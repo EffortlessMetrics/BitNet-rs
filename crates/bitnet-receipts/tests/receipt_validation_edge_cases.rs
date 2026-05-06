@@ -449,3 +449,79 @@ fn llama3_model_info() {
     assert_eq!(info.layers, Some(32));
     assert_eq!(info.vocab_size, Some(128256));
 }
+
+// ---------------------------------------------------------------------------
+// Strict CPU proof validation
+// ---------------------------------------------------------------------------
+
+fn strict_cpu_receipt() -> InferenceReceipt {
+    InferenceReceipt::generate(
+        "cpu",
+        vec!["qk256-avx2-gemv".to_string(), "rope_apply".to_string()],
+        Some("requested=cpu detected=[cpu] selected=cpu".to_string()),
+    )
+    .unwrap()
+    .with_strict_cpu_proof(StrictCpuProofMetadata {
+        requested_kernel: "qk256-avx2-gemv".to_string(),
+        selected_kernel: "qk256-avx2-gemv".to_string(),
+        loader_mode: "real_gguf".to_string(),
+        tokenizer_source: "explicit:/models/tokenizer.json".to_string(),
+        model_family: Some("bitnet".to_string()),
+        quant_format: Some("i2_s".to_string()),
+        cpu_features: vec!["avx2".to_string()],
+        thread_count: Some(4),
+        prompt_tokens: 512,
+        decode_tokens: 128,
+        p50_latency_ms: Some(7.5),
+        p95_latency_ms: Some(9.0),
+        decode_tps: Some(120.0),
+        ..StrictCpuProofMetadata::new(
+            "qk256-avx2-gemv",
+            "qk256-avx2-gemv",
+            "real_gguf",
+            "explicit:/models/tokenizer.json",
+        )
+    })
+}
+
+#[test]
+fn validate_strict_cpu_proof_ok() {
+    let r = strict_cpu_receipt();
+    assert!(r.validate_strict_cpu_proof().is_ok());
+    assert!(r.validate().is_ok());
+}
+
+#[test]
+fn validate_strict_cpu_proof_rejects_kernel_fallback() {
+    let mut r = strict_cpu_receipt();
+    let proof = r.strict_cpu_proof.as_mut().unwrap();
+    proof.selected_kernel = "qk256-scalar-gemv".to_string();
+    let err = r.validate_strict_cpu_proof().unwrap_err();
+    assert!(err.to_string().contains("kernel mismatch"));
+}
+
+#[test]
+fn validate_strict_cpu_proof_rejects_diagnostic_loader() {
+    let mut r = strict_cpu_receipt();
+    r.strict_cpu_proof.as_mut().unwrap().loader_mode = "simple_gguf".to_string();
+    let err = r.validate().unwrap_err();
+    assert!(err.to_string().contains("loader_mode=real_gguf"));
+}
+
+#[test]
+fn validate_strict_cpu_proof_rejects_tokenizer_fallback() {
+    let mut r = strict_cpu_receipt();
+    r.strict_cpu_proof.as_mut().unwrap().tokenizer_source = "gpt2_compat_fallback".to_string();
+    let err = r.validate().unwrap_err();
+    assert!(err.to_string().contains("tokenizer_source"));
+}
+
+#[test]
+fn validate_strict_cpu_proof_rejects_fallback_flag() {
+    let mut r = strict_cpu_receipt();
+    let proof = r.strict_cpu_proof.as_mut().unwrap();
+    proof.fallback_used = true;
+    proof.fallback_reason = Some("AVX2 unavailable".to_string());
+    let err = r.validate().unwrap_err();
+    assert!(err.to_string().contains("fallback_used=true"));
+}

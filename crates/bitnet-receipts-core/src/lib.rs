@@ -171,6 +171,63 @@ pub struct ParityMetadata {
     pub status: String,
 }
 
+/// Strict CPU decode proof metadata.
+///
+/// This optional extension records the end-to-end strict CPU lane choices that
+/// are not captured by the legacy `backend`/`kernels` fields alone: loader and
+/// tokenizer authority, requested versus selected kernel, fallback status, CPU
+/// fingerprint, token counts, latency, and decode throughput.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct StrictCpuProofMetadata {
+    pub requested_backend: String,
+    pub selected_backend: String,
+    pub requested_kernel: String,
+    pub selected_kernel: String,
+    pub loader_mode: String,
+    pub tokenizer_source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_family: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quant_format: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cpu_features: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thread_count: Option<usize>,
+    pub fallback_used: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fallback_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parity_metrics: Option<ParityMetadata>,
+    pub prompt_tokens: usize,
+    pub decode_tokens: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub p50_latency_ms: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub p95_latency_ms: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub decode_tps: Option<f64>,
+}
+
+impl StrictCpuProofMetadata {
+    /// Construct the minimal strict CPU proof envelope.
+    pub fn new(
+        requested_kernel: impl Into<String>,
+        selected_kernel: impl Into<String>,
+        loader_mode: impl Into<String>,
+        tokenizer_source: impl Into<String>,
+    ) -> Self {
+        Self {
+            requested_backend: "cpu".to_string(),
+            selected_backend: "cpu".to_string(),
+            requested_kernel: requested_kernel.into(),
+            selected_kernel: selected_kernel.into(),
+            loader_mode: loader_mode.into(),
+            tokenizer_source: tokenizer_source.into(),
+            ..Self::default()
+        }
+    }
+}
+
 /// Main inference receipt structure (AC4)
 ///
 /// # Schema Version: 1.0.0
@@ -230,6 +287,10 @@ pub struct InferenceReceipt {
     /// Model corrections applied (LayerNorm rescaling, etc.)
     /// Empty if no corrections applied
     pub corrections: Vec<CorrectionRecord>,
+
+    /// Optional strict CPU decode proof metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strict_cpu_proof: Option<StrictCpuProofMetadata>,
 }
 
 impl InferenceReceipt {
@@ -276,6 +337,7 @@ impl InferenceReceipt {
             cross_validation: None,
             parity: None,
             corrections: Vec::new(),
+            strict_cpu_proof: None,
         })
     }
 
@@ -458,6 +520,11 @@ impl InferenceReceipt {
             return Err(anyhow!("Determinism test failed: sequences not identical"));
         }
 
+        // If strict CPU proof metadata is attached, enforce the no-fallback CPU lane.
+        if self.strict_cpu_proof.is_some() {
+            self.validate_strict_cpu_proof()?;
+        }
+
         // Soft gate: if backend_summary is non-empty, verify it has the expected format.
         if !self.backend_summary.is_empty() && !self.backend_summary.contains("selected=") {
             return Err(anyhow!(
@@ -526,6 +593,93 @@ impl InferenceReceipt {
     /// ```
     pub fn validate_kernel_ids(&self) -> Result<()> {
         validate_honest_kernel_ids(self.kernels.iter().map(String::as_str)).map_err(Into::into)
+    }
+
+    /// Validate attached strict CPU decode proof metadata.
+    ///
+    /// This gate is intentionally stricter than the legacy receipt validator: a
+    /// proof run must use CPU as requested and selected backend, use the exact
+    /// requested kernel, name that kernel in the executed kernel list, load via
+    /// the authoritative GGUF path, resolve a deterministic non-fallback
+    /// tokenizer source, and report no fallback.
+    pub fn validate_strict_cpu_proof(&self) -> Result<()> {
+        self.validate_compute_path()?;
+        self.validate_kernel_ids()?;
+
+        if self.kernels.is_empty() {
+            return Err(anyhow!("strict CPU proof requires at least one executed kernel"));
+        }
+
+        let Some(proof) = &self.strict_cpu_proof else {
+            return Err(anyhow!("strict CPU proof metadata missing"));
+        };
+
+        if proof.requested_backend != "cpu"
+            || proof.selected_backend != "cpu"
+            || self.backend != "cpu"
+        {
+            return Err(anyhow!(
+                "strict CPU proof requires requested_backend=cpu selected_backend=cpu backend=cpu"
+            ));
+        }
+
+        if proof.requested_kernel.is_empty() || proof.selected_kernel.is_empty() {
+            return Err(anyhow!("strict CPU proof requires requested and selected kernels"));
+        }
+        if proof.requested_kernel != proof.selected_kernel {
+            return Err(anyhow!(
+                "strict CPU proof kernel mismatch: requested={} selected={}",
+                proof.requested_kernel,
+                proof.selected_kernel
+            ));
+        }
+        if !self.kernels.iter().any(|kernel| kernel == &proof.selected_kernel) {
+            return Err(anyhow!(
+                "strict CPU proof selected kernel {} was not recorded in kernels",
+                proof.selected_kernel
+            ));
+        }
+
+        if proof.loader_mode != "real_gguf" {
+            return Err(anyhow!(
+                "strict CPU proof requires loader_mode=real_gguf, got {}",
+                proof.loader_mode
+            ));
+        }
+
+        let tokenizer_source = proof.tokenizer_source.trim();
+        if tokenizer_source.is_empty() {
+            return Err(anyhow!("strict CPU proof requires tokenizer_source"));
+        }
+        let tokenizer_source_lower = tokenizer_source.to_ascii_lowercase();
+        for forbidden in ["mock", "fallback", "compat", "gpt2", "gpt-2"] {
+            if tokenizer_source_lower.contains(forbidden) {
+                return Err(anyhow!(
+                    "strict CPU proof tokenizer_source must not be fallback-like: {}",
+                    tokenizer_source
+                ));
+            }
+        }
+
+        if proof.fallback_used {
+            return Err(anyhow!(
+                "strict CPU proof reported fallback_used=true: {}",
+                proof.fallback_reason.as_deref().unwrap_or("no reason recorded")
+            ));
+        }
+        if proof.fallback_reason.as_deref().is_some_and(|reason| !reason.trim().is_empty()) {
+            return Err(anyhow!(
+                "strict CPU proof reported fallback_reason despite fallback_used=false"
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Builder for strict CPU decode proof metadata.
+    pub fn with_strict_cpu_proof(mut self, proof: StrictCpuProofMetadata) -> Self {
+        self.strict_cpu_proof = Some(proof);
+        self
     }
 
     /// Builder for test results
