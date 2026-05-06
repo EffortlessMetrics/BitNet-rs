@@ -35,14 +35,22 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  # Lightweight smoke test — runs on every push and PR so the workflow never has 0 jobs.
-  # Previously ran the full workspace test suite, duplicating CI (Core)'s build-test-linux
-  # job. Narrowed to a targeted proptest run on bitnet-quantization, which is the crate
-  # most likely to surface property regressions and isn't covered by Core's --lib filter.
+  # Lightweight smoke test — targeted proptest run on bitnet-quantization (the crate
+  # most likely to surface property regressions; Core's --lib filter does not cover
+  # the i2s_property_fuzz_tests integration test). Runs on main pushes, the nightly
+  # schedule, manual dispatch, and PRs that opt in via the `property-tests` or
+  # `full-ci` label. Ordinary PRs do not pay this cost — the proptest seed pool is
+  # the same on PR HEAD and main, so PR-only regressions are surfaced on merge.
   cargo-tests:
     name: Cargo Tests (smoke)
     runs-on: ubuntu-22.04
     timeout-minutes: 10
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'property-tests') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     env:
       PROPTEST_CASES: "16"
     steps:
