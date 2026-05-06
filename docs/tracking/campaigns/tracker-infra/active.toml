@@ -1,0 +1,54 @@
+id = "tracker-infra"
+title = "Tracker infrastructure"
+status = "active"
+
+objective = "Finish the move from global hand-edited alignment trackers to campaign-local TOML manifests, append-only events, generated dashboards, and advisory xtask gates."
+
+end_state = [
+  "Campaign manifests and events are the source of truth for active work.",
+  "Generated dashboards preserve global coordination visibility.",
+  "Legacy global status and ledger files are transition surfaces, not normal item PR targets.",
+  "xtask can check, generate, and doctor campaign state.",
+]
+
+hard_constraints = [
+  "Do not touch runtime code, kernels, or dependencies for tracker infrastructure.",
+  "Do not remove hardware lane visibility.",
+  "Do not mark work merged without a merge SHA.",
+  "Do not name the pattern after the other repository it was borrowed from.",
+]
+
+[[work_item]]
+id = "TRACKER-001"
+status = "pr_open"
+branch = "codex/tracker-infra/TRACKER-001-campaign-local-gates"
+stackable = false
+requires_human_merge = true
+blocked_by = []
+acceptance = "Add campaign-local tracker model docs, missing campaign manifests, append-only event rules, advisory xtask campaign check/generate/doctor commands, and generated global dashboards."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run -p xtask --no-default-features -- campaign check apple-m4",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "cargo run -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/**",
+  "docs/tracking/TRACKER_MODEL.md",
+  "docs/tracking/campaigns/**",
+  "docs/tracking/generated/**",
+  "xtask/src/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "Campaign-local tracker checks and generated dashboards are available after merge.",
+]
+must_not_claim = [
+  "Legacy global tracking has been fully removed.",
+  "CI enforcement is active.",
+  "Runtime behavior changed.",
+]

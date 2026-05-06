@@ -1,0 +1,10 @@
+timestamp = "2026-05-06T01:48:03Z"
+campaign = "tracker-infra"
+item = "TRACKER-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started tracker infrastructure only.",
+  "Scope is campaign-local manifests, append-only events, generated dashboards, and advisory xtask gates; no runtime or kernel code.",
+]

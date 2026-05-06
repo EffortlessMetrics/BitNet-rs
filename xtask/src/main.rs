@@ -36,6 +36,7 @@ use std::{
 };
 use walkdir::WalkDir;
 
+mod campaign;
 mod cpp_setup_auto;
 mod crossval;
 pub mod ffi;
@@ -996,6 +997,12 @@ enum Cmd {
         #[arg(long, default_value_t = false)]
         dry_run: bool,
     },
+
+    /// Manage campaign-local alignment trackers.
+    Campaign {
+        #[command(subcommand)]
+        command: campaign::CampaignCmd,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1321,6 +1328,7 @@ fn real_main() -> Result<()> {
         Cmd::GridCheck { cpu_only, verbose, dry_run } => {
             grid_check::run(cpu_only, verbose, dry_run)
         }
+        Cmd::Campaign { command } => campaign::run(command),
     }
 }
 

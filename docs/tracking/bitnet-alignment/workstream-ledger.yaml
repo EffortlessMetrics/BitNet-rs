@@ -1883,7 +1883,7 @@ items:
 
   - id: M4-003
     title: Preserve Apple backend identity
-    state: pr_open
+    state: merged
     priority: P1
     workstream: apple_silicon
     depends_on:
@@ -1898,8 +1898,6 @@ items:
         - crates/bitnet-cli/tests/cli_extended_tests.rs
         - crates/bitnet-cli/tests/snapshots/snapshot_wave10__cli_config_validate_invalid_device_error.snap
         - docs/tracking/campaigns/apple-m4/**
-        - docs/tracking/bitnet-alignment/status.md
-        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
       forbidden_paths:
         - crates/bitnet-quantization/src/qk256/**
         - crates/bitnet-qk256-dispatch/**
@@ -1913,10 +1911,13 @@ items:
       - cargo test --locked -p bitnet-common --no-default-features --features cpu backend_selection
       - cargo test --locked -p bitnet-device-config-core --no-default-features
       - cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli cli_config
+    notes:
+      - Merged in #3652 with SHA 849c3db73b786483bb7955371b95f733235119bb.
+      - Identity only; no Metal kernels, MPSGraph execution, QK256, server inference, dependencies, runtime probes, or hardware artifacts.
 
   - id: M4-004
     title: Add Apple M4 Metal device probe
-    state: proposed
+    state: ready
     priority: P1
     workstream: apple_silicon
     depends_on:
@@ -1924,11 +1925,14 @@ items:
     scope:
       allowed_paths:
         - crates/bitnet-device-probe/**
-        - docs/tracking/bitnet-alignment/backend-status.yaml
-        - docs/tracking/bitnet-alignment/status.md
-        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/hardware/apple-m4-mac-mini-validation.md
+        - docs/specs/apple-m4-mac-mini-roadmap.md
+        - docs/tracking/campaigns/apple-m4/**
       forbidden_paths:
+        - crates/bitnet-quantization/src/qk256/**
+        - crates/bitnet-qk256-dispatch/**
         - crates/bitnet-server/**
+        - crates/bitnet-kernels/src/metal/**
     acceptance:
       - Probe reports Metal device visibility, Apple chip name, GPU family when available, unified memory, and macOS version.
       - Probe distinguishes Metal visibility from MPSGraph visibility.
