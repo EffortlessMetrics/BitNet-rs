@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T12:33:15Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-005"
+event = "pr_open"
+pr = 3735
+head_sha = "ba2245e4bcebb81218d9337975b5c75187b1e664"
+actor = "codex"
+
+notes = [
+  "Started CPU-BITNET-005 as split PR 005a for AVX2/FMA feature plumbing and safe target-feature gating.",
+  "This PR does not complete proof-level requested/selected kernel dispatch, receipts, benchmarks, transformer decode, server, GPU, NPU, or crate collapse.",
+]

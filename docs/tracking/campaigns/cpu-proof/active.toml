@@ -188,18 +188,23 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-005"
-status = "ready"
-branch = "codex/cpu-bitnet-005-avx2-gemv"
+status = "pr_open"
+branch = "codex/cpu-bitnet-005a-avx2-fma-gating"
 stackable = false
 requires_human_merge = true
 blocked_by = ["CPU-BITNET-004"]
 acceptance = "CPUID-gated AVX2/FMA QK256 GEMV dispatch matches the scalar packed oracle and records requested versus selected kernel identity."
 commands = [
-  "cargo fmt --all -- --check",
+  "rustfmt crates/bitnet-cpu-detect/src/lib.rs crates/bitnet-quantization/src/i2s_qk256.rs crates/bitnet-quantization/src/i2s_qk256_avx2.rs --edition 2024 --check",
+  "cargo test --locked -p bitnet-cpu-detect --no-default-features --features avx2",
   "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 i2s_qk256",
   "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 --test qk256_avx2_parity_tests",
+  "cargo clippy --locked -p bitnet-quantization --all-targets --no-default-features --features cpu,avx2 -- -D warnings",
 ]
 allowed_paths = [
+  "Cargo.lock",
+  "crates/bitnet-cpu-detect/src/lib.rs",
+  "crates/bitnet-quantization/Cargo.toml",
   "crates/bitnet-quantization/src/i2s_qk256.rs",
   "crates/bitnet-quantization/src/i2s_qk256_avx2.rs",
   "crates/bitnet-quantization/tests/qk256_avx2_parity_tests.rs",

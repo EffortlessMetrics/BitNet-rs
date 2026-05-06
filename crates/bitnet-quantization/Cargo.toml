@@ -26,6 +26,7 @@ serde.workspace = true
 tracing.workspace = true
 bitnet-quantization-bits.workspace = true
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev", optional = true }
+bitnet-cpu-detect = { path = "../bitnet-cpu-detect", version = "0.2.1-dev", default-features = false, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
@@ -43,6 +44,7 @@ bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev", features = [
 default = []
 cpu = ["bitnet-kernels/cpu"]
 simd = []
+avx2 = ["dep:bitnet-cpu-detect", "bitnet-cpu-detect/avx2"]
 integration-tests = []
 cuda = ["bitnet-kernels/cuda"]
 rocm = ["bitnet-kernels/rocm"]

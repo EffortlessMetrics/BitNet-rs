@@ -14,7 +14,7 @@
 | CPU-BITNET-002 | merged | #3680 | `codex/cpu-proof/CPU-BITNET-002-tokenizer-authority` | Strict tokenizer resolution uses explicit override, GGUF metadata, sibling tokenizer assets, then strict failure. |
 | CPU-BITNET-003 | merged | #3690 | `codex/cpu-bitnet-003-canonical-packed-layout` | Canonical block geometry, alignment, stride, and row/block iteration API are defined. |
 | CPU-BITNET-004 | merged | #3696 | `codex/cpu-bitnet-004-scalar-packed-truth` | Canonical scalar packed QK256 GEMV/GEMM kernels are deterministic correctness oracles for decode and prefill. |
-| CPU-BITNET-005 | ready | TBD | `codex/cpu-bitnet-005-avx2-gemv` | CPUID-gated AVX2/FMA QK256 GEMV dispatch matches the scalar packed oracle and records requested versus selected kernel identity. |
+| CPU-BITNET-005 | pr_open | #3735 | `codex/cpu-bitnet-005a-avx2-fma-gating` | CPUID-gated AVX2/FMA QK256 GEMV dispatch matches the scalar packed oracle and records requested versus selected kernel identity. |
 
 ## Hard Constraints
 
