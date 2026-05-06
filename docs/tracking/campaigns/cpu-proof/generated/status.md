@@ -16,7 +16,8 @@
 | CPU-BITNET-004 | merged | #3696 | `codex/cpu-bitnet-004-scalar-packed-truth` | Canonical scalar packed QK256 GEMV/GEMM kernels are deterministic correctness oracles for decode and prefill. |
 | CPU-BITNET-005a | merged | #3735 | `codex/cpu-bitnet-005a-avx2-fma-gating` | AVX2/FMA feature plumbing is explicit, FMA-using QK256 helpers are target-feature gated, and scalar fallback remains unchanged. |
 | CPU-BITNET-005b | merged | #3748 | `codex/cpu-bitnet-005b-kernel-selection` | QK256 decode GEMV selection reports requested kernel, selected kernel, fallback status, fallback reason, and CPU features with strict AVX2 fallback failure. |
-| CPU-BITNET-005c | pr_open | #3753 | `codex/cpu-bitnet-005c-avx2-parity-hardening` | AVX2 decode GEMV parity is hardened against scalar across rows, tail-column shapes, deterministic patterns, and repeated-run equality. |
+| CPU-BITNET-005c | merged | #3753 | `codex/cpu-bitnet-005c-avx2-parity-hardening` | AVX2 decode GEMV parity is hardened against scalar across rows, tail-column shapes, deterministic patterns, and repeated-run equality. |
+| CPU-BITNET-006 | ready | TBD | `codex/cpu-bitnet-006-transformer-decode-ops` | Embedding gather, RMSNorm/subln, RoPE, attention scores, softmax, A/V, FFN, KV-cache, output head, logits handoff, and sampling handoff are authoritative for CPU decode; prefill and decode scheduling are separated; one real-model decode step can run with real tensors; missing ops fail explicitly; KV-cache append/read is deterministic. |
 
 ## Hard Constraints
 
