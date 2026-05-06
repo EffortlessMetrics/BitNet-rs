@@ -32,6 +32,7 @@ bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
 bitnet-request-context-core = { path = "../bitnet-request-context-core", version = "0.2.1-dev" }
+bitnet-request-router-core = { path = "../bitnet-request-router-core", version = "0.2.1-dev" }
 bitnet-api-versioning-core = { path = "../bitnet-api-versioning-core", version = "0.2.1-dev" }
 bitnet-server-health-types-core = { path = "../bitnet-server-health-types-core", version = "0.2.1-dev" }
 bitnet-endpoint-registry-core = { path = "../bitnet-endpoint-registry-core", version = "0.2.1-dev" }
