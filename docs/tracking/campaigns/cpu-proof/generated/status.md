@@ -15,7 +15,7 @@
 | CPU-BITNET-003 | merged | #3690 | `codex/cpu-bitnet-003-canonical-packed-layout` | Canonical block geometry, alignment, stride, and row/block iteration API are defined. |
 | CPU-BITNET-004 | merged | #3696 | `codex/cpu-bitnet-004-scalar-packed-truth` | Canonical scalar packed QK256 GEMV/GEMM kernels are deterministic correctness oracles for decode and prefill. |
 | CPU-BITNET-005a | merged | #3735 | `codex/cpu-bitnet-005a-avx2-fma-gating` | AVX2/FMA feature plumbing is explicit, FMA-using QK256 helpers are target-feature gated, and scalar fallback remains unchanged. |
-| CPU-BITNET-005b | ready | TBD | `codex/cpu-bitnet-005b-kernel-selection` | QK256 decode GEMV selection reports requested kernel, selected kernel, fallback status, fallback reason, and CPU features with strict AVX2 fallback failure. |
+| CPU-BITNET-005b | pr_open | #3748 | `codex/cpu-bitnet-005b-kernel-selection` | QK256 decode GEMV selection reports requested kernel, selected kernel, fallback status, fallback reason, and CPU features with strict AVX2 fallback failure. |
 | CPU-BITNET-005c | proposed | TBD | `codex/cpu-bitnet-005c-avx2-parity-hardening` | AVX2 decode GEMV parity is hardened against scalar across rows, tail-column shapes, deterministic patterns, and repeated-run equality. |
 
 ## Hard Constraints
