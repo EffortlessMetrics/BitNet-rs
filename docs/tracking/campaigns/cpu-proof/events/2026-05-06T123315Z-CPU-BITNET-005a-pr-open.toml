@@ -1,6 +1,6 @@
 timestamp = "2026-05-06T12:33:15Z"
 campaign = "cpu-proof"
-item = "CPU-BITNET-005"
+item = "CPU-BITNET-005a"
 event = "pr_open"
 pr = 3735
 head_sha = "ba2245e4bcebb81218d9337975b5c75187b1e664"

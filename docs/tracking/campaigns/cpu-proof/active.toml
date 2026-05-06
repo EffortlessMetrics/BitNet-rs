@@ -187,13 +187,13 @@ must_not_claim = [
 ]
 
 [[work_item]]
-id = "CPU-BITNET-005"
-status = "pr_open"
+id = "CPU-BITNET-005a"
+status = "merged"
 branch = "codex/cpu-bitnet-005a-avx2-fma-gating"
 stackable = false
 requires_human_merge = true
 blocked_by = ["CPU-BITNET-004"]
-acceptance = "CPUID-gated AVX2/FMA QK256 GEMV dispatch matches the scalar packed oracle and records requested versus selected kernel identity."
+acceptance = "AVX2/FMA feature plumbing is explicit, FMA-using QK256 helpers are target-feature gated, and scalar fallback remains unchanged."
 commands = [
   "rustfmt crates/bitnet-cpu-detect/src/lib.rs crates/bitnet-quantization/src/i2s_qk256.rs crates/bitnet-quantization/src/i2s_qk256_avx2.rs --edition 2024 --check",
   "cargo test --locked -p bitnet-cpu-detect --no-default-features --features avx2",
@@ -217,7 +217,81 @@ forbidden_paths = [
   "crates/bitnet-receipts/**",
 ]
 may_claim = [
-  "AVX2/FMA GEMV dispatch parity against the scalar QK256 oracle exists after merge.",
+  "QK256 AVX2 execution is gated on both AVX2 and FMA after merge.",
+  "FMA-using AVX2 helpers advertise target_feature(avx2,fma) after merge.",
+]
+must_not_claim = [
+  "Requested versus selected kernel dispatch is complete.",
+  "Transformer decode is complete.",
+  "Strict receipts are complete.",
+  "Benchmark or throughput performance is proven.",
+  "GPU or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-005b"
+status = "ready"
+branch = "codex/cpu-bitnet-005b-kernel-selection"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-005a"]
+acceptance = "QK256 decode GEMV selection reports requested kernel, selected kernel, fallback status, fallback reason, and CPU features with strict AVX2 fallback failure."
+commands = [
+  "rustfmt crates/bitnet-quantization/src/i2s_qk256.rs crates/bitnet-quantization/src/i2s_qk256_avx2.rs --edition 2024 --check",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 i2s_qk256 --lib",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 --test qk256_avx2_parity_tests",
+  "cargo clippy --locked -p bitnet-quantization --all-targets --no-default-features --features cpu,avx2 -- -D warnings",
+]
+allowed_paths = [
+  "crates/bitnet-quantization/src/i2s_qk256.rs",
+  "crates/bitnet-quantization/src/i2s_qk256_avx2.rs",
+  "crates/bitnet-quantization/tests/qk256_avx2_parity_tests.rs",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-receipts/**",
+]
+may_claim = [
+  "QK256 requested and selected kernel identity is explicit after merge.",
+  "Strict requested AVX2 fallback failure exists after merge.",
+]
+must_not_claim = [
+  "Transformer decode is complete.",
+  "Strict receipts are complete.",
+  "Benchmark or throughput performance is proven.",
+  "GPU or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-005c"
+status = "proposed"
+branch = "codex/cpu-bitnet-005c-avx2-parity-hardening"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-005b"]
+acceptance = "AVX2 decode GEMV parity is hardened against scalar across rows, tail-column shapes, deterministic patterns, and repeated-run equality."
+commands = [
+  "cargo test --locked -p bitnet-quantization --tests --no-default-features --features cpu,avx2",
+  "cargo bench --locked -p bitnet-quantization --bench qk256_gemv --features cpu,avx2 --no-run",
+]
+allowed_paths = [
+  "crates/bitnet-quantization/src/i2s_qk256.rs",
+  "crates/bitnet-quantization/src/i2s_qk256_avx2.rs",
+  "crates/bitnet-quantization/tests/qk256_avx2_parity_tests.rs",
+  "crates/bitnet-quantization/benches/qk256_gemv.rs",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-receipts/**",
+]
+may_claim = [
+  "AVX2 decode GEMV parity against scalar is hardened after merge.",
 ]
 must_not_claim = [
   "Transformer decode is complete.",

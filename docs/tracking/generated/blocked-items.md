@@ -20,7 +20,9 @@
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | merged |
 | cpu-proof | CPU-BITNET-004 | CPU-BITNET-003 | merged |
-| cpu-proof | CPU-BITNET-005 | CPU-BITNET-004 | pr_open |
+| cpu-proof | CPU-BITNET-005a | CPU-BITNET-004 | merged |
+| cpu-proof | CPU-BITNET-005b | CPU-BITNET-005a | ready |
+| cpu-proof | CPU-BITNET-005c | CPU-BITNET-005b | proposed |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | proposed |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-npu | NPU-003 | NPU-002 | pr_open |
