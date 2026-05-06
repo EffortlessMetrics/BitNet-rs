@@ -122,6 +122,16 @@ ci/hardware/windows-9950x3d-rtx5070ti/<date>/strict-bitnet-cuda-proof.json
 Do not commit bulky local logs, raw command transcripts, GGUFs, model files, or
 binary traces in normal docs or implementation PRs.
 
+Current normalized artifacts:
+
+```text
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-smoke.json
+```
+
+This RTX5070TI-005 artifact is a tiny CUDA kernel smoke receipt only. It records
+`claim=kernel_smoke_tested` and does not claim BitNet inference, parity, or
+speedup.
+
 ## Claim Boundary
 
 - `nvidia-smi` visibility is not CUDA kernel execution.
