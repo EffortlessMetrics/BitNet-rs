@@ -302,8 +302,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-006"
-status = "ready"
-branch = "codex/cpu-bitnet-006-transformer-decode-ops"
+status = "merged"
+pr = 3793
+branch = "codex/cpu-bitnet-006-cpu-decode-step"
 stackable = false
 requires_human_merge = true
 blocked_by = ["CPU-BITNET-005c"]
@@ -333,5 +334,45 @@ may_claim = [
 ]
 must_not_claim = [
   "Full inference quality or performance is proven without receipts.",
+  "GPU or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "CPU-BITNET-007"
+status = "ready"
+branch = "codex/cpu-bitnet-007-strict-receipts"
+stackable = false
+requires_human_merge = true
+blocked_by = ["CPU-BITNET-006"]
+acceptance = "Strict CPU proof receipts tie loader mode, tokenizer source, requested/selected backend, requested/selected kernel, CPU features, quant format, decode/prefill phase, prompt/generated tokens, and fallback status into one machine-checkable record; validation fails on hidden fallback, non-real GGUF loader mode, guessed tokenizer source, mock/diagnostic kernels, or requested AVX2 silently selecting scalar."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-receipts --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-receipts-core --no-default-features",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+]
+allowed_paths = [
+  "crates/bitnet-common/src/backend_selection.rs",
+  "crates/bitnet-inference/src/backends.rs",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-cli/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/bitnet-alignment/status.md",
+  "docs/tracking/bitnet-alignment/workstream-ledger.yaml",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Strict CPU proof receipts record loader, tokenizer, backend, kernel, phase, and fallback truth after merge.",
+]
+must_not_claim = [
+  "Benchmark or throughput performance is proven.",
+  "Server inference is complete.",
   "GPU or NPU execution is involved.",
 ]

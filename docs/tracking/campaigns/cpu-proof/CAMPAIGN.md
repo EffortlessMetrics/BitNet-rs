@@ -32,11 +32,13 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-BITNET-000 | merged | Real BitNet CPU path plan merged in #3642. |
 | CPU-BITNET-001 | merged | Strict GGUF loader authority merged in #3651. |
 | CPU-BITNET-002 | merged | Strict tokenizer authority merged in #3680. |
-| CPU-BITNET-003 | pr_open | Canonical packed layout open in #3690. |
-| CPU-BITNET-004 | proposed | Scalar truth kernels. |
-| CPU-BITNET-005 | proposed | AVX2 decode GEMV. |
-| CPU-BITNET-006 | ready | CPU transformer decode ops. |
-| CPU-BITNET-007 | proposed | Strict receipts and fallback behavior. |
+| CPU-BITNET-003 | merged | Canonical packed layout merged in #3690. |
+| CPU-BITNET-004 | merged | Scalar truth kernels merged in #3696. |
+| CPU-BITNET-005a | merged | AVX2/FMA feature plumbing merged in #3735. |
+| CPU-BITNET-005b | merged | Requested/selected QK256 kernel selection merged in #3748. |
+| CPU-BITNET-005c | merged | AVX2 decode GEMV parity hardening merged in #3753. |
+| CPU-BITNET-006 | merged | CPU transformer decode step merged in #3793. |
+| CPU-BITNET-007 | ready | Strict receipts and fallback behavior. |
 | CPU-BITNET-008 | proposed | CPU phase benchmark profiles. |
 
 ## Review Policy

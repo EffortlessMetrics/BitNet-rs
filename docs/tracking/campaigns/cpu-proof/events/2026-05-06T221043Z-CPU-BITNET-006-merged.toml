@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T22:10:43Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-006"
+event = "merged"
+pr = 3793
+merge_sha = "53fe0af2a05e08a9eaed57b46983ce7b660fa0b4"
+actor = "maintainer"
+
+notes = [
+  "CPU transformer decode-step coverage merged with real tensor embedding, transformer forward, KV-cache append/read, logits handoff, and selected QK256 kernel metadata.",
+  "CPU-BITNET-007 strict receipts is next; no benchmark, server, GPU, NPU, or full inference quality claim is made.",
+]
