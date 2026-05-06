@@ -378,6 +378,45 @@ path before compute.
 Move from isolated kernels to a named BitNet phase such as prefill or decode
 contribution, with CPU reference and explicit fallback status.
 
+The first contribution target is `tiny_metal_i2s_prefill_contribution`, not a
+full decode loop. It reuses the packed I2_S Metal fixture, expands it to two
+prompt-token rows, and records the proof as a prefill projection fixture:
+
+```json
+{
+  "artifact_kind": "phase_contribution",
+  "requested_backend": "apple-m4-metal",
+  "selected_backend": "apple-m4-metal",
+  "runtime_api": "metal",
+  "kernel_id": "tiny_metal_i2s_prefill_contribution",
+  "fallback_used": false,
+  "bitnet": {
+    "kernel_family": "i2_s",
+    "execution_phase": "prefill",
+    "phase_scope": "prefill_projection_fixture",
+    "layout_source": "fixture_packed_i2_s",
+    "fallback_layout": null
+  },
+  "phase": {
+    "name": "prefill",
+    "prefill_tokens": 2,
+    "kv_cache_behavior": "not_exercised",
+    "full_autoregressive_decode": false
+  },
+  "parity": {
+    "reference_backend": "apple-m4-cpu-neon",
+    "target_backend": "apple-m4-metal",
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0
+  }
+}
+```
+
+M4-013 may claim only that the named prefill contribution is receipt-backed
+against CPU/NEON. It must not claim full decode, KV-cache correctness, full
+BitNet inference, M4 acceleration, QK256 on Metal, MPSGraph execution, or Neural
+Engine execution.
+
 ### M4-014 - Strict BitNet M4 Proof Run
 
 Run strict real GGUF, real tokenizer, selected Apple backend,

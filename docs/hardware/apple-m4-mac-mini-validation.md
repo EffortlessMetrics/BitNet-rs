@@ -309,6 +309,40 @@ runs natively on Metal until a later receipt proves that Metal consumes the TL1
 layout directly or names the exact conversion/dequantization path before
 compute.
 
+## M4-013 Metal Prefill Contribution
+
+M4-013 moves the native Metal I2_S fixture from a generic parity proof to a
+named BitNet phase contribution. The first phase target is intentionally small:
+`tiny_metal_i2s_prefill_contribution` runs the existing packed I2_S Metal
+fixture across two prompt-token rows, compares against the Apple CPU/NEON
+reference, and records `execution_phase = "prefill"` with `fallback_used =
+false`.
+
+Run the non-live contract tests with:
+
+```bash
+cargo test --locked -p bitnet-kernels \
+  --no-default-features --features metal \
+  --test metal_tiny_smoke i2s_prefill -- --nocapture
+```
+
+Run the live M4 receipt-backed proof with:
+
+```bash
+BITNET_RUN_M4_METAL_I2S_PREFILL=1 \
+BITNET_M4_METAL_I2S_PREFILL_RECEIPT=ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-prefill-contribution.json \
+cargo test --locked -p bitnet-kernels \
+  --no-default-features --features metal \
+  --test metal_tiny_smoke tiny_m4_metal_i2s_prefill_contribution_matches_cpu_reference_when_enabled -- --nocapture
+```
+
+The receipt must record the phase scope as `prefill_projection_fixture` and
+`kv_cache_behavior = "not_exercised"`. This means M4-013 may claim only that one
+I2_S-adjacent Metal prefill contribution is receipt-backed against CPU/NEON. It
+must not claim full autoregressive decode, KV-cache correctness, full BitNet
+inference, QK256 on Metal, MPSGraph execution, Neural Engine execution, or
+performance.
+
 ## Benchmark Notes
 
 Benchmarks must record:
