@@ -1454,6 +1454,32 @@ fn effective_thread_count(threads: usize) -> usize {
         .unwrap_or_else(|| std::thread::available_parallelism().map(|p| p.get()).unwrap_or(1))
 }
 
+fn detected_cpu_model_label() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var("PROCESSOR_IDENTIFIER")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| "unknown-windows-cpu".to_string())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::fs::read_to_string("/proc/cpuinfo")
+            .ok()
+            .and_then(|cpuinfo| {
+                cpuinfo.lines().find_map(|line| {
+                    line.strip_prefix("model name")
+                        .and_then(|rest| {
+                            rest.split_once(':').map(|(_, value)| value.trim().to_string())
+                        })
+                        .filter(|value| !value.is_empty())
+                })
+            })
+            .unwrap_or_else(|| "unknown-cpu".to_string())
+    }
+}
+
 fn kernel_family_for_quantization(quantization: bitnet_common::QuantizationType) -> &'static str {
     match quantization {
         bitnet_common::QuantizationType::I2S => "i2_s",
@@ -2204,6 +2230,7 @@ async fn run_simple_generation(
         let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
         let thread_count = effective_thread_count(threads);
         let cpu_features = detected_cpu_feature_labels();
+        let cpu_model = detected_cpu_model_label();
         let fallback_reason = backend_identity.fallback_reason.clone();
         let requested_backend = backend_identity.requested_backend.as_str();
         let selected_backend = backend_identity.selected_backend.as_str();
@@ -2294,6 +2321,7 @@ async fn run_simple_generation(
                 "kernel_id": selected_kernel.as_str(),
             },
             "cpu": {
+                "model": cpu_model.as_str(),
                 "arch": std::env::consts::ARCH,
                 "features": &cpu_features,
                 "threads": thread_count,
@@ -2305,14 +2333,17 @@ async fn run_simple_generation(
                 "selected_kernel": selected_kernel.as_str(),
                 "loader_mode": loader_mode,
                 "tokenizer_source": tokenizer_source_str,
+                "tokenizer_strict": tokenizer_strict,
                 "model_family": "bitnet",
                 "quant_format": format!("{}", config.quantization.quantization_type),
+                "cpu_model": cpu_model.as_str(),
                 "cpu_features": &cpu_features,
                 "thread_count": thread_count,
                 "fallback_used": backend_identity.fallback_used,
                 "fallback_reason": backend_identity.fallback_reason.as_deref(),
                 "prompt_tokens": prompt_tokens_len,
                 "decode_tokens": generated_tokens.len(),
+                "phase": "decode",
                 "decode_tps": tok_per_sec,
             },
             "counts": counts,
