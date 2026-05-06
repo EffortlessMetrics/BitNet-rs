@@ -293,7 +293,7 @@ items:
 
   - id: HW-002
     title: Add hardware artifact naming policy
-    state: merged
+    state: proposed
     priority: P1
     workstream: inventory
     depends_on:
@@ -313,6 +313,9 @@ items:
       - No binary or large artifacts are added.
     verification:
       - cargo fmt --all -- --check
+    notes:
+      - "#3625 added ci/hardware/README.md with hardware artifact naming guidance, but this item remains proposed until maintainers confirm HW-002 should be marked merged."
+    followups: []
 
   - id: BITNET-001
     title: Add BitNet model and kernel proof contract
@@ -1418,7 +1421,7 @@ items:
 
   - id: M4-002
     title: Add M4 machine profile and probe bundle
-    state: merged
+    state: pr_open
     priority: P1
     workstream: apple_silicon
     depends_on:
@@ -1427,6 +1430,7 @@ items:
       allowed_paths:
         - docs/hardware/apple-m4-mac-mini-validation.md
         - docs/specs/apple-m4-mac-mini-roadmap.md
+        - ci/hardware/README.md
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
       forbidden_paths:
@@ -1435,17 +1439,31 @@ items:
     acceptance:
       - Probe bundle captures macOS version, Apple chip, CPU/GPU core counts, unified memory, Metal visibility, and Rust toolchain.
       - M4 and M4 Pro configurations are recorded rather than assumed.
+      - Metal, MPSGraph, and CPU/NEON probe artifact paths are documented as separate proof labels.
+      - Probe artifacts do not claim Metal execution, MPSGraph execution, Neural Engine execution, or BitNet inference.
       - No runtime code is touched.
     verification:
       - cargo fmt --all -- --check
+      - Parse YAML tracker files.
+      - git diff --check
+    notes:
+      - Docs/artifact-prep only; do not touch kernels, QK256, server inference, or dependency manifests.
+    followups:
+      - M4-003
+      - M4-004
+      - M4-005
+      - M4-006
+      - M4-007
+      - M4-008
+      - M4-009
 
   - id: M4-003
-    title: Preserve Apple Metal backend identity
-    state: ready
+    title: Preserve Apple backend identity
+    state: proposed
     priority: P1
     workstream: apple_silicon
     depends_on:
-      - M4-001
+      - M4-002
     scope:
       allowed_paths:
         - crates/bitnet-common/src/types.rs
@@ -1548,7 +1566,7 @@ items:
     priority: P1
     workstream: apple_silicon
     depends_on:
-      - M4-004
+      - M4-006
     scope:
       allowed_paths:
         - crates/bitnet-device-probe/**
@@ -1575,7 +1593,7 @@ items:
     priority: P1
     workstream: apple_silicon
     depends_on:
-      - M4-005
+      - M4-007
     scope:
       allowed_paths:
         - crates/bitnet-receipts/**
