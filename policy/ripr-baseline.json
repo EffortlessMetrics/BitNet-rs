@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "comment": "Baseline inventory of ripr findings that exist on `main` and should not be treated as new on PRs. The first real ripr runs on BitNet-rs are expected to surface a baseline that lands here. Until calibration begins, this file is empty: the soft-gate (PR P) treats every diff-scoped finding as new, but the warning is informational only — failures are advisory and labels `ripr-ack` / `ripr-waive` / `full-ci` suppress the warning entirely.",
+  "findings": []
+}

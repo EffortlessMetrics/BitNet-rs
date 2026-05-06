@@ -8,12 +8,10 @@ name: ripr (static exposure)
 # outcomes. See docs/ci/cost-and-verification-policy.md for the
 # verification ladder and why this layer matters.
 #
-# Initial posture: ADVISORY (non-blocking).
-# - continue-on-error: true at the job level
-# - no merge gate
-# - JSON + SARIF + GitHub annotations only
-# - production Rust paths only; skips docs-only PRs
-# - workflow_dispatch + label-triggered runs supported
+# Posture: SOFT-GATE (advisory, warn-on-new). PR P promotes ripr from a
+# pure advisory dump to a warn-on-new step-summary block, while keeping
+# the workflow non-blocking via continue-on-error. Labels `ripr-ack`,
+# `ripr-waive`, and `full-ci` suppress the warning summary.
 #
 # Toolchain note: ripr targets Rust 2024 and requires Rust >= 1.93.
 # BitNet-rs MSRV (rust-toolchain.toml) is currently 1.92, so we install a
@@ -32,6 +30,7 @@ on:
       - 'Cargo.lock'
       - 'ripr.toml'
       - 'policy/ripr-suppressions.toml'
+      - 'policy/ripr-baseline.json'
       - '.github/workflows/ripr.yml'
   workflow_dispatch:
 
@@ -118,6 +117,96 @@ jobs:
           ripr check --base "$base_arg" --format github || true
           # SARIF artifact (for label opt-in code-scanning surfacing later).
           ripr check --base "$base_arg" --format sarif > target/ripr/ripr.sarif || true
+
+      - name: Soft-gate promotion (warn-on-new)
+        # Stage 3 promotion (PR P): emit a high-visibility "soft gate" block
+        # in the run step summary listing reachable_unrevealed and
+        # weakly_exposed findings on production Rust changes. Honours the
+        # `ripr-ack`, `ripr-waive`, and `full-ci` labels as escape hatches.
+        # Does NOT fail the run — `continue-on-error: true` is preserved.
+        if: env.RIPR_INSTALL_FAILED != '1'
+        env:
+          LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          if [ ! -s target/ripr/ripr.json ]; then
+            exit 0
+          fi
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, os, pathlib
+
+          labels = set(json.loads(os.environ.get("LABELS_JSON") or "[]"))
+          # Escape hatches.
+          if labels & {"ripr-ack", "ripr-waive", "full-ci"}:
+              print("## ripr soft gate")
+              print()
+              print(f"_Suppressed by label_: `{', '.join(sorted(labels))}`")
+              print()
+              print("Findings still uploaded as JSON / SARIF artifacts.")
+              raise SystemExit(0)
+
+          # Load baseline so we can flag genuinely new findings. PR P ships
+          # an empty baseline; until calibration begins, every diff-scoped
+          # finding is "new" — which is fine because the gate is advisory.
+          baseline = set()
+          baseline_path = pathlib.Path("policy/ripr-baseline.json")
+          if baseline_path.is_file():
+              try:
+                  data = json.loads(baseline_path.read_text())
+                  for f in data.get("findings", []):
+                      key = (f.get("path"), f.get("symbol"), f.get("classification"))
+                      baseline.add(key)
+              except Exception:
+                  pass  # baseline read errors are non-fatal in soft-gate stage.
+
+          report = json.loads(pathlib.Path("target/ripr/ripr.json").read_text())
+          findings = report.get("findings") or report.get("results") or []
+
+          flagged = []
+          counts = {"reachable_unrevealed": 0, "weakly_exposed": 0, "other": 0}
+          for f in findings:
+              c = f.get("classification") or f.get("class") or ""
+              if c in ("reachable_unrevealed", "weakly_exposed"):
+                  counts[c] += 1
+                  key = (f.get("path"), f.get("symbol"), c)
+                  if key in baseline:
+                      continue
+                  flagged.append(f)
+              else:
+                  counts["other"] += 1
+
+          print("## ripr soft gate")
+          print()
+          print(f"- **reachable_unrevealed**: {counts['reachable_unrevealed']}")
+          print(f"- **weakly_exposed**: {counts['weakly_exposed']}")
+          print(f"- **baseline-suppressed**: {sum(counts.values()) - len(flagged) - counts['other']}")
+          print(f"- **flagged (new)**: {len(flagged)}")
+          print()
+          if not flagged:
+              print("_No new oracle-exposure gaps in this diff. Advisory layer remains green._")
+              raise SystemExit(0)
+
+          print("### Top flagged findings")
+          print()
+          print("| Path | Symbol | Class | Reason |")
+          print("|---|---|---|---|")
+          for f in flagged[:20]:
+              path = f.get("path", "?")
+              line = f.get("line")
+              loc = f"`{path}`" + (f":{line}" if line else "")
+              sym = f.get("symbol", f.get("name", "?"))
+              cls = f.get("classification", "?")
+              reason = (f.get("reason") or f.get("explanation") or "—").replace("|", "\\|")
+              print(f"| {loc} | `{sym}` | `{cls}` | {reason} |")
+          if len(flagged) > 20:
+              print()
+              print(f"_… {len(flagged) - 20} more findings in `target/ripr/ripr.json`._")
+          print()
+          print("> Soft gate is advisory: this run does not fail. Apply `ripr-ack` "
+                "(accept), `ripr-waive` (waive permanently), or `full-ci` to "
+                "suppress this block. To accept many findings as the new baseline, "
+                "regenerate `policy/ripr-baseline.json`.")
+          PY
 
       - name: PR step summary
         if: always()

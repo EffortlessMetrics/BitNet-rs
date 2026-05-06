@@ -4,11 +4,16 @@
 # diff, builds mutation-shaped static probes, and asks whether the changed
 # behavior appears exposed to a meaningful test discriminator.
 #
-# Initial BitNet-rs posture: ADVISORY.
+# BitNet-rs posture: SOFT-GATE (advisory, warn-on-new).
 # - Diff-scoped (no full-repo scan).
-# - No merge gate. Findings are reported via PR step summary + JSON/SARIF.
-# - Promotion to soft-gate or hard-gate requires calibration: see
-#   docs/ci/cost-and-verification-policy.md and the staged plan in PR P.
+# - No merge gate. `continue-on-error: true` preserved at the workflow level.
+# - The workflow's promotion step emits a high-visibility step-summary
+#   block when `reachable_unrevealed` or `weakly_exposed` findings appear
+#   on production Rust changes, but does NOT fail the run.
+# - Labels `ripr-ack`, `ripr-waive`, and `full-ci` suppress the soft-gate
+#   summary (JSON / SARIF artifacts still upload for inspection).
+# - Hard-gate (status-check enforcement) requires baseline calibration
+#   via policy/ripr-baseline.json plus several weeks of observed signal.
 #
 # See https://github.com/EffortlessMetrics/ripr for the schema reference.
 
