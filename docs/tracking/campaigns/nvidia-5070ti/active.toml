@@ -126,7 +126,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "RTX5070TI-006"
-status = "ready"
+status = "in_progress"
 branch = "codex/nvidia-5070ti/RTX5070TI-006-cuda-cpu-parity"
 stackable = false
 requires_human_merge = true
@@ -141,6 +141,7 @@ allowed_paths = [
   "crates/bitnet-inference/**",
   "tests/**",
   "ci/hardware/_templates/cuda-parity-receipt.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-parity.json",
   "docs/tracking/campaigns/nvidia-5070ti/**",
 ]
 forbidden_paths = [
