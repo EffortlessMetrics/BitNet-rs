@@ -1053,13 +1053,35 @@ fn pull_request_claims_item(pr: &GithubPullRequest, item_id: &str) -> bool {
     if pr.labels.iter().any(|label| label.name.eq_ignore_ascii_case(&item_label)) {
         return true;
     }
-
-    let mut text = pr.title.clone();
-    if let Some(body) = &pr.body {
-        text.push('\n');
-        text.push_str(body);
+    if pr.title.contains(item_id) {
+        return true;
     }
-    text.contains(item_id)
+
+    pr.body
+        .as_deref()
+        .is_some_and(|body| body.lines().any(|line| body_line_claims_item(line, item_id)))
+}
+
+fn body_line_claims_item(line: &str, item_id: &str) -> bool {
+    let trimmed = line
+        .trim()
+        .trim_start_matches('-')
+        .trim_start_matches('*')
+        .trim_start_matches('>')
+        .trim()
+        .trim_matches('`')
+        .trim();
+    if trimmed.starts_with(item_id) {
+        return true;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    let explicit_claim = lower.starts_with("work item")
+        || lower.starts_with("item:")
+        || lower.starts_with("item ")
+        || lower.starts_with("scope:")
+        || lower.starts_with("boundary:");
+    explicit_claim && trimmed.contains(item_id)
 }
 
 fn current_branch_name(root: &Path) -> String {
