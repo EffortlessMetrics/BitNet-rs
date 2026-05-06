@@ -80,3 +80,15 @@ fn ceil_div_powers_of_two() {
     assert_eq!(ceil_div(16384, 64), 256);
     assert_eq!(ceil_div(65536, 256), 256);
 }
+
+#[test]
+fn ceil_div_usize_max_no_overflow() {
+    assert_eq!(ceil_div(usize::MAX, 2), (usize::MAX / 2) + 1);
+    assert_eq!(ceil_div(usize::MAX, usize::MAX), 1);
+}
+
+#[test]
+#[should_panic(expected = "divisor must be non-zero")]
+fn ceil_div_zero_divisor_panics() {
+    let _ = ceil_div(10, 0);
+}
