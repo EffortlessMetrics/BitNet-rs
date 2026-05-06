@@ -35,6 +35,7 @@ bitnet = { path = "..", version = "0.2.1-dev", default-features = false, feature
 tokio = { version = "1.48.0", features = ["rt"], optional = true }
 futures = { version = "0.3.31", optional = true }
 regex = "1.12.2"
+globset = "0.4.16"
 xtask-build-helper = { path = "../xtask-build-helper", version = "0.2.1-dev" }
 bitnet-crossval = { path = "../crossval", version = "0.2.1-dev", default-features = false, optional = true }
 bitnet-sys = { path = "../crates/bitnet-sys", version = "0.2.1-dev", default-features = false, optional = true }

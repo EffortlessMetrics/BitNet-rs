@@ -47,6 +47,7 @@ mod health_check;
 #[allow(dead_code)]
 mod model_info;
 mod model_registry;
+mod policy;
 mod tokenizers;
 mod trace_diff;
 
@@ -1003,6 +1004,29 @@ enum Cmd {
         #[command(subcommand)]
         command: campaign::CampaignCmd,
     },
+
+    /// Validate the non-Rust file allowlist (`policy/non-rust-allowlist.toml`).
+    ///
+    /// Enumerates tracked files, identifies non-Rust programming/declarative
+    /// implementation surfaces, and verifies each is covered by an allowlist
+    /// entry. Reports are written to `target/bitnet/reports/file-policy.{md,json}`.
+    /// Schema errors and expired entries fail the check unconditionally.
+    /// Uncovered files and unused entries fail only when `--strict` is set.
+    #[command(name = "check-file-policy")]
+    CheckFilePolicy {
+        /// Fail on uncovered files and unused entries (in addition to
+        /// always-failing schema errors / expired entries).
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Print a unified summary of the active policy checks.
+    ///
+    /// Aggregates the latest results of `check-file-policy` (and, in later
+    /// rollout PRs, `check-no-panic-family` and `check-lint-policy`) into a
+    /// single report under `target/bitnet/reports/policy-report.{md,json}`.
+    #[command(name = "policy-report")]
+    PolicyReport,
 }
 
 #[derive(Subcommand)]
@@ -1329,7 +1353,86 @@ fn real_main() -> Result<()> {
             grid_check::run(cpu_only, verbose, dry_run)
         }
         Cmd::Campaign { command } => campaign::run(command),
+        Cmd::CheckFilePolicy { strict } => check_file_policy_cmd(strict),
+        Cmd::PolicyReport => policy_report_cmd(),
     }
+}
+
+fn check_file_policy_cmd(strict: bool) -> Result<()> {
+    let root = policy::repo_root()?;
+    let outcome = policy::non_rust::run_check(&root, strict)?;
+    if outcome.has_failures(strict) {
+        anyhow::bail!(
+            "non-rust file policy: {} schema errors, {} expired entries{}",
+            outcome.schema_errors.len(),
+            outcome.expired_entries.len(),
+            if strict {
+                format!(
+                    ", {} uncovered, {} unused",
+                    outcome.uncovered.len(),
+                    outcome.unused_entries.len()
+                )
+            } else {
+                String::new()
+            }
+        );
+    }
+    Ok(())
+}
+
+fn policy_report_cmd() -> Result<()> {
+    let root = policy::repo_root()?;
+    let dir = policy::report_dir(&root);
+    std::fs::create_dir_all(&dir).with_context(|| format!("mkdir {}", dir.display()))?;
+
+    // Run available policy checks in advisory mode and aggregate.
+    let mut sections: Vec<(String, Vec<String>)> = Vec::new();
+
+    match policy::non_rust::run_check(&root, false) {
+        Ok(outcome) => {
+            let mut lines = Vec::new();
+            lines.push(format!("tracked: {}", outcome.total_tracked));
+            lines.push(format!("in_scope: {}", outcome.in_scope));
+            lines.push(format!("matched: {}", outcome.matched));
+            lines.push(format!("uncovered: {}", outcome.uncovered.len()));
+            lines.push(format!("unused: {}", outcome.unused_entries.len()));
+            lines.push(format!("expired: {}", outcome.expired_entries.len()));
+            lines.push(format!("schema_errors: {}", outcome.schema_errors.len()));
+            sections.push(("non-rust-file-policy".to_string(), lines));
+        }
+        Err(e) => sections.push((
+            "non-rust-file-policy".to_string(),
+            vec![format!("ERROR: {e:#}")],
+        )),
+    }
+
+    let mut md = String::new();
+    md.push_str("# BitNet policy report\n\n");
+    for (name, lines) in &sections {
+        md.push_str(&format!("## {name}\n\n"));
+        for line in lines {
+            md.push_str(&format!("- {line}\n"));
+        }
+        md.push('\n');
+    }
+    std::fs::write(dir.join("policy-report.md"), &md)?;
+
+    let json: Vec<serde_json::Value> = sections
+        .iter()
+        .map(|(name, lines)| {
+            serde_json::json!({
+                "section": name,
+                "entries": lines,
+            })
+        })
+        .collect();
+    std::fs::write(
+        dir.join("policy-report.json"),
+        serde_json::to_string_pretty(&json)?,
+    )?;
+
+    println!("policy-report: wrote {}", dir.join("policy-report.md").display());
+    Ok(())
 }
 
 // JSON event structure for CI/CD pipelines

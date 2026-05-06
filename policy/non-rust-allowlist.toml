@@ -1,0 +1,525 @@
+# Non-Rust file allowlist for BitNet-rs.
+#
+# Schema: 1.0
+# Owner:  policy/non-rust-files
+#
+# Each entry is a structured receipt: identity (path or glob), kind, owner,
+# surface, classification, reason, and (where appropriate) covered_by and
+# expires. Production / test / tooling surfaces require covered_by — the
+# canonical command(s) that exercise the file in CI.
+#
+# The allowlist is checked by `cargo xtask check-file-policy`. In the
+# current rollout stage the check is advisory (Schema errors and expired
+# entries fail; uncovered files and unused entries are reported but do not
+# block CI until PR 9). See docs/development/BITNET_POLICY_ROLLOUT.md.
+
+schema_version = "1.0"
+
+# -----------------------------------------------------------------------------
+# CI declarative
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = ".github/workflows/*.yml"
+kind = "ci_declarative"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "GitHub Actions workflow definitions are platform-required YAML."
+
+# -----------------------------------------------------------------------------
+# Container / packaging build files
+# -----------------------------------------------------------------------------
+
+[[allow]]
+path = "Dockerfile"
+kind = "build_config"
+owner = "release/containers"
+surface = "ci"
+classification = "config"
+reason = "Primary release container for bitnet-rs CLI."
+
+[[allow]]
+glob = "ci/Dockerfile.*"
+kind = "build_config"
+owner = "release/containers"
+surface = "ci"
+classification = "config"
+reason = "CI container variants (bitnet-cpp cache, etc.)."
+
+[[allow]]
+glob = "docker/Dockerfile.*"
+kind = "build_config"
+owner = "release/containers"
+surface = "ci"
+classification = "config"
+reason = "Backend-specific container variants (intel-gpu, nvidia-gpu, test-matrix)."
+
+[[allow]]
+glob = "infra/docker/Dockerfile.*"
+kind = "build_config"
+owner = "release/containers"
+surface = "ci"
+classification = "config"
+reason = "Infrastructure container variants (rust-primary, rust-gpu, cpu, gpu, legacy-crossval)."
+
+[[allow]]
+glob = ".github/images/rust-ci/Dockerfile"
+kind = "build_config"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Pinned rust-ci image used by GitHub Actions."
+
+[[allow]]
+glob = "infra/packaging/chocolatey/tools/*.ps1"
+kind = "build_config"
+owner = "release/packaging"
+surface = "ci"
+classification = "config"
+reason = "Chocolatey Windows packaging helper scripts."
+
+[[allow]]
+path = "flake.nix"
+kind = "build_config"
+owner = "release/nix"
+surface = "ci"
+classification = "config"
+reason = "Reproducible Nix build flake for bitnet-rs."
+
+# -----------------------------------------------------------------------------
+# CI shell + script tooling
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "ci/**/*.sh"
+kind = "build_config"
+owner = "release/ci"
+surface = "ci"
+classification = "tooling"
+reason = "BitNet-cpp fetch, patch, cache, and validation helpers used by CI."
+covered_by = ["cargo xtask check-file-policy"]
+
+[[allow]]
+glob = "ci/**/*.ps1"
+kind = "build_config"
+owner = "release/ci"
+surface = "ci"
+classification = "tooling"
+reason = "Windows PowerShell counterparts of the CI shell helpers."
+covered_by = ["cargo xtask check-file-policy"]
+
+[[allow]]
+glob = "scripts/**/*.sh"
+kind = "build_config"
+owner = "release/scripts"
+surface = "ci"
+classification = "tooling"
+reason = "Repo-local developer and CI helper scripts."
+covered_by = ["cargo xtask check-file-policy"]
+
+[[allow]]
+glob = "scripts/**/*.ps1"
+kind = "build_config"
+owner = "release/scripts"
+surface = "ci"
+classification = "tooling"
+reason = "Windows counterparts of repo-local helper scripts."
+covered_by = ["cargo xtask check-file-policy"]
+
+[[allow]]
+glob = "scripts/**/*.py"
+kind = "build_config"
+owner = "release/scripts"
+surface = "ci"
+classification = "tooling"
+reason = "Repo-local Python helper scripts (analysis and reporting)."
+covered_by = ["cargo xtask check-file-policy"]
+
+# -----------------------------------------------------------------------------
+# GPU shaders (per backend)
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "crates/bitnet-kernels/src/gpu/kernels/*.cl"
+kind = "gpu_shader"
+owner = "gpu/opencl"
+surface = "gpu"
+classification = "production"
+reason = "OpenCL compute kernels for GPU inference backend."
+covered_by = ["cargo check -p bitnet-kernels --no-default-features --features cpu"]
+
+[[allow]]
+glob = "crates/bitnet-kernels/src/gpu/kernels/*.cu"
+kind = "gpu_shader"
+owner = "gpu/cuda"
+surface = "gpu"
+classification = "production"
+reason = "CUDA compute kernels for GPU inference backend."
+covered_by = ["cargo check -p bitnet-kernels --no-default-features --features cpu"]
+
+[[allow]]
+glob = "crates/bitnet-metal/src/kernels/*.metal"
+kind = "gpu_shader"
+owner = "gpu/metal"
+surface = "gpu"
+classification = "production"
+reason = "Metal Shading Language kernels for Apple Silicon backend."
+covered_by = ["cargo check -p bitnet-metal --no-default-features --features cpu"]
+
+[[allow]]
+glob = "crates/bitnet-rocm/src/kernels/*.hip"
+kind = "gpu_shader"
+owner = "gpu/rocm"
+surface = "gpu"
+classification = "production"
+reason = "HIP compute kernels for AMD ROCm backend."
+covered_by = ["cargo check -p bitnet-rocm --no-default-features --features cpu"]
+
+[[allow]]
+glob = "crates/bitnet-vulkan-shaders/src/kernels/*.comp"
+kind = "gpu_shader"
+owner = "gpu/vulkan"
+surface = "gpu"
+classification = "production"
+reason = "GLSL compute shaders for Vulkan backend."
+covered_by = ["cargo check -p bitnet-vulkan-shaders --no-default-features --features cpu"]
+
+[[allow]]
+glob = "crates/bitnet-webgpu/src/kernels/*.wgsl"
+kind = "gpu_shader"
+owner = "gpu/wgpu"
+surface = "gpu"
+classification = "production"
+reason = "WGSL compute shaders for WebGPU/wgpu backend."
+covered_by = ["cargo check -p bitnet-wgpu --no-default-features --features cpu"]
+
+# -----------------------------------------------------------------------------
+# C / C++ FFI surfaces
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "crates/bitnet-ffi/include/*.h"
+kind = "ffi_c"
+owner = "ffi/c"
+surface = "ffi"
+classification = "production"
+reason = "Public C ABI headers exposed by bitnet-ffi."
+covered_by = ["cargo check -p bitnet-ffi --no-default-features"]
+
+[[allow]]
+glob = "crates/bitnet-ffi/tests/*.c"
+kind = "ffi_c"
+owner = "ffi/c"
+surface = "ffi"
+classification = "test"
+reason = "C-side integration tests for the bitnet-ffi ABI."
+covered_by = ["bash crates/bitnet-ffi/build_c_test.sh"]
+
+[[allow]]
+glob = "crates/bitnet-ffi/build_c_test.*"
+kind = "build_config"
+owner = "ffi/c"
+surface = "ffi"
+classification = "tooling"
+reason = "Cross-platform shell/batch wrappers that build the C integration test."
+covered_by = ["bash crates/bitnet-ffi/build_c_test.sh"]
+
+[[allow]]
+glob = "crates/bitnet-ffi/bindings/csharp/*.cs"
+kind = "language_binding"
+owner = "ffi/csharp"
+surface = "language-binding"
+classification = "production"
+reason = "C# binding sample exposing the bitnet-ffi ABI."
+covered_by = ["cargo check -p bitnet-ffi --no-default-features"]
+
+[[allow]]
+glob = "crates/bitnet-ggml-ffi/csrc/**/*.c"
+kind = "ffi_c"
+owner = "ffi/ggml"
+surface = "ffi"
+classification = "production"
+reason = "GGML C sources vendored under bitnet-ggml-ffi for IQ2_S support."
+covered_by = ["cargo check -p bitnet-ggml-ffi --no-default-features"]
+
+[[allow]]
+glob = "crates/bitnet-ggml-ffi/csrc/**/*.h"
+kind = "ffi_c"
+owner = "ffi/ggml"
+surface = "ffi"
+classification = "production"
+reason = "GGML C headers vendored under bitnet-ggml-ffi."
+covered_by = ["cargo check -p bitnet-ggml-ffi --no-default-features"]
+
+[[allow]]
+glob = "crates/bitnet-kernels/src/ffi/*.cpp"
+kind = "ffi_cpp"
+owner = "ffi/cpp"
+surface = "ffi"
+classification = "production"
+reason = "C++ bridge for the bitnet-kernels FFI."
+covered_by = ["cargo check -p bitnet-kernels --no-default-features --features cpu"]
+
+[[allow]]
+glob = "crates/bitnet-sys/csrc/**"
+kind = "ffi_cpp"
+owner = "ffi/cpp"
+surface = "ffi"
+classification = "production"
+reason = "Vendored bitnet.cpp sources used by bitnet-sys for cross-validation."
+covered_by = ["cargo check -p bitnet-sys --no-default-features"]
+
+[[allow]]
+glob = "crates/bitnet-sys/include/**"
+kind = "ffi_cpp"
+owner = "ffi/cpp"
+surface = "ffi"
+classification = "production"
+reason = "Vendored bitnet.cpp headers used by bitnet-sys for cross-validation."
+covered_by = ["cargo check -p bitnet-sys --no-default-features"]
+
+[[allow]]
+glob = "include/**/*.h"
+kind = "ffi_c"
+owner = "ffi/c"
+surface = "ffi"
+classification = "production"
+reason = "Repo-level C headers shared by FFI consumers."
+covered_by = ["cargo check -p bitnet-ffi --no-default-features"]
+
+# -----------------------------------------------------------------------------
+# Python bindings
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "crates/bitnet-py/src/**/*.py"
+kind = "python_binding"
+owner = "bindings/python"
+surface = "language-binding"
+classification = "production"
+reason = "PyO3 Python binding source for bitnet-py."
+covered_by = ["cargo check -p bitnet-py --no-default-features"]
+
+[[allow]]
+glob = "crates/bitnet-py/python/**/*.py"
+kind = "python_binding"
+owner = "bindings/python"
+surface = "language-binding"
+classification = "production"
+reason = "Pure-Python helpers shipped with the bitnet-py wheel."
+covered_by = ["cargo check -p bitnet-py --no-default-features"]
+
+[[allow]]
+glob = "crates/bitnet-py/python/**/*.pyi"
+kind = "python_binding"
+owner = "bindings/python"
+surface = "language-binding"
+classification = "production"
+reason = "Type stubs distributed with the bitnet-py wheel."
+covered_by = ["cargo check -p bitnet-py --no-default-features"]
+
+[[allow]]
+glob = "crates/bitnet-py/tests/**/*.py"
+kind = "python_binding"
+owner = "bindings/python"
+surface = "language-binding"
+classification = "test"
+reason = "Integration tests that exercise the bitnet-py PyO3 binding."
+covered_by = ["pytest crates/bitnet-py/tests"]
+
+[[allow]]
+glob = "crates/bitnet-py/examples/**/*.py"
+kind = "python_binding"
+owner = "bindings/python"
+surface = "language-binding"
+classification = "docs"
+reason = "Worked examples for the Python binding API."
+
+# -----------------------------------------------------------------------------
+# Cross-validation Python harness
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "crossval/props/*.py"
+kind = "python_binding"
+owner = "crossval"
+surface = "ffi"
+classification = "test"
+reason = "Property-based cross-validation harness comparing Rust and C++ paths."
+covered_by = ["cargo run -p xtask -- crossval"]
+
+[[allow]]
+glob = "tests/python_baseline/**/*.py"
+kind = "python_binding"
+owner = "crossval"
+surface = "ffi"
+classification = "test"
+reason = "Reference Python implementations used as parity baselines."
+covered_by = ["cargo run -p xtask -- crossval"]
+
+[[allow]]
+glob = "crossval/src/*.c"
+kind = "ffi_c"
+owner = "crossval"
+surface = "ffi"
+classification = "production"
+reason = "C bridge between the crossval harness and bitnet.cpp."
+covered_by = ["cargo check -p bitnet-crossval --no-default-features"]
+
+[[allow]]
+glob = "crossval/src/*.cc"
+kind = "ffi_cpp"
+owner = "crossval"
+surface = "ffi"
+classification = "production"
+reason = "C++ bridge between the crossval harness and bitnet.cpp."
+covered_by = ["cargo check -p bitnet-crossval --no-default-features"]
+
+# -----------------------------------------------------------------------------
+# WASM bindings (JavaScript / TypeScript surface)
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "crates/bitnet-wasm/examples/**/*.js"
+kind = "wasm_binding"
+owner = "bindings/wasm"
+surface = "language-binding"
+classification = "docs"
+reason = "Browser/PWA examples consuming the bitnet-wasm package."
+
+[[allow]]
+glob = "crates/bitnet-wasm/pkg/**/*.ts"
+kind = "wasm_binding"
+owner = "bindings/wasm"
+surface = "language-binding"
+classification = "production"
+reason = "Generated TypeScript declarations for the bitnet-wasm package."
+covered_by = ["wasm-pack build crates/bitnet-wasm"]
+
+[[allow]]
+glob = "crates/bitnet-wasm/tools/**/*.js"
+kind = "wasm_binding"
+owner = "bindings/wasm"
+surface = "language-binding"
+classification = "tooling"
+reason = "Internal tooling scripts for the bitnet-wasm package."
+covered_by = ["cargo xtask check-file-policy"]
+
+[[allow]]
+glob = "examples/wasm/**/*.js"
+kind = "wasm_binding"
+owner = "bindings/wasm"
+surface = "language-binding"
+classification = "docs"
+reason = "Standalone WASM examples (browser, pwa)."
+
+# -----------------------------------------------------------------------------
+# Repo-level developer scripts and helpers
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Archive / legacy material
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "archive/**"
+kind = "documentation"
+owner = "release/archive"
+surface = "docs"
+classification = "docs"
+reason = "Frozen historical material kept for reference; not part of CI surface."
+
+# -----------------------------------------------------------------------------
+# Examples (cross-language migration material)
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "examples/**/*.cpp"
+kind = "documentation"
+owner = "docs/examples"
+surface = "docs"
+classification = "docs"
+reason = "C++ side of the cpp-to-rust migration walkthrough."
+
+[[allow]]
+glob = "examples/**/*.h"
+kind = "documentation"
+owner = "docs/examples"
+surface = "docs"
+classification = "docs"
+reason = "Headers for the cpp-to-rust migration walkthrough (when present)."
+retired = true
+
+[[allow]]
+glob = "examples/**/*.c"
+kind = "documentation"
+owner = "docs/examples"
+surface = "docs"
+classification = "docs"
+reason = "C compatibility / FFI demonstration sources."
+
+[[allow]]
+glob = "examples/**/*.py"
+kind = "documentation"
+owner = "docs/examples"
+surface = "docs"
+classification = "docs"
+reason = "Python helper scripts that accompany worked examples."
+
+[[allow]]
+glob = "examples/**/*.sh"
+kind = "documentation"
+owner = "docs/examples"
+surface = "docs"
+classification = "docs"
+reason = "Shell helpers that accompany worked examples."
+
+# -----------------------------------------------------------------------------
+# Test fixtures with embedded source files
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "tests/fixtures/**"
+kind = "fixture_input"
+owner = "tests/fixtures"
+surface = "fixtures"
+classification = "fixtures"
+reason = "Inputs and golden outputs consumed by integration tests."
+
+# -----------------------------------------------------------------------------
+# Repo metadata
+# -----------------------------------------------------------------------------
+
+[[allow]]
+glob = "examples/**/Dockerfile"
+kind = "build_config"
+owner = "docs/examples"
+surface = "docs"
+classification = "docs"
+reason = "Worked deployment-example Dockerfile."
+
+[[allow]]
+glob = "infra/**/*.sh"
+kind = "build_config"
+owner = "release/infra"
+surface = "ci"
+classification = "tooling"
+reason = "Infrastructure deployment helper scripts."
+covered_by = ["cargo xtask check-file-policy"]
+
+[[allow]]
+glob = "infra/packaging/homebrew/*.rb"
+kind = "build_config"
+owner = "release/packaging"
+surface = "ci"
+classification = "config"
+reason = "Homebrew formula for the bitnet-rs CLI."
+
+[[allow]]
+glob = "docs/api/ffi/*.h"
+kind = "documentation"
+owner = "docs/ffi"
+surface = "docs"
+classification = "docs"
+reason = "Mirror of the public C ABI header rendered into the docs tree."
