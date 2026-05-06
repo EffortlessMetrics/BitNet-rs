@@ -1,7 +1,7 @@
 //! Durable Apple backend receipt fields.
 //!
-//! These types record Apple proof identity without collapsing Metal, MPSGraph,
-//! and CPU/NEON evidence. They do not prove BitNet inference on their own.
+//! These types record Apple proof identity without collapsing Metal, `MPSGraph`,
+//! and CPU/NEON evidence. They do not prove `BitNet` inference on their own.
 
 use serde::{Deserialize, Serialize};
 use std::fmt;

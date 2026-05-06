@@ -1,8 +1,8 @@
-//! Apple MPSGraph reference-lane smoke helpers.
+//! Apple `MPSGraph` reference-lane smoke helpers.
 //!
 //! This module is intentionally separate from native Metal probes and kernels.
-//! A passing MPSGraph smoke proves only that a tiny graph executed through the
-//! MPSGraph API; it is not native Metal, Neural Engine, or BitNet inference
+//! A passing `MPSGraph` smoke proves only that a tiny graph executed through the
+//! `MPSGraph` API; it is not native Metal, Neural Engine, or `BitNet` inference
 //! proof.
 
 use std::fmt;
@@ -14,6 +14,7 @@ pub const APPLE_M4_MPSGRAPH_RUNTIME_API: &str = "mpsgraph";
 pub const APPLE_M4_MPSGRAPH_RESOLVED_TARGET_UNKNOWN: &str = "unknown";
 pub const TINY_MPSGRAPH_MATMUL_GRAPH_ID: &str = "tiny_mpsgraph_matmul";
 pub const MPSGRAPH_SMOKE_ELEMENT_COUNT: usize = 4;
+const MPSGRAPH_SMOKE_ELEMENT_COUNT_F32: f32 = 4.0;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TinyMpsGraphSmokeReceipt {
@@ -99,7 +100,7 @@ pub fn apple_mpsgraph_smoke_artifact_path(date: &str) -> String {
 }
 
 #[must_use]
-pub fn tiny_mpsgraph_matmul_inputs()
+pub const fn tiny_mpsgraph_matmul_inputs()
 -> ([f32; MPSGRAPH_SMOKE_ELEMENT_COUNT], [f32; MPSGRAPH_SMOKE_ELEMENT_COUNT]) {
     ([1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0])
 }
@@ -125,10 +126,10 @@ pub fn expected_tiny_mpsgraph_matmul(
     }
 
     Ok(vec![
-        lhs[0] * rhs[0] + lhs[1] * rhs[2],
-        lhs[0] * rhs[1] + lhs[1] * rhs[3],
-        lhs[2] * rhs[0] + lhs[3] * rhs[2],
-        lhs[2] * rhs[1] + lhs[3] * rhs[3],
+        lhs[0].mul_add(rhs[0], lhs[1] * rhs[2]),
+        lhs[0].mul_add(rhs[1], lhs[1] * rhs[3]),
+        lhs[2].mul_add(rhs[0], lhs[3] * rhs[2]),
+        lhs[2].mul_add(rhs[1], lhs[3] * rhs[3]),
     ])
 }
 
@@ -139,6 +140,12 @@ pub fn compare_tiny_mpsgraph_matmul_outputs(
 ) -> Result<TinyMpsGraphSmokeComparison, TinyMpsGraphSmokeError> {
     if expected.is_empty() {
         return Err(TinyMpsGraphSmokeError::EmptyInput);
+    }
+    if expected.len() != MPSGRAPH_SMOKE_ELEMENT_COUNT {
+        return Err(TinyMpsGraphSmokeError::LengthMismatch {
+            expected: MPSGRAPH_SMOKE_ELEMENT_COUNT,
+            actual: expected.len(),
+        });
     }
     if expected.len() != actual.len() {
         return Err(TinyMpsGraphSmokeError::LengthMismatch {
@@ -172,12 +179,12 @@ pub fn compare_tiny_mpsgraph_matmul_outputs(
 
     Ok(TinyMpsGraphSmokeComparison {
         max_abs_error,
-        mean_abs_error: total_abs_error / expected.len() as f32,
+        mean_abs_error: total_abs_error / MPSGRAPH_SMOKE_ELEMENT_COUNT_F32,
     })
 }
 
 #[must_use]
-pub fn tiny_mpsgraph_smoke_swift_source() -> &'static str {
+pub const fn tiny_mpsgraph_smoke_swift_source() -> &'static str {
     r#"
 import Foundation
 import Metal
