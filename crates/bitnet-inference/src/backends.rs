@@ -146,9 +146,9 @@ pub struct GpuBackend {
 
 /// NPU backend implementation.
 ///
-/// The current implementation routes execution through the model's Metal path and
-/// provides an explicit backend surface for NPU-oriented deployment policy,
-/// warm-up behavior, and capability reporting.
+/// This preserves Intel/OpenVINO NPU identity as `Device::Npu`; it must not be
+/// treated as Metal or a generic GPU while dedicated runtime execution is still
+/// being wired.
 pub struct NpuBackend {
     model: Arc<dyn Model>,
     device: Device,
@@ -160,17 +160,20 @@ impl NpuBackend {
     pub fn new(model: Arc<dyn Model>, device: Device) -> Result<Self> {
         if !Self::is_available() {
             return Err(anyhow::anyhow!(
-                "NPU backend unavailable. Set {NPU_ENABLE_ENV}=1 and compile with metal support on macOS"
+                "NPU backend unavailable. Set {NPU_ENABLE_ENV}=1 and compile with the npu-backend feature after an Intel/OpenVINO NPU runtime probe succeeds"
             ));
         }
 
-        if !matches!(device, Device::Metal) {
-            return Err(anyhow::anyhow!("NPU backend currently requires Device::Metal"));
+        if !matches!(device, Device::Npu) {
+            return Err(anyhow::anyhow!(
+                "NPU backend requires Device::Npu; refusing to alias NPU to {:?}",
+                device
+            ));
         }
 
         let allow_cpu_fallback = std::env::var(NPU_FALLBACK_ENV)
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(true);
+            .unwrap_or(false);
 
         info!(
             "Created NPU backend (device={:?}, allow_cpu_fallback={})",
@@ -186,7 +189,7 @@ impl NpuBackend {
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
             .unwrap_or(false);
 
-        enabled && cfg!(target_os = "macos")
+        enabled && cfg!(feature = "npu-backend")
     }
 
     fn ensure_npu_tensor(&self, input: &ConcreteTensor) -> Result<ConcreteTensor> {
@@ -195,7 +198,7 @@ impl NpuBackend {
         }
 
         // Best-effort transfer placeholder: until dedicated NPU kernels are wired,
-        // we keep shape fidelity and allow runtime fallback.
+        // fallback is opt-in so strict NPU requests fail before hidden CPU execution.
         if self.allow_cpu_fallback {
             debug!(
                 "NPU tensor transfer unavailable, using shape-preserving tensor fallback from {:?} to {:?}",
@@ -254,7 +257,7 @@ impl GpuBackend {
 #[async_trait]
 impl Backend for NpuBackend {
     fn backend_type(&self) -> String {
-        "npu_ane".to_string()
+        "intel-npu-openvino".to_string()
     }
 
     fn clone_backend(&self) -> Box<dyn Backend> {

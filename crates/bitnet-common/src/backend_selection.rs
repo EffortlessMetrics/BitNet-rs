@@ -56,6 +56,14 @@ pub enum BackendRequest {
     OneApi,
     /// Require native Metal compute without assuming a specific Apple machine.
     Metal,
+    /// Require an Intel NPU identity without aliasing it to Metal or generic GPU.
+    IntelNpu,
+    /// Require an OpenVINO NPU runtime identity.
+    OpenVinoNpu,
+    /// Require the Intel Arc 140V integrated GPU identity.
+    IntelArc140v,
+    /// Require Intel Arc 140V through OpenVINO GPU device identity.
+    IntelArc140vOpenVinoGpu,
     /// Require MPSGraph graph execution without treating it as native Metal kernels.
     MpsGraph,
     /// Require the Apple M4 native Metal lane.
@@ -77,6 +85,12 @@ impl BackendRequest {
             "hip" | "rocm" => Some(BackendRequest::Hip),
             "oneapi" => Some(BackendRequest::OneApi),
             "metal" => Some(BackendRequest::Metal),
+            "npu" | "intel-npu" => Some(BackendRequest::IntelNpu),
+            "openvino-npu" => Some(BackendRequest::OpenVinoNpu),
+            "intel-arc-140v" | "arc-140v" => Some(BackendRequest::IntelArc140v),
+            "intel-arc-140v-openvino-gpu" | "openvino-gpu" | "gpu.0" => {
+                Some(BackendRequest::IntelArc140vOpenVinoGpu)
+            }
             "mpsgraph" => Some(BackendRequest::MpsGraph),
             "apple-m4-metal" => Some(BackendRequest::AppleM4Metal),
             "apple-m4-mpsgraph" => Some(BackendRequest::AppleM4MpsGraph),
@@ -96,6 +110,10 @@ impl fmt::Display for BackendRequest {
             BackendRequest::Hip => write!(f, "hip"),
             BackendRequest::OneApi => write!(f, "oneapi"),
             BackendRequest::Metal => write!(f, "metal"),
+            BackendRequest::IntelNpu => write!(f, "intel-npu"),
+            BackendRequest::OpenVinoNpu => write!(f, "openvino-npu"),
+            BackendRequest::IntelArc140v => write!(f, "intel-arc-140v"),
+            BackendRequest::IntelArc140vOpenVinoGpu => write!(f, "intel-arc-140v-openvino-gpu"),
             BackendRequest::MpsGraph => write!(f, "mpsgraph"),
             BackendRequest::AppleM4Metal => write!(f, "apple-m4-metal"),
             BackendRequest::AppleM4MpsGraph => write!(f, "apple-m4-mpsgraph"),
@@ -155,6 +173,9 @@ impl BackendSelectionResult {
             "opencl" => "opencl",
             "apple-m4-metal" | "metal" => "metal",
             "apple-m4-mpsgraph" | "mpsgraph" => "mpsgraph",
+            "intel-npu" | "openvino-npu" => "openvino-npu",
+            "intel-arc-140v-openvino-gpu" => "openvino-gpu",
+            "intel-arc-140v" => "opencl",
             _ => "cpu",
         }
     }
@@ -169,6 +190,10 @@ impl BackendSelectionResult {
             BackendRequest::Hip => self.selected != KernelBackend::Hip,
             BackendRequest::OneApi => self.selected != KernelBackend::OneApi,
             BackendRequest::Metal
+            | BackendRequest::IntelNpu
+            | BackendRequest::OpenVinoNpu
+            | BackendRequest::IntelArc140v
+            | BackendRequest::IntelArc140vOpenVinoGpu
             | BackendRequest::MpsGraph
             | BackendRequest::AppleM4Metal
             | BackendRequest::AppleM4MpsGraph
@@ -280,7 +305,12 @@ pub fn select_backend(
                 });
             }
         }
-        BackendRequest::Metal | BackendRequest::AppleM4Metal => {
+        BackendRequest::Metal
+        | BackendRequest::IntelNpu
+        | BackendRequest::OpenVinoNpu
+        | BackendRequest::IntelArc140v
+        | BackendRequest::IntelArc140vOpenVinoGpu
+        | BackendRequest::AppleM4Metal => {
             return Err(BackendSelectionError::RequestedUnavailable {
                 requested: request,
                 available: detected.clone(),
@@ -466,6 +496,16 @@ mod tests {
             BackendRequest::from_label("apple-m4-cpu-neon"),
             Some(BackendRequest::AppleM4CpuNeon)
         );
+        assert_eq!(BackendRequest::from_label("npu"), Some(BackendRequest::IntelNpu));
+        assert_eq!(BackendRequest::from_label("openvino-npu"), Some(BackendRequest::OpenVinoNpu));
+        assert_eq!(
+            BackendRequest::from_label("intel-arc-140v"),
+            Some(BackendRequest::IntelArc140v)
+        );
+        assert_eq!(
+            BackendRequest::from_label("openvino-gpu"),
+            Some(BackendRequest::IntelArc140vOpenVinoGpu)
+        );
     }
 
     #[test]
@@ -473,6 +513,20 @@ mod tests {
         let err = select_backend(BackendRequest::AppleM4Metal, &cpu_only_caps()).unwrap_err();
         assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
         assert!(err.to_string().contains("apple-m4-metal"));
+    }
+
+    #[test]
+    fn intel_npu_and_arc_requests_are_strict_identity_surfaces() {
+        for request in [
+            BackendRequest::IntelNpu,
+            BackendRequest::OpenVinoNpu,
+            BackendRequest::IntelArc140v,
+            BackendRequest::IntelArc140vOpenVinoGpu,
+        ] {
+            let err = select_backend(request, &cpu_only_caps()).unwrap_err();
+            assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+            assert!(err.to_string().contains(&request.to_string()));
+        }
     }
 
     #[test]
