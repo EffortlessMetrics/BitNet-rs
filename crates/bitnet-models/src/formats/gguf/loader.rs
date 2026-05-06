@@ -8,6 +8,7 @@ use crate::{BitNetModel, Model};
 use bitnet_common::{
     BitNetConfig, BitNetError, CorrectionRecord, Device, ModelError, ModelMetadata, Result,
 };
+use bitnet_layer_index_core::extract_structured_layer_index_segment;
 use candle_core::{DType, Tensor};
 use std::path::Path;
 use tracing::{debug, info};
@@ -170,29 +171,7 @@ impl GgufLoader {
 
     /// Extract layer number from tensor name patterns like "blk.N." or "layers.N."
     fn extract_layer_number(name: &str) -> Option<usize> {
-        // Check for "blk.N." pattern
-        if let Some(start) = name.find("blk.") {
-            let after_blk = &name[start + 4..];
-            if let Some(dot_pos) = after_blk.find('.') {
-                let number_str = &after_blk[..dot_pos];
-                if let Ok(layer_num) = number_str.parse::<usize>() {
-                    return Some(layer_num);
-                }
-            }
-        }
-
-        // Check for "layers.N." pattern
-        if let Some(start) = name.find("layers.") {
-            let after_layers = &name[start + 7..];
-            if let Some(dot_pos) = after_layers.find('.') {
-                let number_str = &after_layers[..dot_pos];
-                if let Ok(layer_num) = number_str.parse::<usize>() {
-                    return Some(layer_num);
-                }
-            }
-        }
-
-        None
+        extract_structured_layer_index_segment(name)
     }
 
     /// Infer number of KV heads from tensor shapes (for models without explicit metadata)
