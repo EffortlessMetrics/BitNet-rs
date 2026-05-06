@@ -25,6 +25,7 @@
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-npu | NPU-003 | NPU-002 | pr_open |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
-| nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | pr_open |
+| nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
+| nvidia-5070ti | RTX5070TI-006 | RTX5070TI-005 | ready |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |
