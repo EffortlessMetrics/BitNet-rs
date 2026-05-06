@@ -1,11 +1,12 @@
 ---
 source: crates/bitnet-sampling/tests/snapshot_wave12.rs
+assertion_line: 140
 expression: logits
 ---
 [
     1.0,
     0.15026294,
     3.0,
-    2.909091,
+    2.9090908,
     5.0,
 ]
