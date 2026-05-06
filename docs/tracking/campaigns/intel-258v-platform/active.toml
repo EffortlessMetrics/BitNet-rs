@@ -65,7 +65,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "ARC140V-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/intel-arc/ARC140V-002-runtime-probe"
 stackable = false
 requires_human_merge = true
