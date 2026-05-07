@@ -10,6 +10,7 @@ description = "Shared test infrastructure for BitNet-rs: EnvGuard/EnvScope, mode
 publish = true
 
 [dependencies]
+anyhow.workspace = true
 bitnet-test-env.workspace = true
 
 [dev-dependencies]
