@@ -67,7 +67,7 @@
 | nvidia-5070ti | CUDA-BITNET-008 | CUDA-BITNET-007 | merged |
 | nvidia-5070ti | CUDA-BITNET-009 | CUDA-BITNET-008 | merged |
 | nvidia-5070ti | CUDA-DENSE-001 | RTX5070TI-007 | proposed |
-| slm-cpu | SLM-CPU-001 | SLM-CPU-000 | in_progress |
+| slm-cpu | SLM-CPU-001 | SLM-CPU-000 | pr_open |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | proposed |
 | slm-cpu | SLM-CPU-003 | SLM-CPU-002 | proposed |
 | slm-cpu | SLM-CPU-004 | SLM-CPU-003 | proposed |
