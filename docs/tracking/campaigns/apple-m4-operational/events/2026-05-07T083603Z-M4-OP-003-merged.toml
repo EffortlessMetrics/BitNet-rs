@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T08:36:03Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-003"
+event = "merged"
+pr = 3857
+merge_sha = "01e4e92cce04e87747b6c81a60efd9e132eb487a"
+actor = "codex"
+
+notes = [
+  "M4-OP-003 merged with the Apple M4 operator runbook.",
+  "The runbook documents model placement, validation commands, receipt-bundle checking, expected receipt files, backend labels, failure modes, artifact hygiene, and unsupported claims.",
+  "M4-OP-005 is promoted to ready for conservative benchmark profile summary validation.",
+]

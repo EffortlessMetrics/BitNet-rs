@@ -102,8 +102,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-003"
-status = "pr_open"
+status = "merged"
 pr = 3857
+merge_sha = "01e4e92cce04e87747b6c81a60efd9e132eb487a"
 branch = "codex/apple-m4-operational/M4-OP-003-operator-runbook"
 stackable = true
 review_mode = "codex_premerge"
@@ -176,7 +177,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-005"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-operational/M4-OP-005-benchmark-profile-summary"
 stackable = false
 review_mode = "codex_premerge"
