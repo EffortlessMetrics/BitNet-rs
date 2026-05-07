@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T05:44:22Z"
+campaign = "intel-npu"
+item = "NPU-004"
+event = "merged"
+pr = 3830
+merge_sha = "9ae037bad83ee9c1320689fc931932862a213c6b"
+actor = "maintainer"
+
+notes = [
+  "Intel NPU runtime visibility probe command merged.",
+  "The command emits machine-readable visibility receipts only; graph execution, BitNet inference, and NPU acceleration remain follow-up work.",
+]
