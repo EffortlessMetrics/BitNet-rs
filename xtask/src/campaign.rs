@@ -16,8 +16,13 @@ const WORK_ITEM_STATUSES: &[&str] =
 const CAMPAIGN_STATUSES: &[&str] = &["proposed", "active", "blocked", "complete", "archived"];
 const EVENT_TYPES: &[&str] =
     &["in_progress", "pr_open", "blocked", "superseded", "merged", "closeout"];
+const REVIEW_MODES: &[&str] = &["codex_premerge", "human_required", "external_required", "none"];
+const MERGE_POLICIES: &[&str] =
+    &["automerge_when_green", "codex_merge_when_green", "manual_only", "no_merge"];
+const HUMAN_GATES: &[&str] = &["never", "on_blocker_only", "before_merge", "always"];
 const REQUIRED_CAMPAIGNS: &[&str] = &[
     "apple-m4",
+    "apple-m4-operational",
     "cpu-proof",
     "cpu-qk256-performance",
     "intel-a770",
@@ -87,6 +92,12 @@ struct WorkItem {
     stackable: Option<bool>,
     #[serde(default)]
     requires_human_merge: Option<bool>,
+    #[serde(default)]
+    review_mode: Option<String>,
+    #[serde(default)]
+    merge_policy: Option<String>,
+    #[serde(default)]
+    human_gate: Option<String>,
     #[serde(default)]
     blocked_by: Vec<String>,
     #[serde(default)]
@@ -255,6 +266,9 @@ fn cmd_next(root: &Path, campaign_id: &str) -> Result<()> {
             println!("next_item: {}", item.id);
             println!("status: {}", item.status);
             println!("branch: {}", item.branch);
+            println!("review_mode: {}", item.review_mode.as_deref().unwrap_or("<missing>"));
+            println!("merge_policy: {}", item.merge_policy.as_deref().unwrap_or("<missing>"));
+            println!("human_gate: {}", item.human_gate.as_deref().unwrap_or("<missing>"));
             if let Some(acceptance) = &item.acceptance {
                 println!("acceptance: {}", acceptance.summary());
             }
@@ -493,9 +507,36 @@ fn validate_campaign(campaign: &LoadedCampaign) -> Vec<Problem> {
         if item.stackable.is_none() {
             problems.push(Problem::warning(format!("item `{}` does not set stackable", item.id)));
         }
-        if item.requires_human_merge.is_none() {
-            problems.push(Problem::warning(format!(
-                "item `{}` does not set requires_human_merge",
+        if item.requires_human_merge.is_some() {
+            problems.push(Problem::error(format!(
+                "item `{}` uses deprecated requires_human_merge; use review_mode, merge_policy, and human_gate",
+                item.id
+            )));
+        }
+        validate_enum_field(
+            &mut problems,
+            &item.id,
+            "review_mode",
+            item.review_mode.as_deref(),
+            REVIEW_MODES,
+        );
+        validate_enum_field(
+            &mut problems,
+            &item.id,
+            "merge_policy",
+            item.merge_policy.as_deref(),
+            MERGE_POLICIES,
+        );
+        validate_enum_field(
+            &mut problems,
+            &item.id,
+            "human_gate",
+            item.human_gate.as_deref(),
+            HUMAN_GATES,
+        );
+        if item.merge_policy.as_deref() == Some("no_merge") && item.status == "merged" {
+            problems.push(Problem::error(format!(
+                "item `{}` is merged but has merge_policy=no_merge",
                 item.id
             )));
         }
@@ -617,6 +658,23 @@ fn item_map(manifest: &CampaignManifest) -> BTreeMap<&str, &WorkItem> {
     manifest.work_items.iter().map(|item| (item.id.as_str(), item)).collect()
 }
 
+fn validate_enum_field(
+    problems: &mut Vec<Problem>,
+    item_id: &str,
+    field: &str,
+    value: Option<&str>,
+    allowed: &[&str],
+) {
+    match value.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) if allowed.contains(&value) => {}
+        Some(value) => problems.push(Problem::error(format!(
+            "item `{item_id}` has invalid {field} `{value}`; expected one of {}",
+            allowed.join(", ")
+        ))),
+        None => problems.push(Problem::error(format!("item `{item_id}` does not set {field}"))),
+    }
+}
+
 fn deps_met<'a>(item: &WorkItem, item_by_id: &BTreeMap<&'a str, &'a WorkItem>) -> bool {
     item.blocked_by
         .iter()
@@ -644,8 +702,8 @@ fn render_campaign_status(campaign: &LoadedCampaign) -> String {
     out.push_str(&format!("- State: `{}`\n", campaign.manifest.status));
     out.push_str(&format!("- Objective: {}\n\n", campaign.manifest.objective));
     out.push_str("## Work Items\n\n");
-    out.push_str("| Item | State | PR | Branch | Acceptance |\n");
-    out.push_str("|---|---|---:|---|---|\n");
+    out.push_str("| Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |\n");
+    out.push_str("|---|---|---:|---|---|---|---|---|\n");
     for item in &campaign.manifest.work_items {
         let pr = latest_pr(&campaign.events, &item.id)
             .map(|pr| format!("#{pr}"))
@@ -657,8 +715,15 @@ fn render_campaign_status(campaign: &LoadedCampaign) -> String {
             .unwrap_or_else(|| "".to_string())
             .replace('|', "\\|");
         out.push_str(&format!(
-            "| {} | {} | {} | `{}` | {} |\n",
-            item.id, item.status, pr, item.branch, acceptance
+            "| {} | {} | {} | `{}` | `{}` | `{}` | `{}` | {} |\n",
+            item.id,
+            item.status,
+            pr,
+            item.branch,
+            policy_display(item.review_mode.as_deref()),
+            policy_display(item.merge_policy.as_deref()),
+            policy_display(item.human_gate.as_deref()),
+            acceptance
         ));
     }
     out.push('\n');
@@ -667,6 +732,10 @@ fn render_campaign_status(campaign: &LoadedCampaign) -> String {
         out.push_str(&format!("- {constraint}\n"));
     }
     out
+}
+
+fn policy_display(value: Option<&str>) -> &str {
+    value.unwrap_or("<missing>")
 }
 
 fn render_global_dashboard(campaigns: &[LoadedCampaign]) -> String {
@@ -1175,7 +1244,11 @@ fn fail_on_errors(problems: &[Problem]) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_pull_request_ref;
+    use super::{
+        CampaignManifest, LoadedCampaign, Severity, TextList, WorkItem, parse_pull_request_ref,
+        validate_campaign,
+    };
+    use std::path::PathBuf;
 
     #[test]
     fn parses_github_pull_request_refs() {
@@ -1188,5 +1261,83 @@ mod tests {
     fn rejects_non_pull_request_refs() {
         assert_eq!(parse_pull_request_ref("refs/heads/main"), None);
         assert_eq!(parse_pull_request_ref(""), None);
+    }
+
+    #[test]
+    fn validates_work_item_merge_policy_fields() {
+        let campaign = policy_campaign(WorkItem {
+            id: "POLICY-001".to_string(),
+            status: "ready".to_string(),
+            branch: "codex/policy/POLICY-001".to_string(),
+            stackable: Some(false),
+            requires_human_merge: None,
+            review_mode: Some("codex_premerge".to_string()),
+            merge_policy: Some("automerge_when_green".to_string()),
+            human_gate: Some("on_blocker_only".to_string()),
+            blocked_by: Vec::new(),
+            acceptance: Some(TextList::One("Prove policy validation.".to_string())),
+            commands: vec!["cargo fmt --all -- --check".to_string()],
+            allowed_paths: vec!["docs/**".to_string()],
+            forbidden_paths: vec!["crates/**".to_string()],
+            may_claim: vec!["Policy fields are accepted.".to_string()],
+            must_not_claim: vec!["Deprecated merge field is accepted.".to_string()],
+        });
+
+        assert!(
+            validate_campaign(&campaign).iter().all(|problem| problem.severity != Severity::Error)
+        );
+    }
+
+    #[test]
+    fn rejects_deprecated_requires_human_merge() {
+        let mut item = WorkItem {
+            id: "POLICY-002".to_string(),
+            status: "ready".to_string(),
+            branch: "codex/policy/POLICY-002".to_string(),
+            stackable: Some(false),
+            requires_human_merge: Some(true),
+            review_mode: Some("codex_premerge".to_string()),
+            merge_policy: Some("automerge_when_green".to_string()),
+            human_gate: Some("on_blocker_only".to_string()),
+            blocked_by: Vec::new(),
+            acceptance: Some(TextList::One("Reject deprecated field.".to_string())),
+            commands: vec!["cargo fmt --all -- --check".to_string()],
+            allowed_paths: vec!["docs/**".to_string()],
+            forbidden_paths: vec!["crates/**".to_string()],
+            may_claim: vec!["Deprecated field is rejected.".to_string()],
+            must_not_claim: vec!["Deprecated field is accepted.".to_string()],
+        };
+        let deprecated = policy_campaign(item.clone());
+        let problems = validate_campaign(&deprecated);
+
+        assert!(problems.iter().any(|problem| {
+            problem.severity == Severity::Error
+                && problem.message.contains("deprecated requires_human_merge")
+        }));
+
+        item.requires_human_merge = None;
+        item.merge_policy = Some("ship_it".to_string());
+        let invalid_policy = policy_campaign(item);
+        let problems = validate_campaign(&invalid_policy);
+        assert!(problems.iter().any(|problem| {
+            problem.severity == Severity::Error
+                && problem.message.contains("invalid merge_policy `ship_it`")
+        }));
+    }
+
+    fn policy_campaign(item: WorkItem) -> LoadedCampaign {
+        LoadedCampaign {
+            dir: PathBuf::from("policy-campaign"),
+            manifest: CampaignManifest {
+                id: "policy-campaign".to_string(),
+                title: "Policy Campaign".to_string(),
+                status: "active".to_string(),
+                objective: "Validate campaign policy fields.".to_string(),
+                end_state: vec!["Policy validation is covered.".to_string()],
+                hard_constraints: vec!["Do not accept deprecated policy fields.".to_string()],
+                work_items: vec![item],
+            },
+            events: Vec::new(),
+        }
     }
 }

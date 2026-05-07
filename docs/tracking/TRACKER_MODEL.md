@@ -54,7 +54,9 @@ Each `[[work_item]]` in `active.toml` should include:
 - `status`
 - `branch`
 - `stackable`
-- `requires_human_merge`
+- `review_mode`
+- `merge_policy`
+- `human_gate`
 - `blocked_by`
 - `acceptance`
 - `commands`
@@ -103,10 +105,38 @@ Most runtime and hardware implementation work should set:
 
 ```toml
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 ```
 
-Docs-only scaffolding can be stackable when it does not change a lane contract or shared runtime surface. Backend identity, probe, smoke, parity, receipt, and benchmark work should generally be non-stackable.
+`stackable = false` means dependent work waits for this item to land. It does
+not mean Codex should stop before review, CI repair, auto-merge, or closeout.
+
+Allowed `review_mode` values are:
+
+- `codex_premerge`
+- `human_required`
+- `external_required`
+- `none`
+
+Allowed `merge_policy` values are:
+
+- `automerge_when_green`
+- `codex_merge_when_green`
+- `manual_only`
+- `no_merge`
+
+Allowed `human_gate` values are:
+
+- `never`
+- `on_blocker_only`
+- `before_merge`
+- `always`
+
+Docs-only scaffolding can be stackable when it does not change a lane contract
+or shared runtime surface. Backend identity, probe, smoke, parity, receipt, and
+benchmark work should generally be non-stackable.
 
 ## Transition Rules
 
