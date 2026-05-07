@@ -68,7 +68,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-ROOT-001"
-status = "pr_open"
+status = "in_progress"
 branch = "codex/apple-m4-local-answer/M4-QA-ROOT-001-bitnetcpp-parity"
 stackable = false
 review_mode = "codex_premerge"
