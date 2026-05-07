@@ -560,7 +560,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-017"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4/M4-017-metal-kernel-family-expansion"
 stackable = false
 requires_human_merge = true
