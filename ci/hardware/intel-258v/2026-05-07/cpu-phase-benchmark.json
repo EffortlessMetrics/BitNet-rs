@@ -1,0 +1,234 @@
+{
+  "artifact_kind": "cpu_benchmark",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-07/cpu-phase-benchmark.json",
+  "claim": "cpu_benchmark_receipt",
+  "claim_boundary": "Real phase profiles are measured only when backed by supplied strict CPU proof receipts; not_run profiles are explicit gaps, not performance evidence.",
+  "cpu": {
+    "arch": "x86_64",
+    "avx512": false,
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "frequency_mhz": null,
+    "model": "Intel(R) Core(TM) Ultra 7 258V",
+    "power_mode": "Balanced",
+    "temperature_c": null,
+    "threads": 8
+  },
+  "cpu258v_003_profiles": [
+    {
+      "fallback_used": false,
+      "generated_tokens": 1,
+      "median_ms": 28156.269,
+      "p95_ms": 28156.269,
+      "profile": "smoke_1",
+      "prompt_tokens": 1,
+      "purpose": "strict one-token CPU proof",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "source_profile": "first_token",
+      "status": "measured",
+      "tokens_per_second": 0.03551606926329621,
+      "wall_time_ms": 28156.269
+    },
+    {
+      "fallback_used": false,
+      "generated_tokens": 1,
+      "median_ms": 28156.269,
+      "p95_ms": 28156.269,
+      "profile": "first_token",
+      "prompt_tokens": 1,
+      "purpose": "first-token latency",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "source_profile": "first_token",
+      "status": "measured",
+      "tokens_per_second": 0.03551606926329621,
+      "wall_time_ms": 28156.269
+    },
+    {
+      "fallback_used": false,
+      "generated_tokens": 1,
+      "profile": "decode_128",
+      "prompt_tokens": 1,
+      "purpose": "steady decode over 128 generated tokens",
+      "reason": "supplied strict CPU proof generated fewer than 128 tokens or did not measure steady-state decode",
+      "source_profile": "decode",
+      "status": "not_run"
+    },
+    {
+      "fallback_used": false,
+      "generated_tokens": 1,
+      "profile": "prefill_512",
+      "prompt_tokens": 1,
+      "purpose": "prefill over 512 prompt tokens",
+      "reason": "supplied strict CPU proof did not measure a 512-token prefill",
+      "source_profile": "prefill",
+      "status": "not_run"
+    }
+  ],
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "intel-258v-cpu-avx2",
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "oracle_kernel": "qk256-scalar-gemv",
+    "requested_kernel": "i2_s-avx2-reference",
+    "selected_kernel": "i2_s-avx2-reference"
+  },
+  "machine_id": "intel-258v",
+  "model": {
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "quant_format": "QK256/I2_S",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "platform_context": {
+    "artifact_path": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
+    "cpu": {
+      "avx2_detected": true,
+      "avx512_detected": false,
+      "cores": 8,
+      "fma_detected": true,
+      "lp_e_core_count": 4,
+      "model": "Intel(R) Core(TM) Ultra 7 258V",
+      "p_core_count": 4,
+      "scheduler_hint": "Lunar Lake validation should record P-core / low-power E-core and power context before benchmark claims.",
+      "threads": 8
+    },
+    "machine_id": "intel-258v",
+    "memory": {
+      "kind": "shared LPDDR-class system memory",
+      "reported_modules": 8,
+      "reported_speed_mt_s": 8533,
+      "shared_memory": true,
+      "total_bytes": 33873780736
+    },
+    "os": {
+      "arch": "x86_64",
+      "name": "Microsoft Windows 11 Home",
+      "native_or_virtualized": "native",
+      "version": "10.0.26200"
+    },
+    "power": {
+      "mode": "Balanced",
+      "sustained_run": false,
+      "thermal_profile": null
+    },
+    "proof_stage": "detected",
+    "status": "partial_platform_detected"
+  },
+  "profile_order": [
+    "micro",
+    "layer",
+    "prefill",
+    "first_token",
+    "decode"
+  ],
+  "profiles": [
+    {
+      "execution_phase": "micro_kernel",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "profile": "micro",
+      "reason": "micro is covered by canonical QK256 synthetic benchmark receipts, not this real phase receipt surface",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 1,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "not_run"
+    },
+    {
+      "execution_phase": "layer_forward",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "profile": "layer",
+      "reason": "layer phase harness is not yet wired to a real transformer block benchmark receipt",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 1,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "not_run"
+    },
+    {
+      "execution_phase": "prefill",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "profile": "prefill",
+      "reason": "no supplied strict CPU proof receipt measured prefill",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 1,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "not_run"
+    },
+    {
+      "bandwidth_gbps": 0.0,
+      "execution_phase": "first_token",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "median_ms": 28156.269,
+      "p95_ms": 28156.269,
+      "profile": "first_token",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 4096,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "measured",
+      "tokens_per_second": 0.03551606926329621,
+      "wall_time_ms": 28156.269
+    },
+    {
+      "execution_phase": "decode_steady_state",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "profile": "decode",
+      "reason": "no supplied strict CPU proof receipt measured steady-state decode with more than one generated token",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 1,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "not_run"
+    }
+  ],
+  "receipt_inputs": [
+    "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json"
+  ],
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema": 1,
+  "selected_backend": "cpu-rust",
+  "speedup_claim": false,
+  "timestamp_utc": "2026-05-07T22:26:27Z",
+  "tokenizer": {
+    "source": "explicit",
+    "strict": true
+  },
+  "workload": {
+    "batch_size": 1,
+    "generated_tokens": 1,
+    "prompt_tokens": 1
+  }
+}

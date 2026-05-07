@@ -171,6 +171,40 @@ it writes `proof_stage=blocked_preflight` with a structured blocker. It does not
 load BitNet tensors, run QK256/TL2 kernels, decode tokens, or make benchmark
 claims.
 
+### CPU Phase Benchmark Receipt
+
+Use the CPU phase benchmark receipt emitter to turn strict CPU proof receipts
+into phase-aware 258V CPU artifacts:
+
+```bash
+cargo run --locked -p bitnet-bench-receipts \
+  --bin cpu_phase_benchmark_receipt \
+  --no-default-features \
+  -- \
+  --strict-proof-receipt ci/hardware/intel-258v/YYYY-MM-DD/strict-bitnet-cpu-proof.json \
+  --machine-id intel-258v \
+  --hardware-lane intel-258v-cpu-avx2 \
+  --selected-backend cpu-rust \
+  --model-quant-format QK256/I2_S \
+  --platform-artifact ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json \
+  --receipt-out ci/hardware/intel-258v/YYYY-MM-DD/cpu-phase-benchmark.json
+```
+
+The first 258V phase receipt is:
+
+```text
+ci/hardware/intel-258v/2026-05-07/cpu-phase-benchmark.json
+```
+
+It records the available first-token strict CPU timing, selected backend/kernel,
+fallback status, CPU feature set, 4 P-core / 4 low-power E-core topology,
+shared LPDDR memory context, and Balanced power mode. Profiles that are not
+backed by a supplied strict CPU proof remain explicit `not_run` gaps. This is a
+phase receipt, not a sustained throughput claim and not an Arc 140V or Intel
+NPU performance comparison. The CPU258V-003 profile summary records `smoke_1`
+and `first_token` from the one-token proof and keeps `decode_128` and
+`prefill_512` as explicit `not_run` gaps until matching strict proofs exist.
+
 ## Windows PowerShell Bundle
 
 ```powershell
