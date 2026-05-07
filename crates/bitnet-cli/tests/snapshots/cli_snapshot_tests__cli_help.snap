@@ -44,6 +44,7 @@ Usage: bitnet [OPTIONS] [COMMAND]
 
 Commands:
   run                 Run simple text generation
+  ask                 Ask one question using the answer-readiness generation path
   tokenize            Tokenize text and output token IDs as JSON
   score               Calculate perplexity score for a model
   inference           Run inference on a model
