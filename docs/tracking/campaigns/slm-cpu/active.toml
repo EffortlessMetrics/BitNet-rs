@@ -244,6 +244,7 @@ allowed_paths = [
   "crates/bitnet-transformer/**",
   "crates/bitnet-inference/**",
   "crates/bitnet-receipts/**",
+  "xtask/src/campaign.rs",
   "ci/slm-cpu/**",
   "docs/slm/**",
   "docs/tracking/campaigns/slm-cpu/**",
