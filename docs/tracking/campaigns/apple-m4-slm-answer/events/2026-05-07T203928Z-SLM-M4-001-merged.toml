@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T20:39:28Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-001"
+event = "merged"
+pr = 3925
+merge_sha = "b3b53721669c7d13bcc6c45414fd2dc3d4fa06d0"
+actor = "codex"
+
+notes = [
+  "Seeded the Apple M4 SLM answer campaign and storage policy.",
+  "No model binaries, runtime code, QK256, Metal kernels, MPSGraph, Neural Engine, server inference, or performance claims were included.",
+]
