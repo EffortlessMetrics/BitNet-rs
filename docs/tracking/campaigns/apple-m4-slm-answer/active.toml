@@ -72,7 +72,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-slm-answer/SLM-M4-002-validate-artifact"
 stackable = false
 review_mode = "codex_premerge"
@@ -117,7 +117,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-003"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-answer/SLM-M4-003-rust-cli-answer"
 stackable = false
 review_mode = "codex_premerge"
