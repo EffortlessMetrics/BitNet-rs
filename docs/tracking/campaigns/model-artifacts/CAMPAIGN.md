@@ -36,7 +36,7 @@ GGUF that only proves structural validity or backend execution.
 |---|---|---|
 | MODEL-ARTIFACT-001 | merged | Shared answer-artifact gate merged in #3922; the current Microsoft BitNet I2_S GGUF is rejected for coherent local-answer claims. |
 | MODEL-ARTIFACT-002 | blocked | Shared search merged in #3928 and records no `answer_ready` BitNet artifact. Backend local-answer lanes remain blocked or diagnostic-only until a future artifact passes the reference prompt suite. |
-| MODEL-ARTIFACT-003 | PR open | PR #3932 records latest stock llama.cpp reference-runner compatibility for official-derived candidates. This is diagnostic-only and does not unblock backend answer claims. |
+| MODEL-ARTIFACT-003 | merged | PR #3932 records latest stock llama.cpp reference-runner compatibility for official-derived candidates. This is diagnostic-only and does not unblock backend answer claims. |
 
 ## Review Policy
 

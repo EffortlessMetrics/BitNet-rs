@@ -64,7 +64,7 @@
 | intel-npu | NPU-007 | NPU-006 | merged |
 | intel-npu | NPU-006 | NPU-005 | merged |
 | model-artifacts | MODEL-ARTIFACT-002 | MODEL-ARTIFACT-001 | blocked |
-| model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | pr_open |
+| model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | merged |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
 | nvidia-5070ti | RTX5070TI-006 | RTX5070TI-005 | merged |
