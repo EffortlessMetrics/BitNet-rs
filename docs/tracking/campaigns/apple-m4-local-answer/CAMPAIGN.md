@@ -14,6 +14,11 @@ The `apple-m4` proof campaign and `apple-m4-operational` campaign are complete. 
 
 This campaign starts the selected next frontier: CPU/NEON local-answer usability first. Metal subgraph expansion comes after the CPU/NEON answer path is quality-gated, and Apple QK256 investigation remains last.
 
+The model-artifact blocker discovered here is shared, not Apple-only. Coherent
+local-answer claims require an `answer_ready` artifact under
+`docs/model-artifacts/ANSWER_ARTIFACT_GATE.md`; until then, Apple CPU/NEON runs
+against rejected artifacts remain diagnostic-only.
+
 ## End State
 
 - `apple-m4-cpu-neon` can run a supported real GGUF with real tokenizer and strict loader for multi-token local answers.
@@ -47,7 +52,7 @@ This campaign starts the selected next frontier: CPU/NEON local-answer usability
 |---|---|---|
 | M4-QA-ROOT-001 | merged | Evidence shows the current local GGUF also garbles under the reference runner; model artifact validation is now the blocker. |
 | M4-QA-MODEL-001 | in_progress | Validate the current supported local-answer model artifact and reject it for answer-quality use if reference output remains non-coherent. |
-| M4-QA-MODEL-002 | proposed | Acquire or regenerate a known-good supported artifact before local-answer smoke coverage can claim coherent output. |
+| M4-QA-MODEL-002 | blocked | Acquire or regenerate a known-good supported artifact before local-answer smoke coverage can claim coherent output; shared successor is `MODEL-ARTIFACT-002`. |
 | M4-QA-001 | blocked | Add multi-prompt CPU/NEON local-answer smoke suite; blocked until the supported model artifact is reference-validated for coherent short answers. |
 | M4-QA-002 | proposed | Add greedy determinism checks for local answers. |
 | M4-QA-003 | proposed | Harden local-answer receipt quality fields. |

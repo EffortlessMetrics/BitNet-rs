@@ -42,7 +42,7 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-BITNET-008 | merged | CPU phase benchmark receipt profiles merged in #3856. |
 | CPU-PHASE-TIMING-001 | merged | Tightened Kaby phase timing receipt extraction in #3872 while leaving micro/layer gaps explicit. |
 | CPU-ANSWER-001 | merged | Strict CPU answer-readiness gates merged in #3898. |
-| CPU-ANSWER-002 | merged | Scalar-vs-AVX2 full-decode answer parity merged in #3906, with the 258V CPU as the lead BitNet CPU reference machine. |
+| CPU-ANSWER-002 | merged | Scalar-vs-AVX2 full-decode answer parity merged in #3906, with the 258V CPU as the lead BitNet CPU reference machine. Runs against a rejected answer artifact are diagnostic-only until `MODEL-ARTIFACT-002` provides an `answer_ready` artifact. |
 
 ## Review Policy
 

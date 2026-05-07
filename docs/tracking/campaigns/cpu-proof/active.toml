@@ -17,6 +17,7 @@ hard_constraints = [
   "258V CPU is the lead BitNet CPU reference; no GPU or NPU claims.",
   "No GPU or NPU claims.",
   "No silent GGUF fallback.",
+  "No coherent local-answer claim from an artifact that is not answer_ready under docs/model-artifacts/ANSWER_ARTIFACT_GATE.md.",
   "No performance claim without receipt artifacts.",
   "No helper-only SIMD work unless it is wired to real inference or explicitly scoped as preparation.",
 ]
@@ -532,7 +533,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["CPU-ANSWER-001"]
-acceptance = "Strict CPU answer runs can compare scalar and AVX2 full-decode outputs for the same real GGUF, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs, decoded text, and per-step logits/top-k evidence so AVX2 divergence is separated from shared decode correctness; the 258V CPU is the lead machine for new BitNet CPU answer parity artifacts."
+acceptance = "Strict CPU answer runs can compare scalar and AVX2 full-decode outputs for the same real GGUF, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs, decoded text, and per-step logits/top-k evidence so AVX2 divergence is separated from shared decode correctness; the 258V CPU is the lead machine for new BitNet CPU answer parity artifacts; runs against a non-answer-ready artifact are diagnostic-only."
 commands = [
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
   "cargo test --locked -p bitnet-inference --no-default-features --features cpu",

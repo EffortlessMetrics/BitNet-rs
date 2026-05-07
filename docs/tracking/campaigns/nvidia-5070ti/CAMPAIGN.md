@@ -80,6 +80,12 @@ next productization track is defined in
 quality, prompt template authority, real prompt prefill, and a normal
 `bitnet ask` command before adding strict RTX 5070 Ti CUDA answer receipts.
 
+Coherent CUDA answer claims also require a shared answer-ready model artifact.
+Use `docs/model-artifacts/ANSWER_ARTIFACT_GATE.md` and
+`ci/model-artifacts/artifact-manifest.toml` as the cross-lane precondition. A
+strict CUDA receipt against a rejected artifact may prove execution, but it must
+remain `diagnostic_only` for answer quality.
+
 Answer receipts must keep the completed proof invariants intact:
 
 - selected backend: `nvidia-rtx-5070-ti-cuda`

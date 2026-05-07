@@ -1,0 +1,44 @@
+schema = 1
+artifact_kind = "model_answer_rejected_artifacts"
+updated = "2026-05-07"
+
+[[artifact]]
+id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
+state = "rejected_prompt_suite_failed"
+status = "rejected_for_answer_readiness"
+repo = "microsoft/bitnet-b1.58-2B-4T-gguf"
+repo_revision = "a1f2f1c765812aa8af3f6eda4a313707064bba15"
+file = "ggml-model-i2_s.gguf"
+local_path = "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
+sha256 = "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+bytes = 1187801280
+format = "gguf"
+architecture = "bitnet-b1.58"
+quantization = "i2_s"
+structural_status = "valid_gguf"
+tokenizer_authority = "missing_pretokenizer_authority"
+answer_quality_status = "failed_reference_prompt_suite"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_runner_mode = "cpu, greedy temperature 0.0, deterministic short prompt suite"
+metadata_warning = "llm_load_vocab: missing pre-tokenizer type, using: 'default'"
+legacy_evidence = "ci/quality/apple-m4-local-answer-model-artifacts.toml"
+rejection_reason = "The artifact is structurally valid but lacks tokenizer pre-tokenizer metadata and fails all three local-answer prompt-suite gates under the reference runner."
+claim_boundary = "May be used for diagnostic-only receipts; must not be used for coherent local-answer claims."
+
+  [[artifact.prompt_result]]
+  id = "math_sentence"
+  expected = "contains 4 or four"
+  continuation = "rewardededvest ************************************************************************ makeover glide answered bioned transitions byteesuitonet worse tit"
+  quality_pass = false
+
+  [[artifact.prompt_result]]
+  id = "capital_france_sentence"
+  expected = "contains Paris"
+  continuation = "FPDMAkara SAYmos small gy band adopt[emoji] standing direct passaidu markedifu"
+  quality_pass = false
+
+  [[artifact.prompt_result]]
+  id = "rust_sentence"
+  expected = "contains Rust or programming-language terms"
+  continuation = "v start,onlinecons f front make HQ [invalid-byte] alone bidsredo earned fractionsla"
+  quality_pass = false

@@ -61,6 +61,11 @@ quality gate. A short proof decode whose output is valid CUDA evidence can still
 fail answer readiness if it has no real prompt prefill, emits raw special
 tokens, produces mostly punctuation, or returns unintelligible text.
 
+Answer readiness also depends on the shared model-artifact gate in
+`docs/model-artifacts/ANSWER_ARTIFACT_GATE.md`. A structurally valid GGUF or
+receipt-backed backend execution path is not enough for coherent-answer claims
+unless the model artifact is `answer_ready` under that gate.
+
 ## Non-Goals
 
 - Do not make dense regular-LLM CUDA work satisfy this contract.
@@ -70,6 +75,12 @@ tokens, produces mostly punctuation, or returns unintelligible text.
 - Do not mutate the existing proof commands just to hide product gaps.
 
 ## CPU-First Rule
+
+Before CPU or CUDA answer quality is debugged as a backend issue, the model
+artifact must be answer-capable under the shared gate. If a reference runner
+also produces non-coherent output for the same artifact and prompt suite, CPU
+and CUDA runs against that artifact are diagnostic-only and should classify the
+failure as `model_artifact_blocked`.
 
 Before CUDA answer quality is debugged, the CPU reference path must answer the
 same prompt corpus with the official GGUF, strict loader, and explicit tokenizer.
@@ -101,7 +112,12 @@ CPU baseline acceptance:
 
 The answer path for the official BitNet GGUF must use an explicit Llama 3 chat
 template unless a future receipt records a different authoritative model
-template. The prompt envelope must control:
+template. The model-artifact gate is the authority for changing that template:
+if GGUF metadata, reference-runner evidence, or tokenizer metadata contradicts
+the Llama 3 assumption, a new answer-ready artifact record must capture the
+accepted template family before the CUDA answer lane can claim coherent output.
+
+The prompt envelope must control:
 
 - BOS handling.
 - `<|begin_of_text|>`.

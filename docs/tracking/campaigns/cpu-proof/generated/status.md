@@ -22,12 +22,13 @@
 | CPU-BITNET-008 | merged | #3856 | `codex/cpu-bitnet-008-phase-benchmark-receipts` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | CPU proof benchmark profiles emit receipt-backed micro, layer, prefill, first-token, and decode measurements with selected backend/kernel, fallback status, workload shape, model identity, quant format, prompt/generated token counts, and hardware context. |
 | CPU-PHASE-TIMING-001 | merged | #3872 | `codex/cpu-bitnet-008-phase-timing-followup` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | CPU phase benchmark receipt generation prefers strict prompt-prefill, first-token decode, and steady-decode timing fields when present; regenerated Kaby Lake evidence records prefill, first_token, and decode as measured from strict proof timing while micro and layer remain explicit not_run gaps. |
 | CPU-ANSWER-001 | merged | #3898 | `codex/cpu-answer-001-strict-answer-readiness` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Strict real-model CPU runs prove answer readiness on a tiny deterministic corpus by recording prompt token IDs, generated token IDs, decoded text, selected backend/kernel, fallback=false, and pass/fail answer quality; scalar and AVX2 full-decode runs can be compared before blaming the AVX2 lane. |
-| CPU-ANSWER-002 | merged | #3906 | `codex/cpu-answer-002-full-decode-parity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Strict CPU answer runs can compare scalar and AVX2 full-decode outputs for the same real GGUF, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs, decoded text, and per-step logits/top-k evidence so AVX2 divergence is separated from shared decode correctness; the 258V CPU is the lead machine for new BitNet CPU answer parity artifacts. |
+| CPU-ANSWER-002 | merged | #3906 | `codex/cpu-answer-002-full-decode-parity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Strict CPU answer runs can compare scalar and AVX2 full-decode outputs for the same real GGUF, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs, decoded text, and per-step logits/top-k evidence so AVX2 divergence is separated from shared decode correctness; the 258V CPU is the lead machine for new BitNet CPU answer parity artifacts; runs against a non-answer-ready artifact are diagnostic-only. |
 
 ## Hard Constraints
 
 - 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims.
 - No GPU or NPU claims.
 - No silent GGUF fallback.
+- No coherent local-answer claim from an artifact that is not answer_ready under docs/model-artifacts/ANSWER_ARTIFACT_GATE.md.
 - No performance claim without receipt artifacts.
 - No helper-only SIMD work unless it is wired to real inference or explicitly scoped as preparation.
