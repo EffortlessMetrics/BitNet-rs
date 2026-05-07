@@ -82,6 +82,20 @@ fn test_load_config_defaults() {
 }
 
 #[test]
+fn dense_qwen_loader_accepts_qwen2_and_qwen3_architectures() {
+    let loader = ModelLoader::new(Device::Cpu);
+
+    for architecture in ["qwen2", "qwen2.5", "qwen3"] {
+        assert!(loader.is_supported_architecture(architecture), "{architecture} should load");
+    }
+
+    assert!(
+        !loader.is_supported_architecture("qwen35"),
+        "qwen35 hybrid models stay outside the dense SLM lane"
+    );
+}
+
+#[test]
 fn test_mmap_file() {
     let mut temp_file = NamedTempFile::new().unwrap();
     let test_data = b"Hello, World!";
