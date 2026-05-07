@@ -1149,6 +1149,27 @@ fn build_intel_npu_probe_receipt(
     timestamp_utc: String,
     artifact_path: Option<String>,
 ) -> serde_json::Value {
+    let backend_runtime = serde_json::json!({
+        "name": "openvino",
+        "version": probe.openvino_version.clone(),
+        "device": probe.runtime_device.clone(),
+        "device_name": probe.openvino_npu_full_name.clone(),
+        "driver_version": probe.driver_version.clone(),
+        "compiler_version": probe.compiler_version.clone(),
+        "max_tiles": probe.max_tiles,
+    });
+    let shape_contract = serde_json::json!({
+        "shape_mode": "static",
+        "input_shape": null,
+        "output_shape": null,
+        "note": "runtime_probe_only_no_graph_compiled",
+    });
+    let fallback_policy = serde_json::json!({
+        "fallback_used": probe.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cpu_fallback_allowed": false,
+    });
     let claim = if probe.openvino_npu_visible {
         "openvino_npu_runtime_visibility_recorded"
     } else if probe.available {
@@ -1176,14 +1197,18 @@ fn build_intel_npu_probe_receipt(
         "selected_backend": probe.selected_backend.clone(),
         "runtime_api": probe.runtime_api.clone(),
         "runtime_device": probe.runtime_device.clone(),
+        "backend_runtime": backend_runtime,
+        "shape_contract": shape_contract,
         "shape_mode": "static",
         "strict_mode": strict,
         "fallback_used": probe.fallback_used,
         "fallback_backend": null,
         "fallback_reason": null,
+        "fallback_policy": fallback_policy,
         "kernel_execution": false,
         "graph_execution": false,
         "bitnet_inference": false,
+        "kernels_or_graphs": [],
         "npu": probe,
         "claim": claim,
         "must_not_claim": [
@@ -1227,6 +1252,26 @@ fn build_intel_npu_smoke_receipt(
         smoke.selected_backend.clone().or_else(|| probe.selected_backend.clone());
     let runtime_api = smoke.runtime_api.clone().or_else(|| probe.runtime_api.clone());
     let runtime_device = smoke.runtime_device.clone().or_else(|| probe.runtime_device.clone());
+    let backend_runtime = serde_json::json!({
+        "name": "openvino",
+        "version": smoke.openvino_version.clone().or_else(|| probe.openvino_version.clone()),
+        "device": runtime_device.clone(),
+        "device_name": probe.openvino_npu_full_name.clone(),
+        "driver_version": probe.driver_version.clone(),
+        "compiler_version": probe.compiler_version.clone(),
+        "max_tiles": probe.max_tiles,
+    });
+    let shape_contract = serde_json::json!({
+        "shape_mode": smoke.shape_mode.clone(),
+        "input_shape": smoke.input_shape.clone(),
+        "output_shape": smoke.output_shape.clone(),
+    });
+    let fallback_policy = serde_json::json!({
+        "fallback_used": smoke.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cpu_fallback_allowed": smoke.cpu_fallback_allowed,
+    });
     let error = if strict && !smoke.passed {
         Some(
             smoke
@@ -1258,11 +1303,14 @@ fn build_intel_npu_smoke_receipt(
         "selected_backend": selected_backend,
         "runtime_api": runtime_api,
         "runtime_device": runtime_device,
+        "backend_runtime": backend_runtime,
+        "shape_contract": shape_contract,
         "shape_mode": smoke.shape_mode.clone(),
         "strict_mode": strict,
         "fallback_used": smoke.fallback_used,
         "fallback_backend": null,
         "fallback_reason": null,
+        "fallback_policy": fallback_policy,
         "cpu_fallback_allowed": smoke.cpu_fallback_allowed,
         "kernel_execution": false,
         "graph_execution": smoke.graph_execution,
@@ -1270,6 +1318,7 @@ fn build_intel_npu_smoke_receipt(
         "graph": {
             "name": smoke.graph_name.clone(),
             "precision": smoke.precision.clone(),
+            "cache_dir": null,
             "input_shape": smoke.input_shape.clone(),
             "output_shape": smoke.output_shape.clone(),
             "max_abs_error": smoke.max_abs_error,
@@ -1278,9 +1327,15 @@ fn build_intel_npu_smoke_receipt(
             "result": if smoke.passed { "pass" } else { "fail" },
         },
         "timing": {
+            "first_ever_compile_and_infer_ms": null,
+            "cached_compile_ms": smoke.compile_ms,
+            "steady_state_infer_ms": null,
             "compile_ms": smoke.compile_ms,
             "first_infer_ms": smoke.first_infer_ms,
         },
+        "kernels_or_graphs": [
+            "tiny_matmul_openvino_npu"
+        ],
         "npu": probe,
         "openvino_smoke": smoke,
         "claim": claim,
@@ -4604,12 +4659,26 @@ mod tests {
         assert_eq!(receipt["selected_backend"], "intel-npu-openvino");
         assert_eq!(receipt["runtime_api"], "openvino");
         assert_eq!(receipt["runtime_device"], "NPU");
+        assert_eq!(receipt["backend_runtime"]["name"], "openvino");
+        assert_eq!(receipt["backend_runtime"]["version"], "2026.1");
+        assert_eq!(receipt["backend_runtime"]["device"], "NPU");
+        assert_eq!(receipt["backend_runtime"]["device_name"], "Intel(R) AI Boost");
+        assert_eq!(receipt["backend_runtime"]["driver_version"], "1.2.3");
+        assert_eq!(receipt["backend_runtime"]["compiler_version"], "4.5.6");
+        assert_eq!(receipt["backend_runtime"]["max_tiles"], 1);
+        assert_eq!(receipt["shape_contract"]["shape_mode"], "static");
+        assert!(receipt["shape_contract"]["input_shape"].is_null());
+        assert!(receipt["shape_contract"]["output_shape"].is_null());
         assert_eq!(receipt["strict_mode"], true);
         assert_eq!(receipt["shape_mode"], "static");
         assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["cpu_fallback_allowed"], false);
+        assert!(receipt["fallback_policy"]["fallback_backend"].is_null());
         assert_eq!(receipt["kernel_execution"], false);
         assert_eq!(receipt["graph_execution"], false);
         assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["kernels_or_graphs"], serde_json::json!([]));
         assert!(receipt["error"].is_null());
     }
 
@@ -4722,17 +4791,37 @@ mod tests {
         assert_eq!(receipt["selected_backend"], "intel-npu-openvino");
         assert_eq!(receipt["runtime_api"], "openvino");
         assert_eq!(receipt["runtime_device"], "NPU");
+        assert_eq!(receipt["backend_runtime"]["name"], "openvino");
+        assert_eq!(receipt["backend_runtime"]["version"], "2026.1");
+        assert_eq!(receipt["backend_runtime"]["device"], "NPU");
+        assert_eq!(receipt["backend_runtime"]["device_name"], "Intel(R) AI Boost");
+        assert_eq!(receipt["backend_runtime"]["driver_version"], "1.2.3");
+        assert_eq!(receipt["backend_runtime"]["compiler_version"], "4.5.6");
+        assert_eq!(receipt["backend_runtime"]["max_tiles"], 1);
         assert_eq!(receipt["shape_mode"], "static");
+        assert_eq!(receipt["shape_contract"]["shape_mode"], "static");
+        assert_eq!(receipt["shape_contract"]["input_shape"], serde_json::json!([1, 16]));
+        assert_eq!(receipt["shape_contract"]["output_shape"], serde_json::json!([1, 16]));
         assert_eq!(receipt["fallback_used"], false);
         assert_eq!(receipt["cpu_fallback_allowed"], false);
+        assert_eq!(receipt["fallback_policy"]["fallback_used"], false);
+        assert!(receipt["fallback_policy"]["fallback_backend"].is_null());
+        assert!(receipt["fallback_policy"]["fallback_reason"].is_null());
+        assert_eq!(receipt["fallback_policy"]["cpu_fallback_allowed"], false);
         assert_eq!(receipt["graph_execution"], true);
         assert_eq!(receipt["kernel_execution"], false);
         assert_eq!(receipt["bitnet_inference"], false);
         assert_eq!(receipt["graph"]["name"], "tiny_matmul_add_f16_1x16");
         assert_eq!(receipt["graph"]["precision"], "F16");
+        assert!(receipt["graph"]["cache_dir"].is_null());
         assert_eq!(receipt["graph"]["input_shape"], serde_json::json!([1, 16]));
         assert_eq!(receipt["graph"]["output_shape"], serde_json::json!([1, 16]));
         assert_eq!(receipt["graph"]["result"], "pass");
+        assert_eq!(receipt["timing"]["cached_compile_ms"], 12.5);
+        assert_eq!(receipt["timing"]["first_infer_ms"], 1.25);
+        assert!(receipt["timing"]["first_ever_compile_and_infer_ms"].is_null());
+        assert!(receipt["timing"]["steady_state_infer_ms"].is_null());
+        assert_eq!(receipt["kernels_or_graphs"], serde_json::json!(["tiny_matmul_openvino_npu"]));
         assert!(receipt["error"].is_null());
     }
 
@@ -4803,6 +4892,11 @@ mod tests {
         assert!(receipt["selected_backend"].is_null());
         assert!(receipt["runtime_api"].is_null());
         assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["cpu_fallback_allowed"], false);
+        assert_eq!(receipt["shape_contract"]["shape_mode"], "static");
+        assert_eq!(receipt["shape_contract"]["input_shape"], serde_json::json!([1, 16]));
+        assert!(receipt["shape_contract"]["output_shape"].is_null());
         assert_eq!(receipt["graph_execution"], false);
         assert_eq!(receipt["bitnet_inference"], false);
         assert_eq!(
