@@ -50,7 +50,7 @@ Use these labels consistently:
 | M4-OP-003 | merged | Apple M4 operator runbook merged in #3857. |
 | M4-OP-004 | merged | Effective-use CLI examples and strict failure-mode docs merged in #3871. |
 | M4-OP-005 | merged | Conservative benchmark profile names and summary artifact validation merged in #3861. |
-| M4-OP-006 | in_progress | Decide the next implementation frontier. |
+| M4-OP-006 | pr_open | Decide the next implementation frontier in #3882. |
 
 ## Review Policy
 
