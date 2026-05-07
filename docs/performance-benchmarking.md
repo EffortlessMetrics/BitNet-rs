@@ -104,11 +104,11 @@ Test fixtures are automatically generated using the xtask system:
 
 ```bash
 # Generate small test fixtures
-cargo run -p xtask -- gen-fixtures --size small --output crossval/fixtures/
+cargo run --no-default-features -p xtask -- gen-fixtures --size small --output crossval/fixtures/
 
 # Generate fixtures of different sizes
-cargo run -p xtask -- gen-fixtures --size tiny --output crossval/fixtures/
-cargo run -p xtask -- gen-fixtures --size medium --output crossval/fixtures/
+cargo run --no-default-features -p xtask -- gen-fixtures --size tiny --output crossval/fixtures/
+cargo run --no-default-features -p xtask -- gen-fixtures --size medium --output crossval/fixtures/
 ```
 
 ## 📈 Running Benchmarks
@@ -511,7 +511,7 @@ All benchmarks can be reproduced with deterministic configuration:
 ```bash
 # CPU I2S BitNet32-F16 benchmark (production quantization)
 BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
-cargo run -p xtask -- benchmark --features cpu --quantization i2s
+cargo run --no-default-features -p xtask -- benchmark --features cpu --quantization i2s
 
 # QK256 scalar benchmark (validation only - SLOW)
 # WARNING: This will take ~20 minutes for 128 tokens
@@ -606,7 +606,7 @@ See `.github/workflows/performance-tracking.yml` for CI gate implementation.
 
 **C++ Reference Parity:**
 - **I2S Tolerance**: 1e-5 MSE
-- **Validation Command**: `cargo run -p xtask -- crossval`
+- **Validation Command**: `cargo run --no-default-features -p xtask -- crossval`
 - **Status**: Available when BITNET_GGUF environment variable set
 
 These targets are automatically validated through the regression detection system and receipt artifact generation. All claims must be backed by verifiable receipts.
@@ -634,18 +634,18 @@ BitNet-rs Issue #261 implemented comprehensive strict mode controls to eliminate
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
-cargo run -p xtask -- benchmark --features cpu --quantization i2s
+cargo run --no-default-features -p xtask -- benchmark --features cpu --quantization i2s
 
 # GPU baseline with strict mode (mixed precision, GPU-accelerated alpha)
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
-cargo run -p xtask -- benchmark --features gpu --quantization i2s
+cargo run --no-default-features -p xtask -- benchmark --features gpu --quantization i2s
 
 # Cross-validation with strict mode (validates ≥99.8% I2S accuracy)
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 
 # CI enhanced strict mode (comprehensive validation)
 CI=1 \

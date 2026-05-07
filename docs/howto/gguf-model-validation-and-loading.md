@@ -22,10 +22,10 @@ cargo run -p bitnet-cli -- compat-check model.gguf
 cargo run -p bitnet-cli -- inspect --model model.gguf --json
 
 # Comprehensive validation with verification
-cargo run -p xtask -- verify --model model.gguf --tokenizer tokenizer.json
+cargo run --no-default-features -p xtask -- verify --model model.gguf --tokenizer tokenizer.json
 
 # Load and test inference
-cargo run -p xtask -- infer --model model.gguf --prompt "test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "test"
 ```
 
 ## Step 1: Pre-Loading Validation
@@ -113,7 +113,7 @@ Ensure all required transformer layers are present:
 
 ```bash
 # Comprehensive tensor validation
-cargo run -p xtask -- verify --model model.gguf --strict
+cargo run --no-default-features -p xtask -- verify --model model.gguf --strict
 
 # Expected validation checks:
 # ✓ All attention tensors present (Q, K, V, Output)
@@ -219,7 +219,7 @@ fn calculate_expected_tensor_count(config: &bitnet_common::BitNetConfig) -> usiz
 
 ```bash
 # Attempt GPU loading with CPU fallback
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "test" \
     --features gpu
@@ -235,7 +235,7 @@ cargo run -p xtask -- infer \
 
 ```bash
 # Force CPU loading (useful for debugging)
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "test" \
     --no-default-features --features cpu
@@ -297,7 +297,7 @@ hexdump -C model.gguf | head -1
 
 # Re-download if corrupted
 rm model.gguf
-cargo run -p xtask -- download-model --id repo/model --file model.gguf
+cargo run --no-default-features -p xtask -- download-model --id repo/model --file model.gguf
 ```
 
 **Error: Unsupported GGUF Version**
@@ -328,7 +328,7 @@ Error: Tensor count 2000000 exceeds security limit 1000000
 cargo run -p bitnet-cli -- inspect --model model.gguf --security
 
 # Use relaxed limits for trusted models (development only)
-BITNET_SECURITY_RELAXED=1 cargo run -p xtask -- verify --model model.gguf
+BITNET_SECURITY_RELAXED=1 cargo run --no-default-features -p xtask -- verify --model model.gguf
 ```
 
 ### Memory-Related Errors
@@ -344,13 +344,13 @@ Error: Failed to allocate 8GB for model tensors (4GB available)
 cargo run -p bitnet-cli -- inspect --model model.gguf --memory
 
 # Use memory mapping for large models
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --memory-mapped \
     --prompt "test"
 
 # Use smaller quantized version
-cargo run -p xtask -- download-model \
+cargo run --no-default-features -p xtask -- download-model \
     --id repo/model \
     --file model-q4.gguf  # Smaller quantized version
 ```
@@ -383,13 +383,13 @@ Error: CUDA out of memory: 8GB requested, 2GB available
 nvidia-smi
 
 # Use CPU fallback
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "test" \
     --no-default-features --features cpu
 
 # Use model sharding (if supported)
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "test" \
     --shard-across-devices
@@ -405,7 +405,7 @@ export BITNET_STRICT_VALIDATION=1
 export BITNET_SECURITY_AUDIT=1
 
 # Run with security audit
-cargo run -p xtask -- verify \
+cargo run --no-default-features -p xtask -- verify \
     --model model.gguf \
     --security-audit \
     --strict
@@ -444,16 +444,16 @@ fn perform_security_audit(model_path: &Path) -> Result<()> {
 
 ```bash
 # Use zero-copy loading where possible
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --zero-copy \
     --prompt "test"
 
 # Preload to page cache
-cargo run -p xtask -- preload-model model.gguf
+cargo run --no-default-features -p xtask -- preload-model model.gguf
 
 # Then run inference (faster startup)
-cargo run -p xtask -- infer --model model.gguf --prompt "test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "test"
 ```
 
 ### Parallel Loading

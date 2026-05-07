@@ -34,14 +34,14 @@ Receipt verification prevents these scenarios by correlating claims with evidenc
 
 ```bash
 # 1. Run inference to generate receipt
-cargo run -p xtask -- benchmark \
+cargo run --no-default-features -p xtask -- benchmark \
   --model models/bitnet-model.gguf \
   --tokens 128
 
 # Receipt written to: ci/inference.json
 
 # 2. Verify receipt schema and basic claims
-cargo run -p xtask -- verify-receipt ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
 
 # Expected output:
 # ✓ Schema version: 1.0.0 (valid)
@@ -143,7 +143,7 @@ cat ci/inference.json | jq '.kernels[] | select(
 
 ```bash
 # Use verify-receipt with --require-quantized-kernels flag
-cargo run -p xtask -- verify-receipt --require-quantized-kernels ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --require-quantized-kernels ci/inference.json
 
 # This performs:
 # 1. Schema validation
@@ -196,7 +196,7 @@ cat ci/inference.json | jq '{
 }
 
 # Verify GPU kernel enforcement
-cargo run -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
 ```
 
 ### Detect Silent CPU Fallback
@@ -216,7 +216,7 @@ cargo run -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
 }
 
 # verify-receipt will detect this:
-cargo run -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
 
 # Output:
 ✗ GPU kernel validation: FAIL
@@ -272,7 +272,7 @@ cat ci/inference.json | jq '{
 }
 
 # Automated performance validation
-cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --validate-performance ci/inference.json
 ```
 
 ### Detect Mock Inference
@@ -289,7 +289,7 @@ cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
 }
 
 # verify-receipt will flag this:
-cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --validate-performance ci/inference.json
 
 # Output:
 ✗ Performance validation: FAIL
@@ -323,11 +323,11 @@ export RAYON_NUM_THREADS=1
 export BITNET_STRICT_MODE=1
 
 # Run 1
-cargo run -p xtask -- benchmark --model models/bitnet-model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model models/bitnet-model.gguf --tokens 128
 cp ci/inference.json ci/receipts/run1.json
 
 # Run 2
-cargo run -p xtask -- benchmark --model models/bitnet-model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model models/bitnet-model.gguf --tokens 128
 cp ci/inference.json ci/receipts/run2.json
 
 # Compare receipts
@@ -356,7 +356,7 @@ echo "Running $RUNS deterministic inference runs..."
 
 for i in $(seq 1 $RUNS); do
   echo "Run $i/$RUNS"
-  cargo run -p xtask -- benchmark --model "$MODEL" --tokens 128 --quiet
+  cargo run --no-default-features -p xtask -- benchmark --model "$MODEL" --tokens 128 --quiet
   cp ci/inference.json "ci/receipts/run$i.json"
 done
 
@@ -489,18 +489,18 @@ jobs:
           BITNET_SEED: "42"
           RAYON_NUM_THREADS: "1"
         run: |
-          cargo run -p xtask -- benchmark \
+          cargo run --no-default-features -p xtask -- benchmark \
             --model tests/fixtures/mini.gguf \
             --tokens 128
 
       - name: Verify receipt schema
-        run: cargo run -p xtask -- verify-receipt ci/inference.json
+        run: cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
 
       - name: Verify quantized kernels
-        run: cargo run -p xtask -- verify-receipt --require-quantized-kernels ci/inference.json
+        run: cargo run --no-default-features -p xtask -- verify-receipt --require-quantized-kernels ci/inference.json
 
       - name: Verify performance metrics
-        run: cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
+        run: cargo run --no-default-features -p xtask -- verify-receipt --validate-performance ci/inference.json
 
       - name: Check for fallback indicators
         run: |
@@ -527,13 +527,13 @@ jobs:
 
 1. **Always verify receipts after establishing baselines:**
    ```bash
-   cargo run -p xtask -- benchmark --model model.gguf --tokens 128
-   cargo run -p xtask -- verify-receipt ci/inference.json
+   cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
+   cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
    ```
 
 2. **Use strict mode when generating receipts:**
    ```bash
-   BITNET_STRICT_MODE=1 cargo run -p xtask -- benchmark --model model.gguf
+   BITNET_STRICT_MODE=1 cargo run --no-default-features -p xtask -- benchmark --model model.gguf
    ```
 
 3. **Save receipts with meaningful names:**

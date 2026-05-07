@@ -34,7 +34,7 @@ BitNet GGUF models use GGML I2_S format:
 
 ```bash
 # Download Microsoft BitNet model (uses QK256 format)
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
 # Model is saved to:
 # ./models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
@@ -46,10 +46,10 @@ Verify that the model is recognized and loaded correctly:
 
 ```bash
 # Verify model (automatic tokenizer discovery from GGUF)
-cargo run -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+cargo run --no-default-features -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 
 # Or with explicit tokenizer
-cargo run -p xtask -- verify \
+cargo run --no-default-features -p xtask -- verify \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 ```
@@ -123,10 +123,10 @@ Run a benchmark and inspect the receipt:
 
 ```bash
 # Generate benchmark receipt
-cargo run -p xtask -- benchmark --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 128
 
 # Verify receipt shows Rust kernels
-cargo run -p xtask -- verify-receipt ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
 
 # Expected output includes:
 # "backend": "cpu"
@@ -140,14 +140,14 @@ Measure inference performance:
 
 ```bash
 # CPU benchmark (QK256 kernels)
-cargo run -p xtask -- benchmark \
+cargo run --no-default-features -p xtask -- benchmark \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokens 128 \
   --runs 5
 
 # GPU benchmark (if GPU feature available)
 cargo build --release --no-default-features --features gpu
-cargo run -p xtask -- benchmark \
+cargo run --no-default-features -p xtask -- benchmark \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokens 128 \
   --device cuda
@@ -164,7 +164,7 @@ cargo run -p xtask -- benchmark \
 cargo build --release --no-default-features --features cpu
 
 # Try model loading again
-cargo run -p xtask -- verify --model <model.gguf>
+cargo run --no-default-features -p xtask -- verify --model <model.gguf>
 ```
 
 ### Issue: Very slow inference (suggests FFI fallback)
@@ -231,8 +231,8 @@ cargo run -p bitnet-cli --features cpu,full-cli -- compat-check <model.gguf> --s
 Run the benchmark to measure and record actual throughput on your hardware:
 
 ```bash
-cargo run -p xtask -- benchmark --model <path/to/model.gguf> --tokens 128
-cargo run -p xtask -- verify-receipt
+cargo run --no-default-features -p xtask -- benchmark --model <path/to/model.gguf> --tokens 128
+cargo run --no-default-features -p xtask -- verify-receipt
 ```
 
 **Target envelopes (v0.2.0 goals, not current MVP performance):**
@@ -246,7 +246,7 @@ cargo run -p xtask -- verify-receipt
 | GPU A100 | 200–400 | 2B, batch=1 |
 
 *Actual performance depends on model size, batch size, sequence length, and hardware.
-Always measure with `cargo run -p xtask -- benchmark` to get a verifiable receipt.*
+Always measure with `cargo run --no-default-features -p xtask -- benchmark` to get a verifiable receipt.*
 
 ## Advanced Usage
 

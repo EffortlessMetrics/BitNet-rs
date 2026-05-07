@@ -328,7 +328,7 @@ export RAYON_NUM_THREADS=1
 export BITNET_GGUF="path/to/model.gguf"
 
 # Run cross-validation
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 
 # Check tolerance
 # I2S: 1e-5 MSE vs FP32

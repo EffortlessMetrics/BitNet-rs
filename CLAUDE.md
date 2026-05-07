@@ -142,12 +142,12 @@ Full list: [docs/environment-variables.md](docs/environment-variables.md)
 
 4. **QK256 is slow** — Scalar kernels only (~0.1 tok/s for 2B). Use `--max-tokens 4-16` for validation. SIMD optimization is planned.
 
-5. **FFI linker errors** — Use `--no-default-features --features cpu` to avoid FFI. For cross-validation: `cargo run --locked -p xtask -- fetch-cpp`.
+5. **FFI linker errors** — Use `--no-default-features --features cpu` to avoid FFI. For cross-validation: `cargo run --locked --no-default-features -p xtask -- fetch-cpp`.
 
 ## Repository Contracts
 
 - Always specify features: `--no-default-features --features cpu|gpu`
-- Use xtask for operations: `cargo run --locked -p xtask --`
+- Use xtask for operations: `cargo run --locked --no-default-features -p xtask --` (xtask's default features pull in `gpu`; pass `--features gpu` explicitly when you want it)
 - Never modify GGUF in-place: use `bitnet-compat export-fixed`
 - Use `#[serial(bitnet_env)]` for env-mutating tests
 - Check `#[ignore = "..."]` justification before investigating test failures

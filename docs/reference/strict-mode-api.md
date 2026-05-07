@@ -713,7 +713,7 @@ pub fn infer_kernel_path(kernel_ids: &[String]) -> String {
 **Example:**
 ```bash
 # Enable all strict mode checks
-BITNET_STRICT_MODE=1 cargo run -p xtask -- benchmark --model model.gguf
+BITNET_STRICT_MODE=1 cargo run --no-default-features -p xtask -- benchmark --model model.gguf
 ```
 
 ### Granular Controls

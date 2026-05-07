@@ -4,7 +4,7 @@ Reference for bitnet-rs cross-validation commands comparing Rust inference again
 
 ## Prerequisites
 
-- C++ reference built: `cargo run --locked -p xtask -- fetch-cpp` or `setup-cpp-auto`
+- C++ reference built: `cargo run --locked --no-default-features -p xtask -- fetch-cpp` or `setup-cpp-auto`
 - Environment: `BITNET_CPP_DIR` and dynamic loader path set
 - Build flag: `--features crossval-all` (or `--features inference`)
 
@@ -73,25 +73,25 @@ Maximum L2 distance: 0.00840
 
 ```bash
 # BitNet model (auto-detects bitnet.cpp)
-cargo run --locked -p xtask --features crossval-all -- crossval-per-token \
+cargo run --locked --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" --max-tokens 4 --cos-tol 0.999
 
 # Full diagnostics
-cargo run --locked -p xtask --features crossval-all -- crossval-per-token \
+cargo run --locked --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf --tokenizer models/tokenizer.json \
   --cpp-backend bitnet --prompt-template raw \
   --prompt "2+2=" --max-tokens 1 \
   --dump-ids --dump-cpp-ids --verbose
 
 # JSON output
-cargo run --locked -p xtask --features crossval-all -- crossval-per-token \
+cargo run --locked --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf --tokenizer models/tokenizer.json \
   --prompt "What is 2+2?" --max-tokens 4 --format json
 
 # With system prompt (chat template)
-cargo run --locked -p xtask --features crossval-all -- crossval-per-token \
+cargo run --locked --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf --tokenizer models/tokenizer.json \
   --prompt-template llama3-chat \
   --system-prompt "You are a helpful assistant" \
@@ -108,13 +108,13 @@ One-command C++ reference setup (fetch, build, emit environment exports).
 
 ```bash
 # Bash/Zsh
-eval "$(cargo run --locked -p xtask -- setup-cpp-auto --emit=sh)"
+eval "$(cargo run --locked --no-default-features -p xtask -- setup-cpp-auto --emit=sh)"
 
 # Fish
-cargo run --locked -p xtask -- setup-cpp-auto --emit=fish | source
+cargo run --locked --no-default-features -p xtask -- setup-cpp-auto --emit=fish | source
 
 # PowerShell
-cargo run --locked -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
+cargo run --locked --no-default-features -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
 ```
 
 **What it does:**
@@ -134,10 +134,10 @@ Check C++ backend availability for cross-validation.
 
 ```bash
 # Check all backends
-cargo run --locked -p xtask --features crossval-all -- preflight
+cargo run --locked --no-default-features -p xtask --features crossval-all -- preflight
 
 # Check specific backend
-cargo run --locked -p xtask --features crossval-all -- preflight --backend bitnet --verbose
+cargo run --locked --no-default-features -p xtask --features crossval-all -- preflight --backend bitnet --verbose
 ```
 
 **Example output:**
@@ -161,7 +161,7 @@ Both backends available. Dual-backend cross-validation supported.
 ./scripts/run_crossval_sweep.sh model.gguf tokenizer.json /tmp/crossval
 
 # Trace comparison (debug divergence)
-cargo run --locked -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
+cargo run --locked --no-default-features -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
 ```
 
 See also: [C++ setup guide](../howto/cpp-setup.md) | [Dual-backend architecture](../explanation/dual-backend-crossval.md)

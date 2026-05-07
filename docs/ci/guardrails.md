@@ -246,13 +246,13 @@ Receipt verification ensures **honest compute** by validating inference executio
 
 ```bash
 # Generate receipt (writes to ci/inference.json)
-cargo run -p xtask -- benchmark --model models/model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model models/model.gguf --tokens 128
 
 # Verify receipt
-cargo run -p xtask -- verify-receipt
+cargo run --no-default-features -p xtask -- verify-receipt
 
 # Verify with GPU kernel requirement
-cargo run -p xtask -- verify-receipt --require-gpu-kernels
+cargo run --no-default-features -p xtask -- verify-receipt --require-gpu-kernels
 ```
 
 ### CI Integration
@@ -375,7 +375,7 @@ gh workflow run repin-actions.yml
 **Fix**: Ensure GPU inference actually runs GPU kernels (check for silent CPU fallback):
 ```bash
 # Verify GPU availability
-cargo run -p xtask -- gpu-preflight
+cargo run --no-default-features -p xtask -- gpu-preflight
 
 # Check receipt kernel IDs
 jq '.kernels' ci/inference.json
@@ -422,4 +422,4 @@ BitNet-rs guardrails ensure:
 
 **Local preflight**: `make guards`
 **Automated repin**: `gh workflow run repin-actions.yml`
-**Receipt verification**: `cargo run -p xtask -- verify-receipt`
+**Receipt verification**: `cargo run --no-default-features -p xtask -- verify-receipt`

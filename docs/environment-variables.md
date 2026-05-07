@@ -144,11 +144,11 @@ These override CLI arguments and config file values:
   - **Usage with Preflight**:
     ```bash
     # Test CPU fallback behavior
-    BITNET_GPU_FAKE=none cargo run -p xtask -- preflight
+    BITNET_GPU_FAKE=none cargo run --no-default-features -p xtask -- preflight
     # Expected: "✗ GPU: Not available at runtime"
 
     # Test GPU path without hardware
-    BITNET_GPU_FAKE=cuda cargo run -p xtask -- preflight
+    BITNET_GPU_FAKE=cuda cargo run --no-default-features -p xtask -- preflight
     # Expected: "✓ GPU: Available"
     ```
   - **Device-Aware Testing**:
@@ -223,10 +223,10 @@ These variables prevent "Potemkin passes" (false positives) in performance and i
     ```bash
     # Validate performance metrics only
     BITNET_STRICT_VALIDATE_PERFORMANCE=1 \
-    cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+    cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
 
     # Then verify receipt
-    cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
+    cargo run --no-default-features -p xtask -- verify-receipt --validate-performance ci/inference.json
     ```
 
 - `BITNET_CI_ENHANCED_STRICT=1`: Enhanced strict mode for CI environments **(Issue #453 - AC6)**
@@ -363,7 +363,7 @@ cargo test --no-default-features --features cpu -p bitnet-kernels --no-default-f
 
 # Mock GPU scenarios for testing
 BITNET_GPU_FAKE="cuda" cargo test --no-default-features --features cpu -p bitnet-kernels test_gpu_info_mocked_scenarios
-BITNET_GPU_FAKE="metal" cargo run -p xtask -- download-model --dry-run
+BITNET_GPU_FAKE="metal" cargo run --no-default-features -p xtask -- download-model --dry-run
 BITNET_GPU_FAKE="cuda,rocm" cargo test --no-default-features -p bitnet-kernels --features gpu
 ```
 
@@ -382,7 +382,7 @@ export RAYON_NUM_THREADS=1
 
 # Production deterministic inference with real quantization
 BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42 \
-cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test"
 
 # Local performance builds (not CI)
 export RUSTFLAGS="-C target-cpu=native"
@@ -394,10 +394,10 @@ export RUSTFLAGS="-C target-cpu=native"
 ```bash
 # Primary strict mode - prevents ALL mock inference fallbacks
 BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-inference --features cpu
-BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+BITNET_STRICT_MODE=1 cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test"
 
 # Production inference with strict mode (SIMD-optimised CPU, GPU-accelerated alpha)
-BITNET_STRICT_MODE=1 cargo run -p xtask -- infer \
+BITNET_STRICT_MODE=1 cargo run --no-default-features -p xtask -- infer \
   --model models/bitnet-model.gguf \
   --prompt "Explain quantum computing" \
   --deterministic
@@ -415,7 +415,7 @@ cargo test -p bitnet-quantization --no-default-features --features cpu test_quan
 
 # Validate performance metrics for realistic values
 BITNET_STRICT_VALIDATE_PERFORMANCE=1 \
-cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
 
 # CI enhanced strict mode (comprehensive validation)
 CI=1 BITNET_CI_ENHANCED_STRICT=1 BITNET_STRICT_MODE=1 \
@@ -438,13 +438,13 @@ cargo bench -p bitnet-kernels --bench mixed_precision_bench --features gpu
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
-cargo run -p xtask -- benchmark --features cpu --quantization i2s
+cargo run --no-default-features -p xtask -- benchmark --features cpu --quantization i2s
 
 # Realistic GPU performance baselines (Issue #261 - AC8)
 # Expected: GPU-accelerated (alpha), GPU utilization >80%
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
-cargo run -p xtask -- benchmark --features gpu --quantization i2s
+cargo run --no-default-features -p xtask -- benchmark --features gpu --quantization i2s
 ```
 
 ### Strict Integration Testing
@@ -470,7 +470,7 @@ scripts/verify-tests.sh
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 ```
 
 ## System Metrics Variables

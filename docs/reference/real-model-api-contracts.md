@@ -615,7 +615,7 @@ impl ToleranceConfig {
 
 ```bash
 # Enhanced model download with validation
-cargo run -p xtask -- download-model [OPTIONS] --id <MODEL_ID>
+cargo run --no-default-features -p xtask -- download-model [OPTIONS] --id <MODEL_ID>
 
 Options:
   --id <MODEL_ID>           Hugging Face model identifier
@@ -677,7 +677,7 @@ Options:
 
 ```bash
 # Cross-validation against C++ reference
-cargo run -p xtask -- crossval [OPTIONS] --model <MODEL_PATH>
+cargo run --no-default-features -p xtask -- crossval [OPTIONS] --model <MODEL_PATH>
 
 Options:
   --model <PATH>           Path to GGUF model file

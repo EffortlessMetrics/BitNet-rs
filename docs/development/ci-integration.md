@@ -239,9 +239,9 @@ BITNET_TEST_SMART_SELECTION: true
   - Verify kernel IDs are populated from actual execution
   - Check backend-kernel alignment (GPU receipts need GPU kernels)
 - **Prevention**:
-  - Use `cargo run -p xtask -- benchmark` to generate valid receipts
+  - Use `cargo run --no-default-features -p xtask -- benchmark` to generate valid receipts
   - Test with example receipts: `docs/tdd/receipts/cpu_positive_example.json`
-  - Validate locally: `cargo run -p xtask -- verify-receipt --path ci/inference.json`
+  - Validate locally: `cargo run --no-default-features -p xtask -- verify-receipt --path ci/inference.json`
 
 ### Debug Information
 

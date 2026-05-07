@@ -22,7 +22,7 @@ This is the main development guide for BitNet-rs, providing an overview of devel
 
 3. **Download Models for Testing**
    ```bash
-   cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+   cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
    ```
 
 ## Development Workflows
@@ -47,13 +47,13 @@ cargo test --package bitnet-quantization --no-default-features --features cpu
 
 ```bash
 # Cross-validate against C++ reference
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 
 # Verify model compatibility
-cargo run -p xtask -- verify --model models/test.gguf
+cargo run --no-default-features -p xtask -- verify --model models/test.gguf
 
 # Benchmark performance
-cargo run -p xtask -- benchmark --model models/test.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model models/test.gguf --tokens 128
 ```
 
 ## Development Guides

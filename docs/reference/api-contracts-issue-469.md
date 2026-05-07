@@ -577,7 +577,7 @@ fi
 [example with --strict-loader]
 
 ### Cross-Validation
-[example with cargo run -p xtask -- crossval]
+[example with cargo run --no-default-features -p xtask -- crossval]
 ```
 
 ---

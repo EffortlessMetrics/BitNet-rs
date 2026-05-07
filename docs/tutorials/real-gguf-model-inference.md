@@ -24,7 +24,7 @@ This tutorial demonstrates bitnet-rs's GGUF weight loading capability, enabling 
 
 ```bash
 # Download official BitNet GGUF model with I2_S quantization
-cargo run -p xtask -- download-model \
+cargo run --no-default-features -p xtask -- download-model \
     --id microsoft/bitnet-b1.58-2B-4T-gguf \
     --file ggml-model-i2_s.gguf
 
@@ -62,12 +62,12 @@ cargo run -p bitnet-cli -- inspect \
 
 ```bash
 # Verify that real weights are loaded correctly
-cargo run -p xtask -- verify \
+cargo run --no-default-features -p xtask -- verify \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 
 # Test deterministic inference with real model weights
-BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo run -p xtask -- infer \
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo run --no-default-features -p xtask -- infer \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
     --prompt "The capital of France is" \
@@ -90,11 +90,11 @@ BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo run -p xtask -- infer \
 
 ```bash
 # Download models with different quantization formats
-cargo run -p xtask -- download-model \
+cargo run --no-default-features -p xtask -- download-model \
     --id microsoft/bitnet-b1.58-2B-4T-gguf \
     --file ggml-model-f32.gguf      # FP32 baseline
 
-cargo run -p xtask -- download-model \
+cargo run --no-default-features -p xtask -- download-model \
     --id microsoft/bitnet-b1.58-2B-4T-gguf \
     --file ggml-model-i2_s.gguf     # I2_S quantization
 
@@ -104,7 +104,7 @@ cargo test --no-default-features --features cpu \
 
 # Run cross-validation against C++ reference
 export BITNET_GGUF="models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 ```
 
 ## Understanding Real GGUF Weight Loading
@@ -210,14 +210,14 @@ cargo test --no-default-features --features cpu \
     test_table_lookup_quantization_accuracy
 
 # Cross-validate against C++ reference implementation
-cargo run -p xtask -- crossval --verbose
+cargo run --no-default-features -p xtask -- crossval --verbose
 ```
 
 ### Step 3: Performance Baselines
 
 ```bash
 # Establish quantization performance baselines
-cargo run -p xtask -- benchmark \
+cargo run --no-default-features -p xtask -- benchmark \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
     --tokens 128
@@ -370,7 +370,7 @@ cargo test --doc --workspace --no-default-features --features cpu
 cargo doc --workspace --no-default-features --features cpu --open
 
 # Test documentation examples end-to-end
-cargo run -p xtask -- check-docs
+cargo run --no-default-features -p xtask -- check-docs
 ```
 
 ## Troubleshooting Real Model Issues
@@ -388,7 +388,7 @@ Error: Tensor shape validation failed: expected [4096, 4096], got [4096, 4097]
 cargo run -p bitnet-cli -- inspect --model model.gguf --verbose
 
 # Validate against known good model
-cargo run -p xtask -- verify --model model.gguf --strict
+cargo run --no-default-features -p xtask -- verify --model model.gguf --strict
 ```
 
 **Issue 2: Quantization Format Not Supported**
@@ -419,7 +419,7 @@ Error: Failed to allocate tensor memory: 8GB requested, 4GB available
 cargo run -p bitnet-cli -- inspect --model model.gguf --memory
 
 # Use smaller model or enable memory mapping
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --memory-mapped \
     --prompt "test"
@@ -432,7 +432,7 @@ cargo run -p xtask -- infer \
 **Diagnostic:**
 ```bash
 # Profile inference performance
-cargo run -p xtask -- benchmark \
+cargo run --no-default-features -p xtask -- benchmark \
     --model model.gguf \
     --profile \
     --tokens 64

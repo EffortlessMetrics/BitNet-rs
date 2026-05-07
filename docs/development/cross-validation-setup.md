@@ -124,7 +124,7 @@ Before running cross-validation tests, you need to provision a GGUF model. The t
 
 ```bash
 # Provision the default model (recommended)
-cargo run -p xtask -- download-model
+cargo run --no-default-features -p xtask -- download-model
 
 # This downloads to: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 # Tests will auto-discover this location
@@ -142,7 +142,7 @@ cargo test -p bitnet-models --no-default-features --features crossval
 ```
 
 **Troubleshooting:**
-- If tests fail with "No model found", run `cargo run -p xtask -- download-model` first
+- If tests fail with "No model found", run `cargo run --no-default-features -p xtask -- download-model` first
 - The model file is ~2GB and ignored by git (in `.gitignore`)
 - Each developer/CI machine needs to provision the model once
 
@@ -152,7 +152,7 @@ The easiest way to set up cross-validation:
 
 ```bash
 # 1. Provision GGUF model (one-time setup)
-cargo run -p xtask -- download-model
+cargo run --no-default-features -p xtask -- download-model
 
 # 2. C++ reference (REQUIRED - tests will fail if not present)
 ./ci/fetch_bitnet_cpp.sh
@@ -377,13 +377,13 @@ No model found for cross-validation testing.
 
 To provision a model, run:
 
-cargo run -p xtask -- download-model
+cargo run --no-default-features -p xtask -- download-model
 ```
 
 **Solution:**
 ```bash
 # Provision the default model
-cargo run -p xtask -- download-model
+cargo run --no-default-features -p xtask -- download-model
 
 # Or use a custom model
 export BITNET_GGUF=/path/to/your/model.gguf

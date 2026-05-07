@@ -187,7 +187,7 @@ setup-cpp-auto                  rebuild_xtask()
 **Use Case**: 
 ```bash
 # User runs preflight with auto-repair
-cargo run -p xtask -- preflight --backend bitnet --repair=auto
+cargo run --no-default-features -p xtask -- preflight --backend bitnet --repair=auto
 
 # Expected flow:
 # 1. Detects HAS_BITNET = false

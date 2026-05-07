@@ -13,7 +13,7 @@ Current version: **v1.0.0**
 Generate a receipt during cross-validation:
 
 ```bash
-cargo run -p xtask --features inference -- crossval-per-token \
+cargo run --no-default-features -p xtask --features inference -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -103,7 +103,7 @@ BITNET_TRACE_DIR=/tmp/rs RUST_LOG=warn BITNET_DETERMINISTIC=1 BITNET_SEED=42 \
   --prompt "Your prompt" --max-tokens <first_divergence + 1>
 
 # Compare with C++ trace
-cargo run -p xtask -- trace-diff /tmp/rs /tmp/cpp
+cargo run --no-default-features -p xtask -- trace-diff /tmp/rs /tmp/cpp
 ```
 
 ## CI Integration

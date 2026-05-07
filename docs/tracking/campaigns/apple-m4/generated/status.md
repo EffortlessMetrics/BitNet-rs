@@ -1,4 +1,4 @@
-<!-- GENERATED: do not edit by hand. Run cargo run -p xtask --no-default-features -- campaign generate. -->
+<!-- GENERATED: do not edit by hand. Run cargo run --no-default-features -p xtask --no-default-features -- campaign generate. -->
 # Apple M4 Mac mini validation Campaign Status
 
 - Campaign: `apple-m4`

@@ -258,7 +258,7 @@ BITNET_CPP_FAKE=yes cargo test --features cpp
 BITNET_CPP_DIR=/opt/bitnet.cpp cargo test --features cpp
 
 # Run preflight check
-cargo run -p xtask -- preflight
+cargo run --no-default-features -p xtask -- preflight
 
 # Inspect C++ capabilities
 RUST_LOG=debug cargo run -p bitnet-cli -- inspect --cpp-info

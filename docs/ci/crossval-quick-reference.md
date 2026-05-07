@@ -251,7 +251,7 @@ cargo test -p bitnet-crossval --features cpu,ffi,crossval \
   --test dual_backend_integration -- --nocapture
 
 # Per-token parity
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "Test" \

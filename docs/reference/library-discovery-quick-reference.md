@@ -75,7 +75,7 @@ After building C++:
 
 ```bash
 # Option 1: Use xtask helper
-eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+eval "$(cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=sh)"
 
 # Option 2: Manual setup
 export BITNET_CPP_DIR=/path/to/bitnet_cpp
@@ -95,7 +95,7 @@ cargo build --features ffi -p bitnet-sys -vv 2>&1 | grep "cargo:rustc-link"
 
 # Run cross-validation
 export BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp
-cargo run -p xtask -- crossval --model model.gguf
+cargo run --no-default-features -p xtask -- crossval --model model.gguf
 ```
 
 ## Symbol Analysis (Not Yet Implemented)

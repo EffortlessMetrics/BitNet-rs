@@ -332,7 +332,7 @@ fn configure_bitnet_tokenizer() -> Result<(), Box<dyn std::error::Error>> {
 export BITNET_STRICT_TOKENIZERS=1
 
 # Run inference - will fail if no real tokenizer available
-cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test"
 ```
 
 ```rust,no_run
@@ -352,7 +352,7 @@ let tokenizer = resolver.resolve_with_fallback().await?;
 export BITNET_OFFLINE=1
 
 # Only use embedded tokenizers, co-located files, and cache
-cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test"
 ```
 
 ### Deterministic Inference
@@ -362,7 +362,7 @@ cargo run -p xtask -- infer --model model.gguf --prompt "Test"
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 
-cargo run -p xtask -- infer --model model.gguf --prompt "Test" --deterministic
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test" --deterministic
 ```
 
 ---
@@ -468,7 +468,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 A: Ensure GGUF file contains embedded tokenizer metadata or provide explicit tokenizer path:
 ```bash
-cargo run -p xtask -- infer --model model.gguf --tokenizer tokenizer.json --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --tokenizer tokenizer.json --prompt "Test"
 ```
 
 **Q: "Download failed from HuggingFace Hub"**
@@ -476,7 +476,7 @@ cargo run -p xtask -- infer --model model.gguf --tokenizer tokenizer.json --prom
 A: Enable offline mode or provide cached tokenizer:
 ```bash
 export BITNET_OFFLINE=1
-cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test"
 ```
 
 **Q: "Vocabulary size mismatch"**

@@ -18,7 +18,7 @@ When running 1-bit neural network inference with bitnet-rs, you expect quantized
 **Problem scenario without strict mode:**
 ```bash
 # You run inference expecting GPU-accelerated I2S quantization
-cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
 
 # Receipt claims: "87.5 tok/s with I2S quantization"
 # Reality: Fell back to FP32 CPU, actually ~12 tok/s
@@ -28,7 +28,7 @@ cargo run -p xtask -- benchmark --model model.gguf --tokens 128
 **With strict mode:**
 ```bash
 BITNET_STRICT_MODE=1 \
-cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
 
 # If fallback would occur: Error immediately with detailed message
 # Error: "Strict mode: FP32 fallback rejected - qtype=I2S, device=Cuda(0), reason=kernel_unavailable"
@@ -62,7 +62,7 @@ cargo test -p bitnet-inference --no-default-features --features cpu
 ```bash
 # Production inference with strict mode
 BITNET_STRICT_MODE=1 \
-cargo run --release -p xtask -- infer \
+cargo run --release --no-default-features -p xtask -- infer \
   --model model.gguf \
   --prompt "Explain quantum computing"
 
@@ -78,10 +78,10 @@ cargo run --release -p xtask -- infer \
 
 ```bash
 # Run benchmark
-cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
 
 # Verify receipt honesty
-cargo run -p xtask -- verify-receipt ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
 
 # Checks:
 # - compute_path="real" matches actual kernel IDs
@@ -97,7 +97,7 @@ Let's verify your bitnet-rs installation works with strict mode.
 
 ```bash
 # Download a small test model
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
 # Or use your own model
 export BITNET_GGUF=/path/to/your/model.gguf
@@ -171,7 +171,7 @@ After successful inference, verify the receipt shows real quantized computation:
 ```bash
 # Run benchmark to generate receipt
 BITNET_STRICT_MODE=1 \
-cargo run -p xtask -- benchmark \
+cargo run --no-default-features -p xtask -- benchmark \
   --model models/bitnet-model.gguf \
   --tokens 128
 
@@ -203,7 +203,7 @@ cat ci/inference.json | jq
 
 ```bash
 # Automated verification
-cargo run -p xtask -- verify-receipt ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
 
 # Expected output:
 ✓ Schema version: 1.0.0 (valid)
@@ -305,7 +305,7 @@ cargo build --no-default-features --features cpu  # For CPU
 cargo build --no-default-features --features gpu  # For GPU
 
 # Verify GPU compilation (if using GPU)
-cargo run -p xtask -- preflight
+cargo run --no-default-features -p xtask -- preflight
 ```
 
 ### Issue: Receipt shows "mock" kernels
@@ -346,7 +346,7 @@ nvidia-smi  # Should show your GPU
 nvcc --version  # Should show CUDA 11.0+
 
 # Verify GPU detection
-cargo run -p xtask -- preflight
+cargo run --no-default-features -p xtask -- preflight
 # Look for: "✓ GPU: Available (CUDA 12.0, device 0)"
 
 # Check GPU feature compilation
@@ -376,7 +376,7 @@ You've learned:
 ✓ **Three validation tiers:** Debug assertions, strict mode enforcement, receipt validation
 ✓ **Enable strict mode:** `BITNET_STRICT_MODE=1`
 ✓ **Interpret errors:** Detailed messages show qtype, device, dimensions, and reason
-✓ **Verify receipts:** `cargo run -p xtask -- verify-receipt` checks kernel honesty
+✓ **Verify receipts:** `cargo run --no-default-features -p xtask -- verify-receipt` checks kernel honesty
 ✓ **Combine with determinism:** Strict mode + deterministic inference = reproducible validation
 
 Strict mode is your safety net for production deployments, ensuring that performance claims are backed by real quantized computation, not silent FP32 fallbacks.

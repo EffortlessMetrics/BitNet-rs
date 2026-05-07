@@ -298,7 +298,7 @@ bitnet compat-check model.gguf --verbose
 cargo build --no-default-features --release --no-default-features --features cpu
 
 # Download GGML compatibility files if needed
-cargo run -p xtask -- vendor-ggml --commit <llama.cpp-commit>
+cargo run --no-default-features -p xtask -- vendor-ggml --commit <llama.cpp-commit>
 ```
 
 **Validate Model Compatibility:**

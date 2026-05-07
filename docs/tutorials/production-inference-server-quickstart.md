@@ -42,7 +42,7 @@ cargo build --release --no-default-features --features "cpu,gpu,prometheus,opent
 
 ```bash
 # Download a compatible BitNet model
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
 # Verify model compatibility
 cargo run -p bitnet-cli -- compat-check models/bitnet/model.gguf
@@ -288,13 +288,13 @@ Verify quantization accuracy against reference implementations:
 ```bash
 # Cross-validation test
 export BITNET_GGUF=models/bitnet/model.gguf
-cargo run -p xtask -- crossval --samples 100
+cargo run --no-default-features -p xtask -- crossval --samples 100
 
 # Quantization accuracy validation
 cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
 
 # Feature flag validation
-cargo run -p xtask -- test-matrix --features "cpu gpu"
+cargo run --no-default-features -p xtask -- test-matrix --features "cpu gpu"
 ```
 
 Expected results:

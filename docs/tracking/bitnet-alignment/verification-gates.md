@@ -33,7 +33,7 @@ cargo nextest run --locked --workspace --no-default-features --features cpu
 Use for feature lattice or public API changes.
 
 ```bash
-cargo run --locked -p xtask -- grid-check
+cargo run --locked --no-default-features -p xtask -- grid-check
 cargo nextest run --locked --workspace --no-default-features --features cpu,fixtures
 ```
 

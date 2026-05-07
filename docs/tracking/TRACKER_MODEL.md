@@ -18,12 +18,12 @@ Global dashboards are generated from campaign manifests and events. Agents shoul
 Use:
 
 ```bash
-cargo run -p xtask --no-default-features -- campaign list
-cargo run -p xtask --no-default-features -- campaign status apple-m4
-cargo run -p xtask --no-default-features -- campaign next apple-m4
-cargo run -p xtask --no-default-features -- campaign check apple-m4
-cargo run -p xtask --no-default-features -- campaign generate
-cargo run -p xtask --no-default-features -- campaign doctor
+cargo run --no-default-features -p xtask --no-default-features -- campaign list
+cargo run --no-default-features -p xtask --no-default-features -- campaign status apple-m4
+cargo run --no-default-features -p xtask --no-default-features -- campaign next apple-m4
+cargo run --no-default-features -p xtask --no-default-features -- campaign check apple-m4
+cargo run --no-default-features -p xtask --no-default-features -- campaign generate
+cargo run --no-default-features -p xtask --no-default-features -- campaign doctor
 ```
 
 CI runs the strict forms with `--locked`:

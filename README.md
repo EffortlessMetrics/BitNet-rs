@@ -17,7 +17,7 @@ High-performance Rust inference engine for 1-bit BitNet LLMs.
 cargo build --locked --no-default-features --features cpu
 
 # Download a model
-cargo run --locked -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+cargo run --locked --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
 # Run inference
 RUST_LOG=warn cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- run \

@@ -72,7 +72,7 @@ RUST_LOG=warn cargo run -p bitnet-cli --features cpu,full-cli -- run \
 # Alternative: Use BitNet32-F16 models directly from HuggingFace
 
 # Download BitNet32-F16 model instead
-cargo run -p xtask -- download-model --id <bitnet32-model-repo>
+cargo run --no-default-features -p xtask -- download-model --id <bitnet32-model-repo>
 
 # Run with production performance
 RUST_LOG=warn cargo run -p bitnet-cli --features cpu,full-cli -- run \
@@ -140,7 +140,7 @@ RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
   cargo build --release --no-default-features --features cpu,full-cli
 
 # 2. Verify CPU features detected
-cargo run -p xtask -- preflight
+cargo run --no-default-features -p xtask -- preflight
 
 # 3. Run with optimized binary
 RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
@@ -150,7 +150,7 @@ RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
   --max-tokens 32
 
 # 4. Benchmark to verify improvements
-cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
 ```
 
 **Expected optimization impact:**
@@ -261,7 +261,7 @@ cargo run -p bitnet-cli --features cpu,full-cli -- run \
 
 ```bash
 # 1. Check GPU compilation
-cargo run -p xtask -- preflight
+cargo run --no-default-features -p xtask -- preflight
 
 # 2. Verify GPU build
 cargo build --release --no-default-features --features gpu
@@ -336,7 +336,7 @@ If QK256 performance is blocking your use case, consider alternative formats:
 
 ```bash
 # Download BitNet32-F16 model
-cargo run -p xtask -- download-model --id <bitnet32-repo>
+cargo run --no-default-features -p xtask -- download-model --id <bitnet32-repo>
 
 # Run inference
 cargo run -p bitnet-cli --features cpu,full-cli -- run \
@@ -374,7 +374,7 @@ cargo run -p bitnet-cli --features cpu,full-cli -- run \
 
 ```bash
 # Comprehensive benchmark
-cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
 
 # View receipt with performance metrics
 cat ci/inference.json | jq '{
@@ -434,11 +434,11 @@ cargo run -p bitnet-cli --features cpu,full-cli -- inspect --system > perf_debug
 cargo run -p bitnet-cli --features cpu,full-cli -- compat-check model.gguf >> perf_debug.txt
 
 # 3. Performance baseline
-cargo run -p xtask -- benchmark --model model.gguf --tokens 16
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 16
 cat ci/inference.json >> perf_debug.txt
 
 # 4. CPU/GPU features
-cargo run -p xtask -- preflight >> perf_debug.txt
+cargo run --no-default-features -p xtask -- preflight >> perf_debug.txt
 
 # 5. Environment
 env | grep -E "(RUST|RAYON|BITNET|CUDA)" >> perf_debug.txt

@@ -31,7 +31,7 @@ cargo run --release -p bitnet-cli --no-default-features --features cpu -- \
   --max-tokens 32
 
 # 4. Verify receipt
-cargo run -p xtask -- verify-receipt ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
 
 # 5. Check kernel IDs
 cat ci/inference.json | jq '.kernels[]'
@@ -55,7 +55,7 @@ cat ci/inference.json | jq '.kernels[]'
 uname -m  # Check architecture
 
 # Verify SIMD features detected
-cargo run -p xtask -- preflight
+cargo run --no-default-features -p xtask -- preflight
 ```
 
 **Issue: Kernels show "scalar_fallback"**
@@ -80,7 +80,7 @@ nvcc --version  # CUDA 11.0+ required
 cargo build --no-default-features --release --features gpu
 
 # 3. Verify GPU compilation
-cargo run -p xtask -- preflight
+cargo run --no-default-features -p xtask -- preflight
 # Expected: "✓ GPU: Available (CUDA 12.0, device 0)"
 
 # 4. Run GPU inference with strict mode
@@ -98,7 +98,7 @@ cat ci/inference.json | jq '.backend, .kernels[]'
 # Expected kernels: "gemm_fp16", "i2s_gpu_quantize", "wmma_matmul"
 
 # 6. Verify GPU kernel enforcement
-cargo run -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
 ```
 
 ### Success Criteria
@@ -179,7 +179,7 @@ jobs:
       - name: Verify receipts
         run: |
           for receipt in ci/inference-*.json; do
-            cargo run -p xtask -- verify-receipt "$receipt"
+            cargo run --no-default-features -p xtask -- verify-receipt "$receipt"
           done
 
       - name: Check for fallback indicators
@@ -213,7 +213,7 @@ jobs:
 
       - name: Verify GPU kernels used
         run: |
-          cargo run -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
+          cargo run --no-default-features -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
 ```
 
 ### Success Criteria
@@ -240,7 +240,7 @@ export RAYON_NUM_THREADS=1
 export BITNET_GGUF="models/bitnet-model.gguf"
 
 # 3. Run cross-validation
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 
 # Expected output:
 # ✓ Model loaded: bitnet-b1.58-2B (I2S)
@@ -302,7 +302,7 @@ echo "Runs: $RUNS"
 
 for i in $(seq 1 $RUNS); do
   echo "Run $i/$RUNS..."
-  cargo run -p xtask -- benchmark \
+  cargo run --no-default-features -p xtask -- benchmark \
     --model "$MODEL" \
     --tokens 128 \
     --quiet
@@ -448,7 +448,7 @@ cargo test -p bitnet-inference --features cpu integration_test_with_mock_tokeniz
 export BITNET_STRICT_VALIDATE_PERFORMANCE=1
 unset BITNET_STRICT_REQUIRE_QUANTIZATION
 
-cargo run -p xtask -- benchmark --model model.gguf --tokens 256
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 256
 # Fails if tokens_per_second > 150 (suspicious, likely mock)
 ```
 
@@ -469,7 +469,7 @@ cargo run -p xtask -- benchmark --model model.gguf --tokens 256
    ```bash
    # Unique receipt per run
    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-   cargo run -p xtask -- benchmark --model model.gguf
+   cargo run --no-default-features -p xtask -- benchmark --model model.gguf
    cp ci/inference.json ci/receipts/inference-$TIMESTAMP.json
    ```
 

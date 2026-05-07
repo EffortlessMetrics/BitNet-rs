@@ -321,7 +321,7 @@ Range: bytes=1048576-
 export BITNET_OFFLINE=1
 
 # This will use cached tokenizers only
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/llama2.gguf \
     --prompt "Offline inference" \
     --auto-download  # Safe: no actual download attempts

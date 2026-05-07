@@ -920,10 +920,10 @@ Receipts generated during CPU inference must contain CPU quantized kernels to en
 
 ```bash
 # Run benchmark and generate receipt
-cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
 
 # Verify receipt contains CPU quantized kernels
-cargo run -p xtask -- verify-receipt ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
 
 # The validator checks:
 # - backend="cpu" requires CPU quantized kernel IDs

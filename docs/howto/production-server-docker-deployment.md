@@ -23,7 +23,7 @@ git clone https://github.com/EffortlessMetrics/BitNet-rs
 cd BitNet-rs
 
 # Download model
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
 # Build CPU container
 docker build -f infra/docker/Dockerfile.cpu -t bitnet-cpu:latest .
@@ -412,7 +412,7 @@ cargo run -p bitnet-cli -- compat-check models/model.gguf
 ls -la models/model.gguf
 
 # Test model loading outside Docker
-cargo run -p xtask -- verify --model models/model.gguf
+cargo run --no-default-features -p xtask -- verify --model models/model.gguf
 
 # Enable debug logging
 docker run -e RUST_LOG=debug bitnet-cpu:latest

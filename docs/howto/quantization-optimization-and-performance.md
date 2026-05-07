@@ -22,7 +22,7 @@ cargo bench --no-default-features -p bitnet-quantization --bench quantization_be
 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_performance
 
 # Profile inference performance
-cargo run -p xtask -- benchmark --model model.gguf --profile --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --profile --tokens 128
 
 # CPU optimization build
 RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --release --no-default-features --features cpu
@@ -304,7 +304,7 @@ impl QuantizationMemoryPool {
 
 ```bash
 # Comprehensive performance benchmarking with strict mode
-BITNET_STRICT_MODE=1 cargo run -p xtask -- benchmark \
+BITNET_STRICT_MODE=1 cargo run --no-default-features -p xtask -- benchmark \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
     --tokens 128 \
@@ -416,7 +416,7 @@ RUSTFLAGS="-C profile-generate=/tmp/pgo-data" \
 cargo build --no-default-features --release --no-default-features --features gpu
 
 # Run representative workload for PGO
-cargo run -p xtask -- benchmark --model model.gguf --tokens 1000
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 1000
 
 # Build with PGO data
 RUSTFLAGS="-C profile-use=/tmp/pgo-data -C target-cpu=native" \
@@ -540,7 +540,7 @@ criterion_main!(benches);
 **Diagnostic:**
 ```bash
 # Profile quantization performance
-cargo run -p xtask -- benchmark --model model.gguf --profile-quantization
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --profile-quantization
 
 # Check SIMD availability
 cargo test --no-default-features --features cpu test_simd_availability

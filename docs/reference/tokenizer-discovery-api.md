@@ -1041,7 +1041,7 @@ cargo test --no-default-features --features cpu --test tokenizer_discovery_integ
 
 # Cross-validation
 export BITNET_GGUF="model.gguf"
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 
 # Benchmarks
 cargo bench --no-default-features --features cpu --bench tokenizer_discovery_bench

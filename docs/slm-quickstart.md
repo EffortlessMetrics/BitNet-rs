@@ -35,16 +35,16 @@ from HuggingFace:
 
 ```bash
 # List all known models
-cargo run -p xtask -- download-model --list
+cargo run --no-default-features -p xtask -- download-model --list
 
 # Download SmolLM2 (~3.4 GB, no auth needed — good for testing)
-cargo run -p xtask -- download-model --id HuggingFaceTB/SmolLM2-1.7B-Instruct
+cargo run --no-default-features -p xtask -- download-model --id HuggingFaceTB/SmolLM2-1.7B-Instruct
 
 # Download Phi-4-mini (~7.6 GB, no auth needed — good balance of size/quality)
-cargo run -p xtask -- download-model --id microsoft/Phi-4-mini-instruct
+cargo run --no-default-features -p xtask -- download-model --id microsoft/Phi-4-mini-instruct
 
 # Download Qwen 2.5 1.5B (~3 GB, no auth needed)
-cargo run -p xtask -- download-model --id Qwen/Qwen2.5-1.5B-Instruct
+cargo run --no-default-features -p xtask -- download-model --id Qwen/Qwen2.5-1.5B-Instruct
 ```
 
 For gated models (Phi-4 14B, Gemma, LLaMA), set your HuggingFace token first:
@@ -57,7 +57,7 @@ export HF_TOKEN=hf_your_token_here
 $env:HF_TOKEN = "hf_your_token_here"
 
 # Then download
-cargo run -p xtask -- download-model --id meta-llama/Llama-3.2-1B-Instruct
+cargo run --no-default-features -p xtask -- download-model --id meta-llama/Llama-3.2-1B-Instruct
 ```
 
 Models are saved to `./models/<repo-name>/`.
@@ -189,7 +189,7 @@ Then run the release binary directly:
 
 ### "Unknown model" error
 
-The `--id` must match a known repo ID. Run `cargo run -p xtask -- download-model --list`
+The `--id` must match a known repo ID. Run `cargo run --no-default-features -p xtask -- download-model --list`
 to see all registered models. You can also download any HuggingFace repo by
 passing the full `owner/repo` path.
 

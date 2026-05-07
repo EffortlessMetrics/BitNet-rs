@@ -9,6 +9,6 @@ Each campaign directory contains:
 - `events/`: append-only lifecycle events such as `in_progress`, `pr_open`, `merged`, and `closeout`.
 - `generated/`: generated dashboards. Do not edit these files by hand.
 
-Use `cargo run -p xtask --no-default-features -- campaign check <campaign>` before opening a tracker PR, and `cargo run -p xtask --no-default-features -- campaign generate` to refresh dashboards.
+Use `cargo run --no-default-features -p xtask --no-default-features -- campaign check <campaign>` before opening a tracker PR, and `cargo run --no-default-features -p xtask --no-default-features -- campaign generate` to refresh dashboards.
 
 Normal item PRs should not hand-edit legacy global tracker files under `docs/tracking/bitnet-alignment/`. Those files remain transition surfaces until they are frozen or generated.

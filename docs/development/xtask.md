@@ -98,7 +98,7 @@ models/
 Check system capabilities for BitNet-rs (GPU detection, features).
 
 ```bash
-cargo run -p xtask -- preflight
+cargo run --no-default-features -p xtask -- preflight
 ```
 
 **Output Example**:
@@ -126,7 +126,7 @@ Device Capabilities:
 Advanced GPU preflight check with multiple output formats.
 
 ```bash
-cargo run -p xtask -- gpu-preflight [--require] [--format json|text]
+cargo run --no-default-features -p xtask -- gpu-preflight [--require] [--format json|text]
 ```
 
 **Flags**:

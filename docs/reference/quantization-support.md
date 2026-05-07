@@ -248,7 +248,7 @@ BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --featur
 BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features ffi --release test_performance_comparison_structure
 
 # Cross-validation with C++ reference implementation
-BITNET_GGUF="path/to/model.gguf" BITNET_STRICT_MODE=1 cargo run -p xtask -- crossval
+BITNET_GGUF="path/to/model.gguf" BITNET_STRICT_MODE=1 cargo run --no-default-features -p xtask -- crossval
 ```
 
 ### SIMD Testing
@@ -271,7 +271,7 @@ BitNet-rs provides comprehensive strict mode controls to eliminate mock inferenc
 
 ```bash
 # Enable strict mode for production deployments
-BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+BITNET_STRICT_MODE=1 cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test"
 
 # This enables ALL strict mode checks:
 # - fail_on_mock: Fails when mock computation detected
@@ -292,7 +292,7 @@ cargo test -p bitnet-quantization --no-default-features --features cpu
 
 # Validate performance metrics (Issue #261 - AC6)
 BITNET_STRICT_VALIDATE_PERFORMANCE=1 \
-cargo run -p xtask -- benchmark --model model.gguf
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf
 
 # CI enhanced strict mode (Issue #261 - AC6)
 CI=1 BITNET_CI_ENHANCED_STRICT=1 BITNET_STRICT_MODE=1 \
@@ -341,7 +341,7 @@ Strict mode validates performance metrics against realistic baselines:
     BITNET_SEED: "42"
   run: |
     cargo test --workspace --features cpu
-    cargo run -p xtask -- crossval
+    cargo run --no-default-features -p xtask -- crossval
 ```
 
 ## Strict Quantization Guards (Issue #453)
@@ -396,10 +396,10 @@ cargo run --release -p bitnet-cli --no-default-features --features cpu -- \
 
 ```bash
 # Run benchmark
-cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
 
 # Verify receipt honesty
-cargo run -p xtask -- verify-receipt ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
 
 # Checks:
 # - compute_path="real" matches actual kernel IDs
@@ -488,13 +488,13 @@ Strict mode extends to receipt validation, ensuring performance claims are backe
 
 ```bash
 # Verify quantized kernels are used
-cargo run -p xtask -- verify-receipt --require-quantized-kernels ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --require-quantized-kernels ci/inference.json
 
 # Verify GPU kernels for GPU claims
-cargo run -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
 
 # Validate performance metrics
-cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --validate-performance ci/inference.json
 ```
 
 ### Programmatic Usage
@@ -600,7 +600,7 @@ cargo test --no-default-features --features gpu --test strict_quantization_test
 
 # Cross-validation with strict mode
 BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42 \
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 ```
 
 ### Deterministic Inference with Strict Mode

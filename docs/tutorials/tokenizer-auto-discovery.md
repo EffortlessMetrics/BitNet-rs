@@ -22,10 +22,10 @@ Let's start with a simple example using a LLaMA-2 model:
 
 ```bash
 # Download a LLaMA-2 compatible model
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
+cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
 
 # Run inference with automatic tokenizer discovery
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --prompt "The capital of France is" \
     --auto-download
@@ -55,7 +55,7 @@ models/my-model/
 ```
 
 ```bash
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/my-model/model.gguf \
     --prompt "Hello world"
     # No --auto-download needed - tokenizer found automatically
@@ -67,7 +67,7 @@ For models without co-located tokenizers:
 
 ```bash
 # This will trigger automatic download
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/standalone-model.gguf \
     --prompt "Hello world" \
     --auto-download
@@ -85,7 +85,7 @@ Some models include tokenizer data in the GGUF metadata:
 
 ```bash
 # Works automatically with embedded tokenizers
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/model-with-embedded-tokenizer.gguf \
     --prompt "Hello world"
     # No download required - tokenizer extracted from model
@@ -97,7 +97,7 @@ Large vocabulary models require special consideration for performance:
 
 ```bash
 # LLaMA-3 with 128K vocabulary - GPU recommended
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/llama3-model.gguf \
     --prompt "The future of AI is" \
     --auto-download \
@@ -112,7 +112,7 @@ cargo run -p xtask -- infer \
 **CPU Fallback:**
 ```bash
 # Still works on CPU, but slower for large vocabularies
-BITNET_DETERMINISTIC=1 cargo run -p xtask -- infer \
+BITNET_DETERMINISTIC=1 cargo run --no-default-features -p xtask -- infer \
     --model models/llama3-model.gguf \
     --prompt "The future of AI is" \
     --auto-download \
@@ -133,7 +133,7 @@ export BITNET_STRICT_TOKENIZERS=1
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/production-model.gguf \
     --prompt "Production inference" \
     --auto-download
@@ -145,7 +145,7 @@ cargo run -p xtask -- infer \
 # Use only cached tokenizers, no downloads
 export BITNET_OFFLINE=1
 
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/cached-model.gguf \
     --prompt "Offline inference"
     # Will fail if tokenizer not cached
@@ -158,7 +158,7 @@ cargo run -p xtask -- infer \
 export BITNET_DETERMINISTIC=0  # Allow non-deterministic optimizations
 export RAYON_NUM_THREADS=8     # Control CPU parallelism
 
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/high-throughput-model.gguf \
     --prompt "Fast inference" \
     --auto-download \
@@ -173,7 +173,7 @@ Perfect for CPU inference with TL1/TL2 quantization:
 
 ```bash
 cargo test --no-default-features --features cpu
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/llama2-model.gguf \
     --prompt "Explain quantum computing" \
     --auto-download \
@@ -193,7 +193,7 @@ cargo run -p xtask -- infer \
 Standard BPE tokenization:
 
 ```bash
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/gpt2-model.gguf \
     --prompt "The weather today is" \
     --auto-download \
@@ -210,7 +210,7 @@ cargo run -p xtask -- infer \
 Specialized tokenizers for BitNet architectures:
 
 ```bash
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model models/bitnet-custom.gguf \
     --prompt "Neural network quantization" \
     --auto-download \
@@ -237,7 +237,7 @@ Error: No compatible tokenizer found for transformer model with vocab_size 99999
 cargo run -p bitnet-cli -- compat-check model.gguf
 
 # Try with explicit tokenizer
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --tokenizer path/to/tokenizer.json \
     --prompt "Test"
@@ -253,11 +253,11 @@ Error: HTTP error 404: https://huggingface.co/unknown/repo/resolve/main/tokenize
 **Solution:**
 ```bash
 # Verify model type detection
-cargo run -p xtask -- verify --model model.gguf
+cargo run --no-default-features -p xtask -- verify --model model.gguf
 
 # Use offline mode with cached tokenizer
 export BITNET_OFFLINE=1
-cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test"
 ```
 
 ### Issue 3: Vocabulary Size Mismatch
@@ -271,7 +271,7 @@ Warning: Vocabulary size mismatch: expected 32000, got 50257
 ```bash
 # Clear cache and re-download
 rm -rf ~/.cache/bitnet/tokenizers/
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download
@@ -315,20 +315,20 @@ async fn main() -> anyhow::Result<()> {
 find ~/.cache/bitnet/tokenizers/ -name "*.json"
 
 # Clear all caches (note: clean-cache takes no arguments)
-cargo run -p xtask -- clean-cache
+cargo run --no-default-features -p xtask -- clean-cache
 ```
 
 ### Performance Monitoring
 
 ```bash
 # Enable detailed logging
-RUST_LOG=bitnet_tokenizers=debug cargo run -p xtask -- infer \
+RUST_LOG=bitnet_tokenizers=debug cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Performance test" \
     --auto-download
 
 # Monitor cache hit rates
-RUST_LOG=bitnet_tokenizers::download=info cargo run -p xtask -- infer \
+RUST_LOG=bitnet_tokenizers::download=info cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Cache test"
 ```

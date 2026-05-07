@@ -21,10 +21,10 @@ The simplest approach lets BitNet-rs handle everything:
 
 ```bash
 # Download model with embedded tokenizer
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
+cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
 
 # Run inference with automatic tokenizer discovery
-cargo run -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --prompt "Explain quantization:"
+cargo run --no-default-features -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --prompt "Explain quantization:"
 ```
 
 **What Happens**:
@@ -67,7 +67,7 @@ See what BitNet-rs discovered:
 
 ```bash
 # Verify model and show tokenizer metadata
-cargo run -p xtask -- verify --model model.gguf
+cargo run --no-default-features -p xtask -- verify --model model.gguf
 ```
 
 ```rust,no_run
@@ -100,7 +100,7 @@ If GGUF doesn't have embedded tokenizer, BitNet-rs uses fallback chain:
 cp tokenizer.json /path/to/models/
 
 # BitNet-rs automatically finds co-located tokenizer
-cargo run -p xtask -- infer --model /path/to/models/model.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model /path/to/models/model.gguf --prompt "Test"
 ```
 
 **Fallback Order**:
@@ -119,7 +119,7 @@ Enable strict mode for production to prevent mock fallbacks:
 ```bash
 # Strict mode: fail if no real tokenizer available
 export BITNET_STRICT_TOKENIZERS=1
-cargo run -p xtask -- infer --model model.gguf --prompt "Production test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Production test"
 ```
 
 ```rust,no_run
@@ -139,7 +139,7 @@ let tokenizer = resolver.resolve_with_fallback().await?;
 
 ```bash
 # GGUF contains `tokenizer.json` string metadata
-cargo run -p xtask -- infer --model llama3.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model llama3.gguf --prompt "Test"
 # ✅ Extracts HuggingFace tokenizer automatically
 ```
 
@@ -147,7 +147,7 @@ cargo run -p xtask -- infer --model llama3.gguf --prompt "Test"
 
 ```bash
 # GGUF contains `tokenizer.ggml.tokens` array metadata
-cargo run -p xtask -- infer --model llama2.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model llama2.gguf --prompt "Test"
 # ✅ Creates tokenizer from embedded vocabulary
 ```
 
@@ -159,7 +159,7 @@ cargo run -p xtask -- infer --model llama2.gguf --prompt "Test"
 #   ├── model.gguf
 #   └── tokenizer.json
 
-cargo run -p xtask -- infer --model /models/gpt2/model.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model /models/gpt2/model.gguf --prompt "Test"
 # ✅ Finds co-located tokenizer.json automatically
 ```
 
@@ -168,7 +168,7 @@ cargo run -p xtask -- infer --model /models/gpt2/model.gguf --prompt "Test"
 ```bash
 # Disable downloads in air-gapped environment
 export BITNET_OFFLINE=1
-cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test"
 # ✅ Uses only embedded, co-located, or cached tokenizers
 ```
 
@@ -180,7 +180,7 @@ cargo run -p xtask -- infer --model model.gguf --prompt "Test"
 
 **Solution**: Provide explicit tokenizer or disable strict mode:
 ```bash
-cargo run -p xtask -- infer --model model.gguf --tokenizer tokenizer.json --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --tokenizer tokenizer.json --prompt "Test"
 # OR
 unset BITNET_STRICT_TOKENIZERS
 ```
@@ -191,7 +191,7 @@ unset BITNET_STRICT_TOKENIZERS
 
 **Solution**: GGUF metadata may be incorrect. Use explicit tokenizer:
 ```bash
-cargo run -p xtask -- infer --model model.gguf --tokenizer correct_tokenizer.json --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --tokenizer correct_tokenizer.json --prompt "Test"
 ```
 
 ---

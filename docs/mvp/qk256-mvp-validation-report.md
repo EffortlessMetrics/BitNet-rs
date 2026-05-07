@@ -293,7 +293,7 @@ cargo test -p bitnet-models --no-default-features --features cpu i2s_qk256
 cargo build --release --no-default-features --features cpu
 
 # Download QK256 model ✅
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
 # Run inference ✅
 cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
@@ -354,8 +354,8 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --model model.gguf --prompt "Test" --max-tokens 16 --seed 42
 
 # Check receipt for kernel IDs ✅
-cargo run -p xtask -- benchmark --model model.gguf --tokens 128
-cargo run -p xtask -- verify-receipt ci/inference.json
+cargo run --no-default-features -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run --no-default-features -p xtask -- verify-receipt ci/inference.json
 ```
 
 ### 3.4 Implementation Documentation
@@ -568,7 +568,7 @@ cd BitNet-rs
 cargo build --release --no-default-features --features cpu
 
 # 3. Download QK256 model
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
 # 4. Run inference (QK256 kernel auto-detected)
 cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \

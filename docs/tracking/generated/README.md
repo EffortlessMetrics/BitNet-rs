@@ -14,11 +14,11 @@ Do not hand-edit generated dashboard files. Source data comes from campaign-loca
 Refresh dashboards with:
 
 ```bash
-cargo run -p xtask --no-default-features -- campaign generate
+cargo run --no-default-features -p xtask --no-default-features -- campaign generate
 ```
 
 Check for stale dashboards with:
 
 ```bash
-cargo run -p xtask --no-default-features -- campaign generate --check
+cargo run --no-default-features -p xtask --no-default-features -- campaign generate --check
 ```

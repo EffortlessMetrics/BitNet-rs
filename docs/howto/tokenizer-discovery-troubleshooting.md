@@ -11,10 +11,10 @@ Before diving into specific issues, use these commands to gather diagnostic info
 cargo run -p bitnet-cli -- compat-check model.gguf
 
 # Verify xtask functionality
-cargo run -p xtask -- verify --model model.gguf --allow-mock
+cargo run --no-default-features -p xtask -- verify --model model.gguf --allow-mock
 
 # Test inference with verbose logging
-RUST_LOG=bitnet_tokenizers=debug cargo run -p xtask -- infer \
+RUST_LOG=bitnet_tokenizers=debug cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download
@@ -37,7 +37,7 @@ Error: No compatible tokenizer found for llama model with vocab_size 128256 (str
 ```bash
 # Allow mock tokenizer fallback
 unset BITNET_STRICT_TOKENIZERS
-cargo run -p xtask -- infer --model model.gguf --prompt "Test" --auto-download
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test" --auto-download
 ```
 
 #### Option B: Provide Explicit Tokenizer
@@ -47,7 +47,7 @@ curl -L "https://huggingface.co/meta-llama/Meta-Llama-3-8B/resolve/main/tokenize
     -o tokenizer.json
 
 # Use explicit tokenizer path
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --tokenizer tokenizer.json \
     --prompt "Test"
@@ -81,7 +81,7 @@ curl -I "https://huggingface.co"
 
 # Use offline mode with cached tokenizers
 export BITNET_OFFLINE=1
-cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Test"
 ```
 
 #### Repository Issues
@@ -93,7 +93,7 @@ curl -I "https://huggingface.co/meta-llama/Llama-2-7b-hf"
 curl -s "https://huggingface.co/api/models/meta-llama/Llama-2-7b-hf" | grep -o '"[^"]*tokenizer[^"]*"'
 
 # Use alternative repository
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --tokenizer "https://huggingface.co/alternative-repo/resolve/main/tokenizer.json" \
     --prompt "Test"
@@ -103,7 +103,7 @@ cargo run -p xtask -- infer \
 ```bash
 # Increase timeout and retry
 export BITNET_DOWNLOAD_TIMEOUT=600  # 10 minutes
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download
@@ -128,7 +128,7 @@ rm -rf ~/.cache/bitnet/tokenizers/llama2-32k/
 rm -rf ~/.cache/bitnet/tokenizers/
 
 # Re-download
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download
@@ -153,7 +153,7 @@ jq empty ~/.cache/bitnet/tokenizers/llama2-32k/tokenizer.json
 rm ~/.cache/bitnet/tokenizers/*/tokenizer.json.partial
 
 # Then retry download
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download
@@ -172,7 +172,7 @@ Model: 128256, Tokenizer: 50257
 #### Incorrect Model Type Detection
 ```bash
 # Check detected model type
-RUST_LOG=bitnet_tokenizers::discovery=debug cargo run -p xtask -- infer \
+RUST_LOG=bitnet_tokenizers::discovery=debug cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download 2>&1 | grep "model type"
@@ -184,14 +184,14 @@ RUST_LOG=bitnet_tokenizers::discovery=debug cargo run -p xtask -- infer \
 #### Wrong Repository Mapping
 ```bash
 # Check what repository is being used
-RUST_LOG=bitnet_tokenizers::discovery=debug cargo run -p xtask -- infer \
+RUST_LOG=bitnet_tokenizers::discovery=debug cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download 2>&1 | grep "download compatible tokenizer"
 
 # Use explicit tokenizer for correct vocabulary size
 wget "https://huggingface.co/meta-llama/Meta-Llama-3-8B/resolve/main/tokenizer.json"
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --tokenizer tokenizer.json \
     --prompt "Test"
@@ -219,7 +219,7 @@ chmod 755 ~/.cache/bitnet/tokenizers
 # Use custom cache directory
 export BITNET_CACHE_DIR="/tmp/bitnet-cache"
 mkdir -p "$BITNET_CACHE_DIR"
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download
@@ -236,7 +236,7 @@ rm -rf ~/.cache/bitnet/tokenizers/old-unused-*
 
 # Use temporary cache location
 export BITNET_CACHE_DIR="/tmp/bitnet-temp-cache"
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download
@@ -258,7 +258,7 @@ GPU operations: 0, CPU operations: 1000, GPU efficiency: 0.0%
 cargo build --no-default-features --features gpu
 
 # Run inference with GPU
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download \
@@ -278,7 +278,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 #### Fallback to CPU Gracefully
 ```bash
 # Force CPU-only inference for large vocabularies
-BITNET_FORCE_CPU=1 cargo run -p xtask -- infer \
+BITNET_FORCE_CPU=1 cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Test" \
     --auto-download \
@@ -303,7 +303,7 @@ EOF
 
 # Source and test
 source debug-tokenizer.env
-cargo run -p xtask -- infer --model model.gguf --prompt "Debug test" --auto-download
+cargo run --no-default-features -p xtask -- infer --model model.gguf --prompt "Debug test" --auto-download
 ```
 
 ### Cross-Validation Testing
@@ -311,7 +311,7 @@ cargo run -p xtask -- infer --model model.gguf --prompt "Debug test" --auto-down
 ```bash
 # Test tokenizer compatibility with cross-validation
 export BITNET_GGUF="path/to/model.gguf"
-cargo run -p xtask -- crossval --tokenizer-only
+cargo run --no-default-features -p xtask -- crossval --tokenizer-only
 
 # Compare tokenizer outputs
 cargo test --no-default-features -p bitnet-tokenizers --no-default-features --features cpu test_tokenizer_contract
@@ -322,13 +322,13 @@ cargo test --no-default-features -p bitnet-tokenizers --no-default-features --fe
 ```bash
 # Profile tokenizer discovery performance
 cargo build --no-default-features --release --no-default-features --features cpu
-time cargo run --release -p xtask -- infer \
+time cargo run --release --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Performance test" \
     --auto-download
 
 # Monitor memory usage
-/usr/bin/time -v cargo run -p xtask -- infer \
+/usr/bin/time -v cargo run --no-default-features -p xtask -- infer \
     --model model.gguf \
     --prompt "Memory test" \
     --auto-download
@@ -356,11 +356,11 @@ cargo test --no-default-features -p bitnet-tokenizers --no-default-features --fe
 # Validate all models in your deployment
 for model in models/*.gguf; do
     echo "Validating: $model"
-    cargo run -p xtask -- verify --model "$model" --allow-mock || echo "❌ Failed: $model"
+    cargo run --no-default-features -p xtask -- verify --model "$model" --allow-mock || echo "❌ Failed: $model"
 done
 
 # Pre-download all required tokenizers
-cargo run -p xtask -- pre-download-tokenizers --model-dir models/
+cargo run --no-default-features -p xtask -- pre-download-tokenizers --model-dir models/
 ```
 
 ### 2. Production Monitoring
@@ -375,7 +375,7 @@ export BITNET_STRICT_TOKENIZERS=1
 export BITNET_DETERMINISTIC=1
 
 for model in models/*.gguf; do
-    if ! cargo run -p xtask -- infer \
+    if ! cargo run --no-default-features -p xtask -- infer \
         --model "$model" \
         --prompt "Health check" \
         --max-tokens 1 >/dev/null 2>&1; then

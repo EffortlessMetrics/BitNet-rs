@@ -33,7 +33,7 @@ You can override auto-detection with `--cpp-backend bitnet|llama`.
 
 ```bash
 # Auto-bootstrap both backends
-eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+eval "$(cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=sh)"
 ```
 
 This command fetches, builds, and configures the appropriate C++ reference implementation and emits environment variable exports for your shell.
@@ -46,13 +46,13 @@ The easiest way is to use `setup-cpp-auto`, which automatically selects and buil
 
 ```bash
 # Bash/Zsh
-eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+eval "$(cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=sh)"
 
 # Fish shell
-cargo run -p xtask -- setup-cpp-auto --emit=fish | source
+cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=fish | source
 
 # PowerShell
-cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
+cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
 ```
 
 This command:
@@ -65,10 +65,10 @@ This command:
 
 ```bash
 # Bash/Zsh - add to ~/.bashrc or ~/.zshrc
-cargo run -p xtask -- setup-cpp-auto --emit=sh >> ~/.bashrc
+cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=sh >> ~/.bashrc
 
 # Fish - add to ~/.config/fish/config.fish
-cargo run -p xtask -- setup-cpp-auto --emit=fish >> ~/.config/fish/config.fish
+cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=fish >> ~/.config/fish/config.fish
 ```
 
 ### Option 2: Manual Per-Backend Setup
@@ -79,7 +79,7 @@ If you need fine-grained control, set up backends individually:
 
 ```bash
 # Download and build bitnet.cpp with shared library
-cargo run -p xtask -- fetch-cpp --backend cpu
+cargo run --no-default-features -p xtask -- fetch-cpp --backend cpu
 
 # The build completes in ~/.cache/bitnet_cpp by default
 
@@ -314,7 +314,7 @@ Verify that xtask can access C++ functionality:
 
 ```bash
 # BitNet model auto-detection (will use bitnet.cpp)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -322,7 +322,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --verbose
 
 # LLaMA model auto-detection (will use llama.cpp)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/llama-3-8b-instruct.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -340,7 +340,7 @@ Once setup is complete, you can use the full cross-validation toolkit. The toolk
 
 ```bash
 # Per-token logits divergence detection (BitNet)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -353,7 +353,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
 
 ```bash
 # Per-token logits divergence detection (LLaMA)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/llama-3-8b-instruct.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "What is the capital of France?" \
@@ -366,7 +366,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
 
 ```bash
 # Force bitnet.cpp even for non-BitNet models
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/some-model.gguf \
   --tokenizer models/tokenizer.json \
   --cpp-backend bitnet \
@@ -374,7 +374,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --max-tokens 4
 
 # Force llama.cpp even for BitNet models
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --cpp-backend llama \
@@ -506,7 +506,7 @@ otool -L ~/.cache/bitnet_cpp/build/bin/libbitnet.dylib | grep "not found"
 
 ```bash
 # Rebuild bitnet.cpp
-cargo run -p xtask -- fetch-cpp --backend cpu --force
+cargo run --no-default-features -p xtask -- fetch-cpp --backend cpu --force
 
 # Verify both backends are available
 ls -lh ~/.cache/bitnet_cpp/build/bin/lib*.so  # Linux
@@ -537,7 +537,7 @@ export LD_LIBRARY_PATH="$BITNET_CPP_DIR/build/bin:$LD_LIBRARY_PATH"
 
 ```bash
 # Build xtask with required features
-cargo run -p xtask --features crossval-all -- crossval-per-token --help
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token --help
 ```
 
 Note: The feature must be specified at build time, not at runtime.
@@ -550,14 +550,14 @@ Note: The feature must be specified at build time, not at runtime.
 
 ```bash
 # Force bitnet backend
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/my-model.gguf \
   --tokenizer models/tokenizer.json \
   --cpp-backend bitnet \
   --prompt "Test"
 
 # Force llama backend
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/my-model.gguf \
   --tokenizer models/tokenizer.json \
   --cpp-backend llama \
@@ -598,7 +598,7 @@ cargo clean -p xtask -p bitnet-crossval
 cargo build -p xtask --features crossval-all
 
 # 3. Use --verbose to diagnose which libs are missing
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "Test" \
@@ -614,7 +614,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
 
 ```bash
 # Use --dump-ids and --dump-cpp-ids to compare token sequences
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "What is 2+2?" \

@@ -255,10 +255,10 @@ ls -la scripts/
 
 ```bash
 # Verify model integrity
-cargo run -p xtask -- verify --model "path/to/model.gguf"
+cargo run --no-default-features -p xtask -- verify --model "path/to/model.gguf"
 
 # Test inference
-cargo run -p xtask -- infer \
+cargo run --no-default-features -p xtask -- infer \
     --model "path/to/model.gguf" \
     --prompt "Test" \
     --max-new-tokens 10 \

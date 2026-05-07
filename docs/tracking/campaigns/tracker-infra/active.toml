@@ -28,9 +28,9 @@ blocked_by = []
 acceptance = "Add campaign-local tracker model docs, missing campaign manifests, append-only event rules, advisory xtask campaign check/generate/doctor commands, and generated global dashboards."
 commands = [
   "cargo fmt --all -- --check",
-  "cargo run -p xtask --no-default-features -- campaign check apple-m4",
-  "cargo run -p xtask --no-default-features -- campaign doctor",
-  "cargo run -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --no-default-features -p xtask --no-default-features -- campaign check apple-m4",
+  "cargo run --no-default-features -p xtask --no-default-features -- campaign doctor",
+  "cargo run --no-default-features -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [

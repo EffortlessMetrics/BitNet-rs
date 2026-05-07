@@ -45,7 +45,7 @@ Each step builds on the previous. **Stop at the first failure** to isolate the r
 ### Command
 
 ```bash
-cargo run -p xtask --features crossval-all -- preflight --verbose
+cargo run --no-default-features -p xtask --features crossval-all -- preflight --verbose
 ```
 
 ### Expected Output (Success)
@@ -76,18 +76,18 @@ Both backends available. Dual-backend cross-validation supported.
 1. **Auto-bootstrap** (recommended):
    ```bash
    # Bash/Zsh
-   eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+   eval "$(cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=sh)"
 
    # Fish
-   cargo run -p xtask -- setup-cpp-auto --emit=fish | source
+   cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=fish | source
 
    # PowerShell
-   cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
+   cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
    ```
 
 2. **Manual setup**:
    ```bash
-   cargo run -p xtask -- fetch-cpp
+   cargo run --no-default-features -p xtask -- fetch-cpp
    export BITNET_CPP_DIR=/path/to/bitnet.cpp
    export LD_LIBRARY_PATH=$BITNET_CPP_DIR:$LD_LIBRARY_PATH  # Linux
    export DYLD_LIBRARY_PATH=$BITNET_CPP_DIR:$DYLD_LIBRARY_PATH  # macOS
@@ -119,7 +119,7 @@ Token mismatch causes **total divergence** - the C++ reference processes differe
 ### Command
 
 ```bash
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -163,7 +163,7 @@ Token parity: OK (8 tokens match exactly)
 
    ```bash
    # Try raw template to bypass formatting
-   cargo run -p xtask --features crossval-all -- crossval-per-token \
+   cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
      --model models/model.gguf \
      --tokenizer models/tokenizer.json \
      --prompt-template raw \
@@ -191,7 +191,7 @@ cargo run -p bitnet-cli --features cpu,full-cli -- compat-check \
   models/model.gguf --show-kv | grep -i bos
 
 # 2. Test with raw template (no formatting)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt-template raw \
@@ -200,7 +200,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --dump-ids --dump-cpp-ids
 
 # 3. Test with different template
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt-template instruct \
@@ -226,7 +226,7 @@ Shape mismatches cause silent numerical divergence. Even if tokens match, incorr
 
 ```bash
 # Current implementation: use crossval-per-token with verbose mode
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -292,7 +292,7 @@ If position 0 fails, the issue is in a single layer's computation, not cumulativ
 ### Command
 
 ```bash
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -365,11 +365,11 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
    - Diagnostic: Compare position 0 vs position 7 divergence
      ```bash
      # Position 0 (no cumulative error)
-     cargo run -p xtask --features crossval-all -- crossval-per-token \
+     cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
        --prompt "Test" --max-tokens 1 --format json
 
      # Position 7 (cumulative error)
-     cargo run -p xtask --features crossval-all -- crossval-per-token \
+     cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
        --prompt "What is the capital of France?" --max-tokens 1 --format json
      ```
    - Solution: Check `rope_freq_base` and `rope_freq_scale` in GGUF metadata
@@ -391,7 +391,7 @@ cargo run -p bitnet-cli --features cpu,full-cli -- inspect \
 cargo run -p bitnet-cli -- compat-check models/model.gguf --show-kv | grep rope
 
 # 3. Test with shorter prompt (single token)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "Test" \
@@ -399,7 +399,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --format json
 
 # 4. Compare with known-good model
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/reference-model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "Test" \
@@ -425,7 +425,7 @@ If position 0 passes but position 7 fails, the issue is in **sequential processi
 ### Command
 
 ```bash
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is the capital of France?" \
@@ -478,11 +478,11 @@ Position 3: FAIL (cos_sim: 0.9850)
    - Diagnostic: Test with single-token prompt vs multi-token prompt
      ```bash
      # Single token (no mask needed)
-     cargo run -p xtask --features crossval-all -- crossval-per-token \
+     cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
        --prompt "Test" --max-tokens 1 --format json
 
      # Multi-token (requires causal mask)
-     cargo run -p xtask --features crossval-all -- crossval-per-token \
+     cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
        --prompt "What is the capital" --max-tokens 1 --format json
      ```
    - Solution: Verify mask generation in `apply_causal_mask()` (see Issue #254)
@@ -506,7 +506,7 @@ Position 3: FAIL (cos_sim: 0.9850)
      ```bash
      export BITNET_DETERMINISTIC=1
      export RAYON_NUM_THREADS=1
-     cargo run -p xtask --features crossval-all -- crossval-per-token \
+     cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
        --prompt "Test prompt" --max-tokens 1 --format json
      ```
    - Solution: Acceptable if within tolerance (MSE ≤ 2e-6)
@@ -517,7 +517,7 @@ Position 3: FAIL (cos_sim: 0.9850)
 # 1. Test with increasing prompt lengths
 for prompt in "Test" "What is" "What is the capital"; do
   echo "=== Prompt: $prompt ==="
-  cargo run -p xtask --features crossval-all -- crossval-per-token \
+  cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
     --model models/model.gguf \
     --tokenizer models/tokenizer.json \
     --prompt "$prompt" \
@@ -526,7 +526,7 @@ for prompt in "Test" "What is" "What is the capital"; do
 done
 
 # 2. Capture position-by-position metrics (verbose)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "What is the capital of France and Germany?" \
@@ -537,7 +537,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
 # 3. Test deterministic inference
 export BITNET_DETERMINISTIC=1
 export RAYON_NUM_THREADS=1
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "Test" \
@@ -563,7 +563,7 @@ If position N logits match but generated token differs, the issue is in **sampli
 ### Command
 
 ```bash
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -617,15 +617,15 @@ Position 1: FAIL (cos_sim: 0.7234) → token 19 (Rust) vs token 42 (C++)
 
 ```bash
 # 1. Verify position 0 (no KV update needed)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --prompt "Test" --max-tokens 1 --dump-ids --dump-cpp-ids
 
 # 2. Test position 1 (first KV update)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --prompt "Test" --max-tokens 2 --dump-ids --dump-cpp-ids --verbose
 
 # 3. Check KV cache shapes
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --prompt "Test" --max-tokens 4 --verbose | grep -i "kv_cache"
 ```
 
@@ -652,7 +652,7 @@ Position 4: FAIL → token 123 (Rust) vs token 456 (C++)
    - Solution: Verify greedy sampling (temperature = 0.0, no nucleus/top-k)
      ```bash
      # Ensure greedy decoding
-     cargo run -p xtask --features crossval-all -- crossval-per-token \
+     cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
        --prompt "Test" --max-tokens 4 --dump-ids --dump-cpp-ids
      # Note: crossval-per-token uses greedy by default (no temperature/top-p flags)
      ```
@@ -671,10 +671,10 @@ Position 4: FAIL → token 123 (Rust) vs token 456 (C++)
      export BITNET_DETERMINISTIC=1
      export BITNET_SEED=42
      # Run 1
-     cargo run -p xtask --features crossval-all -- crossval-per-token \
+     cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
        --prompt "Test" --max-tokens 4 --dump-ids > run1.txt
      # Run 2
-     cargo run -p xtask --features crossval-all -- crossval-per-token \
+     cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
        --prompt "Test" --max-tokens 4 --dump-ids > run2.txt
      diff run1.txt run2.txt  # Should be identical
      ```
@@ -722,10 +722,10 @@ Position 0: FAIL → token 220 (Rust) vs token 128220 (C++)
 
 ```bash
 # 1. Preflight
-cargo run -p xtask --features crossval-all -- preflight --verbose
+cargo run --no-default-features -p xtask --features crossval-all -- preflight --verbose
 
 # 2. Token parity (must pass before continuing)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -733,7 +733,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --dump-ids --dump-cpp-ids
 
 # 3. First logits (position 0 only)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "Test" \
@@ -742,7 +742,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --format json
 
 # 4. Per-position (full prompt)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "What is the capital of France?" \
@@ -751,7 +751,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --format text
 
 # 5. Greedy decode (8 generation steps)
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -777,7 +777,7 @@ If cross-validation fails and basic diagnostics don't reveal the issue, capture 
   /tmp/crossval-traces
 
 # 2. Compare traces layer-by-layer
-cargo run -p xtask -- trace-diff \
+cargo run --no-default-features -p xtask -- trace-diff \
   /tmp/crossval-traces/scenario_1/rs_traces \
   /tmp/crossval-traces/scenario_1/cpp_traces
 
@@ -790,12 +790,12 @@ Verify that GPU kernels are actually used (not CPU fallback):
 
 ```bash
 # 1. Run benchmark with receipt generation
-cargo run -p xtask -- benchmark \
+cargo run --no-default-features -p xtask -- benchmark \
   --model models/model.gguf \
   --tokens 128
 
 # 2. Verify GPU kernel IDs in receipt
-cargo run -p xtask -- verify-receipt --require-gpu-kernels
+cargo run --no-default-features -p xtask -- verify-receipt --require-gpu-kernels
 
 # Expected kernel IDs for GPU:
 # - gemm_cuda_*
@@ -813,14 +813,14 @@ export BITNET_SEED=42
 export RAYON_NUM_THREADS=1
 
 # Run twice, compare outputs
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "Test" \
   --max-tokens 4 \
   --dump-ids > run1.txt
 
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "Test" \
