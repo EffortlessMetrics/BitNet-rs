@@ -31,7 +31,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-QA-MODEL-001"]
+blocked_by = ["M4-QA-MODEL-002"]
 acceptance = "Add a multi-prompt Apple M4 CPU/NEON local-answer smoke suite that runs real GGUF and tokenizer paths under strict mode, requires generated_tokens >= 16, valid UTF-8, non-empty output, non-degenerate token variation, and a receipt with explicit fallback status."
 commands = [
   "cargo fmt --all -- --check",
@@ -119,7 +119,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-MODEL-001"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-local-answer/M4-QA-MODEL-001-artifact-validation"
 stackable = false
 review_mode = "codex_premerge"
@@ -154,6 +154,51 @@ forbidden_paths = [
 ]
 may_claim = [
   "A supported local-answer model artifact is reference-validated for the campaign prompt suite, or the current artifact is explicitly rejected with evidence.",
+]
+must_not_claim = [
+  "Apple M4 CPU/NEON local answers are coherent until M4-QA-001 passes.",
+  "Full apple-m4-metal model inference works.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+]
+
+[[work_item]]
+id = "M4-QA-MODEL-002"
+status = "proposed"
+branch = "codex/apple-m4-local-answer/M4-QA-MODEL-002-known-good-artifact"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-QA-MODEL-001"]
+acceptance = "Acquire or regenerate a supported local-answer GGUF/tokenizer artifact that passes the campaign prompt suite under a reference runner, records exact SHA256 and tokenizer metadata, and is allowed to unblock M4-QA-001."
+commands = [
+  "cargo fmt --all -- --check",
+  "Reference runner command for the accepted model artifact and campaign prompt suite",
+  "Metadata check that the artifact includes tokenizer pre-tokenizer authority or an explicit compatibility decision",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "ci/quality/**",
+  "docs/reports/**",
+  "docs/tdd/plans/**",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "A supported local-answer model artifact is reference-validated for the campaign prompt suite and can be used to rerun M4-QA-001.",
 ]
 must_not_claim = [
   "Apple M4 CPU/NEON local answers are coherent until M4-QA-001 passes.",
