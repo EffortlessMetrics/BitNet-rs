@@ -146,6 +146,20 @@ QUICK EXAMPLES:
   # Interactive chat (auto-detects template, clean output)
   RUST_LOG=warn bitnet chat --model model.gguf --tokenizer tokenizer.json
 
+  # Apple M4 local answer path: CPU/NEON is the reliable user-facing route today.
+  # The JSON receipt records requested_backend, selected_backend, runtime_api, and fallback_used.
+  RUST_LOG=warn bitnet --device apple-m4-cpu-neon run \
+    --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+    --prompt "What is 2+2? Answer briefly." --max-tokens 32 \
+    --temperature 0.0 --greedy --deterministic \
+    --strict-loader --strict-tokenizer --json-out local-answer-cpu-neon.json
+
+APPLE M4 ROUTING:
+  apple-m4-cpu-neon: reliable local-answer path with strict receipts.
+  apple-m4-metal: receipt-backed Metal phase/subgraph proof only unless a strict
+    full-model Metal receipt later proves more.
+  apple-m4-mpsgraph: graph/reference lane, not native Metal or Neural Engine proof.
+
 LOGGING:
   Set RUST_LOG=warn (default: info) to reduce log noise and focus on generated text.
   Options: error, warn, info, debug, trace
@@ -227,6 +241,13 @@ enum Commands {
     /// Deterministic Q&A with greedy decoding:
     ///   bitnet run --model model.gguf --prompt "Test question" \
     ///     --temperature 0.0 --greedy --seed 42
+    ///
+    /// Apple M4 local answer path with strict CPU/NEON receipt:
+    ///   bitnet --device apple-m4-cpu-neon run \
+    ///     --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+    ///     --prompt "What is 2+2? Answer briefly." --max-tokens 32 \
+    ///     --temperature 0.0 --greedy --deterministic \
+    ///     --strict-loader --strict-tokenizer --json-out local-answer-cpu-neon.json
     ///
     /// Raw completion (no Q&A formatting):
     ///   bitnet run --model model.gguf --prompt-template raw \

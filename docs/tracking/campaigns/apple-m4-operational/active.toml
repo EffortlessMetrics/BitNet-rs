@@ -140,8 +140,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-004"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-operational/M4-OP-004-effective-cli-flow"
+pr = 3871
+head_sha = "47dd4198e1504533703dee92d19cdbef5e6d2c0b"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T10:15:37Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-004"
+event = "pr_open"
+pr = 3871
+head_sha = "b03e2b3cd32c8c3eae2cb08363039b79f36fd54a"
+actor = "codex"
+
+notes = [
+  "Opened Apple M4 effective CLI flow PR.",
+  "Documents the existing bitnet --device apple-m4-cpu-neon run path as the reliable local-answer route.",
+  "Does not add a new wrapper command, runtime path, full Metal inference claim, QK256 claim, MPSGraph execution claim, Neural Engine claim, or performance claim.",
+]
