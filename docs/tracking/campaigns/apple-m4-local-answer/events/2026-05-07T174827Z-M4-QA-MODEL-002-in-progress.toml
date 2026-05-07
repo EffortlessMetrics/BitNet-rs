@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T17:48:27Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-MODEL-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the supported local-answer model artifact gate.",
+  "Use metadata-first and reference-runner validation before any source-weight download or large model regeneration.",
+  "Do not unblock M4-QA-001 until an artifact passes the campaign prompt suite under the reference runner.",
+]
