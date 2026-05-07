@@ -139,8 +139,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-002A"
-status = "pr_open"
+status = "merged"
 pr = 3917
+merge_sha = "a2b9b468a266683279e16bee2f8d12ab03cf4350"
 branch = "codex/slm-cpu-002a-qwen-strict-blocker"
 stackable = false
 review_mode = "codex_premerge"
@@ -179,6 +180,45 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-002B"
+status = "ready"
+branch = "codex/slm-cpu-002b-dense-q8-gguf"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-002A"]
+acceptance = "Add dense standard GGUF Q8_0/Q*_K adapter or dequantization support sufficient for the verified Qwen3-0.6B Q8_0 artifact to pass strict load without compatibility fallback, while preserving explicit failure for unsupported dense quantization variants."
+commands = [
+  "cargo check --locked -p bitnet-models --no-default-features",
+  "cargo test --locked -p bitnet-models --no-default-features dense_qwen --lib",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/i2s_qk256*",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Qwen3-0.6B Q8_0 can pass strict dense GGUF load after merge.",
+]
+must_not_claim = [
+  "Tiny dense CPU inference works.",
+  "Answer quality is proven.",
+  "Sustained 8250U throughput is proven.",
+]
+
+[[work_item]]
 id = "SLM-CPU-003"
 status = "proposed"
 branch = "codex/slm-cpu-003-tiny-run"
@@ -186,7 +226,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["SLM-CPU-002A"]
+blocked_by = ["SLM-CPU-002B"]
 acceptance = "Run one tiny strict dense CPU receipt on the verified candidate with real GGUF, strict tokenizer, dense architecture adapter, CPU backend, fallback=false, prompt IDs, generated IDs, and decoded text. Correct answer is not required for bring-up if the receipt is diagnosable."
 commands = [
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
