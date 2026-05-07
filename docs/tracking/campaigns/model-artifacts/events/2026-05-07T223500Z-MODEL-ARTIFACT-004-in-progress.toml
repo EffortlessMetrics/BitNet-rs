@@ -1,0 +1,14 @@
+timestamp = "2026-05-07T22:35:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "MODEL-ARTIFACT-004 records intended ik_llama.cpp runner evidence after MODEL-ARTIFACT-003 showed stock llama.cpp cannot load the tdh111 IQ2_BN_R4 artifact.",
+  "The tdh111 IQ2_BN_R4 candidate passes the tiny prompt suite under ik_llama.cpp, but it still lacks pre-tokenizer authority and is not the official Microsoft I2_S CUDA target.",
+  "The official Microsoft I2_S artifact loads under ik_llama.cpp but fails the prompt suite with repeated colon output.",
+  "The work remains diagnostic-only and must not claim CPU, CUDA, coherent local-answer success, or speedup.",
+]

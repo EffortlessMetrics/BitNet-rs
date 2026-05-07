@@ -12,6 +12,7 @@ answer_ready_candidate_found = false
 legacy_search_report = "docs/reports/M4_QA_MODEL_002_ARTIFACT_SEARCH.md"
 shared_search_report = "docs/reports/MODEL_ARTIFACT_002_REFERENCE_GOOD_SEARCH.md"
 reference_runner_compatibility_report = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
+intended_runner_report = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
 claim_boundary = "All candidates below are diagnostic-only until a later artifact passes the shared answer artifact gate."
 
 [local_environment]
@@ -63,7 +64,11 @@ notes = [
   "Structurally valid GGUF.",
   "Reference runner warned that tokenizer.ggml.pre was missing and used default.",
   "All recorded answer prompt-suite checks failed.",
+  "The ik_llama.cpp intended-runner check also loaded this artifact but produced repeated colon output for every prompt-suite row.",
 ]
+intended_runner = "ik_llama.cpp llama-cli"
+intended_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c20fe2c66"
+intended_runner_prompt_suite = "failed"
 
 [[candidate]]
 id = "jpacifico_aramis_2b_i2s"
@@ -218,15 +223,22 @@ sha256 = "a99001aaa5c1dc24acffe8035315c7d2970e82d8ccd3189383275c5d5a5287b5"
 size_bytes = 987884192
 source = "huggingface"
 tokenizer_model = "gpt2"
-pretokenizer_authority = "unknown"
+pretokenizer_authority = "missing"
 chat_template_authority = "present_in_gguf"
-reference_runner = "stock llama.cpp b9061 llama-completion"
-reference_runner_version = "9061 (deab41ec6)"
-reference_prompt_suite = "blocked"
-status = "rejected_reference_runner_failed"
+reference_runner = "ik_llama.cpp llama-cli"
+reference_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c20fe2c66"
+reference_prompt_suite = "passed"
+status = "rejected_missing_tokenizer_authority"
 notes = [
   "Official-derived quantized GGUF for microsoft/bitnet-b1.58-2B-4T.",
   "The model card says this GGUF is intended for ik_llama.cpp.",
   "Latest stock llama.cpp b9061 rejected blk.0.ffn_down.weight with invalid GGML type 335 before prompt execution.",
-  "This is not an answer-quality rejection under the intended runner; it blocks answer_ready promotion through stock llama.cpp only.",
+  "The intended ik_llama.cpp runner loads the GGUF and passes the deterministic tiny prompt suite.",
+  "The intended runner still reports missing pre-tokenizer type and uses default metadata.",
+  "This alternate IQ2_BN_R4 artifact does not unblock the official Microsoft I2_S Rust CUDA answer target.",
+  "It remains rejected for shared answer-readiness promotion until tokenizer/pre-tokenizer authority and target-artifact scope are resolved.",
 ]
+stock_reference_runner = "stock llama.cpp b9061 llama-completion"
+stock_reference_runner_version = "9061 (deab41ec6)"
+stock_reference_runner_result = "rejected_reference_runner_failed"
+stock_reference_runner_error = "gguf_init_from_file_ptr: tensor 'blk.0.ffn_down.weight' has invalid ggml type 335. should be in [0, 42)"
