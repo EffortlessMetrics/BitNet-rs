@@ -16,8 +16,65 @@ use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
+use std::alloc::{GlobalAlloc, Layout, System};
 use std::io;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tracing::{debug, error, info, warn};
+
+#[global_allocator]
+static ALLOCATION_AUDIT_ALLOCATOR: AllocationAuditAllocator = AllocationAuditAllocator;
+
+static ALLOCATION_AUDIT_ENABLED: AtomicBool = AtomicBool::new(false);
+static ALLOCATION_AUDIT_ALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
+static ALLOCATION_AUDIT_ALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
+static ALLOCATION_AUDIT_DEALLOC_COUNT: AtomicU64 = AtomicU64::new(0);
+static ALLOCATION_AUDIT_DEALLOC_BYTES: AtomicU64 = AtomicU64::new(0);
+
+struct AllocationAuditAllocator;
+
+unsafe impl GlobalAlloc for AllocationAuditAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let ptr = unsafe { System.alloc(layout) };
+        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
+            record_allocation_audit_alloc(layout.size());
+        }
+        ptr
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        let ptr = unsafe { System.alloc_zeroed(layout) };
+        if !ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
+            record_allocation_audit_alloc(layout.size());
+        }
+        ptr
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        if ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
+            record_allocation_audit_dealloc(layout.size());
+        }
+        unsafe { System.dealloc(ptr, layout) };
+    }
+
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        let new_ptr = unsafe { System.realloc(ptr, layout, new_size) };
+        if !new_ptr.is_null() && ALLOCATION_AUDIT_ENABLED.load(Ordering::Relaxed) {
+            record_allocation_audit_dealloc(layout.size());
+            record_allocation_audit_alloc(new_size);
+        }
+        new_ptr
+    }
+}
+
+fn record_allocation_audit_alloc(size: usize) {
+    ALLOCATION_AUDIT_ALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
+    ALLOCATION_AUDIT_ALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
+}
+
+fn record_allocation_audit_dealloc(size: usize) {
+    ALLOCATION_AUDIT_DEALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
+    ALLOCATION_AUDIT_DEALLOC_BYTES.fetch_add(size as u64, Ordering::Relaxed);
+}
 
 #[cfg(feature = "full-cli")]
 mod commands;
@@ -295,6 +352,10 @@ enum Commands {
         /// Profile label to record in JSON receipts (for example: smoke_1, prefill_512, decode_128)
         #[arg(long, value_name = "PROFILE")]
         profile_id: Option<String>,
+
+        /// Measure scoped hot-loop allocation counter deltas in profile receipts
+        #[arg(long, default_value_t = false)]
+        allocation_audit: bool,
     },
 
     /// Tokenize text and output token IDs as JSON
@@ -612,6 +673,7 @@ async fn main() -> Result<()> {
             assert_greedy,
             no_warnings,
             profile_id,
+            allocation_audit,
         }) => {
             run_simple_generation(
                 &requested_backend_label,
@@ -645,6 +707,7 @@ async fn main() -> Result<()> {
                 assert_greedy,
                 no_warnings,
                 profile_id,
+                allocation_audit,
             )
             .await
         }
@@ -1980,6 +2043,7 @@ async fn run_simple_generation(
     assert_greedy: bool,
     no_warnings: bool,
     profile_id: Option<String>,
+    allocation_audit: bool,
 ) -> Result<()> {
     use bitnet_common::Device;
     use bitnet_models::{Model, transformer::KVCache};
@@ -2314,15 +2378,30 @@ async fn run_simple_generation(
     // M4-015 profiles measure prompt prefix prefill only when explicitly requested.
     // Default generation behavior remains unchanged for non-profile runs.
     let profile_requested = profile_id.is_some();
+    if allocation_audit && !profile_requested {
+        anyhow::bail!(
+            "--allocation-audit requires --profile-id so allocation claims are receipt-scoped"
+        );
+    }
+    if allocation_audit && json_out.is_none() {
+        anyhow::bail!("--allocation-audit requires --json-out so allocation claims are durable");
+    }
+    let allocation_audit_enabled = allocation_audit;
+    let allocation_audit_guard = AllocationAuditGuard::enable(allocation_audit_enabled);
     let mut prefill_token_count = 0usize;
     let mut prefill_step_ms = Vec::new();
+    let mut prefill_step_allocs = Vec::new();
     let prefill_start = std::time::Instant::now();
     if profile_requested && tokens.len() > 1 {
         for token in &tokens[..tokens.len() - 1] {
             let step_start = std::time::Instant::now();
+            let step_alloc_start = AllocationAuditSnapshot::current();
             let x = model.embed(&[*token])?;
             let _ = model.forward(&x, any_cache.as_mut())?;
             prefill_step_ms.push(elapsed_ms(step_start));
+            if allocation_audit_enabled {
+                prefill_step_allocs.push(AllocationAuditSnapshot::delta_since(step_alloc_start));
+            }
             prefill_token_count += 1;
         }
     }
@@ -2362,15 +2441,26 @@ async fn run_simple_generation(
     let mut logits_step_ms = Vec::with_capacity(max_new_tokens);
     let mut sample_step_ms = Vec::with_capacity(max_new_tokens);
     let mut token_decode_step_ms = Vec::with_capacity(max_new_tokens);
+    let mut decode_step_allocs = Vec::with_capacity(max_new_tokens);
+    let mut embed_step_allocs = Vec::with_capacity(max_new_tokens);
+    let mut forward_step_allocs = Vec::with_capacity(max_new_tokens);
+    let mut logits_step_allocs = Vec::with_capacity(max_new_tokens);
+    let mut sample_step_allocs = Vec::with_capacity(max_new_tokens);
+    let mut token_decode_step_allocs = Vec::with_capacity(max_new_tokens);
     for step_idx in 0..max_new_tokens {
         let decode_step_start = std::time::Instant::now();
+        let decode_alloc_start = AllocationAuditSnapshot::current();
         // Embed only the LAST token (incremental)
         // KV cache already maintains historical context
         let last_token = tokens.last().copied().expect("tokens must be non-empty");
 
         let t0 = std::time::Instant::now();
+        let embed_alloc_start = AllocationAuditSnapshot::current();
         let x = model.embed(&[last_token])?;
         let embed_ms = elapsed_ms(t0);
+        if allocation_audit_enabled {
+            embed_step_allocs.push(AllocationAuditSnapshot::delta_since(embed_alloc_start));
+        }
         embed_step_ms.push(embed_ms);
         if timing_enabled {
             eprintln!("timing: embed_us={}", ms_to_us(embed_ms));
@@ -2378,8 +2468,12 @@ async fn run_simple_generation(
 
         // Forward pass (with KV cache handling history)
         let t1 = std::time::Instant::now();
+        let forward_alloc_start = AllocationAuditSnapshot::current();
         let h = model.forward(&x, any_cache.as_mut())?;
         let forward_ms = elapsed_ms(t1);
+        if allocation_audit_enabled {
+            forward_step_allocs.push(AllocationAuditSnapshot::delta_since(forward_alloc_start));
+        }
         forward_step_ms.push(forward_ms);
         if timing_enabled {
             eprintln!("timing: forward_us={}", ms_to_us(forward_ms));
@@ -2397,6 +2491,7 @@ async fn run_simple_generation(
 
         // Get logits from last token hidden state
         let t2 = std::time::Instant::now();
+        let logits_alloc_start = AllocationAuditSnapshot::current();
         let logits = model.logits(&last_hidden)?;
         let logits_ms = elapsed_ms(t2);
         logits_step_ms.push(logits_ms);
@@ -2406,6 +2501,9 @@ async fn run_simple_generation(
 
         // Extract logits vector with robust shape handling
         let logits_vec = extract_logits_2d(&logits)?;
+        if allocation_audit_enabled {
+            logits_step_allocs.push(AllocationAuditSnapshot::delta_since(logits_alloc_start));
+        }
         let greedy_top1_token = greedy_top1_token_id(&logits_vec);
         if let Some(token_id) = greedy_top1_token {
             top1_tokens.push(token_id);
@@ -2468,8 +2566,12 @@ async fn run_simple_generation(
 
         // Sample next token
         let t3 = std::time::Instant::now();
+        let sample_alloc_start = AllocationAuditSnapshot::current();
         let next_token = sampler.sample(&logits_vec, &generated_tokens)?;
         let sample_ms = elapsed_ms(t3);
+        if allocation_audit_enabled {
+            sample_step_allocs.push(AllocationAuditSnapshot::delta_since(sample_alloc_start));
+        }
         sample_step_ms.push(sample_ms);
         if timing_enabled {
             eprintln!("timing: sample_us={}", ms_to_us(sample_ms));
@@ -2524,7 +2626,12 @@ async fn run_simple_generation(
 
         // Decode and print the new token
         let token_decode_start = std::time::Instant::now();
+        let token_decode_alloc_start = AllocationAuditSnapshot::current();
         let token_text = tokenizer.decode(&[next_token])?;
+        if allocation_audit_enabled {
+            token_decode_step_allocs
+                .push(AllocationAuditSnapshot::delta_since(token_decode_alloc_start));
+        }
         token_decode_step_ms.push(elapsed_ms(token_decode_start));
         print!("{}", token_text);
         std::io::Write::flush(&mut std::io::stdout())?;
@@ -2549,6 +2656,9 @@ async fn run_simple_generation(
             first_token_decode_ms = Some(step_ms);
         }
         decode_step_ms.push(step_ms);
+        if allocation_audit_enabled {
+            decode_step_allocs.push(AllocationAuditSnapshot::delta_since(decode_alloc_start));
+        }
 
         // 1) Token-ID stops (includes template-resolved IDs like <|eot_id|>)
         if all_stop_ids.contains(&next_token) {
@@ -2575,6 +2685,7 @@ async fn run_simple_generation(
             break;
         }
     }
+    drop(allocation_audit_guard);
 
     // Calculate timing metrics
     let total_ms = start_time.elapsed().as_millis() as u64;
@@ -2711,6 +2822,7 @@ async fn run_simple_generation(
             "inference_result"
         };
         let steady_decode_step_ms = decode_step_ms.get(1..).unwrap_or(&[]);
+        let steady_decode_step_allocs = decode_step_allocs.get(1..).unwrap_or(&[]);
         let decode_total_ms = decode_step_ms.iter().sum::<f64>();
         let sampling_ms_per_token = if sample_step_ms.is_empty() {
             None
@@ -2718,6 +2830,8 @@ async fn run_simple_generation(
             Some(sample_step_ms.iter().sum::<f64>() / sample_step_ms.len() as f64)
         };
         let steady_decode_tps = steady_decode_tps_ms(&decode_step_ms);
+        let steady_alloc_count_per_token = mean_alloc_count(steady_decode_step_allocs);
+        let steady_alloc_bytes_per_token = mean_alloc_bytes(steady_decode_step_allocs);
         let profile_label = profile_id.as_deref().unwrap_or("default");
         let profile_claim_scope = profile_claim_scope(runtime_api, selected_backend);
         let profile_machine_context_recorded = profile_machine_context_recorded(
@@ -2767,6 +2881,55 @@ async fn run_simple_generation(
                 "logits_ms": timing_samples_json(&logits_step_ms),
                 "sample_ms": timing_samples_json(&sample_step_ms),
                 "token_decode_ms": timing_samples_json(&token_decode_step_ms),
+            },
+            "allocation_audit": {
+                "enabled": allocation_audit_enabled,
+                "method": if allocation_audit_enabled {
+                    "process_global_allocator_counter_delta"
+                } else {
+                    "not_requested"
+                },
+                "scope": if allocation_audit_enabled {
+                    "selected Apple BitNet prompt-prefill and decode hot loop"
+                } else {
+                    "not_requested"
+                },
+                "claim_scope": "allocation counter deltas for the selected Apple BitNet profile only",
+                "warmup_tokens": usize::from(!decode_step_allocs.is_empty()),
+                "measured_tokens": decode_step_allocs.len().saturating_sub(1),
+                "per_token_alloc_count_delta": allocation_count_delta_json(&decode_step_allocs),
+                "per_token_alloc_bytes_delta": allocation_bytes_delta_json(&decode_step_allocs),
+                "steady_state_alloc_count_per_token": steady_alloc_count_per_token.map(rounded_ms),
+                "steady_state_alloc_bytes_per_token": steady_alloc_bytes_per_token.map(rounded_ms),
+                "instrumentation_included": [
+                    "prompt_prefill_step",
+                    "decode_step_total",
+                    "model.embed",
+                    "model.forward",
+                    "model.logits_and_extract",
+                    "sampler.sample",
+                    "tokenizer.decode",
+                    "stdout_text_write",
+                    "token_vector_updates",
+                    "stop_tail_updates"
+                ],
+                "instrumentation_excluded": [
+                    "model_load",
+                    "tokenizer_load",
+                    "prompt_tokenize",
+                    "json_receipt_serialization",
+                    "debug_logit_dump_topk_unless_enabled"
+                ],
+                "prompt_prefill": allocation_samples_json(&prefill_step_allocs),
+                "decode": {
+                    "total": allocation_samples_json(&decode_step_allocs),
+                    "steady_state": allocation_samples_json(steady_decode_step_allocs),
+                    "embed": allocation_samples_json(&embed_step_allocs),
+                    "forward": allocation_samples_json(&forward_step_allocs),
+                    "logits": allocation_samples_json(&logits_step_allocs),
+                    "sample": allocation_samples_json(&sample_step_allocs),
+                    "token_decode": allocation_samples_json(&token_decode_step_allocs),
+                },
             },
             "model_load_ms": rounded_ms(model_load_ms),
             "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
@@ -3228,6 +3391,52 @@ fn rounded_ms(ms: f64) -> f64 {
     (ms * 1000.0).round() / 1000.0
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct AllocationAuditSnapshot {
+    alloc_count: u64,
+    alloc_bytes: u64,
+    dealloc_count: u64,
+    dealloc_bytes: u64,
+}
+
+impl AllocationAuditSnapshot {
+    fn current() -> Self {
+        Self {
+            alloc_count: ALLOCATION_AUDIT_ALLOC_COUNT.load(Ordering::Relaxed),
+            alloc_bytes: ALLOCATION_AUDIT_ALLOC_BYTES.load(Ordering::Relaxed),
+            dealloc_count: ALLOCATION_AUDIT_DEALLOC_COUNT.load(Ordering::Relaxed),
+            dealloc_bytes: ALLOCATION_AUDIT_DEALLOC_BYTES.load(Ordering::Relaxed),
+        }
+    }
+
+    fn delta_since(start: Self) -> Self {
+        let current = Self::current();
+        Self {
+            alloc_count: current.alloc_count.saturating_sub(start.alloc_count),
+            alloc_bytes: current.alloc_bytes.saturating_sub(start.alloc_bytes),
+            dealloc_count: current.dealloc_count.saturating_sub(start.dealloc_count),
+            dealloc_bytes: current.dealloc_bytes.saturating_sub(start.dealloc_bytes),
+        }
+    }
+}
+
+struct AllocationAuditGuard {
+    previous: bool,
+}
+
+impl AllocationAuditGuard {
+    fn enable(enabled: bool) -> Self {
+        let previous = ALLOCATION_AUDIT_ENABLED.swap(enabled, Ordering::Relaxed);
+        Self { previous }
+    }
+}
+
+impl Drop for AllocationAuditGuard {
+    fn drop(&mut self) {
+        ALLOCATION_AUDIT_ENABLED.store(self.previous, Ordering::Relaxed);
+    }
+}
+
 fn timing_samples_json(samples: &[f64]) -> serde_json::Value {
     if samples.is_empty() {
         return serde_json::json!({
@@ -3255,6 +3464,102 @@ fn timing_samples_json(samples: &[f64]) -> serde_json::Value {
         "p95_ms": rounded_ms(percentile_nearest(&sorted, 95)),
         "max_ms": rounded_ms(sorted[sorted.len() - 1]),
     })
+}
+
+fn allocation_samples_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
+    if samples.is_empty() {
+        return serde_json::json!({
+            "count": 0,
+            "alloc_count_total": 0,
+            "alloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "dealloc_bytes_total": 0,
+            "net_bytes_total": 0,
+            "mean_alloc_count_per_token": serde_json::Value::Null,
+            "mean_alloc_bytes_per_token": serde_json::Value::Null,
+            "max_alloc_count_per_token": serde_json::Value::Null,
+            "max_alloc_bytes_per_token": serde_json::Value::Null,
+        });
+    }
+
+    let total_alloc_count = samples.iter().map(|sample| sample.alloc_count).sum::<u64>();
+    let total_alloc_bytes = samples.iter().map(|sample| sample.alloc_bytes).sum::<u64>();
+    let total_dealloc_count = samples.iter().map(|sample| sample.dealloc_count).sum::<u64>();
+    let total_dealloc_bytes = samples.iter().map(|sample| sample.dealloc_bytes).sum::<u64>();
+    let max_alloc_count = samples.iter().map(|sample| sample.alloc_count).max().unwrap_or(0);
+    let max_alloc_bytes = samples.iter().map(|sample| sample.alloc_bytes).max().unwrap_or(0);
+    let count = samples.len() as f64;
+
+    let net_bytes_total = total_alloc_bytes as i64 - total_dealloc_bytes as i64;
+
+    serde_json::json!({
+        "count": samples.len(),
+        "alloc_count_total": total_alloc_count,
+        "alloc_bytes_total": total_alloc_bytes,
+        "dealloc_count_total": total_dealloc_count,
+        "dealloc_bytes_total": total_dealloc_bytes,
+        "net_bytes_total": net_bytes_total,
+        "mean_alloc_count_per_token": rounded_ms(total_alloc_count as f64 / count),
+        "mean_alloc_bytes_per_token": rounded_ms(total_alloc_bytes as f64 / count),
+        "max_alloc_count_per_token": max_alloc_count,
+        "max_alloc_bytes_per_token": max_alloc_bytes,
+    })
+}
+
+fn allocation_count_delta_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
+    if samples.is_empty() {
+        return serde_json::json!({
+            "count": 0,
+            "total": 0,
+            "mean_per_token": serde_json::Value::Null,
+            "max_per_token": serde_json::Value::Null,
+        });
+    }
+
+    let total = samples.iter().map(|sample| sample.alloc_count).sum::<u64>();
+    let max = samples.iter().map(|sample| sample.alloc_count).max().unwrap_or(0);
+
+    serde_json::json!({
+        "count": samples.len(),
+        "total": total,
+        "mean_per_token": rounded_ms(total as f64 / samples.len() as f64),
+        "max_per_token": max,
+    })
+}
+
+fn allocation_bytes_delta_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
+    if samples.is_empty() {
+        return serde_json::json!({
+            "count": 0,
+            "total": 0,
+            "mean_per_token": serde_json::Value::Null,
+            "max_per_token": serde_json::Value::Null,
+        });
+    }
+
+    let total = samples.iter().map(|sample| sample.alloc_bytes).sum::<u64>();
+    let max = samples.iter().map(|sample| sample.alloc_bytes).max().unwrap_or(0);
+
+    serde_json::json!({
+        "count": samples.len(),
+        "total": total,
+        "mean_per_token": rounded_ms(total as f64 / samples.len() as f64),
+        "max_per_token": max,
+    })
+}
+
+fn mean_alloc_count(samples: &[AllocationAuditSnapshot]) -> Option<f64> {
+    if samples.is_empty() {
+        return None;
+    }
+    Some(samples.iter().map(|sample| sample.alloc_count).sum::<u64>() as f64 / samples.len() as f64)
+}
+
+fn mean_alloc_bytes(samples: &[AllocationAuditSnapshot]) -> Option<f64> {
+    if samples.is_empty() {
+        return None;
+    }
+    Some(samples.iter().map(|sample| sample.alloc_bytes).sum::<u64>() as f64 / samples.len() as f64)
 }
 
 fn percentile_nearest(sorted_samples: &[f64], percentile: usize) -> f64 {
@@ -3603,6 +3908,63 @@ mod tests {
             &cpu_features,
             false
         ));
+    }
+
+    #[test]
+    fn allocation_samples_json_records_counter_deltas() {
+        let summary = allocation_samples_json(&[
+            AllocationAuditSnapshot {
+                alloc_count: 3,
+                alloc_bytes: 128,
+                dealloc_count: 1,
+                dealloc_bytes: 32,
+            },
+            AllocationAuditSnapshot {
+                alloc_count: 1,
+                alloc_bytes: 64,
+                dealloc_count: 1,
+                dealloc_bytes: 96,
+            },
+        ]);
+
+        assert_eq!(summary["count"], 2);
+        assert_eq!(summary["alloc_count_total"], 4);
+        assert_eq!(summary["alloc_bytes_total"], 192);
+        assert_eq!(summary["dealloc_count_total"], 2);
+        assert_eq!(summary["dealloc_bytes_total"], 128);
+        assert_eq!(summary["net_bytes_total"], 64);
+        assert_eq!(summary["mean_alloc_count_per_token"], 2.0);
+        assert_eq!(summary["mean_alloc_bytes_per_token"], 96.0);
+        assert_eq!(summary["max_alloc_count_per_token"], 3);
+        assert_eq!(summary["max_alloc_bytes_per_token"], 128);
+    }
+
+    #[test]
+    fn allocation_delta_helpers_record_per_token_means() {
+        let samples = [
+            AllocationAuditSnapshot {
+                alloc_count: 2,
+                alloc_bytes: 80,
+                dealloc_count: 0,
+                dealloc_bytes: 0,
+            },
+            AllocationAuditSnapshot {
+                alloc_count: 4,
+                alloc_bytes: 160,
+                dealloc_count: 0,
+                dealloc_bytes: 0,
+            },
+        ];
+
+        let count = allocation_count_delta_json(&samples);
+        let bytes = allocation_bytes_delta_json(&samples);
+
+        assert_eq!(count["total"], 6);
+        assert_eq!(count["mean_per_token"], 3.0);
+        assert_eq!(count["max_per_token"], 4);
+        assert_eq!(bytes["total"], 240);
+        assert_eq!(bytes["mean_per_token"], 120.0);
+        assert_eq!(bytes["max_per_token"], 160);
     }
 
     #[test]
