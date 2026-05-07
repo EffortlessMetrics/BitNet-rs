@@ -1,0 +1,16 @@
+timestamp = "2026-05-07T23:17:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-004"
+event = "merged"
+actor = "codex"
+pr = 3939
+merge_sha = "1c06b3367d7d49b3c44a37dec29bc2d69687bd66"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #3939 merged intended ik_llama.cpp runner evidence for tdh111 IQ2_BN_R4 and official Microsoft I2_S candidates.",
+  "The tdh111 IQ2_BN_R4 candidate passes the tiny deterministic prompt suite under ik_llama.cpp, but remains rejected for answer readiness because pre-tokenizer authority is missing and it does not unblock the official I2_S CUDA target.",
+  "The official Microsoft I2_S artifact still fails the prompt suite under ik_llama.cpp.",
+  "The shared gate still has no answer_ready artifact; backend answer-readiness lanes remain blocked or diagnostic-only.",
+]
