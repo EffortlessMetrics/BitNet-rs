@@ -166,7 +166,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-MODEL-002"
-status = "ready"
+status = "blocked"
 branch = "codex/apple-m4-local-answer/M4-QA-MODEL-002-known-good-artifact"
 stackable = false
 review_mode = "codex_premerge"

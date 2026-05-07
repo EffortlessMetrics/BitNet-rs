@@ -50,3 +50,122 @@ rejection_reason = "The artifact is structurally valid but lacks tokenizer pre-t
   expected = "contains Rust or programming-language terms"
   continuation = "v start,onlinecons f front make HQ [invalid-byte] alone bidsredo earned fractionsla"
   quality_pass = false
+
+[[artifact]]
+id = "jpacifico_aramis_2b_i2s"
+status = "rejected_for_local_answer"
+repo = "jpacifico/Aramis-2B-BitNet-b1.58-i2s-GGUF"
+repo_revision = "e3e34940d465e90010021bab28a2672759558e08"
+file = "aramis-ggml-model-i2_s.gguf"
+sha256 = "c68f6ee9b3e783fb14be34444573df53c3064499fb6fa5bc160723c73fd4c182"
+bytes = 1187801248
+format = "gguf"
+architecture = "bitnet-25"
+quantization = "i2_s"
+metadata_warning = "llm_load_vocab: missing pre-tokenizer type, using: 'default'"
+answer_quality_status = "failed_reference_prompt_suite"
+rejection_reason = "The published artifact and a local tokenizer.ggml.pre=llama-bpe metadata repair both produced non-coherent reference output."
+
+[[artifact]]
+id = "richarderkhov_bitnet_b158_large_q8_0"
+status = "rejected_for_local_answer"
+repo = "RichardErkhov/1bitLLM_-_bitnet_b1_58-large-gguf"
+repo_revision = "ea876eebf9f4b9e677f629ed53025d6672225251"
+file = "bitnet_b1_58-large.Q8_0.gguf"
+sha256 = "c2185708579d3ea7c2652ccf202bcbbe262957980f1422d0f8eaa22ffa863906"
+bytes = 775767456
+format = "gguf"
+architecture = "bitnet"
+quantization = "q8_0"
+tokenizer_pretokenizer = "default"
+answer_quality_status = "failed_reference_prompt_suite"
+rejection_reason = "The reference runner produced plausible France and Rust continuations, but the math prompt repeated the prompt instead of answering with 4/four."
+
+[[artifact]]
+id = "imi2_bitnet_b158_large_instruct_tq2_0"
+status = "rejected_for_local_answer"
+repo = "imi2/oxenai_1bitLLM_bitnet_b1_58-large-instruct-v2-gguf"
+repo_revision = "c34765259e6a6a5f2cd3ea9e6021509ef426ca72"
+file = "bitnet_b1_58-large-instruct-v2-TQ2_0.gguf"
+sha256 = "a1e87fff1e0358afde03a7ea6e7e92d7dc9df6b4da8aae7841764674051de713"
+bytes = 275069632
+format = "gguf"
+architecture = "bitnet"
+quantization = "tq2_0"
+tokenizer_pretokenizer = "default"
+answer_quality_status = "failed_reference_prompt_suite"
+rejection_reason = "The reference runner produced plausible France and Rust continuations, but the math prompt produced '2+2 is the answer to the question' rather than the required answer."
+
+[[artifact]]
+id = "bosco_bessie_bitnet_instruct_100k_published"
+status = "rejected_for_local_answer"
+repo = "BoscoTheDog/Bessie_bitnet_instruct_100k_gguf"
+repo_revision = "f44553e63160b4cde5aa873aa4b757fa75eacc50"
+file = "bitnet_100k.gguf"
+sha256 = "befe435168735bd49c5ac0d89e92e8fbc1a2626bf970c0bbb6703bf4b130a584"
+bytes = 775766112
+format = "gguf"
+architecture = "bitnet"
+quantization = "q8_0"
+tokenizer_pretokenizer = "default"
+structural_status = "reference_loader_abort"
+rejection_reason = "The local reference runner aborts while loading the published GGUF with GGML_ASSERT(n_dims >= 1 && n_dims <= GGML_MAX_DIMS)."
+
+[[artifact]]
+id = "greensky_bitnet_b158_3b_q2_q1"
+status = "rejected_for_local_answer"
+repo = "Green-Sky/bitnet_b1_58-3B-GGUF"
+repo_revision = "9ae6d9c9fa971a40221e29837e2f81edea2a64ee"
+file = "bitnet_b1_58-3B.q2_2.gguf, bitnet_b1_58-3B.q1_3.gguf, old/bitnet_b1_58-3B.q2_2.gguf"
+sha256 = "d904c4a15835d5a51c61772923762c4bd65ee5ff25a0ecc6e7385e518186c76d; 16cdf7bdf9d5afcf5e62fdeaa3c0c6ea730af06abe5dc08c9e92d65cbb08e54a; 9b90889f049f6f3a770d614bec5535185d62767854ac9b913e6aeb80fef94c82"
+bytes = 916848960
+format = "gguf"
+architecture = "bitnet"
+structural_status = "reference_loader_rejects_file_bounds"
+rejection_reason = "All tested Green-Sky 3B variants match their published checksums, but the reference loader reports tensor data outside file bounds."
+
+[[artifact]]
+id = "larenspear_bitnet_b158_large_q4_k_m"
+status = "rejected_for_local_answer"
+repo = "larenspear/bitnet_b1_58-large-GGUF"
+repo_revision = "429db33bae07aca385d13e71cdfac182affb39b9"
+file = "bitnet_b1_58-large-q4_k_m.gguf"
+sha256 = "5f505f061b437610be82a48e8195818b8a071bdf8dab793be4d666e6d7d456f2"
+bytes = 450887360
+format = "gguf"
+architecture = "bitnet"
+quantization = "q4_k_m"
+tokenizer_pretokenizer = "default"
+answer_quality_status = "failed_reference_prompt_suite"
+rejection_reason = "The artifact loads, but raw, instruct, and LLaMA-3 chat prompt shapes all fail the math gate; LLaMA-3 chat also fails France."
+
+[[artifact]]
+id = "bifrost_sol_2b_i2s"
+status = "rejected_for_local_answer"
+repo = "Bifrost-AI/Bitnet-b1.58-Bifrost-SOL-2B-4T-gguf"
+repo_revision = "4a368d7ba03f2ae3345aeffbe5e3ccb90818960b"
+file = "bifrost-bitnet-158b-2B-4T-I2_S.gguf"
+sha256 = "ab57cacb918483f2a87b44f1b7b282f21820d50874f2ddec8ef3dc2b436aa7e0"
+bytes = 1187801216
+format = "gguf"
+architecture = "bitnet-25"
+quantization = "i2_s"
+metadata_warning = "llm_load_vocab: missing pre-tokenizer type, using: 'default'"
+answer_quality_status = "failed_reference_prompt_suite"
+rejection_reason = "The artifact loads with a missing pre-tokenizer warning, but raw and LLaMA-3 chat prompt shapes fail all local-answer gates."
+
+[[artifact]]
+id = "bosco_bitnet_instruct_100k_regenerated_q8_0"
+status = "rejected_for_local_answer"
+repo = "BoscoTheDog/bitnet_instruct_q16_gguf"
+repo_revision = "8d872253fbfe1c77cb1e17bc68a7a94d1ac027b2"
+file = "bessie-bitnet-instruct-100k-q8_0-regenerated.gguf"
+sha256 = "4c9652a10dd9b9944480f5bed8ffa133598d87821a88fd41c7f055bde68b69da"
+bytes = 919518288
+format = "gguf"
+architecture = "bitnet-25"
+quantization = "q8_0"
+source_model_sha256 = "8561617743135eecb8e36aa06a9315f77dc15903609b9d277cc9398b92ea5579"
+tokenizer_pretokenizer = "default"
+answer_quality_status = "failed_reference_prompt_suite"
+rejection_reason = "A locally regenerated GGUF loads after conversion fixes, but raw, instruct, and Human:/BITNETAssistant: prompt shapes all produce non-coherent output."

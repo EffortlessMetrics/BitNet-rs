@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T18:18:45Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-MODEL-002"
+event = "blocked"
+actor = "codex"
+
+notes = [
+  "No tested under-cap BitNet GGUF or regenerated Bessie artifact passed the reference local-answer prompt suite.",
+  "M4-QA-001 remains blocked; do not claim Apple M4 CPU/NEON coherent local answers.",
+  "Large candidate payloads were removed from target after logs and hashes were recorded.",
+]
