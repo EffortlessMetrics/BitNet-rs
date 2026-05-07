@@ -726,25 +726,40 @@ fn reject_unsupported_claims(file: &str, role: ReceiptRole, value: &Value) -> Re
     let mut strings = Vec::new();
     collect_strings(value, String::new(), &mut strings);
     for (path, text) in strings {
-        let lower = text.to_ascii_lowercase();
-        let in_not_proven = path == "not_proven" || path.contains("not_proven[");
-        if !in_not_proven && lower.contains("qk256") {
+        let lower_path = path.to_ascii_lowercase();
+        let lower_text = text.to_ascii_lowercase();
+        let in_not_proven = is_not_proven_path(&lower_path);
+        if !in_not_proven && (lower_path.contains("qk256") || lower_text.contains("qk256")) {
             bail!("{file}: unsupported Apple QK256 claim at {path}");
         }
-        if !in_not_proven && lower.contains("neural engine") {
+        if !in_not_proven
+            && (lower_path.contains("neural_engine")
+                || lower_path.contains("neural-engine")
+                || lower_text.contains("neural engine"))
+        {
             bail!("{file}: unsupported Neural Engine claim at {path}");
         }
-        if !in_not_proven && lower.contains("full apple-m4-metal model inference") {
+        if !in_not_proven && lower_text.contains("full apple-m4-metal model inference") {
             bail!("{file}: unsupported full apple-m4-metal inference claim at {path}");
         }
-        if role == ReceiptRole::MpsGraphSmoke && !in_not_proven && lower.contains("native metal") {
+        if role == ReceiptRole::MpsGraphSmoke
+            && !in_not_proven
+            && lower_text.contains("native metal")
+        {
             bail!("{file}: MPSGraph receipt claims native Metal at {path}");
         }
     }
     Ok(())
 }
 
+fn is_not_proven_path(path: &str) -> bool {
+    path == "not_proven" || path.starts_with("not_proven[") || path.contains(".not_proven[")
+}
+
 fn collect_strings(value: &Value, path: String, out: &mut Vec<(String, String)>) {
+    if !path.is_empty() {
+        out.push((path.clone(), String::new()));
+    }
     match value {
         Value::String(text) => out.push((path, text.clone())),
         Value::Array(values) => {
@@ -1023,8 +1038,18 @@ mod tests {
         let mut receipt = read_json(&path).unwrap();
         receipt["bitnet"]["kernel_family"] = json!("qk256");
         write_json(path, &receipt).unwrap();
-        let error = check_bundle(dir.path(), false).unwrap_err().to_string();
-        assert!(error.contains("qk256"));
+        assert_bundle_error_contains(dir.path(), "qk256");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_qk256_claim_hidden_in_field_name() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("strict-bitnet-cpu-neon-proof.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["bitnet"]["qk256_supported"] = json!(true);
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "qk256");
     }
 
     #[test]
@@ -1037,8 +1062,95 @@ mod tests {
         receipt["fallback_used"] = json!(true);
         receipt["fallback_reason"] = json!("Metal unavailable");
         write_json(path, &receipt).unwrap();
-        let error = check_bundle(dir.path(), false).unwrap_err().to_string();
-        assert!(error.contains("selected_backend"));
+        assert_bundle_error_contains(dir.path(), "selected_backend");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_missing_fallback_used() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("metal-smoke.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt.as_object_mut().unwrap().remove("fallback_used");
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "fallback_used");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_backend_mismatch_without_fallback_reason() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("metal-probe.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["selected_backend"] = json!(APPLE_M4_CPU_NEON);
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "without fallback_reason");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_mpsgraph_neural_engine_target() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("mpsgraph-smoke.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["resolved_target"] = json!("ane");
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "Neural Engine");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_neural_engine_claim_hidden_in_field_name() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("mpsgraph-smoke.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["neural_engine_used"] = json!(true);
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "Neural Engine");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_missing_bitnet_kernel_family() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("metal-i2s-parity.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["bitnet"].as_object_mut().unwrap().remove("kernel_family");
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "kernel_family");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_missing_bitnet_execution_phase() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("strict-bitnet-cpu-neon-proof.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["bitnet"].as_object_mut().unwrap().remove("execution_phase");
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "execution_phase");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_strict_cpu_receipt_without_tokenizer() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("strict-bitnet-cpu-neon-proof.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["model"].as_object_mut().unwrap().remove("tokenizer");
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "tokenizer");
+    }
+
+    #[test]
+    fn receipt_checker_allows_qk256_only_in_summary_not_proven() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("summary.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["not_proven"] = json!(["QK256 on Apple Silicon is not proven by this bundle."]);
+        write_json(path, &receipt).unwrap();
+        check_bundle(dir.path(), false).unwrap();
     }
 
     fn write_minimal_bundle(dir: &Path) {
@@ -1156,5 +1268,10 @@ mod tests {
                 "execution_phase": "decode"
             }
         })
+    }
+
+    fn assert_bundle_error_contains(dir: &Path, expected: &str) {
+        let error = check_bundle(dir, false).unwrap_err().to_string();
+        assert!(error.contains(expected), "expected error to contain `{expected}`, got:\n{error}");
     }
 }
