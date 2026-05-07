@@ -352,7 +352,6 @@ impl<'a> GgufReader<'a> {
             | GgufTensorType::Q4_1
             | GgufTensorType::Q5_0
             | GgufTensorType::Q5_1
-            | GgufTensorType::Q8_0
             | GgufTensorType::Q8_1
             | GgufTensorType::Q2_K
             | GgufTensorType::Q3_K
@@ -363,6 +362,7 @@ impl<'a> GgufReader<'a> {
             GgufTensorType::F32
             | GgufTensorType::F16
             | GgufTensorType::F64
+            | GgufTensorType::Q8_0
             | GgufTensorType::IQ2_S
             | GgufTensorType::I2_S => None,
         })
@@ -521,12 +521,15 @@ impl<'a> GgufReader<'a> {
                 GgufTensorType::I2_S | GgufTensorType::IQ2_S => has_i2s = true,
                 // F32, F16, and F64 are unquantized, so they don't set a quantization type
                 GgufTensorType::F32 | GgufTensorType::F16 | GgufTensorType::F64 => continue,
+                // Q8_0 is supported by the dense SLM loader as an eager F32
+                // dequantization path. It is not a BitNet quantization type,
+                // so keep the returned BitNet quantization as None.
+                GgufTensorType::Q8_0 => continue,
                 // All other GGUF quantization types are unsupported
                 GgufTensorType::Q4_0
                 | GgufTensorType::Q4_1
                 | GgufTensorType::Q5_0
                 | GgufTensorType::Q5_1
-                | GgufTensorType::Q8_0
                 | GgufTensorType::Q8_1
                 | GgufTensorType::Q2_K
                 | GgufTensorType::Q3_K

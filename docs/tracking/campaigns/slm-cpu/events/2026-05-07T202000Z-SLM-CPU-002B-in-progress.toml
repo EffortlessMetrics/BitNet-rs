@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T20:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-002B"
+event = "in_progress"
+branch = "codex/slm-cpu-002b-dense-q8-gguf"
+actor = "codex"
+
+notes = [
+  "Started dense Qwen Q8_0 loader support after SLM-CPU-002A merged the explicit unsupported-quantization boundary.",
+  "The official Qwen3-0.6B Q8_0 artifact now reaches full strict tensor loading with no compatibility fallback; transformer construction still rejects Qwen3 attention dimensions and remains outside the SLM-CPU-002B load-support claim.",
+  "No tiny dense inference, answer quality, server, GPU, NPU, or sustained 8250U performance claim is made.",
+]

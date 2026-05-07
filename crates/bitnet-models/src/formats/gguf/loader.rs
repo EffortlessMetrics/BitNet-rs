@@ -1,6 +1,7 @@
 //! GGUF format loader implementation
 
 use super::{GgufReader, GgufTensorType, GgufTensors};
+use crate::architecture::{DenseQwenArchitecture, classify_dense_qwen_architecture};
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::names::{is_layernorm_weight, is_projection_weight};
 use crate::qk256_utils::{detect_qk256_orientation_by_bytes, expected_qk256_shape};
@@ -111,6 +112,29 @@ impl GgufLoader {
                 }; // fallback: pick the smaller
                 tracing::info!("inferred hidden_size={} from {}", hidden, n);
                 return Some(hidden);
+            }
+        }
+        None
+    }
+
+    /// Infer vocab size from embedding tensor shapes when metadata stores only
+    /// tokenizer arrays or omits architecture-prefixed vocab size.
+    fn infer_vocab_size_from_tensors(reader: &GgufReader) -> Option<usize> {
+        let emb_names = [
+            "token_embd.weight",
+            "tok_embeddings.weight",
+            "embed_tokens.weight",
+            "model.embed_tokens.weight",
+            "transformer.wte.weight",
+        ];
+        for n in &emb_names {
+            if let Some(info) = reader.get_tensor_info_by_name(n)
+                && info.shape.len() == 2
+            {
+                let vocab = info.shape[0].max(info.shape[1]);
+                if vocab >= 32768 {
+                    return Some(vocab);
+                }
             }
         }
         None
@@ -794,7 +818,9 @@ impl FormatLoader for GgufLoader {
                 .get_u32_metadata("llama.vocab_size")
                 .or_else(|| reader.get_u32_metadata(&format!("{arch_prefix}.vocab_size")))
                 .or_else(|| reader.get_u32_metadata("tokenizer.ggml.tokens"))
-                .unwrap_or(32000) as usize,
+                .map(|v| v as usize)
+                .or_else(|| Self::infer_vocab_size_from_tensors(&reader))
+                .unwrap_or(32000),
             context_length: reader
                 .get_u32_metadata("llama.context_length")
                 .or_else(|| reader.get_u32_metadata(&format!("{arch_prefix}.context_length")))
@@ -842,6 +868,15 @@ impl FormatLoader for GgufLoader {
 
         // Extract model configuration
         let model_config = self.extract_config(&reader)?;
+        let dense_qwen_load = reader
+            .get_string_metadata("general.architecture")
+            .map(|architecture| {
+                matches!(
+                    classify_dense_qwen_architecture(&architecture),
+                    DenseQwenArchitecture::Supported(_)
+                )
+            })
+            .unwrap_or(false);
         if Self::env_truthy("BITNET_STRICT_MODE") {
             if let Some((tensor_name, tensor_type)) =
                 reader.first_unsupported_standard_quantized_tensor()
@@ -860,7 +895,8 @@ impl FormatLoader for GgufLoader {
         }
 
         // Load tensors with fingerprint for policy matching (returns both regular and raw QK256 tensors)
-        let (tensors, raw_tensors) = self.load_tensors(&reader, device, config, &fingerprint)?;
+        let (tensors, raw_tensors) =
+            self.load_tensors(&reader, device, config, &fingerprint, dense_qwen_load)?;
 
         if let Some(callback) = &config.progress_callback {
             callback(0.9, "Initializing model...");
@@ -1023,6 +1059,70 @@ impl GgufLoader {
         Ok(transposed)
     }
 
+    /// Dequantize GGML Q8_0 blocks into F32 values.
+    ///
+    /// Each Q8_0 block stores one little-endian f16 scale followed by 32 signed
+    /// 8-bit quantized values. GGUF tensor payloads can include trailing
+    /// alignment bytes, so callers provide the full slice and this helper
+    /// consumes exactly the blocks required by the logical tensor shape.
+    pub(super) fn dequantize_q8_0_to_f32(
+        bytes: &[u8],
+        dims: &[usize],
+        tensor_name: &str,
+    ) -> Result<Vec<f32>> {
+        let elements = dims.iter().try_fold(1usize, |acc, dim| {
+            acc.checked_mul(*dim).ok_or_else(|| {
+                BitNetError::Validation(format!(
+                    "Q8_0 tensor '{tensor_name}' shape {:?} overflows element count",
+                    dims
+                ))
+            })
+        })?;
+        let blocks = elements.div_ceil(32);
+        let expected =
+            blocks.checked_mul(GgufTensorType::Q8_0.element_size()).ok_or_else(|| {
+                BitNetError::Validation(format!(
+                    "Q8_0 tensor '{tensor_name}' byte size overflows for {blocks} blocks"
+                ))
+            })?;
+
+        if bytes.len() < expected {
+            return Err(BitNetError::Validation(format!(
+                "Q8_0 tensor '{tensor_name}' has {} bytes, expected at least {} for {} elements",
+                bytes.len(),
+                expected,
+                elements
+            )));
+        }
+
+        let mut out = Vec::with_capacity(elements);
+        for block_idx in 0..blocks {
+            let offset = block_idx * GgufTensorType::Q8_0.element_size();
+            let scale_bits = u16::from_le_bytes([bytes[offset], bytes[offset + 1]]);
+            let scale = half::f16::from_bits(scale_bits).to_f32();
+            for code_idx in 0..32 {
+                if out.len() == elements {
+                    break;
+                }
+                let q = bytes[offset + 2 + code_idx] as i8;
+                out.push(scale * q as f32);
+            }
+        }
+
+        Ok(out)
+    }
+
+    pub(super) fn transpose_f32_values(values: &[f32], dims: &[usize]) -> Vec<f32> {
+        let (rows, cols) = (dims[0], dims[1]);
+        let mut transposed = Vec::with_capacity(rows * cols);
+        for col in 0..cols {
+            for row in 0..rows {
+                transposed.push(values[row * cols + col]);
+            }
+        }
+        transposed
+    }
+
     /// Helper to create a transposed I2_S tensor (for attention projections)
     #[allow(dead_code)]
     fn create_transposed_i2s_tensor(
@@ -1065,20 +1165,51 @@ impl GgufLoader {
         Ok(tensor)
     }
 
-    fn extract_config(&self, reader: &GgufReader) -> Result<BitNetConfig> {
+    pub(super) fn extract_config(&self, reader: &GgufReader) -> Result<BitNetConfig> {
         let mut config = BitNetConfig::default();
+        let architecture = reader
+            .get_string_metadata("general.architecture")
+            .unwrap_or_else(|| "bitnet".to_string());
+        config.model.apply_architecture_defaults(&architecture);
+        let arch_vocab = format!("{architecture}.vocab_size");
+        let arch_block_count = format!("{architecture}.block_count");
+        let arch_embedding_length = format!("{architecture}.embedding_length");
+        let arch_head_count = format!("{architecture}.attention.head_count");
+        let arch_head_count_kv = format!("{architecture}.attention.head_count_kv");
+        let arch_feed_forward_length = format!("{architecture}.feed_forward_length");
+        let arch_context_length = format!("{architecture}.context_length");
+        let arch_rope_freq_base = format!("{architecture}.rope.freq_base");
+        let arch_rms_eps = format!("{architecture}.attention.layer_norm_rms_epsilon");
 
         // Extract model configuration from GGUF metadata
         if let Some(vocab_size) = Self::get_u32_any(
             reader,
-            &["llama.vocab_size", "bitnet-b1.58.vocab_size", "tokenizer.ggml.tokens"],
+            &[
+                "llama.vocab_size",
+                "bitnet-b1.58.vocab_size",
+                arch_vocab.as_str(),
+                "tokenizer.ggml.tokens",
+            ],
         ) {
             config.model.vocab_size = vocab_size as usize;
         }
-
-        if let Some(num_layers) =
-            Self::get_u32_any(reader, &["llama.block_count", "bitnet-b1.58.block_count", "n_layer"])
+        if (config.model.vocab_size == 0
+            || config.model.vocab_size == BitNetConfig::default().model.vocab_size)
+            && let Some(vocab) = Self::infer_vocab_size_from_tensors(reader)
         {
+            tracing::info!("inferred vocab_size={} from token embedding tensor", vocab);
+            config.model.vocab_size = vocab;
+        }
+
+        if let Some(num_layers) = Self::get_u32_any(
+            reader,
+            &[
+                "llama.block_count",
+                "bitnet-b1.58.block_count",
+                arch_block_count.as_str(),
+                "n_layer",
+            ],
+        ) {
             config.model.num_layers = num_layers as usize;
         }
 
@@ -1094,7 +1225,13 @@ impl GgufLoader {
         // 1) hidden_size: try metadata, else infer from embeddings
         if let Some(h) = Self::get_u32_any(
             reader,
-            &["llama.embedding_length", "bitnet-b1.58.embedding_length", "n_embd", "hidden_size"],
+            &[
+                "llama.embedding_length",
+                "bitnet-b1.58.embedding_length",
+                arch_embedding_length.as_str(),
+                "n_embd",
+                "hidden_size",
+            ],
         ) {
             config.model.hidden_size = h as usize;
         }
@@ -1112,6 +1249,7 @@ impl GgufLoader {
             &[
                 "llama.attention.head_count",
                 "bitnet-b1.58.attention.head_count", // BitNet 2B models
+                arch_head_count.as_str(),
                 "n_head",
                 "attn.n_heads",
                 "num_attention_heads",
@@ -1125,6 +1263,7 @@ impl GgufLoader {
         let kv_keys = [
             "llama.attention.head_count_kv",
             "bitnet-b1.58.attention.head_count_kv", // BitNet 2B models
+            arch_head_count_kv.as_str(),
             "n_head_kv",
             "n_kv_heads",
             "attn.n_kv_heads",
@@ -1162,7 +1301,12 @@ impl GgufLoader {
         // 4) intermediate_size: try metadata, else infer from feed-forward tensors
         if let Some(intermediate_size) = Self::get_u32_any(
             reader,
-            &["llama.feed_forward_length", "bitnet-b1.58.feed_forward_length", "n_ff"],
+            &[
+                "llama.feed_forward_length",
+                "bitnet-b1.58.feed_forward_length",
+                arch_feed_forward_length.as_str(),
+                "n_ff",
+            ],
         ) {
             config.model.intermediate_size = intermediate_size as usize;
         }
@@ -1175,9 +1319,10 @@ impl GgufLoader {
             config.model.intermediate_size = inferred_size;
         }
 
-        if let Some(context_length) =
-            Self::get_u32_any(reader, &["llama.context_length", "bitnet-b1.58.context_length"])
-        {
+        if let Some(context_length) = Self::get_u32_any(
+            reader,
+            &["llama.context_length", "bitnet-b1.58.context_length", arch_context_length.as_str()],
+        ) {
             config.model.max_position_embeddings = context_length as usize;
         }
 
@@ -1186,6 +1331,7 @@ impl GgufLoader {
         if let Some(rope_base) = reader
             .get_f32_metadata("bitnet-b1.58.rope.freq_base")
             .or_else(|| reader.get_f32_metadata("llama.rope.freq_base"))
+            .or_else(|| reader.get_f32_metadata(arch_rope_freq_base.as_str()))
             .or_else(|| reader.get_f32_metadata("rope.freq_base"))
         {
             config.model.rope_theta = Some(rope_base);
@@ -1198,6 +1344,7 @@ impl GgufLoader {
             &[
                 "bitnet-b1.58.attention.layer_norm_rms_epsilon",
                 "llama.attention.layer_norm_rms_epsilon",
+                arch_rms_eps.as_str(),
                 "llama.attention.layer_norm_epsilon",
                 "general.layer_norm_epsilon",
             ],
@@ -1326,6 +1473,7 @@ impl GgufLoader {
         device: &Device,
         config: &LoadConfig,
         fingerprint: &str,
+        dense_qwen_load: bool,
     ) -> Result<(GgufTensors, std::collections::HashMap<String, Tensor>)> {
         let tensor_count = reader.tensor_count() as usize;
         let mut tensors = GgufTensors::new();
@@ -1384,6 +1532,7 @@ impl GgufLoader {
                     device,
                     &model_config,
                     policy_plan.as_ref(),
+                    dense_qwen_load,
                 )?;
             tensors.insert(tensor_info.name.clone(), candle_tensor);
 
@@ -1443,6 +1592,7 @@ impl GgufLoader {
         device: &Device,
         model_config: &BitNetConfig,
         policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
+        dense_qwen_load: bool,
     ) -> TensorLoadResult {
         let dtype = match info.tensor_type {
             GgufTensorType::F32 => DType::F32,
@@ -1731,8 +1881,52 @@ impl GgufLoader {
                 }
             }
 
-            // For other quantized types, keep as raw bytes for now
-            // (would need specific dequantizers for Q4_0, Q8_0, etc.)
+            if matches!(info.tensor_type, GgufTensorType::Q8_0) {
+                if is_layernorm_weight(&info.name) {
+                    return Err(BitNetError::Validation(format!(
+                        "LayerNorm weight '{}' should not be quantized with Q8_0. \
+                        Dense GGUF adapters require normalization weights in FP16/FP32.",
+                        info.name
+                    )));
+                }
+
+                let mut f32_data = Self::dequantize_q8_0_to_f32(data, &info.shape, &info.name)?;
+                let mut want_shape = info.shape.clone();
+
+                if Self::is_embedding_tensor(&info.name)
+                    && Self::embedding_is_transposed(&info.shape)
+                {
+                    info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
+                    f32_data = Self::transpose_f32_values(&f32_data, &info.shape);
+                    want_shape = vec![info.shape[1], info.shape[0]];
+                } else if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
+                    debug!(
+                        "pre-transposing Q8_0 projection '{}' from {:?} to [out,in]",
+                        info.name, info.shape
+                    );
+                    f32_data = Self::transpose_f32_values(&f32_data, &info.shape);
+                    want_shape = vec![info.shape[1], info.shape[0]];
+                }
+
+                let tensor = Tensor::from_slice(&f32_data, want_shape.as_slice(), &candle_device)
+                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+                if is_projection_weight(&info.name)
+                    && let Ok(rms) = Self::rms_f32(&tensor)
+                {
+                    debug!(
+                        "PROJ load: '{}' dtype=Q8_0->F32 shape={:?} rms={:.6}",
+                        info.name,
+                        tensor.dims(),
+                        rms
+                    );
+                }
+
+                return Ok((tensor, None, None));
+            }
+
+            // Other standard GGUF quantized types stay fail-closed in strict
+            // mode until a dedicated adapter/dequantizer is added.
             let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)
                 .map_err(|e| BitNetError::Validation(e.to_string()))?;
             Ok((tensor, None, None))
@@ -1794,7 +1988,7 @@ impl GgufLoader {
                     };
 
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
-                    if is_layernorm_weight(&info.name) {
+                    if is_layernorm_weight(&info.name) && !dense_qwen_load {
                         Self::check_ln_gamma_stats(&info.name, &tensor)?;
 
                         // Apply policy-driven rescaling first (if configured)
@@ -1860,7 +2054,7 @@ impl GgufLoader {
                     };
 
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
-                    if is_layernorm_weight(&info.name) {
+                    if is_layernorm_weight(&info.name) && !dense_qwen_load {
                         Self::check_ln_gamma_stats(&info.name, &tensor)?;
 
                         // Apply policy-driven rescaling first (if configured)

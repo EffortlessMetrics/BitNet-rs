@@ -473,6 +473,27 @@ fn find_and_remove(
     None
 }
 
+fn infer_projection_out_dim(
+    tensors: &HashMap<String, Tensor>,
+    keys: &[String],
+    hidden: usize,
+) -> Option<usize> {
+    for key in keys {
+        if let Some(tensor) = tensors.get(key.as_str()) {
+            let dims = tensor.shape().dims();
+            if let [a, b] = dims {
+                if *b == hidden {
+                    return Some(*a);
+                }
+                if *a == hidden {
+                    return Some(*b);
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Normalize attention and FFN weights for a single layer to [out, in] layout
 fn normalize_layer_weights(
     tensors: &mut HashMap<String, Tensor>,
@@ -480,64 +501,52 @@ fn normalize_layer_weights(
     dims: &ModelDims,
 ) -> Result<()> {
     let hidden = dims.hidden;
-    let q_dim = dims.q_dim()?;
-    let kv_dim = dims.kv_dim()?;
 
     // Build key prefixes for this layer (try both blk.N and layers.N)
     let blk_prefix = format!("blk.{}", layer_idx);
     let layers_prefix = format!("layers.{}", layer_idx);
 
+    let q_keys = [
+        format!("{}.attn_q.weight", blk_prefix),
+        format!("{}.attention.q_proj.weight", layers_prefix),
+        format!("{}.attention.wq.weight", layers_prefix),
+        format!("{}.self_attn.q_proj.weight", layers_prefix),
+    ];
+    let k_keys = [
+        format!("{}.attn_k.weight", blk_prefix),
+        format!("{}.attention.k_proj.weight", layers_prefix),
+        format!("{}.attention.wk.weight", layers_prefix),
+        format!("{}.self_attn.k_proj.weight", layers_prefix),
+    ];
+    let v_keys = [
+        format!("{}.attn_v.weight", blk_prefix),
+        format!("{}.attention.v_proj.weight", layers_prefix),
+        format!("{}.attention.wv.weight", layers_prefix),
+        format!("{}.self_attn.v_proj.weight", layers_prefix),
+    ];
+    let o_keys = [
+        format!("{}.attn_output.weight", blk_prefix),
+        format!("{}.attn_o.weight", blk_prefix),
+        format!("{}.attention.o_proj.weight", layers_prefix),
+        format!("{}.attention.wo.weight", layers_prefix),
+        format!("{}.self_attn.o_proj.weight", layers_prefix),
+    ];
+
+    let q_dim = infer_projection_out_dim(tensors, &q_keys, hidden).unwrap_or(dims.q_dim()?);
+    let kv_dim = infer_projection_out_dim(tensors, &k_keys, hidden)
+        .or_else(|| infer_projection_out_dim(tensors, &v_keys, hidden))
+        .unwrap_or(dims.kv_dim()?);
+
     // Attention Q/K/V/O projections
     let attn_keys = [
         // Q projection: [q_dim, hidden] where q_dim = head_dim * n_head
-        (
-            "q_proj",
-            &[
-                format!("{}.attn_q.weight", blk_prefix),
-                format!("{}.attention.q_proj.weight", layers_prefix),
-                format!("{}.attention.wq.weight", layers_prefix),
-                format!("{}.self_attn.q_proj.weight", layers_prefix),
-            ] as &[String],
-            q_dim,
-            hidden,
-        ),
+        ("q_proj", &q_keys as &[String], q_dim, hidden),
         // K projection: [kv_dim, hidden] where kv_dim = head_dim * n_kv_head
-        (
-            "k_proj",
-            &[
-                format!("{}.attn_k.weight", blk_prefix),
-                format!("{}.attention.k_proj.weight", layers_prefix),
-                format!("{}.attention.wk.weight", layers_prefix),
-                format!("{}.self_attn.k_proj.weight", layers_prefix),
-            ],
-            kv_dim,
-            hidden,
-        ),
+        ("k_proj", &k_keys, kv_dim, hidden),
         // V projection: [kv_dim, hidden]
-        (
-            "v_proj",
-            &[
-                format!("{}.attn_v.weight", blk_prefix),
-                format!("{}.attention.v_proj.weight", layers_prefix),
-                format!("{}.attention.wv.weight", layers_prefix),
-                format!("{}.self_attn.v_proj.weight", layers_prefix),
-            ],
-            kv_dim,
-            hidden,
-        ),
+        ("v_proj", &v_keys, kv_dim, hidden),
         // O projection: [hidden, q_dim]
-        (
-            "o_proj",
-            &[
-                format!("{}.attn_output.weight", blk_prefix),
-                format!("{}.attn_o.weight", blk_prefix),
-                format!("{}.attention.o_proj.weight", layers_prefix),
-                format!("{}.attention.wo.weight", layers_prefix),
-                format!("{}.self_attn.o_proj.weight", layers_prefix),
-            ],
-            hidden,
-            q_dim,
-        ),
+        ("o_proj", &o_keys, hidden, q_dim),
     ];
 
     for (name, keys, out_dim, in_dim) in attn_keys {
