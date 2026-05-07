@@ -764,7 +764,26 @@ mod tests {
             }
         });
 
-        assert!(cpu_answer_receipt_failed_rules(&receipt).is_empty());
+        assert!(answer_receipt_failed_rules(&receipt, "cpu").is_empty());
+    }
+
+    #[test]
+    fn answer_receipt_accepts_strict_apple_m4_cpu_neon_truth() {
+        let receipt = json!({
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "gguf_metadata", "strict": true },
+            "kernel": { "kernel_id": "i2_s-scalar-reference" },
+            "tokens": {
+                "prompt_ids": [1, 2, 3],
+                "ids": [4]
+            }
+        });
+
+        assert!(answer_receipt_failed_rules(&receipt, "apple-m4-cpu-neon").is_empty());
     }
 
     #[test]
@@ -780,7 +799,7 @@ mod tests {
             "tokens": {}
         });
 
-        let failed = cpu_answer_receipt_failed_rules(&receipt);
+        let failed = answer_receipt_failed_rules(&receipt, "cpu");
         assert!(failed.contains(&"fallback_false".to_string()));
         assert!(failed.contains(&"loader_real_gguf".to_string()));
         assert!(failed.contains(&"tokenizer_source_recorded".to_string()));
