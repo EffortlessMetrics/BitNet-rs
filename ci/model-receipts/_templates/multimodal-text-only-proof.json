@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "claim": "multimodal_family_text_only_one_token",
+  "model_family": "",
+  "variant": "",
+  "task": "multimodal_text_only",
+  "inputs": {
+    "text_tokens": 0,
+    "image_inputs": 0,
+    "audio_inputs": 0,
+    "video_frames": 0
+  },
+  "runtime": {
+    "requested_backend": "",
+    "selected_backend": "",
+    "fallback_used": false
+  },
+  "coverage": {
+    "full_inference_claim": false,
+    "multimodal_claim": false,
+    "moe_claim": false,
+    "long_context_claim": false,
+    "speedup_claim": false
+  },
+  "output": {
+    "generated_tokens": 1
+  }
+}

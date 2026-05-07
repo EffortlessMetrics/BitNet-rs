@@ -1,0 +1,8 @@
+schema: 1
+required: [family_id, tokenizer_source, vocab_size_or_tbd, fallback_policy, receipt_fields]
+fields:
+  family_id: {type: string}
+  tokenizer_source: {enum: [explicit, model, sibling, unknown]}
+  vocab_size_or_tbd: {type: string_or_integer}
+  fallback_policy: {enum: [forbidden_for_support_claims, allowed_only_with_non_claim_receipt]}
+  receipt_fields: {list: [tokenizer_source, fallback_used, hash_or_tbd]}

@@ -1,0 +1,13 @@
+schema: 1
+source_policy:
+  supplied_notes: The initial facts in this foundation are transcribed from maintainer-supplied planning notes in the task prompt.
+  before_claim_advancement: Replace or augment supplied-note entries with model-card, release-note, or artifact URLs before advancing to loader, smoke, parity, receipt, or benchmark claims.
+families:
+  gemma4: {source_status: source_backed_partial, primary_source: supplied_planning_notes, verification_required_before_runtime_claim: true}
+  qwen36: {source_status: source_backed_partial, primary_source: supplied_planning_notes, verification_required_before_runtime_claim: true}
+  qwen35: {source_status: source_backed_partial, primary_source: supplied_planning_notes, verification_required_before_runtime_claim: true}
+  kimi_k26: {source_status: source_backed_partial, primary_source: supplied_planning_notes, verification_required_before_runtime_claim: true}
+  glm51: {source_status: source_backed_partial, primary_source: supplied_planning_notes, verification_required_before_runtime_claim: true}
+  deepseek_v4: {source_status: source_backed_partial, primary_source: supplied_planning_notes, verification_required_before_runtime_claim: true}
+  mistral_medium_35: {source_status: source_backed_partial, primary_source: supplied_planning_notes, verification_required_before_runtime_claim: true}
+  openai_privacy_filter: {source_status: source_backed_partial, primary_source: supplied_planning_notes, verification_required_before_runtime_claim: true}

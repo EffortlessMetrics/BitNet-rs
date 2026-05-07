@@ -8,6 +8,10 @@ Real BitNet CPU path sequencing remains active, Apple Silicon M4-003 backend ide
 
 Transition note: campaign-local `active.toml` files and append-only `events/*.toml` files are now the active tracker model. This legacy global status file remains a transition view; normal item PRs should use campaign-local tracking plus generated dashboards instead of hand-editing this table.
 
+## Model Family Cross-Reference
+
+Model-family planning for non-BitNet targets is tracked separately in `docs/tracking/model-family-foundation/status.md`.
+
 ## Active / Coordination Queue
 
 | Item | PR | State | Notes |

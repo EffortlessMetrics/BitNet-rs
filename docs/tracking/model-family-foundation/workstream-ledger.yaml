@@ -1,0 +1,84 @@
+schema: 1
+states: [proposed, ready, pr_open, merged, blocked, superseded]
+required_fields: [id, title, state, priority, workstream, depends_on, scope, acceptance, verification]
+transition_rules:
+  - proposed_to_ready_requires_dependencies_clear
+  - pr_open_requires_allowed_paths_only
+  - merged_requires_acceptance_and_verification_notes
+items:
+  - id: MF-001
+    title: Add model-family documentation structure
+    state: ready
+    priority: P0
+    workstream: model_foundation
+    depends_on: []
+    scope:
+      allowed_paths: [docs/models/**, docs/tracking/model-family-foundation/**]
+      forbidden_paths: [crates/**, tests/**, .github/**]
+    acceptance:
+      - Adds model docs tree.
+      - Adds status values and claim boundaries.
+      - Adds schemas for model family, variant, prompt template, hardware fit, and receipts.
+      - Adds source-index.yaml for source-backed facts.
+      - Does not add runtime code.
+    verification: [cargo fmt --all -- --check, Parse YAML files, Parse JSON receipt templates]
+  - id: MF-002
+    title: Add architecture feature glossary
+    state: proposed
+    priority: P0
+    workstream: model_foundation
+    depends_on: [MF-001]
+    scope:
+      allowed_paths: [docs/models/ARCHITECTURE_FEATURE_GLOSSARY.md, docs/models/implementation/**, docs/tracking/model-family-foundation/**]
+      forbidden_paths: [crates/**]
+    acceptance:
+      - Defines dense, MoE, multimodal, token-classification, long-context, and speculative-decoding features.
+      - Unknowns are marked TBD.
+      - No implementation claims are made.
+    verification: [cargo fmt --all -- --check]
+  - id: MF-003
+    title: Add local hardware fit policy for 5070Ti
+    state: proposed
+    priority: P0
+    workstream: model_foundation
+    depends_on: [MF-001]
+    scope:
+      allowed_paths: [docs/models/MODEL_HARDWARE_FIT_5070TI.md, docs/tracking/model-family-foundation/**]
+      forbidden_paths: [crates/**]
+    acceptance:
+      - Splits models into tier_a_local, tier_b_partial, and tier_c_design_only.
+      - Explicitly states that design-only docs are not local inference claims.
+      - Does not invent benchmarks.
+    verification: [cargo fmt --all -- --check]
+  - id: GEMMA4-DOC-001
+    title: Add Gemma 4 model-family foundation doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope: {allowed_paths: [docs/models/families/gemma-4.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}
+    acceptance: [Documents E2B E4B 31B and 26B-A4B variants., Separates text-only multimodal MoE and MTP claims., First target is E2B text-only Q4 quantized proof., Explicitly says generic Gemma support is not Gemma 4 support.]
+    verification: [cargo fmt --all -- --check]
+  - id: QWEN35-DOC-001
+    title: Add Qwen3.5 small-model-first foundation doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope: {allowed_paths: [docs/models/families/qwen-3.5.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}
+    acceptance: [Documents 0.8B 2B 4B 9B as first local targets., Documents thinking disabled by default for small models., Separates 27B 35B 122B 397B as larger or design-gated targets.]
+    verification: [cargo fmt --all -- --check]
+  - id: PRIVACY-DOC-001
+    title: Add OpenAI privacy-filter token-classification foundation doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope: {allowed_paths: [docs/models/families/openai-privacy-filter.md, docs/models/implementation/token-classification-lane.md, ci/model-receipts/_templates/token-classification-proof.json, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}
+    acceptance: [Documents token-classification pipeline separately from generation., Documents 33 BIOES labels and Viterbi span decoder., Adds receipt requirements for span classification.]
+    verification: [cargo fmt --all -- --check, Parse JSON receipt template]
+  - {id: QWEN36-DOC-001, title: Add Qwen3.6 family doc, state: proposed, priority: P0, workstream: model_family_docs, depends_on: [MF-001, MF-002], scope: {allowed_paths: [docs/models/families/qwen-3.6.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}, acceptance: [Adds Qwen3.6 design scaffold and future gates.], verification: [cargo fmt --all -- --check]}
+  - {id: KIMI26-DOC-001, title: Add Kimi K2.6 design-only family doc, state: proposed, priority: P0, workstream: model_family_docs, depends_on: [MF-001, MF-002], scope: {allowed_paths: [docs/models/families/kimi-k2.6.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}, acceptance: [Adds Kimi K2.6 design-only rails and non-claims.], verification: [cargo fmt --all -- --check]}
+  - {id: GLM51-DOC-001, title: Add GLM-5.1 design-only family doc, state: proposed, priority: P0, workstream: model_family_docs, depends_on: [MF-001, MF-002], scope: {allowed_paths: [docs/models/families/glm-5.1.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}, acceptance: [Adds GLM-5.1 design-only rails and non-claims.], verification: [cargo fmt --all -- --check]}
+  - {id: DSV4-DOC-001, title: Add DeepSeek V4 family doc, state: proposed, priority: P0, workstream: model_family_docs, depends_on: [MF-001, MF-002], scope: {allowed_paths: [docs/models/families/deepseek-v4.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}, acceptance: [Adds DeepSeek V4 Flash Pro design-only rails and non-claims.], verification: [cargo fmt --all -- --check]}
+  - {id: MM35-DOC-001, title: Add Mistral Medium 3.5 design-only family doc, state: proposed, priority: P0, workstream: model_family_docs, depends_on: [MF-001, MF-002], scope: {allowed_paths: [docs/models/families/mistral-medium-3.5.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}, acceptance: [Adds Mistral Medium 3.5 design-only rails and non-claims.], verification: [cargo fmt --all -- --check]}

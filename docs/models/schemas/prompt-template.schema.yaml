@@ -1,0 +1,10 @@
+schema: 1
+required: [id, family_id, variant_scope, tokenizer_source, thinking_modes, roles, fallback_allowed]
+fields:
+  id: {type: string}
+  family_id: {type: string}
+  variant_scope: {type: list_string}
+  tokenizer_source: {enum: [explicit, model, sibling, unknown]}
+  thinking_modes: {type: list_string}
+  roles: {type: list_string}
+  fallback_allowed: {type: boolean}

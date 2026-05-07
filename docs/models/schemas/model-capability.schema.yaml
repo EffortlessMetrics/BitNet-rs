@@ -1,0 +1,8 @@
+schema: 1
+required: [id, family_id, source_status, runtime_claim, receipt_required]
+fields:
+  id: {type: string}
+  family_id: {type: string}
+  source_status: {enum: [source_backed, source_backed_partial, needs_model_card_verification, design_only, tbd]}
+  runtime_claim: {type: boolean}
+  receipt_required: {type: boolean}

@@ -1,0 +1,51 @@
+schema: 1
+status_values:
+  - not_present
+  - documented
+  - design_scaffold
+  - catalog_scaffold
+  - tokenizer_scaffold
+  - prompt_template_scaffold
+  - loader_scaffold
+  - synthetic_shape_tested
+  - runtime_detected
+  - one_token_smoke_tested
+  - parity_tested
+  - receipt_backed
+  - benchmarked
+  - design_only
+claim_boundaries:
+  documented:
+    may_claim:
+      - "The repo contains source-backed implementation notes."
+    must_not_claim:
+      - "The model loads or runs."
+  design_scaffold:
+    may_claim:
+      - "The architecture plan is recorded."
+    must_not_claim:
+      - "The implementation compiles, loads, or runs."
+  loader_scaffold:
+    may_claim:
+      - "The intended loader/tensor mapping exists."
+    must_not_claim:
+      - "Inference works."
+  one_token_smoke_tested:
+    may_claim:
+      - "One strict deterministic generation/classification smoke ran."
+    must_not_claim:
+      - "Quality, speed, long context, or full feature support."
+  receipt_backed:
+    may_claim:
+      - "The named model/variant/backend/task is proven by receipt."
+    must_not_claim:
+      - "Other variants, backends, modalities, or quantizations work."
+families:
+  gemma4: {display_name: Gemma 4, implementation_status: design_scaffold, first_target: gemma4-e2b-it-q4-text-only, local_test_tier: tier_a_local, owner_lanes: [dense_decoder, gguf_dense_quant, moe_decoder_future, multimodal_future]}
+  qwen36: {display_name: Qwen 3.6, implementation_status: design_scaffold, first_target: qwen3.6-27b-text-only-gguf-design, local_test_tier: tier_b_partial, owner_lanes: [dense_decoder, moe_decoder_for_35b_a3b, prompt_template, tool_calling]}
+  qwen35: {display_name: Qwen 3.5, implementation_status: design_scaffold, first_target: qwen3.5-0.8b-or-2b-text-only-gguf, local_test_tier: tier_a_local, small_model_priority: true, owner_lanes: [dense_decoder, prompt_template, tokenizer, gguf_dense_quant, moe_decoder_future]}
+  kimi_k26: {display_name: Kimi K2.6, implementation_status: design_only, first_target: design_only_prompt_tokenizer_loader_notes, local_test_tier: tier_c_design_only, owner_lanes: [moe_decoder_design, prompt_template, gguf_dynamic_quant_design]}
+  glm51: {display_name: GLM-5.1, implementation_status: design_only, first_target: design_only_prompt_template_and_moe_notes, local_test_tier: tier_c_design_only, owner_lanes: [moe_decoder_design, prompt_template, tool_calling, external_reference]}
+  deepseek_v4: {display_name: DeepSeek V4, implementation_status: design_only, first_target: design_only_architecture_notes, local_test_tier: tier_c_design_only, owner_lanes: [moe_decoder_design, long_context_design, mixed_precision_design]}
+  mistral_medium_35: {display_name: Mistral Medium 3.5, implementation_status: design_only, first_target: design_only_prompt_reasoning_effort_contract, local_test_tier: tier_c_design_only, owner_lanes: [dense_decoder_design, prompt_template, tool_calling, speculative_decoding_future]}
+  openai_privacy_filter: {display_name: OpenAI privacy-filter, implementation_status: design_scaffold, first_target: token_classification_cpu_or_onnx_smoke, local_test_tier: tier_a_local, owner_lanes: [token_classification, onnx_runtime_future, safetensors_loader, transformersjs_reference]}

@@ -1,0 +1,20 @@
+schema: 1
+lanes:
+  dense_decoder:
+    doc: docs/models/implementation/dense-decoder-lane.md
+    qk256_proof_allowed: false
+  moe_decoder:
+    doc: docs/models/implementation/moe-decoder-lane.md
+    required_receipt_fields: [router_logits, top_k, active_parameters, total_parameters, expert_coverage]
+  multimodal:
+    doc: docs/models/implementation/multimodal-lane.md
+    text_only_is_multimodal_claim: false
+  token_classification:
+    doc: docs/models/implementation/token-classification-lane.md
+    generation_claim_allowed: false
+  openvino_graph:
+    doc: docs/models/implementation/openvino-graph-lane.md
+  gguf_dense_quant:
+    doc: docs/models/implementation/gguf-dense-quant-lane.md
+  safetensors_loader:
+    doc: docs/models/implementation/safetensors-loader-lane.md
