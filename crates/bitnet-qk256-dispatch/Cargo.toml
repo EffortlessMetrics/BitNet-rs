@@ -31,3 +31,6 @@ cuda = [
 ]
 metal = ["bitnet-common/metal"]
 gpu = ["cuda", "metal"]
+
+[lints]
+workspace = true

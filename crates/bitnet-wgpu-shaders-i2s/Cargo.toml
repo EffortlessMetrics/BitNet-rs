@@ -8,3 +8,6 @@ license = "MIT OR Apache-2.0"
 
 [dev-dependencies]
 naga = { version = "28", features = ["wgsl-in"] }
+
+[lints]
+workspace = true

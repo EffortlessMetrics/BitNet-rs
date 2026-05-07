@@ -127,3 +127,6 @@ request_batching = []                                                           
 connection_pool = []                                                                                                                                                              # Gate connection pool module (PR-1 scope)
 tuning = []                                                                                                                                                                       # Gate performance tuning module (PR-1 scope)
 receipts = []                                                                                                                                                                     # Enable KV cache eviction receipts (Phase 2)
+
+[lints]
+workspace = true

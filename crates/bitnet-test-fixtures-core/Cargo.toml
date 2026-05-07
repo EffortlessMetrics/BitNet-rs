@@ -11,3 +11,6 @@ categories.workspace = true
 description = "SRP helpers for resolving and loading test fixtures"
 
 [dependencies]
+
+[lints]
+workspace = true

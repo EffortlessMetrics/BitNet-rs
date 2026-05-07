@@ -35,3 +35,6 @@ cuda = ["bitnet-common/cuda", "candle-core/cuda", "bitnet-quantization/cuda", "b
 metal = ["bitnet-common/metal", "bitnet-qk256-dispatch/metal"]
 gpu = ["cuda", "metal"]
 trace = []
+
+[lints]
+workspace = true

@@ -68,3 +68,6 @@ insta.workspace = true
 proptest.workspace = true
 serial_test.workspace = true
 temp-env = "0.3.6"
+
+[lints]
+workspace = true

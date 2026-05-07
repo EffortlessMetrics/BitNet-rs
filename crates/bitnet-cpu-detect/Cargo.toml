@@ -22,3 +22,6 @@ default = []
 avx2 = []
 avx512 = []
 neon = []
+
+[lints]
+workspace = true

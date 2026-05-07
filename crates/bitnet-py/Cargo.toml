@@ -54,3 +54,6 @@ gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
 name = "streaming_comprehensive"
 path = "tests/integration/streaming_comprehensive.rs"
 required-features = ["integration-tests"]
+
+[lints]
+workspace = true

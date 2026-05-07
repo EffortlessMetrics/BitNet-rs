@@ -60,3 +60,6 @@ runtime-profile-fixtures = ["bitnet-runtime-profile-contract-core/runtime-profil
 runtime-profile-reporting = ["bitnet-runtime-profile-contract-core/runtime-profile-reporting"]
 runtime-profile-trend = ["bitnet-runtime-profile-contract-core/runtime-profile-trend"]
 runtime-profile-integration-tests = ["bitnet-runtime-profile-contract-core/runtime-profile-integration-tests"]
+
+[lints]
+workspace = true

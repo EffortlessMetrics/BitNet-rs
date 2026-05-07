@@ -590,3 +590,6 @@ keywords = [
   "bitnet",           # BitNet specific
 ]
 msrv = "1.93.0"
+
+[lints]
+workspace = true
