@@ -1140,6 +1140,26 @@ enum CiCmd {
         #[arg(long, default_value_t = false)]
         enforce_budget: bool,
     },
+
+    /// Compute learned LEM estimates from observed actuals (PR 20).
+    Estimate {
+        /// JSONL ledger of historical actuals. One record per line:
+        /// `{"lane":"...","actual_lem":1.23,"conclusion":"success"}`.
+        #[arg(long, default_value = ".ci/metrics/ci-lane-history.jsonl")]
+        history: PathBuf,
+        /// Static lane cost table (used as the lower bound for the estimate).
+        #[arg(long, default_value = "policy/ci-lanes.toml")]
+        lanes_toml: PathBuf,
+        /// Output path for the learned-estimate report.
+        #[arg(long, default_value = "target/ci/ci-lane-estimates.json")]
+        json_out: PathBuf,
+        /// Print the report to stdout in addition to writing it.
+        #[arg(long, default_value_t = false)]
+        print: bool,
+        /// Number of recent runs per lane to consider (rolling window).
+        #[arg(long, default_value_t = 50)]
+        window: usize,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1559,6 +1579,9 @@ fn real_main() -> Result<()> {
                 print,
                 enforce_budget,
             ),
+            CiCmd::Estimate { history, lanes_toml, json_out, print, window } => {
+                ci::estimate::run(history, lanes_toml, json_out, print, window)
+            }
         },
     }
 }

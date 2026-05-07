@@ -312,6 +312,26 @@ review_after = "2026-06-07"
 expires = "2026-11-07"
 
 [[lane]]
+id = "pr-gate-success"
+workflow = ".github/workflows/pr-gate.yml"
+job = "PR Gate Success"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/ci"
+intent = "Single required-check aggregator for PR branch protection (PR 19)."
+failure_mode = "Branch protection requires a long tail of leaf checks; long-tail lanes silently become required."
+proof_obligation = "Poll upstream lane conclusions via the GitHub Checks API and emit one verdict."
+evidence = ["job logs", "GitHub step summary"]
+allowed_triggers = ["pull_request", "workflow_dispatch"]
+duplicate_of = []
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
 id = "ripr-advisory"
 workflow = ".github/workflows/ripr.yml"
 job = "ripr static exposure"

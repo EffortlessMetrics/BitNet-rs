@@ -7,4 +7,5 @@
 //! step-summary block.
 
 pub mod actuals;
+pub mod estimate;
 pub mod plan;
