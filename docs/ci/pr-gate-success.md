@@ -19,9 +19,10 @@ default-PR lanes that this rollout treats as authoritative:
   with `--fail-on-error`, plus advisory runs of
   `ci-lane-whitelist`, `lint-inheritance`, `clippy-exceptions`,
   `no-panic-family`, and `policy-report`.
-* **Feature Matrix PR** — the 3-combo PR matrix in
-  `.github/workflows/feature-matrix.yml` (no-features / cpu /
-  cpu+full-cli).
+* **`pr-check (no-features)`**, **`pr-check (cpu)`**, **`pr-check (cpu+full-cli)`** —
+  the 3-combo PR matrix in `.github/workflows/feature-matrix.yml`.
+  The `pr-check` matrix has no aggregator job, so each matrix label
+  is listed individually.
 
 Lanes that are **not** required by `PR Gate Success`:
 

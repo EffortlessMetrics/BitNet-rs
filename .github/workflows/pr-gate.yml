@@ -82,10 +82,16 @@ jobs:
 
           # Upstream lanes that gate the PR. Names must match the
           # `name:` field of each upstream job *exactly*.
+          # Required upstream lanes that gate the PR. Names must match
+          # the `name:` field of each upstream job *exactly*. The
+          # feature-matrix.yml `pr-check` matrix has no aggregator
+          # job, so we list each matrix label individually.
           required_jobs=(
             "CI Core Success"
             "Policy"
-            "Feature Matrix PR"
+            "pr-check (no-features)"
+            "pr-check (cpu)"
+            "pr-check (cpu+full-cli)"
           )
 
           # Optional lanes whose `skipped` is acceptable but `failure`
