@@ -117,7 +117,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-003"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-answer/SLM-M4-003-rust-cli-answer"
 stackable = false
 review_mode = "codex_premerge"

@@ -92,6 +92,8 @@ const GGUF_BPE_SPECIAL_TOKEN_CANDIDATES: &[&str] = &[
     "<|end_of_turn|>",
     "<|start_header_id|>",
     "<|end_header_id|>",
+    "<|im_start|>",
+    "<|im_end|>",
 ];
 
 impl RustTokenizer {
@@ -825,6 +827,8 @@ mod tests {
         assert_eq!(tok.token_to_id("<|eot_id|>"), Some(128009));
         assert_eq!(tok.token_to_id("<|start_header_id|>"), Some(128006));
         assert_eq!(tok.token_to_id("<|end_header_id|>"), Some(128007));
+        assert_eq!(tok.token_to_id("<|im_start|>"), Some(151644));
+        assert_eq!(tok.token_to_id("<|im_end|>"), Some(151645));
     }
 
     #[test]
@@ -844,6 +848,27 @@ mod tests {
                 SpecialSplitSegment::Special(128007),
                 SpecialSplitSegment::Text("\n\nHi"),
                 SpecialSplitSegment::Special(128009),
+            ]
+        );
+    }
+
+    #[test]
+    fn bpe_special_split_preserves_qwen_chatml_control_tokens() {
+        let tok = bpe_tokenizer_for_special_tests();
+
+        let segments = tok.split_bpe_special_segments(
+            "<|im_start|>user\nWhat is 2+2?<|im_end|>\n<|im_start|>assistant\n",
+        );
+
+        assert_eq!(
+            segments,
+            vec![
+                SpecialSplitSegment::Special(151644),
+                SpecialSplitSegment::Text("user\nWhat is 2+2?"),
+                SpecialSplitSegment::Special(151645),
+                SpecialSplitSegment::Text("\n"),
+                SpecialSplitSegment::Special(151644),
+                SpecialSplitSegment::Text("assistant\n"),
             ]
         );
     }
@@ -877,6 +902,8 @@ mod tests {
         piece_to_id.insert("<|start_header_id|>".to_string(), 128006);
         piece_to_id.insert("<|end_header_id|>".to_string(), 128007);
         piece_to_id.insert("<|eot_id|>".to_string(), 128009);
+        piece_to_id.insert("<|im_start|>".to_string(), 151644);
+        piece_to_id.insert("<|im_end|>".to_string(), 151645);
 
         RustTokenizer {
             kind: GgufTokKind::Bpe,

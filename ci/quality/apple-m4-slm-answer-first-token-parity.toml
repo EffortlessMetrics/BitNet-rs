@@ -1,0 +1,96 @@
+schema = 1
+artifact_kind = "apple_m4_slm_answer_first_token_parity"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-003"
+updated = "2026-05-07"
+status = "diverged"
+
+[claim_boundary]
+may_claim = "Qwen ChatML prompt token IDs match the reference tokenizer, and Rust first-token generation divergence is localized."
+must_not_claim = [
+  "Rust-native Apple M4 SLM answers work.",
+  "The Q8_0 companion artifact is accepted for operator use.",
+  "BitNet local-answer quality is proven.",
+  "Full apple-m4-metal inference works.",
+  "General performance is proven.",
+]
+
+[model]
+role = "diagnostic_companion"
+repo = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+file = "qwen2.5-0.5b-instruct-q8_0.gguf"
+local_path = "target/apple-m4-slm-answer/SLM-M4-003/candidates/qwen2_5_0_5b_q8_0/qwen2.5-0.5b-instruct-q8_0.gguf"
+sha256 = "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+bytes = 675710816
+architecture = "qwen2"
+quantization = "Q8_0"
+notes = [
+  "The accepted SLM-M4-002 storage-conscious artifact remains qwen2.5-0.5b-instruct-q4_k_m.gguf.",
+  "Q8_0 is used here only because strict Rust support for Q4_K_M is still unsupported.",
+]
+
+[prompt]
+template = "qwen2.5"
+text = "What is 2+2? Answer briefly."
+chatml_file = "target/apple-m4-slm-answer/SLM-M4-003/qwen_chatml_prompt.txt"
+token_ids_match_reference = true
+prompt_ids = [
+  151644, 8948, 198, 2610, 525, 1207, 16948, 11, 3465, 553,
+  54364, 14817, 13, 1446, 525, 264, 10950, 17847, 13, 151645,
+  198, 151644, 872, 198, 3838, 374, 220, 17, 10, 17,
+  30, 21806, 26753, 13, 151645, 198, 151644, 77091, 198,
+]
+
+[reference]
+runner = "llama-cli"
+command = "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli -m target/apple-m4-slm-answer/SLM-M4-003/candidates/qwen2_5_0_5b_q8_0/qwen2.5-0.5b-instruct-q8_0.gguf -f target/apple-m4-slm-answer/SLM-M4-003/qwen_chatml_prompt.txt -n 4 --no-display-prompt --temp 0 --top-k 1 -ngl 0"
+first_token_id = 198
+first_token_text = "\\n"
+first_bytes_hex = "0a"
+continuation_preview = "\\n2+2\\n\\n"
+
+[rust]
+command = "RUST_LOG=warn cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device apple-m4-cpu-neon run --model target/apple-m4-slm-answer/SLM-M4-003/candidates/qwen2_5_0_5b_q8_0/qwen2.5-0.5b-instruct-q8_0.gguf --prompt 'What is 2+2? Answer briefly.' --max-new-tokens 1 --temperature 0 --prompt-template qwen2.5 --greedy --deterministic --strict-loader --strict-tokenizer --dump-logit-steps 1 --logits-topk 10 --assert-greedy --json-out target/apple-m4-slm-answer/SLM-M4-003/qwen2_5_0_5b_q8_0_rust_math_chatml_first_token.json"
+requested_backend = "apple-m4-cpu-neon"
+selected_backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+first_token_id = 24723
+first_token_text = "eway"
+
+[[rust.top_logits]]
+rank = 1
+token_id = 24723
+logit = 15.079877853393555
+
+[[rust.top_logits]]
+rank = 2
+token_id = 105322
+logit = 14.901577949523926
+
+[[rust.top_logits]]
+rank = 3
+token_id = 84709
+logit = 14.533596992492676
+
+[[rust.top_logits]]
+rank = 4
+token_id = 139370
+logit = 14.124734878540039
+
+[[rust.top_logits]]
+rank = 5
+token_id = 70378
+logit = 13.377963066101074
+
+[next_debug_targets]
+suspects = [
+  "debug-only tensor trace before more model math changes",
+  "configured norm type and layer-0 normalization samples",
+  "lm_head orientation and transposed output weight handling",
+  "dense Qwen tensor orientation",
+  "GQA reshape and KV cache indexing",
+  "RoPE layout or position indexing",
+  "causal mask behavior",
+  "MLP gate/up/down order",
+]
