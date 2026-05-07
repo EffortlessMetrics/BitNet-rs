@@ -7,6 +7,13 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::str::FromStr;
 
+/// Normalise a label for parser comparison: trim whitespace, lowercase, and
+/// collapse `_` / spaces to `-` so `END_TO_END`, `end to end`, and
+/// `End-To-End` all hit the same canonical match arm.
+fn normalize_label(input: &str) -> String {
+    input.trim().to_ascii_lowercase().replace(['_', ' '], "-")
+}
+
 /// Logical test scenario axis for BDD planning.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TestingScenario {
@@ -41,7 +48,7 @@ impl FromStr for TestingScenario {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
+        match normalize_label(s).as_str() {
             "unit" => Ok(Self::Unit),
             "integration" => Ok(Self::Integration),
             "e2e" | "end-to-end" | "endtoend" => Ok(Self::EndToEnd),
@@ -80,7 +87,7 @@ impl FromStr for ExecutionEnvironment {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
+        match normalize_label(s).as_str() {
             "local" | "dev" | "development" => Ok(Self::Local),
             "ci" | "ci/cd" | "cicd" => Ok(Self::Ci),
             "pre-prod" | "preprod" | "pre-production" | "preproduction" | "staging" => {
@@ -154,7 +161,7 @@ impl FromStr for BitnetFeature {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
+        match normalize_label(s).as_str() {
             "cpu" => Ok(Self::Cpu),
             "gpu" => Ok(Self::Gpu),
             "cuda" => Ok(Self::Cuda),
@@ -344,6 +351,11 @@ impl BddGrid {
 }
 
 /// Canonical, reusable helper for mapping runtime feature selections to `FeatureSet`.
+///
+/// Silently ignores names that do not parse to a known `BitnetFeature`, so it
+/// is safe for runtime/user input where unknown labels should not fail the
+/// caller. For curated, in-tree policy data prefer
+/// [`feature_set_from_names_checked`] so typos surface immediately.
 pub fn feature_set_from_names(features: &[&str]) -> FeatureSet {
     let mut set = FeatureSet::new();
     for feature in features {
@@ -352,6 +364,26 @@ pub fn feature_set_from_names(features: &[&str]) -> FeatureSet {
         }
     }
     set
+}
+
+/// Strict counterpart to [`feature_set_from_names`].
+///
+/// Returns the list of unknown names instead of silently dropping them, so
+/// curated policy data (e.g. the in-tree BDD grid) fails fast on a typo.
+pub fn feature_set_from_names_checked(features: &[&str]) -> Result<FeatureSet, Vec<String>> {
+    let mut set = FeatureSet::new();
+    let mut unknown = Vec::new();
+
+    for feature_name in features {
+        match feature_name.parse() {
+            Ok(feature) => {
+                set.insert(feature);
+            }
+            Err(_) => unknown.push((*feature_name).to_string()),
+        }
+    }
+
+    if unknown.is_empty() { Ok(set) } else { Err(unknown) }
 }
 
 #[cfg(test)]
@@ -389,5 +421,52 @@ mod tests {
         let grid = BddGrid::from_rows(rows);
         let found = grid.find(TestingScenario::Unit, ExecutionEnvironment::Local);
         assert!(found.is_some());
+    }
+
+    #[test]
+    fn test_feature_set_from_names_checked_returns_unknown_features() {
+        let result = feature_set_from_names_checked(&["inference", "kernels", "not-a-feature"]);
+        let unknown = result.expect_err("unknown feature should return an error");
+        assert_eq!(unknown, vec!["not-a-feature".to_string()]);
+    }
+
+    #[test]
+    fn test_feature_set_from_names_checked_accepts_valid_features() {
+        let set = feature_set_from_names_checked(&["inference", "kernels"])
+            .expect("known features should parse");
+        assert!(set.contains(BitnetFeature::Inference));
+        assert!(set.contains(BitnetFeature::Kernels));
+    }
+
+    #[test]
+    fn test_feature_set_from_names_silently_drops_unknown() {
+        // Permissive parser must keep working for runtime/user input.
+        let set = feature_set_from_names(&["inference", "not-a-feature"]);
+        assert!(set.contains(BitnetFeature::Inference));
+    }
+
+    #[test]
+    fn test_label_normalization_handles_separator_variants() {
+        // Trim, lowercase, and collapse `_` / spaces to `-` so curated and
+        // human-typed labels round-trip through the same canonical form.
+        assert_eq!(TestingScenario::from_str(" END_TO_END "), Ok(TestingScenario::EndToEnd));
+        assert_eq!(TestingScenario::from_str("End To End"), Ok(TestingScenario::EndToEnd));
+        assert_eq!(
+            ExecutionEnvironment::from_str(" pre_production "),
+            Ok(ExecutionEnvironment::PreProduction)
+        );
+        assert_eq!(
+            ExecutionEnvironment::from_str("PRE PRODUCTION"),
+            Ok(ExecutionEnvironment::PreProduction)
+        );
+        assert_eq!(
+            BitnetFeature::from_str(" integration_tests "),
+            Ok(BitnetFeature::IntegrationTests)
+        );
+        assert_eq!(
+            BitnetFeature::from_str(" CROSS_VALIDATION "),
+            Ok(BitnetFeature::CrossValidation)
+        );
+        assert_eq!(BitnetFeature::from_str(" CPP_FFI "), Ok(BitnetFeature::CppFfi));
     }
 }
