@@ -10,7 +10,7 @@
 | Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
 |---|---|---:|---|---|---|---|---|
 | MODEL-ARTIFACT-001 | merged | #3922 | `codex/model-artifacts/MODEL-ARTIFACT-001-shared-answer-gate-v2` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Define the shared reference-good answer artifact gate, record artifact states, and list the current Microsoft BitNet I2_S GGUF as rejected for answer-readiness claims without changing runtime behavior. |
-| MODEL-ARTIFACT-002 | pr_open | #3928 | `codex/model-artifacts/MODEL-ARTIFACT-002-reference-good-bitnet` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Acquire or regenerate a reference-good BitNet GGUF/tokenizer artifact that passes the deterministic answer prompt suite under a reference runner, records exact SHA256 and tokenizer/pre-tokenizer authority, and can unblock backend answer-readiness lanes. |
+| MODEL-ARTIFACT-002 | blocked | #3928 | `codex/model-artifacts/MODEL-ARTIFACT-002-reference-good-bitnet` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Acquire or regenerate a reference-good BitNet GGUF/tokenizer artifact that passes the deterministic answer prompt suite under a reference runner, records exact SHA256 and tokenizer/pre-tokenizer authority, and can unblock backend answer-readiness lanes. |
 
 ## Hard Constraints
 

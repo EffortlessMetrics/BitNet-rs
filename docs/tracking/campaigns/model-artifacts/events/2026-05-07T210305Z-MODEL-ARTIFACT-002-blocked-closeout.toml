@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T21:03:05Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-002"
+event = "blocked"
+actor = "codex"
+
+notes = [
+  "PR #3928 merged the shared candidate manifest and reference-good search report.",
+  "MODEL-ARTIFACT-002 remains blocked because no recorded BitNet artifact reached answer_ready.",
+  "Next work should acquire or regenerate a new candidate artifact; backend local-answer lanes remain diagnostic-only until then.",
+]
