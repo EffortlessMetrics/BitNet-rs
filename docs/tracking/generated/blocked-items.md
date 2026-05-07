@@ -50,6 +50,9 @@
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
 | intel-258v-platform | LNL258V-003 | LNL258V-002 | merged |
 | intel-258v-platform | CPU258V-001 | LNL258V-003 | merged |
+| intel-258v-platform | LNL258V-OWNERSHIP-001 | CPU258V-001 | pr_open |
+| intel-258v-platform | CPU258V-002 | LNL258V-OWNERSHIP-001 | blocked |
+| intel-258v-platform | CPU258V-003 | CPU258V-002 | proposed |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |

@@ -42,8 +42,8 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-BITNET-008 | merged | CPU phase benchmark receipt profiles merged in #3856. |
 | CPU-PHASE-TIMING-001 | merged | Tightened Kaby phase timing receipt extraction in #3872 while leaving micro/layer gaps explicit. |
 | CPU-ANSWER-001 | merged | Strict CPU answer-readiness gates merged in #3898. |
-| CPU-ANSWER-002 | ready | Next: scalar-vs-AVX2 full-decode answer parity and first-divergence evidence. |
+| CPU-ANSWER-002 | ready | Next: scalar-vs-AVX2 full-decode answer parity and first-divergence evidence, with the 258V CPU as the lead BitNet CPU reference machine. |
 
 ## Review Policy
 
-CPU proof PRs are non-stackable when they touch loader, tokenizer, layout, dispatch, decode, or receipt authority. Hardware validation lanes can consume CPU proof artifacts but should not rewrite the same runtime surface concurrently.
+CPU proof PRs are non-stackable when they touch loader, tokenizer, layout, dispatch, decode, or receipt authority. New BitNet CPU proof leadership routes through the 258V CPU lane; other CPU machines are support validators unless a work item explicitly says otherwise. Hardware validation lanes can consume CPU proof artifacts but should not rewrite the same runtime surface concurrently.

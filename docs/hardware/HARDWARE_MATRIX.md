@@ -19,11 +19,11 @@ Do not merge CPU, Metal, MPSGraph, CUDA, WGPU, Intel Arc GPU, OpenVINO GPU, or O
 
 | Machine | Proof label | Primary role | Must not claim |
 |---|---|---|---|
-| i5-8250U | `intel-i5-8250u-cpu-avx2` | CPU scalar/AVX2 proof, low-power sustained baseline | GPU/NPU acceleration |
-| Core Ultra 7 258V CPU | `intel-258v-cpu-avx2` | Parallel Lunar Lake AVX2 CPU validation and same-machine comparison | Replacing 8250U implementation ownership |
+| i5-8250U | `intel-i5-8250u-cpu-avx2` | SLM CPU lead plus legacy/low-power BitNet comparison baseline | GPU/NPU acceleration or blocking BitNet CPU leadership |
+| Core Ultra 7 258V CPU | `intel-258v-cpu-avx2` | BitNet CPU lead for strict real-GGUF validation, scalar/AVX2 answer parity, phase receipts, and same-machine CPU reference artifacts | GPU/NPU acceleration |
 | UHD 620 | `intel-uhd-620-openvino-gpu` | Optional/deferred OpenVINO GPU smoke on the 8250U box | CPU proof or primary GPU performance |
-| Ryzen 7 5700X | `amd-5700x-cpu-avx2` | Mainstream AM4 / DDR4 desktop CPU baseline | AVX-512 or accelerator proof |
-| Ryzen 9 9950X3D | `amd-9950x3d-cpu-avx512` | Modern AM5 / DDR5 / AVX-512 / cache-sensitive CPU lane | GPU/NPU acceleration |
+| Ryzen 7 5700X | `amd-5700x-cpu-avx2` | Mainstream AM4 / DDR4 desktop support validator; primary support around A770 work | AVX-512, accelerator proof, or BitNet CPU ownership |
+| Ryzen 9 9950X3D | `amd-9950x3d-cpu-avx512` | Modern AM5 / DDR5 / AVX-512 / cache-sensitive support validator; primary support around RTX 5070 Ti work | GPU/NPU acceleration or BitNet CPU ownership |
 | Arc A770 16GB | `intel-arc-a770-opencl` | Discrete GPU OpenCL kernel/perf lane | NPU support, generic GPU proof |
 | Arc A770 OpenVINO | `intel-arc-a770-openvino-gpu` | OpenVINO GPU reference lane | Native BitNet kernel proof |
 | Arc 140V | `intel-arc-140v-opencl` | Lunar Lake shared-memory iGPU comparison lane | A770-equivalent performance |
@@ -39,11 +39,11 @@ Do not merge CPU, Metal, MPSGraph, CUDA, WGPU, Intel Arc GPU, OpenVINO GPU, or O
 
 | Machine | Primary lane | Secondary lane | Notes |
 |---|---|---|---|
-| i5-8250U | `intel-i5-8250u-cpu-avx2` | `intel-uhd-620-openvino-gpu` | Active low-power AVX2 CPU implementation/proof |
-| Ryzen 7 5700X | `amd-5700x-cpu-avx2` | `amd-5700x-cpu-scalar` | Mainstream AM4 / DDR4 desktop CPU baseline |
-| Ryzen 9 9950X3D | `amd-9950x3d-cpu-avx512` | `amd-9950x3d-cpu-avx2`, `amd-9950x3d-cpu-scalar` | Modern AM5 / DDR5 / AVX-512 / cache-sensitive CPU lane |
+| i5-8250U | `intel-i5-8250u-cpu-avx2` | `intel-uhd-620-openvino-gpu` | SLM CPU lead; legacy/low-power BitNet comparison only |
+| Ryzen 7 5700X | `amd-5700x-cpu-avx2` | `amd-5700x-cpu-scalar` | Support validator; primary desktop support around A770 work |
+| Ryzen 9 9950X3D | `amd-9950x3d-cpu-avx512` | `amd-9950x3d-cpu-avx2`, `amd-9950x3d-cpu-scalar` | Support validator; primary desktop support around RTX 5070 Ti work |
 | A770 16GB | `intel-arc-a770-opencl` | `intel-arc-a770-openvino-gpu` | Intel discrete GPU kernel lane |
-| 258V | `intel-258v-cpu-avx2`, `intel-arc-140v-opencl`, `intel-npu-openvino` | `intel-arc-140v-openvino-gpu` | Lunar Lake tri-device box |
+| 258V | `intel-258v-cpu-avx2`, `intel-arc-140v-opencl`, `intel-npu-openvino` | `intel-arc-140v-openvino-gpu` | Lunar Lake tri-device box; BitNet CPU lead and same-machine CPU/NPU/Arc comparison plate |
 | M4 Mac mini | `apple-m4-metal` | `apple-m4-mpsgraph`, `apple-m4-cpu-neon` | Apple Silicon Metal lane |
 | RTX 5070 Ti | `nvidia-rtx-5070-ti-cuda` | `nvidia-rtx-5070-ti-wgpu` | Modern NVIDIA CUDA lane |
 

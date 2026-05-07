@@ -6,13 +6,13 @@ This file defines the validation bundle for the Core Ultra 7 258V Lunar Lake lap
 
 | Device | Proof lane |
 |---|---|
-| CPU | `intel-258v-cpu-avx2` / `cpu-avx2` Lunar Lake validation and fallback |
+| CPU | `intel-258v-cpu-avx2` / `cpu-avx2` BitNet CPU lead, strict validation, and fallback |
 | Integrated GPU | `intel-arc-140v-opencl` and `intel-arc-140v-openvino-gpu` |
 | NPU | `intel-npu-openvino` / `intel_258v_npu_openvino` |
 
 The 258V laptop should not be treated as a single generic Intel accelerator.
 
-The 258V CPU lane validates the same CPU path on Lunar Lake and provides same-machine comparison against Arc 140V and NPU results. It does not replace the i5-8250U active AVX2 implementation/proof lane.
+The 258V CPU lane is the BitNet CPU lead. It owns strict real-GGUF BitNet CPU validation, scalar-vs-AVX2 answer parity, phase receipts, and same-machine CPU reference artifacts used by the Arc 140V and Intel NPU lanes. The i5-8250U is now the SLM CPU lead and a legacy/low-power BitNet comparison lane; it does not block new BitNet CPU work.
 
 Platform roadmap:
 
@@ -76,7 +76,8 @@ Record these before moving any 258V hardware lane beyond `scaffold`:
 - OpenVINO `GPU.0` smoke does not prove BitNet OpenCL kernel acceleration.
 - OpenVINO `NPU` smoke does not prove full BitNet inference.
 - CPU or GPU fallback cannot count as NPU execution.
-- 258V CPU validation must record artifacts without reshaping shared CPU implementation unless explicitly scoped by a ledger item.
+- 258V CPU proof is the first priority on this platform; NPU and Arc proofs must compare against the 258V CPU reference when they make BitNet-adjacent parity claims.
+- 258V CPU changes may own BitNet CPU sequencing when explicitly scoped; accelerator PRs must not reshape CPU dispatch or QK256 CPU kernels.
 - Arc 140V visibility must preserve `requested_backend`, `selected_backend`, runtime API, exact device identity evidence, and `fallback_used=false`; generic Intel GPU visibility is not enough.
 
 ## Platform Probe Bundle Artifacts
@@ -147,8 +148,8 @@ lane-specific Arc 140V, NPU, CPU BitNet, parity, or benchmark artifacts.
 
 ### CPU BitNet Validation Preflight
 
-Use the CPU validation command to emit the Lunar Lake CPU lane artifact without
-taking ownership of CPU implementation internals:
+Use the CPU validation command to emit the Lunar Lake CPU lead artifact without
+touching unrelated accelerator surfaces:
 
 ```bash
 cargo run --locked -p bitnet-cli \

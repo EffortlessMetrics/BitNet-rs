@@ -2,18 +2,18 @@
 
 ## Purpose
 
-This document defines the Core Ultra 7 258V Lunar Lake laptop as a tri-device validation platform for BitNet-rs. It does not merge CPU, GPU, and NPU claims.
+This document defines the Core Ultra 7 258V Lunar Lake laptop as the BitNet CPU lead and tri-device validation platform for BitNet-rs. It does not merge CPU, GPU, and NPU claims.
 
 Proof lanes:
 
 | Subdevice | Primary proof label | Owner |
 |---|---|---|
-| CPU | `intel-258v-cpu-avx2` / `cpu-avx2` | CPU runtime proof |
+| CPU | `intel-258v-cpu-avx2` / `cpu-avx2` | BitNet CPU lead |
 | Integrated GPU | `intel-arc-140v-opencl` | Intel Arc GPU validation |
 | Integrated GPU reference | `intel-arc-140v-openvino-gpu` | Intel Arc GPU validation |
 | NPU | `intel-npu-openvino` / `intel_258v_npu_openvino` | Intel NPU validation |
 
-The platform lane exists to collect machine facts and compare proof artifacts from those lanes on the same laptop. It does not replace the i5-8250U active AVX2 implementation lane.
+The platform lane exists to collect machine facts and compare proof artifacts from those lanes on the same laptop. The 258V CPU is the lead BitNet CPU reference path; the i5-8250U is the SLM CPU lead plus legacy/low-power BitNet comparison lane.
 
 ## Platform Baseline
 
@@ -61,7 +61,8 @@ NPU baseline:
 - GPU fallback cannot count as NPU execution.
 - Shared-memory laptop results must not be compared directly to A770 without memory, power, and thermal context.
 - WSL does not count as NPU-capable unless OpenVINO sees `NPU` inside WSL.
-- 258V CPU validation must not reshape shared CPU implementation unless the ledger item explicitly scopes that work.
+- 258V CPU proof is first priority; NPU and Arc proofs must compare against 258V CPU reference receipts before BitNet-adjacent parity claims.
+- Accelerator PRs must not reshape shared CPU dispatch or QK256 CPU kernels unless the ledger item explicitly scopes that work.
 
 ## Device Routing
 
@@ -175,9 +176,17 @@ Claim boundaries:
 - OpenVINO `NPU` visibility is not graph execution.
 - No BitNet inference, parity, benchmark, or accelerator contribution claim is allowed.
 
-### CPU258V-001 - Add CPU AVX2 Validation Lane
+### CPU258V-001 - Add CPU AVX2 Validation Harness
 
-Document 258V CPU as a parallel Lunar Lake validation lane for the same CPU path. The 8250U remains the active AVX2 implementation/proof lane; 258V CPU validates behavior on the Lunar Lake platform and supports same-machine comparison against Arc 140V and NPU artifacts.
+Document and run the 258V CPU validation harness as the first Lunar Lake CPU proof surface. The 258V CPU now leads BitNet CPU proof sequencing and supports same-machine comparison against Arc 140V and NPU artifacts.
+
+### CPU258V-002 - Add Scalar-vs-AVX2 Answer Parity
+
+Compare scalar and AVX2 strict CPU answer receipts on the 258V with the same real GGUF, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs/text, first-divergence evidence, logits/top-k evidence when available, fallback status, selected kernels, and power/topology context.
+
+### CPU258V-003 - Add Phase Benchmark Receipts
+
+Record 258V CPU phase receipts for smoke, first-token, decode, and prefill profiles with P-core / low-power E-core context, power mode, thread count, selected kernel, and fallback status. Do not claim sustained throughput until sustained benchmark receipts exist.
 
 ### ARC140V-001 - Add Integrated GPU Lane
 
