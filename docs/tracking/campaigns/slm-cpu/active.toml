@@ -181,8 +181,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-002B"
-status = "pr_open"
+status = "merged"
 pr = 3926
+merge_sha = "726e2efd8fb0224d740f608ef5e4079475653ae4"
 branch = "codex/slm-cpu-002b-dense-q8-gguf"
 stackable = false
 review_mode = "codex_premerge"
@@ -221,7 +222,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-003"
-status = "proposed"
+status = "ready"
 branch = "codex/slm-cpu-003-tiny-run"
 stackable = false
 review_mode = "codex_premerge"
