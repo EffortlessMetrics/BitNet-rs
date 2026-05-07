@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T20:09:16Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the Apple M4 SLM answer campaign seed after BitNet local-answer artifact quality remained blocked.",
+  "Keep SLM user-facing answer evidence separate from blocked BitNet local-answer claims.",
+  "Do not commit model binaries; keep candidate downloads under target and record source metadata only.",
+]

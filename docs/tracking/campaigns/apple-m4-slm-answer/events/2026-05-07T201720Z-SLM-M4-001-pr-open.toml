@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T20:17:20Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-001"
+event = "pr_open"
+pr = 3925
+head_sha = "020208d0d32209afd14a9e1d6a31e5b76c61a143"
+actor = "codex"
+
+notes = [
+  "Opened campaign seed PR for the Apple M4 SLM local-answer lane.",
+  "No model binaries, runtime code, QK256, Metal kernels, MPSGraph, Neural Engine, server inference, or performance claims are included.",
+]
