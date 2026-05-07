@@ -428,7 +428,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-007"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-bitnet-007-short-decode-proof"
 stackable = false
 requires_human_merge = true
