@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-operational`
 
-Status: active
+Status: complete
 
 ## Objective
 
@@ -31,6 +31,15 @@ This campaign starts after that proof work. Its job is operational readiness: ma
 - Do not claim QK256 on Apple Silicon.
 - Do not claim general M4 performance from tiny-kernel benchmarks.
 
+## Completion Boundary
+
+This campaign is complete through M4-OP-006. It makes the completed Apple M4
+proof lane repeatable for operators through validation bundle commands,
+receipt-bundle checking, runbook guidance, effective CLI examples, conservative
+benchmark profile validation, and an explicit next-frontier decision. It does
+not add new runtime capability, full `apple-m4-metal` model inference, Apple
+QK256 support, Neural Engine proof, or broad M4 performance claims.
+
 ## Backend Wording
 
 Use these labels consistently:
@@ -50,7 +59,7 @@ Use these labels consistently:
 | M4-OP-003 | merged | Apple M4 operator runbook merged in #3857. |
 | M4-OP-004 | merged | Effective-use CLI examples and strict failure-mode docs merged in #3871. |
 | M4-OP-005 | merged | Conservative benchmark profile names and summary artifact validation merged in #3861. |
-| M4-OP-006 | pr_open | Decide the next implementation frontier in #3882. |
+| M4-OP-006 | merged | Next implementation frontier decision merged in #3882. |
 
 ## Review Policy
 
