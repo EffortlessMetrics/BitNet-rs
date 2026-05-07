@@ -1934,6 +1934,38 @@ fn infer_tokenizer_label(
     }
 }
 
+fn tokenizer_type_for_receipt(
+    tokenizer_label: &str,
+    source: bitnet_tokenizers::auto::TokenizerSource,
+) -> String {
+    if tokenizer_label == source.as_str() {
+        match source {
+            bitnet_tokenizers::auto::TokenizerSource::Explicit
+            | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
+                "external_tokenizer_file".to_string()
+            }
+            bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => "gguf_metadata".to_string(),
+            bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => {
+                "compatibility_fallback".to_string()
+            }
+        }
+    } else {
+        tokenizer_label.to_string()
+    }
+}
+
+fn gguf_header_counts_for_receipt(
+    path: &std::path::Path,
+    is_hf_directory: bool,
+) -> Option<(usize, usize)> {
+    if is_hf_directory || path.extension().and_then(|ext| ext.to_str()) != Some("gguf") {
+        return None;
+    }
+
+    let header = bitnet_inference::gguf::read_header_blocking(path).ok()?;
+    Some((usize::try_from(header.n_kv).ok()?, usize::try_from(header.n_tensors).ok()?))
+}
+
 fn compute_model_sha256(path: &std::path::Path) -> Result<String> {
     use sha2::{Digest, Sha256};
     use std::io::Read;
@@ -2254,8 +2286,8 @@ async fn run_simple_generation(
     // Load tokenizer with deterministic CPU-BITNET authority.
     // Priority: explicit path -> GGUF metadata -> sibling tokenizer asset.
 
-    // Track GGUF metadata for JSON output
-    let mut gguf_metadata: Option<(usize, usize)> = None;
+    // Track GGUF header counts for JSON output independently of tokenizer source.
+    let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
     let effective_strict_tokenizer = strict_tokenizer || strict_loader;
 
     let tokenizer_load_start = std::time::Instant::now();
@@ -2316,14 +2348,6 @@ async fn run_simple_generation(
     let tokenizer_source = tokenizer_resolution.source;
     let tokenizer_strict = tokenizer_resolution.strict;
     let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
-
-    if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
-        let gguf_data = std::fs::read(&model_path)
-            .context("Failed to read GGUF file for tokenizer metadata")?;
-        let reader = bitnet_models::GgufReader::new(&gguf_data)
-            .context("Failed to parse GGUF for tokenizer metadata")?;
-        gguf_metadata = Some((reader.metadata_keys().len(), reader.tensor_count() as usize));
-    }
 
     // Auto-detect template if needed
     let template_type = if prompt_template == "auto" {
@@ -2746,8 +2770,10 @@ async fn run_simple_generation(
 
         // Get tokenizer info
         let tokenizer_source_str = tokenizer_source.as_str();
+        let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+        let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
         let tokenizer_info = serde_json::json!({
-            "type": "sentencepiece",
+            "type": tokenizer_type,
             "origin": if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
                 "embedded"
             } else {
@@ -2800,7 +2826,6 @@ async fn run_simple_generation(
         let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
         let model_file =
             model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
-        let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
         let thread_count = effective_thread_count(threads);
         let cpu_features = detected_cpu_feature_labels();
         let cpu_model = detected_cpu_model_label();
@@ -4033,6 +4058,38 @@ mod tests {
         ));
 
         assert_eq!(repo, "microsoft/bitnet-b1.58-2B-4T-gguf");
+    }
+
+    #[test]
+    fn receipt_tokenizer_type_uses_inferred_model_label() {
+        assert_eq!(
+            tokenizer_type_for_receipt(
+                "llama3",
+                bitnet_tokenizers::auto::TokenizerSource::Explicit
+            ),
+            "llama3"
+        );
+        assert_eq!(
+            tokenizer_type_for_receipt(
+                "explicit",
+                bitnet_tokenizers::auto::TokenizerSource::Explicit
+            ),
+            "external_tokenizer_file"
+        );
+    }
+
+    #[test]
+    fn gguf_header_counts_for_receipt_reads_counts_without_full_metadata_parse() {
+        use std::io::Write;
+
+        let mut file = tempfile::Builder::new().suffix(".gguf").tempfile().unwrap();
+        file.write_all(b"GGUF").unwrap();
+        file.write_all(&3_u32.to_le_bytes()).unwrap();
+        file.write_all(&332_u64.to_le_bytes()).unwrap();
+        file.write_all(&45_u64.to_le_bytes()).unwrap();
+
+        assert_eq!(gguf_header_counts_for_receipt(file.path(), false), Some((45, 332)));
+        assert_eq!(gguf_header_counts_for_receipt(file.path(), true), None);
     }
 
     #[test]
