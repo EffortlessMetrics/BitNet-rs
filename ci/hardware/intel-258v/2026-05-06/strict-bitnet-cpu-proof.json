@@ -1,0 +1,401 @@
+{
+  "artifact_kind": "strict_bitnet_cpu_profile",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
+  "bitnet": {
+    "activation_quantization": "A8",
+    "execution_phase": "decode",
+    "fallback_layout": null,
+    "kernel_family": "i2_s",
+    "kernel_format": "i2_s",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "per_token_weight_upload": false,
+    "quantization": "W1.58A8",
+    "weight_quantization": "W1.58",
+    "weights_uploaded_once": false
+  },
+  "counts": {
+    "n_kv": 0,
+    "n_tensors": 0,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "threads": 8
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 1,
+    "phase": "decode",
+    "prompt_tokens": 11,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust",
+    "thread_count": 8
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_cuda": 0,
+    "bitnet_linear_layers_total": 2310,
+    "execution_claim": "cpu_reference",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": false,
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "family": "i2_s",
+    "implementation": "avx2",
+    "kernel_id": "i2_s-avx2-reference",
+    "layout": "gguf_packed_i2_s"
+  },
+  "latency": {
+    "cmd_to_first_ms": 190337,
+    "decode_first_ms": 190337,
+    "total_ms": 190337
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "explicit"
+  },
+  "logits_dump": null,
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "fallback_loader_used": false,
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "cpu",
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 1,
+        "max_ms": 0.014,
+        "mean_ms": 0.014,
+        "min_ms": 0.014,
+        "p50_ms": 0.014,
+        "p95_ms": 0.014,
+        "total_ms": 0.014
+      },
+      "first_token_decode_ms": 17137.319,
+      "forward_ms": {
+        "count": 1,
+        "max_ms": 17047.864,
+        "mean_ms": 17047.864,
+        "min_ms": 17047.864,
+        "p50_ms": 17047.864,
+        "p95_ms": 17047.864,
+        "total_ms": 17047.864
+      },
+      "generated_tokens": 1,
+      "logits_ms": {
+        "count": 1,
+        "max_ms": 83.518,
+        "mean_ms": 83.518,
+        "min_ms": 83.518,
+        "p50_ms": 83.518,
+        "p95_ms": 83.518,
+        "total_ms": 83.518
+      },
+      "per_token_ms": {
+        "count": 1,
+        "max_ms": 17137.319,
+        "mean_ms": 17137.319,
+        "min_ms": 17137.319,
+        "p50_ms": 17137.319,
+        "p95_ms": 17137.319,
+        "total_ms": 17137.319
+      },
+      "sample_ms": {
+        "count": 1,
+        "max_ms": 1.739,
+        "mean_ms": 1.739,
+        "min_ms": 1.739,
+        "p50_ms": 1.739,
+        "p95_ms": 1.739,
+        "total_ms": 1.739
+      },
+      "steady_per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "steady_state_tok_s": null,
+      "steady_state_tokens": 0,
+      "token_decode_ms": {
+        "count": 1,
+        "max_ms": 0.051,
+        "mean_ms": 0.051,
+        "min_ms": 0.051,
+        "p50_ms": 0.051,
+        "p95_ms": 0.051,
+        "total_ms": 0.051
+      },
+      "warmup_tokens": 1
+    },
+    "id": "smoke_1",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 47313.806,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 173199.784,
+      "per_token_ms": {
+        "count": 10,
+        "max_ms": 19370.643,
+        "mean_ms": 17319.97,
+        "min_ms": 16889.039,
+        "p50_ms": 16975.288,
+        "p95_ms": 19370.643,
+        "total_ms": 173199.702
+      },
+      "tokens": 10
+    },
+    "prompt_tokenize_ms": 0.484,
+    "requested": true,
+    "tokenizer_load_ms": 831.185
+  },
+  "prompt": "Answer with a single digit: 2+2=",
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
+  "strict_provenance": {
+    "cpu_features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "decode_tokens": 1,
+    "decode_tps": 0.005253839243026842,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "bitnet",
+    "phase": "decode",
+    "prompt_tokens": 11,
+    "quant_format": "I2_S",
+    "requested_backend": "cpu",
+    "requested_kernel": "i2_s-avx2-reference",
+    "selected_backend": "cpu-rust",
+    "selected_kernel": "i2_s-avx2-reference",
+    "thread_count": 8,
+    "tokenizer_source": "explicit",
+    "tokenizer_strict": true
+  },
+  "text": "'E",
+  "throughput": {
+    "decoded_tokens": 1,
+    "tokens_per_second": 0.005253839243026842
+  },
+  "timestamp": "2026-05-07T01:18:35.912035600+00:00",
+  "timing": {
+    "decode_steady_state_tok_s": null,
+    "decode_total_ms": 17137.319,
+    "first_token_decode_ms": 17137.319,
+    "first_token_ms": 190337,
+    "model_load_ms": 47313.806,
+    "prefill_ms": 173199.784,
+    "sampling_ms_per_token": 1.739,
+    "tokenize_ms": 0.484,
+    "tokenizer_load_ms": 831.185
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "origin": "external",
+    "source": "explicit",
+    "strict": true,
+    "type": "sentencepiece"
+  },
+  "tokens": {
+    "generated": 1,
+    "ids": [
+      89048
+    ],
+    "prompt": 11,
+    "total": 12
+  }
+}
