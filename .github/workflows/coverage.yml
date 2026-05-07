@@ -120,6 +120,39 @@ jobs:
           fi
           echo "Coverage OK"
 
+      - name: Write coverage receipt
+        if: always()
+        run: |
+          mkdir -p target/bitnet/reports
+          python3 - <<'PYTHON'
+          import json
+          import pathlib
+          receipt = {
+              "schema_version": 1,
+              "repo": "bitnet-rs",
+              "lane": "coverage",
+              "flag": "rust-cpu",
+              "workflow": "Coverage",
+              "artifacts": {
+                  "coverage_json": pathlib.Path("coverage.json").exists(),
+                  "coverage_text": pathlib.Path("coverage.txt").exists(),
+                  "lcov": pathlib.Path("lcov.info").exists(),
+              },
+              "claim_boundary": [
+                  "execution_surface_only",
+                  "cpu_path_only",
+                  "not_gpu_validation",
+                  "not_model_quality",
+                  "not_crossval",
+                  "not_mutation_adequacy"
+              ],
+          }
+          pathlib.Path("target/bitnet/reports/coverage-receipt.json").write_text(
+              json.dumps(receipt, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PYTHON
+
       - name: Upload coverage artifacts (always)
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
@@ -128,4 +161,6 @@ jobs:
           path: |
             coverage.json
             coverage.txt
+            lcov.info
+            target/bitnet/reports/coverage-receipt.json
           retention-days: 7
