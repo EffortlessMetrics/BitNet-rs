@@ -1,0 +1,192 @@
+schema = 1
+artifact_kind = "model_answer_candidate_artifacts"
+campaign = "model-artifacts"
+work_item = "MODEL-ARTIFACT-002"
+updated = "2026-05-07"
+
+[search]
+status = "blocked"
+prompt_suite = "ci/quality/bitnet-answer-corpus.yaml"
+reference_runner_required = true
+answer_ready_candidate_found = false
+legacy_search_report = "docs/reports/M4_QA_MODEL_002_ARTIFACT_SEARCH.md"
+shared_search_report = "docs/reports/MODEL_ARTIFACT_002_REFERENCE_GOOD_SEARCH.md"
+claim_boundary = "All candidates below are diagnostic-only until a later artifact passes the shared answer artifact gate."
+
+[local_environment]
+models_directory_contains_gguf = false
+huggingface_cache_contains_bitnet_gguf = false
+llama_cli_found = false
+reference_runner_bootstrap = "blocked_timeout"
+reference_runner_bootstrap_command = "cargo run --release --locked -p xtask --no-default-features -- fetch-cpp --backend cpu"
+reference_runner_bootstrap_timeout_seconds = 900
+notes = [
+  "The isolated worktree had no local GGUF under models/.",
+  "The Hugging Face cache contained no BitNet GGUF candidates.",
+  "No local llama-cli.exe was found before the bootstrap attempt.",
+  "The reference runner bootstrap exceeded the local timeout and was stopped without changing runtime code.",
+]
+
+[[candidate]]
+id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
+repo = "microsoft/bitnet-b1.58-2B-4T-gguf"
+repo_revision = "a1f2f1c765812aa8af3f6eda4a313707064bba15"
+file = "ggml-model-i2_s.gguf"
+sha256 = "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+size_bytes = 1187801280
+source = "huggingface"
+tokenizer_model = "gpt2"
+pretokenizer_authority = "missing"
+chat_template_authority = "present_in_gguf_but_answer_bad"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_prompt_suite = "failed"
+status = "rejected_prompt_suite_failed"
+notes = [
+  "Structurally valid GGUF.",
+  "Reference runner warned that tokenizer.ggml.pre was missing and used default.",
+  "All recorded answer prompt-suite checks failed.",
+]
+
+[[candidate]]
+id = "jpacifico_aramis_2b_i2s"
+repo = "jpacifico/Aramis-2B-BitNet-b1.58-i2s-GGUF"
+repo_revision = "e3e34940d465e90010021bab28a2672759558e08"
+file = "aramis-ggml-model-i2_s.gguf"
+sha256 = "c68f6ee9b3e783fb14be34444573df53c3064499fb6fa5bc160723c73fd4c182"
+size_bytes = 1187801248
+source = "huggingface"
+tokenizer_model = "unknown"
+pretokenizer_authority = "missing"
+chat_template_authority = "unknown"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_prompt_suite = "failed"
+status = "rejected_prompt_suite_failed"
+notes = [
+  "Published artifact and a local tokenizer.ggml.pre metadata repair both produced non-coherent reference output.",
+]
+
+[[candidate]]
+id = "richarderkhov_bitnet_b158_large_q8_0"
+repo = "RichardErkhov/1bitLLM_-_bitnet_b1_58-large-gguf"
+repo_revision = "ea876eebf9f4b9e677f629ed53025d6672225251"
+file = "bitnet_b1_58-large.Q8_0.gguf"
+sha256 = "c2185708579d3ea7c2652ccf202bcbbe262957980f1422d0f8eaa22ffa863906"
+size_bytes = 775767456
+source = "huggingface"
+tokenizer_model = "unknown"
+pretokenizer_authority = "present_default"
+chat_template_authority = "unknown"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_prompt_suite = "failed"
+status = "rejected_prompt_suite_failed"
+notes = [
+  "France and Rust continuations were plausible, but the math gate repeated the prompt instead of answering with 4 or four.",
+]
+
+[[candidate]]
+id = "imi2_bitnet_b158_large_instruct_tq2_0"
+repo = "imi2/oxenai_1bitLLM_bitnet_b1_58-large-instruct-v2-gguf"
+repo_revision = "c34765259e6a6a5f2cd3ea9e6021509ef426ca72"
+file = "bitnet_b1_58-large-instruct-v2-TQ2_0.gguf"
+sha256 = "a1e87fff1e0358afde03a7ea6e7e92d7dc9df6b4da8aae7841764674051de713"
+size_bytes = 275069632
+source = "huggingface"
+tokenizer_model = "unknown"
+pretokenizer_authority = "present_default"
+chat_template_authority = "unknown"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_prompt_suite = "failed"
+status = "rejected_prompt_suite_failed"
+notes = [
+  "France and Rust continuations were plausible, but the math gate answered incoherently.",
+]
+
+[[candidate]]
+id = "bosco_bessie_bitnet_instruct_100k_published"
+repo = "BoscoTheDog/Bessie_bitnet_instruct_100k_gguf"
+repo_revision = "f44553e63160b4cde5aa873aa4b757fa75eacc50"
+file = "bitnet_100k.gguf"
+sha256 = "befe435168735bd49c5ac0d89e92e8fbc1a2626bf970c0bbb6703bf4b130a584"
+size_bytes = 775766112
+source = "huggingface"
+tokenizer_model = "unknown"
+pretokenizer_authority = "present_default"
+chat_template_authority = "unknown"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_prompt_suite = "blocked"
+status = "rejected_reference_runner_failed"
+notes = [
+  "The local reference runner aborted while loading the published GGUF with a tensor dimension assertion.",
+]
+
+[[candidate]]
+id = "greensky_bitnet_b158_3b_q2_q1"
+repo = "Green-Sky/bitnet_b1_58-3B-GGUF"
+repo_revision = "9ae6d9c9fa971a40221e29837e2f81edea2a64ee"
+file = "bitnet_b1_58-3B.q2_2.gguf; bitnet_b1_58-3B.q1_3.gguf; old/bitnet_b1_58-3B.q2_2.gguf"
+sha256 = "d904c4a15835d5a51c61772923762c4bd65ee5ff25a0ecc6e7385e518186c76d; 16cdf7bdf9d5afcf5e62fdeaa3c0c6ea730af06abe5dc08c9e92d65cbb08e54a; 9b90889f049f6f3a770d614bec5535185d62767854ac9b913e6aeb80fef94c82"
+size_bytes = 916848960
+source = "huggingface"
+tokenizer_model = "unknown"
+pretokenizer_authority = "unknown"
+chat_template_authority = "unknown"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_prompt_suite = "blocked"
+status = "rejected_reference_runner_failed"
+notes = [
+  "Published checksums matched, but the reference loader reported tensor data outside file bounds.",
+]
+
+[[candidate]]
+id = "larenspear_bitnet_b158_large_q4_k_m"
+repo = "larenspear/bitnet_b1_58-large-GGUF"
+repo_revision = "429db33bae07aca385d13e71cdfac182affb39b9"
+file = "bitnet_b1_58-large-q4_k_m.gguf"
+sha256 = "5f505f061b437610be82a48e8195818b8a071bdf8dab793be4d666e6d7d456f2"
+size_bytes = 450887360
+source = "huggingface"
+tokenizer_model = "unknown"
+pretokenizer_authority = "present_default"
+chat_template_authority = "unknown"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_prompt_suite = "failed"
+status = "rejected_prompt_suite_failed"
+notes = [
+  "Raw, instruct, and LLaMA-3 chat prompt shapes all failed the math gate; LLaMA-3 chat also failed France.",
+]
+
+[[candidate]]
+id = "bifrost_sol_2b_i2s"
+repo = "Bifrost-AI/Bitnet-b1.58-Bifrost-SOL-2B-4T-gguf"
+repo_revision = "4a368d7ba03f2ae3345aeffbe5e3ccb90818960b"
+file = "bifrost-bitnet-158b-2B-4T-I2_S.gguf"
+sha256 = "ab57cacb918483f2a87b44f1b7b282f21820d50874f2ddec8ef3dc2b436aa7e0"
+size_bytes = 1187801216
+source = "huggingface"
+tokenizer_model = "unknown"
+pretokenizer_authority = "missing"
+chat_template_authority = "unknown"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_prompt_suite = "failed"
+status = "rejected_prompt_suite_failed"
+notes = [
+  "Loads with a missing pre-tokenizer warning, but raw and LLaMA-3 chat prompt shapes failed all gates.",
+]
+
+[[candidate]]
+id = "bosco_bitnet_instruct_100k_regenerated_q8_0"
+repo = "BoscoTheDog/bitnet_instruct_q16_gguf"
+repo_revision = "8d872253fbfe1c77cb1e17bc68a7a94d1ac027b2"
+file = "bessie-bitnet-instruct-100k-q8_0-regenerated.gguf"
+sha256 = "4c9652a10dd9b9944480f5bed8ffa133598d87821a88fd41c7f055bde68b69da"
+size_bytes = 919518288
+source = "local_conversion"
+tokenizer_model = "llama"
+pretokenizer_authority = "present_default"
+chat_template_authority = "unknown"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+reference_prompt_suite = "failed"
+status = "rejected_prompt_suite_failed"
+notes = [
+  "Local regeneration fixed loader compatibility enough to run, but raw, instruct, and Human:/BITNETAssistant: prompt shapes all produced non-coherent output.",
+]

@@ -68,7 +68,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-ARTIFACT-002"
-status = "ready"
+status = "pr_open"
+pr = 3928
 branch = "codex/model-artifacts/MODEL-ARTIFACT-002-reference-good-bitnet"
 stackable = false
 review_mode = "codex_premerge"
@@ -100,9 +101,11 @@ forbidden_paths = [
   "crates/bitnet-server/**",
 ]
 may_claim = [
-  "A reference-good BitNet answer artifact can unblock backend answer-readiness lanes after merge.",
+  "No recorded BitNet GGUF/tokenizer artifact currently passes the shared reference-good answer artifact gate after merge.",
+  "Backend answer-readiness lanes remain blocked or diagnostic-only until a future answer_ready artifact is recorded.",
 ]
 must_not_claim = [
+  "A reference-good BitNet answer artifact has been acquired.",
   "Any backend local-answer lane passes until that lane reruns its own strict receipt gate.",
   "Any backend speedup is proven.",
 ]

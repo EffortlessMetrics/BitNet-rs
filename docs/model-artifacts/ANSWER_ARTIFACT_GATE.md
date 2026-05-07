@@ -84,7 +84,12 @@ pre-tokenizer authority and deterministic prompt-suite failure.
 Shared manifests:
 
 - `ci/model-artifacts/artifact-manifest.toml`
+- `ci/model-artifacts/candidate-artifacts.toml`
 - `ci/model-artifacts/rejected-artifacts.toml`
+
+The shared search report is:
+
+- `docs/reports/MODEL_ARTIFACT_002_REFERENCE_GOOD_SEARCH.md`
 
 Apple-local evidence remains at:
 

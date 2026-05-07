@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T20:48:42Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-002"
+event = "blocked"
+actor = "codex"
+
+notes = [
+  "No recorded BitNet GGUF/tokenizer artifact passes the shared reference-good answer artifact gate.",
+  "The shared candidate manifest carries forward prior reference-runner failures and the local environment check found no reusable GGUF or llama-cli.",
+  "Backend answer-readiness lanes remain blocked or diagnostic-only; do not weaken quality gates or make CPU/CUDA answer claims.",
+]
