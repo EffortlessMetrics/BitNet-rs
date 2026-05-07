@@ -395,7 +395,8 @@ fn answer_corpus_subcommand_help() {
         .assert()
         .success()
         .stdout(predicate::str::contains("--corpus"))
-        .stdout(predicate::str::contains("--dry-run"));
+        .stdout(predicate::str::contains("--dry-run"))
+        .stdout(predicate::str::contains("--dump-logit-steps"));
 }
 
 /// `answer-corpus --dry-run` validates corpus shape without requiring a model load.

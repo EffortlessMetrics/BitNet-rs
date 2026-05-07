@@ -120,7 +120,8 @@ fn bitnet_version() -> &'static str {
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
 use commands::{
-    AnswerCorpusCommand, ConvertCommand, InferenceCommand, InspectCommand, ServeCommand,
+    AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, InferenceCommand, InspectCommand,
+    ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 
@@ -502,6 +503,10 @@ enum Commands {
     AnswerCorpus(Box<AnswerCorpusCommand>),
 
     #[cfg(feature = "full-cli")]
+    /// Compare scalar and AVX2 strict CPU answer-corpus receipts
+    AnswerParity(Box<AnswerParityCommand>),
+
+    #[cfg(feature = "full-cli")]
     /// Convert between model formats
     #[command(alias = "conv")]
     Convert(ConvertCommand),
@@ -865,6 +870,8 @@ async fn main() -> Result<()> {
         Some(Commands::Chat(cmd)) => (*cmd).run_chat(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::AnswerCorpus(cmd)) => (*cmd).execute(&requested_backend_label).await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::AnswerParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]
