@@ -1,0 +1,15 @@
+timestamp = "2026-05-07T22:59:44Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-003"
+event = "merged"
+from = "ready"
+to = "merged"
+pr = 3938
+merge_sha = "79034a3ba3ae5feb9fd803050e1482a551ea0548"
+actor = "codex"
+
+notes = [
+  "Merged #3938, adding 258V CPU phase benchmark receipts for the Lunar Lake CPU reference lane.",
+  "The merged artifact records smoke_1 and first_token timing, explicit not_run gaps for decode_128 and prefill_512, selected backend/kernel, CPU feature set, power/topology context, and fallback status.",
+  "This is CPU reference evidence only; it does not claim Arc 140V, Intel NPU, or full platform performance.",
+]
