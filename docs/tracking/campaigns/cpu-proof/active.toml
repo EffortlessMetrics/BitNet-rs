@@ -524,7 +524,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-002"
-status = "ready"
+status = "pr_open"
+pr = 3906
 branch = "codex/cpu-answer-002-full-decode-parity"
 stackable = false
 review_mode = "codex_premerge"

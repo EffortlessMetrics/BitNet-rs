@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T17:29:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-002"
+event = "pr_open"
+pr = 3906
+head_sha = "77fee8d8022ad7250a9568ec24bf22d74388e914"
+actor = "codex"
+
+notes = [
+  "Opened #3906 for scalar-versus-AVX2 strict CPU answer-corpus receipt comparison.",
+  "The PR adds per-case token, decoded text, and logits/top-k parity checks plus first-divergence evidence without claiming general chat quality, throughput, server inference, GPU, or NPU execution.",
+]
