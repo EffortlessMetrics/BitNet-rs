@@ -1,0 +1,14 @@
+timestamp = "2026-05-07T21:24:20Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-002B"
+event = "merged"
+pr = 3926
+merge_sha = "726e2efd8fb0224d740f608ef5e4079475653ae4"
+branch = "codex/slm-cpu-002b-dense-q8-gguf"
+actor = "codex"
+
+notes = [
+  "Merged #3926 to add strict dense Qwen Q8_0 GGUF tensor loading without compatibility fallback.",
+  "The merge records the current honest boundary: Qwen3-0.6B Q8_0 reaches tensor loading and then stops at transformer projection shape support.",
+  "No tiny dense inference, answer quality, server, GPU, NPU, or sustained 8250U performance claim is made.",
+]

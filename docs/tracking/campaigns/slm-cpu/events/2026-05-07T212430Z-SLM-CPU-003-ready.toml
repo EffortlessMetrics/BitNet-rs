@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T21:24:30Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Advanced SLM-CPU-003 after #3926 merged SLM-CPU-002B.",
+  "The next item is a tiny strict dense CPU run receipt; it must remain diagnosable and must not claim answer quality.",
+]
