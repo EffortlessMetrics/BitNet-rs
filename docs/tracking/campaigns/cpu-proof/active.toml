@@ -400,8 +400,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-008"
-status = "in_progress"
-branch = "codex/cpu-bitnet-008-phase-benchmark-receipts"
+status = "pr_open"
+branch = "codex/cpu-bitnet-008-phase-timing-accuracy"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

@@ -1,0 +1,16 @@
+timestamp = "2026-05-07T09:26:06Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-008"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3864
+head_sha = "8c9973535125088f438ad457787fa70b3c768555"
+actor = "codex"
+
+notes = [
+  "Opened the CPU phase timing accuracy PR.",
+  "The slice makes cpu_phase_benchmark_receipt consume strict prompt_prefill, first-token decode, and steady decode timing fields when present.",
+  "The regenerated Kaby Lake phase receipt measures prefill, first_token, and decode from the strict proof receipt.",
+  "micro and layer remain explicit not_run gaps, so CPU-BITNET-008 is not complete.",
+]

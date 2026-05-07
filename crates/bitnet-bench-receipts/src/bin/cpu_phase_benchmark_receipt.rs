@@ -27,6 +27,8 @@ struct PhaseMeasurement<'a> {
     cols: u64,
     iterations: u64,
     wall_time_ms: f64,
+    median_ms: f64,
+    p95_ms: f64,
     token_count: u64,
 }
 
@@ -237,19 +239,16 @@ fn apply_measured_phase(
         .max(1);
 
     match phase.as_str() {
-        "prefill" => set_measured(
-            profiles,
-            PhaseMeasurement {
-                profile_name: "prefill",
+        "prefill" => {
+            set_prefill_profile(
+                profiles,
+                proof,
                 requested_kernel,
                 selected_kernel,
-                rows: prompt_tokens,
+                prompt_tokens,
                 cols,
-                iterations: prompt_tokens,
-                wall_time_ms: number_at(proof, "/latency/total_ms").unwrap_or(0.0),
-                token_count: prompt_tokens,
-            },
-        ),
+            );
+        }
         "first_token" => set_measured(
             profiles,
             PhaseMeasurement {
@@ -259,14 +258,37 @@ fn apply_measured_phase(
                 rows: 1,
                 cols,
                 iterations: 1,
-                wall_time_ms: number_at(proof, "/latency/decode_first_ms")
+                wall_time_ms: number_at(proof, "/profile/decode/first_token_decode_ms")
+                    .or_else(|| number_at(proof, "/timing/first_token_decode_ms"))
+                    .or_else(|| number_at(proof, "/latency/decode_first_ms"))
+                    .or_else(|| number_at(proof, "/latency/total_ms"))
+                    .unwrap_or(0.0),
+                median_ms: number_at(proof, "/profile/decode/first_token_decode_ms")
+                    .or_else(|| number_at(proof, "/timing/first_token_decode_ms"))
+                    .or_else(|| number_at(proof, "/latency/decode_first_ms"))
+                    .or_else(|| number_at(proof, "/latency/total_ms"))
+                    .unwrap_or(0.0),
+                p95_ms: number_at(proof, "/profile/decode/first_token_decode_ms")
+                    .or_else(|| number_at(proof, "/timing/first_token_decode_ms"))
+                    .or_else(|| number_at(proof, "/latency/decode_first_ms"))
                     .or_else(|| number_at(proof, "/latency/total_ms"))
                     .unwrap_or(0.0),
                 token_count: 1,
             },
         ),
         "decode" | "decode_steady_state" => {
-            let first_ms = number_at(proof, "/latency/decode_first_ms")
+            set_prefill_profile(
+                profiles,
+                proof,
+                requested_kernel,
+                selected_kernel,
+                prompt_tokens,
+                cols,
+            );
+
+            let first_ms = number_at(proof, "/profile/decode/first_token_decode_ms")
+                .or_else(|| number_at(proof, "/timing/first_token_decode_ms"))
+                .or_else(|| number_at(proof, "/latency/decode_first_ms"))
                 .or_else(|| number_at(proof, "/latency/total_ms"))
                 .unwrap_or(0.0);
             set_measured(
@@ -279,12 +301,29 @@ fn apply_measured_phase(
                     cols,
                     iterations: 1,
                     wall_time_ms: first_ms,
+                    median_ms: first_ms,
+                    p95_ms: first_ms,
                     token_count: 1,
                 },
             );
-            if generated_tokens > 1 {
-                let total_ms = number_at(proof, "/latency/total_ms").unwrap_or(first_ms);
-                let steady_ms = (total_ms - first_ms).max(0.0);
+            let steady_tokens = u64_at(proof, "/profile/decode/steady_state_tokens")
+                .unwrap_or_else(|| generated_tokens.saturating_sub(1));
+            if steady_tokens > 0 {
+                let steady_ms = number_at(proof, "/profile/decode/steady_per_token_ms/total_ms")
+                    .or_else(|| {
+                        number_at(proof, "/timing/decode_total_ms").map(|total| {
+                            if generated_tokens > 1 { (total - first_ms).max(0.0) } else { total }
+                        })
+                    })
+                    .or_else(|| {
+                        number_at(proof, "/latency/total_ms")
+                            .map(|total| (total - first_ms).max(0.0))
+                    })
+                    .unwrap_or(0.0);
+                let median_ms = number_at(proof, "/profile/decode/steady_per_token_ms/p50_ms")
+                    .unwrap_or(steady_ms);
+                let p95_ms = number_at(proof, "/profile/decode/steady_per_token_ms/p95_ms")
+                    .unwrap_or(steady_ms);
                 set_measured(
                     profiles,
                     PhaseMeasurement {
@@ -293,14 +332,48 @@ fn apply_measured_phase(
                         selected_kernel,
                         rows: 1,
                         cols,
-                        iterations: generated_tokens - 1,
+                        iterations: steady_tokens,
                         wall_time_ms: steady_ms,
-                        token_count: generated_tokens - 1,
+                        median_ms,
+                        p95_ms,
+                        token_count: steady_tokens,
                     },
                 );
             }
         }
         _ => {}
+    }
+}
+
+fn set_prefill_profile(
+    profiles: &mut [Value],
+    proof: &Value,
+    requested_kernel: &str,
+    selected_kernel: &str,
+    prompt_tokens: u64,
+    cols: u64,
+) {
+    let prefill_tokens = u64_at(proof, "/profile/prompt_prefill/tokens").unwrap_or(prompt_tokens);
+    let prefill_ms = number_at(proof, "/profile/prompt_prefill/ms")
+        .or_else(|| number_at(proof, "/timing/prefill_ms"));
+    if let Some(wall_time_ms) = prefill_ms.filter(|value| *value > 0.0) {
+        set_measured(
+            profiles,
+            PhaseMeasurement {
+                profile_name: "prefill",
+                requested_kernel,
+                selected_kernel,
+                rows: prefill_tokens,
+                cols,
+                iterations: prefill_tokens,
+                wall_time_ms,
+                median_ms: number_at(proof, "/profile/prompt_prefill/per_token_ms/p50_ms")
+                    .unwrap_or(wall_time_ms),
+                p95_ms: number_at(proof, "/profile/prompt_prefill/per_token_ms/p95_ms")
+                    .unwrap_or(wall_time_ms),
+                token_count: prefill_tokens,
+            },
+        );
     }
 }
 
@@ -327,8 +400,8 @@ fn set_measured(profiles: &mut [Value], measurement: PhaseMeasurement<'_>) {
                 "iterations": measurement.iterations.max(1)
             },
             "wall_time_ms": measurement.wall_time_ms.max(0.0),
-            "median_ms": measurement.wall_time_ms.max(0.0),
-            "p95_ms": measurement.wall_time_ms.max(0.0),
+            "median_ms": measurement.median_ms.max(0.0),
+            "p95_ms": measurement.p95_ms.max(0.0),
             "bandwidth_gbps": 0.0,
             "tokens_per_second": tokens_per_second
         });
@@ -397,4 +470,68 @@ fn array_at(value: &Value, pointer: &str) -> Option<Vec<String>> {
             .map(str::to_string)
             .collect(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decode_receipt_uses_phase_profile_timings_and_prefill() {
+        let proof = json!({
+            "execution": {
+                "phase": "decode",
+                "prompt_tokens": 6,
+                "generated_tokens": 2
+            },
+            "model": {
+                "context_length": 1024
+            },
+            "latency": {
+                "decode_first_ms": 309902.0,
+                "total_ms": 362358.0
+            },
+            "timing": {
+                "first_token_decode_ms": 51212.925,
+                "decode_total_ms": 103669.545,
+                "prefill_ms": 258689.304
+            },
+            "profile": {
+                "prompt_prefill": {
+                    "tokens": 5,
+                    "ms": 258689.304,
+                    "per_token_ms": {
+                        "p50_ms": 51318.026,
+                        "p95_ms": 52824.14
+                    }
+                },
+                "decode": {
+                    "first_token_decode_ms": 51212.925,
+                    "steady_state_tokens": 1,
+                    "steady_per_token_ms": {
+                        "total_ms": 52456.62,
+                        "p50_ms": 52456.62,
+                        "p95_ms": 52456.62
+                    }
+                }
+            }
+        });
+        let mut profiles = default_profiles("i2_s-avx2-reference", "i2_s-avx2-reference");
+
+        apply_measured_phase(&mut profiles, &proof, "i2_s-avx2-reference", "i2_s-avx2-reference");
+
+        let profile = |name: &str| {
+            profiles
+                .iter()
+                .find(|entry| entry.get("profile").and_then(Value::as_str) == Some(name))
+                .expect("profile present")
+        };
+        assert_eq!(profile("prefill")["status"], "measured");
+        assert_eq!(profile("prefill")["shape"]["iterations"], 5);
+        assert_eq!(profile("prefill")["wall_time_ms"], 258689.304);
+        assert_eq!(profile("prefill")["median_ms"], 51318.026);
+        assert_eq!(profile("first_token")["wall_time_ms"], 51212.925);
+        assert_eq!(profile("decode")["wall_time_ms"], 52456.62);
+        assert_eq!(profile("decode")["shape"]["iterations"], 1);
+    }
 }
