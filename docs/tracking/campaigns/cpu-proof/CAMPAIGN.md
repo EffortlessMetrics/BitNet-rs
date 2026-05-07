@@ -41,7 +41,7 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-BITNET-007 | merged | Strict CPU proof receipt enforcement merged in #3800. |
 | CPU-BITNET-008 | merged | CPU phase benchmark receipt profiles merged in #3856. |
 | CPU-PHASE-TIMING-001 | merged | Tightened Kaby phase timing receipt extraction in #3872 while leaving micro/layer gaps explicit. |
-| CPU-ANSWER-001 | in_progress | Adding strict CPU answer-readiness receipts, tiny deterministic corpus checks, and token-ID evidence. |
+| CPU-ANSWER-001 | pr_open | Strict CPU answer-readiness gates opened in #3898. |
 
 ## Review Policy
 
