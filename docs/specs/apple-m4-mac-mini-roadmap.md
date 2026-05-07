@@ -696,7 +696,13 @@ local Mac user
 The completed proof and operational lanes already make the Apple route
 inspectable. The next campaign should make it quality-gated:
 
-1. Multi-token CPU/NEON local-answer smoke prompts.
+1. Multi-token CPU/NEON local-answer smoke prompts. The first command uses
+   `answer-corpus --device apple-m4-cpu-neon` with
+   `ci/quality/apple-m4-local-answer-corpus.yaml`, strict real-model loading,
+   valid-text gates, minimum generated-token checks, token-variation checks,
+   and explicit fallback receipt fields. If the strict run generates
+   non-coherent text, the local-answer lane is blocked on reference parity or
+   model-artifact validation rather than a weaker quality gate.
 2. Greedy determinism for fixed prompt/model/settings.
 3. Receipt checks for output text validity, token counts, model/tokenizer
    identity, backend identity, and fallback status.

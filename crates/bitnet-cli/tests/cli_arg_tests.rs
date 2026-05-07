@@ -29,6 +29,10 @@ fn bitnet() -> Command {
     Command::cargo_bin("bitnet").expect("bitnet binary must be buildable")
 }
 
+fn workspace_path(path: &str) -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..").join(path)
+}
+
 // ============================================================================
 // Run subcommand: required arguments
 // ============================================================================
@@ -446,6 +450,66 @@ cases:
     assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
     assert_eq!(receipt["quality_summary"]["not_run"], 1);
     assert_eq!(receipt["cases"][0]["status"], "not_run");
+}
+
+/// `answer-corpus` can target the Apple M4 CPU/NEON local-answer lane.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_dry_run_accepts_apple_m4_cpu_neon_lane() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let out = dir.path().join("apple-m4-local-answer.json");
+    let corpus = workspace_path("ci/quality/apple-m4-local-answer-corpus.yaml");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    assert_eq!(receipt["artifact_kind"], "bitnet_apple_m4_local_answer_corpus");
+    assert_eq!(receipt["backend"]["requested_backend"], "apple-m4-cpu-neon");
+    assert_eq!(receipt["backend"]["selected_backend"], "apple-m4-cpu-neon");
+    assert_eq!(receipt["backend"]["runtime_api"], "cpu");
+    assert_eq!(receipt["backend"]["fallback_used"], false);
+    assert_eq!(receipt["claim_boundary"]["local_answer_path"], true);
+    assert_eq!(receipt["claim_boundary"]["full_metal_inference_claimed"], false);
+    assert_eq!(receipt["quality_summary"]["not_run"], 3);
+}
+
+/// `answer-corpus` must not treat Apple Metal as the local-answer path.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_rejects_apple_m4_metal_lane() {
+    let corpus = workspace_path("ci/quality/apple-m4-local-answer-corpus.yaml");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-metal",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "only accepts --device cpu or --device apple-m4-cpu-neon",
+        ));
 }
 
 /// `ask --help` exposes the user-answer surface.
