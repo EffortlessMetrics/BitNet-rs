@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T22:21:00Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-003"
+event = "pr_open"
+pr = 3937
+head_sha = "4a6bc6eb9c4c93cb52d3ed7b6e13f0b6ac08cded"
+actor = "codex"
+
+notes = [
+  "Opened a scoped SLM-M4-003 parity-foundation PR.",
+  "The PR preserves Qwen ChatML token IDs, always prefills prompt context, and records first-token divergence against llama.cpp.",
+  "It does not claim Rust-native SLM answers work, accept Q8_0 for operator use, or claim BitNet quality, Metal inference, QK256, Neural Engine, or performance.",
+]
