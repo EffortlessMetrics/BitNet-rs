@@ -23,6 +23,7 @@
 | CUDA-BITNET-006 | merged | #3801 | `codex/cuda-bitnet-006-one-token-proof` | Add strict one-token BitNet CUDA proof with official GGUF, real tokenizer, CUDA kernel invocations greater than zero, zero CPU fallback, CPU/CUDA greedy or top-1 agreement, fallback_used=false, and speedup_claim=false. |
 | CUDA-BITNET-007 | merged | #3806 | `codex/cuda-bitnet-007-short-decode-proof` | Add short greedy BitNet CUDA decode proof with timing, kernel invocation growth, memory high-water mark, and fallback_used=false. |
 | CUDA-BITNET-008 | merged | #3823 | `codex/cuda-bitnet-008-benchmark-baseline` | Add RTX 5070 Ti full BitNet CUDA benchmark baseline comparing 9950X3D CPU scalar, AVX2, AVX-512, and CUDA with matching model, tokenizer, prompt profile, strict loader mode, fallback_used=false, and runtime context. |
+| CUDA-BITNET-009 | ready | TBD | `codex/cuda-bitnet-009-upload-once-routed-proof` | Route the strict RTX 5070 Ti CUDA inference proof through persistent CUDA BitNet weight handles so receipts prove weights_uploaded_once=true, per_token_weight_upload=false, qk256_gemv_cuda invocations greater than zero, and zero CPU fallback. |
 | CUDA-DENSE-001 | proposed | TBD | `codex/cuda-dense-001-reference-lane` | Add regular LLM CUDA dense-kernel reference lane with dense_regular_llm receipt labels that cannot satisfy BitNet packed I2S or QK256 proof acceptance. |
 
 ## Hard Constraints
