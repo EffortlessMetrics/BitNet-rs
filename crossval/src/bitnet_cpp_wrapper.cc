@@ -98,18 +98,9 @@ int crossval_bitnet_tokenize(
 
     // Step 2: Two-pass tokenization pattern
     // Pass 1: Get token count (tokens=NULL, n_tokens_max=0)
-    // New API: Get vocab from model first
-    const llama_vocab* vocab = llama_model_get_vocab(model);
-    if (!vocab) {
-        snprintf(err, err_len,
-                 "crossval_bitnet_tokenize: Failed to get vocab from model (check model format/compatibility)");
-        err[err_len - 1] = '\0';
-        llama_model_free(model);  // Must free model before return
-        return -1;
-    }
     int32_t text_len = static_cast<int32_t>(std::strlen(prompt));
     int32_t n_tokens = llama_tokenize(
-        vocab,             // Use vocab instead of model
+        model,
         prompt,
         text_len,
         nullptr,           // tokens=NULL for size query
@@ -126,7 +117,7 @@ int crossval_bitnet_tokenize(
     if (n_tokens == 0) {
         snprintf(err, err_len, "bitnet_tokenize: Tokenization returned 0 tokens");
         err[err_len - 1] = '\0';
-        llama_model_free(model);  // Use new API
+        llama_free_model(model);
         return -1;
     }
 
@@ -134,7 +125,7 @@ int crossval_bitnet_tokenize(
 
     // If size query (out_tokens == NULL), return now
     if (!out_tokens || out_capacity <= 0) {
-        llama_model_free(model);  // Use new API
+        llama_free_model(model);
         return 0;
     }
 
@@ -144,12 +135,12 @@ int crossval_bitnet_tokenize(
                  "bitnet_tokenize: Buffer too small (need %d, got %d)",
                  n_tokens, out_capacity);
         err[err_len - 1] = '\0';
-        llama_model_free(model);  // Use new API
+        llama_free_model(model);
         return -1;
     }
 
     int32_t result = llama_tokenize(
-        vocab,             // Use vocab instead of model
+        model,
         prompt,
         text_len,
         out_tokens,        // Fill the output buffer
@@ -161,14 +152,14 @@ int crossval_bitnet_tokenize(
     if (result < 0) {
         snprintf(err, err_len, "bitnet_tokenize: Tokenization failed on buffer fill");
         err[err_len - 1] = '\0';
-        llama_model_free(model);  // Use new API
+        llama_free_model(model);
         return -1;
     }
 
     // Update out_len with actual number returned (should match n_tokens)
     *out_len = result;
 
-    llama_model_free(model);  // Use new API
+    llama_free_model(model);
     return 0;
 
 #else
@@ -256,7 +247,7 @@ int crossval_bitnet_eval_with_tokens(
     if (!ctx) {
         snprintf(err, err_len, "bitnet_eval: Failed to create context (n_ctx=%d)", n_ctx);
         err[err_len - 1] = '\0';
-        llama_model_free(model);  // Use new API
+        llama_free_model(model);
         return -1;
     }
 
@@ -264,17 +255,7 @@ int crossval_bitnet_eval_with_tokens(
     llama_set_causal_attn(ctx, false);
 
     // Step 3: Get vocab size for logits shape
-    // New API: llama_model_get_vocab + llama_vocab_n_tokens
-    const llama_vocab* vocab = llama_model_get_vocab(model);
-    if (!vocab) {
-        snprintf(err, err_len,
-                 "crossval_bitnet_eval_with_tokens: Failed to get vocab from model (check model format/compatibility)");
-        err[err_len - 1] = '\0';
-        llama_free(ctx);           // Free context first (depends on model)
-        llama_model_free(model);   // Then free model
-        return -1;
-    }
-    int32_t n_vocab = llama_vocab_n_tokens(vocab);
+    int32_t n_vocab = llama_n_vocab(model);
 
     // Step 4: Set output shape
     *out_rows = n_tokens;
@@ -284,7 +265,7 @@ int crossval_bitnet_eval_with_tokens(
     if (!out_logits || logits_capacity <= 0) {
         // Pass 1: Shape query only - return shape without computing logits
         llama_free(ctx);
-        llama_model_free(model);  // Use new API
+        llama_free_model(model);
         return 0;
     }
 
@@ -296,21 +277,20 @@ int crossval_bitnet_eval_with_tokens(
                  total_elements, logits_capacity);
         err[err_len - 1] = '\0';
         llama_free(ctx);
-        llama_model_free(model);  // Use new API
+        llama_free_model(model);
         return -1;
     }
 
     // Step 6: Create batch with all tokens and decode in one pass
     // Cast away const for llama_batch_get_one (it doesn't modify the tokens)
-    // New API: llama_batch_get_one now only takes 2 arguments (tokens, n_tokens)
-    llama_batch batch = llama_batch_get_one(const_cast<int32_t*>(tokens), n_tokens);
+    llama_batch batch = llama_batch_get_one(const_cast<int32_t*>(tokens), n_tokens, 0, 0);
 
     int result = llama_decode(ctx, batch);
     if (result != 0) {
         snprintf(err, err_len, "bitnet_eval: Batch decode failed (result=%d)", result);
         err[err_len - 1] = '\0';
         llama_free(ctx);
-        llama_model_free(model);  // Use new API
+        llama_free_model(model);
         return -1;
     }
 
@@ -322,7 +302,7 @@ int crossval_bitnet_eval_with_tokens(
             snprintf(err, err_len, "bitnet_eval: Failed to get logits for position %d", i);
             err[err_len - 1] = '\0';
             llama_free(ctx);
-            llama_model_free(model);  // Use new API
+            llama_free_model(model);
             return -1;
         }
         // Copy to row-major output buffer: out_logits[i * n_vocab : (i+1) * n_vocab]
@@ -331,7 +311,7 @@ int crossval_bitnet_eval_with_tokens(
 
     // Step 8: Cleanup
     llama_free(ctx);
-    llama_model_free(model);  // Use new API
+    llama_free_model(model);
     return 0;
 
 #else
@@ -445,7 +425,7 @@ int bitnet_cpp_init_context(
     if (!ctx->ctx) {
         snprintf(err, err_len, "bitnet_cpp_init_context: Failed to create context (n_ctx=%d)", n_ctx);
         err[err_len - 1] = '\0';
-        llama_model_free(ctx->model);
+        llama_free_model(ctx->model);
         delete ctx;
         return -1;
     }
@@ -489,7 +469,7 @@ int bitnet_cpp_free_context(
     }
 
     if (ctx->model) {
-        llama_model_free(ctx->model);
+        llama_free_model(ctx->model);
         ctx->model = nullptr;
     }
 
@@ -573,20 +553,11 @@ int bitnet_cpp_tokenize_with_context(
         return -1;
     }
 
-    // Get vocab from model
-    const llama_vocab* vocab = llama_model_get_vocab(ctx->model);
-    if (!vocab) {
-        snprintf(err, err_len,
-                 "bitnet_cpp_tokenize_with_context: Failed to get vocab from model (check model format/compatibility)");
-        err[err_len - 1] = ' ';
-        // DO NOT free ctx->model here (persistent context owns it)
-        return -1;
-    }
     int32_t text_len = static_cast<int32_t>(std::strlen(prompt));
 
     // Pass 1: Get token count
     int32_t n_tokens = llama_tokenize(
-        vocab,
+        ctx->model,
         prompt,
         text_len,
         nullptr,           // tokens=NULL for size query
@@ -622,7 +593,7 @@ int bitnet_cpp_tokenize_with_context(
     }
 
     int32_t result = llama_tokenize(
-        vocab,
+        ctx->model,
         prompt,
         text_len,
         out_tokens,
@@ -733,15 +704,7 @@ int bitnet_cpp_eval_with_context(
     llama_set_causal_attn(ctx->ctx, false);
 
     // Get vocab size
-    const llama_vocab* vocab = llama_model_get_vocab(ctx->model);
-    if (!vocab) {
-        snprintf(err, err_len,
-                 "bitnet_cpp_eval_with_context: Failed to get vocab from model (check model format/compatibility)");
-        err[err_len - 1] = ' ';
-        // DO NOT free ctx->model here (persistent context owns it)
-        return -1;
-    }
-    int32_t n_vocab = llama_vocab_n_tokens(vocab);
+    int32_t n_vocab = llama_n_vocab(ctx->model);
 
     // Set output shape
     *out_rows = n_tokens;
@@ -773,7 +736,12 @@ int bitnet_cpp_eval_with_context(
 
     // Create batch with all tokens at current position
     // Note: seq_id parameter allows future batch processing support
-    llama_batch batch = llama_batch_get_one(const_cast<int32_t*>(tokens), n_tokens);
+    llama_batch batch = llama_batch_get_one(
+        const_cast<int32_t*>(tokens),
+        n_tokens,
+        ctx->n_past,
+        seq_id
+    );
 
     int result = llama_decode(ctx->ctx, batch);
     if (result != 0) {

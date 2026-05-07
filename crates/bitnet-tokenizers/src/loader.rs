@@ -1,6 +1,7 @@
 /// Tokenizer loading utilities
 use crate::Tokenizer;
 use anyhow::{Context, Result};
+use bitnet_models::{formats::gguf::GgufReader, loader::MmapFile};
 use serde_json::Value;
 use std::{fs, path::Path, sync::Arc};
 
@@ -60,7 +61,11 @@ pub fn load_tokenizer(path: &Path) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     match ext {
-        "gguf" => Ok(Arc::new(crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(path)?)),
+        "gguf" => {
+            let mmap = MmapFile::open(path)?;
+            let reader = GgufReader::new(mmap.as_slice())?;
+            Ok(Arc::new(crate::gguf_loader::RustTokenizer::from_gguf(&reader)?))
+        }
         "json" => {
             let data = fs::read_to_string(path).context("Failed to read tokenizer JSON file")?;
             let value: Value =
