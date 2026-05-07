@@ -35,6 +35,21 @@ pub struct GgufHeader {
 
 pub const GGUF_HEADER_LEN: usize = 24;
 
+fn read_header_from_reader<R: Read>(r: &mut R) -> Result<GgufHeader> {
+    let mut buf = [0u8; GGUF_HEADER_LEN];
+    let mut read_total = 0usize;
+
+    while read_total < GGUF_HEADER_LEN {
+        let n = r.read(&mut buf[read_total..])?;
+        if n == 0 {
+            return Err(GgufError::ShortHeader(read_total));
+        }
+        read_total += n;
+    }
+
+    parse_header(&buf)
+}
+
 /// Parse the first 24 bytes of a GGUF file.
 pub fn parse_header(buf: &[u8]) -> Result<GgufHeader> {
     if buf.len() < GGUF_HEADER_LEN {
@@ -63,23 +78,23 @@ pub async fn read_header(path: impl AsRef<std::path::Path>) -> Result<GgufHeader
     use tokio::io::AsyncReadExt;
     let mut f = tokio::fs::File::open(path).await?;
     let mut buf = [0u8; GGUF_HEADER_LEN];
-    let n = f.read(&mut buf).await?;
-    if n < GGUF_HEADER_LEN {
-        return Err(GgufError::ShortHeader(n));
+
+    let mut read_total = 0usize;
+    while read_total < GGUF_HEADER_LEN {
+        let n = f.read(&mut buf[read_total..]).await?;
+        if n == 0 {
+            return Err(GgufError::ShortHeader(read_total));
+        }
+        read_total += n;
     }
+
     parse_header(&buf)
 }
 
 /// Read GGUF header synchronously for CLI/offline use
 pub fn read_header_blocking(path: impl AsRef<std::path::Path>) -> Result<GgufHeader> {
-    use std::io::Read;
     let mut f = std::fs::File::open(path)?;
-    let mut buf = [0u8; GGUF_HEADER_LEN];
-    let n = f.read(&mut buf)?;
-    if n < GGUF_HEADER_LEN {
-        return Err(GgufError::ShortHeader(n));
-    }
-    parse_header(&buf)
+    read_header_from_reader(&mut f)
 }
 
 /// GGUF value types according to the spec
@@ -318,4 +333,66 @@ pub fn read_kv_pairs(
     }
 
     Ok(kvs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct ChunkedReader {
+        data: Vec<u8>,
+        pos: usize,
+        chunk_size: usize,
+    }
+
+    impl ChunkedReader {
+        fn new(data: Vec<u8>, chunk_size: usize) -> Self {
+            Self { data, pos: 0, chunk_size }
+        }
+    }
+
+    impl Read for ChunkedReader {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            if self.pos >= self.data.len() {
+                return Ok(0);
+            }
+            let remaining = self.data.len() - self.pos;
+            let n = remaining.min(self.chunk_size).min(buf.len());
+            buf[..n].copy_from_slice(&self.data[self.pos..self.pos + n]);
+            self.pos += n;
+            Ok(n)
+        }
+    }
+
+    fn valid_header_bytes() -> Vec<u8> {
+        let mut data = Vec::new();
+        data.extend_from_slice(b"GGUF");
+        data.extend_from_slice(&3u32.to_le_bytes());
+        data.extend_from_slice(&7u64.to_le_bytes());
+        data.extend_from_slice(&9u64.to_le_bytes());
+        data
+    }
+
+    #[test]
+    fn read_header_from_reader_handles_partial_reads() {
+        let data = valid_header_bytes();
+        let mut reader = ChunkedReader::new(data, 3);
+        let header = read_header_from_reader(&mut reader).expect("header should parse");
+
+        assert_eq!(header.version, 3);
+        assert_eq!(header.n_tensors, 7);
+        assert_eq!(header.n_kv, 9);
+    }
+
+    #[test]
+    fn read_header_from_reader_reports_actual_short_size() {
+        let data = valid_header_bytes();
+        let mut reader = ChunkedReader::new(data[..10].to_vec(), 2);
+        let err = read_header_from_reader(&mut reader).expect_err("expected short header");
+
+        match err {
+            GgufError::ShortHeader(n) => assert_eq!(n, 10),
+            e => panic!("unexpected error: {e:?}"),
+        }
+    }
 }

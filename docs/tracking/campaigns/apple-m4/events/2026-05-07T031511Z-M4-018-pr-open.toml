@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T03:15:11Z"
+campaign = "apple-m4"
+item = "M4-018"
+event = "pr_open"
+pr = 3826
+head_sha = "54ca72af3d355c5f053da532244c86a39c1d0b83"
+actor = "codex"
+
+notes = [
+  "Opened Apple backend CLI/package polish PR.",
+  "Scope remains CLI help/config/failure wording, docs, tests, and campaign tracking; no Metal kernels, QK256, server, Neural Engine, or general M4 performance claim.",
+]

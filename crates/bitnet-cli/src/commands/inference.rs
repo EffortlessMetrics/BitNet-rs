@@ -62,7 +62,10 @@ use bitnet_models::ModelLoader;
 use bitnet_tokenizers::Tokenizer;
 use candle_core::Device;
 
-use crate::config::CliConfig;
+use crate::config::{
+    CliConfig, LEGACY_RUNTIME_DEVICE_HELP, invalid_device_message, is_supported_device_label,
+    unsupported_legacy_command_device_message,
+};
 
 /// Generation configuration for inference
 #[derive(Debug, Clone)]
@@ -150,8 +153,7 @@ pub struct InferenceCommand {
     #[arg(short, long, value_name = "PATH")]
     pub output: Option<PathBuf>,
 
-    /// Device to use for inference (cpu, cuda, auto)
-    #[arg(short, long, value_name = "DEVICE")]
+    #[arg(short, long, value_name = "DEVICE", help = LEGACY_RUNTIME_DEVICE_HELP)]
     pub device: Option<String>,
 
     /// Quantization type (i2s, tl1, tl2, auto)
@@ -767,10 +769,13 @@ impl InferenceCommand {
                     Ok(Device::Cpu)
                 }
             }
-            _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto",
-                device_str
-            ),
+            label if is_supported_device_label(label) => {
+                anyhow::bail!(
+                    "{}",
+                    unsupported_legacy_command_device_message("bitnet inference", label)
+                )
+            }
+            _ => anyhow::bail!("{}", invalid_device_message(device_str)),
         }
     }
 

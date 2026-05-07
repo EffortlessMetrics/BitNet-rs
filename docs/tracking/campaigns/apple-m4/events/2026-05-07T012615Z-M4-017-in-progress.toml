@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T01:26:15Z"
+campaign = "apple-m4"
+item = "M4-017"
+event = "in_progress"
+branch = "codex/apple-m4/M4-017-metal-kernel-family-expansion"
+actor = "codex"
+
+notes = [
+  "Started Apple Metal BitNet kernel-family expansion with a tiny I2_S projection residual subgraph.",
+  "Scope remains CPU-reference parity and fallback=false receipt evidence only; no QK256, server, MPSGraph, Neural Engine, full inference, or general performance claim.",
+]

@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T03:04:23Z"
+campaign = "apple-m4"
+item = "M4-018"
+event = "in_progress"
+branch = "codex/apple-m4/M4-018-cli-package-polish"
+actor = "codex"
+
+notes = [
+  "Started Apple backend CLI and package surface polish.",
+  "Scope is help text, config validation, strict/fallback failure wording, docs, and campaign tracking only; no Metal kernels, QK256, server, Neural Engine, or general performance claim.",
+]

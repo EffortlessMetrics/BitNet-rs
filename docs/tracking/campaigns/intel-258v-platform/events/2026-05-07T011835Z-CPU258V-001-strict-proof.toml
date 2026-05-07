@@ -1,0 +1,15 @@
+timestamp = "2026-05-07T01:18:35Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-001"
+event = "in_progress"
+actor = "codex"
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
+]
+
+notes = [
+  "Recorded a strict one-token CPU BitNet decode smoke artifact for the 258V CPU lane.",
+  "The artifact uses real GGUF loading, explicit tokenizer file selection, selected CPU backend execution, and fallback_used=false.",
+  "The artifact does not prove correctness, tokenizer semantic parity, scalar/AVX2 parity, steady-state throughput, benchmark performance, Arc 140V execution, or NPU execution.",
+]

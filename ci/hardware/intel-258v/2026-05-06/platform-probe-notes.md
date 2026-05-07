@@ -15,6 +15,15 @@ tree. It records `status=preflight_ready`, the GGUF SHA-256, explicit tokenizer
 source, CPU AVX2 visibility, and `fallback_used=false` without running BitNet
 inference or CPU kernels.
 
+`strict-bitnet-cpu-proof.json` was emitted by a strict one-token CPU run using
+the real `ggml-model-i2_s.gguf` artifact and explicit tokenizer. It records
+`loader.mode=real_gguf`, `minimal_loader_fallback_used=false`,
+`mock_tensors_used=false`, `tokenizer_source=explicit`,
+`requested_backend=cpu`, `selected_backend=cpu-rust`, `runtime_api=cpu`,
+`kernel_id=i2_s-avx2-reference`, and `fallback_used=false`.
+The top-level platform bundle remains `proof_stage=detected`; only the CPU lane
+has a receipt-backed one-token decode smoke artifact.
+
 ## Captured Facts
 
 - Machine: Lenovo `83MC`
@@ -33,6 +42,17 @@ inference or CPU kernels.
 - Python cannot import `openvino`, so this bundle does not prove OpenVINO GPU or NPU visibility.
 - The canonical BitNet GGUF and explicit tokenizer are present locally, so CPU
   BitNet validation is recorded as `preflight_ready`.
+- A strict CPU proof generated one token from the real BitNet GGUF through the
+  CPU path and wrote `strict-bitnet-cpu-proof.json`.
+- The strict CPU proof used the raw prompt `x` and generated text `'E`, so it
+  is not a correctness or parity receipt.
+- The strict CPU proof is a one-token smoke profile: `first_token_ms=28156`,
+  `prefill_ms=0.0`, and `decode_steady_state_tok_s=null`. It is not a
+  steady-state throughput or benchmark-performance receipt.
+- The strict CPU proof receipt records GGUF header counts (`n_tensors=332`,
+  `n_kv=24`) and `tokenizer.type=llama3`. Treat this artifact as strict
+  selected-file execution evidence, not tokenizer semantic parity or
+  receipt-backed output correctness.
 - CPU BitNet preflight readiness is not strict GGUF loading through the
   inference path, tokenizer resolution through the inference path, QK256/TL2
   kernel execution, or BitNet generation.
@@ -45,3 +65,10 @@ inference or CPU kernels.
 Detection is not execution. These artifacts only establish same-machine hardware
 visibility and the absence of the runtime tooling needed for OpenCL, Level Zero,
 and OpenVINO claims on this Windows host at capture time.
+
+The CPU lane now also has a receipt-backed strict one-token BitNet CPU decode
+smoke. That receipt shows selected CPU backend execution with strict real-GGUF
+loading, explicit tokenizer file selection, and fallback disabled; it does not
+prove tokenizer semantic parity, output correctness, scalar/AVX2 parity,
+steady-state decode throughput, benchmark performance, Arc 140V execution, or
+NPU execution.

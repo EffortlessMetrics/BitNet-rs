@@ -3,20 +3,23 @@
   "artifact_kind": "platform-comparison-index",
   "machine_id": "intel-258v",
   "date": "2026-05-06",
-  "captured_at_utc": "2026-05-07T00:06:02Z",
+  "captured_at_utc": "2026-05-07T01:18:35Z",
   "proof_stage": "detected",
+  "highest_lane_proof_stage": "receipt_backed",
   "artifacts": {
     "platform": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
     "platform_cli": "ci/hardware/intel-258v/2026-05-06/platform-probe-cli.json",
     "cpu_bitnet_validation": "ci/hardware/intel-258v/2026-05-06/cpu-bitnet-validation.json",
+    "strict_cpu_bitnet_proof": "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
     "arc140v": "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json",
     "npu": "ci/hardware/intel-258v/2026-05-06/npu-openvino-runtime-probe.json"
   },
   "lanes": {
     "cpu": {
       "proof_label": "intel-258v-cpu-avx2",
-      "proof_stage": "preflight_ready",
-      "artifact": "ci/hardware/intel-258v/2026-05-06/cpu-bitnet-validation.json"
+      "proof_stage": "receipt_backed",
+      "artifact": "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
+      "preflight_artifact": "ci/hardware/intel-258v/2026-05-06/cpu-bitnet-validation.json"
     },
     "arc140v": {
       "proof_label": "intel-arc-140v-opencl",
@@ -30,10 +33,13 @@
     }
   },
   "fallback_used": false,
-  "claim_allowed": "Same-machine 258V OS visibility artifacts and CPU BitNet preflight readiness are linked for later runtime and BitNet validation.",
+  "claim_allowed": "Same-machine 258V OS visibility artifacts, CPU BitNet preflight readiness, and a CPU-lane strict one-token BitNet decode receipt are linked for later parity and benchmark validation.",
   "claims_not_allowed": [
     "Arc 140V runtime execution works",
     "Intel NPU OpenVINO execution works",
-    "BitNet inference works on 258V"
+    "The whole 258V platform bundle is receipt-backed",
+    "BitNet correctness or parity is proven on 258V",
+    "Tokenizer semantic parity is proven on 258V",
+    "Steady-state BitNet throughput or benchmark performance is proven on 258V"
   ]
 }

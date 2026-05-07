@@ -5,7 +5,7 @@
 
 // COMPILE-TIME FIREWALL: Prevent mock feature in production CLI
 #[cfg(feature = "mock")]
-compile_error!("The 'mock' feature must never be enabled for the CLI ΓÇô tests only.");
+compile_error!("The 'mock' feature must never be enabled for the CLI - tests only.");
 
 use anyhow::{Context, Result};
 use bitnet_common::Tensor;
@@ -119,13 +119,13 @@ fn bitnet_version() -> &'static str {
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
 use commands::{ConvertCommand, InferenceCommand, InspectCommand, ServeCommand};
-use config::{CliConfig, ConfigBuilder};
+use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
 #[derive(Parser)]
 #[command(name = "bitnet")]
-#[command(about = "BitNet-rs ΓÇö 1-bit neural network inference with strict receipts")]
-#[command(long_about = r#"BitNet-rs CLI ΓÇö one-shot generation and chat with strict receipts
+#[command(about = "BitNet-rs - 1-bit neural network inference with strict receipts")]
+#[command(long_about = r#"BitNet-rs CLI - one-shot generation and chat with strict receipts
 
 QUICK EXAMPLES:
 
@@ -158,9 +158,9 @@ PERFORMANCE:
 
   QK256 Models (I2_S quantization):
     - Without AVX2: ~0.1 tok/s (scalar kernels, ~10s per token)
-    - With AVX2: ~1.2├ù faster (optimized kernels)
+    - With AVX2: ~1.2x faster (optimized kernels)
     - For quick validation: use --max-tokens 4-16
-    - SIMD optimizations (ΓëÑ3├ù faster) coming in v0.2.0
+    - SIMD optimizations (>=3x faster) coming in v0.2.0
 "#)]
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
@@ -173,8 +173,7 @@ struct Cli {
     #[arg(short, long, value_name = "PATH", global = true)]
     config: Option<std::path::PathBuf>,
 
-    /// Device/backend to use (cpu, cuda, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, oneapi, gpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, npu, auto)
-    #[arg(short, long, value_name = "DEVICE", global = true)]
+    #[arg(short, long, value_name = "DEVICE", global = true, help = DEVICE_HELP)]
     device: Option<String>,
 
     /// Log level (trace, debug, info, warn, error)
@@ -465,6 +464,17 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Probe Intel NPU OpenVINO runtime visibility without compiling graphs
+    IntelNpuProbe {
+        /// Require OpenVINO to report an NPU runtime device
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// Output JSON probe receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Run validation-only preflight checks
     Validate {
         #[command(subcommand)]
@@ -636,8 +646,20 @@ async fn main() -> Result<()> {
             .unwrap_or(false);
         match select_backend(request, &caps) {
             Ok(result) => info!(backend_selection = %result.identity_summary(), "backend selected"),
-            Err(e) if strict_mode => return Err(e.into()),
-            Err(e) => warn!(error = %e, "backend selection warning"),
+            Err(e) if strict_mode => {
+                let message = backend_selection_error_message_with_note(
+                    &requested_backend_label,
+                    &e.to_string(),
+                );
+                return Err(anyhow::anyhow!(message));
+            }
+            Err(e) => {
+                let message = backend_selection_error_message_with_note(
+                    &requested_backend_label,
+                    &e.to_string(),
+                );
+                warn!(error = %message, "backend selection warning");
+            }
         }
     }
 
@@ -732,6 +754,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::LunarLakeProbe { json_out }) => {
             handle_lunar_lake_probe_command(json_out).await
+        }
+        Some(Commands::IntelNpuProbe { strict, json_out }) => {
+            handle_intel_npu_probe_command(strict, json_out).await
         }
         Some(Commands::Validate { action }) => handle_validate_command(action).await,
         Some(Commands::CudaSmoke { device_index, json_out }) => {
@@ -1100,6 +1125,79 @@ async fn handle_lunar_lake_probe_command(json_out: Option<std::path::PathBuf>) -
     let receipt = build_lunar_lake_probe_receipt(probe, timestamp_utc, artifact_path);
 
     write_json_output(json_out.as_ref(), &receipt)?;
+
+    Ok(())
+}
+
+fn build_intel_npu_probe_receipt(
+    probe: bitnet_device_probe::IntelNpuProbe,
+    strict: bool,
+    timestamp_utc: String,
+    artifact_path: Option<String>,
+) -> serde_json::Value {
+    let claim = if probe.openvino_npu_visible {
+        "openvino_npu_runtime_visibility_recorded"
+    } else if probe.available {
+        "intel_npu_os_visibility_recorded"
+    } else {
+        "intel_npu_unavailable"
+    };
+    let error =
+        if strict && !probe.openvino_npu_visible {
+            Some(probe.failure_reason.clone().unwrap_or_else(|| {
+                "strict Intel NPU probe requires OpenVINO to report NPU".to_owned()
+            }))
+        } else {
+            None
+        };
+
+    serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "intel_npu_runtime_probe",
+        "machine_id": "intel-258v",
+        "hardware_lane": "intel-npu-openvino",
+        "proof_stage": probe.proof_stage.clone(),
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": probe.requested_backend.clone(),
+        "selected_backend": probe.selected_backend.clone(),
+        "runtime_api": probe.runtime_api.clone(),
+        "runtime_device": probe.runtime_device.clone(),
+        "shape_mode": "static",
+        "strict_mode": strict,
+        "fallback_used": probe.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "kernel_execution": false,
+        "graph_execution": false,
+        "bitnet_inference": false,
+        "npu": probe,
+        "claim": claim,
+        "must_not_claim": [
+            "OpenVINO NPU graph execution works",
+            "Intel NPU accelerates BitNet",
+            "BitNet inference works on Intel NPU",
+            "CPU fallback satisfies NPU proof"
+        ],
+        "artifact_path": artifact_path,
+        "error": error,
+    })
+}
+
+async fn handle_intel_npu_probe_command(
+    strict: bool,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    let openvino = bitnet_device_probe::runtimes::openvino::probe_openvino();
+    let npu = bitnet_device_probe::intel::lunar_lake::probe_intel_npu(&openvino);
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt = build_intel_npu_probe_receipt(npu, strict, timestamp_utc, artifact_path);
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
 
     Ok(())
 }
@@ -1772,13 +1870,20 @@ fn resolve_run_backend_identity(
             fallback_used: result.fallback_used(),
             fallback_reason: result.fallback_reason().map(str::to_string),
         }),
-        Err(err) if strict_backend => Err(err.into()),
+        Err(err) if strict_backend => {
+            let message =
+                backend_selection_error_message_with_note(&request.to_string(), &err.to_string());
+            Err(anyhow::anyhow!(message))
+        }
         Err(err) => Ok(RunBackendIdentity {
             requested_backend: request.to_string(),
             selected_backend: "cpu".to_string(),
             runtime_api: "cpu".to_string(),
             fallback_used: request != BackendRequest::Auto && request != BackendRequest::Cpu,
-            fallback_reason: Some(err.to_string()),
+            fallback_reason: Some(backend_selection_error_message_with_note(
+                &request.to_string(),
+                &err.to_string(),
+            )),
         }),
     }
 }
@@ -1932,6 +2037,38 @@ fn infer_tokenizer_label(
     } else {
         source.as_str().to_string()
     }
+}
+
+fn tokenizer_type_for_receipt(
+    tokenizer_label: &str,
+    source: bitnet_tokenizers::auto::TokenizerSource,
+) -> String {
+    if tokenizer_label == source.as_str() {
+        match source {
+            bitnet_tokenizers::auto::TokenizerSource::Explicit
+            | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
+                "external_tokenizer_file".to_string()
+            }
+            bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => "gguf_metadata".to_string(),
+            bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => {
+                "compatibility_fallback".to_string()
+            }
+        }
+    } else {
+        tokenizer_label.to_string()
+    }
+}
+
+fn gguf_header_counts_for_receipt(
+    path: &std::path::Path,
+    is_hf_directory: bool,
+) -> Option<(usize, usize)> {
+    if is_hf_directory || path.extension().and_then(|ext| ext.to_str()) != Some("gguf") {
+        return None;
+    }
+
+    let header = bitnet_inference::gguf::read_header_blocking(path).ok()?;
+    Some((usize::try_from(header.n_kv).ok()?, usize::try_from(header.n_tensors).ok()?))
 }
 
 fn compute_model_sha256(path: &std::path::Path) -> Result<String> {
@@ -2254,8 +2391,8 @@ async fn run_simple_generation(
     // Load tokenizer with deterministic CPU-BITNET authority.
     // Priority: explicit path -> GGUF metadata -> sibling tokenizer asset.
 
-    // Track GGUF metadata for JSON output
-    let mut gguf_metadata: Option<(usize, usize)> = None;
+    // Track GGUF header counts for JSON output independently of tokenizer source.
+    let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
     let effective_strict_tokenizer = strict_tokenizer || strict_loader;
 
     let tokenizer_load_start = std::time::Instant::now();
@@ -2316,14 +2453,6 @@ async fn run_simple_generation(
     let tokenizer_source = tokenizer_resolution.source;
     let tokenizer_strict = tokenizer_resolution.strict;
     let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
-
-    if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
-        let gguf_data = std::fs::read(&model_path)
-            .context("Failed to read GGUF file for tokenizer metadata")?;
-        let reader = bitnet_models::GgufReader::new(&gguf_data)
-            .context("Failed to parse GGUF for tokenizer metadata")?;
-        gguf_metadata = Some((reader.metadata_keys().len(), reader.tensor_count() as usize));
-    }
 
     // Auto-detect template if needed
     let template_type = if prompt_template == "auto" {
@@ -2746,8 +2875,10 @@ async fn run_simple_generation(
 
         // Get tokenizer info
         let tokenizer_source_str = tokenizer_source.as_str();
+        let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+        let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
         let tokenizer_info = serde_json::json!({
-            "type": "sentencepiece",
+            "type": tokenizer_type,
             "origin": if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
                 "embedded"
             } else {
@@ -2800,7 +2931,6 @@ async fn run_simple_generation(
         let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
         let model_file =
             model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
-        let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
         let thread_count = effective_thread_count(threads);
         let cpu_features = detected_cpu_feature_labels();
         let cpu_model = detected_cpu_model_label();
@@ -3839,6 +3969,28 @@ fn is_apple_m4_backend_label(label: &str) -> bool {
     label.trim().to_ascii_lowercase().starts_with("apple-m4-")
 }
 
+fn backend_selection_error_message_with_note(requested_backend_label: &str, error: &str) -> String {
+    match apple_backend_failure_note(requested_backend_label) {
+        Some(note) => format!("{error}. {note}"),
+        None => error.to_string(),
+    }
+}
+
+fn apple_backend_failure_note(requested_backend_label: &str) -> Option<&'static str> {
+    match requested_backend_label.trim().to_ascii_lowercase().as_str() {
+        "apple-m4-metal" => Some(
+            "apple-m4-metal is the native Metal proof lane; it does not imply MPSGraph or Neural Engine execution and must not silently fall back to CPU in strict mode. Run on native macOS Apple M4 with Metal visible, or request apple-m4-cpu-neon for the CPU/NEON reference lane.",
+        ),
+        "apple-m4-mpsgraph" => Some(
+            "apple-m4-mpsgraph is the graph/reference proof lane; it is not native Metal kernel proof and is not Neural Engine proof unless the resolved target is receipt-backed.",
+        ),
+        "apple-m4-cpu-neon" => Some(
+            "apple-m4-cpu-neon is the Apple ARM64 CPU/NEON fallback and parity lane; it is not Metal acceleration, and scalar fallback must be visible in receipts.",
+        ),
+        _ => None,
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct AppleCliMachineProbe {
     chip: Option<String>,
@@ -4003,6 +4155,31 @@ mod tests {
     }
 
     #[test]
+    fn strict_apple_metal_error_describes_non_fallback_proof_lane() {
+        let err = resolve_run_backend_identity("apple-m4-metal", true).unwrap_err().to_string();
+
+        assert!(err.contains("apple-m4-metal"), "got: {err}");
+        assert!(err.contains("native Metal proof lane"), "got: {err}");
+        assert!(err.contains("must not silently fall back to CPU"), "got: {err}");
+        assert!(err.contains("apple-m4-cpu-neon"), "got: {err}");
+    }
+
+    #[test]
+    fn non_strict_apple_mpsgraph_fallback_reason_keeps_graph_boundary() {
+        let identity = resolve_run_backend_identity("apple-m4-mpsgraph", false).unwrap();
+
+        assert_eq!(identity.requested_backend, "apple-m4-mpsgraph");
+        assert!(identity.fallback_used);
+        let fallback_reason = identity.fallback_reason.unwrap();
+        assert!(fallback_reason.contains("graph/reference proof lane"), "got: {fallback_reason}");
+        assert!(
+            fallback_reason.contains("not native Metal kernel proof"),
+            "got: {fallback_reason}"
+        );
+        assert!(fallback_reason.contains("not Neural Engine proof"), "got: {fallback_reason}");
+    }
+
+    #[test]
     fn i2s_receipt_kernel_family_is_stable() {
         assert_eq!(kernel_family_for_quantization(bitnet_common::QuantizationType::I2S), "i2_s");
     }
@@ -4033,6 +4210,38 @@ mod tests {
         ));
 
         assert_eq!(repo, "microsoft/bitnet-b1.58-2B-4T-gguf");
+    }
+
+    #[test]
+    fn receipt_tokenizer_type_uses_inferred_model_label() {
+        assert_eq!(
+            tokenizer_type_for_receipt(
+                "llama3",
+                bitnet_tokenizers::auto::TokenizerSource::Explicit
+            ),
+            "llama3"
+        );
+        assert_eq!(
+            tokenizer_type_for_receipt(
+                "explicit",
+                bitnet_tokenizers::auto::TokenizerSource::Explicit
+            ),
+            "external_tokenizer_file"
+        );
+    }
+
+    #[test]
+    fn gguf_header_counts_for_receipt_reads_counts_without_full_metadata_parse() {
+        use std::io::Write;
+
+        let mut file = tempfile::Builder::new().suffix(".gguf").tempfile().unwrap();
+        file.write_all(b"GGUF").unwrap();
+        file.write_all(&3_u32.to_le_bytes()).unwrap();
+        file.write_all(&332_u64.to_le_bytes()).unwrap();
+        file.write_all(&45_u64.to_le_bytes()).unwrap();
+
+        assert_eq!(gguf_header_counts_for_receipt(file.path(), false), Some((45, 332)));
+        assert_eq!(gguf_header_counts_for_receipt(file.path(), true), None);
     }
 
     #[test]
@@ -4222,6 +4431,101 @@ mod tests {
         assert_eq!(receipt["bitnet_inference"], false);
         assert_eq!(receipt["fallback_used"], false);
         assert!(receipt["platform"]["cpu"]["has_avx512"].is_boolean());
+    }
+
+    #[test]
+    fn intel_npu_probe_receipt_is_visibility_only() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: Some("intel-npu-openvino".to_string()),
+            runtime_api: Some("openvino".to_string()),
+            runtime_device: Some("NPU".to_string()),
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: true,
+            openvino_version: Some("2026.1".to_string()),
+            openvino_available_devices: vec![
+                "CPU".to_string(),
+                "GPU.0".to_string(),
+                "NPU".to_string(),
+            ],
+            openvino_npu_visible: true,
+            openvino_npu_full_name: Some("Intel(R) AI Boost".to_string()),
+            supported_properties: vec!["FULL_DEVICE_NAME".to_string()],
+            driver_version: Some("1.2.3".to_string()),
+            compiler_version: Some("4.5.6".to_string()),
+            total_mem_size: Some(1024),
+            alloc_mem_size: Some(128),
+            max_tiles: Some(1),
+            fallback_used: false,
+            failure_reason: None,
+        };
+        let receipt = build_intel_npu_probe_receipt(
+            probe,
+            true,
+            "2026-05-06T00:00:00Z".to_string(),
+            Some("ci/hardware/intel-258v/2026-05-06/npu-openvino-runtime-probe.json".to_string()),
+        );
+
+        assert_eq!(receipt["artifact_kind"], "intel_npu_runtime_probe");
+        assert_eq!(receipt["requested_backend"], "intel-npu");
+        assert_eq!(receipt["selected_backend"], "intel-npu-openvino");
+        assert_eq!(receipt["runtime_api"], "openvino");
+        assert_eq!(receipt["runtime_device"], "NPU");
+        assert_eq!(receipt["strict_mode"], true);
+        assert_eq!(receipt["shape_mode"], "static");
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["kernel_execution"], false);
+        assert_eq!(receipt["graph_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert!(receipt["error"].is_null());
+    }
+
+    #[test]
+    fn strict_intel_npu_probe_records_error_without_fallback() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: false,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            openvino_npu_visible: false,
+            openvino_npu_full_name: None,
+            supported_properties: Vec::new(),
+            driver_version: None,
+            compiler_version: None,
+            total_mem_size: None,
+            alloc_mem_size: None,
+            max_tiles: None,
+            fallback_used: false,
+            failure_reason: Some("OpenVINO NPU was not visible".to_string()),
+        };
+        let receipt =
+            build_intel_npu_probe_receipt(probe, true, "2026-05-06T00:00:00Z".to_string(), None);
+
+        assert_eq!(receipt["requested_backend"], "intel-npu");
+        assert!(receipt["selected_backend"].is_null());
+        assert!(receipt["runtime_api"].is_null());
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["graph_execution"], false);
+        assert_eq!(receipt["claim"], "intel_npu_os_visibility_recorded");
+        assert_eq!(receipt["error"], "OpenVINO NPU was not visible");
     }
 
     #[test]

@@ -45,6 +45,14 @@ Every BitNet benchmark must record:
 
 ```yaml
 profiles:
+  micro:
+    phase: micro_kernel
+    purpose: packed kernel microbenchmark
+
+  layer:
+    phase: layer_forward
+    purpose: one transformer-layer-sized profile
+
   smoke_1:
     prompt_tokens: small
     generated_tokens: 1
@@ -79,6 +87,53 @@ profiles:
 | `total_generation` | End-to-end user-visible timing |
 
 Do not use one phase to claim another.
+
+## CPU Profile Fields
+
+CPU proof benchmark profiles must make the benchmark profile, execution phase,
+kernel identity, fallback status, and workload shape explicit:
+
+```json
+{
+  "profile": "decode",
+  "execution_phase": "decode_steady_state",
+  "requested_kernel": "qk256-avx2-gemv",
+  "selected_kernel": "qk256-avx2-gemv",
+  "fallback_used": false,
+  "fallback_reason": null,
+  "shape": {
+    "rows": 2048,
+    "cols": 2048,
+    "iterations": 128
+  }
+}
+```
+
+`micro` and `layer` are benchmark profiles, not full model-inference claims.
+They exist to isolate kernel and layer cost before prefill, first-token, and
+steady decode profiles.
+
+Two CPU benchmark receipt emitters intentionally keep synthetic and real phase
+surfaces separate:
+
+- `cpu_benchmark_receipt` measures canonical no-scale QK256 GEMV profile loops.
+  It is useful for micro/kernel evidence, but it is not a full real-model
+  inference benchmark.
+- `cpu_phase_benchmark_receipt` consumes strict CPU proof receipts and emits
+  real phase benchmark evidence only for phases backed by those receipts. Any
+  phase that was not measured by the supplied proof receipt is emitted as
+  `status = "not_run"` with a reason. A final CPU-BITNET-008 closeout requires
+  all required profiles to be measured by appropriate proof-backed inputs.
+
+Example real phase receipt command:
+
+```bash
+cargo run --locked -p bitnet-bench-receipts \
+  --bin cpu_phase_benchmark_receipt --no-default-features -- \
+  --strict-proof-receipt ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json \
+  --selected-backend cpu-rust \
+  --receipt-out target/cpu-phase-benchmark-receipt.json
+```
 
 ## Hardware Linkage
 

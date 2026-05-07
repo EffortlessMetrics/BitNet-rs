@@ -659,21 +659,42 @@ fn check_benchmark_smoke(path: &Path) -> Result<()> {
 
 fn command_available(command: &str) -> bool {
     if command.contains(std::path::MAIN_SEPARATOR) {
-        return Path::new(command).exists();
+        return is_executable_file(Path::new(command));
     }
-    let Some(path) = env::var_os("PATH") else {
+    command_available_in_path(command, env::var_os("PATH"))
+}
+
+fn command_available_in_path(command: &str, path: Option<std::ffi::OsString>) -> bool {
+    let Some(path) = path else {
         return false;
     };
     let exts: &[&str] = if cfg!(windows) { &[".com", ".exe", ".bat", ".cmd", ""] } else { &[""] };
     for dir in env::split_paths(&path) {
         for ext in exts {
             let candidate = dir.join(format!("{command}{ext}"));
-            if candidate.exists() {
+            if is_executable_file(&candidate) {
                 return true;
             }
         }
     }
     false
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    let Ok(metadata) = fs::metadata(path) else {
+        return false;
+    };
+    if !metadata.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        metadata.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
 }
 
 struct ProcessKiller(Option<std::process::Child>);
@@ -794,4 +815,70 @@ fn relevant_flake_output(text: &str) -> Vec<String> {
     }
 
     lines.iter().take(5).map(|line| line.to_string()).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{command_available, command_available_in_path, is_executable_file};
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+    use std::{ffi::OsString, fs};
+
+    #[cfg(unix)]
+    fn make_executable(path: &std::path::Path) {
+        let mut permissions = fs::metadata(path).expect("metadata").permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(path, permissions).expect("set executable bit");
+    }
+
+    #[test]
+    fn command_available_ignores_directories_in_path() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        let fake_cmd = temp.path().join("fakecmd");
+        fs::create_dir_all(&fake_cmd).expect("create fake command directory");
+        let found = command_available_in_path("fakecmd", Some(OsString::from(temp.path())));
+
+        assert!(!found, "directory entries should not be treated as commands");
+    }
+
+    #[test]
+    fn is_executable_file_rejects_directories() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        assert!(!is_executable_file(temp.path()));
+    }
+
+    #[test]
+    fn command_available_finds_executable_files_in_path() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        let fake_cmd = temp.path().join("fakecmd");
+        fs::write(&fake_cmd, b"#!/bin/sh\n").expect("write fake command");
+        #[cfg(unix)]
+        make_executable(&fake_cmd);
+
+        let found = command_available_in_path("fakecmd", Some(OsString::from(temp.path())));
+        assert!(found, "executable files on PATH should be treated as commands");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn command_available_rejects_non_executable_files_in_path() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        let fake_cmd = temp.path().join("fakecmd");
+        fs::write(&fake_cmd, b"not executable").expect("write fake command");
+
+        let found = command_available_in_path("fakecmd", Some(OsString::from(temp.path())));
+        assert!(!found, "non-executable files on PATH should not be treated as commands");
+    }
+
+    #[test]
+    fn command_available_checks_explicit_paths_as_files() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        let fake_cmd_dir = temp.path().join("fakecmd");
+        fs::create_dir_all(&fake_cmd_dir).expect("create fake command directory");
+
+        assert!(
+            !command_available(fake_cmd_dir.to_str().expect("utf-8 path")),
+            "explicit directory paths should not be treated as commands"
+        );
+    }
 }

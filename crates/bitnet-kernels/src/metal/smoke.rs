@@ -6,6 +6,7 @@ pub const MACHINE_ID: &str = "apple-m4-mac-mini";
 pub const ARTIFACT_KIND: &str = "smoke";
 pub const PARITY_ARTIFACT_KIND: &str = "parity";
 pub const PHASE_CONTRIBUTION_ARTIFACT_KIND: &str = "phase_contribution";
+pub const SUBGRAPH_ARTIFACT_KIND: &str = "subgraph";
 pub const REQUESTED_BACKEND: &str = "apple-m4-metal";
 pub const SELECTED_BACKEND: &str = "apple-m4-metal";
 pub const REFERENCE_BACKEND: &str = "apple-m4-cpu-neon";
@@ -14,11 +15,16 @@ pub const TINY_METAL_ADD_SMOKE_KERNEL_ID: &str = "tiny_metal_add_smoke";
 pub const TINY_METAL_ADD_PARITY_KERNEL_ID: &str = "tiny_metal_add_parity";
 pub const I2S_METAL_PARITY_KERNEL_ID: &str = "tiny_metal_i2s_parity";
 pub const I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID: &str = "tiny_metal_i2s_prefill_contribution";
+pub const I2S_METAL_PROJECTION_RESIDUAL_KERNEL_ID: &str = "tiny_metal_i2s_projection_residual";
+pub const I2S_PROJECTION_RESIDUAL_GRAPH_ID: &str = "tiny_i2s_projection_residual_subgraph";
 pub const I2S_KERNEL_FAMILY: &str = "i2_s";
 pub const I2S_EXECUTION_PHASE: &str = "parity";
 pub const I2S_PREFILL_EXECUTION_PHASE: &str = "prefill";
 pub const I2S_PREFILL_PHASE_SCOPE: &str = "prefill_projection_fixture";
 pub const I2S_PREFILL_KV_CACHE_BEHAVIOR: &str = "not_exercised";
+pub const I2S_PROJECTION_RESIDUAL_EXECUTION_PHASE: &str = "parity";
+pub const I2S_PROJECTION_RESIDUAL_PHASE_SCOPE: &str = "projection_residual_subgraph";
+pub const I2S_PROJECTION_RESIDUAL_OPS: [&str; 2] = ["packed_i2_s_matmul", "residual_add"];
 pub const I2S_LAYOUT_SOURCE: &str = "fixture_packed_i2_s";
 pub const I2S_TRANSPORT_LAYOUT: &str = "u32_le_words_from_i2s_bytes";
 pub const I2S_PARITY_M: usize = 1;
@@ -138,6 +144,33 @@ pub struct I2sMetalPrefillContributionReceipt {
     pub mean_abs_error: f32,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct I2sMetalProjectionResidualReceipt {
+    pub machine_id: &'static str,
+    pub artifact_kind: &'static str,
+    pub requested_backend: &'static str,
+    pub selected_backend: &'static str,
+    pub runtime_api: &'static str,
+    pub reference_backend: &'static str,
+    pub target_backend: &'static str,
+    pub graph_id: &'static str,
+    pub kernel_id: &'static str,
+    pub kernel_family: &'static str,
+    pub execution_phase: &'static str,
+    pub phase_scope: &'static str,
+    pub layout_source: &'static str,
+    pub transport_layout: &'static str,
+    pub fallback_used: bool,
+    pub result: &'static str,
+    pub artifact_path: String,
+    pub tokens: usize,
+    pub n: usize,
+    pub k: usize,
+    pub block_size: usize,
+    pub max_abs_error: f32,
+    pub mean_abs_error: f32,
+}
+
 impl TinyMetalAddParityReceipt {
     pub fn passed(
         artifact_path: impl Into<String>,
@@ -221,6 +254,36 @@ impl I2sMetalPrefillContributionReceipt {
     }
 }
 
+impl I2sMetalProjectionResidualReceipt {
+    pub fn passed(artifact_path: impl Into<String>, comparison: SmokeComparison) -> Self {
+        Self {
+            machine_id: MACHINE_ID,
+            artifact_kind: SUBGRAPH_ARTIFACT_KIND,
+            requested_backend: REQUESTED_BACKEND,
+            selected_backend: SELECTED_BACKEND,
+            runtime_api: RUNTIME_API,
+            reference_backend: REFERENCE_BACKEND,
+            target_backend: SELECTED_BACKEND,
+            graph_id: I2S_PROJECTION_RESIDUAL_GRAPH_ID,
+            kernel_id: I2S_METAL_PROJECTION_RESIDUAL_KERNEL_ID,
+            kernel_family: I2S_KERNEL_FAMILY,
+            execution_phase: I2S_PROJECTION_RESIDUAL_EXECUTION_PHASE,
+            phase_scope: I2S_PROJECTION_RESIDUAL_PHASE_SCOPE,
+            layout_source: I2S_LAYOUT_SOURCE,
+            transport_layout: I2S_TRANSPORT_LAYOUT,
+            fallback_used: false,
+            result: "pass",
+            artifact_path: artifact_path.into(),
+            tokens: I2S_PREFILL_TOKENS,
+            n: I2S_PARITY_N,
+            k: I2S_PARITY_K,
+            block_size: I2S_PARITY_BLOCK_SIZE,
+            max_abs_error: comparison.max_abs_error,
+            mean_abs_error: comparison.mean_abs_error,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct I2sMetalParityFixture {
     pub activations: Vec<f32>,
@@ -232,6 +295,13 @@ pub struct I2sMetalParityFixture {
     pub n: usize,
     pub k: usize,
     pub block_size: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct I2sMetalProjectionResidualFixture {
+    pub base: I2sMetalParityFixture,
+    pub residual: Vec<f32>,
+    pub expected: Vec<f32>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -284,6 +354,10 @@ pub fn metal_i2s_prefill_contribution_artifact_path(date: &str) -> String {
     format!("ci/hardware/{MACHINE_ID}/{date}/metal-i2s-prefill-contribution.json")
 }
 
+pub fn metal_i2s_projection_residual_artifact_path(date: &str) -> String {
+    format!("ci/hardware/{MACHINE_ID}/{date}/metal-i2s-projection-residual.json")
+}
+
 pub fn tiny_add_inputs() -> (Vec<f32>, Vec<f32>) {
     let lhs = (0..SMOKE_ELEMENT_COUNT).map(|i| i as f32).collect();
     let rhs = (0..SMOKE_ELEMENT_COUNT).map(|i| (i as f32) * 2.0).collect();
@@ -307,6 +381,25 @@ pub fn i2s_metal_parity_fixture() -> I2sMetalParityFixture {
 
 pub fn i2s_metal_prefill_fixture() -> I2sMetalParityFixture {
     i2s_metal_fixture(I2S_PREFILL_TOKENS)
+}
+
+pub fn i2s_metal_projection_residual_fixture() -> I2sMetalProjectionResidualFixture {
+    let base = i2s_metal_fixture(I2S_PREFILL_TOKENS);
+    let residual = (0..base.expected.len())
+        .map(|index| {
+            let row = index / base.n;
+            let col = index % base.n;
+            ((row as i32 * 3 + col as i32 * 2) % 7 - 3) as f32 * 0.125
+        })
+        .collect::<Vec<_>>();
+    let expected = base
+        .expected
+        .iter()
+        .zip(residual.iter())
+        .map(|(value, residual)| value + residual)
+        .collect();
+
+    I2sMetalProjectionResidualFixture { base, residual, expected }
 }
 
 fn i2s_metal_fixture(m: usize) -> I2sMetalParityFixture {

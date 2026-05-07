@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T03:43:59Z"
+campaign = "apple-m4"
+item = "M4-018"
+event = "merged"
+pr = 3826
+merge_sha = "b5ea2d245ae94a5fc8388f7b0a9a7f19fdfdd648"
+actor = "codex"
+
+notes = [
+  "Merged Apple backend CLI/package polish.",
+  "Clarified Apple backend labels, strict-mode errors, artifact paths, and non-M4 failure modes without adding Metal kernels, QK256, server inference, MPSGraph execution, or Neural Engine claims.",
+]
