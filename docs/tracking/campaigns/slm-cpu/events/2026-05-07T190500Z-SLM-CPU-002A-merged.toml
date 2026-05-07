@@ -10,4 +10,3 @@ notes = [
   "Merged #3917 to recognize dense Qwen qwen2/qwen3 at the strict GGUF loader boundary.",
   "The official Qwen3-0.6B Q8_0 artifact now fails at an explicit unsupported standard-quantization blocker instead of a misleading architecture or tensor validation error.",
 ]
-
