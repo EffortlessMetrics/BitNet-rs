@@ -819,30 +819,66 @@ fn relevant_flake_output(text: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{command_available_in_path, is_executable_file};
-    use std::{env, ffi::OsString, fs, path::Path};
+    use super::{command_available, command_available_in_path, is_executable_file};
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+    use std::{ffi::OsString, fs};
 
-    fn mktemp_dir(label: &str) -> std::path::PathBuf {
-        let base = env::temp_dir().join(format!("bitnet-task-{label}-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&base);
-        fs::create_dir_all(&base).expect("create temp dir");
-        base
+    #[cfg(unix)]
+    fn make_executable(path: &std::path::Path) {
+        let mut permissions = fs::metadata(path).expect("metadata").permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(path, permissions).expect("set executable bit");
     }
 
     #[test]
     fn command_available_ignores_directories_in_path() {
-        let temp = mktemp_dir("command-available-dir");
-        let fake_cmd = temp.join("fakecmd");
+        let temp = tempfile::tempdir().expect("create temp dir");
+        let fake_cmd = temp.path().join("fakecmd");
         fs::create_dir_all(&fake_cmd).expect("create fake command directory");
-        let found = command_available_in_path("fakecmd", Some(OsString::from(temp)));
+        let found = command_available_in_path("fakecmd", Some(OsString::from(temp.path())));
 
         assert!(!found, "directory entries should not be treated as commands");
     }
 
     #[test]
     fn is_executable_file_rejects_directories() {
-        let temp = mktemp_dir("exec-file-dir");
-        assert!(!is_executable_file(Path::new(&temp)));
-        let _ = fs::remove_dir_all(temp);
+        let temp = tempfile::tempdir().expect("create temp dir");
+        assert!(!is_executable_file(temp.path()));
+    }
+
+    #[test]
+    fn command_available_finds_executable_files_in_path() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        let fake_cmd = temp.path().join("fakecmd");
+        fs::write(&fake_cmd, b"#!/bin/sh\n").expect("write fake command");
+        #[cfg(unix)]
+        make_executable(&fake_cmd);
+
+        let found = command_available_in_path("fakecmd", Some(OsString::from(temp.path())));
+        assert!(found, "executable files on PATH should be treated as commands");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn command_available_rejects_non_executable_files_in_path() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        let fake_cmd = temp.path().join("fakecmd");
+        fs::write(&fake_cmd, b"not executable").expect("write fake command");
+
+        let found = command_available_in_path("fakecmd", Some(OsString::from(temp.path())));
+        assert!(!found, "non-executable files on PATH should not be treated as commands");
+    }
+
+    #[test]
+    fn command_available_checks_explicit_paths_as_files() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        let fake_cmd_dir = temp.path().join("fakecmd");
+        fs::create_dir_all(&fake_cmd_dir).expect("create fake command directory");
+
+        assert!(
+            !command_available(fake_cmd_dir.to_str().expect("utf-8 path")),
+            "explicit directory paths should not be treated as commands"
+        );
     }
 }
