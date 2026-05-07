@@ -8,10 +8,10 @@ Each hardware lane owns a narrow proof path. Ownership prevents CPU, GPU, OpenVI
 
 Owns:
 
-- i5-8250U `cpu-scalar` and `cpu-avx2` as the active AVX2 CPU implementation/proof lane.
-- 258V CPU `cpu-avx2` as a parallel Lunar Lake validation and same-machine comparison lane.
-- Ryzen 7 5700X `cpu-scalar` and `cpu-avx2`.
-- Ryzen 9 9950X3D `cpu-scalar`, `cpu-avx2`, and `cpu-avx512`.
+- 258V CPU `cpu-avx2` as the BitNet CPU lead for strict real-GGUF runs, scalar/AVX2 validation, answer parity, phase receipts, and same-machine comparison against Arc 140V and Intel NPU.
+- i5-8250U `cpu-scalar` and `cpu-avx2` as the SLM CPU lead plus legacy/low-power BitNet comparison lane.
+- Ryzen 7 5700X `cpu-scalar` and `cpu-avx2` as a BitNet support validation lane when it does not collide with A770 work.
+- Ryzen 9 9950X3D `cpu-scalar`, `cpu-avx2`, and `cpu-avx512` as a BitNet support validation lane when it does not collide with RTX 5070 Ti work.
 - CPU feature detection and selected CPU kernel-path receipts.
 - Strict CPU proof runs.
 - Sustained CPU baselines with power and thermal context.
@@ -27,20 +27,22 @@ Does not own:
 
 ## CPU No-Trample Rule
 
-The 8250U and 258V CPU lanes may both perform CPU work, but they must not edit the same runtime surface in overlapping PRs. The 8250U lane owns active AVX2 CPU implementation, scalar/AVX2 parity, strict CPU proof, and sustained low-power behavior. The 258V CPU lane owns Lunar Lake CPU validation and same-machine comparisons against Arc 140V and NPU artifacts.
+The 258V CPU lane owns BitNet CPU sequencing. It leads strict real-GGUF BitNet CPU runs, scalar/AVX2 answer parity, phase receipts, and same-machine comparison against Arc 140V and Intel NPU artifacts. The 8250U lane no longer blocks BitNet CPU work; it owns SLM CPU work and remains useful for legacy/low-power BitNet comparison artifacts.
 
-If a CPU change touches shared dispatch, QK256 CPU kernels, or inference hot paths, the ledger item must name the owning CPU lane and list the other CPU lane as a validation target, not a co-owner.
+The 8250U, 258V, 5700X, and 9950X3D CPU lanes may all perform CPU validation, but they must not edit the same runtime surface in overlapping PRs. 9950X3D may validate BitNet CPU changes when that does not collide with RTX 5070 Ti work. 5700X may validate BitNet CPU changes when that does not collide with A770 work.
+
+If a BitNet CPU change touches shared dispatch, QK256 CPU kernels, or inference hot paths, the ledger item must name the 258V lane as the owning BitNet CPU lane unless the item explicitly transfers ownership. Other CPU machines should be listed as validation targets, not co-owners.
 
 PR scoping:
 
 ```text
-8250U AVX2 PR:
-  may touch CPU detect, CPU kernels, scalar/AVX2 dispatch, CPU receipts
-  must not touch Arc 140V, A770, NPU, Metal, CUDA
+258V BitNet CPU PR:
+  may touch CPU detect, CPU kernels, scalar/AVX2 dispatch, answer parity, phase receipts
+  must not touch Arc 140V OpenCL, A770 OpenCL, Intel NPU execution, Metal, CUDA
 
-258V CPU validation PR:
-  may run/record CPU proof on 258V and compare artifacts
-  must not reshape shared CPU implementation unless the item explicitly says so
+8250U SLM CPU PR:
+  may touch SLM CPU proof, SLM receipts, and low-power comparison artifacts
+  must not block new BitNet CPU implementation leadership
 
 Accelerator PR:
   must not alter CPU dispatch or QK256 CPU kernels unless explicitly scoped

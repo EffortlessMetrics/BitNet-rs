@@ -2,15 +2,17 @@ id = "intel-258v-platform"
 title = "Intel 258V platform validation"
 status = "active"
 
-objective = "Validate Core Ultra 7 258V as a tri-device platform while keeping CPU AVX2, Arc 140V GPU, and Intel AI Boost NPU proof labels separate."
+objective = "Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while keeping CPU AVX2, Arc 140V GPU, and Intel AI Boost NPU proof labels separate."
 
 end_state = [
   "Same-machine CPU, GPU, and NPU facts are captured.",
+  "258V CPU strict real-GGUF validation, scalar/AVX2 answer parity, and phase receipts provide the CPU reference plate.",
   "Arc 140V OpenCL, OpenVINO GPU, and OpenVINO NPU evidence are not conflated.",
   "Receipts record OS, drivers, memory, power, thermal, and WSL/native visibility context.",
 ]
 
 hard_constraints = [
+  "258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims.",
   "Arc 140V OpenCL proof is not NPU proof.",
   "OpenVINO GPU smoke is not packed BitNet kernel proof.",
   "WSL only counts for NPU validation if OpenVINO reports NPU inside WSL.",
@@ -238,4 +240,132 @@ must_not_claim = [
   "QK256 or TL2 execution ran on 258V.",
   "BitNet inference works on 258V.",
   "258V CPU benchmark performance.",
+]
+
+[[work_item]]
+id = "LNL258V-OWNERSHIP-001"
+status = "pr_open"
+pr = 3914
+branch = "codex/docs/lnl-bitnet-cpu-lead"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-001"]
+acceptance = "Update Lunar Lake ownership docs and trackers so the 258V CPU is the BitNet CPU lead, 8250U is the SLM CPU lead plus legacy/low-power BitNet comparison lane, 9950X3D and 5700X are support validators, and the priority order is 258V CPU first, Intel NPU second, Arc 140V third."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/bitnet-alignment.md",
+  "docs/hardware/LANE_OWNERSHIP.md",
+  "docs/hardware/HARDWARE_MATRIX.md",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+  "ci/hardware/**",
+]
+may_claim = [
+  "The ownership/control-plane docs route new BitNet CPU proof through the 258V CPU after merge.",
+  "CPU258V-002 and CPU258V-003 are discoverable as the next Lunar Lake CPU proof items after merge.",
+]
+must_not_claim = [
+  "New runtime proof was added.",
+  "258V CPU parity or phase benchmarks ran.",
+  "Intel NPU or Arc 140V execution changed.",
+]
+
+[[work_item]]
+id = "CPU258V-002"
+status = "blocked"
+branch = "codex/intel-258v-platform/CPU258V-002-answer-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OWNERSHIP-001"]
+acceptance = "Run scalar-vs-AVX2 strict CPU answer parity on the 258V using the same GGUF, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs/text, first-divergence evidence, logits/top-k evidence when available, fallback=false, selected kernels, and P-core/LP-E/power context."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::answer_parity::tests -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::answer_corpus::tests -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-parity --scalar ci/hardware/intel-258v/<date>/cpu-answer-corpus-scalar.json --avx2 ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2.json --json-out ci/hardware/intel-258v/<date>/cpu-answer-parity.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "258V scalar-vs-AVX2 strict CPU answer parity can be audited after merge.",
+  "First-divergence evidence can separate AVX2-specific divergence from shared 258V decode, prompt, tokenizer, logits, or sampler issues after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "258V sustained throughput is proven.",
+  "Arc 140V execution is involved.",
+  "Intel NPU execution is involved.",
+]
+
+[[work_item]]
+id = "CPU258V-003"
+status = "proposed"
+branch = "codex/intel-258v-platform/CPU258V-003-phase-receipts"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-002"]
+acceptance = "Add 258V phase benchmark receipts for smoke_1, first_token, decode_128, and prefill_512 when available, recording selected backend/kernel, fallback status, CPU feature set, P-core/LP-E topology, power mode, memory context, and explicit not_run gaps for unavailable profiles."
+commands = [
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features",
+  "Parse ci/hardware/intel-258v/<date>/cpu-phase-benchmark.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "258V phase timing receipt fields are available for CPU reference comparison after merge.",
+]
+must_not_claim = [
+  "Sustained 258V throughput is proven unless a sustained receipt exists.",
+  "Arc 140V or Intel NPU performance is proven.",
+  "Full platform performance comparison is complete.",
 ]

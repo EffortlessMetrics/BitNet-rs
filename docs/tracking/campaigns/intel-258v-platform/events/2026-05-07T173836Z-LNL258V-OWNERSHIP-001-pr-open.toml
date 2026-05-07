@@ -1,0 +1,15 @@
+timestamp = "2026-05-07T17:38:36Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OWNERSHIP-001"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 3914
+branch = "codex/docs/lnl-bitnet-cpu-lead"
+head_sha = "faa02b447efd1b90affe8e01cccdfa167001ad74"
+actor = "codex"
+
+notes = [
+  "Opened ownership correction PR to make the 258V CPU the BitNet CPU lead.",
+  "The PR keeps runtime code untouched and prepares CPU258V-002 as the next Lunar Lake CPU proof item.",
+]

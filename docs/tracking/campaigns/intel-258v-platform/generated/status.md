@@ -3,7 +3,7 @@
 
 - Campaign: `intel-258v-platform`
 - State: `active`
-- Objective: Validate Core Ultra 7 258V as a tri-device platform while keeping CPU AVX2, Arc 140V GPU, and Intel AI Boost NPU proof labels separate.
+- Objective: Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while keeping CPU AVX2, Arc 140V GPU, and Intel AI Boost NPU proof labels separate.
 
 ## Work Items
 
@@ -14,9 +14,13 @@
 | LNL258V-002 | merged | #3784 | `codex/intel-258v-platform/LNL258V-002-probe-bundle` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a 258V platform probe bundle that records CPU, Arc 140V GPU, Intel NPU, memory, OS, driver, OpenVINO, OpenCL, Level Zero, WSL, and power context without runtime claims. |
 | LNL258V-003 | merged | #3795 | `codex/intel-258v-platform/LNL258V-003-cli-platform-probe` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a CLI command that emits the Lunar Lake 258V visibility-only platform probe receipt from the current machine without launching kernels, compiling OpenVINO graphs, loading BitNet models, or making execution claims. |
 | CPU258V-001 | merged | #3802 | `codex/intel-258v-platform/CPU258V-001-validation-harness` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a validation-only Core Ultra 7 258V CPU BitNet preflight command that emits structured blocked_preflight or preflight_ready artifacts without changing GGUF loader, tokenizer, QK256 layout, QK256 dispatch, CPU kernels, or transformer decode internals. |
+| LNL258V-OWNERSHIP-001 | pr_open | #3914 | `codex/docs/lnl-bitnet-cpu-lead` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Update Lunar Lake ownership docs and trackers so the 258V CPU is the BitNet CPU lead, 8250U is the SLM CPU lead plus legacy/low-power BitNet comparison lane, 9950X3D and 5700X are support validators, and the priority order is 258V CPU first, Intel NPU second, Arc 140V third. |
+| CPU258V-002 | blocked | TBD | `codex/intel-258v-platform/CPU258V-002-answer-parity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Run scalar-vs-AVX2 strict CPU answer parity on the 258V using the same GGUF, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs/text, first-divergence evidence, logits/top-k evidence when available, fallback=false, selected kernels, and P-core/LP-E/power context. |
+| CPU258V-003 | proposed | TBD | `codex/intel-258v-platform/CPU258V-003-phase-receipts` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add 258V phase benchmark receipts for smoke_1, first_token, decode_128, and prefill_512 when available, recording selected backend/kernel, fallback status, CPU feature set, P-core/LP-E topology, power mode, memory context, and explicit not_run gaps for unavailable profiles. |
 
 ## Hard Constraints
 
+- 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims.
 - Arc 140V OpenCL proof is not NPU proof.
 - OpenVINO GPU smoke is not packed BitNet kernel proof.
 - WSL only counts for NPU validation if OpenVINO reports NPU inside WSL.

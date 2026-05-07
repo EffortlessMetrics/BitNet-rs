@@ -2,20 +2,20 @@
 
 ## Purpose
 
-This document converts the Lunar Lake validation report into buildable work for BitNet-rs. The Core Ultra 7 258V laptop is a same-machine validation platform, not the owner of the shared CPU implementation sequence.
+This document converts the Lunar Lake validation report into buildable work for BitNet-rs. The Core Ultra 7 258V laptop is the BitNet CPU lead and the same-machine comparison platform for CPU, Arc 140V, and Intel NPU work.
 
 The highest-priority rule is:
 
 ```text
-Use the Core Ultra 7 258V to prove platform identity, backend identity, runtime visibility, strict receipts, and CPU validation artifacts. Keep core CPU loader/tokenizer/QK256 implementation ownership with the active CPU proof lane unless a ledger item explicitly transfers or stacks that work.
+Use the Core Ultra 7 258V CPU as the reference truth path for BitNet CPU proof: strict real-GGUF validation, scalar-vs-AVX2 answer parity, phase receipts, and same-machine CPU reference artifacts. NPU and Arc 140V proofs are secondary until they compare against the 258V CPU reference and must not claim full BitNet inference, QK256 decode, or acceleration without parity receipts.
 ```
 
 ## Lane Ownership
 
 | Lane | Proof label | Role | Editing boundary |
 |---|---|---|---|
-| i5-8250U CPU | `intel-i5-8250u-cpu-avx2` | Active low-power AVX2 CPU implementation and strict proof lane | Owns shared CPU implementation sequence unless a work item says otherwise. |
-| 258V CPU | `intel-258v-cpu-avx2` | Lunar Lake CPU validation and same-machine comparison lane | Records validation artifacts; must not reshape shared CPU hot paths by default. |
+| 258V CPU | `intel-258v-cpu-avx2` | BitNet CPU lead for strict validation, scalar/AVX2 answer parity, phase receipts, and CPU reference artifacts | Owns BitNet CPU sequencing when a work item touches shared BitNet CPU proof surfaces. |
+| i5-8250U CPU | `intel-i5-8250u-cpu-avx2` | SLM CPU lead plus legacy/low-power BitNet comparison lane | Does not block new BitNet CPU work. |
 | Arc 140V | `intel-arc-140v-opencl`, `intel-arc-140v-openvino-gpu` | Integrated GPU identity, smoke, parity, and benchmark lane | Must not count CPU fallback as GPU proof. |
 | Intel NPU | `intel-npu-openvino` | OpenVINO NPU identity, static-shape smoke, and subgraph lane | Must not be routed through Metal or generic GPU identities. |
 | 258V platform | `core-ultra-7-258v` | Machine fact collector tying CPU/GPU/NPU artifacts together | Does not merge CPU, GPU, and NPU claims. |
@@ -27,9 +27,11 @@ Do these identity and validation surfaces before claiming real BitNet performanc
 1. **NPU-002-lite**: preserve Intel NPU backend identity and stop mapping `npu` to Metal or generic GPU paths.
 2. **ARC140V-002**: prove Arc 140V runtime identity through PCI ID, OpenCL, Level Zero, and OpenVINO `GPU.0` evidence.
 3. **LNL258V-RUN-001**: add a visibility-only 258V platform probe receipt that records CPU, Arc 140V, OpenVINO GPU, and OpenVINO NPU facts without claiming inference.
-4. **CPU-BITNET-001 / CPU-BITNET-002**: land strict GGUF loader and tokenizer authority in the active 8250U-owned CPU proof lane.
-5. **CPU258V-001**: run the merged CPU path on the 258V laptop and emit strict validation receipts for scalar-vs-AVX2 parity, loader/tokenizer authority, kernel identity, and decode/prefill metrics.
-6. **Comparison work**: only after the lane receipts exist, compare CPU AVX2, Arc 140V, and OpenVINO NPU artifacts on the same shared-memory platform.
+4. **CPU258V-001**: run the merged CPU path on the 258V laptop and emit strict validation receipts for loader/tokenizer authority, kernel identity, and decode smoke.
+5. **CPU258V-002**: compare scalar and AVX2 strict CPU answer receipts on the 258V with the same model, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs/text, first divergence, logits/top-k evidence when available, fallback status, and power/topology context.
+6. **CPU258V-003**: emit 258V phase benchmark receipts for smoke, first token, decode, and prefill profiles as the CPU reference plate.
+7. **NPU-007 / ARC140V-003**: advance NPU selected RMSNorm subgraph parity and Arc 140V tiny OpenCL smoke against the 258V CPU-first priority order.
+8. **Comparison work**: only after the lane receipts exist, compare CPU AVX2, Arc 140V, and OpenVINO NPU artifacts on the same shared-memory platform.
 
 ## PR Contracts
 
@@ -38,7 +40,9 @@ Do these identity and validation surfaces before claiming real BitNet performanc
 | `NPU-002-lite` | Identity-before-runtime cleanup for Intel NPU. | Backend request parsing, device config, NPU backend selection, probe metadata, receipt identity fields. | OpenVINO graph execution, CPU QK256 kernels, transformer hot path. | `npu`, `intel-npu`, and `openvino-npu` preserve NPU identity; strict NPU requests fail cleanly when unavailable; receipts can represent requested and selected NPU backends. |
 | `ARC140V-002` | Exact Arc 140V runtime identity probe. | `bitnet-device-probe`, Arc 140V probe module, hardware docs, optional CLI/xtask probe command. | CPU kernels, NPU runtime, transformer hot path. | Probe records PCI ID when available, OpenCL device name/driver, Level Zero visibility, OpenVINO `GPU.0` full name, and never emits CPU fallback as Arc proof. |
 | `LNL258V-RUN-001` | Whole-laptop visibility receipt. | `bitnet-device-probe`, receipt schema, CLI/xtask platform probe command, 258V docs. | QK256 CPU kernels, shared transformer hot path. | JSON artifact records CPU AVX2 facts, Arc 140V visibility, Level Zero visibility, OpenVINO devices, NPU visibility, power/thermal context, and `status=runtime_detected` or a failure reason. |
-| `CPU258V-001` | 258V CPU validation harness. | CLI validation command, receipts, hardware/tracking docs, machine profile artifacts. | Shared CPU implementation logic unless stacked on the CPU proof lane. | Strict CPU receipt records loader mode, tokenizer source, mock/fallback status, requested/selected kernel, phase metrics, and same-machine platform link. |
+| `CPU258V-001` | 258V CPU validation harness. | CLI validation command, receipts, hardware/tracking docs, machine profile artifacts. | Accelerator code and unrelated model/tokenizer rewrites. | Strict CPU receipt records loader mode, tokenizer source, mock/fallback status, requested/selected kernel, phase metrics, and same-machine platform link. |
+| `CPU258V-002` | 258V scalar-vs-AVX2 strict answer parity. | CLI parity command, answer receipts, 258V CPU artifacts, hardware/tracking docs. | OpenCL, OpenVINO NPU execution, QK256 kernel rewrites unless explicitly scoped. | Receipt compares scalar and AVX2 output for the same model/tokenizer/prompt/greedy settings, records token IDs/text, first divergence, logits/top-k evidence, selected kernels, fallback=false, and power/topology context. |
+| `CPU258V-003` | 258V phase benchmark receipts. | Benchmark receipt generation, 258V artifacts, hardware/tracking docs. | Accelerator code, server inference, and thread pinning unless separately scoped. | Receipt records smoke, first-token, decode, and prefill phase timing when available with CPU feature, power, topology, selected backend/kernel, and fallback status. |
 
 ## Required Platform Probe Surface
 
@@ -187,7 +191,7 @@ Strict mode must fail before inference if Intel NPU is requested and no Intel NP
 
 ## Required 258V CPU Validation Receipt
 
-The 258V CPU harness should measure the merged CPU path without taking over the implementation surfaces. It should emit a receipt shaped like:
+The 258V CPU harness is the BitNet CPU lead surface. It should measure the merged CPU path and emit a receipt shaped like:
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -230,7 +234,7 @@ Strict 258V CPU validation is invalid if any of these are true:
 
 ## Downstream CPU Implementation Dependencies
 
-The 258V CPU lane depends on the CPU proof lane delivering these implementation surfaces:
+The 258V CPU lane now owns new BitNet CPU proof sequencing. These are the shared implementation surfaces it must preserve or consume deliberately:
 
 | Concern | Canonical authority | Required outcome |
 |---|---|---|

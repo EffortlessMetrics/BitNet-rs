@@ -48,6 +48,16 @@ Rules:
 - Use `cargo run -p xtask --no-default-features -- campaign check <campaign>` before opening a tracker PR.
 - Use `cargo run -p xtask --no-default-features -- campaign generate` to refresh dashboards; do not hand-edit generated files.
 
+Lunar Lake platform priority:
+
+- Core Ultra 7 258V CPU is the BitNet CPU lead for strict CPU proof validation, scalar-vs-AVX2 answer parity, phase receipts, and same-machine CPU reference artifacts.
+- Intel NPU and Arc 140V are significant secondary lanes, but they must compare against 258V CPU reference receipts before BitNet-adjacent parity claims.
+- NPU work must not claim full BitNet inference, QK256 decode, acceleration, or CPU fallback as NPU proof.
+- Arc 140V work must prove native OpenCL execution before any BitNet kernel claim.
+- i5-8250U owns the SLM CPU lane and remains a legacy/low-power BitNet comparison lane; it must not block new BitNet CPU sequencing.
+- Ryzen 9 9950X3D may own AVX-512 BitNet CPU validation when needed, but its primary machine focus remains RTX 5070 Ti.
+- Ryzen 7 5700X may support AVX2 desktop validation when needed, but its primary machine focus remains A770.
+
 Transition note:
 
 `docs/tracking/bitnet-alignment/workstream-ledger.yaml` and `docs/tracking/bitnet-alignment/status.md` are transition surfaces. Normal item PRs should use campaign-local manifests and events once generated dashboards are available.
