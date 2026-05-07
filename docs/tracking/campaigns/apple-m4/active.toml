@@ -1,6 +1,6 @@
 id = "apple-m4"
 title = "Apple M4 Mac mini validation"
-status = "active"
+status = "complete"
 
 objective = "Make Apple Silicon a receipt-backed BitNet target through Metal, MPSGraph, and CPU/NEON proof lanes without conflating detection, execution, parity, inference, or performance."
 
@@ -11,6 +11,10 @@ end_state = [
   "CPU/Metal parity exists for one kernel or subgraph.",
   "MPSGraph graph smoke is recorded as reference evidence, not native Metal proof.",
   "Receipts record requested backend, selected backend, runtime API, resolved device, fallback status, model, quantization, kernel family, and execution phase before BitNet claims.",
+  "Strict real-GGUF Apple CPU/NEON BitNet proof records real tokenizer, strict loader, selected Apple backend, fallback_used=false, deterministic decode, model identity, kernel family, and execution phase.",
+  "Native Apple Metal I2_S parity, prefill contribution, and projection-residual subgraph receipts compare against Apple CPU/NEON without QK256, MPSGraph, Neural Engine, or full Metal inference claims.",
+  "Apple profile and allocation receipts separate timing, prompt prefill, decode, sampling, machine context, and hot-loop allocation evidence.",
+  "CLI and package surfaces document Apple backend labels, strict-mode errors, artifact paths, and non-M4 failure boundaries.",
 ]
 
 hard_constraints = [
