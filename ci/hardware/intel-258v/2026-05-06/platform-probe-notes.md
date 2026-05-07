@@ -44,17 +44,15 @@ has a receipt-backed one-token decode smoke artifact.
   BitNet validation is recorded as `preflight_ready`.
 - A strict CPU proof generated one token from the real BitNet GGUF through the
   CPU path and wrote `strict-bitnet-cpu-proof.json`.
-- The strict CPU proof generated text `'E` for the arithmetic smoke prompt, so
-  it is not a correctness or parity receipt.
-- The strict CPU proof is a one-token smoke profile: `first_token_ms=190337`,
-  `prefill_ms=173199.784`, and `decode_steady_state_tok_s=null`. It is not a
+- The strict CPU proof used the raw prompt `x` and generated text `'E`, so it
+  is not a correctness or parity receipt.
+- The strict CPU proof is a one-token smoke profile: `first_token_ms=28156`,
+  `prefill_ms=0.0`, and `decode_steady_state_tok_s=null`. It is not a
   steady-state throughput or benchmark-performance receipt.
-- The strict CPU proof receipt has known metadata limitations: `counts.n_tensors`
-  and `counts.n_kv` are zero in this profile receipt shape despite real GGUF
-  loading evidence elsewhere in the receipt, and the tokenizer block reports
-  `type=sentencepiece` while the model contract identifies the tokenizer as
-  LLaMA 3. Treat this artifact as strict selected-file execution evidence, not
-  tokenizer semantic parity or receipt-schema completeness.
+- The strict CPU proof receipt records GGUF header counts (`n_tensors=332`,
+  `n_kv=24`) and `tokenizer.type=llama3`. Treat this artifact as strict
+  selected-file execution evidence, not tokenizer semantic parity or
+  receipt-backed output correctness.
 - CPU BitNet preflight readiness is not strict GGUF loading through the
   inference path, tokenizer resolution through the inference path, QK256/TL2
   kernel execution, or BitNet generation.

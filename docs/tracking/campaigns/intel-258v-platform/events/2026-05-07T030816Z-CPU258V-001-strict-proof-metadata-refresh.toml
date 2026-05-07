@@ -1,0 +1,16 @@
+timestamp = "2026-05-07T03:08:16Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-001"
+event = "in_progress"
+branch = "codex/intel-258v-refresh-strict-proof-metadata"
+actor = "codex"
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
+]
+
+notes = [
+  "Refreshed the strict one-token CPU proof artifact after strict receipt metadata hardening landed.",
+  "The refreshed artifact records GGUF header counts n_tensors=332 and n_kv=24 plus tokenizer.type=llama3.",
+  "The artifact remains a CPU decode smoke receipt only; it does not prove correctness, parity, throughput, Arc 140V execution, or NPU execution.",
+]
