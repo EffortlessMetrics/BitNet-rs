@@ -1,0 +1,45 @@
+schema: 1
+artifact_kind: apple_m4_slm_answer_corpus
+name: apple-m4-slm-answer-reference-smoke-v1
+description: Fixed deterministic prompt set for Apple M4 dense SLM artifact answer-readiness validation.
+model:
+  family: qwen-small-instruct
+defaults:
+  prompt_template: raw-instruction-reference-smoke
+  prompt_template_note: "The accepted Qwen GGUF records tokenizer.chat_template metadata; this reference gate uses raw deterministic prompts because noninteractive llama-cli conversation mode is not used for SLM-M4-002."
+  max_new_tokens: 16
+  greedy: true
+  deterministic: true
+  reference_runner: llama-cli
+  temperature: 0.0
+  top_k: 1
+  gpu_layers: 0
+  per_prompt_timeout_seconds: 120
+cases:
+  - id: math_2_plus_2
+    question: "What is 2+2? Answer briefly."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "4"
+        - "four"
+
+  - id: capital_france
+    question: "Name the capital of France."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"
+
+  - id: rust_sentence
+    question: "Write one short sentence about Rust."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Rust"
+        - "rust"
+        - "programming"
+        - "language"
+        - "safety"
+        - "efficiency"

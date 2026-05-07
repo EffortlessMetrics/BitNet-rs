@@ -1,0 +1,87 @@
+schema = 1
+artifact_kind = "apple_m4_slm_answer_model_artifacts"
+campaign = "apple-m4-slm-answer"
+updated = "2026-05-07"
+
+[requirements]
+reference_runner_coherent_output_required = true
+sha256_required = true
+size_limit_bytes = 1073741824
+preferred_size_limit_bytes = 524288000
+tokenizer_metadata_required = true
+pretokenizer_metadata_required = true
+chat_template_required = true
+prompt_suite = "ci/quality/apple-m4-slm-answer-corpus.yaml"
+notes = [
+  "Dense SLM evidence must not be used to claim BitNet local-answer quality.",
+  "Model binaries are stored under ignored target/ paths only and must not be committed.",
+]
+
+[[artifact]]
+id = "qwen2_5_0_5b_instruct_gguf_q4_k_m"
+state = "answer_ready"
+status = "accepted_for_apple_m4_slm_answer"
+repo = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+repo_revision = "9217f5db79a29953eb74d5343926648285ec7e67"
+file = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+local_path = "target/apple-m4-slm-answer/SLM-M4-002/candidates/qwen2_5_0_5b/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+source_url = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/blob/9217f5db79a29953eb74d5343926648285ec7e67/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+sha256 = "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db"
+bytes = 491400032
+format = "gguf"
+gguf_version = "GGUF V3"
+architecture = "qwen2"
+model_name = "qwen2.5-0.5b-instruct"
+model_size_label = "630M"
+model_params = "630.17 M"
+model_size_mib = 462.96
+quantization = "Q4_K_M"
+general_file_type = 15
+quantization_version = 2
+context_length = 32768
+block_count = 24
+embedding_length = 896
+attention_heads = 14
+attention_kv_heads = 2
+tokenizer_source = "gguf_metadata"
+tokenizer_model = "gpt2"
+tokenizer_pretokenizer = "qwen2"
+tokenizer_chat_template_present = true
+prompt_template = "raw-instruction-reference-smoke"
+prompt_template_authority = "gguf tokenizer.chat_template present; raw deterministic prompt suite used for SLM-M4-002 reference gate"
+stop_token_policy = "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+reference_runner = "llama-cli"
+reference_runner_version = "build 3962 (1f86f058)"
+reference_runner_command = "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli -m target/apple-m4-slm-answer/SLM-M4-002/candidates/qwen2_5_0_5b/qwen2.5-0.5b-instruct-q4_k_m.gguf -p '<prompt>' -n 16 --no-display-prompt --temp 0 --top-k 1 -ngl 0"
+reference_runner_mode = "cpu layer placement, greedy temperature 0.0, top_k 1, 16 generated tokens, raw prompt"
+gpu_layers = 0
+answer_quality_status = "passed_reference_prompt_suite"
+storage_status = "retained_under_ignored_target_for_SLM_M4_003"
+claim_boundary = "May unblock SLM-M4-003 only; does not prove Rust-native Apple M4 SLM answers, BitNet local-answer quality, full apple-m4-metal inference, Neural Engine execution, QK256 support, or performance."
+
+  [[artifact.prompt_result]]
+  id = "math_2_plus_2"
+  expected = "contains 4 or four"
+  continuation = "4. Answer: 4. To explain it simply: 1."
+  quality_pass = true
+  prompt_eval_ms = 36.58
+  eval_ms = 92.79
+  total_ms = 131.33
+
+  [[artifact.prompt_result]]
+  id = "capital_france"
+  expected = "contains Paris"
+  continuation = "The capital of France is Paris. It is located in the south of the country"
+  quality_pass = true
+  prompt_eval_ms = 24.51
+  eval_ms = 101.21
+  total_ms = 127.51
+
+  [[artifact.prompt_result]]
+  id = "rust_sentence"
+  expected = "contains Rust, programming, language, safety, or efficiency"
+  continuation = "Rust is a programming language that is known for its safety, efficiency, and ability"
+  quality_pass = true
+  prompt_eval_ms = 36.00
+  eval_ms = 118.00
+  total_ms = 156.01

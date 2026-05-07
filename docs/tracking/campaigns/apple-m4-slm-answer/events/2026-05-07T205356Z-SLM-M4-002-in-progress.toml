@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T20:53:56Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started validation of a storage-conscious dense SLM artifact under a reference runner.",
+  "Candidate binaries remain under ignored target/ paths and are not committed.",
+]

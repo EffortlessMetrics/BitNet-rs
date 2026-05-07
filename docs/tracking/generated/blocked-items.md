@@ -32,7 +32,7 @@
 | apple-m4-operational | M4-OP-004 | M4-OP-003 | merged |
 | apple-m4-operational | M4-OP-005 | M4-OP-002 | merged |
 | apple-m4-operational | M4-OP-006 | M4-OP-004, M4-OP-005 | merged |
-| apple-m4-slm-answer | SLM-M4-002 | SLM-M4-001 | ready |
+| apple-m4-slm-answer | SLM-M4-002 | SLM-M4-001 | pr_open |
 | apple-m4-slm-answer | SLM-M4-003 | SLM-M4-002 | proposed |
 | apple-m4-slm-answer | SLM-M4-004 | SLM-M4-003 | proposed |
 | apple-m4-slm-answer | SLM-M4-005 | SLM-M4-003 | proposed |
