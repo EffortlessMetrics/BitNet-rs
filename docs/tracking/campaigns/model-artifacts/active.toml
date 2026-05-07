@@ -157,3 +157,51 @@ must_not_claim = [
   "Any CPU or CUDA local-answer lane passes.",
   "Any backend speedup is proven.",
 ]
+
+[[work_item]]
+id = "MODEL-ARTIFACT-004"
+status = "pr_open"
+pr = 3939
+branch = "codex/model-artifacts/MODEL-ARTIFACT-004-ikllama-intended-runner"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-ARTIFACT-003"]
+acceptance = "Record intended ik_llama.cpp runner evidence for official-derived BitNet GGUF candidates, including tdh111 IQ2_BN_R4 prompt-suite output and official Microsoft I2_S prompt-suite output, without promoting an answer_ready artifact or changing runtime behavior."
+commands = [
+  "Intended ik_llama.cpp runner prompt-suite command for tested candidates",
+  "Parse ci/model-artifacts/*.toml",
+  "cargo run --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/model-artifacts/**",
+  "ci/model-artifacts/**",
+  "ci/quality/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-cli/**",
+]
+may_claim = [
+  "tdh111 IQ2_BN_R4 passes the tiny deterministic prompt suite under its intended ik_llama.cpp runner, subject to documented metadata and scope caveats.",
+  "The official Microsoft I2_S artifact still fails the prompt suite under ik_llama.cpp.",
+  "No backend answer-readiness lane is unblocked by this evidence.",
+]
+must_not_claim = [
+  "A shared answer_ready BitNet artifact has been acquired.",
+  "tdh111 IQ2_BN_R4 satisfies the official Microsoft I2_S CUDA answer target.",
+  "CPU or CUDA local-answer generation is coherent in Rust.",
+  "Any backend speedup is proven.",
+]

@@ -23,6 +23,10 @@ reference_runner_mode = "cpu, greedy temperature 0.0, deterministic short prompt
 metadata_warning = "llm_load_vocab: missing pre-tokenizer type, using: 'default'"
 legacy_evidence = "ci/quality/apple-m4-local-answer-model-artifacts.toml"
 rejection_reason = "The artifact is structurally valid but lacks tokenizer pre-tokenizer metadata and fails all three local-answer prompt-suite gates under the reference runner."
+intended_runner = "ik_llama.cpp llama-cli"
+intended_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c20fe2c66"
+intended_runner_result = "failed_prompt_suite"
+intended_runner_rejection_reason = "The artifact loads under ik_llama.cpp but emits repeated colon output for every deterministic prompt-suite row."
 claim_boundary = "May be used for diagnostic-only receipts; must not be used for coherent local-answer claims."
 
   [[artifact.prompt_result]]
@@ -196,7 +200,7 @@ claim_boundary = "May be used for diagnostic-only receipts; must not be used for
 
 [[artifact]]
 id = "tdh111_bitnet_b158_2b_4t_iq2_bn_r4"
-state = "rejected_reference_runner_failed"
+state = "rejected_missing_tokenizer_authority"
 status = "rejected_for_answer_readiness"
 repo = "tdh111/bitnet-b1.58-2B-4T-GGUF"
 repo_revision = "e10f9e8b720e90c8f3f0071bba30d50d7f0d4bc7"
@@ -208,13 +212,49 @@ architecture = "bitnet-25"
 quantization = "iq2_bn_r4"
 source = "huggingface"
 tokenizer_model = "gpt2"
-tokenizer_authority = "unknown"
+tokenizer_authority = "missing_pretokenizer_authority"
 chat_template_authority = "present_in_gguf"
-structural_status = "stock_reference_loader_rejects_type"
-reference_runner = "stock llama.cpp b9061 llama-completion"
-reference_runner_mode = "cpu, greedy temperature 0.0, deterministic math prompt"
-reference_runner_version = "9061 (deab41ec6)"
-reference_runner_error = "gguf_init_from_file_ptr: tensor 'blk.0.ffn_down.weight' has invalid ggml type 335. should be in [0, 42)"
-evidence = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
-rejection_reason = "The latest stock llama.cpp runner cannot load the GGUF before prompt execution. The model card says the file is intended for ik_llama.cpp, so this remains a stock-runner compatibility rejection rather than an intended-runner answer-quality verdict."
+structural_status = "intended_runner_loads"
+answer_quality_status = "passed_reference_prompt_suite_under_intended_runner"
+reference_runner = "ik_llama.cpp llama-cli"
+reference_runner_mode = "cpu, greedy temperature 0.0, deterministic prompt suite, User:/Assistant: prompt envelope"
+reference_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c20fe2c66"
+metadata_warning = "load: missing pre-tokenizer type, using: 'default'"
+stock_reference_runner = "stock llama.cpp b9061 llama-completion"
+stock_reference_runner_version = "9061 (deab41ec6)"
+stock_reference_runner_error = "gguf_init_from_file_ptr: tensor 'blk.0.ffn_down.weight' has invalid ggml type 335. should be in [0, 42)"
+evidence = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
+prior_evidence = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
+rejection_reason = "The intended ik_llama.cpp runner loads the GGUF and passes the tiny deterministic prompt suite, but the artifact still lacks required pre-tokenizer authority and is an alternate IQ2_BN_R4 artifact rather than the official Microsoft I2_S CUDA target."
 claim_boundary = "May be used for diagnostic-only receipts; must not be used for coherent local-answer claims."
+
+  [[artifact.prompt_result]]
+  id = "math_2_plus_2"
+  expected = "answer is 4 or starts with 4"
+  continuation = "4"
+  quality_pass = true
+
+  [[artifact.prompt_result]]
+  id = "capital_france"
+  expected = "mentions Paris"
+  continuation = "The capital of France is Paris."
+  quality_pass = true
+
+  [[artifact.prompt_result]]
+  id = "yes_no_water"
+  expected = "starts yes/no"
+  continuation = "Yes."
+  quality_pass = true
+
+  [[artifact.prompt_result]]
+  id = "colors_four"
+  expected = "readable color list"
+  continuation = "1. Red 2. Blue 3. Green 4. Yellow"
+  quality_pass = true
+
+  [[artifact.prompt_result]]
+  id = "bitnet_one_sentence"
+  expected = "readable one-sentence answer"
+  continuation = "BitNet is a computer network protocol designed for the exchange of text and binary data between computers, developed by the University of California, Berkeley."
+  quality_pass = true
+  caveat = "Readable but factually describes an older network protocol rather than the BitNet model architecture; the tiny suite is not a semantic evaluator."

@@ -1,0 +1,16 @@
+timestamp = "2026-05-07T22:38:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-004"
+event = "pr_open"
+actor = "codex"
+pr = 3939
+head_sha = "205d4807993b65c53d036db6a44b7d1d3bd580a7"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "PR #3939 records intended ik_llama.cpp runner evidence for tdh111 IQ2_BN_R4 and official Microsoft I2_S candidates.",
+  "The tdh111 IQ2_BN_R4 candidate passes the tiny deterministic prompt suite under ik_llama.cpp, but remains rejected for answer readiness because pre-tokenizer authority is missing and it does not unblock the official I2_S CUDA target.",
+  "The official Microsoft I2_S artifact still fails the prompt suite under ik_llama.cpp.",
+  "No answer_ready artifact, backend answer claim, or speed claim is introduced.",
+]

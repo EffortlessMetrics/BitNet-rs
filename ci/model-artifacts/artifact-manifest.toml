@@ -8,6 +8,7 @@ prompt_suite = "ci/quality/bitnet-answer-corpus.yaml"
 candidate_artifacts = "ci/model-artifacts/candidate-artifacts.toml"
 rejected_artifacts = "ci/model-artifacts/rejected-artifacts.toml"
 reference_runner_compatibility_report = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
+intended_runner_report = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
 reference_runner_coherent_output_required = true
 sha256_required = true
 tokenizer_metadata_required = true
@@ -28,7 +29,7 @@ structural_validity_is_not_answer_readiness = true
 backend_execution_is_not_answer_readiness = true
 speedup_requires_answer_ready_artifact = true
 answer_ready_artifact_available = false
-current_blocker = "MODEL-ARTIFACT-002 did not find a BitNet GGUF/tokenizer artifact that passes the deterministic answer prompt suite under a reference runner; MODEL-ARTIFACT-003 also records that latest stock llama.cpp cannot load the official I2_S or tdh111 IQ2_BN_R4 candidates before prompt execution."
+current_blocker = "MODEL-ARTIFACT-002 did not find a BitNet GGUF/tokenizer artifact that passes the full shared answer gate. MODEL-ARTIFACT-003 records that latest stock llama.cpp cannot load the official I2_S or tdh111 IQ2_BN_R4 candidates before prompt execution. MODEL-ARTIFACT-004 records that tdh111 IQ2_BN_R4 passes the tiny prompt suite under its intended ik_llama.cpp runner but is still not answer_ready because pre-tokenizer authority is missing and it does not unblock the official Microsoft I2_S CUDA target; the official Microsoft I2_S artifact still fails the prompt suite under ik_llama.cpp."
 
 allowed_before_answer_ready = [
   "structural GGUF validity",
