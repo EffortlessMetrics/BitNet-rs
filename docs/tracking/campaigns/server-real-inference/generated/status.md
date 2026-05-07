@@ -7,9 +7,9 @@
 
 ## Work Items
 
-| Item | State | PR | Branch | Acceptance |
-|---|---|---:|---|---|
-| SERVER-001 | proposed | TBD | `codex/server-real-inference/SERVER-001-single-request-engine` | Wire single-request server inference to real engine execution or explicit 501/503, with no simulated response path in non-test builds. |
+| Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
+|---|---|---:|---|---|---|---|---|
+| SERVER-001 | proposed | TBD | `codex/server-real-inference/SERVER-001-single-request-engine` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Wire single-request server inference to real engine execution or explicit 501/503, with no simulated response path in non-test builds. |
 
 ## Hard Constraints
 

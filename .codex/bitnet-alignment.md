@@ -5,6 +5,7 @@ Use campaign-local goals and trackers for BitNet alignment work.
 Campaign goals:
 
 - `apple-m4`: `.codex/campaigns/apple-m4/goal.md`
+- `apple-m4-operational`: `.codex/campaigns/apple-m4-operational/goal.md`
 - `cpu-proof`: `.codex/campaigns/cpu-proof/goal.md`
 - `cpu-qk256-performance`: `.codex/campaigns/cpu-qk256-performance/goal.md`
 - `intel-a770`: `.codex/campaigns/intel-a770/goal.md`
@@ -20,6 +21,7 @@ Campaign goals:
 Campaign manifests:
 
 - `apple-m4`: `docs/tracking/campaigns/apple-m4/active.toml`
+- `apple-m4-operational`: `docs/tracking/campaigns/apple-m4-operational/active.toml`
 - `cpu-proof`: `docs/tracking/campaigns/cpu-proof/active.toml`
 - `cpu-qk256-performance`: `docs/tracking/campaigns/cpu-qk256-performance/active.toml`
 - `intel-a770`: `docs/tracking/campaigns/intel-a770/active.toml`
@@ -37,7 +39,7 @@ Rules:
 - Pick only from the selected campaign.
 - Check GitHub for an existing PR with the item ID before starting.
 - One work item, one PR.
-- Respect `stackable`, `requires_human_merge`, and `blocked_by`.
+- Respect `stackable`, `review_mode`, `merge_policy`, `human_gate`, and `blocked_by`.
 - Do not edit global dashboards by hand.
 - Do not delete hardware lane visibility.
 - Add follow-up items instead of broadening a PR.

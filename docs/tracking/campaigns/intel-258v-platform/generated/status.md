@@ -7,13 +7,13 @@
 
 ## Work Items
 
-| Item | State | PR | Branch | Acceptance |
-|---|---|---:|---|---|
-| LNL258V-RUN-001 | merged | #3714 | `codex/intel-258v/LNL258V-RUN-001-platform-probe` | Add a JSON-ready Lunar Lake 258V platform probe that records CPU AVX2 facts, Arc 140V OpenCL/Level Zero/OpenVINO GPU visibility, Intel NPU OS/OpenVINO visibility, memory, power, OS, proof_stage=runtime_detected, and fallback_used=false without inference claims. |
-| ARC140V-002 | merged | #3727 | `codex/intel-arc/ARC140V-002-runtime-probe` | Probe exact Arc 140V runtime visibility by name or PCI ID 0x64A0 across OpenCL, Level Zero, and OpenVINO GPU.0 while recording proof_stage=runtime_detected, requested/selected backend identity, runtime API, and fallback_used=false. |
-| LNL258V-002 | merged | #3784 | `codex/intel-258v-platform/LNL258V-002-probe-bundle` | Add a 258V platform probe bundle that records CPU, Arc 140V GPU, Intel NPU, memory, OS, driver, OpenVINO, OpenCL, Level Zero, WSL, and power context without runtime claims. |
-| LNL258V-003 | merged | #3795 | `codex/intel-258v-platform/LNL258V-003-cli-platform-probe` | Add a CLI command that emits the Lunar Lake 258V visibility-only platform probe receipt from the current machine without launching kernels, compiling OpenVINO graphs, loading BitNet models, or making execution claims. |
-| CPU258V-001 | merged | #3802 | `codex/intel-258v-platform/CPU258V-001-validation-harness` | Add a validation-only Core Ultra 7 258V CPU BitNet preflight command that emits structured blocked_preflight or preflight_ready artifacts without changing GGUF loader, tokenizer, QK256 layout, QK256 dispatch, CPU kernels, or transformer decode internals. |
+| Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
+|---|---|---:|---|---|---|---|---|
+| LNL258V-RUN-001 | merged | #3714 | `codex/intel-258v/LNL258V-RUN-001-platform-probe` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a JSON-ready Lunar Lake 258V platform probe that records CPU AVX2 facts, Arc 140V OpenCL/Level Zero/OpenVINO GPU visibility, Intel NPU OS/OpenVINO visibility, memory, power, OS, proof_stage=runtime_detected, and fallback_used=false without inference claims. |
+| ARC140V-002 | merged | #3727 | `codex/intel-arc/ARC140V-002-runtime-probe` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Probe exact Arc 140V runtime visibility by name or PCI ID 0x64A0 across OpenCL, Level Zero, and OpenVINO GPU.0 while recording proof_stage=runtime_detected, requested/selected backend identity, runtime API, and fallback_used=false. |
+| LNL258V-002 | merged | #3784 | `codex/intel-258v-platform/LNL258V-002-probe-bundle` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a 258V platform probe bundle that records CPU, Arc 140V GPU, Intel NPU, memory, OS, driver, OpenVINO, OpenCL, Level Zero, WSL, and power context without runtime claims. |
+| LNL258V-003 | merged | #3795 | `codex/intel-258v-platform/LNL258V-003-cli-platform-probe` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a CLI command that emits the Lunar Lake 258V visibility-only platform probe receipt from the current machine without launching kernels, compiling OpenVINO graphs, loading BitNet models, or making execution claims. |
+| CPU258V-001 | merged | #3802 | `codex/intel-258v-platform/CPU258V-001-validation-harness` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a validation-only Core Ultra 7 258V CPU BitNet preflight command that emits structured blocked_preflight or preflight_ready artifacts without changing GGUF loader, tokenizer, QK256 layout, QK256 dispatch, CPU kernels, or transformer decode internals. |
 
 ## Hard Constraints
 
