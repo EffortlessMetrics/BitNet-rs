@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T14:57:11Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-001"
+event = "pr_open"
+pr = 3904
+head_sha = "2d78c2bf12aeba9ee93af1809ea519814ccc28cd"
+actor = "codex"
+
+notes = [
+  "Opened draft PR for the Apple M4 local-answer smoke harness and honest blocked-proof record.",
+  "The PR adds strict answer-corpus gates but does not claim coherent Apple M4 CPU/NEON answers because the live real-GGUF run failed content quality.",
+  "M4-QA-ROOT-001 remains the next ready item for bitnet.cpp/reference parity and output root-cause work.",
+]

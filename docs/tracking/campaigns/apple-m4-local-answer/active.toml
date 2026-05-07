@@ -25,7 +25,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-QA-001"
-status = "blocked"
+status = "pr_open"
 branch = "codex/apple-m4-local-answer/M4-QA-001-output-smoke"
 stackable = false
 review_mode = "codex_premerge"
