@@ -107,6 +107,9 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/bitnet_cpp_wrapper.c");
     println!("cargo:rerun-if-changed=src/bitnet_cpp_wrapper.cc");
+    println!("cargo:rerun-if-env-changed=BITNET_CPP_DIR");
+    println!("cargo:rerun-if-env-changed=BITNET_CPP_PATH");
+    println!("cargo:rerun-if-env-changed=BITNET_CROSSVAL_LIBDIR");
 
     // Export environment metadata for parity receipts
     // Get rustc version

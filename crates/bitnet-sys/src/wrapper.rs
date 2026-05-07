@@ -141,13 +141,23 @@ impl Context {
         Ok(Context { ptr })
     }
 
-    /// Tokenize text into token IDs
+    /// Tokenize text into token IDs.
     pub fn tokenize(&self, text: &str, add_special: bool) -> Result<Vec<i32>> {
+        self.tokenize_with_options(text, add_special, false)
+    }
+
+    /// Tokenize text into token IDs with explicit special-token parsing.
+    pub fn tokenize_with_options(
+        &self,
+        text: &str,
+        add_special: bool,
+        parse_special: bool,
+    ) -> Result<Vec<i32>> {
         let c_text = CString::new(text)?;
         let model = unsafe { llama_get_model(self.ptr) };
 
         // First call to get the number of tokens
-        let n_tokens = unsafe {
+        let mut n_tokens = unsafe {
             llama_tokenize(
                 model,
                 c_text.as_ptr(),
@@ -155,12 +165,16 @@ impl Context {
                 ptr::null_mut(),
                 0,
                 add_special,
-                false, // parse_special
+                parse_special,
             )
         };
 
         if n_tokens < 0 {
-            return Err(CppError::LlamaError("Tokenization failed".to_string()));
+            n_tokens = -n_tokens;
+        }
+
+        if n_tokens == 0 {
+            return Err(CppError::LlamaError("Tokenization returned 0 tokens".to_string()));
         }
 
         // Second call to get the actual tokens
@@ -173,7 +187,7 @@ impl Context {
                 tokens.as_mut_ptr(),
                 tokens.len() as i32,
                 add_special,
-                false,
+                parse_special,
             )
         };
 
@@ -350,6 +364,16 @@ impl Session {
     /// Tokenize text
     pub fn tokenize(&self, text: &str) -> Result<Vec<i32>> {
         self.context.tokenize(text, true)
+    }
+
+    /// Tokenize text with explicit BOS and special-token parsing policy.
+    pub fn tokenize_with_options(
+        &self,
+        text: &str,
+        add_special: bool,
+        parse_special: bool,
+    ) -> Result<Vec<i32>> {
+        self.context.tokenize_with_options(text, add_special, parse_special)
     }
 
     /// Decode tokens to text

@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T15:19:58Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-ROOT-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started root-cause parity work after M4-QA-001 exposed incoherent strict Apple CPU/NEON output.",
+  "Initial blocker is crossval setup bootstrap: xtask with crossval-all could not compile in bitnet-sys stub mode before the C++ backend is installed.",
+]
