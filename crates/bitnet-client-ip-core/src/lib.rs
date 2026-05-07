@@ -13,7 +13,7 @@ pub fn extract_client_ip(x_forwarded_for: Option<&str>, x_real_ip: Option<&str>)
 /// Parse an `X-Forwarded-For` header value and return the first valid IP if present.
 #[must_use]
 pub fn parse_x_forwarded_for(value: &str) -> Option<IpAddr> {
-    value.split(',').next().and_then(parse_ip)
+    value.split(',').find_map(parse_ip)
 }
 
 /// Parse a single IP value, trimming surrounding whitespace.
@@ -37,6 +37,17 @@ mod tests {
     fn fallback_to_x_real_ip() {
         let ip = extract_client_ip(None, Some("192.0.2.15"));
         assert_eq!(ip, Some(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 15))));
+    }
+
+    #[test]
+    fn x_forwarded_for_skips_invalid_first_hop() {
+        let ip = parse_x_forwarded_for("unknown, 203.0.113.7, 10.0.0.4");
+        assert_eq!(ip, Some(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 7))));
+    }
+
+    #[test]
+    fn x_forwarded_for_returns_none_when_all_hops_invalid() {
+        assert_eq!(parse_x_forwarded_for("unknown, invalid, ???"), None);
     }
 
     #[test]
