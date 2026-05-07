@@ -1,7 +1,7 @@
 timestamp = "2026-05-07T21:24:30Z"
 campaign = "slm-cpu"
 item = "SLM-CPU-003"
-event = "ready"
+event = "in_progress"
 actor = "codex"
 
 notes = [
