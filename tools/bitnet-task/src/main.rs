@@ -299,6 +299,21 @@ fn command_to_string<S: AsRef<str>>(program: &str, args: &[S]) -> String {
     pieces.join(" ")
 }
 
+fn command_failure_details(output: &Output) -> String {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut details = Vec::new();
+
+    if !stderr.trim().is_empty() {
+        details.push(stderr.trim());
+    }
+    if !stdout.trim().is_empty() {
+        details.push(stdout.trim());
+    }
+
+    details.join("\n")
+}
+
 fn run_stream<S: AsRef<str>>(
     cwd: &Path,
     program: &str,
@@ -340,12 +355,12 @@ fn run_capture_with_env<S: AsRef<str>>(
         .output()
         .with_context(|| format!("failed to run `{}`", command_to_string(program, args)))?;
     if !allow_failure && !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let details = command_failure_details(&output);
         bail!(
             "command `{}` failed with {}: {}",
             command_to_string(program, args),
             output.status,
-            stderr.trim()
+            details
         );
     }
     Ok(output)
@@ -819,10 +834,12 @@ fn relevant_flake_output(text: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{command_available, command_available_in_path, is_executable_file};
+    use super::{
+        command_available, command_available_in_path, command_failure_details, is_executable_file,
+    };
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
-    use std::{ffi::OsString, fs};
+    use std::{ffi::OsString, fs, process::Output};
 
     #[cfg(unix)]
     fn make_executable(path: &std::path::Path) {
@@ -880,5 +897,29 @@ mod tests {
             !command_available(fake_cmd_dir.to_str().expect("utf-8 path")),
             "explicit directory paths should not be treated as commands"
         );
+    }
+
+    #[cfg(unix)]
+    fn output_with_status(status: i32, stdout: &[u8], stderr: &[u8]) -> Output {
+        use std::os::unix::process::ExitStatusExt;
+        Output {
+            status: std::process::ExitStatus::from_raw(status << 8),
+            stdout: stdout.to_vec(),
+            stderr: stderr.to_vec(),
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn command_failure_details_includes_stderr_and_stdout() {
+        let output = output_with_status(
+            1,
+            b"fixture.gguf: FAILED\n",
+            b"sha256sum: WARNING: 1 computed checksum did NOT match\n",
+        );
+        let details = command_failure_details(&output);
+
+        assert!(details.contains("fixture.gguf: FAILED"));
+        assert!(details.contains("computed checksum did NOT match"));
     }
 }
