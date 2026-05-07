@@ -525,7 +525,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-016"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4/M4-016-hot-loop-allocation-audit"
 stackable = false
 requires_human_merge = true
@@ -560,7 +560,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-017"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4/M4-017-metal-kernel-family-expansion"
 stackable = false
 requires_human_merge = true
@@ -576,6 +576,7 @@ allowed_paths = [
   "crates/bitnet-kernels/tests/**",
   "crates/**/tests/**",
   "docs/tracking/campaigns/apple-m4/**",
+  "docs/tracking/generated/**",
   "docs/hardware/apple-m4-mac-mini-validation.md",
   "docs/specs/apple-m4-mac-mini-roadmap.md",
 ]
