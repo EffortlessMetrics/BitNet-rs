@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T02:28:54Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-008"
+event = "in_progress"
+branch = "codex/cpu-bitnet-008-benchmark-receipts"
+actor = "codex"
+
+notes = [
+  "Started CPU-BITNET-008 to harden CPU benchmark receipt profiles with per-profile execution phase, requested/selected kernel identity, fallback status, and shape metadata.",
+  "Scope stays in benchmark receipt contracts, benchmark receipt generator output, BitNet docs, and cpu-proof tracking; no server, GPU, NPU, or new performance claim is made.",
+]

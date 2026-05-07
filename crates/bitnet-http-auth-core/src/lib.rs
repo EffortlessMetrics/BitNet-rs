@@ -36,7 +36,7 @@ fn trim_http_auth_whitespace(value: &str) -> &str {
     value.trim_matches(|c| matches!(c, ' ' | '\t'))
 }
 
-fn is_http_auth_whitespace(byte: u8) -> bool {
+const fn is_http_auth_whitespace(byte: u8) -> bool {
     matches!(byte, b' ' | b'\t')
 }
 

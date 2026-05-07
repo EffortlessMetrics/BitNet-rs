@@ -121,8 +121,20 @@ jobs:
           fi
           echo "Coverage OK"
 
+      - name: Detect Codecov token
+        id: codecov-token
+        if: always()
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -n "${CODECOV_TOKEN:-}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload coverage reports to Codecov
-        if: ${{ always() && hashFiles('lcov.info') != '' && secrets.CODECOV_TOKEN != '' }}
+        if: ${{ always() && hashFiles('lcov.info') != '' && steps.codecov-token.outputs.present == 'true' }}
         uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T01:33:47Z"
+campaign = "apple-m4"
+item = "M4-017"
+event = "pr_open"
+pr = 3818
+head_sha = "6440589d3c7668e24c0cc7da5e55c7233749faea"
+actor = "codex"
+
+notes = [
+  "Opened Apple Metal I2_S projection residual subgraph PR.",
+  "Receipt scope remains a specific subgraph parity proof with fallback_used=false; no full Metal inference, QK256, MPSGraph, Neural Engine, or general performance claim.",
+]

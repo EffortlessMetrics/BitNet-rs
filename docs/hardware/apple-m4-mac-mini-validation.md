@@ -541,6 +541,108 @@ compute-bound unless the receipt separates allocation overhead. It must not
 claim QK256 acceleration, Neural Engine execution, Metal execution, or general
 M4 performance.
 
+## M4-017 Metal I2_S Projection Residual Subgraph
+
+The Metal kernel-family expansion adds a tiny I2_S subgraph fixture:
+
+```text
+packed I2_S projection
+-> residual add
+-> CPU/NEON parity comparison
+```
+
+This is still a narrow kernel/subgraph proof. It consumes the fixture's packed
+I2_S transport words directly, dispatches `tiny_metal_i2s_projection_residual`,
+adds a deterministic residual buffer, and compares the output with the
+Apple CPU/NEON reference. It does not load a BitNet model, run a tokenizer,
+exercise KV-cache behavior, benchmark performance, or claim full Metal
+inference.
+
+Run the non-live contract tests with:
+
+```bash
+cargo test --locked -p bitnet-kernels \
+  --no-default-features \
+  --features metal \
+  --test metal_tiny_smoke i2s_projection_residual -- --nocapture
+```
+
+Run the live M4 Metal subgraph smoke with:
+
+```bash
+BITNET_RUN_M4_METAL_I2S_PROJECTION_RESIDUAL=1 \
+BITNET_M4_METAL_I2S_PROJECTION_RESIDUAL_RECEIPT=ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-projection-residual.json \
+cargo test --locked -p bitnet-kernels \
+  --no-default-features \
+  --features metal \
+  --test metal_tiny_smoke tiny_m4_metal_i2s_projection_residual_subgraph_matches_cpu_reference_when_enabled -- --nocapture
+```
+
+The receipt must preserve the subgraph and kernel-family boundaries:
+
+```json
+{
+  "artifact_kind": "subgraph",
+  "requested_backend": "apple-m4-metal",
+  "selected_backend": "apple-m4-metal",
+  "runtime_api": "metal",
+  "graph_id": "tiny_i2s_projection_residual_subgraph",
+  "fallback_used": false,
+  "bitnet": {
+    "kernel_family": "i2_s",
+    "execution_phase": "parity",
+    "phase_scope": "projection_residual_subgraph",
+    "layout_source": "fixture_packed_i2_s"
+  },
+  "subgraph": {
+    "kernel_id": "tiny_metal_i2s_projection_residual",
+    "operations": ["packed_i2_s_matmul", "residual_add"],
+    "full_bitnet_inference": false,
+    "kv_cache_behavior": "not_exercised"
+  },
+  "parity": {
+    "reference_backend": "apple-m4-cpu-neon",
+    "target_backend": "apple-m4-metal",
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0
+  }
+}
+```
+
+M4-017 may claim only that this specific Apple Metal I2_S subgraph passes CPU
+reference parity with `fallback_used=false`. It must not claim full Metal
+inference, QK256 acceleration, Neural Engine execution, MPSGraph execution, or
+general M4 performance.
+
+## M4-018 CLI and Package Surface Polish
+
+The Apple backend labels exposed by the CLI are proof-lane labels, not generic
+accelerator aliases:
+
+| Label | Meaning | Must not imply |
+| --- | --- | --- |
+| `apple-m4-metal` | Native Apple M4 Metal proof lane | MPSGraph, Neural Engine, or CPU fallback proof |
+| `apple-m4-mpsgraph` | MPSGraph graph/reference proof lane | Native Metal kernel proof or Neural Engine proof without resolved-target evidence |
+| `apple-m4-cpu-neon` | Apple ARM64 CPU/NEON fallback and parity lane | Metal acceleration |
+
+CLI help and config validation should make these boundaries visible. Strict
+mode must fail when a requested Apple backend is unavailable; non-strict paths
+may fall back only when the receipt records `requested_backend`,
+`selected_backend`, `runtime_api`, `fallback_used`, and `fallback_reason`.
+
+Artifact path examples remain under the machine lane:
+
+```text
+ci/hardware/apple-m4-mac-mini/<date>/strict-bitnet-cpu-neon-proof.json
+ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-parity.json
+ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-prefill-contribution.json
+ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-projection-residual.json
+```
+
+Legacy CLI subcommands that do not emit Apple proof receipts should direct users
+to `bitnet run` for receipt-backed Apple M4 labels instead of silently aliasing
+those labels to `cpu`, `metal`, `mpsgraph`, or `auto`.
+
 ## Benchmark Notes
 
 Benchmarks must record:

@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T02:26:41Z"
+campaign = "apple-m4"
+item = "M4-017"
+event = "merged"
+pr = 3818
+merge_sha = "cc130fcfe1119d55e8e099e5ff35a8797f5afeab"
+actor = "codex"
+
+notes = [
+  "Merged Apple Metal I2_S projection residual subgraph proof.",
+  "Promoted M4-018 CLI/package polish to ready.",
+]

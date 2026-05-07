@@ -100,10 +100,16 @@ CPU receipts must distinguish the requested kernel from the selected kernel so s
 ```json
 {
   "profile": "decode|prefill|layer|micro",
+  "execution_phase": "decode_steady_state|prefill|layer_forward|micro_kernel",
   "requested_kernel": "qk256-avx2-gemv",
   "selected_kernel": "qk256-avx2-gemv",
   "fallback_used": false,
   "fallback_reason": null,
+  "shape": {
+    "rows": 2048,
+    "cols": 2048,
+    "iterations": 128
+  },
   "tokenizer": {
     "source": "tokenizer.json|gguf|override",
     "strict": true
@@ -115,6 +121,12 @@ CPU receipts must distinguish the requested kernel from the selected kernel so s
   }
 }
 ```
+
+`cpu_benchmark_receipt` and `cpu_phase_benchmark_receipt` are separate receipt
+emitters. The former measures canonical QK256 profile loops; the latter consumes
+strict CPU proof receipts and may emit `status = "not_run"` for phases not
+covered by the supplied real proof input. `not_run` profiles are explicit gaps,
+not performance evidence.
 
 Strict CPU receipts are invalid if `requested_kernel` and `selected_kernel` differ without an explicit failure result.
 

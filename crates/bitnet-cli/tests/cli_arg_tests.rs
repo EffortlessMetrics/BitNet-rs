@@ -113,6 +113,47 @@ fn run_help_documents_greedy() {
         .stdout(predicate::str::contains("--greedy"));
 }
 
+#[test]
+fn top_level_help_documents_apple_backend_labels() {
+    bitnet()
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple-m4-metal"))
+        .stdout(predicate::str::contains("apple-m4-mpsgraph"))
+        .stdout(predicate::str::contains("apple-m4-cpu-neon"));
+}
+
+#[test]
+fn run_help_documents_apple_backend_labels() {
+    bitnet()
+        .args(["run", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple-m4-metal"))
+        .stdout(predicate::str::contains("apple-m4-mpsgraph"))
+        .stdout(predicate::str::contains("apple-m4-cpu-neon"));
+}
+
+#[test]
+fn legacy_inference_apple_label_error_points_to_receipt_backed_run_path() {
+    bitnet()
+        .args([
+            "inference",
+            "--model",
+            "fake.gguf",
+            "--prompt",
+            "hello",
+            "--device",
+            "apple-m4-metal",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("does not support device label 'apple-m4-metal'"))
+        .stderr(predicate::str::contains("Use `bitnet run` for receipt-backed Apple M4 labels"))
+        .stderr(predicate::str::contains("CPU fallback cannot count as Metal execution"));
+}
+
 /// `run --help` documents the --deterministic flag.
 #[test]
 fn run_help_documents_deterministic() {

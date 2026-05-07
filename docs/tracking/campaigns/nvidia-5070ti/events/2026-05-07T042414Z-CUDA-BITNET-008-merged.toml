@@ -1,0 +1,14 @@
+timestamp = "2026-05-07T04:24:14Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-008"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3823
+merge_sha = "c2b4d904ad00c4e31450c79a60bb3b787daabae2"
+actor = "codex"
+
+notes = [
+  "Merged the strict BitNet CUDA benchmark baseline.",
+  "The benchmark receipt compares the RTX 5070 Ti CUDA short-decode proof with the 9950X3D AVX-512 CPU reference, records scalar and AVX2 profiles as not_run, preserves fallback_used=false, and keeps speedup_claim=false.",
+]

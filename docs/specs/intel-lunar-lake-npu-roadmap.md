@@ -517,6 +517,19 @@ Native Windows and native Linux artifacts should both be valid probe inputs. WSL
 
 Add a CLI or xtask command that writes machine-readable output without running model inference.
 
+CLI shape:
+
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- intel-npu-probe \
+  --json-out ci/hardware/intel-258v/<date>/npu-openvino-runtime-probe.json
+```
+
+Use `--strict` when the caller requires OpenVINO to report `NPU`; strict mode
+writes the receipt and then fails if OpenVINO NPU visibility is absent.
+
 Example artifact shape:
 
 ```json

@@ -23,47 +23,55 @@ Options:
           Configuration file path
 
   -m, --model <MODEL>
-          Model file path
+          Model file or directory path (.gguf file or HuggingFace model directory)
 
   -d, --device <DEVICE>
-          Device to use (cpu, cuda, auto)
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+
+      --model-format <FORMAT>
+          Model format: auto (detect from path), gguf, safetensors
+
+          [default: auto]
+
+      --architecture <ARCH>
+          Model architecture override (e.g. bitnet, llama, phi3); auto-detected if omitted
+
+      --log-level <LEVEL>
+          Log level (trace, debug, info, warn, error)
 
       --tokenizer <TOKENIZER>
           Tokenizer file path (optional, will look for sibling file if not provided)
 
-      --log-level <LEVEL>
-          Log level (trace, debug, info, warn, error)
+      --batch-size <SIZE>
+          Batch size for processing
 
   -p, --prompt <PROMPT>
           Input prompt
 
       --max-new-tokens <MAX_NEW_TOKENS>
           Maximum new tokens to generate (aliases: --max-tokens, --n-predict)
-          
+
           [default: 32]
           [aliases: --max-tokens, --n-predict]
 
-      --batch-size <SIZE>
-          Batch size for processing
-
       --temperature <TEMPERATURE>
           Temperature for sampling (0 = greedy)
-          
+
           [default: 1]
 
       --top-k <TOP_K>
           Top-k sampling (0 = disabled)
-          
+
           [default: 0]
 
       --top-p <TOP_P>
           Top-p (nucleus) sampling
-          
+
           [default: 1]
 
       --repetition-penalty <REPETITION_PENALTY>
           Repetition penalty
-          
+
           [default: 1.1]
 
       --seed <SEED>
@@ -71,7 +79,7 @@ Options:
 
       --allow-mock
           Allow falling back to mock loader if real loader fails Also toggled by env BITNET_ALLOW_MOCK=1
-          
+
           [env: BITNET_ALLOW_MOCK=]
 
       --strict-mapping
@@ -100,12 +108,12 @@ Options:
 
       --threads <THREADS>
           Number of threads to use (0 = all cores)
-          
+
           [default: 0]
 
       --prompt-template <TEMPLATE>
           Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
-          
+
           [default: auto]
 
       --system-prompt <TEXT>
@@ -122,7 +130,7 @@ Options:
 
       --logits-topk <K>
           Top-k tokens to include in logit dump
-          
+
           [default: 10]
 
       --assert-greedy
@@ -130,6 +138,12 @@ Options:
 
       --no-warnings
           Suppress performance warnings
+
+      --profile-id <PROFILE>
+          Profile label to record in JSON receipts (for example: smoke_1, prefill_512, decode_128)
+
+      --allocation-audit
+          Measure scoped hot-loop allocation counter deltas in profile receipts
 
   -h, --help
           Print help (see a summary with '-h')
