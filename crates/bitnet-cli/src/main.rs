@@ -359,6 +359,49 @@ enum Commands {
         allocation_audit: bool,
     },
 
+    /// Ask one question using the answer-readiness generation path
+    Ask {
+        /// Model file or directory path (.gguf file or HuggingFace model directory)
+        #[arg(short, long)]
+        model: std::path::PathBuf,
+
+        /// Optional explicit tokenizer path
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+
+        /// User question to answer
+        #[arg(short, long)]
+        question: String,
+
+        /// Optional system prompt
+        #[arg(long = "system", value_name = "TEXT")]
+        system_prompt: Option<String>,
+
+        /// Maximum new tokens to generate (aliases: --max-tokens, --n-predict)
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 96)]
+        max_new_tokens: usize,
+
+        /// Temperature for sampling. The default ask path is deterministic greedy.
+        #[arg(long, default_value_t = 0.0)]
+        temperature: f32,
+
+        /// Top-k sampling (0 = disabled)
+        #[arg(long, default_value_t = 0)]
+        top_k: usize,
+
+        /// Top-p (nucleus) sampling
+        #[arg(long, default_value_t = 1.0)]
+        top_p: f32,
+
+        /// Require the selected backend to be the RTX 5070 Ti CUDA proof lane
+        #[arg(long, default_value_t = false)]
+        strict_cuda: bool,
+
+        /// Output answer-shaped receipt to file
+        #[arg(long, value_name = "PATH")]
+        receipt_out: Option<std::path::PathBuf>,
+    },
+
     /// Tokenize text and output token IDs as JSON
     Tokenize {
         /// Model GGUF path (for extracting tokenizer and counts)
@@ -747,6 +790,33 @@ async fn main() -> Result<()> {
                 no_warnings,
                 profile_id,
                 allocation_audit,
+            )
+            .await
+        }
+        Some(Commands::Ask {
+            model,
+            tokenizer,
+            question,
+            system_prompt,
+            max_new_tokens,
+            temperature,
+            top_k,
+            top_p,
+            strict_cuda,
+            receipt_out,
+        }) => {
+            run_ask_generation(
+                &requested_backend_label,
+                model,
+                tokenizer,
+                question,
+                system_prompt,
+                max_new_tokens,
+                temperature,
+                top_k,
+                top_p,
+                strict_cuda,
+                receipt_out,
             )
             .await
         }
@@ -3684,6 +3754,199 @@ async fn run_simple_generation(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn run_ask_generation(
+    requested_backend_label: &str,
+    model: std::path::PathBuf,
+    tokenizer: Option<std::path::PathBuf>,
+    question: String,
+    system_prompt: Option<String>,
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    strict_cuda: bool,
+    receipt_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    if strict_cuda && requested_backend_label != RTX_5070_TI_CUDA {
+        anyhow::bail!(
+            "--strict-cuda requires --device {RTX_5070_TI_CUDA}; requested backend was {requested_backend_label}"
+        );
+    }
+
+    let question_for_receipt = question.clone();
+    let system_prompt_for_receipt = system_prompt.clone();
+    run_simple_generation(
+        requested_backend_label,
+        model,
+        "auto".to_string(),
+        None,
+        tokenizer,
+        question,
+        max_new_tokens,
+        temperature,
+        top_k,
+        top_p,
+        1.1,
+        None,
+        false,
+        false,
+        true,
+        true,
+        receipt_out.clone(),
+        false,
+        false,
+        true,
+        true,
+        0,
+        "llama3-chat".to_string(),
+        system_prompt,
+        vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
+        Vec::new(),
+        None,
+        10,
+        false,
+        false,
+        Some("ask".to_string()),
+        false,
+    )
+    .await?;
+
+    let Some(receipt_path) = receipt_out else {
+        return Ok(());
+    };
+    let run_receipt: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(&receipt_path)
+            .with_context(|| format!("failed to read run receipt {}", receipt_path.display()))?,
+    )
+    .with_context(|| format!("invalid run receipt {}", receipt_path.display()))?;
+
+    if strict_cuda {
+        validate_strict_cuda_ask_receipt(&run_receipt)?;
+    }
+
+    let answer = run_receipt["text"].as_str().unwrap_or_default();
+    let artifact_kind = if run_receipt["runtime_api"] == "cuda"
+        && run_receipt["selected_backend"] == RTX_5070_TI_CUDA
+    {
+        "bitnet_cuda_answer"
+    } else {
+        "bitnet_cpu_answer"
+    };
+    let answer_receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": artifact_kind,
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "question": question_for_receipt,
+        "answer": answer,
+        "model": {
+            "repo": run_receipt["model"]["repo"].clone(),
+            "file": run_receipt["model"]["file"].clone(),
+            "path": run_receipt["model"]["path"].clone(),
+            "loader_mode": run_receipt["model"]["loader_mode"].clone(),
+            "fallback_loader_used": run_receipt["model"]["fallback_loader_used"].clone(),
+            "tokenizer": run_receipt["model"]["tokenizer"].clone(),
+        },
+        "backend": {
+            "requested_backend": run_receipt["requested_backend"].clone(),
+            "selected_backend": run_receipt["selected_backend"].clone(),
+            "runtime_api": run_receipt["runtime_api"].clone(),
+            "fallback_used": run_receipt["fallback_used"].clone(),
+            "fallback_reason": run_receipt["fallback_reason"].clone(),
+        },
+        "prompt_template": {
+            "family": "llama3-chat",
+            "system_prompt_present": system_prompt_for_receipt.as_ref().is_some_and(|value| !value.is_empty()),
+            "bos_inserted": true,
+            "assistant_prefix_inserted": true,
+            "stop_tokens": ["<|eot_id|>", "<|end_of_text|>"],
+        },
+        "prompt_prefill": {
+            "exercised": run_receipt["profile"]["prompt_prefill"]["exercised"].clone(),
+            "tokens": run_receipt["profile"]["prompt_prefill"]["tokens"].clone(),
+            "kv_cache_behavior": run_receipt["profile"]["prompt_prefill"]["kv_cache_behavior"].clone(),
+        },
+        "bitnet": {
+            "quantization": run_receipt["bitnet"]["quantization"].clone(),
+            "kernel_family": run_receipt["bitnet"]["kernel_family"].clone(),
+            "kernel_id": run_receipt["kernel"]["kernel_id"].clone(),
+            "weights_uploaded_once": run_receipt["bitnet"]["weights_uploaded_once"].clone(),
+            "per_token_weight_upload": run_receipt["bitnet"]["per_token_weight_upload"].clone(),
+        },
+        "execution_coverage": run_receipt["execution_coverage"].clone(),
+        "quality": answer_quality_receipt(answer, &run_receipt, max_new_tokens),
+        "speedup_claim": false,
+        "source_receipt": run_receipt,
+    });
+    write_json_output(Some(&receipt_path), &answer_receipt)?;
+    Ok(())
+}
+
+fn validate_strict_cuda_ask_receipt(run_receipt: &serde_json::Value) -> Result<()> {
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    let selected_backend = run_receipt["selected_backend"].as_str().unwrap_or_default();
+    let runtime_api = run_receipt["runtime_api"].as_str().unwrap_or_default();
+    let fallback_used = run_receipt["fallback_used"].as_bool().unwrap_or(true);
+    if selected_backend != RTX_5070_TI_CUDA || runtime_api != "cuda" || fallback_used {
+        anyhow::bail!(
+            "strict CUDA ask did not preserve the RTX 5070 Ti CUDA lane: selected_backend={selected_backend}, runtime_api={runtime_api}, fallback_used={fallback_used}"
+        );
+    }
+    let cpu_fallback = run_receipt["execution_coverage"]["bitnet_linear_layers_cpu_fallback"]
+        .as_u64()
+        .unwrap_or(1);
+    if cpu_fallback != 0 {
+        anyhow::bail!("strict CUDA ask recorded {cpu_fallback} BitNet linear CPU fallback layers");
+    }
+    Ok(())
+}
+
+fn answer_quality_receipt(
+    answer: &str,
+    run_receipt: &serde_json::Value,
+    max_new_tokens: usize,
+) -> serde_json::Value {
+    let trimmed = strip_answer_special_markers(answer).trim().to_string();
+    let non_empty_answer = !trimmed.is_empty();
+    let printable_utf8 = trimmed.chars().all(|ch| ch == '\n' || ch == '\t' || !ch.is_control());
+    let no_replacement_chars = !trimmed.contains('\u{FFFD}');
+    let no_raw_special_tokens = !trimmed.contains("<|") && !trimmed.contains("|>");
+    let mostly_text = answer_mostly_text(&trimmed);
+    let garbage_filter_passed = non_empty_answer
+        && printable_utf8
+        && no_replacement_chars
+        && no_raw_special_tokens
+        && mostly_text;
+    let generated = run_receipt["tokens"]["generated"].as_u64().unwrap_or_default() as usize;
+    serde_json::json!({
+        "printable_utf8": printable_utf8,
+        "non_empty_answer": non_empty_answer,
+        "stop_reason": if generated >= max_new_tokens { "max_tokens" } else { "eos_or_stop_sequence" },
+        "garbage_filter_passed": garbage_filter_passed,
+        "no_replacement_chars": no_replacement_chars,
+        "no_raw_special_tokens": no_raw_special_tokens,
+        "mostly_text": mostly_text,
+    })
+}
+
+fn strip_answer_special_markers(answer: &str) -> String {
+    answer.replace("<|begin_of_text|>", "").replace("<|end_of_text|>", "").replace("<|eot_id|>", "")
+}
+
+fn answer_mostly_text(answer: &str) -> bool {
+    let mut meaningful = 0usize;
+    let mut punctuation_or_control = 0usize;
+    for ch in answer.chars() {
+        if ch.is_alphanumeric() || ch.is_whitespace() {
+            meaningful += 1;
+        } else if ch.is_ascii_punctuation() || ch.is_control() {
+            punctuation_or_control += 1;
+        }
+    }
+    meaningful > 0 && punctuation_or_control <= meaningful.saturating_mul(2)
+}
+
 fn ensure_non_empty_generation_context(
     tokens: &mut Vec<u32>,
     tokenizer: &dyn bitnet_tokenizers::Tokenizer,
@@ -4325,6 +4588,33 @@ fn apple_machine_receipt_json_from_probe(probe: &AppleCliMachineProbe) -> serde_
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn answer_quality_rejects_punctuation_noise() {
+        let run_receipt = serde_json::json!({
+            "tokens": {
+                "generated": 8,
+            }
+        });
+        let quality = answer_quality_receipt("!!!,,,!!!", &run_receipt, 16);
+
+        assert_eq!(quality["non_empty_answer"], true);
+        assert_eq!(quality["mostly_text"], false);
+        assert_eq!(quality["garbage_filter_passed"], false);
+    }
+
+    #[test]
+    fn answer_quality_marks_max_token_stop() {
+        let run_receipt = serde_json::json!({
+            "tokens": {
+                "generated": 16,
+            }
+        });
+        let quality = answer_quality_receipt("BitNet uses low-bit weights.", &run_receipt, 16);
+
+        assert_eq!(quality["garbage_filter_passed"], true);
+        assert_eq!(quality["stop_reason"], "max_tokens");
+    }
 
     #[test]
     fn apple_cpu_neon_identity_is_preserved_or_visible_fallback() {

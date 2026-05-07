@@ -424,6 +424,30 @@ cases:
     assert_eq!(receipt["cases"][0]["status"], "not_run");
 }
 
+/// `ask --help` exposes the user-answer surface.
+#[test]
+fn ask_subcommand_help() {
+    bitnet()
+        .args(["ask", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--question"))
+        .stdout(predicate::str::contains("--strict-cuda"))
+        .stdout(predicate::str::contains("--receipt-out"));
+}
+
+/// `ask --strict-cuda` must not silently run on auto/CPU.
+#[test]
+fn ask_strict_cuda_requires_lane_device() {
+    bitnet()
+        .args(["ask", "--model", "missing.gguf", "--question", "What is BitNet?", "--strict-cuda"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "--strict-cuda requires --device nvidia-rtx-5070-ti-cuda",
+        ));
+}
+
 /// `inference --help` is recognized (requires full-cli).
 #[cfg(feature = "full-cli")]
 #[test]
