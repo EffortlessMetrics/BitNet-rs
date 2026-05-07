@@ -4006,6 +4006,7 @@ async fn run_ask_generation(
     } else {
         "bitnet_cpu_answer"
     };
+    let quality = answer_quality_receipt(answer, &run_receipt, max_new_tokens);
     let answer_receipt = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": artifact_kind,
@@ -4047,11 +4048,14 @@ async fn run_ask_generation(
             "per_token_weight_upload": run_receipt["bitnet"]["per_token_weight_upload"].clone(),
         },
         "execution_coverage": run_receipt["execution_coverage"].clone(),
-        "quality": answer_quality_receipt(answer, &run_receipt, max_new_tokens),
+        "quality": quality,
         "speedup_claim": false,
         "source_receipt": run_receipt,
     });
     write_json_output(Some(&receipt_path), &answer_receipt)?;
+    if strict_cuda {
+        validate_strict_cuda_answer_quality(&answer_receipt)?;
+    }
     Ok(())
 }
 
@@ -4072,6 +4076,19 @@ fn validate_strict_cuda_ask_receipt(run_receipt: &serde_json::Value) -> Result<(
         anyhow::bail!("strict CUDA ask recorded {cpu_fallback} BitNet linear CPU fallback layers");
     }
     Ok(())
+}
+
+fn validate_strict_cuda_answer_quality(answer_receipt: &serde_json::Value) -> Result<()> {
+    let quality = &answer_receipt["quality"];
+    if quality["garbage_filter_passed"].as_bool().unwrap_or(false) {
+        return Ok(());
+    }
+
+    let quality_summary = serde_json::to_string(quality)
+        .unwrap_or_else(|_| "<unprintable quality receipt>".to_string());
+    anyhow::bail!(
+        "strict CUDA ask failed answer quality gate after writing receipt: {quality_summary}"
+    )
 }
 
 fn ensure_strict_cuda_ask_runtime_libraries_visible() -> Result<Option<std::path::PathBuf>> {
@@ -5095,6 +5112,33 @@ mod tests {
 
         assert_eq!(quality["language_signal"], true);
         assert_eq!(quality["garbage_filter_passed"], true);
+    }
+
+    #[test]
+    fn strict_cuda_answer_quality_gate_rejects_failed_receipt() {
+        let answer_receipt = serde_json::json!({
+            "quality": {
+                "garbage_filter_passed": false,
+                "language_signal": false,
+                "suspicious_fragment_count": 3,
+            }
+        });
+
+        let err = validate_strict_cuda_answer_quality(&answer_receipt).unwrap_err().to_string();
+
+        assert!(err.contains("strict CUDA ask failed answer quality gate"), "got: {err}");
+        assert!(err.contains("\"garbage_filter_passed\":false"), "got: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_answer_quality_gate_accepts_passed_receipt() {
+        let answer_receipt = serde_json::json!({
+            "quality": {
+                "garbage_filter_passed": true,
+            }
+        });
+
+        validate_strict_cuda_answer_quality(&answer_receipt).unwrap();
     }
 
     #[test]
