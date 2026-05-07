@@ -1,0 +1,21 @@
+timestamp = "2026-05-07T08:11:23Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-008"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3856
+head_sha = "a92ed8031a1ba623d0fe05591a00ab2f7c68a39e"
+actor = "codex"
+
+artifacts = [
+  "ci/hardware/intel-i5-8250u-cpu-avx2/2026-05-07/strict-bitnet-cpu-decode2.json",
+  "ci/hardware/intel-i5-8250u-cpu-avx2/2026-05-07/cpu-phase-benchmark-decode2.json",
+]
+
+notes = [
+  "Added a strict Kaby Lake real-GGUF CPU proof run that generates two tokens on the i5-8250U lane.",
+  "The derived CPU phase benchmark receipt records measured first_token and decode profiles with fallback_used=false and selected kernel i2_s-avx2-reference.",
+  "micro, layer, and prefill remain explicit not_run gaps, so CPU-BITNET-008 remains in progress.",
+  "This evidence does not claim sustained mobile throughput, server inference, GPU, NPU, OpenVINO, or UHD 620 execution.",
+]
