@@ -1,0 +1,16 @@
+timestamp = "2026-05-07T04:59:00Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-008"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3833
+head_sha = "cf05483658fa473e52e59ca84afcb5f3ab3a4e1e"
+actor = "codex"
+
+notes = [
+  "Opened the CPU phase benchmark receipt PR.",
+  "The new emitter consumes strict CPU proof receipts and measures only real phases backed by those inputs.",
+  "Synthetic QK256 profile receipts remain separate from real phase benchmark evidence.",
+  "Unwired profiles are emitted as explicit not_run gaps, and CPU-BITNET-008 remains open until all required profiles are proof-backed measured evidence.",
+]

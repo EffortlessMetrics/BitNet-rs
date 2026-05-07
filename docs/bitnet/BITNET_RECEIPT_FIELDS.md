@@ -122,6 +122,12 @@ CPU receipts must distinguish the requested kernel from the selected kernel so s
 }
 ```
 
+`cpu_benchmark_receipt` and `cpu_phase_benchmark_receipt` are separate receipt
+emitters. The former measures canonical QK256 profile loops; the latter consumes
+strict CPU proof receipts and may emit `status = "not_run"` for phases not
+covered by the supplied real proof input. `not_run` profiles are explicit gaps,
+not performance evidence.
+
 Strict CPU receipts are invalid if `requested_kernel` and `selected_kernel` differ without an explicit failure result.
 
 ## Reference Fields
