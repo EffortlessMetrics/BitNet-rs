@@ -1,4 +1,7 @@
-use std::{fs, path::Path};
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -73,18 +76,23 @@ pub const fn validate_downloaded_len(
 }
 
 /// Atomic write helper for small metadata files (etag/last-modified).
+///
+/// Uses a randomly named NamedTempFile in the destination's parent directory
+/// to avoid colliding with a pre-existing sibling at `<path>.tmp` (which the
+/// previous implementation would have clobbered or mis-renamed across), and
+/// to remain race-free across concurrent writers targeting the same path.
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    let tmp = path.with_extension("tmp");
-    fs::write(&tmp, bytes)?;
+    let parent = atomic_write_parent(path);
+    let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
+    tmp.write_all(bytes)?;
+    tmp.flush()?;
 
     #[cfg(unix)]
     {
-        if let Ok(f) = std::fs::File::open(&tmp) {
-            f.sync_all()?;
-        }
+        tmp.as_file().sync_all()?;
     }
 
-    fs::rename(&tmp, path)?;
+    tmp.persist(path).map_err(|err| err.error)?;
 
     #[cfg(unix)]
     {
@@ -96,6 +104,13 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     }
 
     Ok(())
+}
+
+fn atomic_write_parent(path: &Path) -> PathBuf {
+    path.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf()
 }
 
 #[cfg(test)]
@@ -162,5 +177,36 @@ mod tests {
 
         atomic_write(&file_path, b"etag-v2").expect("atomic overwrite should succeed");
         assert_eq!(fs::read(&file_path).expect("read file"), b"etag-v2");
+    }
+
+    #[test]
+    fn atomic_write_ignores_preexisting_tmp_extension_path() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let file_path = dir.path().join("etag");
+        let conflicting_tmp_path = file_path.with_extension("tmp");
+        fs::create_dir(&conflicting_tmp_path).expect("create conflicting tmp directory");
+
+        atomic_write(&file_path, b"etag").expect("atomic write should not depend on .tmp path");
+
+        assert_eq!(fs::read(&file_path).expect("read file"), b"etag");
+        assert!(
+            conflicting_tmp_path.is_dir(),
+            "pre-existing sibling temp path should be left untouched"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn atomic_write_supports_relative_paths_without_parent() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let previous_dir = std::env::current_dir().expect("read current dir");
+        std::env::set_current_dir(dir.path()).expect("switch to temp dir");
+
+        let result = atomic_write(Path::new("etag"), b"relative");
+        let read_result = fs::read("etag");
+        std::env::set_current_dir(previous_dir).expect("restore previous dir");
+
+        result.expect("atomic write should support relative paths");
+        assert_eq!(read_result.expect("read relative file"), b"relative");
     }
 }

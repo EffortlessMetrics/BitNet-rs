@@ -8,6 +8,8 @@ use std::process::Command;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
+use crate::env_bool::{env_falsey, env_truthy};
+
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 const PROBE_POLL_INTERVAL: Duration = Duration::from_millis(50);
 static REAL_GPU_INFO_CACHE: OnceLock<GpuInfo> = OnceLock::new();
@@ -89,9 +91,9 @@ pub fn gpu_available() -> bool {
 /// Get information about available GPU backends
 pub fn get_gpu_info() -> GpuInfo {
     if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
-        if env::var("BITNET_STRICT_NO_FAKE_GPU").as_deref() == Ok("1") {
+        if env_truthy("BITNET_STRICT_NO_FAKE_GPU") {
             panic!(
-                "BITNET_GPU_FAKE is set but strict mode forbids fake GPU (BITNET_STRICT_NO_FAKE_GPU=1)"
+                "BITNET_GPU_FAKE is set but strict mode forbids fake GPU (BITNET_STRICT_NO_FAKE_GPU)"
             );
         }
         let lower = fake.to_lowercase();
@@ -113,7 +115,7 @@ pub fn get_gpu_info() -> GpuInfo {
 
     // Fake GPU selection is intentionally not cached, so tests and tooling can
     // change BITNET_GPU_FAKE across calls and get deterministic responses.
-    if env::var("BITNET_GPU_CACHE").as_deref() == Ok("0") {
+    if env_falsey("BITNET_GPU_CACHE") {
         return detect_real_gpu_info();
     }
 

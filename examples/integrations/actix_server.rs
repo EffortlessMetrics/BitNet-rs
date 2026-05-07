@@ -224,12 +224,19 @@ async fn initialize_app_state() -> Result<AppState> {
     // Create inference engine
     let inference_engine = InferenceEngine::new(model, tokenizer, device)?;
 
-    // Load API keys from environment
-    let api_keys = std::env::var("BITNET_API_KEYS")
-        .unwrap_or_else(|_| "demo-key-123,test-key-456".to_string())
+    // Load API keys from environment. No hardcoded fallback: an unset or empty
+    // BITNET_API_KEYS yields zero accepted keys, denying all bearer-token requests.
+    let api_keys: Vec<String> = std::env::var("BITNET_API_KEYS")
+        .unwrap_or_default()
         .split(',')
         .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
         .collect();
+    if api_keys.is_empty() {
+        warn!(
+            "BITNET_API_KEYS is unset or empty; authenticated endpoints will reject all requests"
+        );
+    }
 
     info!("Application state initialized successfully");
 
@@ -546,8 +553,8 @@ Model information (requires auth).
 ## Example Usage
 
 ```bash
-# Set your API key
-export API_KEY="demo-key-123"
+# Set your API key (must match a key configured via BITNET_API_KEYS on the server)
+export API_KEY="<your-api-key>"
 
 # Generate text
 curl -X POST http://localhost:3000/api/v1/generate \
