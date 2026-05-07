@@ -568,6 +568,65 @@ compute-bound unless allocation overhead is separated in the receipt, and it
 must not claim QK256 acceleration, Neural Engine execution, Metal execution, or
 general M4 performance.
 
+### M4-017 - Metal I2_S Projection Residual Subgraph
+
+Expand Metal kernel-family coverage with a tiny I2_S projection plus residual
+subgraph. This keeps the proof below full inference while exercising more than a
+single projection kernel:
+
+```text
+fixture_packed_i2_s
+-> tiny_metal_i2s_projection_residual
+-> residual_add
+-> CPU/NEON parity
+```
+
+The live test is opt-in and writes a subgraph receipt:
+
+```bash
+BITNET_RUN_M4_METAL_I2S_PROJECTION_RESIDUAL=1 \
+BITNET_M4_METAL_I2S_PROJECTION_RESIDUAL_RECEIPT=ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-projection-residual.json \
+cargo test --locked -p bitnet-kernels \
+  --no-default-features \
+  --features metal \
+  --test metal_tiny_smoke tiny_m4_metal_i2s_projection_residual_subgraph_matches_cpu_reference_when_enabled -- --nocapture
+```
+
+The receipt records:
+
+```json
+{
+  "artifact_kind": "subgraph",
+  "graph_id": "tiny_i2s_projection_residual_subgraph",
+  "requested_backend": "apple-m4-metal",
+  "selected_backend": "apple-m4-metal",
+  "runtime_api": "metal",
+  "fallback_used": false,
+  "bitnet": {
+    "kernel_family": "i2_s",
+    "execution_phase": "parity",
+    "phase_scope": "projection_residual_subgraph"
+  },
+  "subgraph": {
+    "kernel_id": "tiny_metal_i2s_projection_residual",
+    "operations": ["packed_i2_s_matmul", "residual_add"],
+    "full_bitnet_inference": false,
+    "full_autoregressive_decode": false
+  },
+  "parity": {
+    "reference_backend": "apple-m4-cpu-neon",
+    "target_backend": "apple-m4-metal",
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0
+  }
+}
+```
+
+M4-017 may claim only that this specific Apple Metal I2_S subgraph passes CPU
+reference parity with `fallback_used=false`. It must not claim full Metal
+inference, QK256 acceleration, Neural Engine execution, MPSGraph execution, or
+general M4 performance.
+
 ## Do Not
 
 - Do not start with Apple Neural Engine inference claims.
