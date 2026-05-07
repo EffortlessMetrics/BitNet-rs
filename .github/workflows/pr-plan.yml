@@ -57,8 +57,26 @@ jobs:
           echo "Changed files ($count):"
           sed -n '1,200p' changed.txt
 
-      - name: Build PR plan
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.93.0"
+
+      - name: Build PR plan (xtask ci plan)
         id: plan
+        env:
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          cargo run --locked -p xtask --no-default-features -- ci plan \
+            --changed-file changed.txt \
+            --labels-json "$LABELS" \
+            --json-out ci-plan.json \
+            --github-summary "$GITHUB_STEP_SUMMARY" \
+            --print
+
+      - name: Build PR plan (legacy Python; advisory parity check)
+        if: false  # disabled in PR 14; kept for one cycle for diff comparison
         env:
           LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |

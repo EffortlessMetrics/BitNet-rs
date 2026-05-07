@@ -47,6 +47,7 @@ mod grid_check;
 mod health_check;
 #[allow(dead_code)]
 mod model_info;
+mod ci;
 mod model_registry;
 mod policy;
 mod tokenizers;
@@ -1070,6 +1071,45 @@ enum Cmd {
         #[arg(long, default_value = "target/bitnet/reports")]
         report_dir: PathBuf,
     },
+
+    /// CI control-plane subcommands (LEM-aware planning, actuals).
+    Ci {
+        #[command(subcommand)]
+        command: CiCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum CiCmd {
+    /// Compute the per-PR plan (touched areas, expected lanes, estimated LEM).
+    ///
+    /// Replaces the inline Python in `.github/workflows/pr-plan.yml`.
+    Plan {
+        /// Base SHA / ref to diff against. Defaults to `origin/main`.
+        #[arg(long)]
+        base: Option<String>,
+        /// Head SHA / ref. Defaults to `HEAD`.
+        #[arg(long)]
+        head: Option<String>,
+        /// JSON array of label names (e.g. `["full-ci","gpu-ci"]`).
+        #[arg(long = "labels-json")]
+        labels_json: Option<String>,
+        /// Read changed files from this file (one per line) instead of git diff.
+        #[arg(long)]
+        changed_file: Option<PathBuf>,
+        /// Write machine-readable plan JSON to this path.
+        #[arg(long, default_value = "ci-plan.json")]
+        json_out: PathBuf,
+        /// Append the markdown summary to this path (typically $GITHUB_STEP_SUMMARY).
+        #[arg(long)]
+        github_summary: Option<PathBuf>,
+        /// Print the JSON plan to stdout.
+        #[arg(long, default_value_t = false)]
+        print: bool,
+        /// Run the planner without writing artefacts.
+        #[arg(long, default_value_t = false)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1443,6 +1483,26 @@ fn real_main() -> Result<()> {
             policy::clippy::run(exceptions, report_dir, fail_on_error)
         }
         Cmd::PolicyReport { report_dir } => run_policy_report(report_dir),
+        Cmd::Ci { command } => match command {
+            CiCmd::Plan {
+                base,
+                head,
+                labels_json,
+                changed_file,
+                json_out,
+                github_summary,
+                print,
+                dry_run,
+            } => ci::plan::run(
+                base,
+                head,
+                labels_json,
+                changed_file,
+                if dry_run { None } else { Some(json_out) },
+                if dry_run { None } else { github_summary },
+                print,
+            ),
+        },
     }
 }
 
