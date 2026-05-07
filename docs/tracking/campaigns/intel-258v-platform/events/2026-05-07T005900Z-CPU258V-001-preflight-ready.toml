@@ -1,0 +1,15 @@
+timestamp = "2026-05-07T00:59:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-001"
+event = "in_progress"
+actor = "codex"
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-06/cpu-bitnet-validation.json",
+  "ci/hardware/intel-258v/2026-05-06/platform-comparison-index.json",
+]
+
+notes = [
+  "Recorded the 258V CPU BitNet validation artifact advancing from blocked_missing_canonical_model to preflight_ready.",
+  "The artifact proves strict preflight readiness only; it does not claim BitNet inference, kernel execution, parity, or benchmark performance.",
+]
