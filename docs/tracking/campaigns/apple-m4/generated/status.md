@@ -26,7 +26,7 @@
 | M4-015 | merged | #3804 | `codex/apple-m4/M4-015-steady-decode-profile` | Add steady decode and prefill timing profiles for the selected Apple backend with strict model, tokenizer, phase, fallback, and machine context recorded. |
 | M4-016 | merged | #3811 | `codex/apple-m4/M4-016-hot-loop-allocation-audit` | Measure or bound hot-loop allocations for the Apple BitNet path and distinguish compute timing from allocation overhead. |
 | M4-017 | merged | #3818 | `codex/apple-m4/M4-017-metal-kernel-family-expansion` | Expand Apple Metal BitNet kernel or subgraph coverage only where CPU reference parity, fallback=false receipts, phase labels, and claim boundaries are present. |
-| M4-018 | pr_open | #3826 | `codex/apple-m4/M4-018-cli-package-polish` | Polish Apple backend CLI and package surfaces so backend labels, strict-mode errors, artifact paths, and non-M4 failure modes are clear. |
+| M4-018 | merged | #3826 | `codex/apple-m4/M4-018-cli-package-polish` | Polish Apple backend CLI and package surfaces so backend labels, strict-mode errors, artifact paths, and non-M4 failure modes are clear. |
 
 ## Hard Constraints
 
