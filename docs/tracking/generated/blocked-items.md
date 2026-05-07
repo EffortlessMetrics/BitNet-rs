@@ -41,7 +41,7 @@
 | intel-258v-platform | LNL258V-003 | LNL258V-002 | merged |
 | intel-258v-platform | CPU258V-001 | LNL258V-003 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
-| intel-npu | NPU-004 | NPU-003 | in_progress |
+| intel-npu | NPU-004 | NPU-003 | merged |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
 | nvidia-5070ti | RTX5070TI-006 | RTX5070TI-005 | merged |
