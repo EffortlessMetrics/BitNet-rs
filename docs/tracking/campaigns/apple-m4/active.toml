@@ -560,11 +560,12 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-017"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4/M4-017-metal-kernel-family-expansion"
 stackable = false
 requires_human_merge = true
 blocked_by = ["M4-016"]
+pr = 3818
 acceptance = "Expand Apple Metal BitNet kernel or subgraph coverage only where CPU reference parity, fallback=false receipts, phase labels, and claim boundaries are present."
 commands = [
   "cargo fmt --all -- --check",
