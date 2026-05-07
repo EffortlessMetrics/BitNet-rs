@@ -52,6 +52,14 @@ pub struct AnswerCorpusCommand {
     /// Fail the command if any executed prompt fails its quality gate.
     #[arg(long, default_value_t = false)]
     pub fail_on_quality: bool,
+
+    /// Dump this many per-step logit records into each child run receipt.
+    #[arg(long, value_name = "N")]
+    pub dump_logit_steps: Option<usize>,
+
+    /// Number of top logits to include when --dump-logit-steps is used.
+    #[arg(long, default_value_t = 10, value_name = "K")]
+    pub logits_topk: usize,
 }
 
 impl AnswerCorpusCommand {
@@ -134,6 +142,12 @@ impl AnswerCorpusCommand {
                 "strict_loader": corpus.defaults.strict_loader,
                 "default_max_new_tokens": corpus.defaults.max_new_tokens,
                 "per_prompt_timeout_seconds": default_timeout_seconds,
+                "logits_dump_steps": self.dump_logit_steps,
+                "logits_topk": if self.dump_logit_steps.is_some() {
+                    Some(self.logits_topk)
+                } else {
+                    None
+                },
             },
             "quality_summary": {
                 "total": total,
@@ -209,7 +223,15 @@ impl AnswerCorpusCommand {
             args.push("--strict-loader".into());
             args.push("--strict-tokenizer".into());
         }
-
+        if let Some(steps) = self.dump_logit_steps {
+            args.push("--dump-logit-steps".into());
+            args.push(steps.to_string().into());
+            args.push("--logits-topk".into());
+            args.push(self.logits_topk.to_string().into());
+            if corpus.defaults.greedy {
+                args.push("--assert-greedy".into());
+            }
+        }
         let run = run_child_with_timeout(exe, &args, Duration::from_secs(timeout_seconds))?;
         if run.timed_out {
             return Ok(json!({
@@ -278,6 +300,7 @@ impl AnswerCorpusCommand {
                 "prompt": run_receipt["tokens"]["prompt_ids"].clone(),
                 "generated": run_receipt["tokens"]["generated_ids"].clone(),
             },
+            "logits_dump": run_receipt.get("logits_dump").cloned().unwrap_or(Value::Null),
             "prompt_template": corpus.defaults.prompt_template,
             "quality": {
                 "passed": quality.passed,
