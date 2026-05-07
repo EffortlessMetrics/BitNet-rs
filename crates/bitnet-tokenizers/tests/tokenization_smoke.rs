@@ -258,6 +258,39 @@ fn parse_special_eot_handling() -> Result<()> {
     eprintln!("parse_special=false: {:?} ({} tokens)", ids_no_parse, ids_no_parse.len());
     eprintln!("parse_special=true: {:?} ({} tokens)", ids_parse, ids_parse.len());
 
+    if tokenizer.kind() == bitnet_tokenizers::GgufTokKind::Bpe {
+        let vocab = reader
+            .get_string_array_metadata("tokenizer.ggml.tokens")
+            .context("Missing tokenizer.ggml.tokens metadata")?;
+        let eot = vocab
+            .iter()
+            .position(|piece| piece == "<|eot_id|>")
+            .context("Missing <|eot_id|> in GGUF vocab")? as u32;
+        let world = vocab
+            .iter()
+            .position(|piece| piece == "world")
+            .context("Missing world token in GGUF vocab")? as u32;
+        let space_world = vocab
+            .iter()
+            .position(|piece| piece == "Ġworld")
+            .context("Missing Ġworld token in GGUF vocab")? as u32;
+
+        let eot_pos = ids_parse
+            .iter()
+            .position(|id| *id == eot)
+            .context("parse_special=true did not emit <|eot_id|>")?;
+        assert_eq!(
+            ids_parse.get(eot_pos + 1),
+            Some(&world),
+            "text immediately after a parsed special token must not receive a virtual leading space"
+        );
+        assert_ne!(
+            ids_parse.get(eot_pos + 1),
+            Some(&space_world),
+            "text immediately after a parsed special token was encoded as Ġworld"
+        );
+    }
+
     // If EOT is configured, verify parsing behavior
     if let Some(eot) = eot_id {
         eprintln!("EOT token ID: {}", eot);
@@ -284,6 +317,58 @@ fn parse_special_eot_handling() -> Result<()> {
     // Verify encoding succeeds regardless of parse_special flag
     assert!(!ids_no_parse.is_empty(), "Encoding with parse_special=false failed");
     assert!(!ids_parse.is_empty(), "Encoding with parse_special=true failed");
+
+    Ok(())
+}
+
+#[test]
+fn parse_special_llama3_header_roles_are_not_space_prefixed() -> Result<()> {
+    let Some(gguf_path) = get_gguf_path() else {
+        eprintln!("⏭️  Skipping: CROSSVAL_GGUF not set - set it to a valid GGUF model path");
+        return Ok(());
+    };
+    let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
+    let reader = GgufReader::new(mmap.as_slice()).context("Failed to parse GGUF file")?;
+    let tokenizer = bitnet_tokenizers::RustTokenizer::from_gguf(&reader)
+        .context("Failed to load RustTokenizer from GGUF")?;
+
+    if tokenizer.kind() != bitnet_tokenizers::GgufTokKind::Bpe {
+        eprintln!("⏭️  Skipping: tokenizer kind is not BPE");
+        return Ok(());
+    }
+
+    let vocab = reader
+        .get_string_array_metadata("tokenizer.ggml.tokens")
+        .context("Missing tokenizer.ggml.tokens metadata")?;
+    let id_for = |piece: &str| -> Result<u32> {
+        Ok(vocab
+            .iter()
+            .position(|candidate| candidate == piece)
+            .with_context(|| format!("Missing {piece} token in GGUF vocab"))? as u32)
+    };
+    let begin = id_for("<|begin_of_text|>")?;
+    let start_header = id_for("<|start_header_id|>")?;
+    let end_header = id_for("<|end_header_id|>")?;
+    let user = id_for("user")?;
+    let space_user = id_for("Ġuser")?;
+    let assistant = id_for("assistant")?;
+    let space_assistant = id_for("Ġassistant")?;
+
+    let prompt = "<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nHi<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n";
+    let ids = tokenizer.encode(prompt, false, true).context("Failed to encode Llama 3 prompt")?;
+
+    eprintln!("Llama 3 prompt IDs: {:?}", ids);
+    assert_eq!(ids.first().copied(), Some(begin));
+
+    let mut role_ids_after_headers =
+        ids.windows(2).filter_map(|pair| (pair[0] == start_header).then_some(pair[1]));
+    assert_eq!(role_ids_after_headers.next(), Some(user));
+    assert_eq!(role_ids_after_headers.next(), Some(assistant));
+
+    assert!(!ids.windows(2).any(|pair| pair == [start_header, space_user]));
+    assert!(!ids.windows(2).any(|pair| pair == [start_header, space_assistant]));
+    assert!(ids.windows(2).any(|pair| pair == [user, end_header]));
+    assert!(ids.windows(2).any(|pair| pair == [assistant, end_header]));
 
     Ok(())
 }

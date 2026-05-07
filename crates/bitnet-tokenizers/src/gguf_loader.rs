@@ -79,6 +79,21 @@ pub struct RustTokenizer {
     add_bos_hint: Option<bool>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum SpecialSplitSegment<'a> {
+    Text(&'a str),
+    Special(u32),
+}
+
+const GGUF_BPE_SPECIAL_TOKEN_CANDIDATES: &[&str] = &[
+    "<|begin_of_text|>",
+    "<|end_of_text|>",
+    "<|eot_id|>",
+    "<|end_of_turn|>",
+    "<|start_header_id|>",
+    "<|end_header_id|>",
+];
+
 impl RustTokenizer {
     /// Load tokenizer from GGUF metadata
     ///
@@ -384,64 +399,29 @@ impl RustTokenizer {
                 }
             }
             GgufTokKind::Bpe => {
-                let bpe = self.bpe.as_ref().expect("BPE tokenizer should be present");
-                let piece_to_id = self
-                    .bpe_piece_to_gguf_id
-                    .as_ref()
-                    .expect("BPE piece-to-ID map should be present");
-
-                // Encode text using BPE (produces HuggingFace token IDs)
-                let encoding = bpe
-                    .encode(text, parse_special)
-                    .map_err(|e| anyhow::anyhow!("BPE encode error: {}", e))?;
-
-                // Remap HuggingFace token IDs to GGUF token IDs
-                // HF assigns its own IDs, but we need the model's authoritative IDs
-                let mut ids = Vec::with_capacity(encoding.len());
-
-                #[cfg(feature = "tok-debug")]
-                eprintln!("tok-debug: BPE encoding {} HF tokens", encoding.len());
-
-                #[allow(unused_variables)] // idx only used with tok-debug feature
-                for (idx, hf_id) in encoding.get_ids().iter().enumerate() {
-                    let piece = bpe
-                        .id_to_token(*hf_id)
-                        .ok_or_else(|| anyhow::anyhow!("BPE token ID {} has no piece", hf_id))?;
-
-                    // Handle space normalization: some GGUFs use 'Ġ' glyph for leading spaces
-                    // Try direct lookup first, then fallback to GPT-2 style marker if needed
-                    let candidate =
-                        if !piece_to_id.contains_key(piece.as_str()) && piece.starts_with(' ') {
-                            // Try GPT-2-style marker (Ġ = U+0120)
-                            let mut s = String::with_capacity(piece.len());
-                            s.push('\u{0120}'); // Ġ
-                            s.push_str(&piece[1..]);
-                            s
-                        } else {
-                            piece.clone()
-                        };
-
-                    let gguf_id = piece_to_id.get(candidate.as_str()).ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "BPE piece '{}' not found in GGUF vocab (tried: '{}')",
-                            piece,
-                            candidate
-                        )
-                    })?;
-
-                    ids.push(*gguf_id);
-
-                    #[cfg(feature = "tok-debug")]
-                    {
-                        // Dump first 8 tokens for debugging piece→ID remapping
-                        if idx < 8 {
-                            eprintln!(
-                                "tok-debug: token[{}]: hf_id={} piece='{}' candidate='{}' gguf_id={}",
-                                idx, hf_id, piece, candidate, gguf_id
-                            );
+                let mut ids = if parse_special {
+                    let mut ids = Vec::new();
+                    let mut beginning_of_input = true;
+                    for segment in self.split_bpe_special_segments(text) {
+                        match segment {
+                            SpecialSplitSegment::Text(segment_text) if !segment_text.is_empty() => {
+                                ids.extend(self.encode_bpe_text_segment_with_prefix(
+                                    segment_text,
+                                    beginning_of_input,
+                                )?);
+                                beginning_of_input = false;
+                            }
+                            SpecialSplitSegment::Special(id) => {
+                                ids.push(id);
+                                beginning_of_input = false;
+                            }
+                            SpecialSplitSegment::Text(_) => {}
                         }
                     }
-                }
+                    ids
+                } else {
+                    self.encode_bpe_text_segment(text)?
+                };
 
                 // Prepend BOS if requested and not already present
                 if add_bos
@@ -479,11 +459,143 @@ impl RustTokenizer {
             // LLaMA-3 end-of-turn tokens
             "<|eot_id|>" | "<|end_of_turn|>" => self.eot_id,
             // Common EOS patterns
-            "<|eos|>" | "</s>" | "<eos>" => self.eos_id,
+            "<|end_of_text|>" | "<|eos|>" | "</s>" | "<eos>" => self.eos_id,
             // Common BOS patterns
-            "<|bos|>" | "<s>" | "<bos>" => self.bos_id,
+            "<|begin_of_text|>" | "<|bos|>" | "<s>" | "<bos>" => self.bos_id,
             _ => None,
         }
+    }
+
+    fn encode_bpe_text_segment(&self, text: &str) -> Result<Vec<u32>> {
+        self.encode_bpe_text_segment_with_prefix(text, true)
+    }
+
+    fn encode_bpe_text_segment_with_prefix(
+        &self,
+        text: &str,
+        add_prefix_space: bool,
+    ) -> Result<Vec<u32>> {
+        let bpe = self.bpe.as_ref().expect("BPE tokenizer should be present");
+        let piece_to_id =
+            self.bpe_piece_to_gguf_id.as_ref().expect("BPE piece-to-ID map should be present");
+        let mut no_prefix_bpe;
+        let bpe = if add_prefix_space {
+            bpe
+        } else {
+            no_prefix_bpe = bpe.clone();
+            no_prefix_bpe.with_pre_tokenizer(Some(
+                tokenizers::pre_tokenizers::byte_level::ByteLevel::default()
+                    .add_prefix_space(false)
+                    .trim_offsets(false),
+            ));
+            &no_prefix_bpe
+        };
+
+        // Encode text using BPE (produces HuggingFace token IDs)
+        let encoding =
+            bpe.encode(text, false).map_err(|e| anyhow::anyhow!("BPE encode error: {}", e))?;
+
+        // Remap HuggingFace token IDs to GGUF token IDs.
+        let mut ids = Vec::with_capacity(encoding.len());
+
+        #[cfg(feature = "tok-debug")]
+        eprintln!("tok-debug: BPE encoding {} HF tokens", encoding.len());
+
+        #[allow(unused_variables)] // idx only used with tok-debug feature
+        for (idx, hf_id) in encoding.get_ids().iter().enumerate() {
+            let piece = bpe
+                .id_to_token(*hf_id)
+                .ok_or_else(|| anyhow::anyhow!("BPE token ID {} has no piece", hf_id))?;
+
+            // Handle space normalization: some GGUFs use 'Ġ' glyph for leading spaces.
+            let candidate = if !piece_to_id.contains_key(piece.as_str()) && piece.starts_with(' ') {
+                let mut s = String::with_capacity(piece.len());
+                s.push('\u{0120}');
+                s.push_str(&piece[1..]);
+                s
+            } else {
+                piece.clone()
+            };
+
+            let gguf_id = piece_to_id.get(candidate.as_str()).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "BPE piece '{}' not found in GGUF vocab (tried: '{}')",
+                    piece,
+                    candidate
+                )
+            })?;
+
+            ids.push(*gguf_id);
+
+            #[cfg(feature = "tok-debug")]
+            {
+                if idx < 8 {
+                    eprintln!(
+                        "tok-debug: token[{}]: hf_id={} piece='{}' candidate='{}' gguf_id={}",
+                        idx, hf_id, piece, candidate, gguf_id
+                    );
+                }
+            }
+        }
+
+        Ok(ids)
+    }
+
+    fn split_bpe_special_segments<'a>(&self, text: &'a str) -> Vec<SpecialSplitSegment<'a>> {
+        let special_tokens = self.available_bpe_special_tokens();
+        if special_tokens.is_empty() || text.is_empty() {
+            return vec![SpecialSplitSegment::Text(text)];
+        }
+
+        let mut segments = Vec::new();
+        let mut cursor = 0usize;
+        while cursor < text.len() {
+            let rest = &text[cursor..];
+            let mut next_match: Option<(usize, &str, u32)> = None;
+            for (piece, id) in &special_tokens {
+                if let Some(relative) = rest.find(piece) {
+                    let absolute = cursor + relative;
+                    let replace = match next_match {
+                        None => true,
+                        Some((best_absolute, best_piece, _)) => {
+                            absolute < best_absolute
+                                || (absolute == best_absolute && piece.len() > best_piece.len())
+                        }
+                    };
+                    if replace {
+                        next_match = Some((absolute, piece, *id));
+                    }
+                }
+            }
+
+            let Some((start, piece, id)) = next_match else {
+                segments.push(SpecialSplitSegment::Text(rest));
+                break;
+            };
+
+            if start > cursor {
+                segments.push(SpecialSplitSegment::Text(&text[cursor..start]));
+            }
+            segments.push(SpecialSplitSegment::Special(id));
+            cursor = start + piece.len();
+        }
+
+        segments
+    }
+
+    fn available_bpe_special_tokens(&self) -> Vec<(&'static str, u32)> {
+        GGUF_BPE_SPECIAL_TOKEN_CANDIDATES
+            .iter()
+            .filter_map(|piece| self.bpe_special_token_id(piece).map(|id| (*piece, id)))
+            .collect()
+    }
+
+    fn bpe_special_token_id(&self, piece: &str) -> Option<u32> {
+        self.id_for_special(piece).or_else(|| {
+            self.bpe_piece_to_gguf_id
+                .as_ref()
+                .and_then(|piece_to_id| piece_to_id.get(piece).copied())
+        })
     }
 
     /// Get tokenizer kind
@@ -615,15 +727,10 @@ impl crate::Tokenizer for RustTokenizer {
 
         // Otherwise lookup in the vocabulary
         match self.kind {
-            GgufTokKind::Bpe => {
-                // For BPE, use the vocab from the tokenizer
-                if let Some(bpe) = &self.bpe {
-                    let vocab = bpe.get_vocab(true);
-                    vocab.get(token).copied()
-                } else {
-                    None
-                }
-            }
+            GgufTokKind::Bpe => self
+                .bpe_piece_to_gguf_id
+                .as_ref()
+                .and_then(|piece_to_id| piece_to_id.get(token).copied()),
             GgufTokKind::Spm => {
                 // For SPM, we need to check if the token exists by trying to encode it
                 // and seeing if we get a single token back that decodes to the same string
@@ -664,6 +771,7 @@ impl crate::Tokenizer for RustTokenizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Tokenizer as _;
 
     #[test]
     fn test_kind_detection() {
@@ -692,11 +800,13 @@ mod tests {
         assert_eq!(tok.id_for_special("<|bos|>"), Some(1));
         assert_eq!(tok.id_for_special("<s>"), Some(1));
         assert_eq!(tok.id_for_special("<bos>"), Some(1));
+        assert_eq!(tok.id_for_special("<|begin_of_text|>"), Some(1));
 
         // Test EOS patterns
         assert_eq!(tok.id_for_special("<|eos|>"), Some(2));
         assert_eq!(tok.id_for_special("</s>"), Some(2));
         assert_eq!(tok.id_for_special("<eos>"), Some(2));
+        assert_eq!(tok.id_for_special("<|end_of_text|>"), Some(2));
 
         // Test EOT patterns
         assert_eq!(tok.id_for_special("<|eot_id|>"), Some(128009));
@@ -704,6 +814,38 @@ mod tests {
 
         // Test unknown token
         assert_eq!(tok.id_for_special("<unknown>"), None);
+    }
+
+    #[test]
+    fn bpe_special_token_ids_use_authoritative_gguf_ids() {
+        let tok = bpe_tokenizer_for_special_tests();
+
+        assert_eq!(tok.token_to_id("<|begin_of_text|>"), Some(128000));
+        assert_eq!(tok.token_to_id("<|end_of_text|>"), Some(128001));
+        assert_eq!(tok.token_to_id("<|eot_id|>"), Some(128009));
+        assert_eq!(tok.token_to_id("<|start_header_id|>"), Some(128006));
+        assert_eq!(tok.token_to_id("<|end_header_id|>"), Some(128007));
+    }
+
+    #[test]
+    fn bpe_special_split_preserves_llama3_control_tokens() {
+        let tok = bpe_tokenizer_for_special_tests();
+
+        let segments = tok.split_bpe_special_segments(
+            "<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nHi<|eot_id|>",
+        );
+
+        assert_eq!(
+            segments,
+            vec![
+                SpecialSplitSegment::Special(128000),
+                SpecialSplitSegment::Special(128006),
+                SpecialSplitSegment::Text("user"),
+                SpecialSplitSegment::Special(128007),
+                SpecialSplitSegment::Text("\n\nHi"),
+                SpecialSplitSegment::Special(128009),
+            ]
+        );
     }
 
     #[test]
@@ -726,5 +868,27 @@ mod tests {
         assert_eq!(tok.eos_id(), Some(11));
         assert_eq!(tok.eot_id(), Some(12));
         assert_eq!(tok.add_bos_hint(), Some(false));
+    }
+
+    fn bpe_tokenizer_for_special_tests() -> RustTokenizer {
+        let mut piece_to_id = ahash::AHashMap::new();
+        piece_to_id.insert("<|begin_of_text|>".to_string(), 128000);
+        piece_to_id.insert("<|end_of_text|>".to_string(), 128001);
+        piece_to_id.insert("<|start_header_id|>".to_string(), 128006);
+        piece_to_id.insert("<|end_header_id|>".to_string(), 128007);
+        piece_to_id.insert("<|eot_id|>".to_string(), 128009);
+
+        RustTokenizer {
+            kind: GgufTokKind::Bpe,
+            #[cfg(feature = "spm")]
+            spm: None,
+            bpe: None,
+            bpe_piece_to_gguf_id: Some(piece_to_id),
+            real_vocab_size: 128256,
+            bos_id: Some(128000),
+            eos_id: Some(128001),
+            eot_id: Some(128009),
+            add_bos_hint: Some(false),
+        }
     }
 }
