@@ -1,0 +1,16 @@
+timestamp = "2026-05-07T02:04:10Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-008"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3823
+head_sha = "f40c4f948de505c71ec651fe121d4f6dcf7f81b3"
+actor = "codex"
+
+notes = [
+  "Opened the strict BitNet CUDA benchmark baseline PR.",
+  "The receipt records matching strict CUDA and AVX-512 CPU short-decode evidence for the same model, tokenizer, prompt profile, generated token count, and fallback-free loader mode.",
+  "CPU scalar and AVX2 strict end-to-end profiles are recorded as not_run because this CLI path does not expose selectors for those SIMD modes.",
+  "speedup_claim remains false.",
+]

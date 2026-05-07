@@ -22,7 +22,7 @@
 | CUDA-BITNET-005 | merged | #3792 | `codex/cuda-bitnet-005-route-linear` | Route actual BitNetLinear transformer dispatch through the selected CUDA backend with coverage counters and strict CPU fallback rejection. |
 | CUDA-BITNET-006 | merged | #3801 | `codex/cuda-bitnet-006-one-token-proof` | Add strict one-token BitNet CUDA proof with official GGUF, real tokenizer, CUDA kernel invocations greater than zero, zero CPU fallback, CPU/CUDA greedy or top-1 agreement, fallback_used=false, and speedup_claim=false. |
 | CUDA-BITNET-007 | merged | #3806 | `codex/cuda-bitnet-007-short-decode-proof` | Add short greedy BitNet CUDA decode proof with timing, kernel invocation growth, memory high-water mark, and fallback_used=false. |
-| CUDA-BITNET-008 | proposed | TBD | `codex/cuda-bitnet-008-benchmark-baseline` | Add RTX 5070 Ti full BitNet CUDA benchmark baseline comparing 9950X3D CPU scalar, AVX2, AVX-512, and CUDA with matching model, tokenizer, prompt profile, strict loader mode, fallback_used=false, and runtime context. |
+| CUDA-BITNET-008 | pr_open | #3823 | `codex/cuda-bitnet-008-benchmark-baseline` | Add RTX 5070 Ti full BitNet CUDA benchmark baseline comparing 9950X3D CPU scalar, AVX2, AVX-512, and CUDA with matching model, tokenizer, prompt profile, strict loader mode, fallback_used=false, and runtime context. |
 | CUDA-DENSE-001 | proposed | TBD | `codex/cuda-dense-001-reference-lane` | Add regular LLM CUDA dense-kernel reference lane with dense_regular_llm receipt labels that cannot satisfy BitNet packed I2S or QK256 proof acceptance. |
 
 ## Hard Constraints

@@ -459,7 +459,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-008"
-status = "proposed"
+status = "pr_open"
 branch = "codex/cuda-bitnet-008-benchmark-baseline"
 stackable = false
 requires_human_merge = true
@@ -480,7 +480,9 @@ allowed_paths = [
 forbidden_paths = [
   "crates/bitnet-server/**",
 ]
-may_claim = []
+may_claim = [
+  "Strict BitNet CUDA same-model benchmark baseline evidence exists after strict-bitnet-cuda-benchmark.json validates, with speedup_claim=false.",
+]
 must_not_claim = [
   "CUDA speedup exists before same-model benchmark receipt proves it.",
 ]
