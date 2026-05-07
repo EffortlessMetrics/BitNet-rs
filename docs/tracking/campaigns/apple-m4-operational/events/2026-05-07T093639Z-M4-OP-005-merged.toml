@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T09:36:39Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-005"
+event = "merged"
+pr = 3861
+merge_sha = "ce4205fa627eac486840bdd8b06f204e2197b842"
+actor = "codex"
+
+notes = [
+  "Merged conservative Apple M4 benchmark profile summary validation.",
+  "Receipt-bundle validation now checks known profile IDs, expected timing fields, summary benchmark profiles, and broad-performance claim boundaries.",
+  "No full apple-m4-metal inference, QK256 on Apple Silicon, Neural Engine execution, or general M4 performance claim was added.",
+]
