@@ -2,7 +2,7 @@
 # Apple M4 Mac mini validation Campaign Status
 
 - Campaign: `apple-m4`
-- State: `active`
+- State: `complete`
 - Objective: Make Apple Silicon a receipt-backed BitNet target through Metal, MPSGraph, and CPU/NEON proof lanes without conflating detection, execution, parity, inference, or performance.
 
 ## Work Items
