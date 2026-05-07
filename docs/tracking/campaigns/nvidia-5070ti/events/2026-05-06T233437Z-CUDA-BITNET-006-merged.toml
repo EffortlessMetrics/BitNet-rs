@@ -1,0 +1,14 @@
+timestamp = "2026-05-06T23:34:37Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-006"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3801
+merge_sha = "f267c33f51af712189259577ad72b56589caa63f"
+actor = "codex"
+
+notes = [
+  "Merged the strict one-token BitNet CUDA proof.",
+  "The proof receipt records 210 qk256_gemv_cuda invocations, zero BitNet linear CPU fallback, CPU/CUDA greedy and top-1 agreement, and speedup_claim=false.",
+]
