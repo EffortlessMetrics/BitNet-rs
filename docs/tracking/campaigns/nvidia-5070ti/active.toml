@@ -517,7 +517,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-009"
-status = "ready"
+status = "pr_open"
 branch = "codex/cuda-bitnet-009-upload-once-routed-proof"
 stackable = false
 review_mode = "codex_premerge"
@@ -553,7 +553,6 @@ may_claim = [
 ]
 must_not_claim = [
   "CUDA speedup exists before a refreshed same-model benchmark receipt proves it.",
-  "The current CUDA-BITNET-008 benchmark is upload-once optimized; it explicitly records per_token_weight_upload=true.",
 ]
 
 [[work_item]]

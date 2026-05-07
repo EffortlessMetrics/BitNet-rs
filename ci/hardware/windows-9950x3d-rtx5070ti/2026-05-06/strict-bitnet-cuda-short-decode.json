@@ -8,15 +8,15 @@
     "kernel_family": "i2_s",
     "kernel_format": "i2_s",
     "layout_source": "gguf_packed_i2_s_reference",
-    "per_token_weight_upload": true,
+    "per_token_weight_upload": false,
     "quantization": "W1.58A8",
     "weight_quantization": "W1.58",
-    "weights_uploaded_once": false
+    "weights_uploaded_once": true
   },
   "claim": "strict_bitnet_cuda_short_decode",
   "counts": {
-    "n_kv": 0,
-    "n_tensors": 0,
+    "n_kv": 24,
+    "n_tensors": 332,
     "unmapped": 0
   },
   "cpu": {
@@ -43,17 +43,17 @@
     "device_index": 0,
     "device_name": "NVIDIA GeForce RTX 5070 Ti",
     "driver_version": "591.86",
-    "memory_hwm_bytes": 5949620224,
+    "memory_hwm_bytes": 7070547968,
     "memory_hwm_source": "nvidia-smi-memory.used-sampled",
-    "memory_used_after_bytes": 5944377344,
-    "memory_used_before_bytes": 5949620224,
+    "memory_used_after_bytes": 7070547968,
+    "memory_used_before_bytes": 6337593344,
     "nvrtc_version": "12.9",
     "vram_bytes": 17094475776
   },
   "cuda_kernel_invocations": 1680,
-  "cuda_memory_hwm_bytes": 5949620224,
+  "cuda_memory_hwm_bytes": 7070547968,
   "cuda_memory_hwm_source": "nvidia-smi-memory.used-sampled",
-  "decode_steady_state_tok_s": 0.043,
+  "decode_steady_state_tok_s": 6.147,
   "execution": {
     "batch_size": 1,
     "fallback_reason": null,
@@ -77,7 +77,7 @@
   "fallback_backend": null,
   "fallback_reason": null,
   "fallback_used": false,
-  "first_token_ms": 27119,
+  "first_token_ms": 728,
   "gen_policy": {
     "bos": false,
     "deterministic": true,
@@ -114,9 +114,9 @@
     "prompt_tokens": 37
   },
   "latency": {
-    "cmd_to_first_ms": 27119,
-    "decode_first_ms": 27119,
-    "total_ms": 190129
+    "cmd_to_first_ms": 728,
+    "decode_first_ms": 728,
+    "total_ms": 1866
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -174,7 +174,7 @@
       ]
     },
     {
-      "chosen_id": 89048,
+      "chosen_id": 62954,
       "step": 1,
       "top_logits": [
         {
@@ -233,9 +233,148 @@
     "tokenizer": "llama3",
     "vocab_size": 128256
   },
-  "prefill_ms": 27119,
+  "prefill_ms": 728,
   "prefill_timing_source": "time_to_first_token_current_cli_path",
   "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
     "backend": {
       "fallback_reason": null,
       "fallback_used": false,
@@ -247,77 +386,77 @@
     "decode": {
       "embed_ms": {
         "count": 8,
-        "max_ms": 0.056,
-        "mean_ms": 0.028,
-        "min_ms": 0.018,
-        "p50_ms": 0.022,
-        "p95_ms": 0.056,
-        "total_ms": 0.221
+        "max_ms": 0.043,
+        "mean_ms": 0.025,
+        "min_ms": 0.019,
+        "p50_ms": 0.023,
+        "p95_ms": 0.043,
+        "total_ms": 0.202
       },
-      "first_token_decode_ms": 27119.277,
+      "first_token_decode_ms": 728.116,
       "forward_ms": {
         "count": 8,
-        "max_ms": 30443.24,
-        "mean_ms": 23643.81,
-        "min_ms": 19451.493,
-        "p50_ms": 23255.266,
-        "p95_ms": 30443.24,
-        "total_ms": 189150.483
+        "max_ms": 565.297,
+        "mean_ms": 116.493,
+        "min_ms": 51.355,
+        "p50_ms": 52.435,
+        "p95_ms": 565.297,
+        "total_ms": 931.942
       },
       "generated_tokens": 8,
       "logits_ms": {
         "count": 8,
-        "max_ms": 174.442,
-        "mean_ms": 89.481,
-        "min_ms": 63.592,
-        "p50_ms": 73.29,
-        "p95_ms": 174.442,
-        "total_ms": 715.848
+        "max_ms": 101.644,
+        "mean_ms": 91.019,
+        "min_ms": 78.91,
+        "p50_ms": 90.606,
+        "p95_ms": 101.644,
+        "total_ms": 728.149
       },
       "per_token_ms": {
         "count": 8,
-        "max_ms": 30520.023,
-        "mean_ms": 23766.113,
-        "min_ms": 19528.955,
-        "p50_ms": 23574.028,
-        "p95_ms": 30520.023,
-        "total_ms": 190128.903
+        "max_ms": 728.116,
+        "mean_ms": 233.357,
+        "min_ms": 137.666,
+        "p50_ms": 153.133,
+        "p95_ms": 728.116,
+        "total_ms": 1866.855
       },
       "sample_ms": {
         "count": 8,
-        "max_ms": 2.212,
-        "mean_ms": 1.662,
-        "min_ms": 1.23,
-        "p50_ms": 1.334,
-        "p95_ms": 2.212,
-        "total_ms": 13.294
+        "max_ms": 2.261,
+        "mean_ms": 2.046,
+        "min_ms": 1.346,
+        "p50_ms": 2.217,
+        "p95_ms": 2.261,
+        "total_ms": 16.371
       },
       "steady_per_token_ms": {
         "count": 7,
-        "max_ms": 30520.023,
-        "mean_ms": 23287.089,
-        "min_ms": 19528.955,
-        "p50_ms": 23574.028,
-        "p95_ms": 30520.023,
-        "total_ms": 163009.625
+        "max_ms": 232.392,
+        "mean_ms": 162.677,
+        "min_ms": 137.666,
+        "p50_ms": 153.133,
+        "p95_ms": 232.392,
+        "total_ms": 1138.738
       },
-      "steady_state_tok_s": 0.043,
+      "steady_state_tok_s": 6.147,
       "steady_state_tokens": 7,
       "token_decode_ms": {
         "count": 8,
         "max_ms": 0.058,
-        "mean_ms": 0.029,
-        "min_ms": 0.018,
-        "p50_ms": 0.02,
+        "mean_ms": 0.027,
+        "min_ms": 0.022,
+        "p50_ms": 0.023,
         "p95_ms": 0.058,
-        "total_ms": 0.236
+        "total_ms": 0.219
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 33778.27,
+    "model_load_ms": 31377.12,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": false,
@@ -334,9 +473,9 @@
       },
       "tokens": 0
     },
-    "prompt_tokenize_ms": 0.505,
+    "prompt_tokenize_ms": 0.404,
     "requested": false,
-    "tokenizer_load_ms": 941.987
+    "tokenizer_load_ms": 1078.251
   },
   "prompt": "In one compact line, name four common colors, then name four common shapes, separated by commas, and do not include explanations.",
   "prompt_prefill_ms": 0.0,
@@ -359,7 +498,7 @@
     "cpu_model": "AMD64 Family 26 Model 68 Stepping 0, AuthenticAMD",
     "cuda_kernel_invocations": 1680,
     "decode_tokens": 8,
-    "decode_tps": 0.04207669529635143,
+    "decode_tps": 4.287245444801715,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -375,79 +514,79 @@
     "tokenizer_source": "explicit",
     "tokenizer_strict": true
   },
-  "text": "'E'E'E'E'E'E'E'E",
+  "text": "'E-lived,SIGNALConvert!\"\n\n'E$m-lived",
   "throughput": {
     "decoded_tokens": 8,
-    "tokens_per_second": 0.04207669529635143
+    "tokens_per_second": 4.287245444801715
   },
-  "timestamp": "2026-05-07T00:16:04.297548600+00:00",
+  "timestamp": "2026-05-07T05:31:15.553036900+00:00",
   "timing": {
-    "decode_steady_state_tok_s": 0.043,
+    "decode_steady_state_tok_s": 6.147,
     "decode_step_ms": {
       "count": 8,
-      "max_ms": 30520.023,
-      "mean_ms": 23766.113,
-      "min_ms": 19528.955,
-      "p50_ms": 23574.028,
-      "p95_ms": 30520.023,
-      "total_ms": 190128.903
+      "max_ms": 728.116,
+      "mean_ms": 233.357,
+      "min_ms": 137.666,
+      "p50_ms": 153.133,
+      "p95_ms": 728.116,
+      "total_ms": 1866.855
     },
-    "decode_total_ms": 190128.903,
+    "decode_total_ms": 1866.855,
     "embed_ms": {
       "count": 8,
-      "max_ms": 0.056,
-      "mean_ms": 0.028,
-      "min_ms": 0.018,
-      "p50_ms": 0.022,
-      "p95_ms": 0.056,
-      "total_ms": 0.221
+      "max_ms": 0.043,
+      "mean_ms": 0.025,
+      "min_ms": 0.019,
+      "p50_ms": 0.023,
+      "p95_ms": 0.043,
+      "total_ms": 0.202
     },
-    "first_token_decode_ms": 27119.277,
-    "first_token_ms": 27119,
+    "first_token_decode_ms": 728.116,
+    "first_token_ms": 728,
     "forward_ms": {
       "count": 8,
-      "max_ms": 30443.24,
-      "mean_ms": 23643.81,
-      "min_ms": 19451.493,
-      "p50_ms": 23255.266,
-      "p95_ms": 30443.24,
-      "total_ms": 189150.483
+      "max_ms": 565.297,
+      "mean_ms": 116.493,
+      "min_ms": 51.355,
+      "p50_ms": 52.435,
+      "p95_ms": 565.297,
+      "total_ms": 931.942
     },
     "logits_ms": {
       "count": 8,
-      "max_ms": 174.442,
-      "mean_ms": 89.481,
-      "min_ms": 63.592,
-      "p50_ms": 73.29,
-      "p95_ms": 174.442,
-      "total_ms": 715.848
+      "max_ms": 101.644,
+      "mean_ms": 91.019,
+      "min_ms": 78.91,
+      "p50_ms": 90.606,
+      "p95_ms": 101.644,
+      "total_ms": 728.149
     },
-    "model_load_ms": 33778.27,
-    "prefill_ms": 27119,
+    "model_load_ms": 31377.12,
+    "prefill_ms": 728,
     "prefill_timing_source": "time_to_first_token_current_cli_path",
     "prompt_prefill_ms": 0.0,
     "sample_ms": {
       "count": 8,
-      "max_ms": 2.212,
-      "mean_ms": 1.662,
-      "min_ms": 1.23,
-      "p50_ms": 1.334,
-      "p95_ms": 2.212,
-      "total_ms": 13.294
+      "max_ms": 2.261,
+      "mean_ms": 2.046,
+      "min_ms": 1.346,
+      "p50_ms": 2.217,
+      "p95_ms": 2.261,
+      "total_ms": 16.371
     },
-    "sampling_ms_per_token": 1.662,
+    "sampling_ms_per_token": 2.046,
     "token_decode_ms": {
       "count": 8,
       "max_ms": 0.058,
-      "mean_ms": 0.029,
-      "min_ms": 0.018,
-      "p50_ms": 0.02,
+      "mean_ms": 0.027,
+      "min_ms": 0.022,
+      "p50_ms": 0.023,
       "p95_ms": 0.058,
-      "total_ms": 0.236
+      "total_ms": 0.219
     },
-    "tokenize_ms": 0.505,
-    "tokenizer_load_ms": 941.987,
-    "total_ms": 190129
+    "tokenize_ms": 0.404,
+    "tokenizer_load_ms": 1078.251,
+    "total_ms": 1866
   },
   "tokenizer": {
     "bos": 1,
@@ -455,19 +594,19 @@
     "origin": "external",
     "source": "explicit",
     "strict": true,
-    "type": "sentencepiece"
+    "type": "llama3"
   },
   "tokens": {
     "generated": 8,
     "ids": [
       89048,
+      62954,
+      87896,
+      12281,
+      17642,
       89048,
-      89048,
-      89048,
-      89048,
-      89048,
-      89048,
-      89048
+      54616,
+      62954
     ],
     "prompt": 37,
     "total": 45

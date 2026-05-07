@@ -2,18 +2,18 @@
   "artifact_kind": "strict_bitnet_cuda_benchmark",
   "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json",
   "benchmark": {
-    "cpu_avx512_first_token_ms": 18323.0,
-    "cpu_avx512_tokens_per_second": 0.0565135385245728,
-    "cpu_avx512_total_ms": 141559.0,
-    "cpu_avx512_total_ms_div_cuda_total_ms": 0.7445418636820265,
+    "cpu_avx512_first_token_ms": 17715.0,
+    "cpu_avx512_tokens_per_second": 0.05420311261374185,
+    "cpu_avx512_total_ms": 147593.0,
+    "cpu_avx512_total_ms_div_cuda_total_ms": 79.09592711682744,
     "cpu_cuda_output_match": true,
     "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
     "cuda_backend": "nvidia-rtx-5070-ti-cuda",
-    "cuda_first_token_ms": 27119.0,
+    "cuda_first_token_ms": 728.0,
     "cuda_kernel_invocations": 1680,
-    "cuda_tokens_per_second": 0.04207669529635143,
-    "cuda_total_ms": 190129.0,
-    "cuda_total_ms_div_cpu_avx512_total_ms": 1.3431078207673126,
+    "cuda_tokens_per_second": 4.287245444801715,
+    "cuda_total_ms": 1866.0,
+    "cuda_total_ms_div_cpu_avx512_total_ms": 0.012642876017155285,
     "profile": "short_decode_8",
     "prompt_profile": "short_decode_37_prompt_tokens_8_generated_tokens",
     "speedup_claim": false
@@ -21,15 +21,15 @@
   "bitnet": {
     "kernel_family": "qk256",
     "layout": "gguf_packed_i2_s",
-    "per_token_weight_upload": true,
+    "per_token_weight_upload": false,
     "quantization": "W1.58A8",
-    "weights_uploaded_once": false
+    "weights_uploaded_once": true
   },
   "claim": "strict_bitnet_cuda_benchmark_baseline",
   "claim_boundaries": [
     "speedup_claim=false; this receipt records a same-model baseline only.",
     "CPU scalar and AVX2 strict end-to-end profiles are present as explicit not_run entries unless matching strict receipts are supplied.",
-    "The source CUDA receipt records weights_uploaded_once=false and per_token_weight_upload=true, so this benchmark does not claim upload-once optimized inference."
+    "The source CUDA receipt records weights_uploaded_once=true and per_token_weight_upload=false; speedup_claim remains false until a refreshed same-model benchmark proves it."
   ],
   "comparison_contract": {
     "fallback_free": true,
@@ -50,7 +50,7 @@
     "device_index": 0,
     "device_name": "NVIDIA GeForce RTX 5070 Ti",
     "driver_version": "591.86",
-    "memory_hwm_bytes": 5949620224,
+    "memory_hwm_bytes": 7070547968,
     "memory_hwm_source": "nvidia-smi-memory.used-sampled",
     "nvrtc_version": "12.9",
     "vram_bytes": 17094475776
@@ -110,7 +110,7 @@
     {
       "backend": "amd-9950x3d-cpu-avx512",
       "fallback_used": false,
-      "first_token_ms": 18323.0,
+      "first_token_ms": 17715.0,
       "generated_tokens": 8,
       "kernel_id": "i2_s-avx512-reference",
       "kernel_implementation": "avx512",
@@ -118,13 +118,13 @@
       "runtime_api": "cpu",
       "selected_backend": "cpu-rust",
       "status": "measured",
-      "tokens_per_second": 0.0565135385245728,
-      "total_ms": 141559.0
+      "tokens_per_second": 0.05420311261374185,
+      "total_ms": 147593.0
     },
     {
       "backend": "nvidia-rtx-5070-ti-cuda",
       "fallback_used": false,
-      "first_token_ms": 27119.0,
+      "first_token_ms": 728.0,
       "generated_tokens": 8,
       "kernel_id": "qk256_gemv_cuda",
       "kernel_implementation": "cuda",
@@ -132,13 +132,13 @@
       "runtime_api": "cuda",
       "selected_backend": "nvidia-rtx-5070-ti-cuda",
       "status": "measured",
-      "tokens_per_second": 0.04207669529635143,
-      "total_ms": 190129.0
+      "tokens_per_second": 4.287245444801715,
+      "total_ms": 1866.0
     }
   ],
   "proof_inputs": {
     "cpu_avx2_short_decode_receipt": null,
-    "cpu_avx512_short_decode_receipt": "target/cuda-bitnet-008/strict-bitnet-cpu-short-decode.json",
+    "cpu_avx512_short_decode_receipt": "target/cuda-bitnet-009/strict-bitnet-cpu-short-decode.json",
     "cpu_scalar_short_decode_receipt": null,
     "cuda_short_decode_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-short-decode.json"
   },
@@ -154,24 +154,24 @@
   "schema": 1,
   "selected_backend": "nvidia-rtx-5070-ti-cuda",
   "speedup_claim": false,
-  "timestamp_utc": "2026-05-07T02:01:03Z",
+  "timestamp_utc": "2026-05-07T05:31:26Z",
   "tokenizer": {
     "source": "explicit",
     "strict": true,
-    "type": "sentencepiece"
+    "type": "llama3"
   },
   "workload": {
     "cpu_cuda_output_match": true,
-    "generated_text": "'E'E'E'E'E'E'E'E",
+    "generated_text": "'E-lived,SIGNALConvert!\"\n\n'E$m-lived",
     "generated_token_ids": [
       89048,
+      62954,
+      87896,
+      12281,
+      17642,
       89048,
-      89048,
-      89048,
-      89048,
-      89048,
-      89048,
-      89048
+      54616,
+      62954
     ],
     "generated_tokens": 8,
     "profile": "short_decode_8",

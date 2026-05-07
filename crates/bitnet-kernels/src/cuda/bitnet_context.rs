@@ -13,6 +13,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(feature = "cuda")]
 use std::sync::{Arc, Mutex};
 
+#[cfg(feature = "cuda")]
+use super::qk256_gemv::{CUDA_QK256_GEMV_KERNEL_ID, CUDA_QK256_GEMV_KERNEL_SRC, Qk256GemvConfig};
 use super::qk256_gemv::{QK256_BLOCK_COLS, QK256_PACKED_BYTES_PER_BLOCK};
 #[cfg(feature = "cuda")]
 use super::quantized_matmul::{I2S_MATMUL_KERNEL_SRC, I2sMatmulConfig};
@@ -421,6 +423,23 @@ impl CudaBitnetKernelInvocationStats {
         self.weights_uploaded_once = weights_uploaded_once;
         self.per_token_weight_upload = per_token_weight_upload;
     }
+
+    #[cfg(feature = "cuda")]
+    fn record_qk256_gemv(
+        &mut self,
+        host_to_device_bytes: u64,
+        device_to_host_bytes: u64,
+        weights_uploaded_once: bool,
+        per_token_weight_upload: bool,
+    ) {
+        self.kernel_id = CUDA_QK256_GEMV_KERNEL_ID.to_string();
+        self.invocations += 1;
+        self.kernel_launches += 1;
+        self.host_to_device_bytes += host_to_device_bytes;
+        self.device_to_host_bytes += device_to_host_bytes;
+        self.weights_uploaded_once = weights_uploaded_once;
+        self.per_token_weight_upload = per_token_weight_upload;
+    }
 }
 
 impl Default for CudaBitnetKernelInvocationStats {
@@ -451,6 +470,16 @@ pub trait CudaBitnetLinearBackend {
         weights: &CudaWeightHandle,
         activation: &[f32],
         output: &mut [f32],
+        stats: &mut CudaBitnetKernelInvocationStats,
+    ) -> Result<()>;
+
+    /// Run one strict GGUF no-scale QK256 GEMV using a CUDA-resident weight handle.
+    fn qk256_gemv(
+        &mut self,
+        weights: &CudaWeightHandle,
+        activation: &[f32],
+        output: &mut [f32],
+        seq_len: usize,
         stats: &mut CudaBitnetKernelInvocationStats,
     ) -> Result<()>;
 }
@@ -502,6 +531,10 @@ pub struct CudaBitnetContext {
     i2s_matmul_module: Option<Arc<CudaModule>>,
     #[cfg(feature = "cuda")]
     i2s_matmul_function: Option<CudaFunction>,
+    #[cfg(feature = "cuda")]
+    qk256_gemv_module: Option<Arc<CudaModule>>,
+    #[cfg(feature = "cuda")]
+    qk256_gemv_function: Option<CudaFunction>,
 }
 
 #[cfg(feature = "cuda")]
@@ -543,6 +576,8 @@ impl CudaBitnetContext {
             workspace_buffers: CudaActivationDeviceBuffers::default(),
             i2s_matmul_module: None,
             i2s_matmul_function: None,
+            qk256_gemv_module: None,
+            qk256_gemv_function: None,
         })
     }
 
@@ -575,6 +610,10 @@ impl CudaBitnetContext {
             i2s_matmul_module: None,
             #[cfg(feature = "cuda")]
             i2s_matmul_function: None,
+            #[cfg(feature = "cuda")]
+            qk256_gemv_module: None,
+            #[cfg(feature = "cuda")]
+            qk256_gemv_function: None,
         }
     }
 
@@ -818,6 +857,30 @@ impl CudaBitnetContext {
     }
 
     #[cfg(feature = "cuda")]
+    fn ensure_qk256_gemv_function(&mut self) -> Result<()> {
+        if self.qk256_gemv_function.is_some() {
+            return Ok(());
+        }
+
+        let context = self.context.as_ref().ok_or_else(|| KernelError::DeviceUnavailable {
+            reason: "CUDA QK256 GEMV requires a CUDA-backed BitNet context".to_string(),
+        })?;
+        let ptx = compile_cuda_bitnet_ptx(CUDA_QK256_GEMV_KERNEL_SRC, "BitNet QK256 GEMV")?;
+        let module = context.load_module(ptx).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to load CUDA QK256 GEMV module: {err:?}"),
+        })?;
+        let function = module.load_function(CUDA_QK256_GEMV_KERNEL_ID).map_err(|err| {
+            KernelError::GpuError {
+                reason: format!("failed to load CUDA QK256 GEMV kernel: {err:?}"),
+            }
+        })?;
+
+        self.qk256_gemv_module = Some(module);
+        self.qk256_gemv_function = Some(function);
+        Ok(())
+    }
+
+    #[cfg(feature = "cuda")]
     fn launch_i2s_gemv_cuda(
         &mut self,
         weights: &CudaWeightHandle,
@@ -895,6 +958,88 @@ impl CudaBitnetContext {
                 reason: format!("failed to copy CUDA I2S GEMV output to host: {err:?}"),
             })?;
         output[..config.n].copy_from_slice(&output_host[..config.n]);
+        Ok(())
+    }
+
+    #[cfg(feature = "cuda")]
+    fn launch_qk256_gemv_cuda(
+        &mut self,
+        weights: &CudaWeightHandle,
+        activation: &[f32],
+        output: &mut [f32],
+        config: &Qk256GemvConfig,
+    ) -> Result<()> {
+        self.ensure_qk256_gemv_function()?;
+
+        let stream = self.stream.as_ref().ok_or_else(|| KernelError::DeviceUnavailable {
+            reason: "CUDA QK256 GEMV requires a CUDA-backed BitNet stream".to_string(),
+        })?;
+        let function = self.qk256_gemv_function.as_ref().ok_or_else(|| KernelError::GpuError {
+            reason: "CUDA QK256 GEMV kernel was not loaded".to_string(),
+        })?;
+        let buffers = self.device_weight_buffers.get(&weights.id).ok_or_else(|| {
+            KernelError::DeviceUnavailable {
+                reason: format!(
+                    "CUDA QK256 GEMV weight '{}' is not resident on the selected device",
+                    weights.tensor_name
+                ),
+            }
+        })?;
+
+        let input_len = checked_mul(config.seq_len, config.k, "QK256 activation")?;
+        let output_len = checked_mul(config.seq_len, config.n_out, "QK256 output")?;
+        let activation_dev =
+            stream.memcpy_stod(&activation[..input_len]).map_err(|err| KernelError::GpuError {
+                reason: format!("failed to copy CUDA QK256 GEMV activation to device: {err:?}"),
+            })?;
+        let mut output_dev: CudaSlice<f32> =
+            stream.alloc_zeros(output_len).map_err(|err| KernelError::GpuError {
+                reason: format!("failed to allocate CUDA QK256 GEMV output: {err:?}"),
+            })?;
+
+        let launch_config = LaunchConfig {
+            grid_dim: config.grid_dim(),
+            block_dim: config.block_dim(),
+            shared_mem_bytes: config.shared_mem_bytes,
+        };
+        let mut builder = stream.launch_builder(function);
+        builder.arg(&buffers.packed);
+        builder.arg(&activation_dev);
+        builder.arg(&mut output_dev);
+        let seq_len_arg =
+            i32::try_from(config.seq_len).map_err(|_| KernelError::InvalidArguments {
+                reason: format!("CUDA QK256 GEMV seq_len exceeds i32: {}", config.seq_len),
+            })?;
+        let n_out_arg = i32::try_from(config.n_out).map_err(|_| KernelError::InvalidArguments {
+            reason: format!("CUDA QK256 GEMV n_out exceeds i32: {}", config.n_out),
+        })?;
+        let k_arg = i32::try_from(config.k).map_err(|_| KernelError::InvalidArguments {
+            reason: format!("CUDA QK256 GEMV k exceeds i32: {}", config.k),
+        })?;
+        let row_stride_arg =
+            i32::try_from(config.row_stride_bytes).map_err(|_| KernelError::InvalidArguments {
+                reason: format!(
+                    "CUDA QK256 GEMV row_stride_bytes exceeds i32: {}",
+                    config.row_stride_bytes
+                ),
+            })?;
+        builder.arg(&seq_len_arg);
+        builder.arg(&n_out_arg);
+        builder.arg(&k_arg);
+        builder.arg(&row_stride_arg);
+
+        unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
+            reason: format!("failed to launch CUDA QK256 GEMV kernel: {err:?}"),
+        })?;
+        stream.synchronize().map_err(|err| KernelError::GpuError {
+            reason: format!("failed to synchronize CUDA QK256 GEMV kernel: {err:?}"),
+        })?;
+
+        let output_host: Vec<f32> =
+            stream.memcpy_dtov(&output_dev).map_err(|err| KernelError::GpuError {
+                reason: format!("failed to copy CUDA QK256 GEMV output to host: {err:?}"),
+            })?;
+        output[..output_len].copy_from_slice(&output_host[..output_len]);
         Ok(())
     }
 }
@@ -1067,12 +1212,64 @@ impl CudaBitnetLinearBackend for CudaBitnetContext {
             .into())
         }
     }
+
+    fn qk256_gemv(
+        &mut self,
+        weights: &CudaWeightHandle,
+        activation: &[f32],
+        output: &mut [f32],
+        seq_len: usize,
+        stats: &mut CudaBitnetKernelInvocationStats,
+    ) -> Result<()> {
+        let gemv_shape = validate_qk256_gemv_args(weights, activation, output, seq_len)?;
+        let output_features = gemv_shape.output_features;
+        let input_features = gemv_shape.input_features;
+        let activation_len = checked_mul(seq_len, input_features, "QK256 activation")?;
+        let output_len = checked_mul(seq_len, output_features, "QK256 output")?;
+        let activation_bytes = checked_f32_bytes(activation_len, "QK256 activation")?;
+        let output_bytes = checked_f32_bytes(output_len, "QK256 output")?;
+        self.ensure_activation_workspace(activation_bytes, output_bytes, 0)?;
+
+        #[cfg(feature = "cuda")]
+        {
+            let config = Qk256GemvConfig::for_shape(seq_len, output_features, input_features)?;
+            self.launch_qk256_gemv_cuda(weights, &activation[..activation_len], output, &config)?;
+            stats.record_qk256_gemv(
+                u64::try_from(activation_bytes).map_err(|_| KernelError::InvalidArguments {
+                    reason: "QK256 activation byte count exceeds receipt counter range".to_string(),
+                })?,
+                u64::try_from(output_bytes).map_err(|_| KernelError::InvalidArguments {
+                    reason: "QK256 output byte count exceeds receipt counter range".to_string(),
+                })?,
+                weights.uploaded_once,
+                self.stats.per_token_weight_uploads > 0,
+            );
+            return Ok(());
+        }
+
+        #[cfg(not(feature = "cuda"))]
+        {
+            let _ = weights;
+            let _ = activation;
+            let _ = output;
+            let _ = stats;
+            Err(KernelError::DeviceUnavailable {
+                reason: "CUDA QK256 GEMV requires the cuda feature".to_string(),
+            }
+            .into())
+        }
+    }
 }
 
 struct I2sGemvShape {
     output_features: usize,
     input_features: usize,
     block_size: usize,
+}
+
+struct Qk256GemvShape {
+    output_features: usize,
+    input_features: usize,
 }
 
 fn validate_weight_upload(tensor_name: &str, packed_weights: &[u8]) -> Result<()> {
@@ -1195,6 +1392,47 @@ fn validate_i2s_gemv_args(
         )));
     }
     Ok(I2sGemvShape { output_features, input_features, block_size })
+}
+
+fn validate_qk256_gemv_args(
+    weights: &CudaWeightHandle,
+    activation: &[f32],
+    output: &[f32],
+    seq_len: usize,
+) -> Result<Qk256GemvShape> {
+    if weights.kernel_family != CudaBitnetKernelFamily::Qk256 {
+        return Err(invalid_arguments(format!(
+            "CUDA QK256 GEMV requires a QK256 weight handle, got {}",
+            weights.kernel_family.as_str()
+        )));
+    }
+    if weights.shape.dims.len() != 2 {
+        return Err(invalid_arguments(format!(
+            "CUDA QK256 GEMV requires matrix weights, got {:?}",
+            weights.shape.dims
+        )));
+    }
+    if seq_len == 0 {
+        return Err(invalid_arguments("CUDA QK256 GEMV seq_len must be non-zero"));
+    }
+
+    let output_features = weights.shape.dims[0];
+    let input_features = weights.shape.dims[1];
+    let expected_activation = checked_mul(seq_len, input_features, "QK256 activation")?;
+    let expected_output = checked_mul(seq_len, output_features, "QK256 output")?;
+    if activation.len() < expected_activation {
+        return Err(invalid_arguments(format!(
+            "CUDA QK256 GEMV activation too small: expected at least {expected_activation}, got {}",
+            activation.len()
+        )));
+    }
+    if output.len() < expected_output {
+        return Err(invalid_arguments(format!(
+            "CUDA QK256 GEMV output too small: expected at least {expected_output}, got {}",
+            output.len()
+        )));
+    }
+    Ok(Qk256GemvShape { output_features, input_features })
 }
 
 fn checked_mul(lhs: usize, rhs: usize, label: &str) -> Result<usize> {

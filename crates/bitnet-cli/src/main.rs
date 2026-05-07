@@ -2953,6 +2953,19 @@ async fn run_simple_generation(
         let cuda_generated_token_id = generated_tokens.first().copied();
         let cuda_top1_token_id = top1_tokens.first().copied();
         let cuda_kernel_invocations = bitnet_linear_coverage.bitnet_linear_layers_on_cuda;
+        let cuda_weight_residency = if strict_cuda_selected_artifact {
+            bitnet_qk256_dispatch::qk256_cuda_weight_residency()
+        } else {
+            None
+        };
+        let weights_uploaded_once = cuda_weight_residency
+            .as_ref()
+            .map(|residency| residency.weights_uploaded_once)
+            .unwrap_or(false);
+        let per_token_weight_upload = cuda_weight_residency
+            .as_ref()
+            .map(|residency| residency.per_token_weight_upload)
+            .unwrap_or(strict_cuda_selected_artifact && cuda_kernel_invocations > 0);
         let cuda_memory_after_bytes =
             strict_cuda_selected_artifact.then(|| nvidia_smi_memory_used_bytes(Some(0))).flatten();
         let cuda_memory_hwm_bytes =
@@ -3180,8 +3193,8 @@ async fn run_simple_generation(
                 "execution_phase": execution_phase,
                 "layout_source": layout_source,
                 "fallback_layout": serde_json::Value::Null,
-                "weights_uploaded_once": false,
-                "per_token_weight_upload": strict_cuda_selected_artifact && cuda_kernel_invocations > 0,
+                "weights_uploaded_once": weights_uploaded_once,
+                "per_token_weight_upload": per_token_weight_upload,
             },
             "execution": {
                 "phase": execution_phase,
