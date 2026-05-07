@@ -777,6 +777,11 @@ impl FormatLoader for GgufLoader {
         let fingerprint = crate::fingerprint::compute_gguf_fingerprint(mmap.as_slice());
         debug!("Model fingerprint: {}", fingerprint);
 
+        let architecture = reader
+            .get_string_metadata("general.architecture")
+            .unwrap_or_else(|| "bitnet".to_string());
+        let arch_prefix = architecture.clone();
+
         let metadata = ModelMetadata {
             name: reader.get_string_metadata("general.name").unwrap_or_else(|| {
                 path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown").to_string()
@@ -784,16 +789,17 @@ impl FormatLoader for GgufLoader {
             version: reader
                 .get_string_metadata("general.version")
                 .unwrap_or_else(|| format!("gguf-v{}", reader.version())),
-            architecture: reader
-                .get_string_metadata("general.architecture")
-                .unwrap_or_else(|| "bitnet".to_string()),
+            architecture,
             vocab_size: reader
                 .get_u32_metadata("llama.vocab_size")
+                .or_else(|| reader.get_u32_metadata(&format!("{arch_prefix}.vocab_size")))
                 .or_else(|| reader.get_u32_metadata("tokenizer.ggml.tokens"))
                 .unwrap_or(32000) as usize,
             context_length: reader
                 .get_u32_metadata("llama.context_length")
+                .or_else(|| reader.get_u32_metadata(&format!("{arch_prefix}.context_length")))
                 .or_else(|| reader.get_u32_metadata("llama.rope.dimension_count"))
+                .or_else(|| reader.get_u32_metadata(&format!("{arch_prefix}.rope.dimension_count")))
                 .unwrap_or(2048) as usize,
             quantization: reader.get_quantization_type(),
             fingerprint: Some(fingerprint),
@@ -837,6 +843,15 @@ impl FormatLoader for GgufLoader {
         // Extract model configuration
         let model_config = self.extract_config(&reader)?;
         if Self::env_truthy("BITNET_STRICT_MODE") {
+            if let Some((tensor_name, tensor_type)) =
+                reader.first_unsupported_standard_quantized_tensor()
+            {
+                return Err(BitNetError::Validation(format!(
+                    "strict GGUF load rejects unsupported standard quantization {tensor_type:?} \
+                     in tensor '{tensor_name}'. Standard GGUF Q8_0/Q*_K support requires a \
+                     dedicated adapter/dequantization path; no compatibility fallback was used."
+                )));
+            }
             self.validate_strict_tensor_authority(&reader, &model_config)?;
         }
 

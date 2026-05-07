@@ -345,6 +345,29 @@ impl<'a> GgufReader<'a> {
         self.tensor_infos.iter().map(|info| info.name.as_str()).collect()
     }
 
+    /// Return the first standard GGUF quantized tensor unsupported by the strict loader.
+    pub fn first_unsupported_standard_quantized_tensor(&self) -> Option<(&str, GgufTensorType)> {
+        self.tensor_infos.iter().find_map(|info| match info.tensor_type {
+            GgufTensorType::Q4_0
+            | GgufTensorType::Q4_1
+            | GgufTensorType::Q5_0
+            | GgufTensorType::Q5_1
+            | GgufTensorType::Q8_0
+            | GgufTensorType::Q8_1
+            | GgufTensorType::Q2_K
+            | GgufTensorType::Q3_K
+            | GgufTensorType::Q4_K
+            | GgufTensorType::Q5_K
+            | GgufTensorType::Q6_K
+            | GgufTensorType::Q8_K => Some((info.name.as_str(), info.tensor_type)),
+            GgufTensorType::F32
+            | GgufTensorType::F16
+            | GgufTensorType::F64
+            | GgufTensorType::IQ2_S
+            | GgufTensorType::I2_S => None,
+        })
+    }
+
     /// Get string metadata by key
     pub fn get_string_metadata(&self, key: &str) -> Option<String> {
         self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {

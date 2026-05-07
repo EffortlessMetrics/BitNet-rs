@@ -71,3 +71,15 @@ decoded text present
 ```
 
 If the decoded text is wrong, keep the artifact. The next step is reference divergence, not a performance claim.
+
+## Observed Qwen3 Q8_0 Blocker
+
+On the i5-8250U, the official `Qwen3-0.6B-Q8_0.gguf` artifact verifies against the pinned SHA256 and reaches the strict CPU loader with `selected_backend = cpu-rust` and `fallback_used = false`.
+
+The current blocker is before inference:
+
+```text
+strict GGUF load rejects unsupported standard quantization Q8_0 in tensor 'token_embd.weight'
+```
+
+This is the correct boundary for now. Do not claim a tiny dense CPU run until Q8_0/Q*_K dense adapter or dequantization support exists and the same command emits prompt IDs, generated IDs, and decoded text.

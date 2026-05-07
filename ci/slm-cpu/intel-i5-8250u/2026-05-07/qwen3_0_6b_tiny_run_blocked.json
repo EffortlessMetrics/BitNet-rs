@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_tiny_run_blocker",
+  "timestamp_utc": "2026-05-07T17:57:20Z",
+  "machine_id": "intel-i5-8250u-dense-slm",
+  "hardware": {
+    "cpu_model": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+    "cores": 4,
+    "threads": 8,
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "fallback_used": false
+  },
+  "model": {
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "local_path": "models/slm/Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "general_architecture": "qwen3",
+    "quant_format": "Q8_0"
+  },
+  "attempt": {
+    "command": "cargo run --release --locked -p bitnet-cli --no-default-features --features \"cpu,full-cli\" -- --device cpu run --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --prompt-template qwen --prompt \"2+2=\" --max-tokens 1 --temperature 0.0 --greedy --strict-loader --strict-tokenizer --json-out target\\slm-cpu\\qwen3_0_6b_2plus2.json",
+    "prompt": "2+2=",
+    "prompt_template": "qwen",
+    "max_new_tokens": 1,
+    "temperature": 0.0,
+    "greedy": true,
+    "strict_loader": true,
+    "strict_tokenizer": true
+  },
+  "result": {
+    "status": "blocked_before_inference",
+    "stage": "strict_gguf_load",
+    "decoded_text": null,
+    "prompt_ids": null,
+    "generated_ids": null,
+    "blocker": "strict GGUF load rejects unsupported standard quantization Q8_0 in tensor 'token_embd.weight'. Standard GGUF Q8_0/Q*_K support requires a dedicated adapter/dequantization path; no compatibility fallback was used."
+  },
+  "claim_boundary": {
+    "dense_cpu_inference_claimed": false,
+    "answer_quality_claimed": false,
+    "throughput_claimed": false,
+    "server_claimed": false,
+    "gpu_or_npu_claimed": false
+  }
+}

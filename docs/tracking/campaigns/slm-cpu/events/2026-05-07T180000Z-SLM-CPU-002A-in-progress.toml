@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T18:00:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-002A"
+event = "in_progress"
+branch = "codex/slm-cpu-002a-qwen-strict-blocker"
+actor = "codex"
+
+notes = [
+  "Started dense Qwen strict-load blocker hardening after the official Qwen3 Q8_0 artifact reached an unsupported quantization boundary before inference.",
+  "SLM-CPU-003 moved behind SLM-CPU-002A because the tiny run cannot honestly emit prompt IDs, generated IDs, or decoded text until dense Q8_0/Q*_K support exists.",
+  "The follow-up scope is limited to qwen2/qwen3 loader metadata recognition, explicit unsupported-quantization failure, and tracker/runbook evidence.",
+]

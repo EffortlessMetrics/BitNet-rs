@@ -138,14 +138,55 @@ must_not_claim = [
 ]
 
 [[work_item]]
-id = "SLM-CPU-003"
-status = "ready"
-branch = "codex/slm-cpu-003-tiny-run"
+id = "SLM-CPU-002A"
+status = "pr_open"
+pr = 3917
+branch = "codex/slm-cpu-002a-qwen-strict-blocker"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-CPU-002"]
+acceptance = "Recognize qwen2/qwen3 in the authoritative GGUF loader metadata path and make strict dense Qwen Q8_0/Q*_K GGUF attempts fail at an explicit unsupported-quantization boundary before compatibility fallback or misleading tensor validation."
+commands = [
+  "cargo check --locked -p bitnet-models --no-default-features",
+  "cargo test --locked -p bitnet-models --no-default-features dense_qwen --lib",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The official Qwen3-0.6B Q8_0 artifact reaches an explicit dense-quantization blocker in strict mode.",
+]
+must_not_claim = [
+  "Dense CPU inference works.",
+  "Q8_0 dense kernels or dequantization are implemented.",
+  "Answer quality is proven.",
+  "Sustained 8250U throughput is proven.",
+]
+
+[[work_item]]
+id = "SLM-CPU-003"
+status = "proposed"
+branch = "codex/slm-cpu-003-tiny-run"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-002A"]
 acceptance = "Run one tiny strict dense CPU receipt on the verified candidate with real GGUF, strict tokenizer, dense architecture adapter, CPU backend, fallback=false, prompt IDs, generated IDs, and decoded text. Correct answer is not required for bring-up if the receipt is diagnosable."
 commands = [
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
