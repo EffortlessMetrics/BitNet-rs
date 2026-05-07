@@ -459,7 +459,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-008"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-bitnet-008-benchmark-baseline"
 stackable = false
 requires_human_merge = true
