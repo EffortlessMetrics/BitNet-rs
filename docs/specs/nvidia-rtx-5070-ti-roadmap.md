@@ -11,24 +11,31 @@ nvidia-rtx-5070-ti-cuda
 nvidia-rtx-5070-ti-wgpu
 ```
 
-The first useful milestone is CUDA kernel smoke with a receipt proving `selected_backend=nvidia-rtx-5070-ti-cuda` and `fallback_used=false`.
+The first useful milestone was CUDA kernel smoke with a receipt proving
+`selected_backend=nvidia-rtx-5070-ti-cuda` and `fallback_used=false`. The
+BitNet proof lane has since progressed through strict selected-device identity,
+CUDA/NVML probe, smoke, CPU/CUDA parity, counters, benchmarks, persistent CUDA
+BitNet context, upload-once weights, QK256 CUDA GEMV, transformer-path routing,
+one-token proof, short decode proof, and a same-model benchmark baseline.
 
-## Current Implementation Boundary
+## Current Proof State
 
-The CUDA lane is scaffolded infrastructure, not a working CUDA inference path.
-The existing CUDA provider can create a cudarc context, compile CUDA source
-with NVRTC, and load kernel-provider-level functions such as I2S matmul and
-quantization helpers. That is not proof that the transformer forward path
-routes BitNet inference through CUDA.
+The NVIDIA campaign now records `RTX5070TI-003` through `RTX5070TI-008` and
+`CUDA-BITNET-001` through `CUDA-BITNET-009` as merged. The strict BitNet CUDA
+proof receipts record the selected RTX 5070 Ti CUDA backend, official GGUF,
+explicit tokenizer, W1.58A8 packed layout, QK256 CUDA kernel invocations,
+upload-once weight residency, zero BitNet linear CPU fallback, and measured
+timing.
 
-QK256 CUDA is explicitly scaffold-only until the packed kernel path is
-implemented and wired. Any `launch_qk256_gemv` path that returns an explicit
-"scaffold only" or "not yet compiled" error must block full 1-bit BitNet CUDA
-claims.
+QK256 CUDA is no longer a roadmap blocker for the completed proof lane. The
+merged QK256 CUDA path is proof-backed by parity tests and strict routed
+receipts. Any future regression that reintroduces a non-compiled QK256 launch
+path, CPU fallback, per-token weight upload, or missing kernel counters must
+downgrade the claim until the receipts are refreshed.
 
-The first CUDA lane can progress through device probe, tiny kernel smoke, and
-I2S/matmul parity before full BitNet inference. Full inference requires the
-later `CUDA-BITNET-*` work items.
+`CUDA-DENSE-001` remains proposed as an optional dense regular-LLM reference
+lane. It is separate from the completed BitNet packed I2S/QK256 proof and must
+not be used to satisfy BitNet packed-kernel acceptance.
 
 ## Hardware Baseline
 
@@ -83,8 +90,62 @@ windows-9950x3d-rtx5070ti
 - wgpu/Vulkan smoke is not CUDA kernel proof.
 - CPU fallback cannot count as CUDA execution.
 - Dense FP16/BF16 regular-LLM CUDA kernels are not BitNet packed-kernel proof.
-- I2S CUDA parity is not QK256 CUDA inference.
-- Full BitNet CUDA inference cannot be claimed while QK256 CUDA is scaffold-only.
+- I2S CUDA parity alone is not QK256 CUDA inference.
+- Full BitNet CUDA inference claims require strict receipts with selected RTX
+  5070 Ti CUDA backend identity, QK256 CUDA invocation counts, zero CPU
+  fallback, and upload-once weight residency.
+- Speedup claims require same-model, same-tokenizer, fallback-free benchmark
+  receipts. The current strict benchmark baseline keeps `speedup_claim=false`.
+
+## Proof Ledger
+
+RTX 5070 Ti CUDA BitNet proof state:
+
+| Field | Proof value |
+|---|---|
+| Strict selected backend | `nvidia-rtx-5070-ti-cuda` |
+| Runtime API | `cuda` |
+| Machine ID | `windows-9950x3d-rtx5070ti` |
+| Model | `microsoft/bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf` |
+| Tokenizer | explicit strict `llama3` |
+| Quantization | `W1.58A8` |
+| Packed layout | `gguf_packed_i2_s` |
+| CUDA kernel family | `qk256` |
+| Kernel ID | `qk256_gemv_cuda` |
+| Weights uploaded once | `true` |
+| Per-token weight upload | `false` |
+| One-token CUDA invocations | `210` |
+| Short-decode CUDA invocations | `1680` |
+| BitNet linear CPU fallback | `0` |
+| Fallback used | `false` |
+| Speedup claim | `false` |
+
+Committed proof receipts:
+
+```text
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-smoke.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-parity.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-benchmark.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-proof.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-short-decode.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json
+```
+
+Allowed claims:
+
+- The RTX 5070 Ti CUDA selected backend has receipt-backed probe, smoke,
+  parity, counters, and benchmark evidence.
+- Strict BitNet CUDA one-token and short-decode proofs route BitNet linear work
+  through QK256 CUDA kernels with zero BitNet linear CPU fallback.
+- The current benchmark is a fallback-free baseline and does not make a speedup
+  claim.
+
+Not allowed:
+
+- Do not claim dense regular-LLM CUDA as BitNet packed inference.
+- Do not claim WGPU, Vulkan, D3D12, or generic `cuda` as RTX 5070 Ti CUDA proof.
+- Do not claim speedup unless a later same-model fallback-free benchmark receipt
+  explicitly upgrades `speedup_claim`.
 
 ## Runtime Paths
 
@@ -229,27 +290,31 @@ Collect OS, PCI, driver, CUDA, compute capability, VRAM, power, and optional Vul
 
 ### RTX5070TI-003 - Backend Identity
 
-Preserve requested and selected backend identity for RTX 5070 Ti CUDA.
+Merged in #3679. Preserved requested and selected backend identity for RTX 5070
+Ti CUDA.
 
 ### RTX5070TI-004 - CUDA/NVML Probe
 
-Report CUDA runtime visibility, NVML data, driver, CUDA version, compute capability, VRAM, power, and temperature.
+Merged in #3691. Reported CUDA runtime visibility, NVML data, driver, CUDA
+version, compute capability, VRAM, power, and temperature.
 
 ### RTX5070TI-005 - CUDA Kernel Smoke
 
-Compile and run a tiny CUDA kernel on RTX 5070 Ti.
+Merged in #3723. Compiled and ran a tiny CUDA kernel on RTX 5070 Ti.
 
 ### RTX5070TI-006 - CPU/CUDA Parity
 
-Compare one CUDA kernel/subgraph output against CPU.
+Merged in #3749. Compared one CUDA kernel/subgraph output against CPU.
 
 ### RTX5070TI-007 - Receipts
 
-Record CUDA runtime, driver, compute capability, VRAM, power, fallback status, and kernel IDs.
+Merged in #3756. Recorded CUDA runtime, driver, compute capability, VRAM, power,
+fallback status, and kernel IDs.
 
 ### RTX5070TI-008 - Benchmark Baseline
 
-Compare CPU against RTX 5070 Ti CUDA for the validated kernel/subgraph.
+Merged in #3770. Compared CPU against RTX 5070 Ti CUDA for the validated
+kernel/subgraph.
 
 ### RTX5070TI-009 - wgpu/Vulkan Smoke
 
@@ -262,60 +327,60 @@ identity, probe, smoke, parity, receipts, and benchmark baselines durable.
 
 ### CUDA-BITNET-001 - Persistent Context and Weight Handles
 
-Create a CUDA BitNet context with persistent device, stream, weight handles,
-activation workspace, and stats. Weights must be uploadable once, and receipts
-must record `per_token_weight_upload=false`.
+Merged in #3776. Created a CUDA BitNet context with persistent device, stream,
+weight handles, activation workspace, and stats.
 
 ### CUDA-BITNET-002 - Reusable CUDA I2S Linear Primitive
 
-Turn existing I2S CUDA matmul into a reusable backend primitive for real layer
-shapes. It must handle tails and padding, match CPU reference, and record
-kernel IDs and invocation stats.
+Merged in #3782. Turned I2S CUDA matmul into a reusable backend primitive for
+real layer shapes.
 
 ### CUDA-BITNET-003 - CUDA QK256 Fused Dequant GEMV
 
-Replace the scaffold-only QK256 launch path with a real fused packed-weight
-dequant plus GEMV kernel. It must support official BitNet GGUF shapes and pass
-CPU QK256 scalar parity before any full inference claim.
+Merged in #3786. Replaced the former QK256 placeholder launch path with a real
+fused packed-weight dequant plus GEMV CUDA kernel.
 
 ### CUDA-BITNET-004 - Prepack and Upload BitNet Weights Once
 
-At strict GGUF load time, validate BitNet layout, pack or normalize weights for
-CUDA, upload them once, and store per-layer CUDA weight handles. Decode must not
-repack or upload weights per token.
+Merged in #3790. Added strict GGUF CUDA weight handling so BitNet weights can be
+packed or normalized for CUDA and uploaded once.
 
 ### CUDA-BITNET-005 - Route BitNetLinear Through CUDA
 
-Wire the actual transformer forward path so `BitNetLinear` dispatches through
-the selected CUDA backend. Strict CUDA mode must fail on unsupported CPU
-fallback and coverage counters must record total, CUDA-routed, and fallback
-linear layers.
+Merged in #3792. Wired the actual transformer forward path so `BitNetLinear`
+dispatches through the selected CUDA backend with coverage counters.
 
 ### CUDA-BITNET-006 - One-Token Strict BitNet CUDA Proof
 
-Run the official GGUF in strict mode for one greedy token. The proof must record
-CUDA kernel invocation count greater than zero, CPU fallback count zero,
-CPU/CUDA greedy or top-1 parity, and `speedup_claim=false`.
+Merged in #3801. Added the official-GGUF one-token strict BitNet CUDA proof with
+CUDA kernel invocations, zero CPU fallback, CPU/CUDA agreement, and
+`speedup_claim=false`.
 
 ### CUDA-BITNET-007 - Short Decode BitNet CUDA Proof
 
-Extend the one-token proof to a short greedy decode and record prefill,
-first-token, steady-state decode timing, CUDA memory high-water mark, kernel
-invocations, and CPU fallback operations.
+Merged in #3806. Extended the one-token proof to a short greedy decode with
+timing, CUDA memory high-water mark, kernel invocations, and CPU fallback
+operations.
 
 ### CUDA-BITNET-008 - BitNet CUDA Benchmark Baseline
 
-Benchmark only after correctness. Compare 9950X3D CPU scalar, AVX2, AVX-512,
-and RTX 5070 Ti CUDA on the same model, tokenizer, prompt profile, strict
-loader mode, and fallback-free receipt.
+Merged in #3823. Added a same-model strict BitNet CUDA benchmark baseline with
+CPU reference comparison and `speedup_claim=false`.
+
+### CUDA-BITNET-009 - Routed Upload-Once Strict Proof
+
+Merged in #3837. Refreshed the strict one-token, short-decode, and benchmark
+receipts so routed QK256 CUDA inference records `weights_uploaded_once=true`,
+`per_token_weight_upload=false`, `qk256_gemv_cuda` invocations greater than zero,
+and zero BitNet linear CPU fallback.
 
 ## Dense CUDA Reference Lane
 
 Regular LLM CUDA support is useful, but it is separate from BitNet packed-kernel
-proof. A future dense lane may share device selection, probes, context lifetime,
-allocator, workspace, stats, parity harness, and benchmark protocol, but FP16,
-BF16, or INT8 dense kernels must be labeled as `dense_regular_llm`, not BitNet
-packed inference.
+proof. `CUDA-DENSE-001` remains optional proposed work. It may share device
+selection, probes, context lifetime, allocator, workspace, stats, parity
+harness, and benchmark protocol, but FP16, BF16, or INT8 dense kernels must be
+labeled as `dense_regular_llm`, not BitNet packed inference.
 
 ## GitHub Issue Tracking
 
@@ -332,7 +397,8 @@ distinct proof stages into one implementation PR.
 - Do not count CPU fallback as CUDA execution.
 - Do not count wgpu/Vulkan smoke as CUDA kernel proof.
 - Do not omit compute capability from receipts.
-- Do not leave QK256 CUDA scaffold-only while claiming full 1-bit inference.
+- Do not regress QK256 CUDA back to a non-compiled or fallback path while
+  preserving full BitNet CUDA claims.
 - Do not upload weights every token and call it real inference.
 - Do not use dense regular-LLM CUDA kernels as BitNet packed-kernel proof.
 - Do not make benchmark claims without driver, CUDA, VRAM, power, and temperature context.

@@ -2,8 +2,8 @@
 # NVIDIA RTX 5070 Ti validation Campaign Status
 
 - Campaign: `nvidia-5070ti`
-- State: `active`
-- Objective: Validate RTX 5070 Ti as a CUDA-first BitNet acceleration lane with selected-device receipts and no CPU, OpenCL, WGPU, or generic GPU conflation.
+- State: `complete`
+- Objective: Maintain the completed RTX 5070 Ti CUDA BitNet proof lane with selected-device receipts and no CPU, OpenCL, WGPU, dense CUDA, or generic GPU conflation.
 
 ## Work Items
 
@@ -32,3 +32,5 @@
 - WGPU smoke is not CUDA proof.
 - CPU fallback cannot count as CUDA execution.
 - Performance claims require driver, CUDA, VRAM, power, and thermal context.
+- speedup_claim must remain false unless a same-model fallback-free benchmark receipt explicitly upgrades it.
+- Dense regular-LLM CUDA receipts cannot satisfy BitNet packed I2S or QK256 proof acceptance.
