@@ -2386,6 +2386,15 @@ async fn run_simple_generation(
     if allocation_audit && json_out.is_none() {
         anyhow::bail!("--allocation-audit requires --json-out so allocation claims are durable");
     }
+    if allocation_audit && !allocation_audit_backend_supported(&backend_identity) {
+        anyhow::bail!(
+            "--allocation-audit is currently scoped to --device apple-m4-cpu-neon with fallback_used=false; got requested_backend={}, selected_backend={}, runtime_api={}, fallback_used={}",
+            backend_identity.requested_backend,
+            backend_identity.selected_backend,
+            backend_identity.runtime_api,
+            backend_identity.fallback_used
+        );
+    }
     let allocation_audit_enabled = allocation_audit;
     let allocation_audit_guard = AllocationAuditGuard::enable(allocation_audit_enabled);
     let mut prefill_token_count = 0usize;
@@ -2890,11 +2899,15 @@ async fn run_simple_generation(
                     "not_requested"
                 },
                 "scope": if allocation_audit_enabled {
-                    "selected Apple BitNet prompt-prefill and decode hot loop"
+                    "selected Apple M4 CPU/NEON BitNet prompt-prefill and decode hot loop"
                 } else {
                     "not_requested"
                 },
-                "claim_scope": "allocation counter deltas for the selected Apple BitNet profile only",
+                "claim_scope": if allocation_audit_enabled {
+                    "allocation counter deltas for the selected Apple M4 CPU/NEON BitNet profile only"
+                } else {
+                    "not_requested"
+                },
                 "warmup_tokens": usize::from(!decode_step_allocs.is_empty()),
                 "measured_tokens": decode_step_allocs.len().saturating_sub(1),
                 "per_token_alloc_count_delta": allocation_count_delta_json(&decode_step_allocs),
@@ -3611,6 +3624,13 @@ fn profile_machine_context_recorded(
     apple_machine_present || cpu_model_present || !cpu_features.is_empty()
 }
 
+fn allocation_audit_backend_supported(identity: &RunBackendIdentity) -> bool {
+    identity.requested_backend == "apple-m4-cpu-neon"
+        && identity.selected_backend == "apple-m4-cpu-neon"
+        && identity.runtime_api == "cpu"
+        && !identity.fallback_used
+}
+
 fn apple_machine_receipt_json(
     requested_backend: &str,
     selected_backend: &str,
@@ -3965,6 +3985,32 @@ mod tests {
         assert_eq!(bytes["total"], 240);
         assert_eq!(bytes["mean_per_token"], 120.0);
         assert_eq!(bytes["max_per_token"], 160);
+    }
+
+    #[test]
+    fn allocation_audit_requires_selected_apple_cpu_neon_without_fallback() {
+        assert!(allocation_audit_backend_supported(&RunBackendIdentity {
+            requested_backend: "apple-m4-cpu-neon".to_string(),
+            selected_backend: "apple-m4-cpu-neon".to_string(),
+            runtime_api: "cpu".to_string(),
+            fallback_used: false,
+            fallback_reason: None,
+        }));
+
+        assert!(!allocation_audit_backend_supported(&RunBackendIdentity {
+            requested_backend: "apple-m4-cpu-neon".to_string(),
+            selected_backend: "cpu".to_string(),
+            runtime_api: "cpu".to_string(),
+            fallback_used: true,
+            fallback_reason: Some("Apple CPU/NEON unavailable".to_string()),
+        }));
+        assert!(!allocation_audit_backend_supported(&RunBackendIdentity {
+            requested_backend: "cpu".to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            fallback_used: false,
+            fallback_reason: None,
+        }));
     }
 
     #[test]

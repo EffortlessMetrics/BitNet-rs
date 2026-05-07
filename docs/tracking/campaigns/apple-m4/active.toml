@@ -505,6 +505,7 @@ allowed_paths = [
   "crates/**/tests/**",
   "crates/**/benches/**",
   "docs/tracking/campaigns/apple-m4/**",
+  "docs/tracking/generated/**",
   "docs/hardware/apple-m4-mac-mini-validation.md",
   "docs/specs/apple-m4-mac-mini-roadmap.md",
 ]
