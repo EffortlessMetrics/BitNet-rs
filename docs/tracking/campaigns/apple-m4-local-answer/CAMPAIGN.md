@@ -45,8 +45,8 @@ This campaign starts the selected next frontier: CPU/NEON local-answer usability
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-QA-ROOT-001 | in_progress | Compare strict BitNet-rs output against bitnet.cpp/reference behavior and localize the first real-output divergence. |
-| M4-QA-MODEL-001 | proposed | Validate or replace the supported local-answer model artifact before local-answer smoke coverage can claim coherent output. |
+| M4-QA-ROOT-001 | merged | Evidence shows the current local GGUF also garbles under the reference runner; model artifact validation is now the blocker. |
+| M4-QA-MODEL-001 | ready | Validate or replace the supported local-answer model artifact before local-answer smoke coverage can claim coherent output. |
 | M4-QA-001 | blocked | Add multi-prompt CPU/NEON local-answer smoke suite; blocked until the supported model artifact is reference-validated for coherent short answers. |
 | M4-QA-002 | proposed | Add greedy determinism checks for local answers. |
 | M4-QA-003 | proposed | Harden local-answer receipt quality fields. |
