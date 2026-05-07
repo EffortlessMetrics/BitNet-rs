@@ -79,10 +79,68 @@ behavior is understood.
 
 ## Status
 
-* PR 01: merged (policy files, advisory)
-* PR 02: merged (xtask checker)
-* PR 03: this PR — MSRV 1.93, strict policy docs and ledgers
-* PR 04+ in flight on this branch
+* **PRs 01–09 + 13–20 (this rollout): landed together as one stacked
+  PR**, one commit per rollout PR. See the table below for the
+  per-PR shipped artefact set.
+* **PRs 10, 11, 12 deferred** as documented in this file's
+  *Follow-up backlog* section. Those are mass mechanical migrations
+  that cannot land atomically.
+
+### Per-PR shipped artefacts
+
+| Rollout PR | Artefact set                                                                                  |
+| ---------: | --------------------------------------------------------------------------------------------- |
+| 01         | `policy/ci-lane-whitelist.toml`, `policy/ci-whitelist-exceptions.toml`, `docs/ci/`             |
+| 02         | `xtask/src/policy/`, `xtask ci-lane-whitelist check`, `xtask check-{file-policy,no-panic-family,clippy-exceptions,lint-inheritance}`, `xtask policy-report` |
+| 03         | MSRV 1.93.0 across workspace + 28 workflows; `policy/clippy-{lints,debt,exceptions}.toml`; `docs/{CLIPPY_POLICY,NO_PANIC_POLICY,POLICY_ALLOWLISTS,FILE_POLICY}.md` |
+| 04         | `policy/non-rust-allowlist.toml` (8146 files / 112 entries / 0 findings); `.github/workflows/policy.yml` (frontdoor blocking, `check-file-policy --fail-on-error`) |
+| 05         | `policy/no-panic-allowlist.toml` seed; checker stays advisory through PR 12                    |
+| 06         | Tightened `#[allow]`/`#[expect]` attribute-line scanner                                       |
+| 07         | `[lints] workspace = true` added to 99 crate manifests; checker reports 0 missing across 136  |
+| 08         | `[workspace.lints.rust]` block + Stage A explicit Clippy profile alongside `clippy::all`      |
+| 09         | `bitnet_test_support::assertions` (`ensure`, `ensure_eq`, `ensure_ne`, `require_some`, `require_ok`, `require_ok_display`) |
+| 13         | `ripr.toml`, `policy/ripr-suppressions.toml`, `.github/workflows/ripr.yml`, `docs/RIPR_EVIDENCE_POLICY.md` (advisory only) |
+| 14         | `xtask ci plan` Rust port of the inline Python in `pr-plan.yml`                                |
+| 15         | `policy/ci-budget.toml`, `policy/ci-lanes.toml`, `policy/ci-risk-packs.toml`                  |
+| 16         | `[profile.pr]`, `[profile.nightly]` in `.config/nextest.toml`; `xtask ci actuals`             |
+| 17         | Plan emits `risk_packs: [String]` (qk256, kernels_cpu, gpu, ffi, tokenizer, bdd_policy, manifest_release, docs_tracking) |
+| 18         | Plan emits `guard: String` + `override_labels_present`; `--enforce-budget` flag               |
+| 19         | `.github/workflows/pr-gate.yml` (`PR Gate Success` aggregator, observation mode); `docs/ci/pr-gate-success.md` |
+| 20         | `xtask ci estimate` (`p50 × 1.15`, p90 warning, p95 hard); `docs/ci/learned-budgets.md`        |
+
+### Verification at landing time
+
+```
+RUSTFLAGS="-D warnings" cargo clippy --locked \
+  -p bitnet-common -p bitnet-models -p bitnet-tokenizers \
+  -p bitnet-quantization -p bitnet-kernels --lib \
+  --no-default-features --features cpu                 -> clean
+cargo test  -p xtask --bin xtask -- policy:: ci::      -> 36 passing
+cargo test  -p bitnet-test-support                      -> 26 passing
+cargo run   -p xtask -- ci-lane-whitelist check         -> 15 lanes / 2 exceptions / 0 errors
+cargo run   -p xtask -- check-file-policy               -> 8146 files / 112 allow / 0 findings
+cargo run   -p xtask -- check-lint-inheritance          -> 136 crates / 0 missing
+cargo fmt --all -- --check                              -> clean
+```
+
+## Follow-up backlog (deferred)
+
+These are the explicit follow-ups that the rollout depends on but
+that this stacked PR does **not** land. Each is one or more dedicated
+PRs against the artefacts above.
+
+| PR  | Scope                                  | Why deferred                              |
+| --- | -------------------------------------- | ----------------------------------------- |
+| 10  | panic-debt cleanup, default members    | ~31 510 unallowlisted findings; needs per-crate-cluster stacked PRs to be reviewable |
+| 11  | panic-debt cleanup, optional surfaces  | FFI / GPU / Python / WASM / fuzz / bench / tooling — same reason as PR 10 |
+| 12  | strict Clippy flip                     | depends on PR 10 + 11; promotes panic-family lints from `warn`/`allow` to `deny`, removes broad-category warns and test carveouts, removes the 476 bare `#[allow(clippy::...)]` shapes |
+| —   | `unsafe_code = "deny"` + receipt ledger | adds `policy/unsafe-allowlist.toml` and flips the workspace setting; needs the unsafe-island inventory first |
+| —   | learned-estimate planner switch        | requires at least one full sprint of `.ci/metrics/ci-lane-history.jsonl` data; the planner-side change is reversible in one commit when the data is ready |
+| —   | branch-protection migration            | runbook in `docs/ci/pr-gate-success.md`; flip happens after one observation cycle of the `PR Gate Success` aggregator |
+| —   | strict-policy lane promotion           | flip `check-no-panic-family` and `check-clippy-exceptions` to `--fail-on-error` once PRs 10 / 11 / 12 land |
+| —   | inline Python deletion in `pr-plan.yml` | the legacy block is kept behind `if: false` for one parity cycle after PR 14; delete after the parity comparison |
+| —   | risk-pack TOML hot-loading             | PR 17 embeds the path-prefix table; the follow-up reads `policy/ci-risk-packs.toml` directly |
+| —   | `xtask ci actuals` GitHub API source   | PR 16 accepts CLI arguments; the follow-up swaps in a GitHub API call |
 
 ## Receipts and expirations
 
