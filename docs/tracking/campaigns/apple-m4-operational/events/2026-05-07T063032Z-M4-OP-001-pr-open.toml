@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T06:30:32Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-001"
+event = "pr_open"
+pr = 3845
+head_sha = "7a81702fd2a23e73502e3a8103e6d34bfa817f02"
+actor = "codex"
+
+notes = [
+  "Opened the Apple M4 operational validation bundle PR.",
+  "The command writes machine profile, Metal probe, Metal smoke, Metal I2_S parity, MPSGraph smoke, strict CPU/NEON proof, phase profile, allocation audit, and summary receipts under a caller-provided output directory.",
+  "Live validation passed locally under target/apple-m4-validation-2026-05-07 with fallback_used=false for Metal, MPSGraph, and CPU/NEON proof receipts.",
+]

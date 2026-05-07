@@ -1,0 +1,147 @@
+{
+  "artifact_kind": "cpu_benchmark",
+  "artifact_path": "ci\\intel-i5-8250u\\2026-05-07\\cpu-phase-benchmark-receipt.json",
+  "claim": "cpu_benchmark_receipt",
+  "claim_boundary": "Real phase profiles are measured only when backed by supplied strict CPU proof receipts; not_run profiles are explicit gaps, not performance evidence.",
+  "cpu": {
+    "arch": "x86_64",
+    "avx512": false,
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "frequency_mhz": null,
+    "model": "Intel64 Family 6 Model 142 Stepping 10, GenuineIntel",
+    "power_mode": "unknown",
+    "temperature_c": null,
+    "threads": 8
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "cpu-rust",
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "oracle_kernel": "qk256-scalar-gemv",
+    "requested_kernel": "i2_s-avx2-reference",
+    "selected_kernel": "i2_s-avx2-reference"
+  },
+  "machine_id": "cpu-rust",
+  "model": {
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "quant_format": "QK256/I2_S",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "profile_order": [
+    "micro",
+    "layer",
+    "prefill",
+    "first_token",
+    "decode"
+  ],
+  "profiles": [
+    {
+      "execution_phase": "micro_kernel",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "profile": "micro",
+      "reason": "micro is covered by canonical QK256 synthetic benchmark receipts, not this real phase receipt surface",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 1,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "not_run"
+    },
+    {
+      "execution_phase": "layer_forward",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "profile": "layer",
+      "reason": "layer phase harness is not yet wired to a real transformer block benchmark receipt",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 1,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "not_run"
+    },
+    {
+      "execution_phase": "prefill",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "profile": "prefill",
+      "reason": "no supplied strict CPU proof receipt measured prefill",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 1,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "not_run"
+    },
+    {
+      "bandwidth_gbps": 0.0,
+      "execution_phase": "first_token",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "median_ms": 3386602.0,
+      "p95_ms": 3386602.0,
+      "profile": "first_token",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 4096,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "measured",
+      "tokens_per_second": 0.00029528122879511674,
+      "wall_time_ms": 3386602.0
+    },
+    {
+      "execution_phase": "decode_steady_state",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "profile": "decode",
+      "reason": "no supplied strict CPU proof receipt measured steady-state decode with more than one generated token",
+      "requested_kernel": "i2_s-avx2-reference",
+      "selected_kernel": "i2_s-avx2-reference",
+      "shape": {
+        "cols": 1,
+        "iterations": 1,
+        "rows": 1
+      },
+      "status": "not_run"
+    }
+  ],
+  "receipt_inputs": [
+    "ci\\intel-i5-8250u\\2026-05-07\\strict-bitnet-cpu-proof.json"
+  ],
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema": 1,
+  "selected_backend": "cpu-rust",
+  "speedup_claim": false,
+  "timestamp_utc": "2026-05-07T06:51:21Z",
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true
+  },
+  "workload": {
+    "batch_size": 1,
+    "generated_tokens": 1,
+    "prompt_tokens": 65
+  }
+}

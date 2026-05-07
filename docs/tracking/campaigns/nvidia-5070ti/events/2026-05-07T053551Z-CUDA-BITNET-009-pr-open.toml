@@ -1,0 +1,14 @@
+timestamp = "2026-05-07T05:35:51Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-009"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3837
+head_sha = "043837a4b9b43507d9aede7db740c4ec4570b16e"
+actor = "codex"
+
+notes = [
+  "Opened the CUDA-BITNET-009 routed upload-once proof PR.",
+  "The PR refreshes one-token, short-decode, and benchmark receipts with weights_uploaded_once=true, per_token_weight_upload=false, QK256 CUDA invocations, and zero CPU fallback.",
+]

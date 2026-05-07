@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T08:20:37Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-003"
+event = "pr_open"
+pr = 3857
+head_sha = "034c618b9f82869c0240bf4202682b6650d5cfec"
+actor = "codex"
+
+notes = [
+  "Opened the Apple M4 operator runbook PR.",
+  "The runbook documents model placement, validation commands, receipt-bundle checking, expected receipt files, backend labels, failure modes, artifact hygiene, and unsupported claims.",
+  "The PR is documentation and campaign tracking only; it does not add runtime capability or claim full apple-m4-metal model inference.",
+]

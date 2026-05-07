@@ -7,9 +7,9 @@
 
 ## Work Items
 
-| Item | State | PR | Branch | Acceptance |
-|---|---|---:|---|---|
-| CI-COVERAGE-001 | merged | #3620 | `codex/implement-minimal-codecov-integration-vm5aks` | Guard Codecov upload so forked PRs and missing tokens skip coverage upload without failing unrelated CI. |
+| Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
+|---|---|---:|---|---|---|---|---|
+| CI-COVERAGE-001 | merged | #3620 | `codex/implement-minimal-codecov-integration-vm5aks` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Guard Codecov upload so forked PRs and missing tokens skip coverage upload without failing unrelated CI. |
 
 ## Hard Constraints
 

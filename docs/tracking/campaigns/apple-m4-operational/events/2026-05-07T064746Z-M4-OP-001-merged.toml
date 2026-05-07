@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T06:47:46Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-001"
+event = "merged"
+pr = 3845
+merge_sha = "a071c5d289f31f31100b0ec723e4663bdba85dc7"
+actor = "codex"
+
+notes = [
+  "M4-OP-001 merged with the Apple M4 validation bundle command and receipt checker.",
+  "M4-OP-002 is promoted to ready for hardened receipt-bundle validation.",
+  "The merged work operationalizes receipt generation and validation without claiming full apple-m4-metal model inference, QK256 on Apple Silicon, Neural Engine execution, or general M4 performance.",
+]

@@ -113,6 +113,28 @@ kernel identity, fallback status, and workload shape explicit:
 They exist to isolate kernel and layer cost before prefill, first-token, and
 steady decode profiles.
 
+Two CPU benchmark receipt emitters intentionally keep synthetic and real phase
+surfaces separate:
+
+- `cpu_benchmark_receipt` measures canonical no-scale QK256 GEMV profile loops.
+  It is useful for micro/kernel evidence, but it is not a full real-model
+  inference benchmark.
+- `cpu_phase_benchmark_receipt` consumes strict CPU proof receipts and emits
+  real phase benchmark evidence only for phases backed by those receipts. Any
+  phase that was not measured by the supplied proof receipt is emitted as
+  `status = "not_run"` with a reason. A final CPU-BITNET-008 closeout requires
+  all required profiles to be measured by appropriate proof-backed inputs.
+
+Example real phase receipt command:
+
+```bash
+cargo run --locked -p bitnet-bench-receipts \
+  --bin cpu_phase_benchmark_receipt --no-default-features -- \
+  --strict-proof-receipt ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json \
+  --selected-backend cpu-rust \
+  --receipt-out target/cpu-phase-benchmark-receipt.json
+```
+
 ## Hardware Linkage
 
 BitNet benchmark artifacts must also follow:

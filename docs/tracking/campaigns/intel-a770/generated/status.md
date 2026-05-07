@@ -7,9 +7,9 @@
 
 ## Work Items
 
-| Item | State | PR | Branch | Acceptance |
-|---|---|---:|---|---|
-| A770-003 | ready | TBD | `codex/intel-a770/A770-003-backend-identity` | Preserve Intel Arc A770 requested and selected backend identity without adding kernels or inference claims. |
+| Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
+|---|---|---:|---|---|---|---|---|
+| A770-003 | ready | TBD | `codex/intel-a770/A770-003-backend-identity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Preserve Intel Arc A770 requested and selected backend identity without adding kernels or inference claims. |
 
 ## Hard Constraints
 

@@ -175,6 +175,64 @@ The first useful receipt is a CPU feature and dispatch proof:
 
 This is not a performance claim. Sustained-load receipts come later.
 
+## Strict CPU Proof Run
+
+`KBL8250U-004` is the first i5-8250U lane item that may emit a strict CPU
+proof receipt. It requires the canonical BitNet GGUF and tokenizer authority to
+be present on the machine before the receipt can be created. Do not substitute
+`tests/models/mini.gguf`, tokenizer-only GGUF fixtures, mock tensors, or minimal
+loader fallback for this run.
+
+Required local input:
+
+```text
+models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
+```
+
+Command shape:
+
+```powershell
+$env:BITNET_DISABLE_MINIMAL_LOADER = "1"
+$env:BITNET_STRICT_MODE = "1"
+cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli" -- `
+  run `
+  --model models\BitNet-b1.58-2B-4T\ggml-model-i2_s.gguf `
+  --prompt "Answer with a single digit: 2+2=" `
+  --max-tokens 1 `
+  --temperature 0.0 `
+  --greedy `
+  --strict-loader `
+  --strict-tokenizer `
+  --json-out ci\intel-i5-8250u\2026-05-07\strict-bitnet-cpu-proof.json
+```
+
+The proof receipt must record `loader.mode = real_gguf`, strict tokenizer
+authority, model SHA-256, selected backend, selected kernel, `fallback_used =
+false`, timing, power mode, and thermal context. If the canonical model is
+missing, emit a blocker artifact instead of a proof receipt.
+
+The 2026-05-07 Kaby Lake run emitted:
+
+```text
+ci/intel-i5-8250u/2026-05-07/strict-bitnet-cpu-proof.json
+ci/intel-i5-8250u/2026-05-07/cpu-phase-benchmark-receipt.json
+ci/intel-i5-8250u/2026-05-07/strict-cpu-proof-hardware-context.json
+```
+
+The raw CLI receipt records `requested_backend = cpu`, `selected_backend =
+cpu-rust`, `fallback_used = false`, `loader.mode = real_gguf`,
+`tokenizer.source = gguf_metadata`, model SHA-256
+`4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`, and
+kernel `i2_s-avx2-reference`. The hardware context maps that raw CPU execution
+onto the lane identity `intel-i5-8250u-cpu-avx2` and records temperature and
+frequency fields as `null` because those sensors were not available through the
+collected Windows commands.
+
+The companion phase benchmark receipt measures `first_token` only. `micro`,
+`layer`, `prefill`, and steady `decode` remain `not_run`, so this artifact is
+not a complete CPU-BITNET-008 benchmark closeout and is not a sustained
+performance claim.
+
 ## Sustained-Load Reporting
 
 Separate at least three phases when benchmarking:

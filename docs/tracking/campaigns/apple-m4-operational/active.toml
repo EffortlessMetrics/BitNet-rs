@@ -1,0 +1,248 @@
+id = "apple-m4-operational"
+title = "Apple M4 operational readiness"
+status = "active"
+
+objective = "Turn the completed Apple M4 proof lane into a repeatable operator workflow with one-command validation, durable receipts, clear docs, stable failure modes, and benchmark profiles."
+
+end_state = [
+  "A single Apple M4 validation command emits the expected machine, probe, smoke, parity, graph, strict BitNet CPU/NEON, profile, allocation, and summary receipts.",
+  "A receipt-bundle checker rejects missing fallback status, unsupported Apple claims, missing BitNet fields, and accidental QK256 or Neural Engine claims.",
+  "The operator runbook documents model placement, commands, receipt paths, backend labels, failure modes, and unsupported claims.",
+  "CLI examples make effective Apple CPU/NEON use and Metal phase proof repeatable without relying on hidden test knowledge.",
+  "Benchmark profiles are conservative, named, and tied to receipt-backed proof boundaries.",
+  "The next Apple implementation frontier is selected explicitly instead of reopening the completed proof campaign.",
+]
+
+hard_constraints = [
+  "Do not reopen the completed apple-m4 proof campaign.",
+  "Do not claim full apple-m4-metal model inference unless a strict real-model receipt proves it.",
+  "Do not claim Neural Engine execution from MPSGraph.",
+  "Do not claim QK256 on Apple Silicon.",
+  "Do not claim general M4 performance from tiny-kernel benchmarks.",
+]
+
+[[work_item]]
+id = "M4-OP-001"
+status = "merged"
+branch = "codex/apple-m4-operational/M4-OP-001-validation-bundle"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add a one-command Apple M4 validation bundle that runs the known-good proof sequence, writes the expected receipts under a caller-provided output directory, validates every receipt, and writes a summary that states exactly what is and is not proven."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p xtask --no-default-features apple_m4",
+  "cargo run --locked -p xtask --no-default-features -- apple-m4 validate --help",
+  "cargo run --locked -p xtask --no-default-features -- apple-m4 receipts-check --help",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-operational",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "xtask/src/**",
+  "docs/hardware/apple-m4-mac-mini-operator-runbook.md",
+  "docs/tracking/campaigns/apple-m4-operational/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Apple M4 validation receipts can be generated and checked through an operator command after merge.",
+]
+must_not_claim = [
+  "Full apple-m4-metal model inference works.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "General M4 performance is proven.",
+]
+
+[[work_item]]
+id = "M4-OP-002"
+status = "merged"
+pr = 3848
+merge_sha = "6e53e3c03144b58341fd40c13a3fdabbcabe7f96"
+branch = "codex/apple-m4-operational/M4-OP-002-receipt-bundle-validator"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-OP-001"]
+acceptance = "Harden the Apple M4 receipt-bundle validator so it fails on missing fallback fields, backend/fallback mismatches, CPU fallback counted as Metal proof, MPSGraph-as-Neural-Engine claims, missing BitNet fields, or premature QK256 Apple claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p xtask --no-default-features apple_m4",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-operational",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "xtask/src/**",
+  "docs/tracking/campaigns/apple-m4-operational/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Apple M4 receipt bundles are checked for unsupported backend, fallback, BitNet, QK256, and Neural Engine claims.",
+]
+must_not_claim = [
+  "Receipt validation proves performance.",
+  "Receipt validation proves unsupported Apple runtime execution.",
+]
+
+[[work_item]]
+id = "M4-OP-003"
+status = "merged"
+pr = 3857
+merge_sha = "01e4e92cce04e87747b6c81a60efd9e132eb487a"
+branch = "codex/apple-m4-operational/M4-OP-003-operator-runbook"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-OP-001"]
+acceptance = "Add an Apple M4 operator runbook that documents model download and placement, validation commands, expected receipts, backend label meanings, failure modes, and unsupported claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-operational",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/hardware/apple-m4-mac-mini-operator-runbook.md",
+  "docs/hardware/apple-m4-mac-mini-validation.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+  "docs/tracking/campaigns/apple-m4-operational/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "Apple M4 operator guidance is documented.",
+]
+must_not_claim = [
+  "Documentation proves runtime execution.",
+  "Full apple-m4-metal model inference works.",
+]
+
+[[work_item]]
+id = "M4-OP-004"
+status = "proposed"
+branch = "codex/apple-m4-operational/M4-OP-004-effective-cli-flow"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-OP-003"]
+acceptance = "Document and, where needed, polish effective-use CLI examples for strict Apple CPU/NEON BitNet proof and receipt-backed Metal phase proof, with clear strict failure-mode messaging."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m4",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-operational",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/hardware/apple-m4-mac-mini-operator-runbook.md",
+  "docs/tracking/campaigns/apple-m4-operational/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Apple M4 strict CPU/NEON and Metal phase proof CLI flows are documented and fail clearly.",
+]
+must_not_claim = [
+  "Full apple-m4-metal model inference works.",
+  "Metal phase proof is full model inference.",
+]
+
+[[work_item]]
+id = "M4-OP-005"
+status = "ready"
+branch = "codex/apple-m4-operational/M4-OP-005-benchmark-profile-summary"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-OP-002"]
+acceptance = "Add conservative Apple M4 benchmark profile names, expected timing fields, and summary artifact validation without turning tiny-kernel timings into broad performance claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p xtask --no-default-features apple_m4",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-operational",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "xtask/src/**",
+  "docs/hardware/apple-m4-mac-mini-operator-runbook.md",
+  "docs/tracking/campaigns/apple-m4-operational/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Apple M4 benchmark profile summaries are named and receipt-checked.",
+]
+must_not_claim = [
+  "General M4 performance is proven.",
+  "BitNet Metal acceleration is proven beyond receipt-backed phases.",
+]
+
+[[work_item]]
+id = "M4-OP-006"
+status = "proposed"
+branch = "codex/apple-m4-operational/M4-OP-006-next-frontier"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-OP-004", "M4-OP-005"]
+acceptance = "Decide and document the next Apple implementation frontier: CPU/NEON usability, Metal subgraph expansion, or QK256 investigation, with claim boundaries and a new campaign if implementation work should continue."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-operational",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/hardware/apple-m4-mac-mini-operator-runbook.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+  "docs/tracking/campaigns/apple-m4-operational/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The next Apple implementation frontier is explicitly selected or deferred.",
+]
+must_not_claim = [
+  "A new runtime capability was implemented.",
+  "QK256 is supported on Apple Silicon.",
+]

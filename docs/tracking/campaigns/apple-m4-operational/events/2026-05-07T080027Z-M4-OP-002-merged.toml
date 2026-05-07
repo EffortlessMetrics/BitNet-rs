@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T08:00:27Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-002"
+event = "merged"
+pr = 3848
+merge_sha = "6e53e3c03144b58341fd40c13a3fdabbcabe7f96"
+actor = "codex"
+
+notes = [
+  "M4-OP-002 merged with hardened Apple M4 receipt-bundle validation.",
+  "The validator rejects missing fallback status, backend/fallback mismatches, CPU fallback counted as Metal proof, MPSGraph-as-Neural-Engine claims, missing BitNet/tokenizer fields, and premature Apple QK256 claims.",
+  "M4-OP-003 is promoted to ready for the Apple M4 operator runbook.",
+]

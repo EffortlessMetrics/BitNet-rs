@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "artifact_kind": "bitnet_cuda_answer",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "timestamp_utc": "TBD",
+  "claim": "strict_cuda_answer_generation",
+  "speedup_claim": false,
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "fallback_used": false,
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "question": "TBD",
+  "answer": "TBD",
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "TBD",
+    "format": "gguf",
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "loader_mode": "real_gguf",
+    "fallback_loader_used": false,
+    "tokenizer": "llama3",
+    "tokenizer_source": "explicit",
+    "tokenizer_path": "TBD",
+    "tokenizer_sha256": "TBD"
+  },
+  "backend": {
+    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+    "runtime_api": "cuda",
+    "reference_backend": "amd-9950x3d-cpu-avx512",
+    "fallback_used": false,
+    "fallback_backend": null,
+    "fallback_reason": null,
+    "strict_cuda": true
+  },
+  "cuda": {
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "compute_capability": "12.0",
+    "driver_version": "TBD",
+    "cuda_runtime_version": "TBD",
+    "cuda_toolkit_version": "TBD",
+    "nvrtc_version": "TBD",
+    "vram_bytes": 17179869184,
+    "power_limit_watts": null,
+    "power_draw_watts": null,
+    "temperature_c": null
+  },
+  "prompt_template": {
+    "family": "llama3-chat",
+    "bos_inserted": true,
+    "system_prompt_present": false,
+    "assistant_prefix_inserted": true,
+    "stop_tokens": ["<|eot_id|>", "<|end_of_text|>"],
+    "special_tokens_skipped_on_decode": true
+  },
+  "prompt_prefill": {
+    "exercised": true,
+    "tokens": null,
+    "kv_cache_behavior": "prefill_then_incremental_decode",
+    "kv_cache_device": "cpu|cuda"
+  },
+  "generation": {
+    "mode": "greedy",
+    "max_new_tokens": 96,
+    "generated_tokens": null,
+    "temperature": 0.0,
+    "top_p": null,
+    "top_k": null,
+    "seed": 42,
+    "deterministic": true,
+    "stop_reason": "eos|stop_sequence|max_tokens"
+  },
+  "bitnet": {
+    "quantization": "W1.58A8",
+    "kernel_family": "qk256",
+    "layout": "gguf_packed_i2_s",
+    "layout_source": "gguf",
+    "weights_uploaded_once": true,
+    "per_token_weight_upload": false,
+    "kernel_id": "qk256_gemv_cuda"
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_total": null,
+    "bitnet_linear_layers_on_cuda": null,
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "unsupported_ops": []
+  },
+  "quality": {
+    "printable_utf8": true,
+    "non_empty_answer": true,
+    "stop_reason": "eos|stop_sequence|max_tokens",
+    "no_replacement_chars": true,
+    "no_raw_special_tokens": true,
+    "mostly_text": true,
+    "max_repeated_token_run": null,
+    "repeated_token_threshold": 8,
+    "garbage_filter_passed": true,
+    "failed_rules": []
+  },
+  "sequence_parity": {
+    "reference_backend": "amd-9950x3d-cpu-avx512",
+    "cpu_token_ids": [],
+    "cuda_token_ids": [],
+    "first_divergence_index": null,
+    "top1_agreement": null,
+    "max_abs_error": null,
+    "mean_abs_error": null,
+    "divergence_artifact_path": null
+  },
+  "timing": {
+    "load_ms": null,
+    "weight_upload_ms": null,
+    "prompt_prefill_ms": null,
+    "first_token_ms": null,
+    "decode_ms": null,
+    "total_ms": null,
+    "steady_state_tokens_per_second": null
+  },
+  "kernel_stats": [
+    {
+      "kernel_id": "qk256_gemv_cuda",
+      "invocations": null,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": null,
+      "device_to_host_bytes": null,
+      "kernel_launches": null,
+      "kernel_time_ms": null,
+      "selected_device_index": 0,
+      "selected_device_name": "NVIDIA GeForce RTX 5070 Ti",
+      "compute_capability": "12.0"
+    }
+  ],
+  "cpu_fallback_ops": [],
+  "artifact_path": "target/bitnet/receipts/ask-rtx5070ti.json"
+}

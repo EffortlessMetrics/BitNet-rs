@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T08:17:05Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the Apple M4 operator runbook.",
+  "Scope is docs and apple-m4-operational tracking only.",
+  "The runbook documents operator commands, receipt paths, backend labels, failure modes, and unsupported claims without adding runtime capability.",
+]

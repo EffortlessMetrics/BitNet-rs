@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T04:08:34Z"
+campaign = "apple-m4"
+item = "M4-018"
+event = "closeout"
+actor = "codex"
+
+notes = [
+  "Closed the Apple M4 campaign after M4-001 through M4-018 merged and M4-018 closeout landed.",
+  "M4-018 implementation PR #3826 and tracker closeout PR #3828 are both merged.",
+  "Campaign status is complete; no additional Apple M4 work item is ready, proposed, in_progress, or pr_open.",
+  "No runtime code, kernels, QK256, server inference, dependency, or machine-local artifact changes are part of this closeout.",
+]

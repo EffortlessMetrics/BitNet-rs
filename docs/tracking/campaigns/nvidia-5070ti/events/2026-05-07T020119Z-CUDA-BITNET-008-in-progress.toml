@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T02:01:19Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-008"
+event = "in_progress"
+previous_status = "proposed"
+new_status = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the strict BitNet CUDA benchmark baseline rung after CUDA-BITNET-007 merged.",
+  "Scope is limited to normalized same-model benchmark evidence, receipt validation, and tracker updates.",
+  "This rung keeps speedup_claim=false and records CPU scalar/AVX2 strict end-to-end profiles explicitly as not_run unless matching receipts are supplied.",
+]

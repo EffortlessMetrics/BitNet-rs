@@ -11,10 +11,10 @@ description = "SRP core download helpers for offline mode and content-length val
 
 [dependencies]
 thiserror.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true
 
 [dev-dependencies]
-tempfile.workspace = true
 serial_test.workspace = true

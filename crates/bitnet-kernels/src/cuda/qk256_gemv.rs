@@ -36,7 +36,7 @@ pub const QK256_PACKED_BYTES_PER_BLOCK: usize = 64;
 pub const CUDA_QK256_GEMV_KERNEL_ID: &str = "qk256_gemv_cuda";
 
 #[cfg(feature = "cuda")]
-const CUDA_QK256_GEMV_KERNEL_SRC: &str = r#"
+pub(crate) const CUDA_QK256_GEMV_KERNEL_SRC: &str = r#"
 extern "C" __global__
 void qk256_gemv_cuda(
     const unsigned char* packed_weights,

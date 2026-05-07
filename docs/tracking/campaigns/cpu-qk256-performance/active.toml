@@ -23,7 +23,9 @@ id = "KBL8250U-003"
 status = "merged"
 branch = "codex/cpu-qk256-performance/KBL8250U-003-avx2-proof-artifact"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = []
 acceptance = "Prove i5-8250U scalar and AVX2 dispatch with receipt-backed selected CPU kernel identity and no GPU/NPU fallback."
 commands = [
@@ -52,10 +54,12 @@ must_not_claim = [
 
 [[work_item]]
 id = "KBL8250U-004"
-status = "ready"
+status = "merged"
 branch = "codex/cpu-qk256-performance/KBL8250U-004-strict-proof-run"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["KBL8250U-003"]
 acceptance = "Add an i5-8250U strict CPU proof run with selected backend, no fallback, model hash, timing, and thermal context."
 commands = [

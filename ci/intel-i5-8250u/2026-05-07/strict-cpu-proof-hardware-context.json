@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "artifact_kind": "strict_cpu_proof_hardware_context",
+  "machine_id": "intel-i5-8250u-cpu-avx2",
+  "hardware_lane": "i5_8250u",
+  "timestamp_utc": "2026-05-07T06:50:26Z",
+  "work_item": "KBL8250U-004",
+  "strict_cpu_proof": {
+    "artifact_path": "ci/intel-i5-8250u/2026-05-07/strict-bitnet-cpu-proof.json",
+    "raw_receipt_path": "ci/intel-i5-8250u/2026-05-07/strict-bitnet-cpu-proof.json",
+    "artifact_kind": "strict_bitnet_cpu_profile",
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "hardware_lane_selected_backend": "intel-i5-8250u-cpu-avx2",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true,
+    "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "kernel_id": "i2_s-avx2-reference",
+    "dequantizes_before_compute": false,
+    "prompt_tokens": 65,
+    "generated_tokens": 1,
+    "total_ms": 3386603,
+    "first_token_ms": 3386602
+  },
+  "phase_benchmark_receipt": {
+    "artifact_path": "ci/intel-i5-8250u/2026-05-07/cpu-phase-benchmark-receipt.json",
+    "speedup_claim": false,
+    "profiles": [
+      {
+        "profile": "micro",
+        "status": "not_run"
+      },
+      {
+        "profile": "layer",
+        "status": "not_run"
+      },
+      {
+        "profile": "prefill",
+        "status": "not_run"
+      },
+      {
+        "profile": "first_token",
+        "status": "measured"
+      },
+      {
+        "profile": "decode",
+        "status": "not_run"
+      }
+    ]
+  },
+  "cpu": {
+    "model": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+    "cores": 4,
+    "threads": 8,
+    "features": {
+      "avx2": true,
+      "fma": true,
+      "avx512": false
+    }
+  },
+  "system_context": {
+    "os": "Microsoft Windows",
+    "power_mode": "Balanced",
+    "memory_bytes": 34359738368,
+    "memory_speed_mhz": 2400,
+    "temperature_c": null,
+    "frequency_mhz": null,
+    "thermal_context": "Temperature sensor was not available through the collected Windows commands; field is intentionally null.",
+    "frequency_context": "Per-run frequency was not available through the collected Windows commands; field is intentionally null.",
+    "sustained_performance_claim": false
+  },
+  "validation": [
+    {
+      "command": "Get-FileHash models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf -Algorithm SHA256",
+      "result": "ok",
+      "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+    },
+    {
+      "command": "BITNET_DISABLE_MINIMAL_LOADER=1 BITNET_STRICT_MODE=1 cargo run --locked -p bitnet-cli --no-default-features --features \"cpu,full-cli\" -- --device cpu run --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --prompt \"Answer with a single digit: 2+2=\" --max-tokens 1 --temperature 0.0 --greedy --strict-loader --strict-tokenizer --threads 8 --profile-id kbl8250u_strict_first_token --json-out ci/intel-i5-8250u/2026-05-07/strict-bitnet-cpu-proof.json",
+      "result": "ok"
+    },
+    {
+      "command": "cargo run --locked -p bitnet-bench-receipts --bin cpu_phase_benchmark_receipt --no-default-features -- --strict-proof-receipt ci/intel-i5-8250u/2026-05-07/strict-bitnet-cpu-proof.json --selected-backend cpu-rust --receipt-out ci/intel-i5-8250u/2026-05-07/cpu-phase-benchmark-receipt.json",
+      "result": "ok"
+    }
+  ],
+  "claim_boundary": "This artifact records a strict i5-8250U CPU proof run and a first-token phase receipt only. It does not claim sustained mobile performance, throughput superiority, GPU/OpenVINO/UHD 620/NPU execution, or complete CPU-BITNET-008 benchmark closeout.",
+  "artifact_path": "ci/intel-i5-8250u/2026-05-07/strict-cpu-proof-hardware-context.json"
+}

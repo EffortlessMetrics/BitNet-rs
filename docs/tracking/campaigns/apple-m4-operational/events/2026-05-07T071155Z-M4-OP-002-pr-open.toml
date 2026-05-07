@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T07:11:55Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-002"
+event = "pr_open"
+pr = 3848
+head_sha = "df1518f14d10e7c0a4a261750cbaec055666232a"
+actor = "codex"
+
+notes = [
+  "Opened the Apple M4 receipt-bundle validator hardening PR.",
+  "The validator now rejects unsupported Apple QK256 and Neural Engine claims in receipt values and field names.",
+  "Focused xtask Apple M4 tests, campaign checks, generated-dashboard freshness, and git diff checks passed locally.",
+]

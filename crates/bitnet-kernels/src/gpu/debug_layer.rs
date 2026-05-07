@@ -5,6 +5,7 @@
 
 use crate::KernelProvider;
 use crate::cpu::FallbackKernel;
+use crate::env_bool::env_truthy;
 use bitnet_common::{QuantizationType, Result};
 use std::fmt;
 
@@ -114,9 +115,7 @@ impl<P: KernelProvider> DebugLayer<P> {
 
 /// Check whether `BITNET_GPU_DEBUG` is set to a truthy value.
 pub fn gpu_debug_enabled() -> bool {
-    std::env::var("BITNET_GPU_DEBUG")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))
-        .unwrap_or(false)
+    env_truthy("BITNET_GPU_DEBUG")
 }
 
 /// Compare two f32 slices element-wise and collect mismatches.
@@ -451,6 +450,12 @@ mod tests {
         });
         temp_env::with_var("BITNET_GPU_DEBUG", Some("yes"), || {
             assert!(gpu_debug_enabled());
+        });
+        temp_env::with_var("BITNET_GPU_DEBUG", Some(" ON "), || {
+            assert!(gpu_debug_enabled());
+        });
+        temp_env::with_var("BITNET_GPU_DEBUG", Some("FALSE"), || {
+            assert!(!gpu_debug_enabled());
         });
     }
 

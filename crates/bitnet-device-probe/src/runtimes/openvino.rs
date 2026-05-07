@@ -42,6 +42,88 @@ pub struct OpenVinoProbe {
     pub error: Option<String>,
 }
 
+/// Tiny static OpenVINO NPU graph smoke result.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct OpenVinoNpuTinyGraphSmoke {
+    /// Whether the tiny graph executed and matched the CPU expected output.
+    pub passed: bool,
+    /// Proof stage reached by this smoke result.
+    pub proof_stage: String,
+    /// Requested backend identity for the Intel NPU lane.
+    pub requested_backend: String,
+    /// Selected backend when OpenVINO reported or used an NPU device.
+    pub selected_backend: Option<String>,
+    /// Runtime API used by the smoke.
+    pub runtime_api: Option<String>,
+    /// Concrete OpenVINO runtime device token, normally `NPU`.
+    pub runtime_device: Option<String>,
+    /// OpenVINO Python package version when available.
+    pub openvino_version: Option<String>,
+    /// OpenVINO available device tokens observed by the smoke script.
+    pub openvino_available_devices: Vec<String>,
+    /// Tiny static graph identifier.
+    pub graph_name: String,
+    /// Static shape mode expected by the Intel NPU lane.
+    pub shape_mode: String,
+    /// Input shape used by the tiny graph.
+    pub input_shape: Vec<usize>,
+    /// Output shape returned by the tiny graph when available.
+    pub output_shape: Option<Vec<usize>>,
+    /// Graph precision label.
+    pub precision: String,
+    /// Absolute/mean tolerance used for the CPU expected-output comparison.
+    pub tolerance: f32,
+    /// Maximum absolute error versus CPU expected output.
+    pub max_abs_error: Option<f32>,
+    /// Mean absolute error versus CPU expected output.
+    pub mean_abs_error: Option<f32>,
+    /// Compile time to OpenVINO `NPU` when measured.
+    pub compile_ms: Option<f64>,
+    /// First inference time when measured.
+    pub first_infer_ms: Option<f64>,
+    /// Always false: this smoke never substitutes CPU fallback.
+    pub fallback_used: bool,
+    /// Always false: CPU fallback is not allowed for NPU smoke proof.
+    pub cpu_fallback_allowed: bool,
+    /// Whether graph execution occurred.
+    pub graph_execution: bool,
+    /// Always false: this is a tiny graph smoke, not BitNet inference.
+    pub bitnet_inference: bool,
+    /// Non-fatal error for unavailable runtime, missing NPU, compile, infer, or parity failure.
+    pub error: Option<String>,
+}
+
+impl OpenVinoNpuTinyGraphSmoke {
+    fn unavailable(reason: impl Into<String>) -> Self {
+        Self {
+            passed: false,
+            proof_stage: "runtime_detected".to_owned(),
+            requested_backend: "intel-npu".to_owned(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            graph_name: "tiny_matmul_add_f16_1x16".to_owned(),
+            shape_mode: "static".to_owned(),
+            input_shape: vec![1, 16],
+            output_shape: None,
+            precision: "F16".to_owned(),
+            tolerance: 0.001,
+            max_abs_error: None,
+            mean_abs_error: None,
+            compile_ms: None,
+            first_infer_ms: None,
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: false,
+            bitnet_inference: false,
+            error: Some(reason.into()),
+        }
+    }
+}
+
 impl OpenVinoProbe {
     /// Build an unavailable OpenVINO probe result.
     pub fn unavailable(reason: impl Into<String>) -> Self {
@@ -138,6 +220,77 @@ for dev in core.available_devices:
     OpenVinoProbe::unavailable("python openvino import unavailable")
 }
 
+/// Run a tiny static OpenVINO graph on `NPU` through Python, without linking OpenVINO.
+pub fn run_openvino_npu_tiny_graph_smoke() -> OpenVinoNpuTinyGraphSmoke {
+    let script = r#"
+import time
+
+try:
+    import openvino as ov
+    import numpy as np
+    from openvino import opset8 as opset
+
+    core = ov.Core()
+    print("OPENVINO_VERSION=" + str(ov.__version__))
+    for dev in core.available_devices:
+        print("AVAILABLE_DEVICE=" + str(dev))
+
+    if not any(str(dev) == "NPU" or str(dev).startswith("NPU.") for dev in core.available_devices):
+        print("RESULT=fail")
+        print("ERROR=OpenVINO did not report NPU")
+    else:
+        device = "NPU"
+        input_data = np.arange(16, dtype=np.float16).reshape(1, 16)
+        expected = input_data + np.ones((1, 16), dtype=np.float16)
+
+        param = opset.parameter([1, 16], dtype=np.float16, name="input")
+        weights = opset.constant(np.eye(16, dtype=np.float16))
+        bias = opset.constant(np.ones((1, 16), dtype=np.float16))
+        matmul = opset.matmul(param, weights, False, False)
+        output = opset.add(matmul, bias)
+        model = ov.Model([output], [param], "tiny_matmul_add_f16_1x16")
+
+        compile_start = time.perf_counter()
+        compiled = core.compile_model(model, device)
+        compile_ms = (time.perf_counter() - compile_start) * 1000.0
+
+        infer_start = time.perf_counter()
+        result = compiled([input_data])
+        first_infer_ms = (time.perf_counter() - infer_start) * 1000.0
+        actual = np.asarray(next(iter(result.values())))
+
+        diff = np.abs(actual.astype(np.float32) - expected.astype(np.float32))
+        max_abs = float(np.max(diff))
+        mean_abs = float(np.mean(diff))
+        passed = bool(max_abs <= 0.001)
+
+        print("SELECTED_DEVICE=" + device)
+        print("GRAPH_NAME=tiny_matmul_add_f16_1x16")
+        print("SHAPE_MODE=static")
+        print("PRECISION=F16")
+        print("INPUT_SHAPE=1,16")
+        print("OUTPUT_SHAPE=" + ",".join(str(dim) for dim in actual.shape))
+        print("COMPILE_MS=" + str(compile_ms))
+        print("FIRST_INFER_MS=" + str(first_infer_ms))
+        print("MAX_ABS_ERROR=" + str(max_abs))
+        print("MEAN_ABS_ERROR=" + str(mean_abs))
+        print("RESULT=" + ("pass" if passed else "fail"))
+        if not passed:
+            print("ERROR=Output mismatch versus CPU expected output")
+except Exception as exc:
+    print("RESULT=fail")
+    print("ERROR=" + repr(exc))
+"#;
+
+    for python in ["python3", "python"] {
+        if let Ok(stdout) = command_output(python, ["-c", script]) {
+            return parse_openvino_npu_tiny_graph_smoke_output(&stdout);
+        }
+    }
+
+    OpenVinoNpuTinyGraphSmoke::unavailable("python openvino smoke unavailable")
+}
+
 pub(crate) fn parse_openvino_line_output(output: &str) -> OpenVinoProbe {
     let mut probe = OpenVinoProbe {
         runtime_available: true,
@@ -166,6 +319,69 @@ pub(crate) fn parse_openvino_line_output(output: &str) -> OpenVinoProbe {
     }
 
     probe
+}
+
+pub(crate) fn parse_openvino_npu_tiny_graph_smoke_output(
+    output: &str,
+) -> OpenVinoNpuTinyGraphSmoke {
+    let mut smoke = OpenVinoNpuTinyGraphSmoke::unavailable("OpenVINO NPU smoke did not pass");
+    smoke.openvino_available_devices.clear();
+
+    for line in output.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        if let Some(value) = line.strip_prefix("RESULT=") {
+            smoke.passed = value == "pass";
+        } else if let Some(value) = line.strip_prefix("ERROR=") {
+            smoke.error = Some(value.to_owned());
+        } else if let Some(value) = line.strip_prefix("OPENVINO_VERSION=") {
+            smoke.openvino_version = Some(value.to_owned());
+            smoke.runtime_api = Some("openvino".to_owned());
+        } else if let Some(value) = line.strip_prefix("AVAILABLE_DEVICE=") {
+            smoke.openvino_available_devices.push(value.to_owned());
+            if value == "NPU" || value.starts_with("NPU.") {
+                smoke.selected_backend = Some("intel-npu-openvino".to_owned());
+                smoke.runtime_api = Some("openvino".to_owned());
+                smoke.runtime_device = Some(value.to_owned());
+            }
+        } else if let Some(value) = line.strip_prefix("SELECTED_DEVICE=") {
+            smoke.selected_backend = Some("intel-npu-openvino".to_owned());
+            smoke.runtime_api = Some("openvino".to_owned());
+            smoke.runtime_device = Some(value.to_owned());
+        } else if let Some(value) = line.strip_prefix("GRAPH_NAME=") {
+            value.clone_into(&mut smoke.graph_name);
+        } else if let Some(value) = line.strip_prefix("SHAPE_MODE=") {
+            value.clone_into(&mut smoke.shape_mode);
+        } else if let Some(value) = line.strip_prefix("PRECISION=") {
+            value.clone_into(&mut smoke.precision);
+        } else if let Some(value) = line.strip_prefix("INPUT_SHAPE=") {
+            smoke.input_shape = parse_usize_list(value);
+        } else if let Some(value) = line.strip_prefix("OUTPUT_SHAPE=") {
+            smoke.output_shape = Some(parse_usize_list(value));
+        } else if let Some(value) = line.strip_prefix("COMPILE_MS=") {
+            smoke.compile_ms = value.parse().ok();
+        } else if let Some(value) = line.strip_prefix("FIRST_INFER_MS=") {
+            smoke.first_infer_ms = value.parse().ok();
+        } else if let Some(value) = line.strip_prefix("MAX_ABS_ERROR=") {
+            smoke.max_abs_error = value.parse().ok();
+        } else if let Some(value) = line.strip_prefix("MEAN_ABS_ERROR=") {
+            smoke.mean_abs_error = value.parse().ok();
+        }
+    }
+
+    smoke.graph_execution = smoke.passed;
+    smoke.proof_stage = if smoke.passed {
+        smoke.error = None;
+        "kernel_smoke_tested".to_owned()
+    } else {
+        "runtime_detected".to_owned()
+    };
+    smoke.fallback_used = false;
+    smoke.cpu_fallback_allowed = false;
+    smoke.bitnet_inference = false;
+    smoke
+}
+
+fn parse_usize_list(value: &str) -> Vec<usize> {
+    value.split(',').filter_map(|entry| entry.trim().parse::<usize>().ok()).collect()
 }
 
 fn apply_property_line(probe: &mut OpenVinoProbe, rest: &str) {
@@ -230,7 +446,7 @@ fn upsert_property_value(device: &mut OpenVinoDeviceProbe, property: &str, value
 
 #[cfg(test)]
 mod tests {
-    use super::parse_openvino_line_output;
+    use super::{parse_openvino_line_output, parse_openvino_npu_tiny_graph_smoke_output};
 
     #[test]
     fn parses_openvino_npu_runtime_properties() {
@@ -259,5 +475,62 @@ PROP=NPU=NPU_MAX_TILES=2
             probe.property_value_for("NPU", "NPU_DEVICE_TOTAL_MEM_SIZE").as_deref(),
             Some("123456")
         );
+    }
+
+    #[test]
+    fn parses_openvino_npu_tiny_graph_smoke_pass() {
+        let output = r"
+OPENVINO_VERSION=2026.1
+AVAILABLE_DEVICE=CPU
+AVAILABLE_DEVICE=NPU
+SELECTED_DEVICE=NPU
+GRAPH_NAME=tiny_matmul_add_f16_1x16
+SHAPE_MODE=static
+PRECISION=F16
+INPUT_SHAPE=1,16
+OUTPUT_SHAPE=1,16
+COMPILE_MS=12.5
+FIRST_INFER_MS=1.25
+MAX_ABS_ERROR=0.0
+MEAN_ABS_ERROR=0.0
+RESULT=pass
+";
+
+        let smoke = parse_openvino_npu_tiny_graph_smoke_output(output);
+
+        assert!(smoke.passed);
+        assert_eq!(smoke.proof_stage, "kernel_smoke_tested");
+        assert_eq!(smoke.selected_backend.as_deref(), Some("intel-npu-openvino"));
+        assert_eq!(smoke.runtime_api.as_deref(), Some("openvino"));
+        assert_eq!(smoke.runtime_device.as_deref(), Some("NPU"));
+        assert_eq!(smoke.input_shape, [1, 16]);
+        assert_eq!(smoke.output_shape.as_deref(), Some(&[1, 16][..]));
+        assert_eq!(smoke.precision, "F16");
+        assert_eq!(smoke.max_abs_error, Some(0.0));
+        assert!(!smoke.fallback_used);
+        assert!(!smoke.cpu_fallback_allowed);
+        assert!(smoke.graph_execution);
+        assert!(!smoke.bitnet_inference);
+        assert!(smoke.error.is_none());
+    }
+
+    #[test]
+    fn parses_openvino_npu_tiny_graph_smoke_missing_npu_as_runtime_only() {
+        let output = r"
+OPENVINO_VERSION=2026.1
+AVAILABLE_DEVICE=CPU
+RESULT=fail
+ERROR=OpenVINO did not report NPU
+";
+
+        let smoke = parse_openvino_npu_tiny_graph_smoke_output(output);
+
+        assert!(!smoke.passed);
+        assert_eq!(smoke.proof_stage, "runtime_detected");
+        assert_eq!(smoke.runtime_api.as_deref(), Some("openvino"));
+        assert!(smoke.runtime_device.is_none());
+        assert!(!smoke.graph_execution);
+        assert!(!smoke.fallback_used);
+        assert_eq!(smoke.error.as_deref(), Some("OpenVINO did not report NPU"));
     }
 }

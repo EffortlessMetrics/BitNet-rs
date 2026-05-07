@@ -1,13 +1,15 @@
 id = "nvidia-5070ti"
 title = "NVIDIA RTX 5070 Ti validation"
-status = "active"
+status = "complete"
 
-objective = "Validate RTX 5070 Ti as a CUDA-first BitNet acceleration lane with selected-device receipts and no CPU, OpenCL, WGPU, or generic GPU conflation."
+objective = "Maintain the completed RTX 5070 Ti CUDA BitNet proof lane with selected-device receipts and no CPU, OpenCL, WGPU, dense CUDA, or generic GPU conflation."
 
 end_state = [
   "RTX 5070 Ti CUDA backend identity is distinct from generic CUDA and WGPU.",
   "CUDA and NVML probe facts are recorded before kernel execution claims.",
   "CUDA smoke, parity, receipts, and benchmarks are sequenced after identity.",
+  "Strict BitNet CUDA proof receipts name the official GGUF, explicit tokenizer, W1.58A8 layout, selected RTX 5070 Ti CUDA backend, 9950X3D CPU reference, fallback status, QK256 CUDA invocation counts, upload-once weight residency, and measured timing.",
+  "CUDA-DENSE-001 remains an optional dense regular-LLM reference lane and is not part of completed BitNet packed-kernel proof.",
 ]
 
 hard_constraints = [
@@ -15,6 +17,8 @@ hard_constraints = [
   "WGPU smoke is not CUDA proof.",
   "CPU fallback cannot count as CUDA execution.",
   "Performance claims require driver, CUDA, VRAM, power, and thermal context.",
+  "speedup_claim must remain false unless a same-model fallback-free benchmark receipt explicitly upgrades it.",
+  "Dense regular-LLM CUDA receipts cannot satisfy BitNet packed I2S or QK256 proof acceptance.",
 ]
 
 [[work_item]]
@@ -22,7 +26,9 @@ id = "RTX5070TI-003"
 status = "merged"
 branch = "codex/rtx5070ti-003-backend-identity"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = []
 acceptance = "Preserve RTX 5070 Ti requested and selected CUDA backend identity without adding kernels or inference claims."
 commands = [
@@ -66,7 +72,9 @@ id = "RTX5070TI-004"
 status = "merged"
 branch = "codex/nvidia-5070ti/RTX5070TI-004-cuda-nvml-probe"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["RTX5070TI-003"]
 acceptance = "Add RTX 5070 Ti CUDA and NVML runtime probe without claiming kernel execution or BitNet inference."
 commands = [
@@ -94,7 +102,9 @@ id = "RTX5070TI-005"
 status = "merged"
 branch = "codex/nvidia-5070ti/RTX5070TI-005-smoke-receipt"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["RTX5070TI-004"]
 acceptance = "Compile and run a tiny CUDA kernel on the selected RTX 5070 Ti with a fallback-free smoke receipt and no BitNet inference or speedup claim."
 commands = [
@@ -129,7 +139,9 @@ id = "RTX5070TI-006"
 status = "merged"
 branch = "codex/nvidia-5070ti/RTX5070TI-006-cuda-cpu-parity"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["RTX5070TI-005"]
 acceptance = "Run one deterministic fixture through 9950X3D CPU reference and RTX 5070 Ti CUDA target, record error metrics and fallback-free selected-device identity, and emit mismatch debug artifacts without full inference claims."
 commands = [
@@ -164,7 +176,9 @@ id = "RTX5070TI-007"
 status = "merged"
 branch = "codex/nvidia-5070ti/RTX5070TI-007-cuda-receipts-counters"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["RTX5070TI-006"]
 acceptance = "Record CUDA runtime identity and kernel invocation counters in smoke and parity receipts, including fallback-free strict validation, without adding benchmarks or BitNet inference claims."
 commands = [
@@ -202,7 +216,9 @@ id = "RTX5070TI-008"
 status = "merged"
 branch = "codex/nvidia-5070ti/RTX5070TI-008-benchmark-baseline"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["RTX5070TI-006", "RTX5070TI-007"]
 acceptance = "Benchmark parity-tested RTX 5070 Ti CUDA kernels/subgraphs against the 9950X3D CPU reference with driver/runtime/VRAM/power/thermal context and no full inference or unproven speedup claim."
 commands = [
@@ -238,7 +254,9 @@ id = "CUDA-BITNET-001"
 status = "merged"
 branch = "codex/cuda-bitnet-001-context-handles"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["RTX5070TI-007"]
 acceptance = "Add persistent CUDA BitNet context, stream lifetime, reusable workspace, and weight handles without claiming full BitNet inference."
 commands = [
@@ -269,7 +287,9 @@ id = "CUDA-BITNET-002"
 status = "merged"
 branch = "codex/cuda-bitnet-002-i2s-linear"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["CUDA-BITNET-001"]
 acceptance = "Add reusable CUDA I2S linear primitive with CPU/CUDA parity, tails and padding support, and kernel stats without full inference claims."
 commands = [
@@ -299,7 +319,9 @@ id = "CUDA-BITNET-003"
 status = "merged"
 branch = "codex/cuda-bitnet-003-qk256-gemv"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["CUDA-BITNET-001"]
 acceptance = "Replace scaffold-only QK256 launch with a compiled packed fused dequant GEMV CUDA kernel that passes CPU scalar parity."
 commands = [
@@ -330,7 +352,9 @@ id = "CUDA-BITNET-004"
 status = "merged"
 branch = "codex/cuda-bitnet-004-upload-once-weights"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["CUDA-BITNET-002", "CUDA-BITNET-003"]
 acceptance = "Prepack and upload BitNet weights once for CUDA with per-layer handles and receipt fields for packed_at_load and uploaded_once."
 commands = [
@@ -362,7 +386,9 @@ id = "CUDA-BITNET-005"
 status = "merged"
 branch = "codex/cuda-bitnet-005-route-linear"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["CUDA-BITNET-004"]
 acceptance = "Route actual BitNetLinear transformer dispatch through the selected CUDA backend with coverage counters and strict CPU fallback rejection."
 commands = [
@@ -395,7 +421,9 @@ id = "CUDA-BITNET-006"
 status = "merged"
 branch = "codex/cuda-bitnet-006-one-token-proof"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["CUDA-BITNET-005"]
 acceptance = "Add strict one-token BitNet CUDA proof with official GGUF, real tokenizer, CUDA kernel invocations greater than zero, zero CPU fallback, CPU/CUDA greedy or top-1 agreement, fallback_used=false, and speedup_claim=false."
 commands = [
@@ -431,7 +459,9 @@ id = "CUDA-BITNET-007"
 status = "merged"
 branch = "codex/cuda-bitnet-007-short-decode-proof"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["CUDA-BITNET-006"]
 acceptance = "Add short greedy BitNet CUDA decode proof with timing, kernel invocation growth, memory high-water mark, and fallback_used=false."
 commands = [
@@ -459,10 +489,12 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-008"
-status = "proposed"
+status = "merged"
 branch = "codex/cuda-bitnet-008-benchmark-baseline"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["CUDA-BITNET-007"]
 acceptance = "Add RTX 5070 Ti full BitNet CUDA benchmark baseline comparing 9950X3D CPU scalar, AVX2, AVX-512, and CUDA with matching model, tokenizer, prompt profile, strict loader mode, fallback_used=false, and runtime context."
 commands = [
@@ -480,9 +512,51 @@ allowed_paths = [
 forbidden_paths = [
   "crates/bitnet-server/**",
 ]
-may_claim = []
+may_claim = [
+  "Strict BitNet CUDA same-model benchmark baseline evidence exists after strict-bitnet-cuda-benchmark.json validates, with speedup_claim=false.",
+]
 must_not_claim = [
   "CUDA speedup exists before same-model benchmark receipt proves it.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-009"
+status = "merged"
+branch = "codex/cuda-bitnet-009-upload-once-routed-proof"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-BITNET-008"]
+acceptance = "Route the strict RTX 5070 Ti CUDA inference proof through persistent CUDA BitNet weight handles so receipts prove weights_uploaded_once=true, per_token_weight_upload=false, qk256_gemv_cuda invocations greater than zero, and zero CPU fallback."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cuda",
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features cuda",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "Manual RTX 5070 Ti strict one-token and short-decode BitNet CUDA proofs with upload-once receipt fields.",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-proof.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-short-decode.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Strict RTX 5070 Ti BitNet CUDA inference uses upload-once CUDA weight handles only after strict proof receipts record weights_uploaded_once=true and per_token_weight_upload=false.",
+]
+must_not_claim = [
+  "CUDA speedup exists before a refreshed same-model benchmark receipt proves it.",
 ]
 
 [[work_item]]
@@ -490,7 +564,9 @@ id = "CUDA-DENSE-001"
 status = "proposed"
 branch = "codex/cuda-dense-001-reference-lane"
 stackable = false
-requires_human_merge = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
 blocked_by = ["RTX5070TI-007"]
 acceptance = "Add regular LLM CUDA dense-kernel reference lane with dense_regular_llm receipt labels that cannot satisfy BitNet packed I2S or QK256 proof acceptance."
 commands = [

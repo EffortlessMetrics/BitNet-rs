@@ -1,0 +1,22 @@
+timestamp = "2026-05-07T06:51:00Z"
+campaign = "cpu-qk256-performance"
+item = "KBL8250U-004"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 3839
+head_sha = "da266e01c3959a497e7d627db8247535862b170d"
+actor = "codex"
+
+artifacts = [
+  "ci/intel-i5-8250u/2026-05-07/strict-bitnet-cpu-proof.json",
+  "ci/intel-i5-8250u/2026-05-07/cpu-phase-benchmark-receipt.json",
+  "ci/intel-i5-8250u/2026-05-07/strict-cpu-proof-hardware-context.json",
+]
+
+notes = [
+  "Updated #3839 from blocked preflight documentation to a strict i5-8250U CPU proof artifact PR after downloading the canonical BitNet GGUF into the ignored local models directory.",
+  "The strict proof uses real_gguf loading, GGUF metadata tokenizer authority, selected raw backend cpu-rust, AVX2 I2_S kernel identity, no fallback, one generated token, model hash, and timing.",
+  "The companion phase benchmark receipt measures only first_token; micro, layer, prefill, and steady decode remain not_run.",
+  "No sustained mobile performance, throughput superiority, GPU, OpenVINO, UHD 620, NPU, mock, fallback, or fixture-model claim is made.",
+]

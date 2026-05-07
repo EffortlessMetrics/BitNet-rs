@@ -8,15 +8,15 @@
     "kernel_family": "i2_s",
     "kernel_format": "i2_s",
     "layout_source": "gguf_packed_i2_s_reference",
-    "per_token_weight_upload": true,
+    "per_token_weight_upload": false,
     "quantization": "W1.58A8",
     "weight_quantization": "W1.58",
-    "weights_uploaded_once": false
+    "weights_uploaded_once": true
   },
   "claim": "strict_bitnet_cuda_inference",
   "counts": {
-    "n_kv": 0,
-    "n_tensors": 0,
+    "n_kv": 24,
+    "n_tensors": 332,
     "unmapped": 0
   },
   "cpu": {
@@ -29,6 +29,7 @@
       "sse4.2",
       "sse2"
     ],
+    "model": "AMD64 Family 26 Model 68 Stepping 0, AuthenticAMD",
     "threads": 1
   },
   "cpu_fallback_ops": [],
@@ -93,9 +94,9 @@
     }
   ],
   "latency": {
-    "cmd_to_first_ms": 19890,
-    "decode_first_ms": 19890,
-    "total_ms": 19890
+    "cmd_to_first_ms": 693,
+    "decode_first_ms": 693,
+    "total_ms": 693
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -166,6 +167,248 @@
     "tokenizer": "llama3",
     "vocab_size": 128256
   },
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "nvidia-rtx-5070-ti-cuda",
+      "runtime_api": "cuda",
+      "selected_backend": "nvidia-rtx-5070-ti-cuda"
+    },
+    "claim_scope": "selected CUDA backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 1,
+        "max_ms": 0.062,
+        "mean_ms": 0.062,
+        "min_ms": 0.062,
+        "p50_ms": 0.062,
+        "p95_ms": 0.062,
+        "total_ms": 0.062
+      },
+      "first_token_decode_ms": 693.839,
+      "forward_ms": {
+        "count": 1,
+        "max_ms": 515.813,
+        "mean_ms": 515.813,
+        "min_ms": 515.813,
+        "p50_ms": 515.813,
+        "p95_ms": 515.813,
+        "total_ms": 515.813
+      },
+      "generated_tokens": 1,
+      "logits_ms": {
+        "count": 1,
+        "max_ms": 86.905,
+        "mean_ms": 86.905,
+        "min_ms": 86.905,
+        "p50_ms": 86.905,
+        "p95_ms": 86.905,
+        "total_ms": 86.905
+      },
+      "per_token_ms": {
+        "count": 1,
+        "max_ms": 693.839,
+        "mean_ms": 693.839,
+        "min_ms": 693.839,
+        "p50_ms": 693.839,
+        "p95_ms": 693.839,
+        "total_ms": 693.839
+      },
+      "sample_ms": {
+        "count": 1,
+        "max_ms": 1.315,
+        "mean_ms": 1.315,
+        "min_ms": 1.315,
+        "p50_ms": 1.315,
+        "p95_ms": 1.315,
+        "total_ms": 1.315
+      },
+      "steady_per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "steady_state_tok_s": null,
+      "steady_state_tokens": 0,
+      "token_decode_ms": {
+        "count": 1,
+        "max_ms": 0.052,
+        "mean_ms": 0.052,
+        "min_ms": 0.052,
+        "p50_ms": 0.052,
+        "p95_ms": 0.052,
+        "total_ms": 0.052
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 29488.62,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": false,
+      "kv_cache_behavior": "not_requested",
+      "ms": 0.0,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 0
+    },
+    "prompt_tokenize_ms": 0.438,
+    "requested": false,
+    "tokenizer_load_ms": 1044.313
+  },
   "prompt": "Answer with a single digit: 2+2=",
   "reference": {
     "cpu_greedy_token_id": 89048,
@@ -193,13 +436,15 @@
       "sse4.2",
       "sse2"
     ],
+    "cpu_model": "AMD64 Family 26 Model 68 Stepping 0, AuthenticAMD",
     "cuda_kernel_invocations": 210,
     "decode_tokens": 1,
-    "decode_tps": 0.05027652086475616,
+    "decode_tps": 1.443001443001443,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "bitnet",
+    "phase": "decode",
     "prompt_tokens": 22,
     "quant_format": "I2_S",
     "requested_backend": "nvidia-rtx-5070-ti-cuda",
@@ -207,21 +452,33 @@
     "selected_backend": "nvidia-rtx-5070-ti-cuda",
     "selected_kernel": "qk256_gemv_cuda",
     "thread_count": 1,
-    "tokenizer_source": "explicit"
+    "tokenizer_source": "explicit",
+    "tokenizer_strict": true
   },
   "text": "'E",
   "throughput": {
     "decoded_tokens": 1,
-    "tokens_per_second": 0.05027652086475616
+    "tokens_per_second": 1.443001443001443
   },
-  "timestamp": "2026-05-06T22:47:18.129906800+00:00",
+  "timestamp": "2026-05-07T05:30:29.228240900+00:00",
+  "timing": {
+    "decode_steady_state_tok_s": null,
+    "decode_total_ms": 693.839,
+    "first_token_decode_ms": 693.839,
+    "first_token_ms": 693,
+    "model_load_ms": 29488.62,
+    "prefill_ms": 0.0,
+    "sampling_ms_per_token": 1.315,
+    "tokenize_ms": 0.438,
+    "tokenizer_load_ms": 1044.313
+  },
   "tokenizer": {
     "bos": 1,
     "eos": 2,
     "origin": "external",
     "source": "explicit",
     "strict": true,
-    "type": "sentencepiece"
+    "type": "llama3"
   },
   "tokens": {
     "generated": 1,

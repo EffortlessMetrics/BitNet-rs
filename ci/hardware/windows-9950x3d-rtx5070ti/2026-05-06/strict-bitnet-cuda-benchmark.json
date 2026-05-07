@@ -1,0 +1,181 @@
+{
+  "artifact_kind": "strict_bitnet_cuda_benchmark",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json",
+  "benchmark": {
+    "cpu_avx512_first_token_ms": 17715.0,
+    "cpu_avx512_tokens_per_second": 0.05420311261374185,
+    "cpu_avx512_total_ms": 147593.0,
+    "cpu_avx512_total_ms_div_cuda_total_ms": 79.09592711682744,
+    "cpu_cuda_output_match": true,
+    "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+    "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+    "cuda_first_token_ms": 728.0,
+    "cuda_kernel_invocations": 1680,
+    "cuda_tokens_per_second": 4.287245444801715,
+    "cuda_total_ms": 1866.0,
+    "cuda_total_ms_div_cpu_avx512_total_ms": 0.012642876017155285,
+    "profile": "short_decode_8",
+    "prompt_profile": "short_decode_37_prompt_tokens_8_generated_tokens",
+    "speedup_claim": false
+  },
+  "bitnet": {
+    "kernel_family": "qk256",
+    "layout": "gguf_packed_i2_s",
+    "per_token_weight_upload": false,
+    "quantization": "W1.58A8",
+    "weights_uploaded_once": true
+  },
+  "claim": "strict_bitnet_cuda_benchmark_baseline",
+  "claim_boundaries": [
+    "speedup_claim=false; this receipt records a same-model baseline only.",
+    "CPU scalar and AVX2 strict end-to-end profiles are present as explicit not_run entries unless matching strict receipts are supplied.",
+    "The source CUDA receipt records weights_uploaded_once=true and per_token_weight_upload=false; speedup_claim remains false until a refreshed same-model benchmark proves it."
+  ],
+  "comparison_contract": {
+    "fallback_free": true,
+    "same_generated_token_count": true,
+    "same_model": true,
+    "same_prompt": true,
+    "same_sampling_policy": true,
+    "same_strict_loader_mode": true,
+    "same_tokenizer": true
+  },
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_kernel_invocations": 1680,
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "memory_hwm_bytes": 7070547968,
+    "memory_hwm_source": "nvidia-smi-memory.used-sampled",
+    "nvrtc_version": "12.9",
+    "vram_bytes": 17094475776
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_cuda": 1680,
+    "bitnet_linear_layers_total": 1680,
+    "execution_claim": "cuda_inference_contribution",
+    "unsupported_ops": []
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+  "kernel_stats": [
+    {
+      "device_to_host_bytes": null,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": null,
+      "invocations": 1680,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_launches": 1680,
+      "kernel_time_ms": null
+    }
+  ],
+  "loader": {
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "strict_mode": true
+  },
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "fallback_loader_used": false,
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "strict",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "source_loader_mode": "real_gguf"
+  },
+  "profiles": [
+    {
+      "backend": "amd-9950x3d-cpu-scalar",
+      "reason": "current CLI does not expose a strict end-to-end selector for this CPU SIMD mode",
+      "runtime_api": "cpu",
+      "status": "not_run"
+    },
+    {
+      "backend": "amd-9950x3d-cpu-avx2",
+      "reason": "current CLI does not expose a strict end-to-end selector for this CPU SIMD mode",
+      "runtime_api": "cpu",
+      "status": "not_run"
+    },
+    {
+      "backend": "amd-9950x3d-cpu-avx512",
+      "fallback_used": false,
+      "first_token_ms": 17715.0,
+      "generated_tokens": 8,
+      "kernel_id": "i2_s-avx512-reference",
+      "kernel_implementation": "avx512",
+      "prompt_tokens": 37,
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust",
+      "status": "measured",
+      "tokens_per_second": 0.05420311261374185,
+      "total_ms": 147593.0
+    },
+    {
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "fallback_used": false,
+      "first_token_ms": 728.0,
+      "generated_tokens": 8,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_implementation": "cuda",
+      "prompt_tokens": 37,
+      "runtime_api": "cuda",
+      "selected_backend": "nvidia-rtx-5070-ti-cuda",
+      "status": "measured",
+      "tokens_per_second": 4.287245444801715,
+      "total_ms": 1866.0
+    }
+  ],
+  "proof_inputs": {
+    "cpu_avx2_short_decode_receipt": null,
+    "cpu_avx512_short_decode_receipt": "target/cuda-bitnet-009/strict-bitnet-cpu-short-decode.json",
+    "cpu_scalar_short_decode_receipt": null,
+    "cuda_short_decode_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-short-decode.json"
+  },
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "sampling": {
+    "deterministic": true,
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "speedup_claim": false,
+  "timestamp_utc": "2026-05-07T05:31:26Z",
+  "tokenizer": {
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "workload": {
+    "cpu_cuda_output_match": true,
+    "generated_text": "'E-lived,SIGNALConvert!\"\n\n'E$m-lived",
+    "generated_token_ids": [
+      89048,
+      62954,
+      87896,
+      12281,
+      17642,
+      89048,
+      54616,
+      62954
+    ],
+    "generated_tokens": 8,
+    "profile": "short_decode_8",
+    "prompt": "In one compact line, name four common colors, then name four common shapes, separated by commas, and do not include explanations.",
+    "prompt_tokens": 37
+  }
+}
