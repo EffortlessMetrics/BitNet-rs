@@ -1153,6 +1153,7 @@ fn build_gguf_for_validation(
             GgufTensorType::F16 => 1,
             GgufTensorType::I2_S => 36,
             GgufTensorType::Q8_0 => 8,
+            GgufTensorType::Q4_K => 12,
             _ => 0,
         };
         data.extend_from_slice(&type_id.to_le_bytes());
@@ -1170,6 +1171,111 @@ fn build_gguf_for_validation(
     }
 
     data
+}
+
+fn q8_0_block(scale: f32, codes: &[i8]) -> Vec<u8> {
+    assert!(codes.len() <= 32);
+    let mut data = Vec::with_capacity(34);
+    data.extend_from_slice(&half::f16::from_f32(scale).to_bits().to_le_bytes());
+    for idx in 0..32 {
+        data.push(codes.get(idx).copied().unwrap_or(0) as u8);
+    }
+    data
+}
+
+#[test]
+fn dense_qwen_q8_0_is_not_strict_unsupported_standard_quant() {
+    let q8 = q8_0_block(0.5, &[1; 32]);
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("qwen3".to_string())),
+            ("general.name", GgufValue::String("qwen3-q8-fixture".to_string())),
+        ],
+        vec![("token_embd.weight", vec![32], GgufTensorType::Q8_0, q8)],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    assert_eq!(reader.first_unsupported_standard_quantized_tensor(), None);
+}
+
+#[test]
+fn dense_qwen_unsupported_k_quant_still_fails_strict_gate() {
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("qwen3".to_string())),
+            ("general.name", GgufValue::String("qwen3-q4k-fixture".to_string())),
+        ],
+        vec![("blk.0.attn_q.weight", vec![256], GgufTensorType::Q4_K, vec![0u8; 144])],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    let unsupported = reader
+        .first_unsupported_standard_quantized_tensor()
+        .expect("Q4_K should remain unsupported");
+    assert_eq!(unsupported.0, "blk.0.attn_q.weight");
+    assert_eq!(unsupported.1, GgufTensorType::Q4_K);
+}
+
+#[test]
+fn dense_qwen_q8_0_dequantizes_with_alignment_padding() {
+    use super::loader::GgufLoader;
+
+    let mut q8 = q8_0_block(0.5, &[-2, -1, 0, 1, 2]);
+    q8.extend_from_slice(&[0u8; 30]);
+
+    let dequantized =
+        GgufLoader::dequantize_q8_0_to_f32(&q8, &[5], "fixture.q8").expect("q8 dequant");
+    assert_eq!(dequantized, vec![-1.0, -0.5, 0.0, 0.5, 1.0]);
+}
+
+#[test]
+fn dense_qwen_q8_0_transpose_helper_preserves_values() {
+    use super::loader::GgufLoader;
+
+    let values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    assert_eq!(
+        GgufLoader::transpose_f32_values(&values, &[2, 3]),
+        vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]
+    );
+}
+
+#[test]
+fn dense_qwen_extracts_arch_prefixed_metadata_and_vocab_from_embedding() {
+    use super::loader::GgufLoader;
+
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("qwen3".to_string())),
+            ("general.name", GgufValue::String("qwen3-config-fixture".to_string())),
+            ("qwen3.block_count", GgufValue::U32(28)),
+            ("qwen3.context_length", GgufValue::U32(40960)),
+            ("qwen3.embedding_length", GgufValue::U32(1024)),
+            ("qwen3.feed_forward_length", GgufValue::U32(3072)),
+            ("qwen3.attention.head_count", GgufValue::U32(16)),
+            ("qwen3.attention.head_count_kv", GgufValue::U32(8)),
+            ("qwen3.rope.freq_base", GgufValue::F32(1_000_000.0)),
+            ("qwen3.attention.layer_norm_rms_epsilon", GgufValue::F32(1e-6)),
+        ],
+        vec![(
+            "token_embd.weight",
+            vec![1024, 151_936],
+            GgufTensorType::Q8_0,
+            q8_0_block(0.5, &[1; 32]),
+        )],
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    let config = GgufLoader.extract_config(&reader).expect("config extraction");
+
+    assert_eq!(config.model.vocab_size, 151_936);
+    assert_eq!(config.model.hidden_size, 1024);
+    assert_eq!(config.model.num_layers, 28);
+    assert_eq!(config.model.num_heads, 16);
+    assert_eq!(config.model.num_key_value_heads, 8);
+    assert_eq!(config.model.intermediate_size, 3072);
+    assert_eq!(config.model.max_position_embeddings, 40960);
+    assert_eq!(config.model.rope_theta, Some(1_000_000.0));
+    assert_eq!(config.model.rms_norm_eps, Some(1e-6));
 }
 
 #[test]

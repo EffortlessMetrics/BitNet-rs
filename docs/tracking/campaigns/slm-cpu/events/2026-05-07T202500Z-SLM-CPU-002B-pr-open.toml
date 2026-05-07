@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T20:25:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-002B"
+event = "pr_open"
+pr = 3926
+head_sha = "35ebe31944d835f340680a5e460baa6422f40b49"
+branch = "codex/slm-cpu-002b-dense-q8-gguf"
+actor = "codex"
+
+notes = [
+  "Opened #3926 to add dense Qwen Q8_0 GGUF tensor loading and record the post-loader transformer dimension boundary.",
+  "The PR does not claim tiny dense inference, answer quality, server, GPU, NPU, or sustained 8250U performance.",
+]
