@@ -54,7 +54,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "KBL8250U-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/cpu-qk256-performance/KBL8250U-004-strict-proof-run"
 stackable = false
 review_mode = "codex_premerge"

@@ -1,0 +1,22 @@
+timestamp = "2026-05-07T07:41:00Z"
+campaign = "cpu-qk256-performance"
+item = "KBL8250U-004"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3839
+merge_sha = "4cc8fb6c7c27ff072762805757878a61a2fac725"
+actor = "codex"
+
+artifacts = [
+  "ci/intel-i5-8250u/2026-05-07/strict-bitnet-cpu-proof.json",
+  "ci/intel-i5-8250u/2026-05-07/cpu-phase-benchmark-receipt.json",
+  "ci/intel-i5-8250u/2026-05-07/strict-cpu-proof-hardware-context.json",
+]
+
+notes = [
+  "Merged the i5-8250U strict CPU proof artifact PR.",
+  "The strict proof uses real_gguf loading, GGUF metadata tokenizer authority, raw selected backend cpu-rust on the Kaby Lake AVX2 host, AVX2 I2_S kernel identity, no fallback, model hash, one generated token, and timing.",
+  "The companion phase benchmark receipt measures first_token only; micro, layer, prefill, and steady decode remain not_run and CPU-BITNET-008 remains open.",
+  "No sustained mobile performance, throughput superiority, GPU, OpenVINO, UHD 620, NPU, mock, fallback, or fixture-model claim is made.",
+]
