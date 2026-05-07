@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T09:11:51Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-005"
+event = "pr_open"
+pr = 3861
+head_sha = "6e51f060e7cd10ba075360ad8d0c9dd3c11e6642"
+actor = "codex"
+
+notes = [
+  "Opened Apple M4 benchmark profile summary validation PR.",
+  "Adds conservative profile IDs and receipt-bundle validation for timing fields and broad-performance claim boundaries.",
+  "No runtime, kernel, QK256, server, MPSGraph, Neural Engine, or performance-expansion work is claimed.",
+]
