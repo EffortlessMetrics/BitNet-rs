@@ -243,3 +243,15 @@ fn strict_mode_rejects_fake_gpu() {
         },
     );
 }
+
+#[test]
+#[serial(bitnet_env)]
+#[should_panic(expected = "strict mode forbids fake GPU")]
+fn strict_mode_rejects_fake_gpu_with_normalized_truthy_value() {
+    temp_env::with_vars(
+        [("BITNET_GPU_FAKE", Some("cuda")), ("BITNET_STRICT_NO_FAKE_GPU", Some(" TRUE "))],
+        || {
+            let _ = get_gpu_info();
+        },
+    );
+}

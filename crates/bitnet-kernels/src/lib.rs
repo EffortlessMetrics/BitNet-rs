@@ -36,6 +36,7 @@ pub mod dispatch_planner;
 pub mod dispatch_registry;
 pub mod dispatch_table;
 pub mod embedding_ops;
+mod env_bool;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
