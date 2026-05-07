@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T19:20:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-001"
+event = "pr_open"
+pr = 3922
+head_sha = "be03910a"
+actor = "codex"
+
+notes = [
+  "Opened #3922 to promote the model artifact answer-readiness gate from Apple-specific evidence into shared cross-lane authority.",
+  "The PR records the current Microsoft BitNet I2_S GGUF as rejected for coherent local-answer claims while preserving diagnostic-only backend receipts.",
+]
