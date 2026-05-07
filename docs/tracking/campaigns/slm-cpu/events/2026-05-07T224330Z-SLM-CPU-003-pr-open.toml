@@ -1,0 +1,14 @@
+timestamp = "2026-05-07T22:43:30Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-003"
+event = "pr_open"
+pr = 3940
+head_sha = "542198a35c3967d21020bcb6630fb764b5c26402"
+branch = "codex/slm-cpu-003-tiny-strict-receipt"
+actor = "codex"
+
+notes = [
+  "Opened #3940 to record a tiny strict Qwen3-0.6B Q8_0 CPU receipt after fixing dense Qwen attention head_dim and projection-shape handling.",
+  "The receipt records real_gguf loading, GGUF tokenizer metadata, cpu-rust backend selection, fallback=false, prompt/generated token IDs, and decoded text.",
+  "The generated text is not answer-quality evidence; no throughput, server, GPU, NPU, or BitNet kernel claim is made.",
+]
