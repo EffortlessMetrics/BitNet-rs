@@ -29,8 +29,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | Work item | Status | Notes |
 |---|---|---|
 | SLM-CPU-000 | merged | 8250U dense SLM CPU lane merged in #3902. |
-| SLM-CPU-001 | pr_open | Model candidate manifest, artifact policy, and 8250U runbook opened in #3905. |
-| SLM-CPU-002 | proposed | Add strict dense GGUF metadata preflight. |
+| SLM-CPU-001 | merged | Model candidate manifest, artifact policy, and 8250U runbook merged in #3905. |
+| SLM-CPU-002 | ready | Add strict dense GGUF metadata preflight. |
 | SLM-CPU-003 | proposed | Run the first tiny dense CPU receipt. |
 | SLM-CPU-004 | proposed | Add SLM answer corpus evidence. |
 | SLM-CPU-005 | proposed | Add reference divergence artifact schema. |

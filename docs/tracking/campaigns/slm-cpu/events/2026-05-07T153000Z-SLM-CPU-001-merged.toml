@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T15:30:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-001"
+event = "merged"
+pr = 3905
+merge_sha = "b9197be8b8d4cd9e54da4b751897dc3e4d4fc62a"
+actor = "codex"
+
+notes = [
+  "SLM-CPU-001 merged as #3905 to add the SLM CPU model candidate manifest, artifact policy, and 8250U runbook.",
+  "The first candidate policy remains Qwen2.5-0.5B-Instruct GGUF Q4_K_M or Q8_0 only after exact artifact metadata is verified.",
+]
