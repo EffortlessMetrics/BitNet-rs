@@ -140,10 +140,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-operational/M4-OP-004-effective-cli-flow"
 pr = 3871
-head_sha = "47dd4198e1504533703dee92d19cdbef5e6d2c0b"
+merge_sha = "f1bc94317f2ca0aa73532a16b1226aa6327b55b2"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -218,7 +218,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-006"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-operational/M4-OP-006-next-frontier"
 stackable = false
 review_mode = "codex_premerge"
