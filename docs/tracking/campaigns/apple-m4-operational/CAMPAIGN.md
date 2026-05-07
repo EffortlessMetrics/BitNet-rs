@@ -48,9 +48,9 @@ Use these labels consistently:
 | M4-OP-001 | merged | One-command Apple M4 validation bundle merged in #3845. |
 | M4-OP-002 | merged | Hardened receipt-bundle validation merged in #3848. |
 | M4-OP-003 | merged | Apple M4 operator runbook merged in #3857. |
-| M4-OP-004 | pr_open | Add effective-use CLI examples and strict failure-mode docs in #3871. |
+| M4-OP-004 | merged | Effective-use CLI examples and strict failure-mode docs merged in #3871. |
 | M4-OP-005 | merged | Conservative benchmark profile names and summary artifact validation merged in #3861. |
-| M4-OP-006 | proposed | Decide the next implementation frontier. |
+| M4-OP-006 | ready | Decide the next implementation frontier. |
 
 ## Review Policy
 
