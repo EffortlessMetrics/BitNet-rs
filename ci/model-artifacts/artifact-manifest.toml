@@ -5,6 +5,7 @@ updated = "2026-05-07"
 [gate]
 doc = "docs/model-artifacts/ANSWER_ARTIFACT_GATE.md"
 prompt_suite = "ci/quality/bitnet-answer-corpus.yaml"
+candidate_artifacts = "ci/model-artifacts/candidate-artifacts.toml"
 rejected_artifacts = "ci/model-artifacts/rejected-artifacts.toml"
 reference_runner_coherent_output_required = true
 sha256_required = true
@@ -25,6 +26,8 @@ states = [
 structural_validity_is_not_answer_readiness = true
 backend_execution_is_not_answer_readiness = true
 speedup_requires_answer_ready_artifact = true
+answer_ready_artifact_available = false
+current_blocker = "MODEL-ARTIFACT-002 did not find a BitNet GGUF/tokenizer artifact that passes the deterministic answer prompt suite under a reference runner."
 
 allowed_before_answer_ready = [
   "structural GGUF validity",

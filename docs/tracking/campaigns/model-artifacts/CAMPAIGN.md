@@ -35,7 +35,7 @@ GGUF that only proves structural validity or backend execution.
 | Work item | Status | Notes |
 |---|---|---|
 | MODEL-ARTIFACT-001 | merged | Shared answer-artifact gate merged in #3922; the current Microsoft BitNet I2_S GGUF is rejected for coherent local-answer claims. |
-| MODEL-ARTIFACT-002 | ready | Acquire or regenerate a reference-good BitNet artifact that passes the deterministic prompt suite under a reference runner. |
+| MODEL-ARTIFACT-002 | blocked | Shared search records no `answer_ready` BitNet artifact. Backend local-answer lanes remain blocked or diagnostic-only until a future artifact passes the reference prompt suite. |
 
 ## Review Policy
 
