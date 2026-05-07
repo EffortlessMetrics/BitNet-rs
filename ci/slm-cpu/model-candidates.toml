@@ -1,0 +1,57 @@
+schema = 1
+artifact_kind = "slm_cpu_model_candidates"
+lane = "intel-i5-8250u-dense-slm"
+
+[[candidate]]
+id = "qwen2_5_0_5b_instruct"
+priority = 1
+family = "qwen"
+expected_architecture = "qwen2"
+target_role = "first 8250U dense SLM proof"
+recommended_quant = ["Q4_K_M", "Q8_0"]
+claim_boundary = "bring-up and tiny answer corpus only"
+artifact_status = "candidate_unverified"
+notes = "Preferred first target only after exact GGUF artifact path, SHA256, tokenizer metadata, tensor names, and chat-template policy are verified."
+
+[candidate.requirements]
+sha256_required = true
+gguf_architecture_required = true
+tokenizer_metadata_required = true
+tensor_name_audit_required = true
+chat_template_required = true
+
+[[candidate]]
+id = "qwen_small_1bish"
+priority = 2
+family = "qwen"
+expected_architecture = "qwen2_or_verified_successor"
+target_role = "second-pass quality target"
+recommended_quant = ["Q4_K_M", "Q8_0"]
+claim_boundary = "only after the 0.5B path works"
+artifact_status = "candidate_unverified"
+notes = "Do not use a newer Qwen-family architecture string until the adapter intentionally supports that exact GGUF metadata."
+
+[candidate.requirements]
+sha256_required = true
+gguf_architecture_required = true
+tokenizer_metadata_required = true
+tensor_name_audit_required = true
+chat_template_required = true
+
+[[candidate]]
+id = "gemma_small"
+priority = 3
+family = "gemma"
+expected_architecture = "gemma"
+target_role = "cross-family dense adapter test"
+recommended_quant = ["Q4_K_M", "Q8_0"]
+claim_boundary = "adapter coverage, not performance"
+artifact_status = "candidate_unverified"
+notes = "Use after the Qwen2.5-0.5B lane proves the dense SLM metadata and tiny-answer flow."
+
+[candidate.requirements]
+sha256_required = true
+gguf_architecture_required = true
+tokenizer_metadata_required = true
+tensor_name_audit_required = true
+chat_template_required = true

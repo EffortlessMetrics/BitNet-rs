@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T15:15:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started SLM-CPU-001 to add the dense SLM model candidate manifest, artifact policy, and 8250U runbook.",
+  "The first target policy is Qwen2.5-0.5B-Instruct GGUF Q4_K_M or Q8_0 only after exact artifact metadata is verified.",
+]
