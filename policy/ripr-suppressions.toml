@@ -1,0 +1,23 @@
+schema_version = "1.0"
+
+# policy/ripr-suppressions.toml
+#
+# Suppression ledger for ripr findings. Each entry records an ID,
+# the path or kind of finding being suppressed, an owner, a reason,
+# and an expiry. PR 13 ships ripr advisory-only, so suppressions
+# are not required for merge today; the file exists to give human
+# reviewers a single place to record acknowledged gaps.
+#
+# Schema reference:
+#
+#   [[suppress]]
+#   id      = "ripr-XXXX"
+#   path    = "crates/X/src/Y.rs"
+#   finding = "no_static_path" # one of:
+#                              # exposed, weakly_exposed,
+#                              # reachable_unrevealed,
+#                              # no_static_path, infection_unknown,
+#                              # propagation_unknown, static_unknown
+#   owner   = "team-name"
+#   reason  = "why this is acceptable today"
+#   expires = "YYYY-MM-DD"
