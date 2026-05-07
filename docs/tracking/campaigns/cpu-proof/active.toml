@@ -438,7 +438,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-PHASE-TIMING-001"
-status = "pr_open"
+status = "merged"
 pr = 3872
 branch = "codex/cpu-bitnet-008-phase-timing-followup"
 stackable = false
