@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T01:06:19Z"
+campaign = "apple-m4"
+item = "M4-016"
+event = "merged"
+pr = 3811
+merge_sha = "3ffa32d711ee697c1df2e9a3e53600c1b7864b08"
+actor = "codex"
+
+notes = [
+  "M4-016 hot-loop allocation audit merged.",
+  "Allocation audit is scoped to apple-m4-cpu-neon with fallback_used=false and records allocation counter deltas separately from timing.",
+  "No QK256, qk256-dispatch, server inference, or general M4 performance claim was added.",
+]
