@@ -712,6 +712,65 @@ mod tests {
         assert_eq!(logits, original);
     }
 
+    #[test]
+    fn repetition_penalty_count_at_1_2_5_match_explicit_powers() {
+        // Pins the count_penalty contract for small counts so a future
+        // `.powi` → iterative-multiplication refactor has a test bed.
+        for &(count, expected_divisor) in &[(1u32, 2.0f32), (2, 4.0), (5, 32.0)] {
+            let config = RepetitionPenaltyConfig { count_penalty: 2.0, ..Default::default() };
+            let mut logits = vec![64.0f32];
+            config.apply(&mut logits, &[(0, count as usize)]);
+            assert!(
+                (logits[0] - 64.0 / expected_divisor).abs() < 1e-4,
+                "count={count}: got {} expected {}",
+                logits[0],
+                64.0 / expected_divisor
+            );
+        }
+    }
+
+    #[test]
+    fn repetition_penalty_large_count_stays_finite() {
+        // For repetition_penalty close to 1 and any plausible token count
+        // (up to a generation window's worth) the result must remain finite.
+        let config = RepetitionPenaltyConfig { count_penalty: 1.1, ..Default::default() };
+        let mut logits = vec![2.0f32];
+        config.apply(&mut logits, &[(0, 50)]);
+        assert!(logits[0].is_finite());
+        assert!(logits[0] > 0.0 && logits[0] < 2.0, "got {}", logits[0]);
+    }
+
+    #[test]
+    fn repetition_penalty_below_one_boosts_positive_logits() {
+        // count_penalty < 1.0 with a positive logit divides by a value < 1,
+        // which boosts the logit. This pins the directionality of the
+        // sign-handling branch.
+        let config = RepetitionPenaltyConfig { count_penalty: 0.5, ..Default::default() };
+        let mut logits = vec![1.0f32];
+        config.apply(&mut logits, &[(0, 2)]);
+        assert!((logits[0] - 4.0).abs() < 1e-6, "1.0 / 0.5^2 = 4.0, got {}", logits[0]);
+    }
+
+    #[test]
+    fn repetition_penalty_negative_logit_uses_multiply_branch() {
+        // The non-positive branch multiplies by the penalty rather than
+        // dividing, so a negative logit becomes more negative when
+        // count_penalty > 1.
+        let config = RepetitionPenaltyConfig { count_penalty: 2.0, ..Default::default() };
+        let mut logits = vec![-1.0f32];
+        config.apply(&mut logits, &[(0, 3)]);
+        assert!((logits[0] - (-8.0)).abs() < 1e-6, "-1.0 * 2.0^3 = -8.0, got {}", logits[0]);
+    }
+
+    #[test]
+    fn repetition_penalty_zero_logit_stays_zero() {
+        // 0.0 hits the non-positive branch (>0.0 is false): 0 * penalty = 0.
+        let config = RepetitionPenaltyConfig { count_penalty: 2.0, ..Default::default() };
+        let mut logits = vec![0.0f32];
+        config.apply(&mut logits, &[(0, 5)]);
+        assert_eq!(logits[0], 0.0);
+    }
+
     // --- SamplerChain ------------------------------------------------------
 
     #[test]
