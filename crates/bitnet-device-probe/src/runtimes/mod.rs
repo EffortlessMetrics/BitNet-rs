@@ -12,8 +12,9 @@ pub mod openvino;
 pub use level_zero::LevelZeroProbe;
 pub use opencl::{OpenClRuntimeDevice, OpenClRuntimeProbe};
 pub use openvino::{
-    OpenVinoDeviceProbe, OpenVinoNpuBitnetSubgraphParity, OpenVinoNpuTinyGraphSmoke, OpenVinoProbe,
-    OpenVinoPropertyProbe, run_openvino_npu_bitnet_subgraph_parity,
+    OpenVinoDeviceProbe, OpenVinoGpuTinyGraphSmoke, OpenVinoNpuBitnetSubgraphParity,
+    OpenVinoNpuTinyGraphSmoke, OpenVinoProbe, OpenVinoPropertyProbe,
+    run_openvino_gpu_tiny_graph_smoke, run_openvino_npu_bitnet_subgraph_parity,
     run_openvino_npu_tiny_graph_smoke,
 };
 

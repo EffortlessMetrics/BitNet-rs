@@ -94,6 +94,64 @@ pub struct OpenVinoNpuTinyGraphSmoke {
     pub error: Option<String>,
 }
 
+/// Tiny static OpenVINO GPU graph smoke result for the Arc 140V reference lane.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct OpenVinoGpuTinyGraphSmoke {
+    /// Whether the tiny graph executed on an Arc 140V GPU device and matched CPU expected output.
+    pub passed: bool,
+    /// Proof stage reached by this smoke result.
+    pub proof_stage: String,
+    /// Requested backend identity for the Arc 140V lane.
+    pub requested_backend: String,
+    /// Selected backend when OpenVINO reports or uses an Arc 140V GPU device.
+    pub selected_backend: Option<String>,
+    /// Runtime API used by the smoke.
+    pub runtime_api: Option<String>,
+    /// Concrete OpenVINO runtime device token, normally `GPU.0`.
+    pub runtime_device: Option<String>,
+    /// OpenVINO `FULL_DEVICE_NAME` for the selected GPU token when available.
+    pub openvino_gpu_full_name: Option<String>,
+    /// Whether the selected GPU full name identifies Arc 140V.
+    pub arc140v_identity_matched: bool,
+    /// OpenVINO Python package version when available.
+    pub openvino_version: Option<String>,
+    /// OpenVINO available device tokens observed by the smoke script.
+    pub openvino_available_devices: Vec<String>,
+    /// Tiny static graph identifier.
+    pub graph_name: String,
+    /// Static shape mode expected by the OpenVINO GPU reference lane.
+    pub shape_mode: String,
+    /// Input shape used by the tiny graph.
+    pub input_shape: Vec<usize>,
+    /// Output shape returned by the tiny graph when available.
+    pub output_shape: Option<Vec<usize>>,
+    /// Graph precision label.
+    pub precision: String,
+    /// Absolute/mean tolerance used for the CPU expected-output comparison.
+    pub tolerance: f32,
+    /// Maximum absolute error versus CPU expected output.
+    pub max_abs_error: Option<f32>,
+    /// Mean absolute error versus CPU expected output.
+    pub mean_abs_error: Option<f32>,
+    /// Compile time to OpenVINO `GPU.0` when measured.
+    pub compile_ms: Option<f64>,
+    /// First inference time when measured.
+    pub first_infer_ms: Option<f64>,
+    /// Always false: this smoke never substitutes CPU fallback.
+    pub fallback_used: bool,
+    /// Always false: CPU fallback is not allowed for Arc 140V OpenVINO proof.
+    pub cpu_fallback_allowed: bool,
+    /// Whether graph execution occurred.
+    pub graph_execution: bool,
+    /// Always false: this is a tiny graph smoke, not BitNet inference.
+    pub bitnet_inference: bool,
+    /// Always false: this graph smoke does not prove packed QK256 decode.
+    pub qk256_decode: bool,
+    /// Non-fatal error for unavailable runtime, missing GPU, identity mismatch, compile, infer, or parity failure.
+    pub error: Option<String>,
+}
+
 /// Selected static BitNet subgraph parity result on OpenVINO NPU.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(clippy::struct_excessive_bools)]
@@ -179,6 +237,39 @@ impl OpenVinoNpuTinyGraphSmoke {
             cpu_fallback_allowed: false,
             graph_execution: false,
             bitnet_inference: false,
+            error: Some(reason.into()),
+        }
+    }
+}
+
+impl OpenVinoGpuTinyGraphSmoke {
+    fn unavailable(reason: impl Into<String>) -> Self {
+        Self {
+            passed: false,
+            proof_stage: "runtime_detected".to_owned(),
+            requested_backend: "intel-arc-140v".to_owned(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            openvino_gpu_full_name: None,
+            arc140v_identity_matched: false,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            graph_name: "tiny_matmul_add_f16_1x16".to_owned(),
+            shape_mode: "static".to_owned(),
+            input_shape: vec![1, 16],
+            output_shape: None,
+            precision: "F16".to_owned(),
+            tolerance: 0.001,
+            max_abs_error: None,
+            mean_abs_error: None,
+            compile_ms: None,
+            first_infer_ms: None,
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: false,
+            bitnet_inference: false,
+            qk256_decode: false,
             error: Some(reason.into()),
         }
     }
@@ -385,6 +476,94 @@ except Exception as exc:
     OpenVinoNpuTinyGraphSmoke::unavailable("python openvino smoke unavailable")
 }
 
+/// Run a tiny static OpenVINO graph on `GPU.0` through Python, without linking OpenVINO.
+pub fn run_openvino_gpu_tiny_graph_smoke() -> OpenVinoGpuTinyGraphSmoke {
+    let script = r#"
+import time
+
+def matches_arc_140v(value):
+    lower = str(value).lower()
+    return ("arc" in lower and "140v" in lower) or "64a0" in lower
+
+try:
+    import openvino as ov
+    import numpy as np
+    from openvino import opset8 as opset
+
+    core = ov.Core()
+    print("OPENVINO_VERSION=" + str(ov.__version__))
+    for dev in core.available_devices:
+        print("AVAILABLE_DEVICE=" + str(dev))
+
+    gpu_devices = [str(dev) for dev in core.available_devices if str(dev) == "GPU.0" or str(dev).startswith("GPU")]
+    if not gpu_devices:
+        print("RESULT=fail")
+        print("ERROR=OpenVINO did not report GPU")
+    else:
+        device = "GPU.0" if "GPU.0" in gpu_devices else gpu_devices[0]
+        try:
+            full_name = str(core.get_property(device, "FULL_DEVICE_NAME"))
+        except Exception as exc:
+            full_name = "ERR: " + repr(exc)
+        identity_matched = matches_arc_140v(full_name)
+
+        input_data = np.arange(16, dtype=np.float16).reshape(1, 16)
+        expected = input_data + np.ones((1, 16), dtype=np.float16)
+
+        param = opset.parameter([1, 16], dtype=np.float16, name="input")
+        weights = opset.constant(np.eye(16, dtype=np.float16))
+        bias = opset.constant(np.ones((1, 16), dtype=np.float16))
+        matmul = opset.matmul(param, weights, False, False)
+        output = opset.add(matmul, bias)
+        model = ov.Model([output], [param], "tiny_matmul_add_f16_1x16")
+
+        compile_start = time.perf_counter()
+        compiled = core.compile_model(model, device)
+        compile_ms = (time.perf_counter() - compile_start) * 1000.0
+
+        infer_start = time.perf_counter()
+        result = compiled([input_data])
+        first_infer_ms = (time.perf_counter() - infer_start) * 1000.0
+        actual = np.asarray(next(iter(result.values())))
+
+        diff = np.abs(actual.astype(np.float32) - expected.astype(np.float32))
+        max_abs = float(np.max(diff))
+        mean_abs = float(np.mean(diff))
+        graph_passed = bool(max_abs <= 0.001)
+        lane_passed = bool(graph_passed and identity_matched)
+
+        print("SELECTED_DEVICE=" + device)
+        print("FULL_DEVICE_NAME=" + full_name)
+        print("ARC140V_IDENTITY_MATCHED=" + ("true" if identity_matched else "false"))
+        print("GRAPH_NAME=tiny_matmul_add_f16_1x16")
+        print("SHAPE_MODE=static")
+        print("PRECISION=F16")
+        print("INPUT_SHAPE=1,16")
+        print("OUTPUT_SHAPE=" + ",".join(str(dim) for dim in actual.shape))
+        print("COMPILE_MS=" + str(compile_ms))
+        print("FIRST_INFER_MS=" + str(first_infer_ms))
+        print("MAX_ABS_ERROR=" + str(max_abs))
+        print("MEAN_ABS_ERROR=" + str(mean_abs))
+        print("GRAPH_EXECUTION=" + ("true" if graph_passed else "false"))
+        print("RESULT=" + ("pass" if lane_passed else "fail"))
+        if not identity_matched:
+            print("ERROR=OpenVINO GPU full name did not identify Arc 140V")
+        elif not graph_passed:
+            print("ERROR=Output mismatch versus CPU expected output")
+except Exception as exc:
+    print("RESULT=fail")
+    print("ERROR=" + repr(exc))
+"#;
+
+    for python in ["python3", "python"] {
+        if let Ok(stdout) = command_output(python, ["-c", script]) {
+            return parse_openvino_gpu_tiny_graph_smoke_output(&stdout);
+        }
+    }
+
+    OpenVinoGpuTinyGraphSmoke::unavailable("python openvino GPU smoke unavailable")
+}
+
 /// Run selected static BitNet subgraph parity on `NPU` through Python, without linking OpenVINO.
 pub fn run_openvino_npu_bitnet_subgraph_parity() -> OpenVinoNpuBitnetSubgraphParity {
     let script = r#"
@@ -559,6 +738,73 @@ pub(crate) fn parse_openvino_npu_tiny_graph_smoke_output(
     smoke
 }
 
+pub(crate) fn parse_openvino_gpu_tiny_graph_smoke_output(
+    output: &str,
+) -> OpenVinoGpuTinyGraphSmoke {
+    let mut smoke =
+        OpenVinoGpuTinyGraphSmoke::unavailable("OpenVINO GPU smoke did not pass for Arc 140V");
+    smoke.openvino_available_devices.clear();
+
+    for line in output.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        if let Some(value) = line.strip_prefix("RESULT=") {
+            smoke.passed = value == "pass";
+        } else if let Some(value) = line.strip_prefix("ERROR=") {
+            smoke.error = Some(value.to_owned());
+        } else if let Some(value) = line.strip_prefix("OPENVINO_VERSION=") {
+            smoke.openvino_version = Some(value.to_owned());
+            smoke.runtime_api = Some("openvino".to_owned());
+        } else if let Some(value) = line.strip_prefix("AVAILABLE_DEVICE=") {
+            smoke.openvino_available_devices.push(value.to_owned());
+            if value == "GPU.0" || value.starts_with("GPU") {
+                smoke.runtime_api = Some("openvino".to_owned());
+                smoke.runtime_device.get_or_insert_with(|| value.to_owned());
+            }
+        } else if let Some(value) = line.strip_prefix("SELECTED_DEVICE=") {
+            smoke.runtime_api = Some("openvino".to_owned());
+            smoke.runtime_device = Some(value.to_owned());
+        } else if let Some(value) = line.strip_prefix("FULL_DEVICE_NAME=") {
+            smoke.openvino_gpu_full_name = Some(value.to_owned());
+        } else if let Some(value) = line.strip_prefix("ARC140V_IDENTITY_MATCHED=") {
+            smoke.arc140v_identity_matched = value == "true";
+        } else if let Some(value) = line.strip_prefix("GRAPH_NAME=") {
+            value.clone_into(&mut smoke.graph_name);
+        } else if let Some(value) = line.strip_prefix("SHAPE_MODE=") {
+            value.clone_into(&mut smoke.shape_mode);
+        } else if let Some(value) = line.strip_prefix("PRECISION=") {
+            value.clone_into(&mut smoke.precision);
+        } else if let Some(value) = line.strip_prefix("INPUT_SHAPE=") {
+            smoke.input_shape = parse_usize_list(value);
+        } else if let Some(value) = line.strip_prefix("OUTPUT_SHAPE=") {
+            smoke.output_shape = Some(parse_usize_list(value));
+        } else if let Some(value) = line.strip_prefix("COMPILE_MS=") {
+            smoke.compile_ms = value.parse().ok();
+        } else if let Some(value) = line.strip_prefix("FIRST_INFER_MS=") {
+            smoke.first_infer_ms = value.parse().ok();
+        } else if let Some(value) = line.strip_prefix("MAX_ABS_ERROR=") {
+            smoke.max_abs_error = value.parse().ok();
+        } else if let Some(value) = line.strip_prefix("MEAN_ABS_ERROR=") {
+            smoke.mean_abs_error = value.parse().ok();
+        } else if let Some(value) = line.strip_prefix("GRAPH_EXECUTION=") {
+            smoke.graph_execution = value == "true";
+        }
+    }
+
+    if smoke.arc140v_identity_matched {
+        smoke.selected_backend = Some("intel-arc-140v-openvino-gpu".to_owned());
+    }
+    smoke.proof_stage = if smoke.passed {
+        smoke.error = None;
+        "kernel_smoke_tested".to_owned()
+    } else {
+        "runtime_detected".to_owned()
+    };
+    smoke.fallback_used = false;
+    smoke.cpu_fallback_allowed = false;
+    smoke.bitnet_inference = false;
+    smoke.qk256_decode = false;
+    smoke
+}
+
 pub(crate) fn parse_openvino_npu_bitnet_subgraph_parity_output(
     output: &str,
 ) -> OpenVinoNpuBitnetSubgraphParity {
@@ -696,7 +942,8 @@ fn upsert_property_value(device: &mut OpenVinoDeviceProbe, property: &str, value
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_openvino_line_output, parse_openvino_npu_bitnet_subgraph_parity_output,
+        parse_openvino_gpu_tiny_graph_smoke_output, parse_openvino_line_output,
+        parse_openvino_npu_bitnet_subgraph_parity_output,
         parse_openvino_npu_tiny_graph_smoke_output,
     };
 
@@ -784,6 +1031,115 @@ ERROR=OpenVINO did not report NPU
         assert!(!smoke.graph_execution);
         assert!(!smoke.fallback_used);
         assert_eq!(smoke.error.as_deref(), Some("OpenVINO did not report NPU"));
+    }
+
+    #[test]
+    fn parses_openvino_gpu_tiny_graph_smoke_pass() {
+        let output = r"
+OPENVINO_VERSION=2026.1
+AVAILABLE_DEVICE=CPU
+AVAILABLE_DEVICE=GPU.0
+SELECTED_DEVICE=GPU.0
+FULL_DEVICE_NAME=Intel(R) Arc(TM) 140V Graphics
+ARC140V_IDENTITY_MATCHED=true
+GRAPH_NAME=tiny_matmul_add_f16_1x16
+SHAPE_MODE=static
+PRECISION=F16
+INPUT_SHAPE=1,16
+OUTPUT_SHAPE=1,16
+COMPILE_MS=7.5
+FIRST_INFER_MS=0.75
+MAX_ABS_ERROR=0.0
+MEAN_ABS_ERROR=0.0
+GRAPH_EXECUTION=true
+RESULT=pass
+";
+
+        let smoke = parse_openvino_gpu_tiny_graph_smoke_output(output);
+
+        assert!(smoke.passed);
+        assert_eq!(smoke.proof_stage, "kernel_smoke_tested");
+        assert_eq!(smoke.selected_backend.as_deref(), Some("intel-arc-140v-openvino-gpu"));
+        assert_eq!(smoke.runtime_api.as_deref(), Some("openvino"));
+        assert_eq!(smoke.runtime_device.as_deref(), Some("GPU.0"));
+        assert_eq!(smoke.openvino_gpu_full_name.as_deref(), Some("Intel(R) Arc(TM) 140V Graphics"));
+        assert!(smoke.arc140v_identity_matched);
+        assert_eq!(smoke.input_shape, [1, 16]);
+        assert_eq!(smoke.output_shape.as_deref(), Some(&[1, 16][..]));
+        assert_eq!(smoke.precision, "F16");
+        assert_eq!(smoke.max_abs_error, Some(0.0));
+        assert!(!smoke.fallback_used);
+        assert!(!smoke.cpu_fallback_allowed);
+        assert!(smoke.graph_execution);
+        assert!(!smoke.bitnet_inference);
+        assert!(!smoke.qk256_decode);
+        assert!(smoke.error.is_none());
+    }
+
+    #[test]
+    fn parses_openvino_gpu_tiny_graph_missing_gpu_as_runtime_only() {
+        let output = r"
+OPENVINO_VERSION=2026.1
+AVAILABLE_DEVICE=CPU
+RESULT=fail
+ERROR=OpenVINO did not report GPU
+";
+
+        let smoke = parse_openvino_gpu_tiny_graph_smoke_output(output);
+
+        assert!(!smoke.passed);
+        assert_eq!(smoke.proof_stage, "runtime_detected");
+        assert_eq!(smoke.runtime_api.as_deref(), Some("openvino"));
+        assert!(smoke.runtime_device.is_none());
+        assert!(smoke.selected_backend.is_none());
+        assert!(!smoke.arc140v_identity_matched);
+        assert!(!smoke.graph_execution);
+        assert!(!smoke.fallback_used);
+        assert!(!smoke.bitnet_inference);
+        assert!(!smoke.qk256_decode);
+        assert_eq!(smoke.error.as_deref(), Some("OpenVINO did not report GPU"));
+    }
+
+    #[test]
+    fn parses_openvino_gpu_tiny_graph_rejects_generic_gpu_identity() {
+        let output = r"
+OPENVINO_VERSION=2026.1
+AVAILABLE_DEVICE=CPU
+AVAILABLE_DEVICE=GPU.0
+SELECTED_DEVICE=GPU.0
+FULL_DEVICE_NAME=Intel(R) UHD Graphics
+ARC140V_IDENTITY_MATCHED=false
+GRAPH_NAME=tiny_matmul_add_f16_1x16
+SHAPE_MODE=static
+PRECISION=F16
+INPUT_SHAPE=1,16
+OUTPUT_SHAPE=1,16
+COMPILE_MS=7.5
+FIRST_INFER_MS=0.75
+MAX_ABS_ERROR=0.0
+MEAN_ABS_ERROR=0.0
+GRAPH_EXECUTION=true
+RESULT=fail
+ERROR=OpenVINO GPU full name did not identify Arc 140V
+";
+
+        let smoke = parse_openvino_gpu_tiny_graph_smoke_output(output);
+
+        assert!(!smoke.passed);
+        assert_eq!(smoke.proof_stage, "runtime_detected");
+        assert_eq!(smoke.runtime_api.as_deref(), Some("openvino"));
+        assert_eq!(smoke.runtime_device.as_deref(), Some("GPU.0"));
+        assert_eq!(smoke.openvino_gpu_full_name.as_deref(), Some("Intel(R) UHD Graphics"));
+        assert!(smoke.selected_backend.is_none());
+        assert!(!smoke.arc140v_identity_matched);
+        assert!(smoke.graph_execution);
+        assert!(!smoke.fallback_used);
+        assert!(!smoke.bitnet_inference);
+        assert!(!smoke.qk256_decode);
+        assert_eq!(
+            smoke.error.as_deref(),
+            Some("OpenVINO GPU full name did not identify Arc 140V")
+        );
     }
 
     #[test]

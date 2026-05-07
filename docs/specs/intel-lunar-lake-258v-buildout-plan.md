@@ -30,8 +30,9 @@ Do these identity and validation surfaces before claiming real BitNet performanc
 4. **CPU258V-001**: run the merged CPU path on the 258V laptop and emit strict validation receipts for loader/tokenizer authority, kernel identity, and decode smoke.
 5. **CPU258V-002**: compare scalar and AVX2 strict CPU answer receipts on the 258V with the same model, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs/text, first divergence, logits/top-k evidence when available, fallback status, and power/topology context.
 6. **CPU258V-003**: emit 258V phase benchmark receipts for smoke, first token, decode, and prefill profiles as the CPU reference plate.
-7. **NPU-007 / ARC140V-003**: advance NPU selected RMSNorm subgraph parity and Arc 140V tiny OpenCL smoke against the 258V CPU-first priority order.
-8. **Comparison work**: only after the lane receipts exist, compare CPU AVX2, Arc 140V, and OpenVINO NPU artifacts on the same shared-memory platform.
+7. **NPU-007 / ARC140V-003**: advance NPU selected RMSNorm subgraph parity and Arc 140V OpenVINO `GPU.0` smoke against the 258V CPU-first priority order.
+8. **ARC140V-004**: only after OpenVINO GPU smoke, advance Arc 140V to tiny native OpenCL execution.
+9. **Comparison work**: only after the lane receipts exist, compare CPU AVX2, Arc 140V, and OpenVINO NPU artifacts on the same shared-memory platform.
 
 ## PR Contracts
 
@@ -43,6 +44,7 @@ Do these identity and validation surfaces before claiming real BitNet performanc
 | `CPU258V-001` | 258V CPU validation harness. | CLI validation command, receipts, hardware/tracking docs, machine profile artifacts. | Accelerator code and unrelated model/tokenizer rewrites. | Strict CPU receipt records loader mode, tokenizer source, mock/fallback status, requested/selected kernel, phase metrics, and same-machine platform link. |
 | `CPU258V-002` | 258V scalar-vs-AVX2 strict answer parity. | CLI parity command, answer receipts, 258V CPU artifacts, hardware/tracking docs. | OpenCL, OpenVINO NPU execution, QK256 kernel rewrites unless explicitly scoped. | Receipt compares scalar and AVX2 output for the same model/tokenizer/prompt/greedy settings, records token IDs/text, first divergence, logits/top-k evidence, selected kernels, fallback=false, and power/topology context. |
 | `CPU258V-003` | 258V phase benchmark receipts. | Benchmark receipt generation, 258V artifacts, hardware/tracking docs. | Accelerator code, server inference, and thread pinning unless separately scoped. | Receipt records smoke, first-token, decode, and prefill phase timing when available with CPU feature, power, topology, selected backend/kernel, and fallback status. |
+| `ARC140V-003` | Tiny OpenVINO `GPU.0` graph smoke for the Arc 140V reference lane. | OpenVINO runtime probe, CLI smoke receipt, Arc 140V hardware docs. | Native OpenCL kernels, BitNet model/tokenizer/QK256/inference code. | Receipt records Arc 140V OpenVINO GPU identity, static tiny graph execution, shape/timing/tolerance fields, fallback=false, and no BitNet/QK256/native OpenCL claims. |
 
 ## Required Platform Probe Surface
 

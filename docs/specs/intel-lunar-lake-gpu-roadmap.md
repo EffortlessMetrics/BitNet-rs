@@ -67,8 +67,8 @@ memory_kind = "shared-system-memory"
 OpenVINO GPU reference:
 
 ```text
-requested_backend = "intel-arc-140v-openvino-gpu"
-selected_backend = "openvino-gpu"
+requested_backend = "intel-arc-140v"
+selected_backend = "intel-arc-140v-openvino-gpu"
 openvino_device = "GPU.0"
 ```
 
@@ -208,6 +208,25 @@ Detect Arc 140V by device name or PCI ID 0x64A0, and record OpenCL, Level Zero, 
 ### ARC140V-003 - OpenVINO GPU Smoke
 
 Compile and run a tiny fixed-shape graph on OpenVINO `GPU.0`.
+
+Command shape:
+
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- intel-arc-140v-openvino-gpu-smoke \
+  --json-out ci/hardware/intel-258v/YYYY-MM-DD/arc-140v-openvino-gpu-smoke.json
+```
+
+The receipt must keep `requested_backend=intel-arc-140v`,
+`selected_backend=intel-arc-140v-openvino-gpu`, `runtime_api=openvino`,
+`runtime_device=GPU.0`, `fallback_used=false`, `bitnet_inference=false`, and
+`qk256_decode=false`. It may claim tiny OpenVINO GPU graph smoke only when the
+selected `GPU.0` full device name identifies Arc 140V and the graph output
+matches the CPU expected output.
+
+This is not native OpenCL execution. Native OpenCL starts at `ARC140V-004`.
 
 ### ARC140V-004 - OpenCL Kernel Smoke
 

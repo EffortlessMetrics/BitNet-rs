@@ -57,30 +57,32 @@ PERFORMANCE:
 Usage: bitnet [OPTIONS] [COMMAND]
 
 Commands:
-  run                 Run simple text generation
-  ask                 Ask one question using the answer-readiness generation path
-  tokenize            Tokenize text and output token IDs as JSON
-  score               Calculate perplexity score for a model
-  inference           Run inference on a model
-  chat                Interactive chat mode (streaming)
-  answer-corpus       Run the fixed CPU answer-readiness corpus through the `run` surface
-  answer-parity       Compare scalar and AVX2 strict CPU answer-corpus receipts
-  convert             Convert between model formats
-  benchmark           Benchmark model performance
-  serve               Start inference server
-  config              Manage configuration
-  info                Show system information
-  device-smoke        Probe selected device identity without launching kernels
-  lunar-lake-probe    Probe Lunar Lake 258V platform visibility without launching kernels
-  intel-npu-probe     Probe Intel NPU OpenVINO runtime visibility without compiling graphs
-  intel-npu-smoke     Run a tiny static OpenVINO NPU graph smoke without BitNet inference
-  validate            Run validation-only preflight checks
-  cuda-smoke          Compile and launch a tiny CUDA vector-add kernel
-  inspect             Inspect model metadata and diagnostics
-  compat-check        Check GGUF file compatibility using header validation
-  list-architectures  List all supported model architectures
-  list-templates      List all available prompt templates
-  help                Print this message or the help of the given subcommand(s)
+  run                                Run simple text generation
+  ask                                Ask one question using the answer-readiness generation path
+  tokenize                           Tokenize text and output token IDs as JSON
+  score                              Calculate perplexity score for a model
+  inference                          Run inference on a model
+  chat                               Interactive chat mode (streaming)
+  answer-corpus                      Run the fixed CPU answer-readiness corpus through the `run` surface
+  answer-parity                      Compare scalar and AVX2 strict CPU answer-corpus receipts
+  convert                            Convert between model formats
+  benchmark                          Benchmark model performance
+  serve                              Start inference server
+  config                             Manage configuration
+  info                               Show system information
+  device-smoke                       Probe selected device identity without launching kernels
+  lunar-lake-probe                   Probe Lunar Lake 258V platform visibility without launching kernels
+  intel-npu-probe                    Probe Intel NPU OpenVINO runtime visibility without compiling graphs
+  intel-npu-smoke                    Run a tiny static OpenVINO NPU graph smoke without BitNet inference
+  intel-npu-bitnet-subgraph          Run selected static BitNet subgraph parity on OpenVINO NPU
+  intel-arc-140v-openvino-gpu-smoke  Run a tiny static OpenVINO GPU.0 graph smoke for Arc 140V
+  validate                           Run validation-only preflight checks
+  cuda-smoke                         Compile and launch a tiny CUDA vector-add kernel
+  inspect                            Inspect model metadata and diagnostics
+  compat-check                       Check GGUF file compatibility using header validation
+  list-architectures                 List all supported model architectures
+  list-templates                     List all available prompt templates
+  help                               Print this message or the help of the given subcommand(s)
 
 Options:
   -c, --config <PATH>
