@@ -285,7 +285,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-002"
-status = "ready"
+status = "merged"
+pr = 3929
 branch = "codex/intel-258v-platform/CPU258V-002-answer-parity"
 stackable = false
 review_mode = "codex_premerge"
@@ -333,13 +334,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-003"
-status = "proposed"
+status = "ready"
 branch = "codex/intel-258v-platform/CPU258V-003-phase-receipts"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["CPU258V-002"]
+blocked_by = []
 acceptance = "Add 258V phase benchmark receipts for smoke_1, first_token, decode_128, and prefill_512 when available, recording selected backend/kernel, fallback status, CPU feature set, P-core/LP-E topology, power mode, memory context, and explicit not_run gaps for unavailable profiles."
 commands = [
   "cargo test --locked -p bitnet-bench-receipts --no-default-features",
