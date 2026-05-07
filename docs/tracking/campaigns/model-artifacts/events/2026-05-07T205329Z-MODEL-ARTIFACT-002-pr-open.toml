@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T20:53:29Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-002"
+event = "pr_open"
+pr = 3928
+head_sha = "2e784e2b"
+actor = "codex"
+
+notes = [
+  "Opened #3928 to record the shared reference-good BitNet artifact search.",
+  "The PR evidence records no answer_ready candidate; after merge, a closeout event should mark MODEL-ARTIFACT-002 blocked unless a later candidate passes the gate.",
+  "Backend answer-readiness lanes remain diagnostic-only until an answer_ready artifact is recorded.",
+]
