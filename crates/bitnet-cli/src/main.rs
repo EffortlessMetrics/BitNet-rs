@@ -2632,8 +2632,8 @@ async fn run_simple_generation(
     // Track generated tokens for repetition penalty
     let mut generated_tokens = Vec::new();
 
-    // M4-015 profiles measure prompt prefix prefill only when explicitly requested.
-    // Default generation behavior remains unchanged for non-profile runs.
+    // Always prefill the prompt prefix so generation conditions on the full prompt.
+    // Profile requests additionally retain per-step timing/allocation details.
     let profile_requested = profile_id.is_some();
     if allocation_audit && !profile_requested {
         anyhow::bail!(
@@ -2658,13 +2658,16 @@ async fn run_simple_generation(
     let mut prefill_step_ms = Vec::new();
     let mut prefill_step_allocs = Vec::new();
     let prefill_start = std::time::Instant::now();
-    if profile_requested && tokens.len() > 1 {
+    if tokens.len() > 1 {
         for token in &tokens[..tokens.len() - 1] {
             let step_start = std::time::Instant::now();
             let step_alloc_start = AllocationAuditSnapshot::current();
             let x = model.embed(&[*token])?;
             let _ = model.forward(&x, any_cache.as_mut())?;
-            prefill_step_ms.push(elapsed_ms(step_start));
+            let step_ms = elapsed_ms(step_start);
+            if profile_requested {
+                prefill_step_ms.push(step_ms);
+            }
             if allocation_audit_enabled {
                 prefill_step_allocs.push(AllocationAuditSnapshot::delta_since(step_alloc_start));
             }

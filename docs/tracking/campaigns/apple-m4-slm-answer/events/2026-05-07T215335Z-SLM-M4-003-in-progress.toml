@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T21:53:35Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started Rust-native Apple M4 SLM CLI answer path.",
+  "Initial probe showed strict Q4_K_M remains unsupported in Rust; Q8_0 companion loading reaches apple-m4-cpu-neon but generated text is incoherent.",
+  "Scope is dense SLM CPU/NEON correctness and receipts only; no BitNet quality, QK256, Metal kernels, server inference, Neural Engine, or performance claims.",
+]
