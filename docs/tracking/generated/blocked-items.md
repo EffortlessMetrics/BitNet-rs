@@ -34,7 +34,7 @@
 | cpu-proof | CPU-BITNET-005c | CPU-BITNET-005b | merged |
 | cpu-proof | CPU-BITNET-006 | CPU-BITNET-005c | merged |
 | cpu-proof | CPU-BITNET-007 | CPU-BITNET-006 | merged |
-| cpu-proof | CPU-BITNET-008 | CPU-BITNET-007 | pr_open |
+| cpu-proof | CPU-BITNET-008 | CPU-BITNET-007 | in_progress |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | merged |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
