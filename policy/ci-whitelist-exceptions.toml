@@ -1,0 +1,28 @@
+schema_version = "1.0"
+policy = "ci-whitelist-exceptions"
+owner = "release/ci"
+status = "active"
+
+[[exception]]
+id = "ci-exception-docs-default-core"
+kind = "default_pr_compile_lane"
+lane = "ci-core-docs"
+allowed = true
+owner = "docs"
+issue = "TODO"
+reason = "Rustdoc currently remains part of required CI Core; revisit after docs-only/rustdoc ownership is separated from ordinary Rust PRs."
+created = "2026-05-07"
+review_after = "2026-06-07"
+expires = "2026-08-07"
+
+[[exception]]
+id = "ci-exception-compat-msrv-default"
+kind = "default_pr_compat_lane"
+lane = "compatibility-msrv"
+allowed = true
+owner = "release/compat"
+issue = "TODO"
+reason = "MSRV is useful for manifest/public crate changes; keep path-gated while xtask ci plan matures."
+created = "2026-05-07"
+review_after = "2026-06-07"
+expires = "2026-08-07"

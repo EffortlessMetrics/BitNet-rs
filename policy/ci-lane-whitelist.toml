@@ -1,0 +1,333 @@
+schema_version = "1.0"
+policy = "ci-lane-whitelist"
+owner = "release/ci"
+status = "advisory"
+updated = "2026-05-07"
+
+# Linear LEM (Linux-Equivalent Minutes) budget bands for ordinary PRs.
+# These are the planning targets, not enforcement. Enforcement is
+# layered later by the soft budget guard and learned-estimate stack.
+[budget]
+preferred_default_lem = 25
+default_limit_lem = 35
+elevated_limit_lem = 75
+hard_limit_lem = 125
+
+# Runner cost multipliers normalize wall-clock minutes into LEM
+# so Linux/Windows/macOS/Docker/GPU/external lanes can be compared
+# in a single unit.
+[runner_multipliers]
+ubuntu_22_04 = 1.0
+ubuntu_latest = 1.0
+windows_latest = 2.0
+macos_14 = 10.0
+macos_latest = 10.0
+gpu_docker = 6.0
+external_ai_review = 4.0
+
+# ---------------------------------------------------------------------------
+# Core lanes — required on every PR
+# ---------------------------------------------------------------------------
+
+[[lane]]
+id = "pr-plan"
+workflow = ".github/workflows/pr-plan.yml"
+job = "PR Plan"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/ci"
+intent = "Forecast touched areas, expected CI lanes, and Linux-equivalent minutes."
+failure_mode = "CI spend and selected verification lanes are invisible until after the PR runs."
+proof_obligation = "Emit ci-plan.json and a step summary with estimated LEM and lane reasons."
+evidence = ["ci-plan.json", "GitHub step summary"]
+allowed_triggers = ["pull_request", "workflow_dispatch"]
+duplicate_of = []
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
+id = "ci-core-build-test"
+workflow = ".github/workflows/ci-core.yml"
+job = "Build & Test (ubuntu-latest)"
+kind = "rust"
+tier = "frontdoor"
+default_pr = true
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 22
+owner = "core/runtime"
+intent = "Build and test the canonical CPU/default-member Rust surface."
+failure_mode = "Core CPU/tokenizer/quantization/inference behavior breaks before merge."
+proof_obligation = "Run format, CPU builds, core unit tests, SRP microcrate tests, inference golden path, policy/BDD unit tests, and AVX2 smoke where available."
+evidence = ["job logs", "future JUnit/nextest artifacts"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+duplicate_of = []
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
+id = "ci-core-clippy"
+workflow = ".github/workflows/ci-core.yml"
+job = "Clippy"
+kind = "lint"
+tier = "frontdoor"
+default_pr = true
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 8
+owner = "core/rust"
+intent = "Catch local Rust code-shape and lint policy violations."
+failure_mode = "Dangerous or policy-violating Rust shapes merge despite compiling."
+proof_obligation = "Run Clippy on canonical core crates with CPU feature set."
+evidence = ["job logs", "future lint-policy report"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+duplicate_of = ["future:strict-clippy-policy"]
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
+id = "ci-core-docs"
+workflow = ".github/workflows/ci-core.yml"
+job = "Documentation"
+kind = "docs"
+tier = "frontdoor"
+default_pr = true
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 8
+owner = "docs"
+intent = "Ensure Rust documentation builds for the workspace CPU surface."
+failure_mode = "Public docs or rustdoc examples drift from compilable API."
+proof_obligation = "Run cargo doc --workspace --no-default-features --features cpu."
+evidence = ["job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+duplicate_of = ["docs-automation if overlapping"]
+review_after = "2026-06-07"
+expires = "2026-08-07"
+
+[[lane]]
+id = "feature-matrix-pr"
+workflow = ".github/workflows/feature-matrix.yml"
+job = "Feature Matrix PR"
+kind = "feature"
+tier = "frontdoor"
+default_pr = true
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 12
+owner = "core/features"
+intent = "Prevent drift in canonical PR feature combinations."
+failure_mode = "No-default/cpu/full-cli feature combinations stop compiling."
+proof_obligation = "Run reduced PR feature matrix: no-features, cpu, cpu+full-cli."
+evidence = ["job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+duplicate_of = ["ci-core-build-test where CPU overlap exists"]
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+# ---------------------------------------------------------------------------
+# Risk-gated and expensive lanes
+# ---------------------------------------------------------------------------
+
+[[lane]]
+id = "bdd-grid-check"
+workflow = ".github/workflows/ci-core.yml"
+job = "BDD Grid Check"
+kind = "policy"
+tier = "risk-gated"
+default_pr = false
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 4
+owner = "testing-policy"
+intent = "Validate BDD/policy/runtime-flag coverage grid."
+failure_mode = "Policy/BDD coverage matrix drifts after relevant crate changes."
+proof_obligation = "Run xtask grid-check --cpu-only."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "pull_request:labeled"]
+labels = ["bdd", "grid", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
+id = "macos-arm64-clippy"
+workflow = ".github/workflows/ci-core.yml"
+job = "Clippy (macOS ARM64)"
+kind = "platform"
+tier = "expensive"
+default_pr = false
+blocking = false
+runner = "macos_14"
+base_minutes = 15
+owner = "platform/apple"
+intent = "Detect Apple Silicon / NEON Clippy and compile-shape issues."
+failure_mode = "Linux-clean code fails or lints pathologically on Apple Silicon."
+proof_obligation = "Run core crate Clippy on macOS ARM64."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "pull_request:labeled"]
+labels = ["macos", "full-ci"]
+expensive = true
+expensive_reason = "macOS is treated as 10x Linux in LEM planning."
+duplicate_of = ["ci-core-clippy"]
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
+id = "feature-matrix-full"
+workflow = ".github/workflows/feature-matrix.yml"
+job = "Feature Matrix Full"
+kind = "feature"
+tier = "deep"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 70
+owner = "core/features"
+intent = "Exhaustive feature compatibility."
+failure_mode = "Uncommon feature combinations break outside the canonical PR matrix."
+proof_obligation = "Run full feature matrix."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "pull_request:labeled"]
+labels = ["feature-matrix", "full-ci"]
+expensive = true
+duplicate_of = ["feature-matrix-pr"]
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+# ---------------------------------------------------------------------------
+# GPU / FFI / validation lanes
+# ---------------------------------------------------------------------------
+
+[[lane]]
+id = "gpu-native"
+workflow = ".github/workflows/gpu-ci-matrix.yml"
+job = "GPU native compile"
+kind = "gpu"
+tier = "risk-gated"
+default_pr = false
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 18
+owner = "gpu"
+intent = "Compile GPU-facing backend features without requiring live hardware."
+failure_mode = "GPU backend code fails to compile after kernel/inference/device changes."
+proof_obligation = "Run native GPU feature compile checks on GPU-relevant paths."
+evidence = ["job logs"]
+allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch", "pull_request:labeled"]
+labels = ["gpu-ci", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
+id = "gpu-docker"
+workflow = ".github/workflows/gpu-ci-matrix.yml"
+job = "GPU Docker"
+kind = "gpu"
+tier = "expensive"
+default_pr = false
+blocking = false
+runner = "gpu_docker"
+base_minutes = 15
+owner = "gpu"
+intent = "Validate backend Docker build surfaces."
+failure_mode = "NVIDIA/Intel/ROCm Docker images break despite native compile passing."
+proof_obligation = "Build GPU Docker images or Docker compile contexts."
+evidence = ["job logs", "image build output"]
+allowed_triggers = ["push", "workflow_dispatch", "pull_request:labeled"]
+labels = ["gpu-ci", "docker", "full-ci"]
+expensive = true
+duplicate_of = ["gpu-native"]
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
+id = "compatibility-msrv"
+workflow = ".github/workflows/compatibility.yml"
+job = "MSRV"
+kind = "compatibility"
+tier = "risk-gated"
+default_pr = true
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 12
+owner = "release/compat"
+intent = "Validate declared Rust compatibility for manifest/public crate changes."
+failure_mode = "MSRV drifts silently after dependency or public crate changes."
+proof_obligation = "Run MSRV check when manifest/toolchain/public API changes."
+evidence = ["job logs"]
+allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch"]
+duplicate_of = []
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
+id = "compatibility-ffi-abi"
+workflow = ".github/workflows/compatibility.yml"
+job = "ABI / FFI"
+kind = "ffi"
+tier = "risk-gated"
+default_pr = false
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 8
+owner = "ffi"
+intent = "Validate C ABI / FFI surface when FFI-owned code changes."
+failure_mode = "FFI symbols, headers, or ABI expectations break."
+proof_obligation = "Run ABI/FFI smoke on FFI-relevant paths or labels."
+evidence = ["job logs", "future ABI report"]
+allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch", "pull_request:labeled"]
+labels = ["ffi", "abi", "crossval", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+# ---------------------------------------------------------------------------
+# New strict policy and ripr lanes (added by this rollout)
+# ---------------------------------------------------------------------------
+
+[[lane]]
+id = "strict-policy"
+workflow = ".github/workflows/policy.yml"
+job = "Policy"
+kind = "policy"
+tier = "frontdoor"
+default_pr = true
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 3
+owner = "core/policy"
+intent = "Validate policy TOML, Clippy exceptions, no-panic receipts, and non-Rust file allowlist."
+failure_mode = "Strict policy drifts or exceptions become stale/unowned."
+proof_obligation = "Run xtask check-lint-policy, check-no-panic-family, check-clippy-exceptions, check-file-policy."
+evidence = ["target/bitnet/reports/policy-report.md", "target/bitnet/reports/*.json"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+duplicate_of = []
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
+[[lane]]
+id = "ripr-advisory"
+workflow = ".github/workflows/ripr.yml"
+job = "ripr static exposure"
+kind = "oracle-gap"
+tier = "frontdoor-advisory"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 4
+owner = "testing/oracle"
+intent = "Find static oracle-gap evidence for changed Rust behavior."
+failure_mode = "Changed behavior is reachable but not meaningfully discriminated by tests."
+proof_obligation = "Run ripr check on production Rust diffs and upload JSON/SARIF/summary."
+evidence = ["target/ripr/ripr.json", "target/ripr/ripr.sarif", "GitHub annotations"]
+allowed_triggers = ["pull_request:path-gated", "workflow_dispatch"]
+labels = ["ripr", "full-ci"]
+duplicate_of = ["mutation-nightly"]
+review_after = "2026-06-07"
+expires = "2026-11-07"
