@@ -151,3 +151,51 @@ must_not_claim = [
   "Intel NPU accelerates BitNet.",
   "BitNet inference works on Intel NPU.",
 ]
+
+[[work_item]]
+id = "NPU-005"
+status = "in_progress"
+branch = "codex/intel-npu/NPU-005-openvino-graph-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["NPU-004"]
+acceptance = "Add a tiny static OpenVINO NPU graph smoke command that compiles and runs a fixed F16 matmul-add graph on runtime device NPU when available, writes a machine-readable receipt with shape_mode=static, graph identity, timing, requested/selected backend identity, fallback_used=false, cpu_fallback_allowed=false, and never claims BitNet inference or NPU acceleration."
+commands = [
+  "rustfmt --check --config skip_children=true crates/bitnet-cli/src/main.rs crates/bitnet-device-probe/src/runtimes/openvino.rs crates/bitnet-device-probe/src/runtimes/mod.rs --edition 2024",
+  "cargo test --locked -p bitnet-device-probe --no-default-features openvino_npu_tiny_graph -- --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet tests::intel_npu_smoke_receipt_records_static_graph_execution_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet tests::strict_intel_npu_smoke_records_error_without_fallback -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- intel-npu-smoke --json-out target/intel-npu-tiny-graph-smoke.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-device-probe/src/runtimes/openvino.rs",
+  "crates/bitnet-device-probe/src/runtimes/mod.rs",
+  "docs/specs/intel-lunar-lake-npu-roadmap.md",
+  "docs/tracking/campaigns/intel-npu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The CLI can attempt an Intel NPU tiny static OpenVINO graph smoke and emits kernel_smoke_tested only when the graph executes on NPU and matches CPU expected output.",
+]
+must_not_claim = [
+  "BitNet inference works on Intel NPU.",
+  "Intel NPU accelerates BitNet.",
+  "Packed BitNet QK256 decode works on Intel NPU.",
+  "CPU fallback satisfies NPU proof.",
+]

@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T06:33:00Z"
+campaign = "intel-npu"
+item = "NPU-005"
+event = "in_progress"
+branch = "codex/intel-npu/NPU-005-openvino-graph-smoke"
+actor = "codex"
+
+notes = [
+  "Started tiny static OpenVINO NPU graph smoke command work.",
+  "Scope is graph smoke only; BitNet inference, QK256 decode, and NPU acceleration claims remain out of scope.",
+]
