@@ -55,6 +55,38 @@ fn re_llama_wo() -> &'static Regex {
     })
 }
 
+static RE_LLAMA_Q_PROJ: OnceLock<Regex> = OnceLock::new();
+fn re_llama_q_proj() -> &'static Regex {
+    RE_LLAMA_Q_PROJ.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.q_proj\.weight$")
+            .expect("valid regex")
+    })
+}
+
+static RE_LLAMA_K_PROJ: OnceLock<Regex> = OnceLock::new();
+fn re_llama_k_proj() -> &'static Regex {
+    RE_LLAMA_K_PROJ.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.k_proj\.weight$")
+            .expect("valid regex")
+    })
+}
+
+static RE_LLAMA_V_PROJ: OnceLock<Regex> = OnceLock::new();
+fn re_llama_v_proj() -> &'static Regex {
+    RE_LLAMA_V_PROJ.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.v_proj\.weight$")
+            .expect("valid regex")
+    })
+}
+
+static RE_LLAMA_O_PROJ: OnceLock<Regex> = OnceLock::new();
+fn re_llama_o_proj() -> &'static Regex {
+    RE_LLAMA_O_PROJ.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.o_proj\.weight$")
+            .expect("valid regex")
+    })
+}
+
 static RE_BLK_FFN_GATE: OnceLock<Regex> = OnceLock::new();
 fn re_blk_ffn_gate() -> &'static Regex {
     RE_BLK_FFN_GATE.get_or_init(|| {
@@ -130,6 +162,10 @@ pub fn normalize_vendor_key(k: &str) -> Option<String> {
         .or_else(|| cap!(re_llama_wk, k, "layers.{}.attention.k_proj.weight"))
         .or_else(|| cap!(re_llama_wv, k, "layers.{}.attention.v_proj.weight"))
         .or_else(|| cap!(re_llama_wo, k, "layers.{}.attention.o_proj.weight"))
+        .or_else(|| cap!(re_llama_q_proj, k, "layers.{}.attention.q_proj.weight"))
+        .or_else(|| cap!(re_llama_k_proj, k, "layers.{}.attention.k_proj.weight"))
+        .or_else(|| cap!(re_llama_v_proj, k, "layers.{}.attention.v_proj.weight"))
+        .or_else(|| cap!(re_llama_o_proj, k, "layers.{}.attention.o_proj.weight"))
         .or_else(|| cap!(re_blk_ffn_gate, k, "layers.{}.feed_forward.gate_proj.weight"))
         .or_else(|| cap!(re_blk_ffn_up, k, "layers.{}.feed_forward.up_proj.weight"))
         .or_else(|| cap!(re_blk_ffn_down, k, "layers.{}.feed_forward.down_proj.weight"))
@@ -153,6 +189,14 @@ mod tests {
         assert_eq!(
             normalize_vendor_key("model.layers.4.mlp.gate_proj.weight").as_deref(),
             Some("layers.4.feed_forward.gate_proj.weight")
+        );
+        assert_eq!(
+            normalize_vendor_key("model.layers.1.self_attn.q_proj.weight").as_deref(),
+            Some("layers.1.attention.q_proj.weight")
+        );
+        assert_eq!(
+            normalize_vendor_key("layers.9.attn.k_proj.weight").as_deref(),
+            Some("layers.9.attention.k_proj.weight")
         );
     }
 
