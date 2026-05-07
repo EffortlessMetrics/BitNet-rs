@@ -527,9 +527,15 @@ fn normalize_layer_weights(
     ];
 
     let q_dim = infer_projection_out_dim(tensors, &q_keys, hidden).unwrap_or(dims.q_dim()?);
-    let kv_dim = infer_projection_out_dim(tensors, &k_keys, hidden)
+    let configured_kv_dim = dims.kv_dim()?;
+    let inferred_kv_dim = infer_projection_out_dim(tensors, &k_keys, hidden)
         .or_else(|| infer_projection_out_dim(tensors, &v_keys, hidden))
-        .unwrap_or(dims.kv_dim()?);
+        .unwrap_or(configured_kv_dim);
+    let kv_dim = if inferred_kv_dim == hidden && configured_kv_dim != hidden {
+        configured_kv_dim
+    } else {
+        inferred_kv_dim
+    };
 
     // Attention Q/K/V/O projections
     let attn_keys = [
