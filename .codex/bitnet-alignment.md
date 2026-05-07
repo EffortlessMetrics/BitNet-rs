@@ -5,6 +5,7 @@ Use campaign-local goals and trackers for BitNet alignment work.
 Campaign goals:
 
 - `apple-m4`: `.codex/campaigns/apple-m4/goal.md`
+- `apple-m4-local-answer`: `.codex/campaigns/apple-m4-local-answer/goal.md`
 - `apple-m4-operational`: `.codex/campaigns/apple-m4-operational/goal.md`
 - `cpu-proof`: `.codex/campaigns/cpu-proof/goal.md`
 - `cpu-qk256-performance`: `.codex/campaigns/cpu-qk256-performance/goal.md`
@@ -21,6 +22,7 @@ Campaign goals:
 Campaign manifests:
 
 - `apple-m4`: `docs/tracking/campaigns/apple-m4/active.toml`
+- `apple-m4-local-answer`: `docs/tracking/campaigns/apple-m4-local-answer/active.toml`
 - `apple-m4-operational`: `docs/tracking/campaigns/apple-m4-operational/active.toml`
 - `cpu-proof`: `docs/tracking/campaigns/cpu-proof/active.toml`
 - `cpu-qk256-performance`: `docs/tracking/campaigns/cpu-qk256-performance/active.toml`
