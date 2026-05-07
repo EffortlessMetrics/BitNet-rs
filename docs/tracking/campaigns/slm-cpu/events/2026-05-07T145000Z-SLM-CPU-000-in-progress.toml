@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T14:50:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-000"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started a separate 8250U dense SLM CPU lane so Qwen/Gemma/Phi-style dense work does not reuse BitNet QK256 assumptions.",
+  "The first target policy prefers Qwen2.5-0.5B-Instruct GGUF Q4_K_M or Q8_0 only after exact GGUF metadata, tokenizer, tensor naming, and chat template policy are verified.",
+]
