@@ -1,0 +1,15 @@
+timestamp = "2026-05-07T22:14:30Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-003"
+event = "merged"
+actor = "codex"
+pr = 3932
+merge_sha = "0fe12d4958ebe030c8b9aa530213cacf2ccd24ea"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #3932 merged the latest stock llama.cpp reference-runner compatibility evidence.",
+  "The tdh111 IQ2_BN_R4 candidate remains diagnostic-only because stock llama.cpp rejects it before prompt execution.",
+  "The shared artifact gate still has no answer_ready BitNet artifact; backend answer lanes remain blocked or diagnostic-only.",
+]
