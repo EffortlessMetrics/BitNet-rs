@@ -224,11 +224,17 @@ impl ModelLoader {
 
     /// Check if the architecture is supported
     fn is_supported_architecture(&self, architecture: &str) -> bool {
-        match architecture.to_lowercase().as_str() {
-            "bitnet" | "bitnet-b1.58" | "llama" | "mistral" | "qwen" | "qwen2" | "qwen2.5"
-            | "qwen3" => true,
-            _ => false,
-        }
+        matches!(
+            architecture.to_lowercase().as_str(),
+            "bitnet"
+                | "bitnet-b1.58"
+                | "llama"
+                | "mistral"
+                | "qwen"
+                | "qwen2"
+                | "qwen2.5"
+                | "qwen3"
+        )
     }
 
     /// Get available format loaders
