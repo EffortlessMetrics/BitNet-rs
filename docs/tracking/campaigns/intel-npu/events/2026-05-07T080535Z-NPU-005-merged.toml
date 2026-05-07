@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T08:05:35Z"
+campaign = "intel-npu"
+item = "NPU-005"
+event = "merged"
+pr = 3846
+merge_sha = "fb5369a881edbe9eb12dc96f1c0677b9b8fc058e"
+actor = "maintainer"
+
+notes = [
+  "Tiny static OpenVINO NPU graph smoke command merged.",
+  "The command emits kernel_smoke_tested only when the static graph executes on OpenVINO NPU and matches expected output; BitNet inference, QK256 decode, and NPU acceleration remain out of scope.",
+]
