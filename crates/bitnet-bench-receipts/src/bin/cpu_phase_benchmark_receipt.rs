@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 use std::env;
 use std::error::Error;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const PROFILE_NAMES: [&str; 5] = ["micro", "layer", "prefill", "first_token", "decode"];
 
@@ -11,8 +11,11 @@ const PROFILE_NAMES: [&str; 5] = ["micro", "layer", "prefill", "first_token", "d
 struct Args {
     strict_proof_receipts: Vec<PathBuf>,
     receipt_out: Option<PathBuf>,
+    machine_id: Option<String>,
+    hardware_lane: Option<String>,
     selected_backend: Option<String>,
     model_quant_format: Option<String>,
+    platform_artifact: Option<PathBuf>,
     power_mode: Option<String>,
     temperature_c: Option<f64>,
     frequency_mhz: Option<f64>,
@@ -60,8 +63,13 @@ fn parse_args() -> Result<Args, Box<dyn Error>> {
                 args.strict_proof_receipts.push(PathBuf::from(next_value(&mut iter, &arg)?));
             }
             "--receipt-out" => args.receipt_out = Some(PathBuf::from(next_value(&mut iter, &arg)?)),
+            "--machine-id" => args.machine_id = Some(next_value(&mut iter, &arg)?),
+            "--hardware-lane" => args.hardware_lane = Some(next_value(&mut iter, &arg)?),
             "--selected-backend" => args.selected_backend = Some(next_value(&mut iter, &arg)?),
             "--model-quant-format" => args.model_quant_format = Some(next_value(&mut iter, &arg)?),
+            "--platform-artifact" => {
+                args.platform_artifact = Some(PathBuf::from(next_value(&mut iter, &arg)?));
+            }
             "--power-mode" => args.power_mode = Some(next_value(&mut iter, &arg)?),
             "--temperature-c" => args.temperature_c = Some(next_value(&mut iter, &arg)?.parse()?),
             "--frequency-mhz" => args.frequency_mhz = Some(next_value(&mut iter, &arg)?.parse()?),
@@ -90,7 +98,7 @@ fn next_value(
 fn print_help() {
     println!(
         "Usage: cpu_phase_benchmark_receipt --strict-proof-receipt PATH [--strict-proof-receipt PATH ...] [--receipt-out PATH]\n\
-         Options: --selected-backend, --model-quant-format, --power-mode, --temperature-c, --frequency-mhz"
+         Options: --machine-id, --hardware-lane, --selected-backend, --model-quant-format, --platform-artifact, --power-mode, --temperature-c, --frequency-mhz"
     );
 }
 
@@ -102,6 +110,13 @@ fn build_receipt(args: &Args) -> Result<Value, Box<dyn Error>> {
             Ok(serde_json::from_slice(&fs::read(path)?)?)
         })
         .collect::<Result<_, _>>()?;
+    let platform_probe = args
+        .platform_artifact
+        .as_ref()
+        .map(|path| -> Result<Value, Box<dyn Error>> {
+            Ok(serde_json::from_slice(&fs::read(path)?)?)
+        })
+        .transpose()?;
 
     for proof in &proofs {
         require_bool_false(proof, "/fallback_used")?;
@@ -114,6 +129,20 @@ fn build_receipt(args: &Args) -> Result<Value, Box<dyn Error>> {
         .clone()
         .or_else(|| string_at(first, "/execution/selected_backend"))
         .unwrap_or_else(|| "cpu".to_string());
+    let machine_id = args
+        .machine_id
+        .clone()
+        .or_else(|| platform_probe.as_ref().and_then(|platform| string_at(platform, "/machine_id")))
+        .unwrap_or_else(|| selected_backend.clone());
+    let hardware_lane = args
+        .hardware_lane
+        .clone()
+        .or_else(|| {
+            platform_probe
+                .as_ref()
+                .and_then(|platform| string_at(platform, "/cpu/selected_backend"))
+        })
+        .unwrap_or_else(|| selected_backend.clone());
     let selected_kernel = string_at(first, "/kernel/kernel_id")
         .or_else(|| string_at(first, "/strict_provenance/selected_kernel"))
         .unwrap_or_else(|| "qk256-scalar-gemv".to_string());
@@ -127,17 +156,34 @@ fn build_receipt(args: &Args) -> Result<Value, Box<dyn Error>> {
         .clone()
         .or_else(|| string_at(first, "/model/quant_format"))
         .unwrap_or_else(|| "QK256/I2_S".to_string());
+    let cpu_model = platform_probe
+        .as_ref()
+        .and_then(|platform| string_at(platform, "/cpu/model"))
+        .or_else(|| string_at(first, "/cpu/model"))
+        .unwrap_or_else(|| "unknown".to_string());
+    let power_mode = args
+        .power_mode
+        .clone()
+        .or_else(|| platform_probe.as_ref().and_then(|platform| string_at(platform, "/power/mode")))
+        .unwrap_or_else(|| "unknown".to_string());
+    let platform_context = args
+        .platform_artifact
+        .as_ref()
+        .zip(platform_probe.as_ref())
+        .map(|(path, platform)| build_platform_context(path, platform));
 
     let mut profiles = default_profiles(&requested_kernel, &selected_kernel);
     for proof in &proofs {
         apply_measured_phase(&mut profiles, proof, &requested_kernel, &selected_kernel);
     }
+    let cpu258v_003_profiles =
+        build_cpu258v_003_profiles(&profiles, prompt_tokens, generated_tokens);
 
     Ok(json!({
         "schema": 1,
         "artifact_kind": "cpu_benchmark",
-        "machine_id": selected_backend,
-        "hardware_lane": selected_backend,
+        "machine_id": machine_id,
+        "hardware_lane": hardware_lane,
         "timestamp_utc": timestamp_label(),
         "requested_backend": "cpu",
         "selected_backend": selected_backend,
@@ -168,7 +214,7 @@ fn build_receipt(args: &Args) -> Result<Value, Box<dyn Error>> {
             "dequantizes_before_compute": false
         },
         "cpu": {
-            "model": string_at(first, "/cpu/model").unwrap_or_else(|| "unknown".to_string()),
+            "model": cpu_model,
             "arch": string_at(first, "/cpu/arch").unwrap_or_else(|| env::consts::ARCH.to_string()),
             "features": array_at(first, "/cpu/features").unwrap_or_else(|| vec!["scalar".to_string()]),
             "threads": u64_at(first, "/cpu/threads")
@@ -179,10 +225,12 @@ fn build_receipt(args: &Args) -> Result<Value, Box<dyn Error>> {
                 .unwrap_or_default()
                 .iter()
                 .any(|feature| feature.eq_ignore_ascii_case("avx512f")),
-            "power_mode": args.power_mode.clone().unwrap_or_else(|| "unknown".to_string()),
+            "power_mode": power_mode,
             "temperature_c": args.temperature_c,
             "frequency_mhz": args.frequency_mhz
         },
+        "platform_context": platform_context,
+        "cpu258v_003_profiles": cpu258v_003_profiles,
         "workload": {
             "prompt_tokens": prompt_tokens,
             "generated_tokens": generated_tokens,
@@ -197,6 +245,131 @@ fn build_receipt(args: &Args) -> Result<Value, Box<dyn Error>> {
         "artifact_path": args.receipt_out.as_ref().map(|path| path.display().to_string()),
         "claim_boundary": "Real phase profiles are measured only when backed by supplied strict CPU proof receipts; not_run profiles are explicit gaps, not performance evidence."
     }))
+}
+
+fn build_platform_context(path: &Path, platform: &Value) -> Value {
+    json!({
+        "artifact_path": path.display().to_string(),
+        "machine_id": string_at(platform, "/machine_id").unwrap_or_else(|| "unknown".to_string()),
+        "proof_stage": string_at(platform, "/proof_stage").unwrap_or_else(|| "unknown".to_string()),
+        "status": string_at(platform, "/status").unwrap_or_else(|| "unknown".to_string()),
+        "os": {
+            "name": string_at(platform, "/os/name"),
+            "version": string_at(platform, "/os/version"),
+            "arch": string_at(platform, "/os/arch"),
+            "native_or_virtualized": string_at(platform, "/os/native_or_virtualized")
+        },
+        "cpu": {
+            "model": string_at(platform, "/cpu/model"),
+            "cores": u64_at(platform, "/cpu/cores"),
+            "threads": u64_at(platform, "/cpu/threads"),
+            "p_core_count": u64_at(platform, "/cpu/p_core_count"),
+            "lp_e_core_count": u64_at(platform, "/cpu/lp_e_core_count"),
+            "avx2_detected": bool_at(platform, "/cpu/avx2_detected"),
+            "avx512_detected": bool_at(platform, "/cpu/avx512_detected"),
+            "fma_detected": bool_at(platform, "/cpu/fma_detected"),
+            "scheduler_hint": string_at(platform, "/cpu/scheduler_hint")
+        },
+        "memory": {
+            "kind": string_at(platform, "/memory/kind"),
+            "total_bytes": u64_at(platform, "/memory/total_bytes"),
+            "reported_speed_mt_s": u64_at(platform, "/memory/reported_speed_mt_s"),
+            "reported_modules": u64_at(platform, "/memory/reported_modules"),
+            "shared_memory": bool_at(platform, "/memory/shared_memory")
+        },
+        "power": {
+            "mode": string_at(platform, "/power/mode"),
+            "thermal_profile": string_at(platform, "/power/thermal_profile"),
+            "sustained_run": bool_at(platform, "/power/sustained_run")
+        }
+    })
+}
+
+fn build_cpu258v_003_profiles(
+    phase_profiles: &[Value],
+    prompt_tokens: u64,
+    generated_tokens: u64,
+) -> Vec<Value> {
+    let first_token = phase_profile(phase_profiles, "first_token");
+    let prefill = phase_profile(phase_profiles, "prefill");
+    let decode = phase_profile(phase_profiles, "decode");
+
+    vec![
+        cpu258v_profile_from_phase(
+            "smoke_1",
+            "strict one-token CPU proof",
+            first_token,
+            "first_token",
+            "no supplied strict CPU proof receipt measured the one-token smoke path",
+        ),
+        cpu258v_profile_from_phase(
+            "first_token",
+            "first-token latency",
+            first_token,
+            "first_token",
+            "no supplied strict CPU proof receipt measured first token",
+        ),
+        cpu258v_profile_from_phase(
+            "decode_128",
+            "steady decode over 128 generated tokens",
+            decode,
+            "decode",
+            "supplied strict CPU proof generated fewer than 128 tokens or did not measure steady-state decode",
+        ),
+        cpu258v_profile_from_phase(
+            "prefill_512",
+            "prefill over 512 prompt tokens",
+            prefill,
+            "prefill",
+            "supplied strict CPU proof did not measure a 512-token prefill",
+        ),
+    ]
+    .into_iter()
+    .map(|mut profile| {
+        profile["prompt_tokens"] = json!(prompt_tokens);
+        profile["generated_tokens"] = json!(generated_tokens);
+        profile
+    })
+    .collect()
+}
+
+fn phase_profile<'a>(phase_profiles: &'a [Value], name: &str) -> Option<&'a Value> {
+    phase_profiles.iter().find(|entry| entry.get("profile").and_then(Value::as_str) == Some(name))
+}
+
+fn cpu258v_profile_from_phase(
+    profile: &str,
+    purpose: &str,
+    phase: Option<&Value>,
+    source_profile: &str,
+    not_run_reason: &str,
+) -> Value {
+    if let Some(phase) =
+        phase.filter(|entry| entry.get("status").and_then(Value::as_str) == Some("measured"))
+    {
+        return json!({
+            "profile": profile,
+            "purpose": purpose,
+            "status": "measured",
+            "source_profile": source_profile,
+            "wall_time_ms": phase.get("wall_time_ms").cloned().unwrap_or(Value::Null),
+            "median_ms": phase.get("median_ms").cloned().unwrap_or(Value::Null),
+            "p95_ms": phase.get("p95_ms").cloned().unwrap_or(Value::Null),
+            "tokens_per_second": phase.get("tokens_per_second").cloned().unwrap_or(Value::Null),
+            "requested_kernel": phase.get("requested_kernel").cloned().unwrap_or(Value::Null),
+            "selected_kernel": phase.get("selected_kernel").cloned().unwrap_or(Value::Null),
+            "fallback_used": false
+        });
+    }
+
+    json!({
+        "profile": profile,
+        "purpose": purpose,
+        "status": "not_run",
+        "source_profile": source_profile,
+        "reason": not_run_reason,
+        "fallback_used": false
+    })
 }
 
 fn default_profiles(requested_kernel: &str, selected_kernel: &str) -> Vec<Value> {
@@ -456,6 +629,10 @@ fn u64_at(value: &Value, pointer: &str) -> Option<u64> {
     value.pointer(pointer)?.as_u64()
 }
 
+fn bool_at(value: &Value, pointer: &str) -> Option<bool> {
+    value.pointer(pointer)?.as_bool()
+}
+
 fn number_at(value: &Value, pointer: &str) -> Option<f64> {
     value.pointer(pointer)?.as_f64()
 }
@@ -533,5 +710,92 @@ mod tests {
         assert_eq!(profile("first_token")["wall_time_ms"], 51212.925);
         assert_eq!(profile("decode")["wall_time_ms"], 52456.62);
         assert_eq!(profile("decode")["shape"]["iterations"], 1);
+    }
+
+    #[test]
+    fn platform_context_copies_258v_topology_memory_and_power() {
+        let platform = json!({
+            "machine_id": "intel-258v",
+            "proof_stage": "detected",
+            "status": "partial_platform_detected",
+            "os": {
+                "name": "Microsoft Windows 11 Home",
+                "version": "10.0.26200",
+                "arch": "x86_64",
+                "native_or_virtualized": "native"
+            },
+            "cpu": {
+                "model": "Intel(R) Core(TM) Ultra 7 258V",
+                "cores": 8,
+                "threads": 8,
+                "p_core_count": 4,
+                "lp_e_core_count": 4,
+                "avx2_detected": true,
+                "avx512_detected": false,
+                "fma_detected": true,
+                "scheduler_hint": "record topology before benchmark claims"
+            },
+            "memory": {
+                "kind": "shared LPDDR-class system memory",
+                "total_bytes": 33873780736_u64,
+                "reported_speed_mt_s": 8533,
+                "reported_modules": 8,
+                "shared_memory": true
+            },
+            "power": {
+                "mode": "Balanced",
+                "thermal_profile": null,
+                "sustained_run": false
+            }
+        });
+
+        let context = build_platform_context(
+            &PathBuf::from("ci/hardware/intel-258v/2026-05-06/platform-probe.json"),
+            &platform,
+        );
+
+        assert_eq!(context["machine_id"], "intel-258v");
+        assert_eq!(context["cpu"]["p_core_count"], 4);
+        assert_eq!(context["cpu"]["lp_e_core_count"], 4);
+        assert_eq!(context["cpu"]["avx2_detected"], true);
+        assert_eq!(context["cpu"]["avx512_detected"], false);
+        assert_eq!(context["memory"]["shared_memory"], true);
+        assert_eq!(context["memory"]["reported_speed_mt_s"], 8533);
+        assert_eq!(context["power"]["mode"], "Balanced");
+    }
+
+    #[test]
+    fn cpu258v_003_profiles_keep_unavailable_profiles_explicit() {
+        let mut profiles = default_profiles("i2_s-avx2-reference", "i2_s-avx2-reference");
+        set_measured(
+            &mut profiles,
+            PhaseMeasurement {
+                profile_name: "first_token",
+                requested_kernel: "i2_s-avx2-reference",
+                selected_kernel: "i2_s-avx2-reference",
+                rows: 1,
+                cols: 4096,
+                iterations: 1,
+                wall_time_ms: 28_156.269,
+                median_ms: 28_156.269,
+                p95_ms: 28_156.269,
+                token_count: 1,
+            },
+        );
+
+        let requested = build_cpu258v_003_profiles(&profiles, 1, 1);
+        let profile = |name: &str| {
+            requested
+                .iter()
+                .find(|entry| entry.get("profile").and_then(Value::as_str) == Some(name))
+                .expect("profile present")
+        };
+
+        assert_eq!(profile("smoke_1")["status"], "measured");
+        assert_eq!(profile("first_token")["status"], "measured");
+        assert_eq!(profile("decode_128")["status"], "not_run");
+        assert_eq!(profile("prefill_512")["status"], "not_run");
+        assert_eq!(profile("smoke_1")["prompt_tokens"], 1);
+        assert_eq!(profile("smoke_1")["generated_tokens"], 1);
     }
 }
