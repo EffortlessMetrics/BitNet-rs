@@ -245,6 +245,10 @@ pub struct InferenceCommand {
     #[arg(long, value_name = "PATH")]
     pub tokenizer: Option<PathBuf>,
 
+    /// Strict tokenizer mode: fail if no real tokenizer is available
+    #[arg(long, default_value_t = false)]
+    pub strict_tokenizer: bool,
+
     /// Disable BOS insertion
     #[arg(long, default_value_t = false)]
     pub no_bos: bool,
@@ -523,6 +527,13 @@ impl InferenceCommand {
                 std::env::set_var("BITNET_STRICT_MODE", "1");
             }
             debug!("Strict loader enabled (BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)");
+        }
+
+        if self.strict_tokenizer {
+            unsafe {
+                std::env::set_var("BITNET_STRICT_TOKENIZERS", "1");
+            }
+            debug!("Strict tokenizer enabled (BITNET_STRICT_TOKENIZERS=1)");
         }
 
         // Set thread count if specified
@@ -1659,6 +1670,7 @@ mod tests {
     use bitnet_models::Model;
     use bitnet_tokenizers::{BasicTokenizer, Tokenizer};
     use futures::future::BoxFuture;
+    use serial_test::serial;
     use std::{
         sync::{
             Arc,
@@ -1769,6 +1781,18 @@ mod tests {
         }
     }
 
+    #[test]
+    #[serial]
+    fn strict_tokenizer_sets_strict_tokenizer_env() {
+        temp_env::with_var("BITNET_STRICT_TOKENIZERS", None::<&str>, || {
+            let cmd = InferenceCommand { strict_tokenizer: true, ..Default::default() };
+
+            cmd.setup_environment().unwrap();
+
+            assert_eq!(std::env::var("BITNET_STRICT_TOKENIZERS").as_deref(), Ok("1"));
+        });
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn test_prefill_invoked() {
         let tokenizer = Arc::new(BasicTokenizer::new());
@@ -1824,6 +1848,7 @@ mod tests {
             prompt_template: "raw".into(),
             chat_template: None,
             tokenizer: None,
+            strict_tokenizer: false,
             no_bos: false,
             no_eos: false,
             stop: Vec::new(),

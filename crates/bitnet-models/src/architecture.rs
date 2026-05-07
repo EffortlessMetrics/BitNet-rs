@@ -60,6 +60,65 @@ pub enum ModelArchitecture {
     Unknown(String),
 }
 
+/// Dense Qwen families supported by the SLM CPU adapter path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DenseQwenFamily {
+    Qwen2,
+    Qwen3,
+}
+
+/// Dense Qwen architecture classification for strict preflight.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DenseQwenArchitecture {
+    Supported(DenseQwenFamily),
+    UnsupportedHybrid { architecture: String, reason: &'static str },
+    NotQwen,
+}
+
+/// Classify a GGUF/HF architecture string for the dense Qwen adapter.
+///
+/// The dense CPU lane accepts only plain Qwen2/Qwen3 transformer families.
+/// Qwen3.5-style hybrid architectures are intentionally rejected before tensor
+/// loading because they need linear-attention / state-space operators outside
+/// the current dense adapter contract.
+pub fn classify_dense_qwen_architecture(architecture: &str) -> DenseQwenArchitecture {
+    let normalized = architecture.trim().to_ascii_lowercase().replace(['-', '.', ' '], "_");
+
+    if matches!(
+        normalized.as_str(),
+        "qwen35" | "qwen3_5" | "qwen3_5_text" | "qwen_3_5" | "qwen_3_5_text"
+    ) {
+        return DenseQwenArchitecture::UnsupportedHybrid {
+            architecture: architecture.to_string(),
+            reason: "Qwen3.5 hybrid linear-attention/vision models are outside the dense CPU lane",
+        };
+    }
+
+    match normalized.as_str() {
+        "qwen2" | "qwen2_5" | "qwen_2" | "qwen_2_5" => {
+            DenseQwenArchitecture::Supported(DenseQwenFamily::Qwen2)
+        }
+        "qwen3" | "qwen_3" => DenseQwenArchitecture::Supported(DenseQwenFamily::Qwen3),
+        value if value.starts_with("qwen3_5") || value.starts_with("qwen35") => {
+            DenseQwenArchitecture::UnsupportedHybrid {
+                architecture: architecture.to_string(),
+                reason: "Qwen3.5 hybrid linear-attention/vision models are outside the dense CPU lane",
+            }
+        }
+        value if value.starts_with("qwen2") || value.starts_with("qwen_2") => {
+            DenseQwenArchitecture::Supported(DenseQwenFamily::Qwen2)
+        }
+        value if value.starts_with("qwen3") || value.starts_with("qwen_3") => {
+            DenseQwenArchitecture::Supported(DenseQwenFamily::Qwen3)
+        }
+        value if value.contains("qwen") => DenseQwenArchitecture::UnsupportedHybrid {
+            architecture: architecture.to_string(),
+            reason: "unrecognized Qwen architecture requires explicit dense adapter support",
+        },
+        _ => DenseQwenArchitecture::NotQwen,
+    }
+}
+
 impl std::fmt::Display for ModelArchitecture {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -428,6 +487,7 @@ mod tests {
         assert_eq!(detect_architecture("llama"), ModelArchitecture::Llama);
         assert_eq!(detect_architecture("mistral"), ModelArchitecture::Mistral);
         assert_eq!(detect_architecture("qwen2"), ModelArchitecture::Qwen);
+        assert_eq!(detect_architecture("qwen3"), ModelArchitecture::Qwen);
         assert_eq!(detect_architecture("gemma"), ModelArchitecture::Gemma);
         assert_eq!(detect_architecture("bitnet"), ModelArchitecture::BitNet);
         assert_eq!(detect_architecture("falcon"), ModelArchitecture::Falcon);
@@ -472,6 +532,38 @@ mod tests {
     #[test]
     fn detect_empty_string() {
         assert!(matches!(detect_architecture(""), ModelArchitecture::Unknown(_)));
+    }
+
+    #[test]
+    fn dense_qwen_classifies_qwen2_and_qwen3() {
+        assert_eq!(
+            classify_dense_qwen_architecture("qwen2"),
+            DenseQwenArchitecture::Supported(DenseQwenFamily::Qwen2)
+        );
+        assert_eq!(
+            classify_dense_qwen_architecture("qwen2.5"),
+            DenseQwenArchitecture::Supported(DenseQwenFamily::Qwen2)
+        );
+        assert_eq!(
+            classify_dense_qwen_architecture("qwen3"),
+            DenseQwenArchitecture::Supported(DenseQwenFamily::Qwen3)
+        );
+    }
+
+    #[test]
+    fn dense_qwen_rejects_qwen35_hybrid() {
+        for arch in ["qwen35", "qwen3_5", "qwen3_5_text", "qwen-3.5"] {
+            let result = classify_dense_qwen_architecture(arch);
+            assert!(
+                matches!(result, DenseQwenArchitecture::UnsupportedHybrid { .. }),
+                "{arch} should be rejected by the dense Qwen adapter"
+            );
+        }
+    }
+
+    #[test]
+    fn dense_qwen_ignores_non_qwen_architecture() {
+        assert_eq!(classify_dense_qwen_architecture("llama"), DenseQwenArchitecture::NotQwen);
     }
 
     // -- Default config correctness --

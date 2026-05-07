@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T16:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started SLM-CPU-002 as a strict dense-Qwen preflight foundation slice.",
+  "The primary bring-up target is Qwen/Qwen3-0.6B-GGUF Q8_0; Qwen3.5 hybrid architectures remain out of scope for this dense CPU lane.",
+]
