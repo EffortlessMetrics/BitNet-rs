@@ -164,6 +164,12 @@ fn check(exceptions_path: &Path, report_dir: &Path) -> Result<Report> {
             if trimmed.starts_with("//") {
                 continue;
             }
+            // Only fire on lines that look like an attribute (start with `#[`
+            // or `#![`). This prevents matching regex literals or quoted
+            // example strings.
+            if !(trimmed.starts_with("#[") || trimmed.starts_with("#![")) {
+                continue;
+            }
             if bare_allow.is_match(raw) {
                 report.errors.push(format!(
                     "{path_str}:{line_no} bare `#[allow(clippy::...)]` (use `#[expect(..., reason = \"policy:clippy-XXXX\")]`)"
