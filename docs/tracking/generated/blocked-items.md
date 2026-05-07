@@ -43,7 +43,7 @@
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
-| intel-npu | NPU-007 | NPU-006 | ready |
+| intel-npu | NPU-007 | NPU-006 | merged |
 | intel-npu | NPU-006 | NPU-005 | merged |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
