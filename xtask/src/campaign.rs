@@ -24,6 +24,7 @@ const REQUIRED_CAMPAIGNS: &[&str] = &[
     "apple-m4",
     "apple-m4-local-answer",
     "apple-m4-operational",
+    "apple-m4-slm-answer",
     "cpu-proof",
     "cpu-qk256-performance",
     "intel-a770",
