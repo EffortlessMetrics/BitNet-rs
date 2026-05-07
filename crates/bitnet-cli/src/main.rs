@@ -2763,7 +2763,7 @@ async fn run_simple_generation(
             apple_machine.is_some(),
             &cpu_features,
             !cpu_model.is_empty(),
-        );
+        ) || cuda_probe.is_some();
         let profile_receipt = serde_json::json!({
             "id": profile_label,
             "requested": profile_requested,
@@ -3045,7 +3045,8 @@ async fn run_simple_generation(
             object
                 .insert("generated_tokens".to_string(), serde_json::json!(generated_tokens.len()));
             object.insert("prefill_ms".to_string(), serde_json::json!(first_token_ms.unwrap_or(0)));
-            object.insert("prompt_prefill_ms".to_string(), serde_json::json!(rounded_ms(prefill_ms)));
+            object
+                .insert("prompt_prefill_ms".to_string(), serde_json::json!(rounded_ms(prefill_ms)));
             object.insert(
                 "prefill_timing_source".to_string(),
                 serde_json::json!("time_to_first_token_current_cli_path"),
