@@ -11,12 +11,9 @@
     "weight_quantization": "W1.58"
   },
   "bitnet_inference": false,
-  "blocked_before_inference": true,
-  "blocker": {
-    "reason": "model path does not exist: models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
-    "stage": "load_model"
-  },
-  "claim_allowed": "The 258V CPU lane emitted a structured validation blocker before inference.",
+  "blocked_before_inference": false,
+  "blocker": null,
+  "claim_allowed": "The 258V CPU lane preflight found the requested model and tokenizer artifacts; no inference was run.",
   "claims_not_allowed": [
     "Strict BitNet GGUF loaded on 258V",
     "Tokenizer authority resolved through the inference path on 258V",
@@ -71,24 +68,24 @@
   "model": {
     "architecture": "bitnet_b1_58",
     "context_length": 4096,
-    "exists": false,
+    "exists": true,
     "expected_file": "ggml-model-i2_s.gguf",
     "expected_repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
     "format": "gguf",
     "loader_mode": null,
     "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
-    "sha256": null,
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
     "tokenizer": "llama3",
     "vocab_size": 128256
   },
-  "proof_stage": "blocked_preflight",
+  "proof_stage": "runtime_detected",
   "schema": 1,
-  "status": "blocked_missing_canonical_model",
+  "status": "preflight_ready",
   "strict": true,
-  "timestamp_utc": "2026-05-06T23:08:57Z",
+  "timestamp_utc": "2026-05-07T00:06:02Z",
   "tokenizer": {
-    "path": null,
-    "source": null,
+    "path": "models/BitNet-b1.58-2B-4T/tokenizer.json",
+    "source": "explicit",
     "strict": true
   },
   "validation_attempted": false

@@ -9,6 +9,12 @@ after the CLI receipt path landed. It is a runtime-visibility receipt only and
 keeps `kernel_execution=false`, `graph_execution=false`, and
 `bitnet_inference=false`.
 
+`cpu-bitnet-validation.json` was refreshed after the canonical BitNet GGUF and
+explicit tokenizer were made available locally under the ignored `models/`
+tree. It records `status=preflight_ready`, the GGUF SHA-256, explicit tokenizer
+source, CPU AVX2 visibility, and `fallback_used=false` without running BitNet
+inference or CPU kernels.
+
 ## Captured Facts
 
 - Machine: Lenovo `83MC`
@@ -25,7 +31,11 @@ keeps `kernel_execution=false`, `graph_execution=false`, and
 - `clinfo` is not installed in PATH, so this bundle does not prove OpenCL runtime visibility.
 - `sycl-ls` and `ze_info` are not installed in PATH, so this bundle does not prove Level Zero runtime visibility.
 - Python cannot import `openvino`, so this bundle does not prove OpenVINO GPU or NPU visibility.
-- The canonical BitNet GGUF fixture was not present at the checked local paths, so CPU BitNet validation is recorded as `blocked_preflight`.
+- The canonical BitNet GGUF and explicit tokenizer are present locally, so CPU
+  BitNet validation is recorded as `preflight_ready`.
+- CPU BitNet preflight readiness is not strict GGUF loading through the
+  inference path, tokenizer resolution through the inference path, QK256/TL2
+  kernel execution, or BitNet generation.
 - The CLI probe reports Arc 140V runtime identity as unavailable because the
   OpenCL, Level Zero, and OpenVINO runtime tools were not available to the
   command, even though the OS/PnP artifact records the Arc 140V device identity.
