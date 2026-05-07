@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T18:53:16Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-002"
+event = "merged"
+pr = 3906
+merge_sha = "191d490928934b311e939832996d6ca9605c45b8"
+actor = "codex"
+
+notes = [
+  "Scalar-versus-AVX2 strict CPU answer parity receipt comparison merged in #3906.",
+  "The 258V CPU remains the lead BitNet CPU reference machine for new answer parity artifacts; no GPU, NPU, server inference, answer quality, or throughput claim is made by this closeout.",
+]
