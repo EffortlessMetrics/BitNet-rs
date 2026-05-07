@@ -136,13 +136,8 @@ pub fn check(
     report.lane_count = whitelist.lanes.len();
     report.exception_count = exceptions.exceptions.len();
 
-    let lane_ids: BTreeSet<&str> =
-        whitelist.lanes.iter().map(|l| l.id.as_str()).collect();
-    let runner_keys: BTreeSet<String> = whitelist
-        .runner_multipliers
-        .keys()
-        .cloned()
-        .collect();
+    let lane_ids: BTreeSet<&str> = whitelist.lanes.iter().map(|l| l.id.as_str()).collect();
+    let runner_keys: BTreeSet<String> = whitelist.runner_multipliers.keys().cloned().collect();
 
     let mut lane_dups: BTreeMap<&str, usize> = BTreeMap::new();
     for lane in &whitelist.lanes {
@@ -150,9 +145,7 @@ pub fn check(
     }
     for (id, count) in &lane_dups {
         if *count > 1 {
-            report
-                .errors
-                .push(format!("lane id `{id}` declared {count} times"));
+            report.errors.push(format!("lane id `{id}` declared {count} times"));
         }
     }
 
@@ -175,9 +168,7 @@ pub fn check(
                 _ => false,
             };
             if missing {
-                report
-                    .errors
-                    .push(format!("lane `{}` missing field `{field}`", lane.id));
+                report.errors.push(format!("lane `{}` missing field `{field}`", lane.id));
             }
         }
 
@@ -189,9 +180,7 @@ pub fn check(
         }
 
         if lane.blocking && lane.evidence.is_empty() {
-            report
-                .errors
-                .push(format!("blocking lane `{}` has no evidence", lane.id));
+            report.errors.push(format!("blocking lane `{}` has no evidence", lane.id));
         }
 
         if !runner_keys.contains(&lane.runner) {
@@ -233,9 +222,7 @@ pub fn check(
         if let Ok(d) = chrono::NaiveDate::parse_from_str(&lane.expires, "%Y-%m-%d")
             && d < today
         {
-            report
-                .errors
-                .push(format!("lane `{}` expired on {}", lane.id, lane.expires));
+            report.errors.push(format!("lane `{}` expired on {}", lane.id, lane.expires));
         }
 
         if !lane.review_after.is_empty()
@@ -261,10 +248,9 @@ pub fn check(
     // Validate exceptions independently.
     for ex in &exceptions.exceptions {
         if !lane_ids.contains(ex.lane.as_str()) {
-            report.errors.push(format!(
-                "exception `{}` references unknown lane `{}`",
-                ex.id, ex.lane
-            ));
+            report
+                .errors
+                .push(format!("exception `{}` references unknown lane `{}`", ex.id, ex.lane));
         }
         if let Ok(d) = chrono::NaiveDate::parse_from_str(&ex.expires, "%Y-%m-%d")
             && d < today
@@ -293,9 +279,7 @@ pub fn check(
         let referenced: BTreeSet<String> =
             whitelist.lanes.iter().map(|l| l.workflow.clone()).collect();
         for wf in referenced.difference(&on_disk) {
-            report
-                .warnings
-                .push(format!("whitelist references workflow `{wf}` not on disk"));
+            report.warnings.push(format!("whitelist references workflow `{wf}` not on disk"));
         }
     }
 
@@ -308,10 +292,7 @@ pub fn check(
             "lane_count": report.lane_count,
             "exception_count": report.exception_count,
         });
-        fs::write(
-            dir.join("ci-lane-whitelist.json"),
-            serde_json::to_string_pretty(&json)?,
-        )?;
+        fs::write(dir.join("ci-lane-whitelist.json"), serde_json::to_string_pretty(&json)?)?;
 
         let mut md = String::new();
         md.push_str("# CI Lane Whitelist Report\n\n");
@@ -345,14 +326,12 @@ pub fn run(
     report_dir: Option<PathBuf>,
     fail_on_error: bool,
 ) -> Result<()> {
-    let report = check(
-        &whitelist,
-        &exceptions,
-        &workflows,
-        report_dir.as_deref(),
-    )?;
+    let report = check(&whitelist, &exceptions, &workflows, report_dir.as_deref())?;
 
-    println!("ci-lane-whitelist: {} lanes, {} exceptions", report.lane_count, report.exception_count);
+    println!(
+        "ci-lane-whitelist: {} lanes, {} exceptions",
+        report.lane_count, report.exception_count
+    );
     for w in &report.warnings {
         println!("warning: {w}");
     }

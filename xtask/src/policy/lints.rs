@@ -77,13 +77,10 @@ fn check(manifest_path: &Path, report_dir: &Path) -> Result<Report> {
 
     let text = fs::read_to_string(manifest_path)
         .with_context(|| format!("reading {}", manifest_path.display()))?;
-    let ws: WorkspaceManifest = toml::from_str(&text)
-        .with_context(|| format!("parsing {}", manifest_path.display()))?;
+    let ws: WorkspaceManifest =
+        toml::from_str(&text).with_context(|| format!("parsing {}", manifest_path.display()))?;
 
-    let root = manifest_path
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
+    let root = manifest_path.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
 
     let exclude: BTreeSet<&str> = ws.workspace.exclude.iter().map(String::as_str).collect();
     for member in &ws.workspace.members {
@@ -105,28 +102,22 @@ fn check(manifest_path: &Path, report_dir: &Path) -> Result<Report> {
             let body = match fs::read_to_string(&crate_manifest) {
                 Ok(b) => b,
                 Err(e) => {
-                    report.warnings.push(format!(
-                        "could not read {}: {e}",
-                        crate_manifest.display()
-                    ));
+                    report
+                        .warnings
+                        .push(format!("could not read {}: {e}", crate_manifest.display()));
                     continue;
                 }
             };
             let parsed: CrateManifest = match toml::from_str(&body) {
                 Ok(p) => p,
                 Err(e) => {
-                    report.warnings.push(format!(
-                        "could not parse {}: {e}",
-                        crate_manifest.display()
-                    ));
+                    report
+                        .warnings
+                        .push(format!("could not parse {}: {e}", crate_manifest.display()));
                     continue;
                 }
             };
-            let inherits = parsed
-                .lints
-                .as_ref()
-                .and_then(|l| l.workspace)
-                .unwrap_or(false);
+            let inherits = parsed.lints.as_ref().and_then(|l| l.workspace).unwrap_or(false);
             if !inherits {
                 report.errors.push(format!(
                     "{} missing `[lints] workspace = true`",
@@ -143,10 +134,7 @@ fn check(manifest_path: &Path, report_dir: &Path) -> Result<Report> {
         "warnings": report.warnings,
         "crate_count": report.crate_count,
     });
-    fs::write(
-        report_dir.join("lint-inheritance.json"),
-        serde_json::to_string_pretty(&json)?,
-    )?;
+    fs::write(report_dir.join("lint-inheritance.json"), serde_json::to_string_pretty(&json)?)?;
 
     Ok(report)
 }
@@ -164,11 +152,7 @@ fn expand_member(root: &Path, member: &str) -> Vec<PathBuf> {
     if let Some((star_idx, _)) = parts.iter().enumerate().find(|(_, p)| p.contains('*')) {
         let prefix = parts[..star_idx].join("/");
         let suffix = parts[star_idx + 1..].join("/");
-        let parent = if prefix.is_empty() {
-            root.to_path_buf()
-        } else {
-            root.join(prefix)
-        };
+        let parent = if prefix.is_empty() { root.to_path_buf() } else { root.join(prefix) };
         if let Ok(entries) = fs::read_dir(&parent) {
             for entry in entries.flatten() {
                 let p = entry.path();

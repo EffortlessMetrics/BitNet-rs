@@ -108,14 +108,7 @@ pub fn run(
         });
     }
 
-    let actuals = Actuals {
-        schema_version: 1,
-        repo,
-        sha,
-        pr,
-        workflow,
-        jobs,
-    };
+    let actuals = Actuals { schema_version: 1, repo, sha, pr, workflow, jobs };
 
     if let Some(parent) = json_out.parent()
         && !parent.as_os_str().is_empty()
@@ -123,8 +116,7 @@ pub fn run(
         fs::create_dir_all(parent)?;
     }
     let body = serde_json::to_string_pretty(&actuals)?;
-    fs::write(&json_out, &body)
-        .with_context(|| format!("writing {}", json_out.display()))?;
+    fs::write(&json_out, &body).with_context(|| format!("writing {}", json_out.display()))?;
     println!("ci-actuals: wrote {} ({} jobs)", json_out.display(), actuals.jobs.len());
     Ok(())
 }

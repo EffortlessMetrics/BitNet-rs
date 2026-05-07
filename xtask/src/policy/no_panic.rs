@@ -113,8 +113,7 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
     let allowlist: Allowlist = if allowlist_path.exists() {
         let text = fs::read_to_string(allowlist_path)
             .with_context(|| format!("reading {}", allowlist_path.display()))?;
-        toml::from_str(&text)
-            .with_context(|| format!("parsing {}", allowlist_path.display()))?
+        toml::from_str(&text).with_context(|| format!("parsing {}", allowlist_path.display()))?
     } else {
         report.warnings.push(format!(
             "no-panic allowlist `{}` does not exist; running advisory only",
@@ -124,11 +123,8 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
     };
     report.allow_count = allowlist.entries.len();
 
-    let allow_keys: BTreeSet<(String, String)> = allowlist
-        .entries
-        .iter()
-        .map(|e| (normalise_path(&e.path), e.family.clone()))
-        .collect();
+    let allow_keys: BTreeSet<(String, String)> =
+        allowlist.entries.iter().map(|e| (normalise_path(&e.path), e.family.clone())).collect();
 
     let findings = scan_workspace()?;
     report.findings = findings.len();
@@ -143,8 +139,7 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
         }
     }
 
-    fs::create_dir_all(report_dir)
-        .with_context(|| format!("creating {}", report_dir.display()))?;
+    fs::create_dir_all(report_dir).with_context(|| format!("creating {}", report_dir.display()))?;
     let json = serde_json::json!({
         "schema_version": 1,
         "errors": report.errors,
@@ -152,10 +147,7 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
         "findings": report.findings,
         "allow_count": report.allow_count,
     });
-    fs::write(
-        report_dir.join("no-panic.json"),
-        serde_json::to_string_pretty(&json)?,
-    )?;
+    fs::write(report_dir.join("no-panic.json"), serde_json::to_string_pretty(&json)?)?;
 
     // Always emit a proposed allowlist.
     let proposed = synthesize_allowlist(&findings);
@@ -170,10 +162,8 @@ fn normalise_path(p: &str) -> String {
 }
 
 fn synthesize_allowlist(findings: &[Finding]) -> Allowlist {
-    let mut al = Allowlist {
-        schema_version: "0.3".into(),
-        entries: Vec::with_capacity(findings.len()),
-    };
+    let mut al =
+        Allowlist { schema_version: "0.3".into(), entries: Vec::with_capacity(findings.len()) };
     for (i, f) in findings.iter().enumerate() {
         al.entries.push(Entry {
             id: format!("panic-proposed-{:04}", i + 1),
@@ -197,10 +187,7 @@ fn synthesize_allowlist(findings: &[Finding]) -> Allowlist {
 
 fn scan_workspace() -> Result<Vec<Finding>> {
     let mut out = Vec::new();
-    for entry in walkdir::WalkDir::new(".")
-        .into_iter()
-        .filter_map(std::result::Result::ok)
-    {
+    for entry in walkdir::WalkDir::new(".").into_iter().filter_map(std::result::Result::ok) {
         let p = entry.path();
         if !p.is_file() {
             continue;
@@ -208,11 +195,7 @@ fn scan_workspace() -> Result<Vec<Finding>> {
         if p.extension().and_then(|s| s.to_str()) != Some("rs") {
             continue;
         }
-        let path_str = p
-            .strip_prefix(".")
-            .unwrap_or(p)
-            .to_string_lossy()
-            .replace('\\', "/");
+        let path_str = p.strip_prefix(".").unwrap_or(p).to_string_lossy().replace('\\', "/");
         if path_str.contains("/target/") || path_str.starts_with("target/") {
             continue;
         }

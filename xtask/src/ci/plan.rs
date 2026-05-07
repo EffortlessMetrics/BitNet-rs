@@ -76,14 +76,8 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
                 r"^CLAUDE\.md$",
             ],
         ),
-        (
-            "tracking",
-            vec![r"^\.codex/campaigns/", r"^docs/tracking/"],
-        ),
-        (
-            "workflow",
-            vec![r"^\.github/workflows/", r"^\.github/actions/"],
-        ),
+        ("tracking", vec![r"^\.codex/campaigns/", r"^docs/tracking/"]),
+        ("workflow", vec![r"^\.github/workflows/", r"^\.github/actions/"]),
         (
             "rust_core",
             vec![
@@ -121,10 +115,7 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
                 r"^crossval/",
             ],
         ),
-        (
-            "tokenizer",
-            vec![r"^crates/bitnet-tokenizers/", r"^tests/fixtures/tokenizers/"],
-        ),
+        ("tokenizer", vec![r"^crates/bitnet-tokenizers/", r"^tests/fixtures/tokenizers/"]),
         (
             "bdd",
             vec![
@@ -146,18 +137,13 @@ fn classify_areas(files: &[String]) -> BTreeMap<String, bool> {
     let compiled: Vec<(&str, Vec<Regex>)> = patterns
         .into_iter()
         .map(|(area, ps)| {
-            let regexes: Vec<Regex> = ps
-                .into_iter()
-                .filter_map(|p| Regex::new(p).ok())
-                .collect();
+            let regexes: Vec<Regex> = ps.into_iter().filter_map(|p| Regex::new(p).ok()).collect();
             (area, regexes)
         })
         .collect();
 
-    let mut touched: BTreeMap<String, bool> = compiled
-        .iter()
-        .map(|(area, _)| ((*area).to_string(), false))
-        .collect();
+    let mut touched: BTreeMap<String, bool> =
+        compiled.iter().map(|(area, _)| ((*area).to_string(), false)).collect();
     for f in files {
         for (area, regexes) in &compiled {
             if regexes.iter().any(|r| r.is_match(f)) {
@@ -317,22 +303,14 @@ pub fn build_plan(changed: &[String], labels: &[String]) -> Plan {
 }
 
 fn render_markdown(plan: &Plan) -> String {
-    let touched_areas: Vec<&str> = plan
-        .touched
-        .iter()
-        .filter(|(_, v)| **v)
-        .map(|(k, _)| k.as_str())
-        .collect();
+    let touched_areas: Vec<&str> =
+        plan.touched.iter().filter(|(_, v)| **v).map(|(k, _)| k.as_str()).collect();
     let mut s = String::new();
     s.push_str("# PR Plan\n\n");
     s.push_str(&format!("- **Posture:** {}\n", plan.posture));
     s.push_str(&format!(
         "- **Touched areas:** {}\n",
-        if touched_areas.is_empty() {
-            "(none)".to_string()
-        } else {
-            touched_areas.join(", ")
-        }
+        if touched_areas.is_empty() { "(none)".to_string() } else { touched_areas.join(", ") }
     ));
     let labels_str = if plan.labels.is_empty() {
         "(none)".to_string()
@@ -342,10 +320,7 @@ fn render_markdown(plan: &Plan) -> String {
         sorted.join(", ")
     };
     s.push_str(&format!("- **Labels:** {labels_str}\n"));
-    s.push_str(&format!(
-        "- **Estimated LEM:** {}  ·  {}\n\n",
-        plan.estimated_lem, plan.band
-    ));
+    s.push_str(&format!("- **Estimated LEM:** {}  ·  {}\n\n", plan.estimated_lem, plan.band));
     s.push_str("| Lane | Estimated LEM | Reason |\n");
     s.push_str("|---|---:|---|\n");
     if plan.lanes.is_empty() {
@@ -370,9 +345,7 @@ fn changed_files(base: &str, head: &str) -> Result<Vec<String>> {
         .with_context(|| format!("running git diff {base}...{head}"))?;
     if !output.status.success() {
         // Fall back to last commit on the branch.
-        let alt = Command::new("git")
-            .args(["diff", "--name-only", "HEAD~1..HEAD"])
-            .output()?;
+        let alt = Command::new("git").args(["diff", "--name-only", "HEAD~1..HEAD"]).output()?;
         if !alt.status.success() {
             return Ok(vec![]);
         }
@@ -382,11 +355,7 @@ fn changed_files(base: &str, head: &str) -> Result<Vec<String>> {
 }
 
 fn decode_lines(bytes: &[u8]) -> Vec<String> {
-    String::from_utf8_lossy(bytes)
-        .lines()
-        .filter(|s| !s.is_empty())
-        .map(str::to_string)
-        .collect()
+    String::from_utf8_lossy(bytes).lines().filter(|s| !s.is_empty()).map(str::to_string).collect()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -405,8 +374,7 @@ pub fn run(
     };
 
     let changed = if let Some(p) = changed_file.as_ref() {
-        let text = fs::read_to_string(p)
-            .with_context(|| format!("reading {}", p.display()))?;
+        let text = fs::read_to_string(p).with_context(|| format!("reading {}", p.display()))?;
         decode_lines(text.as_bytes())
     } else {
         let base = base.unwrap_or_else(|| "origin/main".to_string());
@@ -426,8 +394,7 @@ pub fn run(
         {
             fs::create_dir_all(parent)?;
         }
-        fs::write(&p, &json)
-            .with_context(|| format!("writing {}", p.display()))?;
+        fs::write(&p, &json).with_context(|| format!("writing {}", p.display()))?;
     }
     if let Some(p) = github_summary {
         let md = render_markdown(&plan);
@@ -436,8 +403,7 @@ pub fn run(
             existing.push('\n');
         }
         existing.push_str(&md);
-        fs::write(&p, existing)
-            .with_context(|| format!("writing {}", p.display()))?;
+        fs::write(&p, existing).with_context(|| format!("writing {}", p.display()))?;
     }
 
     Ok(())

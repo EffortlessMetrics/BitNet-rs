@@ -37,11 +37,7 @@ use std::fmt;
 /// Returns an error built from `message` when `condition` is `false`.
 #[inline]
 pub fn ensure(condition: bool, message: impl Into<String>) -> anyhow::Result<()> {
-    if condition {
-        Ok(())
-    } else {
-        Err(anyhow::anyhow!(message.into()))
-    }
+    if condition { Ok(()) } else { Err(anyhow::anyhow!(message.into())) }
 }
 
 /// Return `Ok(())` if `actual == expected`, else fail with a message
@@ -60,9 +56,7 @@ where
     if actual == expected {
         Ok(())
     } else {
-        Err(anyhow::anyhow!(
-            "{label}: actual = {actual:?}, expected = {expected:?}"
-        ))
+        Err(anyhow::anyhow!("{label}: actual = {actual:?}, expected = {expected:?}"))
     }
 }
 
@@ -78,9 +72,7 @@ where
     if actual != unexpected {
         Ok(())
     } else {
-        Err(anyhow::anyhow!(
-            "{label}: did not expect {actual:?}"
-        ))
+        Err(anyhow::anyhow!("{label}: did not expect {actual:?}"))
     }
 }
 

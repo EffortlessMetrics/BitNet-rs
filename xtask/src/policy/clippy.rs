@@ -48,11 +48,7 @@ pub struct Report {
     pub allow_count: usize,
 }
 
-pub fn run(
-    exceptions_path: PathBuf,
-    report_dir: PathBuf,
-    fail_on_error: bool,
-) -> Result<()> {
+pub fn run(exceptions_path: PathBuf, report_dir: PathBuf, fail_on_error: bool) -> Result<()> {
     let report = check(&exceptions_path, &report_dir)?;
     println!(
         "clippy-exceptions: {} entries, {} errors, {} warnings",
@@ -67,10 +63,7 @@ pub fn run(
         println!("error: {e}");
     }
     if fail_on_error && !report.errors.is_empty() {
-        bail!(
-            "clippy-exceptions check failed: {} errors",
-            report.errors.len()
-        );
+        bail!("clippy-exceptions check failed: {} errors", report.errors.len());
     }
     Ok(())
 }
@@ -91,11 +84,7 @@ fn check(exceptions_path: &Path, report_dir: &Path) -> Result<Report> {
     };
     report.allow_count = exceptions.exceptions.len();
 
-    let known_ids: BTreeSet<&str> = exceptions
-        .exceptions
-        .iter()
-        .map(|e| e.id.as_str())
-        .collect();
+    let known_ids: BTreeSet<&str> = exceptions.exceptions.iter().map(|e| e.id.as_str()).collect();
 
     let today = chrono::Utc::now().date_naive();
     for ex in &exceptions.exceptions {
@@ -103,42 +92,29 @@ fn check(exceptions_path: &Path, report_dir: &Path) -> Result<Report> {
             report.errors.push("exception missing `id`".into());
         }
         if ex.lint.is_empty() {
-            report
-                .errors
-                .push(format!("exception `{}` missing `lint`", ex.id));
+            report.errors.push(format!("exception `{}` missing `lint`", ex.id));
         }
         if ex.owner.is_empty() {
-            report
-                .errors
-                .push(format!("exception `{}` missing `owner`", ex.id));
+            report.errors.push(format!("exception `{}` missing `owner`", ex.id));
         }
         if ex.reason.is_empty() {
-            report
-                .errors
-                .push(format!("exception `{}` missing `reason`", ex.id));
+            report.errors.push(format!("exception `{}` missing `reason`", ex.id));
         }
         if !ex.expires.is_empty()
             && let Ok(d) = chrono::NaiveDate::parse_from_str(&ex.expires, "%Y-%m-%d")
             && d < today
         {
-            report.errors.push(format!(
-                "exception `{}` expired on {}",
-                ex.id, ex.expires
-            ));
+            report.errors.push(format!("exception `{}` expired on {}", ex.id, ex.expires));
         }
     }
 
     let bare_allow = Regex::new(r"#\s*\[\s*allow\s*\(\s*clippy::").unwrap();
-    let expect_re = Regex::new(
-        r#"#\s*\[\s*expect\s*\(\s*clippy::([A-Za-z0-9_]+)[^\]]*reason\s*=\s*"([^"]*)""#,
-    )
-    .unwrap();
+    let expect_re =
+        Regex::new(r#"#\s*\[\s*expect\s*\(\s*clippy::([A-Za-z0-9_]+)[^\]]*reason\s*=\s*"([^"]*)""#)
+            .unwrap();
     let plain_expect = Regex::new(r"#\s*\[\s*expect\s*\(\s*clippy::").unwrap();
 
-    for entry in walkdir::WalkDir::new(".")
-        .into_iter()
-        .filter_map(std::result::Result::ok)
-    {
+    for entry in walkdir::WalkDir::new(".").into_iter().filter_map(std::result::Result::ok) {
         let p = entry.path();
         if !p.is_file() {
             continue;
@@ -146,11 +122,7 @@ fn check(exceptions_path: &Path, report_dir: &Path) -> Result<Report> {
         if p.extension().and_then(|s| s.to_str()) != Some("rs") {
             continue;
         }
-        let path_str = p
-            .strip_prefix(".")
-            .unwrap_or(p)
-            .to_string_lossy()
-            .replace('\\', "/");
+        let path_str = p.strip_prefix(".").unwrap_or(p).to_string_lossy().replace('\\', "/");
         if path_str.contains("/target/") || path_str.starts_with("target/") {
             continue;
         }
@@ -210,10 +182,7 @@ fn check(exceptions_path: &Path, report_dir: &Path) -> Result<Report> {
         "warnings": report.warnings,
         "allow_count": report.allow_count,
     });
-    fs::write(
-        report_dir.join("clippy-exceptions.json"),
-        serde_json::to_string_pretty(&json)?,
-    )?;
+    fs::write(report_dir.join("clippy-exceptions.json"), serde_json::to_string_pretty(&json)?)?;
 
     Ok(report)
 }
@@ -244,10 +213,6 @@ expires = "1999-01-01"
         )
         .unwrap();
         let r = check(&p, &dir).unwrap();
-        assert!(
-            r.errors.iter().any(|e| e.contains("expired")),
-            "errors: {:?}",
-            r.errors
-        );
+        assert!(r.errors.iter().any(|e| e.contains("expired")), "errors: {:?}", r.errors);
     }
 }

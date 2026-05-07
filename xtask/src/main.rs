@@ -38,6 +38,7 @@ use walkdir::WalkDir;
 
 mod apple_m4;
 mod campaign;
+mod ci;
 mod cpp_setup_auto;
 mod crossval;
 pub mod ffi;
@@ -47,7 +48,6 @@ mod grid_check;
 mod health_check;
 #[allow(dead_code)]
 mod model_info;
-mod ci;
 mod model_registry;
 mod policy;
 mod tokenizers;
@@ -1558,9 +1558,8 @@ fn real_main() -> Result<()> {
 }
 
 fn run_policy_report(report_dir: PathBuf) -> Result<()> {
-    fs::create_dir_all(&report_dir).with_context(|| {
-        format!("creating policy report dir {}", report_dir.display())
-    })?;
+    fs::create_dir_all(&report_dir)
+        .with_context(|| format!("creating policy report dir {}", report_dir.display()))?;
 
     // Each checker is non-fatal here; the aggregated markdown summarises.
     println!("== ci-lane-whitelist ==");
@@ -1610,8 +1609,7 @@ fn run_policy_report(report_dir: PathBuf) -> Result<()> {
             md.push_str("- artifact: (not produced)\n\n");
         }
     }
-    fs::write(&combined, md)
-        .with_context(|| format!("writing {}", combined.display()))?;
+    fs::write(&combined, md).with_context(|| format!("writing {}", combined.display()))?;
     println!("policy-report written to {}", combined.display());
     Ok(())
 }

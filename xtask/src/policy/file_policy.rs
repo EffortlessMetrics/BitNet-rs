@@ -70,8 +70,8 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
 
     let text = fs::read_to_string(allowlist_path)
         .with_context(|| format!("reading {}", allowlist_path.display()))?;
-    let allowlist: Allowlist = toml::from_str(&text)
-        .with_context(|| format!("parsing {}", allowlist_path.display()))?;
+    let allowlist: Allowlist =
+        toml::from_str(&text).with_context(|| format!("parsing {}", allowlist_path.display()))?;
     report.allow_count = allowlist.entries.len();
 
     let files = list_files()?;
@@ -83,14 +83,11 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
             continue;
         }
         if !entries.iter().any(|e| glob_match(&e.glob, f)) {
-            report
-                .errors
-                .push(format!("non-Rust file `{f}` not covered by allowlist"));
+            report.errors.push(format!("non-Rust file `{f}` not covered by allowlist"));
         }
     }
 
-    fs::create_dir_all(report_dir)
-        .with_context(|| format!("creating {}", report_dir.display()))?;
+    fs::create_dir_all(report_dir).with_context(|| format!("creating {}", report_dir.display()))?;
     let json = serde_json::json!({
         "schema_version": 1,
         "errors": report.errors,
@@ -98,10 +95,7 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
         "allow_count": report.allow_count,
         "file_count": report.file_count,
     });
-    fs::write(
-        report_dir.join("file-policy.json"),
-        serde_json::to_string_pretty(&json)?,
-    )?;
+    fs::write(report_dir.join("file-policy.json"), serde_json::to_string_pretty(&json)?)?;
     Ok(report)
 }
 
@@ -117,10 +111,7 @@ fn list_files() -> Result<Vec<String>> {
         return Ok(s.lines().map(str::to_string).collect());
     }
     let mut out = Vec::new();
-    for entry in walkdir::WalkDir::new(".")
-        .into_iter()
-        .filter_map(std::result::Result::ok)
-    {
+    for entry in walkdir::WalkDir::new(".").into_iter().filter_map(std::result::Result::ok) {
         let p = entry.path();
         if p.is_file() {
             let s = p.strip_prefix(".").unwrap_or(p).to_string_lossy().to_string();
@@ -245,4 +236,3 @@ mod tests {
         assert!(!is_implicit_rust("README.md"));
     }
 }
-
