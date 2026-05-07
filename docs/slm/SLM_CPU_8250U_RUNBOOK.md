@@ -45,15 +45,15 @@ $env:RAYON_NUM_THREADS = "8"
 cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli" -- `
   --device cpu `
   run `
-  --model models\slm\qwen2.5-0.5b-instruct-q4_k_m.gguf `
-  --prompt-template raw `
+  --model models\slm\Qwen3-0.6B-Q8_0.gguf `
+  --prompt-template qwen `
   --prompt "2+2=" `
   --max-tokens 4 `
   --temperature 0.0 `
   --greedy `
   --strict-loader `
   --strict-tokenizer `
-  --json-out ci\slm-cpu\intel-i5-8250u\qwen2_5_0_5b_2plus2.json
+  --json-out ci\slm-cpu\intel-i5-8250u\qwen3_0_6b_2plus2.json
 ```
 
 Required receipt facts:

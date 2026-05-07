@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T16:30:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-002"
+event = "pr_open"
+pr = 3910
+head_sha = "e27c2ac4fe27e00b67d8e6050392a608842709a4"
+actor = "codex"
+
+notes = [
+  "Opened #3910 for the SLM-CPU-002 dense-Qwen preflight foundation slice.",
+  "The slice retargets the first artifact policy to official Qwen3-0.6B-GGUF, wires strict-tokenizer on the legacy inference command surface, and rejects Qwen3.5 hybrid architectures for the dense CPU lane.",
+]

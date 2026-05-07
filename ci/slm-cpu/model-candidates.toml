@@ -3,15 +3,37 @@ artifact_kind = "slm_cpu_model_candidates"
 lane = "intel-i5-8250u-dense-slm"
 
 [[candidate]]
-id = "qwen2_5_0_5b_instruct"
+id = "qwen3_0_6b_gguf_q8_0"
 priority = 1
 family = "qwen"
-expected_architecture = "qwen2"
+expected_architecture = "qwen3"
 target_role = "first 8250U dense SLM proof"
+recommended_quant = ["Q8_0"]
+claim_boundary = "bring-up and tiny answer corpus only"
+artifact_status = "official_artifact_identified_metadata_unverified"
+repo = "Qwen/Qwen3-0.6B-GGUF"
+file = "Qwen3-0.6B-Q8_0.gguf"
+sha256 = "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+source_url = "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/blob/main/Qwen3-0.6B-Q8_0.gguf"
+notes = "Primary target because an official Qwen GGUF exists. Preflight must still inspect the real file metadata and tensor names before inference claims."
+
+[candidate.requirements]
+sha256_required = true
+gguf_architecture_required = true
+tokenizer_metadata_required = true
+tensor_name_audit_required = true
+chat_template_required = true
+
+[[candidate]]
+id = "qwen2_5_0_5b_instruct"
+priority = 2
+family = "qwen"
+expected_architecture = "qwen2"
+target_role = "fallback conservative dense adapter target"
 recommended_quant = ["Q4_K_M", "Q8_0"]
 claim_boundary = "bring-up and tiny answer corpus only"
 artifact_status = "candidate_unverified"
-notes = "Preferred first target only after exact GGUF artifact path, SHA256, tokenizer metadata, tensor names, and chat-template policy are verified."
+notes = "Use if an exact trusted GGUF or local conversion is pinned; official GGUF was not verified when this lane was authored."
 
 [candidate.requirements]
 sha256_required = true
@@ -22,12 +44,12 @@ chat_template_required = true
 
 [[candidate]]
 id = "qwen_small_1bish"
-priority = 2
+priority = 3
 family = "qwen"
-expected_architecture = "qwen2_or_verified_successor"
+expected_architecture = "qwen2_or_qwen3_verified_successor"
 target_role = "second-pass quality target"
 recommended_quant = ["Q4_K_M", "Q8_0"]
-claim_boundary = "only after the 0.5B path works"
+claim_boundary = "only after the 0.6B path works"
 artifact_status = "candidate_unverified"
 notes = "Do not use a newer Qwen-family architecture string until the adapter intentionally supports that exact GGUF metadata."
 
@@ -40,14 +62,14 @@ chat_template_required = true
 
 [[candidate]]
 id = "gemma_small"
-priority = 3
+priority = 4
 family = "gemma"
 expected_architecture = "gemma"
 target_role = "cross-family dense adapter test"
 recommended_quant = ["Q4_K_M", "Q8_0"]
 claim_boundary = "adapter coverage, not performance"
 artifact_status = "candidate_unverified"
-notes = "Use after the Qwen2.5-0.5B lane proves the dense SLM metadata and tiny-answer flow."
+notes = "Use after the Qwen3-0.6B lane proves the dense SLM metadata and tiny-answer flow."
 
 [candidate.requirements]
 sha256_required = true
