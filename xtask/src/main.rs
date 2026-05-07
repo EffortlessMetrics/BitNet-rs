@@ -5318,6 +5318,12 @@ fn is_gpu_kernel_id(id: &str) -> bool {
     get_gpu_kernel_patterns().iter().any(|re| re.is_match(id))
 }
 
+const GPU_RECEIPT_BACKENDS: &[&str] = &["cuda", "gpu"];
+
+fn is_gpu_receipt_backend(backend: &str) -> bool {
+    GPU_RECEIPT_BACKENDS.iter().any(|candidate| backend.eq_ignore_ascii_case(candidate))
+}
+
 /// Check if a kernel ID represents a CPU quantized kernel
 ///
 /// CPU quantized kernels execute I2S/TL1/TL2 quantization directly on CPU
@@ -5586,7 +5592,7 @@ fn validate_cpu_backend_kernels(
 /// - compute_path == "real" (not "mock")
 /// - kernels[] is non-empty with valid kernel IDs
 /// - kernels[] hygiene: no empty strings, length ≤ 128 chars, count ≤ 10,000
-/// - GPU backend requires at least one GPU kernel (auto-enforced when backend="cuda")
+/// - GPU backend requires at least one GPU kernel (auto-enforced when backend is "cuda" or "gpu")
 /// - CPU backend requires at least one quantized kernel (i2s_*, tl1_*, tl2_*)
 /// - --require-gpu-kernels flag explicitly requires GPU kernels regardless of backend
 ///
@@ -5623,9 +5629,9 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
         bail!("compute_path must be 'real' (got '{}') — mock inference not allowed", compute_path);
     }
 
-    // Check backend and determine GPU kernel requirement (auto-enforce for CUDA)
+    // Check backend and determine GPU kernel requirement (auto-enforce for GPU backends)
     let backend = receipt.get("backend").and_then(|v| v.as_str()).unwrap_or("cpu");
-    let must_require_gpu = backend.eq_ignore_ascii_case("cuda");
+    let must_require_gpu = is_gpu_receipt_backend(backend);
 
     // Check kernels array
     let kernels = receipt
@@ -5673,7 +5679,7 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
 
         if !has_gpu_kernel {
             let reason = if must_require_gpu {
-                "backend is 'cuda'"
+                "backend is 'cuda' or 'gpu'"
             } else {
                 "--require-gpu-kernels flag set"
             };
@@ -6933,6 +6939,20 @@ mod tests {
         ];
         for kernel in &non_gpu_kernels {
             assert!(!is_gpu_kernel_id(kernel), "{} must not be recognized as GPU kernel", kernel);
+        }
+    }
+
+    #[test]
+    fn test_is_gpu_receipt_backend() {
+        for backend in ["cuda", "CUDA", "gpu", "GPU"] {
+            assert!(is_gpu_receipt_backend(backend), "{backend} should require GPU kernels");
+        }
+
+        for backend in ["cpu", "metal", "opencl", ""] {
+            assert!(
+                !is_gpu_receipt_backend(backend),
+                "{backend} should not auto-require GPU kernels"
+            );
         }
     }
 }
