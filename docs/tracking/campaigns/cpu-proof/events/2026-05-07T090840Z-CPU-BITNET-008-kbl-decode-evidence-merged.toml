@@ -1,0 +1,16 @@
+timestamp = "2026-05-07T09:08:40Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-008"
+event = "in_progress"
+previous_status = "pr_open"
+new_status = "in_progress"
+pr = 3856
+merge_sha = "b6ca67223a8989646e2df3d2303a11e2e8e7cacc"
+actor = "codex"
+
+notes = [
+  "Merged the Kaby Lake decode evidence slice.",
+  "The slice adds a strict real-GGUF i5-8250U two-token proof receipt plus a derived CPU phase benchmark receipt.",
+  "first_token and decode are measured from the strict proof input; micro, layer, and prefill remain explicit not_run gaps.",
+  "CPU-BITNET-008 remains in progress and does not claim sustained mobile throughput, server inference, GPU, NPU, OpenVINO, or UHD 620 execution.",
+]
