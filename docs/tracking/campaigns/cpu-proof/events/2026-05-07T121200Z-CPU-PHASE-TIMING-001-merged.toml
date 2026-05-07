@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T12:12:00Z"
+campaign = "cpu-proof"
+item = "CPU-PHASE-TIMING-001"
+event = "merged"
+pr = 3872
+merge_sha = "330e4d3b9421c687c4f8fbaf4aa252071a4e1f68"
+actor = "codex"
+
+notes = [
+  "CPU-PHASE-TIMING-001 merged as #3872 to tighten strict phase timing extraction for Kaby CPU benchmark receipts.",
+  "The follow-up preserves CPU-BITNET-008 as merged, keeps micro and layer as explicit not_run gaps, and makes no sustained throughput, server, GPU, or NPU claim.",
+]
