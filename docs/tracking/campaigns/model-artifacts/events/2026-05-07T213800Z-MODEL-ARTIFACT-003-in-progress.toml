@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T21:38:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "blocked"
+new_status = "in_progress"
+
+notes = [
+  "MODEL-ARTIFACT-002 is blocked with no answer_ready BitNet artifact.",
+  "MODEL-ARTIFACT-003 records reference-runner compatibility evidence for official-derived candidates without changing runtime code.",
+  "The work remains diagnostic-only and must not claim CPU, CUDA, or coherent local-answer success.",
+]

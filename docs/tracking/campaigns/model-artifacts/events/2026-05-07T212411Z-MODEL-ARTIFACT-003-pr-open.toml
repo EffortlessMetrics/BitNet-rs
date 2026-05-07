@@ -1,0 +1,15 @@
+timestamp = "2026-05-07T21:24:11Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-003"
+event = "pr_open"
+actor = "codex"
+pr = 3932
+head_sha = "8baed71410491628be0ba98785536a2f62751b4b"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "PR #3932 records latest stock llama.cpp reference-runner compatibility evidence for official-derived BitNet candidates.",
+  "The evidence keeps tdh111 IQ2_BN_R4 diagnostic-only because stock llama.cpp rejects the GGUF before prompt execution.",
+  "No answer_ready artifact, backend answer claim, or speed claim is introduced.",
+]
