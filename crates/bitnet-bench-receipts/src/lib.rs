@@ -196,6 +196,126 @@ pub fn validate_rtx5070ti_cuda_benchmark_receipt_file(path: &Path) -> Result<(),
     validate_rtx5070ti_cuda_benchmark_receipt_json(&receipt)
 }
 
+/// Validate a strict CPU BitNet benchmark receipt.
+///
+/// This validator checks the benchmark evidence contract, not performance
+/// quality. It requires every CPU proof benchmark profile to be present and
+/// makes selected backend/kernel, fallback state, workload, model identity,
+/// quantization format, and CPU context explicit before any benchmark artifact
+/// can be treated as evidence.
+pub fn validate_strict_cpu_benchmark_receipt_json(
+    receipt: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", "cpu_benchmark")?;
+    require_string_eq(receipt, "runtime_api", "cpu")?;
+    require_string_eq(receipt, "claim", "cpu_benchmark_receipt")?;
+    require_string_eq(receipt, "requested_backend", "cpu")?;
+    require_non_empty_string(receipt, "selected_backend")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+
+    let model = require_object(receipt, "model")?;
+    require_non_empty_string(model, "repo")?;
+    require_non_empty_string(model, "file")?;
+    require_non_empty_string(model, "sha256")?;
+    let quant_format = require_string(model, "quant_format")?;
+    let quant_lc = quant_format.to_ascii_lowercase();
+    if !(quant_lc.contains("i2_s") || quant_lc.contains("qk256")) {
+        return Err(validation_error(format!(
+            "model.quant_format must identify QK256/I2_S, got {quant_format}"
+        )));
+    }
+
+    let tokenizer = require_object(receipt, "tokenizer")?;
+    require_non_empty_string(tokenizer, "source")?;
+    require_bool_eq(tokenizer, "strict", true)?;
+
+    let kernel = require_object(receipt, "kernel")?;
+    require_non_empty_string(kernel, "requested_kernel")?;
+    require_non_empty_string(kernel, "selected_kernel")?;
+    require_string_eq(kernel, "oracle_kernel", "qk256-scalar-gemv")?;
+    require_bool_eq(kernel, "fallback_used", false)?;
+    require_null(kernel, "fallback_reason")?;
+    require_bool_eq(kernel, "dequantizes_before_compute", false)?;
+
+    let cpu = require_object(receipt, "cpu")?;
+    require_non_empty_string(cpu, "model")?;
+    require_non_empty_string(cpu, "arch")?;
+    require_u64_at_least(cpu, "threads", 1)?;
+    let features = require_array(cpu, "features")?;
+    if features.is_empty() {
+        return Err(validation_error("cpu.features must not be empty"));
+    }
+    let selected_kernel = require_string(kernel, "selected_kernel")?;
+    let features_lc: Vec<String> = features
+        .iter()
+        .map(|value| {
+            value
+                .as_str()
+                .map(str::to_ascii_lowercase)
+                .ok_or_else(|| validation_error("cpu.features entries must be strings"))
+        })
+        .collect::<Result<_, _>>()?;
+    if selected_kernel.to_ascii_lowercase().contains("avx2")
+        && !(features_lc.iter().any(|feature| feature == "avx2")
+            && features_lc.iter().any(|feature| feature == "fma"))
+    {
+        return Err(validation_error(
+            "selected AVX2 benchmark kernel requires avx2 and fma CPU features",
+        ));
+    }
+
+    let workload = require_object(receipt, "workload")?;
+    require_u64_at_least(workload, "prompt_tokens", 1)?;
+    require_u64_at_least(workload, "generated_tokens", 1)?;
+    require_u64_at_least(workload, "batch_size", 1)?;
+
+    let profiles = require_array(receipt, "profiles")?;
+    for expected in ["micro", "layer", "prefill", "first_token", "decode"] {
+        let profile = profiles
+            .iter()
+            .find(|entry| {
+                entry.get("profile").and_then(serde_json::Value::as_str) == Some(expected)
+            })
+            .ok_or_else(|| validation_error(format!("profiles missing {expected}")))?;
+        validate_cpu_benchmark_profile(profile)?;
+    }
+
+    Ok(())
+}
+
+/// Validate a strict CPU BitNet benchmark receipt file.
+pub fn validate_strict_cpu_benchmark_receipt_file(path: &Path) -> Result<(), ReceiptError> {
+    let receipt = serde_json::from_slice(&std::fs::read(path)?)?;
+    validate_strict_cpu_benchmark_receipt_json(&receipt)
+}
+
+fn validate_cpu_benchmark_profile(profile: &serde_json::Value) -> Result<(), ReceiptError> {
+    let status = require_string(profile, "status")?;
+    match status {
+        "measured" => {
+            require_non_negative_number(profile, "wall_time_ms")?;
+            require_non_negative_number(profile, "median_ms")?;
+            require_non_negative_number(profile, "p95_ms")?;
+            require_non_negative_number(profile, "bandwidth_gbps")?;
+            require_non_negative_number(profile, "tokens_per_second")?;
+        }
+        "not_run" => {
+            require_non_empty_string(profile, "reason")?;
+        }
+        other => {
+            return Err(validation_error(format!(
+                "profile status must be measured or not_run, got {other}"
+            )));
+        }
+    }
+    require_non_empty_string(profile, "selected_kernel")?;
+    require_bool_eq(profile, "fallback_used", false)?;
+    Ok(())
+}
+
 fn require_object<'a>(
     value: &'a serde_json::Value,
     field: &str,
@@ -206,6 +326,16 @@ fn require_object<'a>(
         return Err(validation_error(format!("{field} must be an object")));
     }
     Ok(child)
+}
+
+fn require_array<'a>(
+    value: &'a serde_json::Value,
+    field: &str,
+) -> Result<&'a Vec<serde_json::Value>, ReceiptError> {
+    value
+        .get(field)
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| validation_error(format!("{field} must be an array")))
 }
 
 fn require_string<'a>(value: &'a serde_json::Value, field: &str) -> Result<&'a str, ReceiptError> {
@@ -478,10 +608,130 @@ mod tests {
     }
 
     #[test]
+    fn strict_cpu_benchmark_receipt_validates() {
+        let receipt = sample_cpu_benchmark_receipt();
+        validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cpu_benchmark_rejects_missing_decode_profile() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["profiles"] = json!([
+            measured_cpu_profile("micro"),
+            measured_cpu_profile("layer"),
+            measured_cpu_profile("prefill"),
+            measured_cpu_profile("first_token")
+        ]);
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("decode"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cpu_benchmark_rejects_hidden_fallback() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["fallback_used"] = json!(true);
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("fallback_used"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cpu_benchmark_rejects_avx2_without_fma() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["cpu"]["features"] = json!(["avx2"]);
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("avx2 and fma"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cpu_benchmark_rejects_speedup_claim() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["speedup_claim"] = json!(true);
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+    }
+
+    #[test]
     fn committed_rtx5070ti_cuda_benchmark_receipt_validates() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-benchmark.json");
         validate_rtx5070ti_cuda_benchmark_receipt_file(&path).unwrap();
+    }
+
+    fn sample_cpu_benchmark_receipt() -> serde_json::Value {
+        json!({
+            "schema": 1,
+            "artifact_kind": "cpu_benchmark",
+            "machine_id": "intel-i5-8250u-cpu-avx2",
+            "hardware_lane": "intel-i5-8250u-cpu-avx2",
+            "timestamp_utc": "2026-05-06T00:00:00Z",
+            "requested_backend": "cpu",
+            "selected_backend": "intel-i5-8250u-cpu-avx2",
+            "runtime_api": "cpu",
+            "claim": "cpu_benchmark_receipt",
+            "speedup_claim": false,
+            "fallback_used": false,
+            "fallback_reason": null,
+            "model": {
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "file": "ggml-model-i2_s.gguf",
+                "sha256": "abc123def456",
+                "family": "bitnet",
+                "quant_format": "QK256/I2_S"
+            },
+            "tokenizer": {
+                "source": "gguf_metadata",
+                "strict": true
+            },
+            "kernel": {
+                "requested_kernel": "qk256-avx2-gemv",
+                "selected_kernel": "qk256-avx2-gemv",
+                "oracle_kernel": "qk256-scalar-gemv",
+                "fallback_used": false,
+                "fallback_reason": null,
+                "dequantizes_before_compute": false
+            },
+            "cpu": {
+                "model": "Intel Core i5-8250U",
+                "arch": "x86_64",
+                "features": ["avx2", "fma"],
+                "threads": 8,
+                "avx512": false,
+                "power_mode": "unknown",
+                "temperature_c": null,
+                "frequency_mhz": null
+            },
+            "workload": {
+                "prompt_tokens": 512,
+                "generated_tokens": 128,
+                "batch_size": 1
+            },
+            "profiles": [
+                measured_cpu_profile("micro"),
+                measured_cpu_profile("layer"),
+                measured_cpu_profile("prefill"),
+                measured_cpu_profile("first_token"),
+                measured_cpu_profile("decode")
+            ],
+            "artifact_path": "ci/hardware/intel-i5-8250u-cpu-avx2/benchmark-receipt.json"
+        })
+    }
+
+    fn measured_cpu_profile(profile: &str) -> serde_json::Value {
+        json!({
+            "profile": profile,
+            "status": "measured",
+            "selected_kernel": "qk256-avx2-gemv",
+            "fallback_used": false,
+            "wall_time_ms": 1.0,
+            "median_ms": 1.0,
+            "p95_ms": 1.0,
+            "bandwidth_gbps": 0.0,
+            "tokens_per_second": 0.0
+        })
     }
 
     fn sample_cuda_benchmark_receipt() -> serde_json::Value {
