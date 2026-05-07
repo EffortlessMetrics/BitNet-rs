@@ -1,4 +1,4 @@
-<!-- GENERATED: do not edit by hand. Run cargo run --no-default-features -p xtask --no-default-features -- campaign generate. -->
+<!-- GENERATED: do not edit by hand. Run cargo run -p xtask --no-default-features -- campaign generate. -->
 # Blocked Campaign Items
 
 | Campaign | Item | Blocked by | State |

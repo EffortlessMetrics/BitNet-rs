@@ -1,4 +1,4 @@
-<!-- GENERATED: do not edit by hand. Run cargo run --no-default-features -p xtask --no-default-features -- campaign generate. -->
+<!-- GENERATED: do not edit by hand. Run cargo run -p xtask --no-default-features -- campaign generate. -->
 # BitNet Campaign Dashboard
 
 | Campaign | Active item | PR | State | Next | Notes |
