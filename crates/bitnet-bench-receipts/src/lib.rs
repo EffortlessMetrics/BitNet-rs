@@ -556,7 +556,7 @@ mod tests {
 
     #[test]
     fn test_throughput_precision() {
-        let r = BenchReceipt::new("k", [1, 1, 1], [1, 1, 1], 1, 3.141_592_653_589_793, 0, "", "");
+        let r = BenchReceipt::new("k", [1, 1, 1], [1, 1, 1], 1, std::f64::consts::PI, 0, "", "");
         let r2 = BenchReceipt::from_json(&r.to_json()).unwrap();
         assert!((r2.throughput_gflops - std::f64::consts::PI).abs() < 1e-10);
     }
