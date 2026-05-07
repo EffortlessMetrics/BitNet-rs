@@ -1,5 +1,6 @@
 //! CLI command implementations
 
+pub mod answer_corpus;
 #[cfg(feature = "cli-bench")]
 pub mod benchmark;
 pub mod chat;
@@ -11,6 +12,7 @@ pub mod inspect;
 pub mod serve;
 pub mod template_util;
 
+pub use answer_corpus::AnswerCorpusCommand;
 #[cfg(feature = "cli-bench")]
 pub use benchmark::BenchmarkCommand;
 pub use convert::ConvertCommand;

@@ -1,0 +1,80 @@
+schema: 1
+artifact_kind: bitnet_answer_corpus
+name: strict-bitnet-answer-corpus-v1
+description: Fixed deterministic prompt set for answer-readiness baselines.
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  file: ggml-model-i2_s.gguf
+defaults:
+  prompt_template: llama3-chat
+  max_new_tokens: 96
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 300
+cases:
+  - id: math_2_plus_2
+    question: "What is 2+2? Answer with only the number."
+    max_new_tokens: 16
+    gate:
+      kind: exact_trimmed
+      expected: "4"
+
+  - id: colors_four
+    question: "Name four common colors."
+    max_new_tokens: 48
+    gate:
+      kind: readable
+      min_words: 4
+
+  - id: bitnet_one_sentence
+    question: "Explain BitNet in one sentence."
+    max_new_tokens: 96
+    gate:
+      kind: contains_any
+      contains_any:
+        - "bit"
+        - "weight"
+        - "model"
+
+  - id: python_add
+    question: "Write a short Python function that adds two numbers."
+    max_new_tokens: 96
+    gate:
+      kind: contains_any
+      contains_any:
+        - "def "
+        - "return"
+
+  - id: capital_france
+    question: "What is the capital of France?"
+    max_new_tokens: 32
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"
+
+  - id: five_word_summary
+    question: "Summarize this sentence in five words: BitNet uses very low-bit weights to reduce memory use."
+    max_new_tokens: 32
+    gate:
+      kind: readable
+      min_words: 3
+
+  - id: shapes_three
+    question: "List three common shapes."
+    max_new_tokens: 48
+    gate:
+      kind: readable
+      min_words: 3
+
+  - id: yes_no_water
+    question: "Answer yes or no: is water wet?"
+    max_new_tokens: 16
+    gate:
+      kind: starts_with_any
+      starts_with_any:
+        - "yes"
+        - "no"
