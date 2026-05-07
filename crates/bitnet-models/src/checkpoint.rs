@@ -159,12 +159,29 @@ fn model_name_from_path(path: &Path) -> String {
     path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown").to_string()
 }
 
+/// Build a stable inventory key for a path.
+///
+/// We prefer canonicalized paths to deduplicate relative/absolute aliases that
+/// point to the same file, but fall back to an absolute best-effort key when
+/// canonicalization is unavailable (e.g. path does not currently exist).
+fn inventory_key(path: &Path) -> String {
+    let normalized = std::fs::canonicalize(path).unwrap_or_else(|_| {
+        if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            std::env::current_dir().map(|cwd| cwd.join(path)).unwrap_or_else(|_| path.to_path_buf())
+        }
+    });
+    normalized.to_string_lossy().to_string()
+}
+
 /// Build [`CheckpointMetadata`] by inspecting a file on disk.
 pub fn extract_metadata(path: &Path) -> Result<CheckpointMetadata, CheckpointError> {
     let meta = std::fs::metadata(path)?;
     let hash = compute_sha256(path)?;
     let format = CheckpointFormat::detect(path);
     let modified_at = meta.modified().ok();
+    let canonical_path = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
 
     Ok(CheckpointMetadata {
         format,
@@ -173,7 +190,7 @@ pub fn extract_metadata(path: &Path) -> Result<CheckpointMetadata, CheckpointErr
         created_at: SystemTime::now(),
         file_size: meta.len(),
         hash,
-        path: path.to_path_buf(),
+        path: canonical_path,
         modified_at,
     })
 }
@@ -211,7 +228,7 @@ impl CheckpointManager {
     /// stores it in the inventory. Returns an error if the path is already
     /// registered.
     pub fn add(&self, path: &Path) -> Result<CheckpointMetadata, CheckpointError> {
-        let key = path.to_string_lossy().to_string();
+        let key = inventory_key(path);
         let meta = extract_metadata(path)?;
 
         let mut inv = self.inventory.write().expect("lock poisoned");
@@ -224,7 +241,7 @@ impl CheckpointManager {
 
     /// Remove a checkpoint from the inventory (does **not** delete the file).
     pub fn remove(&self, path: &Path) -> Result<CheckpointMetadata, CheckpointError> {
-        let key = path.to_string_lossy().to_string();
+        let key = inventory_key(path);
         let mut inv = self.inventory.write().expect("lock poisoned");
         inv.remove(&key).ok_or(CheckpointError::NotFound(key))
     }
@@ -243,7 +260,7 @@ impl CheckpointManager {
 
     /// Retrieve metadata for a specific path.
     pub fn get(&self, path: &Path) -> Option<CheckpointMetadata> {
-        let key = path.to_string_lossy().to_string();
+        let key = inventory_key(path);
         self.inventory.read().expect("lock poisoned").get(&key).cloned()
     }
 
@@ -504,6 +521,26 @@ mod tests {
     }
 
     #[test]
+    fn inventory_rejects_duplicate_absolute_vs_relative_aliases() {
+        let dir = TempDir::new().unwrap();
+        let p = temp_file(&dir, "m.gguf", b"data");
+        let relative = PathBuf::from("m.gguf");
+        struct CwdGuard(PathBuf);
+        impl Drop for CwdGuard {
+            fn drop(&mut self) {
+                let _ = std::env::set_current_dir(&self.0);
+            }
+        }
+
+        let _guard = CwdGuard(std::env::current_dir().unwrap());
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let mgr = CheckpointManager::new();
+        mgr.add(&relative).unwrap();
+        assert!(matches!(mgr.add(&p), Err(CheckpointError::Duplicate(_))));
+    }
+
+    #[test]
     fn inventory_remove() {
         let dir = TempDir::new().unwrap();
         let p = temp_file(&dir, "m.gguf", b"data");
@@ -702,5 +739,13 @@ mod tests {
         let p = temp_file(&dir, "ts.gguf", b"timestamp_test");
         let meta = extract_metadata(&p).unwrap();
         assert!(meta.modified_at.is_some());
+    }
+
+    #[test]
+    fn metadata_path_is_canonicalized() {
+        let dir = TempDir::new().unwrap();
+        let p = temp_file(&dir, "canon.gguf", b"canonical_test");
+        let meta = extract_metadata(&p).unwrap();
+        assert_eq!(meta.path, p.canonicalize().unwrap());
     }
 }
