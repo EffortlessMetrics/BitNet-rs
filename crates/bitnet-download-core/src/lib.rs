@@ -77,7 +77,7 @@ pub const fn validate_downloaded_len(
 
 /// Atomic write helper for small metadata files (etag/last-modified).
 ///
-/// Uses a randomly named NamedTempFile in the destination's parent directory
+/// Uses a randomly named `NamedTempFile` in the destination's parent directory
 /// to avoid colliding with a pre-existing sibling at `<path>.tmp` (which the
 /// previous implementation would have clobbered or mis-renamed across), and
 /// to remain race-free across concurrent writers targeting the same path.
