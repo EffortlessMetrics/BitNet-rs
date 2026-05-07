@@ -410,7 +410,9 @@ distinct proof stages into one implementation PR.
 - `docs/hardware/LANE_OWNERSHIP.md`
 - `docs/hardware/BENCHMARK_PROTOCOL.md`
 - `docs/hardware/windows-9950x3d-rtx5070ti-validation.md`
+- `docs/specs/rtx5070ti-cuda-answer-readiness.md`
 - `ci/hardware/_templates/cuda-probe-receipt.json`
 - `ci/hardware/_templates/cuda-smoke-receipt.json`
 - `ci/hardware/_templates/cuda-parity-receipt.json`
 - `ci/hardware/_templates/strict-bitnet-cuda-proof.json`
+- `ci/hardware/_templates/bitnet-cuda-answer-receipt.json`
