@@ -119,7 +119,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-MODEL-001"
-status = "pr_open"
+status = "merged"
+pr = 3913
+merge_sha = "b09bf8555e5861914be9c4d9715c9753636b9e94"
 branch = "codex/apple-m4-local-answer/M4-QA-MODEL-001-artifact-validation"
 stackable = false
 review_mode = "codex_premerge"
@@ -164,7 +166,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-MODEL-002"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-local-answer/M4-QA-MODEL-002-known-good-artifact"
 stackable = false
 review_mode = "codex_premerge"

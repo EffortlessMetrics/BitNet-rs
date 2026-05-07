@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T17:38:55Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-MODEL-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Promoted the known-good local-answer artifact gate after M4-QA-MODEL-001 merged.",
+  "Do not unblock M4-QA-001 until a supported GGUF/tokenizer artifact passes the reference prompt suite.",
+]
