@@ -133,8 +133,8 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Upload coverage reports to Codecov
-        if: ${{ always() && hashFiles('lcov.info') != '' && steps.codecov-token.outputs.present == 'true' }}
+      - name: Upload coverage reports to Codecov (main)
+        if: ${{ github.event_name == 'push' && hashFiles('lcov.info') != '' && steps.codecov-token.outputs.present == 'true' }}
         uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -142,6 +142,16 @@ jobs:
           flags: rust-cpu
           name: bitnet-rs-rust-cpu
           fail_ci_if_error: true
+
+      - name: Upload coverage reports to Codecov (advisory PR)
+        if: ${{ github.event_name != 'push' && hashFiles('lcov.info') != '' && steps.codecov-token.outputs.present == 'true' }}
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          flags: rust-cpu
+          name: bitnet-rs-rust-cpu
+          fail_ci_if_error: false
 
       - name: Upload coverage artifacts (always)
         if: always()
