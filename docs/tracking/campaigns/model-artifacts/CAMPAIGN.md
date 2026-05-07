@@ -34,8 +34,8 @@ GGUF that only proves structural validity or backend execution.
 
 | Work item | Status | Notes |
 |---|---|---|
-| MODEL-ARTIFACT-001 | in_progress | Define shared answer-artifact gate and record the current Microsoft BitNet I2_S GGUF as rejected for answer readiness. |
-| MODEL-ARTIFACT-002 | blocked | Acquire or regenerate a reference-good BitNet artifact that passes the deterministic prompt suite under a reference runner. |
+| MODEL-ARTIFACT-001 | merged | Shared answer-artifact gate merged in #3922; the current Microsoft BitNet I2_S GGUF is rejected for coherent local-answer claims. |
+| MODEL-ARTIFACT-002 | ready | Acquire or regenerate a reference-good BitNet artifact that passes the deterministic prompt suite under a reference runner. |
 
 ## Review Policy
 

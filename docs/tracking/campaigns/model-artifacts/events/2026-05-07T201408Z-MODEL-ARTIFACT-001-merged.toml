@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T20:14:08Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-001"
+event = "merged"
+pr = 3922
+merge_sha = "7770e5236cc609f8c4af726f156177ea62fc9d95"
+actor = "codex"
+
+notes = [
+  "Merged #3922 to establish the shared answer-artifact gate.",
+  "The current Microsoft BitNet I2_S GGUF remains rejected for coherent local-answer claims; no CPU, CUDA, Apple, NPU, server, or speed claim is made by this closeout.",
+]

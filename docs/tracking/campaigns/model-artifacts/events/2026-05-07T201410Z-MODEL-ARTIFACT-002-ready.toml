@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T20:14:10Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "MODEL-ARTIFACT-002 is ready after the shared answer-artifact gate merged.",
+  "Next work must acquire or regenerate a reference-good BitNet answer artifact before backend lanes claim coherent local answers.",
+]
