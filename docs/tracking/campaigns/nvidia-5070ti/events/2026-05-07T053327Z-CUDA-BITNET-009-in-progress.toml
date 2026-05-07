@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T05:33:27Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-009"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the upload-once routed proof correction after CUDA-BITNET-008 merged.",
+  "The work refreshes strict one-token, short-decode, and benchmark receipts so routed QK256 CUDA inference records weights_uploaded_once=true and per_token_weight_upload=false.",
+]

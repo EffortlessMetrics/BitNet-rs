@@ -116,6 +116,8 @@ fn build_receipt(
     let cpu_cuda_ratio = if cuda_total_ms > 0.0 { cpu_total_ms / cuda_total_ms } else { 0.0 };
     let cuda_kernel_invocations = u64_at(cuda, "/cuda/cuda_kernel_invocations")
         .or_else(|_| u64_at(cuda, "/cuda_kernel_invocations"))?;
+    let weights_uploaded_once = bool_at(cuda, "/bitnet/weights_uploaded_once")?;
+    let per_token_weight_upload = bool_at(cuda, "/bitnet/per_token_weight_upload")?;
 
     Ok(json!({
         "schema": 1,
@@ -163,8 +165,8 @@ fn build_receipt(
             "quantization": str_at(cuda, "/bitnet/quantization")?,
             "kernel_family": str_at(cuda, "/kernel/family")?,
             "layout": str_at(cuda, "/kernel/layout")?,
-            "weights_uploaded_once": bool_at(cuda, "/bitnet/weights_uploaded_once")?,
-            "per_token_weight_upload": bool_at(cuda, "/bitnet/per_token_weight_upload")?
+            "weights_uploaded_once": weights_uploaded_once,
+            "per_token_weight_upload": per_token_weight_upload
         },
         "workload": {
             "profile": "short_decode_8",
@@ -233,7 +235,9 @@ fn build_receipt(
         "claim_boundaries": [
             "speedup_claim=false; this receipt records a same-model baseline only.",
             "CPU scalar and AVX2 strict end-to-end profiles are present as explicit not_run entries unless matching strict receipts are supplied.",
-            "The source CUDA receipt records weights_uploaded_once=false and per_token_weight_upload=true, so this benchmark does not claim upload-once optimized inference."
+            format!(
+                "The source CUDA receipt records weights_uploaded_once={weights_uploaded_once} and per_token_weight_upload={per_token_weight_upload}; speedup_claim remains false until a refreshed same-model benchmark proves it."
+            )
         ],
         "artifact_path": path_label(&args.receipt_out)
     }))
