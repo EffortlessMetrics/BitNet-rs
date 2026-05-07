@@ -3,7 +3,7 @@
   "artifact_kind": "platform-comparison-index",
   "machine_id": "intel-258v",
   "date": "2026-05-06",
-  "captured_at_utc": "2026-05-06T20:40:07.8183866Z",
+  "captured_at_utc": "2026-05-07T00:06:02Z",
   "proof_stage": "detected",
   "artifacts": {
     "platform": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
@@ -15,7 +15,7 @@
   "lanes": {
     "cpu": {
       "proof_label": "intel-258v-cpu-avx2",
-      "proof_stage": "blocked_preflight",
+      "proof_stage": "preflight_ready",
       "artifact": "ci/hardware/intel-258v/2026-05-06/cpu-bitnet-validation.json"
     },
     "arc140v": {
@@ -30,7 +30,7 @@
     }
   },
   "fallback_used": false,
-  "claim_allowed": "Same-machine 258V OS visibility artifacts are linked for later runtime and BitNet validation.",
+  "claim_allowed": "Same-machine 258V OS visibility artifacts and CPU BitNet preflight readiness are linked for later runtime and BitNet validation.",
   "claims_not_allowed": [
     "Arc 140V runtime execution works",
     "Intel NPU OpenVINO execution works",
