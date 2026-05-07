@@ -380,8 +380,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-008"
-status = "in_progress"
-branch = "codex/cpu-bitnet-008-benchmark-receipts"
+status = "pr_open"
+branch = "codex/cpu-bitnet-008-real-benchmark-receipts"
 stackable = false
 requires_human_merge = true
 blocked_by = ["CPU-BITNET-007"]

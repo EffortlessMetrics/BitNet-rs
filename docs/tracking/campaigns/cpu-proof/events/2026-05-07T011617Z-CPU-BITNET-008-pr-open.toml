@@ -1,0 +1,14 @@
+timestamp = "2026-05-07T01:16:17Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-008"
+event = "pr_open"
+pr = 3814
+merge_sha = "5111e7973afac9fe89f8a68e215ad6187792a26d"
+head_sha = "5526836c1fca8ac5079f77c8503edccd684fad9d"
+actor = "codex"
+
+notes = [
+  "CPU-BITNET-008 benchmark receipt emitter merged in PR #3812 with strict CPU benchmark receipt validation, selected kernel/fallback fields, and micro/layer/prefill/first_token/decode profile output.",
+  "PR #3814 keeps CPU-BITNET-008 open instead of marking the synthetic QK256 benchmark-receipt surface as full phase benchmark closure.",
+  "CPU-BITNET-008 remains in progress because the merged emitter is a QK256 benchmark-receipt surface; full phase benchmark closure and any sustained Kaby Lake throughput claim still require receipt artifacts from the real proof workload.",
+]
