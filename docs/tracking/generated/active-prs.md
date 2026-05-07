@@ -3,5 +3,4 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
-| apple-m4-slm-answer | SLM-M4-002 | #3930 | `codex/apple-m4-slm-answer/SLM-M4-002-validate-artifact` | Validate a sub-1 GiB dense instruct GGUF under a reference runner against the M4 SLM prompt suite, record source, SHA256, size, GGUF architecture, quantization, tokenizer metadata, pre-tokenizer authority, prompt template, and reference output, and reject candidates that fail quality. |
 | tracker-infra | TRACKER-003 | #3724 | `codex/tracker-infra/TRACKER-003-current-pr-reconciliation` | Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes. |

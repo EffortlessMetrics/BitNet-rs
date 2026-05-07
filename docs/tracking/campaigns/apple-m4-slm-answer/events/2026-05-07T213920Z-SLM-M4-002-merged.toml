@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T21:39:20Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-002"
+event = "merged"
+pr = 3930
+merge_sha = "787fbe8d1785bd72ae42d84d96d58cb25c998dff"
+actor = "codex"
+
+notes = [
+  "Validated Qwen2.5 0.5B Instruct Q4_K_M as the first reference-good dense SLM artifact for the Apple M4 SLM answer lane.",
+  "Promoted SLM-M4-003 so Rust-native apple-m4-cpu-neon SLM answer receipts can start.",
+]
