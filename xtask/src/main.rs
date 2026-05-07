@@ -3885,7 +3885,7 @@ fn crossval_per_token_cmd_impl(
 
     // Backend dispatch - route based on selected C++ backend
     // For LLaMA backend, we need to keep the session alive for evaluation
-    let mut cpp_session_opt: Option<bitnet_sys::wrapper::Session> = None;
+    let mut cpp_session_opt: Option<bitnet_sys::Session> = None;
 
     let cpp_tokens: Vec<u32> = match backend {
         CppBackend::BitNet => {
@@ -3903,13 +3903,14 @@ fn crossval_per_token_cmd_impl(
         }
         CppBackend::Llama => {
             // Use existing llama.cpp wrapper (backward-compatible path)
-            bitnet_sys::wrapper::init_backend();
-            let _guard = scopeguard::guard((), |_| bitnet_sys::wrapper::free_backend());
+            bitnet_sys::init_backend();
+            let _guard = scopeguard::guard((), |_| bitnet_sys::free_backend());
 
-            let cpp_session = bitnet_sys::wrapper::Session::load_deterministic(model_path_str)?;
+            let cpp_session = bitnet_sys::Session::load_deterministic(model_path_str)?;
 
-            // Tokenize with C++ tokenizer using the same formatted prompt
-            let tokens = cpp_session.tokenize(&formatted_prompt)?;
+            // Tokenize with C++ tokenizer using the same formatted prompt and template policy.
+            let tokens =
+                cpp_session.tokenize_with_options(&formatted_prompt, add_bos, parse_special)?;
 
             // Keep session alive for later evaluation
             cpp_session_opt = Some(cpp_session);

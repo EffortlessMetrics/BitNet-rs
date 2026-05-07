@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T15:59:01Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-ROOT-001"
+event = "pr_open"
+pr = 3908
+head_sha = "dabe7b6e12aae089c793fee0cab8431297c59850"
+actor = "codex"
+
+notes = [
+  "Opened root-cause PR documenting that the current local GGUF also garbles under the reference runner.",
+  "Adds M4-QA-MODEL-001 as a model-artifact gate before unblocking M4-QA-001.",
+]

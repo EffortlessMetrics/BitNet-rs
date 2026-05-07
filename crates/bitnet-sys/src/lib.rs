@@ -142,7 +142,9 @@ pub mod disabled {
 
     /// Error returned when ffi feature is disabled
     #[derive(Debug, thiserror::Error)]
-    #[error("BitNet C++ bindings not available (compile with --features bitnet-sys/ffi)")]
+    #[error(
+        "BitNet C++ bindings not available (enable bitnet-sys/ffi with a populated BITNET_CPP_DIR or run setup-cpp-auto)"
+    )]
     pub struct DisabledError;
 
     /// Check if C++ implementation is available (always false without ffi)
@@ -155,6 +157,17 @@ pub mod disabled {
         Err(DisabledError)
     }
 
+    /// Get version information using the wrapper-compatible API.
+    pub fn get_version() -> String {
+        "unavailable".to_string()
+    }
+
+    /// Initialize the backend using the wrapper-compatible API.
+    pub fn init_backend() {}
+
+    /// Free the backend using the wrapper-compatible API.
+    pub fn free_backend() {}
+
     /// Initialize (returns error without ffi)
     pub fn initialize() -> Result<(), DisabledError> {
         Err(DisabledError)
@@ -162,6 +175,218 @@ pub mod disabled {
 
     /// Placeholder model handle when ffi feature is disabled
     pub struct ModelHandle;
+
+    /// Placeholder llama model when ffi feature is disabled or C++ is unavailable.
+    pub struct Model;
+
+    impl Model {
+        /// Load a model from file.
+        pub fn load(_path: &str) -> Result<Self, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Get the model vocabulary size.
+        pub fn n_vocab(&self) -> i32 {
+            0
+        }
+
+        /// Get the model training context size.
+        pub fn n_ctx_train(&self) -> i32 {
+            0
+        }
+
+        /// Get the model embedding dimension.
+        pub fn n_embd(&self) -> i32 {
+            0
+        }
+    }
+
+    /// Placeholder llama context when ffi feature is disabled or C++ is unavailable.
+    pub struct Context;
+
+    impl Context {
+        /// Create a context from a model.
+        pub fn new(
+            _model: &Model,
+            _n_ctx: u32,
+            _n_batch: u32,
+            _n_threads: i32,
+        ) -> Result<Self, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Tokenize text into token IDs.
+        pub fn tokenize(&self, _text: &str, _add_special: bool) -> Result<Vec<i32>, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Tokenize text into token IDs with explicit special-token parsing.
+        pub fn tokenize_with_options(
+            &self,
+            _text: &str,
+            _add_special: bool,
+            _parse_special: bool,
+        ) -> Result<Vec<i32>, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Decode token IDs to text.
+        pub fn decode(&self, _tokens: &[i32]) -> Result<String, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Evaluate tokens.
+        pub fn eval(&mut self, _tokens: &[i32], _n_past: i32) -> Result<(), DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Get logits from the last evaluation.
+        pub fn get_logits(&self) -> Result<Vec<f32>, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Get logits for a token index.
+        pub fn get_logits_ith(&self, _i: i32) -> Result<Vec<f32>, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Get logits for all token positions.
+        pub fn get_all_logits(&self, _n_tokens: usize) -> Result<Vec<Vec<f32>>, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Sample greedily from logits.
+        pub fn sample_greedy(&self, _logits: &[f32]) -> i32 {
+            0
+        }
+    }
+
+    /// Placeholder deterministic session when ffi feature is disabled or C++ is unavailable.
+    pub struct Session {
+        pub model: Model,
+        pub context: Context,
+    }
+
+    impl Session {
+        /// Load a model and create a context.
+        pub fn load(
+            _model_path: &str,
+            _n_ctx: u32,
+            _n_batch: u32,
+            _n_threads: i32,
+        ) -> Result<Self, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Load with deterministic settings.
+        pub fn load_deterministic(_model_path: &str) -> Result<Self, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Tokenize text.
+        pub fn tokenize(&self, _text: &str) -> Result<Vec<i32>, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Tokenize text with explicit BOS and special-token parsing policy.
+        pub fn tokenize_with_options(
+            &self,
+            _text: &str,
+            _add_special: bool,
+            _parse_special: bool,
+        ) -> Result<Vec<i32>, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Decode tokens to text.
+        pub fn decode(&self, _tokens: &[i32]) -> Result<String, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Evaluate tokens and return logits.
+        pub fn eval_and_get_logits(
+            &mut self,
+            _tokens: &[i32],
+            _n_past: i32,
+        ) -> Result<Vec<f32>, DisabledError> {
+            Err(DisabledError)
+        }
+
+        /// Generate tokens greedily.
+        pub fn generate_greedy(
+            &mut self,
+            _prompt: &str,
+            _max_tokens: usize,
+        ) -> Result<Vec<i32>, DisabledError> {
+            Err(DisabledError)
+        }
+    }
+
+    /// Placeholder BitNet model from the custom C shim.
+    pub struct BitnetModel;
+
+    impl BitnetModel {
+        /// Load a model from file.
+        pub fn from_file(_path: &str) -> Result<Self, DisabledError> {
+            Err(DisabledError)
+        }
+    }
+
+    /// Placeholder BitNet context from the custom C shim.
+    pub struct BitnetContext;
+
+    impl BitnetContext {
+        /// Create a context from a BitNet model.
+        pub fn new(
+            _model: &BitnetModel,
+            _n_ctx: i32,
+            _n_threads: i32,
+            _seed: i32,
+        ) -> Result<Self, DisabledError> {
+            Err(DisabledError)
+        }
+    }
+
+    /// Tokenize text through the custom C shim.
+    pub fn bitnet_tokenize_text(
+        _model: &BitnetModel,
+        _text: &str,
+        _add_bos: bool,
+        _parse_special: bool,
+    ) -> Result<Vec<i32>, DisabledError> {
+        Err(DisabledError)
+    }
+
+    /// Evaluate tokens through the custom C shim.
+    pub fn bitnet_eval_tokens(
+        _ctx: &BitnetContext,
+        _ids: &[i32],
+        _vocab_size: usize,
+    ) -> Result<Vec<f32>, DisabledError> {
+        Err(DisabledError)
+    }
+
+    /// Prefill a BitNet C shim context.
+    pub fn bitnet_prefill(_ctx: &BitnetContext, _ids: &[i32]) -> Result<(), DisabledError> {
+        Err(DisabledError)
+    }
+
+    /// Read the vocabulary size from a BitNet C shim context.
+    pub fn cpp_vocab_size(_ctx: &BitnetContext) -> Result<usize, DisabledError> {
+        Err(DisabledError)
+    }
+
+    /// Decode greedily through the custom C shim.
+    pub fn cpp_decode_greedy(
+        _model: &BitnetModel,
+        _ctx: &BitnetContext,
+        _eos_id: i32,
+        _eot_id: Option<i32>,
+        _max_steps: usize,
+        _out: &mut [i32],
+    ) -> Result<usize, DisabledError> {
+        Err(DisabledError)
+    }
 
     /// Load model (returns error without ffi)
     pub fn load_model(_path: &str) -> Result<ModelHandle, DisabledError> {

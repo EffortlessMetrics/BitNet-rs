@@ -1,4 +1,4 @@
-//! Answer corpus runner for CPU-first answer-readiness baselines.
+//! Answer corpus runner for CPU-first and Apple M4 local-answer baselines.
 
 use anyhow::{Context, Result};
 use clap::Args;
@@ -6,11 +6,12 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
     ffi::OsString,
-    fs,
+    fs::{self, File},
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::atomic::{AtomicU64, Ordering},
     thread,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 /// Run the fixed answer corpus through the existing `bitnet run` surface.
@@ -28,7 +29,7 @@ pub struct AnswerCorpusCommand {
     #[arg(long, value_name = "PATH")]
     pub tokenizer: Option<PathBuf>,
 
-    /// Backend label for this baseline. CPU-ANSWER-001 is CPU-only.
+    /// Backend label for this baseline.
     #[arg(long, value_name = "BACKEND")]
     pub device: Option<String>,
 
@@ -58,12 +59,13 @@ impl AnswerCorpusCommand {
     pub async fn execute(&self, default_device: &str) -> Result<()> {
         let corpus = AnswerCorpus::load(&self.corpus)?;
         let device =
-            normalize_cpu_baseline_device(self.device.as_deref().unwrap_or(default_device));
-        if device != "cpu" {
+            normalize_answer_corpus_device(self.device.as_deref().unwrap_or(default_device));
+        if !matches!(device.as_str(), "cpu" | "apple-m4-cpu-neon") {
             anyhow::bail!(
-                "answer-corpus is the CPU-ANSWER-001 CPU baseline and only accepts --device cpu; got {device}"
+                "answer-corpus only accepts --device cpu or --device apple-m4-cpu-neon; got {device}"
             );
         }
+        let artifact_kind = answer_corpus_artifact_kind(&device);
         let default_timeout_seconds = effective_default_timeout_seconds(
             self.per_prompt_timeout_seconds,
             corpus.defaults.per_prompt_timeout_seconds,
@@ -83,7 +85,7 @@ impl AnswerCorpusCommand {
             let row = if self.dry_run {
                 self.not_run_row(case, "dry_run_requested")
             } else {
-                self.run_case(&exe, &receipt_dir, &corpus, case, device, default_timeout_seconds)?
+                self.run_case(&exe, &receipt_dir, &corpus, case, &device, default_timeout_seconds)?
             };
             rows.push(row);
         }
@@ -99,7 +101,7 @@ impl AnswerCorpusCommand {
 
         let receipt = json!({
             "schema_version": "1.0.0",
-            "artifact_kind": "bitnet_cpu_answer_corpus",
+            "artifact_kind": artifact_kind,
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "corpus": {
                 "path": self.corpus.display().to_string(),
@@ -117,8 +119,8 @@ impl AnswerCorpusCommand {
                 "tokenizer_path": self.tokenizer.as_ref().map(|path| path.display().to_string()),
             },
             "backend": {
-                "requested_backend": "cpu",
-                "selected_backend": "cpu",
+                "requested_backend": device.as_str(),
+                "selected_backend": device.as_str(),
                 "runtime_api": "cpu",
                 "fallback_used": false,
             },
@@ -139,6 +141,13 @@ impl AnswerCorpusCommand {
                 "failed": failed,
                 "timeout": timed_out,
                 "not_run": not_run,
+            },
+            "claim_boundary": {
+                "local_answer_path": device.as_str() == "apple-m4-cpu-neon",
+                "full_metal_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "neural_engine_claimed": false,
+                "broad_performance_claimed": false,
             },
             "cases": rows,
             "speedup_claim": false,
@@ -238,8 +247,23 @@ impl AnswerCorpusCommand {
         )
         .with_context(|| format!("invalid run receipt {}", case_receipt.display()))?;
         let answer = run_receipt["text"].as_str().unwrap_or_default().to_string();
-        let mut quality = evaluate_quality(&answer, &case.gate);
-        quality.failed_rules.extend(cpu_answer_receipt_failed_rules(&run_receipt));
+        let token_ids = generated_token_ids(&run_receipt);
+        let generated_token_count = run_receipt["tokens"]["generated"]
+            .as_u64()
+            .and_then(|value| usize::try_from(value).ok())
+            .unwrap_or(token_ids.len());
+        let min_generated_tokens =
+            case.min_generated_tokens.or(corpus.defaults.min_generated_tokens);
+        let min_distinct_generated_tokens =
+            case.min_distinct_generated_tokens.or(corpus.defaults.min_distinct_generated_tokens);
+        let mut quality = evaluate_quality(
+            &answer,
+            &case.gate,
+            Some(&token_ids),
+            min_generated_tokens,
+            min_distinct_generated_tokens,
+        );
+        quality.failed_rules.extend(answer_receipt_failed_rules(&run_receipt, device));
         quality.passed = quality.failed_rules.is_empty();
         let status = if quality.passed { "passed" } else { "quality_failed" };
 
@@ -262,6 +286,10 @@ impl AnswerCorpusCommand {
                 "no_replacement_chars": quality.no_replacement_chars,
                 "no_raw_special_tokens": quality.no_raw_special_tokens,
                 "mostly_text": quality.mostly_text,
+                "generated_tokens": generated_token_count,
+                "distinct_generated_tokens": quality.distinct_generated_tokens,
+                "min_generated_tokens": min_generated_tokens,
+                "min_distinct_generated_tokens": min_distinct_generated_tokens,
                 "gate_kind": case.gate.kind,
                 "failed_rules": quality.failed_rules,
             },
@@ -344,6 +372,8 @@ struct CorpusDefaults {
     strict_loader: bool,
     temperature: f32,
     per_prompt_timeout_seconds: Option<u64>,
+    min_generated_tokens: Option<usize>,
+    min_distinct_generated_tokens: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -352,6 +382,8 @@ struct AnswerCase {
     question: String,
     max_new_tokens: Option<usize>,
     timeout_seconds: Option<u64>,
+    min_generated_tokens: Option<usize>,
+    min_distinct_generated_tokens: Option<usize>,
     gate: AnswerGate,
 }
 
@@ -371,24 +403,45 @@ struct QualityResult {
     no_replacement_chars: bool,
     no_raw_special_tokens: bool,
     mostly_text: bool,
+    distinct_generated_tokens: usize,
     failed_rules: Vec<String>,
 }
 
-fn normalize_cpu_baseline_device(device: &str) -> &str {
-    if device == "auto" { "cpu" } else { device }
+fn normalize_answer_corpus_device(device: &str) -> String {
+    match device.trim() {
+        "auto" => "cpu".to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn answer_corpus_artifact_kind(device: &str) -> &'static str {
+    match device {
+        "apple-m4-cpu-neon" => "bitnet_apple_m4_local_answer_corpus",
+        _ => "bitnet_cpu_answer_corpus",
+    }
 }
 
 fn effective_default_timeout_seconds(cli: Option<u64>, corpus: Option<u64>) -> u64 {
     cli.or(corpus).unwrap_or(300).max(1)
 }
 
-fn evaluate_quality(answer: &str, gate: &AnswerGate) -> QualityResult {
+fn evaluate_quality(
+    answer: &str,
+    gate: &AnswerGate,
+    generated_token_ids: Option<&[u32]>,
+    min_generated_tokens: Option<usize>,
+    min_distinct_generated_tokens: Option<usize>,
+) -> QualityResult {
     let normalized = strip_special_markers(answer).trim().to_string();
     let non_empty_answer = !normalized.is_empty();
     let no_replacement_chars = !normalized.contains('\u{FFFD}');
     let no_raw_special_tokens = !contains_raw_special_token(&normalized);
     let mostly_text = mostly_text(&normalized);
     let printable_utf8 = normalized.chars().all(|ch| ch == '\n' || ch == '\t' || !ch.is_control());
+    let generated_token_count = generated_token_ids.map(|tokens| tokens.len()).unwrap_or(0);
+    let distinct_generated_tokens = generated_token_ids
+        .map(|tokens| tokens.iter().copied().collect::<std::collections::BTreeSet<_>>().len())
+        .unwrap_or(0);
 
     let mut failed_rules = Vec::new();
     if !non_empty_answer {
@@ -410,6 +463,16 @@ fn evaluate_quality(answer: &str, gate: &AnswerGate) -> QualityResult {
     if !gate_passed(&normalized, gate) {
         failed_rules.push(format!("gate_{}", gate.kind));
     }
+    if let Some(minimum) = min_generated_tokens
+        && generated_token_count < minimum
+    {
+        failed_rules.push("generated_token_min".to_string());
+    }
+    if let Some(minimum) = min_distinct_generated_tokens
+        && distinct_generated_tokens < minimum
+    {
+        failed_rules.push("generated_token_variation".to_string());
+    }
 
     QualityResult {
         passed: failed_rules.is_empty(),
@@ -418,21 +481,27 @@ fn evaluate_quality(answer: &str, gate: &AnswerGate) -> QualityResult {
         no_replacement_chars,
         no_raw_special_tokens,
         mostly_text,
+        distinct_generated_tokens,
         failed_rules,
     }
 }
 
-fn cpu_answer_receipt_failed_rules(run_receipt: &Value) -> Vec<String> {
+fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> Vec<String> {
     let mut failed = Vec::new();
     let requested_backend = run_receipt["requested_backend"].as_str().unwrap_or_default();
     let selected_backend = run_receipt["selected_backend"].as_str().unwrap_or_default();
     let runtime_api = run_receipt["runtime_api"].as_str().unwrap_or_default();
     let fallback_used = run_receipt["fallback_used"].as_bool().unwrap_or(true);
-    if requested_backend != "cpu" {
-        failed.push("requested_backend_cpu".to_string());
+    if requested_backend != expected_backend {
+        failed.push(format!("requested_backend_{expected_backend}"));
     }
-    if !matches!(selected_backend, "cpu" | "cpu-rust") {
-        failed.push("selected_backend_cpu".to_string());
+    let selected_backend_valid = match expected_backend {
+        "cpu" => matches!(selected_backend, "cpu" | "cpu-rust"),
+        "apple-m4-cpu-neon" => selected_backend == "apple-m4-cpu-neon",
+        _ => false,
+    };
+    if !selected_backend_valid {
+        failed.push(format!("selected_backend_{expected_backend}"));
     }
     if runtime_api != "cpu" {
         failed.push("runtime_api_cpu".to_string());
@@ -469,10 +538,22 @@ fn cpu_answer_receipt_failed_rules(run_receipt: &Value) -> Vec<String> {
     if !run_receipt["tokens"]["prompt_ids"].is_array() {
         failed.push("prompt_token_ids_recorded".to_string());
     }
-    if !run_receipt["tokens"]["generated_ids"].is_array() {
+    if generated_token_ids(run_receipt).is_empty() {
         failed.push("generated_token_ids_recorded".to_string());
     }
     failed
+}
+
+fn generated_token_ids(receipt: &Value) -> Vec<u32> {
+    receipt["tokens"]["generated_ids"]
+        .as_array()
+        .or_else(|| receipt["tokens"]["ids"].as_array())
+        .map(|ids| {
+            ids.iter()
+                .filter_map(|value| value.as_u64().and_then(|id| u32::try_from(id).ok()))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn gate_passed(answer: &str, gate: &AnswerGate) -> bool {
@@ -534,37 +615,72 @@ struct ChildRun {
 }
 
 fn run_child_with_timeout(exe: &Path, args: &[OsString], timeout: Duration) -> Result<ChildRun> {
+    let child_rust_log =
+        std::env::var("BITNET_ANSWER_CORPUS_CHILD_RUST_LOG").unwrap_or_else(|_| "warn".into());
+    let stdout_path = child_capture_path("stdout");
+    let stderr_path = child_capture_path("stderr");
+    let stdout_file = File::create(&stdout_path)
+        .with_context(|| format!("failed to create {}", stdout_path.display()))?;
+    let stderr_file = File::create(&stderr_path)
+        .with_context(|| format!("failed to create {}", stderr_path.display()))?;
     let mut child = Command::new(exe)
         .args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .env("RUST_LOG", child_rust_log)
+        .stdout(Stdio::from(stdout_file))
+        .stderr(Stdio::from(stderr_file))
         .spawn()
         .with_context(|| format!("failed to spawn {}", exe.display()))?;
     let start = Instant::now();
     loop {
-        if child.try_wait()?.is_some() {
-            let output = child.wait_with_output()?;
+        if let Some(status) = child.try_wait()? {
+            let stdout = read_child_capture(&stdout_path);
+            let stderr = read_child_capture(&stderr_path);
+            remove_child_capture(&stdout_path);
+            remove_child_capture(&stderr_path);
             return Ok(ChildRun {
-                success: output.status.success(),
+                success: status.success(),
                 timed_out: false,
-                exit_code: output.status.code(),
-                stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
-                stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+                exit_code: status.code(),
+                stdout,
+                stderr,
             });
         }
         if start.elapsed() >= timeout {
             let _ = child.kill();
-            let output = child.wait_with_output()?;
+            let status = child.wait()?;
+            let stdout = read_child_capture(&stdout_path);
+            let stderr = read_child_capture(&stderr_path);
+            remove_child_capture(&stdout_path);
+            remove_child_capture(&stderr_path);
             return Ok(ChildRun {
                 success: false,
                 timed_out: true,
-                exit_code: output.status.code(),
-                stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
-                stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+                exit_code: status.code(),
+                stdout,
+                stderr,
             });
         }
         thread::sleep(Duration::from_millis(100));
     }
+}
+
+fn child_capture_path(kind: &str) -> PathBuf {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let sequence = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or_default();
+    std::env::temp_dir()
+        .join(format!("bitnet-answer-corpus-{}-{nanos}-{sequence}-{kind}.log", std::process::id()))
+}
+
+fn read_child_capture(path: &Path) -> String {
+    fs::read(path).map(|bytes| String::from_utf8_lossy(&bytes).into_owned()).unwrap_or_default()
+}
+
+fn remove_child_capture(path: &Path) {
+    let _ = fs::remove_file(path);
 }
 
 fn tail_string(value: &str, max_chars: usize) -> String {
@@ -595,22 +711,33 @@ mod tests {
     #[test]
     fn exact_gate_accepts_trimmed_answer() {
         let gate = AnswerGate { expected: Some("4".to_string()), ..gate("exact_trimmed") };
-        let quality = evaluate_quality(" 4\n", &gate);
+        let quality = evaluate_quality(" 4\n", &gate, None, None, None);
         assert!(quality.passed);
     }
 
     #[test]
     fn quality_rejects_raw_special_tokens() {
-        let quality = evaluate_quality("<|start_header_id|>assistant", &gate("readable"));
+        let quality =
+            evaluate_quality("<|start_header_id|>assistant", &gate("readable"), None, None, None);
         assert!(!quality.passed);
         assert!(quality.failed_rules.contains(&"raw_special_tokens".to_string()));
     }
 
     #[test]
     fn quality_rejects_punctuation_noise() {
-        let quality = evaluate_quality("!!!,,,!!!", &gate("readable"));
+        let quality = evaluate_quality("!!!,,,!!!", &gate("readable"), None, None, None);
         assert!(!quality.passed);
         assert!(quality.failed_rules.contains(&"mostly_text".to_string()));
+    }
+
+    #[test]
+    fn apple_m4_quality_rejects_short_or_degenerate_token_output() {
+        let gate = AnswerGate { min_words: Some(2), ..gate("readable") };
+        let quality = evaluate_quality("short answer", &gate, Some(&[7, 7, 7]), Some(4), Some(2));
+        assert!(!quality.passed);
+        assert!(quality.failed_rules.contains(&"generated_token_min".to_string()));
+        assert!(quality.failed_rules.contains(&"generated_token_variation".to_string()));
+        assert_eq!(quality.distinct_generated_tokens, 1);
     }
 
     #[test]
@@ -637,7 +764,26 @@ mod tests {
             }
         });
 
-        assert!(cpu_answer_receipt_failed_rules(&receipt).is_empty());
+        assert!(answer_receipt_failed_rules(&receipt, "cpu").is_empty());
+    }
+
+    #[test]
+    fn answer_receipt_accepts_strict_apple_m4_cpu_neon_truth() {
+        let receipt = json!({
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "gguf_metadata", "strict": true },
+            "kernel": { "kernel_id": "i2_s-scalar-reference" },
+            "tokens": {
+                "prompt_ids": [1, 2, 3],
+                "ids": [4]
+            }
+        });
+
+        assert!(answer_receipt_failed_rules(&receipt, "apple-m4-cpu-neon").is_empty());
     }
 
     #[test]
@@ -653,7 +799,7 @@ mod tests {
             "tokens": {}
         });
 
-        let failed = cpu_answer_receipt_failed_rules(&receipt);
+        let failed = answer_receipt_failed_rules(&receipt, "cpu");
         assert!(failed.contains(&"fallback_false".to_string()));
         assert!(failed.contains(&"loader_real_gguf".to_string()));
         assert!(failed.contains(&"tokenizer_source_recorded".to_string()));
