@@ -55,7 +55,7 @@
 | nvidia-5070ti | CUDA-BITNET-006 | CUDA-BITNET-005 | merged |
 | nvidia-5070ti | CUDA-BITNET-007 | CUDA-BITNET-006 | merged |
 | nvidia-5070ti | CUDA-BITNET-008 | CUDA-BITNET-007 | merged |
-| nvidia-5070ti | CUDA-BITNET-009 | CUDA-BITNET-008 | pr_open |
+| nvidia-5070ti | CUDA-BITNET-009 | CUDA-BITNET-008 | merged |
 | nvidia-5070ti | CUDA-DENSE-001 | RTX5070TI-007 | proposed |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |

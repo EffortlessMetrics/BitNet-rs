@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T07:33:57Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-009"
+event = "merged"
+pr = 3837
+merge_sha = "c2db401b561e251ee043ba61f51f3e8e6be244ac"
+actor = "codex"
+
+notes = [
+  "CUDA-BITNET-009 merged with routed strict RTX 5070 Ti CUDA proofs using persistent QK256 CUDA weight handles.",
+  "The refreshed receipts record weights_uploaded_once=true, per_token_weight_upload=false, qk256_gemv_cuda invocations greater than zero, zero CPU fallback, and speedup_claim=false.",
+]

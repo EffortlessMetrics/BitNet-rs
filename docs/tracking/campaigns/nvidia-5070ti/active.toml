@@ -517,7 +517,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-009"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-bitnet-009-upload-once-routed-proof"
 stackable = false
 review_mode = "codex_premerge"
