@@ -1,0 +1,15 @@
+timestamp = "2026-05-07T21:59:31Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-002"
+event = "merged"
+from = "ready"
+to = "merged"
+pr = 3929
+merge_sha = "9ab5021d2e8f319d7bd3d64e13fc4440fa0abd4f"
+actor = "codex"
+
+notes = [
+  "Merged #3929, adding scalar-vs-AVX2 strict answer parity on the 258V.",
+  "The 2026-05-07 receipts show scalar and AVX2 agree while shared answer quality still fails, separating AVX2 divergence from shared decode/artifact behavior.",
+  "Advanced CPU258V-003 to ready for phase benchmark receipts on the 258V CPU reference lane.",
+]
