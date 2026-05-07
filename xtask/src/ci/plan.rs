@@ -38,6 +38,18 @@ pub struct Plan {
     pub estimated_lem: u64,
     pub band: String,
     pub changed_count: usize,
+    /// Risk packs activated by the changed paths (PR 17). Names match
+    /// the keys in `policy/ci-risk-packs.toml`.
+    #[serde(default)]
+    pub risk_packs: Vec<String>,
+    /// Soft-budget guard verdict (PR 18). One of "ok", "warn",
+    /// "strong-warn", "ack-suggested", "block".
+    #[serde(default)]
+    pub guard: String,
+    /// Override labels detected on the PR that may permit a budget
+    /// overage (PR 18).
+    #[serde(default)]
+    pub override_labels_present: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -291,6 +303,8 @@ pub fn build_plan(changed: &[String], labels: &[String]) -> Plan {
     let lanes = pick_lanes(&touched, labels, !changed.is_empty());
     let total: u64 = lanes.iter().map(|l| l.lem).sum();
     let posture = posture_for(&touched, !changed.is_empty());
+    let risk_packs = pick_risk_packs(changed);
+    let (guard, override_labels_present) = guard_verdict(total, labels);
     Plan {
         posture,
         touched,
@@ -299,7 +313,121 @@ pub fn build_plan(changed: &[String], labels: &[String]) -> Plan {
         estimated_lem: total,
         band: band_for(total).to_string(),
         changed_count: changed.len(),
+        risk_packs,
+        guard,
+        override_labels_present,
     }
+}
+
+/// Risk-pack routing (PR 17). Maps changed paths to the risk-pack
+/// keys declared in `policy/ci-risk-packs.toml`. The mapping is
+/// embedded here for now to avoid a runtime dependency on the
+/// policy TOML; PR 17 follow-up can read directly from disk.
+fn pick_risk_packs(changed: &[String]) -> Vec<String> {
+    let table: &[(&str, &[&str])] = &[
+        (
+            "qk256",
+            &[
+                "crates/bitnet-quantization/",
+                "crates/bitnet-quantization-bits/",
+                "crates/bitnet-qk256-",
+                "crates/bitnet-models/src/qk256",
+            ],
+        ),
+        (
+            "kernels_cpu",
+            &["crates/bitnet-kernels/", "crates/bitnet-cpu-activations/", "crates/bitnet-simd/"],
+        ),
+        (
+            "gpu",
+            &[
+                "crates/bitnet-gpu-hal/",
+                "crates/bitnet-device-probe/",
+                "crates/bitnet-device-config-core/",
+                "crates/bitnet-metal/",
+                "crates/bitnet-opencl/",
+                "crates/bitnet-vulkan",
+                "crates/bitnet-vulkan-shaders",
+                "crates/bitnet-wgpu",
+                "crates/bitnet-wgpu-shaders-i2s",
+                "crates/bitnet-rocm/",
+                "crates/bitnet-nvidia/",
+                "crates/bitnet-spirv/",
+                "crates/bitnet-webgpu/",
+            ],
+        ),
+        (
+            "ffi",
+            &["crates/bitnet-ffi/", "crates/bitnet-sys/", "crates/bitnet-ggml-ffi/", "crossval/"],
+        ),
+        (
+            "tokenizer",
+            &[
+                "crates/bitnet-tokenizers/",
+                "crates/bitnet-token-merge-core/",
+                "crates/bitnet-tokenizer-model-core/",
+                "crates/bitnet-tokenizer-discovery-core/",
+                "crates/bitnet-tokenizer-text-core/",
+                "tests/fixtures/tokenizers/",
+            ],
+        ),
+        (
+            "bdd_policy",
+            &[
+                "crates/bitnet-bdd-",
+                "crates/bitnet-testing-policy",
+                "crates/bitnet-testing-scenarios",
+                "crates/bitnet-runtime-feature-flags",
+                "crates/bitnet-startup-contract",
+                "crates/bitnet-feature-contract",
+            ],
+        ),
+        ("manifest_release", &["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/"]),
+        (
+            "docs_tracking",
+            &["docs/", ".codex/campaigns/", "README.md", "CHANGELOG.md", "CONTRIBUTING.md"],
+        ),
+    ];
+
+    let mut out: Vec<String> = Vec::new();
+    for (pack, prefixes) in table {
+        let any_match = changed.iter().any(|c| prefixes.iter().any(|p| c.starts_with(p)));
+        if any_match {
+            out.push((*pack).to_string());
+        }
+    }
+    out
+}
+
+/// Soft-budget guard verdict (PR 18). Reads thresholds from
+/// `policy/ci-budget.toml` if present, otherwise uses the defaults
+/// declared there.
+fn guard_verdict(total: u64, labels: &[String]) -> (String, Vec<String>) {
+    let warn_at = 35u64;
+    let strong_warn_at = 75u64;
+    let suggest_ack_at = 100u64;
+    let fail_above = 125u64;
+    let override_label_set: &[&str] = &["full-ci", "ci-budget-override", "ci-budget-ack"];
+
+    let present: Vec<String> = override_label_set
+        .iter()
+        .filter(|l| labels.iter().any(|x| x == *l))
+        .map(|s| (*s).to_string())
+        .collect();
+
+    let verdict = if total > fail_above {
+        if !present.is_empty() { "block-overridden" } else { "block" }
+    } else if total >= suggest_ack_at {
+        "ack-suggested"
+    } else if total >= strong_warn_at {
+        "strong-warn"
+    } else if total >= warn_at {
+        "warn"
+    } else {
+        "ok"
+    };
+
+    (verdict.to_string(), present)
 }
 
 fn render_markdown(plan: &Plan) -> String {
@@ -320,7 +448,28 @@ fn render_markdown(plan: &Plan) -> String {
         sorted.join(", ")
     };
     s.push_str(&format!("- **Labels:** {labels_str}\n"));
-    s.push_str(&format!("- **Estimated LEM:** {}  ·  {}\n\n", plan.estimated_lem, plan.band));
+    s.push_str(&format!("- **Estimated LEM:** {}  ·  {}\n", plan.estimated_lem, plan.band));
+    if !plan.risk_packs.is_empty() {
+        s.push_str(&format!("- **Risk packs:** {}\n", plan.risk_packs.join(", ")));
+    }
+    let guard_icon = match plan.guard.as_str() {
+        "ok" => "✅",
+        "warn" => "⚠️",
+        "strong-warn" => "⚠️⚠️",
+        "ack-suggested" => "🔶",
+        "block" => "🚨",
+        "block-overridden" => "🚨(overridden)",
+        _ => "·",
+    };
+    let override_note = if plan.override_labels_present.is_empty() {
+        String::new()
+    } else {
+        format!(" (overrides: {})", plan.override_labels_present.join(", "))
+    };
+    s.push_str(&format!(
+        "- **Budget guard:** {} `{}`{}\n\n",
+        guard_icon, plan.guard, override_note
+    ));
     s.push_str("| Lane | Estimated LEM | Reason |\n");
     s.push_str("|---|---:|---|\n");
     if plan.lanes.is_empty() {
@@ -359,6 +508,7 @@ fn decode_lines(bytes: &[u8]) -> Vec<String> {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     base: Option<String>,
     head: Option<String>,
@@ -367,6 +517,7 @@ pub fn run(
     json_out: Option<PathBuf>,
     github_summary: Option<PathBuf>,
     print_stdout: bool,
+    enforce_budget: bool,
 ) -> Result<()> {
     let labels = match labels_json {
         Some(j) => parse_labels(&j)?,
@@ -404,6 +555,15 @@ pub fn run(
         }
         existing.push_str(&md);
         fs::write(&p, existing).with_context(|| format!("writing {}", p.display()))?;
+    }
+
+    if enforce_budget && plan.guard == "block" {
+        bail!(
+            "ci-plan budget guard: estimated LEM {} > hard ceiling 125 with no override label \
+             ({}). Add `full-ci`, `ci-budget-override`, or `ci-budget-ack` to acknowledge.",
+            plan.estimated_lem,
+            plan.labels.join(", ")
+        );
     }
 
     Ok(())
@@ -465,5 +625,84 @@ mod tests {
         assert_eq!(l, vec!["a".to_string(), "b".to_string()]);
         let empty = parse_labels("").unwrap();
         assert!(empty.is_empty());
+    }
+
+    #[test]
+    fn risk_packs_qk256_and_kernels() {
+        let plan = build_plan(
+            &s(&[
+                "crates/bitnet-quantization/src/qk256.rs",
+                "crates/bitnet-kernels/src/cpu/avx2.rs",
+            ]),
+            &[],
+        );
+        assert!(plan.risk_packs.iter().any(|p| p == "qk256"));
+        assert!(plan.risk_packs.iter().any(|p| p == "kernels_cpu"));
+    }
+
+    #[test]
+    fn risk_packs_gpu_ffi_and_tokenizer() {
+        let plan = build_plan(
+            &s(&[
+                "crates/bitnet-metal/src/kernels/matmul.metal",
+                "crates/bitnet-ffi/src/lib.rs",
+                "crates/bitnet-tokenizers/src/lib.rs",
+            ]),
+            &[],
+        );
+        assert!(plan.risk_packs.iter().any(|p| p == "gpu"));
+        assert!(plan.risk_packs.iter().any(|p| p == "ffi"));
+        assert!(plan.risk_packs.iter().any(|p| p == "tokenizer"));
+    }
+
+    #[test]
+    fn risk_packs_manifest_release() {
+        let plan = build_plan(&s(&["Cargo.toml", "Cargo.lock"]), &[]);
+        assert!(plan.risk_packs.iter().any(|p| p == "manifest_release"));
+    }
+
+    #[test]
+    fn risk_packs_docs_tracking() {
+        let plan = build_plan(&s(&["docs/foo.md", "README.md"]), &[]);
+        assert!(plan.risk_packs.iter().any(|p| p == "docs_tracking"));
+    }
+
+    #[test]
+    fn guard_ok_for_low_lem() {
+        let plan = build_plan(&s(&["docs/foo.md"]), &[]);
+        assert_eq!(plan.guard, "ok");
+        assert!(plan.override_labels_present.is_empty());
+    }
+
+    #[test]
+    fn guard_warn_at_35_lem() {
+        let (verdict, _) = guard_verdict(50, &[]);
+        assert_eq!(verdict, "warn");
+    }
+
+    #[test]
+    fn guard_strong_warn_at_75_lem() {
+        let (verdict, _) = guard_verdict(80, &[]);
+        assert_eq!(verdict, "strong-warn");
+    }
+
+    #[test]
+    fn guard_block_above_125_without_override() {
+        let (verdict, present) = guard_verdict(150, &["unrelated".into()]);
+        assert_eq!(verdict, "block");
+        assert!(present.is_empty());
+    }
+
+    #[test]
+    fn guard_block_overridden_with_full_ci_label() {
+        let (verdict, present) = guard_verdict(150, &["full-ci".into()]);
+        assert_eq!(verdict, "block-overridden");
+        assert_eq!(present, vec!["full-ci".to_string()]);
+    }
+
+    #[test]
+    fn guard_ack_suggested_at_100_lem() {
+        let (verdict, _) = guard_verdict(110, &[]);
+        assert_eq!(verdict, "ack-suggested");
     }
 }

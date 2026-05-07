@@ -1135,6 +1135,10 @@ enum CiCmd {
         /// Run the planner without writing artefacts.
         #[arg(long, default_value_t = false)]
         dry_run: bool,
+        /// Exit non-zero when the soft-budget guard verdict is `block`
+        /// (estimated LEM > 125 with no override label). PR 18.
+        #[arg(long, default_value_t = false)]
+        enforce_budget: bool,
     },
 }
 
@@ -1544,6 +1548,7 @@ fn real_main() -> Result<()> {
                 github_summary,
                 print,
                 dry_run,
+                enforce_budget,
             } => ci::plan::run(
                 base,
                 head,
@@ -1552,6 +1557,7 @@ fn real_main() -> Result<()> {
                 if dry_run { None } else { Some(json_out) },
                 if dry_run { None } else { github_summary },
                 print,
+                enforce_budget,
             ),
         },
     }
