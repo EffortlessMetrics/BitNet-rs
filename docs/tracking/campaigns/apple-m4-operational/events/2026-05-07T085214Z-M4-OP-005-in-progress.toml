@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T08:52:14Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-005"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started conservative Apple M4 benchmark profile summary validation.",
+  "Scope is xtask receipt validation, the operator runbook, and apple-m4-operational tracking.",
+  "The item must not turn tiny-kernel or one-token profile data into a broad M4 performance claim.",
+]

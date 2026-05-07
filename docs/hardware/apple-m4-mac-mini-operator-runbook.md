@@ -189,6 +189,35 @@ This is the closest supported user-facing path: prompt in, generated text out,
 and a strict receipt showing the requested and selected Apple CPU backend. It may
 be slow. Its receipt must not be described as Metal acceleration.
 
+## Conservative Profile Names
+
+Apple M4 operational profiles are named so a receipt cannot turn one tiny proof
+into a broad performance claim.
+
+| Profile | Meaning | Current status |
+|---|---|---|
+| `strict_cpu_neon_smoke_1` | One-token strict CPU/NEON proof/profile with timing fields. | Emitted by `apple-m4 validate` as `phase-profile.json` and `allocation-audit.json`. |
+| `metal_i2s_parity` | I2_S-adjacent Metal parity fixture. | Receipt-backed parity only, not a throughput benchmark. |
+| `prefill_512` | Future 512-token prefill profile. | Not proven by the current bundle. |
+| `decode_128` | Future 128-token decode profile. | Not proven by the current bundle. |
+| `context_4096` | Future 4096-token context profile. | Not proven by the current bundle. |
+
+Profile receipts should include:
+
+```text
+timing.model_load_ms
+timing.tokenize_ms
+timing.prefill_ms
+timing.first_token_ms
+timing.decode_steady_state_tok_s
+timing.sampling_ms_per_token
+latency.total_ms
+```
+
+The receipt checker validates those fields for profile receipts. Missing values
+may be `null` only where the profile cannot produce a meaningful number, such as
+steady-state decode throughput for a one-token smoke run.
+
 ## Metal Phase Proof
 
 Metal proof is currently phase/subgraph proof, not full model inference. The
