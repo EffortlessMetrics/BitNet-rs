@@ -39,7 +39,7 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-BITNET-005c | merged | AVX2 decode GEMV parity hardening merged in #3753. |
 | CPU-BITNET-006 | merged | CPU transformer decode step merged in #3793. |
 | CPU-BITNET-007 | merged | Strict CPU proof receipt enforcement merged in #3800. |
-| CPU-BITNET-008 | ready | CPU phase benchmark receipt profiles. |
+| CPU-BITNET-008 | merged | CPU phase benchmark receipt profiles merged in #3856. |
 
 ## Review Policy
 

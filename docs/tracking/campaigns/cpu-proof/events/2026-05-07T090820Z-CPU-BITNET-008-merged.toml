@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T09:08:20Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-008"
+event = "merged"
+pr = 3856
+merge_sha = "b6ca67223a8989646e2df3d2303a11e2e8e7cacc"
+actor = "maintainer"
+
+notes = [
+  "CPU-BITNET-008 Kaby decode evidence merged.",
+  "CPU phase benchmark evidence remains CPU-only and does not claim GPU or NPU execution.",
+]
