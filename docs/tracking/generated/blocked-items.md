@@ -21,7 +21,7 @@
 | apple-m4 | M4-017 | M4-016 | merged |
 | apple-m4 | M4-018 | M4-017 | merged |
 | apple-m4-local-answer | M4-QA-001 | M4-QA-MODEL-002 | blocked |
-| apple-m4-local-answer | M4-QA-MODEL-001 | M4-QA-ROOT-001 | in_progress |
+| apple-m4-local-answer | M4-QA-MODEL-001 | M4-QA-ROOT-001 | pr_open |
 | apple-m4-local-answer | M4-QA-MODEL-002 | M4-QA-MODEL-001 | proposed |
 | apple-m4-local-answer | M4-QA-002 | M4-QA-001 | proposed |
 | apple-m4-local-answer | M4-QA-003 | M4-QA-001 | proposed |

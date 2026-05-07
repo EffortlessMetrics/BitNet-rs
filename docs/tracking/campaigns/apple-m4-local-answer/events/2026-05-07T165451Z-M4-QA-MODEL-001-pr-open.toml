@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T16:54:51Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-MODEL-001"
+event = "pr_open"
+pr = 3913
+head_sha = "ae05737a4afe45448f4427b3e168e16d309721e3"
+actor = "codex"
+
+notes = [
+  "Opened artifact-gate PR rejecting the current local BitNet GGUF for Apple M4 local-answer quality claims.",
+  "The current artifact remains structurally valid, but it fails the reference prompt suite and lacks pre-tokenizer authority.",
+]

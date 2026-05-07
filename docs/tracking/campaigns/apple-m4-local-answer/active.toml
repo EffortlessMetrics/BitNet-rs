@@ -119,7 +119,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-MODEL-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-local-answer/M4-QA-MODEL-001-artifact-validation"
 stackable = false
 review_mode = "codex_premerge"
