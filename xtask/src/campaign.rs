@@ -1159,7 +1159,7 @@ fn pull_request_claims_item(pr: &GithubPullRequest, item_id: &str) -> bool {
     if pr.labels.iter().any(|label| label.name.eq_ignore_ascii_case(&item_label)) {
         return true;
     }
-    if pr.title.contains(item_id) {
+    if text_contains_item_token(&pr.title, item_id) {
         return true;
     }
 
@@ -1177,7 +1177,7 @@ fn body_line_claims_item(line: &str, item_id: &str) -> bool {
         .trim()
         .trim_matches('`')
         .trim();
-    if trimmed.starts_with(item_id) {
+    if text_starts_with_item_token(trimmed, item_id) {
         return true;
     }
 
@@ -1187,7 +1187,25 @@ fn body_line_claims_item(line: &str, item_id: &str) -> bool {
         || lower.starts_with("item ")
         || lower.starts_with("scope:")
         || lower.starts_with("boundary:");
-    explicit_claim && trimmed.contains(item_id)
+    explicit_claim && text_contains_item_token(trimmed, item_id)
+}
+
+fn text_starts_with_item_token(text: &str, item_id: &str) -> bool {
+    text.strip_prefix(item_id)
+        .is_some_and(|rest| rest.chars().next().map_or(true, |ch| !is_item_token_char(ch)))
+}
+
+fn text_contains_item_token(text: &str, item_id: &str) -> bool {
+    text.match_indices(item_id).any(|(start, matched)| {
+        let before = text[..start].chars().next_back();
+        let after = text[start + matched.len()..].chars().next();
+        before.map_or(true, |ch| !is_item_token_char(ch))
+            && after.map_or(true, |ch| !is_item_token_char(ch))
+    })
+}
+
+fn is_item_token_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || ch == '-'
 }
 
 fn pull_request_is_merge_closeout(pr: &GithubPullRequest) -> bool {
@@ -1248,7 +1266,7 @@ fn fail_on_errors(problems: &[Problem]) -> Result<()> {
 mod tests {
     use super::{
         CampaignManifest, LoadedCampaign, Severity, TextList, WorkItem, parse_pull_request_ref,
-        validate_campaign,
+        text_contains_item_token, validate_campaign,
     };
     use std::path::PathBuf;
 
@@ -1263,6 +1281,17 @@ mod tests {
     fn rejects_non_pull_request_refs() {
         assert_eq!(parse_pull_request_ref("refs/heads/main"), None);
         assert_eq!(parse_pull_request_ref(""), None);
+    }
+
+    #[test]
+    fn github_pr_claim_matching_uses_item_token_boundaries() {
+        assert!(text_contains_item_token("[codex][apple-m4] Add lane scaffold (M4-001)", "M4-001"));
+        assert!(text_contains_item_token("Work item: SLM-M4-001", "SLM-M4-001"));
+        assert!(!text_contains_item_token(
+            "[codex][apple-m4-slm-answer] Seed campaign (SLM-M4-001)",
+            "M4-001"
+        ));
+        assert!(!text_contains_item_token("Work item: SLM-M4-001", "M4-001"));
     }
 
     #[test]
