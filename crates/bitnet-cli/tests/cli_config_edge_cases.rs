@@ -2,7 +2,9 @@
 //! CliConfig, LoggingConfig, PerformanceConfig, ConfigBuilder, validation, and TOML serde.
 #![allow(clippy::field_reassign_with_default)]
 
-use bitnet_cli::config::{CliConfig, ConfigBuilder, LoggingConfig, PerformanceConfig};
+use bitnet_cli::config::{
+    APPLE_M4_DEVICE_LABELS_TEXT, CliConfig, ConfigBuilder, LoggingConfig, PerformanceConfig,
+};
 use std::path::PathBuf;
 
 // ---------------------------------------------------------------------------
@@ -94,6 +96,19 @@ fn validate_rejects_invalid_device() {
     let mut cfg = CliConfig::default();
     cfg.default_device = "tpu".to_string();
     assert!(cfg.validate().is_err());
+}
+
+#[test]
+fn validate_invalid_device_error_describes_apple_lane_boundaries() {
+    let mut cfg = CliConfig::default();
+    cfg.default_device = "tpu".to_string();
+    let err = cfg.validate().unwrap_err().to_string();
+
+    assert!(err.contains("npu:<index>"), "got: {err}");
+    assert!(err.contains("intel-npu-openvino"), "got: {err}");
+    assert!(err.contains(APPLE_M4_DEVICE_LABELS_TEXT), "got: {err}");
+    assert!(err.contains("strict mode fails"), "got: {err}");
+    assert!(err.contains("fallback_used"), "got: {err}");
 }
 
 #[test]

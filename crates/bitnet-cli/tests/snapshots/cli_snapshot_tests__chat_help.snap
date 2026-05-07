@@ -23,7 +23,7 @@ Options:
 
       --model-format <FORMAT>
           Model format (auto, gguf, safetensors)
-          
+
           [default: auto]
 
       --log-level <LEVEL>
@@ -39,20 +39,20 @@ Options:
           Output file for results
 
   -d, --device <DEVICE>
-          Device to use for inference (cpu, cuda, auto)
+          Device for this legacy command (cpu, cuda/gpu aliases, auto). Use `bitnet run` for receipt-backed Apple M4 labels
 
   -q, --quantization <TYPE>
           Quantization type (i2s, tl1, tl2, auto)
 
       --max-tokens <N>
           Maximum number of tokens to generate (aliases: --max-new-tokens, --n-predict)
-          
+
           [default: 512]
           [aliases: --max-new-tokens, --n-predict]
 
       --temperature <TEMP>
           Temperature for sampling (0.0 = greedy, higher = more random)
-          
+
           [default: 0.7]
 
       --top-k <K>
@@ -63,7 +63,7 @@ Options:
 
       --repetition-penalty <PENALTY>
           Repetition penalty
-          
+
           [default: 1.1]
 
       --seed <SEED>
@@ -83,7 +83,7 @@ Options:
 
       --batch-size <SIZE>
           Batch size for processing multiple prompts
-          
+
           [default: 1]
 
       --workers <N>
@@ -100,7 +100,7 @@ Options:
 
       --format <FORMAT>
           Output format (text, json, jsonl)
-          
+
           [default: text]
 
       --system-prompt <TEXT>
@@ -111,7 +111,7 @@ Options:
 
       --prompt-template <TEMPLATE>
           Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
-          
+
           [default: auto]
 
       --tokenizer <PATH>
@@ -125,7 +125,7 @@ Options:
 
       --stop <SEQ>
           Stop sequences (aliases: --stop-sequence, --stop_sequences)
-          
+
           [aliases: --stop-sequence, --stop_sequences]
 
       --stop-id <ID>
@@ -133,7 +133,7 @@ Options:
 
       --stop-string-window <N>
           Window size for tail-based stop string matching (default: 64) Only decode the last N tokens when checking stop sequences
-          
+
           [default: 64]
 
       --timeout <SECONDS>
@@ -144,7 +144,7 @@ Options:
 
       --logits-topk <K>
           Number of top logits to dump per step
-          
+
           [default: 10]
 
       --chat-history-limit <N>
@@ -160,7 +160,7 @@ Options:
           Q&A mode: bundle Q&A-friendly defaults (auto template, temp=0.7, top-p=0.95, top-k=50) Individual parameters can still be overridden (e.g., --qa --temperature 0.5)
 
       --strict-loader
-          Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1) Preferred for CI/parity testing. Unset to allow minimal loader fallback (reduced features)
+          Strict loader mode: fail-fast with authoritative real_gguf loading. Preferred for CI/parity testing; compatibility loaders are rejected
 
   -h, --help
           Print help (see a summary with '-h')

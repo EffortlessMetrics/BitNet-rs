@@ -627,6 +627,43 @@ reference parity with `fallback_used=false`. It must not claim full Metal
 inference, QK256 acceleration, Neural Engine execution, MPSGraph execution, or
 general M4 performance.
 
+### M4-018 - CLI and Package Surface Polish
+
+Polish the package-facing Apple backend labels and failure-mode text after the
+strict proof and kernel/subgraph expansion items. The CLI should present these
+as separate proof lanes:
+
+```text
+apple-m4-metal     native Metal proof lane
+apple-m4-mpsgraph  MPSGraph graph/reference proof lane
+apple-m4-cpu-neon  Apple ARM64 CPU/NEON fallback and parity lane
+```
+
+`apple-m4-metal` must not alias to MPSGraph, Neural Engine, CPU fallback, or
+generic `metal`. `apple-m4-mpsgraph` must not count as native Metal kernel
+proof or Neural Engine proof without resolved-target evidence.
+`apple-m4-cpu-neon` must not count as Metal acceleration.
+
+Strict-mode failures should explain that unavailable Apple labels fail rather
+than silently falling back. Non-strict fallback paths must remain receipt-backed
+with `requested_backend`, `selected_backend`, `runtime_api`, `fallback_used`,
+and `fallback_reason`.
+
+Legacy CLI subcommands that do not emit Apple proof receipts should point users
+to `bitnet run` for receipt-backed Apple M4 labels. The artifact path examples
+remain:
+
+```text
+ci/hardware/apple-m4-mac-mini/<date>/strict-bitnet-cpu-neon-proof.json
+ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-parity.json
+ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-prefill-contribution.json
+ci/hardware/apple-m4-mac-mini/<date>/metal-i2s-projection-residual.json
+```
+
+M4-018 may claim only that Apple backend CLI and package surfaces describe
+supported backend labels and failure modes accurately. It must not claim new
+Metal kernel execution, Neural Engine execution, or general M4 performance.
+
 ## Do Not
 
 - Do not start with Apple Neural Engine inference claims.

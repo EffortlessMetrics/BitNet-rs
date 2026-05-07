@@ -2,4 +2,4 @@
 source: crates/bitnet-cli/tests/snapshot_wave10.rs
 expression: err.to_string()
 ---
-Invalid device: quantum. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, npu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto
+Invalid device: quantum. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, hip, rocm, oneapi, npu, npu:<index>, intel-npu, intel-npu:<index>, openvino-npu, intel-npu-openvino, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto. Apple M4 labels are distinct proof lanes: apple-m4-metal = native Metal proof lane, apple-m4-mpsgraph = MPSGraph graph/reference lane, apple-m4-cpu-neon = Apple CPU/NEON fallback/parity lane. On unavailable or non-M4 hosts, strict mode fails and non-strict receipt paths must record fallback_used and fallback_reason.

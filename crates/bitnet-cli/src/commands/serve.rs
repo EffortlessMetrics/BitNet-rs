@@ -5,7 +5,7 @@ use clap::Args;
 use std::path::PathBuf;
 use tracing::{info, warn};
 
-use crate::config::CliConfig;
+use crate::config::{CliConfig, LEGACY_RUNTIME_DEVICE_HELP};
 
 /// Serve command arguments
 #[derive(Args, Debug)]
@@ -22,8 +22,7 @@ pub struct ServeCommand {
     #[arg(short, long, default_value = "8080", value_name = "PORT")]
     pub port: u16,
 
-    /// Device to use (cpu, cuda, auto)
-    #[arg(short, long, value_name = "DEVICE")]
+    #[arg(short, long, value_name = "DEVICE", help = LEGACY_RUNTIME_DEVICE_HELP)]
     pub device: Option<String>,
 
     /// Maximum concurrent requests

@@ -25,7 +25,9 @@ use insta::assert_snapshot;
 /// Panics if the process exits with a non-zero code.
 fn bitnet_stdout(args: &[&str]) -> String {
     let output = cargo_bin_cmd!("bitnet").args(args).output().expect("failed to spawn bitnet");
-    String::from_utf8(output.stdout).expect("stdout is not valid UTF-8")
+    trim_trailing_line_whitespace(
+        String::from_utf8(output.stdout).expect("stdout is not valid UTF-8"),
+    )
 }
 
 /// Run `bitnet <args>` and return its stderr as a `String`.
@@ -34,6 +36,15 @@ fn bitnet_stderr_failure(args: &[&str]) -> String {
     let output = cargo_bin_cmd!("bitnet").args(args).output().expect("failed to spawn bitnet");
     assert!(!output.status.success(), "expected bitnet {:?} to fail, but it succeeded", args);
     String::from_utf8(output.stderr).expect("stderr is not valid UTF-8")
+}
+
+fn trim_trailing_line_whitespace(output: String) -> String {
+    let ends_with_newline = output.ends_with('\n');
+    let mut normalized = output.lines().map(str::trim_end).collect::<Vec<_>>().join("\n");
+    if ends_with_newline {
+        normalized.push('\n');
+    }
+    normalized
 }
 
 // ---------------------------------------------------------------------------

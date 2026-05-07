@@ -11,7 +11,10 @@ use bitnet_inference::InferenceEngine;
 use bitnet_models::ModelLoader;
 use bitnet_scoring_core::{NllStats, observe_target_nll, sanitize_logits_in_place};
 
-use crate::config::CliConfig;
+use crate::config::{
+    CliConfig, invalid_device_message, is_supported_device_label,
+    unsupported_legacy_command_device_message,
+};
 
 /// Evaluate model perplexity and performance
 #[derive(Debug, Args)]
@@ -32,7 +35,7 @@ pub struct EvalCommand {
     #[arg(long, value_name = "PATH")]
     pub tokenizer: Option<PathBuf>,
 
-    /// Device to use for inference
+    /// Device to use for eval; Apple M4 proof labels are receipt-backed in `bitnet run`
     #[arg(short, long, default_value = "auto")]
     pub device: String,
 
@@ -331,10 +334,10 @@ impl EvalCommand {
                     Ok(Device::Cpu)
                 }
             }
-            _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, metal, npu, auto",
-                self.device
-            ),
+            label if is_supported_device_label(label) => {
+                anyhow::bail!("{}", unsupported_legacy_command_device_message("bitnet eval", label))
+            }
+            _ => anyhow::bail!("{}", invalid_device_message(&self.device)),
         }
     }
 

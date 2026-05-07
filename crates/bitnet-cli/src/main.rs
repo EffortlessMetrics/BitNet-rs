@@ -5,7 +5,7 @@
 
 // COMPILE-TIME FIREWALL: Prevent mock feature in production CLI
 #[cfg(feature = "mock")]
-compile_error!("The 'mock' feature must never be enabled for the CLI ΓÇô tests only.");
+compile_error!("The 'mock' feature must never be enabled for the CLI - tests only.");
 
 use anyhow::{Context, Result};
 use bitnet_common::Tensor;
@@ -119,13 +119,13 @@ fn bitnet_version() -> &'static str {
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
 use commands::{ConvertCommand, InferenceCommand, InspectCommand, ServeCommand};
-use config::{CliConfig, ConfigBuilder};
+use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
 #[derive(Parser)]
 #[command(name = "bitnet")]
-#[command(about = "BitNet-rs ΓÇö 1-bit neural network inference with strict receipts")]
-#[command(long_about = r#"BitNet-rs CLI ΓÇö one-shot generation and chat with strict receipts
+#[command(about = "BitNet-rs - 1-bit neural network inference with strict receipts")]
+#[command(long_about = r#"BitNet-rs CLI - one-shot generation and chat with strict receipts
 
 QUICK EXAMPLES:
 
@@ -158,9 +158,9 @@ PERFORMANCE:
 
   QK256 Models (I2_S quantization):
     - Without AVX2: ~0.1 tok/s (scalar kernels, ~10s per token)
-    - With AVX2: ~1.2├ù faster (optimized kernels)
+    - With AVX2: ~1.2x faster (optimized kernels)
     - For quick validation: use --max-tokens 4-16
-    - SIMD optimizations (ΓëÑ3├ù faster) coming in v0.2.0
+    - SIMD optimizations (>=3x faster) coming in v0.2.0
 "#)]
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
@@ -173,8 +173,7 @@ struct Cli {
     #[arg(short, long, value_name = "PATH", global = true)]
     config: Option<std::path::PathBuf>,
 
-    /// Device/backend to use (cpu, cuda, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, oneapi, gpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, npu, auto)
-    #[arg(short, long, value_name = "DEVICE", global = true)]
+    #[arg(short, long, value_name = "DEVICE", global = true, help = DEVICE_HELP)]
     device: Option<String>,
 
     /// Log level (trace, debug, info, warn, error)
@@ -636,8 +635,20 @@ async fn main() -> Result<()> {
             .unwrap_or(false);
         match select_backend(request, &caps) {
             Ok(result) => info!(backend_selection = %result.identity_summary(), "backend selected"),
-            Err(e) if strict_mode => return Err(e.into()),
-            Err(e) => warn!(error = %e, "backend selection warning"),
+            Err(e) if strict_mode => {
+                let message = backend_selection_error_message_with_note(
+                    &requested_backend_label,
+                    &e.to_string(),
+                );
+                return Err(anyhow::anyhow!(message));
+            }
+            Err(e) => {
+                let message = backend_selection_error_message_with_note(
+                    &requested_backend_label,
+                    &e.to_string(),
+                );
+                warn!(error = %message, "backend selection warning");
+            }
         }
     }
 
@@ -1772,13 +1783,20 @@ fn resolve_run_backend_identity(
             fallback_used: result.fallback_used(),
             fallback_reason: result.fallback_reason().map(str::to_string),
         }),
-        Err(err) if strict_backend => Err(err.into()),
+        Err(err) if strict_backend => {
+            let message =
+                backend_selection_error_message_with_note(&request.to_string(), &err.to_string());
+            Err(anyhow::anyhow!(message))
+        }
         Err(err) => Ok(RunBackendIdentity {
             requested_backend: request.to_string(),
             selected_backend: "cpu".to_string(),
             runtime_api: "cpu".to_string(),
             fallback_used: request != BackendRequest::Auto && request != BackendRequest::Cpu,
-            fallback_reason: Some(err.to_string()),
+            fallback_reason: Some(backend_selection_error_message_with_note(
+                &request.to_string(),
+                &err.to_string(),
+            )),
         }),
     }
 }
@@ -3864,6 +3882,28 @@ fn is_apple_m4_backend_label(label: &str) -> bool {
     label.trim().to_ascii_lowercase().starts_with("apple-m4-")
 }
 
+fn backend_selection_error_message_with_note(requested_backend_label: &str, error: &str) -> String {
+    match apple_backend_failure_note(requested_backend_label) {
+        Some(note) => format!("{error}. {note}"),
+        None => error.to_string(),
+    }
+}
+
+fn apple_backend_failure_note(requested_backend_label: &str) -> Option<&'static str> {
+    match requested_backend_label.trim().to_ascii_lowercase().as_str() {
+        "apple-m4-metal" => Some(
+            "apple-m4-metal is the native Metal proof lane; it does not imply MPSGraph or Neural Engine execution and must not silently fall back to CPU in strict mode. Run on native macOS Apple M4 with Metal visible, or request apple-m4-cpu-neon for the CPU/NEON reference lane.",
+        ),
+        "apple-m4-mpsgraph" => Some(
+            "apple-m4-mpsgraph is the graph/reference proof lane; it is not native Metal kernel proof and is not Neural Engine proof unless the resolved target is receipt-backed.",
+        ),
+        "apple-m4-cpu-neon" => Some(
+            "apple-m4-cpu-neon is the Apple ARM64 CPU/NEON fallback and parity lane; it is not Metal acceleration, and scalar fallback must be visible in receipts.",
+        ),
+        _ => None,
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct AppleCliMachineProbe {
     chip: Option<String>,
@@ -4025,6 +4065,31 @@ mod tests {
             assert!(identity.fallback_used);
             assert!(identity.fallback_reason.is_some());
         }
+    }
+
+    #[test]
+    fn strict_apple_metal_error_describes_non_fallback_proof_lane() {
+        let err = resolve_run_backend_identity("apple-m4-metal", true).unwrap_err().to_string();
+
+        assert!(err.contains("apple-m4-metal"), "got: {err}");
+        assert!(err.contains("native Metal proof lane"), "got: {err}");
+        assert!(err.contains("must not silently fall back to CPU"), "got: {err}");
+        assert!(err.contains("apple-m4-cpu-neon"), "got: {err}");
+    }
+
+    #[test]
+    fn non_strict_apple_mpsgraph_fallback_reason_keeps_graph_boundary() {
+        let identity = resolve_run_backend_identity("apple-m4-mpsgraph", false).unwrap();
+
+        assert_eq!(identity.requested_backend, "apple-m4-mpsgraph");
+        assert!(identity.fallback_used);
+        let fallback_reason = identity.fallback_reason.unwrap();
+        assert!(fallback_reason.contains("graph/reference proof lane"), "got: {fallback_reason}");
+        assert!(
+            fallback_reason.contains("not native Metal kernel proof"),
+            "got: {fallback_reason}"
+        );
+        assert!(fallback_reason.contains("not Neural Engine proof"), "got: {fallback_reason}");
     }
 
     #[test]

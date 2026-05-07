@@ -16,7 +16,10 @@ use bitnet_models::ModelLoader;
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;
 
-use crate::config::CliConfig;
+use crate::config::{
+    CliConfig, LEGACY_RUNTIME_DEVICE_HELP, invalid_device_message, is_supported_device_label,
+    unsupported_legacy_command_device_message,
+};
 
 /// Benchmark command arguments
 #[derive(Args, Debug)]
@@ -25,8 +28,7 @@ pub struct BenchmarkCommand {
     #[arg(short, long, value_name = "PATH")]
     pub model: PathBuf,
 
-    /// Device to benchmark (cpu, cuda, auto)
-    #[arg(short, long, value_name = "DEVICE")]
+    #[arg(short, long, value_name = "DEVICE", help = LEGACY_RUNTIME_DEVICE_HELP)]
     pub device: Option<String>,
 
     /// Number of benchmark iterations
@@ -266,10 +268,13 @@ impl BenchmarkCommand {
                 warn!("CUDA support not yet implemented, falling back to CPU");
                 Ok(Device::Cpu)
             }
-            _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto",
-                device_str
-            ),
+            label if is_supported_device_label(label) => {
+                anyhow::bail!(
+                    "{}",
+                    unsupported_legacy_command_device_message("bitnet benchmark", label)
+                )
+            }
+            _ => anyhow::bail!("{}", invalid_device_message(device_str)),
         }
     }
 
