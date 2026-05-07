@@ -8,7 +8,7 @@
 | apple-m4-local-answer | Apple M4 local answer usability | M4-QA-001 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-operational | Apple M4 operational readiness | M4-OP-006 | Do not reopen the completed apple-m4 proof campaign. |
 | ci-coverage | CI coverage | CI-COVERAGE-001 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | BitNet CPU proof | CPU-ANSWER-001 | No GPU or NPU claims. |
+| cpu-proof | BitNet CPU proof | CPU-ANSWER-002 | No GPU or NPU claims. |
 | cpu-qk256-performance | CPU QK256 performance | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | Intel 258V platform validation | CPU258V-001 | Arc 140V OpenCL proof is not NPU proof. |

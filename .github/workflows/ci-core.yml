@@ -33,6 +33,7 @@ on:
 
       # Workflow files - core and related CI workflows
       - '.github/workflows/ci-core.yml'
+      - '.github/workflows/pr-plan.yml'
       - '.github/workflows/coverage.yml'
       - '.github/workflows/ci-reporting.yml'
 
@@ -53,6 +54,7 @@ on:
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - '.github/workflows/ci-core.yml'
+      - '.github/workflows/pr-plan.yml'
   workflow_dispatch:
 
 concurrency:

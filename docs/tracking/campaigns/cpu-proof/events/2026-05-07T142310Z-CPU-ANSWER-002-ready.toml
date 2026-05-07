@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T14:23:10Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Prepared CPU-ANSWER-002 as the next answer-correctness item: scalar-versus-AVX2 full-decode parity and first-divergence evidence.",
+  "The item keeps server, GPU, NPU, crate collapse, and sustained-performance claims out of scope.",
+]
