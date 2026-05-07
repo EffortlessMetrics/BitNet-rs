@@ -1555,8 +1555,7 @@ impl InferenceCommand {
     /// Get tokenizer information
     fn get_tokenizer_info(&self, tokenizer: &dyn bitnet_tokenizers::Tokenizer) -> TokenizerInfo {
         // Determine source from tokenizer type or path
-        let source = if self.tokenizer.is_some() {
-            let path = self.tokenizer.as_ref().unwrap();
+        let source = if let Some(path) = &self.tokenizer {
             if path.extension().is_some_and(|e| e == "json") {
                 "hf_json".to_string()
             } else if path.extension().is_some_and(|e| e == "model") {
