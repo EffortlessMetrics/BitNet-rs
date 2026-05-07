@@ -1,0 +1,73 @@
+schema_version = "1.0"
+msrv = "1.93"
+
+[policy]
+panic_free_tests = true
+allow_test_carveouts = false
+suppression_style = "expect-with-reason"
+blanket_categories = false
+rust_default_implementation = true
+
+# Planned lints land in waves keyed by MSRV. The activate_when_msrv
+# field is informational here; PR 08 ("Clippy Stage A") materialises
+# the first wave inside [workspace.lints.clippy].
+
+[[planned]]
+name = "clippy::same_length_and_capacity"
+level = "deny"
+activate_when_msrv = "1.94"
+reason = "Catch raw-parts reconstruction mistakes."
+
+[[planned]]
+name = "clippy::manual_ilog2"
+level = "warn"
+activate_when_msrv = "1.94"
+reason = "Prefer standard integer log helper."
+
+[[planned]]
+name = "clippy::decimal_bitwise_operands"
+level = "warn"
+activate_when_msrv = "1.94"
+reason = "Make bit masks visually inspectable."
+
+[[planned]]
+name = "clippy::needless_type_cast"
+level = "warn"
+activate_when_msrv = "1.94"
+reason = "Avoid stale numeric type drift."
+
+[[planned]]
+name = "clippy::disallowed_fields"
+level = "deny"
+activate_when_msrv = "1.95"
+reason = "Ban direct field access across protected seams."
+
+[[planned]]
+name = "clippy::manual_checked_ops"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Prefer checked arithmetic over manual divide-by-zero guards."
+
+[[planned]]
+name = "clippy::manual_take"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Use standard ownership helper instead of local reimplementation."
+
+[[planned]]
+name = "clippy::manual_pop_if"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Use collection APIs that encode predicate-and-pop intent."
+
+[[planned]]
+name = "clippy::duration_suboptimal_units"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Make durations legible without mental unit conversion."
+
+[[planned]]
+name = "clippy::unnecessary_trailing_comma"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "Keep format macro calls clean."

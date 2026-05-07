@@ -2,7 +2,7 @@
 name = "bitnet-bench-receipts"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.92.0"
+rust-version = "1.93.0"
 description = "Receipt model and JSONL store for benchmark result tracking"
 license = "MIT OR Apache-2.0"
 

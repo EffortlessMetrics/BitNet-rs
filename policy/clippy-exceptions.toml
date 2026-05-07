@@ -1,0 +1,33 @@
+schema_version = "1.0"
+
+# clippy-exceptions.toml is the receipt ledger for every
+# `#[expect(clippy::..., reason = "policy:clippy-XXXX")]` suppression
+# in the codebase. PR 06 ("Clippy exception checker") enforces:
+#
+#   - no bare `#[allow(clippy::...)]`
+#   - every `#[expect(clippy::...)]` carries a `reason = "policy:..."`
+#     pointing at an entry below
+#   - every entry has an owner, classification, reason, and expiry
+#   - expired entries fail the policy gate
+#
+# Entries are added on demand as crates earn an exception. The file is
+# intentionally empty during the staging phase so that no exception
+# can land without a real receipt.
+
+# [[exception]]
+# id = "clippy-0001"
+# lint = "clippy::indexing_slicing"
+# path = "crates/bitnet-kernels/src/generated_table.rs"
+# classification = "generated_table"
+# owner = "kernels"
+# reason = "Generated lookup table has validated generation invariants; migrate to safe table wrapper."
+# expires = "2026-07-01"
+#
+# [exception.selector]
+# kind = "expr"
+# container = "lookup_state"
+# text_contains = "TABLE[idx]"
+#
+# [exception.last_seen]
+# line = 42
+# column = 9

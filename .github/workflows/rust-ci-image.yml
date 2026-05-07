@@ -45,7 +45,7 @@ jobs:
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           IMAGE="${{ env.REGISTRY }}/${OWNER}/bitnet-rs-ci"
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
-          echo "version_tag=rust-1.92" >> "$GITHUB_OUTPUT"
+          echo "version_tag=rust-1.93" >> "$GITHUB_OUTPUT"
           echo "sha_tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
