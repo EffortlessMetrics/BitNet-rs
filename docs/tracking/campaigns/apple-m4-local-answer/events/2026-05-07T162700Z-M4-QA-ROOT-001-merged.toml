@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T16:27:00Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-ROOT-001"
+event = "merged"
+pr = 3908
+merge_sha = "948c9201aaebc9636c169a805d2a707218dab017"
+actor = "codex"
+
+notes = [
+  "Merged root-cause evidence via the stacked PR before it was carried to main by the M4-QA-001 harness PR.",
+  "The evidence shows the current local GGUF also produces non-coherent output under the reference runner.",
+  "The blocker is now model artifact quality, not Apple M4 CPU/NEON routing.",
+]

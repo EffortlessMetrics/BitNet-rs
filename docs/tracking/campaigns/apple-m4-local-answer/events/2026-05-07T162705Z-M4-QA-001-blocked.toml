@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T16:27:05Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-001"
+event = "blocked"
+actor = "codex"
+
+notes = [
+  "M4-QA-001 harness landed, but coherent Apple M4 CPU/NEON local-answer smoke remains blocked on a reference-validated supported model artifact.",
+  "Do not claim Apple M4 local-answer quality until M4-QA-MODEL-001 passes and the corpus gate is rerun.",
+]
