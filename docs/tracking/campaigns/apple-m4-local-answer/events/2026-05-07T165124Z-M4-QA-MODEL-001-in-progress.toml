@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T16:51:24Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-MODEL-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started model-artifact gate after M4-QA-ROOT-001 showed the current local GGUF also garbles under reference execution.",
+  "Scope is to validate or explicitly reject the current artifact, not to weaken local-answer quality gates.",
+]

@@ -5,7 +5,7 @@
 |---|---|---|---|
 | amd-cpu-baselines | AMD CPU baselines | AMD5700X-003 | These lanes are CPU proof lanes, not accelerator lanes. |
 | apple-m4 | Apple M4 Mac mini validation | M4-018 | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
-| apple-m4-local-answer | Apple M4 local answer usability | M4-QA-001 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
+| apple-m4-local-answer | Apple M4 local answer usability | M4-QA-MODEL-001 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-operational | Apple M4 operational readiness | M4-OP-006 | Do not reopen the completed apple-m4 proof campaign. |
 | ci-coverage | CI coverage | CI-COVERAGE-001 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | BitNet CPU proof | CPU-ANSWER-002 | No GPU or NPU claims. |
