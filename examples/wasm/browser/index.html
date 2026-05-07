@@ -82,10 +82,16 @@
             margin: 15px 0;
         }
 
-        label {
+        label, .container-label {
             display: block;
             margin-bottom: 5px;
             font-weight: 500;
+        }
+
+        .output:focus-visible,
+        .streaming-output:focus-visible {
+            outline: 2px solid #0066cc;
+            outline-offset: 2px;
         }
 
         input, textarea, select {
@@ -274,8 +280,8 @@
             </div>
 
             <div class="input-group">
-                <label>Output:</label>
-                <div id="output" class="output">Generated text will appear here...</div>
+                <div id="output-label" class="container-label">Output:</div>
+                <div id="output" class="output" tabindex="0" role="region" aria-labelledby="output-label" aria-live="polite">Generated text will appear here...</div>
             </div>
         </div>
     </div>
@@ -297,8 +303,8 @@
             </div>
 
             <div class="input-group">
-                <label>Streaming Output:</label>
-                <div id="streaming-output" class="streaming-output">Streaming output will appear here...</div>
+                <div id="streaming-output-label" class="container-label">Streaming Output:</div>
+                <div id="streaming-output" class="streaming-output" tabindex="0" role="region" aria-labelledby="streaming-output-label" aria-live="polite">Streaming output will appear here...</div>
             </div>
 
             <div class="stats">
@@ -340,8 +346,8 @@
             </div>
 
             <div class="input-group">
-                <label>Worker Output:</label>
-                <div id="worker-output" class="output">Worker output will appear here...</div>
+                <div id="worker-output-label" class="container-label">Worker Output:</div>
+                <div id="worker-output" class="output" tabindex="0" role="region" aria-labelledby="worker-output-label" aria-live="polite">Worker output will appear here...</div>
             </div>
         </div>
     </div>
@@ -363,8 +369,8 @@
             </div>
 
             <div class="input-group">
-                <label>Benchmark Results:</label>
-                <div id="benchmark-output" class="output">Run benchmarks to see performance metrics...</div>
+                <div id="benchmark-output-label" class="container-label">Benchmark Results:</div>
+                <div id="benchmark-output" class="output" tabindex="0" role="region" aria-labelledby="benchmark-output-label" aria-live="polite">Run benchmarks to see performance metrics...</div>
             </div>
 
             <div class="stats">
