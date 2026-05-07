@@ -72,6 +72,26 @@ Not allowed:
 - Do not claim speedup unless a later same-model fallback-free receipt upgrades
   `speedup_claim` under the benchmark policy.
 
+## Productization Follow-Up
+
+The completed proof lane is not the same as a user-answer product path. The
+next productization track is defined in
+`docs/specs/rtx5070ti-cuda-answer-readiness.md` and starts from CPU answer
+quality, prompt template authority, real prompt prefill, and a normal
+`bitnet ask` command before adding strict RTX 5070 Ti CUDA answer receipts.
+
+Answer receipts must keep the completed proof invariants intact:
+
+- selected backend: `nvidia-rtx-5070-ti-cuda`
+- runtime API: `cuda`
+- `qk256_gemv_cuda` invocation count greater than zero
+- weights uploaded once: `true`
+- per-token weight upload: `false`
+- BitNet linear CPU fallback: `0`
+- prompt prefill exercised: `true`
+- answer quality gate passed: `true`
+- speedup claim: `false` unless later benchmark-qualified
+
 ## Work Items
 
 | Work item | Status | Notes |
