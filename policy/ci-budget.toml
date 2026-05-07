@@ -1,0 +1,58 @@
+schema_version = "1.0"
+policy = "ci-budget"
+owner = "release/ci"
+status = "active"
+updated = "2026-05-07"
+
+# LEM (Linux-Equivalent Minutes) budget bands. These mirror the
+# bands embedded in policy/ci-lane-whitelist.toml and the inline
+# defaults in xtask/src/ci/plan.rs. The whitelist is the source of
+# truth for individual lane costs; this file is the source of truth
+# for the *budget posture* the planner emits.
+
+[budget]
+preferred_default_lem = 25
+default_limit_lem = 35
+elevated_limit_lem = 75
+hard_limit_lem = 125
+
+[runner_multipliers]
+ubuntu_22_04 = 1.0
+ubuntu_latest = 1.0
+windows_latest = 2.0
+macos_14 = 10.0
+macos_latest = 10.0
+gpu_docker = 6.0
+external_ai_review = 4.0
+
+# Bands map (LEM range -> string posture) used by `xtask ci plan`
+# when emitting the markdown summary. Keys are inclusive upper
+# bounds; the lookup is "first matching band wins".
+[[band]]
+upper = 12
+posture = "✅ pennies (< 12 LEM)"
+
+[[band]]
+upper = 35
+posture = "✅ default budget (< 35 LEM)"
+
+[[band]]
+upper = 75
+posture = "⚠️  elevated (35–75 LEM)"
+
+[[band]]
+upper = 125
+posture = "⚠️  high (75–125 LEM)"
+
+[[band]]
+upper = 100000
+posture = "🚨 over hard ceiling (> 125 LEM)"
+
+# Soft-budget guard thresholds (used by PR 18 once it lands). Until
+# then, exceeding these only emits warnings in the step summary.
+[guard]
+warn_at_lem = 35
+strong_warn_at_lem = 75
+suggest_ack_at_lem = 100
+fail_above_lem = 125
+override_labels = ["full-ci", "ci-budget-override", "ci-budget-ack"]

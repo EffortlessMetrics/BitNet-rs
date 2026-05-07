@@ -1,0 +1,122 @@
+schema_version = "1.0"
+policy = "ci-risk-packs"
+owner = "release/ci"
+status = "active"
+updated = "2026-05-07"
+
+# Risk packs map an area of risk to (a) the paths/packages that
+# touching activates the pack, (b) the default-PR lanes it should
+# trigger, (c) deeper lanes for label or scheduled runs, and
+# (d) the labels that opt into deep proof.
+#
+# Used by `xtask ci plan` (PR 15+) and the routing layer (PR 17).
+
+[risk_pack.qk256]
+description = "QK256 layout, I2S packing, quantization, scalar oracle, AVX2 smoke."
+paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-quantization-bits/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-models/src/qk256*",
+]
+packages = [
+  "bitnet-qk256-layout-core",
+  "bitnet-quantization",
+  "bitnet-quantization-bits",
+  "bitnet-models",
+]
+lanes = ["ci-core-build-test", "feature-matrix-pr", "ripr-advisory"]
+deep_lanes = ["property-tests", "coverage"]
+labels = ["property-tests", "full-ci"]
+
+[risk_pack.kernels_cpu]
+description = "CPU kernels, SIMD paths, AVX2/AVX512/NEON shape."
+paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-cpu-activations/**",
+  "crates/bitnet-simd/**",
+]
+packages = ["bitnet-kernels", "bitnet-cpu-activations", "bitnet-simd"]
+lanes = ["ci-core-build-test", "ripr-advisory"]
+deep_lanes = ["property-tests", "miri", "sanitizers"]
+labels = ["property-tests", "full-ci"]
+
+[risk_pack.gpu]
+description = "GPU HAL, backend compile surfaces, shader catalogs, backend selection."
+paths = [
+  "crates/bitnet-gpu-hal/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-device-config-core/**",
+  "crates/bitnet-metal/**",
+  "crates/bitnet-opencl/**",
+  "crates/bitnet-vulkan/**",
+  "crates/bitnet-vulkan-shaders/**",
+  "crates/bitnet-wgpu/**",
+  "crates/bitnet-wgpu-shaders-i2s/**",
+  "crates/bitnet-rocm/**",
+  "crates/bitnet-nvidia/**",
+  "crates/bitnet-spirv/**",
+]
+lanes = ["gpu-native", "ripr-advisory"]
+deep_lanes = ["gpu-docker", "hardware-receipts"]
+labels = ["gpu-ci", "docker", "full-ci"]
+
+[risk_pack.ffi]
+description = "FFI/sys/GGML/crossval ABI and C boundary surface."
+paths = [
+  "crates/bitnet-ffi/**",
+  "crates/bitnet-sys/**",
+  "crates/bitnet-ggml-ffi/**",
+  "crossval/**",
+]
+lanes = ["compatibility-ffi-abi", "ripr-advisory"]
+deep_lanes = ["crossval", "cpp-ffi"]
+labels = ["ffi", "abi", "crossval", "full-ci"]
+
+[risk_pack.tokenizer]
+description = "Tokenizer model discovery, vocab parsing, text normalization."
+paths = [
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-token-merge-core/**",
+  "crates/bitnet-tokenizer-model-core/**",
+  "crates/bitnet-tokenizer-discovery-core/**",
+  "crates/bitnet-tokenizer-text-core/**",
+  "tests/fixtures/tokenizers/**",
+]
+lanes = ["ci-core-build-test", "compatibility-tokenizer", "ripr-advisory"]
+deep_lanes = ["model-validation"]
+labels = ["tokenizer", "model-validation", "full-ci"]
+
+[risk_pack.bdd_policy]
+description = "BDD grid, runtime feature flags, testing-policy, startup contract."
+paths = [
+  "crates/bitnet-bdd-*/**",
+  "crates/bitnet-testing-policy*/**",
+  "crates/bitnet-testing-scenarios*/**",
+  "crates/bitnet-runtime-feature-flags*/**",
+  "crates/bitnet-startup-contract*/**",
+  "crates/bitnet-feature-contract/**",
+]
+lanes = ["ci-core-build-test", "bdd-grid-check"]
+deep_lanes = []
+labels = ["bdd", "grid", "full-ci"]
+
+[risk_pack.manifest_release]
+description = "Cargo manifests, lockfile, MSRV, dependency, release surfaces."
+paths = ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**"]
+lanes = ["ci-core-build-test", "compatibility-msrv", "feature-matrix-pr"]
+deep_lanes = ["feature-matrix-full", "security-audit", "coverage"]
+labels = ["feature-matrix", "security-audit", "full-ci"]
+
+[risk_pack.docs_tracking]
+description = "Docs, tracking, campaigns, generated status."
+paths = [
+  "docs/**",
+  ".codex/campaigns/**",
+  "README.md",
+  "CHANGELOG.md",
+  "CONTRIBUTING.md",
+]
+lanes = ["docs-gate", "campaign-tracker"]
+deep_lanes = []
+labels = []
