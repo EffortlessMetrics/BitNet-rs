@@ -321,3 +321,38 @@ Today, use `apple-m4-cpu-neon` for the reliable local-answer path. Use
 `apple-m4-metal` only for receipt-backed Metal phases or future full-model Metal
 inference once a strict real-model receipt proves it. Use `apple-m4-mpsgraph`
 only as graph/reference evidence.
+
+## Next Frontier Decision
+
+The next Apple implementation frontier is CPU/NEON local-answer usability. The
+proof and operational campaigns already make the route inspectable; the next
+campaign should make the route pleasant and quality-gated for a local Mac user:
+
+```text
+supported model
+-> normal prompt
+-> multi-token generated answer
+-> deterministic greedy receipt
+-> no hidden fallback
+-> intelligibility and repetition checks
+```
+
+Recommended next campaign ID:
+
+```text
+apple-m4-local-answer
+```
+
+Initial items:
+
+| Item | Goal | Claim boundary |
+|---|---|---|
+| `M4-QA-001` | Add a small multi-prompt CPU/NEON local-answer smoke suite. | Valid text and basic answer envelope only; no Metal claim. |
+| `M4-QA-002` | Add greedy determinism checks for repeated Apple CPU/NEON runs. | Determinism for fixed model/prompt/settings only. |
+| `M4-QA-003` | Require local-answer receipts to record model, tokenizer, backend, fallback status, prompt/generation counts, and output text validity. | Receipt quality only; no performance claim. |
+| `M4-QA-004` | Add failure-mode tests for missing model, tokenizer strictness, non-M4 Apple labels, and unsupported Metal full-inference requests. | Clear errors only; no new backend capability. |
+| `M4-QA-005` | Decide whether one receipt-backed Metal phase can be routed into real generation without changing greedy output. | Phase-level Metal contribution only if CPU parity and fallback status are explicit. |
+
+After CPU/NEON local answers are boring, start Metal subgraph expansion. QK256
+on Apple Silicon should remain last because it would mix a new Apple packed
+layout target with kernel routing and performance claims.

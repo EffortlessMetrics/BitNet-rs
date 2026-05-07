@@ -77,22 +77,77 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           HEAD_SHA: ${{ steps.head.outputs.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
 
-          # Upstream lanes that gate the PR. Names must match the
-          # `name:` field of each upstream job *exactly*.
+          ci_core_required=false
+          policy_required=false
+          feature_matrix_required=false
+
+          if [ "${EVENT_NAME}" = "pull_request" ] && [ -n "${PR_NUMBER:-}" ]; then
+            changed_files=$(gh api --paginate \
+              "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/files" \
+              --jq '.[].filename')
+            echo "Changed files considered by PR gate:"
+            printf '%s\n' "$changed_files"
+
+            while IFS= read -r path; do
+              [ -n "$path" ] || continue
+
+              case "$path" in
+                crates/*|crossval/*|tests/*|tools/bitnet-task/*|xtask/*|docs/tracking/*|.codex/campaigns/*|fuzz/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.github/workflows/ci-core.yml)
+                  ci_core_required=true
+                  ;;
+              esac
+
+              case "$path" in
+                policy/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|clippy.toml|.github/workflows/policy.yml|xtask/*|*.rs)
+                  policy_required=true
+                  ;;
+              esac
+
+              case "$path" in
+                crates/*|Cargo.toml|Cargo.lock|rust-toolchain.toml)
+                  feature_matrix_required=true
+                  ;;
+              esac
+            done <<< "$changed_files"
+          else
+            # Manual runs have no PR path filter context, so require all default lanes.
+            ci_core_required=true
+            policy_required=true
+            feature_matrix_required=true
+          fi
+
           # Required upstream lanes that gate the PR. Names must match
-          # the `name:` field of each upstream job *exactly*. The
-          # feature-matrix.yml `pr-check` matrix has no aggregator
-          # job, so we list each matrix label individually.
-          required_jobs=(
-            "CI Core Success"
-            "Policy"
-            "pr-check (no-features)"
-            "pr-check (cpu)"
-            "pr-check (cpu+full-cli)"
-          )
+          # the `name:` field of each upstream job *exactly*. Only add
+          # lanes whose workflows are expected to run for this PR's
+          # changed paths; otherwise path-filtered workflows appear as
+          # permanently missing and the gate times out on docs/tracker PRs.
+          required_jobs=()
+          if [ "$ci_core_required" = true ]; then
+            required_jobs+=("CI Core Success")
+          fi
+          if [ "$policy_required" = true ]; then
+            required_jobs+=("Policy")
+          fi
+          if [ "$feature_matrix_required" = true ]; then
+            required_jobs+=(
+              "pr-check (no-features)"
+              "pr-check (cpu)"
+              "pr-check (cpu+full-cli)"
+            )
+          fi
+
+          if [ ${#required_jobs[@]} -eq 0 ]; then
+            echo "No path-filtered upstream lanes are required for this PR."
+            exit 0
+          fi
+
+          echo "Required upstream lanes:"
+          printf '  - %s\n' "${required_jobs[@]}"
 
           # Optional lanes whose `skipped` is acceptable but `failure`
           # is not. (Empty in this PR; PR 17's risk-pack routing is the

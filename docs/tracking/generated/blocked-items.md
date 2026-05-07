@@ -24,7 +24,7 @@
 | apple-m4-operational | M4-OP-003 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-004 | M4-OP-003 | merged |
 | apple-m4-operational | M4-OP-005 | M4-OP-002 | merged |
-| apple-m4-operational | M4-OP-006 | M4-OP-004, M4-OP-005 | ready |
+| apple-m4-operational | M4-OP-006 | M4-OP-004, M4-OP-005 | pr_open |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | merged |
