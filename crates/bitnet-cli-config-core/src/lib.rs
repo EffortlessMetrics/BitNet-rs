@@ -5,6 +5,65 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
+/// Package-level device/backend labels accepted by CLI configuration.
+///
+/// These labels name proof lanes and requested backend identities. They do not
+/// imply that every subcommand can execute every backend on every host.
+pub const SUPPORTED_DEVICE_LABELS: &[&str] = &[
+    "cpu",
+    "cuda",
+    "gpu",
+    "vulkan",
+    "opencl",
+    "ocl",
+    "hip",
+    "rocm",
+    "oneapi",
+    "npu",
+    "npu:<index>",
+    "intel-npu",
+    "intel-npu:<index>",
+    "openvino-npu",
+    "intel-npu-openvino",
+    "nvidia-rtx-5070-ti-cuda",
+    "nvidia-rtx-5070-ti-wgpu",
+    "metal",
+    "mpsgraph",
+    "apple-m4-metal",
+    "apple-m4-mpsgraph",
+    "apple-m4-cpu-neon",
+    "auto",
+];
+
+/// Stable help text for supported package-level device/backend labels.
+pub const SUPPORTED_DEVICE_LABELS_TEXT: &str = "cpu, cuda, gpu, vulkan, opencl, ocl, hip, rocm, oneapi, npu, npu:<index>, intel-npu, intel-npu:<index>, openvino-npu, intel-npu-openvino, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto";
+
+/// Stable help text for Apple M4 proof-lane labels.
+pub const APPLE_M4_DEVICE_LABELS_TEXT: &str = "apple-m4-metal = native Metal proof lane, apple-m4-mpsgraph = MPSGraph graph/reference lane, apple-m4-cpu-neon = Apple CPU/NEON fallback/parity lane";
+
+/// Top-level `--device` help for package-level backend labels.
+pub const DEVICE_HELP: &str = "Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes";
+
+/// Help for legacy full-cli commands that do not emit Apple proof receipts.
+pub const LEGACY_RUNTIME_DEVICE_HELP: &str = "Device for this legacy command (cpu, cuda/gpu aliases, auto). Use `bitnet run` for receipt-backed Apple M4 labels";
+
+/// Runtime labels currently handled by legacy full-cli commands.
+pub const LEGACY_RUNTIME_DEVICE_LABELS_TEXT: &str = "cpu, cuda, gpu, vulkan, opencl, ocl, auto";
+
+/// Build a consistent invalid package-level device label error.
+pub fn invalid_device_message(device: &str) -> String {
+    format!(
+        "Invalid device: {device}. Must be one of: {SUPPORTED_DEVICE_LABELS_TEXT}. Apple M4 labels are distinct proof lanes: {APPLE_M4_DEVICE_LABELS_TEXT}. On unavailable or non-M4 hosts, strict mode fails and non-strict receipt paths must record fallback_used and fallback_reason."
+    )
+}
+
+/// Build a consistent error for legacy commands that do not support a proof lane.
+pub fn unsupported_legacy_command_device_message(command: &str, device: &str) -> String {
+    format!(
+        "{command} does not support device label '{device}'. This legacy command currently supports: {LEGACY_RUNTIME_DEVICE_LABELS_TEXT}. Use `bitnet run` for receipt-backed Apple M4 labels ({APPLE_M4_DEVICE_LABELS_TEXT}); CPU fallback cannot count as Metal execution."
+    )
+}
+
 /// CLI configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CliConfig {
@@ -136,10 +195,7 @@ impl CliConfig {
     /// Validate configuration
     pub fn validate(&self) -> Result<()> {
         if !is_supported_device_label(&self.default_device) {
-            anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, npu, intel-npu, openvino-npu, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto",
-                self.default_device
-            );
+            anyhow::bail!("{}", invalid_device_message(&self.default_device));
         }
 
         match self.logging.level.as_str() {
@@ -166,16 +222,18 @@ impl CliConfig {
     }
 }
 
-fn is_supported_device_label(label: &str) -> bool {
-    let label = label.trim().to_ascii_lowercase();
+pub fn is_supported_device_label(label: &str) -> bool {
     matches!(
-        label.as_str(),
+        label,
         "cpu"
             | "cuda"
             | "gpu"
             | "vulkan"
             | "opencl"
             | "ocl"
+            | "hip"
+            | "rocm"
+            | "oneapi"
             | "npu"
             | "intel-npu"
             | "openvino-npu"
@@ -244,7 +302,22 @@ impl ConfigBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::{CliConfig, ConfigBuilder};
+    use super::{
+        APPLE_M4_DEVICE_LABELS_TEXT, CliConfig, ConfigBuilder, SUPPORTED_DEVICE_LABELS,
+        invalid_device_message,
+    };
+
+    #[test]
+    fn supported_device_labels_constant_matches_validation() {
+        for device in SUPPORTED_DEVICE_LABELS {
+            if device.contains("<index>") {
+                continue;
+            }
+            let config =
+                CliConfig { default_device: (*device).to_string(), ..CliConfig::default() };
+            config.validate().unwrap_or_else(|err| panic!("{device} should validate: {err}"));
+        }
+    }
 
     #[test]
     fn validates_intel_npu_labels_without_aliasing() {
@@ -266,5 +339,23 @@ mod tests {
     fn builder_preserves_intel_npu_device_label() {
         let config = ConfigBuilder::new().device(Some("intel-npu:2".to_string())).build().unwrap();
         assert_eq!(config.default_device, "intel-npu:2");
+    }
+
+    #[test]
+    fn validates_apple_m4_labels_without_aliasing() {
+        for device in ["apple-m4-metal", "apple-m4-mpsgraph", "apple-m4-cpu-neon"] {
+            let config = CliConfig { default_device: device.to_string(), ..CliConfig::default() };
+            config.validate().unwrap();
+        }
+    }
+
+    #[test]
+    fn invalid_device_message_describes_apple_m4_boundaries() {
+        let message = invalid_device_message("quantum");
+        assert!(message.contains("npu:<index>"), "got: {message}");
+        assert!(message.contains("intel-npu-openvino"), "got: {message}");
+        assert!(message.contains(APPLE_M4_DEVICE_LABELS_TEXT), "got: {message}");
+        assert!(message.contains("strict mode fails"), "got: {message}");
+        assert!(message.contains("fallback_used"), "got: {message}");
     }
 }

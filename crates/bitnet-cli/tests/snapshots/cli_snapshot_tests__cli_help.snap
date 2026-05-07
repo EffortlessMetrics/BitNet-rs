@@ -2,7 +2,7 @@
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
 expression: help
 ---
-BitNet-rs CLI — one-shot generation and chat with strict receipts
+BitNet-rs CLI - one-shot generation and chat with strict receipts
 
 QUICK EXAMPLES:
 
@@ -35,34 +35,40 @@ PERFORMANCE:
 
   QK256 Models (I2_S quantization):
     - Without AVX2: ~0.1 tok/s (scalar kernels, ~10s per token)
-    - With AVX2: ~1.2× faster (optimized kernels)
+    - With AVX2: ~1.2x faster (optimized kernels)
     - For quick validation: use --max-tokens 4-16
-    - SIMD optimizations (≥3× faster) coming in v0.2.0
+    - SIMD optimizations (>=3x faster) coming in v0.2.0
 
 
 Usage: bitnet [OPTIONS] [COMMAND]
 
 Commands:
-  run           Run simple text generation
-  tokenize      Tokenize text and output token IDs as JSON
-  score         Calculate perplexity score for a model
-  inference     Run inference on a model
-  chat          Interactive chat mode (streaming)
-  convert       Convert between model formats
-  benchmark     Benchmark model performance
-  serve         Start inference server
-  config        Manage configuration
-  info          Show system information
-  inspect       Inspect model metadata and diagnostics
-  compat-check  Check GGUF file compatibility using header validation
-  help          Print this message or the help of the given subcommand(s)
+  run                 Run simple text generation
+  tokenize            Tokenize text and output token IDs as JSON
+  score               Calculate perplexity score for a model
+  inference           Run inference on a model
+  chat                Interactive chat mode (streaming)
+  convert             Convert between model formats
+  benchmark           Benchmark model performance
+  serve               Start inference server
+  config              Manage configuration
+  info                Show system information
+  device-smoke        Probe selected device identity without launching kernels
+  lunar-lake-probe    Probe Lunar Lake 258V platform visibility without launching kernels
+  validate            Run validation-only preflight checks
+  cuda-smoke          Compile and launch a tiny CUDA vector-add kernel
+  inspect             Inspect model metadata and diagnostics
+  compat-check        Check GGUF file compatibility using header validation
+  list-architectures  List all supported model architectures
+  list-templates      List all available prompt templates
+  help                Print this message or the help of the given subcommand(s)
 
 Options:
   -c, --config <PATH>
           Configuration file path
 
   -d, --device <DEVICE>
-          Device to use (cpu, cuda, auto)
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
 
       --log-level <LEVEL>
           Log level (trace, debug, info, warn, error)
@@ -75,7 +81,7 @@ Options:
 
       --completions <SHELL>
           Generate shell completions
-          
+
           [possible values: bash, elvish, fish, powershell, zsh]
 
       --save-config <PATH>
