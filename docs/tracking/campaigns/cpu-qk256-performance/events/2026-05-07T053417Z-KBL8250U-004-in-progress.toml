@@ -1,0 +1,22 @@
+timestamp = "2026-05-07T05:34:17Z"
+campaign = "cpu-qk256-performance"
+item = "KBL8250U-004"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/cpu-qk256-performance/KBL8250U-004-strict-proof-run"
+actor = "codex"
+
+artifacts = [
+  "ci/intel-i5-8250u/2026-05-07/strict-bitnet-cpu-proof.json",
+  "ci/intel-i5-8250u/2026-05-07/cpu-phase-benchmark-receipt.json",
+  "ci/intel-i5-8250u/2026-05-07/strict-cpu-proof-hardware-context.json",
+]
+
+notes = [
+  "Prepared the i5-8250U strict CPU proof lane and emitted a real-GGUF strict CPU proof receipt from the canonical BitNet GGUF.",
+  "The raw CLI backend identity is requested_backend=cpu and selected_backend=cpu-rust; the hardware lane context records the Kaby Lake proof host as intel-i5-8250u-cpu-avx2.",
+  "The strict proof records loader.mode=real_gguf, tokenizer.source=gguf_metadata, tokenizer.strict=true, model hash 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162, kernel i2_s-avx2-reference, generated_tokens=1, fallback_used=false, and first-token timing.",
+  "The phase benchmark receipt consumes the strict proof and measures only first_token; micro, layer, prefill, and steady decode remain not_run and CPU-BITNET-008 is not closed by this lane artifact.",
+  "No throughput superiority, sustained-performance, GPU, OpenVINO, UHD 620, NPU, mock, fallback, or fixture-inference claim is made.",
+]
