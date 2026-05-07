@@ -1192,15 +1192,15 @@ fn body_line_claims_item(line: &str, item_id: &str) -> bool {
 
 fn text_starts_with_item_token(text: &str, item_id: &str) -> bool {
     text.strip_prefix(item_id)
-        .is_some_and(|rest| rest.chars().next().map_or(true, |ch| !is_item_token_char(ch)))
+        .is_some_and(|rest| rest.chars().next().is_none_or(|ch| !is_item_token_char(ch)))
 }
 
 fn text_contains_item_token(text: &str, item_id: &str) -> bool {
     text.match_indices(item_id).any(|(start, matched)| {
         let before = text[..start].chars().next_back();
         let after = text[start + matched.len()..].chars().next();
-        before.map_or(true, |ch| !is_item_token_char(ch))
-            && after.map_or(true, |ch| !is_item_token_char(ch))
+        before.is_none_or(|ch| !is_item_token_char(ch))
+            && after.is_none_or(|ch| !is_item_token_char(ch))
     })
 }
 
