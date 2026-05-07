@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T07:59:12Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-009"
+event = "closeout"
+pr = 3837
+actor = "codex"
+
+notes = [
+  "Closed out the RTX 5070 Ti BitNet CUDA proof lane after RTX5070TI-003 through RTX5070TI-008 and CUDA-BITNET-001 through CUDA-BITNET-009 merged.",
+  "The proof ledger records the official GGUF, explicit tokenizer, selected CUDA backend, W1.58A8/QK256 layout, upload-once weight residency, qk256_gemv_cuda invocation counts, zero CPU fallback, and speedup_claim=false.",
+  "CUDA-DENSE-001 remains a separate optional dense regular-LLM reference lane and does not satisfy BitNet packed-kernel proof acceptance.",
+]

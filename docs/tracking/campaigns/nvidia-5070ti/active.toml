@@ -1,13 +1,15 @@
 id = "nvidia-5070ti"
 title = "NVIDIA RTX 5070 Ti validation"
-status = "active"
+status = "complete"
 
-objective = "Validate RTX 5070 Ti as a CUDA-first BitNet acceleration lane with selected-device receipts and no CPU, OpenCL, WGPU, or generic GPU conflation."
+objective = "Maintain the completed RTX 5070 Ti CUDA BitNet proof lane with selected-device receipts and no CPU, OpenCL, WGPU, dense CUDA, or generic GPU conflation."
 
 end_state = [
   "RTX 5070 Ti CUDA backend identity is distinct from generic CUDA and WGPU.",
   "CUDA and NVML probe facts are recorded before kernel execution claims.",
   "CUDA smoke, parity, receipts, and benchmarks are sequenced after identity.",
+  "Strict BitNet CUDA proof receipts name the official GGUF, explicit tokenizer, W1.58A8 layout, selected RTX 5070 Ti CUDA backend, 9950X3D CPU reference, fallback status, QK256 CUDA invocation counts, upload-once weight residency, and measured timing.",
+  "CUDA-DENSE-001 remains an optional dense regular-LLM reference lane and is not part of completed BitNet packed-kernel proof.",
 ]
 
 hard_constraints = [
@@ -15,6 +17,8 @@ hard_constraints = [
   "WGPU smoke is not CUDA proof.",
   "CPU fallback cannot count as CUDA execution.",
   "Performance claims require driver, CUDA, VRAM, power, and thermal context.",
+  "speedup_claim must remain false unless a same-model fallback-free benchmark receipt explicitly upgrades it.",
+  "Dense regular-LLM CUDA receipts cannot satisfy BitNet packed I2S or QK256 proof acceptance.",
 ]
 
 [[work_item]]
