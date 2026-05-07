@@ -249,13 +249,14 @@ Hard rules:
 
 ## Benchmark Profiles
 
-Use four stable profiles and record the same fields every time so CI/manual receipts remain diffable.
+Use five stable profiles and record the same fields every time so CI/manual receipts remain diffable.
 
 | Profile | Purpose |
 |---|---|
 | `micro` | Single kernel, synthetic blocks, controlled cache state. |
 | `layer` | One transformer block with fixed shapes. |
 | `prefill` | Prompt-only throughput. |
+| `first_token` | First generated-token latency after prompt processing. |
 | `decode` | Steady-state tokens/sec for single-stream and small-batch generation. |
 
 Required measurement fields:
@@ -275,6 +276,17 @@ cargo test --locked -p bitnet-common --no-default-features --features cpu
 cargo test --locked -p bitnet-quantization --release --no-default-features --features cpu
 cargo bench --locked -p bitnet-quantization --bench qk256_gemv --features cpu
 cargo bench --locked -p bitnet-kernels --bench kernel_benchmarks --features cpu
+cargo run --locked -p bitnet-bench-receipts --bin cpu_benchmark_receipt --no-default-features -- \
+  --kernel qk256-avx2-gemv \
+  --strict \
+  --selected-backend intel-i5-8250u-cpu-avx2 \
+  --model-repo microsoft/bitnet-b1.58-2B-4T-gguf \
+  --model-file ggml-model-i2_s.gguf \
+  --model-sha256 <sha256> \
+  --tokenizer-source gguf_metadata \
+  --prompt-tokens 512 \
+  --generated-tokens 128 \
+  --receipt-out ci/receipts/cpu-avx2-benchmark.json
 ```
 
 Target receipt-producing command shape:

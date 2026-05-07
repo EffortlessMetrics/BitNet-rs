@@ -472,6 +472,8 @@ dependencies = [
 name = "bitnet-bench-receipts"
 version = "0.1.0"
 dependencies = [
+ "bitnet-quantization",
+ "chrono",
  "serde",
  "serde_json",
  "tempfile",
