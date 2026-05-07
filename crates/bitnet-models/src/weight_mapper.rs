@@ -10,20 +10,14 @@ struct ModelDims {
     hidden: usize,
     n_head: usize,
     n_kv_head: usize,
+    head_dim: usize,
     inter: usize,
     vocab: usize,
 }
 
 impl ModelDims {
     fn head_dim(&self) -> Result<usize> {
-        let d = self.hidden / self.n_head;
-        if d * self.n_head != self.hidden {
-            return Err(bitnet_common::BitNetError::Validation(format!(
-                "hidden_size {} not divisible by n_head {}",
-                self.hidden, self.n_head
-            )));
-        }
-        Ok(d)
+        Ok(self.head_dim)
     }
 
     fn kv_head_dim(&self) -> Result<usize> {
@@ -565,12 +559,12 @@ fn normalize_layer_weights(
 
             // Special case: allow hidden×hidden only for K/V (exporter emitted full hidden)
             // We need to slice heads NOW in the mapper to produce correct [kv_dim, hidden] shape
-            let is_kv_hidden_square = matches!(shape, [o, i] if (name == "k_proj" || name == "v_proj") && *o == hidden && *i == hidden);
+            let is_kv_hidden_square = matches!(shape, [o, i] if (name == "k_proj" || name == "v_proj") && kv_dim != hidden && *o == hidden && *i == hidden);
 
             if is_kv_hidden_square {
                 let n_heads = dims.n_head;
                 let n_kv_heads = dims.n_kv_head;
-                let head_dim = hidden / n_heads;
+                let head_dim = dims.head_dim()?;
                 let group_size = n_heads / n_kv_heads;
 
                 tracing::warn!(
@@ -783,6 +777,10 @@ pub fn normalize_model_tensors(
         hidden: config.model.hidden_size,
         n_head: config.model.num_heads,
         n_kv_head: n_kv_head_resolved,
+        head_dim: config
+            .model
+            .attention_head_dim
+            .unwrap_or_else(|| config.model.hidden_size / config.model.num_heads),
         inter: config.model.intermediate_size,
         vocab: config.model.vocab_size,
     };
@@ -1202,6 +1200,7 @@ mod tests {
             hidden: hidden_size,
             n_head: n_heads,
             n_kv_head: n_kv_heads,
+            head_dim,
             inter: 10240,  // Not used in this test
             vocab: 128000, // Not used in this test
         };

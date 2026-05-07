@@ -1176,6 +1176,8 @@ impl GgufLoader {
         let arch_embedding_length = format!("{architecture}.embedding_length");
         let arch_head_count = format!("{architecture}.attention.head_count");
         let arch_head_count_kv = format!("{architecture}.attention.head_count_kv");
+        let arch_attention_key_length = format!("{architecture}.attention.key_length");
+        let arch_attention_value_length = format!("{architecture}.attention.value_length");
         let arch_feed_forward_length = format!("{architecture}.feed_forward_length");
         let arch_context_length = format!("{architecture}.context_length");
         let arch_rope_freq_base = format!("{architecture}.rope.freq_base");
@@ -1288,12 +1290,32 @@ impl GgufLoader {
             config.model.num_key_value_heads = config.model.num_heads;
         }
 
+        let attention_key_length = Self::get_u32_any(
+            reader,
+            &[arch_attention_key_length.as_str(), "llama.attention.key_length"],
+        )
+        .map(|value| value as usize);
+        let attention_value_length = Self::get_u32_any(
+            reader,
+            &[arch_attention_value_length.as_str(), "llama.attention.value_length"],
+        )
+        .map(|value| value as usize);
+        if let (Some(key_length), Some(value_length)) =
+            (attention_key_length, attention_value_length)
+            && key_length != value_length
+        {
+            return Err(BitNetError::Validation(format!(
+                "attention key/value dimensions differ: key_length={key_length}, value_length={value_length}"
+            )));
+        }
+        config.model.attention_head_dim = attention_key_length.or(attention_value_length);
+
         // Log one-liner so you can grep it during runs
         let hidden = config.model.hidden_size;
         let q = config.model.num_heads;
         let kv = config.model.num_key_value_heads;
-        if q > 0 && hidden % q == 0 && kv > 0 && q % kv == 0 {
-            let head_dim = hidden / q;
+        if q > 0 && kv > 0 && q % kv == 0 {
+            let head_dim = config.model.attention_head_dim.unwrap_or(hidden / q);
             let group = q / kv;
             info!("heads: q={} kv={} (group={}) head_dim={}", q, kv, group, head_dim);
         }

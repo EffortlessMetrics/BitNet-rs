@@ -222,8 +222,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-003"
-status = "ready"
-branch = "codex/slm-cpu-003-tiny-run"
+status = "in_progress"
+branch = "codex/slm-cpu-003-tiny-strict-receipt"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -237,7 +237,10 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-common/**",
   "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
   "crates/bitnet-inference/**",
   "crates/bitnet-receipts/**",
   "ci/slm-cpu/**",

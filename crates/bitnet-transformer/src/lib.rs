@@ -206,9 +206,12 @@ impl MultiHeadAttention {
     pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         let n_heads = config.model.num_heads;
-        let head_dim = hidden_size / n_heads;
+        let head_dim = config
+            .model
+            .attention_head_dim
+            .unwrap_or_else(|| hidden_size / n_heads);
 
-        if !hidden_size.is_multiple_of(n_heads) {
+        if config.model.attention_head_dim.is_none() && !hidden_size.is_multiple_of(n_heads) {
             return Err(BitNetError::Validation(format!(
                 "hidden_size {} not divisible by num_heads {}",
                 hidden_size, n_heads
@@ -223,15 +226,17 @@ impl MultiHeadAttention {
             )));
         }
         let group_size = n_heads / n_kv_heads;
+        let q_out = n_heads * head_dim;
         let kv_out = n_kv_heads * head_dim;
 
         tracing::info!(
-            "layer{}: MultiHeadAttention dims: hidden={}, n_heads={}, n_kv_heads={}, head_dim={}, kv_out={}, group_size={}",
+            "layer{}: MultiHeadAttention dims: hidden={}, n_heads={}, n_kv_heads={}, head_dim={}, q_out={}, kv_out={}, group_size={}",
             layer_idx,
             hidden_size,
             n_heads,
             n_kv_heads,
             head_dim,
+            q_out,
             kv_out,
             group_size
         );
@@ -239,20 +244,20 @@ impl MultiHeadAttention {
         tracing::info!(
             "layer{}: About to create linear layers with: q_proj([{}, {}]), k_proj([{}, {}]), v_proj([{}, {}]), o_proj([{}, {}])",
             layer_idx,
-            hidden_size,
-            hidden_size,
-            kv_out,
+            q_out,
             hidden_size,
             kv_out,
             hidden_size,
+            kv_out,
             hidden_size,
-            hidden_size
+            hidden_size,
+            q_out
         );
 
-        let q_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("q_proj"))?;
+        let q_proj = linear_with_optional_bias(hidden_size, q_out, vb.pp("q_proj"))?;
         let k_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("k_proj"))?;
         let v_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("v_proj"))?;
-        let o_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("o_proj"))?;
+        let o_proj = linear_with_optional_bias(q_out, hidden_size, vb.pp("o_proj"))?;
 
         let rope = RotaryEmbedding::new(
             head_dim,
@@ -1008,7 +1013,7 @@ impl KVCache {
         let hidden_size = config.model.hidden_size;
 
         // Validate shape assumptions before calculating dimensions
-        if !hidden_size.is_multiple_of(n_heads) {
+        if config.model.attention_head_dim.is_none() && !hidden_size.is_multiple_of(n_heads) {
             return Err(BitNetError::Validation(format!(
                 "KVCache: hidden_size {} not divisible by num_heads {}",
                 hidden_size, n_heads
@@ -1023,7 +1028,10 @@ impl KVCache {
             )));
         }
 
-        let head_dim = hidden_size / n_heads;
+        let head_dim = config
+            .model
+            .attention_head_dim
+            .unwrap_or_else(|| hidden_size / n_heads);
         let max_seq_len = config.model.max_position_embeddings;
 
         let mut layers = Vec::with_capacity(n_layers);
