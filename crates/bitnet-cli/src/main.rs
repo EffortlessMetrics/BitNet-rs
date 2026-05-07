@@ -475,6 +475,17 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Run a tiny static OpenVINO NPU graph smoke without BitNet inference
+    IntelNpuSmoke {
+        /// Require tiny graph execution to pass
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// Output JSON smoke receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Run validation-only preflight checks
     Validate {
         #[command(subcommand)]
@@ -757,6 +768,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::IntelNpuProbe { strict, json_out }) => {
             handle_intel_npu_probe_command(strict, json_out).await
+        }
+        Some(Commands::IntelNpuSmoke { strict, json_out }) => {
+            handle_intel_npu_smoke_command(strict, json_out).await
         }
         Some(Commands::Validate { action }) => handle_validate_command(action).await,
         Some(Commands::CudaSmoke { device_index, json_out }) => {
@@ -1196,6 +1210,105 @@ async fn handle_intel_npu_probe_command(
     write_json_output(json_out.as_ref(), &receipt)?;
 
     if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+fn build_intel_npu_smoke_receipt(
+    probe: bitnet_device_probe::IntelNpuProbe,
+    smoke: bitnet_device_probe::runtimes::OpenVinoNpuTinyGraphSmoke,
+    strict: bool,
+    timestamp_utc: String,
+    artifact_path: Option<String>,
+) -> serde_json::Value {
+    let selected_backend =
+        smoke.selected_backend.clone().or_else(|| probe.selected_backend.clone());
+    let runtime_api = smoke.runtime_api.clone().or_else(|| probe.runtime_api.clone());
+    let runtime_device = smoke.runtime_device.clone().or_else(|| probe.runtime_device.clone());
+    let error = if strict && !smoke.passed {
+        Some(
+            smoke
+                .error
+                .clone()
+                .unwrap_or_else(|| "strict Intel NPU smoke requires tiny graph pass".to_owned()),
+        )
+    } else {
+        smoke.error.clone()
+    };
+    let claim = if smoke.passed {
+        "openvino_npu_tiny_graph_smoke_passed"
+    } else if probe.openvino_npu_visible {
+        "openvino_npu_tiny_graph_smoke_failed"
+    } else if probe.available {
+        "intel_npu_runtime_visibility_recorded_without_openvino_graph"
+    } else {
+        "intel_npu_unavailable"
+    };
+
+    serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "intel_npu_tiny_graph_smoke",
+        "machine_id": "intel-258v",
+        "hardware_lane": "intel-npu-openvino",
+        "proof_stage": smoke.proof_stage.clone(),
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": probe.requested_backend.clone(),
+        "selected_backend": selected_backend,
+        "runtime_api": runtime_api,
+        "runtime_device": runtime_device,
+        "shape_mode": smoke.shape_mode.clone(),
+        "strict_mode": strict,
+        "fallback_used": smoke.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cpu_fallback_allowed": smoke.cpu_fallback_allowed,
+        "kernel_execution": false,
+        "graph_execution": smoke.graph_execution,
+        "bitnet_inference": smoke.bitnet_inference,
+        "graph": {
+            "name": smoke.graph_name.clone(),
+            "precision": smoke.precision.clone(),
+            "input_shape": smoke.input_shape.clone(),
+            "output_shape": smoke.output_shape.clone(),
+            "max_abs_error": smoke.max_abs_error,
+            "mean_abs_error": smoke.mean_abs_error,
+            "tolerance": smoke.tolerance,
+            "result": if smoke.passed { "pass" } else { "fail" },
+        },
+        "timing": {
+            "compile_ms": smoke.compile_ms,
+            "first_infer_ms": smoke.first_infer_ms,
+        },
+        "npu": probe,
+        "openvino_smoke": smoke,
+        "claim": claim,
+        "must_not_claim": [
+            "BitNet inference works on Intel NPU",
+            "Intel NPU accelerates BitNet",
+            "Packed BitNet QK256 decode works on Intel NPU",
+            "CPU fallback satisfies NPU proof"
+        ],
+        "artifact_path": artifact_path,
+        "error": error,
+    })
+}
+
+async fn handle_intel_npu_smoke_command(
+    strict: bool,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    let openvino = bitnet_device_probe::runtimes::openvino::probe_openvino();
+    let npu = bitnet_device_probe::intel::lunar_lake::probe_intel_npu(&openvino);
+    let smoke = bitnet_device_probe::runtimes::run_openvino_npu_tiny_graph_smoke();
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt = build_intel_npu_smoke_receipt(npu, smoke, strict, timestamp_utc, artifact_path);
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if strict && let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
         anyhow::bail!("{error}");
     }
 
@@ -4539,6 +4652,164 @@ mod tests {
         assert_eq!(receipt["graph_execution"], false);
         assert_eq!(receipt["claim"], "intel_npu_os_visibility_recorded");
         assert_eq!(receipt["error"], "OpenVINO NPU was not visible");
+    }
+
+    #[test]
+    fn intel_npu_smoke_receipt_records_static_graph_execution_only() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: Some("intel-npu-openvino".to_string()),
+            runtime_api: Some("openvino".to_string()),
+            runtime_device: Some("NPU".to_string()),
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: true,
+            openvino_version: Some("2026.1".to_string()),
+            openvino_available_devices: vec!["CPU".to_string(), "NPU".to_string()],
+            openvino_npu_visible: true,
+            openvino_npu_full_name: Some("Intel(R) AI Boost".to_string()),
+            supported_properties: vec!["FULL_DEVICE_NAME".to_string()],
+            driver_version: Some("1.2.3".to_string()),
+            compiler_version: Some("4.5.6".to_string()),
+            total_mem_size: Some(1024),
+            alloc_mem_size: Some(128),
+            max_tiles: Some(1),
+            fallback_used: false,
+            failure_reason: None,
+        };
+        let smoke = bitnet_device_probe::runtimes::OpenVinoNpuTinyGraphSmoke {
+            passed: true,
+            proof_stage: "kernel_smoke_tested".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: Some("intel-npu-openvino".to_string()),
+            runtime_api: Some("openvino".to_string()),
+            runtime_device: Some("NPU".to_string()),
+            openvino_version: Some("2026.1".to_string()),
+            openvino_available_devices: vec!["CPU".to_string(), "NPU".to_string()],
+            graph_name: "tiny_matmul_add_f16_1x16".to_string(),
+            shape_mode: "static".to_string(),
+            input_shape: vec![1, 16],
+            output_shape: Some(vec![1, 16]),
+            precision: "F16".to_string(),
+            tolerance: 0.001,
+            max_abs_error: Some(0.0),
+            mean_abs_error: Some(0.0),
+            compile_ms: Some(12.5),
+            first_infer_ms: Some(1.25),
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: true,
+            bitnet_inference: false,
+            error: None,
+        };
+        let receipt = build_intel_npu_smoke_receipt(
+            probe,
+            smoke,
+            true,
+            "2026-05-06T00:00:00Z".to_string(),
+            Some("ci/hardware/intel-258v/2026-05-06/npu-tiny-graph-smoke.json".to_string()),
+        );
+
+        assert_eq!(receipt["artifact_kind"], "intel_npu_tiny_graph_smoke");
+        assert_eq!(receipt["proof_stage"], "kernel_smoke_tested");
+        assert_eq!(receipt["requested_backend"], "intel-npu");
+        assert_eq!(receipt["selected_backend"], "intel-npu-openvino");
+        assert_eq!(receipt["runtime_api"], "openvino");
+        assert_eq!(receipt["runtime_device"], "NPU");
+        assert_eq!(receipt["shape_mode"], "static");
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["cpu_fallback_allowed"], false);
+        assert_eq!(receipt["graph_execution"], true);
+        assert_eq!(receipt["kernel_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["graph"]["name"], "tiny_matmul_add_f16_1x16");
+        assert_eq!(receipt["graph"]["precision"], "F16");
+        assert_eq!(receipt["graph"]["input_shape"], serde_json::json!([1, 16]));
+        assert_eq!(receipt["graph"]["output_shape"], serde_json::json!([1, 16]));
+        assert_eq!(receipt["graph"]["result"], "pass");
+        assert!(receipt["error"].is_null());
+    }
+
+    #[test]
+    fn strict_intel_npu_smoke_records_error_without_fallback() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: false,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            openvino_npu_visible: false,
+            openvino_npu_full_name: None,
+            supported_properties: Vec::new(),
+            driver_version: None,
+            compiler_version: None,
+            total_mem_size: None,
+            alloc_mem_size: None,
+            max_tiles: None,
+            fallback_used: false,
+            failure_reason: Some("OpenVINO NPU was not visible".to_string()),
+        };
+        let smoke = bitnet_device_probe::runtimes::OpenVinoNpuTinyGraphSmoke {
+            passed: false,
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            graph_name: "tiny_matmul_add_f16_1x16".to_string(),
+            shape_mode: "static".to_string(),
+            input_shape: vec![1, 16],
+            output_shape: None,
+            precision: "F16".to_string(),
+            tolerance: 0.001,
+            max_abs_error: None,
+            mean_abs_error: None,
+            compile_ms: None,
+            first_infer_ms: None,
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: false,
+            bitnet_inference: false,
+            error: Some("OpenVINO did not report NPU".to_string()),
+        };
+        let receipt = build_intel_npu_smoke_receipt(
+            probe,
+            smoke,
+            true,
+            "2026-05-06T00:00:00Z".to_string(),
+            None,
+        );
+
+        assert_eq!(receipt["artifact_kind"], "intel_npu_tiny_graph_smoke");
+        assert_eq!(receipt["proof_stage"], "runtime_detected");
+        assert!(receipt["selected_backend"].is_null());
+        assert!(receipt["runtime_api"].is_null());
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["graph_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(
+            receipt["claim"],
+            "intel_npu_runtime_visibility_recorded_without_openvino_graph"
+        );
+        assert_eq!(receipt["error"], "OpenVINO did not report NPU");
     }
 
     #[test]

@@ -563,6 +563,21 @@ Run a static F16 graph on Intel NPU through OpenVINO, such as a matmul plus add,
 
 Keep OpenVINO optional. CPU builds must not require OpenVINO libraries or plugins to be installed.
 
+CLI shape:
+
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- intel-npu-smoke \
+  --json-out ci/hardware/intel-258v/<date>/npu-tiny-graph-smoke.json
+```
+
+Use `--strict` when the caller requires the tiny graph to compile and execute on
+OpenVINO `NPU`; strict mode writes the receipt and then fails if graph execution
+does not pass. A failed or unavailable smoke receipt must keep
+`fallback_used=false` and `cpu_fallback_allowed=false`.
+
 Recommended Cargo shape when implementation starts:
 
 ```toml

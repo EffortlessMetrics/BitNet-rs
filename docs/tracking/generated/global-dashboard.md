@@ -12,7 +12,7 @@
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | CPU258V-001 | #3802 | merged | none | Arc 140V OpenCL proof is not NPU proof. |
 | intel-a770 | A770-003 | TBD | ready | none | OpenCL-first for native A770 proof. |
-| intel-npu | NPU-004 | #3830 | merged | none | Device-node detection is not inference. |
+| intel-npu | NPU-005 | TBD | in_progress | none | Device-node detection is not inference. |
 | nvidia-5070ti | CUDA-DENSE-001 | TBD | proposed | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
 | tracker-infra | TRACKER-003 | #3724 | pr_open | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |

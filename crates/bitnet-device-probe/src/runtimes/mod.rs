@@ -11,7 +11,10 @@ pub mod openvino;
 
 pub use level_zero::LevelZeroProbe;
 pub use opencl::{OpenClRuntimeDevice, OpenClRuntimeProbe};
-pub use openvino::{OpenVinoDeviceProbe, OpenVinoProbe, OpenVinoPropertyProbe};
+pub use openvino::{
+    OpenVinoDeviceProbe, OpenVinoNpuTinyGraphSmoke, OpenVinoProbe, OpenVinoPropertyProbe,
+    run_openvino_npu_tiny_graph_smoke,
+};
 
 pub(crate) fn command_output<I, S>(command: &str, args: I) -> Result<String, String>
 where
