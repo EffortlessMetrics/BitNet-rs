@@ -103,3 +103,45 @@ must_not_claim = [
   "BitNet inference works on Intel NPU.",
   "Intel NPU accelerates BitNet.",
 ]
+
+[[work_item]]
+id = "NPU-004"
+status = "in_progress"
+branch = "codex/intel-npu/NPU-004-smoke-probe-command"
+stackable = false
+requires_human_merge = true
+blocked_by = ["NPU-003"]
+acceptance = "Add an Intel NPU smoke probe command that writes a machine-readable OpenVINO NPU runtime visibility receipt with requested/selected backend identity, runtime API/device, strict mode, proof_stage=runtime_detected, fallback_used=false, and no graph, kernel, or BitNet inference claims."
+commands = [
+  "rustfmt --check --config skip_children=true crates/bitnet-cli/src/main.rs --edition 2024",
+  "cargo test --locked -p bitnet-cli --bin bitnet tests::intel_npu_probe_receipt_is_visibility_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet tests::strict_intel_npu_probe_records_error_without_fallback -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- intel-npu-probe --json-out target/intel-npu-runtime-probe.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "docs/specs/intel-lunar-lake-npu-roadmap.md",
+  "docs/tracking/campaigns/intel-npu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The CLI can emit an Intel NPU OpenVINO runtime visibility receipt after merge.",
+]
+must_not_claim = [
+  "OpenVINO NPU graph execution works.",
+  "Intel NPU accelerates BitNet.",
+  "BitNet inference works on Intel NPU.",
+]

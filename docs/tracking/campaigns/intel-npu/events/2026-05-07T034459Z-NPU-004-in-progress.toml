@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T03:44:59Z"
+campaign = "intel-npu"
+item = "NPU-004"
+event = "in_progress"
+branch = "codex/intel-npu/NPU-004-smoke-probe-command"
+actor = "codex"
+
+notes = [
+  "Started Intel NPU smoke probe command work.",
+  "Scope is CLI receipt emission for OpenVINO NPU runtime visibility only; graph execution and BitNet inference remain out of scope.",
+]

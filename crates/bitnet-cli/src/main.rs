@@ -464,6 +464,17 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Probe Intel NPU OpenVINO runtime visibility without compiling graphs
+    IntelNpuProbe {
+        /// Require OpenVINO to report an NPU runtime device
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// Output JSON probe receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Run validation-only preflight checks
     Validate {
         #[command(subcommand)]
@@ -743,6 +754,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::LunarLakeProbe { json_out }) => {
             handle_lunar_lake_probe_command(json_out).await
+        }
+        Some(Commands::IntelNpuProbe { strict, json_out }) => {
+            handle_intel_npu_probe_command(strict, json_out).await
         }
         Some(Commands::Validate { action }) => handle_validate_command(action).await,
         Some(Commands::CudaSmoke { device_index, json_out }) => {
@@ -1111,6 +1125,79 @@ async fn handle_lunar_lake_probe_command(json_out: Option<std::path::PathBuf>) -
     let receipt = build_lunar_lake_probe_receipt(probe, timestamp_utc, artifact_path);
 
     write_json_output(json_out.as_ref(), &receipt)?;
+
+    Ok(())
+}
+
+fn build_intel_npu_probe_receipt(
+    probe: bitnet_device_probe::IntelNpuProbe,
+    strict: bool,
+    timestamp_utc: String,
+    artifact_path: Option<String>,
+) -> serde_json::Value {
+    let claim = if probe.openvino_npu_visible {
+        "openvino_npu_runtime_visibility_recorded"
+    } else if probe.available {
+        "intel_npu_os_visibility_recorded"
+    } else {
+        "intel_npu_unavailable"
+    };
+    let error =
+        if strict && !probe.openvino_npu_visible {
+            Some(probe.failure_reason.clone().unwrap_or_else(|| {
+                "strict Intel NPU probe requires OpenVINO to report NPU".to_owned()
+            }))
+        } else {
+            None
+        };
+
+    serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "intel_npu_runtime_probe",
+        "machine_id": "intel-258v",
+        "hardware_lane": "intel-npu-openvino",
+        "proof_stage": probe.proof_stage.clone(),
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": probe.requested_backend.clone(),
+        "selected_backend": probe.selected_backend.clone(),
+        "runtime_api": probe.runtime_api.clone(),
+        "runtime_device": probe.runtime_device.clone(),
+        "shape_mode": "static",
+        "strict_mode": strict,
+        "fallback_used": probe.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "kernel_execution": false,
+        "graph_execution": false,
+        "bitnet_inference": false,
+        "npu": probe,
+        "claim": claim,
+        "must_not_claim": [
+            "OpenVINO NPU graph execution works",
+            "Intel NPU accelerates BitNet",
+            "BitNet inference works on Intel NPU",
+            "CPU fallback satisfies NPU proof"
+        ],
+        "artifact_path": artifact_path,
+        "error": error,
+    })
+}
+
+async fn handle_intel_npu_probe_command(
+    strict: bool,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    let openvino = bitnet_device_probe::runtimes::openvino::probe_openvino();
+    let npu = bitnet_device_probe::intel::lunar_lake::probe_intel_npu(&openvino);
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt = build_intel_npu_probe_receipt(npu, strict, timestamp_utc, artifact_path);
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
 
     Ok(())
 }
@@ -4344,6 +4431,101 @@ mod tests {
         assert_eq!(receipt["bitnet_inference"], false);
         assert_eq!(receipt["fallback_used"], false);
         assert!(receipt["platform"]["cpu"]["has_avx512"].is_boolean());
+    }
+
+    #[test]
+    fn intel_npu_probe_receipt_is_visibility_only() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: Some("intel-npu-openvino".to_string()),
+            runtime_api: Some("openvino".to_string()),
+            runtime_device: Some("NPU".to_string()),
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: true,
+            openvino_version: Some("2026.1".to_string()),
+            openvino_available_devices: vec![
+                "CPU".to_string(),
+                "GPU.0".to_string(),
+                "NPU".to_string(),
+            ],
+            openvino_npu_visible: true,
+            openvino_npu_full_name: Some("Intel(R) AI Boost".to_string()),
+            supported_properties: vec!["FULL_DEVICE_NAME".to_string()],
+            driver_version: Some("1.2.3".to_string()),
+            compiler_version: Some("4.5.6".to_string()),
+            total_mem_size: Some(1024),
+            alloc_mem_size: Some(128),
+            max_tiles: Some(1),
+            fallback_used: false,
+            failure_reason: None,
+        };
+        let receipt = build_intel_npu_probe_receipt(
+            probe,
+            true,
+            "2026-05-06T00:00:00Z".to_string(),
+            Some("ci/hardware/intel-258v/2026-05-06/npu-openvino-runtime-probe.json".to_string()),
+        );
+
+        assert_eq!(receipt["artifact_kind"], "intel_npu_runtime_probe");
+        assert_eq!(receipt["requested_backend"], "intel-npu");
+        assert_eq!(receipt["selected_backend"], "intel-npu-openvino");
+        assert_eq!(receipt["runtime_api"], "openvino");
+        assert_eq!(receipt["runtime_device"], "NPU");
+        assert_eq!(receipt["strict_mode"], true);
+        assert_eq!(receipt["shape_mode"], "static");
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["kernel_execution"], false);
+        assert_eq!(receipt["graph_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert!(receipt["error"].is_null());
+    }
+
+    #[test]
+    fn strict_intel_npu_probe_records_error_without_fallback() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: false,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            openvino_npu_visible: false,
+            openvino_npu_full_name: None,
+            supported_properties: Vec::new(),
+            driver_version: None,
+            compiler_version: None,
+            total_mem_size: None,
+            alloc_mem_size: None,
+            max_tiles: None,
+            fallback_used: false,
+            failure_reason: Some("OpenVINO NPU was not visible".to_string()),
+        };
+        let receipt =
+            build_intel_npu_probe_receipt(probe, true, "2026-05-06T00:00:00Z".to_string(), None);
+
+        assert_eq!(receipt["requested_backend"], "intel-npu");
+        assert!(receipt["selected_backend"].is_null());
+        assert!(receipt["runtime_api"].is_null());
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["graph_execution"], false);
+        assert_eq!(receipt["claim"], "intel_npu_os_visibility_recorded");
+        assert_eq!(receipt["error"], "OpenVINO NPU was not visible");
     }
 
     #[test]
