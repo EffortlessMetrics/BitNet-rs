@@ -22,7 +22,8 @@ hard_constraints = [
 
 [[work_item]]
 id = "SLM-CPU-000"
-status = "in_progress"
+status = "pr_open"
+pr = 3902
 branch = "codex/slm-cpu-000-8250u-lane"
 stackable = false
 review_mode = "codex_premerge"
