@@ -1,0 +1,16 @@
+timestamp = "2026-05-07T05:20:00Z"
+campaign = "cpu-proof"
+item = "CPU-BITNET-008"
+event = "in_progress"
+previous_status = "pr_open"
+new_status = "in_progress"
+pr = 3833
+merge_sha = "81f72546962fd2dcb729b34c8cf8c6ec965dea6a"
+actor = "codex"
+
+notes = [
+  "Merged the CPU phase benchmark receipt slice.",
+  "The slice adds a real phase receipt emitter that consumes strict CPU proof receipts and emits measured profiles only for phases backed by those inputs.",
+  "CPU-BITNET-008 remains in progress because full closeout still requires proof-backed measured micro, layer, prefill, first-token, and steady decode benchmark evidence.",
+  "No server, GPU, NPU, crate-collapse, or performance speedup claim is made.",
+]
