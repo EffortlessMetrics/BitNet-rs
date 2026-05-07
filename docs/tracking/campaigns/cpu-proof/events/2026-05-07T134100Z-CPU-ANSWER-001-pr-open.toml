@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T13:41:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-001"
+event = "pr_open"
+pr = 3898
+head_sha = "31ecdde62e3ecdfbd84158d8490ff3599271ca06"
+actor = "codex"
+
+notes = [
+  "Opened #3898 for strict CPU answer-readiness gates and tiny deterministic corpus evidence.",
+  "The PR records prompt/generated token IDs and CPU loader/tokenizer/kernel/fallback truth without claiming general chat quality, server inference, GPU, NPU, or sustained throughput.",
+]

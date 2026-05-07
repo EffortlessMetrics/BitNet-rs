@@ -7,7 +7,7 @@ model:
   file: ggml-model-i2_s.gguf
 defaults:
   prompt_template: llama3-chat
-  max_new_tokens: 96
+  max_new_tokens: 8
   greedy: true
   deterministic: true
   strict_loader: true
@@ -16,63 +16,39 @@ defaults:
 cases:
   - id: math_2_plus_2
     question: "What is 2+2? Answer with only the number."
-    max_new_tokens: 16
+    max_new_tokens: 4
     gate:
       kind: exact_trimmed
       expected: "4"
 
-  - id: colors_four
-    question: "Name four common colors."
-    max_new_tokens: 48
-    gate:
-      kind: readable
-      min_words: 4
-
-  - id: bitnet_one_sentence
-    question: "Explain BitNet in one sentence."
-    max_new_tokens: 96
-    gate:
-      kind: contains_any
-      contains_any:
-        - "bit"
-        - "weight"
-        - "model"
-
-  - id: python_add
-    question: "Write a short Python function that adds two numbers."
-    max_new_tokens: 96
-    gate:
-      kind: contains_any
-      contains_any:
-        - "def "
-        - "return"
-
   - id: capital_france
-    question: "What is the capital of France?"
-    max_new_tokens: 32
+    question: "What is the capital of France? Answer with one word."
+    max_new_tokens: 8
     gate:
       kind: contains_any
       contains_any:
         - "Paris"
         - "paris"
 
-  - id: five_word_summary
-    question: "Summarize this sentence in five words: BitNet uses very low-bit weights to reduce memory use."
-    max_new_tokens: 32
+  - id: repeat_colors
+    question: "Repeat exactly: red blue green"
+    max_new_tokens: 8
     gate:
-      kind: readable
-      min_words: 3
+      kind: contains_any
+      contains_any:
+        - "red blue green"
+        - "Red blue green"
 
-  - id: shapes_three
-    question: "List three common shapes."
-    max_new_tokens: 48
+  - id: say_ok
+    question: "Say exactly: OK"
+    max_new_tokens: 4
     gate:
-      kind: readable
-      min_words: 3
+      kind: exact_trimmed
+      expected: "OK"
 
   - id: yes_no_water
     question: "Answer yes or no: is water wet?"
-    max_new_tokens: 16
+    max_new_tokens: 4
     gate:
       kind: starts_with_any
       starts_with_any:

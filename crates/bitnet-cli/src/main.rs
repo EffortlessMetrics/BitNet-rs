@@ -419,6 +419,10 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         strict_cuda: bool,
 
+        /// Require strict real-model CPU execution with no fallback
+        #[arg(long, default_value_t = false)]
+        strict_cpu: bool,
+
         /// Output answer-shaped receipt to file
         #[arg(long, value_name = "PATH")]
         receipt_out: Option<std::path::PathBuf>,
@@ -836,6 +840,7 @@ async fn main() -> Result<()> {
             top_k,
             top_p,
             strict_cuda,
+            strict_cpu,
             receipt_out,
         }) => {
             run_ask_generation(
@@ -849,6 +854,7 @@ async fn main() -> Result<()> {
                 top_k,
                 top_p,
                 strict_cuda,
+                strict_cpu,
                 receipt_out,
             )
             .await
@@ -3203,7 +3209,9 @@ async fn run_simple_generation(
                 "prompt": prompt_tokens_len,
                 "generated": generated_tokens.len(),
                 "total": prompt_tokens_len + generated_tokens.len(),
-                "ids": generated_tokens,
+                "ids": generated_tokens.clone(),
+                "prompt_ids": tokens[..prompt_tokens_len].to_vec(),
+                "generated_ids": generated_tokens.clone(),
             },
             "latency": {
                 "cmd_to_first_ms": first_token_ms,
@@ -3575,12 +3583,21 @@ async fn run_ask_generation(
     top_k: usize,
     top_p: f32,
     strict_cuda: bool,
+    strict_cpu: bool,
     receipt_out: Option<std::path::PathBuf>,
 ) -> Result<()> {
     const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    if strict_cuda && strict_cpu {
+        anyhow::bail!("--strict-cuda and --strict-cpu are mutually exclusive");
+    }
     if strict_cuda && requested_backend_label != RTX_5070_TI_CUDA {
         anyhow::bail!(
             "--strict-cuda requires --device {RTX_5070_TI_CUDA}; requested backend was {requested_backend_label}"
+        );
+    }
+    if strict_cpu && requested_backend_label != "cpu" {
+        anyhow::bail!(
+            "--strict-cpu requires --device cpu; requested backend was {requested_backend_label}"
         );
     }
     if strict_cuda && let Some(cuda_bin) = ensure_strict_cuda_ask_runtime_libraries_visible()? {
@@ -3640,6 +3657,9 @@ async fn run_ask_generation(
     if strict_cuda {
         validate_strict_cuda_ask_receipt(&run_receipt)?;
     }
+    if strict_cpu {
+        validate_strict_cpu_ask_receipt(&run_receipt)?;
+    }
 
     let answer = run_receipt["text"].as_str().unwrap_or_default();
     let artifact_kind = if run_receipt["runtime_api"] == "cuda"
@@ -3683,6 +3703,10 @@ async fn run_ask_generation(
             "tokens": run_receipt["profile"]["prompt_prefill"]["tokens"].clone(),
             "kv_cache_behavior": run_receipt["profile"]["prompt_prefill"]["kv_cache_behavior"].clone(),
         },
+        "token_ids": {
+            "prompt": run_receipt["tokens"]["prompt_ids"].clone(),
+            "generated": run_receipt["tokens"]["generated_ids"].clone(),
+        },
         "bitnet": {
             "quantization": run_receipt["bitnet"]["quantization"].clone(),
             "kernel_family": run_receipt["bitnet"]["kernel_family"].clone(),
@@ -3698,6 +3722,9 @@ async fn run_ask_generation(
     write_json_output(Some(&receipt_path), &answer_receipt)?;
     if strict_cuda {
         validate_strict_cuda_answer_quality(&answer_receipt)?;
+    }
+    if strict_cpu {
+        validate_strict_cpu_answer_quality(&answer_receipt)?;
     }
     Ok(())
 }
@@ -3731,6 +3758,58 @@ fn validate_strict_cuda_answer_quality(answer_receipt: &serde_json::Value) -> Re
         .unwrap_or_else(|_| "<unprintable quality receipt>".to_string());
     anyhow::bail!(
         "strict CUDA ask failed answer quality gate after writing receipt: {quality_summary}"
+    )
+}
+
+fn validate_strict_cpu_ask_receipt(run_receipt: &serde_json::Value) -> Result<()> {
+    let selected_backend = run_receipt["selected_backend"].as_str().unwrap_or_default();
+    let runtime_api = run_receipt["runtime_api"].as_str().unwrap_or_default();
+    let fallback_used = run_receipt["fallback_used"].as_bool().unwrap_or(true);
+    if runtime_api != "cpu" || fallback_used {
+        anyhow::bail!(
+            "strict CPU ask did not preserve the CPU lane: selected_backend={selected_backend}, runtime_api={runtime_api}, fallback_used={fallback_used}"
+        );
+    }
+    if !matches!(selected_backend, "cpu" | "cpu-rust") {
+        anyhow::bail!("strict CPU ask selected non-CPU backend `{selected_backend}`");
+    }
+
+    let loader_mode = run_receipt["loader"]["mode"]
+        .as_str()
+        .or_else(|| run_receipt["model"]["loader_mode"].as_str())
+        .unwrap_or_default();
+    if loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str() {
+        anyhow::bail!("strict CPU ask requires real_gguf loader mode, got `{loader_mode}`");
+    }
+
+    let tokenizer_strict = run_receipt["tokenizer"]["strict"].as_bool().unwrap_or(false);
+    let tokenizer_source = run_receipt["tokenizer"]["source"].as_str().unwrap_or_default();
+    if !tokenizer_strict || tokenizer_source.is_empty() || tokenizer_source == "unknown" {
+        anyhow::bail!(
+            "strict CPU ask requires strict tokenizer source, got source=`{tokenizer_source}` strict={tokenizer_strict}"
+        );
+    }
+
+    let selected_kernel = run_receipt["kernel"]["kernel_id"].as_str().unwrap_or_default();
+    if selected_kernel.is_empty()
+        || selected_kernel.contains("mock")
+        || selected_kernel.contains("diagnostic")
+    {
+        anyhow::bail!("strict CPU ask selected invalid kernel `{selected_kernel}`");
+    }
+    Ok(())
+}
+
+fn validate_strict_cpu_answer_quality(answer_receipt: &serde_json::Value) -> Result<()> {
+    let quality = &answer_receipt["quality"];
+    if quality["garbage_filter_passed"].as_bool().unwrap_or(false) {
+        return Ok(());
+    }
+
+    let quality_summary = serde_json::to_string(quality)
+        .unwrap_or_else(|_| "<unprintable quality receipt>".to_string());
+    anyhow::bail!(
+        "strict CPU ask failed answer quality gate after writing receipt: {quality_summary}"
     )
 }
 
@@ -4782,6 +4861,49 @@ mod tests {
         });
 
         validate_strict_cuda_answer_quality(&answer_receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cpu_ask_receipt_accepts_real_cpu_path() {
+        let run_receipt = serde_json::json!({
+            "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "gguf_metadata", "strict": true },
+            "kernel": { "kernel_id": "i2_s-avx2-reference" }
+        });
+
+        validate_strict_cpu_ask_receipt(&run_receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cpu_ask_receipt_rejects_fallback() {
+        let run_receipt = serde_json::json!({
+            "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "fallback_used": true,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "gguf_metadata", "strict": true },
+            "kernel": { "kernel_id": "i2_s-avx2-reference" }
+        });
+
+        let err = validate_strict_cpu_ask_receipt(&run_receipt).unwrap_err().to_string();
+
+        assert!(err.contains("strict CPU ask did not preserve the CPU lane"), "got: {err}");
+    }
+
+    #[test]
+    fn strict_cpu_answer_quality_gate_rejects_failed_receipt() {
+        let answer_receipt = serde_json::json!({
+            "quality": {
+                "garbage_filter_passed": false,
+            }
+        });
+
+        let err = validate_strict_cpu_answer_quality(&answer_receipt).unwrap_err().to_string();
+
+        assert!(err.contains("strict CPU ask failed answer quality gate"), "got: {err}");
     }
 
     #[test]

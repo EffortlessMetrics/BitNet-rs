@@ -477,7 +477,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-001"
-status = "ready"
+status = "pr_open"
+pr = 3898
 branch = "codex/cpu-answer-001-strict-answer-readiness"
 stackable = false
 review_mode = "codex_premerge"
@@ -498,6 +499,7 @@ allowed_paths = [
   "crates/bitnet-inference/**",
   "crates/bitnet-receipts/**",
   "crates/bitnet-receipts-core/**",
+  "ci/quality/**",
   "docs/bitnet/**",
   "docs/tracking/campaigns/cpu-proof/**",
   "ci/hardware/intel-i5-8250u-cpu-avx2/**",

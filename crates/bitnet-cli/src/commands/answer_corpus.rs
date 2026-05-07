@@ -28,7 +28,7 @@ pub struct AnswerCorpusCommand {
     #[arg(long, value_name = "PATH")]
     pub tokenizer: Option<PathBuf>,
 
-    /// Backend label for this baseline. CUDA-ANSWER-001 is CPU-only.
+    /// Backend label for this baseline. CPU-ANSWER-001 is CPU-only.
     #[arg(long, value_name = "BACKEND")]
     pub device: Option<String>,
 
@@ -61,7 +61,7 @@ impl AnswerCorpusCommand {
             normalize_cpu_baseline_device(self.device.as_deref().unwrap_or(default_device));
         if device != "cpu" {
             anyhow::bail!(
-                "answer-corpus is the CUDA-ANSWER-001 CPU baseline and only accepts --device cpu; got {device}"
+                "answer-corpus is the CPU-ANSWER-001 CPU baseline and only accepts --device cpu; got {device}"
             );
         }
         let default_timeout_seconds = effective_default_timeout_seconds(
@@ -238,7 +238,9 @@ impl AnswerCorpusCommand {
         )
         .with_context(|| format!("invalid run receipt {}", case_receipt.display()))?;
         let answer = run_receipt["text"].as_str().unwrap_or_default().to_string();
-        let quality = evaluate_quality(&answer, &case.gate);
+        let mut quality = evaluate_quality(&answer, &case.gate);
+        quality.failed_rules.extend(cpu_answer_receipt_failed_rules(&run_receipt));
+        quality.passed = quality.failed_rules.is_empty();
         let status = if quality.passed { "passed" } else { "quality_failed" };
 
         Ok(json!({
@@ -248,6 +250,10 @@ impl AnswerCorpusCommand {
             "run_receipt_path": case_receipt.display().to_string(),
             "answer": answer,
             "tokens": run_receipt.get("tokens").cloned().unwrap_or(Value::Null),
+            "token_ids": {
+                "prompt": run_receipt["tokens"]["prompt_ids"].clone(),
+                "generated": run_receipt["tokens"]["generated_ids"].clone(),
+            },
             "prompt_template": corpus.defaults.prompt_template,
             "quality": {
                 "passed": quality.passed,
@@ -264,6 +270,17 @@ impl AnswerCorpusCommand {
                 "selected_backend": run_receipt["selected_backend"].clone(),
                 "runtime_api": run_receipt["runtime_api"].clone(),
                 "fallback_used": run_receipt["fallback_used"].clone(),
+            },
+            "kernel": {
+                "selected_kernel": run_receipt["kernel"]["kernel_id"].clone(),
+                "family": run_receipt["kernel"]["family"].clone(),
+            },
+            "loader": {
+                "mode": run_receipt["loader"]["mode"].clone(),
+            },
+            "tokenizer": {
+                "source": run_receipt["tokenizer"]["source"].clone(),
+                "strict": run_receipt["tokenizer"]["strict"].clone(),
             }
         }))
     }
@@ -403,6 +420,59 @@ fn evaluate_quality(answer: &str, gate: &AnswerGate) -> QualityResult {
         mostly_text,
         failed_rules,
     }
+}
+
+fn cpu_answer_receipt_failed_rules(run_receipt: &Value) -> Vec<String> {
+    let mut failed = Vec::new();
+    let requested_backend = run_receipt["requested_backend"].as_str().unwrap_or_default();
+    let selected_backend = run_receipt["selected_backend"].as_str().unwrap_or_default();
+    let runtime_api = run_receipt["runtime_api"].as_str().unwrap_or_default();
+    let fallback_used = run_receipt["fallback_used"].as_bool().unwrap_or(true);
+    if requested_backend != "cpu" {
+        failed.push("requested_backend_cpu".to_string());
+    }
+    if !matches!(selected_backend, "cpu" | "cpu-rust") {
+        failed.push("selected_backend_cpu".to_string());
+    }
+    if runtime_api != "cpu" {
+        failed.push("runtime_api_cpu".to_string());
+    }
+    if fallback_used {
+        failed.push("fallback_false".to_string());
+    }
+
+    let loader_mode = run_receipt["loader"]["mode"]
+        .as_str()
+        .or_else(|| run_receipt["model"]["loader_mode"].as_str())
+        .unwrap_or_default();
+    if loader_mode != "real_gguf" {
+        failed.push("loader_real_gguf".to_string());
+    }
+
+    let tokenizer_source = run_receipt["tokenizer"]["source"].as_str().unwrap_or_default();
+    let tokenizer_strict = run_receipt["tokenizer"]["strict"].as_bool().unwrap_or(false);
+    if tokenizer_source.is_empty() || tokenizer_source == "unknown" {
+        failed.push("tokenizer_source_recorded".to_string());
+    }
+    if !tokenizer_strict {
+        failed.push("tokenizer_strict".to_string());
+    }
+
+    let selected_kernel = run_receipt["kernel"]["kernel_id"].as_str().unwrap_or_default();
+    if selected_kernel.is_empty() {
+        failed.push("selected_kernel_recorded".to_string());
+    }
+    if selected_kernel.contains("mock") || selected_kernel.contains("diagnostic") {
+        failed.push("selected_kernel_production".to_string());
+    }
+
+    if !run_receipt["tokens"]["prompt_ids"].is_array() {
+        failed.push("prompt_token_ids_recorded".to_string());
+    }
+    if !run_receipt["tokens"]["generated_ids"].is_array() {
+        failed.push("generated_token_ids_recorded".to_string());
+    }
+    failed
 }
 
 fn gate_passed(answer: &str, gate: &AnswerGate) -> bool {
@@ -549,5 +619,47 @@ mod tests {
         assert_eq!(effective_default_timeout_seconds(None, Some(120)), 120);
         assert_eq!(effective_default_timeout_seconds(None, None), 300);
         assert_eq!(effective_default_timeout_seconds(Some(0), Some(300)), 1);
+    }
+
+    #[test]
+    fn cpu_answer_receipt_accepts_strict_cpu_truth() {
+        let receipt = json!({
+            "requested_backend": "cpu",
+            "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "gguf_metadata", "strict": true },
+            "kernel": { "kernel_id": "i2_s-avx2-reference" },
+            "tokens": {
+                "prompt_ids": [1, 2, 3],
+                "generated_ids": [4]
+            }
+        });
+
+        assert!(cpu_answer_receipt_failed_rules(&receipt).is_empty());
+    }
+
+    #[test]
+    fn cpu_answer_receipt_rejects_hidden_fallback_and_missing_ids() {
+        let receipt = json!({
+            "requested_backend": "cpu",
+            "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "fallback_used": true,
+            "loader": { "mode": "minimal_compatibility" },
+            "tokenizer": { "source": "unknown", "strict": false },
+            "kernel": { "kernel_id": "mock-diagnostic" },
+            "tokens": {}
+        });
+
+        let failed = cpu_answer_receipt_failed_rules(&receipt);
+        assert!(failed.contains(&"fallback_false".to_string()));
+        assert!(failed.contains(&"loader_real_gguf".to_string()));
+        assert!(failed.contains(&"tokenizer_source_recorded".to_string()));
+        assert!(failed.contains(&"tokenizer_strict".to_string()));
+        assert!(failed.contains(&"selected_kernel_production".to_string()));
+        assert!(failed.contains(&"prompt_token_ids_recorded".to_string()));
+        assert!(failed.contains(&"generated_token_ids_recorded".to_string()));
     }
 }

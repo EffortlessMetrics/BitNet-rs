@@ -8,7 +8,7 @@
 | apple-m4-local-answer | M4-QA-001 | TBD | ready | M4-QA-002 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-operational | M4-OP-006 | #3882 | merged | none | Do not reopen the completed apple-m4 proof campaign. |
 | ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | CPU-ANSWER-001 | TBD | ready | none | No GPU or NPU claims. |
+| cpu-proof | CPU-ANSWER-001 | #3898 | pr_open | none | No GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | CPU258V-001 | #3802 | merged | none | Arc 140V OpenCL proof is not NPU proof. |
