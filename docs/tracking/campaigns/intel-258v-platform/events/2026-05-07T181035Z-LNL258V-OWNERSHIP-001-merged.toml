@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T18:10:35Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OWNERSHIP-001"
+event = "merged"
+pr = 3914
+merge_sha = "95544c4c41afe82bc424dc7cc756758e5b7f3505"
+actor = "codex"
+
+notes = [
+  "Lunar Lake ownership correction merged.",
+  "Core Ultra 7 258V is now the BitNet CPU lead; CPU258V-002 is ready as the next scalar-vs-AVX2 strict answer parity item.",
+]
