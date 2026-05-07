@@ -27,7 +27,7 @@ Move CPU BitNet work from strict proof surfaces into scalar, packed-layout, AVX2
 | Work item | Status | Notes |
 |---|---|---|
 | KBL8250U-003 | merged | Prove i5-8250U scalar and AVX2 dispatch. |
-| KBL8250U-004 | pr_open | Adds a strict real-GGUF CPU proof run on the i5-8250U lane, with raw CLI backend `cpu-rust`, hardware lane identity `intel-i5-8250u-cpu-avx2`, no fallback, model hash, first-token timing, and explicit thermal/frequency null context. |
+| KBL8250U-004 | merged | Added a strict real-GGUF CPU proof run on the i5-8250U lane, with raw CLI backend `cpu-rust`, hardware lane identity `intel-i5-8250u-cpu-avx2`, no fallback, model hash, first-token timing, and explicit thermal/frequency null context. |
 
 ## Review Policy
 
