@@ -2018,6 +2018,11 @@ fn cpu_kernel_implementation(quantization: bitnet_common::QuantizationType) -> &
     {
         return "avx2";
     }
+    if std::env::var("BITNET_CPU_KERNEL").as_deref() == Ok("avx512")
+        && bitnet_common::runtime_diag::CpuFeatures::detect().avx512f
+    {
+        return "avx512";
+    }
     if matches!(quantization, bitnet_common::QuantizationType::I2S) && cfg!(target_arch = "aarch64")
     {
         // The current Apple CPU proof path has NEON available, but the packed
@@ -2981,6 +2986,7 @@ async fn run_simple_generation(
         let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
         let tokenizer_info = serde_json::json!({
             "type": tokenizer_type,
+            "model_family": tokenizer_type,
             "origin": if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
                 "embedded"
             } else {
@@ -2988,6 +2994,7 @@ async fn run_simple_generation(
             },
             "source": tokenizer_source_str,
             "strict": tokenizer_strict,
+            "pretokenizer_authority": "unknown",
             "bos": tokenizer.bos_token_id().unwrap_or(1),
             "eos": tokenizer.eos_token_id().unwrap_or(2),
         });
@@ -3285,6 +3292,8 @@ async fn run_simple_generation(
                 "context_length": config.model.max_position_embeddings,
                 "tokenizer": tokenizer_label,
                 "vocab_size": tokenizer.vocab_size(),
+                "tie_word_embeddings": serde_json::Value::Null,
+                "output_head_tensor": "output.weight",
                 "loader_mode": loader_mode,
                 "fallback_loader_used": loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str(),
             },
