@@ -6,4 +6,5 @@
 //! budget band, then emits both `ci-plan.json` and a markdown
 //! step-summary block.
 
+pub mod actuals;
 pub mod plan;

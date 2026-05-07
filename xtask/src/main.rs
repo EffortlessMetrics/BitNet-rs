@@ -1081,6 +1081,32 @@ enum Cmd {
 
 #[derive(Subcommand)]
 enum CiCmd {
+    /// Emit a CI actuals artefact (PR 16 scaffold).
+    Actuals {
+        #[arg(long)]
+        repo: String,
+        #[arg(long)]
+        sha: String,
+        #[arg(long)]
+        pr: Option<u64>,
+        #[arg(long)]
+        workflow: String,
+        #[arg(long)]
+        job: Option<String>,
+        #[arg(long)]
+        runner: Option<String>,
+        #[arg(long)]
+        seconds: Option<u64>,
+        #[arg(long)]
+        estimated_lem: Option<f64>,
+        #[arg(long)]
+        conclusion: Option<String>,
+        #[arg(long, default_value_t = false)]
+        cache_hit: bool,
+        #[arg(long, default_value = "target/ci/ci-actuals.json")]
+        json_out: PathBuf,
+    },
+
     /// Compute the per-PR plan (touched areas, expected lanes, estimated LEM).
     ///
     /// Replaces the inline Python in `.github/workflows/pr-plan.yml`.
@@ -1484,6 +1510,31 @@ fn real_main() -> Result<()> {
         }
         Cmd::PolicyReport { report_dir } => run_policy_report(report_dir),
         Cmd::Ci { command } => match command {
+            CiCmd::Actuals {
+                repo,
+                sha,
+                pr,
+                workflow,
+                job,
+                runner,
+                seconds,
+                estimated_lem,
+                conclusion,
+                cache_hit,
+                json_out,
+            } => ci::actuals::run(
+                repo,
+                sha,
+                pr,
+                workflow,
+                job,
+                runner,
+                seconds,
+                estimated_lem,
+                conclusion,
+                cache_hit,
+                json_out,
+            ),
             CiCmd::Plan {
                 base,
                 head,
