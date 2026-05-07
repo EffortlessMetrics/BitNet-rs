@@ -119,16 +119,17 @@ human_gate = "on_blocker_only"
 blocked_by = ["NPU-003"]
 acceptance = "Add an Intel NPU smoke probe command that writes a machine-readable OpenVINO NPU runtime visibility receipt with requested/selected backend identity, runtime API/device, strict mode, proof_stage=runtime_detected, fallback_used=false, and no graph, kernel, or BitNet inference claims."
 commands = [
-  "rustfmt --check --config skip_children=true crates/bitnet-cli/src/main.rs --edition 2024",
-  "cargo test --locked -p bitnet-cli --bin bitnet tests::intel_npu_probe_receipt_is_visibility_only -- --exact --nocapture",
-  "cargo test --locked -p bitnet-cli --bin bitnet tests::strict_intel_npu_probe_records_error_without_fallback -- --exact --nocapture",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- intel-npu-probe --json-out target/intel-npu-runtime-probe.json",
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs --edition 2024",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_probe_receipt_is_visibility_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::strict_intel_npu_probe_records_error_without_fallback -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu -- intel-npu-probe --json-out target/intel-npu-runtime-probe.json",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
   "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/intel_npu.rs",
   "docs/specs/intel-lunar-lake-npu-roadmap.md",
   "docs/tracking/campaigns/intel-npu/**",
   "docs/tracking/generated/**",
@@ -163,17 +164,18 @@ human_gate = "on_blocker_only"
 blocked_by = ["NPU-004"]
 acceptance = "Add a tiny static OpenVINO NPU graph smoke command that compiles and runs a fixed F16 matmul-add graph on runtime device NPU when available, writes a machine-readable receipt with shape_mode=static, graph identity, timing, requested/selected backend identity, fallback_used=false, cpu_fallback_allowed=false, and never claims BitNet inference or NPU acceleration."
 commands = [
-  "rustfmt --check --config skip_children=true crates/bitnet-cli/src/main.rs crates/bitnet-device-probe/src/runtimes/openvino.rs crates/bitnet-device-probe/src/runtimes/mod.rs --edition 2024",
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs crates/bitnet-device-probe/src/runtimes/openvino.rs crates/bitnet-device-probe/src/runtimes/mod.rs --edition 2024",
   "cargo test --locked -p bitnet-device-probe --no-default-features openvino_npu_tiny_graph -- --nocapture",
-  "cargo test --locked -p bitnet-cli --bin bitnet tests::intel_npu_smoke_receipt_records_static_graph_execution_only -- --exact --nocapture",
-  "cargo test --locked -p bitnet-cli --bin bitnet tests::strict_intel_npu_smoke_records_error_without_fallback -- --exact --nocapture",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- intel-npu-smoke --json-out target/intel-npu-tiny-graph-smoke.json",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_smoke_receipt_records_static_graph_execution_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::strict_intel_npu_smoke_records_error_without_fallback -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu -- intel-npu-smoke --json-out target/intel-npu-tiny-graph-smoke.json",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
   "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/intel_npu.rs",
   "crates/bitnet-device-probe/src/runtimes/openvino.rs",
   "crates/bitnet-device-probe/src/runtimes/mod.rs",
   "docs/specs/intel-lunar-lake-npu-roadmap.md",
@@ -213,18 +215,19 @@ human_gate = "on_blocker_only"
 blocked_by = ["NPU-006"]
 acceptance = "Add selected static BitNet RMSNorm subgraph parity through OpenVINO NPU with CPU reference comparison, selected backend/runtime identity, timing, fallback_used=false, and no full BitNet inference or QK256 decode claims."
 commands = [
-  "rustfmt --check --config skip_children=true crates/bitnet-cli/src/main.rs crates/bitnet-device-probe/src/runtimes/openvino.rs --edition 2024",
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs crates/bitnet-device-probe/src/runtimes/openvino.rs --edition 2024",
   "cargo test --locked -p bitnet-device-probe --no-default-features runtimes::openvino::tests::parses_openvino_npu_bitnet_subgraph_parity_pass -- --exact --nocapture",
   "cargo test --locked -p bitnet-device-probe --no-default-features runtimes::openvino::tests::parses_openvino_npu_bitnet_subgraph_missing_npu_as_runtime_only -- --exact --nocapture",
-  "cargo test --locked -p bitnet-cli --bin bitnet tests::intel_npu_bitnet_subgraph_receipt_records_parity_only -- --exact --nocapture",
-  "cargo test --locked -p bitnet-cli --bin bitnet tests::strict_intel_npu_bitnet_subgraph_records_error_without_fallback -- --exact --nocapture",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- intel-npu-bitnet-subgraph --json-out target/intel-npu-bitnet-subgraph-parity.json",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_bitnet_subgraph_receipt_records_parity_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::strict_intel_npu_bitnet_subgraph_records_error_without_fallback -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu -- intel-npu-bitnet-subgraph --json-out target/intel-npu-bitnet-subgraph-parity.json",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
   "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/intel_npu.rs",
   "crates/bitnet-device-probe/src/runtimes/openvino.rs",
   "crates/bitnet-device-probe/src/runtimes/mod.rs",
   "docs/specs/intel-lunar-lake-npu-roadmap.md",
@@ -262,16 +265,17 @@ human_gate = "on_blocker_only"
 blocked_by = ["NPU-005"]
 acceptance = "Harden Intel NPU probe and tiny graph smoke receipts with structured backend_runtime, shape_contract, fallback_policy, graph identity, timing, and kernels_or_graphs fields while preserving fallback_used=false and no BitNet inference claims."
 commands = [
-  "rustfmt --check --config skip_children=true crates/bitnet-cli/src/main.rs --edition 2024",
-  "cargo test --locked -p bitnet-cli --bin bitnet tests::intel_npu_probe_receipt_is_visibility_only -- --exact --nocapture",
-  "cargo test --locked -p bitnet-cli --bin bitnet tests::intel_npu_smoke_receipt_records_static_graph_execution_only -- --exact --nocapture",
-  "cargo test --locked -p bitnet-cli --bin bitnet tests::strict_intel_npu_smoke_records_error_without_fallback -- --exact --nocapture",
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs --edition 2024",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_probe_receipt_is_visibility_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_smoke_receipt_records_static_graph_execution_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::strict_intel_npu_smoke_records_error_without_fallback -- --exact --nocapture",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
   "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/intel_npu.rs",
   "docs/specs/intel-lunar-lake-npu-roadmap.md",
   "docs/tracking/campaigns/intel-npu/**",
   "docs/tracking/generated/**",
