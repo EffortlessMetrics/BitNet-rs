@@ -542,16 +542,87 @@ debug = true
 [profile.dev.package."*"]
 opt-level = 2
 
-# Workspace-level lints for code quality
+# Workspace-level lints for code quality.
+#
+# Stage A (PR 08): introduce an explicit Rust-level deny block plus a
+# warn baseline for hard safety / silent-failure / governance lints
+# alongside the existing broad category warns. The broad warns are
+# preserved during the staging window; PR 12 ("strict Clippy flip")
+# replaces them with the explicit-only profile and promotes
+# panic-family lints from `warn` to `deny`. See:
+#   - docs/CLIPPY_POLICY.md
+#   - docs/development/BITNET_STRICT_POLICY_ROLLOUT.md
+#   - policy/clippy-lints.toml
+#
+# Notes:
+#   - `unsafe_code = "deny"` (not `forbid`) — BitNet-rs has FFI/GPU/SIMD
+#     surfaces that need narrow unsafe islands, eventually receipted via
+#     policy/unsafe-allowlist.toml.
+#   - `priority = -1` on category lints lets specific lint overrides win.
+#   - Many of the new clippy entries are `warn` during the staging
+#     window so they do not block CI under -D warnings until the
+#     debt cleanup PRs (10 / 11) land.
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+unexpected_cfgs = "warn"
+
 [workspace.lints.clippy]
+# Existing broad category warns (kept until PR 12 replaces them with
+# the explicit-only profile).
 all = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+# Existing surface allows (kept as part of the public-API stylistic
+# decision; revisited in the strict flip).
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 module_name_repetitions = "allow"
 must_use_candidate = "allow"
-nursery = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
+
+# Pre-existing hard ban
 ptr_arg = "deny"
+
+# --- Stage A explicit profile (additive over the broad warns) ---
+
+# Hard bans / placeholders
+dbg_macro = "deny"
+todo = "warn"
+unimplemented = "warn"
+
+# Panic-family — `warn` during staging; promoted to `deny` in PR 12.
+panic = "warn"
+unreachable = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+get_unwrap = "warn"
+unwrap_in_result = "warn"
+panic_in_result_fn = "warn"
+string_slice = "warn"
+indexing_slicing = "warn"
+
+# Hard safety rails — kept at `deny` because they are correctness bugs
+# rather than style debt.
+out_of_bounds_indexing = "deny"
+
+# Silent-failure shapes (kept at `warn` during the staging window so
+# that Stage A does not block CI on legacy debt).
+let_underscore_future = "warn"
+let_underscore_must_use = "warn"
+let_underscore_lock = "warn"
+map_err_ignore = "warn"
+assertions_on_result_states = "warn"
+lines_filter_map_ok = "warn"
+
+# Suppression governance — these enforce the receipt-shaped style
+# documented in docs/CLIPPY_POLICY.md. Kept at `warn` during the
+# staging window because the codebase still carries 476 bare allows;
+# PRs 10 / 11 / 12 clear those.
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+blanket_clippy_restriction_lints = "warn"
 
 # Workspace-level feature flags for convenience
 [workspace.metadata.docs.rs]
