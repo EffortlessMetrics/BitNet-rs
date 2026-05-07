@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T11:06:01Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-006"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started next-frontier decision for Apple M4 operationalization.",
+  "Scope is documentation and tracker updates only.",
+  "The decision must not claim a new runtime capability, Apple QK256 support, full Metal inference, Neural Engine execution, or general M4 performance.",
+]

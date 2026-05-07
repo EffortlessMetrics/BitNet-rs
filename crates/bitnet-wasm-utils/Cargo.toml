@@ -17,3 +17,6 @@ web-sys = { workspace = true, features = ["Window", "Navigator", "Performance"] 
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.53"
+
+[lints]
+workspace = true

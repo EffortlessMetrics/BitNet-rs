@@ -22,9 +22,9 @@
 | apple-m4 | M4-018 | M4-017 | merged |
 | apple-m4-operational | M4-OP-002 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-003 | M4-OP-001 | merged |
-| apple-m4-operational | M4-OP-004 | M4-OP-003 | proposed |
-| apple-m4-operational | M4-OP-005 | M4-OP-002 | pr_open |
-| apple-m4-operational | M4-OP-006 | M4-OP-004, M4-OP-005 | proposed |
+| apple-m4-operational | M4-OP-004 | M4-OP-003 | merged |
+| apple-m4-operational | M4-OP-005 | M4-OP-002 | merged |
+| apple-m4-operational | M4-OP-006 | M4-OP-004, M4-OP-005 | merged |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | merged |
@@ -34,7 +34,9 @@
 | cpu-proof | CPU-BITNET-005c | CPU-BITNET-005b | merged |
 | cpu-proof | CPU-BITNET-006 | CPU-BITNET-005c | merged |
 | cpu-proof | CPU-BITNET-007 | CPU-BITNET-006 | merged |
-| cpu-proof | CPU-BITNET-008 | CPU-BITNET-007 | in_progress |
+| cpu-proof | CPU-BITNET-008 | CPU-BITNET-007 | merged |
+| cpu-proof | CPU-PHASE-TIMING-001 | CPU-BITNET-008 | merged |
+| cpu-proof | CPU-ANSWER-001 | CPU-BITNET-008, CPU-PHASE-TIMING-001 | ready |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | merged |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
@@ -43,6 +45,7 @@
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
+| intel-npu | NPU-007 | NPU-006 | merged |
 | intel-npu | NPU-006 | NPU-005 | merged |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |

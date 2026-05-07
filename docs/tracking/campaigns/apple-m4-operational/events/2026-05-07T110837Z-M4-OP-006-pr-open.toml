@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T11:08:37Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-006"
+event = "pr_open"
+pr = 3882
+head_sha = "562f03259ac0f772d60d9a13a9e4175d005dedf7"
+actor = "codex"
+
+notes = [
+  "Opened Apple M4 next-frontier decision PR.",
+  "Selects CPU/NEON local-answer usability as the next Apple implementation frontier.",
+  "Documents Metal subgraph expansion second and QK256 investigation last.",
+]

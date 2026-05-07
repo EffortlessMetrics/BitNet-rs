@@ -22,3 +22,6 @@ bitnet-probability = { path = "../bitnet-probability", version = "0.2.1-dev" }
 [dev-dependencies]
 proptest = { workspace = true }
 insta = { workspace = true }
+
+[lints]
+workspace = true

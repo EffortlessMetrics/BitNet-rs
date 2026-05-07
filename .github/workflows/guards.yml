@@ -30,7 +30,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
@@ -78,7 +78,7 @@ jobs:
           fi
           echo "✅ All actions pinned to 40-hex SHAs"
 
-      - name: Guard - MSRV consistency (1.92.0 only)
+      - name: Guard - MSRV consistency (1.93.0 only)
         run: |
           # Restrict matches to actual toolchain declarations or explicit JSON/env
           if rg -n --color=never --glob '!guards.yml' \
@@ -86,10 +86,10 @@ jobs:
                -e 'rust-version\s*=\s*"1\.90\.0"' \
                -e '"RUST_VERSION"\s*:\s*"1\.90\.0"' \
                .github/workflows; then
-            echo "❌ Found stale toolchain 1.90.0 in workflows (MSRV is 1.92.0)"
+            echo "❌ Found stale toolchain 1.90.0 in workflows (MSRV is 1.93.0)"
             exit 1
           fi
-          echo "✅ MSRV consistent across all workflows (1.92.0)"
+          echo "✅ MSRV consistent across all workflows (1.93.0)"
 
       - name: Check units
         run: ./scripts/check-units.sh || true

@@ -146,6 +146,20 @@ QUICK EXAMPLES:
   # Interactive chat (auto-detects template, clean output)
   RUST_LOG=warn bitnet chat --model model.gguf --tokenizer tokenizer.json
 
+  # Apple M4 local answer path: CPU/NEON is the reliable user-facing route today.
+  # The JSON receipt records requested_backend, selected_backend, runtime_api, and fallback_used.
+  RUST_LOG=warn bitnet --device apple-m4-cpu-neon run \
+    --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+    --prompt "What is 2+2? Answer briefly." --max-tokens 32 \
+    --temperature 0.0 --greedy --deterministic \
+    --strict-loader --strict-tokenizer --json-out local-answer-cpu-neon.json
+
+APPLE M4 ROUTING:
+  apple-m4-cpu-neon: reliable local-answer path with strict receipts.
+  apple-m4-metal: receipt-backed Metal phase/subgraph proof only unless a strict
+    full-model Metal receipt later proves more.
+  apple-m4-mpsgraph: graph/reference lane, not native Metal or Neural Engine proof.
+
 LOGGING:
   Set RUST_LOG=warn (default: info) to reduce log noise and focus on generated text.
   Options: error, warn, info, debug, trace
@@ -227,6 +241,13 @@ enum Commands {
     /// Deterministic Q&A with greedy decoding:
     ///   bitnet run --model model.gguf --prompt "Test question" \
     ///     --temperature 0.0 --greedy --seed 42
+    ///
+    /// Apple M4 local answer path with strict CPU/NEON receipt:
+    ///   bitnet --device apple-m4-cpu-neon run \
+    ///     --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+    ///     --prompt "What is 2+2? Answer briefly." --max-tokens 32 \
+    ///     --temperature 0.0 --greedy --deterministic \
+    ///     --strict-loader --strict-tokenizer --json-out local-answer-cpu-neon.json
     ///
     /// Raw completion (no Q&A formatting):
     ///   bitnet run --model model.gguf --prompt-template raw \
@@ -359,6 +380,49 @@ enum Commands {
         allocation_audit: bool,
     },
 
+    /// Ask one question using the answer-readiness generation path
+    Ask {
+        /// Model file or directory path (.gguf file or HuggingFace model directory)
+        #[arg(short, long)]
+        model: std::path::PathBuf,
+
+        /// Optional explicit tokenizer path
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+
+        /// User question to answer
+        #[arg(short, long)]
+        question: String,
+
+        /// Optional system prompt
+        #[arg(long = "system", value_name = "TEXT")]
+        system_prompt: Option<String>,
+
+        /// Maximum new tokens to generate (aliases: --max-tokens, --n-predict)
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 96)]
+        max_new_tokens: usize,
+
+        /// Temperature for sampling. The default ask path is deterministic greedy.
+        #[arg(long, default_value_t = 0.0)]
+        temperature: f32,
+
+        /// Top-k sampling (0 = disabled)
+        #[arg(long, default_value_t = 0)]
+        top_k: usize,
+
+        /// Top-p (nucleus) sampling
+        #[arg(long, default_value_t = 1.0)]
+        top_p: f32,
+
+        /// Require the selected backend to be the RTX 5070 Ti CUDA proof lane
+        #[arg(long, default_value_t = false)]
+        strict_cuda: bool,
+
+        /// Output answer-shaped receipt to file
+        #[arg(long, value_name = "PATH")]
+        receipt_out: Option<std::path::PathBuf>,
+    },
+
     /// Tokenize text and output token IDs as JSON
     Tokenize {
         /// Model GGUF path (for extracting tokenizer and counts)
@@ -488,6 +552,17 @@ enum Commands {
         strict: bool,
 
         /// Output JSON smoke receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
+    /// Run selected static BitNet subgraph parity on OpenVINO NPU
+    IntelNpuBitnetSubgraph {
+        /// Require selected subgraph parity to pass
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// Output JSON parity receipt to file
         #[arg(long)]
         json_out: Option<std::path::PathBuf>,
     },
@@ -750,6 +825,33 @@ async fn main() -> Result<()> {
             )
             .await
         }
+        Some(Commands::Ask {
+            model,
+            tokenizer,
+            question,
+            system_prompt,
+            max_new_tokens,
+            temperature,
+            top_k,
+            top_p,
+            strict_cuda,
+            receipt_out,
+        }) => {
+            run_ask_generation(
+                &requested_backend_label,
+                model,
+                tokenizer,
+                question,
+                system_prompt,
+                max_new_tokens,
+                temperature,
+                top_k,
+                top_p,
+                strict_cuda,
+                receipt_out,
+            )
+            .await
+        }
         #[cfg(feature = "full-cli")]
         Some(Commands::Inference(cmd)) => (*cmd).execute(&config).await,
         #[cfg(feature = "full-cli")]
@@ -779,6 +881,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::IntelNpuSmoke { strict, json_out }) => {
             handle_intel_npu_smoke_command(strict, json_out).await
+        }
+        Some(Commands::IntelNpuBitnetSubgraph { strict, json_out }) => {
+            handle_intel_npu_bitnet_subgraph_command(strict, json_out).await
         }
         Some(Commands::Validate { action }) => handle_validate_command(action).await,
         Some(Commands::CudaSmoke { device_index, json_out }) => {
@@ -1368,6 +1473,137 @@ async fn handle_intel_npu_smoke_command(
     let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
     let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
     let receipt = build_intel_npu_smoke_receipt(npu, smoke, strict, timestamp_utc, artifact_path);
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if strict && let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+fn build_intel_npu_bitnet_subgraph_receipt(
+    probe: bitnet_device_probe::IntelNpuProbe,
+    parity: bitnet_device_probe::runtimes::OpenVinoNpuBitnetSubgraphParity,
+    strict: bool,
+    timestamp_utc: String,
+    artifact_path: Option<String>,
+) -> serde_json::Value {
+    let selected_backend =
+        parity.selected_backend.clone().or_else(|| probe.selected_backend.clone());
+    let runtime_api = parity.runtime_api.clone().or_else(|| probe.runtime_api.clone());
+    let runtime_device = parity.runtime_device.clone().or_else(|| probe.runtime_device.clone());
+    let backend_runtime = serde_json::json!({
+        "name": "openvino",
+        "version": parity.openvino_version.clone().or_else(|| probe.openvino_version.clone()),
+        "device": runtime_device.clone(),
+        "device_name": probe.openvino_npu_full_name.clone(),
+        "driver_version": probe.driver_version.clone(),
+        "compiler_version": probe.compiler_version.clone(),
+        "max_tiles": probe.max_tiles,
+    });
+    let shape_contract = serde_json::json!({
+        "shape_mode": parity.shape_mode.clone(),
+        "input_shape": parity.input_shape.clone(),
+        "output_shape": parity.output_shape.clone(),
+    });
+    let fallback_policy = serde_json::json!({
+        "fallback_used": parity.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cpu_fallback_allowed": parity.cpu_fallback_allowed,
+    });
+    let error = if strict && !parity.passed {
+        Some(parity.error.clone().unwrap_or_else(|| {
+            "strict Intel NPU BitNet subgraph parity requires selected subgraph pass".to_owned()
+        }))
+    } else {
+        parity.error.clone()
+    };
+    let claim = if parity.passed {
+        "openvino_npu_bitnet_subgraph_parity_passed"
+    } else if probe.openvino_npu_visible {
+        "openvino_npu_bitnet_subgraph_parity_failed"
+    } else if probe.available {
+        "intel_npu_runtime_visibility_recorded_without_bitnet_subgraph"
+    } else {
+        "intel_npu_unavailable"
+    };
+
+    serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "intel_npu_bitnet_subgraph_parity",
+        "machine_id": "intel-258v",
+        "hardware_lane": "intel-npu-openvino",
+        "proof_stage": parity.proof_stage.clone(),
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": probe.requested_backend.clone(),
+        "selected_backend": selected_backend,
+        "runtime_api": runtime_api,
+        "runtime_device": runtime_device,
+        "backend_runtime": backend_runtime,
+        "shape_contract": shape_contract,
+        "shape_mode": parity.shape_mode.clone(),
+        "strict_mode": strict,
+        "fallback_used": parity.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "fallback_policy": fallback_policy,
+        "cpu_fallback_allowed": parity.cpu_fallback_allowed,
+        "kernel_execution": false,
+        "graph_execution": parity.graph_execution,
+        "bitnet_inference": parity.bitnet_inference,
+        "qk256_decode": parity.qk256_decode,
+        "subgraph": {
+            "name": parity.subgraph_name.clone(),
+            "bitnet_op": parity.bitnet_op.clone(),
+            "precision": parity.precision.clone(),
+            "reference_path": parity.reference_path.clone(),
+            "shape_mode": parity.shape_mode.clone(),
+            "input_shape": parity.input_shape.clone(),
+            "output_shape": parity.output_shape.clone(),
+            "epsilon": parity.epsilon,
+            "max_abs_error": parity.max_abs_error,
+            "mean_abs_error": parity.mean_abs_error,
+            "tolerance": parity.tolerance,
+            "result": if parity.passed { "pass" } else { "fail" },
+        },
+        "timing": {
+            "first_ever_compile_and_infer_ms": null,
+            "cached_compile_ms": parity.compile_ms,
+            "steady_state_infer_ms": null,
+            "compile_ms": parity.compile_ms,
+            "first_infer_ms": parity.first_infer_ms,
+        },
+        "kernels_or_graphs": [
+            "bitnet_rmsnorm_openvino_npu"
+        ],
+        "npu": probe,
+        "openvino_subgraph": parity,
+        "claim": claim,
+        "must_not_claim": [
+            "Full BitNet inference works on Intel NPU",
+            "Intel NPU accelerates BitNet",
+            "Packed BitNet QK256 decode works on Intel NPU",
+            "CPU fallback satisfies NPU proof"
+        ],
+        "artifact_path": artifact_path,
+        "error": error,
+    })
+}
+
+async fn handle_intel_npu_bitnet_subgraph_command(
+    strict: bool,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    let openvino = bitnet_device_probe::runtimes::openvino::probe_openvino();
+    let npu = bitnet_device_probe::intel::lunar_lake::probe_intel_npu(&openvino);
+    let parity = bitnet_device_probe::runtimes::run_openvino_npu_bitnet_subgraph_parity();
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt =
+        build_intel_npu_bitnet_subgraph_receipt(npu, parity, strict, timestamp_utc, artifact_path);
 
     write_json_output(json_out.as_ref(), &receipt)?;
 
@@ -3684,6 +3920,501 @@ async fn run_simple_generation(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn run_ask_generation(
+    requested_backend_label: &str,
+    model: std::path::PathBuf,
+    tokenizer: Option<std::path::PathBuf>,
+    question: String,
+    system_prompt: Option<String>,
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    strict_cuda: bool,
+    receipt_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    if strict_cuda && requested_backend_label != RTX_5070_TI_CUDA {
+        anyhow::bail!(
+            "--strict-cuda requires --device {RTX_5070_TI_CUDA}; requested backend was {requested_backend_label}"
+        );
+    }
+    if strict_cuda && let Some(cuda_bin) = ensure_strict_cuda_ask_runtime_libraries_visible()? {
+        debug!(
+            "added CUDA Toolkit bin directory to process PATH for strict CUDA ask: {}",
+            cuda_bin.display()
+        );
+    }
+
+    let question_for_receipt = question.clone();
+    let system_prompt_for_receipt = system_prompt.clone();
+    run_simple_generation(
+        requested_backend_label,
+        model,
+        "auto".to_string(),
+        None,
+        tokenizer,
+        question,
+        max_new_tokens,
+        temperature,
+        top_k,
+        top_p,
+        1.1,
+        None,
+        false,
+        false,
+        true,
+        true,
+        receipt_out.clone(),
+        false,
+        false,
+        true,
+        true,
+        0,
+        "llama3-chat".to_string(),
+        system_prompt,
+        vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
+        Vec::new(),
+        None,
+        10,
+        false,
+        false,
+        Some("ask".to_string()),
+        false,
+    )
+    .await?;
+
+    let Some(receipt_path) = receipt_out else {
+        return Ok(());
+    };
+    let run_receipt: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(&receipt_path)
+            .with_context(|| format!("failed to read run receipt {}", receipt_path.display()))?,
+    )
+    .with_context(|| format!("invalid run receipt {}", receipt_path.display()))?;
+
+    if strict_cuda {
+        validate_strict_cuda_ask_receipt(&run_receipt)?;
+    }
+
+    let answer = run_receipt["text"].as_str().unwrap_or_default();
+    let artifact_kind = if run_receipt["runtime_api"] == "cuda"
+        && run_receipt["selected_backend"] == RTX_5070_TI_CUDA
+    {
+        "bitnet_cuda_answer"
+    } else {
+        "bitnet_cpu_answer"
+    };
+    let quality = answer_quality_receipt(answer, &run_receipt, max_new_tokens);
+    let answer_receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": artifact_kind,
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "question": question_for_receipt,
+        "answer": answer,
+        "model": {
+            "repo": run_receipt["model"]["repo"].clone(),
+            "file": run_receipt["model"]["file"].clone(),
+            "path": run_receipt["model"]["path"].clone(),
+            "loader_mode": run_receipt["model"]["loader_mode"].clone(),
+            "fallback_loader_used": run_receipt["model"]["fallback_loader_used"].clone(),
+            "tokenizer": run_receipt["model"]["tokenizer"].clone(),
+        },
+        "backend": {
+            "requested_backend": run_receipt["requested_backend"].clone(),
+            "selected_backend": run_receipt["selected_backend"].clone(),
+            "runtime_api": run_receipt["runtime_api"].clone(),
+            "fallback_used": run_receipt["fallback_used"].clone(),
+            "fallback_reason": run_receipt["fallback_reason"].clone(),
+        },
+        "prompt_template": {
+            "family": "llama3-chat",
+            "system_prompt_present": system_prompt_for_receipt.as_ref().is_some_and(|value| !value.is_empty()),
+            "bos_inserted": true,
+            "assistant_prefix_inserted": true,
+            "stop_tokens": ["<|eot_id|>", "<|end_of_text|>"],
+        },
+        "prompt_prefill": {
+            "exercised": run_receipt["profile"]["prompt_prefill"]["exercised"].clone(),
+            "tokens": run_receipt["profile"]["prompt_prefill"]["tokens"].clone(),
+            "kv_cache_behavior": run_receipt["profile"]["prompt_prefill"]["kv_cache_behavior"].clone(),
+        },
+        "bitnet": {
+            "quantization": run_receipt["bitnet"]["quantization"].clone(),
+            "kernel_family": run_receipt["bitnet"]["kernel_family"].clone(),
+            "kernel_id": run_receipt["kernel"]["kernel_id"].clone(),
+            "weights_uploaded_once": run_receipt["bitnet"]["weights_uploaded_once"].clone(),
+            "per_token_weight_upload": run_receipt["bitnet"]["per_token_weight_upload"].clone(),
+        },
+        "execution_coverage": run_receipt["execution_coverage"].clone(),
+        "quality": quality,
+        "speedup_claim": false,
+        "source_receipt": run_receipt,
+    });
+    write_json_output(Some(&receipt_path), &answer_receipt)?;
+    if strict_cuda {
+        validate_strict_cuda_answer_quality(&answer_receipt)?;
+    }
+    Ok(())
+}
+
+fn validate_strict_cuda_ask_receipt(run_receipt: &serde_json::Value) -> Result<()> {
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+    let selected_backend = run_receipt["selected_backend"].as_str().unwrap_or_default();
+    let runtime_api = run_receipt["runtime_api"].as_str().unwrap_or_default();
+    let fallback_used = run_receipt["fallback_used"].as_bool().unwrap_or(true);
+    if selected_backend != RTX_5070_TI_CUDA || runtime_api != "cuda" || fallback_used {
+        anyhow::bail!(
+            "strict CUDA ask did not preserve the RTX 5070 Ti CUDA lane: selected_backend={selected_backend}, runtime_api={runtime_api}, fallback_used={fallback_used}"
+        );
+    }
+    let cpu_fallback = run_receipt["execution_coverage"]["bitnet_linear_layers_cpu_fallback"]
+        .as_u64()
+        .unwrap_or(1);
+    if cpu_fallback != 0 {
+        anyhow::bail!("strict CUDA ask recorded {cpu_fallback} BitNet linear CPU fallback layers");
+    }
+    Ok(())
+}
+
+fn validate_strict_cuda_answer_quality(answer_receipt: &serde_json::Value) -> Result<()> {
+    let quality = &answer_receipt["quality"];
+    if quality["garbage_filter_passed"].as_bool().unwrap_or(false) {
+        return Ok(());
+    }
+
+    let quality_summary = serde_json::to_string(quality)
+        .unwrap_or_else(|_| "<unprintable quality receipt>".to_string());
+    anyhow::bail!(
+        "strict CUDA ask failed answer quality gate after writing receipt: {quality_summary}"
+    )
+}
+
+fn ensure_strict_cuda_ask_runtime_libraries_visible() -> Result<Option<std::path::PathBuf>> {
+    #[cfg(all(feature = "cuda", target_os = "windows"))]
+    {
+        ensure_windows_cuda_toolkit_bin_on_path()
+    }
+
+    #[cfg(not(all(feature = "cuda", target_os = "windows")))]
+    {
+        Ok(None)
+    }
+}
+
+#[cfg(all(feature = "cuda", target_os = "windows"))]
+fn ensure_windows_cuda_toolkit_bin_on_path() -> Result<Option<std::path::PathBuf>> {
+    if windows_cuda_runtime_libraries_visible_on_path() {
+        return Ok(None);
+    }
+
+    let Some(cuda_bin) = discover_windows_cuda_toolkit_bin() else {
+        return Ok(None);
+    };
+    prepend_process_path(&cuda_bin).with_context(|| {
+        format!("failed to add CUDA Toolkit bin to PATH: {}", cuda_bin.display())
+    })?;
+    Ok(Some(cuda_bin))
+}
+
+#[cfg(all(feature = "cuda", target_os = "windows"))]
+fn discover_windows_cuda_toolkit_bin() -> Option<std::path::PathBuf> {
+    discover_cuda_toolkit_bin_from_roots(windows_cuda_toolkit_search_roots())
+}
+
+#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
+fn discover_cuda_toolkit_bin_from_roots<I, P>(roots: I) -> Option<std::path::PathBuf>
+where
+    I: IntoIterator<Item = P>,
+    P: AsRef<std::path::Path>,
+{
+    let mut candidates = Vec::new();
+    for root in roots {
+        collect_cuda_toolkit_bin_candidates(root.as_ref(), &mut candidates);
+    }
+    candidates.sort_by(|left, right| {
+        cuda_bin_version_key(right).cmp(&cuda_bin_version_key(left)).then_with(|| left.cmp(right))
+    });
+    candidates.into_iter().find(|candidate| cuda_toolkit_bin_has_runtime_libraries(candidate))
+}
+
+#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
+fn collect_cuda_toolkit_bin_candidates(
+    root: &std::path::Path,
+    candidates: &mut Vec<std::path::PathBuf>,
+) {
+    candidates.push(root.to_path_buf());
+    candidates.push(root.join("bin"));
+
+    let Ok(children) = std::fs::read_dir(root) else {
+        return;
+    };
+    for child in children.flatten() {
+        let path = child.path();
+        if path.is_dir()
+            && path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with('v'))
+        {
+            candidates.push(path.join("bin"));
+        }
+    }
+}
+
+#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
+fn cuda_toolkit_bin_has_runtime_libraries(bin: &std::path::Path) -> bool {
+    cuda_toolkit_bin_has_any(bin, WINDOWS_NVRTC_LIBRARY_NAMES)
+        && cuda_toolkit_bin_has_any(bin, WINDOWS_CUDART_LIBRARY_NAMES)
+}
+
+#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
+fn cuda_toolkit_bin_has_any(bin: &std::path::Path, names: &[&str]) -> bool {
+    names.iter().any(|name| bin.join(name).is_file())
+}
+
+#[cfg(all(feature = "cuda", target_os = "windows"))]
+fn windows_cuda_runtime_libraries_visible_on_path() -> bool {
+    let Some(path) = std::env::var_os("PATH") else {
+        return false;
+    };
+    std::env::split_paths(&path).any(|entry| cuda_toolkit_bin_has_runtime_libraries(&entry))
+}
+
+#[cfg(all(feature = "cuda", target_os = "windows"))]
+fn windows_cuda_toolkit_search_roots() -> Vec<std::path::PathBuf> {
+    let mut roots = Vec::new();
+    for (key, value) in std::env::vars_os() {
+        if key.to_string_lossy().to_ascii_uppercase().starts_with("CUDA_PATH") && !value.is_empty()
+        {
+            roots.push(std::path::PathBuf::from(value));
+        }
+    }
+
+    for key in ["ProgramW6432", "ProgramFiles"] {
+        if let Some(program_files) = std::env::var_os(key) {
+            roots.push(
+                std::path::PathBuf::from(program_files)
+                    .join("NVIDIA GPU Computing Toolkit")
+                    .join("CUDA"),
+            );
+        }
+    }
+    roots.push(std::path::PathBuf::from(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"));
+
+    dedupe_paths(roots)
+}
+
+#[cfg(all(feature = "cuda", target_os = "windows"))]
+fn dedupe_paths(paths: Vec<std::path::PathBuf>) -> Vec<std::path::PathBuf> {
+    let mut deduped = Vec::<std::path::PathBuf>::new();
+    for path in paths {
+        if !deduped.iter().any(|existing| paths_equal_for_process_path(existing, &path)) {
+            deduped.push(path);
+        }
+    }
+    deduped
+}
+
+#[cfg(all(feature = "cuda", target_os = "windows"))]
+fn prepend_process_path(path: &std::path::Path) -> Result<()> {
+    let current = std::env::var_os("PATH").unwrap_or_default();
+    let mut entries = Vec::from([path.to_path_buf()]);
+    entries.extend(
+        std::env::split_paths(&current).filter(|entry| !paths_equal_for_process_path(entry, path)),
+    );
+    let updated_path = std::env::join_paths(entries)?;
+    // SAFETY: Strict CUDA ask adjusts this process before CUDA/NVRTC loading
+    // starts, so cudarc can discover Toolkit DLLs installed in the standard
+    // Windows location. The CLI does not read PATH concurrently in this block.
+    unsafe {
+        std::env::set_var("PATH", updated_path);
+    }
+    Ok(())
+}
+
+#[cfg(all(feature = "cuda", target_os = "windows"))]
+fn paths_equal_for_process_path(left: &std::path::Path, right: &std::path::Path) -> bool {
+    left.to_string_lossy().eq_ignore_ascii_case(&right.to_string_lossy())
+}
+
+#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
+fn cuda_bin_version_key(path: &std::path::Path) -> (u32, u32, u32) {
+    let version_name =
+        path.parent().and_then(|parent| parent.file_name()).and_then(|name| name.to_str());
+    parse_cuda_version_name(version_name.unwrap_or_default())
+}
+
+#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
+fn parse_cuda_version_name(name: &str) -> (u32, u32, u32) {
+    let Some(rest) = name.strip_prefix('v') else {
+        return (0, 0, 0);
+    };
+    let mut parts = rest.split('.');
+    let major = parts.next().and_then(|value| value.parse().ok()).unwrap_or_default();
+    let minor = parts.next().and_then(|value| value.parse().ok()).unwrap_or_default();
+    let patch = parts.next().and_then(|value| value.parse().ok()).unwrap_or_default();
+    (major, minor, patch)
+}
+
+#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
+const WINDOWS_NVRTC_LIBRARY_NAMES: &[&str] =
+    &["nvrtc64_120_0.dll", "nvrtc64_120.dll", "nvrtc64_12.dll", "nvrtc64.dll", "nvrtc.dll"];
+
+#[cfg(any(test, all(feature = "cuda", target_os = "windows")))]
+const WINDOWS_CUDART_LIBRARY_NAMES: &[&str] =
+    &["cudart64_120.dll", "cudart64_12.dll", "cudart64.dll", "cudart.dll"];
+
+fn answer_quality_receipt(
+    answer: &str,
+    run_receipt: &serde_json::Value,
+    max_new_tokens: usize,
+) -> serde_json::Value {
+    let trimmed = strip_answer_special_markers(answer).trim().to_string();
+    let non_empty_answer = !trimmed.is_empty();
+    let printable_utf8 = trimmed.chars().all(|ch| ch == '\n' || ch == '\t' || !ch.is_control());
+    let no_replacement_chars = !trimmed.contains('\u{FFFD}');
+    let no_raw_special_tokens = !trimmed.contains("<|") && !trimmed.contains("|>");
+    let mostly_text = answer_mostly_text(&trimmed);
+    let language_signal = answer_has_language_signal(&trimmed);
+    let suspicious_fragment_count = suspicious_answer_fragment_count(&trimmed);
+    let fragment_filter_passed = suspicious_fragment_count <= 1;
+    let garbage_filter_passed = non_empty_answer
+        && printable_utf8
+        && no_replacement_chars
+        && no_raw_special_tokens
+        && mostly_text
+        && language_signal
+        && fragment_filter_passed;
+    let generated = run_receipt["tokens"]["generated"].as_u64().unwrap_or_default() as usize;
+    serde_json::json!({
+        "printable_utf8": printable_utf8,
+        "non_empty_answer": non_empty_answer,
+        "stop_reason": if generated >= max_new_tokens { "max_tokens" } else { "eos_or_stop_sequence" },
+        "garbage_filter_passed": garbage_filter_passed,
+        "no_replacement_chars": no_replacement_chars,
+        "no_raw_special_tokens": no_raw_special_tokens,
+        "mostly_text": mostly_text,
+        "language_signal": language_signal,
+        "suspicious_fragment_count": suspicious_fragment_count,
+        "fragment_filter_passed": fragment_filter_passed,
+    })
+}
+
+fn strip_answer_special_markers(answer: &str) -> String {
+    answer.replace("<|begin_of_text|>", "").replace("<|end_of_text|>", "").replace("<|eot_id|>", "")
+}
+
+fn answer_mostly_text(answer: &str) -> bool {
+    let mut meaningful = 0usize;
+    let mut punctuation_or_control = 0usize;
+    for ch in answer.chars() {
+        if ch.is_alphanumeric() || ch.is_whitespace() {
+            meaningful += 1;
+        } else if ch.is_ascii_punctuation() || ch.is_control() {
+            punctuation_or_control += 1;
+        }
+    }
+    meaningful > 0 && punctuation_or_control <= meaningful.saturating_mul(2)
+}
+
+fn answer_has_language_signal(answer: &str) -> bool {
+    let compact: String = answer.chars().filter(|ch| !ch.is_whitespace()).collect();
+    let numeric_short_answer = compact.len() <= 8
+        && compact.chars().any(|ch| ch.is_ascii_digit())
+        && compact.chars().all(|ch| ch.is_ascii_digit() || matches!(ch, '.' | '-' | '+'));
+    if numeric_short_answer {
+        return true;
+    }
+
+    answer_word_tokens(answer).any(|word| ANSWER_QUALITY_LANGUAGE_WORDS.contains(&word.as_str()))
+}
+
+fn suspicious_answer_fragment_count(answer: &str) -> usize {
+    answer
+        .split_whitespace()
+        .filter(|token| {
+            let alphabetic = token.chars().filter(|ch| ch.is_alphabetic()).count();
+            if alphabetic == 0 {
+                return false;
+            }
+            let apostrophes = token.matches('\'').count();
+            let ascii_punctuation = token.chars().filter(|ch| ch.is_ascii_punctuation()).count();
+            let internal_period = token.contains('.')
+                && !token.ends_with('.')
+                && token.chars().any(|ch| ch.is_alphabetic());
+            (apostrophes > 1) || internal_period || (alphabetic >= 3 && ascii_punctuation >= 3)
+        })
+        .count()
+}
+
+fn answer_word_tokens(answer: &str) -> impl Iterator<Item = String> + '_ {
+    answer
+        .split(|ch: char| !ch.is_alphabetic())
+        .filter(|word| word.len() >= 2)
+        .map(str::to_ascii_lowercase)
+}
+
+const ANSWER_QUALITY_LANGUAGE_WORDS: &[&str] = &[
+    "a",
+    "about",
+    "add",
+    "adds",
+    "an",
+    "and",
+    "answer",
+    "are",
+    "architecture",
+    "blue",
+    "bit",
+    "bitnet",
+    "black",
+    "capital",
+    "color",
+    "colors",
+    "common",
+    "compute",
+    "data",
+    "efficient",
+    "explain",
+    "for",
+    "four",
+    "france",
+    "function",
+    "green",
+    "is",
+    "language",
+    "low",
+    "memory",
+    "model",
+    "number",
+    "numbers",
+    "of",
+    "one",
+    "paris",
+    "python",
+    "red",
+    "reduce",
+    "sentence",
+    "shape",
+    "shapes",
+    "the",
+    "that",
+    "three",
+    "to",
+    "uses",
+    "weight",
+    "weights",
+    "white",
+    "with",
+    "wet",
+    "water",
+    "yellow",
+    "yes",
+    "no",
+];
+
 fn ensure_non_empty_generation_context(
     tokens: &mut Vec<u32>,
     tokenizer: &dyn bitnet_tokenizers::Tokenizer,
@@ -4327,6 +5058,119 @@ mod tests {
     use super::*;
 
     #[test]
+    fn answer_quality_rejects_punctuation_noise() {
+        let run_receipt = serde_json::json!({
+            "tokens": {
+                "generated": 8,
+            }
+        });
+        let quality = answer_quality_receipt("!!!,,,!!!", &run_receipt, 16);
+
+        assert_eq!(quality["non_empty_answer"], true);
+        assert_eq!(quality["mostly_text"], false);
+        assert_eq!(quality["garbage_filter_passed"], false);
+    }
+
+    #[test]
+    fn answer_quality_marks_max_token_stop() {
+        let run_receipt = serde_json::json!({
+            "tokens": {
+                "generated": 16,
+            }
+        });
+        let quality = answer_quality_receipt("BitNet uses low-bit weights.", &run_receipt, 16);
+
+        assert_eq!(quality["garbage_filter_passed"], true);
+        assert_eq!(quality["stop_reason"], "max_tokens");
+    }
+
+    #[test]
+    fn answer_quality_rejects_observed_cuda_fragment_garbage() {
+        let run_receipt = serde_json::json!({
+            "tokens": {
+                "generated": 16,
+            }
+        });
+        let answer = "-lived'Elicence'E facts-livedConvert!\"\n\n Gab Clock Paperback,SIGNALIR realise.iOS rzd";
+        let quality = answer_quality_receipt(answer, &run_receipt, 16);
+
+        assert_eq!(quality["non_empty_answer"], true);
+        assert_eq!(quality["mostly_text"], true);
+        assert_eq!(quality["language_signal"], false);
+        assert_eq!(quality["fragment_filter_passed"], false);
+        assert_eq!(quality["garbage_filter_passed"], false);
+    }
+
+    #[test]
+    fn answer_quality_accepts_short_numeric_answer() {
+        let run_receipt = serde_json::json!({
+            "tokens": {
+                "generated": 1,
+            }
+        });
+        let quality = answer_quality_receipt("4", &run_receipt, 16);
+
+        assert_eq!(quality["language_signal"], true);
+        assert_eq!(quality["garbage_filter_passed"], true);
+    }
+
+    #[test]
+    fn strict_cuda_answer_quality_gate_rejects_failed_receipt() {
+        let answer_receipt = serde_json::json!({
+            "quality": {
+                "garbage_filter_passed": false,
+                "language_signal": false,
+                "suspicious_fragment_count": 3,
+            }
+        });
+
+        let err = validate_strict_cuda_answer_quality(&answer_receipt).unwrap_err().to_string();
+
+        assert!(err.contains("strict CUDA ask failed answer quality gate"), "got: {err}");
+        assert!(err.contains("\"garbage_filter_passed\":false"), "got: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_answer_quality_gate_accepts_passed_receipt() {
+        let answer_receipt = serde_json::json!({
+            "quality": {
+                "garbage_filter_passed": true,
+            }
+        });
+
+        validate_strict_cuda_answer_quality(&answer_receipt).unwrap();
+    }
+
+    #[test]
+    fn cuda_toolkit_bin_discovery_prefers_highest_version_with_runtime_libraries() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cuda_root = temp_dir.path().join("CUDA");
+        let older_bin = cuda_root.join("v12.1").join("bin");
+        let newer_bin = cuda_root.join("v12.9").join("bin");
+        std::fs::create_dir_all(&older_bin).unwrap();
+        std::fs::create_dir_all(&newer_bin).unwrap();
+        std::fs::write(older_bin.join("nvrtc64_120_0.dll"), b"").unwrap();
+        std::fs::write(older_bin.join("cudart64_120.dll"), b"").unwrap();
+        std::fs::write(newer_bin.join("nvrtc64_120_0.dll"), b"").unwrap();
+        std::fs::write(newer_bin.join("cudart64_120.dll"), b"").unwrap();
+
+        let discovered = discover_cuda_toolkit_bin_from_roots([cuda_root]).unwrap();
+
+        assert_eq!(discovered, newer_bin);
+    }
+
+    #[test]
+    fn cuda_toolkit_bin_discovery_rejects_partial_toolkit_bin() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cuda_root = temp_dir.path().join("CUDA");
+        let bin = cuda_root.join("v12.9").join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        std::fs::write(bin.join("nvrtc64_120_0.dll"), b"").unwrap();
+
+        assert!(discover_cuda_toolkit_bin_from_roots([cuda_root]).is_none());
+    }
+
+    #[test]
     fn apple_cpu_neon_identity_is_preserved_or_visible_fallback() {
         let identity = resolve_run_backend_identity("apple-m4-cpu-neon", false).unwrap();
 
@@ -4910,6 +5754,190 @@ mod tests {
         assert_eq!(
             receipt["claim"],
             "intel_npu_runtime_visibility_recorded_without_openvino_graph"
+        );
+        assert_eq!(receipt["error"], "OpenVINO did not report NPU");
+    }
+
+    #[test]
+    fn intel_npu_bitnet_subgraph_receipt_records_parity_only() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: Some("intel-npu-openvino".to_string()),
+            runtime_api: Some("openvino".to_string()),
+            runtime_device: Some("NPU".to_string()),
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: true,
+            openvino_version: Some("2026.1".to_string()),
+            openvino_available_devices: vec!["CPU".to_string(), "NPU".to_string()],
+            openvino_npu_visible: true,
+            openvino_npu_full_name: Some("Intel(R) AI Boost".to_string()),
+            supported_properties: vec!["FULL_DEVICE_NAME".to_string()],
+            driver_version: Some("1.2.3".to_string()),
+            compiler_version: Some("4.5.6".to_string()),
+            total_mem_size: Some(1024),
+            alloc_mem_size: Some(128),
+            max_tiles: Some(1),
+            fallback_used: false,
+            failure_reason: None,
+        };
+        let parity = bitnet_device_probe::runtimes::OpenVinoNpuBitnetSubgraphParity {
+            passed: true,
+            proof_stage: "parity_tested".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: Some("intel-npu-openvino".to_string()),
+            runtime_api: Some("openvino".to_string()),
+            runtime_device: Some("NPU".to_string()),
+            openvino_version: Some("2026.1".to_string()),
+            openvino_available_devices: vec!["CPU".to_string(), "NPU".to_string()],
+            subgraph_name: "bitnet_rmsnorm_f16_1x16".to_string(),
+            bitnet_op: "rmsnorm".to_string(),
+            reference_path: "cpu_numpy_rmsnorm_f32".to_string(),
+            shape_mode: "static".to_string(),
+            input_shape: vec![1, 16],
+            output_shape: Some(vec![1, 16]),
+            precision: "F16".to_string(),
+            epsilon: 0.00001,
+            tolerance: 0.005,
+            max_abs_error: Some(0.0009),
+            mean_abs_error: Some(0.0002),
+            compile_ms: Some(14.5),
+            first_infer_ms: Some(1.5),
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: true,
+            bitnet_inference: false,
+            qk256_decode: false,
+            error: None,
+        };
+        let receipt = build_intel_npu_bitnet_subgraph_receipt(
+            probe,
+            parity,
+            true,
+            "2026-05-06T00:00:00Z".to_string(),
+            Some("ci/hardware/intel-258v/2026-05-06/npu-bitnet-subgraph.json".to_string()),
+        );
+
+        assert_eq!(receipt["artifact_kind"], "intel_npu_bitnet_subgraph_parity");
+        assert_eq!(receipt["proof_stage"], "parity_tested");
+        assert_eq!(receipt["requested_backend"], "intel-npu");
+        assert_eq!(receipt["selected_backend"], "intel-npu-openvino");
+        assert_eq!(receipt["runtime_api"], "openvino");
+        assert_eq!(receipt["runtime_device"], "NPU");
+        assert_eq!(receipt["backend_runtime"]["name"], "openvino");
+        assert_eq!(receipt["backend_runtime"]["version"], "2026.1");
+        assert_eq!(receipt["shape_contract"]["shape_mode"], "static");
+        assert_eq!(receipt["shape_contract"]["input_shape"], serde_json::json!([1, 16]));
+        assert_eq!(receipt["shape_contract"]["output_shape"], serde_json::json!([1, 16]));
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["cpu_fallback_allowed"], false);
+        assert_eq!(receipt["graph_execution"], true);
+        assert_eq!(receipt["kernel_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["qk256_decode"], false);
+        assert_eq!(receipt["subgraph"]["name"], "bitnet_rmsnorm_f16_1x16");
+        assert_eq!(receipt["subgraph"]["bitnet_op"], "rmsnorm");
+        assert_eq!(receipt["subgraph"]["reference_path"], "cpu_numpy_rmsnorm_f32");
+        assert_eq!(receipt["subgraph"]["result"], "pass");
+        assert_eq!(receipt["timing"]["cached_compile_ms"], 14.5);
+        assert_eq!(receipt["timing"]["first_infer_ms"], 1.5);
+        assert_eq!(
+            receipt["kernels_or_graphs"],
+            serde_json::json!(["bitnet_rmsnorm_openvino_npu"])
+        );
+        assert_eq!(receipt["claim"], "openvino_npu_bitnet_subgraph_parity_passed");
+        assert!(receipt["error"].is_null());
+    }
+
+    #[test]
+    fn strict_intel_npu_bitnet_subgraph_records_error_without_fallback() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: false,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            openvino_npu_visible: false,
+            openvino_npu_full_name: None,
+            supported_properties: Vec::new(),
+            driver_version: None,
+            compiler_version: None,
+            total_mem_size: None,
+            alloc_mem_size: None,
+            max_tiles: None,
+            fallback_used: false,
+            failure_reason: Some("OpenVINO NPU was not visible".to_string()),
+        };
+        let parity = bitnet_device_probe::runtimes::OpenVinoNpuBitnetSubgraphParity {
+            passed: false,
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            subgraph_name: "bitnet_rmsnorm_f16_1x16".to_string(),
+            bitnet_op: "rmsnorm".to_string(),
+            reference_path: "cpu_numpy_rmsnorm_f32".to_string(),
+            shape_mode: "static".to_string(),
+            input_shape: vec![1, 16],
+            output_shape: None,
+            precision: "F16".to_string(),
+            epsilon: 0.00001,
+            tolerance: 0.005,
+            max_abs_error: None,
+            mean_abs_error: None,
+            compile_ms: None,
+            first_infer_ms: None,
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: false,
+            bitnet_inference: false,
+            qk256_decode: false,
+            error: Some("OpenVINO did not report NPU".to_string()),
+        };
+        let receipt = build_intel_npu_bitnet_subgraph_receipt(
+            probe,
+            parity,
+            true,
+            "2026-05-06T00:00:00Z".to_string(),
+            None,
+        );
+
+        assert_eq!(receipt["artifact_kind"], "intel_npu_bitnet_subgraph_parity");
+        assert_eq!(receipt["proof_stage"], "runtime_detected");
+        assert!(receipt["selected_backend"].is_null());
+        assert!(receipt["runtime_api"].is_null());
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["cpu_fallback_allowed"], false);
+        assert_eq!(receipt["shape_contract"]["shape_mode"], "static");
+        assert_eq!(receipt["shape_contract"]["input_shape"], serde_json::json!([1, 16]));
+        assert!(receipt["shape_contract"]["output_shape"].is_null());
+        assert_eq!(receipt["graph_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["qk256_decode"], false);
+        assert_eq!(
+            receipt["claim"],
+            "intel_npu_runtime_visibility_recorded_without_bitnet_subgraph"
         );
         assert_eq!(receipt["error"], "OpenVINO did not report NPU");
     }

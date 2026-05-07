@@ -679,6 +679,19 @@ Candidate order:
 
 Each prototype must compare CPU reference output with NPU output and record error metrics, latency, selected backend, and fallback status.
 
+Initial NPU-007 scope:
+
+```text
+subgraph: bitnet_rmsnorm_f16_1x16
+bitnet_op: rmsnorm
+reference_path: cpu_numpy_rmsnorm_f32
+runtime_device: NPU
+shape_mode: static
+fallback_used: false
+claim allowed: selected static BitNet subgraph parity
+must not claim: full BitNet inference, NPU acceleration, packed QK256 decode
+```
+
 ### NPU-008 - Evaluate OpenVINO llama.cpp GGUF Backend
 
 Use OpenVINO 2026.1's preview llama.cpp GGUF backend as an external Intel NPU reference lane, not as bitnet-rs production architecture.

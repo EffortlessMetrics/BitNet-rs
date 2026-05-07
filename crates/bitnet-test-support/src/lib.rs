@@ -9,9 +9,12 @@
 //! ## Modules
 //!
 //! - [`env_guard`] — `EnvGuard` (single var, RAII) and `EnvScope` (multi-var, one lock)
+//! - [`assertions`] — fallible test helpers (`ensure`, `ensure_eq`, `require_some`, `require_ok`)
 
+pub mod assertions;
 pub mod env_guard;
 
+pub use assertions::{ensure, ensure_eq, ensure_ne, require_ok, require_ok_display, require_some};
 pub use env_guard::{EnvGuard, EnvScope};
 
 /// Returns the model path from `BITNET_MODEL_PATH` env var, or `None` if not set.

@@ -400,7 +400,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-008"
-status = "in_progress"
+status = "merged"
 branch = "codex/cpu-bitnet-008-phase-benchmark-receipts"
 stackable = false
 review_mode = "codex_premerge"
@@ -434,4 +434,87 @@ must_not_claim = [
   "Server inference is complete.",
   "GPU or NPU execution is involved.",
   "Sustained Kaby Lake throughput is proven from cold-turbo-only runs.",
+]
+
+[[work_item]]
+id = "CPU-PHASE-TIMING-001"
+status = "merged"
+pr = 3872
+branch = "codex/cpu-bitnet-008-phase-timing-followup"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-BITNET-008"]
+acceptance = "CPU phase benchmark receipt generation prefers strict prompt-prefill, first-token decode, and steady-decode timing fields when present; regenerated Kaby Lake evidence records prefill, first_token, and decode as measured from strict proof timing while micro and layer remain explicit not_run gaps."
+commands = [
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features",
+  "Parse ci/hardware/intel-i5-8250u-cpu-avx2/2026-05-07/cpu-phase-benchmark-decode2.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/src/bin/cpu_phase_benchmark_receipt.rs",
+  "ci/hardware/intel-i5-8250u-cpu-avx2/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-cli/**",
+]
+may_claim = [
+  "Kaby Lake phase receipt timing source is tightened for prefill, first_token, and decode after merge.",
+]
+must_not_claim = [
+  "micro and layer profiles are measured by this slice.",
+  "Sustained Kaby Lake throughput is proven.",
+  "Server inference is complete.",
+  "GPU or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "CPU-ANSWER-001"
+status = "ready"
+branch = "codex/cpu-answer-001-strict-answer-readiness"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-BITNET-008", "CPU-PHASE-TIMING-001"]
+acceptance = "Strict real-model CPU runs prove answer readiness on a tiny deterministic corpus by recording prompt token IDs, generated token IDs, decoded text, selected backend/kernel, fallback=false, and pass/fail answer quality; scalar and AVX2 full-decode runs can be compared before blaming the AVX2 lane."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo test --locked -p bitnet-inference --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-receipts --no-default-features",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "ci/hardware/intel-i5-8250u-cpu-avx2/**",
+  "tests/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The Rust CPU path can be checked for deterministic answer readiness on tiny prompts after merge.",
+  "Scalar versus AVX2 full-decode divergence can be separated from shared decode correctness after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "Sustained Kaby Lake throughput is proven.",
+  "Server inference is complete.",
+  "GPU or NPU execution is involved.",
 ]

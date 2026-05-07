@@ -14,6 +14,8 @@ LLaMA-3 chat format with system prompt: bitnet run --model model.gguf --prompt-t
 
 Deterministic Q&A with greedy decoding: bitnet run --model model.gguf --prompt "Test question" \ --temperature 0.0 --greedy --seed 42
 
+Apple M4 local answer path with strict CPU/NEON receipt: bitnet --device apple-m4-cpu-neon run \ --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \ --prompt "What is 2+2? Answer briefly." --max-tokens 32 \ --temperature 0.0 --greedy --deterministic \ --strict-loader --strict-tokenizer --json-out local-answer-cpu-neon.json
+
 Raw completion (no Q&A formatting): bitnet run --model model.gguf --prompt-template raw \ --prompt "2+2=" --max-tokens 16
 
 Usage: bitnet run [OPTIONS] --model <MODEL> --prompt <PROMPT>

@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T10:53:45Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-004"
+event = "merged"
+pr = 3871
+merge_sha = "f1bc94317f2ca0aa73532a16b1226aa6327b55b2"
+actor = "codex"
+
+notes = [
+  "Merged Apple M4 effective CLI flow and strict failure-mode docs.",
+  "The existing bitnet --device apple-m4-cpu-neon run path is documented as the reliable local-answer route.",
+  "No wrapper command, new runtime path, full Metal inference claim, QK256 claim, MPSGraph execution claim, Neural Engine claim, or performance claim was added.",
+]

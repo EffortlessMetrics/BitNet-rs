@@ -1,0 +1,100 @@
+schema_version = "1.0"
+policy = "ci-lanes"
+owner = "release/ci"
+status = "active"
+updated = "2026-05-07"
+
+# policy/ci-lanes.toml is the planner's compact view of lane costs
+# and posture. The authoritative inventory is
+# policy/ci-lane-whitelist.toml; this file is a derived summary
+# pinned for `xtask ci plan` so the planner can read a flat table
+# of lane_id -> base_lem / runner / posture without parsing the
+# full whitelist.
+#
+# When updating: add the lane in policy/ci-lane-whitelist.toml first,
+# then mirror the cost / runner here. PR 17's routing layer
+# enforces consistency between the two files.
+
+[lane.pr-plan]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
+[lane.ci-core-build-test]
+base_lem = 22
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = true
+
+[lane.ci-core-clippy]
+base_lem = 8
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = true
+
+[lane.ci-core-docs]
+base_lem = 8
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = true
+
+[lane.feature-matrix-pr]
+base_lem = 12
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = true
+
+[lane.feature-matrix-full]
+base_lem = 70
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
+
+[lane.bdd-grid-check]
+base_lem = 4
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = true
+
+[lane.macos-arm64-clippy]
+base_lem = 150
+runner = "macos_14"
+default_pr = false
+blocking = false
+
+[lane.gpu-native]
+base_lem = 18
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = true
+
+[lane.gpu-docker]
+base_lem = 90
+runner = "gpu_docker"
+default_pr = false
+blocking = false
+
+[lane.compatibility-msrv]
+base_lem = 12
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = true
+
+[lane.compatibility-ffi-abi]
+base_lem = 8
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = true
+
+[lane.strict-policy]
+base_lem = 3
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = true
+
+[lane.ripr-advisory]
+base_lem = 4
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false

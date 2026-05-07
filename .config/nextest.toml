@@ -93,3 +93,35 @@ status-level = "fail"
 # JUnit output for doctests
 [profile.doctests.junit]
 path = "target/nextest/doctests/junit.xml"
+
+# ---------------------------------------------------------------------------
+# PR 16 — fast-feedback / deep-validation profiles for the CI control plane.
+#
+# `pr` is the profile used by ordinary PRs: aggressive failure mode,
+# tight timing, no retries.
+# `nightly` is the profile for main / nightly / release: looser
+# failure mode, more retries to absorb resource flake.
+# Both emit JUnit so downstream actuals collection (PR 16 consumer)
+# can attribute observed runtime to lanes.
+# ---------------------------------------------------------------------------
+
+[profile.pr]
+fail-fast = true
+failure-output = "immediate-final"
+success-output = "never"
+status-level = "fail"
+slow-timeout = { period = "60s", terminate-after = 2 }
+retries = 0
+
+[profile.pr.junit]
+path = "target/nextest/pr/junit.xml"
+
+[profile.nightly]
+fail-fast = false
+failure-output = "immediate-final"
+success-output = "never"
+status-level = "slow"
+retries = 2
+
+[profile.nightly.junit]
+path = "target/nextest/nightly/junit.xml"

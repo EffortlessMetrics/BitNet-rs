@@ -125,6 +125,18 @@ fn top_level_help_documents_apple_backend_labels() {
 }
 
 #[test]
+fn apple_m4_top_level_help_documents_local_answer_boundaries() {
+    bitnet()
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Apple M4 local answer path"))
+        .stdout(predicate::str::contains("apple-m4-cpu-neon: reliable local-answer path"))
+        .stdout(predicate::str::contains("apple-m4-metal: receipt-backed Metal phase"))
+        .stdout(predicate::str::contains("not native Metal or Neural Engine proof"));
+}
+
+#[test]
 fn run_help_documents_apple_backend_labels() {
     bitnet()
         .args(["run", "--help"])
@@ -133,6 +145,18 @@ fn run_help_documents_apple_backend_labels() {
         .stdout(predicate::str::contains("apple-m4-metal"))
         .stdout(predicate::str::contains("apple-m4-mpsgraph"))
         .stdout(predicate::str::contains("apple-m4-cpu-neon"));
+}
+
+#[test]
+fn apple_m4_run_help_documents_strict_cpu_neon_receipt_flow() {
+    bitnet()
+        .args(["run", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Apple M4 local answer path"))
+        .stdout(predicate::str::contains("bitnet --device apple-m4-cpu-neon run"))
+        .stdout(predicate::str::contains("--strict-loader --strict-tokenizer"))
+        .stdout(predicate::str::contains("--json-out local-answer-cpu-neon.json"));
 }
 
 #[test]
@@ -422,6 +446,30 @@ cases:
     assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
     assert_eq!(receipt["quality_summary"]["not_run"], 1);
     assert_eq!(receipt["cases"][0]["status"], "not_run");
+}
+
+/// `ask --help` exposes the user-answer surface.
+#[test]
+fn ask_subcommand_help() {
+    bitnet()
+        .args(["ask", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--question"))
+        .stdout(predicate::str::contains("--strict-cuda"))
+        .stdout(predicate::str::contains("--receipt-out"));
+}
+
+/// `ask --strict-cuda` must not silently run on auto/CPU.
+#[test]
+fn ask_strict_cuda_requires_lane_device() {
+    bitnet()
+        .args(["ask", "--model", "missing.gguf", "--question", "What is BitNet?", "--strict-cuda"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "--strict-cuda requires --device nvidia-rtx-5070-ti-cuda",
+        ));
 }
 
 /// `inference --help` is recognized (requires full-cli).

@@ -162,6 +162,7 @@ hard failures:
 - Tokenizer is missing or ambiguous.
 - QK256 CUDA kernel stats are missing or have zero invocations.
 - Weights are uploaded per token.
+- Answer quality gate fails after the answer receipt is written.
 
 Generic `cuda` remains distinct from the RTX 5070 Ti proof lane and must not be
 reported as `nvidia-rtx-5070-ti-cuda`.
@@ -201,7 +202,10 @@ must reject:
 - Non-finite logits or invalid token IDs when those are recorded.
 
 The filter must be deterministic and receipt-visible. Failure should include the
-specific failed rule so the next debugging step is obvious.
+specific failed rule so the next debugging step is obvious. Strict CUDA ask
+runs must still write the answer receipt before exiting non-zero on a failed
+quality gate, so the artifact records the backend proof and the quality failure
+in the same place.
 
 ## CPU/CUDA Answer Parity
 

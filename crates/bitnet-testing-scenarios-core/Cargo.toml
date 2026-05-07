@@ -26,3 +26,6 @@ insta.workspace = true
 [features]
 default = []
 fixtures = ["bitnet-testing-scenarios-profile-core/fixtures"]
+
+[lints]
+workspace = true

@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T13:02:01Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-006"
+event = "merged"
+pr = 3882
+merge_sha = "08625e528133ac81651264cca78b67c753e8e3e0"
+actor = "codex"
+
+notes = [
+  "M4-OP-006 next-frontier decision merged.",
+  "Selected Apple M4 CPU/NEON local-answer usability as the next implementation frontier, with Metal subgraph expansion second and QK256 investigation last.",
+  "No runtime code, kernels, QK256, server inference, dependency, or machine-local artifact changes are part of this closeout.",
+]

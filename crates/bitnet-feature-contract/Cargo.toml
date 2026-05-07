@@ -62,3 +62,6 @@ runtime-profile-fixtures = ["bitnet-feature-matrix/runtime-profile-fixtures"]
 runtime-profile-reporting = ["bitnet-feature-matrix/runtime-profile-reporting"]
 runtime-profile-trend = ["bitnet-feature-matrix/runtime-profile-trend"]
 runtime-profile-integration-tests = ["bitnet-feature-matrix/runtime-profile-integration-tests"]
+
+[lints]
+workspace = true

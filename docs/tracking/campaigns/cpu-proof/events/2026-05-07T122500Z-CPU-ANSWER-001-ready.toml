@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T12:25:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "CPU execution proof and CPU benchmark receipts are merged; the next CPU proof gap is answer correctness, not model execution.",
+  "CPU-ANSWER-001 will add deterministic tiny-prompt answer readiness evidence and scalar-versus-AVX2 full-decode comparison before attributing bad output to AVX2.",
+  "The lane must not claim general chat quality, server inference, GPU or NPU execution, or sustained Kaby Lake throughput.",
+]

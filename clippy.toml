@@ -1,8 +1,8 @@
 # Clippy configuration for bitnet-rs
 # Ensures high code quality standards for crates.io publication
 
-# MSRV compatibility
-msrv = "1.92.0"
+# MSRV compatibility (bumped to 1.93.0 in the strict policy rollout, PR 03).
+msrv = "1.93.0"
 
 # Complexity thresholds
 cognitive-complexity-threshold = 30

@@ -11,3 +11,6 @@ categories.workspace = true
 description = "SRP thread configuration and work partitioning primitives"
 
 [dependencies]
+
+[lints]
+workspace = true

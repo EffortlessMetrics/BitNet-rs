@@ -1,0 +1,48 @@
+schema_version = "0.3"
+
+# policy/no-panic-allowlist.toml
+#
+# Receipt ledger for panic-family API shapes (`unwrap`, `expect`,
+# `panic!`, `todo!`, `unimplemented!`, `unreachable!`). Each entry
+# pins a specific call site or scope to an owner, classification,
+# and expiry.
+#
+# Identity is `path + family + selector`. The `last_seen`
+# line/column is advisory only.
+#
+# This file is intentionally empty in PR 05. The PR 05 checker runs
+# in advisory mode; PR 10 and PR 11 are the real debt cleanup
+# milestones. After they land, the no-panic checker is promoted to
+# `--fail-on-error` (PR 12) and any new finding either gets a real
+# receipt below or the offending code is fixed.
+#
+# Schema reference (see docs/NO_PANIC_POLICY.md):
+#
+#   [[allow]]
+#   id           = "panic-XXXX"
+#   path         = "crates/bitnet-X/src/Y.rs"
+#   family       = "unwrap"          # one of: unwrap, expect,
+#                                    # panic_macro, todo,
+#                                    # unimplemented, unreachable,
+#                                    # indexing, string_slice,
+#                                    # get_unwrap,
+#                                    # unchecked_time_subtraction,
+#                                    # unwrap_unchecked
+#   classification = "test_helper"   # or kernel, ffi_boundary, ...
+#   owner          = "team-name"
+#   explanation    = "real reason"
+#   expires        = "YYYY-MM-DD"
+#
+#   [allow.selector]
+#   kind                 = "method_call"
+#   container            = "function_or_module_name"
+#   callee               = "unwrap"
+#   receiver_fingerprint = "<receiver expression sketch>"
+#
+#   [allow.last_seen]
+#   line   = 42
+#   column = 17
+#
+# Auto-tools never write this file. The propose helper writes
+# target/bitnet/reports/no-panic-proposed-allowlist.toml; humans
+# review and copy entries here.

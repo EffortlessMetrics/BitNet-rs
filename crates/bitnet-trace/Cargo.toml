@@ -2,7 +2,7 @@
 name = "bitnet-trace"
 version = "0.2.1-dev"
 edition.workspace = true
-rust-version = "1.92.0"
+rust-version = "1.93.0"
 license = "MIT OR Apache-2.0"
 description = "Tensor activation tracing for bitnet-rs cross-validation debugging"
 
@@ -22,3 +22,6 @@ temp-env = "0.3.6"
 insta = { workspace = true, features = ["json"] }
 proptest.workspace = true
 serde_json.workspace = true
+
+[lints]
+workspace = true

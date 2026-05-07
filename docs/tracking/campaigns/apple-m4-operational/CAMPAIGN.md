@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-operational`
 
-Status: active
+Status: complete
 
 ## Objective
 
@@ -21,7 +21,7 @@ This campaign starts after that proof work. Its job is operational readiness: ma
 - The operator runbook documents model placement, commands, receipt paths, backend labels, failure modes, and unsupported claims.
 - CLI examples make effective Apple CPU/NEON use and Metal phase proof repeatable without relying on hidden test knowledge.
 - Benchmark profiles are conservative, named, and tied to receipt-backed proof boundaries.
-- The next Apple implementation frontier is selected explicitly instead of reopening the completed proof campaign.
+- The next Apple implementation frontier is selected explicitly instead of reopening the completed proof campaign: CPU/NEON local-answer usability first, Metal subgraph expansion second, QK256 investigation last.
 
 ## Hard Constraints
 
@@ -30,6 +30,15 @@ This campaign starts after that proof work. Its job is operational readiness: ma
 - Do not claim Neural Engine execution from MPSGraph.
 - Do not claim QK256 on Apple Silicon.
 - Do not claim general M4 performance from tiny-kernel benchmarks.
+
+## Completion Boundary
+
+This campaign is complete through M4-OP-006. It makes the completed Apple M4
+proof lane repeatable for operators through validation bundle commands,
+receipt-bundle checking, runbook guidance, effective CLI examples, conservative
+benchmark profile validation, and an explicit next-frontier decision. It does
+not add new runtime capability, full `apple-m4-metal` model inference, Apple
+QK256 support, Neural Engine proof, or broad M4 performance claims.
 
 ## Backend Wording
 
@@ -48,9 +57,9 @@ Use these labels consistently:
 | M4-OP-001 | merged | One-command Apple M4 validation bundle merged in #3845. |
 | M4-OP-002 | merged | Hardened receipt-bundle validation merged in #3848. |
 | M4-OP-003 | merged | Apple M4 operator runbook merged in #3857. |
-| M4-OP-004 | proposed | Add effective-use CLI examples and strict failure-mode docs. |
-| M4-OP-005 | pr_open | Add conservative benchmark profile names and summary artifact validation in #3861. |
-| M4-OP-006 | proposed | Decide the next implementation frontier. |
+| M4-OP-004 | merged | Effective-use CLI examples and strict failure-mode docs merged in #3871. |
+| M4-OP-005 | merged | Conservative benchmark profile names and summary artifact validation merged in #3861. |
+| M4-OP-006 | merged | Next implementation frontier decision merged in #3882. |
 
 ## Review Policy
 

@@ -1,6 +1,6 @@
 id = "apple-m4-operational"
 title = "Apple M4 operational readiness"
-status = "active"
+status = "complete"
 
 objective = "Turn the completed Apple M4 proof lane into a repeatable operator workflow with one-command validation, durable receipts, clear docs, stable failure modes, and benchmark profiles."
 
@@ -140,8 +140,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-004"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-operational/M4-OP-004-effective-cli-flow"
+pr = 3871
+merge_sha = "f1bc94317f2ca0aa73532a16b1226aa6327b55b2"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -177,10 +179,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-005"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-operational/M4-OP-005-benchmark-profile-summary"
 pr = 3861
-head_sha = "e4ed29dc21347501b130a5e69337b2f86d14371d"
+merge_sha = "ce4205fa627eac486840bdd8b06f204e2197b842"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -216,8 +218,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-006"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-operational/M4-OP-006-next-frontier"
+pr = 3882
+merge_sha = "08625e528133ac81651264cca78b67c753e8e3e0"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

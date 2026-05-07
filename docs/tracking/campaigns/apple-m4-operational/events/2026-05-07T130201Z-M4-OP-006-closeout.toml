@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T13:02:01Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-006"
+event = "closeout"
+actor = "codex"
+
+notes = [
+  "Closed the Apple M4 operational campaign after M4-OP-001 through M4-OP-006 merged.",
+  "M4-OP-006 implementation PR #3882 merged with the recorded merge SHA.",
+  "Campaign status is complete; no additional Apple M4 operational work item is ready, proposed, in_progress, or pr_open.",
+  "The next Apple implementation frontier is a new CPU/NEON local-answer usability campaign, not a reopening of apple-m4 or apple-m4-operational.",
+]

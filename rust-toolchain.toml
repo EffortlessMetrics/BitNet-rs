@@ -1,7 +1,11 @@
 # Pinned Rust toolchain for reproducible builds
-# MSRV: 1.92.0 (using Rust 2024 edition)
+# MSRV: 1.93.0 (using Rust 2024 edition)
+#
+# Bumped from 1.92.0 in the strict policy / CI economics rollout (PR 03):
+# - aligns with the strict Clippy profile staged in PR 08+
+# - prerequisite for ripr (>= 1.93) added in PR 13
 [toolchain]
-channel = "1.92.0"
+channel = "1.93.0"
 profile = "minimal"
 components = ["rustfmt", "clippy", "rust-analyzer"]
 targets = []
