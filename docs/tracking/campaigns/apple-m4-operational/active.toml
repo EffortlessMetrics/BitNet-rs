@@ -64,8 +64,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-002"
-status = "pr_open"
+status = "merged"
 pr = 3848
+merge_sha = "6e53e3c03144b58341fd40c13a3fdabbcabe7f96"
 branch = "codex/apple-m4-operational/M4-OP-002-receipt-bundle-validator"
 stackable = false
 review_mode = "codex_premerge"
@@ -101,7 +102,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-003"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-operational/M4-OP-003-operator-runbook"
 stackable = true
 review_mode = "codex_premerge"
