@@ -597,11 +597,12 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-018"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4/M4-018-cli-package-polish"
 stackable = false
 requires_human_merge = true
 blocked_by = ["M4-017"]
+pr = 3826
 acceptance = "Polish Apple backend CLI and package surfaces so backend labels, strict-mode errors, artifact paths, and non-M4 failure modes are clear."
 commands = [
   "cargo fmt --all -- --check",
