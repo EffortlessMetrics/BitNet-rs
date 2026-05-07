@@ -1,0 +1,12 @@
+schema: 1
+required: [id, family_id, roles, thinking_controls, tool_calling, non_claims]
+fields:
+  id: {type: string}
+  family_id: {type: string}
+  roles: {type: list_string}
+  thinking_controls: {type: list_string}
+  reasoning_effort: {type: list_string, optional: true}
+  developer_role_supported: {type: boolean}
+  tool_calling: {type: boolean}
+  multimodal_placeholders: {type: list_string}
+  non_claims: {type: list_string}

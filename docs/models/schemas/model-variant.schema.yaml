@@ -1,0 +1,14 @@
+schema: 1
+required: [family_id, variant_id, params, active_params, context, modalities, local_test_tier, status]
+fields:
+  family_id: {type: string}
+  variant_id: {type: string}
+  params: {type: string}
+  active_params: {type: string, nullable: true}
+  context: {type: string}
+  modalities: {type: list_string}
+  first_repo_target: {type: string}
+  local_test_tier:
+    enum: [tier_a_local, tier_b_partial, tier_c_design_only]
+  status:
+    enum: [not_present, documented, design_scaffold, catalog_scaffold, tokenizer_scaffold, prompt_template_scaffold, loader_scaffold, synthetic_shape_tested, runtime_detected, one_token_smoke_tested, parity_tested, receipt_backed, benchmarked, design_only]

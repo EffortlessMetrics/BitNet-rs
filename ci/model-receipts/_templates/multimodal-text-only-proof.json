@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "claim": "multimodal_family_text_only_one_token",
+  "model_family": "",
+  "variant": "",
+  "task": "multimodal_text_only",
+  "model_source": {
+    "repo": "",
+    "file": "",
+    "format": "gguf|safetensors|openvino_ir|onnx",
+    "hash": "TBD"
+  },
+  "runtime": {
+    "requested_backend": "",
+    "selected_backend": "",
+    "fallback_used": false
+  },
+  "coverage": {
+    "text_only_claim": true,
+    "multimodal_claim": false,
+    "image_claim": false,
+    "audio_claim": false,
+    "video_claim": false,
+    "long_context_claim": false,
+    "speedup_claim": false
+  },
+  "output": {
+    "prompt_tokens": 0,
+    "generated_tokens": 0,
+    "greedy": true
+  }
+}

@@ -1,0 +1,39 @@
+schema: 1
+updated: 2026-05-07
+policy:
+  - Supplied notes are captured as source-backed planning facts for this foundation pass.
+  - Before runtime implementation, each fact must be re-verified against primary model cards or official documentation.
+  - Unknown or unverified fields must remain TBD.
+sources:
+  gemma4:
+    fact_source: supplied_notes
+    verification_needed: true
+    doc: docs/models/families/gemma-4.md
+  qwen36:
+    fact_source: supplied_notes
+    verification_needed: true
+    doc: docs/models/families/qwen-3.6.md
+  qwen35:
+    fact_source: supplied_notes
+    verification_needed: true
+    doc: docs/models/families/qwen-3.5.md
+  kimi_k26:
+    fact_source: supplied_notes
+    verification_needed: true
+    doc: docs/models/families/kimi-k2.6.md
+  glm51:
+    fact_source: supplied_notes
+    verification_needed: true
+    doc: docs/models/families/glm-5.1.md
+  deepseek_v4:
+    fact_source: supplied_notes
+    verification_needed: true
+    doc: docs/models/families/deepseek-v4.md
+  mistral_medium_35:
+    fact_source: supplied_notes
+    verification_needed: true
+    doc: docs/models/families/mistral-medium-3.5.md
+  openai_privacy_filter:
+    fact_source: supplied_notes
+    verification_needed: true
+    doc: docs/models/families/openai-privacy-filter.md

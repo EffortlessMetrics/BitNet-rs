@@ -1,0 +1,9 @@
+schema: 1
+required: [family_id, variant_id, local_test_tier, fit_reason, non_claims]
+fields:
+  local_test_tier:
+    enum: [tier_a_local, tier_b_partial, tier_c_design_only]
+  memory_estimate: {type: string, optional: true}
+  fit_reason: {type: string}
+  proof_target: {type: string}
+  non_claims: {type: list_string}

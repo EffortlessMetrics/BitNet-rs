@@ -1,0 +1,9 @@
+schema: 1
+required: [capability_id, source_status, runtime_claim, receipt_required]
+fields:
+  capability_id: {type: string}
+  source_status:
+    enum: [source_backed, source_backed_partial, needs_model_card_verification, design_only]
+  runtime_claim: {type: boolean}
+  receipt_required: {type: boolean}
+  non_claims: {type: list_string}

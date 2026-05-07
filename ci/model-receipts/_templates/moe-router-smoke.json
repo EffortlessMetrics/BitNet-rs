@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "claim": "moe_router_smoke",
+  "model_family": "",
+  "variant": "",
+  "task": "moe_router_smoke",
+  "model_source": {
+    "repo": "",
+    "file": "",
+    "format": "gguf|safetensors|openvino_ir|onnx",
+    "hash": "TBD"
+  },
+  "runtime": {
+    "requested_backend": "",
+    "selected_backend": "",
+    "fallback_used": false
+  },
+  "moe": {
+    "router_logits_shape": [],
+    "top_k": 0,
+    "shared_expert_present": false,
+    "active_parameters": "TBD",
+    "total_parameters": "TBD",
+    "per_token_expert_coverage_recorded": false
+  },
+  "coverage": {
+    "full_inference_claim": false,
+    "moe_claim": true,
+    "speedup_claim": false
+  }
+}

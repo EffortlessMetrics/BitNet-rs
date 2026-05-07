@@ -178,3 +178,7 @@ HW-002 remains proposed. #3625 added `ci/hardware/README.md` with artifact namin
 
 | Item/PR | Superseded by | Reason |
 |---|---|---|
+
+## Related model-family planning tracker
+
+Non-BitNet model-family documentation, schemas, and receipt rails are tracked separately in `docs/tracking/model-family-foundation/status.md`; this BitNet alignment tracker remains the source of truth for backend and hardware proof status.

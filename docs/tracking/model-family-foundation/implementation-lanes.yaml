@@ -1,0 +1,24 @@
+schema: 1
+updated: 2026-05-07
+lanes:
+  dense_decoder:
+    doc: docs/models/implementation/dense-decoder-lane.md
+    claim_boundary: Non-BitNet dense decoders must not use BitNet QK256 proof.
+  moe_decoder:
+    doc: docs/models/implementation/moe-decoder-lane.md
+    claim_boundary: MoE requires router/expert receipts.
+  multimodal:
+    doc: docs/models/implementation/multimodal-lane.md
+    claim_boundary: Text-only proof is not multimodal proof.
+  token_classification:
+    doc: docs/models/implementation/token-classification-lane.md
+    claim_boundary: Token classification is not generation.
+  openvino_graph:
+    doc: docs/models/implementation/openvino-graph-lane.md
+    claim_boundary: Reference graph proof is not native kernel proof.
+  gguf_dense_quant:
+    doc: docs/models/implementation/gguf-dense-quant-lane.md
+    claim_boundary: GGUF proof is per artifact.
+  safetensors_loader:
+    doc: docs/models/implementation/safetensors-loader-lane.md
+    claim_boundary: Loader scaffold is not inference.

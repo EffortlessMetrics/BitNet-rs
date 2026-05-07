@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "claim": "external_reference",
+  "model_family": "",
+  "variant": "",
+  "task": "external_reference",
+  "external_runtime": {
+    "name": "",
+    "version": "",
+    "host": "",
+    "command": "",
+    "artifact_hash": "TBD"
+  },
+  "local_execution_claim": false,
+  "loader_claim": false,
+  "native_kernel_claim": false,
+  "speedup_claim": false,
+  "notes": "External reference does not prove native bitnet-rs support."
+}
