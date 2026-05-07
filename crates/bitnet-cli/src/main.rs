@@ -2719,13 +2719,21 @@ async fn run_simple_generation(
         };
         let steady_decode_tps = steady_decode_tps_ms(&decode_step_ms);
         let profile_label = profile_id.as_deref().unwrap_or("default");
+        let profile_claim_scope = profile_claim_scope(runtime_api, selected_backend);
+        let profile_machine_context_recorded = profile_machine_context_recorded(
+            runtime_api,
+            selected_backend,
+            apple_machine.is_some(),
+            &cpu_features,
+            !cpu_model.is_empty(),
+        );
         let profile_receipt = serde_json::json!({
             "id": profile_label,
             "requested": profile_requested,
             "kind": "steady_decode_prefill",
-            "claim_scope": "selected Apple backend phase timing only",
+            "claim_scope": profile_claim_scope,
             "phase": "decode",
-            "machine_context_recorded": apple_machine.is_some(),
+            "machine_context_recorded": profile_machine_context_recorded,
             "backend": {
                 "requested_backend": requested_backend,
                 "selected_backend": selected_backend,
@@ -3268,6 +3276,36 @@ fn steady_decode_tps_ms(decode_step_ms: &[f64]) -> Option<f64> {
     Some(steady.len() as f64 / (steady_ms / 1000.0))
 }
 
+fn profile_claim_scope(runtime_api: &str, selected_backend: &str) -> &'static str {
+    if runtime_api == "cpu" || selected_backend == "cpu-rust" {
+        "selected CPU backend phase timing only"
+    } else if selected_backend.starts_with("apple-m4") || runtime_api == "metal" {
+        "selected Apple backend phase timing only"
+    } else if runtime_api == "cuda" || selected_backend.contains("cuda") {
+        "selected CUDA backend phase timing only"
+    } else {
+        "selected backend phase timing only"
+    }
+}
+
+fn profile_machine_context_recorded(
+    runtime_api: &str,
+    selected_backend: &str,
+    apple_machine_present: bool,
+    cpu_features: &[String],
+    cpu_model_present: bool,
+) -> bool {
+    if runtime_api == "cpu" || selected_backend == "cpu-rust" {
+        return cpu_model_present || !cpu_features.is_empty();
+    }
+
+    if selected_backend.starts_with("apple-m4") || runtime_api == "metal" {
+        return apple_machine_present;
+    }
+
+    apple_machine_present || cpu_model_present || !cpu_features.is_empty()
+}
+
 fn apple_machine_receipt_json(
     requested_backend: &str,
     selected_backend: &str,
@@ -3537,6 +3575,34 @@ mod tests {
 
         assert_eq!((tps * 1000.0).round() / 1000.0, 20.0);
         assert!(steady_decode_tps_ms(&[100.0]).is_none());
+    }
+
+    #[test]
+    fn cpu_profile_receipt_uses_cpu_claim_scope() {
+        let cpu_features = vec!["avx2".to_string(), "fma".to_string()];
+
+        assert_eq!(
+            profile_claim_scope("cpu", "cpu-rust"),
+            "selected CPU backend phase timing only"
+        );
+        assert!(profile_machine_context_recorded("cpu", "cpu-rust", false, &cpu_features, true));
+    }
+
+    #[test]
+    fn apple_profile_receipt_keeps_apple_claim_scope() {
+        let cpu_features = Vec::new();
+
+        assert_eq!(
+            profile_claim_scope("metal", "apple-m4-metal"),
+            "selected Apple backend phase timing only"
+        );
+        assert!(profile_machine_context_recorded(
+            "metal",
+            "apple-m4-metal",
+            true,
+            &cpu_features,
+            false
+        ));
     }
 
     #[test]
