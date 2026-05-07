@@ -98,7 +98,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-002"
-status = "in_progress"
+status = "pr_open"
+pr = 3910
 branch = "codex/slm-cpu-002-metadata-preflight"
 stackable = false
 review_mode = "codex_premerge"
