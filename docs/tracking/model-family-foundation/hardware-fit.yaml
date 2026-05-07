@@ -1,0 +1,17 @@
+schema: 1
+updated: 2026-05-07
+device_assumption: 5070 Ti-class 16 GB GPU
+tiers:
+  tier_a_local:
+    meaning: Reasonable to smoke locally with small/quantized models or CPU/GPU offload.
+    families: [gemma4-e2b-e4b-text-only, qwen3.5-0.8b-2b-4b-9b, openai-privacy-filter]
+  tier_b_partial:
+    meaning: May run with quantization, CPU/RAM offload, reduced context, or single-token proof only.
+    families: [qwen3.6-27b, qwen3.5-27b-35b-a3b, gemma4-31b-26b-a4b, mistral-medium-3.5-external-offload]
+  tier_c_design_only:
+    meaning: Too large for direct local proof; document architecture, prompt, loader, receipts, and reference commands.
+    families: [kimi-k2.6, glm-5.1, deepseek-v4-flash-pro, mistral-medium-3.5-full]
+non_claims:
+  - Hardware fit tiers do not imply runtime support.
+  - Design-only docs do not imply local inference.
+  - Memory estimates exclude KV/software overhead unless stated.

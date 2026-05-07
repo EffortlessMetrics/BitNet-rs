@@ -1,0 +1,15 @@
+schema: 1
+updated: 2026-05-07
+policy: Supplied notes are recorded as planning sources; external URLs and license terms must be verified before runtime, distribution, or benchmark claims.
+sources:
+  gemma4-google-overview: {family: gemma4, source_type: supplied_notes, verification_status: needs_url_verification}
+  gemma4-memory-notes: {family: gemma4, source_type: supplied_notes, verification_status: needs_url_verification}
+  qwen36-model-notes: {family: qwen36, source_type: supplied_notes, verification_status: needs_url_verification}
+  qwen36-unsloth-memory: {family: qwen36, source_type: supplied_notes, verification_status: needs_url_verification}
+  qwen35-model-notes: {family: qwen35, source_type: supplied_notes, verification_status: needs_url_verification}
+  qwen35-hardware-table: {family: qwen35, source_type: supplied_notes, verification_status: needs_url_verification}
+  kimi26-unsloth-notes: {family: kimi_k26, source_type: supplied_notes, verification_status: needs_url_verification}
+  glm51-model-notes: {family: glm51, source_type: supplied_notes, verification_status: needs_url_verification}
+  deepseek-v4-model-card: {family: deepseek_v4, source_type: supplied_notes, verification_status: needs_url_verification}
+  mistral-medium-35-card: {family: mistral_medium_35, source_type: supplied_notes, verification_status: needs_url_verification}
+  openai-privacy-filter-card: {family: openai_privacy_filter, source_type: supplied_notes, verification_status: needs_url_verification}

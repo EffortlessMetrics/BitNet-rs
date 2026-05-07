@@ -1,0 +1,174 @@
+schema: 1
+project: bitnet-rs-model-family-foundation
+updated: 2026-05-07
+states: [proposed, ready, in_progress, pr_open, blocked, merged, superseded]
+item_schema:
+  required: [id, title, state, priority, workstream, depends_on, scope.allowed_paths, scope.forbidden_paths, acceptance, verification, notes, followups]
+state_transition_rules:
+  - proposed -> ready only when scope, acceptance, and verification are clear.
+  - ready -> in_progress when a branch starts work.
+  - in_progress -> pr_open when a PR is opened.
+  - pr_open -> merged only after merge.
+  - A PR must not mark itself merged.
+workstreams:
+  model_foundation:
+    title: Model-family foundation
+    objective: Add documentation, schemas, status values, and receipts without runtime behavior.
+  model_family_docs:
+    title: Model-family docs
+    objective: Add family-specific implementation plans and non-claims.
+items:
+  - id: MF-001
+    title: Add model-family documentation structure
+    state: ready
+    priority: P0
+    workstream: model_foundation
+    depends_on: []
+    scope:
+      allowed_paths: [docs/models/**, docs/tracking/model-family-foundation/**]
+      forbidden_paths: [crates/**, tests/**, .github/**]
+    acceptance:
+      - Adds model docs tree.
+      - Adds status values and claim boundaries.
+      - Adds schemas for model family, variant, prompt template, hardware fit, and receipts.
+      - Adds source-index.yaml for source-backed facts.
+      - Does not add runtime code.
+    verification: [cargo fmt --all -- --check, Parse YAML files, Parse JSON receipt templates]
+    notes: First pass only; no runtime behavior.
+    followups: [MF-002, MF-003]
+  - id: MF-002
+    title: Add architecture feature glossary
+    state: proposed
+    priority: P0
+    workstream: model_foundation
+    depends_on: [MF-001]
+    scope:
+      allowed_paths: [docs/models/ARCHITECTURE_FEATURE_GLOSSARY.md, docs/models/implementation/**, docs/tracking/model-family-foundation/**]
+      forbidden_paths: [crates/**]
+    acceptance:
+      - Defines dense, MoE, multimodal, token-classification, long-context, and speculative-decoding features.
+      - Unknowns are marked TBD.
+      - No implementation claims are made.
+    verification: [cargo fmt --all -- --check]
+    notes: Glossary terms are shared rails, not runtime support.
+    followups: []
+  - id: MF-003
+    title: Add local hardware fit policy for 5070Ti
+    state: proposed
+    priority: P0
+    workstream: model_foundation
+    depends_on: [MF-001]
+    scope:
+      allowed_paths: [docs/models/MODEL_HARDWARE_FIT_5070TI.md, docs/tracking/model-family-foundation/**]
+      forbidden_paths: [crates/**]
+    acceptance:
+      - Splits models into tier_a_local, tier_b_partial, and tier_c_design_only.
+      - Explicitly states that design-only docs are not local inference claims.
+      - Does not invent benchmarks.
+    verification: [cargo fmt --all -- --check]
+    notes: 5070 Ti-class 16 GB is a planning assumption.
+    followups: []
+  - id: GEMMA4-DOC-001
+    title: Add Gemma 4 model-family foundation doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope:
+      allowed_paths: [docs/models/families/gemma-4.md, docs/tracking/model-family-foundation/**]
+      forbidden_paths: [crates/**]
+    acceptance:
+      - Documents E2B, E4B, 31B, and 26B-A4B variants.
+      - Separates text-only, multimodal, MoE, and MTP claims.
+      - First target is E2B text-only Q4/quantized proof.
+      - Explicitly says generic Gemma support is not Gemma 4 support.
+    verification: [cargo fmt --all -- --check]
+    notes: No Gemma 4 loader or runtime claim.
+    followups: [GEMMA4-DOC-002, GEMMA4-DOC-003, GEMMA4-DOC-004, GEMMA4-DOC-005, GEMMA4-DOC-006]
+  - id: QWEN35-DOC-001
+    title: Add Qwen3.5 small-model-first foundation doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope:
+      allowed_paths: [docs/models/families/qwen-3.5.md, docs/tracking/model-family-foundation/**]
+      forbidden_paths: [crates/**]
+    acceptance:
+      - Documents 0.8B, 2B, 4B, 9B as first local targets.
+      - Documents thinking disabled by default for small models.
+      - Separates 27B/35B/122B/397B as larger or design-gated targets.
+    verification: [cargo fmt --all -- --check]
+    notes: Best early non-BitNet local decoder target.
+    followups: [QWEN35-DOC-002, QWEN35-DOC-003, QWEN35-DOC-004, QWEN35-DOC-005, QWEN35-DOC-006]
+  - id: PRIVACY-DOC-001
+    title: Add OpenAI privacy-filter token-classification foundation doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope:
+      allowed_paths: [docs/models/families/openai-privacy-filter.md, docs/models/implementation/token-classification-lane.md, ci/model-receipts/_templates/token-classification-proof.json, docs/tracking/model-family-foundation/**]
+      forbidden_paths: [crates/**]
+    acceptance:
+      - Documents token-classification pipeline separately from generation.
+      - Documents 33 BIOES labels and Viterbi span decoder.
+      - Adds receipt requirements for span classification.
+    verification: [cargo fmt --all -- --check, Parse JSON receipt template]
+    notes: Not an autoregressive generation lane.
+    followups: [PRIVACY-DOC-002, PRIVACY-DOC-003, PRIVACY-DOC-004, PRIVACY-DOC-005]
+  - id: QWEN36-DOC-001
+    title: Add Qwen3.6 family doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope: {allowed_paths: [docs/models/families/qwen-3.6.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}
+    acceptance: [Documents Qwen3.6 variants and future gates.]
+    verification: [cargo fmt --all -- --check]
+    notes: Tier B partial/offload design.
+    followups: []
+  - id: KIMI26-DOC-001
+    title: Add Kimi K2.6 design-only family doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope: {allowed_paths: [docs/models/families/kimi-k2.6.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}
+    acceptance: [Documents design-only huge-model rails.]
+    verification: [cargo fmt --all -- --check]
+    notes: Tier C design-only.
+    followups: []
+  - id: GLM51-DOC-001
+    title: Add GLM-5.1 design-only family doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope: {allowed_paths: [docs/models/families/glm-5.1.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}
+    acceptance: [Documents design-only GLM-5.1 MoE rails.]
+    verification: [cargo fmt --all -- --check]
+    notes: Tier C design-only.
+    followups: []
+  - id: DSV4-DOC-001
+    title: Add DeepSeek V4 family doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope: {allowed_paths: [docs/models/families/deepseek-v4.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}
+    acceptance: [Documents DeepSeek V4 Flash and Pro design-only rails.]
+    verification: [cargo fmt --all -- --check]
+    notes: Tier C design-only.
+    followups: []
+  - id: MM35-DOC-001
+    title: Add Mistral Medium 3.5 design-only family doc
+    state: proposed
+    priority: P0
+    workstream: model_family_docs
+    depends_on: [MF-001, MF-002]
+    scope: {allowed_paths: [docs/models/families/mistral-medium-3.5.md, docs/tracking/model-family-foundation/**], forbidden_paths: [crates/**]}
+    acceptance: [Documents Mistral Medium 3.5 prompt and external-reference rails.]
+    verification: [cargo fmt --all -- --check]
+    notes: Tier C full-path design-only.
+    followups: []

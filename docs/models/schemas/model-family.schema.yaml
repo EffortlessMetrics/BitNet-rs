@@ -1,0 +1,43 @@
+schema: 1
+required:
+  - id
+  - display_name
+  - source_status
+  - implementation_status
+  - first_target
+  - local_test_tier
+  - architecture
+  - variants
+  - tokenizer
+  - prompt_template
+  - loader
+  - receipts
+  - non_claims
+fields:
+  id:
+    type: string
+    example: gemma4
+  source_status:
+    enum: [source_backed, source_backed_partial, needs_model_card_verification, design_only]
+  implementation_status:
+    enum: [not_present, documented, design_scaffold, catalog_scaffold, loader_scaffold, one_token_smoke_tested, receipt_backed]
+  local_test_tier:
+    enum: [tier_a_local, tier_b_partial, tier_c_design_only]
+  architecture.kind:
+    enum: [dense_decoder, moe_decoder, hybrid_dense_moe, multimodal_decoder, token_classifier, graph_reference, unknown_tbd]
+  loader.formats:
+    list_enum: [gguf, safetensors, onnx, openvino_ir, tokenizer_json, remote_code_tbd]
+  receipts.required_fields:
+    list:
+      - model_id
+      - variant_id
+      - model_hash_or_tbd
+      - tokenizer_source
+      - prompt_template
+      - requested_backend
+      - selected_backend
+      - fallback_used
+      - task
+      - generated_tokens_or_labeled_tokens
+      - full_inference_claim
+      - speedup_claim

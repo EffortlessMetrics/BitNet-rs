@@ -1,0 +1,10 @@
+schema: 1
+required: [family_id, tokenizer_source, vocab_size, special_tokens_status, fallback_policy]
+fields:
+  tokenizer_source:
+    enum: [explicit, model, sibling, unknown]
+  vocab_size:
+    type: string
+    notes: May be numeric or TBD.
+  fallback_policy:
+    enum: [forbidden_without_receipt, allowed_for_docs_only, tbd]

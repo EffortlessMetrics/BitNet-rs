@@ -1,0 +1,9 @@
+schema: 1
+required: [family_id, variant_id, local_test_tier, device_assumption, memory_notes, non_claims]
+fields:
+  local_test_tier:
+    enum: [tier_a_local, tier_b_partial, tier_c_design_only]
+  device_assumption:
+    example: 5070 Ti-class 16 GB GPU
+  memory_notes:
+    type: string

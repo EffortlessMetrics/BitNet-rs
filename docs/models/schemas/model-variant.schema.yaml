@@ -1,0 +1,18 @@
+schema: 1
+required: [family_id, variant_id, params, active_params, context, modalities, local_test_tier, first_repo_target, non_claims]
+fields:
+  params:
+    type: string
+    examples: [0.8B, 26B-A4B, 1T]
+  active_params:
+    type: string
+    notes: Use TBD when not source-backed.
+  context:
+    type: string
+    notes: Model-card context is not runtime proof.
+  modalities:
+    list_enum: [text, image, audio, video_as_frames, token_labels, tbd]
+  first_repo_target:
+    type: string
+  local_test_tier:
+    enum: [tier_a_local, tier_b_partial, tier_c_design_only]

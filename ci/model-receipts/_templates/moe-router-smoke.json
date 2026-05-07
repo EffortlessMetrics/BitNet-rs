@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "claim": "moe_router_smoke",
+  "model_family": "",
+  "variant": "",
+  "task": "moe_router_smoke",
+  "router_logits_shape": [],
+  "top_k": 0,
+  "shared_expert_present": "TBD",
+  "tokens_checked": 0,
+  "expert_coverage": {},
+  "runtime": {
+    "requested_backend": "",
+    "selected_backend": "",
+    "fallback_used": false
+  },
+  "coverage": {
+    "full_inference_claim": false,
+    "multimodal_claim": false,
+    "moe_claim": true,
+    "long_context_claim": false,
+    "speedup_claim": false
+  }
+}

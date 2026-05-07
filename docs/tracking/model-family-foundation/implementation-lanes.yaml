@@ -1,0 +1,10 @@
+schema: 1
+updated: 2026-05-07
+lanes:
+  dense_decoder: {doc: docs/models/implementation/dense-decoder-lane.md, first_targets: [qwen35, gemma4], bitnet_kernel_proof_allowed: false}
+  moe_decoder: {doc: docs/models/implementation/moe-decoder-lane.md, requires: [router_logits, top_k_experts, expert_weights, active_vs_total_receipts]}
+  multimodal: {doc: docs/models/implementation/multimodal-lane.md, text_only_is_multimodal_claim: false}
+  token_classification: {doc: docs/models/implementation/token-classification-lane.md, generation_api_allowed: false}
+  openvino_graph: {doc: docs/models/implementation/openvino-graph-lane.md, native_support_claim: false}
+  gguf_dense_quant: {doc: docs/models/implementation/gguf-dense-quant-lane.md, first_targets: [qwen35, gemma4]}
+  safetensors_loader: {doc: docs/models/implementation/safetensors-loader-lane.md, inference_claim_from_loader: false}

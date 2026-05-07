@@ -1,0 +1,9 @@
+schema: 1
+required: [id, family_id, status, source_status, receipt_required, non_claims]
+fields:
+  status:
+    enum: [documented, design_scaffold, synthetic_shape_tested, runtime_detected, one_token_smoke_tested, parity_tested, receipt_backed, design_only]
+  source_status:
+    enum: [source_backed, source_backed_partial, needs_model_card_verification, design_only]
+  receipt_required:
+    type: boolean

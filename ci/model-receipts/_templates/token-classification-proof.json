@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "claim": "privacy_filter_token_classification_smoke",
+  "model_family": "openai-privacy-filter",
+  "variant": "",
+  "task": "token_classification",
+  "input_tokens": 12,
+  "output_shape": [
+    12,
+    33
+  ],
+  "span_decoder": "bioes_viterbi",
+  "labels": [
+    "private_person",
+    "private_email",
+    "private_phone"
+  ],
+  "generation_claim": false,
+  "runtime": {
+    "requested_backend": "",
+    "selected_backend": "",
+    "fallback_used": false
+  },
+  "coverage": {
+    "full_inference_claim": false,
+    "multimodal_claim": false,
+    "moe_claim": false,
+    "long_context_claim": false,
+    "speedup_claim": false
+  }
+}

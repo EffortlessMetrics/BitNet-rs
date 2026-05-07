@@ -1,0 +1,136 @@
+schema: 1
+updated: 2026-05-07
+status_values:
+  - not_present
+  - documented
+  - design_scaffold
+  - catalog_scaffold
+  - tokenizer_scaffold
+  - prompt_template_scaffold
+  - loader_scaffold
+  - synthetic_shape_tested
+  - runtime_detected
+  - one_token_smoke_tested
+  - parity_tested
+  - receipt_backed
+  - benchmarked
+  - design_only
+claim_boundaries:
+  documented:
+    may_claim:
+      - "The repo contains source-backed implementation notes."
+    must_not_claim:
+      - "The model loads or runs."
+  design_scaffold:
+    may_claim:
+      - "The architecture plan is recorded."
+    must_not_claim:
+      - "The implementation compiles, loads, or runs."
+  loader_scaffold:
+    may_claim:
+      - "The intended loader/tensor mapping exists."
+    must_not_claim:
+      - "Inference works."
+  one_token_smoke_tested:
+    may_claim:
+      - "One strict deterministic generation/classification smoke ran."
+    must_not_claim:
+      - "Quality, speed, long context, or full feature support."
+  receipt_backed:
+    may_claim:
+      - "The named model/variant/backend/task is proven by receipt."
+    must_not_claim:
+      - "Other variants, backends, modalities, or quantizations work."
+families:
+  gemma4:
+    display_name: Gemma 4
+    source_status: source_backed_partial
+    implementation_status: design_scaffold
+    first_target: gemma4-e2b-it-q4-text-only
+    local_test_tier: tier_a_local
+    architecture:
+      kind: multimodal_decoder
+      decoder: dense_for_e2b_e4b_31b
+      moe_variant: gemma4-26b-a4b
+      features: [per_layer_embeddings, sliding_window_attention, global_attention, shared_kv_cache, p_rope, thinking_mode, mtp_drafter_future]
+    implementation_lanes: [dense_decoder, moe_decoder_future, multimodal_future, gguf_dense_quant]
+    non_claims: [no_loader, no_multimodal_runtime, no_moe_runtime, no_mtp_runtime]
+  qwen36:
+    display_name: Qwen 3.6
+    source_status: source_backed_partial
+    implementation_status: design_scaffold
+    first_target: qwen3.6-27b-text-only-gguf-design
+    local_test_tier: tier_b_partial
+    architecture:
+      kind: multimodal_decoder
+      features: [hybrid_thinking, tool_calling, developer_role, long_context, yarn_future, multimodal_projector_external]
+    implementation_lanes: [dense_decoder, moe_decoder_for_35b_a3b, prompt_template, tool_calling]
+    non_claims: [no_256k_runtime, no_full_gpu_residency, no_moe_runtime]
+  qwen35:
+    display_name: Qwen 3.5
+    source_status: source_backed_partial
+    implementation_status: design_scaffold
+    first_target: qwen3.5-0.8b-or-2b-text-only-gguf
+    local_test_tier: tier_a_local
+    small_model_priority: true
+    architecture:
+      kind: multimodal_decoder
+      features: [hybrid_thinking, thinking_disabled_by_default_for_small, tool_calling, long_context, multimodal_projector_external]
+    implementation_lanes: [dense_decoder, prompt_template, tokenizer, gguf_dense_quant, moe_decoder_future]
+    non_claims: [no_256k_runtime, no_multimodal_runtime, no_large_variant_runtime]
+  kimi_k26:
+    display_name: Kimi K2.6
+    source_status: source_backed_partial
+    implementation_status: design_only
+    first_target: design_only_prompt_tokenizer_loader_notes
+    local_test_tier: tier_c_design_only
+    architecture:
+      kind: moe_decoder
+      features: [hybrid_thinking, long_context, vision, extreme_model_size, dynamic_quant_reference]
+    implementation_lanes: [moe_decoder_design, prompt_template, gguf_dynamic_quant_design]
+    non_claims: [no_local_execution, no_loader, no_inference]
+  glm51:
+    display_name: GLM-5.1
+    source_status: source_backed_partial
+    implementation_status: design_only
+    first_target: design_only_prompt_template_and_moe_notes
+    local_test_tier: tier_c_design_only
+    architecture:
+      kind: moe_decoder
+      features: [thinking_enabled_by_default, long_context, tool_calling, huge_moe]
+    implementation_lanes: [moe_decoder_design, prompt_template, tool_calling, external_reference]
+    non_claims: [no_local_execution, no_loader, no_inference]
+  deepseek_v4:
+    display_name: DeepSeek V4
+    source_status: source_backed_partial
+    implementation_status: design_only
+    first_target: design_only_architecture_notes
+    local_test_tier: tier_c_design_only
+    variants: [deepseek-v4-flash, deepseek-v4-pro]
+    architecture:
+      kind: moe_decoder
+      features: [compressed_sparse_attention, heavily_compressed_attention, manifold_constrained_hyper_connections, million_token_context, fp4_fp8_mixed, huge_moe]
+    implementation_lanes: [moe_decoder_design, long_context_design, mixed_precision_design]
+    non_claims: [no_fp4_fp8_kernels, no_1m_runtime, no_csa_hca_mhc_runtime]
+  mistral_medium_35:
+    display_name: Mistral Medium 3.5
+    source_status: source_backed_partial
+    implementation_status: design_only
+    first_target: design_only_prompt_reasoning_effort_contract
+    local_test_tier: tier_c_design_only
+    architecture:
+      kind: dense_decoder
+      features: [reasoning_effort, multimodal_text_image, function_calling, long_context, eagle_drafter_future]
+    implementation_lanes: [dense_decoder_design, prompt_template, tool_calling, speculative_decoding_future]
+    non_claims: [no_local_full_path, no_eagle_runtime]
+  openai_privacy_filter:
+    display_name: OpenAI privacy-filter
+    source_status: source_backed_partial
+    implementation_status: design_scaffold
+    first_target: token_classification_cpu_or_onnx_smoke
+    local_test_tier: tier_a_local
+    architecture:
+      kind: token_classifier
+      features: [bidirectional_encoder, banded_attention, sparse_moe, bioes_labels, viterbi_span_decoder, pii_detection]
+    implementation_lanes: [token_classification, onnx_runtime_future, safetensors_loader, transformersjs_reference]
+    non_claims: [not_generation, no_calibration_claim, no_native_loader]

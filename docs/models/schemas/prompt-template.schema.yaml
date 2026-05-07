@@ -1,0 +1,9 @@
+schema: 1
+required: [id, family_id, source, thinking_enabled_default, roles, tool_calling, non_claims]
+fields:
+  roles:
+    list_enum: [system, developer, user, assistant, tool, im_system, im_user, im_assistant]
+  thinking_enabled_default:
+    enum: [true, false, tbd]
+  reasoning_effort:
+    list_enum: [none, low, medium, high, tbd]

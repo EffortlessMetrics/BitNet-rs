@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "claim": "design_only",
+  "model_family": "",
+  "variant": "",
+  "local_execution_claim": false,
+  "loader_claim": false,
+  "inference_claim": false,
+  "speedup_claim": false,
+  "reason": "Model exceeds local hardware or implementation is not started."
+}
