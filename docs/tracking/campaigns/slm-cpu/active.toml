@@ -181,7 +181,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-002B"
-status = "ready"
+status = "pr_open"
+pr = 3926
 branch = "codex/slm-cpu-002b-dense-q8-gguf"
 stackable = false
 review_mode = "codex_premerge"

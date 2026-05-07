@@ -82,7 +82,7 @@
 | slm-cpu | SLM-CPU-001 | SLM-CPU-000 | merged |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | merged |
 | slm-cpu | SLM-CPU-002A | SLM-CPU-002 | merged |
-| slm-cpu | SLM-CPU-002B | SLM-CPU-002A | ready |
+| slm-cpu | SLM-CPU-002B | SLM-CPU-002A | pr_open |
 | slm-cpu | SLM-CPU-003 | SLM-CPU-002B | proposed |
 | slm-cpu | SLM-CPU-004 | SLM-CPU-003 | proposed |
 | slm-cpu | SLM-CPU-005 | SLM-CPU-004 | proposed |
