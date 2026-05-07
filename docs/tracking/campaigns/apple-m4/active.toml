@@ -597,7 +597,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-018"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4/M4-018-cli-package-polish"
 stackable = false
 requires_human_merge = true

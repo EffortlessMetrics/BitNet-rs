@@ -629,7 +629,7 @@ fn current_item(manifest: &CampaignManifest) -> Option<&WorkItem> {
             return Some(item);
         }
     }
-    manifest.work_items.iter().find(|item| item.status == "merged")
+    manifest.work_items.iter().rev().find(|item| item.status == "merged")
 }
 
 fn latest_pr(events: &[Event], item_id: &str) -> Option<u64> {
