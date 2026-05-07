@@ -33,12 +33,25 @@ impl StartupContractGuard {
     /// Evaluate the startup contract and return a reusable snapshot.
     pub fn evaluate(component: RuntimeComponent, policy: ContractPolicy) -> Result<Self> {
         let report = StartupContractReport::evaluate(component, policy)?;
+        let profile_summary = report.profile_summary();
+        let profile_violations = if report.contract.required_features().is_empty()
+            && report.contract.optional_features().is_empty()
+            && report.contract.forbidden_features().is_empty()
+        {
+            None
+        } else {
+            Some((
+                report.contract.missing_required().to_vec(),
+                report.contract.forbidden_active().to_vec(),
+            ))
+        };
+
         Ok(Self {
             component,
             policy,
             feature_line: feature_line(),
-            profile_summary: active_profile_summary(),
-            profile_violations: active_profile_violation_labels(),
+            profile_summary,
+            profile_violations,
             report,
         })
     }
