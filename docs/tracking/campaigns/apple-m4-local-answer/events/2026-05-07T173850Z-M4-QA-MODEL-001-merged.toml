@@ -1,0 +1,13 @@
+timestamp = "2026-05-07T17:38:50Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-MODEL-001"
+event = "merged"
+pr = 3913
+merge_sha = "b09bf8555e5861914be9c4d9715c9753636b9e94"
+actor = "codex"
+
+notes = [
+  "Merged the local-answer model artifact gate.",
+  "The current Microsoft BitNet I2_S GGUF is structurally valid but rejected for coherent local-answer claims.",
+  "M4-QA-MODEL-002 is ready to acquire or regenerate a supported reference-good artifact before rerunning M4-QA-001.",
+]
