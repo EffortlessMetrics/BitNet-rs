@@ -38,8 +38,8 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-BITNET-005b | merged | Requested/selected QK256 kernel selection merged in #3748. |
 | CPU-BITNET-005c | merged | AVX2 decode GEMV parity hardening merged in #3753. |
 | CPU-BITNET-006 | merged | CPU transformer decode step merged in #3793. |
-| CPU-BITNET-007 | ready | Strict receipts and fallback behavior. |
-| CPU-BITNET-008 | proposed | CPU phase benchmark profiles. |
+| CPU-BITNET-007 | merged | Strict CPU proof receipt enforcement merged in #3800. |
+| CPU-BITNET-008 | ready | CPU phase benchmark receipt profiles. |
 
 ## Review Policy
 
