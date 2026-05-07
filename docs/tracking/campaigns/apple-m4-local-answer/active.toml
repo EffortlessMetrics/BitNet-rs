@@ -16,6 +16,7 @@ end_state = [
 hard_constraints = [
   "Do not reopen the completed apple-m4 or apple-m4-operational campaigns.",
   "Start with apple-m4-cpu-neon as the reliable local-answer path.",
+  "Do not claim coherent local answers from an artifact that is not answer_ready under docs/model-artifacts/ANSWER_ARTIFACT_GATE.md.",
   "Do not claim full apple-m4-metal model inference unless a strict real-model receipt proves it.",
   "Do not claim Neural Engine execution from MPSGraph.",
   "Do not claim QK256 on Apple Silicon.",
@@ -173,7 +174,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-QA-MODEL-001"]
-acceptance = "Acquire or regenerate a supported local-answer GGUF/tokenizer artifact that passes the campaign prompt suite under a reference runner, records exact SHA256 and tokenizer metadata, and is allowed to unblock M4-QA-001."
+acceptance = "Acquire or regenerate a supported local-answer GGUF/tokenizer artifact that passes the campaign prompt suite under a reference runner, records exact SHA256 and tokenizer metadata, and is allowed to unblock M4-QA-001; the shared successor gate is MODEL-ARTIFACT-002."
 commands = [
   "cargo fmt --all -- --check",
   "Reference runner command for the accepted model artifact and campaign prompt suite",

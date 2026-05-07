@@ -1,0 +1,63 @@
+schema = 1
+artifact_kind = "model_answer_artifact_manifest"
+updated = "2026-05-07"
+
+[gate]
+doc = "docs/model-artifacts/ANSWER_ARTIFACT_GATE.md"
+prompt_suite = "ci/quality/bitnet-answer-corpus.yaml"
+rejected_artifacts = "ci/model-artifacts/rejected-artifacts.toml"
+reference_runner_coherent_output_required = true
+sha256_required = true
+tokenizer_metadata_required = true
+pretokenizer_metadata_required = true
+
+states = [
+  "unknown",
+  "structurally_valid",
+  "rejected_missing_tokenizer_authority",
+  "rejected_reference_runner_failed",
+  "rejected_prompt_suite_failed",
+  "answer_ready",
+  "blocked",
+]
+
+[claim_policy]
+structural_validity_is_not_answer_readiness = true
+backend_execution_is_not_answer_readiness = true
+speedup_requires_answer_ready_artifact = true
+
+allowed_before_answer_ready = [
+  "structural GGUF validity",
+  "loader and tokenizer diagnostics",
+  "backend execution proof",
+  "diagnostic_only CPU/CUDA/Metal/NPU receipts",
+  "failure classification such as model_artifact_blocked",
+]
+
+not_allowed_before_answer_ready = [
+  "coherent local-answer claims",
+  "CPU answer-readiness claims",
+  "CUDA answer-readiness claims",
+  "Apple M4 local-answer success claims",
+  "NPU, SLM, server, or other hardware answer claims",
+  "speedup claims based on generated text quality",
+]
+
+[[artifact]]
+id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
+state = "rejected_prompt_suite_failed"
+status = "rejected_for_answer_readiness"
+repo = "microsoft/bitnet-b1.58-2B-4T-gguf"
+repo_revision = "a1f2f1c765812aa8af3f6eda4a313707064bba15"
+file = "ggml-model-i2_s.gguf"
+sha256 = "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+bytes = 1187801280
+format = "gguf"
+architecture = "bitnet-b1.58"
+quantization = "i2_s"
+structural_status = "valid_gguf"
+answer_quality_status = "failed_reference_prompt_suite"
+tokenizer_authority = "missing_pretokenizer_authority"
+reference_runner = "llama-cli via local BitNet.cpp checkout"
+legacy_evidence = "ci/quality/apple-m4-local-answer-model-artifacts.toml"
+rejection_reason = "Structurally valid GGUF, but missing tokenizer pre-tokenizer authority and failing reference prompt-suite output quality."

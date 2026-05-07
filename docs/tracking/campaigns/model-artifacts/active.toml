@@ -1,0 +1,107 @@
+id = "model-artifacts"
+title = "Model artifact answer authority"
+status = "active"
+
+objective = "Define and maintain shared answer-artifact authority so hardware lanes cannot claim coherent local answers from structurally valid but answer-bad GGUF artifacts."
+
+end_state = [
+  "Answer-capable model artifacts are distinguished from structurally valid GGUFs.",
+  "Rejected artifacts record exact identity, hash, tokenizer authority, reference runner result, prompt-suite result, and claim boundary.",
+  "Hardware answer-readiness lanes depend on an answer_ready artifact before coherent local-answer claims.",
+  "Diagnostic-only receipts remain allowed against rejected artifacts when they do not claim answer readiness or speedup.",
+]
+
+hard_constraints = [
+  "Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates.",
+  "Do not touch kernels, transformer routing, tokenizer behavior, model loader behavior, server inference, or accelerator runtime code in tracker-only PRs.",
+  "Do not claim a structurally valid GGUF is answer-ready without reference runner prompt-suite evidence.",
+  "Do not turn backend execution proof into answer-readiness proof.",
+  "Do not make speed claims from answer artifacts.",
+]
+
+[[work_item]]
+id = "MODEL-ARTIFACT-001"
+status = "pr_open"
+branch = "codex/model-artifacts/MODEL-ARTIFACT-001-shared-answer-gate-v2"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Define the shared reference-good answer artifact gate, record artifact states, and list the current Microsoft BitNet I2_S GGUF as rejected for answer-readiness claims without changing runtime behavior."
+commands = [
+  "Parse ci/model-artifacts/*.toml",
+  "cargo run --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/model-artifacts/**",
+  "ci/model-artifacts/**",
+  "docs/specs/rtx5070ti-cuda-answer-readiness.md",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-cli/**",
+]
+may_claim = [
+  "A shared answer-artifact gate exists after merge.",
+  "The current Microsoft BitNet I2_S GGUF is rejected for coherent local-answer claims after merge.",
+]
+must_not_claim = [
+  "CPU local answers are coherent.",
+  "CUDA local answers are coherent.",
+  "Apple M4 local answers are coherent.",
+  "Any backend speedup is proven.",
+]
+
+[[work_item]]
+id = "MODEL-ARTIFACT-002"
+status = "blocked"
+branch = "codex/model-artifacts/MODEL-ARTIFACT-002-reference-good-bitnet"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-ARTIFACT-001"]
+acceptance = "Acquire or regenerate a reference-good BitNet GGUF/tokenizer artifact that passes the deterministic answer prompt suite under a reference runner, records exact SHA256 and tokenizer/pre-tokenizer authority, and can unblock backend answer-readiness lanes."
+commands = [
+  "Reference runner command for the accepted model artifact and prompt suite",
+  "Parse ci/model-artifacts/*.toml",
+  "cargo run --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/model-artifacts/**",
+  "ci/model-artifacts/**",
+  "ci/quality/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A reference-good BitNet answer artifact can unblock backend answer-readiness lanes after merge.",
+]
+must_not_claim = [
+  "Any backend local-answer lane passes until that lane reruns its own strict receipt gate.",
+  "Any backend speedup is proven.",
+]

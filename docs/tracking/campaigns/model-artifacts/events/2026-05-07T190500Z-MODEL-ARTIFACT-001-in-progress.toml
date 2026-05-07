@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T19:05:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started shared answer-artifact authority gate after CPU, CUDA, and Apple answer diagnostics showed the current artifact fails quality before hardware-specific fixes can claim coherent answers.",
+  "Scope is docs and machine-readable artifact manifests only; no runtime, tokenizer, loader, kernel, server, or performance changes.",
+]
