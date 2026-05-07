@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T20:56:29Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-002"
+event = "pr_open"
+pr = 3930
+head_sha = "2dea481f827ef657e7ae94cb514efb4dcc7ed1f1"
+actor = "codex"
+
+notes = [
+  "Opened dense SLM artifact validation PR.",
+  "The candidate GGUF remains under ignored target/ storage and is not committed.",
+]

@@ -72,7 +72,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-slm-answer/SLM-M4-002-validate-artifact"
 stackable = false
 review_mode = "codex_premerge"
