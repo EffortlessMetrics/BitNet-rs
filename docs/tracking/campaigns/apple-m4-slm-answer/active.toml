@@ -25,7 +25,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "SLM-M4-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-slm-answer/SLM-M4-001-seed-campaign"
 stackable = false
 review_mode = "codex_premerge"
