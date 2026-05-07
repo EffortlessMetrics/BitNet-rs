@@ -7,7 +7,17 @@ fn shader_reexport_matches_kernels_module() {
 }
 
 #[test]
-fn runtime_discovery_placeholder_is_empty() {
+fn runtime_discovery_is_non_panicking() {
+    // CI/sandbox environments typically have no Vulkan loader. Discovery
+    // must still be safe and deterministic, returning an empty list rather
+    // than panicking or surfacing a runtime error.
+    let devices = bitnet_vulkan::runtime::discover_devices();
+    assert!(devices.iter().all(|name| !name.trim().is_empty()));
+}
+
+#[test]
+#[cfg(not(feature = "vulkan-runtime"))]
+fn runtime_discovery_without_feature_is_empty() {
     let devices = bitnet_vulkan::runtime::discover_devices();
     assert!(devices.is_empty());
 }

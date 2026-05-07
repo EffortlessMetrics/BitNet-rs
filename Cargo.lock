@@ -1979,7 +1979,9 @@ dependencies = [
 name = "bitnet-vulkan"
 version = "0.2.1-dev"
 dependencies = [
+ "ash",
  "bitnet-vulkan-shaders",
+ "log",
 ]
 
 [[package]]

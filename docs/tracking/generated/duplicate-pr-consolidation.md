@@ -11,25 +11,25 @@ harvesting.
 
 | Sprint | Cluster | State |
 | ------ | ------- | ----- |
-| 1a | Security: hardcoded API keys (#3500) | **landed** in this branch |
-| 1b | Security: predictable IDs (#3533) | **landed** in this branch |
-| 1f | Correctness: download-core atomic temp paths (#3819) | **landed** in this branch |
-| 1g | Correctness: GPU env bool normalization (#3817) | **landed** in this branch |
-| 2  | WASM a11y output regions (canonical #3682) | **landed** in this branch |
-| 1c | Tokenizer architecture inference (#3554) | pending — needs rebase + tests |
+| 1a | Security: hardcoded API keys (#3500) | **landed** |
+| 1b | Security: predictable IDs (#3533) | **landed** |
+| 1c | Tokenizer architecture inference (#3554) | **landed** |
+| 1f | Correctness: download-core atomic temp paths (#3819) | **landed** |
+| 1g | Correctness: GPU env bool normalization (#3817) | **landed** |
+| 2  | WASM a11y output regions (canonical #3682) | **landed** |
+| 3a | BDD grid strict curated parsing (canonical #3565) | **landed** |
+| 3b | BDD grid alias normalization (canonical #3575) | **landed** |
+| 4a | `apply_typical` / `apply_min_p` (Bolt cluster, ~26 PRs) | **landed** with equivalence tests |
+| 5a | OpenCL discovery (canonical #3556) | **landed** |
+| 5b | Vulkan discovery (canonical #3548) | **landed** |
 | 1d | Interactive CLI real generation (#3557) | pending — needs rebase + smoke test |
 | 1e | CPU capability + CLI mojibake (#3558) | pending — review for current applicability |
 | —  | Fixture validation failure (#3576) | pending — confirm `bitnet-task` policy |
 | —  | Tokenizer fixture generator (#3541) | pending — verify no model artifacts committed |
 | —  | Docs feature-flag standardization (#3543) | pending — focused doc audit |
-| 3a | BDD grid strict curated parsing (#3562/#3564/#3565) | pending — pick canonical |
-| 3b | BDD grid alias normalization (#3567/#3568/#3570/#3573/#3575) | pending — synthesize one helper |
 | 3c | BDD grid pair validation semantics (#3574) | pending — independent review |
-| 4a | `apply_typical` / `apply_min_p` (Bolt cluster, ~10 PRs) | pending — synthesize fresh, with equivalence tests |
 | 4b | `top_p` / `top_k` sparse (#3528, #3596) | pending — risky; needs golden tests |
-| 4c | Repetition penalty + sampler buffers (~12 PRs) | pending — split: `.powi`, dead `token_counts`, sampler buffers |
-| 5a | OpenCL discovery (#3556 over #3546) | pending — rebase, claim-boundary docs |
-| 5b | Vulkan discovery (#3548) | pending — rebase, runtime-loader fallback |
+| 4c | Repetition penalty + sampler buffers (~12 PRs) | pending — split: `.powi`, dead `token_counts`, sampler buffers; needs benchmark |
 | 6  | Governance / MSRV 1.93 (#3710..#3760) | **maintainer decision** — defer until policy approved |
 | —  | Broad CI repair (#3431) | recommend close as stale (249 files, mergeable-false) |
 | —  | Smaller CI items (#3450, #3583, #3757..#3768) | pending — review individually for relevance |
