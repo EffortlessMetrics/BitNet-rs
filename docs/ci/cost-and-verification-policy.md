@@ -163,6 +163,67 @@ spend scale linearly with PR volume. The goal is more proof per CI minute —
 enough verification for the agentic age, paid for by changing the cost curve
 of verification.
 
+## Coverage reporting (Codecov)
+
+Coverage is one signal on the verification ladder: it measures **execution
+surface**, not test adequacy or model quality.
+
+### What coverage answers
+
+Coverage tells us: _Did tests exercise this Rust code?_
+
+It does **not** tell us:
+
+- whether tests would catch the wrong behavior (see `ripr`, property tests)
+- whether the inference engine produces correct output (see crossval, hardware validation)
+- whether GPU backends are correct (see GPU scaffolding status in README)
+- whether model predictions are sound (see model validation in `docs/howto/`)
+
+### Coverage in BitNet-rs
+
+Coverage runs are **gated by label or main branch**:
+
+- **PR runs:** only when explicitly labeled `coverage` or `full-ci`
+- **Main runs:** automatic after every merge (cost: ~45 LEM, included in
+  release validation)
+- **Flag:** `rust-cpu` — CPU path execution surface only
+- **Threshold policy:** currently informational; will ratchet after baseline
+  collection
+
+Coverage artifacts (`coverage.json`, `coverage.txt`, `lcov.info`, `coverage-report`) are stored on every run, enabling trend analysis and per-crate surface inspection.
+
+### Codecov configuration
+
+Codecov integration is configured in `codecov.yml` with:
+
+- **Project status:** tracks overall coverage %
+- **Patch status:** tracks changes in PR diffs
+- **Comments:** disabled — the GitHub check and Codecov dashboard are the
+  primary signals
+- **Flags:** scoped to `rust-cpu` for now; GPU flags deferred until backend
+  validation is real
+
+### Coverage is not
+
+Coverage is explicitly **not** responsible for:
+
+- CUDA, Metal, OpenCL, ROCm validation (GPU backends are still scaffold)
+- model quality or inference correctness (see crossval, hardware receipts)
+- test design adequacy (see `ripr` and property tests)
+- production inference performance (see hardware validation, runtime receipts)
+
+### Future: baseline and ratchet
+
+After 10–20 runs with real project coverage, we will review:
+
+1. Coverage % distribution across crate types
+2. Lowest-covered core paths
+3. Runtime cost and flake rate
+4. Whether `--ignore-run-fail` is masking relevant failures
+
+Then we will decide whether to tighten thresholds and move from informational
+to enforced status. Decisions will be based on observed data, not aspiration.
+
 ## Why verification needs to increase
 
 Agentic development changes the shape of risk.

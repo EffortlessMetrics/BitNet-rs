@@ -20,10 +20,7 @@ coverage:
         flags:
           - rust-cpu
 
-comment:
-  layout: "reach,diff,flags,tree"
-  behavior: default
-  require_changes: false
+comment: false
 
 github_checks:
   annotations: false

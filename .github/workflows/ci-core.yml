@@ -14,18 +14,30 @@ on:
   pull_request:
     branches: [ main ]
     paths:
+      # Rust code and build files - always trigger core checks
       - 'crates/**'
       - 'crossval/**'
       - 'tests/**'
       - 'tools/bitnet-task/**'
       - 'xtask/**'
-      - 'docs/tracking/**'
-      - '.codex/campaigns/**'
       - 'fuzz/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+
+      # Documentation tracked in CI policy
+      - 'docs/tracking/**'
+
+      # CI/Codex campaign definitions
+      - '.codex/campaigns/**'
+
+      # Workflow files - core and related CI workflows
       - '.github/workflows/ci-core.yml'
+      - '.github/workflows/coverage.yml'
+      - '.github/workflows/ci-reporting.yml'
+
+      # CI configuration - codecov config affects verification signal
+      - 'codecov.yml'
   push:
     branches: [ main ]
     paths:

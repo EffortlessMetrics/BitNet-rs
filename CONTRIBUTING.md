@@ -709,6 +709,87 @@ gh pr edit 123 --remove-label quant,perf,crossval
 
 **See also:** `.github/workflows/` for individual workflow definitions and trigger conditions.
 
+### CI Workflow Path Filters
+
+**Important:** BitNet-rs uses **path filters** in GitHub Actions workflows to prevent unnecessary CI runs and keep costs low. When adding or modifying CI configuration files, you must ensure the appropriate workflows are triggered—otherwise PRs can hang waiting for required checks that never start.
+
+#### Understanding Path Filters
+
+Path filters determine which workflows run based on what files changed in a PR:
+
+- **ci-core.yml**: Required for all PR merges. Runs only when specific paths change (Rust code, config files, CI workflows)
+- **coverage.yml**: Label-gated. Runs on `main` push and PRs labeled `coverage` or `full-ci`
+- **Other workflows**: Scoped to their domain (GPU, quantization, fuzz, etc.)
+
+If your PR changes a file but the workflow that validates those changes has a path filter that **doesn't include that file**, the workflow won't run—and if it's a required check, your PR will hang waiting for it.
+
+#### Path Filter Checklist
+
+When adding a new workflow or CI config file, update **both**:
+
+1. **ci-core.yml path filters** — Include if the file affects Rust compilation, test execution, or core verification:
+   - ✅ Workflow files (`.github/workflows/*.yml`) → Add to `ci-core.yml` paths
+   - ✅ Config files that affect verification (`codecov.yml`, `.rustfmt.toml`, etc.) → Add to `ci-core.yml` paths
+   - ✅ Rust source code, Cargo.toml, etc. → Already included
+   - ❌ Docs-only changes → Use existing doc workflow filters instead
+
+2. **Any new workflow's path filters** — If you create a new workflow, define its path filters to avoid running on unrelated changes
+
+#### Example: Adding a New Verification Workflow
+
+If you create a new workflow file (e.g., `quality-gates.yml`) that validates CI configuration:
+
+```yaml
+name: Quality Gates
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/**'  # Run when any workflow changes
+      - 'codecov.yml'           # Run when coverage config changes
+      - '.rustfmt.toml'         # Run when formatter config changes
+```
+
+Then add this workflow file to **ci-core.yml** path filters (if it's a required check):
+
+```yaml
+paths:
+  - '.github/workflows/ci-core.yml'
+  - '.github/workflows/quality-gates.yml'  # ← Add new workflow here
+```
+
+#### Troubleshooting: "4 of 5 required checks expected"
+
+If your PR shows this error on GitHub:
+- ✓ 4 required checks passed
+- ✗ 1 required check not yet reported
+
+**Likely cause**: A required workflow (usually `ci-core`) has path filters that don't match your changed files.
+
+**Solution**:
+1. Check what you changed (files in the PR)
+2. Look at the required workflow's path filters in `.github/workflows/ci-core.yml`
+3. If your changed files aren't in the path filters, add them
+4. Commit and push the updated workflow file
+5. The workflow should now trigger and complete
+
+**Example PR flow:**
+```bash
+# 1. Change codecov.yml (CI config)
+# 2. Push PR → ci-core doesn't run (codecov.yml not in path filters)
+# 3. PR hangs: "4 of 5 required checks"
+# 4. Update ci-core.yml to include codecov.yml in paths
+# 5. Push update → ci-core now triggers
+# 6. After ci-core passes, PR merges
+```
+
+**See also:**
+- [CI Cost and Verification Policy](docs/ci/cost-and-verification-policy.md) — Design rationale for path filters and CI lanes
+- `.github/workflows/ci-core.yml` — Current path filter definitions (search for "paths:")
+
+---
+
 ## GPU Backend Development
 
 If you're contributing GPU backend code (kernels, new backends, device selection),
