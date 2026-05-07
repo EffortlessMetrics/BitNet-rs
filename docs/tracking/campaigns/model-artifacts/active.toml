@@ -21,7 +21,8 @@ hard_constraints = [
 
 [[work_item]]
 id = "MODEL-ARTIFACT-001"
-status = "pr_open"
+status = "merged"
+pr = 3922
 branch = "codex/model-artifacts/MODEL-ARTIFACT-001-shared-answer-gate-v2"
 stackable = false
 review_mode = "codex_premerge"
@@ -67,7 +68,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-ARTIFACT-002"
-status = "blocked"
+status = "ready"
 branch = "codex/model-artifacts/MODEL-ARTIFACT-002-reference-good-bitnet"
 stackable = false
 review_mode = "codex_premerge"
