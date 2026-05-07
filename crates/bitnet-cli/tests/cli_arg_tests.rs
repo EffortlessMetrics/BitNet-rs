@@ -125,6 +125,18 @@ fn top_level_help_documents_apple_backend_labels() {
 }
 
 #[test]
+fn apple_m4_top_level_help_documents_local_answer_boundaries() {
+    bitnet()
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Apple M4 local answer path"))
+        .stdout(predicate::str::contains("apple-m4-cpu-neon: reliable local-answer path"))
+        .stdout(predicate::str::contains("apple-m4-metal: receipt-backed Metal phase"))
+        .stdout(predicate::str::contains("not native Metal or Neural Engine proof"));
+}
+
+#[test]
 fn run_help_documents_apple_backend_labels() {
     bitnet()
         .args(["run", "--help"])
@@ -133,6 +145,18 @@ fn run_help_documents_apple_backend_labels() {
         .stdout(predicate::str::contains("apple-m4-metal"))
         .stdout(predicate::str::contains("apple-m4-mpsgraph"))
         .stdout(predicate::str::contains("apple-m4-cpu-neon"));
+}
+
+#[test]
+fn apple_m4_run_help_documents_strict_cpu_neon_receipt_flow() {
+    bitnet()
+        .args(["run", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Apple M4 local answer path"))
+        .stdout(predicate::str::contains("bitnet --device apple-m4-cpu-neon run"))
+        .stdout(predicate::str::contains("--strict-loader --strict-tokenizer"))
+        .stdout(predicate::str::contains("--json-out local-answer-cpu-neon.json"));
 }
 
 #[test]

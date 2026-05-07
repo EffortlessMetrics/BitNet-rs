@@ -21,6 +21,20 @@ QUICK EXAMPLES:
   # Interactive chat (auto-detects template, clean output)
   RUST_LOG=warn bitnet chat --model model.gguf --tokenizer tokenizer.json
 
+  # Apple M4 local answer path: CPU/NEON is the reliable user-facing route today.
+  # The JSON receipt records requested_backend, selected_backend, runtime_api, and fallback_used.
+  RUST_LOG=warn bitnet --device apple-m4-cpu-neon run \
+    --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+    --prompt "What is 2+2? Answer briefly." --max-tokens 32 \
+    --temperature 0.0 --greedy --deterministic \
+    --strict-loader --strict-tokenizer --json-out local-answer-cpu-neon.json
+
+APPLE M4 ROUTING:
+  apple-m4-cpu-neon: reliable local-answer path with strict receipts.
+  apple-m4-metal: receipt-backed Metal phase/subgraph proof only unless a strict
+    full-model Metal receipt later proves more.
+  apple-m4-mpsgraph: graph/reference lane, not native Metal or Neural Engine proof.
+
 LOGGING:
   Set RUST_LOG=warn (default: info) to reduce log noise and focus on generated text.
   Options: error, warn, info, debug, trace
@@ -56,6 +70,8 @@ Commands:
   info                Show system information
   device-smoke        Probe selected device identity without launching kernels
   lunar-lake-probe    Probe Lunar Lake 258V platform visibility without launching kernels
+  intel-npu-probe     Probe Intel NPU OpenVINO runtime visibility without compiling graphs
+  intel-npu-smoke     Run a tiny static OpenVINO NPU graph smoke without BitNet inference
   validate            Run validation-only preflight checks
   cuda-smoke          Compile and launch a tiny CUDA vector-add kernel
   inspect             Inspect model metadata and diagnostics

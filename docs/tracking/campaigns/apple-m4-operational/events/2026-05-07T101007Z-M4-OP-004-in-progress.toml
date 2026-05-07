@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T10:10:07Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-004"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started Apple M4 effective CLI flow and strict failure-mode polish.",
+  "Scope is existing bitnet run help/examples, the operator runbook, and apple-m4-operational tracking.",
+  "The item must not add a new runtime path or claim full apple-m4-metal inference.",
+]

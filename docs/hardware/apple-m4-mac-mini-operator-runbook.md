@@ -164,6 +164,29 @@ and then lists each expected receipt as `pass`.
 For local answers today, use the Apple CPU/NEON path. The CLI device selector is
 a global option, so place it before the `run` subcommand:
 
+Installed binary:
+
+```bash
+BITNET_DISABLE_MINIMAL_LOADER=1 \
+BITNET_STRICT_MODE=1 \
+RUST_LOG=warn \
+bitnet \
+  --device apple-m4-cpu-neon \
+  run \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --prompt "What is 2+2? Answer briefly." \
+  --max-tokens 32 \
+  --temperature 0.0 \
+  --greedy \
+  --deterministic \
+  --strict-loader \
+  --strict-tokenizer \
+  --prompt-template raw \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-07/local-answer-cpu-neon.json
+```
+
+From the repository:
+
 ```bash
 BITNET_DISABLE_MINIMAL_LOADER=1 \
 BITNET_STRICT_MODE=1 \
@@ -188,6 +211,20 @@ cargo run --locked -p bitnet-cli \
 This is the closest supported user-facing path: prompt in, generated text out,
 and a strict receipt showing the requested and selected Apple CPU backend. It may
 be slow. Its receipt must not be described as Metal acceleration.
+
+The receipt should show:
+
+```text
+requested_backend = apple-m4-cpu-neon
+selected_backend = apple-m4-cpu-neon
+runtime_api = cpu
+fallback_used = false
+```
+
+If `apple-m4-metal` is requested in strict mode before full model Metal inference
+is receipt-backed, the CLI should fail instead of silently counting CPU fallback
+as Metal. Use the Metal phase proof commands below only for the specific
+receipt-backed Metal phase or subgraph they name.
 
 ## Conservative Profile Names
 
