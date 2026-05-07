@@ -11,6 +11,7 @@ reference_runner_required = true
 answer_ready_candidate_found = false
 legacy_search_report = "docs/reports/M4_QA_MODEL_002_ARTIFACT_SEARCH.md"
 shared_search_report = "docs/reports/MODEL_ARTIFACT_002_REFERENCE_GOOD_SEARCH.md"
+reference_runner_compatibility_report = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
 claim_boundary = "All candidates below are diagnostic-only until a later artifact passes the shared answer artifact gate."
 
 [local_environment]
@@ -25,6 +26,23 @@ notes = [
   "The Hugging Face cache contained no BitNet GGUF candidates.",
   "No local llama-cli.exe was found before the bootstrap attempt.",
   "The reference runner bootstrap exceeded the local timeout and was stopped without changing runtime code.",
+]
+
+[latest_stock_llama_cpp]
+release = "b9061"
+published_at = "2026-05-07T20:50:23Z"
+version = "9061 (deab41ec6)"
+archive = "llama-b9061-bin-win-cpu-x64.zip"
+archive_sha256 = "c671e6740638441775366e384a279f9b2a3d621f9ef0150a4eb652e4b7c296d4"
+runner = "llama-completion.exe"
+runner_mode = "cpu, greedy temperature 0.0, deterministic math prompt"
+official_i2s_result = "rejected_reference_runner_failed"
+tdh111_iq2_bn_r4_result = "rejected_reference_runner_failed"
+notes = [
+  "The stock llama.cpp runner stayed target-local and was not committed.",
+  "The official Microsoft I2_S GGUF failed before prompt execution with removed TYPE_IQ4_NL_4_4 handling.",
+  "The tdh111 IQ2_BN_R4 GGUF failed before prompt execution with invalid GGML type 335.",
+  "These failures do not prove answer quality failure under specialized ik_llama.cpp or Microsoft BitNet runners; they only block stock llama.cpp reference-runner promotion.",
 ]
 
 [[candidate]]
@@ -189,4 +207,26 @@ reference_prompt_suite = "failed"
 status = "rejected_prompt_suite_failed"
 notes = [
   "Local regeneration fixed loader compatibility enough to run, but raw, instruct, and Human:/BITNETAssistant: prompt shapes all produced non-coherent output.",
+]
+
+[[candidate]]
+id = "tdh111_bitnet_b158_2b_4t_iq2_bn_r4"
+repo = "tdh111/bitnet-b1.58-2B-4T-GGUF"
+repo_revision = "e10f9e8b720e90c8f3f0071bba30d50d7f0d4bc7"
+file = "bitnet1582b4t-iq2_bn_r4.gguf"
+sha256 = "a99001aaa5c1dc24acffe8035315c7d2970e82d8ccd3189383275c5d5a5287b5"
+size_bytes = 987884192
+source = "huggingface"
+tokenizer_model = "gpt2"
+pretokenizer_authority = "unknown"
+chat_template_authority = "present_in_gguf"
+reference_runner = "stock llama.cpp b9061 llama-completion"
+reference_runner_version = "9061 (deab41ec6)"
+reference_prompt_suite = "blocked"
+status = "rejected_reference_runner_failed"
+notes = [
+  "Official-derived quantized GGUF for microsoft/bitnet-b1.58-2B-4T.",
+  "The model card says this GGUF is intended for ik_llama.cpp.",
+  "Latest stock llama.cpp b9061 rejected blk.0.ffn_down.weight with invalid GGML type 335 before prompt execution.",
+  "This is not an answer-quality rejection under the intended runner; it blocks answer_ready promotion through stock llama.cpp only.",
 ]
