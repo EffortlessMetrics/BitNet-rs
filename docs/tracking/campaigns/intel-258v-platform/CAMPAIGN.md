@@ -31,8 +31,8 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | LNL258V-002 | merged | Add 258V probe bundle and same-machine comparison hooks. |
 | LNL258V-003 | merged | Add CLI platform probe emission for the current 258V machine. |
 | CPU258V-001 | merged | Add a validation-only CPU BitNet preflight harness for the 258V lane. |
-| LNL258V-OWNERSHIP-001 | pr_open | Make the 258V CPU the BitNet CPU lead and set priority order: CPU, NPU, Arc 140V; open in #3914. |
-| CPU258V-002 | blocked | Add scalar-vs-AVX2 strict CPU answer parity on the 258V after ownership correction lands. |
+| LNL258V-OWNERSHIP-001 | merged | Made the 258V CPU the BitNet CPU lead and set priority order: CPU, NPU, Arc 140V; merged in #3914. |
+| CPU258V-002 | ready | Add scalar-vs-AVX2 strict CPU answer parity on the 258V. |
 | CPU258V-003 | proposed | Add 258V CPU phase benchmark receipts for the CPU reference plate. |
 
 ## Review Policy

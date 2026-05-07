@@ -11,7 +11,7 @@
 | cpu-proof | BitNet CPU proof | CPU-ANSWER-002 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | CPU QK256 performance | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
-| intel-258v-platform | Intel 258V platform validation | LNL258V-OWNERSHIP-001 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
+| intel-258v-platform | Intel 258V platform validation | CPU258V-002 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
 | intel-a770 | Intel Arc A770 validation | A770-003 | OpenCL-first for native A770 proof. |
 | intel-npu | Intel NPU validation | NPU-006 | Device-node detection is not inference. |
 | nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-DENSE-001 | CUDA visibility is not kernel execution. |

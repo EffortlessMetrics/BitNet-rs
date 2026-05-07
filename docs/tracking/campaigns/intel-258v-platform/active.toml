@@ -244,7 +244,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OWNERSHIP-001"
-status = "pr_open"
+status = "merged"
 pr = 3914
 branch = "codex/docs/lnl-bitnet-cpu-lead"
 stackable = false
@@ -285,13 +285,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-002"
-status = "blocked"
+status = "ready"
 branch = "codex/intel-258v-platform/CPU258V-002-answer-parity"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["LNL258V-OWNERSHIP-001"]
+blocked_by = []
 acceptance = "Run scalar-vs-AVX2 strict CPU answer parity on the 258V using the same GGUF, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs/text, first-divergence evidence, logits/top-k evidence when available, fallback=false, selected kernels, and P-core/LP-E/power context."
 commands = [
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::answer_parity::tests -- --nocapture",
