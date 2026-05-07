@@ -88,17 +88,7 @@ pub fn validate_token_parity(
     prompt: &str,
     backend: CppBackend,
 ) -> anyhow::Result<()> {
-    if let Some((index, token)) = cpp_tokens.iter().enumerate().find(|(_, token)| **token < 0) {
-        let diagnostic = format_negative_cpp_token_error(index, *token, prompt, backend);
-        eprintln!("{diagnostic}");
-        anyhow::bail!(
-            "Invalid C++ token ID at index {index}: {token} (token IDs must be non-negative)"
-        );
-    }
-
-    // Convert C++ tokens from i32 to u32 for comparison
-    // Note: C++ FFI returns i32, but token IDs are non-negative in practice
-    let cpp_tokens_u32: Vec<u32> = cpp_tokens.iter().map(|&id| id as u32).collect();
+    let cpp_tokens_u32 = validate_and_convert_cpp_tokens(cpp_tokens, prompt, backend)?;
 
     // Compare token sequences
     if rust_tokens != cpp_tokens_u32.as_slice() {
@@ -123,6 +113,22 @@ pub fn validate_token_parity(
 
     // Silent success - no output when tokens match
     Ok(())
+}
+
+fn validate_and_convert_cpp_tokens(
+    cpp_tokens: &[i32],
+    prompt: &str,
+    backend: CppBackend,
+) -> anyhow::Result<Vec<u32>> {
+    if let Some((index, token)) = cpp_tokens.iter().enumerate().find(|(_, token)| **token < 0) {
+        let diagnostic = format_negative_cpp_token_error(index, *token, prompt, backend);
+        eprintln!("{diagnostic}");
+        anyhow::bail!(
+            "Invalid C++ token ID at index {index}: {token} (token IDs must be non-negative)"
+        );
+    }
+
+    Ok(cpp_tokens.iter().map(|&id| id as u32).collect())
 }
 
 fn format_negative_cpp_token_error(
@@ -624,6 +630,23 @@ mod tests {
         assert!(formatted.contains("-42"));
         assert!(formatted.contains("--dump-cpp-ids"));
         assert!(formatted.contains("LLaMA"));
+    }
+
+    #[test]
+    fn test_validate_and_convert_cpp_tokens_rejects_negative_ids() {
+        let err =
+            validate_and_convert_cpp_tokens(&[1, -2, 3], "test", CppBackend::BitNet).unwrap_err();
+
+        assert!(err.to_string().contains("Invalid C++ token ID at index 1"));
+    }
+
+    #[test]
+    fn test_validate_and_convert_cpp_tokens_preserves_valid_ids() {
+        let converted =
+            validate_and_convert_cpp_tokens(&[1, 2, i32::MAX], "test", CppBackend::BitNet)
+                .expect("valid token ids should convert");
+
+        assert_eq!(converted, vec![1, 2, i32::MAX as u32]);
     }
 
     // AC10: Backend-specific troubleshooting hints
