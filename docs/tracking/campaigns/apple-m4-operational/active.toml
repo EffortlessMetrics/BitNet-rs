@@ -23,7 +23,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-OP-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-operational/M4-OP-001-validation-bundle"
 stackable = false
 review_mode = "codex_premerge"
