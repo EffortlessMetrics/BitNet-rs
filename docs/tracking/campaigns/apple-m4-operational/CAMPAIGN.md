@@ -45,7 +45,7 @@ Use these labels consistently:
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-OP-001 | ready | Add one-command Apple M4 validation bundle. |
+| M4-OP-001 | in_progress | Add one-command Apple M4 validation bundle. |
 | M4-OP-002 | proposed | Add hardened receipt-bundle validation. |
 | M4-OP-003 | proposed | Add Apple M4 operator runbook. |
 | M4-OP-004 | proposed | Add effective-use CLI examples and strict failure-mode docs. |

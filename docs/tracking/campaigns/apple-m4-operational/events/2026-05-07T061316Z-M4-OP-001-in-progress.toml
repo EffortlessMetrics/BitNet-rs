@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T06:13:16Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started Apple M4 operational validation bundle command work.",
+  "Scope is xtask orchestration, receipt-bundle validation, campaign tracking, and generated dashboards only.",
+  "No runtime, kernel, QK256, server inference, Neural Engine, or full apple-m4-metal inference claims are added.",
+]

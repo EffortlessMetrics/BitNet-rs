@@ -36,6 +36,7 @@ use std::{
 };
 use walkdir::WalkDir;
 
+mod apple_m4;
 mod campaign;
 mod cpp_setup_auto;
 mod crossval;
@@ -1003,6 +1004,13 @@ enum Cmd {
         #[command(subcommand)]
         command: campaign::CampaignCmd,
     },
+
+    /// Run Apple M4 operational validation and receipt checks.
+    #[command(name = "apple-m4")]
+    AppleM4 {
+        #[command(subcommand)]
+        command: apple_m4::AppleM4Cmd,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1329,6 +1337,7 @@ fn real_main() -> Result<()> {
             grid_check::run(cpu_only, verbose, dry_run)
         }
         Cmd::Campaign { command } => campaign::run(command),
+        Cmd::AppleM4 { command } => apple_m4::run(command),
     }
 }
 
