@@ -1,0 +1,254 @@
+id = "slm-cpu"
+title = "Small dense model CPU proof"
+status = "active"
+
+objective = "Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF models by proving metadata, tokenizer, architecture adapter, CPU execution, and tiny answer evidence without claiming throughput."
+
+end_state = [
+  "A dense GGUF candidate is selected by verified architecture and tokenizer metadata.",
+  "Tokenizer source and strictness are recorded.",
+  "Dense architecture metadata maps into a typed adapter contract.",
+  "Tiny CPU answer receipts record prompt IDs, generated IDs, decoded text, selected backend/kernel, and fallback=false.",
+  "8250U evidence is correctness and operability evidence, not performance evidence.",
+]
+
+hard_constraints = [
+  "Do not edit BitNet QK256/I2_S kernels.",
+  "Do not change BitNet proof receipt semantics.",
+  "Do not claim sustained 8250U throughput.",
+  "Do not claim server, GPU, OpenVINO, UHD 620, or NPU execution.",
+  "Do not use model name recognition as proof of GGUF compatibility.",
+]
+
+[[work_item]]
+id = "SLM-CPU-000"
+status = "pr_open"
+pr = 3902
+branch = "codex/slm-cpu-000-8250u-lane"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Define a separate 8250U dense SLM CPU proof lane with explicit target policy, dense GGUF requirements, tokenizer authority rules, architecture adapter boundaries, receipt fields, and claim boundaries. The first candidate policy prefers Qwen2.5-0.5B-Instruct GGUF Q4_K_M or Q8_0 after verifying exact artifact metadata."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The 8250U dense SLM CPU lane contract exists after merge.",
+  "Qwen2.5-0.5B-Instruct is the preferred first candidate class, pending exact GGUF metadata verification.",
+]
+must_not_claim = [
+  "A dense GGUF artifact is verified.",
+  "Dense CPU inference works.",
+  "Answer quality is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "SLM-CPU-001"
+status = "ready"
+branch = "codex/slm-cpu-001-model-manifest"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-000"]
+acceptance = "Add a model candidate manifest, artifact policy, and 8250U runbook. The first target is Qwen2.5-0.5B-Instruct GGUF with Q4_K_M preferred and Q8_0 optional, but only after exact artifact path, SHA256, GGUF architecture string, tokenizer metadata, tensor naming, and chat template policy are verified."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "ci/slm-cpu/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Dense SLM model candidate policy and 8250U runbook exist after merge.",
+]
+must_not_claim = [
+  "The first GGUF artifact is verified.",
+  "Dense CPU inference works.",
+  "Answer quality is proven.",
+  "Sustained 8250U throughput is proven.",
+]
+
+[[work_item]]
+id = "SLM-CPU-002"
+status = "proposed"
+branch = "codex/slm-cpu-002-metadata-preflight"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-001"]
+acceptance = "Add strict SLM CPU metadata preflight that verifies model path, pinned SHA256, GGUF architecture, tokenizer source, context cap, quant format, adapter selection, and fallback=false without running inference."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "docs/slm/**",
+  "ci/slm-cpu/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Dense SLM metadata preflight exists after merge.",
+]
+must_not_claim = [
+  "Dense CPU inference works.",
+  "Answer quality is proven.",
+  "Sustained 8250U throughput is proven.",
+]
+
+[[work_item]]
+id = "SLM-CPU-003"
+status = "proposed"
+branch = "codex/slm-cpu-003-tiny-run"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-002"]
+acceptance = "Run one tiny strict dense CPU receipt on the verified candidate with real GGUF, strict tokenizer, dense architecture adapter, CPU backend, fallback=false, prompt IDs, generated IDs, and decoded text. Correct answer is not required for bring-up if the receipt is diagnosable."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "A tiny dense SLM CPU run receipt exists after merge.",
+]
+must_not_claim = [
+  "Answer quality is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "SLM-CPU-004"
+status = "proposed"
+branch = "codex/slm-cpu-004-answer-corpus"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-003"]
+acceptance = "Add a tiny SLM answer corpus with receipt rows recording model SHA, architecture, tokenizer source, prompt IDs, generated IDs, decoded text, selected backend, fallback status, quality pass/fail, and failed rules."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/quality/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Tiny SLM answer corpus evidence exists after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "SLM-CPU-005"
+status = "proposed"
+branch = "codex/slm-cpu-005-reference-divergence"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-004"]
+acceptance = "Add a machine-checkable reference divergence artifact schema and validator comparing bitnet-rs against a known-good external run by model SHA, prompt/template/BOS policy, prompt IDs, generated IDs, decoded text, top-k when available, and first divergence."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "SLM reference divergence artifacts can be validated after merge.",
+]
+must_not_claim = [
+  "The repo can run the external reference engine.",
+  "General chat quality is proven.",
+  "Sustained 8250U throughput is proven.",
+]

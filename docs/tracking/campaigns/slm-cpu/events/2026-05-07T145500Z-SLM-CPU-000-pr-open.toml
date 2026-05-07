@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T14:55:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-000"
+event = "pr_open"
+pr = 3902
+head_sha = "8431822f1683234fe4f8835438d72a5beb0e8231"
+actor = "codex"
+
+notes = [
+  "Opened #3902 to add the separate 8250U dense SLM CPU proof lane.",
+  "The lane prefers Qwen2.5-0.5B-Instruct GGUF Q4_K_M or Q8_0 only after exact artifact metadata is verified and keeps BitNet QK256, server, GPU, NPU, and throughput claims out of scope.",
+]
