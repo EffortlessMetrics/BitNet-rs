@@ -1,0 +1,12 @@
+timestamp = "2026-05-06T23:56:44Z"
+campaign = "apple-m4"
+item = "M4-015"
+event = "merged"
+pr = 3804
+merge_sha = "8ec65c36bbb78af8edb891919023e92fbc89cd90"
+actor = "codex"
+
+notes = [
+  "Closed out steady decode and prefill timing profile after PR #3804 merged.",
+  "Recorded selected Apple backend timing profile context without claiming general M4 performance, Neural Engine execution, QK256 acceleration, or unsupported Apple Silicon acceleration.",
+]
