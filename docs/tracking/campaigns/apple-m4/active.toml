@@ -505,6 +505,7 @@ allowed_paths = [
   "crates/**/tests/**",
   "crates/**/benches/**",
   "docs/tracking/campaigns/apple-m4/**",
+  "docs/tracking/generated/**",
   "docs/hardware/apple-m4-mac-mini-validation.md",
   "docs/specs/apple-m4-mac-mini-roadmap.md",
 ]
@@ -524,11 +525,12 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-016"
-status = "ready"
+status = "pr_open"
 branch = "codex/apple-m4/M4-016-hot-loop-allocation-audit"
 stackable = false
 requires_human_merge = true
 blocked_by = ["M4-015"]
+pr = 3811
 acceptance = "Measure or bound hot-loop allocations for the Apple BitNet path and distinguish compute timing from allocation overhead."
 commands = [
   "cargo fmt --all -- --check",

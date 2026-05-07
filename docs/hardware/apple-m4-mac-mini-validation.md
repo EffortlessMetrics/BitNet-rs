@@ -475,6 +475,72 @@ This may claim only that M4 timing is recorded for the named BitNet phase and
 profile under captured machine context. It is not a general M4 performance
 claim, Neural Engine claim, QK256 acceleration claim, or Metal BitNet proof.
 
+## M4-016 Hot-Loop Allocation Audit
+
+The hot-loop allocation audit extends the named profile receipt with an opt-in
+allocation counter. It measures scoped allocator counter deltas for prompt
+prefill and decode steps so compute timing can be separated from allocation
+churn. The audit is profile-scoped and must be requested explicitly with
+`--allocation-audit`.
+
+Run the live audit with:
+
+```bash
+BITNET_DISABLE_MINIMAL_LOADER=1 \
+BITNET_STRICT_MODE=1 \
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- \
+  --device apple-m4-cpu-neon \
+  run \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 4 \
+  --temperature 0.0 \
+  --greedy \
+  --deterministic \
+  --strict-loader \
+  --strict-tokenizer \
+  --prompt-template raw \
+  --profile-id smoke_4 \
+  --allocation-audit \
+  --no-warnings \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/strict-bitnet-cpu-neon-allocation-audit.json
+```
+
+The receipt must keep allocation evidence separate from timing evidence:
+
+```json
+{
+  "artifact_kind": "strict_bitnet_cpu_profile",
+  "profile": {
+    "allocation_audit": {
+      "enabled": true,
+      "method": "process_global_allocator_counter_delta",
+      "scope": "selected Apple BitNet prompt-prefill and decode hot loop",
+      "warmup_tokens": 1,
+      "measured_tokens": 3,
+      "steady_state_alloc_count_per_token": 0.0,
+      "steady_state_alloc_bytes_per_token": 0.0,
+      "decode": {
+        "total": {
+          "alloc_count_total": 0,
+          "alloc_bytes_total": 0
+        }
+      }
+    }
+  },
+  "fallback_used": false
+}
+```
+
+M4-016 may claim only that per-token allocation behavior is measured or bounded
+for the selected Apple BitNet path. It must not claim decode performance is
+compute-bound unless the receipt separates allocation overhead. It must not
+claim QK256 acceleration, Neural Engine execution, Metal execution, or general
+M4 performance.
+
 ## Benchmark Notes
 
 Benchmarks must record:

@@ -24,7 +24,7 @@
 | M4-013 | merged | #3783 | `codex/apple-m4/M4-013-metal-prefill-decode` | Move from isolated Apple Metal kernels toward a named BitNet inference phase with CPU reference and explicit fallback status. |
 | M4-014 | merged | #3789 | `codex/apple-m4/M4-014-strict-bitnet-proof` | Run strict real GGUF, real tokenizer, selected Apple backend, fallback_used=false, deterministic prompt, and receipt emission. |
 | M4-015 | merged | #3804 | `codex/apple-m4/M4-015-steady-decode-profile` | Add steady decode and prefill timing profiles for the selected Apple backend with strict model, tokenizer, phase, fallback, and machine context recorded. |
-| M4-016 | ready | TBD | `codex/apple-m4/M4-016-hot-loop-allocation-audit` | Measure or bound hot-loop allocations for the Apple BitNet path and distinguish compute timing from allocation overhead. |
+| M4-016 | pr_open | #3811 | `codex/apple-m4/M4-016-hot-loop-allocation-audit` | Measure or bound hot-loop allocations for the Apple BitNet path and distinguish compute timing from allocation overhead. |
 | M4-017 | proposed | TBD | `codex/apple-m4/M4-017-metal-kernel-family-expansion` | Expand Apple Metal BitNet kernel or subgraph coverage only where CPU reference parity, fallback=false receipts, phase labels, and claim boundaries are present. |
 | M4-018 | proposed | TBD | `codex/apple-m4/M4-018-cli-package-polish` | Polish Apple backend CLI and package surfaces so backend labels, strict-mode errors, artifact paths, and non-M4 failure modes are clear. |
 

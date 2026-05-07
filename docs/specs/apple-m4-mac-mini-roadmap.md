@@ -517,6 +517,57 @@ profile under captured machine context. It must not claim general M4
 performance, Neural Engine execution, QK256 acceleration on Apple Silicon, or
 Metal BitNet inference.
 
+### M4-016 - Hot-Loop Allocation Audit
+
+Add an opt-in allocation audit to the strict Apple profile path. The audit is
+not a benchmark by itself; it records allocator counter deltas around prompt
+prefill and decode steps so later performance claims can distinguish compute
+timing from allocation overhead.
+
+The receipt records:
+
+```json
+{
+  "profile": {
+    "allocation_audit": {
+      "enabled": true,
+      "method": "process_global_allocator_counter_delta",
+      "claim_scope": "allocation counter deltas for the selected Apple BitNet profile only",
+      "warmup_tokens": 1,
+      "measured_tokens": 3,
+      "per_token_alloc_count_delta": {
+        "count": 4,
+        "total": 0,
+        "mean_per_token": 0.0
+      },
+      "per_token_alloc_bytes_delta": {
+        "count": 4,
+        "total": 0,
+        "mean_per_token": 0.0
+      },
+      "decode": {
+        "total": {
+          "alloc_count_total": 0,
+          "alloc_bytes_total": 0,
+          "net_bytes_total": 0
+        },
+        "embed": {},
+        "forward": {},
+        "logits": {},
+        "sample": {},
+        "token_decode": {}
+      }
+    }
+  }
+}
+```
+
+The audit may claim only that per-token allocation behavior is measured or
+bounded for the selected Apple BitNet path. It must not claim the decode path is
+compute-bound unless allocation overhead is separated in the receipt, and it
+must not claim QK256 acceleration, Neural Engine execution, Metal execution, or
+general M4 performance.
+
 ## Do Not
 
 - Do not start with Apple Neural Engine inference claims.

@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T00:16:51Z"
+campaign = "apple-m4"
+item = "M4-016"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started hot-loop allocation audit for the selected Apple BitNet profile path.",
+  "Scope is allocation counter evidence only; no QK256, server, Neural Engine, Metal execution, or general M4 performance claims.",
+]

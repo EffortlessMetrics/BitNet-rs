@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T00:29:00Z"
+campaign = "apple-m4"
+item = "M4-016"
+event = "pr_open"
+pr = 3811
+head_sha = "79dc70bfee7f55bddf89c0a10809396b6963781f"
+actor = "codex"
+
+notes = [
+  "Opened hot-loop allocation audit PR.",
+  "Records profile-scoped allocation counter deltas without claiming decode is compute-bound, general M4 performance, QK256 acceleration, Metal execution, MPSGraph execution, or Neural Engine execution.",
+]
