@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T17:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-002"
+event = "merged"
+pr = 3910
+merge_sha = "34c3f7194bb90b44364756b8b0594fa9c0269081"
+actor = "codex"
+
+notes = [
+  "SLM-CPU-002 merged as #3910 to add dense-Qwen preflight foundations.",
+  "The first SLM CPU artifact policy now targets official Qwen3-0.6B-GGUF Q8_0, with Qwen3.5 hybrid architectures explicitly out of scope for the dense CPU lane.",
+]

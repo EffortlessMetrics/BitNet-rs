@@ -30,7 +30,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
-acceptance = "Define a separate 8250U dense SLM CPU proof lane with explicit target policy, dense GGUF requirements, tokenizer authority rules, architecture adapter boundaries, receipt fields, and claim boundaries. The first candidate policy prefers Qwen2.5-0.5B-Instruct GGUF Q4_K_M or Q8_0 after verifying exact artifact metadata."
+acceptance = "Define a separate 8250U dense SLM CPU proof lane with explicit target policy, dense GGUF requirements, tokenizer authority rules, architecture adapter boundaries, receipt fields, and claim boundaries. The current first candidate policy prefers official Qwen3-0.6B-GGUF Q8_0 after exact artifact metadata verification."
 commands = [
   "cargo run -p xtask --no-default-features -- campaign generate",
   "cargo run -p xtask --no-default-features -- campaign doctor",
@@ -48,7 +48,7 @@ forbidden_paths = [
 ]
 may_claim = [
   "The 8250U dense SLM CPU lane contract exists after merge.",
-  "Qwen2.5-0.5B-Instruct is the preferred first candidate class, pending exact GGUF metadata verification.",
+  "Qwen3-0.6B-GGUF is the preferred first candidate class, pending exact GGUF metadata verification.",
 ]
 must_not_claim = [
   "A dense GGUF artifact is verified.",
@@ -68,7 +68,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-CPU-000"]
-acceptance = "Add a model candidate manifest, artifact policy, and 8250U runbook. The first target is Qwen2.5-0.5B-Instruct GGUF with Q4_K_M preferred and Q8_0 optional, but only after exact artifact path, SHA256, GGUF architecture string, tokenizer metadata, tensor naming, and chat template policy are verified."
+acceptance = "Add a model candidate manifest, artifact policy, and 8250U runbook. The target policy was updated by SLM-CPU-002 to prefer official Qwen3-0.6B-GGUF Q8_0, with Qwen2.5-0.5B-Instruct as a conservative fallback only after exact artifact metadata is verified."
 commands = [
   "cargo run -p xtask --no-default-features -- campaign generate",
   "cargo run -p xtask --no-default-features -- campaign doctor",
@@ -98,7 +98,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-002"
-status = "pr_open"
+status = "merged"
 pr = 3910
 branch = "codex/slm-cpu-002-metadata-preflight"
 stackable = false
@@ -139,7 +139,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-003"
-status = "proposed"
+status = "ready"
 branch = "codex/slm-cpu-003-tiny-run"
 stackable = false
 review_mode = "codex_premerge"

@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T17:15:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Prepared SLM-CPU-003 as the next SLM CPU item: the first tiny strict dense CPU receipt.",
+  "SLM-CPU-003 must not claim answer quality; it should make the first run diagnosable with model/tokenizer/backend/fallback and token ID evidence.",
+]
