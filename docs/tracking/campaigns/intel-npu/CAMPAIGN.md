@@ -31,6 +31,7 @@ Validate Intel Lunar Lake NPU through OpenVINO static-shape detection, smoke, pa
 | NPU-004 | merged | Add smoke probe command. |
 | NPU-005 | merged | Run tiny OpenVINO NPU graph smoke. |
 | NPU-006 | merged | Add structured receipt fields. |
+| NPU-007 | ready | Prototype selected static BitNet RMSNorm subgraph parity. |
 
 ## Review Policy
 
