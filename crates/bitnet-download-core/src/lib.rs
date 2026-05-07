@@ -38,12 +38,25 @@ pub fn parse_content_range_total(content_range: &str) -> Option<u64> {
         return None;
     }
 
-    // Basic sanity check for accepted `Content-Range` formats.
-    if !range.starts_with("bytes ") && range != "bytes *" {
-        return None;
+    let range = range.strip_prefix("bytes ")?;
+    if range != "*" {
+        let (start, end) = range.split_once('-')?;
+        if end.contains('-') {
+            return None;
+        }
+
+        let start = start.parse::<u64>().ok()?;
+        let end = end.parse::<u64>().ok()?;
+        if start > end {
+            return None;
+        }
     }
 
-    total.parse::<u64>().ok()
+    let total = total.parse::<u64>().ok()?;
+    if total == 0 {
+        return None;
+    }
+    Some(total)
 }
 
 /// Ensure downloaded bytes match expected total when available.
@@ -99,6 +112,9 @@ mod tests {
         assert_eq!(parse_content_range_total("bytes 0-0/1234\r\n"), Some(1234));
         assert_eq!(parse_content_range_total("bytes 0-0/1/2"), None);
         assert_eq!(parse_content_range_total("items 0-0/1234"), None);
+        assert_eq!(parse_content_range_total("bytes nope/1234"), None);
+        assert_eq!(parse_content_range_total("bytes 5-1/1234"), None);
+        assert_eq!(parse_content_range_total("bytes 0-0/0"), None);
     }
 
     #[test]
