@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "claim": "privacy_filter_token_classification_smoke",
+  "model_family": "openai-privacy-filter",
+  "variant": "",
+  "task": "token_classification",
+  "model_source": {
+    "repo": "",
+    "file": "",
+    "format": "onnx|safetensors",
+    "hash": "TBD"
+  },
+  "tokenizer": {
+    "source": "explicit|model|sibling|unknown",
+    "fallback_used": false
+  },
+  "runtime": {
+    "requested_backend": "",
+    "selected_backend": "",
+    "fallback_used": false
+  },
+  "classification": {
+    "input_tokens": 0,
+    "output_shape": [
+      0,
+      33
+    ],
+    "label_count": 33,
+    "labels": [
+      "O",
+      "B-private_person",
+      "I-private_person",
+      "E-private_person",
+      "S-private_person",
+      "TBD_remaining_BIOES_labels"
+    ],
+    "span_decoder": "bioes_viterbi"
+  },
+  "coverage": {
+    "generation_claim": false,
+    "full_inference_claim": false,
+    "calibration_claim": false,
+    "speedup_claim": false
+  }
+}

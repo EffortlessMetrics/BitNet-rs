@@ -1,0 +1,25 @@
+schema: 1
+lanes:
+  dense_decoder:
+    doc: docs/models/implementation/dense-decoder-lane.md
+    first_targets: [qwen35, gemma4]
+    forbidden_evidence: [bitnet_w1_58_kernel_proof, qk256_kernel_proof]
+  moe_decoder:
+    doc: docs/models/implementation/moe-decoder-lane.md
+    required_receipts: [router_logits, top_k_expert_selection, active_vs_total_parameters, expert_coverage]
+  multimodal:
+    doc: docs/models/implementation/multimodal-lane.md
+    text_only_boundary: multimodal_claim_false_until_modality_receipt
+  token_classification:
+    doc: docs/models/implementation/token-classification-lane.md
+    first_targets: [openai_privacy_filter]
+  openvino_graph:
+    doc: docs/models/implementation/openvino-graph-lane.md
+    claim_boundary: external_reference_unless_native_receipt_backed
+  gguf_dense_quant:
+    doc: docs/models/implementation/gguf-dense-quant-lane.md
+    first_targets: [qwen35_small, gemma4_e2b_e4b]
+  safetensors_loader:
+    doc: docs/models/implementation/safetensors-loader-lane.md
+    claim_boundary: loader_scaffold_not_inference
+

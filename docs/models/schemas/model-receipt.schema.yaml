@@ -1,0 +1,15 @@
+schema: 1
+required:
+  - schema
+  - claim
+  - model_family
+  - variant
+  - task
+  - runtime
+  - coverage
+fields:
+  task:
+    enum: [text_generation, token_classification, moe_router_smoke, multimodal_text_only, external_reference, design_only]
+  runtime.required: [requested_backend, selected_backend, fallback_used]
+  coverage.required: [full_inference_claim, speedup_claim]
+

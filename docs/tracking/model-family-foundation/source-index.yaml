@@ -1,0 +1,36 @@
+schema: 1
+source_policy: Supplied planning notes are captured as source_backed_partial until maintainers attach exact model-card URLs and hashes.
+families:
+  gemma4:
+    status: source_backed_partial
+    facts_file: docs/models/families/gemma-4.md
+    source_links: [TBD_google_overview, TBD_model_card]
+  qwen36:
+    status: source_backed_partial
+    facts_file: docs/models/families/qwen-3.6.md
+    source_links: [TBD_unsloth_notes, TBD_model_card]
+  qwen35:
+    status: source_backed_partial
+    facts_file: docs/models/families/qwen-3.5.md
+    source_links: [TBD_unsloth_notes, TBD_model_card]
+  kimi_k26:
+    status: source_backed_partial
+    facts_file: docs/models/families/kimi-k2.6.md
+    source_links: [TBD_unsloth_gguf_notes, TBD_model_card]
+  glm51:
+    status: source_backed_partial
+    facts_file: docs/models/families/glm-5.1.md
+    source_links: [TBD_model_card, TBD_chat_template]
+  deepseek_v4:
+    status: source_backed_partial
+    facts_file: docs/models/families/deepseek-v4.md
+    source_links: [TBD_model_card]
+  mistral_medium_35:
+    status: source_backed_partial
+    facts_file: docs/models/families/mistral-medium-3.5.md
+    source_links: [TBD_model_card, TBD_vllm_reference]
+  openai_privacy_filter:
+    status: source_backed_partial
+    facts_file: docs/models/families/openai-privacy-filter.md
+    source_links: [TBD_model_card, TBD_onnx_surface, TBD_transformersjs_surface]
+

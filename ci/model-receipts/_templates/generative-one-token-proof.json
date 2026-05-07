@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "claim": "strict_model_one_token",
+  "model_family": "",
+  "variant": "",
+  "task": "text_generation",
+  "model_source": {
+    "repo": "",
+    "file": "",
+    "format": "gguf|safetensors|openvino_ir|onnx",
+    "hash": "TBD"
+  },
+  "tokenizer": {
+    "source": "explicit|model|sibling|unknown",
+    "fallback_used": false
+  },
+  "prompt_template": {
+    "id": "",
+    "thinking_enabled": false,
+    "developer_role_used": false,
+    "tool_calling_used": false
+  },
+  "runtime": {
+    "requested_backend": "",
+    "selected_backend": "",
+    "fallback_used": false
+  },
+  "coverage": {
+    "full_inference_claim": false,
+    "multimodal_claim": false,
+    "moe_claim": false,
+    "long_context_claim": false,
+    "speedup_claim": false
+  },
+  "output": {
+    "prompt_tokens": 0,
+    "generated_tokens": 0,
+    "greedy": true
+  }
+}

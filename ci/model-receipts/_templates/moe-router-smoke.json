@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "claim": "moe_router_smoke",
+  "model_family": "",
+  "variant": "",
+  "task": "moe_router_smoke",
+  "model_source": {
+    "repo": "",
+    "file": "",
+    "format": "gguf|safetensors",
+    "hash": "TBD"
+  },
+  "router": {
+    "top_k": 0,
+    "total_experts": 0,
+    "active_experts": 0,
+    "shared_expert_present": "TBD",
+    "per_token_expert_coverage": []
+  },
+  "runtime": {
+    "requested_backend": "",
+    "selected_backend": "",
+    "fallback_used": false
+  },
+  "coverage": {
+    "full_inference_claim": false,
+    "moe_claim": true,
+    "long_context_claim": false,
+    "speedup_claim": false
+  }
+}

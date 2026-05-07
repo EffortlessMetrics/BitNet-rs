@@ -1,0 +1,10 @@
+schema: 1
+required: [hardware_profile, tiers, non_claims]
+fields:
+  hardware_profile:
+    example: 5070ti_16gb
+  tiers:
+    list_enum: [tier_a_local, tier_b_partial, tier_c_design_only]
+  non_claims:
+    list: [local_residency, full_context, speedup, multimodal]
+

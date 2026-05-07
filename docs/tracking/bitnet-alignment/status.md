@@ -169,6 +169,10 @@ HW-002 remains proposed. #3625 added `ci/hardware/README.md` with artifact namin
 | AMD5700X-001 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 7 5700X CPU validation lane merged. |
 | AMD5700X-002 | #3625 | bbc5d563ce22c4a81e517992120c4ad5d8a6d0d3 | AMD Ryzen 7 5700X machine profile and probe bundle merged. |
 
+## Related trackers
+
+- Model-family planning for non-BitNet families lives separately in `docs/tracking/model-family-foundation/status.md` so documentation/design-only model states do not mix with CPU, GPU, NPU, or BitNet proof items.
+
 ## Blocked
 
 | Item | Blocker | Next action |

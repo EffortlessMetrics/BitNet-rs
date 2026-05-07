@@ -1,0 +1,11 @@
+schema: 1
+required: [id, display_name, params, active_params, context, modalities, local_test_tier, first_repo_target, non_claims]
+fields:
+  params: string
+  active_params: string
+  context: string
+  modalities:
+    list_enum: [text, image, audio, video_as_frames, token_labels]
+  local_test_tier:
+    enum: [tier_a_local, tier_b_partial, tier_c_design_only]
+

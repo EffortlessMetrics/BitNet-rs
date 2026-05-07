@@ -1,0 +1,12 @@
+schema: 1
+required: [id, source_status, claim_status, receipt_required]
+fields:
+  id:
+    type: string
+  source_status:
+    enum: [source_backed, source_backed_partial, tbd]
+  claim_status:
+    enum: [documentation_only, scaffolded, smoke_tested, receipt_backed]
+  receipt_required:
+    type: boolean
+

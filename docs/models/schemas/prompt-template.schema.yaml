@@ -1,0 +1,8 @@
+schema: 1
+required: [id, family, source, thinking_enabled_default, developer_role_supported, tool_calling_supported, fallback_policy]
+fields:
+  thinking_enabled_default:
+    enum: [true, false, family_variant_specific, tbd]
+  reasoning_effort:
+    enum: [none, high, not_applicable, tbd]
+

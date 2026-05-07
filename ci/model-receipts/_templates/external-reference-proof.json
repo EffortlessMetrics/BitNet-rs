@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "claim": "external_reference",
+  "model_family": "",
+  "variant": "",
+  "task": "external_reference",
+  "reference_runtime": {
+    "name": "",
+    "version": "",
+    "command": "",
+    "hardware": "",
+    "fallback_used": false
+  },
+  "model_source": {
+    "repo": "",
+    "file": "",
+    "format": "gguf|safetensors|openvino_ir|onnx",
+    "hash": "TBD"
+  },
+  "coverage": {
+    "local_bitnet_rs_inference_claim": false,
+    "full_inference_claim": false,
+    "long_context_claim": false,
+    "speedup_claim": false
+  },
+  "output_summary": {
+    "tokens_or_labels": 0,
+    "artifact": "TBD"
+  }
+}
