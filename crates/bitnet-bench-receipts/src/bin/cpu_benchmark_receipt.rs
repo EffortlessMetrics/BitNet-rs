@@ -49,8 +49,14 @@ impl Default for Args {
 #[derive(Debug)]
 struct MeasuredProfile {
     profile: &'static str,
+    execution_phase: &'static str,
+    requested_kernel: &'static str,
     selected_kernel: &'static str,
     fallback_used: bool,
+    fallback_reason: Option<String>,
+    rows: usize,
+    cols: usize,
+    iterations: u64,
     wall_time_ms: f64,
     median_ms: f64,
     p95_ms: f64,
@@ -130,9 +136,10 @@ fn print_help() {
 
 fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
     let measured = [
-        measure_profile("micro", 1, 256, 32, args.requested_kernel, args.strict)?,
-        measure_profile("layer", 32, 512, 12, args.requested_kernel, args.strict)?,
+        measure_profile("micro", "micro_kernel", 1, 256, 32, args.requested_kernel, args.strict)?,
+        measure_profile("layer", "layer_forward", 32, 512, 12, args.requested_kernel, args.strict)?,
         measure_profile(
+            "prefill",
             "prefill",
             16,
             512,
@@ -140,9 +147,18 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
             args.requested_kernel,
             args.strict,
         )?,
-        measure_profile("first_token", 1, 1024, 16, args.requested_kernel, args.strict)?,
+        measure_profile(
+            "first_token",
+            "first_token",
+            1,
+            1024,
+            16,
+            args.requested_kernel,
+            args.strict,
+        )?,
         measure_profile(
             "decode",
+            "decode_steady_state",
             1,
             1024,
             args.generated_tokens.max(1),
@@ -163,9 +179,17 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
         .map(|profile| {
             json!({
                 "profile": profile.profile,
+                "execution_phase": profile.execution_phase,
                 "status": "measured",
+                "requested_kernel": profile.requested_kernel,
                 "selected_kernel": profile.selected_kernel,
                 "fallback_used": profile.fallback_used,
+                "fallback_reason": profile.fallback_reason.as_deref(),
+                "shape": {
+                    "rows": profile.rows,
+                    "cols": profile.cols,
+                    "iterations": profile.iterations
+                },
                 "wall_time_ms": profile.wall_time_ms,
                 "median_ms": profile.median_ms,
                 "p95_ms": profile.p95_ms,
@@ -230,6 +254,7 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
 
 fn measure_profile(
     profile: &'static str,
+    execution_phase: &'static str,
     rows: usize,
     cols: usize,
     iterations: u64,
@@ -276,8 +301,14 @@ fn measure_profile(
 
     Ok(MeasuredProfile {
         profile,
+        execution_phase,
+        requested_kernel: selection.requested_kernel.unwrap_or("auto"),
         selected_kernel: selection.selected_kernel,
         fallback_used: selection.fallback_used,
+        fallback_reason: selection.fallback_reason,
+        rows,
+        cols,
+        iterations,
         wall_time_ms,
         median_ms: percentile(&samples, 0.50),
         p95_ms: percentile(&samples, 0.95),

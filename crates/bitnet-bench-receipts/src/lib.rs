@@ -280,7 +280,7 @@ pub fn validate_strict_cpu_benchmark_receipt_json(
                 entry.get("profile").and_then(serde_json::Value::as_str) == Some(expected)
             })
             .ok_or_else(|| validation_error(format!("profiles missing {expected}")))?;
-        validate_cpu_benchmark_profile(profile)?;
+        validate_cpu_benchmark_profile(profile, expected)?;
     }
 
     Ok(())
@@ -292,7 +292,22 @@ pub fn validate_strict_cpu_benchmark_receipt_file(path: &Path) -> Result<(), Rec
     validate_strict_cpu_benchmark_receipt_json(&receipt)
 }
 
-fn validate_cpu_benchmark_profile(profile: &serde_json::Value) -> Result<(), ReceiptError> {
+fn validate_cpu_benchmark_profile(
+    profile: &serde_json::Value,
+    expected_profile: &str,
+) -> Result<(), ReceiptError> {
+    require_string_eq(profile, "profile", expected_profile)?;
+    require_string_eq(profile, "execution_phase", expected_cpu_profile_phase(expected_profile))?;
+    require_non_empty_string(profile, "requested_kernel")?;
+    require_non_empty_string(profile, "selected_kernel")?;
+    require_bool_eq(profile, "fallback_used", false)?;
+    require_null(profile, "fallback_reason")?;
+
+    let shape = require_object(profile, "shape")?;
+    require_u64_at_least(shape, "rows", 1)?;
+    require_u64_at_least(shape, "cols", 1)?;
+    require_u64_at_least(shape, "iterations", 1)?;
+
     let status = require_string(profile, "status")?;
     match status {
         "measured" => {
@@ -311,9 +326,18 @@ fn validate_cpu_benchmark_profile(profile: &serde_json::Value) -> Result<(), Rec
             )));
         }
     }
-    require_non_empty_string(profile, "selected_kernel")?;
-    require_bool_eq(profile, "fallback_used", false)?;
     Ok(())
+}
+
+fn expected_cpu_profile_phase(profile: &str) -> &'static str {
+    match profile {
+        "micro" => "micro_kernel",
+        "layer" => "layer_forward",
+        "prefill" => "prefill",
+        "first_token" => "first_token",
+        "decode" => "decode_steady_state",
+        _ => "unknown",
+    }
 }
 
 fn require_object<'a>(
@@ -655,6 +679,24 @@ mod tests {
     }
 
     #[test]
+    fn strict_cpu_benchmark_rejects_profile_phase_mismatch() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["profiles"][4]["execution_phase"] = json!("prefill");
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("execution_phase"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cpu_benchmark_rejects_profile_without_shape() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["profiles"][0]["shape"] = serde_json::Value::Null;
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("shape"), "unexpected error: {err}");
+    }
+
+    #[test]
     fn committed_rtx5070ti_cuda_benchmark_receipt_validates() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-benchmark.json");
@@ -723,9 +765,17 @@ mod tests {
     fn measured_cpu_profile(profile: &str) -> serde_json::Value {
         json!({
             "profile": profile,
+            "execution_phase": expected_cpu_profile_phase(profile),
             "status": "measured",
+            "requested_kernel": "qk256-avx2-gemv",
             "selected_kernel": "qk256-avx2-gemv",
             "fallback_used": false,
+            "fallback_reason": null,
+            "shape": {
+                "rows": 512,
+                "cols": 1024,
+                "iterations": 8
+            },
             "wall_time_ms": 1.0,
             "median_ms": 1.0,
             "p95_ms": 1.0,

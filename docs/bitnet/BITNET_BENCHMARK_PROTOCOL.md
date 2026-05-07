@@ -45,6 +45,14 @@ Every BitNet benchmark must record:
 
 ```yaml
 profiles:
+  micro:
+    phase: micro_kernel
+    purpose: packed kernel microbenchmark
+
+  layer:
+    phase: layer_forward
+    purpose: one transformer-layer-sized profile
+
   smoke_1:
     prompt_tokens: small
     generated_tokens: 1
@@ -79,6 +87,31 @@ profiles:
 | `total_generation` | End-to-end user-visible timing |
 
 Do not use one phase to claim another.
+
+## CPU Profile Fields
+
+CPU proof benchmark profiles must make the benchmark profile, execution phase,
+kernel identity, fallback status, and workload shape explicit:
+
+```json
+{
+  "profile": "decode",
+  "execution_phase": "decode_steady_state",
+  "requested_kernel": "qk256-avx2-gemv",
+  "selected_kernel": "qk256-avx2-gemv",
+  "fallback_used": false,
+  "fallback_reason": null,
+  "shape": {
+    "rows": 2048,
+    "cols": 2048,
+    "iterations": 128
+  }
+}
+```
+
+`micro` and `layer` are benchmark profiles, not full model-inference claims.
+They exist to isolate kernel and layer cost before prefill, first-token, and
+steady decode profiles.
 
 ## Hardware Linkage
 
