@@ -139,7 +139,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-002A"
-status = "in_progress"
+status = "pr_open"
+pr = 3917
 branch = "codex/slm-cpu-002a-qwen-strict-blocker"
 stackable = false
 review_mode = "codex_premerge"

@@ -74,7 +74,7 @@
 | nvidia-5070ti | CUDA-DENSE-001 | RTX5070TI-007 | proposed |
 | slm-cpu | SLM-CPU-001 | SLM-CPU-000 | merged |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | merged |
-| slm-cpu | SLM-CPU-002A | SLM-CPU-002 | in_progress |
+| slm-cpu | SLM-CPU-002A | SLM-CPU-002 | pr_open |
 | slm-cpu | SLM-CPU-003 | SLM-CPU-002A | proposed |
 | slm-cpu | SLM-CPU-004 | SLM-CPU-003 | proposed |
 | slm-cpu | SLM-CPU-005 | SLM-CPU-004 | proposed |

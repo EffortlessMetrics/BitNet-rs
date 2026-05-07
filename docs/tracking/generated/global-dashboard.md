@@ -16,5 +16,5 @@
 | intel-npu | NPU-006 | #3860 | merged | none | Device-node detection is not inference. |
 | nvidia-5070ti | CUDA-DENSE-001 | TBD | proposed | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
-| slm-cpu | SLM-CPU-002A | TBD | in_progress | SLM-CPU-003 | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | SLM-CPU-002A | #3917 | pr_open | SLM-CPU-003 | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | pr_open | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |

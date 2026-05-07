@@ -1,0 +1,12 @@
+id = "2026-05-07T181500Z-SLM-CPU-002A-pr-open"
+timestamp = "2026-05-07T18:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-002A"
+event = "pr_open"
+pr = 3917
+branch = "codex/slm-cpu-002a-qwen-strict-blocker"
+summary = "Opened #3917 to harden dense Qwen strict preflight and record the unsupported Q8_0 blocker before SLM-CPU-003."
+details = [
+  "The PR does not claim dense CPU inference or Q8_0 support.",
+  "SLM-CPU-003 remains proposed behind this blocker item.",
+]
