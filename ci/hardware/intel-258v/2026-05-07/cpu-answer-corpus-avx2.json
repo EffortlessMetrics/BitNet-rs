@@ -1,0 +1,769 @@
+{
+  "artifact_kind": "bitnet_cpu_answer_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu"
+  },
+  "cases": [
+    {
+      "answer": "'E-lived,SIGNALConvert",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "math_2_plus_2",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 89048,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 9.742095947265623,
+              "token_id": 89048
+            },
+            {
+              "logit": 8.802050590515137,
+              "token_id": 12281
+            },
+            {
+              "logit": 8.758410453796387,
+              "token_id": 39256
+            },
+            {
+              "logit": 8.517449378967285,
+              "token_id": 87896
+            },
+            {
+              "logit": 8.477624893188477,
+              "token_id": 100952
+            }
+          ]
+        }
+      ],
+      "prompt_template": "llama3-chat",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [
+          "gate_exact_trimmed"
+        ],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "What is 2+2? Answer with only the number.",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-07\\cpu-answer-corpus-avx2-runs\\math_2_plus_2.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "prompt": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          3923,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ]
+      },
+      "tokenizer": {
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "prompt": 24,
+        "prompt_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          3923,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "total": 28
+      }
+    },
+    {
+      "answer": "'E-lived,SIGNALConvert!\"\n\n'E$m-lived",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "capital_france",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 89048,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 9.742095947265623,
+              "token_id": 89048
+            },
+            {
+              "logit": 8.802050590515137,
+              "token_id": 12281
+            },
+            {
+              "logit": 8.758410453796387,
+              "token_id": 39256
+            },
+            {
+              "logit": 8.517449378967285,
+              "token_id": 87896
+            },
+            {
+              "logit": 8.477624893188477,
+              "token_id": 100952
+            }
+          ]
+        }
+      ],
+      "prompt_template": "llama3-chat",
+      "quality": {
+        "distinct_generated_tokens": 6,
+        "failed_rules": [
+          "gate_contains_any"
+        ],
+        "gate_kind": "contains_any",
+        "generated_tokens": 8,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "What is the capital of France? Answer with one word.",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-07\\cpu-answer-corpus-avx2-runs\\capital_france.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "prompt": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          3923,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ]
+      },
+      "tokenizer": {
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 8,
+        "generated_ids": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "ids": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "prompt": 23,
+        "prompt_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          3923,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "total": 31
+      }
+    },
+    {
+      "answer": "'E-lived,SIGNALConvert!\"\n\n'E$m-lived",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "repeat_colors",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 89048,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 9.742095947265623,
+              "token_id": 89048
+            },
+            {
+              "logit": 8.802050590515137,
+              "token_id": 12281
+            },
+            {
+              "logit": 8.758410453796387,
+              "token_id": 39256
+            },
+            {
+              "logit": 8.517449378967285,
+              "token_id": 87896
+            },
+            {
+              "logit": 8.477624893188477,
+              "token_id": 100952
+            }
+          ]
+        }
+      ],
+      "prompt_template": "llama3-chat",
+      "quality": {
+        "distinct_generated_tokens": 6,
+        "failed_rules": [
+          "gate_contains_any"
+        ],
+        "gate_kind": "contains_any",
+        "generated_tokens": 8,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "Repeat exactly: red blue green",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-07\\cpu-answer-corpus-avx2-runs\\repeat_colors.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "prompt": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          39818,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ]
+      },
+      "tokenizer": {
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 8,
+        "generated_ids": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "ids": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "prompt": 17,
+        "prompt_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          39818,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "total": 25
+      }
+    },
+    {
+      "answer": "'E-lived,SIGNALConvert",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "say_ok",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 89048,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 9.742095947265623,
+              "token_id": 89048
+            },
+            {
+              "logit": 8.802050590515137,
+              "token_id": 12281
+            },
+            {
+              "logit": 8.758410453796387,
+              "token_id": 39256
+            },
+            {
+              "logit": 8.517449378967285,
+              "token_id": 87896
+            },
+            {
+              "logit": 8.477624893188477,
+              "token_id": 100952
+            }
+          ]
+        }
+      ],
+      "prompt_template": "llama3-chat",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [
+          "gate_exact_trimmed"
+        ],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "Say exactly: OK",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-07\\cpu-answer-corpus-avx2-runs\\say_ok.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "prompt": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          46864,
+          7041,
+          25,
+          10619,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ]
+      },
+      "tokenizer": {
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "prompt": 15,
+        "prompt_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          46864,
+          7041,
+          25,
+          10619,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "total": 19
+      }
+    },
+    {
+      "answer": "'E-lived,SIGNALConvert",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "yes_no_water",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 89048,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 9.742095947265623,
+              "token_id": 89048
+            },
+            {
+              "logit": 8.802050590515137,
+              "token_id": 12281
+            },
+            {
+              "logit": 8.758410453796387,
+              "token_id": 39256
+            },
+            {
+              "logit": 8.517449378967285,
+              "token_id": 87896
+            },
+            {
+              "logit": 8.477624893188477,
+              "token_id": 100952
+            }
+          ]
+        }
+      ],
+      "prompt_template": "llama3-chat",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [
+          "gate_starts_with_any"
+        ],
+        "gate_kind": "starts_with_any",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "Answer yes or no: is water wet?",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-07\\cpu-answer-corpus-avx2-runs\\yes_no_water.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "prompt": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          16533,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ]
+      },
+      "tokenizer": {
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "prompt": 20,
+        "prompt_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          16533,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "total": 24
+      }
+    }
+  ],
+  "claim_boundary": {
+    "broad_performance_claimed": false,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false
+  },
+  "corpus": {
+    "case_count": 5,
+    "description": "Fixed deterministic prompt set for answer-readiness baselines.",
+    "name": "strict-bitnet-answer-corpus-v1",
+    "path": "ci/quality/bitnet-answer-corpus.yaml"
+  },
+  "generation": {
+    "default_max_new_tokens": 8,
+    "deterministic": true,
+    "logits_dump_steps": 1,
+    "logits_topk": 5,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 360,
+    "requested_cpu_kernel": "avx2",
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "fallback_loader_used": false,
+    "file": "ggml-model-i2_s.gguf",
+    "loader_mode": "real_gguf",
+    "path": "C:\\Code\\Rust\\BitNet-rs-lnl258v-run001\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "tokenizer": "llama3",
+    "tokenizer_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v-run001\\models\\BitNet-b1.58-2B-4T\\tokenizer.json"
+  },
+  "prompt_template": {
+    "family": "llama3-chat"
+  },
+  "quality_summary": {
+    "failed": 5,
+    "not_run": 0,
+    "passed": 0,
+    "timeout": 0,
+    "total": 5
+  },
+  "schema_version": "1.0.0",
+  "speedup_claim": false,
+  "timestamp": "2026-05-07T20:53:33.718314900+00:00"
+}

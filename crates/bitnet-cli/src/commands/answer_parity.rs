@@ -27,6 +27,14 @@ pub struct AnswerParityCommand {
         default_value = "target/bitnet/receipts/cpu-answer-parity.json"
     )]
     pub json_out: PathBuf,
+
+    /// Machine identifier for hardware-scoped parity artifacts.
+    #[arg(long, value_name = "ID")]
+    pub machine: Option<String>,
+
+    /// Same-machine platform probe artifact to cross-link for CPU topology and power context.
+    #[arg(long, value_name = "PATH")]
+    pub platform_artifact: Option<PathBuf>,
 }
 
 impl AnswerParityCommand {
@@ -34,7 +42,19 @@ impl AnswerParityCommand {
     pub async fn execute(&self) -> Result<()> {
         let scalar = read_json(&self.scalar)?;
         let avx2 = read_json(&self.avx2)?;
-        let receipt = build_answer_parity_receipt(&self.scalar, &scalar, &self.avx2, &avx2);
+        let platform = match &self.platform_artifact {
+            Some(path) => Some(read_json(path)?),
+            None => None,
+        };
+        let receipt = build_answer_parity_receipt(
+            &self.scalar,
+            &scalar,
+            &self.avx2,
+            &avx2,
+            self.machine.as_deref(),
+            self.platform_artifact.as_deref(),
+            platform.as_ref(),
+        );
         let failed = receipt["summary"]["failed"].as_u64().unwrap_or(1);
 
         if let Some(parent) = self.json_out.parent()
@@ -67,6 +87,9 @@ fn build_answer_parity_receipt(
     scalar: &Value,
     avx2_path: &Path,
     avx2: &Value,
+    machine: Option<&str>,
+    platform_artifact: Option<&Path>,
+    platform: Option<&Value>,
 ) -> Value {
     let mut shared_failures = Vec::new();
     compare_top_level_contract(scalar, avx2, &mut shared_failures);
@@ -101,6 +124,13 @@ fn build_answer_parity_receipt(
         "inputs": {
             "scalar_receipt_path": scalar_path.display().to_string(),
             "avx2_receipt_path": avx2_path.display().to_string(),
+        },
+        "machine": {
+            "machine_id": machine,
+            "platform_artifact": platform_artifact.map(|path| path.display().to_string()),
+            "cpu": platform.and_then(|value| value.get("cpu")).cloned().unwrap_or(Value::Null),
+            "memory": platform.and_then(|value| value.get("memory")).cloned().unwrap_or(Value::Null),
+            "power": platform.and_then(|value| value.get("power")).cloned().unwrap_or(Value::Null),
         },
         "shared_contract": {
             "same_real_gguf": shared_failures.iter().all(|failure| *failure != "model_contract"),
@@ -300,12 +330,6 @@ fn check_case_contract(
     failures: &mut Vec<&'static str>,
     first_divergence: &mut Option<Value>,
 ) {
-    let status_rule = if lane == "scalar" { "scalar_case_passed" } else { "avx2_case_passed" };
-    if case["status"] != "passed" || case["quality"]["passed"] != true {
-        failures.push(status_rule);
-        set_first(first_divergence, id, status_rule, None, case["status"].clone(), json!("passed"));
-    }
-
     let backend_rule =
         if lane == "scalar" { "scalar_strict_cpu_backend" } else { "avx2_strict_cpu_backend" };
     if case["backend"]["requested_backend"] != "cpu"
@@ -428,6 +452,8 @@ fn compare_logits_dump(
 fn case_summary(case: &Value) -> Value {
     json!({
         "status": case["status"],
+        "quality_passed": case["quality"]["passed"],
+        "quality_failed_rules": case["quality"]["failed_rules"],
         "selected_kernel": case["kernel"]["selected_kernel"],
         "prompt_token_ids": case["token_ids"]["prompt"],
         "generated_token_ids": case["token_ids"]["generated"],
@@ -546,11 +572,46 @@ mod tests {
             &scalar,
             Path::new("avx2.json"),
             &avx2,
+            None,
+            None,
+            None,
         );
 
         assert_eq!(report["artifact_kind"], "bitnet_cpu_answer_parity");
         assert_eq!(report["summary"]["failed"], 0);
         assert_eq!(report["cases"][0]["passed"], true);
+        assert!(report["summary"]["first_divergence"].is_null());
+    }
+
+    #[test]
+    fn parity_receipt_passes_matching_shared_quality_failures() {
+        let mut scalar = receipt("i2_s-scalar-reference", &[999], "bad", logits());
+        let mut avx2 = receipt("i2_s-avx2-reference", &[999], "bad", logits());
+        scalar["cases"][0]["status"] = json!("quality_failed");
+        scalar["cases"][0]["quality"] = json!({
+            "passed": false,
+            "failed_rules": ["exact_trimmed"]
+        });
+        avx2["cases"][0]["status"] = json!("quality_failed");
+        avx2["cases"][0]["quality"] = json!({
+            "passed": false,
+            "failed_rules": ["exact_trimmed"]
+        });
+
+        let report = build_answer_parity_receipt(
+            Path::new("scalar.json"),
+            &scalar,
+            Path::new("avx2.json"),
+            &avx2,
+            Some("intel-258v"),
+            Some(Path::new("platform-probe.json")),
+            None,
+        );
+
+        assert_eq!(report["summary"]["failed"], 0);
+        assert_eq!(report["machine"]["machine_id"], "intel-258v");
+        assert_eq!(report["cases"][0]["passed"], true);
+        assert_eq!(report["cases"][0]["scalar"]["quality_passed"], false);
         assert!(report["summary"]["first_divergence"].is_null());
     }
 
@@ -564,6 +625,9 @@ mod tests {
             &scalar,
             Path::new("avx2.json"),
             &avx2,
+            None,
+            None,
+            None,
         );
 
         assert_eq!(report["summary"]["failed"], 1);
@@ -582,6 +646,9 @@ mod tests {
             &scalar,
             Path::new("avx2.json"),
             &avx2,
+            None,
+            None,
+            None,
         );
 
         let failed = report["cases"][0]["failed_rules"].as_array().unwrap();

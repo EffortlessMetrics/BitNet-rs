@@ -1,0 +1,498 @@
+{
+  "artifact_kind": "bitnet_cpu_answer_parity",
+  "cases": [
+    {
+      "avx2": {
+        "answer": "'E-lived,SIGNALConvert!\"\n\n'E$m-lived",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          3923,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "failed_rules": [],
+      "id": "capital_france",
+      "passed": true,
+      "scalar": {
+        "answer": "'E-lived,SIGNALConvert!\"\n\n'E$m-lived",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          3923,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "quality_failed"
+      }
+    },
+    {
+      "avx2": {
+        "answer": "'E-lived,SIGNALConvert",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          3923,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_exact_trimmed"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "failed_rules": [],
+      "id": "math_2_plus_2",
+      "passed": true,
+      "scalar": {
+        "answer": "'E-lived,SIGNALConvert",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          3923,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_exact_trimmed"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "quality_failed"
+      }
+    },
+    {
+      "avx2": {
+        "answer": "'E-lived,SIGNALConvert!\"\n\n'E$m-lived",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          39818,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "failed_rules": [],
+      "id": "repeat_colors",
+      "passed": true,
+      "scalar": {
+        "answer": "'E-lived,SIGNALConvert!\"\n\n'E$m-lived",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281,
+          17642,
+          89048,
+          54616,
+          62954
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          39818,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "quality_failed"
+      }
+    },
+    {
+      "avx2": {
+        "answer": "'E-lived,SIGNALConvert",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          46864,
+          7041,
+          25,
+          10619,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_exact_trimmed"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "failed_rules": [],
+      "id": "say_ok",
+      "passed": true,
+      "scalar": {
+        "answer": "'E-lived,SIGNALConvert",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          46864,
+          7041,
+          25,
+          10619,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_exact_trimmed"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "quality_failed"
+      }
+    },
+    {
+      "avx2": {
+        "answer": "'E-lived,SIGNALConvert",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          16533,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_starts_with_any"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "failed_rules": [],
+      "id": "yes_no_water",
+      "passed": true,
+      "scalar": {
+        "answer": "'E-lived,SIGNALConvert",
+        "generated_token_ids": [
+          89048,
+          62954,
+          87896,
+          12281
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          16533,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ],
+        "quality_failed_rules": [
+          "gate_starts_with_any"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "quality_failed"
+      }
+    }
+  ],
+  "claim": "scalar_avx2_full_decode_answer_parity",
+  "inputs": {
+    "avx2_receipt_path": "ci/hardware/intel-258v/2026-05-07/cpu-answer-corpus-avx2.json",
+    "scalar_receipt_path": "ci/hardware/intel-258v/2026-05-07/cpu-answer-corpus-scalar.json"
+  },
+  "machine": {
+    "cpu": {
+      "avx2_detected": true,
+      "avx512_detected": false,
+      "cores": 8,
+      "flags": [
+        "avx2",
+        "fma",
+        "sse4.2"
+      ],
+      "fma_detected": true,
+      "l2_cache_kib": 14336,
+      "l3_cache_kib": 12288,
+      "lp_e_core_count": 4,
+      "max_clock_mhz": 2200,
+      "model": "Intel(R) Core(TM) Ultra 7 258V",
+      "p_core_count": 4,
+      "requested_backend": "cpu",
+      "runtime_api": "cpu",
+      "scheduler_hint": "Lunar Lake validation should record P-core / low-power E-core and power context before benchmark claims.",
+      "selected_backend": "intel-258v-cpu-avx2",
+      "sse42_detected": true,
+      "threads": 8
+    },
+    "machine_id": "intel-258v",
+    "memory": {
+      "kind": "shared LPDDR-class system memory",
+      "reported_manufacturer": "Micron Technology",
+      "reported_module_bytes": 4294967296,
+      "reported_modules": 8,
+      "reported_speed_mt_s": 8533,
+      "shared_memory": true,
+      "total_bytes": 33873780736
+    },
+    "platform_artifact": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
+    "power": {
+      "mode": "Balanced",
+      "power_scheme_guid": "381b4222-f694-41f0-9685-ff5bb260df2e",
+      "sustained_run": false,
+      "thermal_profile": null
+    }
+  },
+  "may_claim": [
+    "Scalar versus AVX2 full-decode answer parity can be audited for the compared receipts.",
+    "First divergence evidence can separate AVX2 kernel issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
+  ],
+  "must_not_claim": [
+    "General chat quality is proven.",
+    "Sustained CPU throughput is proven.",
+    "Server inference is complete.",
+    "GPU or NPU execution is involved."
+  ],
+  "proof_stage": "full_decode_parity_compared",
+  "schema_version": "1.0.0",
+  "shared_contract": {
+    "failed_rules": [],
+    "same_greedy_settings": true,
+    "same_prompt_template": true,
+    "same_real_gguf": true,
+    "same_tokenizer": true
+  },
+  "speedup_claim": false,
+  "summary": {
+    "failed": 0,
+    "first_divergence": null,
+    "passed": 5,
+    "total": 5
+  },
+  "timestamp": "2026-05-07T20:53:47.385839500+00:00"
+}

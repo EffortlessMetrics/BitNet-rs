@@ -690,8 +690,29 @@ enum ConfigAction {
     Path,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+#[cfg(windows)]
+fn main() -> Result<()> {
+    // The generated clap command tree is deep enough to overflow the default
+    // Windows main-thread stack before subcommands such as `answer-parity`
+    // can print help. Run the CLI body on an explicitly larger stack.
+    std::thread::Builder::new()
+        .name("bitnet-cli-main".to_string())
+        .stack_size(32 * 1024 * 1024)
+        .spawn(run_main)?
+        .join()
+        .map_err(|_| anyhow::anyhow!("bitnet CLI worker thread panicked"))?
+}
+
+#[cfg(not(windows))]
+fn main() -> Result<()> {
+    run_main()
+}
+
+fn run_main() -> Result<()> {
+    tokio::runtime::Builder::new_multi_thread().enable_all().build()?.block_on(async_main())
+}
+
+async fn async_main() -> Result<()> {
     // RUNTIME GUARD: Forbid test shims in production
     if std::env::var_os("BITNET_GPU_FAKE").is_some() && std::env::var_os("CI").is_none() {
         eprintln!("Error: BITNET_GPU_FAKE is test-only and not allowed outside CI.");
@@ -1987,6 +2008,16 @@ fn detected_cpu_feature_labels() -> Vec<String> {
 }
 
 fn cpu_kernel_implementation(quantization: bitnet_common::QuantizationType) -> &'static str {
+    if std::env::var("BITNET_FORCE_SCALAR").as_deref() == Ok("1")
+        || std::env::var("BITNET_CPU_KERNEL").as_deref() == Ok("scalar")
+    {
+        return "scalar";
+    }
+    if std::env::var("BITNET_CPU_KERNEL").as_deref() == Ok("avx2")
+        && bitnet_common::runtime_diag::CpuFeatures::detect().avx2
+    {
+        return "avx2";
+    }
     if matches!(quantization, bitnet_common::QuantizationType::I2S) && cfg!(target_arch = "aarch64")
     {
         // The current Apple CPU proof path has NEON available, but the packed

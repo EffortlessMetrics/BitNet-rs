@@ -1,7 +1,7 @@
 //! Answer corpus runner for CPU-first and Apple M4 local-answer baselines.
 
 use anyhow::{Context, Result};
-use clap::Args;
+use clap::{Args, ValueEnum};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
@@ -60,6 +60,32 @@ pub struct AnswerCorpusCommand {
     /// Number of top logits to include when --dump-logit-steps is used.
     #[arg(long, default_value_t = 10, value_name = "K")]
     pub logits_topk: usize,
+
+    /// CPU kernel lane to request for child strict CPU runs.
+    #[arg(long, value_enum, value_name = "KERNEL")]
+    pub cpu_kernel: Option<AnswerCpuKernel>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub enum AnswerCpuKernel {
+    Scalar,
+    Avx2,
+}
+
+impl AnswerCpuKernel {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Scalar => "scalar",
+            Self::Avx2 => "avx2",
+        }
+    }
+
+    fn child_env(self) -> Vec<(&'static str, &'static str)> {
+        match self {
+            Self::Scalar => vec![("BITNET_CPU_KERNEL", "scalar"), ("BITNET_FORCE_SCALAR", "1")],
+            Self::Avx2 => vec![("BITNET_CPU_KERNEL", "avx2")],
+        }
+    }
 }
 
 impl AnswerCorpusCommand {
@@ -73,6 +99,12 @@ impl AnswerCorpusCommand {
                 "answer-corpus only accepts --device cpu or --device apple-m4-cpu-neon; got {device}"
             );
         }
+        if self.cpu_kernel.is_some() && device != "cpu" {
+            anyhow::bail!("--cpu-kernel is only valid with --device cpu");
+        }
+        if self.cpu_kernel == Some(AnswerCpuKernel::Avx2) && !cpu_avx2_available() {
+            anyhow::bail!("--cpu-kernel avx2 requested but AVX2 is unavailable on this host");
+        }
         let artifact_kind = answer_corpus_artifact_kind(&device);
         let default_timeout_seconds = effective_default_timeout_seconds(
             self.per_prompt_timeout_seconds,
@@ -84,7 +116,10 @@ impl AnswerCorpusCommand {
             .parent()
             .map(Path::to_path_buf)
             .unwrap_or_else(|| PathBuf::from("."))
-            .join("answer-corpus-runs");
+            .join(format!(
+                "{}-runs",
+                self.json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("answer-corpus")
+            ));
         fs::create_dir_all(&receipt_dir)?;
 
         let exe = std::env::current_exe().context("failed to resolve current bitnet executable")?;
@@ -148,6 +183,7 @@ impl AnswerCorpusCommand {
                 } else {
                     None
                 },
+                "requested_cpu_kernel": self.cpu_kernel.map(AnswerCpuKernel::as_str),
             },
             "quality_summary": {
                 "total": total,
@@ -232,7 +268,9 @@ impl AnswerCorpusCommand {
                 args.push("--assert-greedy".into());
             }
         }
-        let run = run_child_with_timeout(exe, &args, Duration::from_secs(timeout_seconds))?;
+        let child_env = self.cpu_kernel.map(AnswerCpuKernel::child_env).unwrap_or_default();
+        let run =
+            run_child_with_timeout(exe, &args, &child_env, Duration::from_secs(timeout_seconds))?;
         if run.timed_out {
             return Ok(json!({
                 "id": case.id,
@@ -637,7 +675,12 @@ struct ChildRun {
     stderr: String,
 }
 
-fn run_child_with_timeout(exe: &Path, args: &[OsString], timeout: Duration) -> Result<ChildRun> {
+fn run_child_with_timeout(
+    exe: &Path,
+    args: &[OsString],
+    envs: &[(&'static str, &'static str)],
+    timeout: Duration,
+) -> Result<ChildRun> {
     let child_rust_log =
         std::env::var("BITNET_ANSWER_CORPUS_CHILD_RUST_LOG").unwrap_or_else(|_| "warn".into());
     let stdout_path = child_capture_path("stdout");
@@ -648,6 +691,7 @@ fn run_child_with_timeout(exe: &Path, args: &[OsString], timeout: Duration) -> R
         .with_context(|| format!("failed to create {}", stderr_path.display()))?;
     let mut child = Command::new(exe)
         .args(args)
+        .envs(envs.iter().copied())
         .env("RUST_LOG", child_rust_log)
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(stderr_file))
@@ -684,6 +728,18 @@ fn run_child_with_timeout(exe: &Path, args: &[OsString], timeout: Duration) -> R
             });
         }
         thread::sleep(Duration::from_millis(100));
+    }
+}
+
+fn cpu_avx2_available() -> bool {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        std::is_x86_feature_detected!("avx2")
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    {
+        false
     }
 }
 
