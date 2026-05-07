@@ -102,7 +102,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-003"
-status = "ready"
+status = "pr_open"
+pr = 3857
 branch = "codex/apple-m4-operational/M4-OP-003-operator-runbook"
 stackable = true
 review_mode = "codex_premerge"
