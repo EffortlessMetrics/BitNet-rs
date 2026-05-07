@@ -52,3 +52,16 @@ fn test_gpu_info_mocked_scenarios() {
 
     // EnvScope automatically restores original PATH on drop
 }
+
+#[test]
+#[serial(bitnet_env)]
+fn gpu_cache_falsey_values_disable_real_gpu_cache() {
+    let dir = tempdir().unwrap();
+    let mut scope = EnvScope::new();
+    scope.set("PATH", dir.path().to_str().unwrap());
+    scope.remove("BITNET_GPU_FAKE");
+    scope.set("BITNET_GPU_CACHE", " FALSE ");
+
+    let info = get_gpu_info();
+    assert!(!info.any_available());
+}
