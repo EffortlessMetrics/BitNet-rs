@@ -40,6 +40,7 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-BITNET-006 | merged | CPU transformer decode step merged in #3793. |
 | CPU-BITNET-007 | merged | Strict CPU proof receipt enforcement merged in #3800. |
 | CPU-BITNET-008 | merged | CPU phase benchmark receipt profiles merged in #3856. |
+| CPU-PHASE-TIMING-001 | pr_open | Tightens Kaby phase timing receipt extraction in #3872 while leaving micro/layer gaps explicit. |
 
 ## Review Policy
 

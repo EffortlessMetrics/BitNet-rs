@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T10:40:33Z"
+campaign = "cpu-proof"
+item = "CPU-PHASE-TIMING-001"
+event = "pr_open"
+pr = 3872
+actor = "codex"
+
+notes = [
+  "Opened #3872 to tighten CPU phase benchmark receipt timing extraction after the benchmark milestone was marked done.",
+  "The PR is bounded to bitnet-bench-receipts, Kaby CPU hardware evidence, and CPU-proof tracking; it keeps micro and layer as explicit not_run gaps.",
+]

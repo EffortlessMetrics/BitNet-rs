@@ -77,27 +77,31 @@
       "status": "not_run"
     },
     {
+      "bandwidth_gbps": 0.0,
       "execution_phase": "prefill",
       "fallback_reason": null,
       "fallback_used": false,
+      "median_ms": 51318.026,
+      "p95_ms": 52824.14,
       "profile": "prefill",
-      "reason": "no supplied strict CPU proof receipt measured prefill",
       "requested_kernel": "i2_s-avx2-reference",
       "selected_kernel": "i2_s-avx2-reference",
       "shape": {
-        "cols": 1,
-        "iterations": 1,
-        "rows": 1
+        "cols": 4096,
+        "iterations": 5,
+        "rows": 5
       },
-      "status": "not_run"
+      "status": "measured",
+      "tokens_per_second": 0.019328205390355065,
+      "wall_time_ms": 258689.304
     },
     {
       "bandwidth_gbps": 0.0,
       "execution_phase": "first_token",
       "fallback_reason": null,
       "fallback_used": false,
-      "median_ms": 309902.0,
-      "p95_ms": 309902.0,
+      "median_ms": 51212.925,
+      "p95_ms": 51212.925,
       "profile": "first_token",
       "requested_kernel": "i2_s-avx2-reference",
       "selected_kernel": "i2_s-avx2-reference",
@@ -107,16 +111,16 @@
         "rows": 1
       },
       "status": "measured",
-      "tokens_per_second": 0.003226826545165891,
-      "wall_time_ms": 309902.0
+      "tokens_per_second": 0.019526320748131452,
+      "wall_time_ms": 51212.925
     },
     {
       "bandwidth_gbps": 0.0,
       "execution_phase": "decode_steady_state",
       "fallback_reason": null,
       "fallback_used": false,
-      "median_ms": 52456.0,
-      "p95_ms": 52456.0,
+      "median_ms": 52456.62,
+      "p95_ms": 52456.62,
       "profile": "decode",
       "requested_kernel": "i2_s-avx2-reference",
       "selected_kernel": "i2_s-avx2-reference",
@@ -126,8 +130,8 @@
         "rows": 1
       },
       "status": "measured",
-      "tokens_per_second": 0.019063596156779012,
-      "wall_time_ms": 52456.0
+      "tokens_per_second": 0.01906337083860912,
+      "wall_time_ms": 52456.62
     }
   ],
   "receipt_inputs": [
@@ -138,7 +142,7 @@
   "schema": 1,
   "selected_backend": "cpu-rust",
   "speedup_claim": false,
-  "timestamp_utc": "2026-05-07T08:10:56Z",
+  "timestamp_utc": "2026-05-07T09:25:32Z",
   "tokenizer": {
     "source": "gguf_metadata",
     "strict": true

@@ -435,3 +435,42 @@ must_not_claim = [
   "GPU or NPU execution is involved.",
   "Sustained Kaby Lake throughput is proven from cold-turbo-only runs.",
 ]
+
+[[work_item]]
+id = "CPU-PHASE-TIMING-001"
+status = "pr_open"
+pr = 3872
+branch = "codex/cpu-bitnet-008-phase-timing-followup"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-BITNET-008"]
+acceptance = "CPU phase benchmark receipt generation prefers strict prompt-prefill, first-token decode, and steady-decode timing fields when present; regenerated Kaby Lake evidence records prefill, first_token, and decode as measured from strict proof timing while micro and layer remain explicit not_run gaps."
+commands = [
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features",
+  "Parse ci/hardware/intel-i5-8250u-cpu-avx2/2026-05-07/cpu-phase-benchmark-decode2.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/src/bin/cpu_phase_benchmark_receipt.rs",
+  "ci/hardware/intel-i5-8250u-cpu-avx2/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-cli/**",
+]
+may_claim = [
+  "Kaby Lake phase receipt timing source is tightened for prefill, first_token, and decode after merge.",
+]
+must_not_claim = [
+  "micro and layer profiles are measured by this slice.",
+  "Sustained Kaby Lake throughput is proven.",
+  "Server inference is complete.",
+  "GPU or NPU execution is involved.",
+]

@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T10:36:28Z"
+campaign = "cpu-proof"
+item = "CPU-PHASE-TIMING-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started a bounded CPU phase timing follow-up to prefer strict prompt-prefill, first-token decode, and steady-decode timing fields in CPU phase benchmark receipts.",
+  "The regenerated Kaby Lake evidence keeps micro and layer as explicit not_run gaps and does not claim sustained throughput, server inference, GPU, or NPU execution.",
+]
