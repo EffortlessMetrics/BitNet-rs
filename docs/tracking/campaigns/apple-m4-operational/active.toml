@@ -1,6 +1,6 @@
 id = "apple-m4-operational"
 title = "Apple M4 operational readiness"
-status = "active"
+status = "complete"
 
 objective = "Turn the completed Apple M4 proof lane into a repeatable operator workflow with one-command validation, durable receipts, clear docs, stable failure modes, and benchmark profiles."
 
@@ -218,10 +218,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-006"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-operational/M4-OP-006-next-frontier"
 pr = 3882
-head_sha = "9734863336554d3099bff2cf1906b8046323111c"
+merge_sha = "08625e528133ac81651264cca78b67c753e8e3e0"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
