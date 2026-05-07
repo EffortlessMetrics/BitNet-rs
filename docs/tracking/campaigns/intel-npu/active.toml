@@ -202,7 +202,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-007"
-status = "ready"
+status = "merged"
+pr = 3873
+merge_sha = "edc4a29dd41bd83584a6f97ff017532f402be227"
 branch = "codex/intel-npu/NPU-007-bitnet-subgraph-parity"
 stackable = false
 review_mode = "codex_premerge"

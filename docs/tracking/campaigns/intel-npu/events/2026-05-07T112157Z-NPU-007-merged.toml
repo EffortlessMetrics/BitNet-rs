@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T11:21:57Z"
+campaign = "intel-npu"
+item = "NPU-007"
+event = "merged"
+pr = 3873
+merge_sha = "edc4a29dd41bd83584a6f97ff017532f402be227"
+actor = "maintainer"
+
+notes = [
+  "Intel NPU lane now has a selected static BitNet RMSNorm subgraph parity command through OpenVINO NPU.",
+  "The receipt preserves requested/selected backend identity, runtime API/device, static-shape metadata, CPU reference path, error metrics, timing, fallback_used=false, and no full BitNet inference or QK256 decode claims.",
+]
