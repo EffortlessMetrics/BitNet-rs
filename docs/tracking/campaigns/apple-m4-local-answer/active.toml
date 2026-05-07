@@ -1,0 +1,197 @@
+id = "apple-m4-local-answer"
+title = "Apple M4 local answer usability"
+status = "active"
+
+objective = "Make Apple Silicon useful for a local Mac user by turning the completed proof and operational lanes into prompt-in, intelligible-answer-out behavior with truthful hardware routing and receipts."
+
+end_state = [
+  "apple-m4-cpu-neon can run a supported real GGUF with real tokenizer and strict loader for multi-token local answers.",
+  "Short prompt suites produce non-empty, valid UTF-8, non-degenerate generated text under deterministic greedy settings.",
+  "Greedy output is stable for the same model, prompt, tokenizer, backend, and runtime settings.",
+  "Local-answer receipts record requested backend, selected backend, runtime API, model, tokenizer, kernel family, execution phase, fallback status, generated text, token counts, and timing.",
+  "Strict failure modes are predictable when model files, tokenizer authority, backend identity, or unsupported Apple lanes are wrong.",
+  "Any future Metal contribution is phase-level and receipt-backed; CPU fallback is visible and never counted as Metal inference.",
+]
+
+hard_constraints = [
+  "Do not reopen the completed apple-m4 or apple-m4-operational campaigns.",
+  "Start with apple-m4-cpu-neon as the reliable local-answer path.",
+  "Do not claim full apple-m4-metal model inference unless a strict real-model receipt proves it.",
+  "Do not claim Neural Engine execution from MPSGraph.",
+  "Do not claim QK256 on Apple Silicon.",
+  "Do not hide CPU fallback or treat fallback as acceleration.",
+  "Do not add broad benchmark or performance claims before quality and receipt gates exist.",
+]
+
+[[work_item]]
+id = "M4-QA-001"
+status = "ready"
+branch = "codex/apple-m4-local-answer/M4-QA-001-output-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add a multi-prompt Apple M4 CPU/NEON local-answer smoke suite that runs real GGUF and tokenizer paths under strict mode, requires generated_tokens >= 16, valid UTF-8, non-empty output, non-degenerate token variation, and a receipt with explicit fallback status."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m4",
+  "Manual Apple M4 CPU/NEON local-answer command with real GGUF and receipt artifact",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/hardware/apple-m4-mac-mini-operator-runbook.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = [
+  "Apple M4 CPU/NEON local-answer smoke coverage exists for real-model strict runs when the manual M4 proof command passes.",
+]
+must_not_claim = [
+  "Full apple-m4-metal model inference works.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "The output-quality smoke suite proves broad benchmark performance.",
+]
+
+[[work_item]]
+id = "M4-QA-002"
+status = "proposed"
+branch = "codex/apple-m4-local-answer/M4-QA-002-greedy-determinism"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-QA-001"]
+acceptance = "Add deterministic greedy local-answer checks so the same model, prompt, tokenizer, backend, and runtime settings produce stable token IDs and receipt identity."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m4",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = []
+must_not_claim = []
+
+[[work_item]]
+id = "M4-QA-003"
+status = "proposed"
+branch = "codex/apple-m4-local-answer/M4-QA-003-receipt-quality"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-QA-001"]
+acceptance = "Harden local-answer receipts so generated text, token counts, tokenizer authority, model identity, backend routing, fallback status, and timing fields are present and checked."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m4",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "xtask/src/**",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = []
+must_not_claim = []
+
+[[work_item]]
+id = "M4-QA-004"
+status = "proposed"
+branch = "codex/apple-m4-local-answer/M4-QA-004-strict-failure-modes"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-QA-001"]
+acceptance = "Add strict local-answer failure-mode coverage for missing model files, tokenizer authority failures, unsupported Apple backend selections, and attempts to count fallback as acceleration."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m4",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = []
+must_not_claim = []
+
+[[work_item]]
+id = "M4-QA-005"
+status = "proposed"
+branch = "codex/apple-m4-local-answer/M4-QA-005-metal-phase-routing"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-QA-002", "M4-QA-003"]
+acceptance = "Decide and document the first safe route for one receipt-backed Apple Metal phase to participate in real generation while preserving CPU fallback visibility and greedy output comparison."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/hardware/apple-m4-mac-mini-operator-runbook.md",
+  "docs/specs/apple-m4-mac-mini-roadmap.md",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = []
+must_not_claim = []

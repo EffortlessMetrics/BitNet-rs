@@ -22,6 +22,7 @@ const MERGE_POLICIES: &[&str] =
 const HUMAN_GATES: &[&str] = &["never", "on_blocker_only", "before_merge", "always"];
 const REQUIRED_CAMPAIGNS: &[&str] = &[
     "apple-m4",
+    "apple-m4-local-answer",
     "apple-m4-operational",
     "cpu-proof",
     "cpu-qk256-performance",
