@@ -337,6 +337,27 @@ supported model
 -> intelligibility and repetition checks
 ```
 
+The first quality-gated local-answer command uses the existing `answer-corpus`
+runner against the Apple M4 CPU/NEON lane:
+
+```bash
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  --device apple-m4-cpu-neon \
+  answer-corpus \
+  --corpus ci/quality/apple-m4-local-answer-corpus.yaml \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-07/local-answer-corpus.json \
+  --fail-on-quality
+```
+
+This command exercises the real `bitnet run` surface for each prompt. It is a
+CPU/NEON local-answer smoke, not a Metal inference claim.
+
+If this command fails the content gate with non-empty but incoherent text, treat
+that as a real inference-quality blocker. Do not relax the answer gates or count
+the run as a local-answer proof; compare the same model, tokenizer, prompt
+template, and greedy settings against bitnet.cpp/reference behavior first.
+
 Recommended next campaign ID:
 
 ```text

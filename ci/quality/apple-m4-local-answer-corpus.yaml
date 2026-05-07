@@ -1,0 +1,46 @@
+schema: 1
+artifact_kind: bitnet_answer_corpus
+name: apple-m4-local-answer-smoke-v1
+description: Fixed deterministic prompt set for Apple M4 CPU/NEON local-answer smoke validation.
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  file: ggml-model-i2_s.gguf
+defaults:
+  prompt_template: llama3-chat
+  max_new_tokens: 16
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 420
+  min_generated_tokens: 16
+  min_distinct_generated_tokens: 2
+cases:
+  - id: math_sentence
+    question: "What is 2+2? Answer in one short complete sentence."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "4"
+        - "four"
+
+  - id: capital_france_sentence
+    question: "Name the capital of France and answer in one short sentence."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"
+
+  - id: rust_sentence
+    question: "Write one short sentence about Rust programming."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Rust"
+        - "rust"
+        - "programming"
+        - "language"
+        - "compiler"
+        - "memory"
+        - "code"

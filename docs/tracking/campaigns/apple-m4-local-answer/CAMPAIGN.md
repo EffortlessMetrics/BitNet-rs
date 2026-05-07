@@ -45,7 +45,8 @@ This campaign starts the selected next frontier: CPU/NEON local-answer usability
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-QA-001 | ready | Add multi-prompt CPU/NEON local-answer smoke suite. |
+| M4-QA-ROOT-001 | ready | Compare strict BitNet-rs output against bitnet.cpp/reference behavior and localize the first real-output divergence. |
+| M4-QA-001 | blocked | Add multi-prompt CPU/NEON local-answer smoke suite; blocked until strict real-model output is coherent or the local artifact is proven bad under reference execution. |
 | M4-QA-002 | proposed | Add greedy determinism checks for local answers. |
 | M4-QA-003 | proposed | Harden local-answer receipt quality fields. |
 | M4-QA-004 | proposed | Add strict failure-mode coverage for local-answer operator errors. |

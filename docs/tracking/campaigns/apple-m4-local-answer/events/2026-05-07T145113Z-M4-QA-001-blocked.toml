@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T14:51:13Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-001"
+event = "blocked"
+actor = "codex"
+
+notes = [
+  "The M4-QA-001 harness can launch strict real-GGUF apple-m4-cpu-neon child runs and records truthful backend/fallback fields.",
+  "A live 16-token Apple CPU/NEON run generated non-coherent text matching the known garbled-output pattern, so the local-answer quality gate did not pass.",
+  "Do not weaken the local-answer gate or claim coherent Apple M4 CPU/NEON answers until reference parity/root-cause work resolves the output issue.",
+  "M4-QA-ROOT-001 was added as the prerequisite to compare BitNet-rs against bitnet.cpp/reference behavior and localize the first divergence or prove the local model artifact is bad.",
+]

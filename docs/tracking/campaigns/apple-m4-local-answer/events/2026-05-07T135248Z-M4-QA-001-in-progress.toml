@@ -1,0 +1,10 @@
+timestamp = "2026-05-07T13:52:48Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started Apple M4 CPU/NEON local-answer smoke suite work.",
+  "Scope is answer-corpus local-answer quality and receipts; no Metal kernels, QK256, MPSGraph, Neural Engine, or server inference changes.",
+]

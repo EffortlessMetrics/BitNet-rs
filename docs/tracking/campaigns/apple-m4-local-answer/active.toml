@@ -25,13 +25,13 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-QA-001"
-status = "ready"
+status = "blocked"
 branch = "codex/apple-m4-local-answer/M4-QA-001-output-smoke"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = []
+blocked_by = ["M4-QA-ROOT-001"]
 acceptance = "Add a multi-prompt Apple M4 CPU/NEON local-answer smoke suite that runs real GGUF and tokenizer paths under strict mode, requires generated_tokens >= 16, valid UTF-8, non-empty output, non-degenerate token variation, and a receipt with explicit fallback status."
 commands = [
   "cargo fmt --all -- --check",
@@ -64,6 +64,52 @@ must_not_claim = [
   "QK256 works on Apple Silicon.",
   "Neural Engine execution is proven.",
   "The output-quality smoke suite proves broad benchmark performance.",
+]
+
+[[work_item]]
+id = "M4-QA-ROOT-001"
+status = "ready"
+branch = "codex/apple-m4-local-answer/M4-QA-ROOT-001-bitnetcpp-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Compare the same real GGUF, tokenizer, prompt template, prompt, and greedy settings against bitnet.cpp/reference behavior; either produce token/logit parity evidence for the first divergence and fix the Rust path, or prove the local GGUF artifact itself also garbles under the reference implementation."
+commands = [
+  "cargo fmt --all -- --check",
+  "Reference bitnet.cpp run for the same model, tokenizer, prompt, and greedy settings",
+  "BitNet-rs strict run for the same model, tokenizer, prompt, and greedy settings",
+  "Token/logit parity comparison or documented reference-output artifact",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/**/tests/**",
+  "docs/reports/**",
+  "docs/tdd/plans/**",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = [
+  "The first strict real-output divergence is localized against bitnet.cpp/reference evidence, or the local model artifact is proven to garble in the reference path too.",
+]
+must_not_claim = [
+  "Apple M4 CPU/NEON local answers are coherent until M4-QA-001 passes.",
+  "Full apple-m4-metal model inference works.",
+  "QK256 works on Apple Silicon unless this item specifically proves it for Apple receipt-backed paths.",
+  "Neural Engine execution is proven.",
 ]
 
 [[work_item]]
