@@ -508,7 +508,6 @@ fn decode_lines(bytes: &[u8]) -> Vec<String> {
 }
 
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::too_many_arguments)]
 pub fn run(
     base: Option<String>,
     head: Option<String>,

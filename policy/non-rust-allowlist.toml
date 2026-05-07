@@ -99,6 +99,15 @@ reason = "cargo-mutants configuration."
 covered_by = ["cargo mutants"]
 
 [[allow]]
+glob = "ripr.toml"
+kind = "ripr_config"
+owner = "testing/oracle"
+surface = "ci"
+classification = "config"
+reason = "ripr static-exposure analyzer configuration (PR 13)."
+covered_by = ["xtask check-file-policy", ".github/workflows/ripr.yml"]
+
+[[allow]]
 glob = "{Justfile,Makefile,Makefile.ci,Makefile.minimal}"
 kind = "build_runner"
 owner = "release/ci"
