@@ -477,7 +477,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-001"
-status = "pr_open"
+status = "merged"
 pr = 3898
 branch = "codex/cpu-answer-001-strict-answer-readiness"
 stackable = false
@@ -513,6 +513,51 @@ forbidden_paths = [
 may_claim = [
   "The Rust CPU path can be checked for deterministic answer readiness on tiny prompts after merge.",
   "Scalar versus AVX2 full-decode divergence can be separated from shared decode correctness after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "Sustained Kaby Lake throughput is proven.",
+  "Server inference is complete.",
+  "GPU or NPU execution is involved.",
+]
+
+[[work_item]]
+id = "CPU-ANSWER-002"
+status = "ready"
+branch = "codex/cpu-answer-002-full-decode-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-001"]
+acceptance = "Strict CPU answer runs can compare scalar and AVX2 full-decode outputs for the same real GGUF, tokenizer, prompt, greedy settings, prompt token IDs, generated token IDs, decoded text, and per-step logits/top-k evidence so AVX2 divergence is separated from shared decode correctness."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo test --locked -p bitnet-inference --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-receipts --no-default-features",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "ci/quality/**",
+  "ci/hardware/intel-i5-8250u-cpu-avx2/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "tests/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Scalar versus AVX2 full-decode answer parity can be audited after merge.",
+  "First divergence evidence can separate AVX2 kernel issues from shared decode, prompt, tokenizer, logits, or sampler issues after merge.",
 ]
 must_not_claim = [
   "General chat quality is proven.",
