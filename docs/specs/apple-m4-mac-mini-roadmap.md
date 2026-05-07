@@ -678,3 +678,33 @@ Metal kernel execution, Neural Engine execution, or general M4 performance.
 - `docs/hardware/PROOF_STAGES.md`
 - `docs/hardware/LANE_OWNERSHIP.md`
 - `docs/hardware/BENCHMARK_PROTOCOL.md`
+
+## Post-Operational Frontier
+
+The next Apple implementation frontier is **CPU/NEON local-answer usability**.
+This is the fastest honest path to the user-facing Mac Silicon milestone:
+
+```text
+local Mac user
+-> supported GGUF model
+-> normal prompt
+-> coherent generated text
+-> receipt-backed apple-m4-cpu-neon routing
+-> no hidden fallback or unsupported accelerator claim
+```
+
+The completed proof and operational lanes already make the Apple route
+inspectable. The next campaign should make it quality-gated:
+
+1. Multi-token CPU/NEON local-answer smoke prompts.
+2. Greedy determinism for fixed prompt/model/settings.
+3. Receipt checks for output text validity, token counts, model/tokenizer
+   identity, backend identity, and fallback status.
+4. Strict failure-mode tests for missing model/tokenizer, unsupported full
+   Metal inference requests, and non-M4 Apple labels.
+5. A later decision on routing one receipt-backed Metal phase into real
+   generation without changing greedy CPU reference output.
+
+Metal subgraph expansion should follow that CPU/NEON usability campaign. QK256
+on Apple Silicon should remain last until I2_S/TL1 Apple receipts, phase
+profiles, and local-answer quality checks are routine.

@@ -218,7 +218,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-006"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-operational/M4-OP-006-next-frontier"
 stackable = false
 review_mode = "codex_premerge"
