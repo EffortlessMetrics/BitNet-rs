@@ -118,7 +118,9 @@ fn bitnet_version() -> &'static str {
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
-use commands::{ConvertCommand, InferenceCommand, InspectCommand, ServeCommand};
+use commands::{
+    AnswerCorpusCommand, ConvertCommand, InferenceCommand, InspectCommand, ServeCommand,
+};
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
@@ -425,6 +427,10 @@ enum Commands {
     /// Creative chat with nucleus sampling:
     ///   bitnet chat --model model.gguf --temperature 0.8 --top-p 0.95
     Chat(Box<InferenceCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Run the fixed CPU answer-readiness corpus through the `run` surface
+    AnswerCorpus(Box<AnswerCorpusCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Convert between model formats
@@ -748,6 +754,8 @@ async fn main() -> Result<()> {
         Some(Commands::Inference(cmd)) => (*cmd).execute(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Chat(cmd)) => (*cmd).run_chat(&config).await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::AnswerCorpus(cmd)) => (*cmd).execute(&requested_backend_label).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]

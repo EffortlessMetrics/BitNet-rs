@@ -358,6 +358,72 @@ fn chat_subcommand_help() {
         .stdout(predicate::str::contains("--model"));
 }
 
+/// `answer-corpus --help` is recognized (requires full-cli).
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_subcommand_help() {
+    bitnet()
+        .args(["answer-corpus", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--corpus"))
+        .stdout(predicate::str::contains("--dry-run"));
+}
+
+/// `answer-corpus --dry-run` validates corpus shape without requiring a model load.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_dry_run_writes_not_run_receipt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let corpus = dir.path().join("corpus.yaml");
+    let out = dir.path().join("receipt.json");
+    std::fs::write(
+        &corpus,
+        r#"schema: 1
+artifact_kind: bitnet_answer_corpus
+name: test-corpus
+description: test
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  file: ggml-model-i2_s.gguf
+defaults:
+  prompt_template: llama3-chat
+  max_new_tokens: 4
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+cases:
+  - id: math
+    question: "What is 2+2?"
+    gate:
+      kind: exact_trimmed
+      expected: "4"
+"#,
+    )
+    .expect("write corpus");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
+    assert_eq!(receipt["quality_summary"]["not_run"], 1);
+    assert_eq!(receipt["cases"][0]["status"], "not_run");
+}
+
 /// `inference --help` is recognized (requires full-cli).
 #[cfg(feature = "full-cli")]
 #[test]

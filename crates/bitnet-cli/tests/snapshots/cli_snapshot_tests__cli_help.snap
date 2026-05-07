@@ -48,6 +48,7 @@ Commands:
   score               Calculate perplexity score for a model
   inference           Run inference on a model
   chat                Interactive chat mode (streaming)
+  answer-corpus       Run the fixed CPU answer-readiness corpus through the `run` surface
   convert             Convert between model formats
   benchmark           Benchmark model performance
   serve               Start inference server
