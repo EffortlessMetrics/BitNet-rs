@@ -12,6 +12,18 @@ const MACHINE_ID: &str = "apple-m4-mac-mini";
 const APPLE_M4_METAL: &str = "apple-m4-metal";
 const APPLE_M4_CPU_NEON: &str = "apple-m4-cpu-neon";
 const APPLE_M4_MPSGRAPH: &str = "apple-m4-mpsgraph";
+const PROFILE_STRICT_CPU_NEON_SMOKE_1: &str = "strict_cpu_neon_smoke_1";
+const PROFILE_METAL_I2S_PARITY: &str = "metal_i2s_parity";
+const PROFILE_PREFILL_512: &str = "prefill_512";
+const PROFILE_DECODE_128: &str = "decode_128";
+const PROFILE_CONTEXT_4096: &str = "context_4096";
+const APPLE_M4_PROFILE_IDS: &[&str] = &[
+    PROFILE_STRICT_CPU_NEON_SMOKE_1,
+    PROFILE_METAL_I2S_PARITY,
+    PROFILE_PREFILL_512,
+    PROFILE_DECODE_128,
+    PROFILE_CONTEXT_4096,
+];
 
 #[derive(Subcommand)]
 pub enum AppleM4Cmd {
@@ -119,8 +131,8 @@ fn validate(root: &Path, args: ValidateArgs) -> Result<()> {
         &args.cargo,
         &args.model,
         &args.prompt,
-        4,
-        Some("smoke_4"),
+        1,
+        Some(PROFILE_STRICT_CPU_NEON_SMOKE_1),
         false,
         paths.file_abs("phase-profile.json"),
     )?;
@@ -129,8 +141,8 @@ fn validate(root: &Path, args: ValidateArgs) -> Result<()> {
         &args.cargo,
         &args.model,
         &args.prompt,
-        4,
-        Some("smoke_4"),
+        1,
+        Some(PROFILE_STRICT_CPU_NEON_SMOKE_1),
         true,
         paths.file_abs("allocation-audit.json"),
     )?;
@@ -623,18 +635,13 @@ fn validate_receipt(file: &str, role: ReceiptRole, value: &Value) -> Result<()> 
             validate_strict_cpu_bitnet_receipt(file, value)?;
         }
         ReceiptRole::PhaseProfile => {
-            validate_strict_cpu_bitnet_receipt(file, value)?;
-            require_object(value, "profile", file)?;
-            require_eq_path_bool(value, &["profile", "requested"], true, file)?;
+            validate_profile_receipt(file, value, false)?;
         }
         ReceiptRole::AllocationAudit => {
-            validate_strict_cpu_bitnet_receipt(file, value)?;
-            require_eq_path_bool(value, &["profile", "allocation_audit", "enabled"], true, file)?;
+            validate_profile_receipt(file, value, true)?;
         }
         ReceiptRole::Summary => {
-            require_eq(value, "artifact_kind", "apple_m4_validation_summary", file)?;
-            require_array(value, "proven", file)?;
-            require_array(value, "not_proven", file)?;
+            validate_summary_receipt(file, value)?;
         }
     }
 
@@ -667,6 +674,53 @@ fn validate_bitnet_fields(file: &str, value: &Value) -> Result<()> {
     require_object(value, "bitnet", file)?;
     require_string_path(value, &["bitnet", "kernel_family"], file)?;
     require_string_path(value, &["bitnet", "execution_phase"], file)
+}
+
+fn validate_profile_receipt(file: &str, value: &Value, allocation_audit: bool) -> Result<()> {
+    validate_strict_cpu_bitnet_receipt(file, value)?;
+    require_object(value, "profile", file)?;
+    require_eq_path_bool(value, &["profile", "requested"], true, file)?;
+    require_known_profile_id(file, value)?;
+    require_string_path(value, &["profile", "kind"], file)?;
+    require_string_path(value, &["profile", "claim_scope"], file)?;
+    require_bool_path(value, &["profile", "machine_context_recorded"], file)?;
+    require_object_path(value, &["profile", "prompt_prefill"], file)?;
+    require_object_path(value, &["profile", "decode"], file)?;
+    require_object_path(value, &["profile", "allocation_audit"], file)?;
+    require_eq_path_bool(
+        value,
+        &["profile", "allocation_audit", "enabled"],
+        allocation_audit,
+        file,
+    )?;
+    require_number_path(value, &["profile", "model_load_ms"], file)?;
+    require_number_path(value, &["profile", "tokenizer_load_ms"], file)?;
+    require_number_path(value, &["profile", "prompt_tokenize_ms"], file)?;
+    require_number_or_null_path(value, &["timing", "model_load_ms"], file)?;
+    require_number_or_null_path(value, &["timing", "tokenize_ms"], file)?;
+    require_number_or_null_path(value, &["timing", "prefill_ms"], file)?;
+    require_number_or_null_path(value, &["timing", "first_token_ms"], file)?;
+    require_number_or_null_path(value, &["timing", "decode_steady_state_tok_s"], file)?;
+    require_number_or_null_path(value, &["timing", "sampling_ms_per_token"], file)?;
+    require_number_or_null_path(value, &["latency", "total_ms"], file)
+}
+
+fn validate_summary_receipt(file: &str, value: &Value) -> Result<()> {
+    require_eq(value, "artifact_kind", "apple_m4_validation_summary", file)?;
+    require_array(value, "proven", file)?;
+    require_array(value, "not_proven", file)?;
+    require_array(value, "benchmark_profiles", file)?;
+    let Some(profiles) = value.get("benchmark_profiles").and_then(Value::as_array) else {
+        bail!("{file}: missing benchmark_profiles");
+    };
+    for profile in APPLE_M4_PROFILE_IDS {
+        let present =
+            profiles.iter().any(|value| value.get("id").and_then(Value::as_str) == Some(*profile));
+        if !present {
+            bail!("{file}: missing benchmark profile `{profile}`");
+        }
+    }
+    Ok(())
 }
 
 fn validate_fallback_fields(file: &str, value: &Value) -> Result<()> {
@@ -742,6 +796,13 @@ fn reject_unsupported_claims(file: &str, role: ReceiptRole, value: &Value) -> Re
         if !in_not_proven && lower_text.contains("full apple-m4-metal model inference") {
             bail!("{file}: unsupported full apple-m4-metal inference claim at {path}");
         }
+        if !in_not_proven
+            && (lower_text.contains("general m4 performance")
+                || lower_text.contains("broad m4 performance")
+                || lower_text.contains("m4 performance is proven"))
+        {
+            bail!("{file}: unsupported broad M4 performance claim at {path}");
+        }
         if role == ReceiptRole::MpsGraphSmoke
             && !in_not_proven
             && lower_text.contains("native metal")
@@ -810,6 +871,42 @@ fn write_summary(paths: &BundlePaths, report: &BundleCheckReport) -> Result<()> 
             "checked_at": report.checked_at,
             "receipts": receipts,
         },
+        "benchmark_profiles": [
+            {
+                "id": PROFILE_STRICT_CPU_NEON_SMOKE_1,
+                "source": "phase-profile.json",
+                "claim_scope": "strict Apple M4 CPU/NEON smoke timing only",
+                "required_timing_fields": [
+                    "timing.model_load_ms",
+                    "timing.tokenize_ms",
+                    "timing.prefill_ms",
+                    "timing.first_token_ms",
+                    "timing.decode_steady_state_tok_s",
+                    "timing.sampling_ms_per_token",
+                    "latency.total_ms"
+                ]
+            },
+            {
+                "id": PROFILE_METAL_I2S_PARITY,
+                "source": "metal-i2s-parity.json",
+                "claim_scope": "receipt-backed Metal I2_S parity only; no performance claim"
+            },
+            {
+                "id": PROFILE_PREFILL_512,
+                "source": "future-profile",
+                "claim_scope": "future prefill profile; not proven by this bundle"
+            },
+            {
+                "id": PROFILE_DECODE_128,
+                "source": "future-profile",
+                "claim_scope": "future decode profile; not proven by this bundle"
+            },
+            {
+                "id": PROFILE_CONTEXT_4096,
+                "source": "future-profile",
+                "claim_scope": "future context profile; not proven by this bundle"
+            }
+        ],
         "proven": [
             "Apple M4 machine profile was recorded.",
             "Apple M4 Metal runtime visibility was recorded.",
@@ -817,7 +914,7 @@ fn write_summary(paths: &BundlePaths, report: &BundleCheckReport) -> Result<()> 
             "I2_S-adjacent Metal parity receipt is present with CPU/NEON reference and fallback_used=false.",
             "Tiny MPSGraph reference smoke receipt is present as graph/reference evidence.",
             "Strict BitNet CPU/NEON proof receipt is present for the selected Apple CPU backend.",
-            "CPU/NEON profile and allocation receipts are present for the recorded profile."
+            "CPU/NEON profile and allocation receipts are present for strict_cpu_neon_smoke_1."
         ],
         "not_proven": [
             "Full apple-m4-metal model inference is not proven by this bundle.",
@@ -876,6 +973,17 @@ fn require_string_path(value: &Value, path: &[&str], file: &str) -> Result<()> {
     }
 }
 
+fn require_known_profile_id(file: &str, value: &Value) -> Result<()> {
+    let Some(profile_id) = value_at_path(value, &["profile", "id"]).and_then(Value::as_str) else {
+        bail!("{file}: missing `profile.id`");
+    };
+    if APPLE_M4_PROFILE_IDS.contains(&profile_id) {
+        Ok(())
+    } else {
+        bail!("{file}: unsupported Apple M4 profile id `{profile_id}`")
+    }
+}
+
 fn require_bool(value: &Value, field: &str, file: &str) -> Result<()> {
     if value.get(field).and_then(Value::as_bool).is_some() {
         Ok(())
@@ -889,6 +997,23 @@ fn require_bool_path(value: &Value, path: &[&str], file: &str) -> Result<()> {
         Ok(())
     } else {
         bail!("{file}: missing bool field `{}`", path.join("."))
+    }
+}
+
+fn require_number_path(value: &Value, path: &[&str], file: &str) -> Result<()> {
+    if value_at_path(value, path).and_then(Value::as_f64).is_some() {
+        Ok(())
+    } else {
+        bail!("{file}: missing number field `{}`", path.join("."))
+    }
+}
+
+fn require_number_or_null_path(value: &Value, path: &[&str], file: &str) -> Result<()> {
+    match value_at_path(value, path) {
+        Some(Value::Null) => Ok(()),
+        Some(value) if value.as_f64().is_some() => Ok(()),
+        Some(_) => bail!("{file}: `{}` must be a number or null", path.join(".")),
+        None => bail!("{file}: missing number/null field `{}`", path.join(".")),
     }
 }
 
@@ -929,6 +1054,14 @@ fn require_object(value: &Value, field: &str, file: &str) -> Result<()> {
         Ok(())
     } else {
         bail!("{file}: missing object `{field}`")
+    }
+}
+
+fn require_object_path(value: &Value, path: &[&str], file: &str) -> Result<()> {
+    if value_at_path(value, path).and_then(Value::as_object).is_some() {
+        Ok(())
+    } else {
+        bail!("{file}: missing object `{}`", path.join("."))
     }
 }
 
@@ -1153,6 +1286,55 @@ mod tests {
         check_bundle(dir.path(), false).unwrap();
     }
 
+    #[test]
+    fn receipt_checker_rejects_unknown_profile_id() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("phase-profile.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["profile"]["id"] = json!("smoke_4");
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "unsupported Apple M4 profile id");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_missing_profile_timing_field() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("phase-profile.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["timing"].as_object_mut().unwrap().remove("decode_steady_state_tok_s");
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "decode_steady_state_tok_s");
+    }
+
+    #[test]
+    fn receipt_checker_rejects_summary_missing_benchmark_profile() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("summary.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["benchmark_profiles"] = json!([
+            {"id": PROFILE_STRICT_CPU_NEON_SMOKE_1},
+            {"id": PROFILE_METAL_I2S_PARITY},
+            {"id": PROFILE_PREFILL_512},
+            {"id": PROFILE_DECODE_128}
+        ]);
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), PROFILE_CONTEXT_4096);
+    }
+
+    #[test]
+    fn receipt_checker_rejects_broad_performance_claim() {
+        let dir = tempdir().unwrap();
+        write_minimal_bundle(dir.path());
+        let path = dir.path().join("summary.json");
+        let mut receipt = read_json(&path).unwrap();
+        receipt["proven"] = json!(["General M4 performance is proven by this bundle."]);
+        write_json(path, &receipt).unwrap();
+        assert_bundle_error_contains(dir.path(), "broad M4 performance");
+    }
+
     fn write_minimal_bundle(dir: &Path) {
         fs::create_dir_all(dir).unwrap();
         write_json(
@@ -1216,10 +1398,10 @@ mod tests {
         .unwrap();
         write_json(dir.join("strict-bitnet-cpu-neon-proof.json"), &strict_cpu_receipt()).unwrap();
         let mut profile = strict_cpu_receipt();
-        profile["profile"] = json!({"requested": true, "allocation_audit": {"enabled": false}});
+        add_profile_fields(&mut profile, false);
         write_json(dir.join("phase-profile.json"), &profile).unwrap();
         let mut allocation = strict_cpu_receipt();
-        allocation["profile"] = json!({"requested": true, "allocation_audit": {"enabled": true}});
+        add_profile_fields(&mut allocation, true);
         write_json(dir.join("allocation-audit.json"), &allocation).unwrap();
         write_json(
             dir.join("summary.json"),
@@ -1231,6 +1413,13 @@ mod tests {
                 "runtime_api": "xtask-apple-m4",
                 "fallback_used": false,
                 "proven": ["bundle receipts validate"],
+                "benchmark_profiles": [
+                    {"id": PROFILE_STRICT_CPU_NEON_SMOKE_1},
+                    {"id": PROFILE_METAL_I2S_PARITY},
+                    {"id": PROFILE_PREFILL_512},
+                    {"id": PROFILE_DECODE_128},
+                    {"id": PROFILE_CONTEXT_4096}
+                ],
                 "not_proven": ["QK256 on Apple Silicon is not proven"]
             }),
         )
@@ -1268,6 +1457,43 @@ mod tests {
                 "execution_phase": "decode"
             }
         })
+    }
+
+    fn add_profile_fields(receipt: &mut Value, allocation_audit: bool) {
+        receipt["profile"] = json!({
+            "id": PROFILE_STRICT_CPU_NEON_SMOKE_1,
+            "requested": true,
+            "kind": "steady_decode_prefill",
+            "claim_scope": "selected CPU backend phase timing only",
+            "phase": "decode",
+            "machine_context_recorded": true,
+            "prompt_prefill": {
+                "exercised": true,
+                "tokens": 1,
+                "ms": 1.0
+            },
+            "decode": {
+                "generated_tokens": 1,
+                "steady_state_tokens": 0
+            },
+            "allocation_audit": {
+                "enabled": allocation_audit
+            },
+            "model_load_ms": 1.0,
+            "tokenizer_load_ms": 1.0,
+            "prompt_tokenize_ms": 1.0
+        });
+        receipt["timing"] = json!({
+            "model_load_ms": 1.0,
+            "tokenize_ms": 1.0,
+            "prefill_ms": 1.0,
+            "first_token_ms": 1.0,
+            "decode_steady_state_tok_s": null,
+            "sampling_ms_per_token": 1.0
+        });
+        receipt["latency"] = json!({
+            "total_ms": 1.0
+        });
     }
 
     fn assert_bundle_error_contains(dir: &Path, expected: &str) {
