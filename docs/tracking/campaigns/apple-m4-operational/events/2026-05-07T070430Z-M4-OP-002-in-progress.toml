@@ -1,0 +1,11 @@
+timestamp = "2026-05-07T07:04:30Z"
+campaign = "apple-m4-operational"
+item = "M4-OP-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started hardened Apple M4 receipt-bundle validation.",
+  "Scope is limited to xtask receipt checks and apple-m4-operational campaign tracking.",
+  "No runtime, kernel, QK256, server, or dependency changes are included.",
+]

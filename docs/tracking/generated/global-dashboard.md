@@ -5,7 +5,7 @@
 |---|---|---:|---|---|---|
 | amd-cpu-baselines | AMD5700X-003 | TBD | ready | AMD9950X3D-003 | These lanes are CPU proof lanes, not accelerator lanes. |
 | apple-m4 | M4-018 | #3826 | merged | none | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
-| apple-m4-operational | M4-OP-002 | TBD | ready | M4-OP-003 | Do not reopen the completed apple-m4 proof campaign. |
+| apple-m4-operational | M4-OP-002 | #3848 | pr_open | M4-OP-003 | Do not reopen the completed apple-m4 proof campaign. |
 | ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | CPU-BITNET-008 | #3833 | in_progress | none | No GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
