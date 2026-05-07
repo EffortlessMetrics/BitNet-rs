@@ -177,10 +177,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OP-005"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-operational/M4-OP-005-benchmark-profile-summary"
 pr = 3861
-head_sha = "e4ed29dc21347501b130a5e69337b2f86d14371d"
+merge_sha = "ce4205fa627eac486840bdd8b06f204e2197b842"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
