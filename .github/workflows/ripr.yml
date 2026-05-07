@@ -1,0 +1,87 @@
+name: ripr
+
+on:
+  pull_request:
+    paths:
+      - "crates/**/*.rs"
+      - "src/**/*.rs"
+      - "ripr.toml"
+      - "policy/ripr-suppressions.toml"
+      - ".github/workflows/ripr.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ripr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ripr-advisory:
+    name: ripr static exposure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.93.0"
+
+      - name: Locate ripr binary
+        id: locate
+        run: |
+          if command -v ripr >/dev/null 2>&1; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "ripr already on PATH"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "ripr binary is not yet provisioned for this runner."
+            echo "PR 13 ships ripr in advisory mode: when the binary is"
+            echo "absent the workflow records that fact and exits 0."
+          fi
+
+      - name: Run ripr doctor
+        if: steps.locate.outputs.available == 'true'
+        run: ripr doctor || true
+
+      - name: Run ripr check (advisory)
+        if: steps.locate.outputs.available == 'true'
+        run: |
+          mkdir -p target/ripr
+          ripr check \
+            --base "origin/${{ github.base_ref }}" \
+            --json target/ripr/ripr.json \
+            --sarif target/ripr/ripr.sarif \
+            --markdown target/ripr/ripr.md \
+            --config ripr.toml || true
+
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo "## ripr — static oracle-gap analysis (advisory)"
+            echo ""
+            if [ "${{ steps.locate.outputs.available }}" != "true" ]; then
+              echo "_ripr binary not provisioned on this runner; advisory output skipped._"
+              echo ""
+              echo "See \`docs/RIPR_EVIDENCE_POLICY.md\` for the rollout posture."
+            elif [ -f target/ripr/ripr.md ]; then
+              cat target/ripr/ripr.md
+            else
+              echo "_ripr produced no markdown report._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload ripr artifacts
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
+        with:
+          name: ripr-reports
+          path: target/ripr/
+          if-no-files-found: ignore
+          retention-days: 14

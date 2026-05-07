@@ -47,3 +47,6 @@ tempfile.workspace = true
 memmap2.workspace = true
 insta.workspace = true
 proptest.workspace = true
+
+[lints]
+workspace = true

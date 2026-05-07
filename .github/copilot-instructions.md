@@ -1,6 +1,6 @@
 # bitnet-rs — Copilot Instructions
 
-High-performance Rust implementation of BitNet 1-bit LLM inference. MSRV 1.92.0, Rust 2024 edition.
+High-performance Rust implementation of BitNet 1-bit LLM inference. MSRV: 1.93.0, Rust 2024 edition.
 
 ## Build & Test Commands
 

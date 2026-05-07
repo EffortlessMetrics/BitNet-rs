@@ -641,3 +641,6 @@ name = "fuzz_tensor_layout"
 path = "fuzz_targets/fuzz_tensor_layout.rs"
 test = false
 doc = false
+
+[lints]
+workspace = true

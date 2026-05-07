@@ -135,7 +135,7 @@ BitNet-rs includes an FFI bridge for cross-validation against C++ implementation
 - `.github/workflows/compatibility.yml` — Runs on every PR (Linux only)
 - Compatibility jobs are informational (`continue-on-error: true`) — failures do not block merges
 - macOS and Windows CI coverage is planned but not yet implemented
-- MSRV: 1.92.0 (Rust 2024 edition)
+- MSRV: 1.93.0 (Rust 2024 edition)
 
 ## Performance Goals
 

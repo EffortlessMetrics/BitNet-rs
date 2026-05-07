@@ -6,7 +6,7 @@ name: A770 Nightly Hardware Validation
 # To enable:
 #   1. Provision a self-hosted GitHub Actions runner with an Intel Arc A770 GPU.
 #   2. Tag the runner with labels: self-hosted, Linux, intel-gpu, a770
-#   3. Install: Intel compute-runtime, OpenCL ICD loader, clinfo, Rust 1.92.0+
+#   3. Install: Intel compute-runtime, OpenCL ICD loader, clinfo, Rust 1.93.0+
 #   4. Remove the `if: false` condition from each job.
 #   5. Optionally adjust cron schedule (currently 3:00 AM UTC daily).
 
@@ -40,7 +40,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
 
       - name: Verify Intel GPU present
         run: |
@@ -72,7 +72,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
 
       - name: Build kernels (oneapi)
         run: cargo build --locked --no-default-features --features oneapi -p bitnet-kernels
@@ -103,7 +103,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
 
       - name: Build (release, oneapi)
         run: cargo build --locked --release --no-default-features --features oneapi,cpu -p bitnet-kernels
@@ -136,7 +136,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
         with:
-          toolchain: "1.92.0"
+          toolchain: "1.93.0"
 
       - name: Build (release, oneapi)
         run: cargo build --locked --release --no-default-features --features oneapi,cpu -p bitnet-kernels

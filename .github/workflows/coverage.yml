@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RUST_CI_IMAGE: ghcr.io/effortlessmetrics/bitnet-rs-ci:rust-1.92
+  RUST_CI_IMAGE: ghcr.io/effortlessmetrics/bitnet-rs-ci:rust-1.93
 
 jobs:
   coverage:

@@ -1642,6 +1642,7 @@ version = "0.2.1-dev"
 name = "bitnet-test-support"
 version = "0.2.1-dev"
 dependencies = [
+ "anyhow",
  "bitnet-test-env",
  "insta",
  "proptest",

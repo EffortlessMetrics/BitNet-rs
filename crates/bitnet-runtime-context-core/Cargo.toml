@@ -26,3 +26,6 @@ insta.workspace = true
 proptest.workspace = true
 serial_test.workspace = true
 temp-env.workspace = true
+
+[lints]
+workspace = true

@@ -18,3 +18,6 @@ include = [
 [dependencies]
 bitnet-testing-policy-state-core = { path = "../bitnet-testing-policy-state-core", version = "0.2.1-dev" }
 bitnet-testing-policy-interop = { path = "../bitnet-testing-policy-interop", version = "0.2.1-dev" }
+
+[lints]
+workspace = true

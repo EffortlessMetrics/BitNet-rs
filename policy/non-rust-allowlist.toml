@@ -1,0 +1,1095 @@
+schema_version = "1.0"
+
+# policy/non-rust-allowlist.toml
+#
+# Rust and `xtask` are the default implementation surface. Non-Rust
+# files are allowed only with structured receipts that capture owner,
+# surface, classification, and the verification that covers them.
+#
+# Implicit allow: all `*.rs` files and any `Cargo.toml` are skipped by
+# the checker — they are the default implementation surface.
+#
+# Globs use a small subset: `*` matches a path segment, `**` matches
+# any path sequence, `{a,b}` is brace expansion. The checker rejects
+# files that match no allowlist entry.
+
+# ---------------------------------------------------------------------------
+# Repository configuration & metadata
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "Cargo.lock"
+kind = "manifest_lockfile"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Cargo lockfile is required for --locked reproducible builds."
+covered_by = ["cargo build --locked"]
+
+[[allow]]
+glob = "rust-toolchain.toml"
+kind = "toolchain_pin"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Pins the Rust toolchain channel and components for reproducibility."
+covered_by = ["cargo build --locked"]
+
+[[allow]]
+glob = "rustfmt.toml"
+kind = "rustfmt_config"
+owner = "core/rust"
+surface = "build"
+classification = "config"
+reason = "Rustfmt configuration for the workspace."
+covered_by = ["cargo fmt --check"]
+
+[[allow]]
+glob = "clippy.toml"
+kind = "clippy_config"
+owner = "core/rust"
+surface = "build"
+classification = "config"
+reason = "Clippy MSRV and threshold configuration."
+covered_by = ["cargo clippy"]
+
+[[allow]]
+glob = "deny.toml"
+kind = "cargo_deny_config"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "cargo-deny supply-chain policy."
+covered_by = ["cargo deny check"]
+
+[[allow]]
+glob = "taplo.toml"
+kind = "toml_formatter"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Taplo TOML formatter configuration."
+covered_by = ["taplo fmt --check"]
+
+[[allow]]
+glob = "codecov.yml"
+kind = "ci_coverage_config"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Codecov configuration."
+covered_by = ["codecov action"]
+
+[[allow]]
+glob = "build.rs"
+kind = "build_script"
+owner = "core/rust"
+surface = "build"
+classification = "production"
+reason = "Build script (Cargo treats as Rust; technically *.rs but listed for clarity)."
+covered_by = ["cargo build --locked"]
+
+[[allow]]
+glob = "mutants.toml"
+kind = "mutation_config"
+owner = "testing/oracle"
+surface = "ci"
+classification = "config"
+reason = "cargo-mutants configuration."
+covered_by = ["cargo mutants"]
+
+[[allow]]
+glob = "ripr.toml"
+kind = "ripr_config"
+owner = "testing/oracle"
+surface = "ci"
+classification = "config"
+reason = "ripr static-exposure analyzer configuration (PR 13)."
+covered_by = ["xtask check-file-policy", ".github/workflows/ripr.yml"]
+
+[[allow]]
+glob = "{Justfile,Makefile,Makefile.ci,Makefile.minimal}"
+kind = "build_runner"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Make / Just task runners used by the development environment."
+covered_by = ["xtask check-file-policy"]
+
+# ---------------------------------------------------------------------------
+# Documentation, licensing, governance
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "{README.md,CHANGELOG.md,CLAUDE.md,CONTRIBUTING.md,SECURITY.md,COMPATIBILITY.md,CODEOWNERS,CODE_OF_CONDUCT.md,LICENSE,THIRD_PARTY.md,ROADMAP.md}"
+kind = "repo_root_doc"
+owner = "docs"
+surface = "docs"
+classification = "documentation"
+reason = "Repository top-level documentation and governance files."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "docs/**"
+kind = "documentation"
+owner = "docs"
+surface = "docs"
+classification = "documentation"
+reason = "Repository documentation, design notes, and CI policy prose."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "**/README.md"
+kind = "crate_readme"
+owner = "docs"
+surface = "docs"
+classification = "documentation"
+reason = "Per-crate README files."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "**/CHANGELOG.md"
+kind = "crate_changelog"
+owner = "docs"
+surface = "docs"
+classification = "documentation"
+reason = "Per-crate CHANGELOG files."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "**/*.md"
+kind = "markdown"
+owner = "docs"
+surface = "docs"
+classification = "documentation"
+reason = "Markdown documentation throughout the workspace (design notes, READMEs, plans)."
+covered_by = ["xtask check-file-policy", "markdownlint"]
+
+# ---------------------------------------------------------------------------
+# CI, tooling configuration
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = ".github/workflows/*.yml"
+kind = "ci_declarative"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "GitHub Actions workflow definitions are platform-required YAML."
+covered_by = ["xtask ci-lane-whitelist check"]
+
+[[allow]]
+glob = ".github/workflows/*.yaml"
+kind = "ci_declarative"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "GitHub Actions workflow definitions (yaml extension)."
+covered_by = ["xtask ci-lane-whitelist check"]
+
+[[allow]]
+glob = ".github/workflows/*.disabled"
+kind = "ci_disabled_workflow"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Disabled workflows kept for history; not picked up by Actions."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".github/workflows/*.md"
+kind = "ci_documentation"
+owner = "release/ci"
+surface = "ci"
+classification = "documentation"
+reason = "Validation workflow checklists and diagrams alongside workflows."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".github/**/*.yml"
+kind = "github_config"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "GitHub repo configuration: actions, dependabot, codeowners templates."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".github/**/*.yaml"
+kind = "github_config"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "GitHub repo configuration (yaml extension)."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".github/**/*.md"
+kind = "github_documentation"
+owner = "release/ci"
+surface = "ci"
+classification = "documentation"
+reason = "GitHub PR/issue templates, copilot/agent instructions, and policy notes."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".github/CODEOWNERS"
+kind = "codeowners"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Code ownership map enforced by GitHub."
+covered_by = ["github code review"]
+
+[[allow]]
+glob = "{.gitignore,.gitattributes,.editorconfig,.dockerignore,.tokeignore,.markdownlint.jsonc,.lychee.toml,.coderabbit.yaml,.pre-commit-config.yaml,.env.example}"
+kind = "tooling_config"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Tooling and editor configuration files."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".cargo/**"
+kind = "cargo_config"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Per-repo cargo configuration."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".config/**"
+kind = "tooling_config"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Project-local tool configuration directory (nextest, etc.)."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".githooks/**"
+kind = "git_hooks"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Repo-managed git hooks."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".agent/**"
+kind = "agent_metadata"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Agent / Claude Code session metadata."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".claude/**"
+kind = "agent_metadata"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Claude Code project configuration."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".codex/**"
+kind = "agent_metadata"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Codex campaign tracker artefacts."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".copilot/**"
+kind = "agent_metadata"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "GitHub Copilot project configuration."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".jules/**"
+kind = "agent_metadata"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Jules agent configuration."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".kiro/**"
+kind = "agent_metadata"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Kiro agent configuration."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".crates.toml"
+kind = "agent_metadata"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Cargo install metadata captured for environment provenance."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".crates2.json"
+kind = "agent_metadata"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Cargo install metadata captured for environment provenance."
+covered_by = ["xtask check-file-policy"]
+
+# ---------------------------------------------------------------------------
+# Policy ledgers
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "policy/**"
+kind = "policy_ledger"
+owner = "release/ci"
+surface = "policy"
+classification = "config"
+reason = "Policy ledgers governing CI lanes, Clippy receipts, no-panic, file allowlist, ripr suppressions."
+covered_by = ["xtask policy-report"]
+
+# ---------------------------------------------------------------------------
+# Build infrastructure
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "{Dockerfile,docker-compose.yml,docker-compose.test.yml}"
+kind = "container_build"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Container build and compose configuration."
+covered_by = ["docker build"]
+
+[[allow]]
+glob = "docker/**"
+kind = "container_build"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Container build context (Dockerfiles for backends)."
+covered_by = ["docker build"]
+
+[[allow]]
+glob = "infra/**"
+kind = "infra"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Infrastructure as code (CI runners, packaging, deployment)."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "{flake.nix,flake.lock}"
+kind = "nix_flake"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Nix flake definition for reproducible developer/build environments."
+covered_by = ["nix flake check"]
+
+[[allow]]
+glob = "patches/**"
+kind = "vendor_patches"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Vendor source patches applied during builds."
+covered_by = ["cargo build"]
+
+[[allow]]
+glob = "scripts/**"
+kind = "tooling_scripts"
+owner = "release/ci"
+surface = "ci"
+classification = "tooling"
+reason = "Repo automation scripts (CI helpers, environment bootstraps, validation)."
+covered_by = ["shellcheck", "xtask check-file-policy"]
+
+[[allow]]
+glob = "bin/**"
+kind = "wrapper_scripts"
+owner = "release/ci"
+surface = "ci"
+classification = "tooling"
+reason = "Wrapper binaries / launcher scripts for the workspace."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "ci/**"
+kind = "ci_assets"
+owner = "release/ci"
+surface = "ci"
+classification = "tooling"
+reason = "CI utility scripts and report templates."
+covered_by = ["xtask check-file-policy"]
+
+# ---------------------------------------------------------------------------
+# Tests, fixtures, snapshots
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "tests/fixtures/**"
+kind = "fixture_input"
+owner = "test/fixtures"
+surface = "fixtures"
+classification = "test"
+reason = "Fixture inputs used by deterministic tests."
+covered_by = ["cargo test --workspace --features cpu"]
+
+[[allow]]
+glob = "tests/**"
+kind = "test_assets"
+owner = "test/fixtures"
+surface = "tests"
+classification = "test"
+reason = "Test assets (inputs, expected outputs, support files) under tests/."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "tests-new/**"
+kind = "test_assets"
+owner = "test/fixtures"
+surface = "tests"
+classification = "test"
+reason = "Newer test assets directory."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "**/snapshots/*.snap"
+kind = "insta_snapshot"
+owner = "test/fixtures"
+surface = "tests"
+classification = "test"
+reason = "Insta snapshot files."
+covered_by = ["cargo insta test"]
+
+[[allow]]
+glob = "**/snapshots/*.snap.new"
+kind = "insta_snapshot_pending"
+owner = "test/fixtures"
+surface = "tests"
+classification = "test"
+reason = "Pending insta snapshots awaiting review."
+covered_by = ["cargo insta accept"]
+
+[[allow]]
+glob = "**/proptest-regressions/*.txt"
+kind = "proptest_regression"
+owner = "testing/oracle"
+surface = "tests"
+classification = "test"
+reason = "proptest regression fixtures captured for replay."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "**/proptest-regressions"
+kind = "proptest_regression_marker"
+owner = "testing/oracle"
+surface = "tests"
+classification = "test"
+reason = "proptest regression directory marker."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "fuzz/**"
+kind = "fuzz_targets"
+owner = "testing/oracle"
+surface = "fuzz"
+classification = "test"
+reason = "cargo-fuzz targets and corpora."
+covered_by = ["cargo fuzz"]
+
+[[allow]]
+glob = "benches/**"
+kind = "benchmarks"
+owner = "core/runtime"
+surface = "bench"
+classification = "test"
+reason = "Criterion benches and supporting data."
+covered_by = ["cargo bench"]
+
+[[allow]]
+glob = "benchmarks/**"
+kind = "benchmarks"
+owner = "core/runtime"
+surface = "bench"
+classification = "test"
+reason = "Performance harness assets."
+covered_by = ["cargo bench"]
+
+[[allow]]
+glob = "baselines/**"
+kind = "regression_baselines"
+owner = "core/runtime"
+surface = "bench"
+classification = "test"
+reason = "Performance baseline ledgers."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "examples/**"
+kind = "examples"
+owner = "docs"
+surface = "examples"
+classification = "documentation"
+reason = "Public-facing usage examples for documentation."
+covered_by = ["cargo build --examples"]
+
+[[allow]]
+glob = "models/**"
+kind = "model_assets"
+owner = "test/fixtures"
+surface = "models"
+classification = "test"
+reason = "Model placeholders / metadata for local testing (binary GGUF excluded by gitignore)."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "media/**"
+kind = "documentation_media"
+owner = "docs"
+surface = "docs"
+classification = "documentation"
+reason = "Documentation imagery."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "assets/**"
+kind = "documentation_media"
+owner = "docs"
+surface = "docs"
+classification = "documentation"
+reason = "Documentation imagery and downloadable assets."
+covered_by = ["xtask check-file-policy"]
+
+# ---------------------------------------------------------------------------
+# Archives / historical
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "archive/**"
+kind = "historical"
+owner = "docs"
+surface = "docs"
+classification = "documentation"
+reason = "Historical artefacts retained for traceability."
+covered_by = ["xtask check-file-policy"]
+
+# ---------------------------------------------------------------------------
+# Production code: GPU shader sources
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "crates/bitnet-metal/**/*.metal"
+kind = "gpu_shader"
+owner = "gpu/metal"
+surface = "gpu"
+classification = "production"
+reason = "Metal compute shader implementation surface."
+covered_by = ["cargo check -p bitnet-metal"]
+
+[[allow]]
+glob = "crates/bitnet-vulkan-shaders/**/*.{glsl,comp,vert,frag,spv}"
+kind = "gpu_shader"
+owner = "gpu/vulkan"
+surface = "gpu"
+classification = "production"
+reason = "Vulkan GLSL/SPIR-V shader implementation surface."
+covered_by = ["cargo check -p bitnet-vulkan-shaders"]
+
+[[allow]]
+glob = "crates/bitnet-wgpu-shaders-i2s/**/*.wgsl"
+kind = "gpu_shader"
+owner = "gpu/wgpu"
+surface = "gpu"
+classification = "production"
+reason = "WGSL shader implementation surface for I2_S kernels."
+covered_by = ["cargo check -p bitnet-wgpu-shaders-i2s"]
+
+[[allow]]
+glob = "crates/bitnet-kernels/**/*.{cu,cl,comp}"
+kind = "gpu_shader"
+owner = "gpu"
+surface = "gpu"
+classification = "production"
+reason = "GPU kernel sources (CUDA, OpenCL, compute shaders)."
+covered_by = ["cargo check -p bitnet-kernels --features gpu"]
+
+[[allow]]
+glob = "crates/bitnet-kernels/**/*.hip"
+kind = "gpu_shader"
+owner = "gpu/rocm"
+surface = "gpu"
+classification = "production"
+reason = "ROCm/HIP kernel sources."
+covered_by = ["cargo check -p bitnet-kernels"]
+
+[[allow]]
+glob = "crates/bitnet-spirv/**"
+kind = "gpu_shader_artifact"
+owner = "gpu"
+surface = "gpu"
+classification = "production"
+reason = "SPIR-V shader assets and their loader stubs."
+covered_by = ["cargo check -p bitnet-spirv"]
+
+# ---------------------------------------------------------------------------
+# Production code: FFI
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "crates/bitnet-ffi/include/**"
+kind = "ffi_header"
+owner = "ffi"
+surface = "ffi"
+classification = "production"
+reason = "Public C header surface published by the FFI crate."
+covered_by = ["cargo check -p bitnet-ffi"]
+
+[[allow]]
+glob = "crates/bitnet-ffi/**/*.{c,h,cc,cpp}"
+kind = "ffi_surface"
+owner = "ffi"
+surface = "ffi"
+classification = "production"
+reason = "C/C++ FFI surface for the Rust C ABI bridge."
+covered_by = ["cargo check -p bitnet-ffi"]
+
+[[allow]]
+glob = "crates/bitnet-sys/**/*.{c,h,cc,cpp}"
+kind = "ffi_surface"
+owner = "ffi"
+surface = "ffi"
+classification = "production"
+reason = "C/C++ system bindings surface."
+covered_by = ["cargo check -p bitnet-sys"]
+
+[[allow]]
+glob = "crates/bitnet-ggml-ffi/**/*.{c,h,cc,cpp}"
+kind = "ffi_surface"
+owner = "ffi"
+surface = "ffi"
+classification = "production"
+reason = "GGML cross-validation FFI surface."
+covered_by = ["cargo check -p bitnet-ggml-ffi"]
+
+[[allow]]
+glob = "crates/bitnet-kernels/**/*.{cpp,c,cc,h}"
+kind = "ffi_surface"
+owner = "kernels"
+surface = "ffi"
+classification = "production"
+reason = "C/C++ bridge code for kernels."
+covered_by = ["cargo check -p bitnet-kernels"]
+
+[[allow]]
+glob = "include/**"
+kind = "ffi_header"
+owner = "ffi"
+surface = "ffi"
+classification = "production"
+reason = "Repository-level FFI headers and public ABI surfaces."
+covered_by = ["cargo check"]
+
+# ---------------------------------------------------------------------------
+# Production code: Python and WASM bindings
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "crates/bitnet-py/**/*.py"
+kind = "python_binding"
+owner = "bindings/python"
+surface = "language-binding"
+classification = "production"
+reason = "Python package and binding surface."
+covered_by = ["cargo check -p bitnet-py"]
+
+[[allow]]
+glob = "crates/bitnet-py/**/*.{ipynb,toml,cfg,in}"
+kind = "python_binding_assets"
+owner = "bindings/python"
+surface = "language-binding"
+classification = "production"
+reason = "Python package metadata and example notebooks."
+covered_by = ["cargo check -p bitnet-py"]
+
+[[allow]]
+glob = "crates/bitnet-py/pyproject.toml"
+kind = "python_binding_manifest"
+owner = "bindings/python"
+surface = "language-binding"
+classification = "production"
+reason = "Python build/metadata manifest."
+covered_by = ["maturin build"]
+
+[[allow]]
+glob = "crates/bitnet-wasm/**/*.{js,ts,html,wasm}"
+kind = "wasm_binding"
+owner = "bindings/wasm"
+surface = "language-binding"
+classification = "production"
+reason = "WASM JS/TS surface and built artefacts."
+covered_by = ["cargo check -p bitnet-wasm"]
+
+[[allow]]
+glob = "crates/bitnet-wasm/**/*.{toml,html,json,md}"
+kind = "wasm_binding_assets"
+owner = "bindings/wasm"
+surface = "language-binding"
+classification = "production"
+reason = "WASM example assets and manifests."
+covered_by = ["cargo check -p bitnet-wasm"]
+
+# ---------------------------------------------------------------------------
+# Production code: configuration consumed at runtime
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "config/**"
+kind = "runtime_config"
+owner = "core/runtime"
+surface = "runtime"
+classification = "production"
+reason = "Runtime configuration files consumed by the CLI/server."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "src/**"
+kind = "rust_assets"
+owner = "core/runtime"
+surface = "lib"
+classification = "production"
+reason = "Repository root crate non-Rust source assets."
+covered_by = ["cargo test"]
+
+# ---------------------------------------------------------------------------
+# Tooling & misc Python
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "tools/**/*.py"
+kind = "tooling_scripts"
+owner = "release/ci"
+surface = "ci"
+classification = "tooling"
+reason = "Python helpers used by xtask, validation, and CI."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "tools/**"
+kind = "tooling_assets"
+owner = "release/ci"
+surface = "ci"
+classification = "tooling"
+reason = "Workspace tools: validators, generators, helpers."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "**/build.rs"
+kind = "build_script"
+owner = "core/rust"
+surface = "build"
+classification = "production"
+reason = "Per-crate build scripts."
+covered_by = ["cargo build --locked"]
+
+[[allow]]
+glob = "**/Cargo.toml"
+kind = "crate_manifest"
+owner = "core/rust"
+surface = "build"
+classification = "production"
+reason = "Cargo manifests are part of the implementation surface (and validated by lint-inheritance)."
+covered_by = ["xtask check-lint-inheritance"]
+
+# ---------------------------------------------------------------------------
+# Crate-local non-Rust assets (test data, generated sources, schemas)
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "crates/**/tests/data/**"
+kind = "test_data"
+owner = "test/fixtures"
+surface = "tests"
+classification = "test"
+reason = "Per-crate test data assets."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "crates/**/tests/**/*.{json,toml,txt,yaml,yml,gguf,bin,csv,proptest-regressions}"
+kind = "test_data"
+owner = "test/fixtures"
+surface = "tests"
+classification = "test"
+reason = "Per-crate test inputs and expected outputs."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "crates/**/fixtures/**"
+kind = "test_data"
+owner = "test/fixtures"
+surface = "tests"
+classification = "test"
+reason = "Per-crate fixture directories."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "crates/**/templates/**"
+kind = "templates"
+owner = "core/runtime"
+surface = "runtime"
+classification = "production"
+reason = "Prompt templates and other runtime templates consumed at runtime."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "crates/**/data/**"
+kind = "runtime_data"
+owner = "core/runtime"
+surface = "runtime"
+classification = "production"
+reason = "Runtime data (vocab, preset configurations, codepoint tables)."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "crates/**/examples/**"
+kind = "crate_examples"
+owner = "docs"
+surface = "examples"
+classification = "documentation"
+reason = "Per-crate examples (Rust, JSON, JS, etc.)."
+covered_by = ["cargo build --examples"]
+
+[[allow]]
+glob = "crates/**/benches/**"
+kind = "crate_benches"
+owner = "core/runtime"
+surface = "bench"
+classification = "test"
+reason = "Per-crate Criterion benches."
+covered_by = ["cargo bench"]
+
+[[allow]]
+glob = "crates/**/.gitkeep"
+kind = "directory_marker"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Empty-directory markers."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "**/.gitkeep"
+kind = "directory_marker"
+owner = "release/ci"
+surface = "build"
+classification = "config"
+reason = "Empty-directory markers."
+covered_by = ["xtask check-file-policy"]
+
+# ---------------------------------------------------------------------------
+# Cross-validation external tree
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "crossval/**"
+kind = "crossval_assets"
+owner = "ffi"
+surface = "crossval"
+classification = "production"
+reason = "C++ cross-validation harness assets."
+covered_by = ["cargo check -p bitnet-crossval"]
+
+# ---------------------------------------------------------------------------
+# Vendor / archive
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = "**/.proptest-regressions"
+kind = "proptest_regression_marker"
+owner = "testing/oracle"
+surface = "tests"
+classification = "test"
+reason = "proptest regression directory marker (top-level)."
+covered_by = ["cargo test"]
+
+# ---------------------------------------------------------------------------
+# Additional surfaces uncovered by initial sweep
+# ---------------------------------------------------------------------------
+
+[[allow]]
+glob = ".github/images/**"
+kind = "ci_image_assets"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Container image build context for the workspace CI image."
+covered_by = ["docker build"]
+
+[[allow]]
+glob = ".github/review/**"
+kind = "review_artifacts"
+owner = "release/ci"
+surface = "ci"
+classification = "documentation"
+reason = "Review evidence retained inline for traceability."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".github/review-workflows/**"
+kind = "review_artifacts"
+owner = "release/ci"
+surface = "ci"
+classification = "documentation"
+reason = "Mutation/coverage workflow review notes retained for traceability."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = ".github/workflows/.guards-trigger"
+kind = "ci_marker"
+owner = "release/ci"
+surface = "ci"
+classification = "config"
+reason = "Marker file used to force the guards workflow to re-run."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "crates/bitnet-ffi/cbindgen.toml"
+kind = "ffi_header_generator_config"
+owner = "ffi"
+surface = "ffi"
+classification = "production"
+reason = "cbindgen configuration for generating the public C header surface."
+covered_by = ["cargo run -p bitnet-ffi --bin cbindgen-or-similar"]
+
+[[allow]]
+glob = "crates/bitnet-ffi/bindings/**"
+kind = "ffi_language_bindings"
+owner = "ffi"
+surface = "language-binding"
+classification = "production"
+reason = "Hand-maintained C# / C++ language bindings shipped with the FFI crate."
+covered_by = ["cargo check -p bitnet-ffi"]
+
+[[allow]]
+glob = "crates/bitnet-ffi/build_c_test.{sh,bat}"
+kind = "ffi_test_runner"
+owner = "ffi"
+surface = "ffi"
+classification = "tooling"
+reason = "Helper scripts that build and run the FFI C-side smoke test."
+covered_by = ["shellcheck", "cargo test -p bitnet-ffi"]
+
+[[allow]]
+glob = "crates/bitnet-ggml-ffi/csrc/**"
+kind = "vendored_csrc"
+owner = "ffi"
+surface = "ffi"
+classification = "production"
+reason = "Vendored GGML / GGML quants C sources for cross-validation."
+covered_by = ["cargo check -p bitnet-ggml-ffi"]
+
+[[allow]]
+glob = "crates/bitnet-py/python/**"
+kind = "python_binding_assets"
+owner = "bindings/python"
+surface = "language-binding"
+classification = "production"
+reason = "Built Python package contents (stubs, py.typed marker, generated artefacts)."
+covered_by = ["maturin build"]
+
+[[allow]]
+glob = "crates/bitnet-rocm/**/*.hip"
+kind = "gpu_shader"
+owner = "gpu/rocm"
+surface = "gpu"
+classification = "production"
+reason = "ROCm/HIP kernel sources in the dedicated rocm crate."
+covered_by = ["cargo check -p bitnet-rocm"]
+
+[[allow]]
+glob = "crates/bitnet-webgpu/**/*.{wgsl,glsl}"
+kind = "gpu_shader"
+owner = "gpu/wgpu"
+surface = "gpu"
+classification = "production"
+reason = "WebGPU/WGSL kernel sources for the dedicated webgpu crate."
+covered_by = ["cargo check -p bitnet-webgpu"]
+
+[[allow]]
+glob = "crates/**/proptest-regressions/**"
+kind = "proptest_regression"
+owner = "testing/oracle"
+surface = "tests"
+classification = "test"
+reason = "proptest regression fixtures stored per-crate."
+covered_by = ["cargo test"]
+
+[[allow]]
+glob = "**/*.rs.disabled"
+kind = "disabled_test"
+owner = "test/fixtures"
+surface = "tests"
+classification = "test"
+reason = "Test files temporarily disabled while their target API is unstable."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "**/VENDORED_*"
+kind = "vendor_marker"
+owner = "ffi"
+surface = "ffi"
+classification = "config"
+reason = "Marker files recording the upstream commit / version of vendored sources."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "**/GGML_VERSION"
+kind = "vendor_marker"
+owner = "ffi"
+surface = "ffi"
+classification = "config"
+reason = "Vendored GGML version marker."
+covered_by = ["xtask check-file-policy"]
+
+[[allow]]
+glob = "xtask/ci/**"
+kind = "xtask_ci_assets"
+owner = "release/ci"
+surface = "ci"
+classification = "tooling"
+reason = "xtask CI assets (golden inputs, configuration)."
+covered_by = ["cargo test -p xtask"]
+
+[[allow]]
+glob = "xtask/src/**/*.txt"
+kind = "xtask_inline_data"
+owner = "release/ci"
+surface = "ci"
+classification = "tooling"
+reason = "xtask inline patch / data files included via include_str!."
+covered_by = ["cargo test -p xtask"]
+
+[[allow]]
+glob = "xtask/tests/**"
+kind = "xtask_test_assets"
+owner = "release/ci"
+surface = "tests"
+classification = "test"
+reason = "xtask integration test fixtures and helpers."
+covered_by = ["cargo test -p xtask"]

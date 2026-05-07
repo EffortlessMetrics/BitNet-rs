@@ -1,0 +1,18 @@
+schema_version = "1.0"
+
+# clippy-debt.toml records crate- or path-scoped technical debt that
+# blocks promoting a Clippy lint to `deny`. Each entry must have an
+# owner, a reason, an `expires` date, and a `status`. PR 08 introduces
+# this file in advisory mode; the Clippy strict flip in PR 12
+# requires every active debt entry to either be receipted or removed.
+
+# Initial entries are placeholders documenting the staging strategy.
+# Add real debt as crates fail Clippy promotion.
+
+# [[debt]]
+# lint = "clippy::arithmetic_side_effects"
+# path = "crates/bitnet-kernels/**"
+# owner = "numeric-kernels"
+# reason = "Kernel arithmetic needs explicit checked/wrapping/saturating policy before promotion."
+# expires = "2026-07-01"
+# status = "active"

@@ -8,3 +8,6 @@ description = "Build script helpers for FFI compilation (AC6 FFI build hygiene)"
 
 [dependencies]
 cc = "1.2.46"
+
+[lints]
+workspace = true

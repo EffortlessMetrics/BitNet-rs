@@ -1,0 +1,33 @@
+# ripr — static oracle-gap analysis for BitNet-rs
+#
+# ripr asks: does the changed Rust behavior appear gripped by a
+# meaningful test discriminator? It is mutation-testing-lite, run at
+# static-analysis prices. It does not run mutants and does not
+# replace mutation testing.
+#
+# In this rollout (PR 13) ripr runs advisory only: every severity
+# emits an annotation but the workflow never fails the merge.
+# Promotion is later, after baseline behavior is understood.
+
+[analysis]
+mode = "diff"
+
+[policy]
+# Empty `fail_on` keeps the workflow advisory.
+fail_on = []
+
+[report]
+max_related_tests = 8
+include_context = true
+
+[severity]
+exposed = "notice"
+weakly_exposed = "warning"
+reachable_unrevealed = "warning"
+no_static_path = "notice"
+infection_unknown = "notice"
+propagation_unknown = "notice"
+static_unknown = "notice"
+
+[suppressions]
+path = "policy/ripr-suppressions.toml"

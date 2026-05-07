@@ -1,0 +1,94 @@
+name: Policy
+
+on:
+  pull_request:
+    paths:
+      - "policy/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "clippy.toml"
+      - ".github/workflows/policy.yml"
+      - "xtask/**"
+      - "**/*.rs"
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Cancel old runs on the same branch.
+concurrency:
+  group: policy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: Policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.93.0"
+
+      - name: Cache cargo
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57  # v4.2.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: policy-${{ runner.os }}-1.93.0-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            policy-${{ runner.os }}-1.93.0-
+
+      - name: ci-lane-whitelist check
+        run: |
+          cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check \
+            --report-dir target/bitnet/reports
+
+      - name: file-policy check
+        run: |
+          cargo run --locked -p xtask --no-default-features -- check-file-policy \
+            --report-dir target/bitnet/reports \
+            --fail-on-error
+
+      - name: lint-inheritance check
+        run: |
+          cargo run --locked -p xtask --no-default-features -- check-lint-inheritance \
+            --report-dir target/bitnet/reports
+
+      - name: clippy-exceptions check
+        run: |
+          cargo run --locked -p xtask --no-default-features -- check-clippy-exceptions \
+            --report-dir target/bitnet/reports
+
+      - name: no-panic-family check
+        run: |
+          cargo run --locked -p xtask --no-default-features -- check-no-panic-family \
+            --report-dir target/bitnet/reports
+
+      - name: Aggregate policy report
+        if: always()
+        run: |
+          cargo run --locked -p xtask --no-default-features -- policy-report \
+            --report-dir target/bitnet/reports
+
+      - name: Upload policy reports
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
+        with:
+          name: policy-reports
+          path: target/bitnet/reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Step summary
+        if: always()
+        run: |
+          if [ -f target/bitnet/reports/policy-report.md ]; then
+            cat target/bitnet/reports/policy-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi

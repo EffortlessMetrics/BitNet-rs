@@ -6,7 +6,7 @@ Essential guidance for working with the bitnet-rs codebase.
 
 - **Name:** bitnet-rs — 1-bit LLM inference engine in Rust
 - **Version:** v0.2.1-dev (pre-alpha)
-- **MSRV:** 1.92.0 (Rust 2024 edition, pinned in `rust-toolchain.toml`)
+- **MSRV: 1.93.0 (Rust 2024 edition, pinned in `rust-toolchain.toml`)
 - **Status:** CPU inference works with SIMD optimization. GPU backends are scaffolded but not validated. Do not use in production.
 
 ## Build and Test

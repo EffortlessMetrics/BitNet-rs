@@ -593,7 +593,7 @@ Before submitting a PR, ensure:
    This verifies:
    - ✅ All GitHub Actions are SHA-pinned (no floating @v3, @main, etc.)
    - ✅ All action pins use 40-hex commit SHAs (immutable)
-   - ✅ MSRV consistency (1.92.0 — see `rust-toolchain.toml`)
+   - ✅ MSRV: 1.93.0 — see `rust-toolchain.toml`)
    - ✅ All cargo/cross commands use `--locked` flags
 
    **Why run this locally?** Catches CI blockers before push, saving CI minutes and iteration time.

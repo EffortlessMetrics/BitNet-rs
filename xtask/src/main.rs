@@ -38,6 +38,7 @@ use walkdir::WalkDir;
 
 mod apple_m4;
 mod campaign;
+mod ci;
 mod cpp_setup_auto;
 mod crossval;
 pub mod ffi;
@@ -48,6 +49,7 @@ mod health_check;
 #[allow(dead_code)]
 mod model_info;
 mod model_registry;
+mod policy;
 mod tokenizers;
 mod trace_diff;
 
@@ -1011,6 +1013,171 @@ enum Cmd {
         #[command(subcommand)]
         command: apple_m4::AppleM4Cmd,
     },
+
+    /// Validate CI lane whitelist (`policy/ci-lane-whitelist.toml`).
+    #[command(name = "ci-lane-whitelist")]
+    CiLaneWhitelist {
+        #[command(subcommand)]
+        command: CiLaneWhitelistCmd,
+    },
+
+    /// Validate that every workspace crate inherits workspace lints.
+    #[command(name = "check-lint-inheritance")]
+    CheckLintInheritance {
+        #[arg(long, default_value = "Cargo.toml")]
+        manifest: PathBuf,
+        #[arg(long, default_value = "target/bitnet/reports")]
+        report_dir: PathBuf,
+        #[arg(long, default_value_t = false)]
+        fail_on_error: bool,
+    },
+
+    /// Validate `policy/non-rust-allowlist.toml` against tracked files.
+    #[command(name = "check-file-policy")]
+    CheckFilePolicy {
+        #[arg(long, default_value = "policy/non-rust-allowlist.toml")]
+        allowlist: PathBuf,
+        #[arg(long, default_value = "target/bitnet/reports")]
+        report_dir: PathBuf,
+        #[arg(long, default_value_t = false)]
+        fail_on_error: bool,
+    },
+
+    /// Detect panic-family findings against `policy/no-panic-allowlist.toml`.
+    #[command(name = "check-no-panic-family")]
+    CheckNoPanicFamily {
+        #[arg(long, default_value = "policy/no-panic-allowlist.toml")]
+        allowlist: PathBuf,
+        #[arg(long, default_value = "target/bitnet/reports")]
+        report_dir: PathBuf,
+        #[arg(long, default_value_t = false)]
+        fail_on_error: bool,
+    },
+
+    /// Validate `#[expect(clippy::...)]` exception receipts.
+    #[command(name = "check-clippy-exceptions")]
+    CheckClippyExceptions {
+        #[arg(long, default_value = "policy/clippy-exceptions.toml")]
+        exceptions: PathBuf,
+        #[arg(long, default_value = "target/bitnet/reports")]
+        report_dir: PathBuf,
+        #[arg(long, default_value_t = false)]
+        fail_on_error: bool,
+    },
+
+    /// Run every policy checker in sequence and write a combined report.
+    #[command(name = "policy-report")]
+    PolicyReport {
+        #[arg(long, default_value = "target/bitnet/reports")]
+        report_dir: PathBuf,
+    },
+
+    /// CI control-plane subcommands (LEM-aware planning, actuals).
+    Ci {
+        #[command(subcommand)]
+        command: CiCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum CiCmd {
+    /// Emit a CI actuals artefact (PR 16 scaffold).
+    Actuals {
+        #[arg(long)]
+        repo: String,
+        #[arg(long)]
+        sha: String,
+        #[arg(long)]
+        pr: Option<u64>,
+        #[arg(long)]
+        workflow: String,
+        #[arg(long)]
+        job: Option<String>,
+        #[arg(long)]
+        runner: Option<String>,
+        #[arg(long)]
+        seconds: Option<u64>,
+        #[arg(long)]
+        estimated_lem: Option<f64>,
+        #[arg(long)]
+        conclusion: Option<String>,
+        #[arg(long, default_value_t = false)]
+        cache_hit: bool,
+        #[arg(long, default_value = "target/ci/ci-actuals.json")]
+        json_out: PathBuf,
+    },
+
+    /// Compute the per-PR plan (touched areas, expected lanes, estimated LEM).
+    ///
+    /// Replaces the inline Python in `.github/workflows/pr-plan.yml`.
+    Plan {
+        /// Base SHA / ref to diff against. Defaults to `origin/main`.
+        #[arg(long)]
+        base: Option<String>,
+        /// Head SHA / ref. Defaults to `HEAD`.
+        #[arg(long)]
+        head: Option<String>,
+        /// JSON array of label names (e.g. `["full-ci","gpu-ci"]`).
+        #[arg(long = "labels-json")]
+        labels_json: Option<String>,
+        /// Read changed files from this file (one per line) instead of git diff.
+        #[arg(long)]
+        changed_file: Option<PathBuf>,
+        /// Write machine-readable plan JSON to this path.
+        #[arg(long, default_value = "ci-plan.json")]
+        json_out: PathBuf,
+        /// Append the markdown summary to this path (typically $GITHUB_STEP_SUMMARY).
+        #[arg(long)]
+        github_summary: Option<PathBuf>,
+        /// Print the JSON plan to stdout.
+        #[arg(long, default_value_t = false)]
+        print: bool,
+        /// Run the planner without writing artefacts.
+        #[arg(long, default_value_t = false)]
+        dry_run: bool,
+        /// Exit non-zero when the soft-budget guard verdict is `block`
+        /// (estimated LEM > 125 with no override label). PR 18.
+        #[arg(long, default_value_t = false)]
+        enforce_budget: bool,
+    },
+
+    /// Compute learned LEM estimates from observed actuals (PR 20).
+    Estimate {
+        /// JSONL ledger of historical actuals. One record per line:
+        /// `{"lane":"...","actual_lem":1.23,"conclusion":"success"}`.
+        #[arg(long, default_value = ".ci/metrics/ci-lane-history.jsonl")]
+        history: PathBuf,
+        /// Static lane cost table (used as the lower bound for the estimate).
+        #[arg(long, default_value = "policy/ci-lanes.toml")]
+        lanes_toml: PathBuf,
+        /// Output path for the learned-estimate report.
+        #[arg(long, default_value = "target/ci/ci-lane-estimates.json")]
+        json_out: PathBuf,
+        /// Print the report to stdout in addition to writing it.
+        #[arg(long, default_value_t = false)]
+        print: bool,
+        /// Number of recent runs per lane to consider (rolling window).
+        #[arg(long, default_value_t = 50)]
+        window: usize,
+    },
+}
+
+#[derive(Subcommand)]
+enum CiLaneWhitelistCmd {
+    /// Check the whitelist for completeness, expirations, and runner coverage.
+    Check {
+        #[arg(long, default_value = ".github/workflows")]
+        workflows: PathBuf,
+        #[arg(long, default_value = "policy/ci-lane-whitelist.toml")]
+        whitelist: PathBuf,
+        #[arg(long, default_value = "policy/ci-whitelist-exceptions.toml")]
+        exceptions: PathBuf,
+        #[arg(long, default_value = "target/bitnet/reports")]
+        report_dir: PathBuf,
+        /// Exit non-zero if any error is reported.
+        #[arg(long, default_value_t = false)]
+        fail_on_error: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1338,7 +1505,142 @@ fn real_main() -> Result<()> {
         }
         Cmd::Campaign { command } => campaign::run(command),
         Cmd::AppleM4 { command } => apple_m4::run(command),
+        Cmd::CiLaneWhitelist { command } => match command {
+            CiLaneWhitelistCmd::Check {
+                workflows,
+                whitelist,
+                exceptions,
+                report_dir,
+                fail_on_error,
+            } => policy::ci_lanes::run(
+                workflows,
+                whitelist,
+                exceptions,
+                Some(report_dir),
+                fail_on_error,
+            ),
+        },
+        Cmd::CheckLintInheritance { manifest, report_dir, fail_on_error } => {
+            policy::lints::run(manifest, report_dir, fail_on_error)
+        }
+        Cmd::CheckFilePolicy { allowlist, report_dir, fail_on_error } => {
+            policy::file_policy::run(allowlist, report_dir, fail_on_error)
+        }
+        Cmd::CheckNoPanicFamily { allowlist, report_dir, fail_on_error } => {
+            policy::no_panic::run(allowlist, report_dir, fail_on_error)
+        }
+        Cmd::CheckClippyExceptions { exceptions, report_dir, fail_on_error } => {
+            policy::clippy::run(exceptions, report_dir, fail_on_error)
+        }
+        Cmd::PolicyReport { report_dir } => run_policy_report(report_dir),
+        Cmd::Ci { command } => match command {
+            CiCmd::Actuals {
+                repo,
+                sha,
+                pr,
+                workflow,
+                job,
+                runner,
+                seconds,
+                estimated_lem,
+                conclusion,
+                cache_hit,
+                json_out,
+            } => ci::actuals::run(
+                repo,
+                sha,
+                pr,
+                workflow,
+                job,
+                runner,
+                seconds,
+                estimated_lem,
+                conclusion,
+                cache_hit,
+                json_out,
+            ),
+            CiCmd::Plan {
+                base,
+                head,
+                labels_json,
+                changed_file,
+                json_out,
+                github_summary,
+                print,
+                dry_run,
+                enforce_budget,
+            } => ci::plan::run(
+                base,
+                head,
+                labels_json,
+                changed_file,
+                if dry_run { None } else { Some(json_out) },
+                if dry_run { None } else { github_summary },
+                print,
+                enforce_budget,
+            ),
+            CiCmd::Estimate { history, lanes_toml, json_out, print, window } => {
+                ci::estimate::run(history, lanes_toml, json_out, print, window)
+            }
+        },
     }
+}
+
+fn run_policy_report(report_dir: PathBuf) -> Result<()> {
+    fs::create_dir_all(&report_dir)
+        .with_context(|| format!("creating policy report dir {}", report_dir.display()))?;
+
+    // Each checker is non-fatal here; the aggregated markdown summarises.
+    println!("== ci-lane-whitelist ==");
+    let _ = policy::ci_lanes::run(
+        PathBuf::from(".github/workflows"),
+        PathBuf::from("policy/ci-lane-whitelist.toml"),
+        PathBuf::from("policy/ci-whitelist-exceptions.toml"),
+        Some(report_dir.clone()),
+        false,
+    );
+    println!("== lint-inheritance ==");
+    let _ = policy::lints::run(PathBuf::from("Cargo.toml"), report_dir.clone(), false);
+    println!("== file-policy ==");
+    let _ = policy::file_policy::run(
+        PathBuf::from("policy/non-rust-allowlist.toml"),
+        report_dir.clone(),
+        false,
+    );
+    println!("== no-panic-family ==");
+    let _ = policy::no_panic::run(
+        PathBuf::from("policy/no-panic-allowlist.toml"),
+        report_dir.clone(),
+        false,
+    );
+    println!("== clippy-exceptions ==");
+    let _ = policy::clippy::run(
+        PathBuf::from("policy/clippy-exceptions.toml"),
+        report_dir.clone(),
+        false,
+    );
+
+    let combined = report_dir.join("policy-report.md");
+    let mut md = String::new();
+    md.push_str("# BitNet-rs Policy Report\n\n");
+    for (label, file) in [
+        ("CI Lane Whitelist", "ci-lane-whitelist.json"),
+        ("Lint Inheritance", "lint-inheritance.json"),
+        ("File Policy", "file-policy.json"),
+        ("No-Panic Family", "no-panic.json"),
+        ("Clippy Exceptions", "clippy-exceptions.json"),
+    ] {
+        md.push_str(&format!("## {label}\n\n"));
+        let path = report_dir.join(file);
+        if path.exists() {
+            md.push_str(&format!("- artifact: `{}`\n\n", path.display()));
+        } else {
+            md.push_str("- artifact: (not produced)\n\n");
+        }
+    }
+    fs::write(&combined, md).with_context(|| format!("writing {}", combined.display()))?;
+    println!("policy-report written to {}", combined.display());
+    Ok(())
 }
 
 // JSON event structure for CI/CD pipelines

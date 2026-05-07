@@ -1,0 +1,172 @@
+name: PR Gate
+
+# PR Gate Success — the single required check that branch protection
+# should gate merges on (PR 19 of the strict policy / CI economics
+# rollout). The job aggregates the conclusions of the upstream
+# default-PR workflows that this rollout treats as authoritative:
+#
+#   * CI Core      (ci-core-success aggregator inside ci-core.yml)
+#   * Feature Matrix PR
+#   * Policy       (added in PR 04)
+#
+# The aggregator does *not* require ripr-advisory (PR 13), the
+# macOS / GPU / Docker / Coverage / Crossval / Property lanes, or
+# any deep / nightly / labelled lane. Those run only when the
+# planner or labels select them; making them required would defeat
+# the rollout's LEM-economics goal.
+#
+# Posture in this PR:
+#
+#   * The workflow runs on every pull_request and emits a single
+#     "PR Gate Success" check.
+#   * It is *not* yet wired into branch protection. The migration
+#     (`Settings -> Branches -> main -> Required status checks`)
+#     happens in a separate change once one full sprint of these
+#     conclusions has been observed.
+#   * Until then, the existing `ci-core-success` summary remains
+#     the source of truth for branch protection.
+#
+# Aggregation strategy:
+#
+#   GitHub Actions does not allow `needs:` across workflows in the
+#   same `pull_request` event. Two pragmatic options exist:
+#
+#     a) `workflow_run` trigger: spawns a follow-up after each upstream
+#        workflow completes. Loses the "single check on the PR" UX.
+#     b) A dedicated job in this workflow that polls the GitHub
+#        Checks API for the upstream conclusions on the same head SHA.
+#
+#   This PR uses option (b) because branch protection wants a single
+#   required check that returns a single conclusion on the PR head.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pr-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+  actions: read
+
+jobs:
+  pr-gate-success:
+    name: PR Gate Success
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Determine head SHA
+        id: head
+        env:
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          FALLBACK: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          sha="${PR_HEAD:-$FALLBACK}"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Head SHA: $sha"
+
+      - name: Wait for upstream lanes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          HEAD_SHA: ${{ steps.head.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          # Upstream lanes that gate the PR. Names must match the
+          # `name:` field of each upstream job *exactly*.
+          # Required upstream lanes that gate the PR. Names must match
+          # the `name:` field of each upstream job *exactly*. The
+          # feature-matrix.yml `pr-check` matrix has no aggregator
+          # job, so we list each matrix label individually.
+          required_jobs=(
+            "CI Core Success"
+            "Policy"
+            "pr-check (no-features)"
+            "pr-check (cpu)"
+            "pr-check (cpu+full-cli)"
+          )
+
+          # Optional lanes whose `skipped` is acceptable but `failure`
+          # is not. (Empty in this PR; PR 17's risk-pack routing is the
+          # right place to enforce gating on conditionally-required
+          # lanes.)
+          optional_jobs=()
+
+          # Poll for up to 25 minutes (50 * 30s). Most PRs take ~10-15
+          # minutes for these lanes. Anything beyond 25 minutes warrants
+          # human intervention.
+          deadline=$((SECONDS + 1500))
+          api="repos/${OWNER}/${REPO}/commits/${HEAD_SHA}/check-runs"
+          missing="${required_jobs[*]}"
+
+          while [ $SECONDS -lt $deadline ]; do
+            payload=$(gh api -H 'Accept: application/vnd.github+json' \
+              "${api}?per_page=100" || true)
+            if [ -z "$payload" ]; then
+              echo "Empty API response; retrying"
+              sleep 30
+              continue
+            fi
+
+            pending=()
+            failures=()
+            for name in "${required_jobs[@]}"; do
+              status=$(printf '%s' "$payload" | jq -r --arg n "$name" \
+                '[.check_runs[]? | select(.name == $n)] | sort_by(.started_at) | last | .status // "missing"')
+              conclusion=$(printf '%s' "$payload" | jq -r --arg n "$name" \
+                '[.check_runs[]? | select(.name == $n)] | sort_by(.started_at) | last | .conclusion // ""')
+              echo "  $name -> status=$status conclusion=$conclusion"
+              if [ "$status" != "completed" ]; then
+                pending+=("$name")
+              elif [ "$conclusion" = "success" ]; then
+                : # ok
+              elif [ "$conclusion" = "skipped" ]; then
+                # Required jobs must not be skipped.
+                failures+=("$name (skipped)")
+              else
+                failures+=("$name ($conclusion)")
+              fi
+            done
+
+            if [ ${#failures[@]} -gt 0 ]; then
+              echo "❌ Required upstream lane(s) did not succeed:"
+              for f in "${failures[@]}"; do echo "  - $f"; done
+              exit 1
+            fi
+            if [ ${#pending[@]} -eq 0 ]; then
+              echo "✅ All required upstream lanes succeeded"
+              exit 0
+            fi
+            echo "Waiting for ${#pending[@]} upstream lane(s); checking again in 30s..."
+            sleep 30
+          done
+
+          echo "❌ Timed out waiting for upstream lanes after 25 minutes"
+          exit 1
+
+      - name: Step summary
+        if: always()
+        env:
+          OUTCOME: ${{ job.status }}
+        run: |
+          {
+            echo "## PR Gate Success"
+            echo ""
+            echo "| Required upstream lane | Status |"
+            echo "|---|---|"
+            echo "| CI Core Success | gate input |"
+            echo "| Policy | gate input |"
+            echo "| Feature Matrix PR | gate input |"
+            echo ""
+            echo "_PR Gate Success is **not yet branch-protection-required**;"
+            echo "it ships in observation mode in PR 19 of the rollout. See"
+            echo "\`docs/ci/pr-gate-success.md\`._"
+          } >> "$GITHUB_STEP_SUMMARY"

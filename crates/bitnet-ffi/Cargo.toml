@@ -48,3 +48,6 @@ cpu = []
 cuda = ["cudarc", "bitnet-inference/cuda"]
 gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
 ffi-tests = []
+
+[lints]
+workspace = true

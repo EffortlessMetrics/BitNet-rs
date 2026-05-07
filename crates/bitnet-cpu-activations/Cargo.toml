@@ -12,3 +12,6 @@ description = "CPU activation kernels extracted as an SRP microcrate"
 
 [dependencies]
 libm = "0.2.16"
+
+[lints]
+workspace = true
