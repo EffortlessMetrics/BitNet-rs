@@ -206,10 +206,7 @@ impl MultiHeadAttention {
     pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         let n_heads = config.model.num_heads;
-        let head_dim = config
-            .model
-            .attention_head_dim
-            .unwrap_or_else(|| hidden_size / n_heads);
+        let head_dim = config.model.attention_head_dim.unwrap_or_else(|| hidden_size / n_heads);
 
         if config.model.attention_head_dim.is_none() && !hidden_size.is_multiple_of(n_heads) {
             return Err(BitNetError::Validation(format!(
@@ -1028,10 +1025,7 @@ impl KVCache {
             )));
         }
 
-        let head_dim = config
-            .model
-            .attention_head_dim
-            .unwrap_or_else(|| hidden_size / n_heads);
+        let head_dim = config.model.attention_head_dim.unwrap_or_else(|| hidden_size / n_heads);
         let max_seq_len = config.model.max_position_embeddings;
 
         let mut layers = Vec::with_capacity(n_layers);
