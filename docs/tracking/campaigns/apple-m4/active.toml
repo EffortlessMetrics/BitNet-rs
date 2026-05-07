@@ -489,7 +489,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-015"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4/M4-015-steady-decode-profile"
 stackable = false
 requires_human_merge = true
@@ -524,7 +524,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-016"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4/M4-016-hot-loop-allocation-audit"
 stackable = false
 requires_human_merge = true
