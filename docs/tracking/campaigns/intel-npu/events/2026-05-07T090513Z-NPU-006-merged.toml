@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T09:05:13Z"
+campaign = "intel-npu"
+item = "NPU-006"
+event = "merged"
+pr = 3860
+merge_sha = "e0152fee429ee28eba97eeda2ec23ba642c77e04"
+actor = "maintainer"
+
+notes = [
+  "Intel NPU probe and tiny graph smoke receipts now include structured backend_runtime, shape_contract, fallback_policy, graph, timing, and kernels_or_graphs fields.",
+  "The receipts keep fallback_used=false and preserve the no BitNet inference, no NPU acceleration, no QK256 decode, and no CPU fallback claim boundary.",
+]

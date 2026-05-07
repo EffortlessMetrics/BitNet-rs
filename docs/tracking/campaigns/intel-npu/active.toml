@@ -202,7 +202,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-006"
-status = "ready"
+status = "merged"
 branch = "codex/intel-npu/NPU-006-receipt-fields"
 stackable = false
 review_mode = "codex_premerge"
