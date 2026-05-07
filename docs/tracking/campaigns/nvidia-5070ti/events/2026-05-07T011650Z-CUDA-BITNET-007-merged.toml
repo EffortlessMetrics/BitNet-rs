@@ -1,0 +1,14 @@
+timestamp = "2026-05-07T01:16:50Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-007"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 3806
+merge_sha = "d9a1dd19048b0367300cfd8d085572acda148280"
+actor = "codex"
+
+notes = [
+  "Merged the strict short-decode BitNet CUDA proof.",
+  "The proof receipt records 37 prompt tokens, 8 generated tokens, 1680 qk256_gemv_cuda invocations, zero BitNet linear CPU fallback, CUDA memory high-water sampling, KV-cache behavior, and speedup_claim=false.",
+]
