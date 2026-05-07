@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T14:22:18Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-001"
+event = "merged"
+pr = 3898
+merge_sha = "3d8d556cb7bb44957d3d34b8a0e2ba128371ed51"
+actor = "codex"
+
+notes = [
+  "CPU-ANSWER-001 merged as #3898 to add strict CPU answer-readiness gates and a tiny deterministic answer corpus.",
+  "The answer-corpus receipt records prompt/generated token IDs, decoded text, selected CPU backend/kernel identity, fallback=false, and pass/fail answer quality without claiming general chat quality, server inference, GPU, NPU, or sustained throughput.",
+]

@@ -477,8 +477,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-001"
-status = "pr_open"
+status = "merged"
 pr = 3898
+merge_sha = "3d8d556cb7bb44957d3d34b8a0e2ba128371ed51"
 branch = "codex/cpu-answer-001-strict-answer-readiness"
 stackable = false
 review_mode = "codex_premerge"
