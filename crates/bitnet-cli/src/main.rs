@@ -556,6 +556,17 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Run selected static BitNet subgraph parity on OpenVINO NPU
+    IntelNpuBitnetSubgraph {
+        /// Require selected subgraph parity to pass
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// Output JSON parity receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Run validation-only preflight checks
     Validate {
         #[command(subcommand)]
@@ -870,6 +881,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::IntelNpuSmoke { strict, json_out }) => {
             handle_intel_npu_smoke_command(strict, json_out).await
+        }
+        Some(Commands::IntelNpuBitnetSubgraph { strict, json_out }) => {
+            handle_intel_npu_bitnet_subgraph_command(strict, json_out).await
         }
         Some(Commands::Validate { action }) => handle_validate_command(action).await,
         Some(Commands::CudaSmoke { device_index, json_out }) => {
@@ -1459,6 +1473,137 @@ async fn handle_intel_npu_smoke_command(
     let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
     let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
     let receipt = build_intel_npu_smoke_receipt(npu, smoke, strict, timestamp_utc, artifact_path);
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+
+    if strict && let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+fn build_intel_npu_bitnet_subgraph_receipt(
+    probe: bitnet_device_probe::IntelNpuProbe,
+    parity: bitnet_device_probe::runtimes::OpenVinoNpuBitnetSubgraphParity,
+    strict: bool,
+    timestamp_utc: String,
+    artifact_path: Option<String>,
+) -> serde_json::Value {
+    let selected_backend =
+        parity.selected_backend.clone().or_else(|| probe.selected_backend.clone());
+    let runtime_api = parity.runtime_api.clone().or_else(|| probe.runtime_api.clone());
+    let runtime_device = parity.runtime_device.clone().or_else(|| probe.runtime_device.clone());
+    let backend_runtime = serde_json::json!({
+        "name": "openvino",
+        "version": parity.openvino_version.clone().or_else(|| probe.openvino_version.clone()),
+        "device": runtime_device.clone(),
+        "device_name": probe.openvino_npu_full_name.clone(),
+        "driver_version": probe.driver_version.clone(),
+        "compiler_version": probe.compiler_version.clone(),
+        "max_tiles": probe.max_tiles,
+    });
+    let shape_contract = serde_json::json!({
+        "shape_mode": parity.shape_mode.clone(),
+        "input_shape": parity.input_shape.clone(),
+        "output_shape": parity.output_shape.clone(),
+    });
+    let fallback_policy = serde_json::json!({
+        "fallback_used": parity.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "cpu_fallback_allowed": parity.cpu_fallback_allowed,
+    });
+    let error = if strict && !parity.passed {
+        Some(parity.error.clone().unwrap_or_else(|| {
+            "strict Intel NPU BitNet subgraph parity requires selected subgraph pass".to_owned()
+        }))
+    } else {
+        parity.error.clone()
+    };
+    let claim = if parity.passed {
+        "openvino_npu_bitnet_subgraph_parity_passed"
+    } else if probe.openvino_npu_visible {
+        "openvino_npu_bitnet_subgraph_parity_failed"
+    } else if probe.available {
+        "intel_npu_runtime_visibility_recorded_without_bitnet_subgraph"
+    } else {
+        "intel_npu_unavailable"
+    };
+
+    serde_json::json!({
+        "schema": 1,
+        "artifact_kind": "intel_npu_bitnet_subgraph_parity",
+        "machine_id": "intel-258v",
+        "hardware_lane": "intel-npu-openvino",
+        "proof_stage": parity.proof_stage.clone(),
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": probe.requested_backend.clone(),
+        "selected_backend": selected_backend,
+        "runtime_api": runtime_api,
+        "runtime_device": runtime_device,
+        "backend_runtime": backend_runtime,
+        "shape_contract": shape_contract,
+        "shape_mode": parity.shape_mode.clone(),
+        "strict_mode": strict,
+        "fallback_used": parity.fallback_used,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "fallback_policy": fallback_policy,
+        "cpu_fallback_allowed": parity.cpu_fallback_allowed,
+        "kernel_execution": false,
+        "graph_execution": parity.graph_execution,
+        "bitnet_inference": parity.bitnet_inference,
+        "qk256_decode": parity.qk256_decode,
+        "subgraph": {
+            "name": parity.subgraph_name.clone(),
+            "bitnet_op": parity.bitnet_op.clone(),
+            "precision": parity.precision.clone(),
+            "reference_path": parity.reference_path.clone(),
+            "shape_mode": parity.shape_mode.clone(),
+            "input_shape": parity.input_shape.clone(),
+            "output_shape": parity.output_shape.clone(),
+            "epsilon": parity.epsilon,
+            "max_abs_error": parity.max_abs_error,
+            "mean_abs_error": parity.mean_abs_error,
+            "tolerance": parity.tolerance,
+            "result": if parity.passed { "pass" } else { "fail" },
+        },
+        "timing": {
+            "first_ever_compile_and_infer_ms": null,
+            "cached_compile_ms": parity.compile_ms,
+            "steady_state_infer_ms": null,
+            "compile_ms": parity.compile_ms,
+            "first_infer_ms": parity.first_infer_ms,
+        },
+        "kernels_or_graphs": [
+            "bitnet_rmsnorm_openvino_npu"
+        ],
+        "npu": probe,
+        "openvino_subgraph": parity,
+        "claim": claim,
+        "must_not_claim": [
+            "Full BitNet inference works on Intel NPU",
+            "Intel NPU accelerates BitNet",
+            "Packed BitNet QK256 decode works on Intel NPU",
+            "CPU fallback satisfies NPU proof"
+        ],
+        "artifact_path": artifact_path,
+        "error": error,
+    })
+}
+
+async fn handle_intel_npu_bitnet_subgraph_command(
+    strict: bool,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    let openvino = bitnet_device_probe::runtimes::openvino::probe_openvino();
+    let npu = bitnet_device_probe::intel::lunar_lake::probe_intel_npu(&openvino);
+    let parity = bitnet_device_probe::runtimes::run_openvino_npu_bitnet_subgraph_parity();
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt =
+        build_intel_npu_bitnet_subgraph_receipt(npu, parity, strict, timestamp_utc, artifact_path);
 
     write_json_output(json_out.as_ref(), &receipt)?;
 
@@ -5565,6 +5710,190 @@ mod tests {
         assert_eq!(
             receipt["claim"],
             "intel_npu_runtime_visibility_recorded_without_openvino_graph"
+        );
+        assert_eq!(receipt["error"], "OpenVINO did not report NPU");
+    }
+
+    #[test]
+    fn intel_npu_bitnet_subgraph_receipt_records_parity_only() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: Some("intel-npu-openvino".to_string()),
+            runtime_api: Some("openvino".to_string()),
+            runtime_device: Some("NPU".to_string()),
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: true,
+            openvino_version: Some("2026.1".to_string()),
+            openvino_available_devices: vec!["CPU".to_string(), "NPU".to_string()],
+            openvino_npu_visible: true,
+            openvino_npu_full_name: Some("Intel(R) AI Boost".to_string()),
+            supported_properties: vec!["FULL_DEVICE_NAME".to_string()],
+            driver_version: Some("1.2.3".to_string()),
+            compiler_version: Some("4.5.6".to_string()),
+            total_mem_size: Some(1024),
+            alloc_mem_size: Some(128),
+            max_tiles: Some(1),
+            fallback_used: false,
+            failure_reason: None,
+        };
+        let parity = bitnet_device_probe::runtimes::OpenVinoNpuBitnetSubgraphParity {
+            passed: true,
+            proof_stage: "parity_tested".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: Some("intel-npu-openvino".to_string()),
+            runtime_api: Some("openvino".to_string()),
+            runtime_device: Some("NPU".to_string()),
+            openvino_version: Some("2026.1".to_string()),
+            openvino_available_devices: vec!["CPU".to_string(), "NPU".to_string()],
+            subgraph_name: "bitnet_rmsnorm_f16_1x16".to_string(),
+            bitnet_op: "rmsnorm".to_string(),
+            reference_path: "cpu_numpy_rmsnorm_f32".to_string(),
+            shape_mode: "static".to_string(),
+            input_shape: vec![1, 16],
+            output_shape: Some(vec![1, 16]),
+            precision: "F16".to_string(),
+            epsilon: 0.00001,
+            tolerance: 0.005,
+            max_abs_error: Some(0.0009),
+            mean_abs_error: Some(0.0002),
+            compile_ms: Some(14.5),
+            first_infer_ms: Some(1.5),
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: true,
+            bitnet_inference: false,
+            qk256_decode: false,
+            error: None,
+        };
+        let receipt = build_intel_npu_bitnet_subgraph_receipt(
+            probe,
+            parity,
+            true,
+            "2026-05-06T00:00:00Z".to_string(),
+            Some("ci/hardware/intel-258v/2026-05-06/npu-bitnet-subgraph.json".to_string()),
+        );
+
+        assert_eq!(receipt["artifact_kind"], "intel_npu_bitnet_subgraph_parity");
+        assert_eq!(receipt["proof_stage"], "parity_tested");
+        assert_eq!(receipt["requested_backend"], "intel-npu");
+        assert_eq!(receipt["selected_backend"], "intel-npu-openvino");
+        assert_eq!(receipt["runtime_api"], "openvino");
+        assert_eq!(receipt["runtime_device"], "NPU");
+        assert_eq!(receipt["backend_runtime"]["name"], "openvino");
+        assert_eq!(receipt["backend_runtime"]["version"], "2026.1");
+        assert_eq!(receipt["shape_contract"]["shape_mode"], "static");
+        assert_eq!(receipt["shape_contract"]["input_shape"], serde_json::json!([1, 16]));
+        assert_eq!(receipt["shape_contract"]["output_shape"], serde_json::json!([1, 16]));
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["cpu_fallback_allowed"], false);
+        assert_eq!(receipt["graph_execution"], true);
+        assert_eq!(receipt["kernel_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["qk256_decode"], false);
+        assert_eq!(receipt["subgraph"]["name"], "bitnet_rmsnorm_f16_1x16");
+        assert_eq!(receipt["subgraph"]["bitnet_op"], "rmsnorm");
+        assert_eq!(receipt["subgraph"]["reference_path"], "cpu_numpy_rmsnorm_f32");
+        assert_eq!(receipt["subgraph"]["result"], "pass");
+        assert_eq!(receipt["timing"]["cached_compile_ms"], 14.5);
+        assert_eq!(receipt["timing"]["first_infer_ms"], 1.5);
+        assert_eq!(
+            receipt["kernels_or_graphs"],
+            serde_json::json!(["bitnet_rmsnorm_openvino_npu"])
+        );
+        assert_eq!(receipt["claim"], "openvino_npu_bitnet_subgraph_parity_passed");
+        assert!(receipt["error"].is_null());
+    }
+
+    #[test]
+    fn strict_intel_npu_bitnet_subgraph_records_error_without_fallback() {
+        let probe = bitnet_device_probe::IntelNpuProbe {
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            os: "windows".to_string(),
+            arch: "x86_64".to_string(),
+            available: true,
+            accel_device_present: false,
+            accel_devices: Vec::new(),
+            intel_vpu_driver_seen: true,
+            driver_hint: Some("intel_vpu/ivpu evidence".to_string()),
+            openvino_runtime_available: false,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            openvino_npu_visible: false,
+            openvino_npu_full_name: None,
+            supported_properties: Vec::new(),
+            driver_version: None,
+            compiler_version: None,
+            total_mem_size: None,
+            alloc_mem_size: None,
+            max_tiles: None,
+            fallback_used: false,
+            failure_reason: Some("OpenVINO NPU was not visible".to_string()),
+        };
+        let parity = bitnet_device_probe::runtimes::OpenVinoNpuBitnetSubgraphParity {
+            passed: false,
+            proof_stage: "runtime_detected".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            subgraph_name: "bitnet_rmsnorm_f16_1x16".to_string(),
+            bitnet_op: "rmsnorm".to_string(),
+            reference_path: "cpu_numpy_rmsnorm_f32".to_string(),
+            shape_mode: "static".to_string(),
+            input_shape: vec![1, 16],
+            output_shape: None,
+            precision: "F16".to_string(),
+            epsilon: 0.00001,
+            tolerance: 0.005,
+            max_abs_error: None,
+            mean_abs_error: None,
+            compile_ms: None,
+            first_infer_ms: None,
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: false,
+            bitnet_inference: false,
+            qk256_decode: false,
+            error: Some("OpenVINO did not report NPU".to_string()),
+        };
+        let receipt = build_intel_npu_bitnet_subgraph_receipt(
+            probe,
+            parity,
+            true,
+            "2026-05-06T00:00:00Z".to_string(),
+            None,
+        );
+
+        assert_eq!(receipt["artifact_kind"], "intel_npu_bitnet_subgraph_parity");
+        assert_eq!(receipt["proof_stage"], "runtime_detected");
+        assert!(receipt["selected_backend"].is_null());
+        assert!(receipt["runtime_api"].is_null());
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["cpu_fallback_allowed"], false);
+        assert_eq!(receipt["shape_contract"]["shape_mode"], "static");
+        assert_eq!(receipt["shape_contract"]["input_shape"], serde_json::json!([1, 16]));
+        assert!(receipt["shape_contract"]["output_shape"].is_null());
+        assert_eq!(receipt["graph_execution"], false);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["qk256_decode"], false);
+        assert_eq!(
+            receipt["claim"],
+            "intel_npu_runtime_visibility_recorded_without_bitnet_subgraph"
         );
         assert_eq!(receipt["error"], "OpenVINO did not report NPU");
     }
