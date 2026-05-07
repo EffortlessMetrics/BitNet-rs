@@ -23,9 +23,9 @@
 //! ```
 
 use std::collections::HashSet;
-use std::sync::{Mutex, OnceLock};
 #[cfg(test)]
 use std::sync::TryLockError;
+use std::sync::{Mutex, OnceLock};
 
 /// Global registry of seen warning keys.
 ///
@@ -63,15 +63,7 @@ fn get_registry() -> &'static Mutex<HashSet<String>> {
 /// warn_once_fn("model_fallback", "Falling back to CPU for unsupported operation"); // DEBUG level
 /// ```
 pub fn warn_once_fn(key: &str, message: &str) {
-    let registry = get_registry();
-    // Recover from poisoned lock - we don't care if a thread panicked while holding it
-    let is_first_occurrence = {
-        let mut seen = match registry.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        };
-        seen.insert(key.to_string())
-    };
+    let is_first_occurrence = record_warning_occurrence(key);
 
     if is_first_occurrence {
         // First occurrence - log at WARN level
@@ -82,13 +74,20 @@ pub fn warn_once_fn(key: &str, message: &str) {
     }
 }
 
+fn record_warning_occurrence(key: &str) -> bool {
+    let registry = get_registry();
+    // Recover from poisoned lock - we don't care if a thread panicked while holding it
+    let mut seen = match registry.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    seen.insert(key.to_string())
+}
+
 #[cfg(test)]
 fn registry_lock_is_available_for_test() -> bool {
     let registry = get_registry();
-    matches!(
-        registry.try_lock(),
-        Ok(_) | Err(TryLockError::Poisoned(_))
-    )
+    matches!(registry.try_lock(), Ok(_) | Err(TryLockError::Poisoned(_)))
 }
 
 /// Macro for convenient warn-once logging.
@@ -133,12 +132,12 @@ pub fn clear_registry_for_test() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicBool, Ordering};
     use serial_test::serial;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use tracing::Subscriber;
-    use tracing_subscriber::layer::{Context, Layer};
     use tracing_subscriber::EnvFilter;
     use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::layer::{Context, Layer};
     use tracing_subscriber::util::SubscriberInitExt;
 
     /// Test helper to capture tracing output
@@ -303,6 +302,16 @@ mod tests {
         assert!(seen.contains("key_a"));
         assert!(seen.contains("key_b"));
         assert!(seen.contains("key_c"));
+    }
+
+    #[test]
+    #[serial]
+    fn test_record_warning_occurrence_reports_first_insert_only() {
+        clear_registry_for_test();
+
+        assert!(record_warning_occurrence("record_once"));
+        assert!(!record_warning_occurrence("record_once"));
+        assert!(record_warning_occurrence("record_other"));
     }
 
     struct RegistryLockProbeLayer {
