@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T15:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-000"
+event = "merged"
+pr = 3902
+merge_sha = "d6bedd49b357c35681ef66c38f7bdab519f6973b"
+actor = "codex"
+
+notes = [
+  "SLM-CPU-000 merged as #3902 to create the separate 8250U dense SLM CPU proof lane.",
+  "The lane remains separate from BitNet QK256/I2_S proof, server, GPU, NPU, and throughput claims.",
+]

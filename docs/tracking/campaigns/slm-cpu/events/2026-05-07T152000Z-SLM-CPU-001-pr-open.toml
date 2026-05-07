@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T15:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-001"
+event = "pr_open"
+pr = 3905
+head_sha = "c1ebbe7f092c2deb2d3607946ad4578eadb1986f"
+actor = "codex"
+
+notes = [
+  "Opened #3905 to add the SLM CPU model candidate manifest, artifact policy, and 8250U runbook.",
+  "The first candidate class is Qwen2.5-0.5B-Instruct GGUF Q4_K_M or Q8_0, pending exact artifact path, SHA256, architecture string, tokenizer metadata, tensor names, and chat-template policy verification.",
+]
