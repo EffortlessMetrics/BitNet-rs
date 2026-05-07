@@ -1,0 +1,14 @@
+timestamp = "2026-05-07T22:49:00Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-003"
+event = "closeout"
+pr = 3937
+merge_sha = "9bd6595349ed65f187f76c5e155254b5b0def61d"
+actor = "codex"
+
+notes = [
+  "Closed PR #3937 as a parity-foundation checkpoint, not as SLM-M4-003 completion.",
+  "The checkpoint proves Qwen ChatML prompt IDs match llama.cpp and records first-token divergence: reference token 198 versus Rust token 24723.",
+  "SLM-M4-003 remains in_progress because Rust-native Apple M4 SLM coherent answers are not proven.",
+  "Next slice should add debug-only tensor traces before more dense Qwen architecture fixes.",
+]

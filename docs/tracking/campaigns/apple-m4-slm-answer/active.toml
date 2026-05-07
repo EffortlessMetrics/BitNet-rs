@@ -117,13 +117,12 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-003"
-status = "pr_open"
+status = "in_progress"
 branch = "codex/apple-m4-slm-answer/SLM-M4-003-rust-cli-answer"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-pr = 3937
 blocked_by = ["SLM-M4-002"]
 acceptance = "Run the validated dense SLM through the Rust CLI with apple-m4-cpu-neon, strict loader/tokenizer behavior, explicit fallback status, coherent answer text, generated token IDs, and timing in receipts."
 commands = [
