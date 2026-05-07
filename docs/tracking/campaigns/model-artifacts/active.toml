@@ -68,7 +68,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-ARTIFACT-002"
-status = "pr_open"
+status = "blocked"
 pr = 3928
 branch = "codex/model-artifacts/MODEL-ARTIFACT-002-reference-good-bitnet"
 stackable = false
