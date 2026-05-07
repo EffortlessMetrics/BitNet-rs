@@ -15,6 +15,7 @@ pub fn offline_enabled(cli_offline: bool) -> bool {
 
 #[must_use]
 fn is_truthy_env_value(value: &str) -> bool {
+    let value = value.trim();
     value.eq_ignore_ascii_case("1")
         || value.eq_ignore_ascii_case("true")
         || value.eq_ignore_ascii_case("yes")
@@ -84,7 +85,7 @@ mod tests {
         assert!(!offline_enabled(false));
         assert!(offline_enabled(true));
 
-        for truthy in ["1", "true", "TRUE", "yes", "YES", "on", "ON"] {
+        for truthy in ["1", "true", "TRUE", " yes ", "YES", "on", "ON"] {
             unsafe { std::env::set_var("BITNET_OFFLINE", truthy) };
             assert!(
                 offline_enabled(false),
