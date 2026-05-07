@@ -76,7 +76,12 @@ pub fn apply_min_p(probs: &mut [f32], min_p: f32) {
     let max_prob = probs.iter().copied().fold(0.0f32, f32::max);
     let threshold = min_p * max_prob;
     for p in probs.iter_mut() {
-        if *p < threshold {
+        // Skip writing zero over an already-zero slot; this avoids a needless
+        // store in the common case of sparse probability vectors after a
+        // top-k/top-p stage. The branch is cheap relative to the store, and
+        // the visible result is identical (every kept value either passes the
+        // threshold or is zeroed).
+        if *p > 0.0 && *p < threshold {
             *p = 0.0;
         }
     }
@@ -92,22 +97,26 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
         return;
     }
 
-    let indexed: Vec<(usize, f32)> =
-        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
-    if indexed.is_empty() {
+    // First pass: collect non-zero probabilities, accumulate entropy, and
+    // cache surprise (-p.ln()) so we don't re-evaluate ln() per element.
+    let mut entropy = 0.0f32;
+    let mut deviations: Vec<(usize, f32, f32)> = Vec::with_capacity(probs.len());
+    for (i, &p) in probs.iter().enumerate() {
+        if p > 0.0 {
+            let surprise = -p.ln();
+            entropy += p * surprise;
+            deviations.push((i, p, surprise));
+        }
+    }
+
+    if deviations.is_empty() {
         return;
     }
 
-    let entropy: f32 = indexed.iter().map(|&(_, p)| -p * p.ln()).sum();
-
-    let mut deviations: Vec<(usize, f32, f32)> = indexed
-        .into_iter()
-        .map(|(i, p)| {
-            let surprise = -p.ln();
-            let deviation = (surprise - entropy).abs();
-            (i, p, deviation)
-        })
-        .collect();
+    // Second pass: turn the cached surprise into the deviation from entropy.
+    for entry in &mut deviations {
+        entry.2 = (entry.2 - entropy).abs();
+    }
 
     deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
 
@@ -197,6 +206,79 @@ mod tests {
         let non_zero = probs.iter().filter(|&&p| p > 0.0).count();
         assert!(non_zero >= 1);
         assert!(non_zero < probs.len());
+    }
+
+    #[test]
+    fn typical_handles_all_zero_distribution() {
+        // The fused implementation must early-return without dividing by zero
+        // or sorting an empty deviation vector.
+        let mut probs = vec![0.0f32; 8];
+        apply_typical(&mut probs, 0.5);
+        assert!(probs.iter().all(|&p| p == 0.0));
+    }
+
+    #[test]
+    fn typical_handles_single_nonzero_distribution() {
+        // Only one token has positive probability — entropy collapses to
+        // p * (-ln p), the single deviation is zero, so the token is kept.
+        let mut probs = vec![0.0f32, 1.0, 0.0, 0.0];
+        apply_typical(&mut probs, 0.5);
+        assert!(probs[1] > 0.0);
+        assert!(probs.iter().enumerate().filter(|&(_, &p)| p > 0.0).count() == 1);
+    }
+
+    #[test]
+    fn typical_handles_sparse_post_topk_distribution() {
+        // After a hypothetical top-k stage many entries are exactly zero. The
+        // surprise cache must skip those without including them in the
+        // entropy or sorting them as ties.
+        let mut probs = vec![0.0f32, 0.0, 0.6, 0.0, 0.4, 0.0];
+        apply_typical(&mut probs, 0.95);
+        let kept: Vec<usize> =
+            probs.iter().enumerate().filter(|&(_, &p)| p > 0.0).map(|(i, _)| i).collect();
+        // The two non-zero entries must remain available; zeros stay zero.
+        assert!(!kept.is_empty());
+        for &i in &[0_usize, 1, 3, 5] {
+            assert_eq!(probs[i], 0.0, "untouched zero at index {i}");
+        }
+    }
+
+    #[test]
+    fn typical_no_op_when_threshold_is_one() {
+        // typical_p == 1.0 is the documented no-op short-circuit.
+        let mut probs = vec![0.5f32, 0.25, 0.25];
+        let original = probs.clone();
+        apply_typical(&mut probs, 1.0);
+        assert_eq!(probs, original);
+    }
+
+    #[test]
+    fn min_p_skip_zero_writes_does_not_change_outputs() {
+        // The "skip writing zero over an already-zero slot" optimization must
+        // produce the same final vector as a naive pass that writes zero
+        // unconditionally.
+        let mut probs = vec![0.0f32, 0.5, 0.3, 0.0, 0.05, 0.0];
+        let mut reference = probs.clone();
+        apply_min_p(&mut probs, 0.2);
+
+        // Reference implementation: always write.
+        let max_prob = reference.iter().copied().fold(0.0f32, f32::max);
+        let threshold = 0.2 * max_prob;
+        for p in reference.iter_mut() {
+            if *p < threshold {
+                *p = 0.0;
+            }
+        }
+        assert_eq!(probs, reference);
+    }
+
+    #[test]
+    fn min_p_keeps_max_token() {
+        // With min_p > 0 the maximum token must always be kept (its value is
+        // the threshold's reference point).
+        let mut probs = vec![0.6f32, 0.3, 0.05, 0.05];
+        apply_min_p(&mut probs, 0.5);
+        assert!(probs[0] > 0.0);
     }
 
     proptest::proptest! {
