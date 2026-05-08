@@ -116,6 +116,8 @@ pub enum TemplateType {
     Instruct,
     /// LLaMA-3 chat format with special tokens
     Llama3Chat,
+    /// Microsoft BitNet.cpp answer-ready reference envelope
+    BitnetCppAnswer,
     /// Phi-4 ChatML format with im_start/im_end tokens
     Phi4Chat,
     /// Qwen ChatML format with im_start/im_end tokens
@@ -238,6 +240,10 @@ impl std::str::FromStr for TemplateType {
             "raw" => Ok(Self::Raw),
             "instruct" => Ok(Self::Instruct),
             "llama3-chat" | "llama3_chat" => Ok(Self::Llama3Chat),
+            "bitnetcpp-answer"
+            | "bitnet-cpp-answer"
+            | "microsoft-bitnet-answer"
+            | "msft-bitnet-answer" => Ok(Self::BitnetCppAnswer),
             "phi4-chat" | "phi4_chat" | "phi4" | "chatml" => Ok(Self::Phi4Chat),
             "qwen-chat" | "qwen_chat" | "qwen" => Ok(Self::QwenChat),
             "gemma-chat" | "gemma_chat" | "gemma" => Ok(Self::GemmaChat),
@@ -298,7 +304,7 @@ impl std::str::FromStr for TemplateType {
             "phi2-instruct" | "phi-2-instruct" | "phi2" => Ok(Self::Phi2Instruct),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
-                 llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
+                 llama3-chat, bitnetcpp-answer, phi4-chat, qwen-chat, gemma-chat, \
                  mistral-chat, deepseek-chat, starcoder, falcon-chat, \
                  codellama-instruct, cohere-command, internlm-chat, \
                  yi-chat, baichuan-chat, chatglm-chat, mpt-instruct, \
@@ -327,6 +333,7 @@ impl std::fmt::Display for TemplateType {
             Self::Raw => write!(f, "raw"),
             Self::Instruct => write!(f, "instruct"),
             Self::Llama3Chat => write!(f, "llama3-chat"),
+            Self::BitnetCppAnswer => write!(f, "bitnetcpp-answer"),
             Self::Phi4Chat => write!(f, "phi4-chat"),
             Self::QwenChat => write!(f, "qwen-chat"),
             Self::GemmaChat => write!(f, "gemma-chat"),
@@ -1203,6 +1210,7 @@ impl TemplateType {
             Self::Raw => user_text.to_string(),
             Self::Instruct => Self::apply_instruct(user_text, system_prompt),
             Self::Llama3Chat => Self::apply_llama3_chat(user_text, system_prompt),
+            Self::BitnetCppAnswer => Self::apply_bitnetcpp_answer(user_text, system_prompt),
             Self::Phi4Chat => Self::apply_phi4_chat(user_text, system_prompt),
             Self::QwenChat => Self::apply_qwen_chat(user_text, system_prompt),
             Self::GemmaChat => Self::apply_gemma_chat(user_text, system_prompt),
@@ -1328,6 +1336,23 @@ impl TemplateType {
         // Start assistant response
         result.push_str("<|start_header_id|>assistant<|end_header_id|>\n\n");
 
+        result
+    }
+
+    /// Apply the Microsoft BitNet.cpp answer-ready reference envelope.
+    ///
+    /// This mirrors the MODEL-ARTIFACT-007 reference runner prompt:
+    /// `User: {question}<|eot_id|>Assistant:`.
+    fn apply_bitnetcpp_answer(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        if let Some(system) = system_prompt.filter(|system| !system.trim().is_empty()) {
+            result.push_str("System: ");
+            result.push_str(system);
+            result.push_str("<|eot_id|>");
+        }
+        result.push_str("User: ");
+        result.push_str(user_text);
+        result.push_str("<|eot_id|>Assistant:");
         result
     }
 
@@ -2029,6 +2054,7 @@ impl TemplateType {
             Self::Raw => vec![],
             Self::Instruct => vec!["\n\nQ:".to_string(), "\n\nHuman:".to_string()],
             Self::Llama3Chat => vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
+            Self::BitnetCppAnswer => vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
             Self::Phi4Chat => vec!["<|im_end|>".to_string(), "<|endoftext|>".to_string()],
             Self::QwenChat => {
                 vec!["<|im_end|>".to_string(), "<|endoftext|>".to_string()]
@@ -2204,6 +2230,7 @@ impl TemplateType {
         match self {
             Self::Raw | Self::Instruct => true,
             Self::Llama3Chat => false, // Template includes <|begin_of_text|>
+            Self::BitnetCppAnswer => true, // Reference envelope has no literal BOS marker
             Self::Phi4Chat => false,   // ChatML uses im_start/im_end tokens
             Self::QwenChat => false,   // ChatML uses im_start/im_end tokens
             Self::GemmaChat => false,  // Uses start_of_turn/end_of_turn tokens
@@ -2269,6 +2296,7 @@ impl TemplateType {
         matches!(
             self,
             Self::Llama3Chat
+                | Self::BitnetCppAnswer
                 | Self::Phi4Chat
                 | Self::QwenChat
                 | Self::GemmaChat
@@ -2342,6 +2370,21 @@ impl TemplateType {
 
                 // Start assistant response
                 write!(out, "<|start_header_id|>assistant<|end_header_id|>\n\n")?;
+            }
+            TemplateType::BitnetCppAnswer => {
+                if let Some(sys) = system.filter(|sys| !sys.trim().is_empty()) {
+                    write!(out, "System: {}<|eot_id|>", sys)?;
+                }
+
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => write!(out, "User: {}<|eot_id|>", turn.text)?,
+                        ChatRole::Assistant => write!(out, "Assistant: {}<|eot_id|>", turn.text)?,
+                        ChatRole::System => write!(out, "System: {}<|eot_id|>", turn.text)?,
+                    }
+                }
+
+                write!(out, "Assistant:")?;
             }
             TemplateType::Phi4Chat => {
                 // ChatML format with im_start/im_end tokens
@@ -3773,11 +3816,33 @@ mod tests {
     }
 
     #[test]
+    fn test_bitnetcpp_answer_template() {
+        let template = TemplateType::BitnetCppAnswer;
+
+        let result = template.apply("What is 2+2? Answer with only the number.", None);
+        assert_eq!(result, "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:");
+
+        let result = template.apply("Say exactly: OK", Some("Keep answers short."));
+        assert_eq!(
+            result,
+            "System: Keep answers short.<|eot_id|>User: Say exactly: OK<|eot_id|>Assistant:"
+        );
+    }
+
+    #[test]
     fn test_template_from_str() {
         assert_eq!("raw".parse::<TemplateType>().unwrap(), TemplateType::Raw);
         assert_eq!("instruct".parse::<TemplateType>().unwrap(), TemplateType::Instruct);
         assert_eq!("llama3-chat".parse::<TemplateType>().unwrap(), TemplateType::Llama3Chat);
         assert_eq!("llama3_chat".parse::<TemplateType>().unwrap(), TemplateType::Llama3Chat);
+        assert_eq!(
+            "bitnetcpp-answer".parse::<TemplateType>().unwrap(),
+            TemplateType::BitnetCppAnswer
+        );
+        assert_eq!(
+            "bitnet-cpp-answer".parse::<TemplateType>().unwrap(),
+            TemplateType::BitnetCppAnswer
+        );
         assert_eq!("phi4-chat".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
         assert_eq!("phi4_chat".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
         assert_eq!("phi4".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
@@ -3946,6 +4011,7 @@ mod tests {
         assert!(TemplateType::Raw.should_add_bos());
         assert!(TemplateType::Instruct.should_add_bos());
         assert!(!TemplateType::Llama3Chat.should_add_bos()); // Has its own BOS
+        assert!(TemplateType::BitnetCppAnswer.should_add_bos()); // Reference envelope has no BOS marker
         assert!(!TemplateType::Phi4Chat.should_add_bos()); // Uses im_start/im_end
         assert!(!TemplateType::QwenChat.should_add_bos()); // Uses im_start/im_end
         assert!(!TemplateType::GemmaChat.should_add_bos()); // Uses start_of_turn
@@ -3975,6 +4041,7 @@ mod tests {
         assert!(!TemplateType::Raw.parse_special());
         assert!(!TemplateType::Instruct.parse_special());
         assert!(TemplateType::Llama3Chat.parse_special()); // LLaMA-3 has special tokens
+        assert!(TemplateType::BitnetCppAnswer.parse_special()); // Uses <|eot_id|>
         assert!(TemplateType::Phi4Chat.parse_special()); // Phi-4 has special tokens
         assert!(TemplateType::QwenChat.parse_special()); // Qwen has special tokens
         assert!(TemplateType::GemmaChat.parse_special()); // Gemma has special tokens

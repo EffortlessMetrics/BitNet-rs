@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T05:10:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-004"
+event = "pr_open"
+pr = 3995
+head_sha = "d384df94cf9fe387c45559b280e681d81105ad50"
+actor = "codex"
+
+notes = [
+  "Opened #3995 to align the strict BitNet CPU answer corpus with the MODEL-ARTIFACT-007 Microsoft BitNet.cpp answer-ready prompt authority.",
+  "The PR adds the bitnetcpp-answer template and switches the corpus default away from the rejected llama3-chat envelope without claiming answer quality, throughput, server inference, GPU, or NPU execution.",
+]
