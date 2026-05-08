@@ -62,6 +62,12 @@ Options:
       --allocation-audit
           Include scoped hot-loop allocation counter deltas in warm-session profile receipts
 
+      --progress
+          Emit operator progress lines to stderr while validation runs
+
+      --quiet
+          Suppress validation status/progress lines; receipt artifacts are still written
+
       --json-out <PATH>
           Output aggregate warm-session receipt
 

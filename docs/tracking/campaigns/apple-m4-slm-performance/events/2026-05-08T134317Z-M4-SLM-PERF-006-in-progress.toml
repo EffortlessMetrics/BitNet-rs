@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T13:43:17Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-006"
+event = "in_progress"
+actor = "codex"
+from = "ready"
+to = "in_progress"
+
+notes = [
+  "Started streaming token output, time-to-first-token receipt aliases, quiet default logs, and operator progress for the Apple M4 SLM warm-session path.",
+  "Scope remains CLI, SLM docs, and campaign tracking only; no QK256, server, Metal kernel, model artifact, or full apple-m4-metal inference work.",
+]

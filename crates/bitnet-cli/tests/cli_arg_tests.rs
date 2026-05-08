@@ -175,6 +175,9 @@ fn slm_warm_session_help_documents_warm_receipts() {
         .stdout(predicate::str::contains("--fail-on-quality"))
         .stdout(predicate::str::contains("--require-determinism"))
         .stdout(predicate::str::contains("--allocation-audit"))
+        .stdout(predicate::str::contains("--stream"))
+        .stdout(predicate::str::contains("--progress"))
+        .stdout(predicate::str::contains("--quiet"))
         .stdout(predicate::str::contains("--json-out"))
         .stdout(predicate::str::contains("qwen2.5"));
 }
@@ -316,7 +319,9 @@ fn mac_validate_help_documents_operator_profile_set() {
         .stdout(predicate::str::contains("16/32/64 profiles"))
         .stdout(predicate::str::contains("performance"))
         .stdout(predicate::str::contains("16/32/64/128"))
-        .stdout(predicate::str::contains("--allocation-audit"));
+        .stdout(predicate::str::contains("--allocation-audit"))
+        .stdout(predicate::str::contains("--progress"))
+        .stdout(predicate::str::contains("--quiet"));
 }
 
 #[test]
@@ -1224,6 +1229,16 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     assert_eq!(receipt["session"]["session_owned_buffers"], true);
     assert_eq!(receipt["session"]["prompt_token_buffer_reused"], true);
     assert_eq!(receipt["session"]["generated_token_buffer_reused"], true);
+    assert_eq!(receipt["operator_ux"]["stream_tokens_requested"], false);
+    assert_eq!(receipt["operator_ux"]["quiet_default_logs"], true);
+    assert_eq!(receipt["operator_ux"]["time_to_first_token_receipts"], true);
+    assert_eq!(receipt["operator_ux"]["clear_failure_messages"], true);
+    assert!(
+        !receipt["speed"]["timing"]["time_to_first_token_ms"]
+            .as_array()
+            .expect("aggregate TTFT samples")
+            .is_empty()
+    );
     assert_eq!(
         receipt["session"]["kv_cache_reuse_policy"],
         "recreated_per_prompt_for_prompt_isolation"
@@ -1261,8 +1276,15 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
         assert_eq!(prompt_receipt["session_reuse"]["session_owned_buffers"], true);
         assert_eq!(prompt_receipt["session_reuse"]["prompt_token_buffer_reused"], true);
         assert_eq!(prompt_receipt["session_reuse"]["generated_token_buffer_reused"], true);
+        assert_eq!(prompt_receipt["operator_ux"]["stream_tokens_requested"], false);
+        assert_eq!(prompt_receipt["operator_ux"]["time_to_first_token_receipt"], true);
+        assert_eq!(prompt_receipt["operator_ux"]["clear_failure_messages"], true);
         assert_eq!(prompt_receipt["timing"]["model_load_ms"], 0.0);
         assert_eq!(prompt_receipt["timing"]["tokenizer_load_ms"], 0.0);
+        assert_eq!(
+            prompt_receipt["timing"]["time_to_first_token_ms"],
+            prompt_receipt["timing"]["first_token_ms"]
+        );
         assert!(
             prompt_receipt["tokens"]["generated"].as_u64().unwrap_or_default() > 0,
             "prompt should generate at least one token"
