@@ -257,6 +257,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-M4-004", "SLM-M4-005"]
+pr = 3986
 acceptance = "Measure and improve warm-answer speed by avoiding repeated model/tokenizer loads, reusing buffers and sampling/logits scratch where safe, separating prefill/decode timing, and recording warm tokens/sec without broad performance claims."
 commands = [
   "cargo fmt --all -- --check",
