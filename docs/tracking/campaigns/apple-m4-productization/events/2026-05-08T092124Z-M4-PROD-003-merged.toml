@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T09:21:24Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-003"
+event = "merged"
+pr = 4025
+merge_sha = "6dc70ec618386c322c9f69a7c8e7246741a107bb"
+actor = "codex"
+
+notes = [
+  "M4-PROD-003 Mac-oriented SLM CLI wrappers merged.",
+  "Promoted M4-PROD-004 for warm-session timing and operator threshold polish.",
+  "Closeout is tracker-only; no runtime, kernel, QK256, server, model binary, or broad performance claim changes.",
+]
