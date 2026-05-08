@@ -18,6 +18,9 @@
 - [Performance Tracking](performance-tracking.md)
 - [Performance Tuning](performance-tuning.md)
 
+## Planning / Specs
+- [WASM Inference Lane Plan](specs/wasm-inference-lane.md)
+
 ## Reference
 - [Environment Variables](environment-variables.md)
 - [Troubleshooting](troubleshooting/troubleshooting.md)

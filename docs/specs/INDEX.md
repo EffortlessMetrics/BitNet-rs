@@ -22,6 +22,20 @@ This directory contains comprehensive documentation of the BitNet.cpp API discov
 
 **When to use**: Planning and sequencing Apple Silicon acceleration work
 
+
+### wasm-inference-lane.md (New)
+**Purpose**: Planning contract and PR ladder for receipt-backed WASM CPU inference
+**Audience**: WASM/runtime/model-loader/tokenizer/receipt contributors
+
+**Contents**:
+- Explicit WASM backend labels (`wasm-cpu-scalar`, `wasm-cpu-simd`, `wasm-cpu-threads`, `wasm-browser-worker`, `wasm-wasi-sandbox`)
+- Claim gates that separate compile smoke, runtime detection, kernel parity, tiny inference, browser decode, BitNet reference parity, and benchmarking
+- Receipt schema requirements for model hashes, tokenizer source, fallback status, memory, timing, and kernel stats
+- Separate model/tokenizer artifact strategy and memory plan
+- WASM-001 through WASM-008 implementation ladder
+
+**When to use**: Planning and sequencing the WebAssembly inference lane without overclaiming scaffolded behavior
+
 ### 1. bitnet-cpp-api-requirements.md (Full Reference)
 **Purpose**: Complete API documentation with implementation examples
 **Audience**: Developers implementing the wrapper
