@@ -704,8 +704,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-PROD-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-prod/CUDA-PROD-001-strict-ask-receipt-default"
+pr = 4054
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
