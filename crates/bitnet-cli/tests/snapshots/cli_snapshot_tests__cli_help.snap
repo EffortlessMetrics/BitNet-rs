@@ -66,6 +66,7 @@ Commands:
   chat                               Interactive chat mode (streaming)
   answer-corpus                      Run the fixed CPU answer-readiness corpus through the `run` surface
   answer-parity                      Compare answer-corpus receipts for backend parity diagnostics
+  reference-compare                  Validate an external-reference divergence artifact
   slm-warm-session                   Run multiple SLM prompts in one warm process with one model/tokenizer load
   convert                            Convert between model formats
   benchmark                          Benchmark model performance
