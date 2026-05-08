@@ -110,6 +110,14 @@ mod inference_cmd {
         assert_eq!(cmd.prompt_template, "llama3-chat");
     }
 
+    /// `--prompt-template bitnetcpp-answer` is accepted.
+    #[test]
+    fn test_prompt_template_bitnetcpp_answer_accepted() {
+        let cmd = parse(&["test-cli", "--prompt-template", "bitnetcpp-answer"])
+            .expect("--prompt-template bitnetcpp-answer must be accepted");
+        assert_eq!(cmd.prompt_template, "bitnetcpp-answer");
+    }
+
     // ── system-prompt ─────────────────────────────────────────────────────────
 
     /// `--system-prompt` is optional and defaults to `None`.

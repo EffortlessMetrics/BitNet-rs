@@ -114,7 +114,7 @@ Options:
           [default: 0]
 
       --prompt-template <TEMPLATE>
-          Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+          Prompt template: auto (detect), raw, instruct, llama3-chat, bitnetcpp-answer
 
           [default: auto]
 

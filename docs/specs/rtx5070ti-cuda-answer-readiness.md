@@ -110,20 +110,17 @@ CPU baseline acceptance:
 
 ## Prompt Template Authority
 
-The answer path for the official BitNet GGUF must use an explicit Llama 3 chat
-template unless a future receipt records a different authoritative model
-template. The model-artifact gate is the authority for changing that template:
-if GGUF metadata, reference-runner evidence, or tokenizer metadata contradicts
-the Llama 3 assumption, a new answer-ready artifact record must capture the
-accepted template family before the CUDA answer lane can claim coherent output.
+The answer path for the official BitNet GGUF must use the BitNet.cpp answer
+template recorded by the CPU/reference evidence. The model-artifact gate remains
+the authority for promoting any template to answer-ready status: if GGUF
+metadata, reference-runner evidence, or tokenizer metadata changes the accepted
+template family, the answer artifact record must capture that before the CUDA
+answer lane can claim coherent output.
 
 The prompt envelope must control:
 
 - BOS handling.
-- `<|begin_of_text|>`.
-- `<|start_header_id|>system<|end_header_id|>` when a system prompt is present.
-- `<|start_header_id|>user<|end_header_id|>`.
-- `<|start_header_id|>assistant<|end_header_id|>`.
+- `User:` / `Assistant:` envelope text.
 - `<|eot_id|>` and `<|end_of_text|>` stop behavior.
 - Special-token skipping during answer decode.
 
@@ -132,9 +129,10 @@ Answer receipts must include:
 ```json
 {
   "prompt_template": {
-    "family": "llama3-chat",
+    "family": "bitnetcpp-answer",
     "bos_inserted": true,
     "assistant_prefix_inserted": true,
+    "rendered_sha256": "...",
     "stop_tokens": ["<|eot_id|>", "<|end_of_text|>"],
     "special_tokens_skipped_on_decode": true
   }
@@ -266,7 +264,7 @@ deterministic greedy answers before debugging CUDA answer quality.
 
 ### CUDA-ANSWER-002 - Prompt Template Authority
 
-Add or harden the strict Llama 3 BitNet chat template, including tokenized
+Add or harden the strict BitNet.cpp answer template, including tokenized
 envelope tests and receipt fields for BOS, assistant prefix, stop tokens, and
 special-token decode policy.
 

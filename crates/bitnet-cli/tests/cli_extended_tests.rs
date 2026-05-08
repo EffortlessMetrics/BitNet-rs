@@ -196,6 +196,7 @@ mod prompt_template_parsing {
             ("raw", TemplateType::Raw),
             ("instruct", TemplateType::Instruct),
             ("llama3-chat", TemplateType::Llama3Chat),
+            ("bitnetcpp-answer", TemplateType::BitnetCppAnswer),
         ];
         for (name, expected) in &cases {
             let got: TemplateType = name.parse().unwrap_or_else(|e| {
