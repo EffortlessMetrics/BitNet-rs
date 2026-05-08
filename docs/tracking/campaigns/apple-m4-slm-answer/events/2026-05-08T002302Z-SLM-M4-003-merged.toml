@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T00:23:02Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-003"
+event = "merged"
+pr = 3948
+merge_sha = "9690ea0c4cac05a4d47a8a86d4654a75a64789d2"
+actor = "codex"
+
+notes = [
+  "Merged Rust-native Qwen CPU/NEON answer smoke for the validated Apple M4 SLM lane.",
+  "The proof restored first-token parity for the Qwen2.5 ChatML prompt and produced coherent apple-m4-cpu-neon answer receipt evidence with fallback_used=false.",
+  "No BitNet local-answer quality, QK256, MPSGraph, Neural Engine, full apple-m4-metal inference, or general performance claim is made.",
+]
