@@ -203,6 +203,54 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "NPU-006"
+status = "merged"
+pr = 3860
+merge_sha = "e0152fee429ee28eba97eeda2ec23ba642c77e04"
+branch = "codex/intel-npu/NPU-006-receipt-fields"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["NPU-005"]
+acceptance = "Harden Intel NPU probe and tiny graph smoke receipts with structured backend_runtime, shape_contract, fallback_policy, graph identity, timing, and kernels_or_graphs fields while preserving fallback_used=false and no BitNet inference claims."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs --edition 2024",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_probe_receipt_is_visibility_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_smoke_receipt_records_static_graph_execution_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::strict_intel_npu_smoke_records_error_without_fallback -- --exact --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/intel_npu.rs",
+  "docs/specs/intel-lunar-lake-npu-roadmap.md",
+  "docs/tracking/campaigns/intel-npu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Intel NPU probe and tiny graph smoke receipts carry structured backend runtime, static-shape, graph, timing, and fallback policy fields after merge.",
+]
+must_not_claim = [
+  "BitNet inference works on Intel NPU.",
+  "Intel NPU accelerates BitNet.",
+  "Packed BitNet QK256 decode works on Intel NPU.",
+  "CPU fallback satisfies NPU proof.",
+]
+
+[[work_item]]
 id = "NPU-007"
 status = "merged"
 pr = 3873
@@ -298,52 +346,6 @@ may_claim = [
 ]
 must_not_claim = [
   "Full BitNet inference works on Intel NPU.",
-  "Intel NPU accelerates BitNet.",
-  "Packed BitNet QK256 decode works on Intel NPU.",
-  "CPU fallback satisfies NPU proof.",
-]
-
-[[work_item]]
-id = "NPU-006"
-status = "merged"
-branch = "codex/intel-npu/NPU-006-receipt-fields"
-stackable = false
-review_mode = "codex_premerge"
-merge_policy = "automerge_when_green"
-human_gate = "on_blocker_only"
-blocked_by = ["NPU-005"]
-acceptance = "Harden Intel NPU probe and tiny graph smoke receipts with structured backend_runtime, shape_contract, fallback_policy, graph identity, timing, and kernels_or_graphs fields while preserving fallback_used=false and no BitNet inference claims."
-commands = [
-  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs --edition 2024",
-  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_probe_receipt_is_visibility_only -- --exact --nocapture",
-  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_smoke_receipt_records_static_graph_execution_only -- --exact --nocapture",
-  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::strict_intel_npu_smoke_records_error_without_fallback -- --exact --nocapture",
-  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
-  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
-  "git diff --check",
-]
-allowed_paths = [
-  "crates/bitnet-cli/src/main.rs",
-  "crates/bitnet-cli/src/intel_npu.rs",
-  "docs/specs/intel-lunar-lake-npu-roadmap.md",
-  "docs/tracking/campaigns/intel-npu/**",
-  "docs/tracking/generated/**",
-]
-forbidden_paths = [
-  "crates/bitnet-models/**",
-  "crates/bitnet-tokenizers/**",
-  "crates/bitnet-quantization/**",
-  "crates/bitnet-qk256-layout-core/**",
-  "crates/bitnet-qk256-dispatch/**",
-  "crates/bitnet-kernels/**",
-  "crates/bitnet-inference/**",
-  "crates/bitnet-server/**",
-]
-may_claim = [
-  "Intel NPU probe and tiny graph smoke receipts carry structured backend runtime, static-shape, graph, timing, and fallback policy fields after merge.",
-]
-must_not_claim = [
-  "BitNet inference works on Intel NPU.",
   "Intel NPU accelerates BitNet.",
   "Packed BitNet QK256 decode works on Intel NPU.",
   "CPU fallback satisfies NPU proof.",
