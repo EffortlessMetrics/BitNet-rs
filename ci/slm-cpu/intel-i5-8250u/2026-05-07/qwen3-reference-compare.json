@@ -1,0 +1,227 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "backend_reference_compare",
+  "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+  "model_family": "qwen3",
+  "prompt_text": "What is 2+2? Answer with only the number.",
+  "prompt_template": {
+    "family": "qwen-chat",
+    "source": "explicit_cli",
+    "rendered_sha256": "b405fcaf0b81921928815e1819bd5cd72eec32e5af63006a18375d03dc5e3516"
+  },
+  "bos": false,
+  "claim_boundary": {
+    "answer_quality_claim": false,
+    "throughput_claim": false,
+    "server_claim": false,
+    "gpu_claim": false,
+    "npu_claim": false,
+    "qwen35_claim": false
+  },
+  "inputs": {
+    "bitnet_rs_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-bitnet-rs-first-token-topk.json",
+    "reference_seed_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-reference-divergence-example.json",
+    "model_path_used": "C:/Code/Rust/BitNet-rs/models/slm/Qwen3-0.6B-Q8_0.gguf"
+  },
+  "reference": {
+    "backend": "known-good-external",
+    "kernel": "external-reference",
+    "prompt_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      3838,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30,
+      21806,
+      448,
+      1172,
+      279,
+      1372,
+      13,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ],
+    "generated_ids": [
+      19
+    ],
+    "text": "4",
+    "topk_step0": [
+      [
+        19,
+        10.0
+      ],
+      [
+        20,
+        1.0
+      ]
+    ],
+    "chosen_id": 19
+  },
+  "bitnet_rs": {
+    "backend": "cpu-rust",
+    "kernel": "i2_s-avx2-reference",
+    "runtime_api": "cpu",
+    "loader_mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true,
+    "fallback_used": false,
+    "selected_backend": "cpu-rust",
+    "selected_kernel": "i2_s-avx2-reference",
+    "cpu_model": "Intel64 Family 6 Model 142 Stepping 10, GenuineIntel",
+    "cpu_features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "prompt_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      3838,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30,
+      21806,
+      448,
+      1172,
+      279,
+      1372,
+      13,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ],
+    "generated_ids": [
+      4594
+    ],
+    "text": "ł",
+    "topk_step0": [
+      [
+        4594,
+        12.70166301727295
+      ],
+      [
+        107029,
+        12.342401504516602
+      ],
+      [
+        105,
+        12.229808807373047
+      ],
+      [
+        43588,
+        11.351120948791504
+      ],
+      [
+        96365,
+        11.138113021850586
+      ],
+      [
+        71689,
+        11.103738784790039
+      ],
+      [
+        23990,
+        11.087825775146484
+      ],
+      [
+        134216,
+        10.981222152709961
+      ],
+      [
+        125676,
+        10.87973690032959
+      ],
+      [
+        31693,
+        10.494781494140625
+      ]
+    ],
+    "chosen_id": 4594,
+    "logits_dump": [
+      {
+        "step": 0,
+        "chosen_id": 4594,
+        "top_logits": [
+          {
+            "token_id": 4594,
+            "logit": 12.70166301727295
+          },
+          {
+            "token_id": 107029,
+            "logit": 12.342401504516602
+          },
+          {
+            "token_id": 105,
+            "logit": 12.229808807373047
+          },
+          {
+            "token_id": 43588,
+            "logit": 11.351120948791504
+          },
+          {
+            "token_id": 96365,
+            "logit": 11.138113021850586
+          },
+          {
+            "token_id": 71689,
+            "logit": 11.103738784790039
+          },
+          {
+            "token_id": 23990,
+            "logit": 11.087825775146484
+          },
+          {
+            "token_id": 134216,
+            "logit": 10.981222152709961
+          },
+          {
+            "token_id": 125676,
+            "logit": 10.87973690032959
+          },
+          {
+            "token_id": 31693,
+            "logit": 10.494781494140625
+          }
+        ]
+      }
+    ]
+  }
+}

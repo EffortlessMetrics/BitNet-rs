@@ -1,0 +1,248 @@
+{
+  "artifact_kind": "slm_reference_divergence_validation",
+  "claim": "slm_reference_divergence_diagnostic",
+  "comparison": {
+    "bitnet_rs": {
+      "backend": "cpu-rust",
+      "chosen_id": 4594,
+      "fallback_used": false,
+      "generated_ids": [
+        4594
+      ],
+      "kernel": "i2_s-avx2-reference",
+      "loader_mode": "real_gguf",
+      "prompt_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        448,
+        1172,
+        279,
+        1372,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "runtime_api": "cpu",
+      "text": "ł",
+      "tokenizer_source": "gguf_metadata",
+      "tokenizer_strict": true,
+      "topk_step0": [
+        [
+          4594,
+          12.70166301727295
+        ],
+        [
+          107029,
+          12.342401504516602
+        ],
+        [
+          105,
+          12.229808807373049
+        ],
+        [
+          43588,
+          11.351120948791504
+        ],
+        [
+          96365,
+          11.138113021850586
+        ],
+        [
+          71689,
+          11.10373878479004
+        ],
+        [
+          23990,
+          11.087825775146484
+        ],
+        [
+          134216,
+          10.98122215270996
+        ],
+        [
+          125676,
+          10.87973690032959
+        ],
+        [
+          31693,
+          10.494781494140623
+        ]
+      ]
+    },
+    "first_divergence": {
+      "bitnet_rs": [
+        [
+          4594,
+          12.70166301727295
+        ],
+        [
+          107029,
+          12.342401504516602
+        ],
+        [
+          105,
+          12.229808807373049
+        ],
+        [
+          43588,
+          11.351120948791504
+        ],
+        [
+          96365,
+          11.138113021850586
+        ],
+        [
+          71689,
+          11.10373878479004
+        ],
+        [
+          23990,
+          11.087825775146484
+        ],
+        [
+          134216,
+          10.98122215270996
+        ],
+        [
+          125676,
+          10.87973690032959
+        ],
+        [
+          31693,
+          10.494781494140623
+        ]
+      ],
+      "classification": "logits_or_shared_transformer_math",
+      "index": 0,
+      "phase": "logits",
+      "reference": [
+        [
+          19,
+          10.0
+        ],
+        [
+          20,
+          1.0
+        ]
+      ]
+    },
+    "passed": false,
+    "reference": {
+      "backend": "known-good-external",
+      "chosen_id": 19,
+      "fallback_used": null,
+      "generated_ids": [
+        19
+      ],
+      "kernel": "external-reference",
+      "loader_mode": null,
+      "prompt_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        448,
+        1172,
+        279,
+        1372,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "runtime_api": null,
+      "text": "4",
+      "tokenizer_source": null,
+      "tokenizer_strict": null,
+      "topk_step0": [
+        [
+          19,
+          10.0
+        ],
+        [
+          20,
+          1.0
+        ]
+      ]
+    }
+  },
+  "inputs": {
+    "artifact_path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-reference-compare.json"
+  },
+  "may_claim": [
+    "The artifact is machine-checkable against an external reference run.",
+    "First divergence evidence can separate tokenizer, prompt-template, decode, logits, and text-decoding issues.",
+    "For BitNet CPU artifacts, strict loader, tokenizer, backend, kernel, and fallback evidence was checked."
+  ],
+  "model": {
+    "family": "qwen3",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+  },
+  "must_not_claim": [
+    "BitNet-rs can run the external reference engine.",
+    "General chat quality is proven.",
+    "Sustained CPU throughput is proven.",
+    "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved."
+  ],
+  "prompt": {
+    "bos": false,
+    "bytes": null,
+    "template": {
+      "family": "qwen-chat",
+      "rendered_sha256": "b405fcaf0b81921928815e1819bd5cd72eec32e5af63006a18375d03dc5e3516",
+      "source": "explicit_cli"
+    },
+    "text": "What is 2+2? Answer with only the number."
+  },
+  "proof_stage": "external_reference_compared",
+  "schema_version": "1.0.0",
+  "speedup_claim": false,
+  "timestamp": "2026-05-08T12:59:29.305735800+00:00",
+  "validation": {
+    "failed_rules": [],
+    "passed": true
+  }
+}
