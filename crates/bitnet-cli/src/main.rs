@@ -2816,6 +2816,28 @@ async fn run_simple_generation(
         && backend_identity.selected_backend.as_str() == "nvidia-rtx-5070-ti-cuda"
         && backend_identity.runtime_api.as_str() == "cuda"
         && !backend_identity.fallback_used;
+    if strict_cuda_backend_selected {
+        answer_corpus_child_phase(
+            "cuda_runtime_libraries_start",
+            serde_json::json!({
+                "selected_backend": backend_identity.selected_backend.as_str(),
+                "runtime_api": backend_identity.runtime_api.as_str(),
+            }),
+        );
+        let cuda_bin = ensure_strict_cuda_runtime_libraries_visible()?;
+        answer_corpus_child_phase(
+            "cuda_runtime_libraries_complete",
+            serde_json::json!({
+                "added_cuda_toolkit_bin": cuda_bin.as_ref().map(|path| path.display().to_string()),
+            }),
+        );
+        if let Some(cuda_bin) = cuda_bin {
+            debug!(
+                "added CUDA Toolkit bin directory to process PATH for strict CUDA run: {}",
+                cuda_bin.display()
+            );
+        }
+    }
     let cuda_memory_before_bytes =
         strict_cuda_backend_selected.then(|| nvidia_smi_memory_used_bytes(Some(0))).flatten();
     unsafe {
@@ -4939,7 +4961,7 @@ async fn run_ask_generation(
             "--strict-cpu requires --device cpu; requested backend was {requested_backend_label}"
         );
     }
-    if strict_cuda && let Some(cuda_bin) = ensure_strict_cuda_ask_runtime_libraries_visible()? {
+    if strict_cuda && let Some(cuda_bin) = ensure_strict_cuda_runtime_libraries_visible()? {
         debug!(
             "added CUDA Toolkit bin directory to process PATH for strict CUDA ask: {}",
             cuda_bin.display()
@@ -5152,7 +5174,7 @@ fn validate_strict_cpu_answer_quality(answer_receipt: &serde_json::Value) -> Res
     )
 }
 
-fn ensure_strict_cuda_ask_runtime_libraries_visible() -> Result<Option<std::path::PathBuf>> {
+fn ensure_strict_cuda_runtime_libraries_visible() -> Result<Option<std::path::PathBuf>> {
     #[cfg(all(feature = "cuda", target_os = "windows"))]
     {
         ensure_windows_cuda_toolkit_bin_on_path()
