@@ -3,4 +3,5 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
+| intel-258v-platform | CPU258V-013 | #4036 | `codex/intel-258v-platform/CPU258V-013-warm-phase-artifacts` | Record release-built 258V warm-session strict CPU phase receipts for prefill_512 and decode_128 after the BitNet b1.58 mechanics correction, preserving real GGUF loading, explicit tokenizer resolution, selected i2_s-avx2-reference kernel, fallback=false, and phase timing claim boundaries. |
 | tracker-infra | TRACKER-003 | #3724 | `codex/tracker-infra/TRACKER-003-current-pr-reconciliation` | Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes. |

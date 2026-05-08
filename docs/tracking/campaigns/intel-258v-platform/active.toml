@@ -884,3 +884,43 @@ must_not_claim = [
   "Sustained throughput is proven.",
   "Arc 140V or Intel NPU execution is proven.",
 ]
+
+[[work_item]]
+id = "CPU258V-013"
+status = "pr_open"
+branch = "codex/intel-258v-platform/CPU258V-013-warm-phase-artifacts"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-012"]
+acceptance = "Record release-built 258V warm-session strict CPU phase receipts for prefill_512 and decode_128 after the BitNet b1.58 mechanics correction, preserving real GGUF loading, explicit tokenizer resolution, selected i2_s-avx2-reference kernel, fallback=false, and phase timing claim boundaries."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/decode_128.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The release-built 258V warm-session run emitted strict CPU phase receipts for prefill_512 and decode_128.",
+  "The run used real_gguf loading, explicit strict tokenizer resolution, selected i2_s-avx2-reference, and fallback_used=false.",
+  "prefill_512 and decode_128 are now backed by emitted warm-session profile receipts for the 258V CPU lane.",
+]
+must_not_claim = [
+  "Answer quality is fixed.",
+  "Sustained throughput is proven.",
+  "A speedup is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "The phase receipts are accelerator comparison evidence.",
+]

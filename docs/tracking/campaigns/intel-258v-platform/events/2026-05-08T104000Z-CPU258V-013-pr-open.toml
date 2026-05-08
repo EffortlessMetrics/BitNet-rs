@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T10:40:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-013"
+event = "pr_open"
+pr = 4036
+actor = "codex"
+branch = "codex/intel-258v-platform/CPU258V-013-warm-phase-artifacts"
+head_sha = "ce6093c27e7e7a6a9dba6237c392bcf69f36daf1"
+summary = "Opened CPU258V-013 to record release-built 258V warm-session phase receipts."
+
+notes = [
+  "The PR records an aggregate warm-session receipt plus strict CPU profile receipts for prefill_512 and decode_128.",
+  "The receipts preserve real_gguf loading, explicit strict tokenizer resolution, selected i2_s-avx2-reference, and fallback_used=false.",
+  "This remains CPU phase timing evidence only: no answer-quality, sustained throughput, speedup, Arc 140V execution, Intel NPU execution, or acceleration claims.",
+]

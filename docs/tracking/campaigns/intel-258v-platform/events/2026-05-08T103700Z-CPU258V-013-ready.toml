@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T10:37:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-013"
+event = "in_progress"
+actor = "codex"
+branch = "codex/intel-258v-platform/CPU258V-013-warm-phase-artifacts"
+summary = "Readied CPU258V-013 to record release-built 258V warm-session phase receipts after the BitNet b1.58 mechanics correction."
+
+notes = [
+  "The warm-session run emitted strict CPU profile receipts for prefill_512 and decode_128 using the real GGUF model and explicit LLaMA 3 tokenizer.",
+  "The artifacts record selected i2_s-avx2-reference, fallback_used=false, 512 prefill tokens for prefill_512, and 128 generated tokens for decode_128.",
+  "The claim boundary remains CPU phase timing only: no answer-quality, sustained throughput, speedup, Arc 140V execution, Intel NPU execution, or acceleration claims.",
+]

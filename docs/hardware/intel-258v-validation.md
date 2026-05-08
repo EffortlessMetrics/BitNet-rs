@@ -267,6 +267,24 @@ The command emits per-profile strict CPU receipts under
 claim answer quality, sustained throughput, Arc 140V execution, Intel NPU
 execution, or acceleration.
 
+CPU258V-013 records the first release-built warm-session receipts emitted after
+the BitNet b1.58 RMSNorm/ReLU2 mechanics correction:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json
+ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json
+ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/decode_128.json
+```
+
+The run used the real GGUF model, explicit LLaMA 3 tokenizer, strict loader and
+tokenizer modes, selected `i2_s-avx2-reference`, and `fallback_used=false`.
+`prefill_512` records 513 prompt tokens, 512 prefill tokens, and one generated
+token. `decode_128` records 128 generated tokens after a short prompt. These
+artifacts fill the prior `prefill_512` and `decode_128` evidence gaps, but they
+are still CPU phase timing evidence only: they do not claim answer quality,
+sustained throughput, speedup, Arc 140V execution, Intel NPU execution, or
+acceleration.
+
 ### CPU Answer Template Refresh
 
 CPU258V-007 records the first 258V AVX2 answer-corpus refresh after the CPU
