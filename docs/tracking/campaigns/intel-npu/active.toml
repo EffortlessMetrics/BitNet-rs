@@ -350,3 +350,48 @@ must_not_claim = [
   "Packed BitNet QK256 decode works on Intel NPU.",
   "CPU fallback satisfies NPU proof.",
 ]
+
+[[work_item]]
+id = "NPU-009"
+status = "pr_open"
+pr = 4068
+branch = "codex/intel-npu/NPU-009-openvino-llamacpp-gguf-reference"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["NPU-008", "CPU258V-015"]
+acceptance = "Evaluate OpenVINO llama.cpp GGUF as an external Intel NPU reference lane by recording a Lunar Lake GGUF reference receipt or explicit blocked receipt with model, runtime, selected device, shape/context, fallback status, and claim boundary. This does not prove native bitnet-rs NPU inference, packed QK256 decode, or acceleration."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json",
+  "Parse docs/tracking/campaigns/intel-npu/active.toml",
+  "Parse docs/tracking/campaigns/intel-npu/generated/status.md",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-npu-roadmap.md",
+  "docs/tracking/campaigns/intel-npu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+]
+may_claim = [
+  "OpenVINO llama.cpp GGUF is tracked as an external Intel NPU reference lane with either evidence or explicit blocker status.",
+]
+must_not_claim = [
+  "Full BitNet inference works on Intel NPU.",
+  "Native bitnet-rs NPU inference works.",
+  "Intel NPU accelerates BitNet.",
+  "Packed BitNet QK256 GGUF decode works on Intel NPU.",
+  "CPU fallback satisfies NPU proof.",
+]
