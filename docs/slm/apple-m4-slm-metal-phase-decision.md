@@ -71,3 +71,47 @@ Metal is faster.
 Neural Engine is used.
 QK256 is supported on Apple Silicon.
 ```
+
+## M4-PROD-005 Proof Shape
+
+`M4-PROD-005` implements the first proof as a dense f32 prefill linear projection
+microphase. The proof uses a deterministic fixture, runs the same projection
+through the CPU reference and native Metal, compares greedy argmax token IDs, and
+emits a split receipt:
+
+```text
+slm_pipeline.selected_backend = apple-m4-cpu-neon
+metal_phase.selected_backend = apple-m4-metal
+metal_phase.runtime_api = metal
+metal_phase.fallback_used = false
+metal_phase.execution_phase = prefill_linear_projection
+layout.consumes_dense_f32_directly = true
+layout.dequantizes_before_compute = false
+parity.greedy_token_ids_match_cpu_reference = true
+```
+
+Run the live Apple M4 proof explicitly:
+
+```bash
+BITNET_RUN_M4_METAL_DENSE_PREFILL_LINEAR=1 \
+BITNET_M4_METAL_DENSE_PREFILL_LINEAR_RECEIPT=ci/hardware/apple-m4-mac-mini/<date>/metal-dense-prefill-linear.json \
+cargo test --locked -p bitnet-kernels \
+  --no-default-features \
+  --features metal \
+  --test metal_tiny_smoke \
+  tiny_m4_metal_dense_prefill_linear_projection_matches_cpu_reference_when_enabled \
+  -- --nocapture
+```
+
+Validate the emitted receipt:
+
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/metal-dense-prefill-linear.json --json
+```
+
+This proof still does not claim full `apple-m4-metal` inference, decode-loop
+Metal routing, KV-cache behavior on Metal, Neural Engine execution, MPSGraph
+execution, QK256 on Apple Silicon, or broad performance.

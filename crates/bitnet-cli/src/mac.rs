@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use crate::model_cache::{self, VerifiedCachedModel};
 
 const APPLE_M4_CPU_NEON: &str = "apple-m4-cpu-neon";
+const APPLE_M4_METAL: &str = "apple-m4-metal";
 const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
@@ -663,6 +664,10 @@ fn validate_mac_receipt_value(
     receipt: &serde_json::Value,
 ) -> Result<ReceiptCheckSummary> {
     let artifact_kind = receipt["artifact_kind"].as_str().unwrap_or("<missing>").to_string();
+    if is_metal_phase_receipt(receipt) {
+        return validate_metal_phase_receipt(path, receipt, artifact_kind);
+    }
+
     let requested_backend = receipt_string(receipt, "requested_backend").unwrap_or_default();
     let selected_backend = receipt_string(receipt, "selected_backend").unwrap_or_default();
     let runtime_api = receipt_string(receipt, "runtime_api").unwrap_or_default();
@@ -836,6 +841,138 @@ fn validate_operator_profiles_receipt(
         generated_total += generated as usize;
     }
     Ok((Some(profiles.len()), Some(generated_total)))
+}
+
+fn is_metal_phase_receipt(receipt: &serde_json::Value) -> bool {
+    receipt["artifact_kind"].as_str() == Some("phase_contribution")
+        && receipt["metal_phase"].is_object()
+}
+
+fn validate_metal_phase_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+    artifact_kind: String,
+) -> Result<ReceiptCheckSummary> {
+    let requested_backend = receipt_string(receipt, "requested_backend").unwrap_or_default();
+    let selected_backend = receipt_string(receipt, "selected_backend").unwrap_or_default();
+    let runtime_api = receipt_string(receipt, "runtime_api").unwrap_or_default();
+    let fallback_used = receipt_bool(receipt, "fallback_used").unwrap_or(true);
+
+    if requested_backend != APPLE_M4_METAL {
+        anyhow::bail!(
+            "{} Metal phase requested_backend must be {APPLE_M4_METAL}, got {requested_backend:?}",
+            path.display()
+        );
+    }
+    if selected_backend != APPLE_M4_METAL {
+        anyhow::bail!(
+            "{} Metal phase selected_backend must be {APPLE_M4_METAL}, got {selected_backend:?}",
+            path.display()
+        );
+    }
+    if runtime_api != "metal" {
+        anyhow::bail!(
+            "{} Metal phase runtime_api must be metal, got {runtime_api:?}",
+            path.display()
+        );
+    }
+    if fallback_used {
+        anyhow::bail!("{} Metal phase records fallback_used=true", path.display());
+    }
+    if receipt_flag_true(receipt, "full_metal_inference_claimed")
+        || receipt_flag_true(receipt, "full_metal_inference")
+    {
+        anyhow::bail!("{} claims full apple-m4-metal inference", path.display());
+    }
+    if receipt_flag_true(receipt, "neural_engine_execution_claimed") {
+        anyhow::bail!("{} claims Neural Engine execution", path.display());
+    }
+    if receipt_flag_true(receipt, "mpsgraph_inference_claimed") {
+        anyhow::bail!("{} claims MPSGraph model inference", path.display());
+    }
+    if receipt_flag_true(receipt, "qk256_apple_claimed") {
+        anyhow::bail!("{} claims QK256 on Apple Silicon", path.display());
+    }
+    if receipt_flag_true(receipt, "bitnet_quality_claimed") {
+        anyhow::bail!("{} claims BitNet local-answer quality", path.display());
+    }
+    if receipt_flag_true(receipt, "broad_performance_claim")
+        || receipt_flag_true(receipt, "speedup_claim")
+    {
+        anyhow::bail!("{} claims broad Mac performance or speedup", path.display());
+    }
+
+    let slm_pipeline = &receipt["slm_pipeline"];
+    if slm_pipeline["selected_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+        || slm_pipeline["runtime_api"].as_str() != Some("cpu")
+        || slm_pipeline["cpu_pipeline_for_remaining_phases"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "{} Metal phase receipt must record the remaining SLM pipeline as {APPLE_M4_CPU_NEON}",
+            path.display()
+        );
+    }
+
+    let metal_phase = &receipt["metal_phase"];
+    if metal_phase["selected_backend"].as_str() != Some(APPLE_M4_METAL)
+        || metal_phase["runtime_api"].as_str() != Some("metal")
+        || metal_phase["fallback_used"].as_bool() != Some(false)
+    {
+        anyhow::bail!(
+            "{} Metal phase details must record selected_backend={APPLE_M4_METAL}, runtime_api=metal, fallback_used=false",
+            path.display()
+        );
+    }
+    if metal_phase["execution_phase"].as_str() != Some("prefill_linear_projection") {
+        anyhow::bail!(
+            "{} Metal phase must be execution_phase=prefill_linear_projection",
+            path.display()
+        );
+    }
+    if metal_phase["kernel_id"].as_str().is_none() {
+        anyhow::bail!("{} Metal phase receipt is missing kernel_id", path.display());
+    }
+
+    let layout = &receipt["layout"];
+    if layout["consumes_dense_f32_directly"].as_bool() != Some(true)
+        || layout["dequantizes_before_compute"].as_bool() != Some(false)
+    {
+        anyhow::bail!(
+            "{} Metal phase layout must record direct dense f32 consumption without dequantization",
+            path.display()
+        );
+    }
+    for field in ["batch_size", "in_features", "out_features"] {
+        if layout[field].as_u64().unwrap_or_default() == 0 {
+            anyhow::bail!("{} Metal phase layout is missing {field}", path.display());
+        }
+    }
+
+    let parity = &receipt["parity"];
+    if parity["reference_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+        || parity["target_backend"].as_str() != Some(APPLE_M4_METAL)
+        || parity["greedy_token_ids_match_cpu_reference"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "{} Metal phase parity must match CPU/NEON reference greedy token IDs",
+            path.display()
+        );
+    }
+    if parity["max_abs_error"].is_null() || parity["mean_abs_error"].is_null() {
+        anyhow::bail!("{} Metal phase parity is missing error metrics", path.display());
+    }
+
+    Ok(ReceiptCheckSummary {
+        path: path.to_path_buf(),
+        artifact_kind,
+        requested_backend,
+        selected_backend,
+        runtime_api,
+        fallback_used,
+        prompt_count: None,
+        generated_tokens: None,
+        passed: true,
+    })
 }
 
 fn validate_one_shot_receipt(

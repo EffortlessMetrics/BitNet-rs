@@ -55,11 +55,11 @@ general M4 performance
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-PROD-001 | in_progress | Document the working Apple M4 SLM local-answer baseline and claim boundary. |
-| M4-PROD-002 | proposed | Add model fetch, verify, list, and prune commands for the supported SLM artifact cache. |
-| M4-PROD-003 | proposed | Add Mac-oriented check, ask, validate, and receipts-check CLI wrappers. |
-| M4-PROD-004 | proposed | Polish warm-session speed measurement and operator thresholds without broad performance claims. |
-| M4-PROD-005 | proposed | Implement the first parity-gated Apple Metal prefill projection microphase handoff. |
+| M4-PROD-001 | merged | Document the working Apple M4 SLM local-answer baseline and claim boundary. |
+| M4-PROD-002 | merged | Add model fetch, verify, list, and prune commands for the supported SLM artifact cache. |
+| M4-PROD-003 | merged | Add Mac-oriented check, ask, validate, and receipts-check CLI wrappers. |
+| M4-PROD-004 | merged | Polish warm-session speed measurement and operator thresholds without broad performance claims. |
+| M4-PROD-005 | in_progress | Implement the first parity-gated Apple Metal prefill projection microphase handoff. |
 
 ## Review Policy
 

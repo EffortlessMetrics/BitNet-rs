@@ -380,6 +380,131 @@ fn mac_receipts_check_accepts_operator_profile_summary() {
 }
 
 #[test]
+fn mac_receipts_check_accepts_split_metal_phase_receipt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("metal-phase.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "phase_contribution",
+            "requested_backend": "apple-m4-metal",
+            "selected_backend": "apple-m4-metal",
+            "runtime_api": "metal",
+            "fallback_used": false,
+            "kernel_id": "tiny_metal_dense_prefill_linear_projection",
+            "slm_pipeline": {
+                "requested_backend": "apple-m4-cpu-neon",
+                "selected_backend": "apple-m4-cpu-neon",
+                "runtime_api": "cpu",
+                "cpu_pipeline_for_remaining_phases": true,
+                "full_inference_exercised": false
+            },
+            "metal_phase": {
+                "requested_backend": "apple-m4-metal",
+                "selected_backend": "apple-m4-metal",
+                "runtime_api": "metal",
+                "fallback_used": false,
+                "kernel_id": "tiny_metal_dense_prefill_linear_projection",
+                "kernel_family": "dense_f32",
+                "execution_phase": "prefill_linear_projection",
+                "full_metal_inference": false,
+                "full_autoregressive_decode": false
+            },
+            "layout": {
+                "source": "fixture_dense_f32_row_major",
+                "transport_layout": "row_major_f32",
+                "consumes_dense_f32_directly": true,
+                "dequantizes_before_compute": false,
+                "batch_size": 2,
+                "in_features": 8,
+                "out_features": 6
+            },
+            "parity": {
+                "reference_backend": "apple-m4-cpu-neon",
+                "target_backend": "apple-m4-metal",
+                "max_abs_error": 0.0,
+                "mean_abs_error": 0.0,
+                "cpu_reference_token_id": 3,
+                "metal_phase_token_id": 3,
+                "greedy_token_ids_match_cpu_reference": true
+            },
+            "claim_boundary": {
+                "phase_contribution_only": true,
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "bitnet_quality_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("phase_contribution"))
+        .stdout(predicate::str::contains("apple-m4-metal"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_metal_phase_with_full_inference_claim() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("bad-metal-phase.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "phase_contribution",
+            "requested_backend": "apple-m4-metal",
+            "selected_backend": "apple-m4-metal",
+            "runtime_api": "metal",
+            "fallback_used": false,
+            "slm_pipeline": {
+                "selected_backend": "apple-m4-cpu-neon",
+                "runtime_api": "cpu",
+                "cpu_pipeline_for_remaining_phases": true
+            },
+            "metal_phase": {
+                "selected_backend": "apple-m4-metal",
+                "runtime_api": "metal",
+                "fallback_used": false,
+                "kernel_id": "tiny_metal_dense_prefill_linear_projection",
+                "execution_phase": "prefill_linear_projection",
+                "full_metal_inference": true
+            },
+            "layout": {
+                "consumes_dense_f32_directly": true,
+                "dequantizes_before_compute": false,
+                "batch_size": 2,
+                "in_features": 8,
+                "out_features": 6
+            },
+            "parity": {
+                "reference_backend": "apple-m4-cpu-neon",
+                "target_backend": "apple-m4-metal",
+                "max_abs_error": 0.0,
+                "mean_abs_error": 0.0,
+                "greedy_token_ids_match_cpu_reference": true
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("claims full apple-m4-metal inference"));
+}
+
+#[test]
 fn mac_receipts_check_rejects_operator_profile_missing_profile() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("operator-profiles.json");
