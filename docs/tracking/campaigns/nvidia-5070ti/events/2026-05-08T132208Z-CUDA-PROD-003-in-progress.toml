@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T13:22:08Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-003"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-003-residency-coverage"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started explicit CUDA execution-residency coverage receipts after CUDA-PROD-002 merged.",
+  "The scope is receipt/report visibility for QK256 linears, upload-once weight handles, KV cache, non-linear transformer phases, host/device transfer accounting, and claim boundaries.",
+  "No kernel, QK256 dispatch, transformer math, tokenizer, loader, server, speed, broad chat-quality, or full-residency claim is in scope.",
+]
