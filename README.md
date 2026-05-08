@@ -11,41 +11,41 @@ Pre-alpha Rust inference engine and validation workspace for 1-bit BitNet LLMs.
 > [!WARNING]
 > **Pre-alpha. Do not use in production.**
 >
-> BitNet-rs is not yet a general-purpose local chat engine. The project currently proves loader, tokenizer, kernel, receipt, and hardware-lane behavior under narrow claim boundaries. Coherent BitNet answer quality remains blocked on an `answer_ready` model artifact; until that shared gate passes, BitNet answer runs are diagnostic only.
-
-## Current Boundary
-
-The active blocker is model-artifact authority, not basic backend execution. The shared answer-artifact gate currently records no `answer_ready` BitNet artifact, and the official Microsoft I2_S GGUF is rejected for coherent local-answer claims because the deterministic prompt suite fails under the recorded reference evidence.
-
-Backend receipts can still prove selected-device execution, tokenizer and prompt diagnostics, fallback behavior, and kernel coverage. They cannot prove coherent user answers until an artifact passes [docs/model-artifacts/ANSWER_ARTIFACT_GATE.md](docs/model-artifacts/ANSWER_ARTIFACT_GATE.md).
+> BitNet-rs is not yet a general-purpose local chat engine. The project currently focuses on loader, tokenizer, kernel, receipt, and hardware validation. Coherent BitNet answer quality is still under validation, so generated BitNet text should be treated as diagnostic output.
 
 ## What This Repo Is For
 
 BitNet-rs is moving toward Rust-native BitNet inference, but the current repo is best understood as an inference-systems validation workspace. It is useful for contributors working on model loading, tokenization, quantization, kernel parity, hardware bring-up, receipts, and reproducible inference validation. It is not yet a polished end-user inference server.
 
-Current proof surfaces include:
+What exists today:
 
-- strict GGUF loading and tokenizer authority checks
+- strict GGUF loading and tokenizer metadata checks
 - I2_S / QK256 quantization and kernel infrastructure
-- scalar, AVX2, AVX-512, NEON, CUDA, OpenCL, OpenVINO, Metal, and NPU proof lanes
+- scalar, AVX2, AVX-512, NEON, CUDA, OpenCL, OpenVINO, Metal, and NPU validation work
 - diagnostic answer-corpus and answer-parity receipts
-- hardware identity, runtime identity, fallback, kernel, and claim-boundary receipts
-- dense SLM companion lanes used to validate the generation pipeline while BitNet artifact authority remains blocked
+- receipts that record hardware identity, runtime identity, fallback behavior, and kernel coverage
+- dense SLM companion work used to validate the generation pipeline while BitNet model-artifact work continues
+
+## Current Status
+
+The repo has real inference infrastructure, but it does not yet provide supported coherent BitNet local answers. The model-artifact docs record the current Microsoft I2_S GGUF as diagnostic for local-answer work because it fails the deterministic prompt suite.
+
+Backend receipts remain useful for selected-device execution, tokenizer and prompt diagnostics, fallback behavior, and kernel coverage. They are not, by themselves, evidence that the generated text is a supported answer. See the [model-artifact validation docs](docs/model-artifacts/ANSWER_ARTIFACT_GATE.md).
 
 ## Capability Matrix
 
-| Area | State | Current claim |
+| Area | State | What it means today |
 |---|---|---|
-| GGUF loading | Supported / hardening | Structural loading and metadata extraction are active proof surfaces. |
-| Tokenizer handling | Supported / hardening | Strict tokenizer authority is required for answer claims. |
-| I2_S BitNet32 CPU path | Diagnostic | CPU execution exists; coherent BitNet answer quality is not claimed. |
-| I2_S QK256 CPU path | Diagnostic | Scalar, AVX2, and AVX-512 diagnostic lanes are receipt-backed; answer quality depends on the artifact gate. |
-| Scalar / SIMD parity | Diagnostic | Used for backend agreement checks and first-divergence evidence, not answer-readiness claims. |
-| Dense SLM path | Early working | Companion/control lane for generation-pipeline validation; not a BitNet answer-quality claim. |
-| RTX 5070 Ti CUDA | Execution proof complete / diagnostic | Packed BitNet CUDA proof is receipt-backed through `CUDA-BITNET-009`; coherent CUDA answers and speedup claims are still blocked by the answer-artifact gate. |
-| Metal / OpenCL / OpenVINO / NPU | Probe / smoke lanes | Hardware identity and narrow execution receipts; no full BitNet answer-readiness claim. |
-| Cross-validation | Supported / hardening | Reference comparison infrastructure exists; artifact authority remains gatekeeping. |
-| Honest-compute receipts | Supported | Receipts preserve backend, runtime, fallback, kernel, timing, and claim boundaries. |
+| GGUF loading | Supported / hardening | Structural loading and metadata extraction are active work surfaces. |
+| Tokenizer handling | Supported / hardening | Tokenizer metadata is checked strictly for answer-quality work. |
+| I2_S BitNet32 CPU path | Diagnostic | CPU execution exists; coherent BitNet answer quality is still under validation. |
+| I2_S QK256 CPU path | Diagnostic | Scalar, AVX2, and AVX-512 diagnostics have receipts; generated text quality is still under validation. |
+| Scalar / SIMD parity | Diagnostic | Used for backend agreement checks and first-divergence debugging. |
+| Dense SLM path | Early working | Companion/control path for generation-pipeline validation; not a BitNet quality result. |
+| RTX 5070 Ti CUDA | Execution path validated / diagnostic | Packed BitNet CUDA has receipts through `CUDA-BITNET-009`; coherent CUDA answers and speed are not established. |
+| Metal / OpenCL / OpenVINO / NPU | Probe / smoke | Hardware identity and narrow execution receipts exist; full BitNet answer quality is not established. |
+| Cross-validation | Supported / hardening | Reference comparison infrastructure exists; model selection remains active work. |
+| Honest-compute receipts | Supported | Receipts preserve backend, runtime, fallback, kernel, and timing metadata. |
 | CLI run/chat | Diagnostic | Useful for exercising the pipeline; generated text is not yet a supported answer-quality surface. |
 | Server / HTTP API | Incomplete | Health wiring exists; inference serving is not ready. |
 
@@ -87,28 +87,7 @@ RUST_LOG=warn cargo run --locked -p bitnet-cli \
   --json-out target/bitnet/receipts/first-run.json
 ```
 
-This exercises the model, tokenizer, generation, and receipt path. It is not a coherent answer-quality claim until the shared answer-artifact gate has an `answer_ready` BitNet artifact.
-
-## Claim Boundaries
-
-Before the answer-artifact gate passes, BitNet-rs may claim:
-
-- structural GGUF loading
-- tokenizer and prompt-template diagnostics
-- backend execution proof
-- scalar/SIMD/CUDA diagnostic receipts
-- hardware identity and fallback receipts
-- diagnostic-only answer-corpus output
-
-Before the answer-artifact gate passes, BitNet-rs must not claim:
-
-- coherent BitNet local answers
-- production inference readiness
-- CUDA, Metal, OpenCL, OpenVINO, or NPU answer readiness
-- server inference readiness
-- speedup claims tied to generated answer quality
-
-See [docs/model-artifacts/ANSWER_ARTIFACT_GATE.md](docs/model-artifacts/ANSWER_ARTIFACT_GATE.md).
+This exercises the model, tokenizer, generation, and receipt path. Treat the output as diagnostic evidence, not as a supported chat answer.
 
 ## Architecture
 
@@ -133,20 +112,20 @@ bitnet-models  (GGUF loader, I2_S detection, metadata)  |
 
 The workspace contains roughly 200 crates. See [docs/architecture-overview.md](docs/architecture-overview.md).
 
-## Hardware Lanes
+## Hardware Validation
 
-Hardware validation is lane-based. Each lane must preserve hardware identity, runtime identity, selected backend identity, fallback status, proof stage, and claim boundary.
+Hardware validation is organized by platform so backend identity, runtime identity, fallback status, and receipt coverage stay explicit.
 
-| Lane | Role |
+| Platform | Role |
 |---|---|
-| Intel 258V CPU | Lead BitNet CPU reference and AVX2 diagnostic lane. |
-| i5-8250U CPU | Dense SLM CPU lead and low-power comparison lane. |
-| Ryzen 9950X3D | AVX-512 support validator and high-performance CPU diagnostic lane. |
-| RTX 5070 Ti | CUDA packed BitNet proof and answer-productization lane. |
-| Apple M4 | Metal, MPSGraph, and CPU/NEON validation lane. |
-| Arc A770 | Discrete Intel GPU OpenCL/OpenVINO lane. |
-| Arc 140V | Lunar Lake iGPU OpenCL/OpenVINO lane. |
-| Intel NPU | OpenVINO NPU static-shape proof lane. |
+| Intel 258V CPU | Lead BitNet CPU reference and AVX2 diagnostics. |
+| i5-8250U CPU | Dense SLM CPU lead and low-power comparison. |
+| Ryzen 9950X3D | AVX-512 support and high-performance CPU diagnostics. |
+| RTX 5070 Ti | CUDA packed BitNet validation and future answer path. |
+| Apple M4 | Metal, MPSGraph, and CPU/NEON validation. |
+| Arc A770 | Discrete Intel GPU OpenCL/OpenVINO validation. |
+| Arc 140V | Lunar Lake iGPU OpenCL/OpenVINO validation. |
+| Intel NPU | OpenVINO NPU static-shape validation. |
 
 See [docs/hardware/HARDWARE_MATRIX.md](docs/hardware/HARDWARE_MATRIX.md).
 
@@ -186,7 +165,7 @@ cargo fmt --all -- --check
 cargo clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings
 ```
 
-The repository contains unit, property, snapshot, fixture, fuzz, BDD, receipt, and hardware-lane tests. Some tests are intentionally ignored with justification strings where hardware, model artifacts, or long-running evidence is required. See [docs/development/test-suite.md](docs/development/test-suite.md).
+The repository contains unit, property, snapshot, fixture, fuzz, BDD, receipt, and hardware-specific tests. Some tests are intentionally ignored with justification strings where hardware, model artifacts, or long-running evidence is required. See [docs/development/test-suite.md](docs/development/test-suite.md).
 
 ## Documentation
 
@@ -196,20 +175,20 @@ The repository contains unit, property, snapshot, fixture, fuzz, BDD, receipt, a
 | [docs/howto/](docs/howto/) | Install, run, export, validate, and cross-check. |
 | [docs/explanation/](docs/explanation/) | Architecture and design notes. |
 | [docs/reference/](docs/reference/) | CLI, environment variables, quantization, and receipts. |
-| [docs/model-artifacts/](docs/model-artifacts/) | Answer-artifact gate and model authority. |
-| [docs/hardware/](docs/hardware/) | Hardware proof lanes and benchmark protocol. |
-| [docs/tracking/](docs/tracking/) | Campaign state and active work lanes. |
+| [docs/model-artifacts/](docs/model-artifacts/) | Model artifact status and validation. |
+| [docs/hardware/](docs/hardware/) | Hardware validation and benchmark protocol. |
+| [docs/tracking/](docs/tracking/) | Campaign state and active work. |
 
-## Current Development Focus
+## What We Are Working On
 
 Near-term work is focused on:
 
-1. finding or producing an answer-ready BitNet artifact
-2. recording reference-runner, tokenizer, pre-tokenizer, and prompt-template authority
+1. finding or producing a BitNet model artifact that gives coherent reference answers
+2. recording the reference runner, tokenizer, pre-tokenizer, and prompt template used
 3. enriching backend-neutral answer diagnostics and first-divergence receipts
-4. proving coherent BitNet answer quality against a deterministic corpus
-5. proving strict CPU/CUDA answer parity only after artifact authority passes
-6. qualifying throughput only after answer quality is green
+4. validating coherent BitNet answer quality against a deterministic corpus
+5. validating strict CPU/CUDA answer parity after the reference answer path works
+6. qualifying throughput after answer quality works
 
 ## Contributing
 
