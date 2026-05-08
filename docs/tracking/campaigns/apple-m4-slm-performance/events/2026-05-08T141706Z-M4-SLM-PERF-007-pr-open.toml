@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T14:17:06Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-007"
+event = "pr_open"
+pr = 4081
+head_sha = "728cda267f39afc6980329b08aeb334bbe6dbe7c"
+actor = "codex"
+
+notes = [
+  "Opened the measured Apple M4 SLM performance envelope PR.",
+  "The PR refreshes release baseline and allocation-audit receipts to the current resident-session schema, adds a checked-in Metal phase receipt, and publishes a bounded performance envelope.",
+  "No broad M4 performance, full Metal inference, BitNet quality or performance, QK256, MPSGraph model inference, or Neural Engine claims are made.",
+]
