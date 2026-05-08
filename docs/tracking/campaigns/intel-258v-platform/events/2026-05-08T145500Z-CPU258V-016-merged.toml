@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T14:55:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-016"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4087
+merge_sha = "197fd54e725ee6e40b87288d7636810cbeed9692"
+actor = "codex"
+summary = "Merged CPU258V-016, recording the post-mechanics 258V CPU reference bundle and next CPU-referenced platform queue."
+
+notes = [
+  "Merged #4087, adding ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json.",
+  "The bundle links strict real-GGUF decode smoke, full fixed-corpus scalar/AVX2 answer parity, and warm-session prefill/decode phase receipts.",
+  "NPU-011, ARC140V-005, and LNL258V-COMPARE-002 are queued as follow-up work that must preserve independent CPU, NPU, and Arc proof claims.",
+]
