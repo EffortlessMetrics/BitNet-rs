@@ -50,6 +50,7 @@ mod health_check;
 mod model_info;
 mod model_registry;
 mod policy;
+mod quality_gates;
 mod tokenizers;
 mod trace_diff;
 
@@ -757,6 +758,28 @@ enum Cmd {
         format: String,
     },
 
+    /// Evaluate release quality gates and emit the release validation report
+    ///
+    /// Rust replacement for the historical scripts/evaluate_quality_gates.py helper.
+    #[command(name = "quality-gates")]
+    QualityGates {
+        /// Coverage report JSON file
+        #[arg(long, default_value = "coverage-report/tarpaulin-report.json")]
+        coverage_report: PathBuf,
+        /// Performance comparison JSON file
+        #[arg(long, default_value = "performance-results/comparison.json")]
+        performance_report: PathBuf,
+        /// Security audit JSON file
+        #[arg(long, default_value = "security-results/security-audit.json")]
+        security_report: PathBuf,
+        /// Pattern for cross-platform build result directories
+        #[arg(long, default_value = "build-*/")]
+        cross_platform_results: String,
+        /// Output summary report file
+        #[arg(long)]
+        output: Option<PathBuf>,
+    },
+
     /// Vendor GGML quantization files for IQ2_S support
     ///
     /// Downloads GGML quantization headers and implementation from llama.cpp
@@ -1436,6 +1459,19 @@ fn real_main() -> Result<()> {
         Cmd::DetectBreaking { baseline, current, format } => {
             detect_breaking_changes_cmd(baseline.as_deref(), &current, &format)
         }
+        Cmd::QualityGates {
+            coverage_report,
+            performance_report,
+            security_report,
+            cross_platform_results,
+            output,
+        } => quality_gates::run(
+            &coverage_report,
+            &performance_report,
+            &security_report,
+            &cross_platform_results,
+            output.as_deref(),
+        ),
         Cmd::VendorGgml { commit, force, output } => vendor_ggml_cmd(&commit, force, &output),
         Cmd::GpuPreflight { require, format } => gpu_preflight_cmd(require, &format),
         Cmd::GpuSmoke { size, tolerance, skip_if_no_gpu } => {
