@@ -5,6 +5,117 @@
 
 use std::collections::HashMap;
 
+/// Gemma 4 model variants tracked by the architecture/catalog foundation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Gemma4Variant {
+    E2B,
+    E4B,
+    Dense31B,
+    Moe26BA4B,
+}
+
+impl Gemma4Variant {
+    pub fn id(&self) -> &'static str {
+        match self {
+            Self::E2B => "e2b-it",
+            Self::E4B => "e4b-it",
+            Self::Dense31B => "31b-it",
+            Self::Moe26BA4B => "26b-a4b-it",
+        }
+    }
+}
+
+/// Modality metadata exposed by Gemma 4 model cards.
+///
+/// These fields describe model capability only. Runtime receipts must separately
+/// state which modalities were actually loaded and claimed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Gemma4Modalities {
+    pub text: bool,
+    pub image: bool,
+    pub audio: bool,
+}
+
+/// Static Gemma 4 variant expectations used by catalog and loader validation.
+///
+/// The presence of a [`Gemma4Spec`] is not an inference claim. E2B/E4B require
+/// PLE and shared KV before strict text-only proof can be accepted, while MoE,
+/// multimodal, long-context, and MTP behavior remain future-gated until receipts
+/// prove otherwise.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Gemma4Spec {
+    pub variant: Gemma4Variant,
+    pub layers: usize,
+    pub vocab_size: usize,
+    pub context_length: usize,
+    pub sliding_window: usize,
+    pub has_ple: bool,
+    pub has_shared_kv: bool,
+    pub is_moe: bool,
+    pub active_experts: Option<usize>,
+    pub total_experts: Option<usize>,
+    pub modalities: Gemma4Modalities,
+}
+
+impl Gemma4Spec {
+    pub fn for_variant(variant: Gemma4Variant) -> Self {
+        match variant {
+            Gemma4Variant::E2B => Self {
+                variant,
+                layers: 35,
+                vocab_size: 262_144,
+                context_length: 131_072,
+                sliding_window: 512,
+                has_ple: true,
+                has_shared_kv: true,
+                is_moe: false,
+                active_experts: None,
+                total_experts: None,
+                modalities: Gemma4Modalities { text: true, image: true, audio: true },
+            },
+            Gemma4Variant::E4B => Self {
+                variant,
+                layers: 42,
+                vocab_size: 262_144,
+                context_length: 131_072,
+                sliding_window: 512,
+                has_ple: true,
+                has_shared_kv: true,
+                is_moe: false,
+                active_experts: None,
+                total_experts: None,
+                modalities: Gemma4Modalities { text: true, image: true, audio: true },
+            },
+            Gemma4Variant::Dense31B => Self {
+                variant,
+                layers: 60,
+                vocab_size: 262_144,
+                context_length: 262_144,
+                sliding_window: 1024,
+                has_ple: false,
+                has_shared_kv: false,
+                is_moe: false,
+                active_experts: None,
+                total_experts: None,
+                modalities: Gemma4Modalities { text: true, image: true, audio: false },
+            },
+            Gemma4Variant::Moe26BA4B => Self {
+                variant,
+                layers: 30,
+                vocab_size: 262_144,
+                context_length: 262_144,
+                sliding_window: 1024,
+                has_ple: false,
+                has_shared_kv: false,
+                is_moe: true,
+                active_experts: Some(8),
+                total_experts: Some(128),
+                modalities: Gemma4Modalities { text: true, image: true, audio: false },
+            },
+        }
+    }
+}
+
 /// Model license type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum License {
@@ -191,6 +302,33 @@ impl ModelCard {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_gemma4_e_variants_require_ple_and_shared_kv() {
+        let e2b = Gemma4Spec::for_variant(Gemma4Variant::E2B);
+        assert_eq!(e2b.layers, 35);
+        assert_eq!(e2b.context_length, 131_072);
+        assert_eq!(e2b.vocab_size, 262_144);
+        assert!(e2b.has_ple);
+        assert!(e2b.has_shared_kv);
+        assert!(e2b.modalities.audio);
+
+        let e4b = Gemma4Spec::for_variant(Gemma4Variant::E4B);
+        assert_eq!(e4b.layers, 42);
+        assert_eq!(e4b.sliding_window, 512);
+        assert!(e4b.has_ple);
+        assert!(e4b.has_shared_kv);
+    }
+
+    #[test]
+    fn test_gemma4_moe_variant_records_experts() {
+        let moe = Gemma4Spec::for_variant(Gemma4Variant::Moe26BA4B);
+        assert!(moe.is_moe);
+        assert_eq!(moe.context_length, 262_144);
+        assert_eq!(moe.active_experts, Some(8));
+        assert_eq!(moe.total_experts, Some(128));
+        assert!(!moe.modalities.audio);
+    }
 
     #[test]
     fn test_basic_metadata() {
