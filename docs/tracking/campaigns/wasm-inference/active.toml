@@ -1,0 +1,284 @@
+id = "wasm-inference"
+title = "WASM inference proof lane"
+status = "active"
+
+objective = "Establish WASM as an explicit receipt-backed BitNet backend lane for browser, Node, WASI, and embedded-sandbox hosts without conflating WASM detection, placeholder generation, model parsing, or scalar fallback with real inference."
+
+end_state = [
+  "WASM backend identities are explicit: wasm-cpu-scalar, wasm-cpu-simd, wasm-cpu-threads, wasm-browser-worker, and wasm-wasi-sandbox.",
+  "Byte-backed model and tokenizer loaders avoid browser filesystem assumptions.",
+  "Tiny-fixture inference proves at least one deterministic generated token with fallback_used=false before any official BitNet browser claim.",
+  "Browser product claims run in a worker, use separately supplied model artifacts, record strict hashes, and emit memory high-water receipts.",
+  "SIMD, threads, official BitNet, and speed claims are gated by strict receipts that prove exactly what ran.",
+]
+
+hard_constraints = [
+  "WASM detection is not inference.",
+  "Placeholder generation cannot count as inference, parity, or performance proof.",
+  "A model loader probe cannot count as sandboxed inference.",
+  "Generic cpu or generic wasm backend labels cannot support WASM proof.",
+  "Strict mode must fail rather than silently downgrade SIMD or threads.",
+  "Model weights must not be embedded in the WASM runtime bundle for product claims.",
+  "Do not claim browser BitNet 2B feasibility, usability, or speed until smaller fixture and short-decode proofs exist.",
+]
+
+[[work_item]]
+id = "WASM-001"
+status = "ready"
+branch = "codex/wasm-inference/WASM-001-proof-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Document the WASM proof contract, current scaffold boundary, explicit backend identities, receipt requirements, model/tokenizer strategy, memory plan, milestones, and PR ladder without changing runtime code."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check wasm-inference",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/wasm/**",
+  "docs/tracking/campaigns/wasm-inference/**",
+]
+forbidden_paths = [
+  "crates/bitnet-wasm/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+]
+may_claim = [
+  "A WASM inference proof lane and planning contract exist.",
+  "Current WASM inference remains scaffolded until later work items prove real generation.",
+]
+must_not_claim = [
+  "WASM inference works today.",
+  "Browser BitNet 2B inference is feasible at usable speed.",
+  "WASM SIMD kernels are proven.",
+  "A byte-backed GGUF/tokenizer loader exists.",
+]
+
+[[work_item]]
+id = "WASM-002"
+status = "ready"
+branch = "codex/wasm-inference/WASM-002-honest-inference-compile"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["WASM-001"]
+acceptance = "Make cargo check --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser,inference compile, with unsupported runtime paths returning explicit not-implemented errors rather than placeholder success."
+commands = [
+  "cargo check --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser,inference",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-wasm/**",
+  "crates/bitnet-inference/**",
+  "docs/tracking/campaigns/wasm-inference/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The opt-in WASM inference feature compiles for wasm32.",
+]
+must_not_claim = [
+  "Runtime WASM inference is implemented.",
+  "Browser generation is real.",
+]
+
+[[work_item]]
+id = "WASM-003"
+status = "ready"
+branch = "codex/wasm-inference/WASM-003-byte-loaders"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["WASM-002"]
+acceptance = "Add byte-backed model and tokenizer loader APIs for WASM so browser paths do not depend on virtual filesystem placeholders."
+commands = [
+  "cargo test --locked -p bitnet-gguf --no-default-features",
+  "cargo check --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser,inference",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-wasm/**",
+  "crates/bitnet-gguf/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-inference/**",
+  "docs/tracking/campaigns/wasm-inference/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/qk256/**",
+]
+may_claim = [
+  "WASM model/tokenizer loading can be byte-backed for the supported fixture scope.",
+]
+must_not_claim = [
+  "Full browser inference works.",
+  "Official BitNet GGUF is browser-ready.",
+]
+
+[[work_item]]
+id = "WASM-004"
+status = "ready"
+branch = "codex/wasm-inference/WASM-004-worker-api"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["WASM-003"]
+acceptance = "Expose a worker-safe JS API for loadModel, generate, generateStream, unload, and getMemoryStats, with abort support and no fake generation responses."
+commands = [
+  "cargo check --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser,inference",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-wasm/**",
+  "docs/wasm/**",
+  "docs/tracking/campaigns/wasm-inference/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/qk256/**",
+]
+may_claim = [
+  "A worker-safe WASM API surface exists.",
+]
+must_not_claim = [
+  "The API produces real model-backed generation unless WASM-005 proof exists.",
+]
+
+[[work_item]]
+id = "WASM-005"
+status = "ready"
+branch = "codex/wasm-inference/WASM-005-tiny-fixture-proof"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["WASM-004"]
+acceptance = "Use a tiny committed fixture to emit a strict receipt with runtime_api=wasm, selected_backend=wasm-cpu-scalar, fallback_used=false, and generated_tokens=1."
+commands = [
+  "cargo test --locked -p bitnet-wasm --target wasm32-unknown-unknown --no-default-features --features browser,inference",
+  "cargo run --locked -p xtask --no-default-features -- verify-receipt <receipt>",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-wasm/**",
+  "crates/bitnet-receipts/**",
+  "ci/receipts/**",
+  "docs/wasm/**",
+  "docs/tracking/campaigns/wasm-inference/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/qk256/**",
+]
+may_claim = [
+  "A tiny WASM scalar inference fixture produced one real token under the claimed receipt scope.",
+]
+must_not_claim = [
+  "Official BitNet inference works in WASM.",
+  "Browser product inference is ready.",
+  "Performance is proven.",
+]
+
+[[work_item]]
+id = "WASM-006"
+status = "ready"
+branch = "codex/wasm-inference/WASM-006-simd-kernel-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["WASM-005"]
+acceptance = "Add a WASM SIMD packed BitNet linear smoke proof with scalar parity, SIMD invocation count greater than zero, and strict fallback count zero."
+commands = [
+  "cargo test --locked -p bitnet-wasm --target wasm32-unknown-unknown --no-default-features --features browser,inference,wasm-kernels",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-wasm/**",
+  "crates/bitnet-kernels/**",
+  "docs/wasm/**",
+  "docs/tracking/campaigns/wasm-inference/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A WASM SIMD packed-kernel smoke proof exists for the tested shape.",
+]
+must_not_claim = [
+  "Full decode uses SIMD unless decode receipts show it.",
+  "Browser speedup is proven.",
+]
+
+[[work_item]]
+id = "WASM-007"
+status = "ready"
+branch = "codex/wasm-inference/WASM-007-browser-short-decode"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["WASM-006"]
+acceptance = "Prove browser-worker short greedy decode with separately supplied and cached model artifacts, strict model hash, streamed real output, memory high-water mark, and fallback status."
+commands = [
+  "cargo check --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser,inference,wasm-kernels",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-wasm/**",
+  "examples/**",
+  "docs/wasm/**",
+  "docs/tracking/campaigns/wasm-inference/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A browser-worker short-decode demo is real for the documented model scope.",
+]
+must_not_claim = [
+  "Official BitNet 2B browser inference is practical.",
+  "Performance is proven without benchmark receipts.",
+]
+
+[[work_item]]
+id = "WASM-008"
+status = "ready"
+branch = "codex/wasm-inference/WASM-008-official-bitnet-feasibility"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["WASM-007"]
+acceptance = "Attempt official or canonical BitNet GGUF WASM feasibility with strict loader, real tokenizer, packed weights, one greedy token, native CPU reference parity, and no speed claim unless separately benchmarked."
+commands = [
+  "cargo check --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser,inference,wasm-kernels",
+  "cargo run --locked -p xtask --no-default-features -- verify-receipt <receipt>",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-wasm/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "ci/receipts/**",
+  "docs/wasm/**",
+  "docs/tracking/campaigns/wasm-inference/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Official or canonical BitNet WASM feasibility is proven for the exact receipt scope if all gates pass.",
+]
+must_not_claim = [
+  "Browser BitNet is fast without benchmark receipts.",
+  "Unsupported hosts will run the same path.",
+]

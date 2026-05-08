@@ -144,3 +144,10 @@
 | slm-cpu | SLM-CPU-006B | SLM-CPU-006A | merged |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |
+| wasm-inference | WASM-002 | WASM-001 | ready |
+| wasm-inference | WASM-003 | WASM-002 | ready |
+| wasm-inference | WASM-004 | WASM-003 | ready |
+| wasm-inference | WASM-005 | WASM-004 | ready |
+| wasm-inference | WASM-006 | WASM-005 | ready |
+| wasm-inference | WASM-007 | WASM-006 | ready |
+| wasm-inference | WASM-008 | WASM-007 | ready |
