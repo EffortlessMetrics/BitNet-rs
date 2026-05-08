@@ -125,8 +125,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-003"
-status = "pr_open"
+status = "merged"
 pr = 4050
+merge_sha = "5171c9c931d477de840d160a30b032226c25b282"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-003-resident-session"
 stackable = false
 review_mode = "codex_premerge"
@@ -171,7 +172,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-004"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-004-cpu-neon-hotpath"
 stackable = false
 review_mode = "codex_premerge"
@@ -201,8 +202,16 @@ forbidden_paths = [
   "crates/bitnet-kernels/src/metal/**",
   "models/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "A measured Apple M4 CPU/NEON bottleneck is optimized with before/after receipts.",
+  "Greedy output identity and quality gates are preserved for the optimized path.",
+]
+must_not_claim = [
+  "Broad M4 performance is proven.",
+  "Full apple-m4-metal inference works.",
+  "BitNet local-answer quality or performance is proven.",
+  "A Metal phase is optimized.",
+]
 
 [[work_item]]
 id = "M4-SLM-PERF-005"
