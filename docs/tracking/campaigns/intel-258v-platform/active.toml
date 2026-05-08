@@ -783,3 +783,43 @@ must_not_claim = [
   "Sustained throughput is proven.",
   "Arc 140V or Intel NPU execution is proven.",
 ]
+
+[[work_item]]
+id = "CPU258V-011"
+status = "pr_open"
+pr = 4014
+branch = "codex/intel-258v-platform/CPU258V-011-release-scalar-case"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-010"]
+acceptance = "Record release-built 258V scalar and scalar-vs-AVX2 answer parity artifacts for the selected math_2_plus_2 BitNet.cpp-template case, showing the bad generated answer is shared by scalar and AVX2 without answer-quality, speed, Arc, or NPU claims."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-math_2_plus_2-release.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-math_2_plus_2-release.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "ci/hardware/intel-258v/README.md",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The selected release-built 258V scalar math_2_plus_2 answer-corpus case completed within the bounded child-run window.",
+  "Scalar and AVX2 selected kernels generated identical prompt token IDs, generated token IDs, and decoded text for the selected case.",
+  "The shared output still fails the exact answer-quality gate.",
+]
+must_not_claim = [
+  "The selected case answered correctly.",
+  "Full corpus scalar/AVX2 parity is proven under the new prompt.",
+  "Sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+]
