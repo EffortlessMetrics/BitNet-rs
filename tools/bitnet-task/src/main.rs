@@ -36,7 +36,7 @@ use self::{
         cmd_test_real_tokenizer, cmd_test_simple, cmd_test_token_generation, cmd_xtask_smoke,
     },
     validation::{
-        cmd_check_codeowners_teams, cmd_check_envlock, cmd_check_feature_gates,
+        cmd_check_codeowners_teams, cmd_check_coverage, cmd_check_envlock, cmd_check_feature_gates,
         cmd_check_ignore_annotations, cmd_check_serial_annotations, cmd_check_units,
         cmd_check_units_imports, cmd_json_schema_gate, cmd_validate_fixtures,
         cmd_validate_iq2s_build, cmd_validate_strict,
@@ -82,6 +82,13 @@ enum Task {
     CheckSerialAnnotations,
     /// Equivalent of scripts/check-codeowners-teams.sh
     CheckCodeownersTeams,
+    /// Equivalent of scripts/check_coverage.sh
+    CheckCoverage {
+        /// Coverage report file (JSON).
+        coverage_file: PathBuf,
+        /// Minimum coverage threshold (percent).
+        threshold: f64,
+    },
     /// Equivalent of scripts/resolve_model_path.sh
     ResolveModelPath {
         /// Required model path or model name.
@@ -244,6 +251,9 @@ fn main() -> Result<()> {
         Task::TestTokenGeneration { model } => cmd_test_token_generation(&root, model),
         Task::CheckSerialAnnotations => cmd_check_serial_annotations(&root),
         Task::CheckCodeownersTeams => cmd_check_codeowners_teams(&root),
+        Task::CheckCoverage { coverage_file, threshold } => {
+            cmd_check_coverage(&coverage_file, threshold)
+        }
         Task::DetectFlake => cmd_detect_flake(&root),
         Task::PerfPhase1QuantProbe { model, tokenizer } => {
             cmd_perf_phase1_quant_probe(&root, model, tokenizer)

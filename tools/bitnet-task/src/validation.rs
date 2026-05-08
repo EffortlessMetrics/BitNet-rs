@@ -57,6 +57,66 @@ pub(crate) fn cmd_check_envlock(root: &Path) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn cmd_check_coverage(coverage_file: &Path, threshold: f64) -> Result<()> {
+    if !coverage_file.exists() {
+        bail!("Coverage file not found: {}", coverage_file.display());
+    }
+
+    let content = fs::read_to_string(coverage_file)
+        .with_context(|| format!("Error reading coverage file: {}", coverage_file.display()))?;
+    let coverage_data: Value = serde_json::from_str(&content)
+        .with_context(|| format!("Error reading coverage file: {}", coverage_file.display()))?;
+    let coverage_percentage = coverage_percentage(&coverage_data)?;
+
+    println!("Coverage: {coverage_percentage:.2}%");
+    println!("Threshold: {threshold:.2}%");
+
+    if coverage_percentage >= threshold {
+        println!("✅ Coverage threshold met");
+        println!("Coverage check passed");
+        Ok(())
+    } else {
+        println!("❌ Coverage below threshold ({coverage_percentage:.2}% < {threshold:.2}%)");
+        bail!("coverage below threshold")
+    }
+}
+
+fn coverage_percentage(coverage_data: &Value) -> Result<f64> {
+    if let Some(files) = coverage_data.get("files") {
+        let files = files
+            .as_object()
+            .context("Error reading coverage file: expected `files` to be an object")?;
+        let mut total_lines = 0_u64;
+        let mut covered_lines = 0_u64;
+
+        for file_data in files.values() {
+            let Some(coverage) = file_data.get("coverage") else {
+                continue;
+            };
+            let coverage = coverage
+                .as_array()
+                .context("Error reading coverage file: expected `coverage` to be an array")?;
+            for line_data in coverage {
+                if line_data.is_null() {
+                    continue;
+                }
+                total_lines += 1;
+                if line_data.as_f64().unwrap_or(0.0) > 0.0 {
+                    covered_lines += 1;
+                }
+            }
+        }
+
+        if total_lines == 0 {
+            bail!("No coverage data found");
+        }
+
+        Ok((covered_lines as f64 / total_lines as f64) * 100.0)
+    } else {
+        Ok(coverage_data.get("coverage").and_then(Value::as_f64).unwrap_or(0.0))
+    }
+}
+
 pub(crate) fn cmd_check_units_imports(root: &Path) -> Result<()> {
     let mut violations = Vec::new();
     for path in collect_rust_files(root.join("tests"))? {

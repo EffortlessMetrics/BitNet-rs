@@ -269,6 +269,73 @@ fn generate_policy_missing_model_reports_useful_stderr() {
 }
 
 #[test]
+fn check_coverage_accepts_tarpaulin_report() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let coverage_path = temp.path().join("coverage.json");
+    fs::write(
+        &coverage_path,
+        r#"{
+            "files": {
+                "src/lib.rs": { "coverage": [1, 0, null, 3] },
+                "src/main.rs": { "coverage": [null, 2] }
+            }
+        }"#,
+    )
+    .expect("write coverage report");
+
+    let output = Command::new(bitnet_task_bin())
+        .args(["check-coverage", coverage_path.to_str().expect("coverage path utf8"), "75"])
+        .output()
+        .expect("run check-coverage");
+    let stdout = assert_success(&output);
+
+    assert!(stdout.contains("Coverage: 75.00%"));
+    assert!(stdout.contains("Threshold: 75.00%"));
+    assert!(stdout.contains("Coverage check passed"));
+}
+
+#[test]
+fn check_coverage_rejects_below_threshold() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let coverage_path = temp.path().join("coverage.json");
+    fs::write(&coverage_path, r#"{ "coverage": 42.5 }"#).expect("write coverage report");
+
+    let output = Command::new(bitnet_task_bin())
+        .args(["check-coverage", coverage_path.to_str().expect("coverage path utf8"), "90"])
+        .output()
+        .expect("run check-coverage");
+    assert_failure(&output);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    assert!(stdout.contains("Coverage: 42.50%"));
+    assert!(stdout.contains("❌ Coverage below threshold (42.50% < 90.00%)"));
+}
+
+#[test]
+fn check_coverage_wrapper_dispatches_to_rust_facade() {
+    let repo_root = repo_root();
+    let manifest_path = repo_root.join("Cargo.toml");
+    let invocations = run_wrapper("check_coverage.sh", &["coverage.json", "85"]);
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(
+        invocations[0],
+        vec![
+            "run",
+            "--quiet",
+            "--locked",
+            "--manifest-path",
+            manifest_path.to_string_lossy().as_ref(),
+            "-p",
+            "bitnet-task",
+            "--",
+            "check-coverage",
+            "coverage.json",
+            "85",
+        ]
+    );
+}
+
+#[test]
 fn perf_wrapper_rewrites_legacy_positionals_into_flags() {
     let repo_root = repo_root();
     let manifest_path = repo_root.join("Cargo.toml");
