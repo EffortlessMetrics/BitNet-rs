@@ -5,6 +5,7 @@ use clap::{Args, ValueEnum};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
+    collections::BTreeSet,
     ffi::OsString,
     fs::{self, File},
     path::{Path, PathBuf},
@@ -66,6 +67,10 @@ pub struct AnswerCorpusCommand {
     /// CPU kernel lane to request for child strict CPU runs.
     #[arg(long, value_enum, value_name = "KERNEL")]
     pub cpu_kernel: Option<AnswerCpuKernel>,
+
+    /// Run only matching corpus case IDs. Repeat to run multiple cases.
+    #[arg(long = "case-id", value_name = "ID")]
+    pub case_ids: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -130,9 +135,13 @@ impl AnswerCorpusCommand {
             ));
         fs::create_dir_all(&receipt_dir)?;
 
+        let selected_cases = self.selected_cases(&corpus)?;
+        let selected_case_ids: Vec<String> =
+            selected_cases.iter().map(|case| case.id.clone()).collect();
+
         let exe = std::env::current_exe().context("failed to resolve current bitnet executable")?;
-        let mut rows = Vec::with_capacity(corpus.cases.len());
-        for case in &corpus.cases {
+        let mut rows = Vec::with_capacity(selected_cases.len());
+        for case in selected_cases {
             let row = if self.dry_run {
                 self.not_run_row(case, "dry_run_requested")
             } else {
@@ -165,6 +174,8 @@ impl AnswerCorpusCommand {
                 "name": corpus.name,
                 "description": corpus.description,
                 "case_count": corpus.cases.len(),
+                "selected_case_count": selected_case_ids.len(),
+                "selected_case_ids": selected_case_ids,
             },
             "model": {
                 "repo": corpus.model.repo,
@@ -236,6 +247,22 @@ impl AnswerCorpusCommand {
             anyhow::bail!("answer corpus quality failed: {failed} failed, {timed_out} timed out");
         }
         Ok(())
+    }
+
+    fn selected_cases<'a>(&self, corpus: &'a AnswerCorpus) -> Result<Vec<&'a AnswerCase>> {
+        if self.case_ids.is_empty() {
+            return Ok(corpus.cases.iter().collect());
+        }
+
+        let requested: BTreeSet<&str> = self.case_ids.iter().map(String::as_str).collect();
+        let selected: Vec<&AnswerCase> =
+            corpus.cases.iter().filter(|case| requested.contains(case.id.as_str())).collect();
+        let found: BTreeSet<&str> = selected.iter().map(|case| case.id.as_str()).collect();
+        let missing: Vec<&str> = requested.difference(&found).copied().collect();
+        if !missing.is_empty() {
+            anyhow::bail!("answer-corpus --case-id not found: {}", missing.join(", "));
+        }
+        Ok(selected)
     }
 
     fn run_case(

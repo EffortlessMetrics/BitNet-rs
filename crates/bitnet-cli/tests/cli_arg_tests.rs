@@ -668,6 +668,7 @@ fn answer_corpus_subcommand_help() {
         .assert()
         .success()
         .stdout(predicate::str::contains("--corpus"))
+        .stdout(predicate::str::contains("--case-id"))
         .stdout(predicate::str::contains("--dry-run"))
         .stdout(predicate::str::contains("--dump-logit-steps"));
 }
@@ -768,6 +769,119 @@ cases:
     assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
     assert_eq!(receipt["quality_summary"]["not_run"], 1);
     assert_eq!(receipt["cases"][0]["status"], "not_run");
+}
+
+/// `answer-corpus --case-id` limits a diagnostic run without changing corpus identity.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_case_id_dry_run_selects_one_case() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let corpus = dir.path().join("corpus.yaml");
+    let out = dir.path().join("receipt.json");
+    std::fs::write(
+        &corpus,
+        r#"schema: 1
+artifact_kind: bitnet_answer_corpus
+name: test-corpus
+description: test
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  file: ggml-model-i2_s.gguf
+defaults:
+  prompt_template: llama3-chat
+  max_new_tokens: 4
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+cases:
+  - id: math
+    question: "What is 2+2?"
+    gate:
+      kind: exact_trimmed
+      expected: "4"
+  - id: word
+    question: "Answer with one word."
+    gate:
+      kind: contains_any
+      contains_any: ["yes", "no"]
+"#,
+    )
+    .expect("write corpus");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--case-id",
+            "word",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    assert_eq!(receipt["corpus"]["case_count"], 2);
+    assert_eq!(receipt["corpus"]["selected_case_count"], 1);
+    assert_eq!(receipt["corpus"]["selected_case_ids"][0], "word");
+    assert_eq!(receipt["quality_summary"]["total"], 1);
+    assert_eq!(receipt["quality_summary"]["not_run"], 1);
+    assert_eq!(receipt["cases"][0]["id"], "word");
+    assert_eq!(receipt["cases"][0]["status"], "not_run");
+}
+
+/// `answer-corpus --case-id` fails early for unknown case IDs.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_case_id_rejects_missing_case() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let corpus = dir.path().join("corpus.yaml");
+    std::fs::write(
+        &corpus,
+        r#"schema: 1
+artifact_kind: bitnet_answer_corpus
+name: test-corpus
+description: test
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  file: ggml-model-i2_s.gguf
+defaults:
+  prompt_template: llama3-chat
+  max_new_tokens: 4
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+cases:
+  - id: math
+    question: "What is 2+2?"
+    gate:
+      kind: exact_trimmed
+      expected: "4"
+"#,
+    )
+    .expect("write corpus");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--case-id",
+            "missing",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("answer-corpus --case-id not found: missing"));
 }
 
 /// `answer-corpus --dry-run` accepts the SLM corpus and preserves model identity.

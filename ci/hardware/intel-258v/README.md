@@ -12,6 +12,7 @@ ci/hardware/intel-258v/<date>/cpu-phase-benchmark.json
 ci/hardware/intel-258v/<date>/cpu-phase-evidence-attempts.json
 ci/hardware/intel-258v/<date>/cpu-phase-warm-session.json
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template.json
+ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-case.json
 ```
 
 `platform-probe.json` is visibility-only. It may record CPU AVX2 facts, Arc
@@ -37,3 +38,9 @@ converted by `cpu_phase_benchmark_receipt`.
 attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready
 prompt envelope. Timeout rows and `missing_child_receipt` kernels are blocker
 evidence only; they do not prove answer quality or AVX2 correctness.
+
+`cpu-answer-corpus-avx2-bitnetcpp-template-case.json` is the expected shape for
+bounded single-case follow-up attempts using `answer-corpus --case-id`. It must
+preserve the full corpus identity while recording `selected_case_count` and
+`selected_case_ids`, and it remains diagnostic blocker evidence until a real
+child receipt is emitted.
