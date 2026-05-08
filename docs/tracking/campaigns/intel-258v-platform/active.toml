@@ -1098,8 +1098,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "ARC140V-005"
-status = "pr_open"
+status = "merged"
 pr = 4103
+merge_sha = "cb48e2924209ad71be1ac9ce83db90ce4679a48e"
 branch = "codex/intel-258v-platform/ARC140V-005-opencl-cpu-parity"
 stackable = false
 review_mode = "codex_premerge"
