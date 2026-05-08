@@ -173,10 +173,12 @@ pub fn remap_gguf_weights_with_options(
 
     // First pass: map all tensors
     for (name, tensor) in tensors {
-        // Handle raw QK256 tensor keys with .qk256_qs suffix
+        // Handle raw QK256 tensor keys with side-map suffixes.
         // Strip suffix -> remap base -> re-append suffix
         let (base_name, suffix) = if let Some(base) = name.strip_suffix(".qk256_qs") {
             (base, Some(".qk256_qs"))
+        } else if let Some(base) = name.strip_suffix(".qk256_scale") {
+            (base, Some(".qk256_scale"))
         } else {
             (name.as_str(), None)
         };
@@ -1324,6 +1326,7 @@ mod tests {
 
         // Test with a GGUF key that should be remapped
         tensors.insert("blk.0.attn_q.weight.qk256_qs".to_string(), tensor.clone());
+        tensors.insert("blk.0.attn_q.weight.qk256_scale".to_string(), tensor.clone());
 
         let mapped = remap_gguf_weights(&tensors).unwrap();
 
@@ -1331,6 +1334,11 @@ mod tests {
         assert!(
             mapped.contains_key("layers.0.attention.q_proj.weight.qk256_qs"),
             "Expected remapped key with .qk256_qs suffix, got keys: {:?}",
+            mapped.keys().collect::<Vec<_>>()
+        );
+        assert!(
+            mapped.contains_key("layers.0.attention.q_proj.weight.qk256_scale"),
+            "Expected remapped key with .qk256_scale suffix, got keys: {:?}",
             mapped.keys().collect::<Vec<_>>()
         );
 

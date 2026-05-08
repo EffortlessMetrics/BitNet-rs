@@ -168,11 +168,11 @@ fn apply_architecture_defaults_case_insensitive() {
 }
 
 #[test]
-fn apply_architecture_defaults_bitnet_keeps_layernorm() {
+fn apply_architecture_defaults_bitnet_sets_rmsnorm_relu2() {
     let mut cfg = ModelConfig::default();
     cfg.apply_architecture_defaults("bitnet");
-    assert_eq!(cfg.norm_type, NormType::LayerNorm);
-    assert_eq!(cfg.activation_type, ActivationType::Silu);
+    assert_eq!(cfg.norm_type, NormType::RmsNorm);
+    assert_eq!(cfg.activation_type, ActivationType::Relu2);
     // bitnet has no default context length
     assert_eq!(cfg.max_position_embeddings, 2048);
 }

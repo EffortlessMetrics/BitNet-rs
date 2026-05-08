@@ -1,4 +1,4 @@
-use bitnet_qk256_dispatch::forward_qk256;
+use bitnet_qk256_dispatch::{forward_qk256, forward_qk256_with_scale};
 use candle_core::{Device, Tensor};
 
 #[test]
@@ -29,6 +29,25 @@ fn forward_qk256_supports_rank3_input() {
             assert!((token[0] - 256.0).abs() < 1e-4);
         }
     }
+}
+
+#[test]
+fn forward_qk256_with_scale_uses_bitnet_i8s_activation_path() {
+    let device = Device::Cpu;
+    let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device).unwrap();
+    let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
+
+    let out = forward_qk256_with_scale(
+        &input,
+        &qk,
+        "layers.0.attention.q_proj.weight.qk256_qs",
+        Some(0.5),
+    )
+    .unwrap();
+    assert_eq!(out.dims(), &[1, 1]);
+
+    let out_vals = out.to_vec2::<f32>().unwrap();
+    assert!((out_vals[0][0] - 128.0).abs() < 1e-4);
 }
 
 #[test]

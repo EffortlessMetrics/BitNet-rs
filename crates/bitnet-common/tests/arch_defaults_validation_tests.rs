@@ -208,8 +208,8 @@ fn deepseekv3_defaults() {
 #[test]
 fn bitnet_defaults() {
     let cfg = defaults_for("bitnet");
-    assert_eq!(cfg.norm_type, NormType::LayerNorm);
-    assert_eq!(cfg.activation_type, ActivationType::Silu);
+    assert_eq!(cfg.norm_type, NormType::RmsNorm);
+    assert_eq!(cfg.activation_type, ActivationType::Relu2);
 }
 
 // ────────────────────────────────────────────────────────────────

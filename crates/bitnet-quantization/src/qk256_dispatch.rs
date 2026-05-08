@@ -114,9 +114,9 @@ mod tests {
         let rows = 256;
         let cols = 256;
         let mut output = vec![0.0f32; rows];
-        // Code 1 (0b01) maps to -1.0 in i2s_qk256; with activations at 0.5 this
+        // Code 0 maps to -1.0 in BitNet.cpp I2_S; with activations at 0.5 this
         // yields a stable, non-zero smoke assertion.
-        let packed = vec![0x55u8; rows * cols / 4];
+        let packed = vec![0x00u8; rows * cols / 4];
         let scales = vec![1.0f32; rows * cols / QK256];
         let activations = vec![0.5f32; cols];
 

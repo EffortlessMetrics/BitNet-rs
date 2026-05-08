@@ -512,7 +512,7 @@ mod tests {
         let cfg = detect_from_hf_config(json).unwrap();
         assert_eq!(cfg.hidden_size, 2560);
         assert_eq!(cfg.activation_type, ActivationType::Relu2);
-        assert_eq!(cfg.norm_type, NormType::LayerNorm);
+        assert_eq!(cfg.norm_type, NormType::RmsNorm);
     }
 
     // ===================================================================
@@ -593,7 +593,7 @@ mod tests {
         assert_eq!(cfg.hidden_size, 2560);
         assert_eq!(cfg.num_layers, 26);
         assert_eq!(cfg.vocab_size, 32000);
-        assert_eq!(cfg.norm_type, NormType::LayerNorm);
+        assert_eq!(cfg.norm_type, NormType::RmsNorm);
         assert_eq!(cfg.activation_type, ActivationType::Relu2);
     }
 

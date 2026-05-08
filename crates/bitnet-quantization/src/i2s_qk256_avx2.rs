@@ -6,15 +6,14 @@
 //!
 //! The hot path uses several techniques for throughput:
 //!
-//! - **SIMD variable shift** (`vpsrlvd`): Extracts 8 two-bit codes from 2 packed
-//!   bytes in 3 SIMD ops (broadcast → variable shift → mask), replacing 8 scalar
-//!   bit-extractions + `_mm256_setr_epi32`.
+//! - **SIMD byte expansion**: Extracts 8 grouped two-bit codes from 8 packed
+//!   bytes, matching BitNet.cpp `dequantize_row_i2_s`.
 //!
 //! - **4-wide accumulator bank**: Hides FMA latency (4–5 cycles on Haswell+) by
 //!   keeping 4 independent dependency chains in flight.
 //!
-//! - **32-element inner loop**: Processes 8 packed bytes per iteration, amortizing
-//!   loop overhead and giving the out-of-order engine more independent work.
+//! - **Lane-aware 32-element chunks**: Processes each BitNet.cpp 32-value lane
+//!   in 8-element SIMD chunks.
 //!
 //! - **Software prefetch**: `_mm_prefetch(..., _MM_HINT_T0)` pulls the next block's
 //!   quantized data and input vector into L1 before they're needed.
@@ -32,33 +31,31 @@ use std::arch::x86_64::*;
 use crate::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES};
 use anyhow::Result;
 
-/// Decode 8 two-bit codes from 2 packed bytes into 8 f32 weights using SIMD.
+/// Decode 8 grouped BitNet.cpp I2_S two-bit codes into 8 f32 weights using SIMD.
 ///
-/// Uses `vpsrlvd` (per-lane variable shift) to extract all 8 codes in parallel:
-///   packed = b0 | (b1 << 16)  →  broadcast to all lanes  →  shift by [0,2,4,6,16,18,20,22]  →  mask 0x03
-///
-/// Then maps codes [0,1,2,3] → weights [-2,-1,+1,+2] via: `weight = code - 2 + (code >> 1) & 1`.
+/// Each input byte contributes one code for the requested 32-value lane. The
+/// BitNet.cpp I2_S map is [0,1,2,3] -> [-1,0,+1,0].
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2,fma")]
-unsafe fn decode_8_weights_avx2(
-    byte0: u8,
-    byte1: u8,
-    shifts: __m256i,
+unsafe fn decode_8_lane_weights_avx2(
+    bytes: *const u8,
+    lane_shift: i32,
     mask_03: __m256i,
     two: __m256i,
-    one: __m256i,
+    zero: __m256i,
+    one_ps: __m256,
+    neg_one_ps: __m256,
 ) -> __m256 {
-    // Pack both bytes so per-lane shifts extract each 2-bit code:
-    //   lanes 0–3 shift byte0 by 0,2,4,6; lanes 4–7 shift byte1 by 0,2,4,6
-    //   (byte1 sits at bit 16, so shifts 16,18,20,22 reach its 2-bit fields).
-    let packed = (byte0 as i32) | ((byte1 as i32) << 16);
-    let broadcast = _mm256_set1_epi32(packed);
-    let codes = _mm256_and_si256(_mm256_srlv_epi32(broadcast, shifts), mask_03);
+    let eight_bytes = unsafe { _mm_loadl_epi64(bytes as *const __m128i) };
+    let byte_lanes = _mm256_cvtepu8_epi32(eight_bytes);
+    let shifts = _mm256_set1_epi32(lane_shift);
+    let codes = _mm256_and_si256(_mm256_srlv_epi32(byte_lanes, shifts), mask_03);
 
-    // codes ∈ {0,1,2,3} → weights ∈ {-2,-1,+1,+2}
-    let shifted = _mm256_sub_epi32(codes, two);
-    let correction = _mm256_and_si256(_mm256_srli_epi32::<1>(codes), one);
-    _mm256_cvtepi32_ps(_mm256_add_epi32(shifted, correction))
+    let is_zero = _mm256_cmpeq_epi32(codes, zero);
+    let is_two = _mm256_cmpeq_epi32(codes, two);
+    let neg = _mm256_and_ps(_mm256_castsi256_ps(is_zero), neg_one_ps);
+    let pos = _mm256_and_ps(_mm256_castsi256_ps(is_two), one_ps);
+    _mm256_add_ps(neg, pos)
 }
 
 /// AVX2-accelerated dot product for one QK256 row.
@@ -94,11 +91,12 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
     debug_assert!(x.len() >= cols, "AVX2: x too short: {} < {}", x.len(), cols);
 
     unsafe {
-        // Hoisted constants shared by every decode_8_weights_avx2 call.
-        let shifts = _mm256_setr_epi32(0, 2, 4, 6, 16, 18, 20, 22);
+        // Hoisted constants shared by every decode_8_lane_weights_avx2 call.
         let mask_03 = _mm256_set1_epi32(0x03);
         let two = _mm256_set1_epi32(2);
-        let one = _mm256_set1_epi32(1);
+        let zero = _mm256_setzero_si256();
+        let one_ps = _mm256_set1_ps(1.0);
+        let neg_one_ps = _mm256_set1_ps(-1.0);
 
         // 4 independent FMA accumulators to saturate the FMA pipe.
         let mut acc0 = _mm256_setzero_ps();
@@ -124,88 +122,56 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
                 _mm_prefetch(x_ptr.add(col + QK256_BLOCK + 16) as *const i8, _MM_HINT_T0);
             }
 
-            let mut j = 0usize;
+            for chunk in 0..2 {
+                let chunk_byte_base = chunk * 32;
+                let chunk_elem_base = chunk * 128;
+                if chunk_elem_base >= take {
+                    break;
+                }
 
-            // --- 32-element main loop (8 packed bytes → 4 × 8-wide FMA) ---
-            while j + 32 <= take {
-                let pi = j / 4;
+                for lane in 0..4 {
+                    let lane_elem_base = chunk_elem_base + lane * 32;
+                    if lane_elem_base >= take {
+                        break;
+                    }
 
-                let w0 = decode_8_weights_avx2(
-                    *blk.add(pi),
-                    *blk.add(pi + 1),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
-                let w1 = decode_8_weights_avx2(
-                    *blk.add(pi + 2),
-                    *blk.add(pi + 3),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
-                let w2 = decode_8_weights_avx2(
-                    *blk.add(pi + 4),
-                    *blk.add(pi + 5),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
-                let w3 = decode_8_weights_avx2(
-                    *blk.add(pi + 6),
-                    *blk.add(pi + 7),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
+                    let lane_take = 32usize.min(take - lane_elem_base);
+                    let lane_shift = 6 - lane as i32 * 2;
+                    let mut gp = 0usize;
 
-                let xj = col + j;
-                let x0 = _mm256_loadu_ps(x_ptr.add(xj));
-                let x1 = _mm256_loadu_ps(x_ptr.add(xj + 8));
-                let x2 = _mm256_loadu_ps(x_ptr.add(xj + 16));
-                let x3 = _mm256_loadu_ps(x_ptr.add(xj + 24));
+                    while gp + 8 <= lane_take {
+                        let w = decode_8_lane_weights_avx2(
+                            blk.add(chunk_byte_base + gp),
+                            lane_shift,
+                            mask_03,
+                            two,
+                            zero,
+                            one_ps,
+                            neg_one_ps,
+                        );
+                        let xv = _mm256_loadu_ps(x_ptr.add(col + lane_elem_base + gp));
 
-                acc0 = _mm256_fmadd_ps(w0, x0, acc0);
-                acc1 = _mm256_fmadd_ps(w1, x1, acc1);
-                acc2 = _mm256_fmadd_ps(w2, x2, acc2);
-                acc3 = _mm256_fmadd_ps(w3, x3, acc3);
+                        match (chunk, lane) {
+                            (0, 0) | (1, 0) => acc0 = _mm256_fmadd_ps(w, xv, acc0),
+                            (0, 1) | (1, 1) => acc1 = _mm256_fmadd_ps(w, xv, acc1),
+                            (0, 2) | (1, 2) => acc2 = _mm256_fmadd_ps(w, xv, acc2),
+                            _ => acc3 = _mm256_fmadd_ps(w, xv, acc3),
+                        }
+                        gp += 8;
+                    }
 
-                j += 32;
-            }
-
-            // --- 8-element cleanup loop ---
-            while j + 8 <= take {
-                let pi = j / 4;
-                let w = decode_8_weights_avx2(
-                    *blk.add(pi),
-                    *blk.add(pi + 1),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
-                let xv = _mm256_loadu_ps(x_ptr.add(col + j));
-                acc0 = _mm256_fmadd_ps(w, xv, acc0);
-                j += 8;
-            }
-
-            // --- Scalar tail (< 8 elements) ---
-            while j < take {
-                let packed_byte = *blk.add(j / 4);
-                let shift = (j % 4) * 2;
-                let code = (packed_byte >> shift) & 0x03;
-                let w = match code {
-                    0 => -2.0,
-                    1 => -1.0,
-                    2 => 1.0,
-                    _ => 2.0,
-                };
-                scalar_acc += w * *x_ptr.add(col + j);
-                j += 1;
+                    while gp < lane_take {
+                        let packed_byte = *blk.add(chunk_byte_base + gp);
+                        let code = (packed_byte >> lane_shift) & 0x03;
+                        let w = match code {
+                            0 => -1.0,
+                            2 => 1.0,
+                            _ => 0.0,
+                        };
+                        scalar_acc += w * *x_ptr.add(col + lane_elem_base + gp);
+                        gp += 1;
+                    }
+                }
             }
 
             col += take;

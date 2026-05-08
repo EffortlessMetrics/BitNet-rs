@@ -10,12 +10,15 @@ use bitnet_common::{
     BitNetConfig, BitNetError, CorrectionRecord, Device, ModelError, ModelMetadata, Result,
 };
 use bitnet_layer_index_core::extract_structured_layer_index_segment;
+use bitnet_quantization::i2s_qk256::{
+    QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, unpack_qk256_block,
+};
 use candle_core::{DType, Tensor};
 use std::path::Path;
 use tracing::{debug, info};
 
-/// Type alias for tensor load result with optional raw tensor and correction record
-type TensorLoadResult = Result<(Tensor, Option<(String, Tensor)>, Option<CorrectionRecord>)>;
+/// Type alias for tensor load result with optional raw tensors and correction record.
+type TensorLoadResult = Result<(Tensor, Vec<(String, Tensor)>, Option<CorrectionRecord>)>;
 
 /// GGUF format loader
 pub struct GgufLoader;
@@ -49,6 +52,165 @@ impl GgufLoader {
         // GGUF frequently provides them as [in,out]. Normalize here once.
         // Use name-only gating since model dims vary across architectures.
         is_projection_weight(name) && shape.len() == 2
+    }
+
+    fn qk256_inline_scale(
+        data: &[u8],
+        expected_raw_bytes: usize,
+        name: &str,
+    ) -> Result<Option<f32>> {
+        let Some(trailing) = data.len().checked_sub(expected_raw_bytes) else {
+            return Ok(None);
+        };
+        if trailing == 0 {
+            return Ok(None);
+        }
+        if trailing < std::mem::size_of::<f32>() {
+            tracing::debug!(
+                "QK256 '{}': trailing bytes too short for inline scale: {}",
+                name,
+                trailing
+            );
+            return Ok(None);
+        }
+
+        let scale = f32::from_le_bytes(
+            data[expected_raw_bytes..expected_raw_bytes + std::mem::size_of::<f32>()]
+                .try_into()
+                .expect("slice length checked"),
+        );
+        if !scale.is_finite() {
+            return Err(BitNetError::Validation(format!(
+                "QK256 '{}': inline scale is not finite: {}",
+                name, scale
+            )));
+        }
+
+        Ok(Some(scale))
+    }
+
+    fn qk256_raw_entries(
+        name: &str,
+        data: &[u8],
+        rows: usize,
+        cols: usize,
+        device: &candle_core::Device,
+    ) -> Result<(Tensor, Vec<(String, Tensor)>, Option<f32>, usize)> {
+        let blocks_per_row = cols.div_ceil(QK256_BLOCK);
+        let row_stride_bytes = blocks_per_row.checked_mul(QK256_PACKED_BYTES).ok_or_else(|| {
+            BitNetError::Validation(format!(
+                "QK256 '{}': row stride overflow for cols={}",
+                name, cols
+            ))
+        })?;
+        let expected_raw_bytes = rows.checked_mul(row_stride_bytes).ok_or_else(|| {
+            BitNetError::Validation(format!(
+                "QK256 '{}': raw byte shape overflow for rows={} stride={}",
+                name, rows, row_stride_bytes
+            ))
+        })?;
+        if data.len() < expected_raw_bytes {
+            return Err(BitNetError::Validation(format!(
+                "QK256 '{}': missing raw bytes: available={}, expected={}",
+                name,
+                data.len(),
+                expected_raw_bytes
+            )));
+        }
+
+        let scale = Self::qk256_inline_scale(data, expected_raw_bytes, name)?;
+        let raw_data = if data.len() > expected_raw_bytes {
+            tracing::debug!(
+                "QK256 '{}': preserving {} trailing bytes as inline scale/padding",
+                name,
+                data.len() - expected_raw_bytes
+            );
+            &data[..expected_raw_bytes]
+        } else {
+            data
+        };
+
+        let raw_tensor =
+            Tensor::from_raw_buffer(raw_data, DType::U8, &[rows, row_stride_bytes], device)
+                .map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+        let qk256_key = format!("{}.qk256_qs", name);
+        let mut raw_entries = vec![(qk256_key.clone(), raw_tensor.clone())];
+        if let Some(scale) = scale {
+            let scale_key = format!("{}.qk256_scale", name);
+            let scale_tensor = Tensor::from_vec(vec![scale], &[1], device)
+                .map_err(|e| BitNetError::Validation(e.to_string()))?;
+            raw_entries.push((scale_key.clone(), scale_tensor));
+            tracing::debug!(
+                "QK256 inline scale stored with key '{}' value={:.8e}",
+                scale_key,
+                scale
+            );
+        }
+
+        tracing::debug!(
+            "QK256 raw tensor stored with key '{}' [shape: {:?}]",
+            qk256_key,
+            raw_tensor.dims()
+        );
+
+        Ok((raw_tensor, raw_entries, scale, row_stride_bytes))
+    }
+
+    fn dequantize_qk256_token_embedding_rows(
+        data: &[u8],
+        rows: usize,
+        cols: usize,
+        scale: Option<f32>,
+        row_stride_bytes: usize,
+        name: &str,
+    ) -> Result<Vec<f32>> {
+        let expected_raw_bytes = rows.checked_mul(row_stride_bytes).ok_or_else(|| {
+            BitNetError::Validation(format!(
+                "QK256 embedding '{}': raw byte shape overflow for rows={} stride={}",
+                name, rows, row_stride_bytes
+            ))
+        })?;
+        if data.len() < expected_raw_bytes {
+            return Err(BitNetError::Validation(format!(
+                "QK256 embedding '{}': missing raw bytes: available={}, expected={}",
+                name,
+                data.len(),
+                expected_raw_bytes
+            )));
+        }
+
+        let scale = scale.unwrap_or(1.0);
+        let total = rows.checked_mul(cols).ok_or_else(|| {
+            BitNetError::Validation(format!(
+                "QK256 embedding '{}': output shape overflow for rows={} cols={}",
+                name, rows, cols
+            ))
+        })?;
+        let mut out = vec![0f32; total];
+        let mut codes = [0u8; QK256_BLOCK];
+
+        for row in 0..rows {
+            let row_start = row * row_stride_bytes;
+            let row_bytes = &data[row_start..row_start + row_stride_bytes];
+            let mut col = 0usize;
+            for block in row_bytes.chunks_exact(QK256_PACKED_BYTES) {
+                let block: &[u8; QK256_PACKED_BYTES] =
+                    block.try_into().expect("QK256 block must be 64 bytes");
+                unpack_qk256_block(block, &mut codes);
+                let take = QK256_BLOCK.min(cols - col);
+                let out_base = row * cols + col;
+                for idx in 0..take {
+                    out[out_base + idx] = scale * code_to_f32(codes[idx]);
+                }
+                col += take;
+                if col >= cols {
+                    break;
+                }
+            }
+        }
+
+        Ok(out)
     }
 
     /// Helper to fetch an unsigned integer by trying a list of keys
@@ -1127,6 +1289,36 @@ impl GgufLoader {
         Ok(out)
     }
 
+    fn f16_values_to_f32(bytes: &[u8], dims: &[usize], name: &str) -> Result<Vec<f32>> {
+        let elements = dims.iter().try_fold(1usize, |acc, dim| {
+            acc.checked_mul(*dim).ok_or_else(|| {
+                BitNetError::Validation(format!(
+                    "F16 tensor '{name}' shape {:?} overflows element count",
+                    dims
+                ))
+            })
+        })?;
+        let expected_bytes = elements.checked_mul(2).ok_or_else(|| {
+            BitNetError::Validation(format!(
+                "F16 tensor '{name}' byte count overflows for shape {:?}",
+                dims
+            ))
+        })?;
+        if bytes.len() < expected_bytes {
+            return Err(BitNetError::Validation(format!(
+                "F16 tensor '{name}' has {} bytes, expected at least {} for {:?}",
+                bytes.len(),
+                expected_bytes,
+                dims
+            )));
+        }
+
+        Ok(bytes[..expected_bytes]
+            .chunks_exact(2)
+            .map(|chunk| half::f16::from_bits(u16::from_le_bytes([chunk[0], chunk[1]])).to_f32())
+            .collect())
+    }
+
     #[allow(dead_code)]
     pub(super) fn transpose_f32_values(values: &[f32], dims: &[usize]) -> Vec<f32> {
         let (rows, cols) = (dims[0], dims[1]);
@@ -1563,7 +1755,7 @@ impl GgufLoader {
             );
 
             // Convert to Candle tensor (now with policy plan and QK256 handling)
-            let (candle_tensor, raw_qk256_opt, correction_opt) = self
+            let (candle_tensor, raw_qk256_entries, correction_opt) = self
                 .create_candle_tensor_with_policy(
                     tensor_info,
                     tensor_data,
@@ -1574,8 +1766,8 @@ impl GgufLoader {
                 )?;
             tensors.insert(tensor_info.name.clone(), candle_tensor);
 
-            // Store raw QK256 tensor if present
-            if let Some((key, raw_tensor)) = raw_qk256_opt {
+            // Store raw QK256 tensors if present.
+            for (key, raw_tensor) in raw_qk256_entries {
                 raw_tensors.insert(key, raw_tensor);
             }
 
@@ -1664,7 +1856,7 @@ impl GgufLoader {
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
                 let tensor = Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                return Ok((tensor, None, None));
+                return Ok((tensor, Vec::new(), None));
             }
 
             // For IQ2_S without FFI support, fail with clear message
@@ -1712,7 +1904,16 @@ impl GgufLoader {
                     // Determine correct orientation for QK256 tensors
                     // QK256 format requires [output_dim, input_dim] layout (one row per output feature)
                     // GGUF may store as [input_dim, output_dim] which needs transposition
-                    let (rows, cols) = {
+                    let is_transposed_embedding = Self::is_embedding_tensor(&info.name)
+                        && Self::embedding_is_transposed(&info.shape);
+                    let (rows, cols) = if is_transposed_embedding {
+                        tracing::info!(
+                            "QK256 token embedding '{}' uses GGML [hidden, vocab] dims {:?} -> preserving token-major raw rows [vocab, hidden]",
+                            info.name,
+                            info.shape
+                        );
+                        (info.shape[1], info.shape[0])
+                    } else {
                         let shape_as_is = (info.shape[0], info.shape[1]);
                         let shape_transposed = (info.shape[1], info.shape[0]);
 
@@ -1767,58 +1968,28 @@ impl GgufLoader {
                         }
                     };
 
-                    let blocks_per_row = cols.div_ceil(256); // 256 elements per block
-                    let row_stride_bytes = blocks_per_row * 64; // 64 bytes per 256-element block
-                    let expected_raw_bytes =
-                        rows.checked_mul(row_stride_bytes).ok_or_else(|| {
-                            BitNetError::Validation(format!(
-                                "QK256 '{}': raw byte shape overflow for rows={} stride={}",
-                                info.name, rows, row_stride_bytes
-                            ))
-                        })?;
-                    if data.len() < expected_raw_bytes {
-                        return Err(BitNetError::Validation(format!(
-                            "QK256 '{}': missing raw bytes: available={}, expected={}",
-                            info.name,
-                            data.len(),
-                            expected_raw_bytes
-                        )));
-                    }
-                    let raw_data = if data.len() > expected_raw_bytes {
-                        tracing::debug!(
-                            "QK256 '{}': ignoring {} trailing alignment padding bytes",
-                            info.name,
-                            data.len() - expected_raw_bytes
-                        );
-                        &data[..expected_raw_bytes]
+                    let (_raw_tensor, raw_entries, scale, row_stride_bytes) =
+                        Self::qk256_raw_entries(&info.name, data, rows, cols, &candle_device)?;
+
+                    if is_transposed_embedding {
+                        let f32_data = Self::dequantize_qk256_token_embedding_rows(
+                            data,
+                            rows,
+                            cols,
+                            scale,
+                            row_stride_bytes,
+                            &info.name,
+                        )?;
+                        let tensor = Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                        return Ok((tensor, raw_entries, None));
                     } else {
-                        data
-                    };
-
-                    // Store raw bytes as U8 tensor [rows, row_stride_bytes]
-                    let raw_tensor = Tensor::from_raw_buffer(
-                        raw_data,
-                        DType::U8,
-                        &[rows, row_stride_bytes],
-                        &candle_device,
-                    )
-                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
-
-                    // Generate key for raw_tensors collection
-                    let qk256_key = format!("{}.qk256_qs", info.name);
-
-                    // Return placeholder f32 tensor for main collection (will not be used)
-                    // We need a valid tensor to satisfy the API, but transformer will use raw_tensors
-                    let placeholder = Tensor::zeros(&[rows, cols], DType::F32, &candle_device)
-                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
-
-                    tracing::debug!(
-                        "QK256 raw tensor stored with key '{}' [shape: {:?}]",
-                        qk256_key,
-                        raw_tensor.dims()
-                    );
-
-                    return Ok((placeholder, Some((qk256_key, raw_tensor)), None));
+                        // Return placeholder f32 tensor for main collection (will not be used)
+                        // We need a valid tensor to satisfy the API, but transformer will use raw_tensors
+                        let placeholder = Tensor::zeros(&[rows, cols], DType::F32, &candle_device)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                        return Ok((placeholder, raw_entries, None));
+                    }
                 }
 
                 // For other I2_S flavors (Split32, Inline), continue with dequantization
@@ -1843,7 +2014,7 @@ impl GgufLoader {
                     let (rows, cols) = (info.shape[1], info.shape[0]);
                     let tensor = Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                    return Ok((tensor, None, correction_opt));
+                    return Ok((tensor, Vec::new(), correction_opt));
                 } else if Self::is_projection_tensor(&info.name) && info.shape.len() == 2 {
                     // Projection tensors need transposition for linear layer compatibility
                     debug!(
@@ -1871,7 +2042,7 @@ impl GgufLoader {
                         );
                     }
 
-                    return Ok((tensor, None, correction_opt));
+                    return Ok((tensor, Vec::new(), correction_opt));
                 } else {
                     // Normal I2_S dequantization with config
                     let mut f32_data = i2s::dequantize_to_f32_with_cfg(data, &info.shape, cfg)
@@ -1915,7 +2086,7 @@ impl GgufLoader {
                         );
                     }
 
-                    return Ok((tensor, None, correction_opt));
+                    return Ok((tensor, Vec::new(), correction_opt));
                 }
             }
 
@@ -1962,14 +2133,14 @@ impl GgufLoader {
                     );
                 }
 
-                return Ok((tensor, None, None));
+                return Ok((tensor, Vec::new(), None));
             }
 
             // Other standard GGUF quantized types stay fail-closed in strict
             // mode until a dedicated adapter/dequantizer is added.
             let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)
                 .map_err(|e| BitNetError::Validation(e.to_string()))?;
-            Ok((tensor, None, None))
+            Ok((tensor, Vec::new(), None))
         } else {
             // For regular tensors, interpret the bytes according to the data type
             match dtype {
@@ -2003,11 +2174,10 @@ impl GgufLoader {
                         && Self::embedding_is_transposed(&info.shape)
                     {
                         info!(
-                            "Embedding appears transposed ({:?}) -> decoding transposed",
+                            "Embedding uses GGML [hidden, vocab] dims {:?} -> reshaping token-major payload to [vocab, hidden]",
                             info.shape
                         );
-                        let f32_data = Self::transpose_f32_to_f32(data, &info.shape)?;
-                        // Now dims become [vocab, hidden]
+                        let f32_data = bytemuck::cast_slice::<u8, f32>(data);
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?
@@ -2044,7 +2214,7 @@ impl GgufLoader {
 
                         // Prefer correction2 if both are present, otherwise use correction1
                         let final_correction = correction2.or(correction1);
-                        Ok((final_tensor, None, final_correction))
+                        Ok((final_tensor, Vec::new(), final_correction))
                     } else {
                         // Log projection RMS for F32 projections
                         if is_projection_weight(&info.name)
@@ -2057,7 +2227,7 @@ impl GgufLoader {
                                 rms
                             );
                         }
-                        Ok((tensor, None, None))
+                        Ok((tensor, Vec::new(), None))
                     }
                 }
                 DType::F16 => {
@@ -2066,11 +2236,10 @@ impl GgufLoader {
                         && Self::embedding_is_transposed(&info.shape)
                     {
                         info!(
-                            "Embedding appears transposed ({:?}) -> decoding transposed",
+                            "Embedding uses GGML [hidden, vocab] dims {:?} -> reshaping token-major payload to [vocab, hidden]",
                             info.shape
                         );
-                        let f32_data = Self::transpose_f16_to_f32(data, &info.shape)?;
-                        // Now dims become [vocab, hidden]
+                        let f32_data = Self::f16_values_to_f32(data, &info.shape, &info.name)?;
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?
@@ -2086,9 +2255,7 @@ impl GgufLoader {
                             .map_err(|e| BitNetError::Validation(e.to_string()))?
                     } else {
                         // For now, convert F16 data to F32 for compatibility
-                        let half_data = bytemuck::cast_slice::<u8, u16>(data);
-                        let float_data: Vec<f32> =
-                            half_data.iter().map(|&h| half::f16::from_bits(h).to_f32()).collect();
+                        let float_data = Self::f16_values_to_f32(data, &info.shape, &info.name)?;
                         Tensor::from_slice(&float_data, info.shape.as_slice(), &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?
                     };
@@ -2110,7 +2277,7 @@ impl GgufLoader {
 
                         // Prefer correction2 if both are present, otherwise use correction1
                         let final_correction = correction2.or(correction1);
-                        Ok((final_tensor, None, final_correction))
+                        Ok((final_tensor, Vec::new(), final_correction))
                     } else {
                         // Log projection RMS for F16→F32 projections
                         if is_projection_weight(&info.name)
@@ -2123,7 +2290,7 @@ impl GgufLoader {
                                 rms
                             );
                         }
-                        Ok((tensor, None, None))
+                        Ok((tensor, Vec::new(), None))
                     }
                 }
                 _ => Err(BitNetError::Model(ModelError::InvalidFormat {
@@ -2197,5 +2364,66 @@ mod tests {
         };
 
         assert_eq!(output_shape, vec![151_936, 896]);
+    }
+
+    #[test]
+    fn qk256_inline_scale_reads_first_trailing_f32() {
+        let expected_raw_bytes = 64;
+        let mut data = vec![0u8; expected_raw_bytes];
+        data.extend_from_slice(&0.125f32.to_le_bytes());
+        data.extend_from_slice(&[0u8; 28]);
+
+        let scale =
+            GgufLoader::qk256_inline_scale(&data, expected_raw_bytes, "blk.0.attn_q.weight")
+                .expect("scale parse");
+
+        assert_eq!(scale, Some(0.125));
+    }
+
+    #[test]
+    fn qk256_inline_scale_is_absent_without_trailing_bytes() {
+        let data = vec![0u8; 64];
+
+        let scale =
+            GgufLoader::qk256_inline_scale(&data, 64, "blk.0.attn_q.weight").expect("scale parse");
+
+        assert_eq!(scale, None);
+    }
+
+    #[test]
+    fn qk256_token_embedding_rows_use_bitnetcpp_dequant_map_and_scale() {
+        let mut data = vec![0x00u8; 64];
+        data.extend(std::iter::repeat_n(0xAAu8, 64));
+        data.extend_from_slice(&0.5f32.to_le_bytes());
+
+        let values = GgufLoader::dequantize_qk256_token_embedding_rows(
+            &data,
+            2,
+            256,
+            Some(0.5),
+            64,
+            "token_embd.weight",
+        )
+        .expect("embedding dequant");
+
+        assert_eq!(values.len(), 512);
+        assert_eq!(values[0], -0.5);
+        assert_eq!(values[255], -0.5);
+        assert_eq!(values[256], 0.5);
+        assert_eq!(values[511], 0.5);
+    }
+
+    #[test]
+    fn f16_embedding_payload_is_token_major_for_ggml_hidden_vocab_shape() {
+        let values = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let mut data = Vec::new();
+        for value in values {
+            data.extend_from_slice(&half::f16::from_f32(value).to_bits().to_le_bytes());
+        }
+
+        let f32_values =
+            GgufLoader::f16_values_to_f32(&data, &[3, 2], "token_embd.weight").expect("f16 parse");
+
+        assert_eq!(f32_values, values);
     }
 }

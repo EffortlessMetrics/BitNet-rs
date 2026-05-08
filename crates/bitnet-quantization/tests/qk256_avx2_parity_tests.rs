@@ -12,11 +12,16 @@ use bitnet_quantization::i2s_qk256::{
 };
 use bitnet_quantization::i2s_qk256_avx2::gemv_qk256_avx2;
 
-/// Pack 256 2-bit codes into 64 bytes (4 codes per byte, LSB first).
+/// Pack 256 2-bit codes into BitNet.cpp I2_S grouped QK256 layout.
 fn pack_codes(codes: &[u8; 256]) -> [u8; 64] {
     let mut packed = [0u8; 64];
     for (i, &code) in codes.iter().enumerate() {
-        packed[i / 4] |= (code & 0x03) << ((i % 4) * 2);
+        let chunk = i / 128;
+        let chunk_pos = i % 128;
+        let lane = chunk_pos / 32;
+        let gp = chunk_pos % 32;
+        let byte_idx = chunk * 32 + gp;
+        packed[byte_idx] |= (code & 0x03) << (6 - lane * 2);
     }
     packed
 }
@@ -117,6 +122,13 @@ fn deterministic_prng_activation(cols: usize) -> Vec<f32> {
         .collect()
 }
 
+fn avx2_selection_available() -> bool {
+    cfg!(feature = "avx2")
+        && cfg!(target_arch = "x86_64")
+        && is_x86_feature_detected!("avx2")
+        && is_x86_feature_detected!("fma")
+}
+
 fn assert_close_vectors(label: &str, expected: &[f32], actual: &[f32], tolerance: f32) {
     assert_eq!(expected.len(), actual.len(), "{label}: vector length mismatch");
     for (idx, (&expected, &actual)) in expected.iter().zip(actual.iter()).enumerate() {
@@ -209,7 +221,7 @@ fn assert_hardened_parity_case(rows: usize, cols: usize, salt: usize, tolerance:
 
     #[cfg(target_arch = "x86_64")]
     {
-        if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+        if avx2_selection_available() {
             let mut y_strict_avx2 = vec![0.0f32; rows];
             let avx2_selection = gemv_qk256_with_kernel_selection(
                 &qs,
@@ -395,7 +407,7 @@ fn test_avx2_parity_requested_shape_pattern_matrix_1e4() {
                 );
 
                 #[cfg(target_arch = "x86_64")]
-                if is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma") {
+                if avx2_selection_available() {
                     let mut y_avx2 = vec![0.0f32; rows];
                     let selection = gemv_qk256_with_kernel_selection(
                         &qs,
@@ -470,12 +482,12 @@ fn test_gemv_single_row_all_ones() {
     assert_parity(&qs, &x, 1, cols, stride, 1e-5);
 }
 
-// ── Test 2: single row, all codes=1 (-1), uniform x=1.0 ──
+// ── Test 2: single row, all codes=0 (-1), uniform x=1.0 ──
 
 #[test]
 fn test_gemv_single_row_all_neg_ones() {
     let cols = 256;
-    let codes = vec![1u8; cols]; // code 1 → -1.0
+    let codes = vec![0u8; cols]; // code 0 → -1.0
     let x = vec![1.0f32; cols];
     let (qs, stride) = build_qs_data(&[codes], cols);
 
@@ -577,10 +589,10 @@ fn test_unpack_code_roundtrip() {
 
 #[test]
 fn test_code_to_f32_mapping() {
-    assert_eq!(code_to_f32(0), -2.0);
-    assert_eq!(code_to_f32(1), -1.0);
+    assert_eq!(code_to_f32(0), -1.0);
+    assert_eq!(code_to_f32(1), 0.0);
     assert_eq!(code_to_f32(2), 1.0);
-    assert_eq!(code_to_f32(3), 2.0);
+    assert_eq!(code_to_f32(3), 0.0);
 }
 
 // ── Test 10: all x=0.0 → y=0.0 ──
@@ -627,17 +639,17 @@ fn test_gemv_large_values() {
 fn test_gemv_single_element_rows() {
     let cols = 4; // minimum meaningful size
     let rows = 2;
-    // codes: row0=[0,1,2,3] → weights [-2,-1,+1,+2]
-    // codes: row1=[3,3,3,3] → weights [+2,+2,+2,+2]
-    let row_codes = vec![vec![0u8, 1, 2, 3], vec![3u8, 3, 3, 3]];
+    // codes: row0=[0,1,2,3] → weights [-1,0,+1,0]
+    // codes: row1=[2,2,2,2] → weights [+1,+1,+1,+1]
+    let row_codes = vec![vec![0u8, 1, 2, 3], vec![2u8, 2, 2, 2]];
     let x = vec![1.0f32; cols];
     let (qs, stride) = build_qs_data(&row_codes, cols);
 
-    // Row 0: (-2)*1 + (-1)*1 + 1*1 + 2*1 = 0
-    // Row 1: 2*1 + 2*1 + 2*1 + 2*1 = 8
+    // Row 0: (-1)*1 + 0*1 + 1*1 + 0*1 = 0
+    // Row 1: 1*1 + 1*1 + 1*1 + 1*1 = 4
     let mut y = vec![0.0f32; rows];
     gemv_qk256(&qs, &x, &mut y, rows, cols, stride).expect("gemv_qk256 small");
     assert!(y[0].abs() < 1e-5, "row 0 expected 0, got {}", y[0]);
-    assert!((y[1] - 8.0).abs() < 1e-5, "row 1 expected 8, got {}", y[1]);
+    assert!((y[1] - 4.0).abs() < 1e-5, "row 1 expected 4, got {}", y[1]);
     assert_parity(&qs, &x, rows, cols, stride, 1e-5);
 }
