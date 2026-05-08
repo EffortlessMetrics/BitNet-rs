@@ -141,6 +141,14 @@ enum MacAction {
         #[arg(long, default_value_t = false)]
         allocation_audit: bool,
 
+        /// Emit operator progress lines to stderr while validation runs.
+        #[arg(long, default_value_t = false)]
+        progress: bool,
+
+        /// Suppress validation status/progress lines; receipt artifacts are still written.
+        #[arg(long, default_value_t = false)]
+        quiet: bool,
+
         /// Output aggregate warm-session receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_VALIDATE_DEFAULT_RECEIPT)]
         json_out: PathBuf,
@@ -217,6 +225,8 @@ impl MacCommand {
                 max_new_tokens,
                 threads,
                 allocation_audit,
+                progress,
+                quiet,
                 json_out,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac validate")?;
@@ -229,6 +239,8 @@ impl MacCommand {
                     max_new_tokens,
                     threads,
                     allocation_audit,
+                    progress,
+                    quiet,
                     json_out,
                 )
                 .await
@@ -335,6 +347,8 @@ async fn run_validate(
     max_new_tokens: usize,
     threads: usize,
     allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
     json_out: PathBuf,
 ) -> Result<()> {
     if profile_set == MacValidateProfileSet::Performance && cfg!(debug_assertions) {
@@ -344,10 +358,19 @@ async fn run_validate(
     }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     if profile_set == MacValidateProfileSet::Operator {
-        return run_operator_profiles(model, json_out, threads, allocation_audit).await;
+        return run_operator_profiles(model, json_out, threads, allocation_audit, progress, quiet)
+            .await;
     }
     if profile_set == MacValidateProfileSet::Performance {
-        return run_performance_profiles(model, json_out, threads, allocation_audit).await;
+        return run_performance_profiles(
+            model,
+            json_out,
+            threads,
+            allocation_audit,
+            progress,
+            quiet,
+        )
+        .await;
     }
     crate::run_slm_warm_session(
         APPLE_M4_CPU_NEON,
@@ -375,6 +398,7 @@ async fn run_validate(
         true,
         true,
         allocation_audit,
+        crate::SlmWarmSessionOutput::new(false, progress, quiet),
         1,
         1,
         json_out.clone(),
@@ -389,6 +413,8 @@ async fn run_operator_profiles(
     json_out: PathBuf,
     threads: usize,
     allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
 ) -> Result<()> {
     run_warm_profile_set(
         model,
@@ -401,6 +427,8 @@ async fn run_operator_profiles(
             command: "mac validate --profile-set operator",
             required_release: false,
             allocation_audit,
+            progress,
+            quiet,
         },
     )
     .await
@@ -411,6 +439,8 @@ async fn run_performance_profiles(
     json_out: PathBuf,
     threads: usize,
     allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
 ) -> Result<()> {
     if cfg!(debug_assertions) {
         anyhow::bail!(
@@ -428,6 +458,8 @@ async fn run_performance_profiles(
             command: "mac validate --profile-set performance",
             required_release: true,
             allocation_audit,
+            progress,
+            quiet,
         },
     )
     .await
@@ -440,6 +472,8 @@ struct WarmProfileSetSpec {
     command: &'static str,
     required_release: bool,
     allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
 }
 
 async fn run_warm_profile_set(
@@ -488,6 +522,7 @@ async fn run_warm_profile_set(
             true,
             false,
             spec.allocation_audit,
+            crate::SlmWarmSessionOutput::new(false, spec.progress, spec.quiet),
             1,
             1,
             receipt_path.clone(),
@@ -543,6 +578,15 @@ async fn run_warm_profile_set(
             "cold_load_separated": true,
             "broad_performance_claim": false,
             "speedup_claim": false
+        },
+        "operator_ux": {
+            "stream_tokens_requested": false,
+            "progress_enabled": spec.progress && !spec.quiet,
+            "quiet_default_logs": !spec.progress,
+            "quiet_requested": spec.quiet,
+            "status_stream": "stderr",
+            "time_to_first_token_receipts": true,
+            "clear_failure_messages": true
         },
         "model_cache": {
             "id": model.id,
@@ -641,11 +685,13 @@ fn operator_profile_summary(
             "prefill_ms": receipt["speed"]["timing"]["prefill_ms"].clone(),
             "warm_prompt_wall_ms": receipt["speed"]["timing"]["warm_prompt_wall_ms"].clone(),
             "first_token_ms": receipt["speed"]["timing"]["first_token_ms"].clone(),
+            "time_to_first_token_ms": receipt["speed"]["timing"]["time_to_first_token_ms"].clone(),
             "decode_total_ms": receipt["speed"]["timing"]["decode_total_ms"].clone(),
             "sampling_ms": receipt["speed"]["timing"]["sampling_ms"].clone(),
             "warm_prompt_generated_tok_s": receipt["speed"]["throughput"]["warm_prompt_generated_tok_s"].clone(),
             "decode_generated_tok_s": receipt["speed"]["throughput"]["decode_generated_tok_s"].clone(),
         },
+        "operator_ux": receipt["operator_ux"].clone(),
         "memory": {
             "peak_memory_mb": peak_memory_mb(),
             "peak_memory_source": "getrusage.ru_maxrss",
@@ -1372,6 +1418,14 @@ fn validate_warm_session_receipt(
     if receipt["quality_summary"]["passed"].as_bool().is_some_and(|passed| !passed) {
         anyhow::bail!("{} warm-session quality summary failed", path.display());
     }
+    if receipt["operator_ux"].is_object()
+        && receipt["operator_ux"]["time_to_first_token_receipts"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "{} warm-session receipt must expose time-to-first-token UX receipts",
+            path.display()
+        );
+    }
     let prompts = receipt["prompts"].as_array().ok_or_else(|| {
         anyhow!("{} warm-session receipt is missing prompt summaries", path.display())
     })?;
@@ -1392,6 +1446,21 @@ fn validate_warm_session_receipt(
         let generated = prompt["generated_tokens"].as_u64().unwrap_or_default() as usize;
         if generated == 0 {
             anyhow::bail!("{} warm-session prompt generated zero tokens", path.display());
+        }
+        if prompt["operator_ux"].is_object()
+            && prompt["operator_ux"]["time_to_first_token_receipt"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} warm-session prompt is missing time-to-first-token UX receipt",
+                path.display()
+            );
+        }
+        if prompt["timing"]["time_to_first_token_ms"].is_null() && prompt["operator_ux"].is_object()
+        {
+            anyhow::bail!(
+                "{} warm-session prompt is missing timing.time_to_first_token_ms",
+                path.display()
+            );
         }
         generated_total += generated;
     }

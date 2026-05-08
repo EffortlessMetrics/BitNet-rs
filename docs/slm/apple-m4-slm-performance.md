@@ -217,6 +217,30 @@ timing.speedup_claim = false
 This timing is phase-local. It does not claim full SLM inference, full
 `apple-m4-metal` routing, or broad M4 performance.
 
+## Streaming And Operator UX
+
+`M4-SLM-PERF-006` adds user-facing output controls around the resident
+warm-session path without changing backend routing or speed claims:
+
+```text
+--stream    write generated token text to stdout as each token is decoded
+--progress  write operator progress lines to stderr
+--quiet     suppress status/progress lines while still writing receipts
+```
+
+Warm-session receipts now keep `timing.first_token_ms` and add the explicit
+alias `timing.time_to_first_token_ms` per prompt. Aggregate receipts also record
+`speed.timing.time_to_first_token_ms`, plus an `operator_ux` block that states
+whether token streaming and progress were requested. The default remains quiet
+for receipt-oriented runs: no progress output is emitted unless `--progress` is
+passed, and token text is streamed only when `--stream` is passed.
+
+`bitnet mac validate` exposes `--progress` and `--quiet` for operator profile
+runs. The Mac validation receipts preserve the same claim boundary: they record
+time-to-first-token and progress behavior, but do not claim broad performance,
+BitNet quality, full Metal inference, Neural Engine execution, MPSGraph model
+inference, or QK256 support.
+
 ## Claim Boundary
 
 Performance claims must be tied to a receipt with:

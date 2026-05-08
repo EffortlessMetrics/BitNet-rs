@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T13:46:03Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-006"
+event = "pr_open"
+pr = 4075
+head_sha = "ee4259148235c46b3a348581e50fc398c00f71ac"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+
+notes = [
+  "Opened Apple M4 SLM streaming UX and time-to-first-token receipt PR.",
+  "Scope stays on CLI warm-session/mac validation UX, SLM docs, and campaign tracking; no QK256, server, Metal kernel, model artifact, or full apple-m4-metal inference work.",
+]

@@ -626,6 +626,18 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         allocation_audit: bool,
 
+        /// Stream generated token text to stdout as each token is decoded
+        #[arg(long, default_value_t = false)]
+        stream: bool,
+
+        /// Emit operator progress lines to stderr while keeping token text on stdout
+        #[arg(long, default_value_t = false)]
+        progress: bool,
+
+        /// Suppress warm-session status/progress lines; token streaming still uses stdout
+        #[arg(long, default_value_t = false)]
+        quiet: bool,
+
         /// Minimum generated tokens required by the warm-session quality gate
         #[arg(long, default_value_t = 1)]
         min_generated_tokens: usize,
@@ -1263,6 +1275,9 @@ async fn async_main() -> Result<()> {
             fail_on_quality,
             require_determinism,
             allocation_audit,
+            stream,
+            progress,
+            quiet,
             min_generated_tokens,
             min_distinct_generated_tokens,
             json_out,
@@ -1293,6 +1308,7 @@ async fn async_main() -> Result<()> {
                 fail_on_quality,
                 require_determinism,
                 allocation_audit,
+                SlmWarmSessionOutput::new(stream, progress, quiet),
                 min_generated_tokens,
                 min_distinct_generated_tokens,
                 json_out,
@@ -2303,6 +2319,20 @@ fn write_json_output(path: Option<&std::path::PathBuf>, value: &serde_json::Valu
     } else {
         println!("{json}");
     }
+    Ok(())
+}
+
+#[cfg(feature = "full-cli")]
+fn write_json_output_silent(path: &std::path::Path, value: &serde_json::Value) -> Result<()> {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create {}", parent.display()))?;
+    }
+    let json = serde_json::to_string_pretty(value)?;
+    std::fs::write(path, json)
+        .with_context(|| format!("Failed to write JSON to {}", path.display()))?;
     Ok(())
 }
 
@@ -6490,6 +6520,31 @@ fn cuda_execution_residency_receipt(
     })
 }
 
+#[cfg(feature = "full-cli")]
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct SlmWarmSessionOutput {
+    pub(crate) stream_tokens: bool,
+    pub(crate) progress: bool,
+    pub(crate) quiet: bool,
+}
+
+#[cfg(feature = "full-cli")]
+impl SlmWarmSessionOutput {
+    pub(crate) const fn new(stream_tokens: bool, progress: bool, quiet: bool) -> Self {
+        Self { stream_tokens, progress, quiet }
+    }
+
+    fn progress_enabled(self) -> bool {
+        self.progress && !self.quiet
+    }
+
+    fn status(self, message: impl AsRef<str>) {
+        if self.progress_enabled() {
+            eprintln!("{}", message.as_ref());
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 #[cfg(feature = "full-cli")]
 async fn run_slm_warm_session(
@@ -6518,6 +6573,7 @@ async fn run_slm_warm_session(
     fail_on_quality: bool,
     require_determinism: bool,
     allocation_audit: bool,
+    output: SlmWarmSessionOutput,
     min_generated_tokens: usize,
     min_distinct_generated_tokens: usize,
     json_out: std::path::PathBuf,
@@ -6526,6 +6582,7 @@ async fn run_slm_warm_session(
     use bitnet_models::{Model, transformer::KVCache};
     use bitnet_sampling::{SamplingConfig, SamplingStrategy};
     use bitnet_tokenizers::Tokenizer;
+    use std::io::Write;
     use std::sync::Arc;
 
     let corpus = corpus_path.as_deref().map(SlmWarmSessionCorpus::load).transpose()?;
@@ -6635,7 +6692,7 @@ async fn run_slm_warm_session(
         validate_checksums: false,
         progress_callback: None,
     };
-    println!("Warm session loading model once from: {}", model_path.display());
+    output.status(format!("warm-session: loading model once from {}", model_path.display()));
     let model_load_start = std::time::Instant::now();
     let loaded_model = loader.load_with_config(&model_path, &load_config).with_context(|| {
         format!("Failed to load real model for warm session: {}", model_path.display())
@@ -6695,6 +6752,10 @@ async fn run_slm_warm_session(
         ));
     std::fs::create_dir_all(&receipt_dir)
         .with_context(|| format!("Failed to create {}", receipt_dir.display()))?;
+    output.status(format!(
+        "warm-session: writing per-prompt receipts under {}",
+        receipt_dir.display()
+    ));
 
     let mut prompt_receipts = Vec::with_capacity(prompt_inputs.len());
     let mut prompt_summaries = Vec::with_capacity(prompt_inputs.len());
@@ -6705,6 +6766,11 @@ async fn run_slm_warm_session(
     let allocation_audit_guard = AllocationAuditGuard::enable(allocation_audit_enabled);
     let mut session_buffers = WarmSessionPromptBuffers::default();
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
+        output.status(format!(
+            "warm-session: prompt {}/{} started",
+            index + 1,
+            prompt_inputs.len()
+        ));
         let prompt_alloc_start = AllocationAuditSnapshot::current();
         let prompt = &prompt_input.prompt;
         let prompt_start = std::time::Instant::now();
@@ -6839,6 +6905,10 @@ async fn run_slm_warm_session(
             let token_decode_start = std::time::Instant::now();
             let token_decode_alloc_start = AllocationAuditSnapshot::current();
             let token_text = tokenizer.decode(&[next_token])?;
+            if output.stream_tokens {
+                print!("{token_text}");
+                std::io::stdout().flush()?;
+            }
             if allocation_audit_enabled {
                 token_decode_step_allocs
                     .push(AllocationAuditSnapshot::delta_since(token_decode_alloc_start));
@@ -6886,6 +6956,9 @@ async fn run_slm_warm_session(
         }
 
         let generated_text = tokenizer.decode(&generated_tokens)?;
+        if output.stream_tokens {
+            println!();
+        }
         let quality = slm_warm_session_quality_receipt(
             &generated_text,
             &generated_tokens,
@@ -6965,6 +7038,7 @@ async fn run_slm_warm_session(
                 "tokenize_ms": rounded_ms(prompt_tokenize_ms),
                 "prefill_ms": rounded_ms(prefill_ms),
                 "first_token_ms": first_token_ms,
+                "time_to_first_token_ms": first_token_ms,
                 "first_token_decode_ms": first_token_decode_ms.map(rounded_ms),
                 "decode_total_ms": rounded_ms(decode_total_ms),
                 "decode_steady_state_tok_s": decode_steady_state_tok_s,
@@ -7036,6 +7110,17 @@ async fn run_slm_warm_session(
                 "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
                 "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
             },
+            "operator_ux": {
+                "stream_tokens_requested": output.stream_tokens,
+                "stdout_token_stream": output.stream_tokens,
+                "progress_enabled": output.progress_enabled(),
+                "quiet_default_logs": !output.progress,
+                "quiet_requested": output.quiet,
+                "status_stream": "stderr",
+                "token_stream": if output.stream_tokens { "stdout" } else { "disabled" },
+                "time_to_first_token_receipt": first_token_ms.is_some(),
+                "clear_failure_messages": true,
+            },
             "speedup_claim": false,
         });
         let prompt_receipt_construct_alloc =
@@ -7073,7 +7158,7 @@ async fn run_slm_warm_session(
                 },
             );
         }
-        write_json_output(Some(&prompt_receipt_path), &prompt_receipt)?;
+        write_json_output_silent(&prompt_receipt_path, &prompt_receipt)?;
         prompt_summaries.push(serde_json::json!({
             "prompt_index": index,
             "case_id": prompt_input.case_id.as_str(),
@@ -7092,9 +7177,17 @@ async fn run_slm_warm_session(
                 "fallback_used": backend_identity.fallback_used,
             },
             "session_reuse": prompt_receipt["session_reuse"].clone(),
+            "operator_ux": prompt_receipt["operator_ux"].clone(),
             "allocation_audit": prompt_receipt["allocation_audit"].clone(),
         }));
         prompt_receipts.push(prompt_receipt_path.display().to_string());
+        output.status(format!(
+            "warm-session: prompt {}/{} completed; first_token_ms={:?}, generated_tokens={}",
+            index + 1,
+            prompt_inputs.len(),
+            first_token_ms,
+            generated_tokens.len()
+        ));
     }
     drop(allocation_audit_guard);
 
@@ -7179,6 +7272,17 @@ async fn run_slm_warm_session(
             "total_session_ms": rounded_ms(total_session_ms),
         },
         "speed": speed_summary,
+        "operator_ux": {
+            "stream_tokens_requested": output.stream_tokens,
+            "stdout_token_stream": output.stream_tokens,
+            "progress_enabled": output.progress_enabled(),
+            "quiet_default_logs": !output.progress,
+            "quiet_requested": output.quiet,
+            "status_stream": "stderr",
+            "token_stream": if output.stream_tokens { "stdout" } else { "disabled" },
+            "time_to_first_token_receipts": true,
+            "clear_failure_messages": true,
+        },
         "backend": {
             "requested_backend": backend_identity.requested_backend.as_str(),
             "selected_backend": backend_identity.selected_backend.as_str(),
@@ -7225,12 +7329,12 @@ async fn run_slm_warm_session(
         object.insert("resolved_device".to_string(), apple_machine["resolved_device"].clone());
         object.insert("apple".to_string(), apple_machine);
     }
-    write_json_output(Some(&json_out), &aggregate)?;
-    println!(
-        "warm session receipt written to {} ({} prompts, model/tokenizer loaded once)",
+    write_json_output_silent(&json_out, &aggregate)?;
+    output.status(format!(
+        "warm-session: aggregate receipt written to {} ({} prompts, model/tokenizer loaded once)",
         json_out.display(),
         prompt_inputs.len()
-    );
+    ));
     let quality_summary = &aggregate["quality_summary"];
     if fail_on_quality && !quality_summary["passed"].as_bool().unwrap_or(false) {
         anyhow::bail!("SLM warm-session quality gate failed: {}", quality_summary);
@@ -7443,6 +7547,7 @@ impl WarmSessionSpeedAccumulator {
                 "decode_total_ms": rounded_ms(self.decode_total_ms),
                 "sampling_ms": rounded_ms(self.sampling_ms),
                 "first_token_ms": timing_samples_json(&self.first_token_ms),
+                "time_to_first_token_ms": timing_samples_json(&self.first_token_ms),
                 "steady_decode_tok_s": numeric_samples_json(&self.steady_decode_tok_s),
             },
             "throughput": {

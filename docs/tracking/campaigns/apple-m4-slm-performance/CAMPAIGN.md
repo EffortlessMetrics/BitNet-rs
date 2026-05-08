@@ -42,8 +42,8 @@ That is working, but not yet excellent. This campaign owns the next layer: relea
 | M4-SLM-PERF-002 | merged | Audit decode and receipt hot-loop allocations before optimizing math. |
 | M4-SLM-PERF-003 | merged | Harden resident-session reuse as the normal multi-prompt path. |
 | M4-SLM-PERF-004 | merged | Optimize the measured CPU/NEON bottleneck while preserving greedy output. |
-| M4-SLM-PERF-005 | ready | Expand only parity-gated Metal prefill/projection phases with explicit fallback boundaries. |
-| M4-SLM-PERF-006 | proposed | Add streaming, time-to-first-token receipts, quiet logs, and operator-friendly progress. |
+| M4-SLM-PERF-005 | merged | Expand only parity-gated Metal prefill/projection phases with explicit fallback boundaries. |
+| M4-SLM-PERF-006 | in_progress | Add streaming, time-to-first-token receipts, quiet logs, and operator-friendly progress. |
 | M4-SLM-PERF-007 | proposed | Publish a measured performance envelope for supported profiles and hardware only. |
 
 ## Review Policy

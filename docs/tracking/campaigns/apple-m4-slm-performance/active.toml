@@ -270,7 +270,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-006"
-status = "ready"
+status = "pr_open"
+pr = 4075
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-006-streaming-ux"
 stackable = false
 review_mode = "codex_premerge"
@@ -300,8 +301,18 @@ forbidden_paths = [
   "crates/bitnet-kernels/src/metal/**",
   "models/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "Apple M4 SLM warm-session runs can stream generated token text on request and record time-to-first-token UX fields in receipts.",
+  "Mac validation runs can emit operator progress on request while keeping default receipt-oriented runs quiet.",
+]
+must_not_claim = [
+  "Streaming improves model speed or output quality.",
+  "Broad Apple M4 performance is proven.",
+  "Full apple-m4-metal inference works.",
+  "BitNet local-answer quality or performance is proven.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+]
 
 [[work_item]]
 id = "M4-SLM-PERF-007"
