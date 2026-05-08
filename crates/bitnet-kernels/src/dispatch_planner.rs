@@ -335,6 +335,16 @@ impl ModelDispatchBackend {
         }
     }
 
+    pub fn receipt_route_label(&self) -> &'static str {
+        match self {
+            Self::CpuScalar => "cpu_scalar",
+            Self::CpuSimd => "cpu_simd",
+            Self::CudaBitnetQk256 => "bitnet_qk256_cuda",
+            Self::CudaDenseRegularLlm => "dense_regular_llm_cuda",
+            Self::Unsupported => "unsupported",
+        }
+    }
+
     pub fn is_cpu(&self) -> bool {
         matches!(self, Self::CpuScalar | Self::CpuSimd)
     }
@@ -384,6 +394,14 @@ impl ModelDispatchPlan {
         self.decisions.iter().filter(|d| d.backend.is_cuda()).count()
     }
 
+    pub fn cuda_bitnet_qk256_ops(&self) -> usize {
+        self.by_backend(ModelDispatchBackend::CudaBitnetQk256).len()
+    }
+
+    pub fn cuda_dense_regular_llm_ops(&self) -> usize {
+        self.by_backend(ModelDispatchBackend::CudaDenseRegularLlm).len()
+    }
+
     pub fn cpu_fallback_ops(&self) -> usize {
         self.decisions.iter().filter(|d| d.fallback_used && d.backend.is_cpu()).count()
     }
@@ -391,11 +409,68 @@ impl ModelDispatchPlan {
     pub fn unsupported_ops(&self) -> usize {
         self.decisions.iter().filter(|d| d.backend.is_unsupported()).count()
     }
+
+    pub fn summary(&self) -> ModelDispatchSummary {
+        let total_ops = self.op_count();
+        let cuda_bitnet_qk256_ops = self.cuda_bitnet_qk256_ops();
+        let cuda_dense_regular_llm_ops = self.cuda_dense_regular_llm_ops();
+        let cpu_fallback_ops = self.cpu_fallback_ops();
+        let unsupported_ops = self.unsupported_ops();
+        let selected_route =
+            select_unambiguous_cuda_route(cuda_bitnet_qk256_ops, cuda_dense_regular_llm_ops);
+        let cuda_ops = cuda_bitnet_qk256_ops + cuda_dense_regular_llm_ops;
+
+        ModelDispatchSummary {
+            total_ops,
+            cuda_bitnet_qk256_ops,
+            cuda_dense_regular_llm_ops,
+            cpu_fallback_ops,
+            unsupported_ops,
+            fallback_used: cpu_fallback_ops > 0,
+            selected_route,
+            strict_cuda_ready: total_ops > 0
+                && selected_route.is_some()
+                && cuda_ops == total_ops
+                && cpu_fallback_ops == 0
+                && unsupported_ops == 0,
+        }
+    }
 }
 
 impl Default for ModelDispatchPlan {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Receipt-ready summary for model-aware dispatch plans.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ModelDispatchSummary {
+    pub total_ops: usize,
+    pub cuda_bitnet_qk256_ops: usize,
+    pub cuda_dense_regular_llm_ops: usize,
+    pub cpu_fallback_ops: usize,
+    pub unsupported_ops: usize,
+    pub fallback_used: bool,
+    pub selected_route: Option<ModelDispatchBackend>,
+    pub strict_cuda_ready: bool,
+}
+
+impl ModelDispatchSummary {
+    pub fn cuda_ops(&self) -> usize {
+        self.cuda_bitnet_qk256_ops + self.cuda_dense_regular_llm_ops
+    }
+
+    pub fn has_any_cuda(&self) -> bool {
+        self.cuda_ops() > 0
+    }
+
+    pub fn has_mixed_cuda_routes(&self) -> bool {
+        self.cuda_bitnet_qk256_ops > 0 && self.cuda_dense_regular_llm_ops > 0
+    }
+
+    pub fn selected_route_label(&self) -> Option<&'static str> {
+        self.selected_route.map(|route| route.receipt_route_label())
     }
 }
 
@@ -481,6 +556,17 @@ fn normalized_metadata_label(label: &str) -> String {
         .chars()
         .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
         .collect()
+}
+
+fn select_unambiguous_cuda_route(
+    cuda_bitnet_qk256_ops: usize,
+    cuda_dense_regular_llm_ops: usize,
+) -> Option<ModelDispatchBackend> {
+    match (cuda_bitnet_qk256_ops > 0, cuda_dense_regular_llm_ops > 0) {
+        (true, false) => Some(ModelDispatchBackend::CudaBitnetQk256),
+        (false, true) => Some(ModelDispatchBackend::CudaDenseRegularLlm),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -610,6 +696,137 @@ mod tests {
         assert!(!plan.decisions[0].fallback_used);
         assert_eq!(plan.cuda_ops(), 1);
         assert_eq!(plan.unsupported_ops(), 0);
+    }
+
+    #[test]
+    fn model_aware_summary_counts_bitnet_qk256_cuda_route() {
+        let spec = ModelDispatchSpec {
+            model_family: ModelFamily::BitNet,
+            quantization: QuantizationKind::BitnetI2S,
+            backend_policy: BackendPolicy::StrictCuda,
+            has_simd: true,
+            cuda: CudaPlannerCapabilities::bitnet_qk256(),
+        };
+
+        let plan = plan_model_dispatch(&[qk256_matmul_op(), qk256_matmul_op()], spec);
+        let summary = plan.summary();
+
+        assert_eq!(
+            summary,
+            ModelDispatchSummary {
+                total_ops: 2,
+                cuda_bitnet_qk256_ops: 2,
+                cuda_dense_regular_llm_ops: 0,
+                cpu_fallback_ops: 0,
+                unsupported_ops: 0,
+                fallback_used: false,
+                selected_route: Some(ModelDispatchBackend::CudaBitnetQk256),
+                strict_cuda_ready: true,
+            }
+        );
+        assert_eq!(summary.cuda_ops(), 2);
+        assert!(summary.has_any_cuda());
+        assert!(!summary.has_mixed_cuda_routes());
+        assert_eq!(summary.selected_route_label(), Some("bitnet_qk256_cuda"));
+    }
+
+    #[test]
+    fn model_aware_summary_counts_dense_regular_llm_cuda_route() {
+        let spec = ModelDispatchSpec {
+            model_family: ModelFamily::DenseRegularLlm,
+            quantization: QuantizationKind::DenseBf16,
+            backend_policy: BackendPolicy::StrictCuda,
+            has_simd: true,
+            cuda: CudaPlannerCapabilities::dense_regular_llm(),
+        };
+
+        let plan = plan_model_dispatch(&[matmul_op(4096), matmul_op(8192)], spec);
+        let summary = plan.summary();
+
+        assert_eq!(summary.total_ops, 2);
+        assert_eq!(summary.cuda_bitnet_qk256_ops, 0);
+        assert_eq!(summary.cuda_dense_regular_llm_ops, 2);
+        assert_eq!(summary.cpu_fallback_ops, 0);
+        assert_eq!(summary.unsupported_ops, 0);
+        assert!(!summary.fallback_used);
+        assert_eq!(summary.selected_route, Some(ModelDispatchBackend::CudaDenseRegularLlm));
+        assert_eq!(summary.selected_route_label(), Some("dense_regular_llm_cuda"));
+        assert!(summary.strict_cuda_ready);
+    }
+
+    #[test]
+    fn model_aware_summary_rejects_mixed_cuda_route_claim() {
+        let mut plan = ModelDispatchPlan::new();
+        plan.add(ModelDispatchDecision {
+            op: qk256_matmul_op(),
+            backend: ModelDispatchBackend::CudaBitnetQk256,
+            fallback_used: false,
+            reason: "bitnet route".into(),
+        });
+        plan.add(ModelDispatchDecision {
+            op: matmul_op(4096),
+            backend: ModelDispatchBackend::CudaDenseRegularLlm,
+            fallback_used: false,
+            reason: "dense route".into(),
+        });
+
+        let summary = plan.summary();
+
+        assert_eq!(summary.total_ops, 2);
+        assert_eq!(summary.cuda_bitnet_qk256_ops, 1);
+        assert_eq!(summary.cuda_dense_regular_llm_ops, 1);
+        assert_eq!(summary.cuda_ops(), 2);
+        assert!(summary.has_any_cuda());
+        assert!(summary.has_mixed_cuda_routes());
+        assert_eq!(summary.selected_route, None);
+        assert_eq!(summary.selected_route_label(), None);
+        assert!(!summary.strict_cuda_ready);
+    }
+
+    #[test]
+    fn model_aware_summary_keeps_unsupported_strict_route_not_ready() {
+        let spec = ModelDispatchSpec {
+            model_family: ModelFamily::BitNet,
+            quantization: QuantizationKind::BitnetI2S,
+            backend_policy: BackendPolicy::StrictCuda,
+            has_simd: true,
+            cuda: CudaPlannerCapabilities::bitnet_qk256(),
+        };
+
+        let plan = plan_model_dispatch(&[qk256_matmul_op(), norm_op()], spec);
+        let summary = plan.summary();
+
+        assert_eq!(summary.total_ops, 2);
+        assert_eq!(summary.cuda_bitnet_qk256_ops, 1);
+        assert_eq!(summary.cuda_dense_regular_llm_ops, 0);
+        assert_eq!(summary.cpu_fallback_ops, 0);
+        assert_eq!(summary.unsupported_ops, 1);
+        assert!(!summary.fallback_used);
+        assert_eq!(summary.selected_route, Some(ModelDispatchBackend::CudaBitnetQk256));
+        assert!(!summary.strict_cuda_ready);
+    }
+
+    #[test]
+    fn model_aware_summary_records_explicit_cpu_fallback() {
+        let spec = ModelDispatchSpec {
+            model_family: ModelFamily::DenseRegularLlm,
+            quantization: QuantizationKind::DenseFp16,
+            backend_policy: BackendPolicy::AllowCpuFallback,
+            has_simd: true,
+            cuda: CudaPlannerCapabilities::none(),
+        };
+
+        let plan = plan_model_dispatch(&[matmul_op(4096), norm_op()], spec);
+        let summary = plan.summary();
+
+        assert_eq!(summary.total_ops, 2);
+        assert_eq!(summary.cuda_ops(), 0);
+        assert_eq!(summary.cpu_fallback_ops, 2);
+        assert_eq!(summary.unsupported_ops, 0);
+        assert!(summary.fallback_used);
+        assert_eq!(summary.selected_route, None);
+        assert_eq!(summary.selected_route_label(), None);
+        assert!(!summary.strict_cuda_ready);
     }
 
     #[test]
