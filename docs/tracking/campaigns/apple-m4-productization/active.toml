@@ -25,7 +25,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-PROD-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-productization/M4-PROD-001-user-facing-baseline"
 stackable = false
 review_mode = "codex_premerge"
@@ -33,6 +33,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
 pr = 4017
+merge_sha = "7da95e85e86207f7580748fd48400332b25977bd"
 acceptance = "Document the working Rust-native Apple M4 CPU/NEON SLM local-answer baseline, including the current warm-session command, expected model artifact, receipt fields, failure boundaries, and unsupported claims."
 commands = [
   "cargo fmt --all -- --check",
@@ -69,7 +70,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-PROD-002"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-productization/M4-PROD-002-model-cache"
 stackable = false
 review_mode = "codex_premerge"

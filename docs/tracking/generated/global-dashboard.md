@@ -7,7 +7,7 @@
 | apple-m4 | M4-018 | #3826 | merged | none | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
 | apple-m4-local-answer | M4-QA-001 | #3904 | blocked | M4-QA-MODEL-002 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-operational | M4-OP-006 | #3882 | merged | none | Do not reopen the completed apple-m4 proof campaign. |
-| apple-m4-productization | M4-PROD-001 | #4017 | pr_open | M4-PROD-002 | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
+| apple-m4-productization | M4-PROD-002 | TBD | ready | M4-PROD-003 | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
 | apple-m4-slm-answer | SLM-M4-007 | #3991 | merged | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | CPU-ANSWER-006 | #4005 | pr_open | none | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
