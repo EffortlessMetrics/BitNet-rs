@@ -72,6 +72,8 @@ impl SmartTokenizerDownload {
     ///     files: vec!["tokenizer.json".to_string()],
     ///     cache_key: "llama2-32k".to_string(),
     ///     expected_vocab: Some(32000),
+    ///     tokenizer_type: bitnet_tokenizers::TokenizerType::Unknown,
+    ///     special_tokens: bitnet_tokenizers::SpecialTokenConfig::default(),
     /// };
     /// let tokenizer_path = downloader.download_tokenizer(&info).await?;
     /// # Ok(())
