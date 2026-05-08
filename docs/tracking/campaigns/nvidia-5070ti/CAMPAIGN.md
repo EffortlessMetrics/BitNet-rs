@@ -101,10 +101,15 @@ AVX-512 and RTX 5070 Ti CUDA now match generated token IDs and decoded text for
 all five committed deterministic corpus cases. Exact top-k logit parity remains
 open for four cases.
 
-`CUDA-PROD-001` starts the user-path work after the strict corpus and parity
-proofs. Strict `bitnet ask` must validate backend, fallback, and answer quality
-even when the user omits `--receipt-out`; a default receipt path is acceptable
-for strict ask, but the receipt still must preserve `speedup_claim=false`.
+`CUDA-PROD-001` started the user-path work after the strict corpus and parity
+proofs. Strict `bitnet ask` now validates backend, fallback, and answer quality
+even when the user omits `--receipt-out`; the default strict ask receipt still
+preserves `speedup_claim=false`.
+
+`CUDA-PROD-002` is the next product-path gate: a strict CUDA warm session that
+loads the model once, initializes CUDA once, uploads BitNet weights once, serves
+multiple deterministic turns, and emits per-turn or session-summary receipts
+without broad chat, speed, server, or full-residency claims.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -140,7 +145,8 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-ANSWER-010 | merged | Strict RTX 5070 Ti CUDA answer corpus passes after the QK256 I2_S layout alignment in #4024. |
 | CUDA-ANSWER-011 | merged | Same-box CPU AVX-512 and RTX 5070 Ti CUDA both pass the corpus, but the original receipt preserved top-k logit divergence and one generated-answer divergence. |
 | CUDA-ANSWER-012 | merged | CUDA QK256 I8_S activation semantics close generated-token parity for all five committed corpus cases; exact top-k parity remains open. |
-| CUDA-PROD-001 | in_progress | Strict `bitnet ask` validates through a default answer receipt when `--receipt-out` is omitted. |
+| CUDA-PROD-001 | merged | Strict `bitnet ask` validates through a default answer receipt when `--receipt-out` is omitted. |
+| CUDA-PROD-002 | ready | Strict RTX 5070 Ti CUDA warm-session receipts with load/context/upload reuse across multiple deterministic turns. |
 | CUDA-DENSE-001 | proposed | Optional dense regular-LLM CUDA reference lane; not part of BitNet packed proof completion. |
 
 ## Review Policy

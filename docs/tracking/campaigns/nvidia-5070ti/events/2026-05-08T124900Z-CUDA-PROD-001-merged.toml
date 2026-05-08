@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T12:49:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-001"
+event = "merged"
+actor = "codex"
+pr = 4054
+merge_sha = "e9adf928df2ee09971b39574b27edba7331f89f2"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4054 merged the strict ask default receipt path.",
+  "Strict CPU/CUDA ask now writes and validates an answer receipt by default when --receipt-out is omitted.",
+  "CUDA speedup, broad chat quality, full CUDA residency, and completed model fetch/verify UX remain unclaimed.",
+]
