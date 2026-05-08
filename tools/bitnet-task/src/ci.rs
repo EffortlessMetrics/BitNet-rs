@@ -1165,11 +1165,321 @@ fn print_tail(output: &Output, lines: usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_max_rss_mb;
+    use super::{parse_max_rss_mb, receipt_payload, validate_receipt_payload};
+    use serde_json::json;
 
     #[test]
     fn parses_gnu_time_max_rss() {
         let output = "\tMaximum resident set size (kbytes): 131072\n";
         assert_eq!(parse_max_rss_mb(output), Some(128));
     }
+
+    #[test]
+    fn validates_top_level_receipt_payloads() {
+        let value = json!({
+            "compute_path": "real",
+            "backend": "cpu",
+            "kernels": ["i2s_cpu_quantize"]
+        });
+        let summary = validate_receipt_payload(receipt_payload(&value), "inline").unwrap();
+        assert_eq!(summary.backend, "cpu");
+        assert_eq!(summary.compute_path, "real");
+        assert_eq!(summary.kernels_len, 1);
+    }
+
+    #[test]
+    fn validates_wrapped_receipt_payloads() {
+        let value = json!({
+            "receipt": {
+                "compute_path": "real",
+                "backend": "cuda",
+                "kernels": ["cuda_gemm"]
+            }
+        });
+        let summary = validate_receipt_payload(receipt_payload(&value), "inline").unwrap();
+        assert_eq!(summary.backend, "cuda");
+        assert_eq!(summary.kernels_len, 1);
+    }
+}
+
+pub(crate) fn cmd_grep_guards(root: &Path) -> Result<()> {
+    let mut failed = false;
+
+    println!("Checking for absolute paths in source code...");
+    let mut absolute_path_args = vec![
+        "-n".to_string(),
+        "/home/steven".to_string(),
+        "-g".to_string(),
+        "!target/**".to_string(),
+        "-g".to_string(),
+        "!.git/**".to_string(),
+        "-g".to_string(),
+        "!Cargo.lock".to_string(),
+        "-g".to_string(),
+        "!docs/**".to_string(),
+        "-g".to_string(),
+        "!*.md".to_string(),
+        "-g".to_string(),
+        "!ci/receipts/**".to_string(),
+        "-g".to_string(),
+        "!**/tests/**".to_string(),
+        "-g".to_string(),
+        "!tests/**".to_string(),
+    ];
+    absolute_path_args.extend(crate_src_dirs(root)?);
+    if run_rg_guard(root, &absolute_path_args)? {
+        println!("ERROR: Found absolute paths in production source code");
+        failed = true;
+    }
+
+    println!("Checking for cuda-only feature gates in source code...");
+    if run_filtered_rg_guard(
+        root,
+        &[
+            "-n",
+            r#"#\[cfg\(feature\s*=\s*"cuda"\)\]"#,
+            "-g",
+            "!Cargo.lock",
+            "-g",
+            "!target/**",
+            "-g",
+            "!.git/**",
+            "-g",
+            "!docs/**",
+            "-g",
+            "!*.md",
+            "-g",
+            "!tests/fixtures/**",
+            "-g",
+            "!**/tests/**",
+            "-g",
+            "!examples/**",
+            "crates/",
+        ],
+        is_allowed_cuda_cfg_attribute,
+    )? {
+        println!(
+            "ERROR: Found cuda-only feature gates in source code (should use 'any(feature = \"gpu\", feature = \"cuda\")')"
+        );
+        failed = true;
+    }
+
+    if run_filtered_rg_guard(
+        root,
+        &[
+            "-n",
+            r#"cfg!\(feature\s*=\s*"cuda"\)"#,
+            "-g",
+            "!Cargo.lock",
+            "-g",
+            "!target/**",
+            "-g",
+            "!.git/**",
+            "-g",
+            "!docs/**",
+            "-g",
+            "!*.md",
+            "-g",
+            "!tests/fixtures/**",
+            "-g",
+            "!**/tests/**",
+            "-g",
+            "!examples/**",
+            "crates/",
+        ],
+        is_allowed_cuda_cfg_macro,
+    )? {
+        println!(
+            "ERROR: Found runtime cuda-only cfg! checks in source code (should use 'any(feature = \"gpu\", feature = \"cuda\")')"
+        );
+        failed = true;
+    }
+
+    if failed {
+        bail!("evidence hygiene checks failed");
+    }
+
+    println!("✅ All evidence hygiene checks passed");
+    Ok(())
+}
+
+fn run_rg_guard<S: AsRef<str>>(root: &Path, args: &[S]) -> Result<bool> {
+    let output = run_capture(root, "rg", args, &[], true)?;
+    print_command_output(&output);
+    match output.status.code() {
+        Some(0) => Ok(true),
+        Some(1) => Ok(false),
+        _ => bail!(
+            "ripgrep guard `{}` failed with {}: {}",
+            command_to_string("rg", args),
+            output.status,
+            command_failure_details(&output)
+        ),
+    }
+}
+
+fn run_filtered_rg_guard<S, F>(root: &Path, args: &[S], allowed: F) -> Result<bool>
+where
+    S: AsRef<str>,
+    F: Fn(&str) -> bool,
+{
+    let output = run_capture(root, "rg", args, &[], true)?;
+    match output.status.code() {
+        Some(0) => {
+            eprint!("{}", String::from_utf8_lossy(&output.stderr));
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut failed = false;
+            for line in stdout.lines().filter(|line| !allowed(line)) {
+                println!("{line}");
+                failed = true;
+            }
+            Ok(failed)
+        }
+        Some(1) => Ok(false),
+        _ => bail!(
+            "ripgrep guard `{}` failed with {}: {}",
+            command_to_string("rg", args),
+            output.status,
+            command_failure_details(&output)
+        ),
+    }
+}
+
+fn is_allowed_cuda_cfg_attribute(line: &str) -> bool {
+    [
+        "crates/bitnet-cli/src/main.rs:",
+        "crates/bitnet-device-probe/src/nvidia_cuda.rs:",
+        "crates/bitnet-kernels/src/cuda/",
+        "crates/bitnet-qk256-dispatch/src/lib.rs:",
+    ]
+    .iter()
+    .any(|prefix| line.starts_with(prefix))
+}
+
+fn is_allowed_cuda_cfg_macro(line: &str) -> bool {
+    [
+        "crates/bitnet-common/src/kernel_registry.rs:",
+        "crates/bitnet-opencl/src/diagnostics.rs:",
+        "crates/bitnet-runtime-feature-flags/src/lib.rs:",
+    ]
+    .iter()
+    .any(|prefix| line.starts_with(prefix))
+}
+
+fn crate_src_dirs(root: &Path) -> Result<Vec<String>> {
+    let crates_dir = root.join("crates");
+    let mut dirs = Vec::new();
+    for entry in fs::read_dir(&crates_dir)
+        .with_context(|| format!("failed to read {}", crates_dir.display()))?
+    {
+        let entry = entry.with_context(|| format!("failed to scan {}", crates_dir.display()))?;
+        let src = entry.path().join("src");
+        if src.is_dir() {
+            let rel = src.strip_prefix(root).unwrap_or(&src);
+            dirs.push(rel.to_string_lossy().into_owned());
+        }
+    }
+    dirs.sort();
+    if dirs.is_empty() {
+        bail!("no crate source directories found under {}", crates_dir.display());
+    }
+    Ok(dirs)
+}
+
+pub(crate) fn cmd_validate_receipt(root: &Path, receipt_file: &Path) -> Result<()> {
+    let receipt_path = if receipt_file.is_absolute() {
+        receipt_file.to_path_buf()
+    } else {
+        root.join(receipt_file)
+    };
+
+    if !receipt_path.is_file() {
+        bail!("Receipt file not found: {}", receipt_file.display());
+    }
+
+    println!("Validating receipt: {}", receipt_file.display());
+    let content = fs::read_to_string(&receipt_path)
+        .with_context(|| format!("failed to read {}", receipt_file.display()))?;
+    let value: Value = serde_json::from_str(&content)
+        .with_context(|| format!("failed to parse {} as JSON", receipt_file.display()))?;
+    let receipt = receipt_payload(&value);
+    let summary = validate_receipt_payload(receipt, &receipt_file.display().to_string())?;
+
+    println!("✅ Receipt validation passed");
+    println!("   Backend: {}", summary.backend);
+    println!("   Compute Path: {}", summary.compute_path);
+    if matches!(summary.backend, "gpu" | "cuda") {
+        println!("   GPU Kernels: {}", summary.kernels_len);
+    }
+    Ok(())
+}
+
+fn receipt_payload(value: &Value) -> &Value {
+    value.get("receipt").unwrap_or(value)
+}
+
+struct ReceiptSummary<'a> {
+    backend: &'a str,
+    compute_path: &'a str,
+    kernels_len: usize,
+}
+
+fn validate_receipt_payload<'a>(receipt: &'a Value, label: &str) -> Result<ReceiptSummary<'a>> {
+    let compute_path = receipt
+        .get("compute_path")
+        .and_then(Value::as_str)
+        .with_context(|| format!("missing string receipt.compute_path in {label}"))?;
+    let backend = receipt
+        .get("backend")
+        .and_then(Value::as_str)
+        .with_context(|| format!("missing string receipt.backend in {label}"))?;
+    let kernels_len = receipt.get("kernels").and_then(Value::as_array).map_or(0, Vec::len);
+
+    if compute_path != "real" {
+        bail!("Receipt validation failed: receipt.compute_path must be \"real\"");
+    }
+    if !matches!(backend, "cpu" | "gpu" | "cuda") {
+        bail!("Receipt validation failed: unsupported .receipt.backend `{backend}`");
+    }
+    if backend == "gpu" && kernels_len == 0 {
+        bail!("Receipt validation failed: gpu backend must report at least one kernel");
+    }
+
+    Ok(ReceiptSummary { backend, compute_path, kernels_len })
+}
+
+pub(crate) fn cmd_e2e_gate(root: &Path, command: &[String]) -> Result<()> {
+    use fs2::FileExt;
+
+    let max_e2e = env::var("MAX_E2E").unwrap_or_else(|_| "2".to_string());
+    let lock_path = env::temp_dir().join("bitnet-e2e-suite.lock");
+    println!("🔒 BitNet-rs E2E Gate: Acquiring test slot (max {max_e2e} concurrent)");
+    let lock = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(&lock_path)
+        .with_context(|| format!("failed to open {}", lock_path.display()))?;
+    if lock.try_lock_exclusive().is_err() {
+        println!("⏳ E2E slot busy → waiting for available slot...");
+        lock.lock_exclusive().with_context(|| format!("failed to lock {}", lock_path.display()))?;
+    }
+
+    println!("✅ E2E slot acquired, running: {}", command.join(" "));
+    let preflight = collect_preflight_env(false)?;
+    let preflight_refs = env_refs_from_pairs(&preflight);
+    let (program, args) = command.split_first().context("e2e-gate requires a command to run")?;
+    let arg_refs: Vec<&str> = args.iter().map(String::as_str).collect();
+    let result = run_stream(root, program, &arg_refs, &preflight_refs);
+    match &result {
+        Ok(()) => println!("🏁 E2E slot released (exit code: 0)"),
+        Err(err) => println!("🏁 E2E slot released (error: {err:#})"),
+    }
+    lock.unlock().with_context(|| format!("failed to unlock {}", lock_path.display()))?;
+    result
+}
+
+fn print_command_output(output: &Output) {
+    print!("{}", String::from_utf8_lossy(&output.stdout));
+    eprint!("{}", String::from_utf8_lossy(&output.stderr));
 }
