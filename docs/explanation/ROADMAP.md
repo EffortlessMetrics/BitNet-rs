@@ -27,6 +27,7 @@ Core functionality working: GGUF model loading, device-aware quantization, basic
 - Real inference e2e (non-mock).
 - Performance baselines & gating; replace claims with numbers.
 - GPU build/run sanity.
+- WASM inference remains scaffolded; the receipt-backed planning lane is documented in [`docs/wasm/INFERENCE_LANE.md`](../wasm/INFERENCE_LANE.md).
 
 ---
 

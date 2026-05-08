@@ -1,6 +1,6 @@
 # WebAssembly Examples
 
-This directory contains examples for running BitNet-rs in web browsers and WebAssembly environments.
+This directory contains WebAssembly browser/PWA integration shells for BitNet-rs. Real WASM inference is still a scaffolded lane; see [`docs/wasm/INFERENCE_LANE.md`](../../docs/wasm/INFERENCE_LANE.md) for the proof contract and milestone path.
 
 ## Examples
 
@@ -21,7 +21,8 @@ python -m http.server 8000
 
 ### PWA Example
 ```bash
-# Build PWA bundle
+# Build PWA bundle. The inference feature is opt-in and currently represents
+# scaffolded plumbing, not a completed browser inference proof.
 cargo build --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser,inference
 
 # Serve PWA
@@ -37,9 +38,10 @@ npm install && npm start
 - Modern web browser with WebAssembly support
 - For PWA: Node.js and npm for dependency management
 
-## Features
+## Current capabilities and boundaries
 
-- Client-side neural network inference
-- Offline model loading and caching
-- WebWorker support for non-blocking inference
+- Browser and PWA integration shells
+- Offline model loading/caching UI scaffolding
+- WebWorker support scaffolding for non-blocking execution
 - Progressive enhancement with fallbacks
+- Real inference claims require the receipt-backed milestones in [`docs/wasm/INFERENCE_LANE.md`](../../docs/wasm/INFERENCE_LANE.md)
