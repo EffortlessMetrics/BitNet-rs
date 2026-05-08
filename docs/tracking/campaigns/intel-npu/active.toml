@@ -446,3 +446,54 @@ must_not_claim = [
   "Packed BitNet QK256 decode works on Intel NPU.",
   "CPU fallback satisfies NPU proof.",
 ]
+
+[[work_item]]
+id = "NPU-011"
+status = "ready"
+branch = "codex/intel-npu/NPU-011-ffn-subgraph-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["NPU-010", "CPU258V-016"]
+acceptance = "Add the next selected static BitNet-shaped OpenVINO NPU subgraph parity experiment, focused on an FFN/ReLU2 block or another explicitly scoped post-linear BitNet operation, with CPU reference comparison, static shape metadata, tolerance, timing, selected backend/runtime identity, fallback_used=false, and no full inference, acceleration, QK256, or CPU fallback proof claims."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs crates/bitnet-device-probe/src/runtimes/openvino.rs crates/bitnet-device-probe/src/runtimes/mod.rs --edition 2024",
+  "cargo test --locked -p bitnet-device-probe --no-default-features runtimes::openvino::tests -- --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu -- intel-npu-bitnet-ffn-subgraph --cpu-reference ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json --json-out ci/hardware/intel-258v/<date>/npu-bitnet-ffn-subgraph-parity.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/intel_npu.rs",
+  "crates/bitnet-device-probe/src/runtimes/openvino.rs",
+  "crates/bitnet-device-probe/src/runtimes/mod.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-npu-roadmap.md",
+  "docs/tracking/campaigns/intel-npu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The CLI can attempt the selected static BitNet-shaped FFN/ReLU2 or post-linear subgraph parity on OpenVINO NPU and emits parity_tested only when NPU execution matches the CPU reference.",
+]
+must_not_claim = [
+  "Full BitNet inference works on Intel NPU.",
+  "Native bitnet-rs NPU inference works.",
+  "Intel NPU accelerates BitNet.",
+  "Packed BitNet QK256 decode works on Intel NPU.",
+  "CPU fallback satisfies NPU proof.",
+]

@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "artifact_kind": "intel_258v_cpu_reference_bundle",
+  "machine_id": "intel-258v",
+  "captured_at_utc": "2026-05-08T14:24:00Z",
+  "proof_stage": "cpu_reference_bundled",
+  "reference_scope": "same_machine_cpu_reference_for_accelerator_comparison",
+  "source_artifacts": {
+    "platform_probe": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
+    "strict_decode_smoke": "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
+    "phase_warm_session": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
+    "phase_prefill_512": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json",
+    "phase_decode_128": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/decode_128.json",
+    "answer_corpus_scalar": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json",
+    "answer_corpus_avx2": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
+    "answer_parity": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
+    "comparison_index": "ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json"
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "architecture": "bitnet_b1_58",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "loader_mode": "real_gguf",
+    "fallback_loader_used": false
+  },
+  "tokenizer": {
+    "type": "llama3",
+    "source": "explicit",
+    "pretokenizer_authority": "llama-bpe",
+    "strict": true
+  },
+  "cpu_reference": {
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "hardware_lane": "intel-258v-cpu-avx2",
+    "scalar_kernel": "i2_s-scalar-reference",
+    "avx2_kernel": "i2_s-avx2-reference",
+    "fallback_used": false
+  },
+  "answer_parity": {
+    "proof_stage": "full_decode_parity_compared",
+    "corpus": "strict-bitnet-answer-corpus-v1",
+    "prompt_envelope": "bitnetcpp-template",
+    "summary": {
+      "passed": 5,
+      "failed": 0,
+      "total": 5,
+      "first_divergence": null
+    },
+    "cases": [
+      "capital_france",
+      "math_2_plus_2",
+      "list_colors",
+      "echo_word",
+      "yes_no_water"
+    ],
+    "same_real_gguf": true,
+    "same_tokenizer": true,
+    "same_prompt_template": true,
+    "same_greedy_settings": true,
+    "scalar_and_avx2_match": true
+  },
+  "phase_evidence": {
+    "session_artifact": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
+    "model_loaded_once": true,
+    "tokenizer_loaded_once": true,
+    "profiles": [
+      {
+        "profile": "prefill_512",
+        "phase": "prefill",
+        "prompt_tokens": 513,
+        "prefill_tokens": 512,
+        "generated_tokens": 1,
+        "fallback_used": false,
+        "receipt_path": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json"
+      },
+      {
+        "profile": "decode_128",
+        "phase": "decode",
+        "prompt_tokens": 9,
+        "prefill_tokens": 8,
+        "generated_tokens": 128,
+        "fallback_used": false,
+        "receipt_path": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/decode_128.json"
+      }
+    ]
+  },
+  "comparison_policy": {
+    "cpu_is_reference_plate": true,
+    "accelerator_comparison_requires_independent_receipts": true,
+    "performance_comparison_allowed": false,
+    "speedup_claim": false,
+    "cpu_fallback_can_satisfy_accelerator_proof": false
+  },
+  "may_claim": [
+    "The 258V CPU reference plate is bundled from strict real-GGUF receipts, full fixed-corpus scalar-vs-AVX2 answer parity, and warm-session phase receipts.",
+    "The bundled CPU artifacts are suitable as the CPU reference inputs for later Arc 140V and Intel NPU parity comparisons.",
+    "The referenced CPU receipts used real GGUF loading, explicit strict tokenizer resolution, selected i2_s scalar/AVX2 CPU kernels, and fallback_used=false."
+  ],
+  "must_not_claim": [
+    "General chat quality is proven.",
+    "Sustained throughput is proven.",
+    "A CPU speedup is proven.",
+    "Arc 140V or Intel NPU execution is proven by this CPU bundle.",
+    "CPU fallback can satisfy Arc 140V or Intel NPU proof."
+  ],
+  "fallback_used": false
+}
