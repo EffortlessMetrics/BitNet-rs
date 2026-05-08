@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T22:55:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-004"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-planner-004-execution-plan-receipts"
+pr = 4146
+head_sha = "d760656d8c7884fdf9a55a2c21b028b4a9bf358a"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4146 to emit model-aware execution_plan fields in strict ask/run, answer-corpus, warm-session, and benchmark receipts.",
+  "The PR validates that dense regular-LLM CUDA execution plans cannot satisfy BitNet QK256 proof receipts.",
+  "The PR keeps speedup_claim=false, full_cuda_residency_claimed=false, and does not change QK256 math, tokenizer, loader, prompt-template, transformer, or server behavior.",
+]

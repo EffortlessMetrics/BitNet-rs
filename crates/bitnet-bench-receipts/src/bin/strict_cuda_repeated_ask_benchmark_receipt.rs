@@ -143,6 +143,7 @@ fn build_receipt(
     };
     let kernel_stats = aggregate_cuda_kernel_stats(&cuda_runs)?;
     let cuda_execution_residency = aggregate_cuda_residency(first_cuda, &kernel_stats);
+    let execution_plan = execution_plan_from_source(first_cuda_source)?;
 
     Ok(json!({
         "schema": 1,
@@ -160,6 +161,7 @@ fn build_receipt(
         "fallback_used": false,
         "fallback_backend": null,
         "fallback_reason": null,
+        "execution_plan": execution_plan,
         "proof_inputs": {
             "cpu_avx512_ask_receipts": path_labels(&args.cpu_avx512_ask_receipts),
             "cuda_ask_receipts": path_labels(&args.cuda_ask_receipts),
@@ -313,6 +315,7 @@ fn run_record(
     });
     if runtime_api == "cuda" {
         let object = run.as_object_mut().expect("run record object");
+        object.insert("execution_plan".to_string(), execution_plan_from_source(source)?);
         object.insert(
             "kernel_invocations".to_string(),
             json!(u64_at(source, "/kernel_stats/0/invocations")?),
@@ -516,6 +519,14 @@ fn assert_same_answer_path_inputs(cpu: &Value, cuda: &Value) -> Result<(), Box<d
 
 fn source_receipt(receipt: &Value) -> &Value {
     receipt.get("source_receipt").unwrap_or(receipt)
+}
+
+fn execution_plan_from_source(source: &Value) -> Result<Value, Box<dyn Error>> {
+    source
+        .pointer("/execution_plan")
+        .filter(|plan| plan.is_object())
+        .cloned()
+        .ok_or_else(|| "CUDA source receipt must include execution_plan".into())
 }
 
 fn same_model(left: &Value, right: &Value) -> bool {

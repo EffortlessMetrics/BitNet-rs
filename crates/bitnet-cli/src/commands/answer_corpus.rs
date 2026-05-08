@@ -1,5 +1,6 @@
 //! Answer corpus runner for CPU-first and Apple M4 local-answer baselines.
 
+use crate::planner_receipts;
 use anyhow::{Context, Result};
 use clap::{Args, ValueEnum};
 use serde::Deserialize;
@@ -164,6 +165,7 @@ impl AnswerCorpusCommand {
                 (Some("qwen"), _) => "gguf_metadata",
                 _ => "llama3",
             };
+        let aggregate_execution_plan = aggregate_execution_plan(&rows, &device);
 
         let receipt = json!({
             "schema_version": "1.0.0",
@@ -196,6 +198,7 @@ impl AnswerCorpusCommand {
                 "runtime_api": answer_corpus_runtime_api(&device),
                 "fallback_used": false,
             },
+            "execution_plan": aggregate_execution_plan,
             "prompt_template": {
                 "family": corpus.defaults.prompt_template,
             },
@@ -437,6 +440,7 @@ impl AnswerCorpusCommand {
                 "runtime_api": run_receipt["runtime_api"].clone(),
                 "fallback_used": run_receipt["fallback_used"].clone(),
             },
+            "execution_plan": run_receipt.get("execution_plan").cloned().unwrap_or(Value::Null),
             "kernel": {
                 "selected_kernel": run_receipt["kernel"]["kernel_id"].clone(),
                 "family": run_receipt["kernel"]["family"].clone(),
@@ -753,6 +757,13 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
         if cpu_fallback != 0 {
             failed.push("cuda_bitnet_linear_cpu_fallback_zero".to_string());
         }
+        failed.extend(
+            planner_receipts::strict_bitnet_qk256_execution_plan_failed_rules(
+                &run_receipt["execution_plan"],
+            )
+            .into_iter()
+            .map(str::to_string),
+        );
     }
 
     if !run_receipt["tokens"]["prompt_ids"].is_array() {
@@ -762,6 +773,22 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
         failed.push("generated_token_ids_recorded".to_string());
     }
     failed
+}
+
+fn aggregate_execution_plan(rows: &[Value], device: &str) -> Value {
+    if !is_cuda_answer_corpus_device(device) {
+        return Value::Null;
+    }
+
+    let mut plan = rows
+        .iter()
+        .find_map(|row| row.get("execution_plan").filter(|plan| plan.is_object()).cloned())
+        .unwrap_or(Value::Null);
+    if let Some(plan) = plan.as_object_mut() {
+        plan.insert("scope".to_string(), Value::from("answer_corpus_aggregate"));
+        plan.insert("case_count".to_string(), Value::from(rows.len() as u64));
+    }
+    plan
 }
 
 fn generated_token_ids(receipt: &Value) -> Vec<u32> {
@@ -1390,10 +1417,54 @@ mod tests {
             "kernel": { "kernel_id": "qk256_gemv_cuda" },
             "kernel_stats": [{ "kernel_id": "qk256_gemv_cuda", "invocations": 8 }],
             "execution_coverage": { "bitnet_linear_layers_cpu_fallback": 0 },
+            "execution_plan": {
+                "planner_version": "cuda-planner-004",
+                "model_family": "bitnet_b1_58",
+                "quantization": "i2_s_qk256",
+                "selected_route": "bitnet_qk256_cuda",
+                "requested_backend": RTX_5070_TI_CUDA,
+                "selected_backend": RTX_5070_TI_CUDA,
+                "runtime_api": "cuda",
+                "strict_fallback_policy": "reject",
+                "dense_regular_llm_cuda": false,
+                "bitnet_packed_qk256_cuda": true,
+                "cuda_bitnet_qk256_ops": 8,
+                "cuda_dense_regular_llm_ops": 0,
+                "cpu_fallback_ops": 0,
+                "unsupported_ops": 0,
+                "total_ops": 8,
+                "cuda_ops": 8,
+                "mixed_cuda_routes": false,
+                "fallback_used": false,
+                "strict_cuda_ready": true,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            },
             "tokens": { "prompt_ids": [1, 2], "generated_ids": [3] },
         });
 
         assert!(answer_receipt_failed_rules(&receipt, RTX_5070_TI_CUDA).is_empty());
+    }
+
+    #[test]
+    fn cuda_answer_receipt_rejects_missing_execution_plan() {
+        let receipt = json!({
+            "requested_backend": RTX_5070_TI_CUDA,
+            "selected_backend": RTX_5070_TI_CUDA,
+            "runtime_api": "cuda",
+            "fallback_used": false,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "gguf_metadata", "strict": true },
+            "kernel": { "kernel_id": "qk256_gemv_cuda" },
+            "kernel_stats": [{ "kernel_id": "qk256_gemv_cuda", "invocations": 8 }],
+            "execution_coverage": { "bitnet_linear_layers_cpu_fallback": 0 },
+            "tokens": { "prompt_ids": [1, 2], "generated_ids": [3] },
+        });
+
+        let failed = answer_receipt_failed_rules(&receipt, RTX_5070_TI_CUDA);
+
+        assert!(failed.contains(&"execution_plan_planner_version".to_string()));
+        assert!(failed.contains(&"execution_plan_selected_route_bitnet_qk256_cuda".to_string()));
     }
 
     #[test]

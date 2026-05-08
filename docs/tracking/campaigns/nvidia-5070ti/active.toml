@@ -1408,3 +1408,62 @@ must_not_claim = [
   "CUDA speedup is accepted.",
   "Full CUDA residency for every transformer operation is proven.",
 ]
+
+[[work_item]]
+id = "CUDA-PLANNER-004"
+status = "pr_open"
+branch = "codex/cuda-planner-004-execution-plan-receipts"
+pr = 4146
+head_sha = "d760656d8c7884fdf9a55a2c21b028b4a9bf358a"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-PLANNER-003"]
+acceptance = "Emit model-aware execution_plan fields in strict ask/run, answer-corpus, warm-session, and benchmark receipts so BitNet QK256 CUDA and dense regular-LLM CUDA routes remain claim-separated in real artifacts."
+commands = [
+  "cargo fmt -p bitnet-cli -p bitnet-bench-receipts -- --check",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,full-cli planner_receipts -- --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli strict_cuda_ask_receipt -- --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli answer_corpus -- --nocapture",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/lib.rs",
+  "crates/bitnet-cli/src/planner_receipts.rs",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF inference implementation",
+  "server runtime behavior",
+]
+may_claim = [
+  "Strict CUDA ask/run receipts emit execution_plan for the BitNet I2_S/QK256 route.",
+  "Answer-corpus, warm-session, and benchmark receipts preserve the BitNet QK256 CUDA route and reject dense regular-LLM CUDA as BitNet proof.",
+  "Committed RTX 5070 Ti benchmark receipts carry execution_plan metadata without changing their speedup or residency claim boundaries.",
+]
+must_not_claim = [
+  "Any new CUDA kernel exists.",
+  "BitNet QK256 math changed.",
+  "Runtime model loading, tokenizer behavior, prompt-template behavior, transformer behavior, or server behavior changed.",
+  "General dense GGUF CUDA inference is complete.",
+  "CUDA speedup is accepted.",
+  "Full CUDA residency for every transformer operation is proven.",
+]
