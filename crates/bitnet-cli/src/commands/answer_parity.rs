@@ -1,4 +1,4 @@
-//! Scalar-vs-AVX2 answer-corpus parity comparator.
+//! Answer-corpus parity comparator.
 
 use anyhow::{Context, Result};
 use clap::Args;
@@ -9,18 +9,34 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// Compare scalar and AVX2 strict CPU answer-corpus receipts.
+/// Compare answer-corpus receipts.
 #[derive(Args, Debug)]
 pub struct AnswerParityCommand {
     /// Scalar strict CPU answer-corpus receipt.
     #[arg(long, value_name = "PATH")]
-    pub scalar: PathBuf,
+    pub scalar: Option<PathBuf>,
 
     /// AVX2 strict CPU answer-corpus receipt.
     #[arg(long, value_name = "PATH")]
-    pub avx2: PathBuf,
+    pub avx2: Option<PathBuf>,
 
-    /// Output scalar-vs-AVX2 parity receipt.
+    /// Left/baseline answer-corpus receipt for generic backend comparison.
+    #[arg(long, value_name = "PATH")]
+    pub left: Option<PathBuf>,
+
+    /// Right/variant answer-corpus receipt for generic backend comparison.
+    #[arg(long, value_name = "PATH")]
+    pub right: Option<PathBuf>,
+
+    /// Label to use for the left/baseline receipt in generic comparison output.
+    #[arg(long, value_name = "LABEL")]
+    pub left_label: Option<String>,
+
+    /// Label to use for the right/variant receipt in generic comparison output.
+    #[arg(long, value_name = "LABEL")]
+    pub right_label: Option<String>,
+
+    /// Output parity receipt.
     #[arg(
         long,
         value_name = "PATH",
@@ -38,19 +54,31 @@ pub struct AnswerParityCommand {
 }
 
 impl AnswerParityCommand {
-    /// Execute the offline scalar-vs-AVX2 answer parity comparison.
+    /// Execute the offline answer parity comparison.
     pub async fn execute(&self) -> Result<()> {
-        let scalar = read_json(&self.scalar)?;
-        let avx2 = read_json(&self.avx2)?;
+        let inputs = self.resolve_inputs()?;
+        let left = read_json(inputs.left_path)?;
+        let right = read_json(inputs.right_path)?;
+        let left_label = inputs
+            .left_label
+            .map(str::to_string)
+            .unwrap_or_else(|| infer_lane_label(&left, inputs.left_path, "left"));
+        let right_label = inputs
+            .right_label
+            .map(str::to_string)
+            .unwrap_or_else(|| infer_lane_label(&right, inputs.right_path, "right"));
         let platform = match &self.platform_artifact {
             Some(path) => Some(read_json(path)?),
             None => None,
         };
         let receipt = build_answer_parity_receipt(
-            &self.scalar,
-            &scalar,
-            &self.avx2,
-            &avx2,
+            inputs.left_path,
+            &left,
+            inputs.right_path,
+            &right,
+            &left_label,
+            &right_label,
+            inputs.legacy_scalar_avx2,
             self.machine.as_deref(),
             self.platform_artifact.as_deref(),
             platform.as_ref(),
@@ -67,12 +95,63 @@ impl AnswerParityCommand {
 
         if failed > 0 {
             anyhow::bail!(
-                "scalar-vs-AVX2 answer parity failed for {failed} case(s); receipt written to {}",
+                "{}-vs-{} answer parity failed for {failed} case(s); receipt written to {}",
+                left_label,
+                right_label,
                 self.json_out.display()
             );
         }
         Ok(())
     }
+
+    fn resolve_inputs(&self) -> Result<ParityInputs<'_>> {
+        let generic_requested = self.left.is_some()
+            || self.right.is_some()
+            || self.left_label.is_some()
+            || self.right_label.is_some();
+        if generic_requested {
+            if self.scalar.is_some() || self.avx2.is_some() {
+                anyhow::bail!(
+                    "use either --left/--right for generic parity or --scalar/--avx2 for legacy CPU parity"
+                );
+            }
+            let left_path =
+                self.left.as_deref().context("--left is required for generic answer parity")?;
+            let right_path =
+                self.right.as_deref().context("--right is required for generic answer parity")?;
+            return Ok(ParityInputs {
+                left_path,
+                right_path,
+                left_label: self.left_label.as_deref(),
+                right_label: self.right_label.as_deref(),
+                legacy_scalar_avx2: false,
+            });
+        }
+
+        let left_path = self
+            .scalar
+            .as_deref()
+            .context("--scalar and --avx2 are required for legacy CPU answer parity")?;
+        let right_path = self
+            .avx2
+            .as_deref()
+            .context("--scalar and --avx2 are required for legacy CPU answer parity")?;
+        Ok(ParityInputs {
+            left_path,
+            right_path,
+            left_label: Some("scalar"),
+            right_label: Some("avx2"),
+            legacy_scalar_avx2: true,
+        })
+    }
+}
+
+struct ParityInputs<'a> {
+    left_path: &'a Path,
+    right_path: &'a Path,
+    left_label: Option<&'a str>,
+    right_label: Option<&'a str>,
+    legacy_scalar_avx2: bool,
 }
 
 fn read_json(path: &Path) -> Result<Value> {
@@ -83,20 +162,23 @@ fn read_json(path: &Path) -> Result<Value> {
 }
 
 fn build_answer_parity_receipt(
-    scalar_path: &Path,
-    scalar: &Value,
-    avx2_path: &Path,
-    avx2: &Value,
+    left_path: &Path,
+    left: &Value,
+    right_path: &Path,
+    right: &Value,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
     machine: Option<&str>,
     platform_artifact: Option<&Path>,
     platform: Option<&Value>,
 ) -> Value {
     let mut shared_failures = Vec::new();
-    compare_top_level_contract(scalar, avx2, &mut shared_failures);
+    compare_top_level_contract(left, right, legacy_scalar_avx2, &mut shared_failures);
 
-    let scalar_cases = cases_by_id(scalar);
-    let avx2_cases = cases_by_id(avx2);
-    let case_ids = scalar_cases.keys().chain(avx2_cases.keys()).cloned().collect::<BTreeSet<_>>();
+    let left_cases = cases_by_id(left);
+    let right_cases = cases_by_id(right);
+    let case_ids = left_cases.keys().chain(right_cases.keys()).cloned().collect::<BTreeSet<_>>();
 
     let mut first_divergence = None;
     let cases = case_ids
@@ -104,8 +186,11 @@ fn build_answer_parity_receipt(
         .map(|id| {
             compare_case(
                 id,
-                scalar_cases.get(id).copied(),
-                avx2_cases.get(id).copied(),
+                left_cases.get(id).copied(),
+                right_cases.get(id).copied(),
+                left_label,
+                right_label,
+                legacy_scalar_avx2,
                 &mut first_divergence,
             )
         })
@@ -114,17 +199,62 @@ fn build_answer_parity_receipt(
     let passed = cases.iter().filter(|case| case["passed"] == true).count();
     let failed = cases.len().saturating_sub(passed) + usize::from(!shared_failures.is_empty());
 
+    let inputs = if legacy_scalar_avx2 {
+        json!({
+            "scalar_receipt_path": left_path.display().to_string(),
+            "avx2_receipt_path": right_path.display().to_string(),
+        })
+    } else {
+        json!({
+            "left_receipt_path": left_path.display().to_string(),
+            "right_receipt_path": right_path.display().to_string(),
+            "left_label": left_label,
+            "right_label": right_label,
+        })
+    };
+    let may_claim = if legacy_scalar_avx2 {
+        json!([
+            "Scalar versus AVX2 full-decode answer parity can be audited for the compared receipts.",
+            "First divergence evidence can separate AVX2 kernel issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
+        ])
+    } else {
+        json!([
+            "Full-decode answer parity can be audited for the compared receipts.",
+            "First divergence evidence can separate backend issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
+        ])
+    };
+    let must_not_claim = if legacy_scalar_avx2 {
+        json!([
+            "General chat quality is proven.",
+            "Sustained CPU throughput is proven.",
+            "Server inference is complete.",
+            "GPU or NPU execution is involved."
+        ])
+    } else {
+        json!([
+            "General chat quality is proven.",
+            "Sustained throughput is proven.",
+            "Server inference is complete.",
+            "A backend is answer-ready when the compared model artifact is not answer-ready."
+        ])
+    };
+
     json!({
         "schema_version": "1.0.0",
-        "artifact_kind": "bitnet_cpu_answer_parity",
+        "artifact_kind": if legacy_scalar_avx2 {
+            "bitnet_cpu_answer_parity"
+        } else {
+            "bitnet_answer_corpus_parity"
+        },
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "proof_stage": "full_decode_parity_compared",
-        "claim": "scalar_avx2_full_decode_answer_parity",
-        "speedup_claim": false,
-        "inputs": {
-            "scalar_receipt_path": scalar_path.display().to_string(),
-            "avx2_receipt_path": avx2_path.display().to_string(),
+        "claim": if legacy_scalar_avx2 {
+            "scalar_avx2_full_decode_answer_parity"
+        } else {
+            "full_decode_answer_parity_diagnostic"
         },
+        "speedup_claim": false,
+        "inputs": inputs,
         "machine": {
             "machine_id": machine,
             "platform_artifact": platform_artifact.map(|path| path.display().to_string()),
@@ -146,36 +276,46 @@ fn build_answer_parity_receipt(
             "first_divergence": first_divergence,
         },
         "cases": cases,
-        "may_claim": [
-            "Scalar versus AVX2 full-decode answer parity can be audited for the compared receipts.",
-            "First divergence evidence can separate AVX2 kernel issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
-        ],
-        "must_not_claim": [
-            "General chat quality is proven.",
-            "Sustained CPU throughput is proven.",
-            "Server inference is complete.",
-            "GPU or NPU execution is involved."
-        ],
+        "may_claim": may_claim,
+        "must_not_claim": must_not_claim,
     })
 }
 
-fn compare_top_level_contract(scalar: &Value, avx2: &Value, failures: &mut Vec<&'static str>) {
-    if scalar["artifact_kind"] != "bitnet_cpu_answer_corpus"
-        || avx2["artifact_kind"] != "bitnet_cpu_answer_corpus"
-        || scalar["model"]["loader_mode"] != "real_gguf"
-        || avx2["model"]["loader_mode"] != "real_gguf"
-        || scalar["model"]["repo"] != avx2["model"]["repo"]
-        || scalar["model"]["file"] != avx2["model"]["file"]
-        || scalar["model"]["path"] != avx2["model"]["path"]
+fn compare_top_level_contract(
+    left: &Value,
+    right: &Value,
+    legacy_scalar_avx2: bool,
+    failures: &mut Vec<&'static str>,
+) {
+    if !answer_corpus_artifact_kind_allowed(left["artifact_kind"].as_str())
+        || !answer_corpus_artifact_kind_allowed(right["artifact_kind"].as_str())
+        || (legacy_scalar_avx2
+            && (left["artifact_kind"] != "bitnet_cpu_answer_corpus"
+                || right["artifact_kind"] != "bitnet_cpu_answer_corpus"))
+    {
+        failures.push("artifact_kind_contract");
+    }
+
+    let path_mismatch = match (left["model"]["path"].as_str(), right["model"]["path"].as_str()) {
+        (Some(left_path), Some(right_path)) if !left_path.is_empty() && !right_path.is_empty() => {
+            left_path != right_path
+        }
+        _ => false,
+    };
+    if left["model"]["loader_mode"] != "real_gguf"
+        || right["model"]["loader_mode"] != "real_gguf"
+        || left["model"]["repo"] != right["model"]["repo"]
+        || left["model"]["file"] != right["model"]["file"]
+        || path_mismatch
     {
         failures.push("model_contract");
     }
 
-    if scalar["model"]["tokenizer_path"] != avx2["model"]["tokenizer_path"] {
+    if left["model"]["tokenizer_path"] != right["model"]["tokenizer_path"] {
         failures.push("tokenizer_contract");
     }
 
-    if scalar["prompt_template"] != avx2["prompt_template"] {
+    if left["prompt_template"] != right["prompt_template"] {
         failures.push("prompt_template");
     }
 
@@ -188,15 +328,33 @@ fn compare_top_level_contract(scalar: &Value, avx2: &Value, failures: &mut Vec<&
         "/generation/logits_dump_steps",
         "/generation/logits_topk",
     ] {
-        if scalar.pointer(field) != avx2.pointer(field) {
+        if left.pointer(field) != right.pointer(field) {
             failures.push("generation_contract");
             break;
         }
     }
 
-    if !strict_cpu_backend(scalar) || !strict_cpu_backend(avx2) {
+    if legacy_scalar_avx2 && (!strict_cpu_backend(left) || !strict_cpu_backend(right)) {
         failures.push("strict_cpu_backend");
     }
+
+    if !legacy_scalar_avx2
+        && (!generic_backend_contract(left["backend"].as_object())
+            || !generic_backend_contract(right["backend"].as_object()))
+    {
+        failures.push("backend_contract");
+    }
+}
+
+fn answer_corpus_artifact_kind_allowed(kind: Option<&str>) -> bool {
+    matches!(
+        kind,
+        Some(
+            "bitnet_cpu_answer_corpus"
+                | "bitnet_cuda_answer_corpus"
+                | "bitnet_apple_m4_local_answer_corpus"
+        )
+    )
 }
 
 fn strict_cpu_backend(receipt: &Value) -> bool {
@@ -204,6 +362,31 @@ fn strict_cpu_backend(receipt: &Value) -> bool {
         && receipt["backend"]["selected_backend"] == "cpu"
         && receipt["backend"]["runtime_api"] == "cpu"
         && receipt["backend"]["fallback_used"] == false
+}
+
+fn generic_backend_contract(backend: Option<&serde_json::Map<String, Value>>) -> bool {
+    let Some(backend) = backend else {
+        return false;
+    };
+    !backend.get("requested_backend").and_then(Value::as_str).unwrap_or_default().is_empty()
+        && !backend.get("selected_backend").and_then(Value::as_str).unwrap_or_default().is_empty()
+        && !backend.get("runtime_api").and_then(Value::as_str).unwrap_or_default().is_empty()
+        && backend.get("fallback_used").and_then(Value::as_bool) == Some(false)
+}
+
+fn infer_lane_label(receipt: &Value, path: &Path, fallback: &str) -> String {
+    receipt["generation"]["requested_cpu_kernel"]
+        .as_str()
+        .or_else(|| receipt["backend"]["requested_backend"].as_str())
+        .or_else(|| receipt["backend"]["selected_backend"].as_str())
+        .map(str::to_string)
+        .unwrap_or_else(|| {
+            path.file_stem()
+                .and_then(|stem| stem.to_str())
+                .filter(|stem| !stem.is_empty())
+                .unwrap_or(fallback)
+                .to_string()
+        })
 }
 
 fn cases_by_id(receipt: &Value) -> BTreeMap<String, &Value> {
@@ -217,28 +400,138 @@ fn cases_by_id(receipt: &Value) -> BTreeMap<String, &Value> {
 
 fn compare_case(
     id: &str,
-    scalar: Option<&Value>,
-    avx2: Option<&Value>,
+    left: Option<&Value>,
+    right: Option<&Value>,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
     first_divergence: &mut Option<Value>,
 ) -> Value {
-    let Some(scalar) = scalar else {
-        set_first(first_divergence, id, "case_missing_in_scalar", None, Value::Null, Value::Null);
-        return failed_case(id, &["case_missing_in_scalar"]);
+    let missing_left_rule =
+        if legacy_scalar_avx2 { "case_missing_in_scalar" } else { "case_missing_in_left" };
+    let missing_right_rule =
+        if legacy_scalar_avx2 { "case_missing_in_avx2" } else { "case_missing_in_right" };
+    let Some(left) = left else {
+        set_first(
+            first_divergence,
+            id,
+            missing_left_rule,
+            None,
+            Value::Null,
+            Value::Null,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+        );
+        return failed_case(id, &[missing_left_rule]);
     };
-    let Some(avx2) = avx2 else {
-        set_first(first_divergence, id, "case_missing_in_avx2", None, Value::Null, Value::Null);
-        return failed_case(id, &["case_missing_in_avx2"]);
+    let Some(right) = right else {
+        set_first(
+            first_divergence,
+            id,
+            missing_right_rule,
+            None,
+            Value::Null,
+            Value::Null,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+        );
+        return failed_case(id, &[missing_right_rule]);
     };
 
     let mut failures = Vec::new();
-    check_case_contract(id, "scalar", scalar, &mut failures, first_divergence);
-    check_case_contract(id, "avx2", avx2, &mut failures, first_divergence);
+    if !case_has_execution_evidence(left) || !case_has_execution_evidence(right) {
+        check_equal(
+            id,
+            "question",
+            None,
+            &left["question"],
+            &right["question"],
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+            &mut failures,
+            first_divergence,
+        );
+        check_equal(
+            id,
+            "status",
+            None,
+            &left["status"],
+            &right["status"],
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+            &mut failures,
+            first_divergence,
+        );
+        check_equal(
+            id,
+            "quality_failed_rules",
+            None,
+            &left["quality"]["failed_rules"],
+            &right["quality"]["failed_rules"],
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+            &mut failures,
+            first_divergence,
+        );
+        failures.push("execution_evidence_recorded");
+        set_first(
+            first_divergence,
+            id,
+            "execution_evidence_recorded",
+            None,
+            case_status_summary(left),
+            case_status_summary(right),
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+        );
+        return case_comparison_row(
+            id,
+            failures,
+            left,
+            right,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+        );
+    }
+
+    check_case_contract(
+        id,
+        left_label,
+        left,
+        legacy_scalar_avx2,
+        true,
+        left_label,
+        right_label,
+        &mut failures,
+        first_divergence,
+    );
+    check_case_contract(
+        id,
+        right_label,
+        right,
+        legacy_scalar_avx2,
+        false,
+        left_label,
+        right_label,
+        &mut failures,
+        first_divergence,
+    );
     check_equal(
         id,
         "question",
         None,
-        &scalar["question"],
-        &avx2["question"],
+        &left["question"],
+        &right["question"],
+        left_label,
+        right_label,
+        legacy_scalar_avx2,
         &mut failures,
         first_divergence,
     );
@@ -246,8 +539,11 @@ fn compare_case(
         id,
         "prompt_template",
         None,
-        &scalar["prompt_template"],
-        &avx2["prompt_template"],
+        &left["prompt_template"],
+        &right["prompt_template"],
+        left_label,
+        right_label,
+        legacy_scalar_avx2,
         &mut failures,
         first_divergence,
     );
@@ -255,8 +551,11 @@ fn compare_case(
         id,
         "tokenizer_source",
         None,
-        &scalar["tokenizer"]["source"],
-        &avx2["tokenizer"]["source"],
+        &left["tokenizer"]["source"],
+        &right["tokenizer"]["source"],
+        left_label,
+        right_label,
+        legacy_scalar_avx2,
         &mut failures,
         first_divergence,
     );
@@ -264,8 +563,11 @@ fn compare_case(
         id,
         "tokenizer_strict",
         None,
-        &scalar["tokenizer"]["strict"],
-        &avx2["tokenizer"]["strict"],
+        &left["tokenizer"]["strict"],
+        &right["tokenizer"]["strict"],
+        left_label,
+        right_label,
+        legacy_scalar_avx2,
         &mut failures,
         first_divergence,
     );
@@ -273,8 +575,11 @@ fn compare_case(
         id,
         "prompt_token_ids",
         None,
-        &scalar["token_ids"]["prompt"],
-        &avx2["token_ids"]["prompt"],
+        &left["token_ids"]["prompt"],
+        &right["token_ids"]["prompt"],
+        left_label,
+        right_label,
+        legacy_scalar_avx2,
         &mut failures,
         first_divergence,
     );
@@ -282,8 +587,11 @@ fn compare_case(
         id,
         "generated_token_ids",
         None,
-        &scalar["token_ids"]["generated"],
-        &avx2["token_ids"]["generated"],
+        &left["token_ids"]["generated"],
+        &right["token_ids"]["generated"],
+        left_label,
+        right_label,
+        legacy_scalar_avx2,
         &mut failures,
         first_divergence,
     );
@@ -291,28 +599,69 @@ fn compare_case(
         id,
         "decoded_text",
         None,
-        &scalar["answer"],
-        &avx2["answer"],
+        &left["answer"],
+        &right["answer"],
+        left_label,
+        right_label,
+        legacy_scalar_avx2,
         &mut failures,
         first_divergence,
     );
-    check_kernel_lane(id, "scalar", scalar, &mut failures, first_divergence);
-    check_kernel_lane(id, "avx2", avx2, &mut failures, first_divergence);
+    if legacy_scalar_avx2 {
+        check_kernel_lane(
+            id,
+            "scalar",
+            left,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+            &mut failures,
+            first_divergence,
+        );
+        check_kernel_lane(
+            id,
+            "avx2",
+            right,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+            &mut failures,
+            first_divergence,
+        );
+    } else {
+        check_generic_kernel_recorded(
+            id,
+            "left",
+            left,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+            &mut failures,
+            first_divergence,
+        );
+        check_generic_kernel_recorded(
+            id,
+            "right",
+            right,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+            &mut failures,
+            first_divergence,
+        );
+    }
     compare_logits_dump(
         id,
-        &scalar["logits_dump"],
-        &avx2["logits_dump"],
+        &left["logits_dump"],
+        &right["logits_dump"],
+        left_label,
+        right_label,
+        legacy_scalar_avx2,
         &mut failures,
         first_divergence,
     );
 
-    json!({
-        "id": id,
-        "passed": failures.is_empty(),
-        "failed_rules": failures,
-        "scalar": case_summary(scalar),
-        "avx2": case_summary(avx2),
-    })
+    case_comparison_row(id, failures, left, right, left_label, right_label, legacy_scalar_avx2)
 }
 
 fn failed_case(id: &str, failures: &[&str]) -> Value {
@@ -323,22 +672,79 @@ fn failed_case(id: &str, failures: &[&str]) -> Value {
     })
 }
 
+fn case_has_execution_evidence(case: &Value) -> bool {
+    case["backend"].is_object()
+        && case["kernel"]["selected_kernel"].as_str().is_some_and(|kernel| !kernel.is_empty())
+        && case["token_ids"]["prompt"].is_array()
+        && case["token_ids"]["generated"].is_array()
+}
+
+fn case_comparison_row(
+    id: &str,
+    failures: Vec<&'static str>,
+    left: &Value,
+    right: &Value,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
+) -> Value {
+    if legacy_scalar_avx2 {
+        json!({
+            "id": id,
+            "passed": failures.is_empty(),
+            "failed_rules": failures,
+            "scalar": case_summary(left),
+            "avx2": case_summary(right),
+        })
+    } else {
+        json!({
+            "id": id,
+            "passed": failures.is_empty(),
+            "failed_rules": failures,
+            "left": labeled_case_summary(left, left_label),
+            "right": labeled_case_summary(right, right_label),
+        })
+    }
+}
+
 fn check_case_contract(
     id: &str,
-    lane: &'static str,
+    lane: &str,
     case: &Value,
+    legacy_scalar_avx2: bool,
+    is_left: bool,
+    left_label: &str,
+    right_label: &str,
     failures: &mut Vec<&'static str>,
     first_divergence: &mut Option<Value>,
 ) {
-    let backend_rule =
-        if lane == "scalar" { "scalar_strict_cpu_backend" } else { "avx2_strict_cpu_backend" };
-    if case["backend"]["requested_backend"] != "cpu"
-        || !matches!(case["backend"]["selected_backend"].as_str(), Some("cpu" | "cpu-rust"))
-        || case["backend"]["runtime_api"] != "cpu"
-        || case["backend"]["fallback_used"] != false
-    {
+    let backend_rule = match (legacy_scalar_avx2, is_left) {
+        (true, true) => "scalar_strict_cpu_backend",
+        (true, false) => "avx2_strict_cpu_backend",
+        (false, true) => "left_backend_contract",
+        (false, false) => "right_backend_contract",
+    };
+    let backend_ok = if legacy_scalar_avx2 {
+        case["backend"]["requested_backend"] == "cpu"
+            && matches!(case["backend"]["selected_backend"].as_str(), Some("cpu" | "cpu-rust"))
+            && case["backend"]["runtime_api"] == "cpu"
+            && case["backend"]["fallback_used"] == false
+    } else {
+        generic_backend_contract(case["backend"].as_object())
+    };
+    if !backend_ok {
         failures.push(backend_rule);
-        set_first(first_divergence, id, backend_rule, None, case["backend"].clone(), json!("cpu"));
+        set_first(
+            first_divergence,
+            id,
+            backend_rule,
+            None,
+            case["backend"].clone(),
+            json!(lane),
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+        );
     }
 }
 
@@ -348,12 +754,25 @@ fn check_equal(
     step: Option<usize>,
     left: &Value,
     right: &Value,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
     failures: &mut Vec<&'static str>,
     first_divergence: &mut Option<Value>,
 ) {
     if left != right {
         failures.push(rule);
-        set_first(first_divergence, id, rule, step, left.clone(), right.clone());
+        set_first(
+            first_divergence,
+            id,
+            rule,
+            step,
+            left.clone(),
+            right.clone(),
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+        );
     }
 }
 
@@ -361,6 +780,9 @@ fn check_kernel_lane(
     id: &str,
     lane: &'static str,
     case: &Value,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
     failures: &mut Vec<&'static str>,
     first_divergence: &mut Option<Value>,
 ) {
@@ -368,62 +790,122 @@ fn check_kernel_lane(
     if !selected.to_ascii_lowercase().contains(lane) {
         let rule = if lane == "scalar" { "scalar_kernel_identity" } else { "avx2_kernel_identity" };
         failures.push(rule);
-        set_first(first_divergence, id, rule, None, json!(selected), json!(lane));
+        set_first(
+            first_divergence,
+            id,
+            rule,
+            None,
+            json!(selected),
+            json!(lane),
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+        );
+    }
+}
+
+fn check_generic_kernel_recorded(
+    id: &str,
+    lane: &'static str,
+    case: &Value,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
+    failures: &mut Vec<&'static str>,
+    first_divergence: &mut Option<Value>,
+) {
+    let selected = case["kernel"]["selected_kernel"].as_str().unwrap_or_default();
+    if selected.is_empty() || selected.contains("mock") || selected.contains("diagnostic") {
+        let rule = if lane == "left" { "left_kernel_recorded" } else { "right_kernel_recorded" };
+        failures.push(rule);
+        set_first(
+            first_divergence,
+            id,
+            rule,
+            None,
+            json!(selected),
+            json!(lane),
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+        );
     }
 }
 
 fn compare_logits_dump(
     id: &str,
-    scalar: &Value,
-    avx2: &Value,
+    left: &Value,
+    right: &Value,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
     failures: &mut Vec<&'static str>,
     first_divergence: &mut Option<Value>,
 ) {
-    let Some(scalar_steps) = scalar.as_array() else {
-        failures.push("scalar_logits_dump_recorded");
+    let left_logits_rule = if legacy_scalar_avx2 {
+        "scalar_logits_dump_recorded"
+    } else {
+        "left_logits_dump_recorded"
+    };
+    let right_logits_rule =
+        if legacy_scalar_avx2 { "avx2_logits_dump_recorded" } else { "right_logits_dump_recorded" };
+    let Some(left_steps) = left.as_array() else {
+        failures.push(left_logits_rule);
         set_first(
             first_divergence,
             id,
-            "scalar_logits_dump_recorded",
+            left_logits_rule,
             None,
-            scalar.clone(),
+            left.clone(),
             Value::Null,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
         );
         return;
     };
-    let Some(avx2_steps) = avx2.as_array() else {
-        failures.push("avx2_logits_dump_recorded");
+    let Some(right_steps) = right.as_array() else {
+        failures.push(right_logits_rule);
         set_first(
             first_divergence,
             id,
-            "avx2_logits_dump_recorded",
+            right_logits_rule,
             None,
-            avx2.clone(),
+            right.clone(),
             Value::Null,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
         );
         return;
     };
-    if scalar_steps.is_empty() {
-        failures.push("scalar_logits_dump_recorded");
+    if left_steps.is_empty() {
+        failures.push(left_logits_rule);
         set_first(
             first_divergence,
             id,
-            "scalar_logits_dump_recorded",
+            left_logits_rule,
             None,
-            scalar.clone(),
+            left.clone(),
             Value::Null,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
         );
         return;
     }
-    if avx2_steps.is_empty() {
-        failures.push("avx2_logits_dump_recorded");
+    if right_steps.is_empty() {
+        failures.push(right_logits_rule);
         set_first(
             first_divergence,
             id,
-            "avx2_logits_dump_recorded",
+            right_logits_rule,
             None,
-            avx2.clone(),
+            right.clone(),
             Value::Null,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
         );
         return;
     }
@@ -431,18 +913,24 @@ fn compare_logits_dump(
         id,
         "logits_step_count",
         None,
-        &json!(scalar_steps.len()),
-        &json!(avx2_steps.len()),
+        &json!(left_steps.len()),
+        &json!(right_steps.len()),
+        left_label,
+        right_label,
+        legacy_scalar_avx2,
         failures,
         first_divergence,
     );
-    for (step, (scalar_step, avx2_step)) in scalar_steps.iter().zip(avx2_steps).enumerate() {
+    for (step, (left_step, right_step)) in left_steps.iter().zip(right_steps).enumerate() {
         check_equal(
             id,
             "logits_topk",
             Some(step),
-            scalar_step,
-            avx2_step,
+            left_step,
+            right_step,
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
             failures,
             first_divergence,
         );
@@ -462,23 +950,57 @@ fn case_summary(case: &Value) -> Value {
     })
 }
 
+fn labeled_case_summary(case: &Value, label: &str) -> Value {
+    let mut summary = case_summary(case);
+    summary["label"] = json!(label);
+    summary["backend"] = case["backend"].clone();
+    summary
+}
+
+fn case_status_summary(case: &Value) -> Value {
+    json!({
+        "status": case["status"],
+        "quality_failed_rules": case["quality"]["failed_rules"],
+        "run_receipt_path": case["run_receipt_path"],
+        "exit_code": case["exit_code"],
+        "reason": case["reason"],
+    })
+}
+
 fn set_first(
     first_divergence: &mut Option<Value>,
     id: &str,
     kind: &'static str,
     step: Option<usize>,
-    scalar: Value,
-    avx2: Value,
+    left: Value,
+    right: Value,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
 ) {
     if first_divergence.is_none() {
-        *first_divergence = Some(json!({
-            "case_id": id,
-            "kind": kind,
-            "step": step,
-            "scalar": scalar,
-            "avx2": avx2,
-            "scope": divergence_scope(kind),
-        }));
+        let divergence = if legacy_scalar_avx2 {
+            json!({
+                "case_id": id,
+                "kind": kind,
+                "step": step,
+                "scalar": left,
+                "avx2": right,
+                "scope": divergence_scope(kind),
+            })
+        } else {
+            json!({
+                "case_id": id,
+                "kind": kind,
+                "step": step,
+                "left_label": left_label,
+                "right_label": right_label,
+                "left": left,
+                "right": right,
+                "scope": divergence_scope(kind),
+            })
+        };
+        *first_divergence = Some(divergence);
     }
 }
 
@@ -562,24 +1084,63 @@ mod tests {
         }])
     }
 
+    fn cuda_receipt(generated: &[u64], answer: &str, logits: Value) -> Value {
+        let mut receipt = receipt("qk256_gemv_cuda", generated, answer, logits);
+        receipt["artifact_kind"] = json!("bitnet_cuda_answer_corpus");
+        receipt["backend"] = json!({
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "fallback_used": false
+        });
+        receipt["cases"][0]["backend"] = receipt["backend"].clone();
+        receipt
+    }
+
+    fn build_legacy_report(scalar: &Value, avx2: &Value) -> Value {
+        build_answer_parity_receipt(
+            Path::new("scalar.json"),
+            scalar,
+            Path::new("avx2.json"),
+            avx2,
+            "scalar",
+            "avx2",
+            true,
+            None,
+            None,
+            None,
+        )
+    }
+
+    fn build_generic_report(left: &Value, right: &Value) -> Value {
+        build_answer_parity_receipt(
+            Path::new("left.json"),
+            left,
+            Path::new("right.json"),
+            right,
+            "scalar",
+            "cuda",
+            false,
+            None,
+            None,
+            None,
+        )
+    }
+
     #[test]
     fn parity_receipt_passes_matching_scalar_and_avx2_runs() {
         let scalar = receipt("i2_s-scalar-reference", &[4], "4", logits());
         let avx2 = receipt("i2_s-avx2-reference", &[4], "4", logits());
 
-        let report = build_answer_parity_receipt(
-            Path::new("scalar.json"),
-            &scalar,
-            Path::new("avx2.json"),
-            &avx2,
-            None,
-            None,
-            None,
-        );
+        let report = build_legacy_report(&scalar, &avx2);
 
         assert_eq!(report["artifact_kind"], "bitnet_cpu_answer_parity");
+        assert_eq!(report["claim"], "scalar_avx2_full_decode_answer_parity");
+        assert_eq!(report["inputs"]["scalar_receipt_path"], "scalar.json");
+        assert!(report["inputs"]["left_receipt_path"].is_null());
         assert_eq!(report["summary"]["failed"], 0);
         assert_eq!(report["cases"][0]["passed"], true);
+        assert!(report["cases"][0]["left"].is_null());
         assert!(report["summary"]["first_divergence"].is_null());
     }
 
@@ -603,6 +1164,9 @@ mod tests {
             &scalar,
             Path::new("avx2.json"),
             &avx2,
+            "scalar",
+            "avx2",
+            true,
             Some("intel-258v"),
             Some(Path::new("platform-probe.json")),
             None,
@@ -620,15 +1184,7 @@ mod tests {
         let scalar = receipt("i2_s-scalar-reference", &[4], "4", logits());
         let avx2 = receipt("i2_s-avx2-reference", &[5], "5", logits());
 
-        let report = build_answer_parity_receipt(
-            Path::new("scalar.json"),
-            &scalar,
-            Path::new("avx2.json"),
-            &avx2,
-            None,
-            None,
-            None,
-        );
+        let report = build_legacy_report(&scalar, &avx2);
 
         assert_eq!(report["summary"]["failed"], 1);
         assert_eq!(report["cases"][0]["passed"], false);
@@ -641,17 +1197,82 @@ mod tests {
         let scalar = receipt("i2_s-scalar-reference", &[4], "4", Value::Null);
         let avx2 = receipt("i2_s-avx2-reference", &[4], "4", logits());
 
-        let report = build_answer_parity_receipt(
-            Path::new("scalar.json"),
-            &scalar,
-            Path::new("avx2.json"),
-            &avx2,
-            None,
-            None,
-            None,
-        );
+        let report = build_legacy_report(&scalar, &avx2);
 
         let failed = report["cases"][0]["failed_rules"].as_array().unwrap();
         assert!(failed.iter().any(|rule| rule == "scalar_logits_dump_recorded"));
+    }
+
+    #[test]
+    fn generic_parity_accepts_matching_cpu_and_cuda_answer_corpus_receipts() {
+        let scalar = receipt("i2_s-scalar-reference", &[4], "4", logits());
+        let cuda = cuda_receipt(&[4], "4", logits());
+
+        let report = build_generic_report(&scalar, &cuda);
+
+        assert_eq!(report["artifact_kind"], "bitnet_answer_corpus_parity");
+        assert_eq!(report["claim"], "full_decode_answer_parity_diagnostic");
+        assert_eq!(report["summary"]["failed"], 0);
+        assert_eq!(report["inputs"]["left_label"], "scalar");
+        assert_eq!(report["inputs"]["right_label"], "cuda");
+        assert_eq!(report["cases"][0]["passed"], true);
+        assert_eq!(report["cases"][0]["right"]["selected_kernel"], "qk256_gemv_cuda");
+        assert!(report["cases"][0]["scalar"].is_null());
+    }
+
+    #[test]
+    fn generic_parity_records_left_right_divergence() {
+        let scalar = receipt("i2_s-scalar-reference", &[4], "4", logits());
+        let cuda = cuda_receipt(&[5], "5", logits());
+
+        let report = build_generic_report(&scalar, &cuda);
+
+        assert_eq!(report["summary"]["failed"], 1);
+        assert_eq!(report["summary"]["first_divergence"]["kind"], "generated_token_ids");
+        assert_eq!(report["summary"]["first_divergence"]["left_label"], "scalar");
+        assert_eq!(report["summary"]["first_divergence"]["right_label"], "cuda");
+        assert!(report["summary"]["first_divergence"]["left"].is_array());
+        assert!(report["summary"]["first_divergence"]["scalar"].is_null());
+    }
+
+    #[test]
+    fn legacy_parity_still_rejects_cuda_receipts() {
+        let scalar = receipt("i2_s-scalar-reference", &[4], "4", logits());
+        let cuda = cuda_receipt(&[4], "4", logits());
+
+        let report = build_legacy_report(&scalar, &cuda);
+
+        assert_ne!(report["summary"]["failed"], 0);
+        let shared = report["shared_contract"]["failed_rules"].as_array().unwrap();
+        assert!(shared.iter().any(|rule| rule == "artifact_kind_contract"));
+        assert!(shared.iter().any(|rule| rule == "strict_cpu_backend"));
+    }
+
+    #[test]
+    fn generic_parity_classifies_matching_command_failures_as_missing_execution_evidence() {
+        let mut scalar = receipt("i2_s-scalar-reference", &[4], "4", logits());
+        let mut cuda = cuda_receipt(&[4], "4", logits());
+        let failed_case = json!({
+            "id": "math",
+            "question": "Answer with a single digit: 2+2=",
+            "status": "command_failed",
+            "exit_code": 7,
+            "run_receipt_path": "target/bitnet/receipts/math.json",
+            "quality": {
+                "passed": false,
+                "failed_rules": ["command_failed"]
+            }
+        });
+        scalar["cases"][0] = failed_case.clone();
+        cuda["cases"][0] = failed_case;
+
+        let report = build_generic_report(&scalar, &cuda);
+
+        assert_eq!(report["summary"]["failed"], 1);
+        assert_eq!(report["summary"]["first_divergence"]["kind"], "execution_evidence_recorded");
+        let failed = report["cases"][0]["failed_rules"].as_array().unwrap();
+        assert!(failed.iter().any(|rule| rule == "execution_evidence_recorded"));
+        assert!(!failed.iter().any(|rule| rule == "left_backend_contract"));
+        assert!(!failed.iter().any(|rule| rule == "right_backend_contract"));
     }
 }
