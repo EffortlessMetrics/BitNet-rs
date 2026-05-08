@@ -2,10 +2,10 @@ name: CI (Core)
 
 # Core gating checks that MUST pass for PR merges (Linux-only).
 # This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh.
-# Repository rules require this workflow's job contexts before every PR merge, so
-# pull_request cannot be path-filtered. Other docs and meta-only workflows still
-# provide narrower checks, but this workflow must always emit its required
-# contexts to keep automerge from waiting on missing statuses.
+# Triggers are scoped to inputs that affect Rust compilation/tests plus campaign
+# tracking docs, because repository rules require this workflow's contexts before
+# every PR merge. Other docs and meta-only changes are handled by markdownlint,
+# link-check, docs-automation, and similar workflows.
 #
 # CI cost / verification policy: see docs/ci/cost-and-verification-policy.md
 # (rationale for the well-below-$1-per-PR target and the verification ladder).
@@ -13,6 +13,33 @@ name: CI (Core)
 on:
   pull_request:
     branches: [ main ]
+    paths:
+      # Rust code and build files - always trigger core checks
+      - 'crates/**'
+      - 'crossval/**'
+      - 'tests/**'
+      - 'tools/bitnet-task/**'
+      - 'xtask/**'
+      - 'fuzz/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'Makefile'
+
+      # Documentation tracked in CI policy
+      - 'docs/tracking/**'
+
+      # CI/Codex campaign definitions
+      - '.codex/campaigns/**'
+
+      # Workflow files - core and related CI workflows
+      - '.github/workflows/ci-core.yml'
+      - '.github/workflows/pr-plan.yml'
+      - '.github/workflows/coverage.yml'
+      - '.github/workflows/ci-reporting.yml'
+
+      # CI configuration - codecov config affects verification signal
+      - 'codecov.yml'
   push:
     branches: [ main ]
     paths:
