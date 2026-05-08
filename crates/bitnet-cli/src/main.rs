@@ -999,6 +999,7 @@ async fn async_main() -> Result<()> {
 
     let requested_backend_label =
         cli.device.clone().unwrap_or_else(|| config.default_device.clone());
+    #[cfg(feature = "full-cli")]
     let explicit_device_label = cli.device.clone();
 
     // Report backend selection at startup so logs and receipts are deterministic.

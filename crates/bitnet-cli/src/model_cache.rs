@@ -17,6 +17,7 @@ use tokio::io::AsyncWriteExt;
 
 const DEFAULT_CACHE_RELATIVE: &[&str] = &["bitnet-rs", "models"];
 const LOW_DISK_HEADROOM_BYTES: u64 = 1_073_741_824;
+#[cfg(feature = "full-cli")]
 pub(crate) const M4_SLM_RUNTIME_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
 
 /// Manage supported local model artifacts.
@@ -145,6 +146,7 @@ struct VerifyResult {
     model: SupportedModel,
 }
 
+#[cfg(feature = "full-cli")]
 #[derive(Debug, Clone)]
 pub(crate) struct VerifiedCachedModel {
     pub id: String,
@@ -187,6 +189,7 @@ impl ModelCommand {
     }
 }
 
+#[cfg(feature = "full-cli")]
 pub(crate) fn verified_apple_m4_slm_model(
     id: &str,
     cache_dir: Option<PathBuf>,
@@ -232,6 +235,7 @@ pub(crate) fn verified_apple_m4_slm_model(
     })
 }
 
+#[cfg(feature = "full-cli")]
 pub(crate) fn apple_m4_slm_cache_status_json(
     id: &str,
     cache_dir: Option<PathBuf>,
