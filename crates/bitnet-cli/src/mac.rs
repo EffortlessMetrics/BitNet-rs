@@ -1,7 +1,7 @@
 //! Mac-oriented operator wrappers for the supported Apple M4 SLM path.
 
 use anyhow::{Context, Result, anyhow};
-use clap::{Args, Subcommand};
+use clap::{Args, Subcommand, ValueEnum};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
@@ -12,6 +12,20 @@ const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.js
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
 const QWEN_PROMPT_TEMPLATE: &str = "qwen2.5";
+const OPERATOR_PROFILE_TOKENS: &[usize] = &[16, 32, 64];
+const OPERATOR_PROFILE_PROMPTS: &[&str] = &[
+    "What is 2+2? Answer briefly.",
+    "Name the capital of France.",
+    "Write one short sentence about Rust.",
+];
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum MacValidateProfileSet {
+    /// Run the deterministic smoke corpus once.
+    Smoke,
+    /// Run bounded 16/32/64 warm-answer timing profiles and write an aggregate summary.
+    Operator,
+}
 
 /// Run the supported Apple M4 local-answer flow with strict receipts.
 #[derive(Debug, Args)]
@@ -106,6 +120,10 @@ enum MacAction {
         #[arg(long, default_value_t = 2)]
         corpus_repeat_runs: usize,
 
+        /// Validation profile set. Use operator to measure 16/32/64 token warm-answer profiles.
+        #[arg(long, value_enum, default_value_t = MacValidateProfileSet::Smoke)]
+        profile_set: MacValidateProfileSet,
+
         /// Maximum new tokens per prompt when the corpus does not override it.
         #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 32)]
         max_new_tokens: usize,
@@ -186,6 +204,7 @@ impl MacCommand {
                 cache_dir,
                 corpus,
                 corpus_repeat_runs,
+                profile_set,
                 max_new_tokens,
                 threads,
                 json_out,
@@ -196,6 +215,7 @@ impl MacCommand {
                     cache_dir,
                     corpus,
                     corpus_repeat_runs,
+                    profile_set,
                     max_new_tokens,
                     threads,
                     json_out,
@@ -300,11 +320,15 @@ async fn run_validate(
     cache_dir: Option<PathBuf>,
     corpus: PathBuf,
     corpus_repeat_runs: usize,
+    profile_set: MacValidateProfileSet,
     max_new_tokens: usize,
     threads: usize,
     json_out: PathBuf,
 ) -> Result<()> {
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    if profile_set == MacValidateProfileSet::Operator {
+        return run_operator_profiles(model, json_out, threads).await;
+    }
     crate::run_slm_warm_session(
         APPLE_M4_CPU_NEON,
         model.path.clone(),
@@ -337,6 +361,188 @@ async fn run_validate(
     .await?;
     annotate_and_validate_mac_receipt(&json_out, &model, "mac validate")?;
     Ok(())
+}
+
+async fn run_operator_profiles(
+    model: VerifiedCachedModel,
+    json_out: PathBuf,
+    threads: usize,
+) -> Result<()> {
+    let receipt_dir =
+        json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from(".")).join(
+            format!(
+                "{}-profiles",
+                json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("mac-validate")
+            ),
+        );
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("failed to create {}", receipt_dir.display()))?;
+
+    let mut summaries = Vec::with_capacity(OPERATOR_PROFILE_TOKENS.len());
+    for tokens in OPERATOR_PROFILE_TOKENS {
+        let profile_id = format!("warm_{tokens}");
+        let receipt_path = receipt_dir.join(format!("{profile_id}.json"));
+        crate::run_slm_warm_session(
+            APPLE_M4_CPU_NEON,
+            model.path.clone(),
+            "auto".to_string(),
+            None,
+            None,
+            1,
+            OPERATOR_PROFILE_PROMPTS.iter().map(|prompt| (*prompt).to_string()).collect(),
+            *tokens,
+            0.0,
+            1,
+            1.0,
+            1.1,
+            None,
+            true,
+            true,
+            true,
+            true,
+            threads,
+            QWEN_PROMPT_TEMPLATE.to_string(),
+            None,
+            vec!["<|im_end|>".to_string()],
+            Vec::new(),
+            true,
+            false,
+            1,
+            1,
+            receipt_path.clone(),
+        )
+        .await?;
+        annotate_and_validate_mac_receipt(
+            &receipt_path,
+            &model,
+            "mac validate --profile-set operator",
+        )?;
+        let receipt: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(&receipt_path)
+                .with_context(|| format!("failed to read {}", receipt_path.display()))?,
+        )?;
+        summaries.push(operator_profile_summary(&profile_id, *tokens, &receipt_path, &receipt)?);
+    }
+
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_operator_profiles",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "profile_set": "operator",
+        "profiles": summaries,
+        "operator_thresholds": {
+            "scope": "supported Apple M4 SLM warm-answer timing only",
+            "profile_execution_model": "one warm-session run per token budget",
+            "profiles_loaded_independently": true,
+            "profile_set_model_loads": OPERATOR_PROFILE_TOKENS.len(),
+            "profiles_required": ["warm_16", "warm_32", "warm_64"],
+            "cold_load_separated": true,
+            "model_tokenizer_reuse_visible": true,
+            "model_tokenizer_reuse_visible_per_profile": true,
+            "reuse_scope": "within_each_profile",
+            "initial_targets": {
+                "warm_16": "complete reliably",
+                "warm_32": "complete without timeout",
+                "warm_64": "measured and bounded"
+            },
+            "hard_latency_thresholds": serde_json::Value::Null,
+            "thresholds_are_claim_bounds_not_speed_guarantees": true
+        },
+        "model_cache": {
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        },
+        "mac_claim_boundary": {
+            "slm_local_answer": true,
+            "timing_profile": true,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        },
+        "speedup_claim": false,
+    });
+    std::fs::write(&json_out, serde_json::to_vec_pretty(&aggregate)?)
+        .with_context(|| format!("failed to write {}", json_out.display()))?;
+    validate_mac_receipt_value(&json_out, &aggregate)?;
+    println!(
+        "Mac operator profile summary written to {} (profiles: warm_16, warm_32, warm_64)",
+        json_out.display()
+    );
+    Ok(())
+}
+
+fn operator_profile_summary(
+    profile_id: &str,
+    requested_max_new_tokens: usize,
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<serde_json::Value> {
+    let speed = &receipt["speed"];
+    let generated_tokens = speed["counts"]["generated_tokens"]
+        .as_u64()
+        .or_else(|| {
+            receipt["prompts"].as_array().map(|prompts| {
+                prompts
+                    .iter()
+                    .map(|prompt| prompt["generated_tokens"].as_u64().unwrap_or_default())
+                    .sum::<u64>()
+            })
+        })
+        .unwrap_or_default();
+    let prompt_count = receipt["session"]["prompt_count"].as_u64().unwrap_or_default();
+    let quality_passed = receipt["quality_summary"]["passed"].as_bool().unwrap_or(false);
+    let cold_load_separated = !receipt["timing"]["model_load_ms"].is_null()
+        && !receipt["timing"]["tokenizer_load_ms"].is_null()
+        && !receipt["speed"]["timing"]["warm_prompt_wall_ms"].is_null();
+    if prompt_count == 0 || generated_tokens == 0 || !quality_passed {
+        anyhow::bail!("operator profile {profile_id} did not produce a valid warm-session receipt");
+    }
+    Ok(serde_json::json!({
+        "profile_id": profile_id,
+        "receipt_path": path.display().to_string(),
+        "requested_max_new_tokens": requested_max_new_tokens,
+        "prompt_count": prompt_count,
+        "generated_tokens": generated_tokens,
+        "quality_passed": quality_passed,
+        "cold_load_separated": cold_load_separated,
+        "model_loaded_once": receipt["session"]["model_loaded_once"].as_bool().unwrap_or(false),
+        "tokenizer_loaded_once": receipt["session"]["tokenizer_loaded_once"].as_bool().unwrap_or(false),
+        "reuse_scope": "within_profile",
+        "timing": {
+            "model_load_ms": receipt["timing"]["model_load_ms"].clone(),
+            "tokenizer_load_ms": receipt["timing"]["tokenizer_load_ms"].clone(),
+            "warm_prompt_wall_ms": receipt["speed"]["timing"]["warm_prompt_wall_ms"].clone(),
+            "decode_total_ms": receipt["speed"]["timing"]["decode_total_ms"].clone(),
+            "sampling_ms": receipt["speed"]["timing"]["sampling_ms"].clone(),
+            "warm_prompt_generated_tok_s": receipt["speed"]["throughput"]["warm_prompt_generated_tok_s"].clone(),
+            "decode_generated_tok_s": receipt["speed"]["throughput"]["decode_generated_tok_s"].clone(),
+        },
+        "claim_boundary": {
+            "speedup_claim": false,
+            "broad_performance_claim": false,
+            "scope": "this profile, model, backend, and machine receipt only",
+        }
+    }))
 }
 
 fn annotate_and_validate_mac_receipt(
@@ -506,6 +712,8 @@ fn validate_mac_receipt_value(
 
     let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session" {
         validate_warm_session_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_operator_profiles" {
+        validate_operator_profiles_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -521,6 +729,113 @@ fn validate_mac_receipt_value(
         generated_tokens,
         passed: true,
     })
+}
+
+fn validate_operator_profiles_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    if receipt["operator_thresholds"]["cold_load_separated"] != true {
+        anyhow::bail!("{} operator profiles must separate cold load timing", path.display());
+    }
+    if receipt["operator_thresholds"]["model_tokenizer_reuse_visible"] != true {
+        anyhow::bail!("{} operator profiles must record model/tokenizer reuse", path.display());
+    }
+    if receipt["operator_thresholds"]["model_tokenizer_reuse_visible_per_profile"] != true {
+        anyhow::bail!(
+            "{} operator profiles must scope model/tokenizer reuse visibility per profile",
+            path.display()
+        );
+    }
+    if receipt["operator_thresholds"]["thresholds_are_claim_bounds_not_speed_guarantees"] != true {
+        anyhow::bail!(
+            "{} operator profiles must record that thresholds are claim bounds, not speed guarantees",
+            path.display()
+        );
+    }
+    if receipt["operator_thresholds"]["profiles_loaded_independently"] != true {
+        anyhow::bail!(
+            "{} operator profiles must disclose independent per-token-budget warm-session runs",
+            path.display()
+        );
+    }
+    let profiles = receipt["profiles"].as_array().ok_or_else(|| {
+        anyhow!("{} operator profile summary is missing profiles", path.display())
+    })?;
+    if profiles.len() != 3 {
+        anyhow::bail!(
+            "{} operator profile summary must contain exactly warm_16, warm_32, and warm_64",
+            path.display()
+        );
+    }
+    if receipt["operator_thresholds"]["profile_set_model_loads"].as_u64() != Some(3) {
+        anyhow::bail!(
+            "{} operator profile summary must record profile_set_model_loads=3",
+            path.display()
+        );
+    }
+    let required = [("warm_16", 16_u64), ("warm_32", 32_u64), ("warm_64", 64_u64)];
+    for (profile_id, requested_tokens) in required {
+        if !profiles.iter().any(|profile| {
+            profile["profile_id"] == profile_id
+                && profile["requested_max_new_tokens"].as_u64() == Some(requested_tokens)
+        }) {
+            anyhow::bail!("{} operator profile summary is missing {profile_id}", path.display());
+        }
+    }
+    let mut generated_total = 0usize;
+    for profile in profiles {
+        if profile["quality_passed"].as_bool() != Some(true) {
+            anyhow::bail!("{} operator profile quality failed", path.display());
+        }
+        if profile["prompt_count"].as_u64().unwrap_or_default() == 0 {
+            anyhow::bail!("{} operator profile records zero prompts", path.display());
+        }
+        let generated = profile["generated_tokens"].as_u64().unwrap_or_default();
+        if generated == 0 {
+            anyhow::bail!("{} operator profile records zero generated tokens", path.display());
+        }
+        if profile["model_loaded_once"].as_bool() != Some(true)
+            || profile["tokenizer_loaded_once"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} operator profile does not record model/tokenizer reuse",
+                path.display()
+            );
+        }
+        if profile["cold_load_separated"].as_bool() != Some(true) {
+            anyhow::bail!(
+                "{} operator profile must record cold_load_separated=true",
+                path.display()
+            );
+        }
+        if profile["reuse_scope"].as_str() != Some("within_profile") {
+            anyhow::bail!(
+                "{} operator profile must record reuse_scope=within_profile",
+                path.display()
+            );
+        }
+        let timing = &profile["timing"];
+        for field in [
+            "model_load_ms",
+            "tokenizer_load_ms",
+            "warm_prompt_wall_ms",
+            "decode_total_ms",
+            "sampling_ms",
+            "warm_prompt_generated_tok_s",
+            "decode_generated_tok_s",
+        ] {
+            if timing[field].is_null() {
+                anyhow::bail!(
+                    "{} operator profile {} is missing timing.{field}",
+                    path.display(),
+                    profile["profile_id"].as_str().unwrap_or("<unknown>")
+                );
+            }
+        }
+        generated_total += generated as usize;
+    }
+    Ok((Some(profiles.len()), Some(generated_total)))
 }
 
 fn validate_one_shot_receipt(

@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T09:24:43Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-004"
+event = "in_progress"
+actor = "codex"
+branch = "codex/apple-m4-productization/M4-PROD-004-warm-speed-polish"
+
+notes = [
+  "Started warm-session timing and operator threshold polish.",
+  "Scope is Mac SLM CLI receipt/profile surfaces, docs, campaign tracking, and generated dashboards only.",
+  "No broad M4 performance, BitNet performance, Metal acceleration, QK256, kernel, server, or model binary claims.",
+]

@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T09:46:20Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-004"
+event = "pr_open"
+pr = 4029
+branch = "codex/apple-m4-productization/M4-PROD-004-warm-speed-polish"
+head_sha = "c3715eed3b2df64d326878419290fc01dce2312c"
+actor = "codex"
+
+notes = [
+  "Opened M4-PROD-004 to add named 16, 32, and 64 token Apple M4 SLM warm-answer operator profiles.",
+  "The profile receipts keep model/tokenizer reuse scoped per profile and do not claim broad performance, speedup, full Metal inference, BitNet quality, Neural Engine execution, or QK256 support.",
+]

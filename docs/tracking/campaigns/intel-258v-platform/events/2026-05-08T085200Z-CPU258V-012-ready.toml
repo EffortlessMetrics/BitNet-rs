@@ -1,10 +1,16 @@
 timestamp = "2026-05-08T08:52:00Z"
 campaign = "intel-258v-platform"
 item = "CPU258V-012"
-event = "ready"
+event = "in_progress"
+actor = "codex"
 branch = "codex/intel-258v-platform/CPU258V-012-gamma-rootcause"
 base_sha = "10d52f2163fbb4a48718beb886aef274d966709c"
 summary = "Readied CPU258V-012 to correct BitNet b1.58 CPU model mechanics and receipt output-head metadata."
+
+notes = [
+  "Started CPU258V-012 after CPU258V-011 showed scalar and AVX2 share the selected bad math_2_plus_2 answer.",
+  "This event was normalized from the invalid ready lifecycle value to in_progress so campaign doctor accepts the existing event history.",
+]
 
 details = [
   "The prior CPU258V-011 artifacts showed scalar and AVX2 share the selected bad math_2_plus_2 answer, so CPU258V-012 targets shared model mechanics rather than AVX2 divergence.",

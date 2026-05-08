@@ -86,10 +86,29 @@ bitnet mac validate \
   --json-out target/apple-m4-productization/mac-validate.json
 ```
 
+Run the operator timing profile set:
+
+```bash
+bitnet mac validate \
+  --profile-set operator \
+  --json-out target/apple-m4-productization/mac-operator-profiles.json
+```
+
+This writes a summary receipt plus per-profile warm-session receipts for
+`warm_16`, `warm_32`, and `warm_64`. These profiles record cold model/tokenizer
+load separately from warm prompt timing, show model/tokenizer reuse within each
+profile, and keep latency numbers scoped to this model, backend, prompt set, and
+machine context. The operator profile set intentionally runs one warm session per
+token budget, so reuse is `within_profile`, not a single shared process across
+all three budgets. The summary records `profile_set_model_loads=3` and
+`profiles_loaded_independently=true` to keep that scope visible. These are not
+broad performance or speedup claims.
+
 Check answer or warm-session receipts:
 
 ```bash
 bitnet mac receipts-check target/apple-m4-productization/mac-validate.json
+bitnet mac receipts-check target/apple-m4-productization/mac-operator-profiles.json
 ```
 
 The lower-level warm-session command remains available for debugging:
@@ -121,6 +140,11 @@ generated text and token IDs present
 quality_summary.passed = true
 determinism.passed = true
 timing separates load, tokenize, prefill, decode, sampling, and total time
+operator profile summaries include warm_16, warm_32, and warm_64 when requested
+operator profile summaries disclose one warm session per token budget
+operator profile summaries record profile_set_model_loads = 3
+broad_performance_claim = false
+speedup_claim = false
 ```
 
 `bitnet mac ask` and `bitnet mac validate` intentionally route to
