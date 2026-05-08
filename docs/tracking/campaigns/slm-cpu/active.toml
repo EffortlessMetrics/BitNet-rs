@@ -222,8 +222,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-003"
-status = "pr_open"
+status = "merged"
 pr = 3940
+merge_sha = "566472d3be1965d958154b2c2f5cc364ef25e52d"
 branch = "codex/slm-cpu-003-tiny-strict-receipt"
 stackable = false
 review_mode = "codex_premerge"
@@ -267,7 +268,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-004"
-status = "proposed"
+status = "ready"
 branch = "codex/slm-cpu-004-answer-corpus"
 stackable = false
 review_mode = "codex_premerge"

@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T00:40:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-003"
+event = "merged"
+pr = 3940
+merge_sha = "566472d3be1965d958154b2c2f5cc364ef25e52d"
+branch = "codex/slm-cpu-003-tiny-strict-receipt"
+actor = "codex"
+
+notes = [
+  "Merged #3940 to add a tiny strict Qwen3 CPU run receipt with real GGUF, strict tokenizer provenance, CPU backend, fallback=false, prompt IDs, generated IDs, and decoded text.",
+  "The receipt is diagnosable bring-up evidence only; it does not claim answer quality, sustained 8250U throughput, server execution, GPU execution, OpenVINO execution, UHD 620 execution, or NPU execution.",
+]

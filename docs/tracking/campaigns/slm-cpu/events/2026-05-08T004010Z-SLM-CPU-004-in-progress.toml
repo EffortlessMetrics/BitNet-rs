@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T00:40:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-004"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Advanced SLM-CPU-004 after #3940 merged SLM-CPU-003.",
+  "The next item is a tiny SLM answer corpus with quality pass/fail fields and diagnosable failure rules, still without general chat quality or sustained performance claims.",
+]
