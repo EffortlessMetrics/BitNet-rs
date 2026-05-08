@@ -1152,7 +1152,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-COMPARE-002"
-status = "ready"
+status = "pr_open"
+pr = 4110
 branch = "codex/lunar-lake/LNL258V-COMPARE-002"
 stackable = false
 review_mode = "codex_premerge"
