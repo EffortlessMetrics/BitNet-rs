@@ -317,7 +317,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-007"
-status = "ready"
+status = "pr_open"
+pr = 4081
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-007-performance-envelope"
 stackable = false
 review_mode = "codex_premerge"

@@ -73,10 +73,10 @@ Observed release-mode summary on the recorded M4 Mac mini:
 
 | Profile | Generated tokens | Warm prompt tok/s | Decode tok/s | First token mean ms | Total session ms | Peak memory MB |
 |---|---:|---:|---:|---:|---:|---:|
-| `warm_16` | 34 | 4.266 | 14.517 | 1966.667 | 13085.842 | 3646.453 |
-| `warm_32` | 50 | 5.879 | 15.187 | 1804.000 | 13513.646 | 4010.359 |
-| `warm_64` | 82 | 7.663 | 14.909 | 1802.667 | 15483.482 | 4028.125 |
-| `warm_128` | 123 | 8.847 | 14.925 | 1975.333 | 18977.237 | 4028.125 |
+| `warm_16` | 34 | 4.435 | 14.962 | 1885.000 | 12576.726 | 3772.469 |
+| `warm_32` | 50 | 5.947 | 15.317 | 1779.333 | 13117.047 | 4009.078 |
+| `warm_64` | 82 | 7.840 | 15.269 | 1763.000 | 15228.741 | 4026.438 |
+| `warm_128` | 123 | 9.347 | 15.313 | 1775.333 | 17896.347 | 4033.422 |
 
 The receipt records `requested_backend=apple-m4-cpu-neon`, `selected_backend=apple-m4-cpu-neon`, `runtime_api=cpu`, and `fallback_used=false`. It also records `release_mode_observed=true`, `warm_128_included=true`, `speedup_claim=false`, and `broad_performance_claim=false`.
 
@@ -105,17 +105,16 @@ Aggregate ranked hotspots from the recorded audit:
 
 | Component | Alloc count | Alloc bytes |
 |---|---:|---:|
-| `prompt_setup` | 3,097 | 9,664,149,432 |
-| `decode_total` | 4,809,096 | 6,005,508,269 |
-| `model.forward` | 4,792,776 | 5,469,127,472 |
-| `prompt_prefill` | 6,900,544 | 3,897,852,928 |
+| `prompt_setup` | 2,977 | 9,663,994,696 |
+| `decode_total` | 4,698,106 | 5,970,721,165 |
+| `model.forward` | 4,681,800 | 5,434,345,232 |
+| `prompt_prefill` | 6,740,800 | 3,875,563,648 |
 | `prompt_tokenize` | 18,241,403 | 1,519,238,922 |
 | `model.logits_and_extract` | 8,381 | 527,517,191 |
 | `sampler.sample` | 56 | 7,306,608 |
 | `model.embed` | 4,913 | 1,418,412 |
-| `receipt_construction` | 2,856 | 283,918 |
+| `receipt_construction` | 3,276 | 331,534 |
 | `tokenizer.decode` | 2,089 | 57,426 |
-| `token_vector_updates` | 14 | 4,864 |
 
 These are allocation counter deltas, not resident-memory measurements. They can include transient allocate/free churn and allocator reuse behavior. The first optimization targets should therefore be chosen from the ranked evidence, not from raw intuition:
 
@@ -240,6 +239,67 @@ runs. The Mac validation receipts preserve the same claim boundary: they record
 time-to-first-token and progress behavior, but do not claim broad performance,
 BitNet quality, full Metal inference, Neural Engine execution, MPSGraph model
 inference, or QK256 support.
+
+## Published Performance Envelope
+
+`M4-SLM-PERF-007` publishes the measured Apple M4 SLM envelope from current
+validator-passing receipts:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline.json
+ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit.json
+ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/metal-phase/metal-dense-prefill-linear.json
+ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/performance-envelope.md
+```
+
+Measured context:
+
+```text
+machine_id = apple-m4-mac-mini
+chip = Apple M4
+cpu_cores = 10
+gpu_cores = 10
+unified_memory_bytes = 17179869184
+model = Qwen2.5 0.5B Instruct Q8_0
+model_sha256 = ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e
+requested_backend = apple-m4-cpu-neon
+selected_backend = apple-m4-cpu-neon
+runtime_api = cpu
+fallback_used = false
+```
+
+The published envelope for the recorded release-mode CPU/NEON run is:
+
+| Profile | Requested max tokens | Generated tokens | Warm prompt tok/s | Decode tok/s | First token mean ms | Total session ms | Peak memory MB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `warm_16` | 16 | 34 | 4.435 | 14.962 | 1885.000 | 12576.726 | 3772.469 |
+| `warm_32` | 32 | 50 | 5.947 | 15.317 | 1779.333 | 13117.047 | 4009.078 |
+| `warm_64` | 64 | 82 | 7.840 | 15.269 | 1763.000 | 15228.741 | 4026.438 |
+| `warm_128` | 128 | 123 | 9.347 | 15.313 | 1775.333 | 17896.347 | 4033.422 |
+
+The allocation-audit envelope records the same four profiles with auditing
+enabled. Its top allocation-counter hotspots are `prompt_setup`,
+`decode_total`, `model.forward`, `prompt_prefill`, and `prompt_tokenize`. These
+are process-global allocation counter deltas; they are not resident-memory
+claims.
+
+The Metal phase contribution remains a separate phase-local receipt:
+
+```text
+execution_phase = prefill_linear_projection
+kernel_id = tiny_metal_dense_prefill_linear_projection
+metal_phase_ms = 135.298875
+cpu_reference_ms = 0.013333
+timing_delta_ms = 135.285542
+fallback_used = false
+speedup_claim = false
+full_metal_inference_claimed = false
+```
+
+This envelope may claim only that the named model, profiles, backend, machine,
+and phase contribution were measured. It does not claim broad M4 performance,
+full `apple-m4-metal` inference, BitNet quality or performance, QK256 on Apple
+Silicon, MPSGraph model inference, or Neural Engine execution.
 
 ## Claim Boundary
 
