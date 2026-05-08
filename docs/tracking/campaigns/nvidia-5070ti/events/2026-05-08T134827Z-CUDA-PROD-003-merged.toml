@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T13:48:27Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-003"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-003-residency-coverage"
+pr = 4073
+merge_sha = "bbc7d00b41afa8f0c3ab7a3882fc032e8d07e68d"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "Merged strict RTX 5070 Ti CUDA execution-residency receipts.",
+  "The merged receipts expose QK256 CUDA coverage, upload-once weight residency, CPU-resident KV cache, non-resident or not-yet-claimed transformer phases, unmeasured transfer/kernel timing fields, and speedup_claim=false.",
+  "CUDA-PROD-004 is ready for strict answer-path benchmark receipts; no speed, broad chat, server, or full-residency claim is implied by this closeout.",
+]
