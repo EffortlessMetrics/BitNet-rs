@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T04:37:15Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-007"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started first safe Metal phase decision for the validated Apple M4 SLM lane.",
+  "Scope is docs/tracking only; no Metal kernels, runtime routing, QK256, server inference, MPSGraph, Neural Engine, model binary, or performance claim changes.",
+]
