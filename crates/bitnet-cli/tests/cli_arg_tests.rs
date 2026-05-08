@@ -180,6 +180,121 @@ fn slm_warm_session_help_documents_warm_receipts() {
 }
 
 #[test]
+fn cuda_warm_session_help_documents_strict_cuda_receipts() {
+    bitnet()
+        .args(["cuda-warm-session", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("RTX 5070 Ti CUDA"))
+        .stdout(predicate::str::contains("--prompt"))
+        .stdout(predicate::str::contains("--strict-loader"))
+        .stdout(predicate::str::contains("--strict-tokenizer"))
+        .stdout(predicate::str::contains("--fail-on-quality"))
+        .stdout(predicate::str::contains("--json-out"))
+        .stdout(predicate::str::contains("bitnetcpp-answer"));
+}
+
+#[test]
+fn cuda_warm_session_requires_rtx5070ti_device_before_model_load() {
+    bitnet()
+        .args([
+            "--device",
+            "cpu",
+            "cuda-warm-session",
+            "--model",
+            "missing.gguf",
+            "--tokenizer",
+            "missing-tokenizer.json",
+            "--prompt",
+            "What is 2+2?",
+            "--prompt",
+            "What is the capital of France?",
+            "--strict-loader",
+            "--strict-tokenizer",
+            "--json-out",
+            "target/test-cuda-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "cuda-warm-session requires --device nvidia-rtx-5070-ti-cuda",
+        ));
+}
+
+#[test]
+fn cuda_warm_session_requires_multiple_prompts_before_model_load() {
+    bitnet()
+        .args([
+            "--device",
+            "nvidia-rtx-5070-ti-cuda",
+            "cuda-warm-session",
+            "--model",
+            "missing.gguf",
+            "--tokenizer",
+            "missing-tokenizer.json",
+            "--prompt",
+            "What is 2+2?",
+            "--strict-loader",
+            "--strict-tokenizer",
+            "--json-out",
+            "target/test-cuda-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "cuda-warm-session requires at least two --prompt values",
+        ));
+}
+
+#[test]
+fn cuda_warm_session_requires_strict_loader_before_model_load() {
+    bitnet()
+        .args([
+            "--device",
+            "nvidia-rtx-5070-ti-cuda",
+            "cuda-warm-session",
+            "--model",
+            "missing.gguf",
+            "--tokenizer",
+            "missing-tokenizer.json",
+            "--prompt",
+            "What is 2+2?",
+            "--prompt",
+            "What is the capital of France?",
+            "--strict-tokenizer",
+            "--json-out",
+            "target/test-cuda-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cuda-warm-session requires --strict-loader"));
+}
+
+#[test]
+fn cuda_warm_session_requires_strict_tokenizer_before_model_load() {
+    bitnet()
+        .args([
+            "--device",
+            "nvidia-rtx-5070-ti-cuda",
+            "cuda-warm-session",
+            "--model",
+            "missing.gguf",
+            "--tokenizer",
+            "missing-tokenizer.json",
+            "--prompt",
+            "What is 2+2?",
+            "--prompt",
+            "What is the capital of France?",
+            "--strict-loader",
+            "--json-out",
+            "target/test-cuda-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cuda-warm-session requires --strict-tokenizer"));
+}
+
+#[test]
 fn mac_help_documents_operator_wrappers() {
     bitnet()
         .args(["mac", "--help"])
