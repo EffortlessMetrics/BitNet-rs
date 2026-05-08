@@ -36,7 +36,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | LNL258V-OWNERSHIP-001 | merged | Made the 258V CPU the BitNet CPU lead and set priority order: CPU, NPU, Arc 140V; merged in #3914. |
 | CPU258V-002 | merged | Add scalar-vs-AVX2 strict CPU answer parity on the 258V; merged in #3929. |
 | CPU258V-003 | merged | Add 258V CPU phase benchmark receipts for the CPU reference plate; merged in #3938. |
-| CPU258V-004 | ready | Require real token-count thresholds before promoting 258V `decode_128` or `prefill_512` phase evidence. |
+| CPU258V-004 | merged | Require real token-count thresholds before promoting 258V `decode_128` or `prefill_512` phase evidence; merged in #3981. |
 
 ## Review Policy
 
