@@ -157,7 +157,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-PROD-004"
-status = "in_progress"
+status = "pr_open"
+pr = 4029
 branch = "codex/apple-m4-productization/M4-PROD-004-warm-speed-polish"
 stackable = false
 review_mode = "codex_premerge"
