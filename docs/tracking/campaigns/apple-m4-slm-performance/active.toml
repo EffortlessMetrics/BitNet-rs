@@ -270,8 +270,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-006"
-status = "pr_open"
+status = "merged"
 pr = 4075
+merge_sha = "549d91ed8c9d431659b7a131dbb284e668ee243d"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-006-streaming-ux"
 stackable = false
 review_mode = "codex_premerge"
@@ -316,7 +317,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-007"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-007-performance-envelope"
 stackable = false
 review_mode = "codex_premerge"
@@ -343,5 +344,14 @@ forbidden_paths = [
   "crates/bitnet-server/**",
   "models/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "A measured Apple M4 SLM performance envelope exists for the named supported model, profiles, backend, and machine receipts.",
+  "Cold load, warm answer timing, and named Metal phase contributions are reported only for the measured profiles.",
+]
+must_not_claim = [
+  "The measured envelope proves broad Apple M4 performance.",
+  "The measured envelope proves full apple-m4-metal inference.",
+  "The measured envelope proves BitNet local-answer quality or performance.",
+  "The measured envelope proves QK256 works on Apple Silicon.",
+  "The measured envelope proves Neural Engine execution.",
+]

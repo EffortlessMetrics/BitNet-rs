@@ -3,5 +3,4 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
-| apple-m4-slm-performance | M4-SLM-PERF-006 | #4075 | `codex/apple-m4-slm-performance/M4-SLM-PERF-006-streaming-ux` | Add streaming token output, time-to-first-token receipts, quiet default logs, operator-friendly progress, and clear failure messages without changing backend claim boundaries. |
 | tracker-infra | TRACKER-003 | #3724 | `codex/tracker-infra/TRACKER-003-current-pr-reconciliation` | Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes. |

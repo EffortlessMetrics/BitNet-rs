@@ -46,8 +46,8 @@
 | apple-m4-slm-performance | M4-SLM-PERF-003 | M4-SLM-PERF-002 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-004 | M4-SLM-PERF-003 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-005 | M4-SLM-PERF-004 | merged |
-| apple-m4-slm-performance | M4-SLM-PERF-006 | M4-SLM-PERF-005 | pr_open |
-| apple-m4-slm-performance | M4-SLM-PERF-007 | M4-SLM-PERF-006 | proposed |
+| apple-m4-slm-performance | M4-SLM-PERF-006 | M4-SLM-PERF-005 | merged |
+| apple-m4-slm-performance | M4-SLM-PERF-007 | M4-SLM-PERF-006 | ready |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | merged |
