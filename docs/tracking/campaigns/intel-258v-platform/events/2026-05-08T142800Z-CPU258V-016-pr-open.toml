@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T14:28:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-016"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4087
+actor = "codex"
+branch = "codex/lunar-lake/post-baseline-next-items"
+summary = "Opened CPU258V-016 to record the post-mechanics 258V CPU reference bundle and queue the next CPU-referenced Lunar Lake items."
+
+notes = [
+  "The bundle links strict real-GGUF decode smoke, full fixed-corpus scalar/AVX2 answer parity, and warm-session phase receipts.",
+  "NPU-011 and ARC140V-005 remain follow-up parity items that must compare against the 258V CPU reference bundle.",
+  "The PR does not claim general chat quality, sustained throughput, speedup, Arc 140V BitNet inference, Intel NPU BitNet inference, acceleration, or CPU fallback as accelerator proof.",
+]

@@ -1056,8 +1056,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-016"
-status = "ready"
-branch = "codex/intel-258v-platform/CPU258V-016-reference-bundle"
+status = "pr_open"
+pr = 4087
+branch = "codex/lunar-lake/post-baseline-next-items"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
