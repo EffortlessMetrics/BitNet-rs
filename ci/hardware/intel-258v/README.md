@@ -17,6 +17,7 @@ ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_p
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-release.json
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-scalar-bitnetcpp-template-math_2_plus_2-release.json
 ci/hardware/intel-258v/<date>/cpu-answer-parity-bitnetcpp-template-math_2_plus_2-release.json
+ci/hardware/intel-258v/<date>/platform-comparison-index.json
 ```
 
 `platform-probe.json` is visibility-only. It may record CPU AVX2 facts, Arc
@@ -63,3 +64,9 @@ and `fallback_used=false`, but the generated answer fails the exact-answer gate.
 matching scalar run and scalar-vs-AVX2 parity result. Scalar and AVX2 generate
 the same token IDs and decoded text for the selected case, so the selected bad
 answer is not AVX2-specific.
+
+`platform-comparison-index.json` links independently scoped CPU, Arc 140V, and
+Intel NPU artifacts from the same Lunar Lake laptop. It is an index only: it may
+record artifact paths, backend identity, runtime API, proof stage, and fallback
+status, but it must not merge CPU, GPU, or NPU claims or introduce performance,
+BitNet inference, QK256 decode, or acceleration claims.

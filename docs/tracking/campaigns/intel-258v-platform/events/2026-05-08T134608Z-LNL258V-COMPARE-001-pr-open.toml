@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T13:46:08Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-001"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4076
+head_sha = "7fc2c5ce7bfc7a5ea18de8e909140eb2f81ade73"
+branch = "codex/lunar-lake/LNL258V-COMPARE-001"
+actor = "codex"
+summary = "Opened LNL258V-COMPARE-001 for the same-machine Lunar Lake comparison index."
+
+notes = [
+  "PR #4076 adds a comparison index that links current 258V CPU, Arc 140V, and Intel NPU artifacts while preserving lane-specific claim boundaries.",
+  "The index cites CPU full-corpus scalar-vs-AVX2 parity, CPU warm phase receipts, Arc 140V OpenCL tiny-kernel smoke, and the NPU OpenVINO llama.cpp GGUF reference blocker receipt.",
+  "The PR is docs/artifact only and must not claim cross-lane performance, Arc 140V BitNet inference, Intel NPU BitNet inference, QK256 accelerator decode, acceleration, or CPU fallback as accelerator proof.",
+]

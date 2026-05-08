@@ -48,6 +48,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | CPU258V-013 | merged | Record release-built warm-session `prefill_512` and `decode_128` strict CPU phase receipts on the 258V after the BitNet b1.58 mechanics correction; phase timing only, no answer-quality, speedup, Arc, or NPU claims; merged in #4036. |
 | CPU258V-014 | merged | Record post-mechanics scalar and AVX2 answer-corpus receipts for the selected `math_2_plus_2` BitNet.cpp-template case, showing the corrected CPU path passes the exact answer gate and preserves scalar-vs-AVX2 parity; no general chat, speed, Arc, or NPU claims; merged in #4041. |
 | CPU258V-015 | merged | Record post-mechanics scalar and AVX2 answer-corpus receipts for the full committed BitNet.cpp-template corpus on the 258V, showing all five fixed cases pass and scalar-vs-AVX2 full-corpus parity holds; no general chat, speed, Arc, or NPU claims; merged in #4046. |
+| LNL258V-COMPARE-001 | pr_open | Add a same-machine comparison index that links CPU, Arc 140V, and Intel NPU artifacts by path, backend identity, proof stage, and fallback status without merging lane claims; opened in #4076. |
 
 ## Review Policy
 
