@@ -221,6 +221,95 @@ fn slm_warm_session_requires_apple_m4_cpu_neon_before_loading_model() {
 }
 
 #[test]
+fn cpu_phase_warm_session_help_documents_strict_phase_receipts() {
+    bitnet()
+        .args(["cpu-phase-warm-session", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("258V CPU phase prompts"))
+        .stdout(predicate::str::contains("--prefill-prompt-file"))
+        .stdout(predicate::str::contains("--decode-tokens"))
+        .stdout(predicate::str::contains("--cpu-kernel"))
+        .stdout(predicate::str::contains("--strict-loader"))
+        .stdout(predicate::str::contains("--strict-tokenizer"))
+        .stdout(predicate::str::contains("--json-out"));
+}
+
+#[test]
+fn cpu_phase_warm_session_rejects_accelerator_backend_before_loading_model() {
+    bitnet()
+        .args([
+            "--device",
+            "intel-npu",
+            "cpu-phase-warm-session",
+            "--model",
+            "missing.gguf",
+            "--strict-loader",
+            "--strict-tokenizer",
+            "--json-out",
+            "target/test-cpu-phase-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("scoped to --device cpu"));
+}
+
+#[test]
+fn cpu_phase_warm_session_requires_strict_loader_before_loading_model() {
+    bitnet()
+        .args([
+            "--device",
+            "cpu",
+            "cpu-phase-warm-session",
+            "--model",
+            "missing.gguf",
+            "--strict-tokenizer",
+            "--json-out",
+            "target/test-cpu-phase-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("requires --strict-loader"));
+}
+
+#[test]
+fn cpu_phase_warm_session_requires_strict_tokenizer_before_loading_model() {
+    bitnet()
+        .args([
+            "--device",
+            "cpu",
+            "cpu-phase-warm-session",
+            "--model",
+            "missing.gguf",
+            "--strict-loader",
+            "--json-out",
+            "target/test-cpu-phase-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("requires --strict-tokenizer"));
+}
+
+#[test]
+fn cpu_phase_warm_session_rejects_safetensors_before_loading_model() {
+    bitnet()
+        .args([
+            "--device",
+            "cpu",
+            "cpu-phase-warm-session",
+            "--model",
+            "missing.safetensors",
+            "--strict-loader",
+            "--strict-tokenizer",
+            "--json-out",
+            "target/test-cpu-phase-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("supports GGUF only, not safetensors"));
+}
+
+#[test]
 fn slm_warm_session_rejects_non_gguf_format_before_loading_model() {
     bitnet()
         .args([

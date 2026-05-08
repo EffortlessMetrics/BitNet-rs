@@ -605,6 +605,12 @@ fn set_measured(profiles: &mut [Value], measurement: PhaseMeasurement<'_>) {
     if let Some(profile) = profiles.iter_mut().find(|entry| {
         entry.get("profile").and_then(Value::as_str) == Some(measurement.profile_name)
     }) {
+        if profile.get("status").and_then(Value::as_str) == Some("measured")
+            && u64_at(profile, "/shape/iterations")
+                .is_some_and(|existing| existing > measurement.iterations)
+        {
+            return;
+        }
         let tokens_per_second = if measurement.wall_time_ms > 0.0 {
             measurement.token_count as f64 / (measurement.wall_time_ms / 1000.0)
         } else {
@@ -768,6 +774,91 @@ mod tests {
         assert_eq!(profile("first_token")["wall_time_ms"], 51212.925);
         assert_eq!(profile("decode")["wall_time_ms"], 52456.62);
         assert_eq!(profile("decode")["shape"]["iterations"], 1);
+    }
+
+    #[test]
+    fn smaller_decode_prefill_does_not_replace_larger_prefill_receipt() {
+        let prefill_proof = json!({
+            "execution": {
+                "phase": "prefill",
+                "prompt_tokens": 513,
+                "generated_tokens": 1
+            },
+            "model": {
+                "context_length": 4096
+            },
+            "timing": {
+                "prefill_ms": 1024.0
+            },
+            "profile": {
+                "prompt_prefill": {
+                    "tokens": 512,
+                    "ms": 1024.0,
+                    "per_token_ms": {
+                        "p50_ms": 2.0,
+                        "p95_ms": 3.0
+                    }
+                }
+            }
+        });
+        let decode_proof = json!({
+            "execution": {
+                "phase": "decode",
+                "prompt_tokens": 8,
+                "generated_tokens": 128
+            },
+            "model": {
+                "context_length": 4096
+            },
+            "latency": {
+                "decode_first_ms": 4.0,
+                "total_ms": 132.0
+            },
+            "timing": {
+                "first_token_decode_ms": 4.0,
+                "decode_total_ms": 128.0,
+                "prefill_ms": 8.0
+            },
+            "profile": {
+                "prompt_prefill": {
+                    "tokens": 7,
+                    "ms": 8.0,
+                    "per_token_ms": {
+                        "p50_ms": 1.0,
+                        "p95_ms": 1.5
+                    }
+                },
+                "decode": {
+                    "first_token_decode_ms": 4.0,
+                    "steady_state_tokens": 127,
+                    "steady_per_token_ms": {
+                        "total_ms": 124.0,
+                        "p50_ms": 1.0,
+                        "p95_ms": 1.2
+                    }
+                }
+            }
+        });
+        let mut profiles = default_profiles("i2_s-avx2-reference", "i2_s-avx2-reference");
+
+        apply_measured_phase(
+            &mut profiles,
+            &prefill_proof,
+            "i2_s-avx2-reference",
+            "i2_s-avx2-reference",
+        );
+        apply_measured_phase(
+            &mut profiles,
+            &decode_proof,
+            "i2_s-avx2-reference",
+            "i2_s-avx2-reference",
+        );
+
+        assert_eq!(named_profile(&profiles, "prefill")["status"], "measured");
+        assert_eq!(named_profile(&profiles, "prefill")["shape"]["iterations"], 512);
+        assert_eq!(named_profile(&profiles, "prefill")["wall_time_ms"], 1024.0);
+        assert_eq!(named_profile(&profiles, "decode")["status"], "measured");
+        assert_eq!(named_profile(&profiles, "decode")["shape"]["iterations"], 127);
     }
 
     #[test]

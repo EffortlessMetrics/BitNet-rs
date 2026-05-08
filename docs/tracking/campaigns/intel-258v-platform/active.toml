@@ -566,3 +566,54 @@ must_not_claim = [
   "Sustained 258V throughput is proven.",
   "Arc 140V or Intel NPU performance is proven.",
 ]
+
+[[work_item]]
+id = "CPU258V-006"
+status = "pr_open"
+pr = 4001
+branch = "codex/intel-258v-platform/CPU258V-006-warm-phase"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-005"]
+acceptance = "Add a strict CPU warm phase runner that loads the 258V BitNet GGUF model/tokenizer once, emits per-profile strict CPU receipts for prefill_512 and decode_128, preserves selected backend/kernel and fallback=false, and keeps phase evidence separate from speedup, Arc, or NPU claims."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/tests/cli_arg_tests.rs crates/bitnet-bench-receipts/src/bin/cpu_phase_benchmark_receipt.rs --edition 2024",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests cpu_phase_warm_session -- --nocapture",
+  "cargo test --locked -p bitnet-bench-receipts --bin cpu_phase_benchmark_receipt --no-default-features tests:: -- --nocapture",
+  "cargo clippy --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- -D warnings",
+  "cargo clippy --locked -p bitnet-bench-receipts --no-default-features --bin cpu_phase_benchmark_receipt -- -D warnings",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-bench-receipts/src/bin/cpu_phase_benchmark_receipt.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A CPU-only warm phase runner can emit strict CPU phase profile receipts after merge.",
+  "The converter preserves the larger measured prefill receipt when decode and prefill receipts are supplied together.",
+]
+must_not_claim = [
+  "prefill_512 or decode_128 is measured without a real emitted profile receipt.",
+  "Sustained 258V throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "CPU phase timings prove answer quality or acceleration.",
+]
