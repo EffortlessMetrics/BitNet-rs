@@ -953,8 +953,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-002-gemm-parity"
+pr = 4106
+head_sha = "36136b8bc33ec8a78415b8baeba6927998f65db6"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
