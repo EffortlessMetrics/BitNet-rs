@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T15:09:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-004"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-004-benchmark-baseline"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started strict RTX 5070 Ti answer-path benchmark baseline work after CUDA-PROD-003 residency coverage.",
+  "The work is bounded to benchmark receipts, report evidence, and tracker updates; no CUDA kernel, QK256 dispatch, transformer, tokenizer, model-loader, server, or speed-claim change is included.",
+  "The long CPU AVX-512 prefill/decode phase attempt timed out before producing receipts and will be recorded as blocked rather than treated as benchmark-qualified evidence.",
+]

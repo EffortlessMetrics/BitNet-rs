@@ -782,7 +782,7 @@ enum Commands {
         #[arg(long, default_value_t = 1)]
         prefill_tokens: usize,
 
-        /// Requested CPU kernel identity: auto, scalar, or avx2
+        /// Requested CPU kernel identity: auto, scalar, avx2, or avx512
         #[arg(long, value_name = "KERNEL", default_value = "avx2")]
         cpu_kernel: String,
 
@@ -2602,6 +2602,17 @@ fn effective_thread_count(threads: usize) -> usize {
         .and_then(|value| value.parse::<usize>().ok())
         .filter(|threads| *threads > 0)
         .unwrap_or_else(|| std::thread::available_parallelism().map(|p| p.get()).unwrap_or(1))
+}
+
+fn cpu_phase_machine_labels(
+    requested_kernel: &str,
+    selected_implementation: &str,
+) -> (&'static str, &'static str) {
+    if requested_kernel == "avx512" || selected_implementation == "avx512" {
+        ("windows-9950x3d-rtx5070ti", "amd-9950x3d-cpu-avx512")
+    } else {
+        ("intel-258v", "intel-258v-cpu-avx2")
+    }
 }
 
 fn detected_cpu_model_label() -> String {
@@ -4913,11 +4924,16 @@ async fn run_cpu_phase_warm_session(
         }
     }
     match cpu_kernel.as_str() {
-        "auto" | "scalar" | "avx2" => {}
-        other => anyhow::bail!("invalid --cpu-kernel {other}; expected auto, scalar, or avx2"),
+        "auto" | "scalar" | "avx2" | "avx512" => {}
+        other => {
+            anyhow::bail!("invalid --cpu-kernel {other}; expected auto, scalar, avx2, or avx512");
+        }
     }
     if cpu_kernel == "avx2" && !bitnet_common::runtime_diag::CpuFeatures::detect().avx2 {
         anyhow::bail!("--cpu-kernel avx2 requested but AVX2 is not available");
+    }
+    if cpu_kernel == "avx512" && !bitnet_common::runtime_diag::CpuFeatures::detect().avx512f {
+        anyhow::bail!("--cpu-kernel avx512 requested but AVX-512F is not available");
     }
     if model_path.is_dir() {
         anyhow::bail!(
@@ -4944,6 +4960,11 @@ async fn run_cpu_phase_warm_session(
             }
             "avx2" => {
                 std::env::set_var("BITNET_CPU_KERNEL", "avx2");
+                std::env::set_var("BITNET_FORCE_SCALAR", "0");
+            }
+            "avx512" => {
+                std::env::set_var("BITNET_CPU_KERNEL", "avx512");
+                std::env::set_var("BITNET_FORCE_SCALAR", "0");
             }
             "auto" => {}
             _ => unreachable!("validated cpu_kernel"),
@@ -5041,6 +5062,11 @@ async fn run_cpu_phase_warm_session(
             "--cpu-kernel scalar requested but selected CPU kernel implementation is {kernel_implementation}"
         );
     }
+    if cpu_kernel == "avx512" && kernel_implementation != "avx512" {
+        anyhow::bail!(
+            "--cpu-kernel avx512 requested but selected CPU kernel implementation is {kernel_implementation}"
+        );
+    }
     let selected_kernel = format!("{kernel_family}-{kernel_implementation}-reference");
     let layout_source = layout_source_for_quantization(config.quantization.quantization_type);
     let kernel_layout = kernel_layout_for_quantization(config.quantization.quantization_type);
@@ -5049,6 +5075,7 @@ async fn run_cpu_phase_warm_session(
     let thread_count = effective_thread_count(threads);
     let cpu_features = detected_cpu_feature_labels();
     let cpu_model = detected_cpu_model_label();
+    let (machine_id, hardware_lane) = cpu_phase_machine_labels(&cpu_kernel, &kernel_implementation);
 
     let receipt_dir = json_out
         .parent()
@@ -5154,8 +5181,8 @@ async fn run_cpu_phase_warm_session(
         "artifact_kind": "cpu_phase_warm_session",
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "artifact_path": json_out.display().to_string(),
-        "machine_id": "intel-258v",
-        "hardware_lane": "intel-258v-cpu-avx2",
+        "machine_id": machine_id,
+        "hardware_lane": hardware_lane,
         "requested_backend": backend_identity.requested_backend.as_str(),
         "selected_backend": backend_identity.selected_backend.as_str(),
         "runtime_api": backend_identity.runtime_api.as_str(),
@@ -5761,7 +5788,9 @@ async fn run_cuda_warm_session(
     let thread_count = effective_thread_count(threads);
     let cpu_features = detected_cpu_feature_labels();
     let cpu_model = detected_cpu_model_label();
+    let cuda_probe_start = std::time::Instant::now();
     let cuda_probe = bitnet_device_probe::probe_nvidia_cuda(Some(0));
+    let cuda_probe_ms = elapsed_ms(cuda_probe_start);
 
     let receipt_dir = json_out
         .parent()
@@ -6139,8 +6168,13 @@ async fn run_cuda_warm_session(
         && total_coverage.bitnet_linear_layers_cpu_fallback == 0
         && final_residency.as_ref().is_some_and(|value| value.weights_uploaded_once)
         && final_residency.as_ref().is_some_and(|value| !value.per_token_weight_upload);
-    let speed_summary =
-        speed_accumulator.receipt(model_load_ms, tokenizer_load_ms, total_session_ms);
+    let speed_summary = speed_accumulator.receipt(
+        model_load_ms,
+        tokenizer_load_ms,
+        total_session_ms,
+        "strict RTX 5070 Ti CUDA warm answer session",
+        "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
+    );
     let cuda_execution_residency = cuda_execution_residency_receipt(
         &total_coverage,
         final_residency.as_ref(),
@@ -6216,6 +6250,11 @@ async fn run_cuda_warm_session(
         "timing": {
             "model_load_ms": rounded_ms(model_load_ms),
             "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+            "cuda_probe_ms": rounded_ms(cuda_probe_ms),
+            "cuda_context_init_ms": serde_json::Value::Null,
+            "cuda_context_init_timing_source": "not_separately_measured; included in strict CUDA session setup and first CUDA work",
+            "weight_upload_ms": serde_json::Value::Null,
+            "weight_upload_timing_source": "not_separately_measured; upload-once weight residency is verified by qk256 weight-handle counters",
             "total_session_ms": rounded_ms(total_session_ms),
         },
         "speed": speed_summary,
@@ -6241,6 +6280,9 @@ async fn run_cuda_warm_session(
             "memory_used_after_bytes": cuda_memory_after_bytes,
             "memory_hwm_bytes": cuda_memory_hwm_bytes,
             "memory_hwm_source": "nvidia-smi-memory.used-sampled",
+            "power_limit_watts": cuda_probe.power_limit_watts,
+            "power_draw_watts": cuda_probe.power_draw_watts,
+            "temperature_c": cuda_probe.temperature_c,
         },
         "cpu": {
             "model": cpu_model.as_str(),
@@ -7192,8 +7234,13 @@ async fn run_slm_warm_session(
     drop(allocation_audit_guard);
 
     let total_session_ms = elapsed_ms(session_start);
-    let speed_summary =
-        speed_accumulator.receipt(model_load_ms, tokenizer_load_ms, total_session_ms);
+    let speed_summary = speed_accumulator.receipt(
+        model_load_ms,
+        tokenizer_load_ms,
+        total_session_ms,
+        "validated SLM warm session on apple-m4-cpu-neon",
+        "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+    );
     let determinism = slm_warm_session_determinism_receipt(&determinism_records);
     let quality_passed = quality_failed_prompts.is_empty();
     let effective_min_generated_tokens = prompt_inputs
@@ -7507,10 +7554,12 @@ impl WarmSessionSpeedAccumulator {
         model_load_ms: f64,
         tokenizer_load_ms: f64,
         total_session_ms: f64,
+        measurement_scope: &str,
+        claim: &str,
     ) -> serde_json::Value {
         serde_json::json!({
-            "measurement_scope": "validated SLM warm session on apple-m4-cpu-neon",
-            "claim": "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+            "measurement_scope": measurement_scope,
+            "claim": claim,
             "speedup_claim": false,
             "broad_performance_claim": false,
             "reuse": {
@@ -9969,9 +10018,16 @@ mod tests {
             steady_decode_tok_s: Some(20.0),
         });
 
-        let receipt = accumulator.receipt(1000.0, 50.0, 1600.0);
+        let receipt = accumulator.receipt(
+            1000.0,
+            50.0,
+            1600.0,
+            "strict RTX 5070 Ti CUDA warm answer session",
+            "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
+        );
 
         assert_eq!(receipt["counts"]["prompt_count"], 2);
+        assert_eq!(receipt["measurement_scope"], "strict RTX 5070 Ti CUDA warm answer session");
         assert_eq!(receipt["counts"]["generated_tokens"], 8);
         assert_eq!(receipt["throughput"]["warm_prompt_generated_tok_s"], 16.0);
         assert_eq!(receipt["throughput"]["decode_generated_tok_s"], 20.0);
@@ -9987,6 +10043,15 @@ mod tests {
 
         assert_eq!((tps * 1000.0).round() / 1000.0, 20.0);
         assert!(steady_decode_tps_ms(&[100.0]).is_none());
+    }
+
+    #[test]
+    fn cpu_phase_machine_labels_select_9950x3d_for_avx512() {
+        assert_eq!(
+            cpu_phase_machine_labels("avx512", "avx512"),
+            ("windows-9950x3d-rtx5070ti", "amd-9950x3d-cpu-avx512")
+        );
+        assert_eq!(cpu_phase_machine_labels("avx2", "avx2"), ("intel-258v", "intel-258v-cpu-avx2"));
     }
 
     #[test]

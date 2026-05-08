@@ -121,7 +121,7 @@
 | nvidia-5070ti | CUDA-PROD-001 | CUDA-ANSWER-012 | merged |
 | nvidia-5070ti | CUDA-PROD-002 | CUDA-PROD-001 | merged |
 | nvidia-5070ti | CUDA-PROD-003 | CUDA-PROD-002 | merged |
-| nvidia-5070ti | CUDA-PROD-004 | CUDA-PROD-003 | ready |
+| nvidia-5070ti | CUDA-PROD-004 | CUDA-PROD-003 | in_progress |
 | nvidia-5070ti | CUDA-DENSE-001 | RTX5070TI-007 | proposed |
 | slm-cpu | SLM-CPU-001 | SLM-CPU-000 | merged |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | merged |
