@@ -887,7 +887,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-013"
-status = "pr_open"
+status = "merged"
 branch = "codex/intel-258v-platform/CPU258V-013-warm-phase-artifacts"
 stackable = false
 review_mode = "codex_premerge"
