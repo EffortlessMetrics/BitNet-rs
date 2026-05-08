@@ -35,6 +35,7 @@ Validate Intel Lunar Lake NPU through OpenVINO static-shape detection, smoke, pa
 | NPU-008 | merged | Add selected static BitNet linear-projection subgraph parity. |
 | NPU-009 | merged | Evaluate OpenVINO llama.cpp GGUF as an external Intel NPU reference lane or record an explicit blocker receipt; merged in #4068. |
 | NPU-010 | merged | Record live 258V OpenVINO 2026.1 NPU runtime, tiny graph smoke, and selected BitNet RMSNorm/linear subgraph parity receipts; merged in #4080. |
+| NPU-011 | in_progress | Add selected static BitNet FFN/ReLU2 subgraph parity anchored to the 258V CPU reference bundle. |
 
 ## Review Policy
 

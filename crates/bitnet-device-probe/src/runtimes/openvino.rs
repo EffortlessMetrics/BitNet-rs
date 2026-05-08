@@ -339,6 +339,38 @@ impl OpenVinoNpuBitnetSubgraphParity {
             error: Some(reason.into()),
         }
     }
+
+    fn ffn_relu2_unavailable(reason: impl Into<String>) -> Self {
+        Self {
+            passed: false,
+            proof_stage: "runtime_detected".to_owned(),
+            requested_backend: "intel-npu".to_owned(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            subgraph_name: "bitnet_ffn_relu2_f16_1x16x32".to_owned(),
+            bitnet_op: "ffn_relu2".to_owned(),
+            reference_path: "cpu_numpy_ffn_relu2_f32".to_owned(),
+            shape_mode: "static".to_owned(),
+            input_shape: vec![1, 16],
+            output_shape: None,
+            precision: "F16".to_owned(),
+            epsilon: 0.0,
+            tolerance: 0.05,
+            max_abs_error: None,
+            mean_abs_error: None,
+            compile_ms: None,
+            first_infer_ms: None,
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: false,
+            bitnet_inference: false,
+            qk256_decode: false,
+            error: Some(reason.into()),
+        }
+    }
 }
 
 impl OpenVinoProbe {
@@ -761,6 +793,102 @@ except Exception as exc:
     )
 }
 
+/// Run a static BitNet-shaped FFN/ReLU2 parity graph on `NPU` through Python.
+pub fn run_openvino_npu_bitnet_ffn_relu2_parity() -> OpenVinoNpuBitnetSubgraphParity {
+    let script = r#"
+import time
+
+try:
+    import openvino as ov
+    import numpy as np
+    from openvino import opset8 as opset
+
+    core = ov.Core()
+    print("OPENVINO_VERSION=" + str(ov.__version__))
+    for dev in core.available_devices:
+        print("AVAILABLE_DEVICE=" + str(dev))
+
+    if not any(str(dev) == "NPU" or str(dev).startswith("NPU.") for dev in core.available_devices):
+        print("RESULT=fail")
+        print("ERROR=OpenVINO did not report NPU")
+    else:
+        device = "NPU"
+        tolerance = np.float32(0.05)
+        input_data = np.linspace(-0.5, 0.5, 16, dtype=np.float16).reshape(1, 16)
+        w1 = (np.arange(512, dtype=np.float32).reshape(16, 32) / 511.0 - 0.5).astype(np.float16)
+        w2 = (np.arange(512, dtype=np.float32).reshape(32, 16) / 511.0 - 0.5).astype(np.float16)
+
+        hidden = input_data.astype(np.float32) @ w1.astype(np.float32)
+        relu2 = np.maximum(hidden, 0.0) * np.maximum(hidden, 0.0)
+        expected = relu2 @ w2.astype(np.float32)
+
+        param = opset.parameter([1, 16], dtype=np.float16, name="input")
+        w1_const = opset.constant(w1.astype(np.float16))
+        w2_const = opset.constant(w2.astype(np.float16))
+        hidden_node = opset.matmul(param, w1_const, False, False)
+        relu_node = opset.relu(hidden_node)
+        relu2_node = opset.multiply(relu_node, relu_node)
+        output = opset.matmul(relu2_node, w2_const, False, False)
+        model = ov.Model([output], [param], "bitnet_ffn_relu2_f16_1x16x32")
+
+        compile_start = time.perf_counter()
+        compiled = core.compile_model(model, device)
+        compile_ms = (time.perf_counter() - compile_start) * 1000.0
+
+        infer_start = time.perf_counter()
+        result = compiled([input_data])
+        first_infer_ms = (time.perf_counter() - infer_start) * 1000.0
+        actual = np.asarray(next(iter(result.values())))
+
+        diff = np.abs(actual.astype(np.float32) - expected.astype(np.float32))
+        max_abs = float(np.max(diff))
+        mean_abs = float(np.mean(diff))
+        passed = bool(max_abs <= tolerance)
+
+        print("SELECTED_DEVICE=" + device)
+        print("SUBGRAPH_NAME=bitnet_ffn_relu2_f16_1x16x32")
+        print("BITNET_OP=ffn_relu2")
+        print("REFERENCE_PATH=cpu_numpy_ffn_relu2_f32")
+        print("SHAPE_MODE=static")
+        print("PRECISION=F16")
+        print("EPSILON=0.0")
+        print("TOLERANCE=" + str(float(tolerance)))
+        print("INPUT_SHAPE=1,16")
+        print("OUTPUT_SHAPE=" + ",".join(str(dim) for dim in actual.shape))
+        print("COMPILE_MS=" + str(compile_ms))
+        print("FIRST_INFER_MS=" + str(first_infer_ms))
+        print("MAX_ABS_ERROR=" + str(max_abs))
+        print("MEAN_ABS_ERROR=" + str(mean_abs))
+        print("RESULT=" + ("pass" if passed else "fail"))
+        if not passed:
+            print("ERROR=FFN ReLU2 output mismatch versus CPU reference output")
+except Exception as exc:
+    print("RESULT=fail")
+    print("ERROR=" + repr(exc))
+"#;
+
+    for python in ["python3", "python"] {
+        if let Ok(stdout) = command_output(python, ["-c", script]) {
+            return parse_openvino_npu_bitnet_ffn_relu2_parity_output(&stdout);
+        }
+    }
+
+    OpenVinoNpuBitnetSubgraphParity::ffn_relu2_unavailable(
+        "python openvino FFN ReLU2 parity unavailable",
+    )
+}
+
+pub(crate) fn parse_openvino_npu_bitnet_ffn_relu2_parity_output(
+    output: &str,
+) -> OpenVinoNpuBitnetSubgraphParity {
+    parse_openvino_npu_bitnet_subgraph_parity_output_with_default(
+        output,
+        OpenVinoNpuBitnetSubgraphParity::ffn_relu2_unavailable(
+            "OpenVINO NPU BitNet FFN ReLU2 parity did not pass",
+        ),
+    )
+}
+
 pub(crate) fn parse_openvino_npu_bitnet_linear_projection_parity_output(
     output: &str,
 ) -> OpenVinoNpuBitnetSubgraphParity {
@@ -1075,6 +1203,7 @@ fn upsert_property_value(device: &mut OpenVinoDeviceProbe, property: &str, value
 mod tests {
     use super::{
         parse_openvino_gpu_tiny_graph_smoke_output, parse_openvino_line_output,
+        parse_openvino_npu_bitnet_ffn_relu2_parity_output,
         parse_openvino_npu_bitnet_linear_projection_parity_output,
         parse_openvino_npu_bitnet_subgraph_parity_output,
         parse_openvino_npu_tiny_graph_smoke_output,
@@ -1358,6 +1487,53 @@ RESULT=pass
         assert_eq!(parity.epsilon, 0.0);
         assert_eq!(parity.max_abs_error, Some(0.001));
         assert_eq!(parity.mean_abs_error, Some(0.0003));
+        assert!(!parity.fallback_used);
+        assert!(!parity.cpu_fallback_allowed);
+        assert!(parity.graph_execution);
+        assert!(!parity.bitnet_inference);
+        assert!(!parity.qk256_decode);
+        assert!(parity.error.is_none());
+    }
+
+    #[test]
+    fn parses_openvino_npu_bitnet_ffn_relu2_parity_pass() {
+        let output = r"
+OPENVINO_VERSION=2026.1
+AVAILABLE_DEVICE=CPU
+AVAILABLE_DEVICE=NPU
+SELECTED_DEVICE=NPU
+SUBGRAPH_NAME=bitnet_ffn_relu2_f16_1x16x32
+BITNET_OP=ffn_relu2
+REFERENCE_PATH=cpu_numpy_ffn_relu2_f32
+SHAPE_MODE=static
+PRECISION=F16
+EPSILON=0.0
+TOLERANCE=0.05
+INPUT_SHAPE=1,16
+OUTPUT_SHAPE=1,16
+COMPILE_MS=18.5
+FIRST_INFER_MS=2.25
+MAX_ABS_ERROR=0.004
+MEAN_ABS_ERROR=0.0007
+RESULT=pass
+";
+
+        let parity = parse_openvino_npu_bitnet_ffn_relu2_parity_output(output);
+
+        assert!(parity.passed);
+        assert_eq!(parity.proof_stage, "parity_tested");
+        assert_eq!(parity.selected_backend.as_deref(), Some("intel-npu-openvino"));
+        assert_eq!(parity.runtime_api.as_deref(), Some("openvino"));
+        assert_eq!(parity.runtime_device.as_deref(), Some("NPU"));
+        assert_eq!(parity.subgraph_name, "bitnet_ffn_relu2_f16_1x16x32");
+        assert_eq!(parity.bitnet_op, "ffn_relu2");
+        assert_eq!(parity.reference_path, "cpu_numpy_ffn_relu2_f32");
+        assert_eq!(parity.input_shape, [1, 16]);
+        assert_eq!(parity.output_shape.as_deref(), Some(&[1, 16][..]));
+        assert_eq!(parity.epsilon, 0.0);
+        assert_eq!(parity.tolerance, 0.05);
+        assert_eq!(parity.max_abs_error, Some(0.004));
+        assert_eq!(parity.mean_abs_error, Some(0.0007));
         assert!(!parity.fallback_used);
         assert!(!parity.cpu_fallback_allowed);
         assert!(parity.graph_execution);

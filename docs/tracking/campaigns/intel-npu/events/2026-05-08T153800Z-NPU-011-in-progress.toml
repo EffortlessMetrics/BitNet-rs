@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T15:38:00Z"
+campaign = "intel-npu"
+item = "NPU-011"
+event = "in_progress"
+actor = "codex"
+branch = "codex/intel-npu/NPU-011-ffn-subgraph-parity"
+summary = "Started NPU-011 for selected static FFN/ReLU2 subgraph parity."
+
+notes = [
+  "NPU-011 adds an intel-npu-bitnet-ffn-subgraph command for a selected static BitNet-shaped FFN/ReLU2 OpenVINO NPU parity experiment.",
+  "The command records the 258V CPU reference bundle path, selected_backend=intel-npu-openvino, runtime_api=openvino, runtime_device=NPU, static shape metadata, tolerance, timing, and fallback_used=false.",
+  "The item remains selected static subgraph parity only and does not claim full BitNet inference, native bitnet-rs NPU inference, acceleration, packed QK256 decode, or CPU fallback proof.",
+]

@@ -1,0 +1,211 @@
+{
+  "artifact_kind": "intel_npu_bitnet_subgraph_parity",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-ffn-subgraph-parity.json",
+  "backend_runtime": {
+    "compiler_version": "458781",
+    "device": "NPU",
+    "device_name": "Intel(R) AI Boost",
+    "driver_version": "1004512",
+    "max_tiles": 6,
+    "name": "openvino",
+    "version": "2026.1.0-21367-63e31528c62-releases/2026/1"
+  },
+  "bitnet_inference": false,
+  "claim": "openvino_npu_bitnet_subgraph_parity_passed",
+  "cpu_fallback_allowed": false,
+  "cpu_reference": {
+    "artifact_path": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json",
+    "comparison": "openvino_npu_output_vs_cpu_numpy_reference",
+    "reference_path": "cpu_numpy_ffn_relu2_f32"
+  },
+  "error": null,
+  "fallback_backend": null,
+  "fallback_policy": {
+    "cpu_fallback_allowed": false,
+    "fallback_backend": null,
+    "fallback_reason": null,
+    "fallback_used": false
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "graph_execution": true,
+  "hardware_lane": "intel-npu-openvino",
+  "kernel_execution": false,
+  "kernels_or_graphs": [
+    "bitnet_ffn_relu2_openvino_npu"
+  ],
+  "machine_id": "intel-258v",
+  "must_not_claim": [
+    "Full BitNet inference works on Intel NPU",
+    "Native bitnet-rs NPU inference works",
+    "Intel NPU accelerates BitNet",
+    "Packed BitNet QK256 decode works on Intel NPU",
+    "CPU fallback satisfies NPU proof"
+  ],
+  "npu": {
+    "accel_device_present": false,
+    "accel_devices": [],
+    "alloc_mem_size": 0,
+    "arch": "x86_64",
+    "available": true,
+    "compiler_version": "458781",
+    "driver_hint": "intel_vpu/ivpu evidence",
+    "driver_version": "1004512",
+    "failure_reason": null,
+    "fallback_used": false,
+    "intel_vpu_driver_seen": true,
+    "max_tiles": 6,
+    "openvino_available_devices": [
+      "CPU",
+      "GPU",
+      "NPU"
+    ],
+    "openvino_npu_full_name": "Intel(R) AI Boost",
+    "openvino_npu_visible": true,
+    "openvino_runtime_available": true,
+    "openvino_version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+    "os": "windows",
+    "proof_stage": "runtime_detected",
+    "requested_backend": "intel-npu",
+    "runtime_api": "openvino",
+    "runtime_device": "NPU",
+    "selected_backend": "intel-npu-openvino",
+    "supported_properties": [
+      "{'AVAILABLE_DEVICES': 'RO",
+      "CACHE_DIR': 'RW",
+      "CACHE_MODE': 'RW",
+      "COMPILATION_NUM_THREADS': 'RW",
+      "DEVICE_ARCHITECTURE': 'RO",
+      "DEVICE_GOPS': 'RO",
+      "DEVICE_ID': 'RW",
+      "DEVICE_LUID': 'RO",
+      "DEVICE_PCI_INFO': 'RO",
+      "DEVICE_TYPE': 'RO",
+      "DEVICE_UUID': 'RO",
+      "ENABLE_CPU_PINNING': 'RW",
+      "EXECUTION_DEVICES': 'RO",
+      "EXECUTION_MODE_HINT': 'RW",
+      "FULL_DEVICE_NAME': 'RO",
+      "INFERENCE_PRECISION_HINT': 'RW",
+      "LOG_LEVEL': 'RW",
+      "MODEL_PRIORITY': 'RW",
+      "MODEL_PTR': 'RO",
+      "NPU_BYPASS_UMD_CACHING': 'RW",
+      "NPU_COMPILATION_MODE_PARAMS': 'RW",
+      "NPU_COMPILER_DYNAMIC_QUANTIZATION': 'RW",
+      "NPU_COMPILER_TYPE': 'RW",
+      "NPU_COMPILER_VERSION': 'RO",
+      "NPU_DEFER_WEIGHTS_LOAD': 'RW",
+      "NPU_DEVICE_ALLOC_MEM_SIZE': 'RO",
+      "NPU_DEVICE_TOTAL_MEM_SIZE': 'RO",
+      "NPU_DRIVER_VERSION': 'RO",
+      "NPU_ENABLE_STRIDES_FOR': 'RW",
+      "NPU_MAX_TILES': 'RW",
+      "NPU_PLATFORM': 'RW",
+      "NPU_QDQ_OPTIMIZATION': 'RW",
+      "NPU_QDQ_OPTIMIZATION_AGGRESSIVE': 'RW",
+      "NPU_RUN_INFERENCES_SEQUENTIALLY': 'RW",
+      "NPU_TILES': 'RW",
+      "NPU_TURBO': 'RW",
+      "NUM_STREAMS': 'RO",
+      "OPTIMAL_NUMBER_OF_INFER_REQUESTS': 'RO",
+      "OPTIMIZATION_CAPABILITIES': 'RO",
+      "PERFORMANCE_HINT': 'RW",
+      "PERFORMANCE_HINT_NUM_REQUESTS': 'RW",
+      "PERF_COUNT': 'RW",
+      "RANGE_FOR_ASYNC_INFER_REQUESTS': 'RO",
+      "RANGE_FOR_STREAMS': 'RO",
+      "SUPPORTED_PROPERTIES': 'RO",
+      "WEIGHTS_PATH': 'RW",
+      "WORKLOAD_TYPE': 'RW'}"
+    ],
+    "total_mem_size": 17179869184
+  },
+  "openvino_subgraph": {
+    "bitnet_inference": false,
+    "bitnet_op": "ffn_relu2",
+    "compile_ms": 88.45790001214482,
+    "cpu_fallback_allowed": false,
+    "epsilon": 0.0,
+    "error": null,
+    "fallback_used": false,
+    "first_infer_ms": 4.311900003813207,
+    "graph_execution": true,
+    "input_shape": [
+      1,
+      16
+    ],
+    "max_abs_error": 0.00034332275390625,
+    "mean_abs_error": 0.00018027424812316895,
+    "openvino_available_devices": [
+      "CPU",
+      "GPU",
+      "NPU"
+    ],
+    "openvino_version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+    "output_shape": [
+      1,
+      16
+    ],
+    "passed": true,
+    "precision": "F16",
+    "proof_stage": "parity_tested",
+    "qk256_decode": false,
+    "reference_path": "cpu_numpy_ffn_relu2_f32",
+    "requested_backend": "intel-npu",
+    "runtime_api": "openvino",
+    "runtime_device": "NPU",
+    "selected_backend": "intel-npu-openvino",
+    "shape_mode": "static",
+    "subgraph_name": "bitnet_ffn_relu2_f16_1x16x32",
+    "tolerance": 0.05000000074505806
+  },
+  "proof_stage": "parity_tested",
+  "qk256_decode": false,
+  "requested_backend": "intel-npu",
+  "runtime_api": "openvino",
+  "runtime_device": "NPU",
+  "schema": 1,
+  "selected_backend": "intel-npu-openvino",
+  "shape_contract": {
+    "input_shape": [
+      1,
+      16
+    ],
+    "output_shape": [
+      1,
+      16
+    ],
+    "shape_mode": "static"
+  },
+  "shape_mode": "static",
+  "strict_mode": false,
+  "subgraph": {
+    "bitnet_op": "ffn_relu2",
+    "epsilon": 0.0,
+    "input_shape": [
+      1,
+      16
+    ],
+    "max_abs_error": 0.00034332275390625,
+    "mean_abs_error": 0.00018027424812316895,
+    "name": "bitnet_ffn_relu2_f16_1x16x32",
+    "output_shape": [
+      1,
+      16
+    ],
+    "precision": "F16",
+    "reference_path": "cpu_numpy_ffn_relu2_f32",
+    "result": "pass",
+    "shape_mode": "static",
+    "tolerance": 0.05000000074505806
+  },
+  "timestamp_utc": "2026-05-08T15:42:34Z",
+  "timing": {
+    "cached_compile_ms": 88.45790001214482,
+    "compile_ms": 88.45790001214482,
+    "first_ever_compile_and_infer_ms": null,
+    "first_infer_ms": 4.311900003813207,
+    "steady_state_infer_ms": null
+  }
+}

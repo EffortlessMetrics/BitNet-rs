@@ -889,6 +889,22 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Run static BitNet FFN/ReLU2 subgraph parity on OpenVINO NPU
+    #[command(name = "intel-npu-bitnet-ffn-subgraph")]
+    IntelNpuBitnetFfnSubgraph {
+        /// Require selected subgraph parity to pass
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// CPU reference bundle artifact used as the comparison anchor
+        #[arg(long)]
+        cpu_reference: Option<std::path::PathBuf>,
+
+        /// Output JSON parity receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Run a tiny static OpenVINO GPU.0 graph smoke for Arc 140V
     #[command(name = "intel-arc-140v-openvino-gpu-smoke")]
     IntelArc140vOpenvinoGpuSmoke {
@@ -1432,6 +1448,9 @@ async fn async_main() -> Result<()> {
         }
         Some(Commands::IntelNpuBitnetLinearSubgraph { strict, json_out }) => {
             intel_npu::handle_bitnet_linear_subgraph_command(strict, json_out).await
+        }
+        Some(Commands::IntelNpuBitnetFfnSubgraph { strict, cpu_reference, json_out }) => {
+            intel_npu::handle_bitnet_ffn_subgraph_command(strict, cpu_reference, json_out).await
         }
         Some(Commands::IntelArc140vOpenvinoGpuSmoke { strict, json_out }) => {
             intel_arc::handle_openvino_gpu_smoke_command(strict, json_out).await
@@ -2604,6 +2623,7 @@ fn effective_thread_count(threads: usize) -> usize {
         .unwrap_or_else(|| std::thread::available_parallelism().map(|p| p.get()).unwrap_or(1))
 }
 
+#[allow(dead_code)]
 fn cpu_phase_machine_labels(
     requested_kernel: &str,
     selected_implementation: &str,
