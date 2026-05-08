@@ -116,6 +116,8 @@ pub enum TemplateType {
     Instruct,
     /// LLaMA-3 chat format with special tokens
     Llama3Chat,
+    /// Microsoft BitNet.cpp reference prompt envelope (`User: ...<|eot_id|>Assistant:`)
+    BitnetChat,
     /// Phi-4 ChatML format with im_start/im_end tokens
     Phi4Chat,
     /// Qwen ChatML format with im_start/im_end tokens
@@ -238,6 +240,9 @@ impl std::str::FromStr for TemplateType {
             "raw" => Ok(Self::Raw),
             "instruct" => Ok(Self::Instruct),
             "llama3-chat" | "llama3_chat" => Ok(Self::Llama3Chat),
+            "bitnet-chat" | "bitnet_chat" | "microsoft-bitnet-chat" | "microsoft_bitnet_chat" => {
+                Ok(Self::BitnetChat)
+            }
             "phi4-chat" | "phi4_chat" | "phi4" | "chatml" => Ok(Self::Phi4Chat),
             "qwen-chat" | "qwen_chat" | "qwen" => Ok(Self::QwenChat),
             "gemma-chat" | "gemma_chat" | "gemma" => Ok(Self::GemmaChat),
@@ -298,7 +303,7 @@ impl std::str::FromStr for TemplateType {
             "phi2-instruct" | "phi-2-instruct" | "phi2" => Ok(Self::Phi2Instruct),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
-                 llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
+                 llama3-chat, bitnet-chat, phi4-chat, qwen-chat, gemma-chat, \
                  mistral-chat, deepseek-chat, starcoder, falcon-chat, \
                  codellama-instruct, cohere-command, internlm-chat, \
                  yi-chat, baichuan-chat, chatglm-chat, mpt-instruct, \
@@ -327,6 +332,7 @@ impl std::fmt::Display for TemplateType {
             Self::Raw => write!(f, "raw"),
             Self::Instruct => write!(f, "instruct"),
             Self::Llama3Chat => write!(f, "llama3-chat"),
+            Self::BitnetChat => write!(f, "bitnet-chat"),
             Self::Phi4Chat => write!(f, "phi4-chat"),
             Self::QwenChat => write!(f, "qwen-chat"),
             Self::GemmaChat => write!(f, "gemma-chat"),
@@ -409,7 +415,7 @@ impl TemplateType {
                 || path_str.contains("1_58b")
                 || (path_str.contains("bitnet") && !path_str.contains("instruct"))
             {
-                return Self::Instruct;
+                return Self::BitnetChat;
             }
 
             if path_str.contains("instruct") || path_str.contains("chat") {
@@ -449,6 +455,19 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::Llama3Chat;
+            }
+            // Microsoft BitNet.cpp intended-runner evidence uses a plain
+            // User/Assistant role envelope with <|eot_id|> delimiters.
+            if jinja.contains("<|eot_id|>")
+                && (jinja.contains("Assistant:") || jinja.contains("BITNETAssistant"))
+                && (jinja.contains("User:") || jinja.contains("Human:"))
+            {
+                tracing::debug!(
+                    template = "BitnetChat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::BitnetChat;
             }
             // Fill-in-the-middle signature
             if jinja.contains("<fim_prefix>") {
@@ -658,6 +677,18 @@ impl TemplateType {
         // Priority 2: Tokenizer family name heuristics
         if let Some(name) = tokenizer_name {
             let lower = name.to_ascii_lowercase();
+            if lower.contains("microsoft-bitnet")
+                || lower.contains("bitnet-b1.58")
+                || lower.contains("bitnet-1.58b")
+            {
+                tracing::debug!(
+                    template = "BitnetChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::BitnetChat;
+            }
             // TinyLlama must be checked before "llama" to avoid false match
             if lower.contains("tinyllama") || lower.contains("tiny-llama") {
                 tracing::debug!(
@@ -1203,6 +1234,7 @@ impl TemplateType {
             Self::Raw => user_text.to_string(),
             Self::Instruct => Self::apply_instruct(user_text, system_prompt),
             Self::Llama3Chat => Self::apply_llama3_chat(user_text, system_prompt),
+            Self::BitnetChat => Self::apply_bitnet_chat(user_text, system_prompt),
             Self::Phi4Chat => Self::apply_phi4_chat(user_text, system_prompt),
             Self::QwenChat => Self::apply_qwen_chat(user_text, system_prompt),
             Self::GemmaChat => Self::apply_gemma_chat(user_text, system_prompt),
@@ -1296,6 +1328,26 @@ impl TemplateType {
         result.push_str(user_text);
         result.push_str("\nA:");
 
+        result
+    }
+
+    /// Apply Microsoft BitNet.cpp answer prompt envelope.
+    ///
+    /// The intended Microsoft BitNet.cpp runner evidence uses a plain role
+    /// marker envelope with an externally inserted BOS token:
+    /// `User: {user_text}<|eot_id|>Assistant:`.
+    fn apply_bitnet_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        if let Some(system) = system_prompt
+            && !system.is_empty()
+        {
+            result.push_str("System: ");
+            result.push_str(system);
+            result.push_str("<|eot_id|>");
+        }
+        result.push_str("User: ");
+        result.push_str(user_text);
+        result.push_str("<|eot_id|>Assistant:");
         result
     }
 
@@ -2029,6 +2081,7 @@ impl TemplateType {
             Self::Raw => vec![],
             Self::Instruct => vec!["\n\nQ:".to_string(), "\n\nHuman:".to_string()],
             Self::Llama3Chat => vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
+            Self::BitnetChat => vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
             Self::Phi4Chat => vec!["<|im_end|>".to_string(), "<|endoftext|>".to_string()],
             Self::QwenChat => {
                 vec!["<|im_end|>".to_string(), "<|endoftext|>".to_string()]
@@ -2204,6 +2257,7 @@ impl TemplateType {
         match self {
             Self::Raw | Self::Instruct => true,
             Self::Llama3Chat => false, // Template includes <|begin_of_text|>
+            Self::BitnetChat => true,  // Reference runner inserts BOS outside the prompt text
             Self::Phi4Chat => false,   // ChatML uses im_start/im_end tokens
             Self::QwenChat => false,   // ChatML uses im_start/im_end tokens
             Self::GemmaChat => false,  // Uses start_of_turn/end_of_turn tokens
@@ -2269,6 +2323,7 @@ impl TemplateType {
         matches!(
             self,
             Self::Llama3Chat
+                | Self::BitnetChat
                 | Self::Phi4Chat
                 | Self::QwenChat
                 | Self::GemmaChat
@@ -2342,6 +2397,29 @@ impl TemplateType {
 
                 // Start assistant response
                 write!(out, "<|start_header_id|>assistant<|end_header_id|>\n\n")?;
+            }
+            TemplateType::BitnetChat => {
+                if let Some(sys) = system
+                    && !sys.is_empty()
+                {
+                    write!(out, "System: {}<|eot_id|>", sys)?;
+                }
+
+                for turn in history {
+                    match turn.role {
+                        ChatRole::System => {
+                            write!(out, "System: {}<|eot_id|>", turn.text)?;
+                        }
+                        ChatRole::User => {
+                            write!(out, "User: {}<|eot_id|>", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "Assistant: {}<|eot_id|>", turn.text)?;
+                        }
+                    }
+                }
+
+                write!(out, "Assistant:")?;
             }
             TemplateType::Phi4Chat => {
                 // ChatML format with im_start/im_end tokens
@@ -3226,6 +3304,7 @@ impl TemplateType {
             Self::Raw,
             Self::Instruct,
             Self::Llama3Chat,
+            Self::BitnetChat,
             Self::Phi4Chat,
             Self::QwenChat,
             Self::GemmaChat,
@@ -3480,7 +3559,30 @@ mod tests {
             Some(Path::new("models/microsoft-bitnet-b1.58-2B-4T.gguf")),
             None,
         );
-        assert_eq!(detected, TemplateType::Instruct);
+        assert_eq!(detected, TemplateType::BitnetChat);
+    }
+
+    #[test]
+    fn bitnet_chat_matches_reference_runner_prompt_envelope() {
+        let template = TemplateType::BitnetChat;
+        let prompt = template.apply("What is 2+2? Answer with only the number.", None);
+
+        assert_eq!(prompt, "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:");
+        assert!(template.should_add_bos());
+        assert!(template.parse_special());
+        assert_eq!(
+            template.default_stop_sequences(),
+            vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()]
+        );
+    }
+
+    #[test]
+    fn detects_bitnet_chat_from_reference_template_shape() {
+        let detected = TemplateType::detect(
+            Some("gpt2"),
+            Some("{{ 'User: ' + messages[0]['content'] + '<|eot_id|>Assistant:' }}"),
+        );
+        assert_eq!(detected, TemplateType::BitnetChat);
     }
 
     #[test]
@@ -3871,6 +3973,11 @@ mod tests {
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
         assert!(llama3_stops.contains(&"<|eot_id|>".to_string()));
 
+        // Check bitnet-chat has the expected stop tokens
+        let bitnet_stops = TemplateType::BitnetChat.default_stop_sequences();
+        assert!(bitnet_stops.contains(&"<|eot_id|>".to_string()));
+        assert!(bitnet_stops.contains(&"<|end_of_text|>".to_string()));
+
         // Check phi4-chat has the expected stop tokens
         let phi4_stops = TemplateType::Phi4Chat.default_stop_sequences();
         assert!(phi4_stops.contains(&"<|im_end|>".to_string()));
@@ -3946,6 +4053,7 @@ mod tests {
         assert!(TemplateType::Raw.should_add_bos());
         assert!(TemplateType::Instruct.should_add_bos());
         assert!(!TemplateType::Llama3Chat.should_add_bos()); // Has its own BOS
+        assert!(TemplateType::BitnetChat.should_add_bos()); // Reference runner inserts BOS externally
         assert!(!TemplateType::Phi4Chat.should_add_bos()); // Uses im_start/im_end
         assert!(!TemplateType::QwenChat.should_add_bos()); // Uses im_start/im_end
         assert!(!TemplateType::GemmaChat.should_add_bos()); // Uses start_of_turn
@@ -3975,6 +4083,7 @@ mod tests {
         assert!(!TemplateType::Raw.parse_special());
         assert!(!TemplateType::Instruct.parse_special());
         assert!(TemplateType::Llama3Chat.parse_special()); // LLaMA-3 has special tokens
+        assert!(TemplateType::BitnetChat.parse_special()); // Uses <|eot_id|> as a real token
         assert!(TemplateType::Phi4Chat.parse_special()); // Phi-4 has special tokens
         assert!(TemplateType::QwenChat.parse_special()); // Qwen has special tokens
         assert!(TemplateType::GemmaChat.parse_special()); // Gemma has special tokens
@@ -5534,6 +5643,11 @@ mod detect_logging_tests {
         assert_eq!("chatgpt-chat".parse::<TemplateType>().unwrap(), TemplateType::ChatGptChat);
         assert_eq!("chatgpt".parse::<TemplateType>().unwrap(), TemplateType::ChatGptChat);
         assert_eq!("gpt4-chat".parse::<TemplateType>().unwrap(), TemplateType::ChatGptChat);
+        assert_eq!("bitnet-chat".parse::<TemplateType>().unwrap(), TemplateType::BitnetChat);
+        assert_eq!(
+            "microsoft-bitnet-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::BitnetChat
+        );
     }
 
     #[test]
@@ -5541,6 +5655,7 @@ mod detect_logging_tests {
         assert_eq!(TemplateType::TinyLlamaChat.to_string(), "tinyllama-chat");
         assert_eq!(TemplateType::DolphinChat.to_string(), "dolphin-chat");
         assert_eq!(TemplateType::ChatGptChat.to_string(), "chatgpt-chat");
+        assert_eq!(TemplateType::BitnetChat.to_string(), "bitnet-chat");
     }
 
     // ΓöÇΓöÇ all_variants() ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -5548,7 +5663,7 @@ mod detect_logging_tests {
     #[test]
     fn test_all_variants_complete() {
         let variants = TemplateType::all_variants();
-        assert_eq!(variants.len(), 59);
+        assert_eq!(variants.len(), 60);
         // Verify no duplicates
         let mut seen = std::collections::HashSet::new();
         for v in variants {

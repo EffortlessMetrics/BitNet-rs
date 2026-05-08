@@ -618,3 +618,46 @@ must_not_claim = [
   "Server inference is complete.",
   "GPU or NPU execution is involved.",
 ]
+
+[[work_item]]
+id = "CPU-ANSWER-004"
+status = "in_progress"
+branch = "codex/cpu-answer-004-bitnet-chat-prompt-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-003"]
+acceptance = "The Rust BitNet answer path can render the Microsoft BitNet.cpp reference chat envelope, use externally supplied llama-bpe tokenizer authority, record prompt-render metadata, and prove the math_2_plus_2 prompt token IDs match the known-good reference runner before classifying the first generated-token divergence as downstream of prompt/template/tokenizer."
+commands = [
+  "cargo test --locked -p bitnet-prompt-templates-core --no-default-features bitnet_chat -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_compare -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run -p xtask --no-default-features -- campaign generate --check",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-prompt-templates-core/**",
+  "ci/quality/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "crates/bitnet-transformer/**",
+]
+may_claim = [
+  "The Rust BitNet prompt envelope and prompt token IDs match the Microsoft BitNet.cpp reference prompt for math_2_plus_2 after merge.",
+  "Rust still diverges at the first generated token in the recorded diagnostic run, so the next fix is downstream of prompt/template/tokenizer after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "Rust CPU answer readiness is proven.",
+  "CUDA answer readiness is proven.",
+  "Server inference is complete.",
+  "A speedup claim is proven.",
+]

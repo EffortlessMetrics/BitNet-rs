@@ -157,7 +157,7 @@ proptest! {
 
 // ── Deterministic unit tests ─────────────────────────────────────────────────
 
-/// --prompt-template raw/instruct/llama3-chat each parse to the correct TemplateType.
+/// --prompt-template raw/instruct/llama3-chat/bitnet-chat each parse to the correct TemplateType.
 #[test]
 fn test_explicit_prompt_templates_parse_to_correct_type() {
     use bitnet_inference::TemplateType;
@@ -166,6 +166,7 @@ fn test_explicit_prompt_templates_parse_to_correct_type() {
         ("raw", TemplateType::Raw),
         ("instruct", TemplateType::Instruct),
         ("llama3-chat", TemplateType::Llama3Chat),
+        ("bitnet-chat", TemplateType::BitnetChat),
     ];
 
     for (value, expected) in cases {

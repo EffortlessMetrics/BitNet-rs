@@ -110,6 +110,14 @@ mod inference_cmd {
         assert_eq!(cmd.prompt_template, "llama3-chat");
     }
 
+    /// `--prompt-template bitnet-chat` is accepted.
+    #[test]
+    fn test_prompt_template_bitnet_chat_accepted() {
+        let cmd = parse(&["test-cli", "--prompt-template", "bitnet-chat"])
+            .expect("--prompt-template bitnet-chat must be accepted");
+        assert_eq!(cmd.prompt_template, "bitnet-chat");
+    }
+
     // ── system-prompt ─────────────────────────────────────────────────────────
 
     /// `--system-prompt` is optional and defaults to `None`.

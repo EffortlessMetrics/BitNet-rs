@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 //! BitNet CLI application
 //!
 //! A comprehensive command-line interface for BitNet 1-bit LLM inference.
@@ -342,7 +344,7 @@ enum Commands {
         #[arg(long, default_value_t = 0)]
         threads: usize,
 
-        /// Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+        /// Prompt template: auto (detect), raw, instruct, llama3-chat, bitnet-chat
         #[arg(long, value_name = "TEMPLATE", default_value = "auto")]
         prompt_template: String,
 
@@ -2469,6 +2471,14 @@ fn compute_model_sha256(path: &std::path::Path) -> Result<String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
+fn compute_sha256_bytes(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
 fn greedy_top1_token_id(logits: &[f32]) -> Option<u32> {
     logits
         .iter()
@@ -2895,7 +2905,7 @@ async fn run_simple_generation(
     } else {
         prompt_template.parse().with_context(|| {
             format!(
-                "Invalid prompt template '{}'. Supported: raw, instruct, llama3-chat",
+                "Invalid prompt template '{}'. Supported: raw, instruct, llama3-chat, bitnet-chat",
                 prompt_template
             )
         })?
@@ -3123,8 +3133,12 @@ async fn run_simple_generation(
 
     // Auto-detect template if needed
     let template_type = if prompt_template == "auto" {
-        // Check if tokenizer has special tokens for LLaMA-3
-        if tokenizer.token_to_id("<|eot_id|>").is_some() {
+        let path_template =
+            TemplateType::detect_from_paths(Some(&model_path), tokenizer_path.as_deref());
+        if matches!(path_template, TemplateType::BitnetChat) {
+            debug!("Auto-detected bitnet-chat template (model path matches BitNet)");
+            TemplateType::BitnetChat
+        } else if tokenizer.token_to_id("<|eot_id|>").is_some() {
             debug!("Auto-detected llama3-chat template (tokenizer has <|eot_id|>)");
             TemplateType::Llama3Chat
         } else {
@@ -3144,11 +3158,13 @@ async fn run_simple_generation(
         }),
     );
     let formatted_prompt = template_type.apply(&prompt, system_prompt.as_deref());
+    let rendered_prompt_sha256 = compute_sha256_bytes(formatted_prompt.as_bytes());
     answer_corpus_child_phase(
         "prompt_render_complete",
         serde_json::json!({
             "template": template_type.to_string(),
             "rendered_prompt_bytes": formatted_prompt.len(),
+            "rendered_prompt_sha256": rendered_prompt_sha256.clone(),
         }),
     );
 
@@ -3773,6 +3789,7 @@ async fn run_simple_generation(
         let tokenizer_source_str = tokenizer_source.as_str();
         let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
         let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
+        let pretokenizer_authority = tokenizer_pretokenizer_authority(tokenizer_source);
         let tokenizer_info = serde_json::json!({
             "type": tokenizer_type,
             "model_family": tokenizer_type,
@@ -3783,7 +3800,7 @@ async fn run_simple_generation(
             },
             "source": tokenizer_source_str,
             "strict": tokenizer_strict,
-            "pretokenizer_authority": "unknown",
+            "pretokenizer_authority": pretokenizer_authority,
             "bos": tokenizer.bos_token_id().unwrap_or(1),
             "eos": tokenizer.eos_token_id().unwrap_or(2),
         });
@@ -3797,11 +3814,22 @@ async fn run_simple_generation(
         });
 
         let gen_policy = serde_json::json!({
-            "bos": bos,
+            "bos": bos_policy,
+            "explicit_bos_requested": bos,
+            "parse_special": parse_special,
             "temperature": temperature,
             "seed": seed.unwrap_or(0),
             "greedy": greedy,
             "deterministic": deterministic,
+        });
+        let prompt_render_receipt = serde_json::json!({
+            "template_family": template_type.to_string(),
+            "rendered_text": formatted_prompt,
+            "rendered_sha256": rendered_prompt_sha256,
+            "add_bos": bos_policy,
+            "parse_special": parse_special,
+            "stop_sequences": all_stop_sequences,
+            "stop_token_ids": all_stop_ids,
         });
         let loader_info = serde_json::json!({
             "mode": loader_mode,
@@ -4042,6 +4070,7 @@ async fn run_simple_generation(
             "fallback_used": backend_identity.fallback_used,
             "fallback_reason": fallback_reason,
             "prompt": prompt,
+            "prompt_render": prompt_render_receipt,
             "text": generated_text,
             "tokens": {
                 "prompt": prompt_tokens_len,
@@ -4451,10 +4480,10 @@ fn tokenizer_pretokenizer_authority(
     source: bitnet_tokenizers::auto::TokenizerSource,
 ) -> &'static str {
     match source {
-        bitnet_tokenizers::auto::TokenizerSource::Explicit => "explicit_tokenizer",
-        bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => "gguf_metadata",
-        bitnet_tokenizers::auto::TokenizerSource::Sibling => "sibling_tokenizer",
-        bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => "compatibility_fallback",
+        bitnet_tokenizers::auto::TokenizerSource::Explicit => "externally_supplied",
+        bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => "present",
+        bitnet_tokenizers::auto::TokenizerSource::Sibling => "externally_supplied",
+        bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => "defaulted",
     }
 }
 
@@ -5600,7 +5629,7 @@ async fn run_ask_generation(
         true,
         true,
         0,
-        "llama3-chat".to_string(),
+        "bitnet-chat".to_string(),
         system_prompt,
         vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
         Vec::new(),
@@ -5660,7 +5689,7 @@ async fn run_ask_generation(
             "fallback_reason": run_receipt["fallback_reason"].clone(),
         },
         "prompt_template": {
-            "family": "llama3-chat",
+            "family": "bitnet-chat",
             "system_prompt_present": system_prompt_for_receipt.as_ref().is_some_and(|value| !value.is_empty()),
             "bos_inserted": true,
             "assistant_prefix_inserted": true,

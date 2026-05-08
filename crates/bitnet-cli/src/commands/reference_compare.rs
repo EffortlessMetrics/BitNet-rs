@@ -72,6 +72,11 @@ fn build_reference_divergence_receipt(path: &Path, artifact: &Value) -> Value {
     let first_divergence =
         if validation_failures.is_empty() { first_divergence(artifact) } else { None };
     let passed = validation_failures.is_empty() && first_divergence.is_none();
+    let classification = if validation_failures.is_empty() {
+        divergence_classification(first_divergence.as_ref())
+    } else {
+        "receipt_contract"
+    };
     let bitnet_artifact = is_bitnet_artifact(artifact);
     let artifact_kind = if bitnet_artifact {
         "bitnet_cpu_reference_divergence_validation"
@@ -110,6 +115,7 @@ fn build_reference_divergence_receipt(path: &Path, artifact: &Value) -> Value {
         },
         "comparison": {
             "passed": passed,
+            "classification": classification,
             "first_divergence": first_divergence,
             "reference": side_summary(&artifact["reference"]),
             "bitnet_rs": side_summary(bitnet_side(artifact)),
@@ -122,8 +128,9 @@ fn build_reference_divergence_receipt(path: &Path, artifact: &Value) -> Value {
         "must_not_claim": [
             "BitNet-rs can run the external reference engine.",
             "General chat quality is proven.",
-            "Sustained CPU throughput is proven.",
-            "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved."
+            "Rust CPU or CUDA answer readiness is proven without matching receipts.",
+            "Server, GPU, OpenVINO, UHD 620, or NPU execution is proven by this artifact.",
+            "A speedup claim is proven."
         ],
     })
 }
@@ -256,13 +263,20 @@ fn first_divergence(artifact: &Value) -> Option<Value> {
     if let Some(index) =
         first_id_divergence(ids(reference.get("prompt_ids"))?, ids(bitnet.get("prompt_ids"))?)
     {
-        return Some(divergence("prompt", index, &reference["prompt_ids"], &bitnet["prompt_ids"]));
+        return Some(divergence(
+            "prompt",
+            "prompt_or_tokenizer",
+            index,
+            &reference["prompt_ids"],
+            &bitnet["prompt_ids"],
+        ));
     }
     if let Some(index) =
         first_id_divergence(ids(reference.get("generated_ids"))?, ids(bitnet.get("generated_ids"))?)
     {
         return Some(divergence(
             "decode",
+            "decode_or_sampler",
             index,
             &reference["generated_ids"],
             &bitnet["generated_ids"],
@@ -271,10 +285,10 @@ fn first_divergence(artifact: &Value) -> Option<Value> {
     if let (Some(reference_topk), Some(bitnet_topk)) = (topk(reference), topk(bitnet))
         && reference_topk != bitnet_topk
     {
-        return Some(divergence("logits", 0, reference_topk, bitnet_topk));
+        return Some(divergence("logits", "logits_or_kernel", 0, reference_topk, bitnet_topk));
     }
     if reference["text"] != bitnet["text"] {
-        return Some(divergence("text", 0, &reference["text"], &bitnet["text"]));
+        return Some(divergence("text", "text_decode", 0, &reference["text"], &bitnet["text"]));
     }
     None
 }
@@ -312,13 +326,31 @@ fn chosen_id(side: &Value) -> Option<u64> {
     })
 }
 
-fn divergence(phase: &'static str, index: usize, reference: &Value, bitnet: &Value) -> Value {
+fn divergence(
+    phase: &'static str,
+    scope: &'static str,
+    index: usize,
+    reference: &Value,
+    bitnet: &Value,
+) -> Value {
     json!({
         "phase": phase,
+        "scope": scope,
         "index": index,
         "reference": reference,
         "bitnet_rs": bitnet,
     })
+}
+
+fn divergence_classification(first_divergence: Option<&Value>) -> &'static str {
+    match first_divergence.and_then(|divergence| divergence["scope"].as_str()) {
+        None => "passed",
+        Some("prompt_or_tokenizer") => "prompt_or_tokenizer",
+        Some("decode_or_sampler") => "decode_or_sampler",
+        Some("text_decode") => "text_decode",
+        Some("logits_or_kernel") => "logits_or_kernel",
+        Some(_) => "receipt_contract",
+    }
 }
 
 fn side_summary(side: &Value) -> Value {
@@ -463,6 +495,7 @@ mod tests {
         assert_eq!(report["artifact_kind"], "slm_reference_divergence_validation");
         assert_eq!(report["validation"]["passed"], true);
         assert_eq!(report["comparison"]["passed"], true);
+        assert_eq!(report["comparison"]["classification"], "passed");
         assert!(report["comparison"]["first_divergence"].is_null());
     }
 
@@ -473,7 +506,9 @@ mod tests {
 
         assert_eq!(report["validation"]["passed"], true);
         assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["classification"], "decode_or_sampler");
         assert_eq!(report["comparison"]["first_divergence"]["phase"], "decode");
+        assert_eq!(report["comparison"]["first_divergence"]["scope"], "decode_or_sampler");
         assert_eq!(report["comparison"]["first_divergence"]["index"], 0);
     }
 
@@ -497,7 +532,9 @@ mod tests {
         assert_eq!(report["artifact_kind"], "bitnet_cpu_reference_divergence_validation");
         assert_eq!(report["validation"]["passed"], true);
         assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["classification"], "logits_or_kernel");
         assert_eq!(report["comparison"]["first_divergence"]["phase"], "logits");
+        assert_eq!(report["comparison"]["first_divergence"]["scope"], "logits_or_kernel");
         assert_eq!(report["comparison"]["bitnet_rs"]["loader_mode"], "real_gguf");
         assert_eq!(report["comparison"]["bitnet_rs"]["tokenizer_source"], "gguf_metadata");
     }

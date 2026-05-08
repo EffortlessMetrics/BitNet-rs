@@ -150,7 +150,11 @@ impl AnswerCorpusCommand {
         let timed_out = rows.iter().filter(|row| row["status"] == "timeout").count();
         let not_run = rows.iter().filter(|row| row["status"] == "not_run").count();
         let aggregate_tokenizer =
-            if corpus.model.family.as_deref() == Some("qwen") { "gguf_metadata" } else { "llama3" };
+            match (corpus.model.family.as_deref(), corpus.defaults.prompt_template.as_str()) {
+                (_, "bitnet-chat") => "externally_supplied_llama_bpe",
+                (Some("qwen"), _) => "gguf_metadata",
+                _ => "llama3",
+            };
 
         let receipt = json!({
             "schema_version": "1.0.0",
@@ -361,11 +365,25 @@ impl AnswerCorpusCommand {
             },
             "logits_dump": run_receipt.get("logits_dump").cloned().unwrap_or(Value::Null),
             "prompt": {
-                "rendered_text": run_receipt["prompt"].clone(),
+                "rendered_text": run_receipt["prompt_render"]["rendered_text"]
+                    .as_str()
+                    .map(Value::from)
+                    .unwrap_or_else(|| run_receipt["prompt"].clone()),
+                "rendered_sha256": run_receipt["prompt_render"]["rendered_sha256"].clone(),
                 "template_family": corpus.defaults.prompt_template,
-                "add_bos": run_receipt["gen_policy"]["bos"].clone(),
-                "add_special": run_receipt["tokenizer"]["bos"].is_number()
-                    || run_receipt["tokenizer"]["eos"].is_number(),
+                "add_bos": run_receipt["prompt_render"]["add_bos"]
+                    .as_bool()
+                    .map(Value::from)
+                    .unwrap_or_else(|| run_receipt["gen_policy"]["bos"].clone()),
+                "add_special": run_receipt["prompt_render"]["parse_special"]
+                    .as_bool()
+                    .map(Value::from)
+                    .unwrap_or_else(|| {
+                        Value::from(
+                            run_receipt["tokenizer"]["bos"].is_number()
+                                || run_receipt["tokenizer"]["eos"].is_number(),
+                        )
+                    }),
             },
             "prompt_template": corpus.defaults.prompt_template,
             "prompt_prefill": prompt_prefill,

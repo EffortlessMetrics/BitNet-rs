@@ -1,0 +1,60 @@
+schema: 1
+artifact_kind: bitnet_answer_corpus
+name: strict-bitnet-reference-answer-corpus-v1
+description: Deterministic BitNet answer-readiness prompts using the Microsoft BitNet.cpp reference prompt envelope.
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  file: ggml-model-i2_s.gguf
+  sha256: 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162
+  family: bitnet-b1.58-2B-4T
+  architecture: bitnet
+  quant_format: I2_S
+defaults:
+  prompt_template: bitnet-chat
+  max_new_tokens: 8
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 300
+cases:
+  - id: math_2_plus_2
+    question: "What is 2+2? Answer with only the number."
+    max_new_tokens: 4
+    gate:
+      kind: exact_trimmed
+      expected: "4"
+
+  - id: capital_france
+    question: "What is the capital of France? Answer with one word."
+    max_new_tokens: 8
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"
+
+  - id: repeat_colors
+    question: "Repeat exactly: red blue green"
+    max_new_tokens: 8
+    gate:
+      kind: contains_any
+      contains_any:
+        - "red blue green"
+        - "Red blue green"
+
+  - id: say_ok
+    question: "Say exactly: OK"
+    max_new_tokens: 4
+    gate:
+      kind: exact_trimmed
+      expected: "OK"
+
+  - id: yes_no_water
+    question: "Answer yes or no: is water wet?"
+    max_new_tokens: 4
+    gate:
+      kind: starts_with_any
+      starts_with_any:
+        - "yes"
+        - "no"

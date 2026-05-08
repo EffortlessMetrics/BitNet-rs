@@ -1,0 +1,11 @@
+timestamp = "2026-05-08T05:07:28Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-004"
+event = "in_progress"
+branch = "codex/cpu-answer-004-bitnet-chat-prompt-parity"
+actor = "codex"
+
+notes = [
+  "Started CPU-ANSWER-004 to align Rust BitNet answer prompts with the Microsoft BitNet.cpp reference envelope and external llama-bpe tokenizer authority recorded by MODEL-ARTIFACT-007.",
+  "The slice records prompt-render metadata and prompt-token evidence so the current first-token failure can be classified downstream of prompt/template/tokenizer without claiming Rust CPU, CUDA, server, or speed readiness.",
+]

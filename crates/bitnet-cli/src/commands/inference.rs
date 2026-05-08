@@ -237,7 +237,7 @@ pub struct InferenceCommand {
     #[arg(long, value_name = "TEMPLATE")]
     pub chat_template: Option<String>,
 
-    /// Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+    /// Prompt template: auto (detect), raw, instruct, llama3-chat, bitnet-chat
     #[arg(long, value_name = "TEMPLATE", default_value = "auto")]
     pub prompt_template: String,
 
@@ -2244,8 +2244,8 @@ mod tests {
         let detected = cmd.auto_detect_template();
         assert_eq!(
             detected,
-            TemplateType::Instruct,
-            "Microsoft BitNet base model should prefer Instruct template for Q&A"
+            TemplateType::BitnetChat,
+            "Microsoft BitNet model path should prefer the BitNet.cpp reference prompt envelope"
         );
     }
 
@@ -2268,8 +2268,8 @@ mod tests {
             let detected = cmd.auto_detect_template();
             assert_eq!(
                 detected,
-                TemplateType::Instruct,
-                "BitNet path '{}' should detect Instruct template",
+                TemplateType::BitnetChat,
+                "BitNet path '{}' should detect BitNet chat template",
                 path
             );
         }
@@ -2288,8 +2288,8 @@ mod tests {
         let detected = cmd.auto_detect_template();
         assert_eq!(
             detected,
-            TemplateType::Instruct,
-            "BitNet base model should be detected with Instruct template (better Q&A than Raw)"
+            TemplateType::BitnetChat,
+            "BitNet base model should be detected with the BitNet.cpp reference prompt envelope"
         );
     }
 }

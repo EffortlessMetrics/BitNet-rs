@@ -182,6 +182,16 @@ mod prompt_template_parsing {
         assert_eq!(tpl, TemplateType::Llama3Chat);
     }
 
+    /// "bitnet-chat" parses to TemplateType::BitnetChat.
+    #[test]
+    fn test_prompt_template_bitnet_chat() {
+        let cmd =
+            parse_args(&["bitnet", "--prompt-template", "bitnet-chat"]).expect("should parse");
+        let tpl: TemplateType =
+            cmd.prompt_template.parse().expect("bitnet-chat should parse to TemplateType");
+        assert_eq!(tpl, TemplateType::BitnetChat);
+    }
+
     /// An empty string stored as prompt_template fails TemplateType::from_str.
     #[test]
     fn test_empty_prompt_template_fails_parse() {
@@ -189,13 +199,14 @@ mod prompt_template_parsing {
         assert!(result.is_err(), "empty string must fail TemplateType::from_str");
     }
 
-    /// Parsing all three canonical names succeeds and returns the right variant.
+    /// Parsing canonical names succeeds and returns the right variant.
     #[test]
     fn test_all_canonical_template_names_parse() {
         let cases = [
             ("raw", TemplateType::Raw),
             ("instruct", TemplateType::Instruct),
             ("llama3-chat", TemplateType::Llama3Chat),
+            ("bitnet-chat", TemplateType::BitnetChat),
         ];
         for (name, expected) in &cases {
             let got: TemplateType = name.parse().unwrap_or_else(|e| {

@@ -52,6 +52,7 @@
 | cpu-proof | CPU-ANSWER-001 | CPU-BITNET-008, CPU-PHASE-TIMING-001 | merged |
 | cpu-proof | CPU-ANSWER-002 | CPU-ANSWER-001 | merged |
 | cpu-proof | CPU-ANSWER-003 | CPU-ANSWER-002 | merged |
+| cpu-proof | CPU-ANSWER-004 | CPU-ANSWER-003 | in_progress |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | merged |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
