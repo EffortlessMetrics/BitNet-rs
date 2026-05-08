@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T04:42:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-003"
+event = "pr_open"
+pr = 3993
+head_sha = "2a71ed89ba9c3e8fa54aea2d18a6ccf5b3325fac"
+actor = "codex"
+
+notes = [
+  "Opened #3993 for BitNet CPU reference-divergence artifact validation.",
+  "The PR extends the offline reference-compare command so strict BitNet CPU answer failures can be compared against known-good reference artifacts without claiming answer quality, throughput, server inference, GPU, or NPU execution.",
+]
