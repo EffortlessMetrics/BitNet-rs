@@ -36,7 +36,7 @@
 | apple-m4-slm-answer | SLM-M4-003 | SLM-M4-002 | merged |
 | apple-m4-slm-answer | SLM-M4-004 | SLM-M4-003 | merged |
 | apple-m4-slm-answer | SLM-M4-005 | SLM-M4-004 | merged |
-| apple-m4-slm-answer | SLM-M4-006 | SLM-M4-004, SLM-M4-005 | ready |
+| apple-m4-slm-answer | SLM-M4-006 | SLM-M4-004, SLM-M4-005 | in_progress |
 | apple-m4-slm-answer | SLM-M4-007 | SLM-M4-005, SLM-M4-006 | proposed |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |

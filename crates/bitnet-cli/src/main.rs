@@ -4666,6 +4666,7 @@ async fn run_slm_warm_session(
     let mut prompt_summaries = Vec::with_capacity(prompt_inputs.len());
     let mut quality_failed_prompts = Vec::new();
     let mut determinism_records = Vec::with_capacity(prompt_inputs.len());
+    let mut speed_accumulator = WarmSessionSpeedAccumulator::default();
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
         let prompt = &prompt_input.prompt;
         let prompt_start = std::time::Instant::now();
@@ -4814,13 +4815,25 @@ async fn run_slm_warm_session(
         });
         let prompt_total_ms = elapsed_ms(prompt_start);
         let decode_total_ms = decode_step_ms.iter().sum::<f64>();
+        let sampling_total_ms = sample_step_ms.iter().sum::<f64>();
         let sampling_ms_per_token = if sample_step_ms.is_empty() {
             None
         } else {
-            Some(sample_step_ms.iter().sum::<f64>() / sample_step_ms.len() as f64)
+            Some(sampling_total_ms / sample_step_ms.len() as f64)
         };
         let decode_steady_state_tok_s =
             steady_decode_tps_ms(&decode_step_ms).map(|value| (value * 1000.0).round() / 1000.0);
+        speed_accumulator.record(WarmSessionPromptSpeed {
+            prompt_tokens: prompt_token_count,
+            generated_tokens: generated_tokens.len(),
+            tokenize_ms: prompt_tokenize_ms,
+            prefill_ms,
+            decode_total_ms,
+            sampling_ms: sampling_total_ms,
+            prompt_total_ms,
+            first_token_ms: first_token_ms.map(|value| value as f64),
+            steady_decode_tok_s: decode_steady_state_tok_s,
+        });
         let prompt_receipt_path = receipt_dir.join(format!(
             "{:02}-{}.json",
             index + 1,
@@ -4941,6 +4954,8 @@ async fn run_slm_warm_session(
     }
 
     let total_session_ms = elapsed_ms(session_start);
+    let speed_summary =
+        speed_accumulator.receipt(model_load_ms, tokenizer_load_ms, total_session_ms);
     let determinism = slm_warm_session_determinism_receipt(&determinism_records);
     let quality_passed = quality_failed_prompts.is_empty();
     let effective_min_generated_tokens = prompt_inputs
@@ -5008,6 +5023,7 @@ async fn run_slm_warm_session(
             "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
             "total_session_ms": rounded_ms(total_session_ms),
         },
+        "speed": speed_summary,
         "backend": {
             "requested_backend": backend_identity.requested_backend.as_str(),
             "selected_backend": backend_identity.selected_backend.as_str(),
@@ -5039,6 +5055,7 @@ async fn run_slm_warm_session(
             "model_loaded_once": true,
             "tokenizer_loaded_once": true,
             "speedup_claim": false,
+            "broad_performance_claim": false,
             "full_metal_inference_claimed": false,
             "bitnet_quality_claimed": false,
         },
@@ -5091,6 +5108,100 @@ struct WarmSessionPromptInput {
     gate: Option<SlmWarmSessionGate>,
     min_generated_tokens: usize,
     min_distinct_generated_tokens: usize,
+}
+
+#[derive(Clone, Debug, Default)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionPromptSpeed {
+    prompt_tokens: usize,
+    generated_tokens: usize,
+    tokenize_ms: f64,
+    prefill_ms: f64,
+    decode_total_ms: f64,
+    sampling_ms: f64,
+    prompt_total_ms: f64,
+    first_token_ms: Option<f64>,
+    steady_decode_tok_s: Option<f64>,
+}
+
+#[derive(Clone, Debug, Default)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionSpeedAccumulator {
+    prompt_count: usize,
+    prompt_tokens: usize,
+    generated_tokens: usize,
+    tokenize_ms: f64,
+    prefill_ms: f64,
+    decode_total_ms: f64,
+    sampling_ms: f64,
+    prompt_total_ms: f64,
+    first_token_ms: Vec<f64>,
+    steady_decode_tok_s: Vec<f64>,
+}
+
+#[cfg(feature = "full-cli")]
+impl WarmSessionSpeedAccumulator {
+    fn record(&mut self, prompt: WarmSessionPromptSpeed) {
+        self.prompt_count += 1;
+        self.prompt_tokens += prompt.prompt_tokens;
+        self.generated_tokens += prompt.generated_tokens;
+        self.tokenize_ms += prompt.tokenize_ms;
+        self.prefill_ms += prompt.prefill_ms;
+        self.decode_total_ms += prompt.decode_total_ms;
+        self.sampling_ms += prompt.sampling_ms;
+        self.prompt_total_ms += prompt.prompt_total_ms;
+        if let Some(first_token_ms) = prompt.first_token_ms {
+            self.first_token_ms.push(first_token_ms);
+        }
+        if let Some(steady_decode_tok_s) = prompt.steady_decode_tok_s {
+            self.steady_decode_tok_s.push(steady_decode_tok_s);
+        }
+    }
+
+    fn receipt(
+        &self,
+        model_load_ms: f64,
+        tokenizer_load_ms: f64,
+        total_session_ms: f64,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "measurement_scope": "validated SLM warm session on apple-m4-cpu-neon",
+            "claim": "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+            "speedup_claim": false,
+            "broad_performance_claim": false,
+            "reuse": {
+                "model_loaded_once": true,
+                "tokenizer_loaded_once": true,
+                "per_prompt_model_load_ms": 0.0,
+                "per_prompt_tokenizer_load_ms": 0.0,
+                "kv_cache_recreated_per_prompt": true,
+                "sampler_recreated_per_prompt": true,
+                "logits_buffer_reuse_claimed": false,
+            },
+            "counts": {
+                "prompt_count": self.prompt_count,
+                "prompt_tokens": self.prompt_tokens,
+                "generated_tokens": self.generated_tokens,
+            },
+            "timing": {
+                "model_load_ms": rounded_ms(model_load_ms),
+                "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+                "total_session_ms": rounded_ms(total_session_ms),
+                "warm_prompt_wall_ms": rounded_ms(self.prompt_total_ms),
+                "tokenize_ms": rounded_ms(self.tokenize_ms),
+                "prefill_ms": rounded_ms(self.prefill_ms),
+                "decode_total_ms": rounded_ms(self.decode_total_ms),
+                "sampling_ms": rounded_ms(self.sampling_ms),
+                "first_token_ms": timing_samples_json(&self.first_token_ms),
+                "steady_decode_tok_s": numeric_samples_json(&self.steady_decode_tok_s),
+            },
+            "throughput": {
+                "cold_session_generated_tok_s": tokens_per_second_json(self.generated_tokens, total_session_ms),
+                "warm_prompt_generated_tok_s": tokens_per_second_json(self.generated_tokens, self.prompt_total_ms),
+                "decode_generated_tok_s": tokens_per_second_json(self.generated_tokens, self.decode_total_ms),
+            },
+        })
+    }
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -6299,6 +6410,40 @@ fn timing_samples_json(samples: &[f64]) -> serde_json::Value {
     })
 }
 
+fn numeric_samples_json(samples: &[f64]) -> serde_json::Value {
+    if samples.is_empty() {
+        return serde_json::json!({
+            "count": 0,
+            "min": serde_json::Value::Null,
+            "mean": serde_json::Value::Null,
+            "p50": serde_json::Value::Null,
+            "p95": serde_json::Value::Null,
+            "max": serde_json::Value::Null,
+        });
+    }
+
+    let mut sorted = samples.to_vec();
+    sorted.sort_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal));
+    let mean = samples.iter().sum::<f64>() / samples.len() as f64;
+
+    serde_json::json!({
+        "count": samples.len(),
+        "min": rounded_ms(sorted[0]),
+        "mean": rounded_ms(mean),
+        "p50": rounded_ms(percentile_nearest(&sorted, 50)),
+        "p95": rounded_ms(percentile_nearest(&sorted, 95)),
+        "max": rounded_ms(sorted[sorted.len() - 1]),
+    })
+}
+
+fn tokens_per_second_json(tokens: usize, elapsed_ms: f64) -> serde_json::Value {
+    if tokens == 0 || elapsed_ms <= 0.0 {
+        serde_json::Value::Null
+    } else {
+        serde_json::json!(rounded_ms(tokens as f64 / (elapsed_ms / 1000.0)))
+    }
+}
+
 fn allocation_samples_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {
     if samples.is_empty() {
         return serde_json::json!({
@@ -7036,6 +7181,44 @@ mod tests {
         assert_eq!(summary["p50_ms"], 2.0);
         assert_eq!(summary["p95_ms"], 10.0);
         assert_eq!(summary["max_ms"], 10.0);
+    }
+
+    #[test]
+    fn warm_session_speed_receipt_records_warm_and_decode_throughput_without_speedup_claim() {
+        let mut accumulator = WarmSessionSpeedAccumulator::default();
+        accumulator.record(WarmSessionPromptSpeed {
+            prompt_tokens: 8,
+            generated_tokens: 4,
+            tokenize_ms: 2.0,
+            prefill_ms: 10.0,
+            decode_total_ms: 200.0,
+            sampling_ms: 4.0,
+            prompt_total_ms: 250.0,
+            first_token_ms: Some(90.0),
+            steady_decode_tok_s: Some(25.0),
+        });
+        accumulator.record(WarmSessionPromptSpeed {
+            prompt_tokens: 6,
+            generated_tokens: 4,
+            tokenize_ms: 1.0,
+            prefill_ms: 8.0,
+            decode_total_ms: 200.0,
+            sampling_ms: 4.0,
+            prompt_total_ms: 250.0,
+            first_token_ms: Some(80.0),
+            steady_decode_tok_s: Some(20.0),
+        });
+
+        let receipt = accumulator.receipt(1000.0, 50.0, 1600.0);
+
+        assert_eq!(receipt["counts"]["prompt_count"], 2);
+        assert_eq!(receipt["counts"]["generated_tokens"], 8);
+        assert_eq!(receipt["throughput"]["warm_prompt_generated_tok_s"], 16.0);
+        assert_eq!(receipt["throughput"]["decode_generated_tok_s"], 20.0);
+        assert_eq!(receipt["speedup_claim"], false);
+        assert_eq!(receipt["broad_performance_claim"], false);
+        assert_eq!(receipt["reuse"]["model_loaded_once"], true);
+        assert_eq!(receipt["reuse"]["logits_buffer_reuse_claimed"], false);
     }
 
     #[test]
