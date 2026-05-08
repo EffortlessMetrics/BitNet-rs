@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T08:04:07Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-011"
+event = "merged"
+pr = 4014
+merge_sha = "4b0560f95e6cd5feb5a4e4ed642aa63a578b4c65"
+summary = "Merged CPU258V-011, recording release-built scalar-vs-AVX2 selected-case answer parity."
+
+details = [
+  "The merged artifacts show scalar and AVX2 both complete strict CPU execution for the selected math_2_plus_2 case.",
+  "Both lanes produce identical prompt IDs, generated IDs [89048, 124979, 70232, 88162], and decoded text, so the selected bad answer is not AVX2-specific.",
+  "The shared output fails the exact-answer gate, so no answer correctness, full-corpus parity, sustained throughput, Arc 140V execution, or Intel NPU execution is claimed.",
+]
