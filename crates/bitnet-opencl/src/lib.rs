@@ -14,12 +14,14 @@ pub mod backend_registry;
 pub mod context_pool;
 pub mod kv_cache;
 pub mod paged_attention;
+pub mod runtime;
 
 pub use backend_dispatcher::{
     BackendCapabilityMatrix, BackendDispatcher, BackendStatus, DispatchDecision, DispatchError,
     DispatchLog, DispatchStrategy, Operation,
 };
 pub use backend_registry::{BackendInfo, BackendProvider, BackendRegistry};
+pub use runtime::discover_devices;
 pub mod quantized_kernels;
 pub mod quantized_ops;
 pub mod spirv;
