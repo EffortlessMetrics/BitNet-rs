@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T22:10:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-003"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-planner-003-receipts"
+pr = 4140
+head_sha = "df6b623774b0290dc7b3a95b98a6c5f48d317fd0"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4140 for receipt-ready model-aware CUDA planner summaries.",
+  "The summary separates BitNet QK256 CUDA ops, dense regular-LLM CUDA ops, CPU fallback ops, and unsupported ops.",
+  "Mixed CUDA routes remain visible and do not produce an unambiguous selected-route claim.",
+  "No real ask, answer-corpus, warm-session, or benchmark receipt emission is changed in this PR.",
+]
