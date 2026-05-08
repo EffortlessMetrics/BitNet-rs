@@ -649,7 +649,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-ANSWER-012"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-answer/CUDA-ANSWER-012-logit-divergence"
 stackable = false
 review_mode = "codex_premerge"
