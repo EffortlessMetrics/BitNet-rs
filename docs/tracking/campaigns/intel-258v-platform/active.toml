@@ -927,8 +927,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-014"
-status = "pr_open"
-pr = 4041
+status = "merged"
 branch = "codex/intel-258v-platform/CPU258V-014-answer-quality-triage"
 stackable = false
 review_mode = "codex_premerge"
