@@ -681,6 +681,267 @@ pub fn validate_strict_cuda_repeated_ask_benchmark_receipt_file(
     validate_strict_cuda_repeated_ask_benchmark_receipt_json(&receipt)
 }
 
+/// Validate a repeated strict CUDA warm-session benchmark receipt for the RTX 5070 Ti lane.
+///
+/// This receipt qualifies the CUDA warm-session path with repeated
+/// same-model multi-turn sessions. It is CUDA-only baseline evidence and keeps
+/// `speedup_claim=false`; CPU/CUDA speedup acceptance belongs to a later
+/// benchmark qualification review.
+pub fn validate_strict_cuda_warm_session_benchmark_receipt_json(
+    receipt: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", "strict_cuda_warm_session_benchmark")?;
+    require_string_eq(receipt, "machine_id", "windows-9950x3d-rtx5070ti")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia_rtx_5070_ti_cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "claim", "strict_cuda_warm_session_benchmark_baseline")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_bool_eq(receipt, "benchmark_qualified_speedup", false)?;
+    require_bool_eq(receipt, "full_cuda_residency_claimed", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+
+    let model = require_object(receipt, "model")?;
+    require_string_eq(model, "repo", "microsoft/bitnet-b1.58-2B-4T-gguf")?;
+    require_string_eq(model, "file", "ggml-model-i2_s.gguf")?;
+    require_non_empty_string(model, "sha256")?;
+    require_string_eq(model, "loader_mode", "strict_real_gguf")?;
+    require_bool_eq(model, "fallback_loader_used", false)?;
+
+    let tokenizer = require_object(receipt, "tokenizer")?;
+    require_string_eq(tokenizer, "source", "explicit")?;
+    require_bool_eq(tokenizer, "strict", true)?;
+    require_string_eq(tokenizer, "pretokenizer_authority", "llama-bpe")?;
+
+    let generation = require_object(receipt, "generation")?;
+    require_string_eq(generation, "prompt_template", "bitnetcpp-answer")?;
+    require_string_eq(generation, "mode", "greedy")?;
+    require_bool_eq(generation, "deterministic", true)?;
+    require_non_negative_number(generation, "temperature")?;
+    require_u64_at_least(generation, "max_new_tokens", 1)?;
+
+    let session_contract = require_object(receipt, "session_contract")?;
+    let runs_per_backend = require_u64(session_contract, "runs_per_backend")?;
+    if runs_per_backend < 2 {
+        return Err(validation_error(format!(
+            "runs_per_backend must be >= 2, got {runs_per_backend}"
+        )));
+    }
+    let turn_count = require_u64(session_contract, "turn_count")?;
+    if turn_count < 2 {
+        return Err(validation_error(format!("turn_count must be >= 2, got {turn_count}")));
+    }
+    require_bool_eq(session_contract, "same_model", true)?;
+    require_bool_eq(session_contract, "same_tokenizer", true)?;
+    require_bool_eq(session_contract, "same_prompts", true)?;
+    require_bool_eq(session_contract, "same_sampling_policy", true)?;
+    require_bool_eq(session_contract, "fallback_free", true)?;
+    require_bool_eq(session_contract, "model_loaded_once", true)?;
+    require_bool_eq(session_contract, "tokenizer_loaded_once", true)?;
+    require_bool_eq(session_contract, "cuda_context_initialized_once", true)?;
+    require_bool_eq(session_contract, "qk256_weights_uploaded_once", true)?;
+    require_bool_eq(session_contract, "per_token_weight_upload", false)?;
+    require_bool_eq(session_contract, "kv_cache_reuse_claimed", false)?;
+    require_bool_eq(session_contract, "speedup_claim", false)?;
+
+    let workload = require_object(receipt, "workload")?;
+    require_string_eq(workload, "profile", "strict_cuda_warm_session_2_turns")?;
+    require_u64_eq(workload, "turn_count", turn_count)?;
+    require_u64_at_least(workload, "generated_tokens_total", 1)?;
+    require_u64_at_least(workload, "prompt_tokens_total", 1)?;
+    require_bool_eq(workload, "quality_passed", true)?;
+    let prompts = require_array(workload, "prompts")?;
+    if prompts.len() != turn_count as usize {
+        return Err(validation_error(format!(
+            "workload.prompts must contain {turn_count} entries"
+        )));
+    }
+    for prompt in prompts {
+        require_u64_at_least(prompt, "turn_index", 1)?;
+        require_non_empty_string(prompt, "prompt")?;
+        require_non_empty_string(prompt, "expected_answer_scope")?;
+    }
+    let answers = require_array(workload, "answers")?;
+    if answers.len() != turn_count as usize {
+        return Err(validation_error(format!(
+            "workload.answers must contain {turn_count} entries"
+        )));
+    }
+    let first_answer = answers
+        .first()
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| validation_error("workload.answers[0] must be a string"))?;
+    if first_answer.trim() != "4" {
+        return Err(validation_error(format!(
+            "first warm-session answer must trim to 4, got {first_answer:?}"
+        )));
+    }
+    for answer in answers {
+        let answer = answer
+            .as_str()
+            .ok_or_else(|| validation_error("workload.answers entries must be strings"))?;
+        if answer.trim().is_empty() {
+            return Err(validation_error("workload.answers entries must not be empty"));
+        }
+    }
+
+    let benchmark = require_object(receipt, "benchmark")?;
+    require_string_eq(benchmark, "profile", "strict_cuda_warm_session_2_turns")?;
+    require_string_eq(benchmark, "cuda_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_u64_eq(benchmark, "runs_per_backend", runs_per_backend)?;
+    require_u64_eq(benchmark, "turns_per_run", turn_count)?;
+    require_non_negative_number(benchmark, "cuda_median_total_session_ms")?;
+    require_non_negative_number(benchmark, "cuda_median_kernel_time_ms")?;
+    require_non_negative_number(benchmark, "cuda_median_generated_tokens_per_second")?;
+    require_u64_at_least(benchmark, "cuda_median_host_to_device_bytes", 1)?;
+    require_u64_at_least(benchmark, "cuda_median_device_to_host_bytes", 1)?;
+    require_bool_eq(benchmark, "quality_passed", true)?;
+    require_bool_eq(benchmark, "speedup_claim", false)?;
+    require_bool_eq(benchmark, "benchmark_qualified_speedup", false)?;
+
+    let summary = require_object(receipt, "summary")?;
+    require_string_eq(summary, "backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(summary, "runtime_api", "cuda")?;
+    require_u64_eq(summary, "runs", runs_per_backend)?;
+    require_bool_eq(summary, "quality_passed", true)?;
+    require_bool_eq(summary, "fallback_used", false)?;
+    for metric in [
+        "total_session_ms",
+        "model_load_ms",
+        "tokenizer_load_ms",
+        "cuda_probe_ms",
+        "kernel_time_ms",
+        "generated_tokens_per_second",
+    ] {
+        validate_metric_summary(require_object(summary, metric)?, runs_per_backend)?;
+    }
+    for metric in ["host_to_device_bytes", "device_to_host_bytes", "memory_hwm_bytes"] {
+        validate_u64_summary(require_object(summary, metric)?, runs_per_backend)?;
+    }
+
+    let runs = require_array(receipt, "runs")?;
+    if runs.len() != runs_per_backend as usize {
+        return Err(validation_error(format!("runs must contain {runs_per_backend} entries")));
+    }
+    for run in runs {
+        validate_warm_session_run(run, turn_count)?;
+    }
+
+    let cuda = require_object(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_u64_at_least(cuda, "device_count", 1)?;
+    require_u64(cuda, "device_index")?;
+    let device_name = require_string(cuda, "device_name")?;
+    if !is_rtx5070ti_device_name(device_name) {
+        return Err(validation_error(format!(
+            "cuda.device_name must identify NVIDIA GeForce RTX 5070 Ti, got {device_name}"
+        )));
+    }
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_non_empty_string(cuda, "driver_version")?;
+    require_non_empty_string(cuda, "cuda_runtime_version")?;
+    require_non_empty_string(cuda, "cuda_toolkit_version")?;
+    require_non_empty_string(cuda, "nvrtc_version")?;
+    require_u64_at_least(cuda, "vram_bytes", 1)?;
+    require_u64_at_least(cuda, "memory_hwm_bytes", 1)?;
+    require_u64_at_least(cuda, "cuda_kernel_invocations", 1)?;
+
+    let stats = receipt
+        .get("kernel_stats")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|items| items.first())
+        .ok_or_else(|| validation_error("kernel_stats must contain at least one entry"))?;
+    require_string_eq(stats, "kernel_id", "qk256_gemv_cuda")?;
+    require_u64_at_least(stats, "invocations", 1)?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+    require_u64_at_least(stats, "kernel_launches", 1)?;
+    require_non_negative_number(stats, "kernel_time_ms")?;
+    require_u64_at_least(stats, "host_to_device_bytes", 1)?;
+    require_u64_at_least(stats, "device_to_host_bytes", 1)?;
+
+    let residency = require_object(receipt, "cuda_execution_residency")?;
+    require_bool_eq(residency, "speedup_claim", false)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+    let transfer = require_object(residency, "host_device_transfer_accounting")?;
+    require_string_eq(transfer, "status", "qk256_measured")?;
+    require_u64_at_least(transfer, "host_to_device_bytes", 1)?;
+    require_u64_at_least(transfer, "device_to_host_bytes", 1)?;
+    require_non_negative_number(transfer, "kernel_time_ms")?;
+
+    let boundaries = require_array(receipt, "claim_boundaries")?;
+    if boundaries.is_empty() {
+        return Err(validation_error("claim_boundaries must not be empty"));
+    }
+
+    Ok(())
+}
+
+/// Validate a repeated strict CUDA warm-session benchmark receipt file.
+pub fn validate_strict_cuda_warm_session_benchmark_receipt_file(
+    path: &Path,
+) -> Result<(), ReceiptError> {
+    let receipt = serde_json::from_slice(&std::fs::read(path)?)?;
+    validate_strict_cuda_warm_session_benchmark_receipt_json(&receipt)
+}
+
+fn validate_warm_session_run(
+    run: &serde_json::Value,
+    expected_turn_count: u64,
+) -> Result<(), ReceiptError> {
+    require_string_eq(run, "profile", "strict_cuda_warm_session_2_turns")?;
+    require_string_eq(run, "backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(run, "runtime_api", "cuda")?;
+    require_string_eq(run, "status", "measured")?;
+    require_string_eq(run, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(run, "kernel_id", "qk256_gemv_cuda")?;
+    require_u64_at_least(run, "repeat_index", 1)?;
+    require_non_empty_string(run, "source_receipt_path")?;
+    require_bool_eq(run, "quality_passed", true)?;
+    require_bool_eq(run, "fallback_used", false)?;
+    require_bool_eq(run, "model_loaded_once", true)?;
+    require_bool_eq(run, "tokenizer_loaded_once", true)?;
+    require_bool_eq(run, "cuda_context_initialized_once", true)?;
+    require_bool_eq(run, "qk256_weights_uploaded_once", true)?;
+    require_bool_eq(run, "per_token_weight_upload", false)?;
+    require_u64_eq(run, "turn_count", expected_turn_count)?;
+    require_u64_at_least(run, "generated_tokens_total", 1)?;
+    require_u64_at_least(run, "prompt_tokens_total", 1)?;
+    require_non_negative_number(run, "total_session_ms")?;
+    require_non_negative_number(run, "model_load_ms")?;
+    require_non_negative_number(run, "tokenizer_load_ms")?;
+    require_non_negative_number(run, "cuda_probe_ms")?;
+    require_non_negative_number(run, "kernel_time_ms")?;
+    require_non_negative_number(run, "generated_tokens_per_second")?;
+    require_u64_at_least(run, "kernel_invocations", 1)?;
+    require_u64_at_least(run, "host_to_device_bytes", 1)?;
+    require_u64_at_least(run, "device_to_host_bytes", 1)?;
+    require_u64_at_least(run, "memory_hwm_bytes", 1)?;
+
+    let turns = require_array(run, "turns")?;
+    if turns.len() != expected_turn_count as usize {
+        return Err(validation_error(format!(
+            "run.turns must contain {expected_turn_count} entries"
+        )));
+    }
+    for turn in turns {
+        require_u64_at_least(turn, "turn_index", 1)?;
+        require_non_empty_string(turn, "answer_trimmed")?;
+        require_u64_at_least(turn, "generated_tokens", 1)?;
+        require_u64_at_least(turn, "prompt_tokens", 1)?;
+        require_bool_eq(turn, "quality_passed", true)?;
+        require_bool_eq(turn, "fallback_used", false)?;
+        require_non_negative_number(turn, "kernel_time_ms")?;
+        require_u64_at_least(turn, "host_to_device_bytes", 1)?;
+        require_u64_at_least(turn, "device_to_host_bytes", 1)?;
+    }
+
+    Ok(())
+}
+
 /// Validate a strict CPU BitNet benchmark receipt.
 ///
 /// This validator checks the benchmark evidence contract, not performance
@@ -1598,6 +1859,64 @@ mod tests {
         validate_strict_cuda_repeated_ask_benchmark_receipt_file(&path).unwrap();
     }
 
+    #[test]
+    fn strict_cuda_warm_session_benchmark_receipt_validates() {
+        let receipt = sample_strict_cuda_warm_session_benchmark_receipt();
+        validate_strict_cuda_warm_session_benchmark_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cuda_warm_session_benchmark_rejects_single_run() {
+        let mut receipt = sample_strict_cuda_warm_session_benchmark_receipt();
+        receipt["session_contract"]["runs_per_backend"] = json!(1);
+
+        let err = validate_strict_cuda_warm_session_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("runs_per_backend"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_warm_session_benchmark_rejects_hidden_fallback() {
+        let mut receipt = sample_strict_cuda_warm_session_benchmark_receipt();
+        receipt["runs"][0]["fallback_used"] = json!(true);
+
+        let err = validate_strict_cuda_warm_session_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("fallback_used"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_warm_session_benchmark_rejects_speedup_claim() {
+        let mut receipt = sample_strict_cuda_warm_session_benchmark_receipt();
+        receipt["speedup_claim"] = json!(true);
+
+        let err = validate_strict_cuda_warm_session_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_warm_session_benchmark_rejects_missing_transfer_bytes() {
+        let mut receipt = sample_strict_cuda_warm_session_benchmark_receipt();
+        receipt["kernel_stats"][0]["host_to_device_bytes"] = json!(0);
+
+        let err = validate_strict_cuda_warm_session_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("host_to_device_bytes"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn committed_strict_cuda_warm_session_benchmark_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json",
+        );
+        validate_strict_cuda_warm_session_benchmark_receipt_file(&path).unwrap();
+    }
+
     fn sample_cpu_benchmark_receipt() -> serde_json::Value {
         json!({
             "schema": 1,
@@ -1654,6 +1973,243 @@ mod tests {
                 measured_cpu_profile("decode")
             ],
             "artifact_path": "ci/hardware/intel-i5-8250u-cpu-avx2/benchmark-receipt.json"
+        })
+    }
+
+    fn sample_strict_cuda_warm_session_benchmark_receipt() -> serde_json::Value {
+        json!({
+            "schema": 1,
+            "artifact_kind": "strict_cuda_warm_session_benchmark",
+            "machine_id": "windows-9950x3d-rtx5070ti",
+            "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+            "timestamp_utc": "2026-05-08T00:00:00Z",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "claim": "strict_cuda_warm_session_benchmark_baseline",
+            "fallback_used": false,
+            "fallback_backend": null,
+            "fallback_reason": null,
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "full_cuda_residency_claimed": false,
+            "model": {
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "file": "ggml-model-i2_s.gguf",
+                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "format": "gguf",
+                "architecture": "bitnet_b1_58",
+                "loader_mode": "strict_real_gguf",
+                "fallback_loader_used": false
+            },
+            "tokenizer": {
+                "source": "explicit",
+                "strict": true,
+                "type": "llama3",
+                "model_family": "llama3",
+                "pretokenizer_authority": "llama-bpe"
+            },
+            "generation": {
+                "prompt_template": "bitnetcpp-answer",
+                "mode": "greedy",
+                "deterministic": true,
+                "temperature": 0.0,
+                "max_new_tokens": 8
+            },
+            "session_contract": {
+                "runs_per_backend": 2,
+                "turn_count": 2,
+                "same_model": true,
+                "same_tokenizer": true,
+                "same_prompts": true,
+                "same_sampling_policy": true,
+                "fallback_free": true,
+                "model_loaded_once": true,
+                "tokenizer_loaded_once": true,
+                "cuda_context_initialized_once": true,
+                "qk256_weights_uploaded_once": true,
+                "per_token_weight_upload": false,
+                "kv_cache_reuse_policy": "recreated_per_turn_for_prompt_isolation",
+                "kv_cache_reuse_claimed": false,
+                "speedup_claim": false
+            },
+            "workload": {
+                "profile": "strict_cuda_warm_session_2_turns",
+                "turn_count": 2,
+                "generated_tokens_total": 11,
+                "prompt_tokens_total": 34,
+                "quality_passed": true,
+                "prompts": [
+                    {
+                        "turn_index": 1,
+                        "prompt": "What is 2+2? Answer with only the number.",
+                        "expected_answer_scope": "exact_trimmed_4"
+                    },
+                    {
+                        "turn_index": 2,
+                        "prompt": "Answer yes or no: is water wet?",
+                        "expected_answer_scope": "quality_gate"
+                    }
+                ],
+                "answers": [
+                    " 4",
+                    " No. Water is not wet; it"
+                ]
+            },
+            "benchmark": {
+                "profile": "strict_cuda_warm_session_2_turns",
+                "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+                "runs_per_backend": 2,
+                "turns_per_run": 2,
+                "cuda_median_total_session_ms": 8000.0,
+                "cuda_median_kernel_time_ms": 2030.0,
+                "cuda_median_generated_tokens_per_second": 1.37,
+                "cuda_median_host_to_device_bytes": 114923520,
+                "cuda_median_device_to_host_bytes": 117565440,
+                "quality_passed": true,
+                "speedup_claim": false,
+                "benchmark_qualified_speedup": false
+            },
+            "summary": {
+                "backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "runs": 2,
+                "quality_passed": true,
+                "fallback_used": false,
+                "total_session_ms": warm_session_metric_summary(),
+                "model_load_ms": warm_session_metric_summary(),
+                "tokenizer_load_ms": warm_session_metric_summary(),
+                "cuda_probe_ms": warm_session_metric_summary(),
+                "kernel_time_ms": warm_session_metric_summary(),
+                "generated_tokens_per_second": warm_session_metric_summary(),
+                "host_to_device_bytes": warm_session_u64_summary(),
+                "device_to_host_bytes": warm_session_u64_summary(),
+                "memory_hwm_bytes": warm_session_u64_summary()
+            },
+            "runs": [
+                warm_session_run(1),
+                warm_session_run(2)
+            ],
+            "cuda": {
+                "available": true,
+                "device_count": 1,
+                "device_index": 0,
+                "device_name": "NVIDIA GeForce RTX 5070 Ti",
+                "compute_capability": "12.0",
+                "driver_version": "591.86",
+                "cuda_runtime_version": "12.9",
+                "cuda_toolkit_version": "12.9",
+                "nvrtc_version": "12.9",
+                "vram_bytes": 17094475776u64,
+                "memory_hwm_bytes": 10078912512u64,
+                "cuda_kernel_invocations": 18060
+            },
+            "kernel_stats": [
+                {
+                    "kernel_id": "qk256_gemv_cuda",
+                    "invocations": 18060,
+                    "fallback_invocations": 0,
+                    "kernel_launches": 18060,
+                    "kernel_time_ms": 4060.0,
+                    "host_to_device_bytes": 229847040u64,
+                    "device_to_host_bytes": 235130880u64
+                }
+            ],
+            "cuda_execution_residency": {
+                "schema_version": "1.0.0",
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false,
+                "host_device_transfer_accounting": {
+                    "status": "qk256_measured",
+                    "host_to_device_bytes": 229847040u64,
+                    "device_to_host_bytes": 235130880u64,
+                    "kernel_time_ms": 4060.0
+                }
+            },
+            "claim_boundaries": [
+                "speedup_claim=false; repeated warm-session timing remains baseline evidence only.",
+                "This receipt does not claim broad chat quality, production server readiness, or full CUDA residency."
+            ],
+            "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json"
+        })
+    }
+
+    fn warm_session_metric_summary() -> serde_json::Value {
+        json!({
+            "samples": 2,
+            "min": 1.0,
+            "max": 2.0,
+            "mean": 1.5,
+            "median": 1.5
+        })
+    }
+
+    fn warm_session_u64_summary() -> serde_json::Value {
+        json!({
+            "samples": 2,
+            "min": 4096,
+            "max": 8192,
+            "mean": 6144.0,
+            "median": 6144.0
+        })
+    }
+
+    fn warm_session_run(index: u64) -> serde_json::Value {
+        json!({
+            "profile": "strict_cuda_warm_session_2_turns",
+            "backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "status": "measured",
+            "repeat_index": index,
+            "source_receipt_path": format!("target/bitnet/receipts/cuda-bitnet-perf-003/cuda-warm-session-run-{index}.json"),
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "kernel_id": "qk256_gemv_cuda",
+            "quality_passed": true,
+            "fallback_used": false,
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "cuda_context_initialized_once": true,
+            "qk256_weights_uploaded_once": true,
+            "per_token_weight_upload": false,
+            "turn_count": 2,
+            "generated_tokens_total": 11,
+            "prompt_tokens_total": 34,
+            "total_session_ms": 8000.0 + index as f64,
+            "model_load_ms": 2600.0,
+            "tokenizer_load_ms": 330.0,
+            "cuda_probe_ms": 250.0,
+            "kernel_time_ms": 2030.0,
+            "generated_tokens_per_second": 1.37,
+            "kernel_invocations": 9030,
+            "host_to_device_bytes": 114923520u64,
+            "device_to_host_bytes": 117565440u64,
+            "memory_hwm_bytes": 10078912512u64,
+            "turns": [
+                warm_session_turn(1, "4", 3, 19, 1000.0, 56125440, 57415680),
+                warm_session_turn(2, "No. Water is not wet; it", 8, 15, 1030.0, 58798080, 60149760)
+            ]
+        })
+    }
+
+    fn warm_session_turn(
+        index: u64,
+        answer: &str,
+        generated_tokens: u64,
+        prompt_tokens: u64,
+        kernel_time_ms: f64,
+        host_to_device_bytes: u64,
+        device_to_host_bytes: u64,
+    ) -> serde_json::Value {
+        json!({
+            "turn_index": index,
+            "answer_trimmed": answer,
+            "generated_tokens": generated_tokens,
+            "prompt_tokens": prompt_tokens,
+            "quality_passed": true,
+            "fallback_used": false,
+            "kernel_time_ms": kernel_time_ms,
+            "host_to_device_bytes": host_to_device_bytes,
+            "device_to_host_bytes": device_to_host_bytes
         })
     }
 

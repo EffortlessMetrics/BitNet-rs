@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T19:10:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-PERF-003"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-bitnet-perf-003-warm-session-benchmark"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started repeated strict CUDA warm-session benchmark receipts after CUDA-BITNET-PERF-002.",
+  "The lane uses the official Microsoft I2_S model, explicit llama-bpe tokenizer authority, bitnetcpp-answer prompt template, deterministic two-turn warm-session profile, and fallback_used=false.",
+  "The receipt must preserve model/tokenizer/context loaded once, upload-once QK256 weight handles, measured QK256 kernel time and transfer byte counters, speedup_claim=false, and full_cuda_residency_claimed=false.",
+]
