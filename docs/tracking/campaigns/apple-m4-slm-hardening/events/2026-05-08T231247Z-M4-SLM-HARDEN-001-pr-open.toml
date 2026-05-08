@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T23:12:47Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-001"
+event = "pr_open"
+pr = 4149
+head_sha = "cdecc9acef3399ee1ded046cd8b747ee06a1075c"
+actor = "codex"
+
+notes = [
+  "Opened positional Mac ask UX PR.",
+  "Preserves --question compatibility, default Qwen2.5 cache flow, and apple-m4-cpu-neon boundary.",
+]
