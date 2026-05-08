@@ -13,6 +13,7 @@ ci/hardware/intel-258v/<date>/cpu-phase-evidence-attempts.json
 ci/hardware/intel-258v/<date>/cpu-phase-warm-session.json
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template.json
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-case.json
+ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2.json
 ```
 
 `platform-probe.json` is visibility-only. It may record CPU AVX2 facts, Arc
@@ -44,3 +45,7 @@ bounded single-case follow-up attempts using `answer-corpus --case-id`. It must
 preserve the full corpus identity while recording `selected_case_count` and
 `selected_case_ids`, and it remains diagnostic blocker evidence until a real
 child receipt is emitted.
+
+`cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2.json` records the
+first 258V AVX2 single-case follow-up. The selected `math_2_plus_2` case still
+timed out within the bounded child-run window, so it is blocker evidence only.

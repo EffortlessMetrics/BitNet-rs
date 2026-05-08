@@ -308,6 +308,18 @@ it narrows timeout evidence collection and does not prove selected-case
 completion, answer quality, scalar/AVX2 parity, sustained throughput, Arc 140V
 execution, or Intel NPU execution.
 
+CPU258V-009 records the first bounded single-case attempt:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2.json
+```
+
+The selected `math_2_plus_2` case timed out within the same 420-second child-run
+window and emitted no child receipt. This confirms that at least one individual
+BitNet.cpp-template case is blocked independently of full-corpus fanout. It does
+not prove answer quality, scalar/AVX2 parity under the new prompt, sustained
+throughput, Arc 140V execution, or Intel NPU execution.
+
 ## Windows PowerShell Bundle
 
 ```powershell

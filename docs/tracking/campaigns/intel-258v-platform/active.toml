@@ -705,3 +705,42 @@ must_not_claim = [
   "Sustained throughput is proven.",
   "Arc 140V or Intel NPU execution is proven.",
 ]
+
+[[work_item]]
+id = "CPU258V-009"
+status = "pr_open"
+pr = 4010
+branch = "codex/intel-258v-platform/CPU258V-009-single-case-answer"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-008"]
+acceptance = "Record a bounded 258V AVX2 answer-corpus attempt for a single BitNet.cpp-template case selected with --case-id, preserving the timeout row and missing child receipt as blocker evidence without answer-quality, parity, speed, Arc, or NPU claims."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "ci/hardware/intel-258v/README.md",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The selected 258V AVX2 math_2_plus_2 BitNet.cpp-template answer-corpus case timed out within the bounded local child-run window.",
+  "The aggregate receipt preserves full corpus identity and selected_case_ids for the single-case attempt.",
+]
+must_not_claim = [
+  "The selected case completed on the local 258V.",
+  "The BitNet.cpp answer-ready prompt envelope improves 258V answer quality.",
+  "Scalar/AVX2 parity under the new prompt is proven.",
+  "Sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+]

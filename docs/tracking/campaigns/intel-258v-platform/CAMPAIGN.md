@@ -41,6 +41,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | CPU258V-006 | merged | Add a strict CPU warm phase runner that emits receipt-converter inputs for `prefill_512` and `decode_128` without speedup, Arc, or NPU claims; merged in #4001. |
 | CPU258V-007 | merged | Record the 258V AVX2 answer-corpus refresh under the BitNet.cpp answer-ready prompt envelope as timeout/blocker evidence; merged in #4006. |
 | CPU258V-008 | merged | Add bounded `answer-corpus --case-id` diagnostics so the 258V answer-template refresh can run one corpus case at a time without answer-quality, parity, speed, Arc, or NPU claims; merged in #4008. |
+| CPU258V-009 | pr_open | Record a bounded single-case 258V AVX2 answer-corpus attempt for `math_2_plus_2`, preserving timeout/blocker evidence without answer-quality, parity, speed, Arc, or NPU claims; open in #4010. |
 
 ## Review Policy
 
