@@ -786,7 +786,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-011"
-status = "pr_open"
+status = "merged"
 pr = 4014
 branch = "codex/intel-258v-platform/CPU258V-011-release-scalar-case"
 stackable = false
