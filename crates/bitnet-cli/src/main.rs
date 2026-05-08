@@ -4582,7 +4582,6 @@ fn sanitize_warm_session_prompt_stem(prompt: &str) -> String {
     if stem.is_empty() { "prompt".to_string() } else { stem.chars().take(48).collect() }
 }
 
-#[cfg(feature = "full-cli")]
 fn tokenizer_pretokenizer_authority(
     source: bitnet_tokenizers::auto::TokenizerSource,
     tokenizer_label: &str,
@@ -7765,6 +7764,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
     fn slm_warm_session_quality_accepts_qwen_marker_answer() {
         let gate = SlmWarmSessionGate {
             kind: "contains_any".to_string(),
@@ -7791,6 +7791,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
     fn slm_warm_session_determinism_accepts_matching_repeats() {
         let records = vec![
             WarmSessionDeterminismRecord {
@@ -7817,6 +7818,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
     fn slm_warm_session_determinism_rejects_divergent_repeats() {
         let records = vec![
             WarmSessionDeterminismRecord {
@@ -8135,6 +8137,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
     fn warm_session_speed_receipt_records_warm_and_decode_throughput_without_speedup_claim() {
         let mut accumulator = WarmSessionSpeedAccumulator::default();
         accumulator.record(WarmSessionPromptSpeed {

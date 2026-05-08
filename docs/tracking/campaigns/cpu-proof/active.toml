@@ -703,3 +703,49 @@ must_not_claim = [
   "Server inference is complete.",
   "GPU or NPU execution is involved.",
 ]
+
+[[work_item]]
+id = "CPU-ANSWER-006"
+status = "pr_open"
+pr = 4005
+branch = "codex/cpu-answer-006-reference-token-artifact"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-005"]
+acceptance = "A Microsoft BitNet.cpp reference-divergence artifact records the MODEL-ARTIFACT-007 prompt envelope, BOS policy, external Llama-BPE tokenizer/pre-tokenizer authority, prompt token IDs, generated token IDs, decoded text, and first-step top-k/logit evidence where available, so strict Rust CPU failures can be classified as prompt/tokenizer divergence, shared decode/logits divergence, or backend-specific execution without claiming answer quality."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_divergence",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/intel-i5-8250u-cpu-avx2/**",
+  "ci/hardware/intel-258v/**",
+  "ci/quality/**",
+  "docs/bitnet/**",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Strict BitNet CPU answer failures can be compared against a reference artifact with prompt IDs and generated IDs after merge.",
+  "Reference evidence can separate prompt/tokenizer/template mismatch from decode/logits or backend-specific divergence after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "Rust CPU answer quality is proven.",
+  "A reference text-only output is enough to prove logits parity.",
+  "258V or Kaby Lake sustained throughput is proven.",
+  "Server inference is complete.",
+  "GPU or NPU execution is involved.",
+]
