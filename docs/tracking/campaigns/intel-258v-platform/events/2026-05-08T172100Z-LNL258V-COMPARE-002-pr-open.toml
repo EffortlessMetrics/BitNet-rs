@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T17:21:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-002"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4110
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-COMPARE-002"
+summary = "Opened LNL258V-COMPARE-002 to refresh the Lunar Lake same-machine evidence index after CPU, NPU, and Arc parity receipts."
+
+notes = [
+  "The index now points at the post-mechanics 258V CPU reference bundle as the CPU primary artifact.",
+  "The Arc lane now points at ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json.",
+  "The NPU lane now includes RMSNorm, linear-projection, and FFN/ReLU2 selected static subgraph parity receipts.",
+  "The index remains discovery-only and does not claim platform performance, acceleration, full Arc/NPU BitNet inference, QK256 accelerator decode, or CPU fallback proof.",
+]

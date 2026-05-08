@@ -442,5 +442,7 @@ scalar-vs-AVX2 answer-parity receipt, and warm-session `prefill_512` /
 `decode_128` phase receipts. Accelerator lanes may use it as a CPU reference,
 but the bundle itself does not prove Arc 140V or Intel NPU execution.
 
-The next comparison refresh is `LNL258V-COMPARE-002`, after the new CPU bundle
-and the next independent Arc/NPU parity receipts exist.
+`LNL258V-COMPARE-002` refreshes that index after the new CPU bundle and the
+next independent Arc/NPU parity receipts. It keeps the index as artifact
+discovery only: no platform performance, acceleration, full Arc/NPU inference,
+or CPU fallback claim is introduced by the index itself.
