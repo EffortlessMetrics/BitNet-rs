@@ -465,6 +465,132 @@ pub fn validate_dense_regular_llm_cuda_tensor_residency_receipt_json(
     Ok(())
 }
 
+/// Validate dense regular-LLM CUDA persistent fixture residency evidence.
+///
+/// This is still fixture-scoped evidence: it proves repeated dense FP16 GEMM
+/// launches reused one CUDA context/module and persistent device buffers for
+/// the deterministic fixture. It does not validate dense GGUF inference,
+/// BitNet packed proof, speedup, server readiness, or full CUDA residency.
+pub fn validate_dense_regular_llm_cuda_persistent_residency_receipt_json(
+    receipt: &Value,
+) -> Result<()> {
+    validate_dense_regular_llm_cuda_receipt_json(receipt)?;
+    require_string_eq(
+        receipt,
+        "claim",
+        "dense_regular_llm_cuda_persistent_fixture_residency_tested",
+    )?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", true)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+
+    let stats = first_kernel_stats(receipt)?;
+    let invocations = object_field(stats, "invocations")?
+        .as_u64()
+        .ok_or_else(|| anyhow!("kernel_stats[0].invocations must be an unsigned integer"))?;
+    if invocations < 2 {
+        return Err(anyhow!("persistent dense CUDA fixture must record at least two invocations"));
+    }
+    require_u64_eq(stats, "kernel_launches", invocations)?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+
+    let parity = object_field(receipt, "parity")?;
+    require_u64_eq(parity, "runs", invocations)?;
+
+    let persistent = object_field(receipt, "persistent_session")?;
+    require_string_eq(persistent, "scope", "persistent_dense_f16_gemm_fixture_session")?;
+    require_u64_eq(persistent, "repeated_runs", invocations)?;
+    require_u64_eq(persistent, "context_creations", 1)?;
+    require_u64_eq(persistent, "module_loads", 1)?;
+    require_u64_eq(persistent, "kernel_launches", invocations)?;
+    require_u64_eq(persistent, "input_uploads", 2)?;
+    require_u64_eq(persistent, "output_allocations", 1)?;
+    require_positive_u64(persistent, "persistent_handle_count")?;
+    require_u64_eq(persistent, "per_run_host_to_device_bytes", 0)?;
+    require_bool_eq(persistent, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(persistent, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(persistent, "speedup_claim", false)?;
+
+    let residency = object_field(receipt, "tensor_residency")?;
+    require_string_eq(residency, "scope", "persistent_dense_f16_gemm_fixture_session")?;
+    require_string_eq(residency, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(residency, "fixture_id", required_string(parity, "fixture_id")?)?;
+    require_bool_eq(residency, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(residency, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(residency, "persistent_session_residency_claimed", true)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(residency, "input_tensors_uploaded_once", true)?;
+    require_bool_eq(residency, "output_tensor_cuda_resident_during_kernel", true)?;
+    require_bool_eq(residency, "host_device_transfer_accounting_matches_kernel_stats", true)?;
+    require_u64_eq(residency, "per_run_host_to_device_bytes", 0)?;
+
+    let inputs = array_field(residency, "inputs")?;
+    if inputs.len() < 2 {
+        return Err(anyhow!("tensor_residency.inputs must contain A and B tensors"));
+    }
+    for input in inputs {
+        require_string_non_empty(input, "name")?;
+        require_string_eq(input, "device_residency", "cuda_device_buffer")?;
+        require_string_eq(input, "reuse_scope", "persistent_fixture_session")?;
+        require_u64_eq(input, "upload_count", 1)?;
+        require_positive_u64(input, "host_bytes")?;
+        reject_bitnet_packed_marker(
+            required_string(input, "dtype")?,
+            "tensor_residency.inputs.dtype",
+        )?;
+    }
+
+    let outputs = array_field(residency, "outputs")?;
+    if outputs.is_empty() {
+        return Err(anyhow!("tensor_residency.outputs must contain an output tensor"));
+    }
+    for output in outputs {
+        require_string_non_empty(output, "name")?;
+        require_string_eq(output, "device_residency", "cuda_device_buffer")?;
+        require_string_eq(output, "download_scope", "parity_check_each_run")?;
+        require_positive_u64(output, "device_to_host_bytes")?;
+        reject_bitnet_packed_marker(
+            required_string(output, "dtype")?,
+            "tensor_residency.outputs.dtype",
+        )?;
+    }
+
+    let allocation = object_field(residency, "allocation")?;
+    require_positive_u64(allocation, "device_buffer_count")?;
+    require_u64_eq(
+        allocation,
+        "persistent_handle_count",
+        object_field(persistent, "persistent_handle_count")?.as_u64().ok_or_else(|| {
+            anyhow!("persistent_session.persistent_handle_count must be an unsigned integer")
+        })?,
+    )?;
+    require_bool_eq(allocation, "persistent_handles_claimed", true)?;
+
+    let transfer = object_field(residency, "transfer_accounting")?;
+    require_string_eq(transfer, "status", "measured")?;
+    require_u64_eq(
+        transfer,
+        "host_to_device_bytes",
+        object_field(stats, "host_to_device_bytes")?.as_u64().ok_or_else(|| {
+            anyhow!("kernel_stats[0].host_to_device_bytes must be an unsigned integer")
+        })?,
+    )?;
+    require_u64_eq(
+        transfer,
+        "device_to_host_bytes",
+        object_field(stats, "device_to_host_bytes")?.as_u64().ok_or_else(|| {
+            anyhow!("kernel_stats[0].device_to_host_bytes must be an unsigned integer")
+        })?,
+    )?;
+
+    Ok(())
+}
+
 /// Reject dense regular-LLM CUDA receipts at BitNet packed-kernel proof gates.
 ///
 /// BitNet QK256/I2_S validators can call this before evaluating their own proof

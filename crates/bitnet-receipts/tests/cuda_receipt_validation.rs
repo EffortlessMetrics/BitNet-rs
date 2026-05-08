@@ -5,7 +5,9 @@
 
 use bitnet_receipts::{
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof, validate_cuda_parity_receipt_json,
-    validate_cuda_smoke_receipt_json, validate_dense_regular_llm_cuda_receipt_json,
+    validate_cuda_smoke_receipt_json,
+    validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
+    validate_dense_regular_llm_cuda_receipt_json,
     validate_dense_regular_llm_cuda_tensor_residency_receipt_json,
 };
 use serde_json::{Value, json};
@@ -49,6 +51,17 @@ fn committed_dense_regular_llm_cuda_residency_receipt_validates() {
     .unwrap();
 
     validate_dense_regular_llm_cuda_tensor_residency_receipt_json(&receipt).unwrap();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_regular_llm_cuda_persistent_residency_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-persistent.json"
+    ))
+    .unwrap();
+
+    validate_dense_regular_llm_cuda_persistent_residency_receipt_json(&receipt).unwrap();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
 
@@ -231,6 +244,56 @@ fn dense_regular_llm_cuda_residency_rejects_transfer_mismatch() {
         .to_string();
 
     assert!(err.contains("host_to_device_bytes"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_persistent_residency_receipt_validates() {
+    let receipt = valid_dense_regular_llm_cuda_persistent_residency_receipt();
+
+    validate_dense_regular_llm_cuda_persistent_residency_receipt_json(&receipt).unwrap();
+}
+
+#[test]
+fn dense_regular_llm_cuda_persistent_residency_rejects_single_launch() {
+    let mut receipt = valid_dense_regular_llm_cuda_persistent_residency_receipt();
+    receipt["kernel_stats"][0]["invocations"] = json!(1);
+    receipt["kernel_stats"][0]["kernel_launches"] = json!(1);
+    receipt["parity"]["runs"] = json!(1);
+    receipt["persistent_session"]["repeated_runs"] = json!(1);
+    receipt["persistent_session"]["kernel_launches"] = json!(1);
+
+    let err = validate_dense_regular_llm_cuda_persistent_residency_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("at least two invocations"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_persistent_residency_rejects_per_run_uploads() {
+    let mut receipt = valid_dense_regular_llm_cuda_persistent_residency_receipt();
+    receipt["persistent_session"]["per_run_host_to_device_bytes"] = json!(40);
+    receipt["tensor_residency"]["per_run_host_to_device_bytes"] = json!(40);
+
+    let err = validate_dense_regular_llm_cuda_persistent_residency_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("per_run_host_to_device_bytes"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_persistent_residency_rejects_full_residency_claim() {
+    let mut receipt = valid_dense_regular_llm_cuda_persistent_residency_receipt();
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(true);
+    receipt["persistent_session"]["full_cuda_residency_claimed"] = json!(true);
+    receipt["tensor_residency"]["full_cuda_residency_claimed"] = json!(true);
+
+    let err = validate_dense_regular_llm_cuda_persistent_residency_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("full_cuda_residency_claimed"), "unexpected error: {err}");
 }
 
 fn valid_smoke_receipt() -> Value {
@@ -417,6 +480,91 @@ fn valid_dense_regular_llm_cuda_residency_receipt() -> Value {
             "status": "measured",
             "host_to_device_bytes": 40,
             "device_to_host_bytes": 24
+        }
+    });
+    receipt
+}
+
+fn valid_dense_regular_llm_cuda_persistent_residency_receipt() -> Value {
+    let mut receipt = valid_dense_regular_llm_cuda_receipt();
+    receipt["claim"] = json!("dense_regular_llm_cuda_persistent_fixture_residency_tested");
+    receipt["artifact_path"] =
+        json!("ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-persistent.json");
+    receipt["kernel_stats"][0]["invocations"] = json!(3);
+    receipt["kernel_stats"][0]["device_to_host_bytes"] = json!(72);
+    receipt["kernel_stats"][0]["kernel_launches"] = json!(3);
+    receipt["parity"]["runs"] = json!(3);
+    receipt["claim_boundary"]["dense_tensor_residency_claimed"] = json!(true);
+    receipt["claim_boundary"]["dense_gguf_inference_claimed"] = json!(false);
+    receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(true);
+    receipt["persistent_session"] = json!({
+        "schema_version": "1.0.0",
+        "scope": "persistent_dense_f16_gemm_fixture_session",
+        "repeated_runs": 3,
+        "context_creations": 1,
+        "module_loads": 1,
+        "kernel_launches": 3,
+        "input_uploads": 2,
+        "output_allocations": 1,
+        "persistent_handle_count": 3,
+        "per_run_host_to_device_bytes": 0,
+        "dense_gguf_inference_claimed": false,
+        "full_cuda_residency_claimed": false,
+        "speedup_claim": false
+    });
+    receipt["tensor_residency"] = json!({
+        "schema_version": "1.0.0",
+        "scope": "persistent_dense_f16_gemm_fixture_session",
+        "model_class": "dense_regular_llm",
+        "fixture_id": "dense_f16_gemm_m2_n3_k4",
+        "dense_tensor_residency_claimed": true,
+        "dense_gguf_inference_claimed": false,
+        "persistent_session_residency_claimed": true,
+        "full_cuda_residency_claimed": false,
+        "input_tensors_uploaded_once": true,
+        "output_tensor_cuda_resident_during_kernel": true,
+        "host_device_transfer_accounting_matches_kernel_stats": true,
+        "per_run_host_to_device_bytes": 0,
+        "inputs": [
+            {
+                "name": "a",
+                "dtype": "f16",
+                "shape": [2, 4],
+                "host_bytes": 16,
+                "device_residency": "cuda_device_buffer",
+                "upload_count": 1,
+                "reuse_scope": "persistent_fixture_session"
+            },
+            {
+                "name": "b",
+                "dtype": "f16",
+                "shape": [4, 3],
+                "host_bytes": 24,
+                "device_residency": "cuda_device_buffer",
+                "upload_count": 1,
+                "reuse_scope": "persistent_fixture_session"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "c",
+                "dtype": "f32",
+                "shape": [2, 3],
+                "device_residency": "cuda_device_buffer",
+                "device_to_host_bytes": 72,
+                "download_scope": "parity_check_each_run"
+            }
+        ],
+        "allocation": {
+            "device_buffer_count": 3,
+            "temporary_workspace_bytes": 0,
+            "persistent_handle_count": 3,
+            "persistent_handles_claimed": true
+        },
+        "transfer_accounting": {
+            "status": "measured",
+            "host_to_device_bytes": 40,
+            "device_to_host_bytes": 72
         }
     });
     receipt
