@@ -967,3 +967,46 @@ must_not_claim = [
   "A speedup is proven.",
   "Arc 140V or Intel NPU execution is proven.",
 ]
+
+[[work_item]]
+id = "CPU258V-015"
+status = "pr_open"
+pr = 4046
+branch = "codex/intel-258v-platform/CPU258V-015-post-mechanics-corpus"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-014"]
+acceptance = "Record post-mechanics release-built 258V scalar and AVX2 answer-corpus receipts for the full committed strict-bitnet-answer-corpus-v1 prompt set, showing all five fixed cases pass and scalar-vs-AVX2 full-corpus parity holds after the RMSNorm/ReLU2 and tied-output-head corrections without general chat, speed, Arc, or NPU claims."
+commands = [
+  "target/release/bitnet answer-corpus --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --threads 8 --cpu-kernel scalar --per-prompt-timeout-seconds 300 --dump-logit-steps 1 --logits-topk 5 --json-out target/cpu-answer-corpus-post-mechanics-scalar-full.json",
+  "target/release/bitnet answer-corpus --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --threads 8 --cpu-kernel avx2 --per-prompt-timeout-seconds 300 --dump-logit-steps 1 --logits-topk 5 --json-out target/cpu-answer-corpus-post-mechanics-avx2-full.json",
+  "target/release/bitnet answer-parity --scalar target/cpu-answer-corpus-post-mechanics-scalar-full.json --avx2 target/cpu-answer-corpus-post-mechanics-avx2-full.json --json-out target/cpu-answer-parity-post-mechanics-full.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The 258V scalar full committed strict-bitnet-answer-corpus-v1 run passes all five fixed BitNet.cpp-template answer gates after the BitNet b1.58 mechanics correction.",
+  "The 258V AVX2 full committed strict-bitnet-answer-corpus-v1 run passes all five fixed BitNet.cpp-template answer gates after the BitNet b1.58 mechanics correction.",
+  "Scalar and AVX2 full-corpus answer parity passes with summary.failed=0 and no first divergence for the fixed corpus.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "Sustained throughput is proven.",
+  "A speedup is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+]

@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T12:11:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-015"
+event = "in_progress"
+actor = "codex"
+branch = "codex/intel-258v-platform/CPU258V-015-post-mechanics-corpus"
+base_sha = "de442a1a5a863c7b5acbbdb26c0a3a69e1b3c4eb"
+summary = "Readied CPU258V-015 to record full-corpus post-mechanics answer readiness on the 258V CPU."
+
+notes = [
+  "After CPU258V-014 proved selected-case recovery, CPU258V-015 expands the post-mechanics run to the full committed strict-bitnet-answer-corpus-v1 prompt set.",
+  "The release-built scalar and AVX2 receipts pass all five fixed corpus gates with fallback_used=false and selected i2_s CPU kernels.",
+  "The claim boundary remains fixed-corpus CPU answer readiness and scalar-vs-AVX2 parity only: no general chat quality, sustained throughput, speedup, Arc 140V execution, Intel NPU execution, or acceleration claims.",
+]
