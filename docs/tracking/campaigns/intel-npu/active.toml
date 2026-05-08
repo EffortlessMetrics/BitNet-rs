@@ -449,7 +449,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-011"
-status = "in_progress"
+status = "pr_open"
+pr = 4097
 branch = "codex/intel-npu/NPU-011-ffn-subgraph-parity"
 stackable = false
 review_mode = "codex_premerge"

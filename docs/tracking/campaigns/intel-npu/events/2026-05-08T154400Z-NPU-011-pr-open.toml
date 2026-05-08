@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T15:44:00Z"
+campaign = "intel-npu"
+item = "NPU-011"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 4097
+head_sha = "994e44ed9996f813920e9622e42d29cc83b21b04"
+actor = "codex"
+branch = "codex/intel-npu/NPU-011-ffn-subgraph-parity"
+summary = "Opened NPU-011 for selected FFN/ReLU2 OpenVINO NPU subgraph parity."
+
+notes = [
+  "PR #4097 adds the intel-npu-bitnet-ffn-subgraph command for selected static FFN/ReLU2 subgraph parity on OpenVINO NPU.",
+  "The PR records live 258V evidence at ci/hardware/intel-258v/2026-05-08/npu-bitnet-ffn-subgraph-parity.json with proof_stage=parity_tested, selected_backend=intel-npu-openvino, runtime_device=NPU, graph_execution=true, and fallback_used=false.",
+  "The claim remains selected static subgraph parity only: no full BitNet inference, native bitnet-rs NPU inference, acceleration, packed QK256 decode, or CPU fallback proof.",
+]
