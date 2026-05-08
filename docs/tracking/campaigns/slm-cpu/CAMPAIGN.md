@@ -38,6 +38,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-005 | merged | Reference divergence artifact schema and validator merged in #3969. |
 | SLM-CPU-006A | merged | First-token divergence classifier, logits alias, and 8250U workflow support merged in #4051. |
 | SLM-CPU-006B | merged | Qwen3-0.6B first-token divergence artifact capture merged in #4096. |
+| SLM-CPU-007 | pr_open | Tracker setup for Qwen3-0.6B Q8_0 first-token logits root-cause is open in #4126. |
 
 ## Review Policy
 
