@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T06:45:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-005"
+event = "merged"
+pr = 4003
+merge_sha = "ee700a4610b587967dfe969ec296e81e48c430ad"
+actor = "codex"
+
+notes = [
+  "External Llama-BPE tokenizer/pre-tokenizer authority recording merged in #4003.",
+  "The merge hardens strict Rust CPU answer receipts but does not claim answer quality; the local Kaby one-token smoke still generated the wrong token and remains diagnostic.",
+]
