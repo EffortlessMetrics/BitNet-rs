@@ -333,6 +333,22 @@ the exact-answer gate with generated text `'E tradi Paperback mente`, so this is
 output-quality evidence, not answer readiness. It does not prove scalar/AVX2
 parity, sustained throughput, Arc 140V execution, or Intel NPU execution.
 
+CPU258V-011 records the matching release-built scalar run and scalar-vs-AVX2
+parity receipt:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-math_2_plus_2-release.json
+ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-math_2_plus_2-release.json
+```
+
+The selected scalar run uses `i2_s-scalar-reference`; the selected AVX2 run uses
+`i2_s-avx2-reference`. Both produce the same prompt token IDs, generated token
+IDs `[89048, 124979, 70232, 88162]`, and decoded text
+`'E tradi Paperback mente`, with the same `gate_exact_trimmed` quality failure.
+This proves selected-case scalar-vs-AVX2 answer parity only. It does not prove
+answer correctness, full-corpus parity, sustained throughput, Arc 140V
+execution, or Intel NPU execution.
+
 ## Windows PowerShell Bundle
 
 ```powershell
