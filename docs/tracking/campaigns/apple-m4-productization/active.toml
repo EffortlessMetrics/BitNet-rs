@@ -114,7 +114,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-PROD-003"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-productization/M4-PROD-003-mac-cli"
 stackable = false
 review_mode = "codex_premerge"

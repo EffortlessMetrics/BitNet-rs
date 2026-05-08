@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Mac-oriented SLM check, ask, validate, and receipt-check wrappers
+
+Usage: bitnet mac [OPTIONS] <COMMAND>
+
+Commands:
+  check           Check the cached Apple M4 SLM model artifact and routing boundary
+  ask             Ask one question through the Rust-native Apple M4 CPU/NEON SLM path
+  validate        Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session
+  receipts-check  Check Apple M4 SLM answer/warm-session receipts for hidden fallback or overclaims
+  help            Print this message or the help of the given subcommand(s)
+
+Options:
+  -c, --config <PATH>      Configuration file path
+  -d, --device <DEVICE>    Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+      --log-level <LEVEL>  Log level (trace, debug, info, warn, error)
+      --threads <N>        Number of CPU threads
+      --batch-size <SIZE>  Batch size for processing
+  -h, --help               Print help

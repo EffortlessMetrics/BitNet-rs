@@ -1,0 +1,33 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session
+
+Usage: bitnet mac validate [OPTIONS]
+
+Options:
+  -c, --config <PATH>
+          Configuration file path
+      --model-id <MODEL_ID>
+          Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
+      --cache-dir <PATH>
+          Override model cache root. Defaults to ~/.cache/bitnet-rs/models
+  -d, --device <DEVICE>
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+      --corpus <PATH>
+          Deterministic SLM quality corpus [default: ci/quality/apple-m4-slm-quality-corpus.yaml]
+      --log-level <LEVEL>
+          Log level (trace, debug, info, warn, error)
+      --corpus-repeat-runs <CORPUS_REPEAT_RUNS>
+          Number of repeated runs for each corpus case [default: 2]
+      --batch-size <SIZE>
+          Batch size for processing
+      --max-new-tokens <MAX_NEW_TOKENS>
+          Maximum new tokens per prompt when the corpus does not override it [default: 32] [aliases: --max-tokens, --n-predict]
+      --threads <THREADS>
+          Number of CPU threads to use (0 = all cores; deterministic mode may override) [default: 0]
+      --json-out <PATH>
+          Output aggregate warm-session receipt [default: target/apple-m4-productization/mac-validate.json]
+  -h, --help
+          Print help

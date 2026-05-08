@@ -179,6 +179,127 @@ fn slm_warm_session_help_documents_warm_receipts() {
 }
 
 #[test]
+fn mac_help_documents_operator_wrappers() {
+    bitnet()
+        .args(["mac", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("check"))
+        .stdout(predicate::str::contains("ask"))
+        .stdout(predicate::str::contains("validate"))
+        .stdout(predicate::str::contains("receipts-check"));
+}
+
+#[test]
+fn mac_check_missing_cache_points_to_model_fetch() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "check", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args([
+            "--device",
+            "apple-m4-metal",
+            "mac",
+            "ask",
+            "--question",
+            "What is 2+2? Answer briefly.",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac ask routes the supported Mac local-answer path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("answer.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "inference_result",
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "text": "4.",
+            "tokens": {
+                "generated": 1,
+                "generated_ids": [19]
+            },
+            "model": {
+                "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+            },
+            "tokenizer": {
+                "source": "gguf_metadata"
+            },
+            "mac_claim_boundary": {
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "bitnet_quality_claimed": false
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"passed\": true"))
+        .stdout(predicate::str::contains("apple-m4-cpu-neon"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_hidden_fallback() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("fallback.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "inference_result",
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": true,
+            "text": "4.",
+            "tokens": {
+                "generated": 1,
+                "generated_ids": [19]
+            },
+            "model": {
+                "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+            },
+            "tokenizer": {
+                "source": "gguf_metadata"
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("fallback_used=true"));
+}
+
+#[test]
 fn slm_warm_session_requires_multiple_prompts_before_loading_model() {
     bitnet()
         .args([

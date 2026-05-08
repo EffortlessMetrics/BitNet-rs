@@ -86,6 +86,8 @@ mod intel_arc;
 mod intel_npu;
 #[cfg(feature = "full-cli")]
 mod ln_rules;
+#[cfg(feature = "full-cli")]
+mod mac;
 mod model_cache;
 mod score;
 pub mod tokenizer_discovery;
@@ -128,6 +130,8 @@ use commands::{
     ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
+#[cfg(feature = "full-cli")]
+use mac::MacCommand;
 use model_cache::ModelCommand;
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
@@ -436,6 +440,10 @@ enum Commands {
 
     /// Fetch, verify, list, and prune supported local model artifacts
     Model(ModelCommand),
+
+    #[cfg(feature = "full-cli")]
+    /// Mac-oriented SLM check, ask, validate, and receipt-check wrappers
+    Mac(MacCommand),
 
     /// Tokenize text and output token IDs as JSON
     Tokenize {
@@ -991,6 +999,7 @@ async fn async_main() -> Result<()> {
 
     let requested_backend_label =
         cli.device.clone().unwrap_or_else(|| config.default_device.clone());
+    let explicit_device_label = cli.device.clone();
 
     // Report backend selection at startup so logs and receipts are deterministic.
     {
@@ -1122,6 +1131,8 @@ async fn async_main() -> Result<()> {
             .await
         }
         Some(Commands::Model(cmd)) => cmd.execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Mac(cmd)) => cmd.execute(explicit_device_label.as_deref()).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Inference(cmd)) => (*cmd).execute(&config).await,
         #[cfg(feature = "full-cli")]

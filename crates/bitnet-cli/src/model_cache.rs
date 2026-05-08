@@ -16,6 +16,7 @@ use tokio::io::AsyncWriteExt;
 
 const DEFAULT_CACHE_RELATIVE: &[&str] = &["bitnet-rs", "models"];
 const LOW_DISK_HEADROOM_BYTES: u64 = 1_073_741_824;
+pub(crate) const M4_SLM_RUNTIME_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
 
 /// Manage supported local model artifacts.
 #[derive(Debug, Args)]
@@ -143,6 +144,22 @@ struct VerifyResult {
     model: SupportedModel,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct VerifiedCachedModel {
+    pub id: String,
+    pub display_name: String,
+    pub path: PathBuf,
+    pub cache_root: PathBuf,
+    pub sha256: String,
+    pub bytes: u64,
+    pub architecture: String,
+    pub quantization: String,
+    pub tokenizer_model: String,
+    pub tokenizer_pre: String,
+    pub chat_template: bool,
+    pub support_note: String,
+}
+
 #[derive(Debug, Serialize)]
 struct PruneResult {
     id: String,
@@ -167,6 +184,100 @@ impl ModelCommand {
             }
         }
     }
+}
+
+pub(crate) fn verified_apple_m4_slm_model(
+    id: &str,
+    cache_dir: Option<PathBuf>,
+) -> Result<VerifiedCachedModel> {
+    let model = supported_model(id)?;
+    if !model.apple_m4_cpu_neon_supported {
+        anyhow::bail!(
+            "model `{}` is not supported for the Rust-native Apple M4 CPU/NEON SLM path: {}",
+            model.id,
+            model.support_note
+        );
+    }
+    let cache_root = resolve_cache_root(cache_dir)?;
+    let path = model_path(&cache_root, model);
+    let result = verify_model(model, &path)?;
+    if !result.passed {
+        let actual = match (result.actual_bytes, result.actual_sha256.as_deref()) {
+            (Some(bytes), Some(sha)) => format!("bytes={bytes}, sha256={sha}"),
+            (Some(bytes), None) => format!("bytes={bytes}, sha256=<unavailable>"),
+            _ => "missing".to_string(),
+        };
+        anyhow::bail!(
+            "cached Apple M4 SLM model `{}` is not verified at {} ({actual}); run `bitnet model fetch {}` first",
+            model.id,
+            path.display(),
+            model.id
+        );
+    }
+    write_cache_metadata(&cache_root, model, &path, &result)?;
+    Ok(VerifiedCachedModel {
+        id: model.id.to_string(),
+        display_name: model.display_name.to_string(),
+        path,
+        cache_root,
+        sha256: model.sha256.to_string(),
+        bytes: model.bytes,
+        architecture: model.architecture.to_string(),
+        quantization: model.quantization.to_string(),
+        tokenizer_model: model.tokenizer_model.to_string(),
+        tokenizer_pre: model.tokenizer_pre.to_string(),
+        chat_template: model.chat_template,
+        support_note: model.support_note.to_string(),
+    })
+}
+
+pub(crate) fn apple_m4_slm_cache_status_json(
+    id: &str,
+    cache_dir: Option<PathBuf>,
+    verify: bool,
+) -> Result<serde_json::Value> {
+    let model = supported_model(id)?;
+    let cache_root = resolve_cache_root(cache_dir)?;
+    let status = cache_status(&cache_root, *model, verify)?;
+    let ready = status.present
+        && status.size_matches
+        && status.metadata_present
+        && status.verified.unwrap_or(true);
+    Ok(serde_json::json!({
+        "artifact_kind": "apple_m4_slm_model_cache_check",
+        "id": model.id,
+        "display_name": model.display_name,
+        "cache_root": cache_root,
+        "cache_path": status.cache_path,
+        "metadata_path": status.metadata_path,
+        "state": cache_state_label(&status),
+        "ready": ready,
+        "present": status.present,
+        "size_matches": status.size_matches,
+        "metadata_present": status.metadata_present,
+        "verified": status.verified,
+        "expected": {
+            "repo": model.repo,
+            "revision": model.revision,
+            "filename": model.filename,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+        },
+        "runtime_support": {
+            "apple_m4_cpu_neon": model.apple_m4_cpu_neon_supported,
+            "note": model.support_note,
+        },
+        "next_step": if ready {
+            serde_json::Value::Null
+        } else {
+            serde_json::json!(format!("run `bitnet model fetch {}`", model.id))
+        },
+    }))
 }
 
 const SUPPORTED_MODELS: &[SupportedModel] = &[
