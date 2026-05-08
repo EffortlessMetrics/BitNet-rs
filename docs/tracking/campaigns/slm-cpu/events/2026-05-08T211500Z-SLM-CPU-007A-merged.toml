@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T21:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-007A"
+event = "merged"
+pr = 4132
+merge_sha = "afb6a84bd66ea638b8122240869ee35a0eb4032e"
+branch = "codex/slm-cpu-007-checkpoint-probes"
+actor = "codex"
+
+notes = [
+  "Merged #4132 to expose bounded Qwen checkpoint tracing through bitnet run flags as a support slice for SLM-CPU-007.",
+  "This records the probe surface only; the actual first-drift checkpoint capture remains open as SLM-CPU-007B.",
+]
