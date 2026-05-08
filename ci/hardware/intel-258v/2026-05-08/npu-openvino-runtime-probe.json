@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "artifact_kind": "intel_npu_runtime_probe",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08/npu-openvino-runtime-probe.json",
+  "machine_id": "intel-258v",
+  "hardware_lane": "intel-npu-openvino",
+  "captured_at_utc": "2026-05-08T13:57:35.326023Z",
+  "proof_stage": "runtime_detected",
+  "requested_backend": "intel-npu",
+  "selected_backend": "intel-npu-openvino",
+  "runtime_api": "openvino",
+  "runtime_device": "NPU",
+  "fallback_used": false,
+  "cpu_fallback_allowed": false,
+  "backend_runtime": {
+    "name": "openvino",
+    "version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+    "device": "NPU",
+    "device_name": "Intel(R) AI Boost",
+    "available_devices": [
+      "CPU",
+      "GPU",
+      "NPU"
+    ],
+    "driver_version": "1004512",
+    "compiler_version": "458781",
+    "device_total_mem_size": 17179869184,
+    "device_alloc_mem_size": 0,
+    "max_tiles": 6
+  },
+  "shape_contract": {
+    "shape_mode": null,
+    "input_shape": null,
+    "output_shape": null
+  },
+  "fallback_policy": {
+    "fallback_used": false,
+    "cpu_fallback_allowed": false,
+    "fallback_backend": null,
+    "fallback_reason": null
+  },
+  "npu": {
+    "openvino_runtime_available": true,
+    "openvino_version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+    "openvino_available_devices": [
+      "CPU",
+      "GPU",
+      "NPU"
+    ],
+    "openvino_npu_visible": true,
+    "openvino_npu_full_name": "Intel(R) AI Boost",
+    "supported_properties": "{'AVAILABLE_DEVICES': 'RO', 'CACHE_DIR': 'RW', 'CACHE_MODE': 'RW', 'COMPILATION_NUM_THREADS': 'RW', 'DEVICE_ARCHITECTURE': 'RO', 'DEVICE_GOPS': 'RO', 'DEVICE_ID': 'RW', 'DEVICE_LUID': 'RO', 'DEVICE_PCI_INFO': 'RO', 'DEVICE_TYPE': 'RO', 'DEVICE_UUID': 'RO', 'ENABLE_CPU_PINNING': 'RW', 'EXECUTION_DEVICES': 'RO', 'EXECUTION_MODE_HINT': 'RW', 'FULL_DEVICE_NAME': 'RO', 'INFERENCE_PRECISION_HINT': 'RW', 'LOG_LEVEL': 'RW', 'MODEL_PRIORITY': 'RW', 'MODEL_PTR': 'RO', 'NPU_BYPASS_UMD_CACHING': 'RW', 'NPU_COMPILATION_MODE_PARAMS': 'RW', 'NPU_COMPILER_DYNAMIC_QUANTIZATION': 'RW', 'NPU_COMPILER_TYPE': 'RW', 'NPU_COMPILER_VERSION': 'RO', 'NPU_DEFER_WEIGHTS_LOAD': 'RW', 'NPU_DEVICE_ALLOC_MEM_SIZE': 'RO', 'NPU_DEVICE_TOTAL_MEM_SIZE': 'RO', 'NPU_DRIVER_VERSION': 'RO', 'NPU_ENABLE_STRIDES_FOR': 'RW', 'NPU_MAX_TILES': 'RW', 'NPU_PLATFORM': 'RW', 'NPU_QDQ_OPTIMIZATION': 'RW', 'NPU_QDQ_OPTIMIZATION_AGGRESSIVE': 'RW', 'NPU_RUN_INFERENCES_SEQUENTIALLY': 'RW', 'NPU_TILES': 'RW', 'NPU_TURBO': 'RW', 'NUM_STREAMS': 'RO', 'OPTIMAL_NUMBER_OF_INFER_REQUESTS': 'RO', 'OPTIMIZATION_CAPABILITIES': 'RO', 'PERFORMANCE_HINT': 'RW', 'PERFORMANCE_HINT_NUM_REQUESTS': 'RW', 'PERF_COUNT': 'RW', 'RANGE_FOR_ASYNC_INFER_REQUESTS': 'RO', 'RANGE_FOR_STREAMS': 'RO', 'SUPPORTED_PROPERTIES': 'RO', 'WEIGHTS_PATH': 'RW', 'WORKLOAD_TYPE': 'RW'}",
+    "driver_version": "1004512",
+    "compiler_version": "458781",
+    "total_mem_size": 17179869184,
+    "alloc_mem_size": 0,
+    "max_tiles": 6
+  },
+  "claim": "openvino_npu_runtime_visibility_recorded",
+  "may_claim": [
+    "OpenVINO 2026.1 sees Intel AI Boost NPU and selects intel-npu-openvino backend identity."
+  ],
+  "must_not_claim": [
+    "OpenVINO NPU graph execution works from runtime visibility alone.",
+    "BitNet inference works on Intel NPU.",
+    "Intel NPU accelerates BitNet."
+  ]
+}

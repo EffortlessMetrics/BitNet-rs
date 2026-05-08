@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "machine_id": "intel-258v",
+  "hardware_lane": "intel-npu-openvino",
+  "captured_at_utc": "2026-05-08T13:57:35.326023Z",
+  "requested_backend": "intel-npu",
+  "selected_backend": "intel-npu-openvino",
+  "runtime_api": "openvino",
+  "runtime_device": "NPU",
+  "backend_runtime": {
+    "name": "openvino",
+    "version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+    "device": "NPU",
+    "device_name": "Intel(R) AI Boost",
+    "available_devices": [
+      "CPU",
+      "GPU",
+      "NPU"
+    ],
+    "driver_version": "1004512",
+    "compiler_version": "458781",
+    "device_total_mem_size": 17179869184,
+    "device_alloc_mem_size": 0,
+    "max_tiles": 6
+  },
+  "fallback_policy": {
+    "fallback_used": false,
+    "cpu_fallback_allowed": false,
+    "fallback_backend": null,
+    "fallback_reason": null
+  },
+  "fallback_used": false,
+  "cpu_fallback_allowed": false,
+  "artifact_kind": "intel_npu_bitnet_subgraph_parity",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
+  "proof_stage": "parity_tested",
+  "shape_contract": {
+    "shape_mode": "static",
+    "input_shape": [
+      1,
+      16
+    ],
+    "output_shape": [
+      1,
+      16
+    ]
+  },
+  "subgraph": {
+    "name": "bitnet_rmsnorm_f16_1x16",
+    "bitnet_op": "rmsnorm",
+    "reference_path": "cpu_numpy_rmsnorm_f32",
+    "precision": "F16",
+    "shape_mode": "static",
+    "input_shape": [
+      1,
+      16
+    ],
+    "output_shape": [
+      1,
+      16
+    ],
+    "epsilon": 9.999999747378752e-06,
+    "tolerance": 0.004999999888241291,
+    "max_abs_error": 0.0006940364837646484,
+    "mean_abs_error": 0.0001842239871621132,
+    "result": "pass"
+  },
+  "timing": {
+    "compile_ms": 72.24529999075457,
+    "first_infer_ms": 1.3026999949943274
+  },
+  "graph_execution": true,
+  "bitnet_inference": false,
+  "qk256_decode": false,
+  "kernels_or_graphs": [
+    "bitnet_rmsnorm_openvino_npu"
+  ],
+  "claim": "openvino_npu_bitnet_subgraph_parity_passed",
+  "may_claim": [
+    "Selected static BitNet-shaped subgraph parity executed on OpenVINO NPU and matched the CPU NumPy reference within tolerance."
+  ],
+  "must_not_claim": [
+    "Full BitNet inference works on Intel NPU.",
+    "Intel NPU accelerates BitNet.",
+    "Packed BitNet QK256 decode works on Intel NPU.",
+    "CPU fallback satisfies NPU proof."
+  ]
+}

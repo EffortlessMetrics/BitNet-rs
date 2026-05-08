@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T14:05:17Z"
+campaign = "intel-npu"
+item = "NPU-010"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4080
+head_sha = "7a99bf28b77b9d62b91c5144b93a1f517195c7da"
+actor = "codex"
+branch = "codex/intel-npu/NPU-010-live-openvino-receipts"
+summary = "Opened NPU-010 to record live 258V OpenVINO NPU receipts."
+
+notes = [
+  "PR #4080 records live OpenVINO 2026.1 NPU runtime visibility, tiny static graph smoke, and selected RMSNorm plus linear-projection BitNet-shaped subgraph parity receipts from the 258V laptop.",
+  "The receipts preserve selected_backend=intel-npu-openvino, runtime_api=openvino, runtime_device=NPU, fallback_used=false, and cpu_fallback_allowed=false.",
+  "The PR is docs/artifacts only and does not claim full BitNet inference, native bitnet-rs NPU inference, acceleration, packed QK256 decode, or CPU fallback proof.",
+]

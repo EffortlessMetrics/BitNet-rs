@@ -738,6 +738,51 @@ blocked reference receipt instead of substituting CPU execution. This lane is us
 only as an external reference for graph lowering decisions; it is not the native
 BitNet-rs NPU architecture.
 
+### NPU-010 - Record Live OpenVINO NPU Receipts
+
+Record live 258V OpenVINO NPU receipts after installing OpenVINO 2026.1 into a
+workspace-local Python target directory. The package install target is not
+committed; only the resulting machine receipts are tracked.
+
+Artifacts:
+
+```text
+ci/hardware/intel-258v/2026-05-08/npu-openvino-runtime-probe.json
+ci/hardware/intel-258v/2026-05-08/npu-openvino-tiny-graph-smoke.json
+ci/hardware/intel-258v/2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json
+ci/hardware/intel-258v/2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json
+```
+
+Recorded live facts:
+
+```text
+OpenVINO version: 2026.1.0-21367-63e31528c62-releases/2026/1
+OpenVINO devices: CPU, GPU, NPU
+Selected backend: intel-npu-openvino
+Runtime API/device: openvino / NPU
+NPU full device name: Intel(R) AI Boost
+Driver/compiler: 1004512 / 458781
+Fallback: false
+```
+
+Proof ladder covered by these receipts:
+
+| Artifact | Proof stage | Claim allowed |
+|---|---|---|
+| `npu-openvino-runtime-probe.json` | `runtime_detected` | OpenVINO sees and selects Intel AI Boost NPU |
+| `npu-openvino-tiny-graph-smoke.json` | `kernel_smoke_tested` | The recorded tiny static OpenVINO graph executed on NPU |
+| `npu-bitnet-rmsnorm-subgraph-parity.json` | `parity_tested` | The selected static RMSNorm subgraph matched the CPU NumPy reference |
+| `npu-bitnet-linear-projection-subgraph-parity.json` | `parity_tested` | The selected static linear-projection subgraph matched the CPU NumPy reference |
+
+Claim boundary:
+
+```text
+These receipts prove only live OpenVINO NPU runtime visibility, one tiny static
+graph smoke, and selected static BitNet-shaped subgraph parity. They do not
+prove full BitNet inference, native bitnet-rs NPU inference, NPU acceleration,
+packed QK256 decode, or CPU fallback as NPU proof.
+```
+
 ## Collision Avoidance
 
 The Intel NPU lane should avoid:
@@ -775,7 +820,10 @@ Intel NPU may be useful for graph-level INT8 or FP16 workloads before it is usef
 3. Research path: explore whether BitNet-specific packed ops can be lowered into an OpenVINO custom or accepted graph form.
 4. Fallback path: keep NPU smoke or OpenVINO GenAI only and prioritize CPU AVX2 or Intel GPU/OpenCL for custom kernels.
 
-The next meaningful milestone is a strict Lunar Lake smoke artifact proving that Intel NPU was requested, selected, used for a tiny graph, and did not fall back to CPU.
+After `NPU-010`, the lane has live runtime visibility, tiny static graph
+smoke, and selected static RMSNorm/linear-projection parity receipts. The next
+meaningful milestone is another deliberately scoped graph-lowering experiment,
+such as FFN or attention-block parity, not full decode or packed QK256.
 
 The Lunar Lake data bundle should decide the next implementation target:
 
