@@ -130,6 +130,21 @@ same prompt IDs before comparing checkpoint summaries. The trace remains a
 diagnostic artifact: it localizes the first drift point and does not claim Qwen
 answer quality or throughput.
 
+The `SLM-CPU-007B` i5-8250U capture records the first layer-0 trace at:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-bitnet-rs-layer0-checkpoints.jsonl
+ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-bitnet-rs-first-token-layer0.json
+ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-first-drift-checkpoint-classification.json
+```
+
+That artifact confirms prompt IDs still match the reference and the first
+comparable mismatch remains `lm_head.top_logits`: the reference chooses token
+`19` (`4`) while bitnet-rs chooses token `4594` (`ł`). Because the known-good
+reference does not yet include internal checkpoint dumps, the internal first
+drift is recorded as `reference-missing`, not as an attention, MLP, or output
+head root-cause claim.
+
 ## Divergence Classification
 
 The validator records a `classification` alongside

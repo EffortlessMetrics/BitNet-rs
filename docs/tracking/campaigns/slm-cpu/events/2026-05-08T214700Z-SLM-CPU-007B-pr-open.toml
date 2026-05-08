@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T21:47:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-007B"
+event = "pr_open"
+pr = 4138
+branch = "codex/slm-cpu-007b-first-drift-capture"
+head_sha = "8b9f826cb9bdecb791c2b81df0399c1e151c335b"
+actor = "codex"
+
+notes = [
+  "Opened #4138 to capture the i5-8250U Qwen3 layer-0 bitnet-rs checkpoint trace and first-drift classification artifact.",
+  "The artifact records prompt ID match, logits divergence at the first comparable checkpoint, and reference-missing internal checkpoints without claiming answer quality, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]

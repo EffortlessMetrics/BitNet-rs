@@ -143,10 +143,11 @@ ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
 ```
 
 The index links the CPU reference bundle, CPU full-corpus scalar-vs-AVX2 parity
-receipts, CPU warm phase receipts, Arc 140V native OpenCL CPU-reference parity,
-and the NPU OpenVINO runtime/smoke/RMSNorm/linear/FFN selected subgraph parity
-receipts. It is not a proof artifact by itself. A lane claim is allowed only
-when the cited lane artifact independently proves it.
+receipts, CPU warm phase receipts, Arc 140V OpenVINO GPU smoke and native
+OpenCL CPU-reference parity, and the NPU OpenVINO
+runtime/smoke/RMSNorm/linear/FFN selected subgraph parity receipts. It is not a
+proof artifact by itself. A lane claim is allowed only when the cited lane
+artifact independently proves it.
 
 The comparison index may claim that the repository has a same-machine artifact
 map for CPU, Arc 140V, and Intel NPU receipts. It must not claim cross-lane
@@ -174,7 +175,8 @@ lane-specific Arc 140V, NPU, CPU BitNet, parity, or benchmark artifacts.
 ### Arc 140V OpenVINO GPU Smoke
 
 Use the Arc 140V OpenVINO GPU smoke command to emit a tiny fixed-shape graph
-receipt from `GPU.0` without loading BitNet models or running native OpenCL:
+receipt from the OpenVINO GPU device without loading BitNet models or running
+native OpenCL:
 
 ```bash
 cargo run --locked -p bitnet-cli \
@@ -185,8 +187,11 @@ cargo run --locked -p bitnet-cli \
 ```
 
 The command records `proof_stage=kernel_smoke_tested` only when OpenVINO reports
-an Arc 140V `GPU.0`, compiles the tiny static graph to that device, and matches
-the CPU expected output. It keeps `fallback_used=false`,
+an Arc 140V GPU device, compiles the tiny static graph to that device, and
+matches the CPU expected output. On the 2026-05-08 Windows 258V artifact,
+OpenVINO 2026.1 reports the selected runtime device as `GPU` with full device
+name `Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)`.
+It keeps `fallback_used=false`,
 `cpu_fallback_allowed=false`, `bitnet_inference=false`, and `qk256_decode=false`.
 It does not prove native OpenCL kernels, BitNet inference, or Arc acceleration.
 
@@ -742,9 +747,14 @@ ARC140V-005:
   artifact: ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json
   anchor: ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
 
+ARC140V-003 live artifact:
+  OpenVINO GPU tiny static graph smoke on Arc 140V
+  artifact: ci/hardware/intel-258v/2026-05-08/arc-140v-openvino-gpu-smoke.json
+  claim: OpenVINO GPU graph smoke only; no native OpenCL, BitNet, QK256, or acceleration claim
+
 LNL258V-COMPARE-002:
   refreshed the same-machine comparison index after the new CPU reference
-  bundle and independent NPU/Arc parity receipts
+  bundle, Arc OpenVINO GPU smoke, and independent NPU/Arc parity receipts
 ```
 
 These follow-ups preserve the current priority order:
@@ -770,3 +780,10 @@ platform. The live receipt records `selected_backend=intel-arc-140v-opencl`,
 `tiny_vector_add` kernel against the post-mechanics 258V CPU reference bundle.
 This is native OpenCL parity only; it is not BitNet inference, Arc acceleration,
 packed QK256 decode, OpenVINO GPU proof, or CPU fallback proof.
+
+The 2026-05-08 `ARC140V-003` live OpenVINO GPU smoke artifact records
+`selected_backend=intel-arc-140v-openvino-gpu`, `runtime_api=openvino`,
+`runtime_device=GPU`, `graph_execution=true`, and `fallback_used=false` for
+the tiny `tiny_matmul_add_f16_1x16` graph. It is OpenVINO GPU smoke only and
+does not prove native OpenCL, BitNet inference, packed QK256 decode, Arc
+acceleration, or CPU fallback proof.

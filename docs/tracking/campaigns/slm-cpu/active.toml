@@ -486,14 +486,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-007B"
-status = "ready"
+status = "pr_open"
+pr = 4138
 branch = "codex/slm-cpu-007b-first-drift-capture"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-CPU-007A"]
-acceptance = "Capture bitnet-rs Qwen3 checkpoint JSONL and known-good reference checkpoint evidence for the same Qwen3-0.6B Q8_0 model SHA, prompt/template/BOS policy, prompt IDs, greedy settings, and selected CPU backend as SLM-CPU-006B; validate and classify the first divergent checkpoint as embedding, RMSNorm, Q/K/V/O, RoPE, attention, MLP, final norm, logits, or reference-missing without claiming answer quality, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+acceptance = "Capture bitnet-rs Qwen3 checkpoint JSONL plus known-good reference prompt/top-logit evidence for the same Qwen3-0.6B Q8_0 model SHA, prompt/template/BOS policy, prompt IDs, greedy settings, and selected CPU backend as SLM-CPU-006B; validate and classify the first comparable divergence as logits and the first internal drift as reference-missing until reference internal checkpoint dumps exist, without claiming answer quality, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
 commands = [
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_divergence",
   "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
@@ -517,8 +518,8 @@ forbidden_paths = [
   "crates/bitnet-npu/**",
 ]
 may_claim = [
-  "The Qwen3 first-token logits divergence can be localized to the first drifting checkpoint after merge.",
-  "Bounded checkpoint evidence exists for dense Qwen3 correctness triage after merge.",
+  "The Qwen3 first comparable divergence is localized to first-token top logits after merge.",
+  "Bounded bitnet-rs checkpoint evidence exists for dense Qwen3 correctness triage after merge.",
 ]
 must_not_claim = [
   "Qwen answer quality is proven.",
