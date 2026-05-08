@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T03:44:11Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 3981
+merge_sha = "bbfd4775c47d815c03d5f80ea2fd0d5291da760f"
+actor = "codex"
+
+notes = [
+  "Merged #3981, requiring real token-count thresholds before promoting 258V decode_128 or prefill_512 CPU phase evidence.",
+  "The merged receipt hardening keeps one-token 258V CPU proof receipts as explicit not_run gaps for decode_128 and prefill_512 rather than treating short proxy evidence as measured.",
+  "This is CPU phase receipt semantics only; it does not claim sustained throughput, new model execution, Arc 140V performance, Intel NPU performance, or full platform comparison.",
+]

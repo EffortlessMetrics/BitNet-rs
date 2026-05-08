@@ -170,7 +170,10 @@ fn slm_warm_session_help_documents_warm_receipts() {
         .assert()
         .success()
         .stdout(predicate::str::contains("one model/tokenizer load"))
+        .stdout(predicate::str::contains("--corpus"))
         .stdout(predicate::str::contains("--prompt"))
+        .stdout(predicate::str::contains("--fail-on-quality"))
+        .stdout(predicate::str::contains("--require-determinism"))
         .stdout(predicate::str::contains("--json-out"))
         .stdout(predicate::str::contains("qwen2.5"));
 }
@@ -193,7 +196,7 @@ fn slm_warm_session_requires_multiple_prompts_before_loading_model() {
         ])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("requires at least two --prompt values"));
+        .stderr(predicate::str::contains("requires at least two --prompt values or --corpus"));
 }
 
 #[test]
@@ -241,6 +244,25 @@ fn slm_warm_session_rejects_non_gguf_format_before_loading_model() {
 }
 
 #[test]
+fn slm_warm_session_accepts_corpus_without_prompt_before_loading_model() {
+    bitnet()
+        .args([
+            "--device",
+            "apple-m4-cpu-neon",
+            "slm-warm-session",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            "missing-corpus.yaml",
+            "--json-out",
+            "target/test-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failed to read warm-session corpus"));
+}
+
+#[test]
 fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     let Ok(model) = std::env::var("BITNET_M4_SLM_QWEN_GGUF") else {
         eprintln!("skipping real SLM warm-session receipt test; set BITNET_M4_SLM_QWEN_GGUF");
@@ -258,6 +280,8 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     let out = dir.path().join("warm-session.json");
     let out_str = out.to_string_lossy().into_owned();
     let model_str = model_path.to_string_lossy().into_owned();
+    let corpus_path = workspace_path("ci/quality/apple-m4-slm-quality-corpus.yaml");
+    let corpus_str = corpus_path.to_string_lossy().into_owned();
 
     bitnet()
         .args([
@@ -266,20 +290,12 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
             "slm-warm-session",
             "--model",
             model_str.as_str(),
-            "--prompt",
-            "What is 2+2? Answer briefly.",
-            "--prompt",
-            "Name the capital of France.",
-            "--max-new-tokens",
-            "16",
-            "--temperature",
-            "0",
-            "--prompt-template",
-            "qwen2.5",
-            "--greedy",
-            "--deterministic",
+            "--corpus",
+            corpus_str.as_str(),
             "--strict-loader",
             "--strict-tokenizer",
+            "--fail-on-quality",
+            "--require-determinism",
             "--json-out",
             out_str.as_str(),
         ])
@@ -296,14 +312,19 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     assert_eq!(receipt["fallback_used"], false);
     assert_eq!(receipt["session"]["model_loaded_once"], true);
     assert_eq!(receipt["session"]["tokenizer_loaded_once"], true);
-    assert_eq!(receipt["session"]["prompt_count"], 2);
+    assert_eq!(receipt["session"]["prompt_count"], 6);
+    assert_eq!(receipt["corpus"]["artifact_kind"], "apple_m4_slm_quality_corpus");
+    assert_eq!(receipt["quality_summary"]["passed"], true);
+    assert_eq!(receipt["determinism"]["checked"], true);
+    assert_eq!(receipt["determinism"]["passed"], true);
     assert_eq!(receipt["claim_boundary"]["speedup_claim"], false);
     assert_eq!(receipt["claim_boundary"]["full_metal_inference_claimed"], false);
     assert_eq!(receipt["claim_boundary"]["bitnet_quality_claimed"], false);
     let prompts = receipt["prompts"].as_array().expect("prompt summaries");
-    assert_eq!(prompts.len(), 2);
+    assert_eq!(prompts.len(), 6);
     for prompt in prompts {
         assert_eq!(prompt["backend"]["fallback_used"], false);
+        assert_eq!(prompt["quality"]["passed"], true);
         assert_eq!(prompt["timing"]["model_load_ms"], 0.0);
         assert_eq!(prompt["timing"]["tokenizer_load_ms"], 0.0);
         assert!(

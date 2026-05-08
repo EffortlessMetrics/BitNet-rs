@@ -35,9 +35,9 @@
 | apple-m4-slm-answer | SLM-M4-002 | SLM-M4-001 | merged |
 | apple-m4-slm-answer | SLM-M4-003 | SLM-M4-002 | merged |
 | apple-m4-slm-answer | SLM-M4-004 | SLM-M4-003 | merged |
-| apple-m4-slm-answer | SLM-M4-005 | SLM-M4-004 | ready |
-| apple-m4-slm-answer | SLM-M4-006 | SLM-M4-004, SLM-M4-005 | proposed |
-| apple-m4-slm-answer | SLM-M4-007 | SLM-M4-005, SLM-M4-006 | proposed |
+| apple-m4-slm-answer | SLM-M4-005 | SLM-M4-004 | merged |
+| apple-m4-slm-answer | SLM-M4-006 | SLM-M4-004, SLM-M4-005 | merged |
+| apple-m4-slm-answer | SLM-M4-007 | SLM-M4-005, SLM-M4-006 | ready |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | merged |
@@ -51,6 +51,7 @@
 | cpu-proof | CPU-PHASE-TIMING-001 | CPU-BITNET-008 | merged |
 | cpu-proof | CPU-ANSWER-001 | CPU-BITNET-008, CPU-PHASE-TIMING-001 | merged |
 | cpu-proof | CPU-ANSWER-002 | CPU-ANSWER-001 | merged |
+| cpu-proof | CPU-ANSWER-003 | CPU-ANSWER-002 | ready |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | merged |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
@@ -59,7 +60,7 @@
 | intel-258v-platform | LNL258V-003 | LNL258V-002 | merged |
 | intel-258v-platform | CPU258V-001 | LNL258V-003 | merged |
 | intel-258v-platform | LNL258V-OWNERSHIP-001 | CPU258V-001 | merged |
-| intel-258v-platform | CPU258V-004 | CPU258V-003 | pr_open |
+| intel-258v-platform | CPU258V-004 | CPU258V-003 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |

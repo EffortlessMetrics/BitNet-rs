@@ -208,13 +208,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-005"
-status = "ready"
+status = "merged"
 branch = "codex/apple-m4-slm-answer/SLM-M4-005-quality-determinism"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-M4-004"]
+pr = 3973
+merge_sha = "b00e11631691212702c7d2f22564d1fabc6e59e6"
 acceptance = "Add a deterministic Apple M4 SLM quality corpus so temperature=0 runs produce stable token IDs and receipts record valid UTF-8, non-empty, non-degenerate answers, model/tokenizer identity, backend routing, fallback status, and timing."
 commands = [
   "cargo fmt --all -- --check",
@@ -248,13 +250,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-006"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-slm-answer/SLM-M4-006-warm-speed"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-M4-004", "SLM-M4-005"]
+pr = 3986
+merge_sha = "e51a78950ad1d124dab212bffc34a55ea595037b"
 acceptance = "Measure and improve warm-answer speed by avoiding repeated model/tokenizer loads, reusing buffers and sampling/logits scratch where safe, separating prefill/decode timing, and recording warm tokens/sec without broad performance claims."
 commands = [
   "cargo fmt --all -- --check",
@@ -290,7 +294,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-007"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-answer/SLM-M4-007-metal-phase-decision"
 stackable = false
 review_mode = "codex_premerge"

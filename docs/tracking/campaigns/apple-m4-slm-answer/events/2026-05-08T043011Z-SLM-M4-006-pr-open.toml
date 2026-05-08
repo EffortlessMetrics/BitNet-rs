@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T04:30:11Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-006"
+event = "pr_open"
+pr = 3986
+head_sha = "93e489732b036811e6b9ddd4e01c6766ca213a23"
+actor = "codex"
+
+notes = [
+  "Opened Apple M4 SLM warm-answer speed PR.",
+  "The PR records warm-session timing and throughput for apple-m4-cpu-neon only, with broad performance and speedup claims explicitly false.",
+  "No BitNet performance, full apple-m4-metal inference, QK256, MPSGraph, Neural Engine, server inference, Metal kernel, or model binary changes are in scope.",
+]

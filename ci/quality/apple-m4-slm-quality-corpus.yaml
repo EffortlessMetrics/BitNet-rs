@@ -1,0 +1,49 @@
+schema: 1
+artifact_kind: apple_m4_slm_quality_corpus
+name: apple-m4-slm-quality-determinism-v1
+description: Deterministic Apple M4 dense SLM warm-session quality corpus.
+model:
+  repo: Qwen/Qwen2.5-0.5B-Instruct-GGUF
+  file: qwen2.5-0.5b-instruct-q8_0.gguf
+  sha256: ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e
+  family: qwen
+  architecture: qwen2
+  quant_format: Q8_0
+defaults:
+  prompt_template: qwen2.5
+  max_new_tokens: 16
+  greedy: true
+  deterministic: true
+  temperature: 0.0
+  top_k: 1
+  repeat_runs: 2
+  min_generated_tokens: 1
+  min_distinct_generated_tokens: 2
+cases:
+  - id: math_2_plus_2
+    question: "What is 2+2? Answer briefly."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "4"
+        - "four"
+
+  - id: capital_france
+    question: "Name the capital of France."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"
+
+  - id: rust_sentence
+    question: "Write one short sentence about Rust."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Rust"
+        - "rust"
+        - "programming"
+        - "language"
+        - "safety"
+        - "efficiency"
