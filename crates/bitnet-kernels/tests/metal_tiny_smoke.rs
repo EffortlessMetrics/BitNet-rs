@@ -5,19 +5,19 @@ use bitnet_kernels::metal::smoke::{
     ARTIFACT_KIND, DENSE_KERNEL_FAMILY, DENSE_LAYOUT_SOURCE, DENSE_METAL_PREFILL_LINEAR_KERNEL_ID,
     DENSE_MODEL_FAMILY, DENSE_PREFILL_IN_FEATURES, DENSE_PREFILL_LINEAR_EXECUTION_PHASE,
     DENSE_PREFILL_LINEAR_KV_CACHE_BEHAVIOR, DENSE_PREFILL_LINEAR_PHASE_SCOPE,
-    DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND, DENSE_PREFILL_OUT_FEATURES,
-    DENSE_PREFILL_TOKENS, DENSE_TRANSPORT_LAYOUT, DenseMetalPrefillLinearFixture,
-    DenseMetalPrefillLinearReceipt, I2S_EXECUTION_PHASE, I2S_KERNEL_FAMILY, I2S_LAYOUT_SOURCE,
-    I2S_METAL_PARITY_KERNEL_ID, I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID,
-    I2S_METAL_PROJECTION_RESIDUAL_KERNEL_ID, I2S_PARITY_BLOCK_SIZE, I2S_PARITY_K, I2S_PARITY_M,
-    I2S_PARITY_N, I2S_PREFILL_EXECUTION_PHASE, I2S_PREFILL_KV_CACHE_BEHAVIOR,
-    I2S_PREFILL_PHASE_SCOPE, I2S_PREFILL_TOKENS, I2S_PROJECTION_RESIDUAL_EXECUTION_PHASE,
-    I2S_PROJECTION_RESIDUAL_GRAPH_ID, I2S_PROJECTION_RESIDUAL_OPS,
-    I2S_PROJECTION_RESIDUAL_PHASE_SCOPE, I2S_TRANSPORT_LAYOUT, I2sMetalParityFixture,
-    I2sMetalParityReceipt, I2sMetalPrefillContributionReceipt, I2sMetalProjectionResidualFixture,
-    I2sMetalProjectionResidualReceipt, MACHINE_ID, PARITY_ARTIFACT_KIND,
-    PHASE_CONTRIBUTION_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND, RUNTIME_API,
-    SELECTED_BACKEND, SMOKE_WORKGROUP_SIZE, SUBGRAPH_ARTIFACT_KIND, SmokeComparison,
+    DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND, DENSE_PREFILL_LINEAR_TIMING_SCOPE,
+    DENSE_PREFILL_OUT_FEATURES, DENSE_PREFILL_TOKENS, DENSE_TRANSPORT_LAYOUT,
+    DenseMetalPrefillLinearFixture, DenseMetalPrefillLinearReceipt, DenseMetalPrefillLinearTiming,
+    I2S_EXECUTION_PHASE, I2S_KERNEL_FAMILY, I2S_LAYOUT_SOURCE, I2S_METAL_PARITY_KERNEL_ID,
+    I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID, I2S_METAL_PROJECTION_RESIDUAL_KERNEL_ID,
+    I2S_PARITY_BLOCK_SIZE, I2S_PARITY_K, I2S_PARITY_M, I2S_PARITY_N, I2S_PREFILL_EXECUTION_PHASE,
+    I2S_PREFILL_KV_CACHE_BEHAVIOR, I2S_PREFILL_PHASE_SCOPE, I2S_PREFILL_TOKENS,
+    I2S_PROJECTION_RESIDUAL_EXECUTION_PHASE, I2S_PROJECTION_RESIDUAL_GRAPH_ID,
+    I2S_PROJECTION_RESIDUAL_OPS, I2S_PROJECTION_RESIDUAL_PHASE_SCOPE, I2S_TRANSPORT_LAYOUT,
+    I2sMetalParityFixture, I2sMetalParityReceipt, I2sMetalPrefillContributionReceipt,
+    I2sMetalProjectionResidualFixture, I2sMetalProjectionResidualReceipt, MACHINE_ID,
+    PARITY_ARTIFACT_KIND, PHASE_CONTRIBUTION_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND,
+    RUNTIME_API, SELECTED_BACKEND, SMOKE_WORKGROUP_SIZE, SUBGRAPH_ARTIFACT_KIND, SmokeComparison,
     TINY_METAL_ADD_PARITY_KERNEL_ID, TINY_METAL_ADD_SMOKE_KERNEL_ID, TinyMetalAddParityReceipt,
     TinyMetalAddSmokeReceipt, argmax_index, compare_tiny_add_outputs,
     dense_metal_prefill_linear_fixture, dense_prefill_linear_shape_words, expected_tiny_add,
@@ -233,6 +233,7 @@ fn dense_prefill_linear_receipt_records_split_cpu_and_metal_phase_boundary() {
         SmokeComparison { max_abs_error: 0.0, mean_abs_error: 0.0 },
         3,
         3,
+        DenseMetalPrefillLinearTiming::measured(0.125, 0.5),
     );
 
     assert_eq!(receipt.machine_id, MACHINE_ID);
@@ -255,6 +256,11 @@ fn dense_prefill_linear_receipt_records_split_cpu_and_metal_phase_boundary() {
     assert_eq!(receipt.in_features, DENSE_PREFILL_IN_FEATURES);
     assert_eq!(receipt.out_features, DENSE_PREFILL_OUT_FEATURES);
     assert_eq!(receipt.cpu_reference_token_id, receipt.metal_phase_token_id);
+    assert_eq!(receipt.timing.cpu_reference_ms, 0.125);
+    assert_eq!(receipt.timing.metal_phase_ms, 0.5);
+    assert_eq!(receipt.timing.timing_delta_ms, 0.375);
+    assert_eq!(receipt.timing.timing_scope, DENSE_PREFILL_LINEAR_TIMING_SCOPE);
+    assert!(!receipt.timing.speedup_claim);
     assert!(!receipt.fallback_used);
     assert_eq!(
         receipt.artifact_path,
@@ -650,7 +656,12 @@ mod live_metal {
         }
 
         let fixture = dense_metal_prefill_linear_fixture();
+        let cpu_reference_start = Instant::now();
+        let cpu_reference = run_dense_prefill_linear_cpu_reference(&fixture)?;
+        let cpu_reference_duration = cpu_reference_start.elapsed();
+        let metal_phase_start = Instant::now();
         let metal_output = run_dense_metal_prefill_linear_fixture(&fixture)?;
+        let metal_phase_duration = metal_phase_start.elapsed();
 
         if !is_apple_m4_adapter_name(&metal_output.adapter_name) {
             return Err(io_error(format!(
@@ -659,12 +670,14 @@ mod live_metal {
             )));
         }
 
-        let comparison = compare_tiny_add_outputs(&fixture.expected, &metal_output.output, 1e-5)?;
+        compare_tiny_add_outputs(&fixture.expected, &cpu_reference, 0.0)?;
+        let comparison = compare_tiny_add_outputs(&cpu_reference, &metal_output.output, 1e-5)?;
+        let cpu_reference_token_id = argmax_index(&cpu_reference);
         let metal_phase_token_id = argmax_index(&metal_output.output);
-        if metal_phase_token_id != fixture.cpu_reference_token_id {
+        if metal_phase_token_id != cpu_reference_token_id {
             return Err(io_error(format!(
                 "M4-PROD-005 greedy token mismatch: CPU reference {}, Metal phase {}",
-                fixture.cpu_reference_token_id, metal_phase_token_id
+                cpu_reference_token_id, metal_phase_token_id
             )));
         }
         let artifact_path = std::env::var(DENSE_PREFILL_LINEAR_ARTIFACT_PATH_ENV)
@@ -675,8 +688,12 @@ mod live_metal {
         let receipt = DenseMetalPrefillLinearReceipt::passed(
             artifact_path.clone(),
             comparison,
-            fixture.cpu_reference_token_id,
+            cpu_reference_token_id,
             metal_phase_token_id,
+            DenseMetalPrefillLinearTiming::measured(
+                duration_ms(cpu_reference_duration),
+                duration_ms(metal_phase_duration),
+            ),
         );
 
         let mut receipt_json = apple_backend_receipt_json(
@@ -1212,6 +1229,28 @@ mod live_metal {
 
             Ok(MetalI2sParityOutput { adapter_name: adapter_info.name, output })
         })
+    }
+
+    fn run_dense_prefill_linear_cpu_reference(
+        fixture: &DenseMetalPrefillLinearFixture,
+    ) -> Result<Vec<f32>, Box<dyn Error>> {
+        let config = bitnet_kernels::cpu::linear::LinearConfig::new(
+            fixture.batch_size,
+            fixture.in_features,
+            fixture.out_features,
+        )
+        .map_err(|error| io_error(format!("failed to build dense CPU reference config: {error}")))?
+        .with_bias(true);
+        let mut output = vec![0.0; fixture.batch_size * fixture.out_features];
+        bitnet_kernels::cpu::linear::linear_cpu(
+            &fixture.activations,
+            &fixture.weights,
+            Some(&fixture.bias),
+            &mut output,
+            &config,
+        )
+        .map_err(|error| io_error(format!("failed to run dense CPU reference: {error}")))?;
+        Ok(output)
     }
 
     fn run_i2s_metal_projection_residual_fixture(
@@ -1859,6 +1898,7 @@ mod live_metal {
                 "phase_scope": receipt.phase_scope,
                 "prefill_tokens": receipt.prefill_tokens,
                 "kv_cache_behavior": receipt.kv_cache_behavior,
+                "timing_recorded": true,
                 "full_autoregressive_decode": false,
                 "full_metal_inference": false
             }),
@@ -1890,6 +1930,16 @@ mod live_metal {
                 "cpu_reference_token_id": receipt.cpu_reference_token_id,
                 "metal_phase_token_id": receipt.metal_phase_token_id,
                 "greedy_token_ids_match_cpu_reference": receipt.cpu_reference_token_id == receipt.metal_phase_token_id
+            }),
+        );
+        object.insert(
+            "timing".to_string(),
+            json!({
+                "scope": receipt.timing.timing_scope,
+                "cpu_reference_ms": receipt.timing.cpu_reference_ms,
+                "metal_phase_ms": receipt.timing.metal_phase_ms,
+                "timing_delta_ms": receipt.timing.timing_delta_ms,
+                "speedup_claim": receipt.timing.speedup_claim
             }),
         );
         object.insert(

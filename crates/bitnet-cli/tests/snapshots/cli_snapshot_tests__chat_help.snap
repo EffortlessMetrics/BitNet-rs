@@ -146,6 +146,8 @@ Options:
       --dump-logits <N>
           Dump top-k logits for first N decode steps (for testing)
 
+          [aliases: --dump-logit-steps, --logits-dump-steps]
+
       --logits-topk <K>
           Number of top logits to dump per step
 

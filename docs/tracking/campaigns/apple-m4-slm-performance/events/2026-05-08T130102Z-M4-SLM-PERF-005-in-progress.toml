@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T13:01:02Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-005"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started parity-gated Apple Metal phase expansion work.",
+  "Scope is limited to named Metal prefill/projection phase timing receipts and receipt validation; no full Metal inference, QK256, Neural Engine, MPSGraph, or broad performance claims.",
+]

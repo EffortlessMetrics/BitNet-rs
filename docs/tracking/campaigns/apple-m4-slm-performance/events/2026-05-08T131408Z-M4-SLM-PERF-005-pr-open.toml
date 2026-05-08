@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T13:14:08Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-005"
+event = "pr_open"
+pr = 4069
+head_sha = "0cee806e6e7317b14bf04617b21f36d71fda8896"
+actor = "codex"
+
+notes = [
+  "Opened Metal phase timing receipt PR.",
+  "The PR keeps the proof phase-local: no full Metal inference, QK256, Neural Engine, MPSGraph, BitNet quality, or broad performance claims.",
+]

@@ -6,7 +6,19 @@
 //! both CARGO_FEATURE_GPU and CARGO_FEATURE_CUDA environment variables.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+fn kernel_build_rs_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build.rs")
+}
+
+fn workspace_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("bitnet-kernels lives under crates/bitnet-kernels")
+        .to_path_buf()
+}
 
 /// AC:2 - Verify build.rs checks both GPU and CUDA features
 ///
@@ -16,17 +28,17 @@ use std::path::Path;
 /// Tests specification: docs/explanation/issue-439-spec.md#implementation-approach-2
 #[test]
 fn ac2_build_script_checks_both_features() {
-    let build_rs_path = "/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels/build.rs";
+    let build_rs_path = kernel_build_rs_path();
 
-    if !Path::new(build_rs_path).exists() {
+    if !build_rs_path.exists() {
         panic!(
             "AC:2 FAIL - build.rs not found at: {}\n\
              Implementation required: Create build.rs with unified GPU detection",
-            build_rs_path
+            build_rs_path.display()
         );
     }
 
-    let build_rs = fs::read_to_string(build_rs_path)
+    let build_rs = fs::read_to_string(&build_rs_path)
         .unwrap_or_else(|_| panic!("AC:2 FAIL - Failed to read build.rs"));
 
     // Check for both feature environment variables
@@ -66,13 +78,13 @@ fn ac2_build_script_checks_both_features() {
 /// Tests specification: docs/explanation/issue-439-spec.md#build-script-parity
 #[test]
 fn ac2_build_script_emits_gpu_cfg() {
-    let build_rs_path = "/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels/build.rs";
+    let build_rs_path = kernel_build_rs_path();
 
-    if !Path::new(build_rs_path).exists() {
+    if !build_rs_path.exists() {
         panic!("AC:2 FAIL - build.rs not found, cannot verify cfg emission");
     }
 
-    let build_rs = fs::read_to_string(build_rs_path)
+    let build_rs = fs::read_to_string(&build_rs_path)
         .unwrap_or_else(|_| panic!("AC:2 FAIL - Failed to read build.rs"));
 
     // Check for rustc-cfg emission for GPU builds
@@ -95,18 +107,19 @@ fn ac2_build_script_emits_gpu_cfg() {
 /// Tests specification: docs/explanation/issue-439-spec.md#affected-crates
 #[test]
 fn ac2_workspace_build_scripts_consistency() {
+    let workspace_root = workspace_root();
     let workspace_crates_with_gpu = vec![
-        "/home/steven/code/Rust/BitNet-rs/crates/bitnet-quantization/build.rs",
-        "/home/steven/code/Rust/BitNet-rs/crates/bitnet-inference/build.rs",
+        workspace_root.join("crates/bitnet-quantization/build.rs"),
+        workspace_root.join("crates/bitnet-inference/build.rs"),
     ];
 
     for build_rs_path in workspace_crates_with_gpu {
-        if !Path::new(build_rs_path).exists() {
+        if !build_rs_path.exists() {
             // Optional - not all crates may have build scripts
             continue;
         }
 
-        let build_rs = match fs::read_to_string(build_rs_path) {
+        let build_rs = match fs::read_to_string(&build_rs_path) {
             Ok(content) => content,
             Err(_) => continue,
         };
@@ -123,10 +136,10 @@ fn ac2_workspace_build_scripts_consistency() {
                 has_unified_check,
                 "AC:2 FAIL - {} must use unified GPU feature detection\n\
                  Expected: CARGO_FEATURE_GPU || CARGO_FEATURE_CUDA",
-                build_rs_path
+                build_rs_path.display()
             );
 
-            println!("AC:2 PASS - {} uses unified GPU detection", build_rs_path);
+            println!("AC:2 PASS - {} uses unified GPU detection", build_rs_path.display());
         }
     }
 }
@@ -141,9 +154,9 @@ mod build_script_edge_cases {
     /// allowing CPU-only builds to succeed.
     #[test]
     fn ac2_build_script_handles_no_features() {
-        let build_rs_path = "/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels/build.rs";
+        let build_rs_path = kernel_build_rs_path();
 
-        if !Path::new(build_rs_path).exists() {
+        if !build_rs_path.exists() {
             return;
         }
 
@@ -163,20 +176,21 @@ mod build_script_edge_cases {
     /// potentially conflicting flags.
     #[test]
     fn ac2_build_script_single_unified_cfg() {
-        let build_rs_path = "/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels/build.rs";
+        let build_rs_path = kernel_build_rs_path();
 
-        if !Path::new(build_rs_path).exists() {
+        if !build_rs_path.exists() {
             return;
         }
 
         let build_rs = fs::read_to_string(build_rs_path).unwrap();
 
-        // Count rustc-cfg emissions related to GPU
-        let gpu_cfg_count = build_rs.matches("cargo:rustc-cfg").count();
+        // Count rustc-cfg emissions related to GPU. Other cfgs, such as the
+        // optional C++ FFI bridge, are outside this AC:2 GPU-unification check.
+        let gpu_cfg_count = build_rs.matches("cargo:rustc-cfg=bitnet_build").count();
 
-        // Should emit exactly one unified GPU cfg, not separate cuda/gpu cfgs
+        // Should emit unified accelerator cfgs, not separate cuda/gpu cfgs.
         assert!(
-            gpu_cfg_count <= 2, // Allow for potential FFI or other cfgs
+            gpu_cfg_count <= 2, // unified GPU plus optional HIP
             "AC:2 FAIL - build.rs should emit minimal cfg flags (found: {})",
             gpu_cfg_count
         );

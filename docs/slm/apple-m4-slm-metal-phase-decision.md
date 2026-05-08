@@ -88,6 +88,10 @@ metal_phase.execution_phase = prefill_linear_projection
 layout.consumes_dense_f32_directly = true
 layout.dequantizes_before_compute = false
 parity.greedy_token_ids_match_cpu_reference = true
+timing.cpu_reference_ms = <phase CPU fixture time>
+timing.metal_phase_ms = <phase Metal setup/dispatch/readback time>
+timing.timing_delta_ms = <metal_phase_ms - cpu_reference_ms>
+timing.speedup_claim = false
 ```
 
 Run the live Apple M4 proof explicitly:
@@ -111,6 +115,11 @@ cargo run --locked -p bitnet-cli \
   --features cpu,full-cli \
   -- mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/metal-dense-prefill-linear.json --json
 ```
+
+`M4-SLM-PERF-005` extends this proof with phase-local timing delta receipts.
+The timing scope is the deterministic dense prefill linear fixture only; it
+does not report a full-pipeline speedup, and `mac receipts-check` rejects Metal
+phase receipts that omit timing or set `speedup_claim=true`.
 
 This proof still does not claim full `apple-m4-metal` inference, decode-loop
 Metal routing, KV-cache behavior on Metal, Neural Engine execution, MPSGraph

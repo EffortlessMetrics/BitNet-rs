@@ -680,6 +680,7 @@ fn mac_receipts_check_accepts_split_metal_phase_receipt() {
                 "kernel_id": "tiny_metal_dense_prefill_linear_projection",
                 "kernel_family": "dense_f32",
                 "execution_phase": "prefill_linear_projection",
+                "timing_recorded": true,
                 "full_metal_inference": false,
                 "full_autoregressive_decode": false
             },
@@ -700,6 +701,13 @@ fn mac_receipts_check_accepts_split_metal_phase_receipt() {
                 "cpu_reference_token_id": 3,
                 "metal_phase_token_id": 3,
                 "greedy_token_ids_match_cpu_reference": true
+            },
+            "timing": {
+                "scope": "single_live_phase_dispatch_readback_vs_cpu_reference_fixture",
+                "cpu_reference_ms": 0.125,
+                "metal_phase_ms": 0.5,
+                "timing_delta_ms": 0.375,
+                "speedup_claim": false
             },
             "claim_boundary": {
                 "phase_contribution_only": true,
@@ -723,6 +731,59 @@ fn mac_receipts_check_accepts_split_metal_phase_receipt() {
         .success()
         .stdout(predicate::str::contains("phase_contribution"))
         .stdout(predicate::str::contains("apple-m4-metal"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_metal_phase_without_timing() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("metal-phase-missing-timing.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "phase_contribution",
+            "requested_backend": "apple-m4-metal",
+            "selected_backend": "apple-m4-metal",
+            "runtime_api": "metal",
+            "fallback_used": false,
+            "kernel_id": "tiny_metal_dense_prefill_linear_projection",
+            "slm_pipeline": {
+                "selected_backend": "apple-m4-cpu-neon",
+                "runtime_api": "cpu",
+                "cpu_pipeline_for_remaining_phases": true
+            },
+            "metal_phase": {
+                "selected_backend": "apple-m4-metal",
+                "runtime_api": "metal",
+                "fallback_used": false,
+                "kernel_id": "tiny_metal_dense_prefill_linear_projection",
+                "execution_phase": "prefill_linear_projection",
+                "full_metal_inference": false
+            },
+            "layout": {
+                "consumes_dense_f32_directly": true,
+                "dequantizes_before_compute": false,
+                "batch_size": 2,
+                "in_features": 8,
+                "out_features": 6
+            },
+            "parity": {
+                "reference_backend": "apple-m4-cpu-neon",
+                "target_backend": "apple-m4-metal",
+                "max_abs_error": 0.0,
+                "mean_abs_error": 0.0,
+                "greedy_token_ids_match_cpu_reference": true
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("must record phase timing"));
 }
 
 #[test]
