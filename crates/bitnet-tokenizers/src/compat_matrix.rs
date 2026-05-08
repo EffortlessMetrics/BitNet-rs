@@ -161,8 +161,11 @@ pub fn compatibility_matrix() -> Vec<CompatEntry> {
             add_eos: false,
             chat_template: None,
         },
+        // Legacy compatibility placeholder only. Canonical Microsoft BitNet
+        // b1.58 models are metadata-authoritative and must not resolve to this
+        // old 32k SentencePiece fallback.
         CompatEntry {
-            model_family: "bitnet".to_string(),
+            model_family: "bitnet-legacy-sentencepiece".to_string(),
             tokenizer_type: TokenizerType::SentencePiece,
             vocab_size: 32000,
             special_tokens: SpecialTokens {
@@ -321,8 +324,15 @@ mod tests {
 
     #[test]
     fn test_bitnet_entry() {
-        let e = lookup("bitnet").unwrap();
+        let e = lookup("bitnet-legacy-sentencepiece").unwrap();
         assert_eq!(e.vocab_size, 32000);
         assert_eq!(e.tokenizer_type, TokenizerType::SentencePiece);
+    }
+
+    #[test]
+    fn canonical_bitnet_b158_does_not_use_legacy_sentencepiece_fallback() {
+        assert!(lookup("microsoft/bitnet-b1.58-2B-4T").is_none());
+        assert!(lookup("microsoft/bitnet-b1.58-2B-4T-gguf").is_none());
+        assert!(lookup("bitnet").is_none());
     }
 }

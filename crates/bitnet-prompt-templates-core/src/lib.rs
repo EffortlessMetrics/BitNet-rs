@@ -395,6 +395,25 @@ impl std::fmt::Display for TemplateType {
 }
 
 impl TemplateType {
+    fn looks_like_canonical_bitnet_hint(value: &str) -> bool {
+        let value = value.to_ascii_lowercase();
+        value.contains("microsoft/bitnet-b1.58")
+            || value.contains("microsoft-bitnet-b1.58")
+            || value.contains("bitnet-b1.58")
+            || value.contains("bitnet_b1.58")
+            || value.contains("bitnet-1.58")
+            || value.contains("bitnet_1.58")
+            || value.contains("b1.58-2b-4t")
+            || value.contains("b1_58-2b-4t")
+            || value == "bitnet"
+    }
+
+    fn looks_like_bitnet_answer_template(jinja: &str) -> bool {
+        jinja.contains("<|eot_id|>")
+            && (jinja.contains("Assistant:") || jinja.contains("BITNETAssistant"))
+            && (jinja.contains("User:") || jinja.contains("Human:"))
+    }
+
     /// Detect template type from model/tokenizer path hints.
     ///
     /// This is intentionally lightweight and filesystem-free so callers can
@@ -439,6 +458,47 @@ impl TemplateType {
         Self::Instruct
     }
 
+    /// Detect template type from GGUF/tokenizer metadata plus tokenizer hints.
+    ///
+    /// Canonical Microsoft BitNet b1.58 uses a LLaMA-3-family tokenizer, but
+    /// its answer envelope is not the generic LLaMA-3 header template. Treat
+    /// model metadata and `tokenizer.chat_template` as the authority before
+    /// falling back to path or tokenizer-name heuristics.
+    #[must_use]
+    pub fn detect_from_metadata(
+        architecture: Option<&str>,
+        model_name: Option<&str>,
+        tokenizer_name: Option<&str>,
+        chat_template_jinja: Option<&str>,
+    ) -> Self {
+        if let Some(jinja) = chat_template_jinja
+            && Self::looks_like_bitnet_answer_template(jinja)
+        {
+            tracing::debug!(
+                template = "BitnetCppAnswer",
+                source = "metadata_chat_template",
+                "auto-detected prompt template"
+            );
+            return Self::BitnetCppAnswer;
+        }
+
+        if architecture
+            .into_iter()
+            .chain(model_name)
+            .chain(tokenizer_name)
+            .any(Self::looks_like_canonical_bitnet_hint)
+        {
+            tracing::debug!(
+                template = "BitnetCppAnswer",
+                source = "model_metadata",
+                "auto-detected prompt template"
+            );
+            return Self::BitnetCppAnswer;
+        }
+
+        Self::detect(tokenizer_name, chat_template_jinja)
+    }
+
     /// Detect template type from GGUF metadata and tokenizer hints.
     ///
     /// Priority order:
@@ -457,10 +517,7 @@ impl TemplateType {
                 );
                 return Self::Llama3Chat;
             }
-            if jinja.contains("<|eot_id|>")
-                && (jinja.contains("Assistant:") || jinja.contains("BITNETAssistant"))
-                && (jinja.contains("User:") || jinja.contains("Human:"))
-            {
+            if Self::looks_like_bitnet_answer_template(jinja) {
                 tracing::debug!(
                     template = "BitnetCppAnswer",
                     source = "gguf_chat_template",
@@ -3280,6 +3337,7 @@ impl TemplateType {
             Self::Raw,
             Self::Instruct,
             Self::Llama3Chat,
+            Self::BitnetCppAnswer,
             Self::Phi4Chat,
             Self::QwenChat,
             Self::GemmaChat,
@@ -3845,6 +3903,30 @@ mod tests {
         let detected = TemplateType::detect(
             Some("gpt2"),
             Some("{{ 'User: ' + messages[0]['content'] + '<|eot_id|>Assistant:' }}"),
+        );
+        assert_eq!(detected, TemplateType::BitnetCppAnswer);
+    }
+
+    #[test]
+    fn detects_bitnetcpp_answer_from_canonical_bitnet_metadata() {
+        let detected = TemplateType::detect_from_metadata(
+            Some("bitnet"),
+            Some("microsoft/bitnet-b1.58-2B-4T"),
+            Some("llama3"),
+            None,
+        );
+        assert_eq!(detected, TemplateType::BitnetCppAnswer);
+    }
+
+    #[test]
+    fn bitnet_metadata_takes_precedence_over_generic_llama3_header_template() {
+        let detected = TemplateType::detect_from_metadata(
+            Some("bitnet"),
+            Some("microsoft/bitnet-b1.58-2B-4T"),
+            Some("llama3"),
+            Some(
+                "{{ '<|start_header_id|>user<|end_header_id|>' + messages[0]['content'] + '<|eot_id|>' }}",
+            ),
         );
         assert_eq!(detected, TemplateType::BitnetCppAnswer);
     }
@@ -5635,7 +5717,8 @@ mod detect_logging_tests {
     #[test]
     fn test_all_variants_complete() {
         let variants = TemplateType::all_variants();
-        assert_eq!(variants.len(), 59);
+        assert_eq!(variants.len(), 60);
+        assert!(variants.contains(&TemplateType::BitnetCppAnswer));
         // Verify no duplicates
         let mut seen = std::collections::HashSet::new();
         for v in variants {
