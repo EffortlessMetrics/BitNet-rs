@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T21:15:00Z"
+campaign = "model-artifacts"
+item = "BITNET-COMPAT-001"
+event = "pr_open"
+actor = "codex"
+branch = "codex/bitnet-compat-001-model-kernel-ledger"
+pr = 4134
+head_sha = "a1628153e0ce83fe3bf4d8e0906173969c995e7f"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4134 to record upstream model/kernel compatibility constraints and validator policy.",
+  "The PR rejects 1bitLLM/bitnet_b1_58-3B x86 I2_S as answer_ready, reference_authority, backend_parity, or speedup evidence while preserving diagnostic-only use.",
+  "No QK256 math, tokenizer, loader, transformer, CUDA kernel, dense CUDA, server, or speed-claim behavior changed.",
+]
