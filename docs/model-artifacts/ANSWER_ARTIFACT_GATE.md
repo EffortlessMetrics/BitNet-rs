@@ -32,6 +32,25 @@ Project-specific manifests may retain more detailed legacy statuses, but they
 must map to one of these shared states before they are used as a cross-lane
 precondition.
 
+## Authority Dimensions
+
+Rejected and candidate rows may carry additional authority dimensions when an
+artifact has mixed evidence:
+
+| Field | Values |
+|---|---|
+| `answer_readiness_scope` | `official_target`, `alternate_quant_control`, `diagnostic_only` |
+| `target_alignment` | `official_i2s_cuda_target`, `official_derived_alt_quant`, `unrelated` |
+| `runner_authority` | `stock_llama_cpp`, `ik_llama_cpp`, `microsoft_bitnet`, `unknown` |
+| `tokenizer_authority` | `present`, `missing`, `defaulted`, `externally_supplied` |
+| `pretokenizer_authority` | `present`, `missing`, `defaulted`, `externally_supplied` |
+| `prompt_suite_result` | `passed`, `failed`, `blocked`, `not_run` |
+
+Manifests should also record whether an artifact can unblock the official I2_S
+CUDA answer lane or only a separate alternate-quant control lane. Passing output
+from an alternate quantization is useful control evidence, but it is not proof
+that the official I2_S CUDA target is answer-ready.
+
 ## Answer-Ready Requirements
 
 An `answer_ready` artifact must record:
@@ -80,6 +99,11 @@ Not allowed before this gate passes:
 The current Microsoft BitNet I2_S GGUF is structurally valid, but it is rejected
 for answer-readiness claims because reference-runner evidence records missing
 pre-tokenizer authority and deterministic prompt-suite failure.
+
+The `tdh111` IQ2_BN_R4 artifact is recorded separately as alternate-quant
+control evidence: it passes the tiny prompt suite under its intended
+`ik_llama.cpp` runner, but it is still missing pre-tokenizer authority and does
+not unblock the official Microsoft I2_S CUDA target.
 
 Shared manifests:
 

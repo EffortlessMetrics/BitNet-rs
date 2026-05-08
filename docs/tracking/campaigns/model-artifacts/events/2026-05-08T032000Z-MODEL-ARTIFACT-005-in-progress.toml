@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T03:20:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-005"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "MODEL-ARTIFACT-004 left the shared gate closed: official Microsoft I2_S still fails under ik_llama.cpp, while tdh111 IQ2_BN_R4 passes only as alternate-quant control evidence.",
+  "MODEL-ARTIFACT-005 splits target alignment, runner authority, tokenizer/pre-tokenizer authority, prompt-suite result, and per-lane unblock fields.",
+  "The work remains docs/manifests only and must not promote an answer_ready artifact or claim CPU/CUDA answer readiness.",
+]
