@@ -14,6 +14,8 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
+const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+
 /// Run the fixed answer corpus through the existing `bitnet run` surface.
 #[derive(Args, Debug)]
 pub struct AnswerCorpusCommand {
@@ -97,9 +99,9 @@ impl AnswerCorpusCommand {
         let corpus = AnswerCorpus::load(&self.corpus)?;
         let device =
             normalize_answer_corpus_device(self.device.as_deref().unwrap_or(default_device));
-        if !matches!(device.as_str(), "cpu" | "apple-m4-cpu-neon") {
+        if !matches!(device.as_str(), "cpu" | "apple-m4-cpu-neon" | "cuda" | RTX_5070_TI_CUDA) {
             anyhow::bail!(
-                "answer-corpus only accepts --device cpu or --device apple-m4-cpu-neon; got {device}"
+                "answer-corpus only accepts --device cpu, --device apple-m4-cpu-neon, --device cuda, or --device {RTX_5070_TI_CUDA}; got {device}"
             );
         }
         if self.cpu_kernel.is_some() && device != "cpu" {
@@ -170,7 +172,7 @@ impl AnswerCorpusCommand {
             "backend": {
                 "requested_backend": device.as_str(),
                 "selected_backend": device.as_str(),
-                "runtime_api": "cpu",
+                "runtime_api": answer_corpus_runtime_api(&device),
                 "fallback_used": false,
             },
             "prompt_template": {
@@ -202,6 +204,8 @@ impl AnswerCorpusCommand {
                 "local_answer_path": device.as_str() == "apple-m4-cpu-neon",
                 "diagnostic_only_until_answer_ready_artifact": true,
                 "coherent_answer_claimed": false,
+                "cuda_answer_corpus": is_cuda_answer_corpus_device(&device),
+                "strict_cuda_answer_claimed": false,
                 "full_metal_inference_claimed": false,
                 "qk256_apple_claimed": false,
                 "neural_engine_claimed": false,
@@ -508,8 +512,17 @@ fn normalize_answer_corpus_device(device: &str) -> String {
 fn answer_corpus_artifact_kind(device: &str) -> &'static str {
     match device {
         "apple-m4-cpu-neon" => "bitnet_apple_m4_local_answer_corpus",
+        "cuda" | RTX_5070_TI_CUDA => "bitnet_cuda_answer_corpus",
         _ => "bitnet_cpu_answer_corpus",
     }
+}
+
+fn answer_corpus_runtime_api(device: &str) -> &'static str {
+    if is_cuda_answer_corpus_device(device) { "cuda" } else { "cpu" }
+}
+
+fn is_cuda_answer_corpus_device(device: &str) -> bool {
+    matches!(device, "cuda" | RTX_5070_TI_CUDA)
 }
 
 fn prompt_prefill_receipt(run_receipt: &Value) -> Value {
@@ -612,13 +625,16 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
     let selected_backend_valid = match expected_backend {
         "cpu" => matches!(selected_backend, "cpu" | "cpu-rust"),
         "apple-m4-cpu-neon" => selected_backend == "apple-m4-cpu-neon",
+        "cuda" => selected_backend.contains("cuda"),
+        RTX_5070_TI_CUDA => selected_backend == RTX_5070_TI_CUDA,
         _ => false,
     };
     if !selected_backend_valid {
         failed.push(format!("selected_backend_{expected_backend}"));
     }
-    if runtime_api != "cpu" {
-        failed.push("runtime_api_cpu".to_string());
+    let expected_runtime_api = answer_corpus_runtime_api(expected_backend);
+    if runtime_api != expected_runtime_api {
+        failed.push(format!("runtime_api_{expected_runtime_api}"));
     }
     if fallback_used {
         failed.push("fallback_false".to_string());
@@ -647,6 +663,24 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
     }
     if selected_kernel.contains("mock") || selected_kernel.contains("diagnostic") {
         failed.push("selected_kernel_production".to_string());
+    }
+    if is_cuda_answer_corpus_device(expected_backend) {
+        let cuda_kernel_recorded = selected_kernel.contains("cuda")
+            || run_receipt["kernel_stats"].as_array().is_some_and(|stats| {
+                stats.iter().any(|stat| {
+                    stat["kernel_id"].as_str().is_some_and(|id| id.contains("cuda"))
+                        && stat["invocations"].as_u64().unwrap_or_default() > 0
+                })
+            });
+        if !cuda_kernel_recorded {
+            failed.push("cuda_kernel_recorded".to_string());
+        }
+        let cpu_fallback = run_receipt["execution_coverage"]["bitnet_linear_layers_cpu_fallback"]
+            .as_u64()
+            .unwrap_or(1);
+        if cpu_fallback != 0 {
+            failed.push("cuda_bitnet_linear_cpu_fallback_zero".to_string());
+        }
     }
 
     if !run_receipt["tokens"]["prompt_ids"].is_array() {
@@ -959,6 +993,24 @@ mod tests {
         });
 
         assert!(answer_receipt_failed_rules(&receipt, "apple-m4-cpu-neon").is_empty());
+    }
+
+    #[test]
+    fn answer_receipt_accepts_strict_cuda_truth() {
+        let receipt = json!({
+            "requested_backend": RTX_5070_TI_CUDA,
+            "selected_backend": RTX_5070_TI_CUDA,
+            "runtime_api": "cuda",
+            "fallback_used": false,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "gguf_metadata", "strict": true },
+            "kernel": { "kernel_id": "qk256_gemv_cuda" },
+            "kernel_stats": [{ "kernel_id": "qk256_gemv_cuda", "invocations": 8 }],
+            "execution_coverage": { "bitnet_linear_layers_cpu_fallback": 0 },
+            "tokens": { "prompt_ids": [1, 2], "generated_ids": [3] },
+        });
+
+        assert!(answer_receipt_failed_rules(&receipt, RTX_5070_TI_CUDA).is_empty());
     }
 
     #[test]
