@@ -320,6 +320,19 @@ BitNet.cpp-template case is blocked independently of full-corpus fanout. It does
 not prove answer quality, scalar/AVX2 parity under the new prompt, sustained
 throughput, Arc 140V execution, or Intel NPU execution.
 
+CPU258V-010 records the same selected case through a release-built CLI:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-release.json
+```
+
+The release run completes the selected strict CPU AVX2 row with real GGUF
+loading, explicit strict tokenizer resolution, `i2_s-avx2-reference`,
+`fallback_used=false`, 19 prompt tokens, and 4 generated tokens. It still fails
+the exact-answer gate with generated text `'E tradi Paperback mente`, so this is
+output-quality evidence, not answer readiness. It does not prove scalar/AVX2
+parity, sustained throughput, Arc 140V execution, or Intel NPU execution.
+
 ## Windows PowerShell Bundle
 
 ```powershell
