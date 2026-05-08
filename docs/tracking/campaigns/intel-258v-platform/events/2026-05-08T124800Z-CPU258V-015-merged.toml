@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T12:48:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-015"
+event = "merged"
+actor = "codex"
+pr = 4046
+merge_sha = "2fdfde8164a3d27d6be31c081983ffe79205752f"
+summary = "Merged CPU258V-015, recording full-corpus post-mechanics answer readiness on the 258V CPU."
+
+notes = [
+  "The merged scalar and AVX2 receipts pass all five fixed strict-bitnet-answer-corpus-v1 gates after the BitNet b1.58 mechanics correction.",
+  "The scalar-vs-AVX2 full-corpus parity receipt records summary.passed=5, summary.failed=0, and no first divergence.",
+  "This closeout preserves the claim boundary: fixed-corpus CPU answer readiness and parity only, without general chat, speed, Arc 140V, or Intel NPU claims.",
+]

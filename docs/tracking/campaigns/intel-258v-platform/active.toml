@@ -970,8 +970,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-015"
-status = "pr_open"
-pr = 4046
+status = "merged"
 branch = "codex/intel-258v-platform/CPU258V-015-post-mechanics-corpus"
 stackable = false
 review_mode = "codex_premerge"

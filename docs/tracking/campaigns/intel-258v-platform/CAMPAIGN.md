@@ -47,7 +47,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | CPU258V-012 | merged | Correct BitNet b1.58 CPU model mechanics to use RMSNorm and ReLU2, fix tied-output-head receipt metadata, and record a one-token strict scalar fixture showing the shared answer-quality issue remains after the mechanics correction; merged in #4022. |
 | CPU258V-013 | merged | Record release-built warm-session `prefill_512` and `decode_128` strict CPU phase receipts on the 258V after the BitNet b1.58 mechanics correction; phase timing only, no answer-quality, speedup, Arc, or NPU claims; merged in #4036. |
 | CPU258V-014 | merged | Record post-mechanics scalar and AVX2 answer-corpus receipts for the selected `math_2_plus_2` BitNet.cpp-template case, showing the corrected CPU path passes the exact answer gate and preserves scalar-vs-AVX2 parity; no general chat, speed, Arc, or NPU claims; merged in #4041. |
-| CPU258V-015 | pr_open | Record post-mechanics scalar and AVX2 answer-corpus receipts for the full committed BitNet.cpp-template corpus on the 258V, showing all five fixed cases pass and scalar-vs-AVX2 full-corpus parity holds; no general chat, speed, Arc, or NPU claims; PR #4046. |
+| CPU258V-015 | merged | Record post-mechanics scalar and AVX2 answer-corpus receipts for the full committed BitNet.cpp-template corpus on the 258V, showing all five fixed cases pass and scalar-vs-AVX2 full-corpus parity holds; no general chat, speed, Arc, or NPU claims; merged in #4046. |
 
 ## Review Policy
 
