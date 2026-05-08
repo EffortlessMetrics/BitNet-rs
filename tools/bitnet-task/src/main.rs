@@ -59,6 +59,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Task {
+    /// Equivalent of scripts/preflight.sh
+    Preflight {
+        /// Print shell exports for callers that source scripts/preflight.sh.
+        #[arg(long)]
+        emit_env: bool,
+    },
     /// Equivalent of scripts/bitnet_accept.sh
     BitnetAccept {
         #[arg(default_value = DEFAULT_MODEL)]
@@ -249,6 +255,7 @@ fn main() -> Result<()> {
     let root = workspace_root()?;
 
     match cli.command {
+        Task::Preflight { emit_env } => cmd_preflight(emit_env),
         Task::BitnetAccept { model, tokenizer } => cmd_bitnet_accept(&root, &model, &tokenizer),
         Task::BuildCppStatic { cpp_dir } => cmd_build_cpp_static(&root, cpp_dir.as_deref()),
         Task::CheckIgnoreAnnotations => cmd_check_ignore_annotations(&root),
@@ -469,7 +476,29 @@ fn run_xtask_binary<S: AsRef<str>>(
     run_capture(root, program, args, &[], allow_failure)
 }
 
-fn collect_preflight_env() -> Result<Vec<(String, String)>> {
+fn cmd_preflight(emit_env: bool) -> Result<()> {
+    let envs = collect_preflight_env(emit_env)?;
+    if emit_env {
+        for (name, value) in envs {
+            println!("export {name}={}", shell_quote(&value));
+        }
+    }
+    Ok(())
+}
+
+fn preflight_line(diagnostics_to_stderr: bool, message: impl AsRef<str>) {
+    if diagnostics_to_stderr {
+        eprintln!("{}", message.as_ref());
+    } else {
+        println!("{}", message.as_ref());
+    }
+}
+
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace("'", "'\''"))
+}
+
+fn collect_preflight_env(diagnostics_to_stderr: bool) -> Result<Vec<(String, String)>> {
     let pids_used = if command_available("ps") {
         let output = run_capture(Path::new("."), "ps", &["-e"], &[], true)?;
         if output.status.success() {
@@ -502,10 +531,13 @@ fn collect_preflight_env() -> Result<Vec<(String, String)>> {
     let pids_pct = if pid_max > 0 { pids_used.saturating_mul(100) / pid_max } else { 0 };
     let files_pct = if files_max > 0 { files_used.saturating_mul(100) / files_max } else { 0 };
 
-    println!("=== BitNet-rs System Resource Check ===");
-    println!("PIDs: {pids_used} / {pid_max} ({pids_pct}%)");
-    println!("Open files: {files_used} / {files_max} ({files_pct}%)");
-    println!("Load average: {load_avg}");
+    preflight_line(diagnostics_to_stderr, "=== BitNet-rs System Resource Check ===");
+    preflight_line(diagnostics_to_stderr, format!("PIDs: {pids_used} / {pid_max} ({pids_pct}%)"));
+    preflight_line(
+        diagnostics_to_stderr,
+        format!("Open files: {files_used} / {files_max} ({files_pct}%)"),
+    );
+    preflight_line(diagnostics_to_stderr, format!("Load average: {load_avg}"));
 
     let mut envs = vec![
         (
@@ -559,19 +591,27 @@ fn collect_preflight_env() -> Result<Vec<(String, String)>> {
                 }
             }
         }
-        println!("⚠️  System hot ({pids_pct}% PID usage) → auto-degraded to single-threaded mode");
+        preflight_line(
+            diagnostics_to_stderr,
+            format!(
+                "⚠️  System hot ({pids_pct}% PID usage) → auto-degraded to single-threaded mode"
+            ),
+        );
     } else {
-        println!(
-            "✅ System resources OK → using capped concurrency (RUST_TEST_THREADS={}, RAYON={} )",
-            envs[0].1, envs[1].1,
+        preflight_line(
+            diagnostics_to_stderr,
+            format!(
+                "✅ System resources OK → using capped concurrency (RUST_TEST_THREADS={}, RAYON={} )",
+                envs[0].1, envs[1].1,
+            ),
         );
     }
 
-    println!("=== BitNet-rs Concurrency Configuration ===");
+    preflight_line(diagnostics_to_stderr, "=== BitNet-rs Concurrency Configuration ===");
     for (name, value) in &envs {
-        println!("{name}={value}");
+        preflight_line(diagnostics_to_stderr, format!("{name}={value}"));
     }
-    println!("========================================");
+    preflight_line(diagnostics_to_stderr, "========================================");
 
     Ok(envs)
 }
@@ -869,6 +909,7 @@ fn relevant_flake_output(text: &str) -> Vec<String> {
 mod tests {
     use super::{
         command_available, command_available_in_path, command_failure_details, is_executable_file,
+        shell_quote,
     };
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
@@ -879,6 +920,12 @@ mod tests {
         let mut permissions = fs::metadata(path).expect("metadata").permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(path, permissions).expect("set executable bit");
+    }
+
+    #[test]
+    fn shell_quote_escapes_single_quotes() {
+        assert_eq!(shell_quote("plain"), "'plain'");
+        assert_eq!(shell_quote("can't"), "'can'\''t'");
     }
 
     #[test]
