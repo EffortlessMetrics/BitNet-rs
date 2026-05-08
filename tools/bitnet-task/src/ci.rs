@@ -572,3 +572,604 @@ pub(crate) fn cmd_sanity_check(root: &Path) -> Result<()> {
     println!("Ready for production deployment! 🚀");
     Ok(())
 }
+
+#[derive(Clone, Copy)]
+enum AcceptanceExit {
+    General = 1,
+    MissingModel = 2,
+    Mapping = 3,
+    Tokenizer = 4,
+    Inference = 5,
+    Tokenization = 6,
+    Determinism = 7,
+    Test = 8,
+    Performance = 9,
+    Memory = 10,
+}
+
+fn acceptance_fail(code: AcceptanceExit, message: impl AsRef<str>) -> ! {
+    eprintln!("{}", message.as_ref());
+    std::process::exit(code as i32);
+}
+
+struct AcceptanceTemps {
+    paths: Vec<PathBuf>,
+    next: usize,
+}
+
+impl AcceptanceTemps {
+    fn new() -> Self {
+        Self { paths: Vec::new(), next: 0 }
+    }
+
+    fn file(&mut self, label: &str) -> PathBuf {
+        self.next += 1;
+        let path = env::temp_dir().join(format!(
+            "bitnet-task-ci-acceptance-{}-{}-{label}.json",
+            std::process::id(),
+            self.next
+        ));
+        self.paths.push(path.clone());
+        path
+    }
+}
+
+impl Drop for AcceptanceTemps {
+    fn drop(&mut self) {
+        for path in &self.paths {
+            let _ = fs::remove_file(path);
+        }
+    }
+}
+
+struct AcceptanceMode {
+    name: &'static str,
+    model_path: String,
+    tokenizer_path: Option<String>,
+    tokenizer_mode: &'static str,
+}
+
+pub(crate) fn cmd_ci_acceptance_gate(root: &Path) -> Result<()> {
+    if !command_available("cargo") {
+        acceptance_fail(AcceptanceExit::General, "❌ cargo is required but not installed");
+    }
+
+    println!("=== BitNet-rs CI Acceptance Gate ===");
+    println!("Environment: DETERMINISTIC=1, SEED=42, THREADS=1");
+    let gate_env = [
+        ("RAYON_NUM_THREADS", "1"),
+        ("BITNET_DETERMINISTIC", "1"),
+        ("BITNET_SEED", "42"),
+        ("OMP_NUM_THREADS", "1"),
+        ("GGML_NUM_THREADS", "1"),
+    ];
+
+    println!("━━━ Gate 1: Build & Binary Discovery ━━━");
+    let rs_bin = discover_release_bitnet(root, &gate_env)
+        .unwrap_or_else(|err| acceptance_fail(AcceptanceExit::General, err));
+    println!("✓ Binary discovered: {}", rs_bin.display());
+
+    println!("━━━ Gate 2: Unit Tests ━━━");
+    let test_output = run_capture(
+        root,
+        "cargo",
+        &[
+            "test",
+            "--workspace",
+            "--no-default-features",
+            "--features",
+            "cpu",
+            "--exclude",
+            "bitnet-py",
+            "--lib",
+            "--",
+            "-q",
+        ],
+        &gate_env,
+        true,
+    )?;
+    if !test_output.status.success() {
+        eprintln!("❌ Unit tests failed");
+        print_tail(&test_output, 200);
+        std::process::exit(AcceptanceExit::Test as i32);
+    }
+    println!("✓ Unit tests passed");
+
+    println!("━━━ Gate 3: Model Selection ━━━");
+    let mode = acceptance_mode();
+    println!("Mode: {}", mode.name);
+    println!("Model: {}", mode.model_path);
+    if !root.join(&mode.model_path).is_file() && !Path::new(&mode.model_path).is_file() {
+        eprintln!("❌ Missing model file: {}", mode.model_path);
+        if mode.name == "PR" {
+            eprintln!(
+                "Run: scripts/fetch-pr-model.sh to download TinyLlama with embedded tokenizer"
+            );
+        } else {
+            eprintln!("Run: cargo run -p xtask -- download-model");
+        }
+        std::process::exit(AcceptanceExit::MissingModel as i32);
+    }
+    if let Some(tokenizer) = &mode.tokenizer_path {
+        if !root.join(tokenizer).is_file() && !Path::new(tokenizer).is_file() {
+            acceptance_fail(
+                AcceptanceExit::Tokenizer,
+                format!("❌ Missing tokenizer: {tokenizer} (required for nightly)"),
+            );
+        }
+    }
+
+    let mut temps = AcceptanceTemps::new();
+
+    println!("━━━ Gate 4: Tensor Mapping Validation ━━━");
+    let mapper_json = temps.file("mapper");
+    let mapper_out = run_capture(
+        root,
+        "cargo",
+        &["run", "-q", "-p", "xtask", "--", "gate", "mapper", "--model", &mode.model_path],
+        &gate_env,
+        true,
+    )?;
+    if !mapper_out.status.success() {
+        acceptance_fail(AcceptanceExit::Mapping, "❌ Mapper gate failed to run");
+    }
+    fs::write(&mapper_json, &mapper_out.stdout)?;
+    let mapper = read_json(&mapper_json, AcceptanceExit::Mapping);
+    if !mapper.get("ok").and_then(Value::as_bool).unwrap_or(false)
+        || mapper.get("unmapped_count").and_then(Value::as_i64).unwrap_or(-1) != 0
+    {
+        eprintln!("❌ Tensor mapping failed");
+        eprintln!("{}", serde_json::to_string_pretty(&mapper).unwrap_or_default());
+        std::process::exit(AcceptanceExit::Mapping as i32);
+    }
+    println!(
+        "✓ All tensors mapped (unmapped={})",
+        mapper.get("unmapped_count").and_then(Value::as_i64).unwrap_or(0)
+    );
+
+    println!("━━━ Gate 5: Strict Inference (no mocks) ━━━");
+    let strict_json = temps.file("strict");
+    let mut strict_args = vec![
+        "run".to_string(),
+        "--model".to_string(),
+        mode.model_path.clone(),
+        "--prompt".to_string(),
+        "The capital of France is".to_string(),
+        "--bos".to_string(),
+        "--max-new-tokens".to_string(),
+        "16".to_string(),
+        "--temperature".to_string(),
+        "0".to_string(),
+        "--strict-mapping".to_string(),
+        "--strict-tokenizer".to_string(),
+        "--json-out".to_string(),
+        strict_json.to_string_lossy().into_owned(),
+    ];
+    push_tokenizer(&mut strict_args, &mode);
+    run_acceptance_bin(
+        root,
+        &rs_bin,
+        &strict_args,
+        &gate_env,
+        AcceptanceExit::Inference,
+        "❌ Strict inference failed",
+    )?;
+    let strict = read_json(&strict_json, AcceptanceExit::Inference);
+    let counts_ok = strict.pointer("/counts/unmapped").and_then(Value::as_i64).unwrap_or(-1) == 0
+        && value_to_f64(strict.pointer("/counts/n_kv")).unwrap_or(0.0) > 0.0
+        && value_to_f64(strict.pointer("/counts/n_tensors")).unwrap_or(0.0) > 0.0;
+    let tokenizer_ok = mode.name != "PR"
+        || strict.pointer("/tokenizer/type").and_then(Value::as_str) == Some("sentencepiece");
+    if !counts_ok || !tokenizer_ok {
+        eprintln!("❌ Strict validation failed");
+        eprintln!("{}", serde_json::to_string_pretty(&strict).unwrap_or_default());
+        std::process::exit(AcceptanceExit::Inference as i32);
+    }
+    println!("✓ Strict inference passed (tokenizer={})", mode.tokenizer_mode);
+
+    println!("━━━ Gate 6: Tokenization Smoke Test ━━━");
+    let prompts = ["The capital of France is", "Once upon a time", "def fibonacci(n):"];
+    let mut pass = 0;
+    let mut failed = Vec::new();
+    for prompt in prompts {
+        let tok_json = temps.file("tokenize");
+        let mut args = vec![
+            "tokenize".to_string(),
+            "--model".to_string(),
+            mode.model_path.clone(),
+            "--prompt".to_string(),
+            prompt.to_string(),
+            "--bos".to_string(),
+            "--json-out".to_string(),
+            tok_json.to_string_lossy().into_owned(),
+        ];
+        push_tokenizer(&mut args, &mode);
+        let out = run_capture(root, rs_bin.to_string_lossy().as_ref(), &args, &gate_env, true)?;
+        if out.status.success() {
+            let tok = read_json_allowing_empty(&tok_json);
+            let ids_non_empty = tok
+                .as_ref()
+                .and_then(|v| v.pointer("/tokens/ids"))
+                .and_then(Value::as_array)
+                .is_some_and(|ids| !ids.is_empty());
+            if ids_non_empty {
+                pass += 1;
+            } else {
+                failed.push(prompt);
+            }
+        } else {
+            failed.push(prompt);
+        }
+    }
+    if pass < 2 {
+        eprintln!("❌ Tokenization failed: only {pass}/{} prompts succeeded", prompts.len());
+        for prompt in failed {
+            eprintln!("  Failed: {prompt}");
+        }
+        std::process::exit(AcceptanceExit::Tokenization as i32);
+    }
+    println!("✓ Tokenization smoke test: {pass}/{} passed", prompts.len());
+
+    println!("━━━ Gate 7: Determinism Check ━━━");
+    let run1 = temps.file("det1");
+    let run2 = temps.file("det2");
+    for out_path in [&run1, &run2] {
+        let mut args = vec![
+            "run".to_string(),
+            "--model".to_string(),
+            mode.model_path.clone(),
+            "--prompt".to_string(),
+            "Once upon".to_string(),
+            "--bos".to_string(),
+            "--max-new-tokens".to_string(),
+            "32".to_string(),
+            "--temperature".to_string(),
+            "0".to_string(),
+            "--json-out".to_string(),
+            out_path.to_string_lossy().into_owned(),
+        ];
+        push_tokenizer(&mut args, &mode);
+        run_acceptance_bin(
+            root,
+            &rs_bin,
+            &args,
+            &gate_env,
+            AcceptanceExit::Determinism,
+            "❌ Determinism run failed",
+        )?;
+    }
+    let ids1 = token_ids_string(&read_json(&run1, AcceptanceExit::Determinism));
+    let ids2 = token_ids_string(&read_json(&run2, AcceptanceExit::Determinism));
+    if ids1 != ids2 || ids1 == "[]" {
+        eprintln!("❌ Non-deterministic token generation detected");
+        eprintln!("Run 1 IDs: {ids1}");
+        eprintln!("Run 2 IDs: {ids2}");
+        std::process::exit(AcceptanceExit::Determinism as i32);
+    }
+    println!("✓ Deterministic execution verified");
+
+    println!("━━━ Gate 8: Performance & Memory ━━━");
+    run_performance_gate(root, &rs_bin, &mode, &gate_env, &mut temps)?;
+
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("🎉 CI Acceptance Gate: ALL PASSED");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Mode: {}", mode.name);
+    println!("Binary: {}", rs_bin.display());
+    println!("Model: {}", mode.model_path);
+    println!("All gates passed with strict validation");
+    Ok(())
+}
+
+fn acceptance_mode() -> AcceptanceMode {
+    if env::var_os("CI_PR").is_some() || env::var_os("NIGHTLY").is_none() {
+        AcceptanceMode {
+            name: "PR",
+            model_path: env::var("PR_MODEL")
+                .unwrap_or_else(|_| "models/tinyllama-q2.gguf".to_string()),
+            tokenizer_path: None,
+            tokenizer_mode: "embedded",
+        }
+    } else {
+        AcceptanceMode {
+            name: "NIGHTLY",
+            model_path: env::var("BITNET_GGUF")
+                .unwrap_or_else(|_| "models/bitnet/ggml-model-i2_s.gguf".to_string()),
+            tokenizer_path: Some(
+                env::var("TOKENIZER_PATH")
+                    .unwrap_or_else(|_| "models/bitnet/tokenizer.model".to_string()),
+            ),
+            tokenizer_mode: "external",
+        }
+    }
+}
+
+fn discover_release_bitnet(
+    root: &Path,
+    envs: &[(&str, &str)],
+) -> std::result::Result<PathBuf, String> {
+    let output = run_capture(
+        root,
+        "cargo",
+        &[
+            "build",
+            "-p",
+            "bitnet-cli",
+            "--release",
+            "--no-default-features",
+            "--features",
+            "cpu,full-cli",
+            "--message-format=json",
+        ],
+        envs,
+        true,
+    )
+    .map_err(|err| format!("❌ Failed to run cargo build: {err:#}"))?;
+
+    for line in String::from_utf8_lossy(&output.stdout).lines().rev() {
+        let Ok(value) = serde_json::from_str::<Value>(line) else { continue };
+        let is_bitnet_bin = value.pointer("/target/name").and_then(Value::as_str) == Some("bitnet")
+            && value
+                .pointer("/target/kind")
+                .and_then(Value::as_array)
+                .is_some_and(|kinds| kinds.iter().any(|kind| kind.as_str() == Some("bin")));
+        if is_bitnet_bin {
+            if let Some(exe) = value.get("executable").and_then(Value::as_str) {
+                let path = PathBuf::from(exe);
+                if is_executable_file(&path) {
+                    return Ok(path);
+                }
+            }
+        }
+    }
+
+    eprintln!("⚠ JSON parse failed, attempting fallback build...");
+    run_stream(
+        root,
+        "cargo",
+        &[
+            "build",
+            "-p",
+            "bitnet-cli",
+            "--release",
+            "--no-default-features",
+            "--features",
+            "cpu,full-cli",
+        ],
+        envs,
+    )
+    .map_err(|err| format!("❌ Fallback build failed: {err:#}"))?;
+
+    find_executable_named(&root.join("target"), "bitnet")
+        .ok_or_else(|| "❌ Failed to build or locate bitnet binary".to_string())
+}
+
+fn find_executable_named(root: &Path, name: &str) -> Option<PathBuf> {
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = fs::read_dir(&dir) else { continue };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.file_name().and_then(|n| n.to_str()) == Some(name)
+                && is_executable_file(&path)
+            {
+                return Some(path);
+            }
+        }
+    }
+    None
+}
+
+fn push_tokenizer(args: &mut Vec<String>, mode: &AcceptanceMode) {
+    if let Some(tokenizer) = &mode.tokenizer_path {
+        args.push("--tokenizer".to_string());
+        args.push(tokenizer.clone());
+    }
+}
+
+fn run_acceptance_bin(
+    root: &Path,
+    bin: &Path,
+    args: &[String],
+    envs: &[(&str, &str)],
+    code: AcceptanceExit,
+    message: &str,
+) -> Result<()> {
+    let out = run_capture(root, bin.to_string_lossy().as_ref(), args, envs, true)?;
+    if !out.status.success() {
+        acceptance_fail(code, message);
+    }
+    Ok(())
+}
+
+fn read_json(path: &Path, code: AcceptanceExit) -> Value {
+    match fs::read_to_string(path).ok().and_then(|text| serde_json::from_str(&text).ok()) {
+        Some(value) => value,
+        None => acceptance_fail(code, format!("❌ Invalid JSON output: {}", path.display())),
+    }
+}
+
+fn read_json_allowing_empty(path: &Path) -> Option<Value> {
+    fs::read_to_string(path).ok().and_then(|text| serde_json::from_str(&text).ok())
+}
+
+fn value_to_f64(value: Option<&Value>) -> Option<f64> {
+    match value? {
+        Value::Number(n) => n.as_f64(),
+        Value::String(s) => s.parse().ok(),
+        _ => None,
+    }
+}
+
+fn token_ids_string(value: &Value) -> String {
+    value
+        .pointer("/tokens/ids")
+        .cloned()
+        .and_then(|ids| serde_json::to_string(&ids).ok())
+        .unwrap_or_else(|| "[]".to_string())
+}
+
+fn run_performance_gate(
+    root: &Path,
+    rs_bin: &Path,
+    mode: &AcceptanceMode,
+    envs: &[(&str, &str)],
+    temps: &mut AcceptanceTemps,
+) -> Result<()> {
+    let perf_json = temps.file("perf");
+    let mut args = vec![
+        "run".to_string(),
+        "--model".to_string(),
+        mode.model_path.clone(),
+        "--prompt".to_string(),
+        "The quick brown fox jumps over the lazy dog".to_string(),
+        "--max-new-tokens".to_string(),
+        "128".to_string(),
+        "--temperature".to_string(),
+        "0".to_string(),
+        "--json-out".to_string(),
+        perf_json.to_string_lossy().into_owned(),
+    ];
+    push_tokenizer(&mut args, mode);
+    let rss_mb = run_performance_command(root, rs_bin, &args, envs)?;
+
+    let perf = read_json(&perf_json, AcceptanceExit::Performance);
+    let tokps = value_to_f64(perf.pointer("/throughput/tokens_per_second")).unwrap_or(0.0);
+    let decoded = value_to_f64(perf.pointer("/throughput/decoded_tokens")).unwrap_or(0.0);
+    if decoded < 64.0 {
+        println!(
+            "⚠ Warning: only decoded {decoded} tokens (<64), performance measurement may be noisy"
+        );
+    }
+    if tokps < 1.0 {
+        acceptance_fail(
+            AcceptanceExit::Performance,
+            format!("❌ Performance too low: {tokps} tokens/sec < 1.0 minimum"),
+        );
+    }
+    println!("Performance: {tokps} tokens/sec");
+
+    let baseline_path = root.join("ci/baseline.json");
+    if baseline_path.is_file() {
+        let baseline = read_json(&baseline_path, AcceptanceExit::Performance);
+        let model_key = if mode.name == "NIGHTLY" { "bitnet_i2s_cpu" } else { "tinyllama_q2k_cpu" };
+        let base_tps =
+            value_to_f64(baseline.pointer(&format!("/cpu/{model_key}/tok_s"))).unwrap_or(0.0);
+        if base_tps != 0.0 {
+            let threshold = 0.95 * base_tps;
+            if tokps < threshold {
+                acceptance_fail(
+                    AcceptanceExit::Performance,
+                    format!("❌ Performance regression: {tokps} < 95% of baseline {base_tps}"),
+                );
+            }
+            println!("✓ Performance ratio: {tokps} / {base_tps} baseline");
+        }
+        if let Some(rss_mb) = rss_mb {
+            println!("Memory RSS: {rss_mb}MB");
+            let base_rss =
+                value_to_f64(baseline.pointer(&format!("/cpu/{model_key}/rss_mb"))).unwrap_or(0.0);
+            if base_rss != 0.0 {
+                let threshold = (1.03 * base_rss) as u64;
+                if rss_mb > threshold {
+                    acceptance_fail(
+                        AcceptanceExit::Memory,
+                        format!("❌ Memory regression: {rss_mb}MB > 103% of baseline {base_rss}MB"),
+                    );
+                }
+                println!("✓ Memory ratio: {rss_mb}MB / {base_rss}MB baseline");
+            }
+        }
+    } else {
+        println!("✓ Performance acceptable (no baseline for regression testing)");
+    }
+    Ok(())
+}
+
+fn run_performance_command(
+    root: &Path,
+    rs_bin: &Path,
+    args: &[String],
+    envs: &[(&str, &str)],
+) -> Result<Option<u64>> {
+    let time_program = if command_available("gtime") {
+        Some("gtime")
+    } else if Path::new("/usr/bin/time").is_file() && time_supports_verbose("/usr/bin/time") {
+        Some("/usr/bin/time")
+    } else {
+        None
+    };
+
+    if let Some(time_program) = time_program {
+        let mut command = Command::new(time_program);
+        command.current_dir(root).arg("-v").arg(rs_bin).args(args);
+        for (key, value) in envs {
+            command.env(key, value);
+        }
+        command.stdout(Stdio::piped()).stderr(Stdio::piped());
+        let output = command
+            .output()
+            .with_context(|| format!("failed to run `{time_program} -v {}`", rs_bin.display()))?;
+        if !output.status.success() {
+            acceptance_fail(AcceptanceExit::Performance, "❌ Performance run failed");
+        }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Ok(parse_max_rss_mb(&stderr));
+    }
+
+    run_acceptance_bin(
+        root,
+        rs_bin,
+        args,
+        envs,
+        AcceptanceExit::Performance,
+        "❌ Performance run failed",
+    )?;
+    Ok(None)
+}
+
+fn parse_max_rss_mb(time_output: &str) -> Option<u64> {
+    time_output.lines().find_map(|line| {
+        let (_, value) = line.split_once("Maximum resident set size")?;
+        let kb = value.split_whitespace().find_map(|piece| {
+            piece.trim_matches(|c: char| !c.is_ascii_digit()).parse::<u64>().ok()
+        })?;
+        Some(kb / 1024)
+    })
+}
+
+fn time_supports_verbose(program: &str) -> bool {
+    Command::new(program)
+        .arg("-v")
+        .arg("true")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
+fn print_tail(output: &Output, lines: usize) {
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let all = text.lines().collect::<Vec<_>>();
+    let start = all.len().saturating_sub(lines);
+    for line in &all[start..] {
+        eprintln!("{line}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_max_rss_mb;
+
+    #[test]
+    fn parses_gnu_time_max_rss() {
+        let output = "\tMaximum resident set size (kbytes): 131072\n";
+        assert_eq!(parse_max_rss_mb(output), Some(128));
+    }
+}

@@ -336,6 +336,28 @@ fn check_coverage_wrapper_dispatches_to_rust_facade() {
 }
 
 #[test]
+fn ci_acceptance_gate_wrapper_dispatches_to_rust_facade() {
+    let repo_root = repo_root();
+    let manifest_path = repo_root.join("Cargo.toml");
+    let invocations = run_wrapper("ci-acceptance-gate.sh", &[]);
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(
+        invocations[0],
+        vec![
+            "run",
+            "--quiet",
+            "--locked",
+            "--manifest-path",
+            manifest_path.to_string_lossy().as_ref(),
+            "-p",
+            "bitnet-task",
+            "--",
+            "ci-acceptance-gate",
+        ]
+    );
+}
+
+#[test]
 fn perf_wrapper_rewrites_legacy_positionals_into_flags() {
     let repo_root = repo_root();
     let manifest_path = repo_root.join("Cargo.toml");

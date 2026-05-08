@@ -21,7 +21,10 @@ mod testing;
 mod validation;
 
 use self::{
-    ci::{cmd_ci_local, cmd_quality_gate, cmd_sanity_check, cmd_verify_crossval, cmd_verify_tests},
+    ci::{
+        cmd_ci_acceptance_gate, cmd_ci_local, cmd_quality_gate, cmd_sanity_check,
+        cmd_verify_crossval, cmd_verify_tests,
+    },
     docker::{cmd_build_cpp_static, cmd_docker_build},
     hooks::cmd_install_hooks,
     locking::{FixLockedMode, cmd_fix_locked},
@@ -211,6 +214,8 @@ enum Task {
     InstallHooks,
     /// Equivalent of scripts/check-feature-gates.sh
     CheckFeatureGates,
+    /// Equivalent of scripts/ci-acceptance-gate.sh
+    CiAcceptanceGate,
     /// Equivalent of scripts/ci-local.sh
     CiLocal {
         /// Optional mode (workspace | bitnet-server-receipts).
@@ -307,6 +312,7 @@ fn main() -> Result<()> {
         }
         Task::InstallHooks => cmd_install_hooks(&root),
         Task::CheckFeatureGates => cmd_check_feature_gates(&root),
+        Task::CiAcceptanceGate => cmd_ci_acceptance_gate(&root),
         Task::CiLocal { mode } => cmd_ci_local(&root, mode),
         Task::ValidateIq2sBuild => cmd_validate_iq2s_build(&root),
         Task::ValidateStrict => cmd_validate_strict(&root),
