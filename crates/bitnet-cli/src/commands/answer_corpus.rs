@@ -70,6 +70,7 @@ pub struct AnswerCorpusCommand {
 pub enum AnswerCpuKernel {
     Scalar,
     Avx2,
+    Avx512,
 }
 
 impl AnswerCpuKernel {
@@ -77,13 +78,15 @@ impl AnswerCpuKernel {
         match self {
             Self::Scalar => "scalar",
             Self::Avx2 => "avx2",
+            Self::Avx512 => "avx512",
         }
     }
 
     fn child_env(self) -> Vec<(&'static str, &'static str)> {
         match self {
             Self::Scalar => vec![("BITNET_CPU_KERNEL", "scalar"), ("BITNET_FORCE_SCALAR", "1")],
-            Self::Avx2 => vec![("BITNET_CPU_KERNEL", "avx2")],
+            Self::Avx2 => vec![("BITNET_CPU_KERNEL", "avx2"), ("BITNET_FORCE_SCALAR", "0")],
+            Self::Avx512 => vec![("BITNET_CPU_KERNEL", "avx512"), ("BITNET_FORCE_SCALAR", "0")],
         }
     }
 }
@@ -104,6 +107,9 @@ impl AnswerCorpusCommand {
         }
         if self.cpu_kernel == Some(AnswerCpuKernel::Avx2) && !cpu_avx2_available() {
             anyhow::bail!("--cpu-kernel avx2 requested but AVX2 is unavailable on this host");
+        }
+        if self.cpu_kernel == Some(AnswerCpuKernel::Avx512) && !cpu_avx512_available() {
+            anyhow::bail!("--cpu-kernel avx512 requested but AVX512 is unavailable on this host");
         }
         let artifact_kind = answer_corpus_artifact_kind(&device);
         let default_timeout_seconds = effective_default_timeout_seconds(
@@ -194,6 +200,8 @@ impl AnswerCorpusCommand {
             },
             "claim_boundary": {
                 "local_answer_path": device.as_str() == "apple-m4-cpu-neon",
+                "diagnostic_only_until_answer_ready_artifact": true,
+                "coherent_answer_claimed": false,
                 "full_metal_inference_claimed": false,
                 "qk256_apple_claimed": false,
                 "neural_engine_claimed": false,
@@ -308,6 +316,7 @@ impl AnswerCorpusCommand {
         .with_context(|| format!("invalid run receipt {}", case_receipt.display()))?;
         let answer = run_receipt["text"].as_str().unwrap_or_default().to_string();
         let token_ids = generated_token_ids(&run_receipt);
+        let prompt_prefill = prompt_prefill_receipt(&run_receipt);
         let generated_token_count = run_receipt["tokens"]["generated"]
             .as_u64()
             .and_then(|value| usize::try_from(value).ok())
@@ -339,7 +348,18 @@ impl AnswerCorpusCommand {
                 "generated": run_receipt["tokens"]["generated_ids"].clone(),
             },
             "logits_dump": run_receipt.get("logits_dump").cloned().unwrap_or(Value::Null),
+            "prompt": {
+                "rendered_text": run_receipt["prompt"].clone(),
+                "template_family": corpus.defaults.prompt_template,
+                "add_bos": run_receipt["gen_policy"]["bos"].clone(),
+                "add_special": run_receipt["tokenizer"]["bos"].is_number()
+                    || run_receipt["tokenizer"]["eos"].is_number(),
+            },
             "prompt_template": corpus.defaults.prompt_template,
+            "prompt_prefill": prompt_prefill,
+            "position": {
+                "next_decode_position": run_receipt["tokens"]["prompt"].clone(),
+            },
             "quality": {
                 "passed": quality.passed,
                 "printable_utf8": quality.printable_utf8,
@@ -370,6 +390,16 @@ impl AnswerCorpusCommand {
             "tokenizer": {
                 "source": run_receipt["tokenizer"]["source"].clone(),
                 "strict": run_receipt["tokenizer"]["strict"].clone(),
+                "model_family": run_receipt["tokenizer"]["type"].clone(),
+                "pretokenizer_authority": run_receipt["tokenizer"]["pretokenizer_authority"]
+                    .as_str()
+                    .map(Value::from)
+                    .unwrap_or_else(|| Value::from("unknown")),
+            },
+            "model": {
+                "vocab_size": run_receipt["model"]["vocab_size"].clone(),
+                "tie_word_embeddings": run_receipt["model"]["tie_word_embeddings"].clone(),
+                "output_head_tensor": run_receipt["model"]["output_head_tensor"].clone(),
             }
         }))
     }
@@ -480,6 +510,29 @@ fn answer_corpus_artifact_kind(device: &str) -> &'static str {
         "apple-m4-cpu-neon" => "bitnet_apple_m4_local_answer_corpus",
         _ => "bitnet_cpu_answer_corpus",
     }
+}
+
+fn prompt_prefill_receipt(run_receipt: &Value) -> Value {
+    let prompt_token_count = run_receipt["tokens"]["prompt"].as_u64().unwrap_or_else(|| {
+        run_receipt["tokens"]["prompt_ids"]
+            .as_array()
+            .map(|tokens| tokens.len() as u64)
+            .unwrap_or_default()
+    });
+    let profile_prefill = &run_receipt["profile"]["prompt_prefill"];
+    let exercised = profile_prefill["exercised"].as_bool().unwrap_or(prompt_token_count > 0);
+    json!({
+        "executed": exercised,
+        "exercised": exercised,
+        "prompt_token_count": prompt_token_count,
+        "decode_start_position": prompt_token_count,
+        "kv_cache_behavior": profile_prefill["kv_cache_behavior"].clone(),
+        "source": if profile_prefill.is_object() {
+            "run_receipt_profile"
+        } else {
+            "tokens_prompt_count"
+        },
+    })
 }
 
 fn effective_default_timeout_seconds(cli: Option<u64>, corpus: Option<u64>) -> u64 {
@@ -743,6 +796,18 @@ fn cpu_avx2_available() -> bool {
     }
 }
 
+fn cpu_avx512_available() -> bool {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        std::is_x86_feature_detected!("avx512f")
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    {
+        false
+    }
+}
+
 fn child_capture_path(kind: &str) -> PathBuf {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let sequence = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -844,6 +909,37 @@ mod tests {
         });
 
         assert!(answer_receipt_failed_rules(&receipt, "cpu").is_empty());
+    }
+
+    #[test]
+    fn avx512_cpu_kernel_selector_sets_child_env() {
+        assert_eq!(AnswerCpuKernel::Avx512.as_str(), "avx512");
+        assert_eq!(
+            AnswerCpuKernel::Avx512.child_env(),
+            vec![("BITNET_CPU_KERNEL", "avx512"), ("BITNET_FORCE_SCALAR", "0")]
+        );
+    }
+
+    #[test]
+    fn prompt_prefill_receipt_prefers_profile_data() {
+        let receipt = json!({
+            "tokens": {
+                "prompt": 7,
+                "prompt_ids": [1, 2, 3, 4, 5, 6, 7]
+            },
+            "profile": {
+                "prompt_prefill": {
+                    "exercised": true,
+                    "kv_cache_behavior": "prompt_prefix_prefilled_before_decode"
+                }
+            }
+        });
+
+        let prefill = prompt_prefill_receipt(&receipt);
+        assert_eq!(prefill["executed"], true);
+        assert_eq!(prefill["prompt_token_count"], 7);
+        assert_eq!(prefill["decode_start_position"], 7);
+        assert_eq!(prefill["source"], "run_receipt_profile");
     }
 
     #[test]
