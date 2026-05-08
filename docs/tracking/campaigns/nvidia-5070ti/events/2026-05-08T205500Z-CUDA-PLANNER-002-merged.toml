@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T20:55:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-002"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-planner-002-capability-spec"
+pr = 4129
+head_sha = "3bb28760dd407da5f8633434d4f69e12caa53878"
+merge_sha = "9e19a9a6ff04620200d862861f0a383132d3ea54"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4129 merged conservative model-family and quantization metadata mapping into model-aware CUDA planner specs.",
+  "Recognized BitNet I2_S/QK256 labels and dense regular-LLM FP16/BF16 labels route separately.",
+  "Unknown and mismatched metadata remain unsupported under strict CUDA without changing kernels, loader, tokenizer, transformer, server, or dense GGUF inference behavior.",
+]
