@@ -555,3 +555,12 @@ fn rmsnorm_architectures_are_modern() {
         assert_eq!(cfg.norm_type, NormType::RmsNorm, "{arch} should use RmsNorm");
     }
 }
+
+#[test]
+fn bitnet_b158_uses_rmsnorm_relu2_mechanics() {
+    for arch in ["bitnet", "bitnet-b1.58"] {
+        let cfg = defaults_for(arch);
+        assert_eq!(cfg.norm_type, NormType::RmsNorm, "{arch} should use RMSNorm");
+        assert_eq!(cfg.activation_type, ActivationType::Relu2, "{arch} should use ReLU2");
+    }
+}

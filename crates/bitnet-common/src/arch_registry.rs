@@ -12,7 +12,7 @@ use crate::config::{ActivationType, NormType};
 pub struct ArchDefaults {
     /// Normalization layer variant (RmsNorm or LayerNorm).
     pub norm_type: NormType,
-    /// Activation function variant (Silu or Gelu).
+    /// Activation function variant (Silu, Relu2, or Gelu).
     pub activation_type: ActivationType,
     /// Default context length, if one is widely agreed upon.
     pub default_context_length: Option<usize>,
@@ -27,7 +27,7 @@ impl ArchitectureRegistry {
     /// The match is **case-insensitive**.  Returns `None` for unrecognised
     /// architecture strings.
     pub fn lookup(architecture: &str) -> Option<ArchDefaults> {
-        use ActivationType::{Gelu, Silu};
+        use ActivationType::{Gelu, Relu2, Silu};
         use NormType::{LayerNorm, RmsNorm};
 
         let (norm, act, ctx) = match architecture.to_lowercase().as_str() {
@@ -48,7 +48,7 @@ impl ArchitectureRegistry {
             "gemma" => (RmsNorm, Gelu, None),
             "gemma2" | "gemma-2" => (RmsNorm, Gelu, Some(8192)),
 
-            "bitnet" | "bitnet-b1.58" => (RmsNorm, ActivationType::Relu2, None),
+            "bitnet" | "bitnet-b1.58" => (RmsNorm, Relu2, None),
 
             "deepseek" | "deepseek2" => (RmsNorm, Silu, None),
             "deepseek-v3" | "deepseekv3" | "deepseek3" => (RmsNorm, Silu, Some(65536)),
