@@ -371,6 +371,100 @@ pub fn validate_dense_regular_llm_cuda_receipt_json(receipt: &Value) -> Result<(
     Ok(())
 }
 
+/// Validate dense regular-LLM CUDA tensor-residency evidence.
+///
+/// This builds on the dense CUDA boundary validator and requires a
+/// `tensor_residency` section proving the deterministic dense fixture placed
+/// its input and output tensors in CUDA device buffers for the kernel launch.
+/// It is still a fixture-level residency receipt, not a dense GGUF inference,
+/// speedup, server, or full CUDA residency claim.
+pub fn validate_dense_regular_llm_cuda_tensor_residency_receipt_json(
+    receipt: &Value,
+) -> Result<()> {
+    validate_dense_regular_llm_cuda_receipt_json(receipt)?;
+    require_string_eq(receipt, "claim", "dense_regular_llm_cuda_tensor_residency_tested")?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+
+    let stats = first_kernel_stats(receipt)?;
+    let residency = object_field(receipt, "tensor_residency")?;
+    require_string_eq(residency, "scope", "single_dense_f16_gemm_fixture")?;
+    require_string_eq(residency, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(
+        residency,
+        "fixture_id",
+        required_string(object_field(receipt, "parity")?, "fixture_id")?,
+    )?;
+    require_bool_eq(residency, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(residency, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(residency, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(residency, "input_tensors_uploaded_once", true)?;
+    require_bool_eq(residency, "output_tensor_cuda_resident_during_kernel", true)?;
+    require_bool_eq(residency, "host_device_transfer_accounting_matches_kernel_stats", true)?;
+
+    let inputs = array_field(residency, "inputs")?;
+    if inputs.len() < 2 {
+        return Err(anyhow!("tensor_residency.inputs must contain A and B tensors"));
+    }
+    for input in inputs {
+        require_string_non_empty(input, "name")?;
+        require_string_eq(input, "device_residency", "cuda_device_buffer")?;
+        require_string_eq(input, "reuse_scope", "single_fixture_launch")?;
+        require_u64_eq(input, "upload_count", 1)?;
+        require_positive_u64(input, "host_bytes")?;
+        reject_bitnet_packed_marker(
+            required_string(input, "dtype")?,
+            "tensor_residency.inputs.dtype",
+        )?;
+    }
+
+    let outputs = array_field(residency, "outputs")?;
+    if outputs.is_empty() {
+        return Err(anyhow!("tensor_residency.outputs must contain an output tensor"));
+    }
+    for output in outputs {
+        require_string_non_empty(output, "name")?;
+        require_string_eq(output, "device_residency", "cuda_device_buffer")?;
+        require_string_eq(output, "download_scope", "parity_check_only")?;
+        require_positive_u64(output, "device_to_host_bytes")?;
+        reject_bitnet_packed_marker(
+            required_string(output, "dtype")?,
+            "tensor_residency.outputs.dtype",
+        )?;
+    }
+
+    let allocation = object_field(residency, "allocation")?;
+    require_positive_u64(allocation, "device_buffer_count")?;
+    require_u64_eq(allocation, "persistent_handle_count", 0)?;
+    require_bool_eq(allocation, "persistent_handles_claimed", false)?;
+
+    let transfer = object_field(residency, "transfer_accounting")?;
+    require_string_eq(transfer, "status", "measured")?;
+    require_u64_eq(
+        transfer,
+        "host_to_device_bytes",
+        object_field(stats, "host_to_device_bytes")?.as_u64().ok_or_else(|| {
+            anyhow!("kernel_stats[0].host_to_device_bytes must be an unsigned integer")
+        })?,
+    )?;
+    require_u64_eq(
+        transfer,
+        "device_to_host_bytes",
+        object_field(stats, "device_to_host_bytes")?.as_u64().ok_or_else(|| {
+            anyhow!("kernel_stats[0].device_to_host_bytes must be an unsigned integer")
+        })?,
+    )?;
+
+    Ok(())
+}
+
 /// Reject dense regular-LLM CUDA receipts at BitNet packed-kernel proof gates.
 ///
 /// BitNet QK256/I2_S validators can call this before evaluating their own proof
@@ -466,6 +560,12 @@ fn first_kernel_stats(receipt: &Value) -> Result<&Value> {
 
 fn object_field<'a>(object: &'a Value, field: &str) -> Result<&'a Value> {
     object.get(field).ok_or_else(|| anyhow!("missing required field `{field}`"))
+}
+
+fn array_field<'a>(object: &'a Value, field: &str) -> Result<&'a Vec<Value>> {
+    object_field(object, field)?
+        .as_array()
+        .ok_or_else(|| anyhow!("field `{field}` must be an array"))
 }
 
 fn required_string<'a>(object: &'a Value, field: &str) -> Result<&'a str> {

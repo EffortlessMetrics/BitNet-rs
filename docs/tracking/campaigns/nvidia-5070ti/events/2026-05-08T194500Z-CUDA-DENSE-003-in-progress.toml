@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T19:45:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-003"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-003-tensor-residency"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started dense regular-LLM CUDA tensor-residency evidence after CUDA-DENSE-002 merged.",
+  "Scope is fixture-level dense FP16 GEMM input/output CUDA device-buffer residency, transfer byte accounting, validators, and committed RTX 5070 Ti evidence.",
+  "No BitNet packed I2S/QK256 proof, dense GGUF inference, speedup, persistent session residency, full CUDA residency, tokenizer, loader, transformer, or server claim is in scope.",
+]

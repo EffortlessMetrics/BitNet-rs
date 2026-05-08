@@ -499,6 +499,17 @@ mod tests {
         assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
         assert_eq!(receipt["claim_boundary"]["speedup_claim"], false);
         assert_eq!(receipt["claim_boundary"]["full_cuda_residency_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["persistent_session_residency_claimed"], false);
+        assert_eq!(receipt["tensor_residency"]["scope"], "single_dense_f16_gemm_fixture");
+        assert_eq!(receipt["tensor_residency"]["input_tensors_uploaded_once"], true);
+        assert_eq!(receipt["tensor_residency"]["output_tensor_cuda_resident_during_kernel"], true);
+        assert_eq!(receipt["tensor_residency"]["full_cuda_residency_claimed"], false);
+        assert_eq!(receipt["tensor_residency"]["inputs"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            receipt["tensor_residency"]["transfer_accounting"]["host_to_device_bytes"],
+            parity.stats.host_to_device_bytes
+        );
     }
 
     #[test]
@@ -632,11 +643,17 @@ mod tests {
             }),
         };
 
+        let claim = if artifact_path.contains("residency") {
+            "dense_regular_llm_cuda_tensor_residency_tested"
+        } else {
+            "dense_regular_llm_cuda_gemm_parity_tested"
+        };
+
         json!({
             "schema": 1,
             "artifact_kind": "dense_regular_llm_cuda",
             "artifact_path": artifact_path,
-            "claim": "dense_regular_llm_cuda_gemm_parity_tested",
+            "claim": claim,
             "machine_id": MACHINE_ID,
             "hardware_lane": HARDWARE_LANE,
             "timestamp_utc": timestamp_utc,
@@ -683,9 +700,66 @@ mod tests {
             },
             "claim_boundary": {
                 "dense_regular_llm_cuda_claimed": true,
+                "dense_tensor_residency_claimed": claim == "dense_regular_llm_cuda_tensor_residency_tested",
+                "dense_gguf_inference_claimed": false,
                 "bitnet_packed_i2s_qk256_proof": false,
                 "speedup_claim": false,
+                "persistent_session_residency_claimed": false,
                 "full_cuda_residency_claimed": false
+            },
+            "tensor_residency": {
+                "schema_version": "1.0.0",
+                "scope": "single_dense_f16_gemm_fixture",
+                "model_class": "dense_regular_llm",
+                "fixture_id": parity.fixture_id,
+                "dense_tensor_residency_claimed": true,
+                "dense_gguf_inference_claimed": false,
+                "persistent_session_residency_claimed": false,
+                "full_cuda_residency_claimed": false,
+                "input_tensors_uploaded_once": true,
+                "output_tensor_cuda_resident_during_kernel": true,
+                "host_device_transfer_accounting_matches_kernel_stats": true,
+                "inputs": [
+                    {
+                        "name": "a",
+                        "dtype": "f16",
+                        "shape": [2, 4],
+                        "host_bytes": 16,
+                        "device_residency": "cuda_device_buffer",
+                        "upload_count": 1,
+                        "reuse_scope": "single_fixture_launch"
+                    },
+                    {
+                        "name": "b",
+                        "dtype": "f16",
+                        "shape": [4, 3],
+                        "host_bytes": 24,
+                        "device_residency": "cuda_device_buffer",
+                        "upload_count": 1,
+                        "reuse_scope": "single_fixture_launch"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "name": "c",
+                        "dtype": "f32",
+                        "shape": [2, 3],
+                        "device_residency": "cuda_device_buffer",
+                        "device_to_host_bytes": parity.stats.device_to_host_bytes,
+                        "download_scope": "parity_check_only"
+                    }
+                ],
+                "allocation": {
+                    "device_buffer_count": 3,
+                    "temporary_workspace_bytes": 0,
+                    "persistent_handle_count": 0,
+                    "persistent_handles_claimed": false
+                },
+                "transfer_accounting": {
+                    "status": "measured",
+                    "host_to_device_bytes": parity.stats.host_to_device_bytes,
+                    "device_to_host_bytes": parity.stats.device_to_host_bytes
+                }
             },
             "error": null
         })
