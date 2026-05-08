@@ -270,7 +270,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-006"
-status = "in_progress"
+status = "pr_open"
+pr = 4075
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-006-streaming-ux"
 stackable = false
 review_mode = "codex_premerge"
