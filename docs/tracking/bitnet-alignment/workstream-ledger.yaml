@@ -2599,33 +2599,68 @@ items:
     followups: []
 
   - id: CUDA-DENSE-001
-    title: Add regular LLM CUDA dense-kernel reference lane
-    state: proposed
+    title: Add regular LLM CUDA dense-lane receipt boundary
+    state: in_progress
     priority: P2
     workstream: nvidia_cuda
     depends_on:
       - RTX5070TI-007
     scope:
       allowed_paths:
-        - crates/bitnet-kernels/src/cuda/**
+        - crates/bitnet-receipts/**
+        - crates/bitnet-receipts-core/**
+        - docs/reports/**
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/campaigns/nvidia-5070ti/**
+      forbidden_paths:
+        - crates/bitnet-kernels/**
         - crates/bitnet-inference/**
+        - crates/bitnet-server/**
+    acceptance:
+      - Receipts label the path as dense_regular_llm_cuda, not BitNet packed-kernel proof.
+      - Dense-lane receipts require speedup and full-residency claims to remain false at this stage.
+      - Dense-lane receipts cannot satisfy CUDA-BITNET packed I2S/QK256 acceptance criteria.
+      - First dense GEMM/cuBLAS parity is split to CUDA-DENSE-002.
+    verification:
+      - cargo fmt -p bitnet-receipts-core -p bitnet-receipts -- --check
+      - cargo test --locked -p bitnet-receipts --test cuda_receipt_validation -- --nocapture
+    notes:
+      - This lane is separate from strict BitNet CUDA inference.
+    followups:
+      - CUDA-DENSE-002
+
+  - id: CUDA-DENSE-002
+    title: Add dense CUDA GEMM smoke/parity fixture
+    state: proposed
+    priority: P2
+    workstream: nvidia_cuda
+    depends_on:
+      - CUDA-DENSE-001
+    scope:
+      allowed_paths:
+        - crates/bitnet-kernels/src/cuda/**
         - crates/bitnet-receipts/**
         - crates/bitnet-receipts-core/**
         - docs/tracking/bitnet-alignment/backend-status.yaml
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/campaigns/nvidia-5070ti/**
       forbidden_paths:
         - crates/bitnet-server/**
+        - BitNet QK256 CUDA math changes
     acceptance:
       - FP16/BF16 dense matmul or cuBLAS-backed path has CPU parity.
-      - RMSNorm, RoPE, and KV-cache CUDA helpers are shared where useful.
-      - Receipts label the path as dense_regular_llm, not BitNet packed-kernel proof.
+      - Receipts label the path as dense_regular_llm_cuda, not BitNet packed-kernel proof.
       - Dense-lane receipts cannot satisfy CUDA-BITNET packed I2S/QK256 acceptance criteria.
+      - speedup_claim remains false.
     verification:
       - cargo fmt --all -- --check
       - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+      - cargo test --locked -p bitnet-receipts --test cuda_receipt_validation -- --nocapture
     notes:
-      - This lane is separate from strict BitNet CUDA inference.
+      - This is the first item allowed to touch dense CUDA math, not CUDA-DENSE-001.
     followups: []
 
   - id: AMD9950X3D-001

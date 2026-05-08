@@ -32,6 +32,16 @@ pub const RECEIPT_SCHEMA_VERSION: &str = "1.0.0";
 /// Alias for schema version (for consistency)
 pub const RECEIPT_SCHEMA: &str = RECEIPT_SCHEMA_VERSION;
 
+/// Artifact kind for the dense regular-LLM CUDA reference lane.
+///
+/// This is deliberately separate from BitNet packed I2_S/QK256 CUDA receipt
+/// kinds. Dense CUDA evidence may share CUDA runtime plumbing, but it must not
+/// satisfy BitNet packed-kernel proof gates.
+pub const DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND: &str = "dense_regular_llm_cuda";
+
+/// Model class label for CUDA receipts that exercise dense regular LLM kernels.
+pub const DENSE_REGULAR_LLM_MODEL_CLASS: &str = "dense_regular_llm";
+
 /// Model information in receipt
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ModelInfo {
@@ -279,6 +289,103 @@ pub fn validate_cuda_parity_receipt_json(receipt: &Value) -> Result<()> {
     Ok(())
 }
 
+/// Validate a receipt for the dense regular-LLM CUDA reference lane.
+///
+/// This contract is intentionally a lane boundary, not a BitNet packed-kernel
+/// validator. A valid dense CUDA receipt must identify itself as
+/// `dense_regular_llm_cuda`, record fallback-free RTX 5070 Ti CUDA execution,
+/// name a dense model class, and explicitly keep BitNet packed I2_S/QK256 proof
+/// claims false.
+pub fn validate_dense_regular_llm_cuda_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_null(receipt, "error")?;
+
+    let cuda = object_field(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_positive_u64(cuda, "device_count")?;
+    require_cuda_device_index(cuda)?;
+    require_rtx_5070_ti_name(cuda, "device_name")?;
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_string_non_empty_not_tbd(cuda, "driver_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_runtime_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_toolkit_version")?;
+    require_string_non_empty_not_tbd(cuda, "nvrtc_version")?;
+    require_positive_u64(cuda, "vram_bytes")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_non_empty(execution_path, "kernel_family")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "kernel_family")?,
+        "execution_path.kernel_family",
+    )?;
+    require_string_non_empty(execution_path, "quantization_family")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "quantization_family")?,
+        "execution_path.quantization_family",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    let stats = first_kernel_stats(receipt)?;
+    require_string_non_empty(stats, "kernel_id")?;
+    reject_bitnet_packed_marker(required_string(stats, "kernel_id")?, "kernel_stats[0].kernel_id")?;
+    require_positive_u64(stats, "invocations")?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+    require_optional_positive_u64(stats, "host_to_device_bytes")?;
+    require_optional_positive_u64(stats, "device_to_host_bytes")?;
+    require_optional_non_negative_number(stats, "kernel_time_ms")?;
+
+    Ok(())
+}
+
+/// Reject dense regular-LLM CUDA receipts at BitNet packed-kernel proof gates.
+///
+/// BitNet QK256/I2_S validators can call this before evaluating their own proof
+/// contract. It gives dense CUDA work a clear receipt label while preventing
+/// dense FP/BF/INT kernels from being counted as packed BitNet evidence.
+pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> Result<()> {
+    let artifact_kind = receipt.get("artifact_kind").and_then(Value::as_str);
+    let model_class = receipt
+        .get("execution_path")
+        .and_then(|execution_path| execution_path.get("model_class"))
+        .and_then(Value::as_str);
+    let dense_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| claim_boundary.get("dense_regular_llm_cuda_claimed"))
+        .and_then(Value::as_bool);
+
+    if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
+        || model_class == Some(DENSE_REGULAR_LLM_MODEL_CLASS)
+        || dense_claim == Some(true)
+    {
+        return Err(anyhow!(
+            "dense_regular_llm CUDA receipt cannot satisfy BitNet packed I2_S/QK256 proof"
+        ));
+    }
+
+    Ok(())
+}
+
 /// Load and validate an RTX 5070 Ti CUDA smoke receipt from disk.
 pub fn validate_cuda_smoke_receipt_file(path: &Path) -> Result<()> {
     let receipt = load_json_receipt(path)?;
@@ -422,6 +529,35 @@ fn require_positive_u64(object: &Value, field: &str) -> Result<()> {
         .ok_or_else(|| anyhow!("field `{field}` must be an unsigned integer"))?;
     if actual == 0 {
         return Err(anyhow!("field `{field}` must be greater than zero"));
+    }
+    Ok(())
+}
+
+fn require_optional_positive_u64(object: &Value, field: &str) -> Result<()> {
+    let value = object_field(object, field)?;
+    if value.is_null() {
+        return Ok(());
+    }
+    let actual = value
+        .as_u64()
+        .ok_or_else(|| anyhow!("field `{field}` must be null or an unsigned integer"))?;
+    if actual == 0 {
+        return Err(anyhow!("field `{field}` must be greater than zero when measured"));
+    }
+    Ok(())
+}
+
+fn reject_bitnet_packed_marker(value: &str, field: &str) -> Result<()> {
+    let normalized = value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_ascii_lowercase();
+    const BITNET_PACKED_MARKERS: &[&str] = &["bitnet", "i2s", "qk256", "w158a8"];
+    if BITNET_PACKED_MARKERS.iter().any(|marker| normalized.contains(marker)) {
+        return Err(anyhow!(
+            "field `{field}` must not identify BitNet packed I2_S/QK256 proof, got `{value}`"
+        ));
     }
     Ok(())
 }

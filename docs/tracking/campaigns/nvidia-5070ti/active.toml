@@ -905,30 +905,83 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-001"
-status = "proposed"
-branch = "codex/cuda-dense-001-reference-lane"
+status = "pr_open"
+branch = "codex/cuda-dense-001-receipt-boundary"
+pr = 4104
+head_sha = "d170ed578184a842825740df32339662952fdbfe"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["RTX5070TI-007"]
-acceptance = "Add regular LLM CUDA dense-kernel reference lane with dense_regular_llm receipt labels that cannot satisfy BitNet packed I2S or QK256 proof acceptance."
+acceptance = "Add the regular LLM CUDA dense-lane receipt boundary with dense_regular_llm_cuda labels, speedup/full-residency claims false, and a validator proving dense receipts cannot satisfy BitNet packed I2S or QK256 proof acceptance."
+commands = [
+  "cargo fmt -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+]
+may_claim = [
+  "Dense regular-LLM CUDA receipts have a separate dense_regular_llm_cuda label and claim boundary.",
+  "Dense regular-LLM CUDA receipts are rejected as BitNet packed I2S/QK256 proof.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA matmul parity exists.",
+  "Dense regular LLM CUDA speedup exists.",
+  "Full dense regular LLM CUDA residency exists.",
+]
+
+[[work_item]]
+id = "CUDA-DENSE-002"
+status = "proposed"
+branch = "codex/cuda-dense-002-gemm-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-001"]
+acceptance = "Add the first dense CUDA FP16/BF16 or cuBLAS-backed GEMM smoke/parity fixture with dense_regular_llm_cuda receipts, fallback_used=false, CPU reference comparison, and no BitNet packed I2S/QK256 or speedup claim."
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-kernels --no-default-features --features cuda",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation -- --nocapture",
+  "git diff --check",
 ]
 allowed_paths = [
   "crates/bitnet-kernels/src/cuda/**",
-  "crates/bitnet-inference/**",
   "crates/bitnet-receipts/**",
   "crates/bitnet-receipts-core/**",
   "docs/tracking/campaigns/nvidia-5070ti/**",
 ]
 forbidden_paths = [
   "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
 ]
-may_claim = []
+may_claim = [
+  "A dense regular-LLM CUDA GEMM/parity fixture exists for the exact recorded receipt.",
+]
 must_not_claim = [
   "Dense regular LLM CUDA proves BitNet packed I2S inference.",
   "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
 ]

@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T16:36:33Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-001"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-001-receipt-boundary"
+pr = 4104
+head_sha = "d170ed578184a842825740df32339662952fdbfe"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4104 for the dense regular-LLM CUDA receipt-boundary lane.",
+  "The PR adds dense_regular_llm_cuda receipt labels and validators while rejecting dense receipts as BitNet packed I2S/QK256 proof.",
+  "No dense GEMM, cuBLAS, QK256, transformer, tokenizer, loader, server, speedup, or full-residency implementation is in scope.",
+]
