@@ -367,7 +367,7 @@ enum Commands {
         stop_id: Vec<u32>,
 
         /// Dump logit steps during generation (max steps)
-        #[arg(long)]
+        #[arg(long, visible_alias = "logits-dump-steps")]
         dump_logit_steps: Option<usize>,
 
         /// Top-k tokens to include in logit dump

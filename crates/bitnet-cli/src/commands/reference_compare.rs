@@ -256,25 +256,74 @@ fn first_divergence(artifact: &Value) -> Option<Value> {
     if let Some(index) =
         first_id_divergence(ids(reference.get("prompt_ids"))?, ids(bitnet.get("prompt_ids"))?)
     {
-        return Some(divergence("prompt", index, &reference["prompt_ids"], &bitnet["prompt_ids"]));
+        return Some(divergence(
+            "prompt",
+            "prompt_tokenizer_template",
+            index,
+            &reference["prompt_ids"],
+            &bitnet["prompt_ids"],
+        ));
     }
-    if let Some(index) =
-        first_id_divergence(ids(reference.get("generated_ids"))?, ids(bitnet.get("generated_ids"))?)
+    let generated_divergence = first_id_divergence(
+        ids(reference.get("generated_ids"))?,
+        ids(bitnet.get("generated_ids"))?,
+    );
+    if generated_divergence.is_some()
+        && let (Some(reference_topk), Some(bitnet_topk)) =
+            (topk_pairs(reference), topk_pairs(bitnet))
+        && reference_topk != bitnet_topk
     {
         return Some(divergence(
+            "logits",
+            "logits_or_shared_transformer_math",
+            0,
+            topk(reference).unwrap_or(&Value::Null),
+            topk(bitnet).unwrap_or(&Value::Null),
+        ));
+    }
+    if let Some(index) = generated_divergence {
+        if let (Some(reference_topk), Some(bitnet_topk)) =
+            (topk_pairs(reference), topk_pairs(bitnet))
+            && reference_topk == bitnet_topk
+            && chosen_id(reference)
+                .zip(chosen_id(bitnet))
+                .is_some_and(|(left, right)| left != right)
+        {
+            return Some(divergence(
+                "sampler",
+                "sampler",
+                index,
+                &reference["generated_ids"],
+                &bitnet["generated_ids"],
+            ));
+        }
+        return Some(divergence(
             "decode",
+            "output_head_vocab_indexing_or_shared_transformer_math",
             index,
             &reference["generated_ids"],
             &bitnet["generated_ids"],
         ));
     }
-    if let (Some(reference_topk), Some(bitnet_topk)) = (topk(reference), topk(bitnet))
+    if let (Some(reference_topk), Some(bitnet_topk)) = (topk_pairs(reference), topk_pairs(bitnet))
         && reference_topk != bitnet_topk
     {
-        return Some(divergence("logits", 0, reference_topk, bitnet_topk));
+        return Some(divergence(
+            "logits",
+            "logits_or_shared_transformer_math",
+            0,
+            topk(reference).unwrap_or(&Value::Null),
+            topk(bitnet).unwrap_or(&Value::Null),
+        ));
     }
     if reference["text"] != bitnet["text"] {
-        return Some(divergence("text", 0, &reference["text"], &bitnet["text"]));
+        return Some(divergence(
+            "text",
+            "tokenizer_decode",
+            0,
+            &reference["text"],
+            &bitnet["text"],
+        ));
     }
     None
 }
@@ -302,6 +351,17 @@ fn topk(side: &Value) -> Option<&Value> {
     })
 }
 
+fn topk_pairs(side: &Value) -> Option<Vec<(u64, f64)>> {
+    topk(side)?.as_array()?.iter().map(topk_entry_pair).collect()
+}
+
+fn topk_entry_pair(entry: &Value) -> Option<(u64, f64)> {
+    if let Some(values) = entry.as_array() {
+        return Some((values.first()?.as_u64()?, values.get(1)?.as_f64()?));
+    }
+    Some((entry.get("token_id")?.as_u64()?, entry.get("logit")?.as_f64()?))
+}
+
 fn chosen_id(side: &Value) -> Option<u64> {
     side.get("chosen_id").and_then(Value::as_u64).or_else(|| {
         side.get("logits_dump")
@@ -312,9 +372,16 @@ fn chosen_id(side: &Value) -> Option<u64> {
     })
 }
 
-fn divergence(phase: &'static str, index: usize, reference: &Value, bitnet: &Value) -> Value {
+fn divergence(
+    phase: &'static str,
+    classification: &'static str,
+    index: usize,
+    reference: &Value,
+    bitnet: &Value,
+) -> Value {
     json!({
         "phase": phase,
+        "classification": classification,
         "index": index,
         "reference": reference,
         "bitnet_rs": bitnet,
@@ -448,7 +515,7 @@ mod tests {
                     "chosen_id": 19,
                     "top_logits": [
                         {"token_id": 19, "logit": 12.0},
-                        {"token_id": 20, "logit": 8.0}
+                        {"token_id": 21, "logit": 8.0}
                     ]
                 }]
             }
@@ -467,14 +534,68 @@ mod tests {
     }
 
     #[test]
-    fn reference_divergence_records_decode_token_mismatch() {
+    fn reference_divergence_records_sampler_mismatch_when_topk_matches() {
         let report =
             build_reference_divergence_receipt(Path::new("compare.json"), &artifact(&[5], "5"));
 
         assert_eq!(report["validation"]["passed"], true);
         assert_eq!(report["comparison"]["passed"], false);
-        assert_eq!(report["comparison"]["first_divergence"]["phase"], "decode");
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "sampler");
+        assert_eq!(report["comparison"]["first_divergence"]["classification"], "sampler");
         assert_eq!(report["comparison"]["first_divergence"]["index"], 0);
+    }
+
+    #[test]
+    fn reference_divergence_records_logit_mismatch_before_token_mismatch() {
+        let mut input = artifact(&[5], "5");
+        input["bitnet_rs"]["topk_step0"] = json!([[5, 10.0], [4, 1.0]]);
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "logits");
+        assert_eq!(
+            report["comparison"]["first_divergence"]["classification"],
+            "logits_or_shared_transformer_math"
+        );
+    }
+
+    #[test]
+    fn reference_divergence_keeps_decode_classification_without_topk() {
+        let mut input = artifact(&[5], "5");
+        input["reference"].as_object_mut().unwrap().remove("topk_step0");
+        input["bitnet_rs"].as_object_mut().unwrap().remove("topk_step0");
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "decode");
+        assert_eq!(
+            report["comparison"]["first_divergence"]["classification"],
+            "output_head_vocab_indexing_or_shared_transformer_math"
+        );
+    }
+
+    #[test]
+    fn reference_divergence_normalizes_logit_dump_topk_objects() {
+        let mut input = artifact(&[4], "4");
+        input["bitnet_rs"].as_object_mut().unwrap().remove("topk_step0");
+        input["bitnet_rs"]["logits_dump"] = json!([{
+            "step": 0,
+            "chosen_id": 4,
+            "top_logits": [
+                {"token_id": 4, "logit": 10.0},
+                {"token_id": 5, "logit": 1.0}
+            ]
+        }]);
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], true);
+        assert!(report["comparison"]["first_divergence"].is_null());
     }
 
     #[test]

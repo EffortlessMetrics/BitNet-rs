@@ -280,7 +280,11 @@ pub struct InferenceCommand {
     pub timeout: Option<u64>,
 
     /// Dump top-k logits for first N decode steps (for testing)
-    #[arg(long, value_name = "N")]
+    #[arg(
+        long,
+        visible_aliases = ["dump-logit-steps", "logits-dump-steps"],
+        value_name = "N"
+    )]
     pub dump_logits: Option<usize>,
 
     /// Number of top logits to dump per step
