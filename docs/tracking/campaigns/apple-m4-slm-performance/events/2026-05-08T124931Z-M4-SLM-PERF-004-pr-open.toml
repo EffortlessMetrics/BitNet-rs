@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T12:49:31Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-004"
+event = "pr_open"
+pr = 4057
+head_sha = "b42b900b691f3b1d932c2e4b4bc10b8bb65f3c5d"
+actor = "codex"
+
+notes = [
+  "Opened Apple M4 SLM CPU/NEON hot-path optimization PR.",
+  "Scope skips all-zero single-token decode causal masks and caches static transformer debug/trace env flags; generated token IDs matched the release baseline across warm profiles and prompts.",
+  "No QK256, qk256-dispatch, server, Metal kernel, MPSGraph, Neural Engine, BitNet quality, full Metal inference, or broad performance claim work.",
+]

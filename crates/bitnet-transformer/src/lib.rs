@@ -9,16 +9,80 @@ use bitnet_qk256_dispatch::{
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
+use std::sync::OnceLock;
+
+#[derive(Clone, Debug)]
+struct QwenTraceConfig {
+    path: Option<std::path::PathBuf>,
+    stderr_enabled: bool,
+    layer: usize,
+}
+
+fn env_flag(name: &str) -> bool {
+    std::env::var(name).is_ok()
+}
+
+fn env_flag_eq_1(name: &str) -> bool {
+    std::env::var(name).as_deref() == Ok("1")
+}
+
+fn qwen_trace_config() -> &'static QwenTraceConfig {
+    static CONFIG: OnceLock<QwenTraceConfig> = OnceLock::new();
+    CONFIG.get_or_init(|| QwenTraceConfig {
+        path: std::env::var("BITNET_QWEN_TRACE_JSONL")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .map(std::path::PathBuf::from),
+        stderr_enabled: env_flag_eq_1("BITNET_QWEN_TRACE"),
+        layer: std::env::var("BITNET_QWEN_TRACE_LAYER")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(0),
+    })
+}
+
+fn debug_attn_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| env_flag("DEBUG_ATTN"))
+}
+
+fn debug_attn_scale_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| env_flag("BITNET_DEBUG_ATTN_SCALE"))
+}
+
+fn debug_gqa_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| env_flag("BITNET_DEBUG_GQA"))
+}
+
+fn debug_rope_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| env_flag("BITNET_DEBUG_ROPE"))
+}
+
+fn debug_rmsnorm_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| env_flag("BITNET_DEBUG_RMSNORM"))
+}
+
+fn debug_mlp_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| env_flag("BITNET_DEBUG_MLP"))
+}
+
+fn trace_rms_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| env_flag_eq_1("BITNET_TRACE_RMS"))
+}
 
 fn qwen_trace_path() -> Option<std::path::PathBuf> {
-    std::env::var("BITNET_QWEN_TRACE_JSONL")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .map(std::path::PathBuf::from)
+    qwen_trace_config().path.clone()
 }
 
 fn qwen_trace_enabled() -> bool {
-    qwen_trace_path().is_some() || std::env::var("BITNET_QWEN_TRACE").as_deref() == Ok("1")
+    let config = qwen_trace_config();
+    config.path.is_some() || config.stderr_enabled
 }
 
 fn qwen_trace_active() -> bool {
@@ -29,11 +93,7 @@ fn qwen_trace_layer_enabled(layer_idx: usize) -> bool {
     if !qwen_trace_active() {
         return false;
     }
-    let requested_layer = std::env::var("BITNET_QWEN_TRACE_LAYER")
-        .ok()
-        .and_then(|value| value.parse::<usize>().ok())
-        .unwrap_or(0);
-    requested_layer == layer_idx
+    qwen_trace_config().layer == layer_idx
 }
 
 fn qwen_trace_escape(value: &str) -> String {
@@ -155,7 +215,7 @@ fn qwen_trace_tensor(
 
 /// Debug helper for tensor statistics (only runs if DEBUG_ATTN env var is set)
 fn dbg_stats(tag: &str, t: &Tensor) -> candle_core::Result<()> {
-    if std::env::var("DEBUG_ATTN").is_ok() {
+    if debug_attn_enabled() {
         let mean = t.mean_all()?.to_scalar::<f32>()?;
         // Compute std manually: sqrt(E[(x - mean)^2])
         let diff = t.broadcast_sub(&t.mean_all()?)?;
@@ -168,7 +228,7 @@ fn dbg_stats(tag: &str, t: &Tensor) -> candle_core::Result<()> {
 
 /// Debug helper for checking finite values
 fn dbg_finite(tag: &str, t: &Tensor) -> candle_core::Result<()> {
-    if std::env::var("DEBUG_ATTN").is_ok() {
+    if debug_attn_enabled() {
         let v: Vec<f32> = t.flatten_all()?.to_vec1()?;
         let n = v.len().min(4096);
         let mut n_nan = 0;
@@ -527,7 +587,7 @@ impl MultiHeadAttention {
         }
 
         // Probe A3: Q/K/V projection RMS (layer 0, step 0 only)
-        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.layer_idx == 0 {
+        if trace_rms_enabled() && self.layer_idx == 0 {
             static PROJ_LOGGED: std::sync::Once = std::sync::Once::new();
             PROJ_LOGGED.call_once(|| {
                 let _ = (|| -> candle_core::Result<()> {
@@ -584,7 +644,7 @@ impl MultiHeadAttention {
         dbg_stats("V", &v)?;
 
         // GQA diagnostic: log Q/K/V dimensions and norms (once per run)
-        if std::env::var("BITNET_DEBUG_GQA").is_ok() {
+        if debug_gqa_enabled() {
             static GQA_LOGGED: std::sync::Once = std::sync::Once::new();
             GQA_LOGGED.call_once(|| {
                 let q_dims = q.dims();
@@ -612,7 +672,7 @@ impl MultiHeadAttention {
             let position = kv_cache.as_ref().map(|c| c.seq_len).unwrap_or(0);
 
             // Log ROPE application details (once)
-            if std::env::var("BITNET_DEBUG_ROPE").is_ok() {
+            if debug_rope_enabled() {
                 static ROPE_LOGGED: std::sync::Once = std::sync::Once::new();
                 ROPE_LOGGED.call_once(|| {
                     tracing::info!(
@@ -676,7 +736,7 @@ impl MultiHeadAttention {
         let scale_factor = (self.head_dim as f32).sqrt().recip();
 
         // Log scale computation once
-        if std::env::var("BITNET_DEBUG_ATTN_SCALE").is_ok() {
+        if debug_attn_scale_enabled() {
             static SCALE_LOGGED: std::sync::Once = std::sync::Once::new();
             SCALE_LOGGED.call_once(|| {
                 tracing::info!(
@@ -702,11 +762,16 @@ impl MultiHeadAttention {
 
         // Apply causal mask so queries cannot attend to future positions.
         // When using a KV cache, k includes past tokens, so the mask must
-        // account for the total key length.
+        // account for the total key length. Single-token decode has no future
+        // key positions, so the mask is all zeros and can be skipped.
         let total_len = k_expanded.dims()[2];
-        // PATCH 5: create_causal_mask now returns [1, 1, Tq, Tk] directly - no need for unsqueeze
-        let mask = self.create_causal_mask(seq_len, total_len, scores_f32.device())?;
-        let scores_f32 = scores_f32.broadcast_add(&mask)?;
+        let scores_f32 = if seq_len == 1 {
+            scores_f32
+        } else {
+            // PATCH 5: create_causal_mask now returns [1, 1, Tq, Tk] directly - no need for unsqueeze
+            let mask = self.create_causal_mask(seq_len, total_len, scores_f32.device())?;
+            scores_f32.broadcast_add(&mask)?
+        };
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("attention.scores_post_mask", Some(self.layer_idx), &scores_f32)?;
         }
@@ -716,7 +781,7 @@ impl MultiHeadAttention {
         dbg_finite("scores post-mask", &scores_f32)?;
 
         // Log scores range after mask for layer 0 (user's diagnostic request)
-        if std::env::var("BITNET_DEBUG_ATTN_SCALE").is_ok() {
+        if debug_attn_scale_enabled() {
             static LAYER_LOGGED: std::sync::Once = std::sync::Once::new();
             LAYER_LOGGED.call_once(|| {
                 if let Ok(flat) = scores_f32.flatten_all()
@@ -747,7 +812,7 @@ impl MultiHeadAttention {
         let scores_stabilized = scores_f32.broadcast_sub(&row_max)?;
 
         // Log that max-subtraction ran (user's diagnostic request)
-        if std::env::var("BITNET_DEBUG_ATTN_SCALE").is_ok() {
+        if debug_attn_scale_enabled() {
             static MAX_SUB_LOGGED: std::sync::Once = std::sync::Once::new();
             MAX_SUB_LOGGED.call_once(|| {
                 tracing::info!("Attention: max-subtraction applied for numerical stability");
@@ -777,7 +842,7 @@ impl MultiHeadAttention {
 
         // Debug attention weights and row sums
         dbg_stats("attn softmax", &attn_weights)?;
-        if std::env::var("DEBUG_ATTN").is_ok() {
+        if debug_attn_enabled() {
             let sums = attn_weights.sum(3)?;
             let sums_host: Vec<f32> = sums.flatten_all()?.to_vec1()?;
             let take = sums_host.iter().take(4).cloned().collect::<Vec<_>>();
@@ -841,7 +906,7 @@ impl MultiHeadAttention {
         }
 
         // Probe: Why is QK256 not found? (layer 0 only, once)
-        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.layer_idx == 0 {
+        if trace_rms_enabled() && self.layer_idx == 0 {
             static FALLBACK_LOGGED: std::sync::Once = std::sync::Once::new();
             FALLBACK_LOGGED.call_once(|| {
                 eprintln!(
@@ -932,7 +997,7 @@ impl FeedForward {
         }
 
         // MLP gating diagnostics (point 3 of user's plan)
-        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+        if debug_mlp_enabled()
             && let Ok(u_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
             tracing::debug!("MLP ||u|| (gate_proj): {:.6e}", u_norm);
@@ -943,7 +1008,7 @@ impl FeedForward {
             qwen_trace_tensor("mlp.gate_activation", Some(self.layer_idx), &gate)?;
         }
 
-        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+        if debug_mlp_enabled()
             && let Ok(activation_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
             tracing::debug!("MLP ||activation(u)||: {:.6e}", activation_norm);
@@ -954,7 +1019,7 @@ impl FeedForward {
             qwen_trace_tensor("mlp.up_proj", Some(self.layer_idx), &up)?;
         }
 
-        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+        if debug_mlp_enabled()
             && let Ok(v_norm) = up.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
             tracing::debug!("MLP ||v|| (up_proj): {:.6e}", v_norm);
@@ -974,7 +1039,7 @@ impl FeedForward {
             hidden
         };
 
-        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+        if debug_mlp_enabled()
             && let Ok(prod_norm) = hidden.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
             tracing::debug!("MLP ||silu(u) * v||: {:.6e}", prod_norm);
@@ -985,7 +1050,7 @@ impl FeedForward {
             qwen_trace_tensor("mlp.down_proj", Some(self.layer_idx), &output)?;
         }
 
-        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+        if debug_mlp_enabled()
             && let Ok(out_norm) = output.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
             tracing::debug!("MLP ||W2 * (...)||: {:.6e}", out_norm);
@@ -1086,7 +1151,7 @@ impl TransformerBlock {
         raw_tensors: &std::collections::HashMap<String, Tensor>,
     ) -> Result<Tensor> {
         // Debug input activation norms
-        if std::env::var("DEBUG_ATTN").is_ok() {
+        if debug_attn_enabled() {
             let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
             eprintln!("[norm] input: {norm:.6e}");
         }
@@ -1096,7 +1161,7 @@ impl TransformerBlock {
 
         // RMSNorm diagnostics (Layer 0 only) - attention norm
         // User's diagnostic: log mean(x^2) and rms = sqrt(mean(x^2) + eps) before/after norm
-        if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
+        if debug_rmsnorm_enabled() {
             static ATTN_NORM_LOGGED: std::sync::Once = std::sync::Once::new();
             ATTN_NORM_LOGGED.call_once(|| {
                 if let Ok(mean_sq) =
@@ -1123,8 +1188,7 @@ impl TransformerBlock {
         }
 
         // Probe A2: LayerNorm gamma RMS + LN output RMS (layer 0, step 0 only)
-        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.attention.layer_idx == 0
-        {
+        if trace_rms_enabled() && self.attention.layer_idx == 0 {
             static LN0_LOGGED: std::sync::Once = std::sync::Once::new();
             LN0_LOGGED.call_once(|| {
                 let _ = (|| -> candle_core::Result<()> {
@@ -1160,7 +1224,7 @@ impl TransformerBlock {
         }
 
         // Check norm output
-        if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
+        if debug_rmsnorm_enabled() {
             static ATTN_NORM_OUT_LOGGED: std::sync::Once = std::sync::Once::new();
             ATTN_NORM_OUT_LOGGED.call_once(|| {
                 if let Ok(norm_out) = x
@@ -1184,7 +1248,7 @@ impl TransformerBlock {
         }
 
         // Debug post-attention activation norms
-        if std::env::var("DEBUG_ATTN").is_ok() {
+        if debug_attn_enabled() {
             let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
             eprintln!("[norm] post-attn: {norm:.6e}");
         }
@@ -1193,7 +1257,7 @@ impl TransformerBlock {
         let residual = &x;
 
         // RMSNorm diagnostics (Layer 0 only) - FFN norm
-        if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
+        if debug_rmsnorm_enabled() {
             static FFN_NORM_LOGGED: std::sync::Once = std::sync::Once::new();
             FFN_NORM_LOGGED.call_once(|| {
                 if let Ok(mean_sq) =
@@ -1218,7 +1282,7 @@ impl TransformerBlock {
         }
 
         // Check norm output
-        if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
+        if debug_rmsnorm_enabled() {
             static FFN_NORM_OUT_LOGGED: std::sync::Once = std::sync::Once::new();
             FFN_NORM_OUT_LOGGED.call_once(|| {
                 if let Ok(norm_out) = x
@@ -1242,7 +1306,7 @@ impl TransformerBlock {
         }
 
         // Debug post-FFN activation norms
-        if std::env::var("DEBUG_ATTN").is_ok() {
+        if debug_attn_enabled() {
             let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
             eprintln!("[norm] post-ffn: {norm:.6e}");
         }
@@ -1601,7 +1665,7 @@ impl TransformerModel {
         let hidden = hidden.reshape(&[batch_size, seq_len, hidden_size])?;
 
         // Probe A1: Embedding RMS (step 0 only)
-        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") {
+        if trace_rms_enabled() {
             static EMB_LOGGED: std::sync::Once = std::sync::Once::new();
             EMB_LOGGED.call_once(|| {
                 let _ = (|| -> candle_core::Result<()> {
@@ -1725,7 +1789,7 @@ impl TransformerModel {
         }
 
         // Debug input activation norm
-        if std::env::var("DEBUG_ATTN").is_ok()
+        if debug_attn_enabled()
             && let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
             eprintln!("[norm] input: {:.6e}", norm);
@@ -1736,7 +1800,7 @@ impl TransformerModel {
             x = layer.forward(&x, layer_cache, &self.raw_tensors)?;
 
             // Debug layer activation norms (show all layers when debugging)
-            if std::env::var("DEBUG_ATTN").is_ok()
+            if debug_attn_enabled()
                 && let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
             {
                 eprintln!("[norm] layer {i}: {:.6e}", norm);
@@ -1745,7 +1809,7 @@ impl TransformerModel {
 
         let normalized = self.norm.forward(&x)?;
         qwen_trace_tensor("model.final_norm", None, &normalized)?;
-        if std::env::var("DEBUG_ATTN").is_ok()
+        if debug_attn_enabled()
             && let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
             eprintln!("[norm] final: {:.6e}", norm);
@@ -1859,7 +1923,7 @@ impl TransformerModel {
                 };
 
                 // Debug logits std
-                if std::env::var("DEBUG_ATTN").is_ok()
+                if debug_attn_enabled()
                     && let Ok(mean) = logits.mean_all()
                     && let Ok(diff) = logits.broadcast_sub(&mean)
                     && let Ok(variance) = diff.sqr()?.mean_all()
