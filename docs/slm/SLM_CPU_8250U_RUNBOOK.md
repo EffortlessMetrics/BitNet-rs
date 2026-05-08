@@ -104,6 +104,20 @@ cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli"
   --json-out ci\slm-cpu\intel-i5-8250u\2026-05-07\qwen3-bitnet-rs-first-token-topk.json
 ```
 
+For root-cause work after the first-token divergence is confirmed, add bounded
+checkpoint tracing to the same run:
+
+```powershell
+  --qwen-trace-jsonl ci\slm-cpu\intel-i5-8250u\2026-05-07\qwen3-bitnet-rs-checkpoints.jsonl `
+  --qwen-trace-layer 0 `
+  --qwen-trace-full-prompt
+```
+
+The JSONL trace records summaries only: shape, dtype, finite counts, mean, RMS,
+min/max, checksum, and a short sample. Use it to find the first drift against a
+known-good reference checkpoint pack; do not treat it as answer-quality or
+throughput evidence.
+
 Reference comparison:
 
 ```powershell

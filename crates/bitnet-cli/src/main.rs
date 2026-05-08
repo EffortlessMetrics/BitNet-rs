@@ -378,6 +378,22 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         assert_greedy: bool,
 
+        /// Emit bounded Qwen first-token checkpoint summaries as JSONL
+        #[arg(long, value_name = "PATH")]
+        qwen_trace_jsonl: Option<std::path::PathBuf>,
+
+        /// Qwen transformer layer index to trace when --qwen-trace-jsonl is set
+        #[arg(long, value_name = "N")]
+        qwen_trace_layer: Option<usize>,
+
+        /// Also trace the full prompt forward path before incremental decode
+        #[arg(long, default_value_t = false)]
+        qwen_trace_full_prompt: bool,
+
+        /// Comma-separated prompt token IDs to force for reference-aligned tracing
+        #[arg(long, value_name = "IDS")]
+        qwen_trace_prompt_ids: Option<String>,
+
         /// Suppress performance warnings
         #[arg(long, default_value_t = false)]
         no_warnings: bool,
@@ -1222,6 +1238,10 @@ async fn async_main() -> Result<()> {
             dump_logit_steps,
             logits_topk,
             assert_greedy,
+            qwen_trace_jsonl,
+            qwen_trace_layer,
+            qwen_trace_full_prompt,
+            qwen_trace_prompt_ids,
             no_warnings,
             profile_id,
             allocation_audit,
@@ -1256,6 +1276,10 @@ async fn async_main() -> Result<()> {
                 dump_logit_steps,
                 logits_topk,
                 assert_greedy,
+                qwen_trace_jsonl,
+                qwen_trace_layer,
+                qwen_trace_full_prompt,
+                qwen_trace_prompt_ids,
                 no_warnings,
                 profile_id,
                 allocation_audit,
@@ -3461,6 +3485,10 @@ async fn run_simple_generation(
     dump_logit_steps: Option<usize>,
     logits_topk: usize,
     assert_greedy: bool,
+    qwen_trace_jsonl: Option<std::path::PathBuf>,
+    qwen_trace_layer: Option<usize>,
+    qwen_trace_full_prompt: bool,
+    qwen_trace_prompt_ids: Option<String>,
     no_warnings: bool,
     profile_id: Option<String>,
     allocation_audit: bool,
@@ -3470,6 +3498,27 @@ async fn run_simple_generation(
     use bitnet_sampling::{SamplingConfig, SamplingStrategy};
     use bitnet_tokenizers::Tokenizer;
     use std::sync::Arc;
+
+    if let Some(path) = &qwen_trace_jsonl {
+        unsafe {
+            std::env::set_var("BITNET_QWEN_TRACE_JSONL", path);
+        }
+    }
+    if let Some(layer) = qwen_trace_layer {
+        unsafe {
+            std::env::set_var("BITNET_QWEN_TRACE_LAYER", layer.to_string());
+        }
+    }
+    if qwen_trace_full_prompt {
+        unsafe {
+            std::env::set_var("BITNET_QWEN_TRACE_FULL_PROMPT", "1");
+        }
+    }
+    if let Some(prompt_ids) = &qwen_trace_prompt_ids {
+        unsafe {
+            std::env::set_var("BITNET_QWEN_TRACE_PROMPT_IDS", prompt_ids);
+        }
+    }
 
     answer_corpus_child_phase("process_start", serde_json::json!({ "command": "run" }));
     answer_corpus_child_phase(
@@ -8507,6 +8556,10 @@ async fn run_ask_generation(
         None,
         10,
         false,
+        None,
+        None,
+        false,
+        None,
         false,
         Some("ask".to_string()),
         false,

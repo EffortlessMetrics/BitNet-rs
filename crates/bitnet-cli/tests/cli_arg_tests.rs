@@ -1342,6 +1342,19 @@ fn run_help_documents_logit_dump_alias() {
         .stdout(predicate::str::contains("--logits-dump-steps"));
 }
 
+/// `run --help` documents the bounded Qwen checkpoint trace flags used by SLM-CPU-007.
+#[test]
+fn run_help_documents_qwen_trace_flags() {
+    bitnet()
+        .args(["run", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--qwen-trace-jsonl"))
+        .stdout(predicate::str::contains("--qwen-trace-layer"))
+        .stdout(predicate::str::contains("--qwen-trace-full-prompt"))
+        .stdout(predicate::str::contains("--qwen-trace-prompt-ids"));
+}
+
 /// `run --help` documents the --repetition-penalty option.
 #[test]
 fn run_help_documents_repetition_penalty() {
