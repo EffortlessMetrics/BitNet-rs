@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T22:32:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-003"
+event = "in_progress"
+branch = "codex/slm-cpu-003-tiny-strict-receipt"
+actor = "codex"
+
+notes = [
+  "Started the tiny strict dense CPU receipt branch from current main after SLM-CPU-002B tracker sync landed.",
+  "The Qwen3-0.6B Q8_0 run exposed dense Qwen attention head_dim handling gaps, so the work item allowed paths were widened to cover the common/model/transformer shape fixes needed for the receipt.",
+  "No answer-quality, throughput, server, GPU, NPU, or BitNet kernel claim is made.",
+]

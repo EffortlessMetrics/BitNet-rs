@@ -31,6 +31,10 @@ pub struct ModelConfig {
     pub num_heads: usize,
     /// GQA/MQA: number of K/V heads (defaults to num_heads for MHA)
     pub num_key_value_heads: usize,
+    /// Optional explicit per-head attention dimension. Some dense GGUF
+    /// families, including Qwen3, use head_dim != hidden_size / num_heads.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attention_head_dim: Option<usize>,
     pub intermediate_size: usize,
     pub max_position_embeddings: usize,
     pub rope_theta: Option<f32>,
@@ -74,6 +78,7 @@ impl Default for ModelConfig {
             num_layers: 32,
             num_heads: 32,
             num_key_value_heads: 0, // will default to num_heads if not set
+            attention_head_dim: None,
             intermediate_size: 11008,
             max_position_embeddings: 2048,
             rope_theta: None,

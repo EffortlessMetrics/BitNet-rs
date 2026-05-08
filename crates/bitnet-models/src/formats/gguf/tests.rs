@@ -1253,6 +1253,8 @@ fn dense_qwen_extracts_arch_prefixed_metadata_and_vocab_from_embedding() {
             ("qwen3.feed_forward_length", GgufValue::U32(3072)),
             ("qwen3.attention.head_count", GgufValue::U32(16)),
             ("qwen3.attention.head_count_kv", GgufValue::U32(8)),
+            ("qwen3.attention.key_length", GgufValue::U32(128)),
+            ("qwen3.attention.value_length", GgufValue::U32(128)),
             ("qwen3.rope.freq_base", GgufValue::F32(1_000_000.0)),
             ("qwen3.attention.layer_norm_rms_epsilon", GgufValue::F32(1e-6)),
         ],
@@ -1272,6 +1274,7 @@ fn dense_qwen_extracts_arch_prefixed_metadata_and_vocab_from_embedding() {
     assert_eq!(config.model.num_layers, 28);
     assert_eq!(config.model.num_heads, 16);
     assert_eq!(config.model.num_key_value_heads, 8);
+    assert_eq!(config.model.attention_head_dim, Some(128));
     assert_eq!(config.model.intermediate_size, 3072);
     assert_eq!(config.model.max_position_embeddings, 40960);
     assert_eq!(config.model.rope_theta, Some(1_000_000.0));

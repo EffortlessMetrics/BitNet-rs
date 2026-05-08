@@ -484,6 +484,7 @@ fn create_mock_bitnet_model(vocab_size: usize, hidden_size: usize) -> Result<Bit
         num_layers: 2,
         num_heads: 8,
         num_key_value_heads: 8,
+        attention_head_dim: None,
         intermediate_size: hidden_size * 4,
         max_position_embeddings: 2048,
         rope_theta: Some(10000.0),

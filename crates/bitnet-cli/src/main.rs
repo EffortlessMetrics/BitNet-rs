@@ -708,12 +708,25 @@ fn main() -> Result<()> {
     // The generated clap command tree is deep enough to overflow the default
     // Windows main-thread stack before subcommands such as `answer-parity`
     // can print help. Run the CLI body on an explicitly larger stack.
+    let stack_size = std::env::var("BITNET_CLI_STACK_BYTES")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(64 * 1024 * 1024);
+
     std::thread::Builder::new()
         .name("bitnet-cli-main".to_string())
-        .stack_size(32 * 1024 * 1024)
+        .stack_size(stack_size)
         .spawn(run_main)?
         .join()
-        .map_err(|_| anyhow::anyhow!("bitnet CLI worker thread panicked"))?
+        .map_err(|panic| {
+            if let Some(message) = panic.downcast_ref::<&str>() {
+                anyhow::anyhow!("bitnet CLI worker thread panicked: {message}")
+            } else if let Some(message) = panic.downcast_ref::<String>() {
+                anyhow::anyhow!("bitnet CLI worker thread panicked: {message}")
+            } else {
+                anyhow::anyhow!("bitnet CLI worker thread panicked")
+            }
+        })?
 }
 
 #[cfg(not(windows))]
@@ -2120,16 +2133,33 @@ fn infer_model_repo(path: &std::path::Path) -> String {
         || normalized.contains("microsoft-bitnet-b1.58-2b-4t")
     {
         "microsoft/bitnet-b1.58-2B-4T-gguf".to_string()
+    } else if normalized.contains("qwen3-0.6b") {
+        "Qwen/Qwen3-0.6B-GGUF".to_string()
+    } else if normalized.contains("qwen2.5-0.5b") || normalized.contains("qwen2_5_0_5b") {
+        "Qwen/Qwen2.5-0.5B-Instruct".to_string()
     } else {
         "local".to_string()
     }
 }
 
 fn infer_model_architecture(path: &std::path::Path) -> String {
+    let normalized = path.to_string_lossy().to_ascii_lowercase();
     if infer_model_repo(path) == "microsoft/bitnet-b1.58-2B-4T-gguf" {
         "bitnet_b1_58".to_string()
+    } else if normalized.contains("qwen3") {
+        "qwen3".to_string()
+    } else if normalized.contains("qwen2.5") || normalized.contains("qwen2_5") {
+        "qwen2".to_string()
     } else {
         "unknown".to_string()
+    }
+}
+
+fn receipt_model_family(model_architecture: &str) -> &'static str {
+    match model_architecture {
+        "bitnet_b1_58" => "bitnet",
+        "qwen2" | "qwen3" => "qwen",
+        _ => "unknown",
     }
 }
 
@@ -3332,6 +3362,7 @@ async fn run_simple_generation(
         let model_repo = infer_model_repo(&model_path);
         let canonical_bitnet_model = model_repo == "microsoft/bitnet-b1.58-2B-4T-gguf";
         let model_architecture = infer_model_architecture(&model_path);
+        let model_family = receipt_model_family(&model_architecture);
         let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
         let model_file =
             model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
@@ -3583,6 +3614,7 @@ async fn run_simple_generation(
                 "path": model_path.display().to_string(),
                 "sha256": model_sha256,
                 "format": model_format_label,
+                "family": model_family,
                 "architecture": model_architecture,
                 "context_length": config.model.max_position_embeddings,
                 "tokenizer": tokenizer_label,
@@ -3644,7 +3676,7 @@ async fn run_simple_generation(
                 "loader_mode": loader_mode,
                 "tokenizer_source": tokenizer_source_str,
                 "tokenizer_strict": tokenizer_strict,
-                "model_family": "bitnet",
+                "model_family": model_family,
                 "quant_format": format!("{}", config.quantization.quantization_type),
                 "cpu_model": cpu_model.as_str(),
                 "cpu_features": &cpu_features,
@@ -5353,6 +5385,16 @@ mod tests {
         ));
 
         assert_eq!(repo, "microsoft/bitnet-b1.58-2B-4T-gguf");
+    }
+
+    #[test]
+    fn qwen_receipt_identity_uses_dense_family() {
+        let path = std::path::Path::new("models/slm/Qwen3-0.6B-Q8_0.gguf");
+        let architecture = infer_model_architecture(path);
+
+        assert_eq!(infer_model_repo(path), "Qwen/Qwen3-0.6B-GGUF");
+        assert_eq!(architecture, "qwen3");
+        assert_eq!(receipt_model_family(&architecture), "qwen");
     }
 
     #[test]
