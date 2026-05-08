@@ -205,3 +205,51 @@ must_not_claim = [
   "CPU or CUDA local-answer generation is coherent in Rust.",
   "Any backend speedup is proven.",
 ]
+
+[[work_item]]
+id = "MODEL-ARTIFACT-005"
+status = "in_progress"
+branch = "codex/model-artifacts/MODEL-ARTIFACT-005-authority-dimensions"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-ARTIFACT-004"]
+acceptance = "Split artifact authority into explicit target alignment, runner authority, tokenizer/pre-tokenizer authority, prompt-suite result, and per-lane unblock fields so alternate-quant control evidence cannot be confused with the official Microsoft I2_S CUDA target."
+commands = [
+  "Parse ci/model-artifacts/*.toml",
+  "cargo run --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/model-artifacts/**",
+  "ci/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/specs/rtx5070ti-cuda-answer-readiness.md",
+]
+forbidden_paths = [
+  "crates/**",
+  "runtime behavior",
+  "tokenizer behavior",
+  "model loader behavior",
+  "transformer/math code",
+  "QK256/CUDA",
+  "server/NPU/Metal/A770/SLM runtime",
+  "speed claims",
+  "quality gate weakening",
+]
+may_claim = [
+  "Official Microsoft I2_S remains the official CUDA target and remains blocked.",
+  "tdh111 IQ2_BN_R4 is useful alternate-quant control evidence.",
+  "tdh111 IQ2_BN_R4 cannot unblock official Microsoft I2_S CUDA answer-readiness.",
+  "Missing pre-tokenizer authority remains a first-class blocker.",
+]
+must_not_claim = [
+  "A shared answer_ready BitNet artifact has been acquired.",
+  "tdh111 IQ2_BN_R4 satisfies the official Microsoft I2_S CUDA answer target.",
+  "CPU or CUDA local-answer generation is coherent in Rust.",
+  "Any backend speedup is proven.",
+]

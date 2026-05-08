@@ -24,6 +24,25 @@ states = [
   "blocked",
 ]
 
+answer_readiness_scopes = [
+  "official_target",
+  "alternate_quant_control",
+  "diagnostic_only",
+]
+
+target_alignments = [
+  "official_i2s_cuda_target",
+  "official_derived_alt_quant",
+  "unrelated",
+]
+
+runner_authorities = [
+  "stock_llama_cpp",
+  "ik_llama_cpp",
+  "microsoft_bitnet",
+  "unknown",
+]
+
 [claim_policy]
 structural_validity_is_not_answer_readiness = true
 backend_execution_is_not_answer_readiness = true
@@ -63,6 +82,43 @@ quantization = "i2_s"
 structural_status = "valid_gguf"
 answer_quality_status = "failed_reference_prompt_suite"
 tokenizer_authority = "missing_pretokenizer_authority"
+pretokenizer_authority = "missing"
+answer_readiness_scope = "official_target"
+target_alignment = "official_i2s_cuda_target"
+runner_authority = "ik_llama_cpp"
+prompt_suite_result = "failed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 reference_runner = "llama-cli via local BitNet.cpp checkout"
 legacy_evidence = "ci/quality/apple-m4-local-answer-model-artifacts.toml"
 rejection_reason = "Structurally valid GGUF, but missing tokenizer pre-tokenizer authority and failing reference prompt-suite output quality."
+
+[[artifact]]
+id = "tdh111_bitnet_b158_2b_4t_iq2_bn_r4"
+state = "rejected_missing_tokenizer_authority"
+status = "rejected_for_answer_readiness"
+repo = "tdh111/bitnet-b1.58-2B-4T-GGUF"
+repo_revision = "e10f9e8b720e90c8f3f0071bba30d50d7f0d4bc7"
+file = "bitnet1582b4t-iq2_bn_r4.gguf"
+sha256 = "a99001aaa5c1dc24acffe8035315c7d2970e82d8ccd3189383275c5d5a5287b5"
+bytes = 987884192
+format = "gguf"
+architecture = "bitnet-25"
+quantization = "iq2_bn_r4"
+structural_status = "intended_runner_loads"
+answer_quality_status = "passed_reference_prompt_suite_under_intended_runner"
+tokenizer_authority = "missing_pretokenizer_authority"
+pretokenizer_authority = "missing"
+chat_template_authority = "present_in_gguf"
+answer_readiness_scope = "alternate_quant_control"
+target_alignment = "official_derived_alt_quant"
+runner_authority = "ik_llama_cpp"
+prompt_suite_result = "passed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = true
+reference_runner = "ik_llama.cpp llama-cli"
+reference_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c20fe2c66"
+stock_reference_runner = "stock llama.cpp b9061 llama-completion"
+stock_reference_runner_result = "rejected_reference_runner_failed"
+evidence = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
+rejection_reason = "Intended ik_llama.cpp runner loads the artifact and passes the tiny prompt suite, but required pre-tokenizer authority is missing and this alternate IQ2_BN_R4 artifact is not the official Microsoft I2_S CUDA target."
