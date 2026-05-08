@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T13:28:59Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-005"
+event = "merged"
+pr = 4069
+merge_sha = "731f399a6147b1981fa6bffb4a90b29aabbe4ce1"
+actor = "codex"
+
+notes = [
+  "M4-SLM-PERF-005 Metal phase timing receipt PR merged.",
+  "The merged work keeps timing phase-local, records fallback_used=false for the named Metal phase, keeps the rest of the SLM pipeline on CPU/NEON, and does not claim full Metal inference or broad Apple M4 performance.",
+  "M4-SLM-PERF-006 is ready for streaming and operator UX work.",
+]
