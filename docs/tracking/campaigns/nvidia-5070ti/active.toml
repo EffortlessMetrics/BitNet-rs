@@ -1258,3 +1258,51 @@ must_not_claim = [
   "Persistent dense model/session inference exists.",
   "Full dense regular LLM CUDA residency exists.",
 ]
+
+[[work_item]]
+id = "CUDA-PLANNER-001"
+status = "pr_open"
+branch = "codex/cuda-planner-001-model-aware"
+pr = 4127
+head_sha = "b5943e9ad58079518d598b3f3ab3046d4e28bb97"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add a model-aware dispatch planner contract that keeps BitNet QK256 CUDA and dense regular-LLM CUDA routes separate, rejects unsupported strict CUDA fallback explicitly, and does not change kernels, model math, tokenizer, loader, transformer, or server behavior."
+commands = [
+  "cargo fmt -p bitnet-kernels -- --check",
+  "cargo test --locked -p bitnet-kernels --lib --no-default-features dispatch_planner -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/dispatch_planner.rs",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF inference implementation",
+]
+may_claim = [
+  "The planner can distinguish BitNet QK256 CUDA routes from dense regular-LLM CUDA routes.",
+  "Strict CUDA planning records unsupported operations instead of silently selecting CPU fallback.",
+]
+must_not_claim = [
+  "Any new CUDA kernel exists.",
+  "BitNet QK256 CUDA math changed.",
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "General dense GGUF CUDA inference is complete.",
+  "CUDA speedup is accepted.",
+  "Full CUDA residency for every transformer operation is proven.",
+]
