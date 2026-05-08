@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T22:28:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "After SLM-CPU-007B, the next dense Qwen3 CPU item is first-token parity for the fixed 2+2 prompt.",
+  "The item must fix the first divergent operation without claiming answer quality, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, quant expansion, or BitNet QK256 changes.",
+]

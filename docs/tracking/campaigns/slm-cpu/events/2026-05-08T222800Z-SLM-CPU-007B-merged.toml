@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T22:28:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-007B"
+event = "merged"
+pr = 4138
+merge_sha = "fcc0f992a00e39fb97bb5d0770a9b1b2295322ad"
+branch = "codex/slm-cpu-007b-first-drift-capture"
+actor = "codex"
+
+notes = [
+  "Merged #4138 with the i5-8250U Qwen3 layer-0 bitnet-rs checkpoint trace and first-drift classification artifact.",
+  "The artifact localizes the first comparable divergence to top logits and records internal drift as reference-missing until known-good internal checkpoints exist.",
+]
