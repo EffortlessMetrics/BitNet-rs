@@ -747,7 +747,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-010"
-status = "ready"
+status = "pr_open"
+pr = 4012
 branch = "codex/intel-258v-platform/CPU258V-010-release-single-case"
 stackable = false
 review_mode = "codex_premerge"

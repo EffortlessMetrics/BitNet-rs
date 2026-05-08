@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T07:52:21Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-010"
+event = "pr_open"
+pr = 4012
+branch = "codex/intel-258v-platform/CPU258V-010-release-single-case"
+head_sha = "31549ec8f52564463fe275caa81491054eecb572"
+summary = "Opened CPU258V-010 to record release-built single-case 258V AVX2 answer-corpus evidence."
+
+details = [
+  "The release-built selected math_2_plus_2 case completed strict CPU execution within the bounded child-run window.",
+  "The receipt records real_gguf loading, explicit tokenizer resolution, selected i2_s-avx2-reference kernel, fallback_used=false, 19 prompt tokens, and 4 generated tokens.",
+  "The generated text fails the exact-answer gate, so this PR does not claim answer readiness, scalar/AVX2 parity, sustained throughput, Arc 140V execution, or Intel NPU execution.",
+]
