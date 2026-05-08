@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T04:38:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-007"
+event = "merged"
+actor = "codex"
+pr = 3988
+merge_sha = "e9dcdaa37fb6dfa3700bc506b48311bcb9f3676c"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #3988 merged Microsoft BitNet.cpp reference-runner evidence for the official Microsoft I2_S GGUF with external tokenizer.ggml.pre=llama-bpe authority.",
+  "The official I2_S artifact is answer_ready for backend gates only when paired with the documented external tokenizer/pre-tokenizer authority and prompt envelope.",
+  "Rust CPU, Rust CUDA, accelerator, server, and speed claims remain blocked until their strict receipt gates pass.",
+]
