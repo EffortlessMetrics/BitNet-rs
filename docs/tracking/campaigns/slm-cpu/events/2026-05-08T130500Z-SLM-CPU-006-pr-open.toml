@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T13:05:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-006"
+event = "pr_open"
+pr = 4071
+branch = "codex/slm-cpu-006-first-token-artifact"
+actor = "codex"
+head_sha = "fd1591bff88b5bf5ba1ce6c73845a63b57f734bb"
+notes = [
+  "Opened #4071 with first-token Qwen3 divergence artifacts from the i5-8250U.",
+  "The bitnet-rs run uses Qwen3-0.6B Q8_0 on cpu-rust with strict loader/tokenizer, fallback=false, and logits top-k for the first generated token.",
+  "The reference comparison validates prompt-token parity and classifies the first divergence as logits_or_shared_transformer_math.",
+  "No Qwen answer-quality, throughput, server, GPU, NPU, Qwen3.5, or BitNet QK256 claim is introduced.",
+]

@@ -350,7 +350,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-006"
-status = "ready"
+status = "pr_open"
+pr = 4071
 branch = "codex/slm-cpu-006-first-token-artifact"
 stackable = false
 review_mode = "codex_premerge"
