@@ -5622,6 +5622,7 @@ async fn run_slm_warm_session(
     let mut speed_accumulator = WarmSessionSpeedAccumulator::default();
     let allocation_audit_enabled = allocation_audit;
     let allocation_audit_guard = AllocationAuditGuard::enable(allocation_audit_enabled);
+    let mut session_buffers = WarmSessionPromptBuffers::default();
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
         let prompt_alloc_start = AllocationAuditSnapshot::current();
         let prompt = &prompt_input.prompt;
@@ -5645,14 +5646,36 @@ async fn run_slm_warm_session(
         let parse_special = template_type.parse_special();
         let prompt_tokenize_start = std::time::Instant::now();
         let prompt_tokenize_alloc_start = AllocationAuditSnapshot::current();
-        let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
-        ensure_non_empty_generation_context(&mut tokens, tokenizer.as_ref())?;
+        let encoded_prompt_tokens =
+            tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
         let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
         let prompt_tokenize_alloc =
             AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
-        let prompt_token_count = tokens.len();
+        let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
 
         let prompt_setup_alloc_start = AllocationAuditSnapshot::current();
+        session_buffers.reset(encoded_prompt_tokens.len(), max_new_tokens, max_stop_len);
+        session_buffers.tokens.extend_from_slice(&encoded_prompt_tokens);
+        ensure_non_empty_generation_context(&mut session_buffers.tokens, tokenizer.as_ref())?;
+        let tokens = &mut session_buffers.tokens;
+        let generated_tokens = &mut session_buffers.generated_tokens;
+        let decode_step_ms = &mut session_buffers.decode_step_ms;
+        let embed_step_ms = &mut session_buffers.embed_step_ms;
+        let forward_step_ms = &mut session_buffers.forward_step_ms;
+        let logits_step_ms = &mut session_buffers.logits_step_ms;
+        let sample_step_ms = &mut session_buffers.sample_step_ms;
+        let token_decode_step_ms = &mut session_buffers.token_decode_step_ms;
+        let prefill_step_allocs = &mut session_buffers.prefill_step_allocs;
+        let decode_step_allocs = &mut session_buffers.decode_step_allocs;
+        let embed_step_allocs = &mut session_buffers.embed_step_allocs;
+        let forward_step_allocs = &mut session_buffers.forward_step_allocs;
+        let logits_step_allocs = &mut session_buffers.logits_step_allocs;
+        let sample_step_allocs = &mut session_buffers.sample_step_allocs;
+        let token_vector_update_allocs = &mut session_buffers.token_vector_update_allocs;
+        let token_decode_step_allocs = &mut session_buffers.token_decode_step_allocs;
+        let stop_tail_update_allocs = &mut session_buffers.stop_tail_update_allocs;
+        let stop_tail = &mut session_buffers.stop_tail;
+        let prompt_token_count = tokens.len();
         let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
         let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
         let mut sampler = SamplingStrategy::new(SamplingConfig {
@@ -5662,22 +5685,6 @@ async fn run_slm_warm_session(
             repetition_penalty,
             seed,
         });
-        let mut generated_tokens = Vec::with_capacity(max_new_tokens);
-        let mut decode_step_ms = Vec::with_capacity(max_new_tokens);
-        let mut embed_step_ms = Vec::with_capacity(max_new_tokens);
-        let mut forward_step_ms = Vec::with_capacity(max_new_tokens);
-        let mut logits_step_ms = Vec::with_capacity(max_new_tokens);
-        let mut sample_step_ms = Vec::with_capacity(max_new_tokens);
-        let mut token_decode_step_ms = Vec::with_capacity(max_new_tokens);
-        let mut prefill_step_allocs = Vec::with_capacity(tokens.len().saturating_sub(1));
-        let mut decode_step_allocs = Vec::with_capacity(max_new_tokens);
-        let mut embed_step_allocs = Vec::with_capacity(max_new_tokens);
-        let mut forward_step_allocs = Vec::with_capacity(max_new_tokens);
-        let mut logits_step_allocs = Vec::with_capacity(max_new_tokens);
-        let mut sample_step_allocs = Vec::with_capacity(max_new_tokens);
-        let mut token_vector_update_allocs = Vec::with_capacity(max_new_tokens);
-        let mut token_decode_step_allocs = Vec::with_capacity(max_new_tokens);
-        let mut stop_tail_update_allocs = Vec::with_capacity(max_new_tokens);
         let mut first_token_ms = None;
         let mut first_token_decode_ms = None;
         let prompt_setup_alloc = AllocationAuditSnapshot::delta_since(prompt_setup_alloc_start);
@@ -5697,13 +5704,6 @@ async fn run_slm_warm_session(
             }
         }
         let prefill_ms = if prefill_token_count > 0 { elapsed_ms(prefill_start) } else { 0.0 };
-
-        let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
-        let mut tail = if max_stop_len > 0 {
-            Some(String::with_capacity(max_stop_len.saturating_add(16)))
-        } else {
-            None
-        };
 
         for _step_idx in 0..max_new_tokens {
             let decode_step_start = std::time::Instant::now();
@@ -5764,15 +5764,15 @@ async fn run_slm_warm_session(
             }
             token_decode_step_ms.push(elapsed_ms(token_decode_start));
             let stop_tail_alloc_start = AllocationAuditSnapshot::current();
-            if let Some(tail) = &mut tail {
-                tail.push_str(&token_text);
-                if tail.len() > max_stop_len {
-                    let cut = tail.len() - max_stop_len;
+            if max_stop_len > 0 {
+                stop_tail.push_str(&token_text);
+                if stop_tail.len() > max_stop_len {
+                    let cut = stop_tail.len() - max_stop_len;
                     let mut safe_cut = cut;
-                    while safe_cut > 0 && !tail.is_char_boundary(safe_cut) {
+                    while safe_cut > 0 && !stop_tail.is_char_boundary(safe_cut) {
                         safe_cut -= 1;
                     }
-                    tail.drain(..safe_cut);
+                    stop_tail.drain(..safe_cut);
                 }
             }
             if allocation_audit_enabled {
@@ -5796,9 +5796,9 @@ async fn run_slm_warm_session(
             {
                 break;
             }
-            if let Some(tail) = &tail
+            if max_stop_len > 0
                 && !all_stop_sequences.is_empty()
-                && all_stop_sequences.iter().any(|pat| tail.ends_with(pat))
+                && all_stop_sequences.iter().any(|pat| stop_tail.ends_with(pat))
             {
                 break;
             }
@@ -5941,6 +5941,20 @@ async fn run_slm_warm_session(
                     "single_token_prompt_no_prefix_prefill"
                 },
             },
+            "session_reuse": {
+                "reuse_scope": "resident_session",
+                "model_loaded_once": true,
+                "tokenizer_loaded_once": true,
+                "session_owned_buffers": true,
+                "prompt_token_buffer_reused": true,
+                "generated_token_buffer_reused": true,
+                "timing_buffers_reused": true,
+                "allocation_audit_buffers_reused": true,
+                "stop_tail_buffer_reused": max_stop_len > 0,
+                "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+                "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+                "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+            },
             "speedup_claim": false,
         });
         let prompt_receipt_construct_alloc =
@@ -5996,6 +6010,7 @@ async fn run_slm_warm_session(
                 "runtime_api": backend_identity.runtime_api.as_str(),
                 "fallback_used": backend_identity.fallback_used,
             },
+            "session_reuse": prompt_receipt["session_reuse"].clone(),
             "allocation_audit": prompt_receipt["allocation_audit"].clone(),
         }));
         prompt_receipts.push(prompt_receipt_path.display().to_string());
@@ -6033,6 +6048,16 @@ async fn run_slm_warm_session(
             "prompt_count": prompt_inputs.len(),
             "per_prompt_receipt_dir": receipt_dir.display().to_string(),
             "per_prompt_receipts": prompt_receipts,
+            "reuse_scope": "resident_session",
+            "session_owned_buffers": true,
+            "prompt_token_buffer_reused": true,
+            "generated_token_buffer_reused": true,
+            "timing_buffers_reused": true,
+            "allocation_audit_buffers_reused": true,
+            "stop_tail_buffer_reused": true,
+            "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+            "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+            "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
         },
         "corpus": slm_warm_session_corpus_receipt(corpus_path.as_deref(), corpus.as_ref(), corpus_repeat_runs),
         "generation": {
@@ -6160,6 +6185,90 @@ struct WarmSessionPromptInput {
     min_distinct_generated_tokens: usize,
 }
 
+#[derive(Debug, Default)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionPromptBuffers {
+    tokens: Vec<u32>,
+    generated_tokens: Vec<u32>,
+    decode_step_ms: Vec<f64>,
+    embed_step_ms: Vec<f64>,
+    forward_step_ms: Vec<f64>,
+    logits_step_ms: Vec<f64>,
+    sample_step_ms: Vec<f64>,
+    token_decode_step_ms: Vec<f64>,
+    prefill_step_allocs: Vec<AllocationAuditSnapshot>,
+    decode_step_allocs: Vec<AllocationAuditSnapshot>,
+    embed_step_allocs: Vec<AllocationAuditSnapshot>,
+    forward_step_allocs: Vec<AllocationAuditSnapshot>,
+    logits_step_allocs: Vec<AllocationAuditSnapshot>,
+    sample_step_allocs: Vec<AllocationAuditSnapshot>,
+    token_vector_update_allocs: Vec<AllocationAuditSnapshot>,
+    token_decode_step_allocs: Vec<AllocationAuditSnapshot>,
+    stop_tail_update_allocs: Vec<AllocationAuditSnapshot>,
+    stop_tail: String,
+}
+
+#[cfg(feature = "full-cli")]
+impl WarmSessionPromptBuffers {
+    fn reset(&mut self, prompt_token_capacity: usize, max_new_tokens: usize, max_stop_len: usize) {
+        let token_capacity = prompt_token_capacity.saturating_add(max_new_tokens);
+        reserve_total_capacity(&mut self.tokens, token_capacity);
+        reserve_total_capacity(&mut self.generated_tokens, max_new_tokens);
+        reserve_total_capacity(&mut self.decode_step_ms, max_new_tokens);
+        reserve_total_capacity(&mut self.embed_step_ms, max_new_tokens);
+        reserve_total_capacity(&mut self.forward_step_ms, max_new_tokens);
+        reserve_total_capacity(&mut self.logits_step_ms, max_new_tokens);
+        reserve_total_capacity(&mut self.sample_step_ms, max_new_tokens);
+        reserve_total_capacity(&mut self.token_decode_step_ms, max_new_tokens);
+        reserve_total_capacity(
+            &mut self.prefill_step_allocs,
+            prompt_token_capacity.saturating_sub(1),
+        );
+        reserve_total_capacity(&mut self.decode_step_allocs, max_new_tokens);
+        reserve_total_capacity(&mut self.embed_step_allocs, max_new_tokens);
+        reserve_total_capacity(&mut self.forward_step_allocs, max_new_tokens);
+        reserve_total_capacity(&mut self.logits_step_allocs, max_new_tokens);
+        reserve_total_capacity(&mut self.sample_step_allocs, max_new_tokens);
+        reserve_total_capacity(&mut self.token_vector_update_allocs, max_new_tokens);
+        reserve_total_capacity(&mut self.token_decode_step_allocs, max_new_tokens);
+        reserve_total_capacity(&mut self.stop_tail_update_allocs, max_new_tokens);
+        reserve_string_total_capacity(&mut self.stop_tail, max_stop_len.saturating_add(16));
+
+        self.tokens.clear();
+        self.generated_tokens.clear();
+        self.decode_step_ms.clear();
+        self.embed_step_ms.clear();
+        self.forward_step_ms.clear();
+        self.logits_step_ms.clear();
+        self.sample_step_ms.clear();
+        self.token_decode_step_ms.clear();
+        self.prefill_step_allocs.clear();
+        self.decode_step_allocs.clear();
+        self.embed_step_allocs.clear();
+        self.forward_step_allocs.clear();
+        self.logits_step_allocs.clear();
+        self.sample_step_allocs.clear();
+        self.token_vector_update_allocs.clear();
+        self.token_decode_step_allocs.clear();
+        self.stop_tail_update_allocs.clear();
+        self.stop_tail.clear();
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn reserve_total_capacity<T>(values: &mut Vec<T>, needed: usize) {
+    if values.capacity() < needed {
+        values.reserve(needed - values.capacity());
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn reserve_string_total_capacity(value: &mut String, needed: usize) {
+    if value.capacity() < needed {
+        value.reserve(needed - value.capacity());
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 #[cfg(feature = "full-cli")]
 struct WarmSessionPromptSpeed {
@@ -6224,9 +6333,19 @@ impl WarmSessionSpeedAccumulator {
                 "tokenizer_loaded_once": true,
                 "per_prompt_model_load_ms": 0.0,
                 "per_prompt_tokenizer_load_ms": 0.0,
+                "reuse_scope": "resident_session",
+                "session_owned_buffers": true,
+                "prompt_token_buffer_reused": true,
+                "generated_token_buffer_reused": true,
+                "timing_buffers_reused": true,
+                "allocation_audit_buffers_reused": true,
+                "stop_tail_buffer_reused": true,
                 "kv_cache_recreated_per_prompt": true,
+                "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
                 "sampler_recreated_per_prompt": true,
+                "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
                 "logits_buffer_reuse_claimed": false,
+                "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
             },
             "counts": {
                 "prompt_count": self.prompt_count,

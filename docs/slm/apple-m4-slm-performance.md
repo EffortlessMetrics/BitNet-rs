@@ -136,6 +136,27 @@ prompt token vector growth until a reusable session buffer is introduced
 
 This audit does not claim any performance improvement. It names and ranks allocation hotspots so `M4-SLM-PERF-003` and `M4-SLM-PERF-004` can remove overhead with before/after receipts.
 
+## Resident Session Hardening
+
+`M4-SLM-PERF-003` makes the existing SLM warm-session command more explicit about what stays resident across prompts. The model and tokenizer were already loaded once per aggregate warm-session run; this item adds CLI-owned reusable prompt buffers and receipt fields so operators can distinguish durable session state from prompt-local runtime state.
+
+Resident-session receipts now record:
+
+```text
+session.reuse_scope = resident_session
+session.session_owned_buffers = true
+session.prompt_token_buffer_reused = true
+session.generated_token_buffer_reused = true
+session.timing_buffers_reused = true
+session.allocation_audit_buffers_reused = true
+session.stop_tail_buffer_reused = true
+session.kv_cache_reuse_policy = recreated_per_prompt_for_prompt_isolation
+session.sampler_reuse_policy = recreated_per_prompt_for_deterministic_prompt_independence
+session.logits_buffer_reuse_policy = not_claimed_until_logits_extraction_uses_reusable_storage
+```
+
+The important boundary is that this is session hygiene, not a speed claim. KV cache and sampler state remain reset per prompt to preserve independent prompt correctness. Logits extraction still materializes a fresh vector, so logits buffer reuse is deliberately not claimed.
+
 ## Optimization Order
 
 1. Measure release-mode warm-session bottlenecks.

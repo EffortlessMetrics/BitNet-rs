@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T12:32:37Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-003"
+event = "pr_open"
+pr = 4050
+head_sha = "a4bc20c120202d977aae5c4ed9ffbfd500cd3ffd"
+actor = "codex"
+
+notes = [
+  "Opened the resident-session hardening PR for Apple M4 SLM warm sessions.",
+  "Adds CLI-owned reusable prompt buffers and receipt fields for resident-session reuse without claiming speedup.",
+  "No QK256, qk256-dispatch, server, Metal kernel, MPSGraph, Neural Engine, or broad performance claim changes.",
+]
