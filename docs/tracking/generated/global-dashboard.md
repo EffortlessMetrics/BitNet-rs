@@ -22,3 +22,4 @@
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
 | slm-cpu | SLM-CPU-006B | #4096 | merged | none | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | pr_open | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
+| wasm-inference | WASM-001 | TBD | ready | WASM-002 | WASM detection is not inference. |
