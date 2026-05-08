@@ -149,8 +149,18 @@ fn build_receipt(args: &Args) -> Result<Value, Box<dyn Error>> {
     let requested_kernel = string_at(first, "/strict_provenance/requested_kernel")
         .or_else(|| string_at(first, "/kernel/kernel_id"))
         .unwrap_or_else(|| selected_kernel.clone());
-    let prompt_tokens = u64_at(first, "/execution/prompt_tokens").unwrap_or(1).max(1);
-    let generated_tokens = u64_at(first, "/execution/generated_tokens").unwrap_or(1).max(1);
+    let prompt_tokens = proofs
+        .iter()
+        .filter_map(|proof| u64_at(proof, "/execution/prompt_tokens"))
+        .max()
+        .unwrap_or(1)
+        .max(1);
+    let generated_tokens = proofs
+        .iter()
+        .filter_map(|proof| u64_at(proof, "/execution/generated_tokens"))
+        .max()
+        .unwrap_or(1)
+        .max(1);
     let model_quant_format = args
         .model_quant_format
         .clone()
@@ -301,6 +311,9 @@ fn build_cpu258v_003_profiles(
             first_token,
             "first_token",
             "no supplied strict CPU proof receipt measured the one-token smoke path",
+            prompt_tokens,
+            generated_tokens,
+            PhaseProfileRequirements::default(),
         ),
         cpu258v_profile_from_phase(
             "first_token",
@@ -308,6 +321,9 @@ fn build_cpu258v_003_profiles(
             first_token,
             "first_token",
             "no supplied strict CPU proof receipt measured first token",
+            prompt_tokens,
+            generated_tokens,
+            PhaseProfileRequirements::default(),
         ),
         cpu258v_profile_from_phase(
             "decode_128",
@@ -315,6 +331,13 @@ fn build_cpu258v_003_profiles(
             decode,
             "decode",
             "supplied strict CPU proof generated fewer than 128 tokens or did not measure steady-state decode",
+            prompt_tokens,
+            generated_tokens,
+            PhaseProfileRequirements {
+                min_generated_tokens: Some(128),
+                min_iterations: Some(1),
+                ..PhaseProfileRequirements::default()
+            },
         ),
         cpu258v_profile_from_phase(
             "prefill_512",
@@ -322,6 +345,13 @@ fn build_cpu258v_003_profiles(
             prefill,
             "prefill",
             "supplied strict CPU proof did not measure a 512-token prefill",
+            prompt_tokens,
+            generated_tokens,
+            PhaseProfileRequirements {
+                min_prompt_tokens: Some(512),
+                min_iterations: Some(512),
+                ..PhaseProfileRequirements::default()
+            },
         ),
     ]
     .into_iter()
@@ -343,10 +373,14 @@ fn cpu258v_profile_from_phase(
     phase: Option<&Value>,
     source_profile: &str,
     not_run_reason: &str,
+    prompt_tokens: u64,
+    generated_tokens: u64,
+    requirements: PhaseProfileRequirements,
 ) -> Value {
-    if let Some(phase) =
-        phase.filter(|entry| entry.get("status").and_then(Value::as_str) == Some("measured"))
-    {
+    if let Some(phase) = phase.filter(|entry| {
+        entry.get("status").and_then(Value::as_str) == Some("measured")
+            && requirements.matches(entry, prompt_tokens, generated_tokens)
+    }) {
         return json!({
             "profile": profile,
             "purpose": purpose,
@@ -370,6 +404,23 @@ fn cpu258v_profile_from_phase(
         "reason": not_run_reason,
         "fallback_used": false
     })
+}
+
+#[derive(Debug, Default)]
+struct PhaseProfileRequirements {
+    min_prompt_tokens: Option<u64>,
+    min_generated_tokens: Option<u64>,
+    min_iterations: Option<u64>,
+}
+
+impl PhaseProfileRequirements {
+    fn matches(&self, phase: &Value, prompt_tokens: u64, generated_tokens: u64) -> bool {
+        self.min_prompt_tokens.is_none_or(|min| prompt_tokens >= min)
+            && self.min_generated_tokens.is_none_or(|min| generated_tokens >= min)
+            && self.min_iterations.is_none_or(|min| {
+                u64_at(phase, "/shape/iterations").is_some_and(|value| value >= min)
+            })
+    }
 }
 
 fn default_profiles(requested_kernel: &str, selected_kernel: &str) -> Vec<Value> {
@@ -653,6 +704,13 @@ fn array_at(value: &Value, pointer: &str) -> Option<Vec<String>> {
 mod tests {
     use super::*;
 
+    fn named_profile<'a>(entries: &'a [Value], name: &str) -> &'a Value {
+        entries
+            .iter()
+            .find(|entry| entry.get("profile").and_then(Value::as_str) == Some(name))
+            .expect("profile present")
+    }
+
     #[test]
     fn decode_receipt_uses_phase_profile_timings_and_prefill() {
         let proof = json!({
@@ -797,5 +855,57 @@ mod tests {
         assert_eq!(profile("prefill_512")["status"], "not_run");
         assert_eq!(profile("smoke_1")["prompt_tokens"], 1);
         assert_eq!(profile("smoke_1")["generated_tokens"], 1);
+    }
+
+    #[test]
+    fn cpu258v_003_decode_128_requires_128_generated_tokens() {
+        let mut profiles = default_profiles("i2_s-avx2-reference", "i2_s-avx2-reference");
+        set_measured(
+            &mut profiles,
+            PhaseMeasurement {
+                profile_name: "decode",
+                requested_kernel: "i2_s-avx2-reference",
+                selected_kernel: "i2_s-avx2-reference",
+                rows: 1,
+                cols: 4096,
+                iterations: 1,
+                wall_time_ms: 120.0,
+                median_ms: 120.0,
+                p95_ms: 120.0,
+                token_count: 1,
+            },
+        );
+
+        let short = build_cpu258v_003_profiles(&profiles, 16, 2);
+        let full = build_cpu258v_003_profiles(&profiles, 16, 128);
+        assert_eq!(named_profile(&short, "decode_128")["status"], "not_run");
+        assert_eq!(named_profile(&full, "decode_128")["status"], "measured");
+        assert_eq!(named_profile(&full, "decode_128")["generated_tokens"], 128);
+    }
+
+    #[test]
+    fn cpu258v_003_prefill_512_requires_512_prompt_tokens() {
+        let mut profiles = default_profiles("i2_s-avx2-reference", "i2_s-avx2-reference");
+        set_measured(
+            &mut profiles,
+            PhaseMeasurement {
+                profile_name: "prefill",
+                requested_kernel: "i2_s-avx2-reference",
+                selected_kernel: "i2_s-avx2-reference",
+                rows: 512,
+                cols: 4096,
+                iterations: 512,
+                wall_time_ms: 300.0,
+                median_ms: 0.6,
+                p95_ms: 0.8,
+                token_count: 512,
+            },
+        );
+
+        let short = build_cpu258v_003_profiles(&profiles, 128, 1);
+        let full = build_cpu258v_003_profiles(&profiles, 512, 1);
+        assert_eq!(named_profile(&short, "prefill_512")["status"], "not_run");
+        assert_eq!(named_profile(&full, "prefill_512")["status"], "measured");
+        assert_eq!(named_profile(&full, "prefill_512")["prompt_tokens"], 512);
     }
 }
