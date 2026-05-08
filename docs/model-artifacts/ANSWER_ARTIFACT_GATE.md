@@ -100,6 +100,11 @@ The current Microsoft BitNet I2_S GGUF is structurally valid, but it is rejected
 for answer-readiness claims because reference-runner evidence records missing
 pre-tokenizer authority and deterministic prompt-suite failure.
 
+The source Microsoft model repository publishes an external `tokenizer.json`
+with explicit pre-tokenizer behavior. That is useful diagnostic authority, but
+it does not by itself make the official I2_S GGUF answer-ready because the
+recorded prompt-suite output still fails.
+
 The `tdh111` IQ2_BN_R4 artifact is recorded separately as alternate-quant
 control evidence: it passes the tiny prompt suite under its intended
 `ik_llama.cpp` runner, but it is still missing pre-tokenizer authority and does
@@ -110,6 +115,7 @@ Shared manifests:
 - `ci/model-artifacts/artifact-manifest.toml`
 - `ci/model-artifacts/candidate-artifacts.toml`
 - `ci/model-artifacts/rejected-artifacts.toml`
+- `ci/model-artifacts/tokenizer-authority.toml`
 
 The shared search report is:
 

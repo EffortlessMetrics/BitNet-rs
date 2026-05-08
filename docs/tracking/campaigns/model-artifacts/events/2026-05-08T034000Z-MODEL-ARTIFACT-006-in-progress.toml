@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T03:40:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-006"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "MODEL-ARTIFACT-006 audits whether missing pre-tokenizer authority is absent from GGUF metadata, externally supplied by source tokenizer assets, or still blocked.",
+  "The audit covers official Microsoft I2_S and the tdh111 IQ2_BN_R4 alternate-quant control artifact.",
+  "The work remains docs/manifests only and must not claim answer readiness, change tokenizer behavior, or change runtime behavior.",
+]

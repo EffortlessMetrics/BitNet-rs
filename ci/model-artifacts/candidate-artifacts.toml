@@ -2,7 +2,7 @@ schema = 1
 artifact_kind = "model_answer_candidate_artifacts"
 campaign = "model-artifacts"
 work_item = "MODEL-ARTIFACT-002"
-updated = "2026-05-07"
+updated = "2026-05-08"
 
 [search]
 status = "blocked"
@@ -76,6 +76,7 @@ notes = [
 intended_runner = "ik_llama.cpp llama-cli"
 intended_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c20fe2c66"
 intended_runner_prompt_suite = "failed"
+tokenizer_authority_evidence = "ci/model-artifacts/tokenizer-authority.toml"
 
 [[candidate]]
 id = "jpacifico_aramis_2b_i2s"
@@ -256,3 +257,4 @@ stock_reference_runner = "stock llama.cpp b9061 llama-completion"
 stock_reference_runner_version = "9061 (deab41ec6)"
 stock_reference_runner_result = "rejected_reference_runner_failed"
 stock_reference_runner_error = "gguf_init_from_file_ptr: tensor 'blk.0.ffn_down.weight' has invalid ggml type 335. should be in [0, 42)"
+tokenizer_authority_evidence = "ci/model-artifacts/tokenizer-authority.toml"
