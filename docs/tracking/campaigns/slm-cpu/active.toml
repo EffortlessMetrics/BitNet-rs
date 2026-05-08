@@ -268,7 +268,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-004"
-status = "ready"
+status = "pr_open"
+pr = 3957
 branch = "codex/slm-cpu-004-answer-corpus"
 stackable = false
 review_mode = "codex_premerge"
