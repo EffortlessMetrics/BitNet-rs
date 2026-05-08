@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T01:17:30Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-004"
+event = "pr_open"
+pr = 3957
+head_sha = "5ff167e6b0a54a4c60b65d55168566d99c16d6be"
+branch = "codex/slm-cpu-004-answer-corpus"
+actor = "codex"
+
+notes = [
+  "Opened #3957 for the Qwen3 tiny SLM answer corpus evidence slice.",
+  "The included i5-8250U corpus receipt preserves quality failures with prompt IDs, generated IDs, selected backend/kernel, fallback=false, and model identity; it does not claim answer quality or performance.",
+]

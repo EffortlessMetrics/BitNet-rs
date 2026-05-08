@@ -10,6 +10,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
+      - 'codecov.yml'
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     branches: [ main ]
@@ -20,6 +21,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
+      - 'codecov.yml'
   workflow_dispatch:
 
 concurrency:
@@ -38,11 +40,12 @@ jobs:
       contents: read
       packages: read
 
-    # PRs: only run when explicitly labeled "coverage"
+    # PRs: only run when explicitly labeled "coverage" or "full-ci"
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'coverage')
+      contains(github.event.pull_request.labels.*.name, 'coverage') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2

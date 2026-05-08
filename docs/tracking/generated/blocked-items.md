@@ -55,6 +55,7 @@
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
 | intel-258v-platform | ARC140V-003 | ARC140V-002, CPU258V-003 | merged |
+| intel-258v-platform | ARC140V-004 | ARC140V-003, CPU258V-003 | merged |
 | intel-258v-platform | LNL258V-003 | LNL258V-002 | merged |
 | intel-258v-platform | CPU258V-001 | LNL258V-003 | merged |
 | intel-258v-platform | LNL258V-OWNERSHIP-001 | CPU258V-001 | merged |
@@ -86,7 +87,7 @@
 | slm-cpu | SLM-CPU-002A | SLM-CPU-002 | merged |
 | slm-cpu | SLM-CPU-002B | SLM-CPU-002A | merged |
 | slm-cpu | SLM-CPU-003 | SLM-CPU-002B | merged |
-| slm-cpu | SLM-CPU-004 | SLM-CPU-003 | ready |
+| slm-cpu | SLM-CPU-004 | SLM-CPU-003 | pr_open |
 | slm-cpu | SLM-CPU-005 | SLM-CPU-004 | proposed |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |
