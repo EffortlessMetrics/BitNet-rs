@@ -455,7 +455,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["NPU-010", "CPU258V-016"]
+blocked_by = ["NPU-010"]
 acceptance = "Add the next selected static BitNet-shaped OpenVINO NPU subgraph parity experiment, focused on an FFN/ReLU2 block or another explicitly scoped post-linear BitNet operation, with CPU reference comparison, static shape metadata, tolerance, timing, selected backend/runtime identity, fallback_used=false, and no full inference, acceleration, QK256, or CPU fallback proof claims."
 commands = [
   "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs crates/bitnet-device-probe/src/runtimes/openvino.rs crates/bitnet-device-probe/src/runtimes/mod.rs --edition 2024",
