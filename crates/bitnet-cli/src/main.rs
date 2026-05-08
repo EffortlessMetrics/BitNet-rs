@@ -473,6 +473,29 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Emit a BitNet prompt/token authority audit receipt without running inference
+    PromptAuthorityAudit {
+        /// Model GGUF path (for metadata and tokenizer authority)
+        #[arg(long)]
+        model: std::path::PathBuf,
+
+        /// Optional explicit tokenizer path
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+
+        /// User prompt to render and tokenize
+        #[arg(long)]
+        prompt: String,
+
+        /// Optional system prompt used by chat-style templates
+        #[arg(long = "system", value_name = "TEXT")]
+        system_prompt: Option<String>,
+
+        /// Output JSON receipt path
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Calculate perplexity score for a model
     Score(score::ScoreArgs),
 
@@ -1444,6 +1467,16 @@ async fn async_main() -> Result<()> {
         Some(Commands::Tokenize { model, tokenizer, text, file, bos, json_out }) => {
             handle_tokenize_command(model, tokenizer, text, file, bos, json_out).await
         }
+        Some(Commands::PromptAuthorityAudit {
+            model,
+            tokenizer,
+            prompt,
+            system_prompt,
+            json_out,
+        }) => {
+            handle_prompt_authority_audit_command(model, tokenizer, prompt, system_prompt, json_out)
+                .await
+        }
         Some(Commands::Score(args)) => score::run_score(&args).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
@@ -1720,6 +1753,322 @@ async fn handle_tokenize_command(
     }
 
     Ok(())
+}
+
+async fn handle_prompt_authority_audit_command(
+    model_path: std::path::PathBuf,
+    tokenizer_path: Option<std::path::PathBuf>,
+    prompt: String,
+    system_prompt: Option<String>,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    use bitnet_models::GgufReader;
+    use bitnet_tokenizers::Tokenizer;
+
+    let model_sha256 = compute_model_sha256(&model_path)?;
+    let gguf_bytes = std::fs::read(&model_path)
+        .with_context(|| format!("Failed to read model: {}", model_path.display()))?;
+    let gguf = GgufReader::new(&gguf_bytes).context("Failed to parse GGUF")?;
+    let gguf_architecture = gguf.get_string_metadata("general.architecture");
+    let gguf_model_name = gguf.get_string_metadata("general.name");
+    let gguf_tokenizer_model = gguf.get_string_metadata("tokenizer.ggml.model");
+    let gguf_chat_template = gguf.get_string_metadata("tokenizer.chat_template");
+    let gguf_vocab_size = gguf
+        .get_u32_metadata("tokenizer.ggml.vocab_size")
+        .or_else(|| {
+            gguf_architecture
+                .as_ref()
+                .and_then(|arch| gguf.get_u32_metadata(&format!("{arch}.vocab_size")))
+        })
+        .or_else(|| gguf.get_u32_metadata("llama.vocab_size"));
+
+    let tokenizer_json_metadata =
+        tokenizer_path.as_deref().and_then(read_tokenizer_json_prompt_metadata);
+    let external_chat_template =
+        tokenizer_json_metadata.as_ref().and_then(|metadata| metadata.chat_template.clone());
+    let chat_template_for_detection =
+        gguf_chat_template.as_deref().or(external_chat_template.as_deref());
+    let tokenizer_name_hint = gguf_tokenizer_model.as_deref().or_else(|| {
+        tokenizer_json_metadata.as_ref().and_then(|metadata| metadata.family.as_deref())
+    });
+
+    let tokenizer_resolution =
+        bitnet_tokenizers::auto::resolve_tokenizer(&model_path, tokenizer_path.as_deref(), true)?;
+    let tokenizer_source = tokenizer_resolution.source;
+    let tokenizer_path_resolved = tokenizer_resolution.path.clone();
+    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+    let tokenizer_family = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+    let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_family, tokenizer_source);
+    let tokenizer_vocab_size = tokenizer.real_vocab_size();
+    let metadata_template = bitnet_inference::TemplateType::detect_from_metadata(
+        gguf_architecture.as_deref(),
+        gguf_model_name.as_deref(),
+        tokenizer_name_hint,
+        chat_template_for_detection,
+    );
+    let current_default_template = prompt_audit_current_default_template(
+        &model_path,
+        tokenizer_path.as_deref(),
+        tokenizer.as_ref(),
+    );
+
+    let variants = [
+        ("current_default", current_default_template, "current_cli_default_heuristic"),
+        ("metadata_authority", metadata_template, "gguf_or_tokenizer_metadata"),
+        ("raw", bitnet_inference::TemplateType::Raw, "explicit_template"),
+        ("llama3_chat", bitnet_inference::TemplateType::Llama3Chat, "explicit_template"),
+        ("bitnetcpp_answer", bitnet_inference::TemplateType::BitnetCppAnswer, "explicit_template"),
+        (
+            "hf_apply_chat_template_equivalent",
+            bitnet_inference::TemplateType::BitnetCppAnswer,
+            "local_shape_only_reference_token_ids_not_embedded",
+        ),
+        (
+            "bitnet_cpp_conversation_equivalent",
+            bitnet_inference::TemplateType::BitnetCppAnswer,
+            "local_shape_only_reference_token_ids_not_embedded",
+        ),
+    ];
+
+    let mut variant_json = Vec::with_capacity(variants.len());
+    let mut current_ids = None;
+    let mut metadata_ids = None;
+    let mut current_rendered = String::new();
+    let mut metadata_rendered = String::new();
+    for (label, template_type, template_source) in variants {
+        let (entry, encoded_ids, rendered_prompt) = prompt_audit_variant_json(
+            label,
+            template_type,
+            template_source,
+            &prompt,
+            system_prompt.as_deref(),
+            tokenizer.as_ref(),
+        );
+        if label == "current_default" {
+            current_ids = encoded_ids.clone();
+            current_rendered = rendered_prompt.clone();
+        }
+        if label == "metadata_authority" {
+            metadata_ids = encoded_ids.clone();
+            metadata_rendered = rendered_prompt;
+        }
+        variant_json.push(entry);
+    }
+
+    let (first_divergence_stage, notes, first_mismatch_index) = prompt_audit_classification(
+        &current_rendered,
+        &metadata_rendered,
+        &current_ids,
+        &metadata_ids,
+    );
+
+    let chat_template_source = if gguf_chat_template.is_some() {
+        "gguf"
+    } else if external_chat_template.is_some() {
+        "tokenizer_json"
+    } else {
+        "none"
+    };
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_prompt_token_authority_audit",
+        "machine_id": "intel-258v",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "model": {
+            "path": model_path.display().to_string(),
+            "sha256": model_sha256,
+            "gguf_architecture": gguf_architecture,
+            "gguf_name": gguf_model_name,
+            "n_tensors": gguf.tensor_count(),
+            "n_kv": gguf.metadata_keys().len(),
+            "gguf_vocab_size": gguf_vocab_size,
+        },
+        "tokenizer": {
+            "source": tokenizer_source.as_str(),
+            "path": tokenizer_path_resolved.map(|path| path.display().to_string()),
+            "family": tokenizer_family,
+            "type": tokenizer_type,
+            "vocab_size": tokenizer_vocab_size,
+            "gguf_model": gguf_tokenizer_model,
+            "chat_template_source": chat_template_source,
+            "chat_template_present": gguf_chat_template.is_some() || external_chat_template.is_some(),
+            "bos_token_id": tokenizer.bos_token_id(),
+            "eos_token_id": tokenizer.eos_token_id(),
+        },
+        "reference_inputs": {
+            "hf_apply_chat_template": {
+                "rendered_prompt_available": true,
+                "token_ids_available": false,
+                "source": "local BitnetCppAnswer envelope; CPU258V-020 will compare official HF token IDs"
+            },
+            "bitnet_cpp_conversation_mode": {
+                "rendered_prompt_available": true,
+                "token_ids_available": false,
+                "source": "local BitnetCppAnswer envelope; CPU258V-020 will compare bitnet.cpp/reference IDs"
+            }
+        },
+        "prompt_variants": variant_json,
+        "tokens": {
+            "generated_token_ids": [],
+            "eos_token_id": tokenizer.eos_token_id(),
+        },
+        "logits": {
+            "first_token_top_k": [],
+            "available": false,
+            "reason": "prompt_token_authority_audit_does_not_run_model_inference"
+        },
+        "classification": {
+            "first_divergence_stage": first_divergence_stage,
+            "first_mismatch_index": first_mismatch_index,
+            "notes": notes,
+        },
+        "fallback_used": false,
+        "claim_boundary": {
+            "prompt_token_authority_only": true,
+            "answer_quality_claimed": false,
+            "speed_claimed": false,
+            "arc_or_npu_claimed": false,
+            "qk256_kernel_claimed": false,
+        }
+    });
+
+    write_json_output(json_out.as_ref(), &receipt)?;
+    Ok(())
+}
+
+#[derive(Debug)]
+struct TokenizerJsonPromptMetadata {
+    family: Option<String>,
+    chat_template: Option<String>,
+}
+
+fn read_tokenizer_json_prompt_metadata(
+    path: &std::path::Path,
+) -> Option<TokenizerJsonPromptMetadata> {
+    if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+        return None;
+    }
+    let value: serde_json::Value = serde_json::from_slice(&std::fs::read(path).ok()?).ok()?;
+    let family = value
+        .get("tokenizer_class")
+        .and_then(serde_json::Value::as_str)
+        .or_else(|| {
+            value
+                .get("model")
+                .and_then(|model| model.get("type"))
+                .and_then(serde_json::Value::as_str)
+        })
+        .map(str::to_string);
+    let chat_template =
+        value.get("chat_template").and_then(serde_json::Value::as_str).map(str::to_string);
+    Some(TokenizerJsonPromptMetadata { family, chat_template })
+}
+
+fn prompt_audit_current_default_template(
+    model_path: &std::path::Path,
+    tokenizer_path: Option<&std::path::Path>,
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+) -> bitnet_inference::TemplateType {
+    let path_template =
+        bitnet_inference::TemplateType::detect_from_paths(Some(model_path), tokenizer_path);
+    if matches!(path_template, bitnet_inference::TemplateType::BitnetCppAnswer) {
+        bitnet_inference::TemplateType::BitnetCppAnswer
+    } else if tokenizer.token_to_id("<|eot_id|>").is_some() {
+        bitnet_inference::TemplateType::Llama3Chat
+    } else {
+        bitnet_inference::TemplateType::Instruct
+    }
+}
+
+fn prompt_audit_variant_json(
+    label: &str,
+    template_type: bitnet_inference::TemplateType,
+    template_source: &str,
+    prompt: &str,
+    system_prompt: Option<&str>,
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+) -> (serde_json::Value, Option<Vec<u32>>, String) {
+    let rendered_prompt = template_type.apply(prompt, system_prompt);
+    let add_bos = template_type.should_add_bos();
+    let parse_special = template_type.parse_special();
+    let encoded = tokenizer.encode(&rendered_prompt, add_bos, parse_special);
+    let (ids, error) = match encoded {
+        Ok(ids) => (Some(ids), None),
+        Err(error) => (None, Some(error.to_string())),
+    };
+    let entry = serde_json::json!({
+        "mode": label,
+        "prompt_policy": {
+            "template_type": template_type.to_string(),
+            "template_source": template_source,
+            "rendered_prompt": rendered_prompt,
+            "rendered_sha256": compute_sha256_bytes(rendered_prompt.as_bytes()),
+            "add_bos": add_bos,
+            "add_eos": false,
+            "parse_special": parse_special,
+            "add_generation_prompt": !matches!(template_type, bitnet_inference::TemplateType::Raw),
+        },
+        "tokens": {
+            "prompt_token_ids": ids.clone().unwrap_or_default(),
+            "prompt_token_count": ids.as_ref().map(Vec::len),
+            "encode_error": error,
+        }
+    });
+    (entry, ids, rendered_prompt)
+}
+
+fn prompt_audit_classification(
+    current_rendered: &str,
+    metadata_rendered: &str,
+    current_ids: &Option<Vec<u32>>,
+    metadata_ids: &Option<Vec<u32>>,
+) -> (&'static str, Vec<String>, Option<usize>) {
+    let mut notes = Vec::new();
+    if current_rendered != metadata_rendered {
+        notes.push("current_default_rendered_prompt_differs_from_metadata_authority".to_string());
+        return ("prompt", notes, first_string_mismatch(current_rendered, metadata_rendered));
+    }
+    match (current_ids, metadata_ids) {
+        (Some(left), Some(right)) if left != right => {
+            notes.push(
+                "current_default_prompt_token_ids_differ_from_metadata_authority".to_string(),
+            );
+            ("token_ids", notes, first_token_mismatch(left, right))
+        }
+        (Some(_), Some(_)) => {
+            notes.push("current_default_and_metadata_authority_prompt_tokens_match".to_string());
+            notes.push(
+                "model_inference_not_run; first-token logits remain unclassified".to_string(),
+            );
+            ("unknown", notes, None)
+        }
+        _ => {
+            notes.push("one_or_more_prompt_variants_failed_to_encode".to_string());
+            ("token_ids", notes, None)
+        }
+    }
+}
+
+fn first_token_mismatch(left: &[u32], right: &[u32]) -> Option<usize> {
+    let shared = left.len().min(right.len());
+    (0..shared).find(|idx| left[*idx] != right[*idx]).or(if left.len() != right.len() {
+        Some(shared)
+    } else {
+        None
+    })
+}
+
+fn first_string_mismatch(left: &str, right: &str) -> Option<usize> {
+    let mut left_chars = left.chars();
+    let mut right_chars = right.chars();
+    let mut index = 0;
+    loop {
+        match (left_chars.next(), right_chars.next()) {
+            (Some(left), Some(right)) if left == right => index += 1,
+            (Some(_), Some(_)) | (Some(_), None) | (None, Some(_)) => return Some(index),
+            (None, None) => return None,
+        }
+    }
 }
 
 async fn handle_device_smoke_command(

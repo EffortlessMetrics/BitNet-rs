@@ -118,10 +118,16 @@ pub fn expected_vocab_size(model: &str) -> Option<usize> {
     let lower = model.to_lowercase();
     if lower.contains("phi-4") || lower.contains("phi4") {
         Some(100352)
-    } else if lower.contains("llama-3") || lower.contains("llama3") {
+    } else if lower.contains("llama-3")
+        || lower.contains("llama3")
+        || lower.contains("bitnet-b1.58")
+        || lower.contains("bitnet_b1.58")
+        || lower.contains("microsoft/bitnet")
+        || lower.contains("b1.58-2b-4t")
+    {
         Some(128256)
     } else if lower.contains("bitnet") {
-        Some(32000)
+        None
     } else if lower.contains("gpt2") {
         Some(50257)
     } else if lower.contains("qwen") {
@@ -190,7 +196,8 @@ mod tests {
     fn test_expected_vocab_sizes() {
         assert_eq!(expected_vocab_size("microsoft/phi-4"), Some(100352));
         assert_eq!(expected_vocab_size("meta-llama3"), Some(128256));
-        assert_eq!(expected_vocab_size("bitnet-b1.58"), Some(32000));
+        assert_eq!(expected_vocab_size("bitnet-b1.58"), Some(128256));
+        assert_eq!(expected_vocab_size("bitnet-legacy"), None);
         assert_eq!(expected_vocab_size("unknown"), None);
     }
 

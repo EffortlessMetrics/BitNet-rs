@@ -1189,3 +1189,54 @@ must_not_claim = [
   "The comparison index proves acceleration.",
   "CPU fallback satisfies Arc 140V or Intel NPU proof.",
 ]
+
+[[work_item]]
+id = "CPU258V-017"
+status = "pr_open"
+pr = 4123
+branch = "codex/lunar-lake/CPU258V-017-prompt-token-audit"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-016", "LNL258V-COMPARE-002"]
+acceptance = "Emit a BitNet prompt/token authority audit receipt for the 258V CPU path that records GGUF metadata, tokenizer source/family/vocab, selected template policy, rendered prompt, BOS/EOS/special-token policy, prompt token IDs, generated-token/logit availability, and a first-divergence classification without claiming answer quality, speed, Arc/NPU execution, or QK256 changes."
+commands = [
+  "rustfmt --check --edition 2024 --config skip_children=true crates/bitnet-cli/src/main.rs crates/bitnet-prompt-templates-core/src/lib.rs crates/bitnet-tokenizers/src/compat_matrix.rs crates/bitnet-tokenizers/src/vocab_encoding.rs",
+  "cargo test --locked -p bitnet-prompt-templates-core bitnetcpp -- --nocapture",
+  "cargo test --locked -p bitnet-prompt-templates-core test_all_variants_complete -- --nocapture",
+  "CMAKE_GENERATOR=Ninja cargo test --locked -p bitnet-tokenizers canonical_bitnet_b158_does_not_use_legacy_sentencepiece_fallback -- --nocapture",
+  "CMAKE_GENERATOR=Ninja cargo test --locked -p bitnet-tokenizers test_expected_vocab_sizes -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-prompt-templates-core/**",
+  "crates/bitnet-tokenizers/**",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The 258V CPU lane has a prompt/token authority audit receipt surface that records current default, metadata-authoritative, raw, LLaMA3, BitnetCppAnswer, and local reference-equivalent prompt shapes.",
+  "Canonical BitNet b1.58 metadata resolves to BitnetCppAnswer metadata-authoritative prompt mode in the prompt-template core.",
+  "Canonical BitNet b1.58 no longer silently resolves to the legacy 32k SentencePiece static compatibility fallback.",
+]
+must_not_claim = [
+  "BitNet answer quality is proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Packed QK256 decode semantics are fixed.",
+  "Prompt/token parity with official HF or bitnet.cpp token IDs is proven before CPU258V-020.",
+]
