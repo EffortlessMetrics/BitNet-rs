@@ -621,7 +621,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-004"
-status = "pr_open"
+status = "merged"
 pr = 3995
 branch = "codex/cpu-answer-004-bitnetcpp-template"
 stackable = false
