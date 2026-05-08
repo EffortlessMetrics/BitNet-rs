@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T16:39:37Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-001"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-001-receipt-boundary"
+pr = 4104
+head_sha = "fb306c7becdb11ca7fb4b21e122f6ba287331cb9"
+merge_sha = "44c6eac5d27107a83dc94e97b0c75ec8308932a9"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4104 merged the dense regular-LLM CUDA receipt-boundary lane.",
+  "The merged boundary adds dense_regular_llm_cuda labels and validators while rejecting dense receipts as BitNet packed I2S/QK256 proof.",
+  "CUDA-DENSE-002 remains the proposed next lane for first dense CUDA GEMM/cuBLAS smoke and parity evidence.",
+]
