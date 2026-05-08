@@ -367,6 +367,24 @@ This proves selected-case scalar-vs-AVX2 answer parity only. It does not prove
 answer correctness, full-corpus parity, sustained throughput, Arc 140V
 execution, or Intel NPU execution.
 
+CPU258V-014 records the same selected case after the BitNet b1.58 mechanics
+correction from CPU258V-012:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-math_2_plus_2-post-mechanics.json
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-post-mechanics.json
+ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-math_2_plus_2-post-mechanics.json
+```
+
+Both the scalar and AVX2 release-built receipts pass the exact answer gate for
+the selected `math_2_plus_2` BitNet.cpp-template case, producing decoded text
+` 4` with identical generated token IDs `[220, 19, 128009]`. The scalar run
+selects `i2_s-scalar-reference`, the AVX2 run selects `i2_s-avx2-reference`,
+and the parity receipt records `summary.failed=0` with no first divergence.
+This is selected-case answer recovery and scalar-vs-AVX2 parity evidence only:
+it does not prove general chat quality, full-corpus answer readiness, sustained
+throughput, speedup, Arc 140V execution, Intel NPU execution, or acceleration.
+
 ## Windows PowerShell Bundle
 
 ```powershell

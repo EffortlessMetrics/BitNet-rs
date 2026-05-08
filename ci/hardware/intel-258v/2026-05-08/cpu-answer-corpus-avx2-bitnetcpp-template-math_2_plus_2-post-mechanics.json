@@ -1,0 +1,232 @@
+{
+  "artifact_kind": "bitnet_cpu_answer_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu"
+  },
+  "cases": [
+    {
+      "answer": " 4",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "math_2_plus_2",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 220,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 6.6697001457214355,
+              "token_id": 220
+            },
+            {
+              "logit": -6.725193023681641,
+              "token_id": 256
+            },
+            {
+              "logit": -7.214357852935791,
+              "token_id": 482
+            },
+            {
+              "logit": -7.763550758361816,
+              "token_id": 666
+            },
+            {
+              "logit": -8.280210494995117,
+              "token_id": 2355
+            }
+          ]
+        }
+      ],
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 19
+      },
+      "prompt": {
+        "add_bos": true,
+        "add_special": true,
+        "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+        "rendered_text": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 19,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 19,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 3,
+        "failed_rules": [],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 3,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "What is 2+2? Answer with only the number.",
+      "run_receipt_path": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-post-mechanics-runs\\math_2_plus_2.json",
+      "status": "passed",
+      "token_ids": {
+        "generated": [
+          220,
+          19,
+          128009
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 3,
+        "generated_ids": [
+          220,
+          19,
+          128009
+        ],
+        "ids": [
+          220,
+          19,
+          128009
+        ],
+        "prompt": 19,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "total": 22
+      }
+    }
+  ],
+  "claim_boundary": {
+    "broad_performance_claimed": false,
+    "coherent_answer_claimed": false,
+    "cuda_answer_corpus": false,
+    "diagnostic_only_until_answer_ready_artifact": true,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_answer_path": false,
+    "strict_cuda_answer_claimed": false
+  },
+  "corpus": {
+    "case_count": 5,
+    "description": "Fixed deterministic prompt set for answer-readiness baselines.",
+    "name": "strict-bitnet-answer-corpus-v1",
+    "path": "ci/quality/bitnet-answer-corpus.yaml",
+    "selected_case_count": 1,
+    "selected_case_ids": [
+      "math_2_plus_2"
+    ]
+  },
+  "generation": {
+    "default_max_new_tokens": 8,
+    "deterministic": true,
+    "logits_dump_steps": 1,
+    "logits_topk": 5,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 240,
+    "requested_cpu_kernel": "avx2",
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "architecture": null,
+    "fallback_loader_used": false,
+    "family": null,
+    "file": "ggml-model-i2_s.gguf",
+    "loader_mode": "real_gguf",
+    "path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+    "quant_format": null,
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": null,
+    "tokenizer": "externally_supplied_llama_bpe",
+    "tokenizer_path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\tokenizer.json"
+  },
+  "prompt_template": {
+    "family": "bitnetcpp-answer"
+  },
+  "quality_summary": {
+    "failed": 0,
+    "not_run": 0,
+    "passed": 1,
+    "timeout": 0,
+    "total": 1
+  },
+  "schema_version": "1.0.0",
+  "speedup_claim": false,
+  "timestamp": "2026-05-08T11:09:01.318782500+00:00"
+}

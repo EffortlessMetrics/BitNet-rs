@@ -924,3 +924,47 @@ must_not_claim = [
   "Arc 140V or Intel NPU execution is proven.",
   "The phase receipts are accelerator comparison evidence.",
 ]
+
+[[work_item]]
+id = "CPU258V-014"
+status = "pr_open"
+pr = 4041
+branch = "codex/intel-258v-platform/CPU258V-014-answer-quality-triage"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-012", "CPU258V-013"]
+acceptance = "Record post-mechanics release-built 258V scalar and AVX2 answer-corpus receipts for the selected math_2_plus_2 BitNet.cpp-template case, showing exact answer-gate pass and scalar-vs-AVX2 parity after the RMSNorm/ReLU2 and tied-output-head corrections without general chat, speed, Arc, or NPU claims."
+commands = [
+  "target/release/bitnet answer-corpus --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --threads 8 --cpu-kernel scalar --case-id math_2_plus_2 --per-prompt-timeout-seconds 240 --dump-logit-steps 1 --logits-topk 5 --json-out target/cpu-answer-corpus-post-mechanics-scalar-math_2_plus_2.json",
+  "target/release/bitnet answer-corpus --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --threads 8 --cpu-kernel avx2 --case-id math_2_plus_2 --per-prompt-timeout-seconds 240 --dump-logit-steps 1 --logits-topk 5 --json-out target/cpu-answer-corpus-post-mechanics-avx2-math_2_plus_2.json",
+  "target/release/bitnet answer-parity --scalar target/cpu-answer-corpus-post-mechanics-scalar-math_2_plus_2.json --avx2 target/cpu-answer-corpus-post-mechanics-avx2-math_2_plus_2.json --json-out target/cpu-answer-parity-post-mechanics-math_2_plus_2.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-math_2_plus_2-post-mechanics.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-post-mechanics.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-math_2_plus_2-post-mechanics.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The selected 258V scalar math_2_plus_2 BitNet.cpp-template case now passes the exact answer gate after the BitNet b1.58 mechanics correction.",
+  "The selected 258V AVX2 math_2_plus_2 BitNet.cpp-template case now passes the exact answer gate after the BitNet b1.58 mechanics correction.",
+  "Scalar and AVX2 generated identical prompt token IDs, generated token IDs, decoded text, and first-step top-logit evidence for the selected case.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "The full answer corpus is proven.",
+  "Sustained throughput is proven.",
+  "A speedup is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+]

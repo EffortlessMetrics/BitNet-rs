@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T11:15:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-014"
+event = "in_progress"
+actor = "codex"
+branch = "codex/intel-258v-platform/CPU258V-014-answer-quality-triage"
+base_sha = "2105efebde66719a7cb702db1590fba8e06bc49d"
+summary = "Readied CPU258V-014 to record post-mechanics selected-case answer recovery on the 258V CPU."
+
+notes = [
+  "After CPU258V-012 corrected BitNet b1.58 RMSNorm/ReLU2 mechanics and tied-output-head metadata, the selected math_2_plus_2 BitNet.cpp-template case now passes the exact answer gate in both scalar and AVX2 release-built runs.",
+  "The scalar and AVX2 receipts record identical prompt token IDs, generated token IDs [220, 19, 128009], decoded text ' 4', and matching first-step top-logit evidence.",
+  "The claim boundary remains selected-case CPU answer recovery and scalar-vs-AVX2 parity only: no general chat quality, full-corpus readiness, sustained throughput, speedup, Arc 140V execution, Intel NPU execution, or acceleration claims.",
+]
