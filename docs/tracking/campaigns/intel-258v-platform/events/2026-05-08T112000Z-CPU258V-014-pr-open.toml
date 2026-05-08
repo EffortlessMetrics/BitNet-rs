@@ -5,7 +5,7 @@ event = "pr_open"
 actor = "codex"
 pr = 4041
 branch = "codex/intel-258v-platform/CPU258V-014-answer-quality-triage"
-head_sha = "9720d3745d119c271fdd2e03e8188434ef4f6d83"
+head_sha = "f5bc473feffde2e3e5b3e762e30fd07862621edf"
 summary = "Opened CPU258V-014 to record post-mechanics selected-case answer recovery on the 258V CPU."
 
 notes = [
