@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T23:55:15Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-001"
+event = "merged"
+pr = 4149
+head_sha = "0b543892b4bd3ca3156827e22bc10fe7713cd1da"
+merge_sha = "d31dd7651c382eeb1e4d1c46b7bf02f1ba60ba3c"
+actor = "codex"
+
+notes = [
+  "Merged positional Mac ask UX for the shortest supported Apple M4 SLM local-answer command.",
+  "Preserved the --question form, default verified Qwen2.5 cache flow, and apple-m4-cpu-neon boundary.",
+  "No BitNet local-answer quality, full apple-m4-metal inference, MPSGraph or Neural Engine model inference, QK256 support, or broad M4 performance claim was made.",
+  "M4-SLM-HARDEN-002 is ready for cache repair and first-run guidance.",
+]
