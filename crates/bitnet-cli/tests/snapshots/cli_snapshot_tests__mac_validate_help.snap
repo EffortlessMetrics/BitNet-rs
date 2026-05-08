@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 139
 expression: help
 ---
 Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session
@@ -57,6 +58,9 @@ Options:
           Number of CPU threads to use (0 = all cores; deterministic mode may override)
 
           [default: 0]
+
+      --allocation-audit
+          Include scoped hot-loop allocation counter deltas in warm-session profile receipts
 
       --json-out <PATH>
           Output aggregate warm-session receipt

@@ -174,6 +174,7 @@ fn slm_warm_session_help_documents_warm_receipts() {
         .stdout(predicate::str::contains("--prompt"))
         .stdout(predicate::str::contains("--fail-on-quality"))
         .stdout(predicate::str::contains("--require-determinism"))
+        .stdout(predicate::str::contains("--allocation-audit"))
         .stdout(predicate::str::contains("--json-out"))
         .stdout(predicate::str::contains("qwen2.5"));
 }
@@ -199,7 +200,8 @@ fn mac_validate_help_documents_operator_profile_set() {
         .stdout(predicate::str::contains("--profile-set"))
         .stdout(predicate::str::contains("16/32/64 profiles"))
         .stdout(predicate::str::contains("performance"))
-        .stdout(predicate::str::contains("16/32/64/128"));
+        .stdout(predicate::str::contains("16/32/64/128"))
+        .stdout(predicate::str::contains("--allocation-audit"));
 }
 
 #[test]
@@ -435,6 +437,14 @@ fn mac_receipts_check_accepts_performance_profile_summary() {
                 "warm_128_included": true,
                 "broad_performance_claim": false,
                 "speedup_claim": false
+            },
+            "allocation_audit": {
+                "enabled": true,
+                "method": "process_global_allocator_counter_delta",
+                "optimization_deferred": true,
+                "ranked_hotspots": [
+                    {"component": "model.forward", "alloc_count": 10, "alloc_bytes": 1024}
+                ]
             },
             "profiles": [
                 performance_profile_json("warm_16", 16, 8000.0, 5000.0),
@@ -743,6 +753,12 @@ fn performance_profile_json(
         "memory": {
             "peak_memory_mb": 512.0,
             "peak_memory_source": "getrusage.ru_maxrss"
+        },
+        "allocation_audit": {
+            "enabled": true,
+            "ranked_hotspots": [
+                {"component": "model.forward", "alloc_count": 10, "alloc_bytes": 1024}
+            ]
         }
     })
 }

@@ -80,6 +80,62 @@ Observed release-mode summary on the recorded M4 Mac mini:
 
 The receipt records `requested_backend=apple-m4-cpu-neon`, `selected_backend=apple-m4-cpu-neon`, `runtime_api=cpu`, and `fallback_used=false`. It also records `release_mode_observed=true`, `warm_128_included=true`, `speedup_claim=false`, and `broad_performance_claim=false`.
 
+## Allocation Audit
+
+`M4-SLM-PERF-002` adds allocation-counter auditing to the SLM warm-session path and records the audit in the same release-mode profile set. The audit uses process-global allocator counter deltas scoped to prompt tokenize/setup, prompt prefill, decode substeps, token vector updates, token decode, stop-tail updates, and prompt receipt construction.
+
+Audit command:
+
+```bash
+cargo run --release --locked -p bitnet-cli \
+  --no-default-features --features cpu,full-cli -- \
+  mac validate \
+  --profile-set performance \
+  --allocation-audit \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit.json
+```
+
+Local M4 audit receipt:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit.json
+```
+
+Aggregate ranked hotspots from the recorded audit:
+
+| Component | Alloc count | Alloc bytes |
+|---|---:|---:|
+| `prompt_setup` | 3,097 | 9,664,149,432 |
+| `decode_total` | 4,809,096 | 6,005,508,269 |
+| `model.forward` | 4,792,776 | 5,469,127,472 |
+| `prompt_prefill` | 6,900,544 | 3,897,852,928 |
+| `prompt_tokenize` | 18,241,403 | 1,519,238,922 |
+| `model.logits_and_extract` | 8,381 | 527,517,191 |
+| `sampler.sample` | 56 | 7,306,608 |
+| `model.embed` | 4,913 | 1,418,412 |
+| `receipt_construction` | 2,856 | 283,918 |
+| `tokenizer.decode` | 2,089 | 57,426 |
+| `token_vector_updates` | 14 | 4,864 |
+
+These are allocation counter deltas, not resident-memory measurements. They can include transient allocate/free churn and allocator reuse behavior. The first optimization targets should therefore be chosen from the ranked evidence, not from raw intuition:
+
+1. `prompt_setup` is dominated by per-profile/per-prompt runtime setup such as KV cache/session objects. This is a resident-session hardening target, not a math kernel target.
+2. `decode_total` is dominated by `model.forward`, so CPU/NEON hot-path work should start from the measured forward path after setup/session reuse is bounded.
+3. `prompt_prefill` and `prompt_tokenize` are large enough to keep visible in before/after receipts.
+4. `model.logits_and_extract` is smaller than forward but still material for decode.
+5. `sampler.sample`, `tokenizer.decode`, token vector updates, and receipt construction are currently named rather than optimized; receipt construction is outside the decode hot loop.
+
+Unavoidable candidates before optimization:
+
+```text
+model.embed/model.forward/model.logits tensor outputs from the current dense Qwen CPU execution path
+tokenizer.decode allocation for per-token text and stop-tail checks
+receipt construction outside the decode hot loop
+prompt token vector growth until a reusable session buffer is introduced
+```
+
+This audit does not claim any performance improvement. It names and ranks allocation hotspots so `M4-SLM-PERF-003` and `M4-SLM-PERF-004` can remove overhead with before/after receipts.
+
 ## Optimization Order
 
 1. Measure release-mode warm-session bottlenecks.

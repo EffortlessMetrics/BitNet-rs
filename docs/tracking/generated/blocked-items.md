@@ -42,7 +42,7 @@
 | apple-m4-slm-answer | SLM-M4-005 | SLM-M4-004 | merged |
 | apple-m4-slm-answer | SLM-M4-006 | SLM-M4-004, SLM-M4-005 | merged |
 | apple-m4-slm-answer | SLM-M4-007 | SLM-M4-005, SLM-M4-006 | merged |
-| apple-m4-slm-performance | M4-SLM-PERF-002 | M4-SLM-PERF-001 | ready |
+| apple-m4-slm-performance | M4-SLM-PERF-002 | M4-SLM-PERF-001 | pr_open |
 | apple-m4-slm-performance | M4-SLM-PERF-003 | M4-SLM-PERF-002 | proposed |
 | apple-m4-slm-performance | M4-SLM-PERF-004 | M4-SLM-PERF-003 | proposed |
 | apple-m4-slm-performance | M4-SLM-PERF-005 | M4-SLM-PERF-004 | proposed |
