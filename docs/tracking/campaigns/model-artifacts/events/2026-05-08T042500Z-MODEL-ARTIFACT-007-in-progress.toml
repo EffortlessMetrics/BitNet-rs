@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T04:25:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-007"
+event = "in_progress"
+actor = "codex"
+branch = "codex/model-artifacts/MODEL-ARTIFACT-007-msft-bitnetcpp-external-pretokenizer"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "The Windows fetch-cpp bootstrap now succeeds through Git Bash and builds Microsoft BitNet.cpp locally.",
+  "Initial Microsoft BitNet.cpp runs show the official Microsoft I2_S GGUF can pass committed answer-corpus prompts when tokenizer.ggml.pre is explicitly supplied from external Microsoft tokenizer authority.",
+  "This work item is docs/manifests only and does not claim Rust CPU, Rust CUDA, server, accelerator, or speed readiness.",
+]

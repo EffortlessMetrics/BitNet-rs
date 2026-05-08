@@ -28,9 +28,9 @@ What exists today:
 
 ## Current Status
 
-The repo has real inference infrastructure, but it does not yet provide supported coherent BitNet local answers. The model-artifact docs record the current Microsoft I2_S GGUF as diagnostic for local-answer work because it fails the deterministic prompt suite.
+The repo has real inference infrastructure, but it does not yet provide supported coherent Rust BitNet local answers. The Microsoft BitNet.cpp reference path can answer the tiny suite with the official I2_S GGUF when the missing pre-tokenizer is supplied from Microsoft's tokenizer assets.
 
-Backend receipts remain useful for selected-device execution, tokenizer and prompt diagnostics, fallback behavior, and kernel coverage. They are not, by themselves, evidence that the generated text is a supported answer. See the [model-artifact validation docs](docs/model-artifacts/ANSWER_ARTIFACT_GATE.md).
+Backend receipts remain useful for selected-device execution, tokenizer and prompt diagnostics, fallback behavior, and kernel coverage. They are not, by themselves, evidence that the Rust-generated text is a supported answer. See the [model-artifact validation docs](docs/model-artifacts/ANSWER_ARTIFACT_GATE.md).
 
 ## Capability Matrix
 
@@ -183,11 +183,11 @@ The repository contains unit, property, snapshot, fixture, fuzz, BDD, receipt, a
 
 Near-term work is focused on:
 
-1. finding or producing a BitNet model artifact that gives coherent reference answers
-2. recording the reference runner, tokenizer, pre-tokenizer, and prompt template used
+1. matching the Microsoft BitNet.cpp reference path from Rust CPU
+2. preserving the reference runner, tokenizer, pre-tokenizer, and prompt template chain
 3. enriching backend-neutral answer diagnostics and first-divergence receipts
 4. validating coherent BitNet answer quality against a deterministic corpus
-5. validating strict CPU/CUDA answer parity after the reference answer path works
+5. validating strict CPU/CUDA answer parity after the Rust CPU path works
 6. qualifying throughput after answer quality works
 
 ## Contributing

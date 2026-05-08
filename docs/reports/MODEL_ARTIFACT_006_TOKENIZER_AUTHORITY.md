@@ -1,6 +1,6 @@
 # MODEL-ARTIFACT-006 Tokenizer Authority Audit
 
-**Status:** diagnostic-only; no artifact is promoted to `answer_ready`
+**Status:** superseded by `MODEL-ARTIFACT-007` for official I2_S promotion
 
 ## Summary
 
@@ -16,8 +16,10 @@ The result is narrower than the previous blocker:
 - The external tokenizer's BPE merges hash matches the GGUF metadata.
 - The GGUF chat template and the external `tokenizer_config.json` chat template
   are different authority sources.
-- External tokenizer authority alone does not make the official I2_S GGUF
-  answer-ready; the recorded intended-runner prompt suite still fails.
+- External tokenizer authority alone did not make the official I2_S GGUF
+  answer-ready in this audit. `MODEL-ARTIFACT-007` later supplied that
+  authority to Microsoft BitNet.cpp with `tokenizer.ggml.pre=llama-bpe` and
+  recorded a passing deterministic answer corpus.
 - The `tdh111` IQ2_BN_R4 repository does not publish tokenizer assets, so it
   remains alternate-quant control evidence with missing pre-tokenizer authority.
 
@@ -61,10 +63,12 @@ The source Microsoft model repository exposes tokenizer assets:
 | `config.json` | `2b43e80788972e6d53967b01ac3609d7df23cf0aabb0c866e51be694a59c1149` | `model_type = bitnet`; `tie_word_embeddings = true`. |
 | `generation_config.json` | `af34a37cd006fd230106fcefc6bfdc1f775503aee05a80c174ccc5c6594f7054` | Generation defaults. |
 
-The external tokenizer can supply pre-tokenizer authority for Rust diagnostics,
-but it does not close the answer gate. Recorded intended-runner evidence still
-shows the official I2_S artifact failing the deterministic prompt suite with
-repeated colon output.
+The external tokenizer can supply pre-tokenizer authority for Rust diagnostics.
+This audit did not close the answer gate by itself because the recorded
+intended-runner evidence still showed the official I2_S artifact failing under
+`ik_llama.cpp`. `MODEL-ARTIFACT-007` closes that reference-runner gap under
+Microsoft BitNet.cpp by passing the committed deterministic answer corpus with
+`tokenizer.ggml.pre=llama-bpe`.
 
 ## tdh111 IQ2_BN_R4
 
@@ -93,18 +97,15 @@ pre-tokenizer authority required by the shared gate.
 | Do those assets define the missing pre-tokenizer behavior? | Yes for external authority: `tokenizer.json` records a Sequence pre-tokenizer made from Regex Split plus ByteLevel. |
 | Does the official GGUF repo itself include those assets? | No. The GGUF repo listing only exposes the GGUF file. |
 | Does `tdh111` include tokenizer assets? | No tokenizer assets were listed for the `tdh111` GGUF repository. |
-| Does external tokenizer authority promote official I2_S to `answer_ready`? | No. It supplies tokenizer evidence for diagnostics, but the official I2_S artifact still fails the recorded prompt-suite evidence. |
+| Does external tokenizer authority promote official I2_S to `answer_ready`? | Not by itself in this audit. `MODEL-ARTIFACT-007` combines this authority with Microsoft BitNet.cpp prompt-suite evidence and promotes official I2_S for backend gates. |
 
 ## Next Unblocker
 
-The next artifact decision should be one of:
+`MODEL-ARTIFACT-007` completed the first follow-up: official I2_S was run under
+Microsoft BitNet.cpp with external tokenizer/pre-tokenizer authority explicitly
+supplied, and the committed deterministic answer corpus passed.
 
-1. run official I2_S under a reference runner with the external tokenizer and
-   prompt-template authority explicitly supplied, if the runner supports that;
-2. regenerate official-target I2_S GGUF with embedded tokenizer/pre-tokenizer
-   metadata and a prompt suite that passes under an intended reference runner;
-3. keep official I2_S blocked and open a separate alternate-quant control lane
-   for `tdh111`.
-
-The direct RTX 5070 Ti answer path remains blocked until the official I2_S
-target has both authority and coherent prompt-suite output.
+The next artifact-adjacent decision is prompt-token parity between Microsoft
+BitNet.cpp and Rust CPU using the same external tokenizer authority and prompt
+template. The direct RTX 5070 Ti answer path remains blocked until Rust CPU and
+then Rust CUDA pass their own strict receipt gates against this artifact.

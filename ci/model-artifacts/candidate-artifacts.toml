@@ -5,15 +5,17 @@ work_item = "MODEL-ARTIFACT-002"
 updated = "2026-05-08"
 
 [search]
-status = "blocked"
+status = "answer_ready_found"
 prompt_suite = "ci/quality/bitnet-answer-corpus.yaml"
 reference_runner_required = true
-answer_ready_candidate_found = false
+answer_ready_candidate_found = true
+answer_ready_candidate_id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
 legacy_search_report = "docs/reports/M4_QA_MODEL_002_ARTIFACT_SEARCH.md"
 shared_search_report = "docs/reports/MODEL_ARTIFACT_002_REFERENCE_GOOD_SEARCH.md"
 reference_runner_compatibility_report = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
 intended_runner_report = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
-claim_boundary = "All candidates below are diagnostic-only until a later artifact passes the shared answer artifact gate."
+external_pretokenizer_reference_runner_report = "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md"
+claim_boundary = "The official Microsoft I2_S artifact is answer_ready for backend gates only when paired with the documented external tokenizer/pre-tokenizer authority. Backend CPU/CUDA/accelerator lanes still need strict receipts before claiming local-answer success."
 
 [local_environment]
 models_directory_contains_gguf = false
@@ -28,6 +30,17 @@ notes = [
   "No local llama-cli.exe was found before the bootstrap attempt.",
   "The reference runner bootstrap exceeded the local timeout and was stopped without changing runtime code.",
 ]
+
+[latest_microsoft_bitnet_cpp]
+status = "succeeded"
+bootstrap_command = "cargo run --release --locked -p xtask --no-default-features -- fetch-cpp --backend cpu"
+bootstrap_fix = "PR #3983 made fetch-cpp prefer Git Bash on Windows instead of the WSL bash launcher."
+runner = "Microsoft BitNet.cpp llama-cli"
+runner_path = "C:\\Users\\steven\\.cache\\bitnet_cpp\\build\\bin\\llama-cli.exe"
+bitnet_cpp_commit = "01eb415772c342d9f20dc42772f1583ae1e5b102"
+llama_cpp_submodule_commit = "1f86f058de0c3f4098dedae2ae8653c335c868a1"
+llama_cli_version = "3962 (1f86f058)"
+windows_loader_note = "Default mmap loading failed with PrefetchVirtualMemory unavailable; prompt-suite evidence used --no-mmap."
 
 [latest_stock_llama_cpp]
 release = "b9061"
@@ -55,28 +68,32 @@ sha256 = "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
 size_bytes = 1187801280
 source = "huggingface"
 tokenizer_model = "gpt2"
-pretokenizer_authority = "missing"
-chat_template_authority = "present_in_gguf_but_answer_bad"
+pretokenizer_authority = "externally_supplied"
+pretokenizer_compatibility_decision = "tokenizer.ggml.pre=llama-bpe"
+chat_template_authority = "externally_supplied_user_assistant_eot"
 answer_readiness_scope = "official_target"
 target_alignment = "official_i2s_cuda_target"
-runner_authority = "ik_llama_cpp"
-tokenizer_authority = "missing"
-prompt_suite_result = "failed"
-can_unblock_official_i2s_cuda = false
+runner_authority = "microsoft_bitnet"
+tokenizer_authority = "externally_supplied"
+prompt_suite_result = "passed"
+can_unblock_official_i2s_cuda = true
 can_unblock_alt_quant_control = false
-reference_runner = "llama-cli via local BitNet.cpp checkout"
-reference_prompt_suite = "failed"
-status = "rejected_prompt_suite_failed"
+reference_runner = "Microsoft BitNet.cpp llama-cli"
+reference_runner_version = "BitNet.cpp 01eb415772c342d9f20dc42772f1583ae1e5b102; llama-cli 3962 (1f86f058)"
+reference_prompt_suite = "passed"
+status = "answer_ready"
 notes = [
   "Structurally valid GGUF.",
-  "Reference runner warned that tokenizer.ggml.pre was missing and used default.",
-  "All recorded answer prompt-suite checks failed.",
-  "The ik_llama.cpp intended-runner check also loaded this artifact but produced repeated colon output for every prompt-suite row.",
+  "The GGUF still lacks embedded tokenizer.ggml.pre metadata.",
+  "The source Microsoft tokenizer.json supplies external pre-tokenizer authority, recorded in ci/model-artifacts/tokenizer-authority.toml.",
+  "Microsoft BitNet.cpp passes the committed deterministic answer corpus when tokenizer.ggml.pre=llama-bpe is supplied with --override-kv.",
+  "Backend lanes must still rerun strict CPU/CUDA/accelerator receipts before claiming local-answer success.",
 ]
 intended_runner = "ik_llama.cpp llama-cli"
 intended_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c20fe2c66"
 intended_runner_prompt_suite = "failed"
 tokenizer_authority_evidence = "ci/model-artifacts/tokenizer-authority.toml"
+reference_runner_evidence = "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md"
 
 [[candidate]]
 id = "jpacifico_aramis_2b_i2s"

@@ -3,9 +3,9 @@ artifact_kind = "model_answer_rejected_artifacts"
 updated = "2026-05-08"
 
 [[artifact]]
-id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
+id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_legacy_default_pretokenizer_failure"
 state = "rejected_prompt_suite_failed"
-status = "rejected_for_answer_readiness"
+status = "superseded_by_external_pretokenizer_reference_runner_evidence"
 repo = "microsoft/bitnet-b1.58-2B-4T-gguf"
 repo_revision = "a1f2f1c765812aa8af3f6eda4a313707064bba15"
 file = "ggml-model-i2_s.gguf"
@@ -35,7 +35,8 @@ intended_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c2
 intended_runner_result = "failed_prompt_suite"
 intended_runner_rejection_reason = "The artifact loads under ik_llama.cpp but emits repeated colon output for every deterministic prompt-suite row."
 tokenizer_authority_evidence = "ci/model-artifacts/tokenizer-authority.toml"
-claim_boundary = "May be used for diagnostic-only receipts; must not be used for coherent local-answer claims."
+superseded_by = "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md"
+claim_boundary = "Historical default/missing-pretokenizer failure evidence only; the official I2_S artifact is answer_ready for backend gates when paired with external tokenizer.ggml.pre=llama-bpe authority."
 
   [[artifact.prompt_result]]
   id = "math_sentence"

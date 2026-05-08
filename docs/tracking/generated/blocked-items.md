@@ -72,6 +72,7 @@
 | model-artifacts | MODEL-ARTIFACT-004 | MODEL-ARTIFACT-003 | merged |
 | model-artifacts | MODEL-ARTIFACT-005 | MODEL-ARTIFACT-004 | merged |
 | model-artifacts | MODEL-ARTIFACT-006 | MODEL-ARTIFACT-005 | merged |
+| model-artifacts | MODEL-ARTIFACT-007 | MODEL-ARTIFACT-006 | pr_open |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
 | nvidia-5070ti | RTX5070TI-006 | RTX5070TI-005 | merged |
