@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T09:06:09Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-012"
+event = "pr_open"
+pr = 4022
+branch = "codex/intel-258v-platform/CPU258V-012-gamma-rootcause"
+head_sha = "e2b42c4594b61a04fc45de8afd65839dfc1ba405"
+summary = "Opened CPU258V-012 to correct BitNet b1.58 CPU mechanics and tied-output-head receipt metadata."
+
+details = [
+  "BitNet b1.58 defaults now route through RMSNorm and ReLU2 for CPU decode construction.",
+  "The transformer FFN honors the configured activation instead of always applying SiLU.",
+  "The strict scalar one-token raw fixture changes the generated token but still produces a bad answer, so answer quality remains open.",
+  "This PR does not claim answer quality is fixed, scalar/AVX2 parity changed, sustained throughput, Arc 140V execution, or Intel NPU execution.",
+]

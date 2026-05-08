@@ -826,7 +826,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-012"
-status = "ready"
+status = "pr_open"
+pr = 4022
 branch = "codex/intel-258v-platform/CPU258V-012-gamma-rootcause"
 stackable = false
 review_mode = "codex_premerge"
