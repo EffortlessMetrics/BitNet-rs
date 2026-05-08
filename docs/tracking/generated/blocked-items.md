@@ -135,6 +135,6 @@
 | slm-cpu | SLM-CPU-004 | SLM-CPU-003 | merged |
 | slm-cpu | SLM-CPU-005 | SLM-CPU-004 | merged |
 | slm-cpu | SLM-CPU-006A | SLM-CPU-005 | merged |
-| slm-cpu | SLM-CPU-006B | SLM-CPU-006A | ready |
+| slm-cpu | SLM-CPU-006B | SLM-CPU-006A | merged |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |
