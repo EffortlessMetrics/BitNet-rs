@@ -1,0 +1,17 @@
+[package]
+name = "bitnet-python-to-rust-example"
+version = "0.1.0"
+edition = "2024"
+description = "BitNet migration example converted from Python to Rust"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[[bin]]
+name = "inference"
+path = "src/main.rs"
+
+[[bin]]
+name = "benchmark"
+path = "src/benchmark.rs"
+
+[workspace]
