@@ -15,6 +15,7 @@ use std::{
 mod ci;
 mod docker;
 mod hooks;
+mod locking;
 mod models;
 mod testing;
 mod validation;
@@ -23,6 +24,7 @@ use self::{
     ci::{cmd_ci_local, cmd_quality_gate, cmd_sanity_check, cmd_verify_crossval, cmd_verify_tests},
     docker::{cmd_build_cpp_static, cmd_docker_build},
     hooks::cmd_install_hooks,
+    locking::{FixLockedMode, cmd_fix_locked},
     models::{
         cmd_bitnet_accept, cmd_generate_policy, cmd_resolve_model_path, cmd_show_quant_status,
         cmd_vendor_ggml_quants,
@@ -187,6 +189,18 @@ enum Task {
     TestGeneration,
     /// Equivalent of scripts/test_quant_support.sh
     TestQuantSupport,
+    /// Equivalent of scripts/fix-locked.sh
+    FixLocked {
+        /// Preview changes without modifying files.
+        #[arg(long, alias = "preview")]
+        dry_run: bool,
+        /// Exit non-zero if changes would be made.
+        #[arg(long)]
+        check: bool,
+        /// Files to update or check.
+        #[arg(required = true)]
+        files: Vec<String>,
+    },
     /// Equivalent of scripts/install-hooks.sh
     InstallHooks,
     /// Equivalent of scripts/check-feature-gates.sh
@@ -275,6 +289,15 @@ fn main() -> Result<()> {
         Task::TestDownload => cmd_test_download(&root),
         Task::TestGeneration => cmd_test_generation(&root),
         Task::TestQuantSupport => cmd_test_quant_support(&root),
+        Task::FixLocked { dry_run, check, files } => {
+            let mode = match (dry_run, check) {
+                (true, true) => bail!("--dry-run and --check are mutually exclusive"),
+                (true, false) => FixLockedMode::DryRun,
+                (false, true) => FixLockedMode::Check,
+                (false, false) => FixLockedMode::Apply,
+            };
+            cmd_fix_locked(&root, mode, files)
+        }
         Task::InstallHooks => cmd_install_hooks(&root),
         Task::CheckFeatureGates => cmd_check_feature_gates(&root),
         Task::CiLocal { mode } => cmd_ci_local(&root, mode),
