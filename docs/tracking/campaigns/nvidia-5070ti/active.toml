@@ -560,6 +560,52 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-ANSWER-010"
+status = "merged"
+branch = "codex/cuda-answer/CUDA-ANSWER-010-qk256-i2s-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-BITNET-009"]
+acceptance = "Align RTX 5070 Ti QK256 I2_S CUDA GEMV with the BitNet.cpp/GGML grouped bitplane layout so strict CUDA ask answers the constrained math prompt and the committed deterministic answer corpus passes with selected_backend=nvidia-rtx-5070-ti-cuda, runtime_api=cuda, fallback_used=false, selected_kernel=qk256_gemv_cuda, and speedup_claim=false."
+commands = [
+  "RUSTFLAGS=-D warnings cargo check --locked --workspace --no-default-features --features cpu",
+  "RUSTFLAGS=-D warnings cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cuda --lib qk256 -- --nocapture",
+  "cargo clippy --locked --workspace --no-default-features --features cpu -- -D warnings",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- ask --device nvidia-rtx-5070-ti-cuda --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --question \"What is 2+2? Answer with only the number.\" --max-new-tokens 8 --temperature 0 --strict-cuda --receipt-out target/bitnet/receipts/cuda-answer-readiness/strict-cuda-ask-math-closeout.json",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- answer-corpus --device nvidia-rtx-5070-ti-cuda --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/bitnet-answer-corpus.yaml --per-prompt-timeout-seconds 300 --dump-logit-steps 1 --logits-topk 20 --fail-on-quality --json-out target/bitnet/receipts/cuda-answer-readiness/cuda-answer-corpus-closeout.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/model_cache.rs",
+  "crates/bitnet-ffi/src/config.rs",
+  "xtask/src/main.rs",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/strict-cuda-ask-math.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json",
+  "docs/reports/CUDA_ANSWER_010_STRICT_5070TI_CORPUS.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "dense CUDA reference lanes",
+  "WGPU, Vulkan, D3D12, OpenCL, Metal, NPU, or SLM runtime work",
+]
+may_claim = [
+  "The official Microsoft I2_S artifact passes the committed deterministic answer corpus through the strict RTX 5070 Ti CUDA answer path after CUDA-ANSWER-010.",
+  "The strict CUDA answer path records selected_backend=nvidia-rtx-5070-ti-cuda, runtime_api=cuda, fallback_used=false, selected_kernel=qk256_gemv_cuda, prompt prefill, upload-once weights, and answer quality pass for the committed corpus.",
+]
+must_not_claim = [
+  "Broad chat quality is proven beyond the committed deterministic answer corpus.",
+  "CUDA speedup exists before a same-model fallback-free benchmark receipt upgrades speedup_claim.",
+  "Dense CUDA, generic GPU, WGPU, OpenCL, Metal, NPU, or SLM proof satisfies RTX 5070 Ti BitNet packed I2_S CUDA answer readiness.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-001"
 status = "proposed"
 branch = "codex/cuda-dense-001-reference-lane"

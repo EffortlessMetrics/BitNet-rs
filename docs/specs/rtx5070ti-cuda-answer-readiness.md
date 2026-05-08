@@ -2,15 +2,20 @@
 
 ## Purpose
 
-The RTX 5070 Ti CUDA lane has receipt-backed execution proof. The next product
-milestone is a normal user-answer path: one command, one question, a coherent
-answer, strict fallback rejection, and an answer receipt.
+The RTX 5070 Ti CUDA lane has receipt-backed execution proof and, after
+`CUDA-ANSWER-010`, strict deterministic answer-corpus proof. The next product
+milestone is a normal reusable user path: one command or warm session, one or
+more questions, coherent answers, strict fallback rejection, and answer
+receipts.
 
-The existing strict CUDA receipts prove that the official BitNet GGUF can route
-BitNet linear work through QK256 CUDA kernels with upload-once weights and zero
-BitNet linear CPU fallback. They do not by themselves prove that the command
-surface is a normal chat or ask flow. The answer-readiness lane must exercise
-the full user-visible generation stack:
+The strict CUDA receipts prove that the official BitNet GGUF can route BitNet
+linear work through QK256 CUDA kernels with upload-once weights and zero BitNet
+linear CPU fallback. The `CUDA-ANSWER-010` receipts additionally prove that the
+strict CUDA `ask` path and committed answer corpus can produce coherent
+deterministic answers through that backend. Productization still needs to make
+the reusable command/session surface boring, documented, and benchmarked without
+weakening claim boundaries. The answer-readiness lane must exercise the full
+user-visible generation stack:
 
 ```text
 question
@@ -42,9 +47,9 @@ cargo run --locked -p bitnet-cli --no-default-features \
 The exact answer text can vary once sampling is enabled. The first readiness
 gate must use deterministic greedy decode so failures are reproducible.
 
-## Current Boundary
+## Current Evidence
 
-The completed NVIDIA proof lane supports these claims:
+The completed NVIDIA proof lane plus `CUDA-ANSWER-010` support these claims:
 
 - The selected backend is `nvidia-rtx-5070-ti-cuda`.
 - The runtime API is `cuda`.
@@ -54,17 +59,19 @@ The completed NVIDIA proof lane supports these claims:
 - Weights are uploaded once.
 - Per-token weight upload is false.
 - BitNet linear CPU fallback is zero.
+- The strict CUDA `ask` path answers the constrained `math_2_plus_2` prompt.
+- The RTX 5070 Ti CUDA answer corpus passes all five committed deterministic
+  answer-readiness cases.
 - `speedup_claim` remains false unless a later same-model benchmark upgrades it.
 
-That is CUDA execution proof. Answer readiness adds a stricter user-facing
-quality gate. A short proof decode whose output is valid CUDA evidence can still
-fail answer readiness if it has no real prompt prefill, emits raw special
-tokens, produces mostly punctuation, or returns unintelligible text.
+That is strict corpus-scoped CUDA answer proof. It is not broad chat quality,
+production server readiness, or a speedup claim.
 
 Answer readiness also depends on the shared model-artifact gate in
-`docs/model-artifacts/ANSWER_ARTIFACT_GATE.md`. A structurally valid GGUF or
-receipt-backed backend execution path is not enough for coherent-answer claims
-unless the model artifact is `answer_ready` under that gate.
+`docs/model-artifacts/ANSWER_ARTIFACT_GATE.md`. `MODEL-ARTIFACT-007` marks the
+official Microsoft I2_S artifact `answer_ready` for backend gates only when
+paired with the documented external tokenizer/pre-tokenizer authority and
+BitNet.cpp answer prompt envelope.
 
 ## Non-Goals
 
@@ -282,6 +289,14 @@ proven CUDA backend with strict fallback rejection and answer receipts.
 
 Record CPU and CUDA greedy token sequences, decoded answers, divergence
 artifacts, and quality-gate results for the fixed answer corpus.
+
+### CUDA-ANSWER-010 - Strict RTX 5070 Ti CUDA Corpus Proof
+
+Record the post-#4024 strict CUDA answer evidence for the official Microsoft
+I2_S artifact: constrained `ask` returns `4`, the five-case answer corpus passes,
+the selected backend is `nvidia-rtx-5070-ti-cuda`, runtime API is `cuda`,
+fallback is false, the selected kernel is `qk256_gemv_cuda`, prompt prefill is
+exercised, upload-once weights are preserved, and `speedup_claim=false`.
 
 ### CUDA-ANSWER-006 - Interactive CUDA Chat Session
 
