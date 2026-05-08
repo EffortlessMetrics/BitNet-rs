@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T00:57:55Z"
+campaign = "intel-258v-platform"
+item = "ARC140V-004"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 3953
+head_sha = "22e6474b017db0a42622a8117ca2d898a44eb54c"
+actor = "codex"
+
+notes = [
+  "Opened #3953 for ARC140V-004, adding native Arc 140V OpenCL tiny vector-add smoke and a real 258V receipt.",
+  "The PR keeps the claim boundary to native OpenCL kernel smoke only: no BitNet inference, QK256 decode, acceleration, OpenVINO proof as native OpenCL proof, or CPU fallback as Arc proof.",
+]

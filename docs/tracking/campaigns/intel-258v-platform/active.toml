@@ -165,6 +165,62 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "ARC140V-004"
+status = "pr_open"
+pr = 3953
+branch = "codex/intel-258v-platform/ARC140V-004-opencl-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["ARC140V-003", "CPU258V-003"]
+acceptance = "Run a tiny native OpenCL vector-add kernel on Arc 140V, record runtime/device identity, kernel shape/timing/tolerance fields, fallback=false, and no BitNet/QK256/OpenVINO acceleration claims."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_arc.rs crates/bitnet-device-probe/src/opencl.rs crates/bitnet-device-probe/src/runtimes/opencl.rs crates/bitnet-device-probe/src/runtimes/mod.rs --edition 2024",
+  "cargo test --locked -p bitnet-device-probe --no-default-features runtimes::opencl::tests -- --nocapture",
+  "cargo test --locked -p bitnet-device-probe --no-default-features --features opencl opencl -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet intel_arc::tests::intel_arc_opencl_smoke_receipt_records_kernel_execution_only -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet intel_arc::tests::strict_intel_arc_opencl_smoke_records_error_without_fallback -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli,opencl -- intel-arc-140v-opencl-smoke --json-out ci/hardware/intel-258v/2026-05-07/arc-140v-opencl-smoke.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/src/opencl.rs",
+  "crates/bitnet-device-probe/src/runtimes/opencl.rs",
+  "crates/bitnet-device-probe/src/runtimes/mod.rs",
+  "crates/bitnet-cli/Cargo.toml",
+  "crates/bitnet-cli/src/intel_arc.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/specs/intel-lunar-lake-gpu-roadmap.md",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Arc 140V native OpenCL can execute a tiny vector-add kernel when the selected OpenCL device resolves to Arc 140V and output matches CPU expected output.",
+]
+must_not_claim = [
+  "BitNet inference works on Arc 140V.",
+  "Packed QK256 decode works on Arc 140V.",
+  "OpenVINO GPU smoke proves native OpenCL execution.",
+  "Arc 140V accelerates BitNet.",
+  "CPU fallback satisfies Arc 140V proof.",
+]
+
+[[work_item]]
 id = "LNL258V-002"
 status = "merged"
 branch = "codex/intel-258v-platform/LNL258V-002-probe-bundle"
