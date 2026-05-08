@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T11:51:27Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-001"
+event = "pr_open"
+pr = 4044
+head_sha = "5b1d948618d91f567dac5fa3cd089703b8b06c36"
+actor = "codex"
+
+notes = [
+  "Opened release-mode Apple M4 SLM warm-session baseline PR.",
+  "Adds performance profile set for warm_16, warm_32, warm_64, and warm_128.",
+  "Includes receipt-backed local M4 release baseline under ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance.",
+  "No BitNet quality, QK256, Neural Engine, MPSGraph model inference, full apple-m4-metal inference, broad performance, or speedup claim.",
+]

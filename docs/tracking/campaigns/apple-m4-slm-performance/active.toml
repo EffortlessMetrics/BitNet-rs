@@ -26,7 +26,8 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-SLM-PERF-001"
-status = "in_progress"
+status = "pr_open"
+pr = 4044
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-001-release-baseline"
 stackable = false
 review_mode = "codex_premerge"
