@@ -113,7 +113,7 @@ impl AnswerCorpusCommand {
         if self.cpu_kernel == Some(AnswerCpuKernel::Avx512) && !cpu_avx512_available() {
             anyhow::bail!("--cpu-kernel avx512 requested but AVX512 is unavailable on this host");
         }
-        let artifact_kind = answer_corpus_artifact_kind(&device);
+        let artifact_kind = answer_corpus_artifact_kind(&device, &corpus.artifact_kind);
         let default_timeout_seconds = effective_default_timeout_seconds(
             self.per_prompt_timeout_seconds,
             corpus.defaults.per_prompt_timeout_seconds,
@@ -149,6 +149,8 @@ impl AnswerCorpusCommand {
             .count();
         let timed_out = rows.iter().filter(|row| row["status"] == "timeout").count();
         let not_run = rows.iter().filter(|row| row["status"] == "not_run").count();
+        let aggregate_tokenizer =
+            if corpus.model.family.as_deref() == Some("qwen") { "gguf_metadata" } else { "llama3" };
 
         let receipt = json!({
             "schema_version": "1.0.0",
@@ -163,10 +165,14 @@ impl AnswerCorpusCommand {
             "model": {
                 "repo": corpus.model.repo,
                 "file": corpus.model.file,
+                "sha256": corpus.model.sha256,
+                "family": corpus.model.family,
+                "architecture": corpus.model.architecture,
+                "quant_format": corpus.model.quant_format,
                 "path": self.model.display().to_string(),
                 "loader_mode": "real_gguf",
                 "fallback_loader_used": false,
-                "tokenizer": "llama3",
+                "tokenizer": aggregate_tokenizer,
                 "tokenizer_path": self.tokenizer.as_ref().map(|path| path.display().to_string()),
             },
             "backend": {
@@ -201,6 +207,7 @@ impl AnswerCorpusCommand {
                 "not_run": not_run,
             },
             "claim_boundary": {
+                "slm_answer_path": corpus.artifact_kind == "slm_answer_corpus",
                 "local_answer_path": device.as_str() == "apple-m4-cpu-neon",
                 "diagnostic_only_until_answer_ready_artifact": true,
                 "coherent_answer_claimed": false,
@@ -401,6 +408,16 @@ impl AnswerCorpusCommand {
                     .unwrap_or_else(|| Value::from("unknown")),
             },
             "model": {
+                "repo": run_receipt["model"]["repo"].clone(),
+                "file": run_receipt["model"]["file"].clone(),
+                "sha256": run_receipt["model"]["sha256"].clone(),
+                "family": run_receipt["model"]["family"].clone(),
+                "architecture": run_receipt["model"]["architecture"].clone(),
+                "quant_format": run_receipt["model"]["quant_format"]
+                    .as_str()
+                    .map(Value::from)
+                    .or_else(|| corpus.model.quant_format.as_ref().map(|value| Value::from(value.clone())))
+                    .unwrap_or_else(|| run_receipt["strict_provenance"]["quant_format"].clone()),
                 "vocab_size": run_receipt["model"]["vocab_size"].clone(),
                 "tie_word_embeddings": run_receipt["model"]["tie_word_embeddings"].clone(),
                 "output_head_tensor": run_receipt["model"]["output_head_tensor"].clone(),
@@ -442,7 +459,7 @@ impl AnswerCorpus {
         if corpus.schema != 1 {
             anyhow::bail!("unsupported answer corpus schema {}", corpus.schema);
         }
-        if corpus.artifact_kind != "bitnet_answer_corpus" {
+        if !matches!(corpus.artifact_kind.as_str(), "bitnet_answer_corpus" | "slm_answer_corpus") {
             anyhow::bail!("unexpected answer corpus artifact_kind {}", corpus.artifact_kind);
         }
         if corpus.cases.is_empty() {
@@ -456,6 +473,14 @@ impl AnswerCorpus {
 struct CorpusModel {
     repo: String,
     file: String,
+    #[serde(default)]
+    sha256: Option<String>,
+    #[serde(default)]
+    family: Option<String>,
+    #[serde(default)]
+    architecture: Option<String>,
+    #[serde(default)]
+    quant_format: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -509,10 +534,11 @@ fn normalize_answer_corpus_device(device: &str) -> String {
     }
 }
 
-fn answer_corpus_artifact_kind(device: &str) -> &'static str {
-    match device {
-        "apple-m4-cpu-neon" => "bitnet_apple_m4_local_answer_corpus",
-        "cuda" | RTX_5070_TI_CUDA => "bitnet_cuda_answer_corpus",
+fn answer_corpus_artifact_kind(device: &str, corpus_artifact_kind: &str) -> &'static str {
+    match (device, corpus_artifact_kind) {
+        ("apple-m4-cpu-neon", _) => "bitnet_apple_m4_local_answer_corpus",
+        ("cuda" | RTX_5070_TI_CUDA, _) => "bitnet_cuda_answer_corpus",
+        (_, "slm_answer_corpus") => "slm_cpu_answer_corpus",
         _ => "bitnet_cpu_answer_corpus",
     }
 }
@@ -951,6 +977,18 @@ mod tests {
         assert_eq!(
             AnswerCpuKernel::Avx512.child_env(),
             vec![("BITNET_CPU_KERNEL", "avx512"), ("BITNET_FORCE_SCALAR", "0")]
+        );
+    }
+
+    #[test]
+    fn slm_corpus_uses_slm_cpu_artifact_kind() {
+        assert_eq!(
+            answer_corpus_artifact_kind("cpu", "slm_answer_corpus"),
+            "slm_cpu_answer_corpus"
+        );
+        assert_eq!(
+            answer_corpus_artifact_kind("cpu", "bitnet_answer_corpus"),
+            "bitnet_cpu_answer_corpus"
         );
     }
 

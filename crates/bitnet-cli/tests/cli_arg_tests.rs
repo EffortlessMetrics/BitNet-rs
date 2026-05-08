@@ -497,6 +497,42 @@ cases:
     assert_eq!(receipt["cases"][0]["status"], "not_run");
 }
 
+/// `answer-corpus --dry-run` accepts the SLM corpus and preserves model identity.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_dry_run_accepts_slm_answer_corpus() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let out = dir.path().join("slm-answer-corpus.json");
+    let corpus = workspace_path("ci/quality/slm-answer-corpus.yaml");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "cpu",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    assert_eq!(receipt["artifact_kind"], "slm_cpu_answer_corpus");
+    assert_eq!(receipt["model"]["repo"], "Qwen/Qwen3-0.6B-GGUF");
+    assert_eq!(receipt["model"]["architecture"], "qwen3");
+    assert_eq!(receipt["model"]["quant_format"], "Q8_0");
+    assert_eq!(receipt["model"]["tokenizer"], "gguf_metadata");
+    assert_eq!(receipt["claim_boundary"]["slm_answer_path"], true);
+    assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+    assert_eq!(receipt["quality_summary"]["not_run"], 5);
+}
+
 /// `answer-corpus` can target the Apple M4 CPU/NEON local-answer lane.
 #[cfg(feature = "full-cli")]
 #[test]
