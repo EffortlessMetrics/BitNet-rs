@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T18:38:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4110
+merge_sha = "d34ae0843b9c9f15ce9a9177bbcd63767bf0bd2b"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-COMPARE-002"
+summary = "Merged LNL258V-COMPARE-002, refreshing the Lunar Lake same-machine evidence index after CPU, NPU, and Arc parity receipts."
+
+notes = [
+  "Merged the Lunar Lake same-machine evidence index refresh.",
+  "The index links the post-mechanics 258V CPU reference bundle, Arc 140V native OpenCL parity receipt, and NPU static subgraph parity receipts by artifact path, backend identity, runtime API, proof stage, fallback status, and claim boundary.",
+  "The merged work does not claim platform performance, Arc acceleration, NPU acceleration, full BitNet inference on Arc/NPU, packed QK256 accelerator decode, or CPU fallback as accelerator proof.",
+]
