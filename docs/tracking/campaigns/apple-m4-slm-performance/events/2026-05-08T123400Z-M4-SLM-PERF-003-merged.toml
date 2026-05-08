@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T12:34:00Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-003"
+event = "merged"
+pr = 4050
+merge_sha = "5171c9c931d477de840d160a30b032226c25b282"
+actor = "codex"
+
+notes = [
+  "Merged resident-session hardening for Apple M4 SLM warm sessions.",
+  "Promoted M4-SLM-PERF-004 CPU/NEON hot-path optimization to ready.",
+  "No QK256, qk256-dispatch, server, Metal kernel, MPSGraph, Neural Engine, or broad performance claim changes.",
+]
