@@ -1,6 +1,29 @@
 # Apple M4 SLM Warm-Answer Speed
 
-`SLM-M4-006` extends the Apple M4 SLM warm-session receipt with bounded timing fields for the validated Qwen2.5 0.5B Q8_0 artifact. The goal is to make warm-answer speed measurable after the model and tokenizer are loaded once, not to claim broad M4 performance.
+`SLM-M4-006` extended the Apple M4 SLM warm-session receipt with bounded timing fields for the validated Qwen2.5 0.5B Q8_0 artifact. `M4-PROD-004` turns those fields into an operator profile set for 16, 32, and 64 token warm answers. The goal is to make warm-answer speed measurable after cold load is separated, not to claim broad M4 performance.
+
+Operator profile command:
+
+```bash
+bitnet mac validate \
+  --profile-set operator \
+  --json-out target/apple-m4-productization/mac-operator-profiles.json
+```
+
+This writes:
+
+```text
+target/apple-m4-productization/mac-operator-profiles.json
+target/apple-m4-productization/mac-operator-profiles-profiles/warm_16.json
+target/apple-m4-productization/mac-operator-profiles-profiles/warm_32.json
+target/apple-m4-productization/mac-operator-profiles-profiles/warm_64.json
+```
+
+Each `warm_<tokens>.json` receipt is one warm-session run for that token budget.
+It records `model_loaded_once=true` and `tokenizer_loaded_once=true` within that
+profile. The aggregate summary discloses `profiles_loaded_independently=true`
+`profile_set_model_loads=3`, and `reuse_scope=within_each_profile`; it must not
+imply one resident process was shared across all three budgets.
 
 Recommended proof command:
 
@@ -51,5 +74,6 @@ speed.reuse.tokenizer_loaded_once = true
 Claim boundary:
 
 - The receipt measures warm-answer timing for the recorded model, corpus, backend, and machine context only.
+- Operator profile summaries are claim bounds for named warm-answer budgets, not latency guarantees.
 - `speedup_claim` and `broad_performance_claim` remain false.
 - This does not claim BitNet performance, full Apple Metal inference, QK256 support, or general M4 performance.

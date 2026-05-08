@@ -50,6 +50,50 @@ If tokenizer artifacts are distributed separately, keep them beside the model.
 Strict tokenizer mode fails rather than silently accepting a mock or missing
 tokenizer.
 
+## Practical SLM Local-Answer Path
+
+The current practical Mac local-answer baseline uses the validated
+Qwen2.5 0.5B Instruct Q8_0 GGUF through the Rust CLI on
+`apple-m4-cpu-neon`. This is separate from BitNet quality claims and from future
+full-model Metal inference.
+
+Fetch and verify the supported cached model:
+
+```bash
+bitnet model fetch qwen2.5-0.5b-instruct-q8_0
+bitnet model verify qwen2.5-0.5b-instruct-q8_0
+bitnet mac check
+```
+
+Ask one question:
+
+```bash
+bitnet mac ask \
+  --question "What is 2+2? Answer briefly." \
+  --json-out target/apple-m4-productization/mac-ask.json
+```
+
+Run the deterministic validation corpus:
+
+```bash
+bitnet mac validate \
+  --json-out target/apple-m4-productization/mac-validate.json
+```
+
+Run the named operator warm-answer profiles:
+
+```bash
+bitnet mac validate \
+  --profile-set operator \
+  --json-out target/apple-m4-productization/mac-operator-profiles.json
+```
+
+The operator profile set writes `warm_16`, `warm_32`, and `warm_64` receipts.
+Each profile is one warm session for that token budget: cold load is recorded
+separately, and model/tokenizer reuse is visible within that profile. The
+aggregate summary discloses that profiles are loaded independently, records
+`profile_set_model_loads=3`, and does not claim broad M4 performance or speedup.
+
 ## One-Command Validation
 
 Run the complete Apple M4 validation bundle from the repository root:

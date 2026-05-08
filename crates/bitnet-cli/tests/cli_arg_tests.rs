@@ -191,6 +191,16 @@ fn mac_help_documents_operator_wrappers() {
 }
 
 #[test]
+fn mac_validate_help_documents_operator_profile_set() {
+    bitnet()
+        .args(["mac", "validate", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--profile-set"))
+        .stdout(predicate::str::contains("16/32/64 token warm-answer profiles"));
+}
+
+#[test]
 fn mac_check_missing_cache_points_to_model_fetch() {
     let dir = tempfile::tempdir().expect("tempdir");
     let cache = dir.path().join("models");
@@ -261,6 +271,176 @@ fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt() {
         .success()
         .stdout(predicate::str::contains("\"passed\": true"))
         .stdout(predicate::str::contains("apple-m4-cpu-neon"));
+}
+
+#[test]
+fn mac_receipts_check_accepts_operator_profile_summary() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("operator-profiles.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "apple_m4_slm_operator_profiles",
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "operator_thresholds": {
+                "cold_load_separated": true,
+                "model_tokenizer_reuse_visible": true,
+                "model_tokenizer_reuse_visible_per_profile": true,
+                "profiles_loaded_independently": true,
+                "profile_set_model_loads": 3,
+                "reuse_scope": "within_each_profile",
+                "profiles_required": ["warm_16", "warm_32", "warm_64"],
+                "thresholds_are_claim_bounds_not_speed_guarantees": true
+            },
+            "profiles": [
+                {
+                    "profile_id": "warm_16",
+                    "requested_max_new_tokens": 16,
+                    "prompt_count": 1,
+                    "generated_tokens": 16,
+                    "quality_passed": true,
+                    "cold_load_separated": true,
+                    "model_loaded_once": true,
+                    "tokenizer_loaded_once": true,
+                    "reuse_scope": "within_profile",
+                    "timing": {
+                        "model_load_ms": 1000.0,
+                        "tokenizer_load_ms": 25.0,
+                        "warm_prompt_wall_ms": 8000.0,
+                        "decode_total_ms": 5000.0,
+                        "sampling_ms": 12.0,
+                        "warm_prompt_generated_tok_s": 2.0,
+                        "decode_generated_tok_s": 3.2
+                    }
+                },
+                {
+                    "profile_id": "warm_32",
+                    "requested_max_new_tokens": 32,
+                    "prompt_count": 1,
+                    "generated_tokens": 32,
+                    "quality_passed": true,
+                    "cold_load_separated": true,
+                    "model_loaded_once": true,
+                    "tokenizer_loaded_once": true,
+                    "reuse_scope": "within_profile",
+                    "timing": {
+                        "model_load_ms": 1000.0,
+                        "tokenizer_load_ms": 25.0,
+                        "warm_prompt_wall_ms": 16000.0,
+                        "decode_total_ms": 10000.0,
+                        "sampling_ms": 24.0,
+                        "warm_prompt_generated_tok_s": 2.0,
+                        "decode_generated_tok_s": 3.2
+                    }
+                },
+                {
+                    "profile_id": "warm_64",
+                    "requested_max_new_tokens": 64,
+                    "prompt_count": 1,
+                    "generated_tokens": 64,
+                    "quality_passed": true,
+                    "cold_load_separated": true,
+                    "model_loaded_once": true,
+                    "tokenizer_loaded_once": true,
+                    "reuse_scope": "within_profile",
+                    "timing": {
+                        "model_load_ms": 1000.0,
+                        "tokenizer_load_ms": 25.0,
+                        "warm_prompt_wall_ms": 32000.0,
+                        "decode_total_ms": 20000.0,
+                        "sampling_ms": 48.0,
+                        "warm_prompt_generated_tok_s": 2.0,
+                        "decode_generated_tok_s": 3.2
+                    }
+                }
+            ],
+            "mac_claim_boundary": {
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "bitnet_quality_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_slm_operator_profiles"))
+        .stdout(predicate::str::contains("\"prompt_count\": 3"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_operator_profile_missing_profile() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("operator-profiles.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "apple_m4_slm_operator_profiles",
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "operator_thresholds": {
+                "cold_load_separated": true,
+                "model_tokenizer_reuse_visible": true,
+                "model_tokenizer_reuse_visible_per_profile": true,
+                "profiles_loaded_independently": true,
+                "profile_set_model_loads": 3,
+                "profiles_required": ["warm_16", "warm_32", "warm_64"],
+                "thresholds_are_claim_bounds_not_speed_guarantees": true
+            },
+            "profiles": [
+                {
+                    "profile_id": "warm_16",
+                    "requested_max_new_tokens": 16,
+                    "prompt_count": 1,
+                    "generated_tokens": 16,
+                    "quality_passed": true,
+                    "cold_load_separated": true,
+                    "model_loaded_once": true,
+                    "tokenizer_loaded_once": true,
+                    "reuse_scope": "within_profile",
+                    "timing": {
+                        "model_load_ms": 1000.0,
+                        "tokenizer_load_ms": 25.0,
+                        "warm_prompt_wall_ms": 8000.0,
+                        "decode_total_ms": 5000.0,
+                        "sampling_ms": 12.0,
+                        "warm_prompt_generated_tok_s": 2.0,
+                        "decode_generated_tok_s": 3.2
+                    }
+                }
+            ],
+            "mac_claim_boundary": {
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "bitnet_quality_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet().args(["mac", "receipts-check", receipt_str.as_str()]).assert().failure().stderr(
+        predicate::str::contains(
+            "operator profile summary must contain exactly warm_16, warm_32, and warm_64",
+        ),
+    );
 }
 
 #[test]
