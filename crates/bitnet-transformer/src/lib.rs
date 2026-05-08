@@ -1,4 +1,4 @@
-use bitnet_common::{BitNetConfig, BitNetError, Result};
+use bitnet_common::{BitNetConfig, BitNetError, Result, config::NormType};
 use bitnet_qk256_dispatch::{
     forward_qk256, record_bitnet_linear_cpu_fallback, record_bitnet_linear_unsupported,
     strict_cuda_bitnet_backend_requested,
@@ -6,6 +6,149 @@ use bitnet_qk256_dispatch::{
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
+
+fn qwen_trace_path() -> Option<std::path::PathBuf> {
+    std::env::var("BITNET_QWEN_TRACE_JSONL")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .map(std::path::PathBuf::from)
+}
+
+fn qwen_trace_enabled() -> bool {
+    qwen_trace_path().is_some() || std::env::var("BITNET_QWEN_TRACE").as_deref() == Ok("1")
+}
+
+fn qwen_trace_active() -> bool {
+    qwen_trace_enabled() && std::env::var("BITNET_QWEN_TRACE_ACTIVE").as_deref() == Ok("1")
+}
+
+fn qwen_trace_layer_enabled(layer_idx: usize) -> bool {
+    if !qwen_trace_active() {
+        return false;
+    }
+    let requested_layer = std::env::var("BITNET_QWEN_TRACE_LAYER")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(0);
+    requested_layer == layer_idx
+}
+
+fn qwen_trace_escape(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n").replace('\r', "\\r")
+}
+
+fn qwen_trace_number(value: f64) -> String {
+    if value.is_finite() { format!("{value:.9}") } else { "null".to_string() }
+}
+
+fn qwen_trace_write_line(line: &str) {
+    if let Some(path) = qwen_trace_path() {
+        if let Some(parent) = path.parent()
+            && let Err(err) = std::fs::create_dir_all(parent)
+        {
+            eprintln!("qwen_trace_write_failed: create_dir_all {}: {err}", parent.display());
+            return;
+        }
+        match std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+            Ok(mut file) => {
+                if let Err(err) = std::io::Write::write_all(&mut file, line.as_bytes())
+                    .and_then(|_| std::io::Write::write_all(&mut file, b"\n"))
+                {
+                    eprintln!("qwen_trace_write_failed: {}: {err}", path.display());
+                }
+            }
+            Err(err) => eprintln!("qwen_trace_write_failed: {}: {err}", path.display()),
+        }
+    } else if std::env::var("BITNET_QWEN_TRACE").as_deref() == Ok("1") {
+        eprintln!("{line}");
+    }
+}
+
+fn qwen_trace_event(stage: &str, fields_json: &str) {
+    if !qwen_trace_enabled() {
+        return;
+    }
+    let step = std::env::var("BITNET_QWEN_TRACE_STEP").unwrap_or_else(|_| "null".to_string());
+    qwen_trace_write_line(&format!(
+        "{{\"kind\":\"qwen_trace_event\",\"stage\":\"{}\",\"step\":{},{} }}",
+        qwen_trace_escape(stage),
+        step,
+        fields_json
+    ));
+}
+
+fn qwen_trace_tensor(
+    stage: &str,
+    layer_idx: Option<usize>,
+    tensor: &Tensor,
+) -> candle_core::Result<()> {
+    if !qwen_trace_active() {
+        return Ok(());
+    }
+    if let Some(layer_idx) = layer_idx
+        && !qwen_trace_layer_enabled(layer_idx)
+    {
+        return Ok(());
+    }
+
+    let tensor_f32 =
+        if tensor.dtype() == DType::F32 { tensor.clone() } else { tensor.to_dtype(DType::F32)? };
+    let values = tensor_f32.flatten_all()?.to_vec1::<f32>()?;
+    let mut finite_count = 0usize;
+    let mut nonfinite_count = 0usize;
+    let mut sum = 0.0f64;
+    let mut sum_sq = 0.0f64;
+    let mut min = f64::INFINITY;
+    let mut max = f64::NEG_INFINITY;
+    let mut checksum = 0.0f64;
+    for (idx, value) in values.iter().enumerate() {
+        let value = *value as f64;
+        if value.is_finite() {
+            finite_count += 1;
+            sum += value;
+            sum_sq += value * value;
+            min = min.min(value);
+            max = max.max(value);
+            if idx < 4096 {
+                checksum += value * ((idx % 257) + 1) as f64;
+            }
+        } else {
+            nonfinite_count += 1;
+        }
+    }
+
+    let denom = finite_count.max(1) as f64;
+    let mean = sum / denom;
+    let rms = (sum_sq / denom).sqrt();
+    let sample = values
+        .iter()
+        .take(8)
+        .map(|value| qwen_trace_number(*value as f64))
+        .collect::<Vec<_>>()
+        .join(",");
+    let dims = tensor.dims().iter().map(|dim| dim.to_string()).collect::<Vec<_>>().join(",");
+    let layer_json = layer_idx.map(|idx| idx.to_string()).unwrap_or_else(|| "null".to_string());
+    let step = std::env::var("BITNET_QWEN_TRACE_STEP").unwrap_or_else(|_| "null".to_string());
+
+    qwen_trace_write_line(&format!(
+        "{{\"kind\":\"qwen_trace_tensor\",\"stage\":\"{}\",\"step\":{},\"layer\":{},\"dtype\":\"{:?}\",\"dims\":[{}],\"len\":{},\"finite\":{},\"nonfinite\":{},\"mean\":{},\"rms\":{},\"min\":{},\"max\":{},\"checksum\":{},\"sample\":[{}]}}",
+        qwen_trace_escape(stage),
+        step,
+        layer_json,
+        tensor.dtype(),
+        dims,
+        values.len(),
+        finite_count,
+        nonfinite_count,
+        qwen_trace_number(mean),
+        qwen_trace_number(rms),
+        qwen_trace_number(min),
+        qwen_trace_number(max),
+        qwen_trace_number(checksum),
+        sample
+    ));
+    Ok(())
+}
 
 /// Debug helper for tensor statistics (only runs if DEBUG_ATTN env var is set)
 fn dbg_stats(tag: &str, t: &Tensor) -> candle_core::Result<()> {
@@ -68,12 +211,33 @@ fn linear_with_optional_bias(
 /// Helper to create layer norm with optional bias.
 /// If `bias` is missing we use no-bias LayerNorm by default, or error when
 /// `BITNET_REQUIRE_LAYER_NORM_BIAS=1`.
+#[cfg(test)]
 fn layer_norm_with_optional_bias(
     normalized_shape: usize,
     eps: f64,
     vb: VarBuilder,
 ) -> candle_core::Result<LayerNorm> {
+    norm_with_optional_bias(NormType::LayerNorm, normalized_shape, eps, vb)
+}
+
+fn norm_with_optional_bias(
+    norm_type: NormType,
+    normalized_shape: usize,
+    eps: f64,
+    vb: VarBuilder,
+) -> candle_core::Result<LayerNorm> {
     let weight = vb.get((normalized_shape,), "weight")?;
+    if matches!(norm_type, NormType::RmsNorm) {
+        if vb.get((normalized_shape,), "bias").is_ok() {
+            tracing::debug!(
+                "Bias tensor present for RMSNorm layer; ignoring bias [{}]",
+                normalized_shape
+            );
+        }
+        tracing::debug!("Using RMSNorm without mean subtraction [{}]", normalized_shape);
+        return Ok(LayerNorm::rms_norm(weight, eps));
+    }
+
     match vb.get((normalized_shape,), "bias") {
         Ok(bias) => {
             // Bias exists → standard LayerNorm (with mean subtraction and bias)
@@ -292,6 +456,11 @@ impl MultiHeadAttention {
         let q_proj_out = self.apply_linear(x, &self.q_proj, "q_proj", raw_tensors)?;
         let k_proj_out = self.apply_linear(x, &self.k_proj, "k_proj", raw_tensors)?;
         let v_proj_out = self.apply_linear(x, &self.v_proj, "v_proj", raw_tensors)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("attention.q_proj", Some(self.layer_idx), &q_proj_out)?;
+            qwen_trace_tensor("attention.k_proj", Some(self.layer_idx), &k_proj_out)?;
+            qwen_trace_tensor("attention.v_proj", Some(self.layer_idx), &v_proj_out)?;
+        }
 
         // Probe A3: Q/K/V projection RMS (layer 0, step 0 only)
         if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.layer_idx == 0 {
@@ -394,6 +563,17 @@ impl MultiHeadAttention {
 
             let q_rot = rope.apply(&q, position)?;
             let k_rot = rope.apply(&k, position)?;
+            if qwen_trace_layer_enabled(self.layer_idx) {
+                qwen_trace_event(
+                    "attention.rope_metadata",
+                    &format!(
+                        "\"layer\":{},\"position\":{},\"head_dim\":{},\"n_heads\":{},\"n_kv_heads\":{}",
+                        self.layer_idx, position, self.head_dim, self.n_heads, self.n_kv_heads
+                    ),
+                );
+                qwen_trace_tensor("attention.q_rope", Some(self.layer_idx), &q_rot)?;
+                qwen_trace_tensor("attention.k_rope", Some(self.layer_idx), &k_rot)?;
+            }
             (q_rot, k_rot)
         } else {
             (q, k)
@@ -463,6 +643,9 @@ impl MultiHeadAttention {
         // PATCH 5: create_causal_mask now returns [1, 1, Tq, Tk] directly - no need for unsqueeze
         let mask = self.create_causal_mask(seq_len, total_len, scores_f32.device())?;
         let scores_f32 = scores_f32.broadcast_add(&mask)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("attention.scores_post_mask", Some(self.layer_idx), &scores_f32)?;
+        }
 
         // Debug scores after mask and before softmax (critical diagnostics)
         dbg_stats("scores post-mask", &scores_f32)?;
@@ -510,6 +693,9 @@ impl MultiHeadAttention {
         // Apply softmax (exp then normalize)
         // VERIFIED: axis=3 is correct - softmax over keys (Tk dimension) in [B, H, Tq, Tk]
         let attn_weights = candle_nn::ops::softmax(&scores_stabilized, 3)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("attention.weights", Some(self.layer_idx), &attn_weights)?;
+        }
 
         // Tracepoint 4: Attention scores post-softmax (layer-specific)
         #[cfg(feature = "trace")]
@@ -535,6 +721,9 @@ impl MultiHeadAttention {
         }
 
         let attn_output = attn_weights.matmul(&v_expanded)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("attention.output_heads", Some(self.layer_idx), &attn_output)?;
+        }
 
         // Reshape and project output
         let attn_output = attn_output.transpose(1, 2)?.reshape(&[
@@ -543,7 +732,11 @@ impl MultiHeadAttention {
             self.n_heads * self.head_dim,
         ])?;
 
-        self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)
+        let projected = self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("attention.o_proj", Some(self.layer_idx), &projected)?;
+        }
+        Ok(projected)
     }
 
     /// Apply linear transformation with QK256 dispatch
@@ -651,6 +844,9 @@ impl FeedForward {
         raw_tensors: &std::collections::HashMap<String, Tensor>,
     ) -> Result<Tensor> {
         let gate = self.apply_linear(x, &self.gate_proj, "gate_proj", raw_tensors)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("mlp.gate_proj", Some(self.layer_idx), &gate)?;
+        }
 
         // MLP gating diagnostics (point 3 of user's plan)
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
@@ -660,6 +856,9 @@ impl FeedForward {
         }
 
         let gate = candle_nn::ops::silu(&gate)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("mlp.gate_silu", Some(self.layer_idx), &gate)?;
+        }
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(silu_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -668,6 +867,9 @@ impl FeedForward {
         }
 
         let up = self.apply_linear(x, &self.up_proj, "up_proj", raw_tensors)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("mlp.up_proj", Some(self.layer_idx), &up)?;
+        }
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(v_norm) = up.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -676,6 +878,9 @@ impl FeedForward {
         }
 
         let hidden = gate.mul(&up)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("mlp.gated_product", Some(self.layer_idx), &hidden)?;
+        }
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(prod_norm) = hidden.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -684,6 +889,9 @@ impl FeedForward {
         }
 
         let output = self.apply_linear(&hidden, &self.down_proj, "down_proj", raw_tensors)?;
+        if qwen_trace_layer_enabled(self.layer_idx) {
+            qwen_trace_tensor("mlp.down_proj", Some(self.layer_idx), &output)?;
+        }
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(out_norm) = output.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -751,12 +959,14 @@ impl TransformerBlock {
         Ok(Self {
             attention: MultiHeadAttention::new(config, vb.pp("attention"), layer_idx)?,
             feed_forward: FeedForward::new(config, vb.pp("feed_forward"), layer_idx)?,
-            attention_norm: layer_norm_with_optional_bias(
+            attention_norm: norm_with_optional_bias(
+                config.model.norm_type,
                 hidden_size,
                 eps,
                 vb.pp("attention_norm"),
             )?,
-            ffn_norm: layer_norm_with_optional_bias(
+            ffn_norm: norm_with_optional_bias(
+                config.model.norm_type,
                 hidden_size,
                 eps,
                 vb.pp("post_attention_layernorm"),
@@ -803,6 +1013,9 @@ impl TransformerBlock {
         }
 
         let x = self.attention_norm.forward(x)?;
+        if qwen_trace_layer_enabled(self.attention.layer_idx) {
+            qwen_trace_tensor("block.attention_norm", Some(self.attention.layer_idx), &x)?;
+        }
 
         // Probe A2: LayerNorm gamma RMS + LN output RMS (layer 0, step 0 only)
         if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.attention.layer_idx == 0
@@ -861,6 +1074,9 @@ impl TransformerBlock {
 
         let x = self.attention.forward(&x, kv_cache, raw_tensors)?;
         let x = (x + residual)?;
+        if qwen_trace_layer_enabled(self.attention.layer_idx) {
+            qwen_trace_tensor("block.post_attention_residual", Some(self.attention.layer_idx), &x)?;
+        }
 
         // Debug post-attention activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {
@@ -892,6 +1108,9 @@ impl TransformerBlock {
         }
 
         let x = self.ffn_norm.forward(&x)?;
+        if qwen_trace_layer_enabled(self.attention.layer_idx) {
+            qwen_trace_tensor("block.ffn_norm", Some(self.attention.layer_idx), &x)?;
+        }
 
         // Check norm output
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
@@ -913,6 +1132,9 @@ impl TransformerBlock {
 
         let x = self.feed_forward.forward(&x, raw_tensors)?;
         let x = (x + residual)?;
+        if qwen_trace_layer_enabled(self.attention.layer_idx) {
+            qwen_trace_tensor("block.output", Some(self.attention.layer_idx), &x)?;
+        }
 
         // Debug post-FFN activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {
@@ -1101,7 +1323,8 @@ impl TransformerModel {
         let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
         tracing::info!("Final norm using RMSNorm eps={} (from header)", eps);
 
-        let norm = layer_norm_with_optional_bias(hidden_size, eps, vb.pp("final_norm"))?;
+        let norm =
+            norm_with_optional_bias(config.model.norm_type, hidden_size, eps, vb.pp("final_norm"))?;
 
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
@@ -1134,16 +1357,25 @@ impl TransformerModel {
                 }
                 (Some(layer), weight, transposed)
             }
-            Err(_) => {
-                tracing::info!("lm_head.weight not found, will use tied weights");
-                (None, None, false)
-            }
+            Err(_) => match vb.get((hidden_size, vocab_size), "lm_head.weight") {
+                Ok(weight) => {
+                    tracing::info!(
+                        "LM head is stored transposed [hidden, vocab] - using direct matmul path"
+                    );
+                    (None, Some(weight), true)
+                }
+                Err(_) => {
+                    tracing::info!("lm_head.weight not found, will use tied weights");
+                    (None, None, false)
+                }
+            },
         };
 
         // PATCH 2: Optimize tied weights by pre-transposing embeddings once at load
         // NOTE: embed_tokens.embeddings() ALWAYS returns [V,H] (Candle's internal format)
         // regardless of how they were stored in GGUF. We need [H,V] for tied weights.
-        let (embed_transposed, embed_tied_weight) = if lm_head.is_none() {
+        let (embed_transposed, embed_tied_weight) = if lm_head.is_none() && lm_head_weight.is_none()
+        {
             // No dedicated lm_head, we'll use tied weights - pre-transpose for efficiency
             let embed_weight = embed_tokens.embeddings();
             tracing::info!(
@@ -1161,6 +1393,32 @@ impl TransformerModel {
             // Dedicated lm_head exists, no need to optimize embeddings
             (embed_transposed, None)
         };
+        qwen_trace_event(
+            "model_config",
+            &format!(
+                "\"vocab_size\":{},\"hidden_size\":{},\"layers\":{},\"heads\":{},\"kv_heads\":{},\"norm_type\":\"{:?}\",\"rms_norm_eps\":{},\"rope_theta\":{},\"embed_transposed\":{},\"lm_head_present\":{},\"lm_head_weight_present\":{},\"lm_head_transposed\":{}",
+                vocab_size,
+                hidden_size,
+                n_layers,
+                config.model.num_heads,
+                config.model.num_key_value_heads,
+                config.model.norm_type,
+                config
+                    .model
+                    .rms_norm_eps
+                    .map(|value| qwen_trace_number(value as f64))
+                    .unwrap_or_else(|| "null".to_string()),
+                config
+                    .model
+                    .rope_theta
+                    .map(|value| qwen_trace_number(value as f64))
+                    .unwrap_or_else(|| "null".to_string()),
+                embed_transposed,
+                lm_head.is_some(),
+                lm_head_weight.is_some(),
+                lm_head_transposed
+            ),
+        );
 
         Ok(Self {
             config,
@@ -1377,6 +1635,7 @@ impl TransformerModel {
         }
 
         let normalized = self.norm.forward(&x)?;
+        qwen_trace_tensor("model.final_norm", None, &normalized)?;
         if std::env::var("DEBUG_ATTN").is_ok()
             && let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
@@ -1388,13 +1647,35 @@ impl TransformerModel {
 
     pub fn logits(&self, hidden: &Tensor) -> Result<Tensor> {
         let vocab_size = self.config.model.vocab_size;
+        qwen_trace_tensor("lm_head.input_hidden", None, hidden)?;
+        qwen_trace_event(
+            "lm_head.metadata",
+            &format!(
+                "\"lm_head_present\":{},\"lm_head_transposed\":{},\"embed_transposed\":{},\"has_cached_tied_weight\":{}",
+                self.lm_head.is_some(),
+                self.lm_head_transposed,
+                self.embed_transposed,
+                self.embed_tied_weight.is_some()
+            ),
+        );
 
         match hidden.rank() {
             2 => {
                 // [B, H] - last token only
                 let (b, _h) = (hidden.dims()[0], hidden.dims()[1]);
 
-                let logits = if let Some(ref lm_head) = self.lm_head {
+                let logits = if self.lm_head_transposed {
+                    if let Some(ref weight) = self.lm_head_weight {
+                        hidden.matmul(weight)?.reshape(&[b, vocab_size])?
+                    } else if let Some(ref lm_head) = self.lm_head {
+                        let logits = lm_head.forward(hidden)?; // [B, V]
+                        logits.reshape(&[b, vocab_size])?
+                    } else {
+                        return Err(BitNetError::Validation(
+                            "lm_head is marked transposed but lm_head.weight is unavailable".into(),
+                        ));
+                    }
+                } else if let Some(ref lm_head) = self.lm_head {
                     // Use dedicated LM head if available
                     let logits = lm_head.forward(hidden)?; // [B, V]
                     logits.reshape(&[b, vocab_size])?
@@ -1461,6 +1742,7 @@ impl TransformerModel {
                 {
                     eprintln!("[norm] logits std: {:.6e}", std_val);
                 }
+                qwen_trace_tensor("lm_head.logits", None, &logits)?;
 
                 // Tracepoint 5: Logits (incremental path - single token)
                 // This captures the final logits for the current token [B, V]
@@ -1484,28 +1766,28 @@ impl TransformerModel {
                 // [B, T, H] - all timesteps
                 let (b, t, h) = (hidden.dims()[0], hidden.dims()[1], hidden.dims()[2]);
 
-                if let Some(ref lm_head) = self.lm_head {
-                    // Use dedicated LM head if available
-                    if self.lm_head_transposed {
-                        if let Some(ref weight) = self.lm_head_weight {
-                            // LM head weight is stored as [hidden, vocab]
-                            // Flatten to 2D so Candle matmul is happy
-                            let hidden_2d = hidden.reshape(&[b * t, h])?;
-                            let logits_2d = hidden_2d.matmul(weight)?;
-                            Ok(logits_2d.reshape(&[b, t, vocab_size])?)
-                        } else {
-                            // Fallback to standard forward if we couldn't get weight directly
-                            let hidden_2d = hidden.reshape(&[b * t, h])?;
-                            let logits_2d = lm_head.forward(&hidden_2d)?;
-                            Ok(logits_2d.reshape(&[b, t, vocab_size])?)
-                        }
-                    } else {
-                        // Standard path: LM head weight is [vocab, hidden]
-                        // Flatten to 2D for proper matmul
+                if self.lm_head_transposed {
+                    if let Some(ref weight) = self.lm_head_weight {
+                        // LM head weight is stored as [hidden, vocab].
+                        let hidden_2d = hidden.reshape(&[b * t, h])?;
+                        let logits_2d = hidden_2d.matmul(weight)?;
+                        Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                    } else if let Some(ref lm_head) = self.lm_head {
                         let hidden_2d = hidden.reshape(&[b * t, h])?;
                         let logits_2d = lm_head.forward(&hidden_2d)?;
                         Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                    } else {
+                        Err(BitNetError::Validation(
+                            "lm_head is marked transposed but lm_head.weight is unavailable".into(),
+                        ))
                     }
+                } else if let Some(ref lm_head) = self.lm_head {
+                    // Use dedicated LM head if available
+                    // Standard path: LM head weight is [vocab, hidden]
+                    // Flatten to 2D for proper matmul
+                    let hidden_2d = hidden.reshape(&[b * t, h])?;
+                    let logits_2d = lm_head.forward(&hidden_2d)?;
+                    Ok(logits_2d.reshape(&[b, t, vocab_size])?)
                 } else {
                     // Tied weights: use embedding matrix
                     static LOGGED: std::sync::Once = std::sync::Once::new();

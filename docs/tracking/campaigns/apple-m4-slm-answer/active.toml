@@ -117,8 +117,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-003"
-status = "in_progress"
-branch = "codex/apple-m4-slm-answer/SLM-M4-003-rust-cli-answer"
+status = "pr_open"
+branch = "codex/apple-m4-slm-answer/SLM-M4-003-qwen-trace"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -137,6 +137,8 @@ commands = [
 allowed_paths = [
   "crates/bitnet-cli/**",
   "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-prompt-templates-core/**",
   "crates/bitnet-tokenizers/**",
   "crates/**/tests/**",
   "ci/quality/**",

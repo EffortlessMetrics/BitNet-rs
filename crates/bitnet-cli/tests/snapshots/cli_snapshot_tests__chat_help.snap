@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 73
 expression: help
 ---
 Interactive chat mode (streaming)
@@ -116,6 +117,9 @@ Options:
 
       --tokenizer <PATH>
           Path to tokenizer.json (HF) or tokenizer.model (SPM)
+
+      --strict-tokenizer
+          Strict tokenizer mode: fail if no real tokenizer is available
 
       --no-bos
           Disable BOS insertion

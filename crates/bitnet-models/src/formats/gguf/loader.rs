@@ -998,6 +998,21 @@ impl GgufLoader {
         )
     }
 
+    /// Check if a tensor name indicates the final vocabulary projection.
+    fn is_output_head_tensor(name: &str) -> bool {
+        matches!(
+            name,
+            "output.weight"
+                | "lm_head.weight"
+                | "model.lm_head.weight"
+                | "generator.weight"
+                | "transformer.lm_head.weight"
+                | "language_model_head.weight"
+                | "head.weight"
+                | "cls.weight"
+        )
+    }
+
     /// Check if a tensor name indicates it's a projection tensor that needs transposition
     /// This includes both attention and feed-forward projection tensors
     fn is_projection_tensor(name: &str) -> bool {
@@ -1112,6 +1127,7 @@ impl GgufLoader {
         Ok(out)
     }
 
+    #[allow(dead_code)]
     pub(super) fn transpose_f32_values(values: &[f32], dims: &[usize]) -> Vec<f32> {
         let (rows, cols) = (dims[0], dims[1]);
         let mut transposed = Vec::with_capacity(rows * cols);
@@ -1890,21 +1906,23 @@ impl GgufLoader {
                     )));
                 }
 
-                let mut f32_data = Self::dequantize_q8_0_to_f32(data, &info.shape, &info.name)?;
+                let f32_data = Self::dequantize_q8_0_to_f32(data, &info.shape, &info.name)?;
                 let mut want_shape = info.shape.clone();
 
-                if Self::is_embedding_tensor(&info.name)
+                if (Self::is_embedding_tensor(&info.name)
+                    || Self::is_output_head_tensor(&info.name))
                     && Self::embedding_is_transposed(&info.shape)
                 {
-                    info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
-                    f32_data = Self::transpose_f32_values(&f32_data, &info.shape);
+                    info!(
+                        "{} uses GGML [hidden, vocab] dims {:?} -> reshaping token-major data to [vocab, hidden]",
+                        info.name, info.shape
+                    );
                     want_shape = vec![info.shape[1], info.shape[0]];
                 } else if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
                     debug!(
-                        "pre-transposing Q8_0 projection '{}' from {:?} to [out,in]",
+                        "Q8_0 projection '{}' uses GGML [in, out] dims {:?} -> reshaping token-major data to [out, in]",
                         info.name, info.shape
                     );
-                    f32_data = Self::transpose_f32_values(&f32_data, &info.shape);
                     want_shape = vec![info.shape[1], info.shape[0]];
                 }
 
@@ -2126,5 +2144,36 @@ impl GgufLoader {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GgufLoader;
+
+    #[test]
+    fn q8_vocab_projection_uses_token_major_shape() {
+        let ggml_hidden_vocab = [896, 151_936];
+
+        assert!(GgufLoader::embedding_is_transposed(&ggml_hidden_vocab));
+        assert!(GgufLoader::is_embedding_tensor("token_embd.weight"));
+        assert!(GgufLoader::is_output_head_tensor("output.weight"));
+        assert!(GgufLoader::is_output_head_tensor("lm_head.weight"));
+        assert!(GgufLoader::is_output_head_tensor("generator.weight"));
+        assert!(GgufLoader::is_output_head_tensor("transformer.lm_head.weight"));
+        assert!(GgufLoader::is_output_head_tensor("language_model_head.weight"));
+        assert!(GgufLoader::is_output_head_tensor("cls.weight"));
+        assert!(!GgufLoader::is_output_head_tensor("blk.0.attn_output.weight"));
+
+        let output_shape = if (GgufLoader::is_embedding_tensor("output.weight")
+            || GgufLoader::is_output_head_tensor("output.weight"))
+            && GgufLoader::embedding_is_transposed(&ggml_hidden_vocab)
+        {
+            vec![ggml_hidden_vocab[1], ggml_hidden_vocab[0]]
+        } else {
+            ggml_hidden_vocab.to_vec()
+        };
+
+        assert_eq!(output_shape, vec![151_936, 896]);
     }
 }

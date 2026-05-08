@@ -1,0 +1,12 @@
+timestamp = "2026-05-07T23:59:55Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Localized the Rust-native Qwen divergence with debug-only tensor traces.",
+  "Fixed Qwen2.5 ChatML assistant boundary, prompt prefill, RMSNorm selection, Qwen attention biases, and Q8_0 token-major tensor layout for embeddings, projections, and output.weight.",
+  "The diagnostic Q8_0 companion now produces coherent Rust CLI apple-m4-cpu-neon smoke answers with fallback_used=false for the campaign prompt suite.",
+  "This does not claim BitNet local-answer quality, full apple-m4-metal inference, QK256, Neural Engine execution, or broad performance.",
+]
