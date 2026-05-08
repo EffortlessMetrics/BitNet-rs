@@ -57,6 +57,8 @@ Committed proof receipts:
 - `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-proof.json`
 - `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-short-decode.json`
 - `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json`
+- `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/strict-cuda-ask-math.json`
+- `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json`
 
 Allowed claims:
 
@@ -74,17 +76,17 @@ Not allowed:
 
 ## Productization Follow-Up
 
-The completed proof lane is not the same as a user-answer product path. The
-next productization track is defined in
-`docs/specs/rtx5070ti-cuda-answer-readiness.md` and starts from CPU answer
-quality, prompt template authority, real prompt prefill, and a normal
-`bitnet ask` command before adding strict RTX 5070 Ti CUDA answer receipts.
+The completed proof lane is not the same as a polished user-answer product path.
+The next productization track is defined in
+`docs/specs/rtx5070ti-cuda-answer-readiness.md`. `MODEL-ARTIFACT-007`,
+`CPU-ANSWER-007`, and `CUDA-ANSWER-010` now provide the artifact, CPU, and strict
+RTX 5070 Ti CUDA answer-corpus gates needed for the next step: CPU/CUDA answer
+parity against the same artifact, tokenizer authority, prompt template, and
+deterministic corpus.
 
-Coherent CUDA answer claims also require a shared answer-ready model artifact.
-Use `docs/model-artifacts/ANSWER_ARTIFACT_GATE.md` and
-`ci/model-artifacts/artifact-manifest.toml` as the cross-lane precondition. A
-strict CUDA receipt against a rejected artifact may prove execution, but it must
-remain `diagnostic_only` for answer quality.
+Coherent CUDA answer claims still remain scoped. The current proof covers the
+committed deterministic answer corpus, not broad chat quality, production server
+readiness, or speedup.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -117,6 +119,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-BITNET-007 | merged | Strict short-decode BitNet CUDA proof merged in #3806. |
 | CUDA-BITNET-008 | merged | Strict BitNet CUDA benchmark baseline merged in #3823. |
 | CUDA-BITNET-009 | merged | Routed upload-once strict proof receipts merged in #3837. |
+| CUDA-ANSWER-010 | merged | Strict RTX 5070 Ti CUDA answer corpus passes after the QK256 I2_S layout alignment in #4024. |
 | CUDA-DENSE-001 | proposed | Optional dense regular-LLM CUDA reference lane; not part of BitNet packed proof completion. |
 
 ## Review Policy

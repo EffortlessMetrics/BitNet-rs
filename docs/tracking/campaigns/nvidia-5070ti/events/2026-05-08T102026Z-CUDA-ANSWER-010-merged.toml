@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T10:20:26Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-ANSWER-010"
+event = "merged"
+actor = "codex"
+pr = 4024
+merge_sha = "1d0efa60e1d501fe03b5289de756e71b976fb8de"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4024 merged the RTX 5070 Ti QK256 I2_S CUDA GEMV layout alignment against the BitNet.cpp/GGML grouped bitplane layout.",
+  "Current-main closeout receipts record strict CUDA ask answering the constrained math prompt with `4` and the CUDA answer corpus passing all five committed deterministic cases.",
+  "The receipts preserve selected_backend=nvidia-rtx-5070-ti-cuda, runtime_api=cuda, fallback_used=false, selected_kernel=qk256_gemv_cuda, prompt prefill, upload-once weights, zero BitNet linear CPU fallback, and speedup_claim=false.",
+]
