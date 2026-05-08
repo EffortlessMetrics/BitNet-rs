@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T04:38:55Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-007"
+event = "pr_open"
+pr = 3991
+head_sha = "a6869bf6d63a4b00f9e1787da631e164cc77af7c"
+actor = "codex"
+
+notes = [
+  "Opened first safe Apple Metal phase decision PR for the validated SLM lane.",
+  "The PR selects a future prefill-only dense linear projection candidate and requires CPU-only vs CPU+Metal greedy token parity before any acceleration claim.",
+  "No Metal kernels, runtime routing, QK256, MPSGraph, Neural Engine, server inference, model binary, or performance claim changes are in scope.",
+]
