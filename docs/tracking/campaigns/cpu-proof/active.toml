@@ -752,7 +752,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-007"
-status = "pr_open"
+status = "merged"
 pr = 4019
 branch = "codex/cpu-answer-007-bitnet-subnorms"
 stackable = false

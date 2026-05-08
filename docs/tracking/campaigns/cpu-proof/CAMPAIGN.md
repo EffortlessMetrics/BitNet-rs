@@ -46,7 +46,8 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-ANSWER-003 | merged | Reference-divergence triage merged in #3993: strict BitNet CPU answer runs can now be compared against known-good reference artifacts before blaming AVX2 or claiming answer quality. |
 | CPU-ANSWER-004 | merged | Align the strict Rust CPU answer corpus to the MODEL-ARTIFACT-007 Microsoft BitNet.cpp prompt authority before rerunning answer-readiness evidence. |
 | CPU-ANSWER-005 | merged | External Llama-BPE tokenizer/pre-tokenizer authority recording merged in #4003; failed strict CPU answer artifacts remain diagnostic and do not prove answer quality. |
-| CPU-ANSWER-006 | pr_open | #4005 captures Microsoft BitNet.cpp reference prompt/generated token IDs and first-step top-k/logit evidence where available before blaming Rust decode math, logits, sampler, or AVX2. |
+| CPU-ANSWER-006 | merged | Microsoft BitNet.cpp reference prompt/generated token IDs and first-step top-k/logit evidence where available merged in #4005 before blaming Rust decode math, logits, sampler, or AVX2. |
+| CPU-ANSWER-007 | merged | BitNet B1.58 answer math alignment for the official Microsoft I2_S answer-ready artifact merged in #4019: RMSNorm/ReLU^2 defaults, attention and FFN sub-layernorms, BitNet.cpp I2_S QK256 layout, inline scale and I8_S GEMV semantics, and GGML token-major F16 token embeddings. |
 
 ## Review Policy
 
