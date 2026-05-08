@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T20:45:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-002"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-planner-002-capability-spec"
+pr = 4129
+head_sha = "f40391241e2b1dcd744bd668b49d941a1ddb9b89"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4129 for conservative model-family and quantization metadata mapping into model-aware CUDA planner specs.",
+  "The PR recognizes BitNet I2_S/QK256 labels separately from dense regular-LLM FP16/BF16 labels.",
+  "Unknown and mismatched metadata remain unsupported under strict CUDA.",
+]
