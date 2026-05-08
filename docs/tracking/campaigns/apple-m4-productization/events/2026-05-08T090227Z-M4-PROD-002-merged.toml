@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T09:02:27Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-002"
+event = "merged"
+pr = 4020
+merge_sha = "a9c942dbfd4fbf652c7881c0481164248663f952"
+actor = "codex"
+
+notes = [
+  "M4-PROD-002 model cache commands merged.",
+  "Promoted M4-PROD-003 to ready for Mac-oriented check, ask, validate, and receipts-check CLI wrappers.",
+]

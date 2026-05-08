@@ -70,8 +70,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-PROD-002"
-status = "pr_open"
+status = "merged"
 pr = 4020
+merge_sha = "a9c942dbfd4fbf652c7881c0481164248663f952"
 branch = "codex/apple-m4-productization/M4-PROD-002-model-cache"
 stackable = false
 review_mode = "codex_premerge"
@@ -113,7 +114,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-PROD-003"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-productization/M4-PROD-003-mac-cli"
 stackable = false
 review_mode = "codex_premerge"
