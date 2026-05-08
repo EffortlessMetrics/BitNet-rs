@@ -38,11 +38,12 @@ Options:
           Batch size for processing
 
       --profile-set <PROFILE_SET>
-          Validation profile set. Use operator to measure 16/32/64 token warm-answer profiles
+          Validation profile set. Use operator for 16/32/64 profiles or performance for release-mode 16/32/64/128 profiles
 
           Possible values:
-          - smoke:    Run the deterministic smoke corpus once
-          - operator: Run bounded 16/32/64 warm-answer timing profiles and write an aggregate summary
+          - smoke:       Run the deterministic smoke corpus once
+          - operator:    Run bounded 16/32/64 warm-answer timing profiles and write an aggregate summary
+          - performance: Run release-mode 16/32/64/128 warm-answer timing profiles
 
           [default: smoke]
 

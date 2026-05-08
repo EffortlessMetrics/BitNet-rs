@@ -9,6 +9,7 @@ Campaign goals:
 - `apple-m4-operational`: `.codex/campaigns/apple-m4-operational/goal.md`
 - `apple-m4-productization`: `.codex/campaigns/apple-m4-productization/goal.md`
 - `apple-m4-slm-answer`: `.codex/campaigns/apple-m4-slm-answer/goal.md`
+- `apple-m4-slm-performance`: `.codex/campaigns/apple-m4-slm-performance/goal.md`
 - `cpu-proof`: `.codex/campaigns/cpu-proof/goal.md`
 - `cpu-qk256-performance`: `.codex/campaigns/cpu-qk256-performance/goal.md`
 - `intel-a770`: `.codex/campaigns/intel-a770/goal.md`
@@ -28,6 +29,7 @@ Campaign manifests:
 - `apple-m4-operational`: `docs/tracking/campaigns/apple-m4-operational/active.toml`
 - `apple-m4-productization`: `docs/tracking/campaigns/apple-m4-productization/active.toml`
 - `apple-m4-slm-answer`: `docs/tracking/campaigns/apple-m4-slm-answer/active.toml`
+- `apple-m4-slm-performance`: `docs/tracking/campaigns/apple-m4-slm-performance/active.toml`
 - `cpu-proof`: `docs/tracking/campaigns/cpu-proof/active.toml`
 - `cpu-qk256-performance`: `docs/tracking/campaigns/cpu-qk256-performance/active.toml`
 - `intel-a770`: `docs/tracking/campaigns/intel-a770/active.toml`

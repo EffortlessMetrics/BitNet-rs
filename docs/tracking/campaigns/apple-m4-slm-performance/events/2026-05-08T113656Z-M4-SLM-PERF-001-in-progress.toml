@@ -1,0 +1,11 @@
+timestamp = "2026-05-08T11:36:56Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started release-mode Apple M4 SLM performance baseline work.",
+  "Scope is performance profile plumbing, receipt validation, and campaign-local tracking only until live release receipts are produced.",
+  "No model binaries, BitNet quality claims, QK256, server inference, Neural Engine claims, or full apple-m4-metal inference claims.",
+]

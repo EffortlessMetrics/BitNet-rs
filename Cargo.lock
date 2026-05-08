@@ -528,6 +528,7 @@ dependencies = [
  "humantime",
  "indicatif",
  "insta",
+ "libc",
  "memmap2",
  "num_cpus",
  "predicates",
