@@ -9,6 +9,19 @@ This directory contains comprehensive documentation of the BitNet.cpp API discov
 
 ## Files in This Directory
 
+### wasm-inference-lane.md (New)
+**Purpose**: Receipt-backed WASM inference lane plan for turning scaffolded WASM support into real browser/client and WASM sandbox inference lanes.
+**Audience**: Runtime, WASM, loader, kernel, and proof-receipt contributors.
+
+**Contents**:
+- Current WASM foundations and claim boundaries
+- Explicit WASM backend identities
+- Separate model/tokenizer artifact contract
+- Memory, worker API, receipt, and fallback requirements
+- PR ladder from proof contract through official BitNet feasibility proof
+
+**When to use**: Planning and sequencing WASM inference work.
+
 ### 0. apple-silicon-backend-roadmap.md (New)
 **Purpose**: Phased implementation plan for Apple GPU/NPU support in BitNet-rs
 **Audience**: Runtime/kernel/inference contributors planning Apple backend work
