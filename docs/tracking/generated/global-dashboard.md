@@ -19,5 +19,5 @@
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | CUDA-ANSWER-011 | #4039 | pr_open | CUDA-DENSE-001 | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
-| slm-cpu | SLM-CPU-006 | #4031 | pr_open | none | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | SLM-CPU-006 | #4031 | ready | none | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | pr_open | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
