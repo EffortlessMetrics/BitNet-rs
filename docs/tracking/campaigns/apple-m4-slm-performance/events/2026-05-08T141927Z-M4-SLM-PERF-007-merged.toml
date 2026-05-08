@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T14:19:27Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-007"
+event = "merged"
+pr = 4081
+merge_sha = "7474cefe5e84703bc7e8bd2f99c304563f942820"
+actor = "codex"
+
+notes = [
+  "M4-SLM-PERF-007 measured Apple M4 SLM performance envelope PR merged.",
+  "The merged work publishes current-schema release baseline and allocation-audit receipts, a checked-in Metal phase receipt, and a bounded performance envelope for the named model, profiles, backend, and machine.",
+  "The apple-m4-slm-performance campaign is complete.",
+]

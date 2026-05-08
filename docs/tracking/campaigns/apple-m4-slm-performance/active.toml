@@ -1,6 +1,6 @@
 id = "apple-m4-slm-performance"
 title = "Apple M4 SLM performance"
-status = "active"
+status = "complete"
 
 objective = "Turn the working Apple M4 SLM answer path into a fast, efficient, repeatable local-answer engine by measuring release-mode warm-session bottlenecks, removing hot-loop overhead, improving CPU/NEON execution, expanding only parity-gated Metal phases, and keeping every speed claim tied to receipts."
 
@@ -317,8 +317,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-007"
-status = "pr_open"
+status = "merged"
 pr = 4081
+merge_sha = "7474cefe5e84703bc7e8bd2f99c304563f942820"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-007-performance-envelope"
 stackable = false
 review_mode = "codex_premerge"
