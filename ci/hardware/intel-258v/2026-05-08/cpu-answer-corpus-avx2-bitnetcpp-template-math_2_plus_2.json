@@ -1,0 +1,265 @@
+{
+  "artifact_kind": "bitnet_cpu_answer_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu"
+  },
+  "cases": [
+    {
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu",
+        "source": "answer_corpus_launcher"
+      },
+      "child_invocation": {
+        "args": [
+          "--device",
+          "cpu",
+          "run",
+          "--model",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+          "--prompt",
+          "What is 2+2? Answer with only the number.",
+          "--max-new-tokens",
+          "4",
+          "--temperature",
+          "0",
+          "--prompt-template",
+          "bitnetcpp-answer",
+          "--json-out",
+          "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-runs\\math_2_plus_2.json",
+          "--tokenizer",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json",
+          "--greedy",
+          "--deterministic",
+          "--strict-loader",
+          "--strict-tokenizer",
+          "--dump-logit-steps",
+          "1",
+          "--logits-topk",
+          "5",
+          "--assert-greedy"
+        ],
+        "environment_overrides": {
+          "BITNET_CPU_KERNEL": "avx2",
+          "BITNET_FORCE_SCALAR": "0",
+          "RUST_LOG": "warn"
+        },
+        "executable": "C:\\Code\\Rust\\BitNet-rs-arc140v004-opencl-smoke\\target\\debug\\bitnet.exe",
+        "expected_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-runs\\math_2_plus_2.json",
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-25140-1778225309477049500-2-phases.log",
+        "timeout_seconds": 420
+      },
+      "child_process": {
+        "crash_class": "timeout",
+        "exit_code": 1,
+        "exit_code_hex": "0x00000001",
+        "last_observed_phase": "prompt_prefill_start",
+        "phase_events": [
+          {
+            "child_phase": "process_start",
+            "details": {
+              "command": "run"
+            },
+            "timestamp": "2026-05-08T07:28:29.545173800+00:00"
+          },
+          {
+            "child_phase": "args_parsed",
+            "details": {
+              "has_tokenizer_path": true,
+              "json_out": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-runs\\math_2_plus_2.json",
+              "max_new_tokens": 4,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+              "prompt_template": "bitnetcpp-answer",
+              "requested_backend": "cpu"
+            },
+            "timestamp": "2026-05-08T07:28:29.546007800+00:00"
+          },
+          {
+            "child_phase": "backend_select_start",
+            "details": {
+              "requested_backend": "cpu",
+              "strict_backend": true
+            },
+            "timestamp": "2026-05-08T07:28:29.548994400+00:00"
+          },
+          {
+            "child_phase": "backend_select_complete",
+            "details": {
+              "fallback_reason": null,
+              "fallback_used": false,
+              "requested_backend": "cpu",
+              "runtime_api": "cpu",
+              "selected_backend": "cpu-rust"
+            },
+            "timestamp": "2026-05-08T07:28:29.549367300+00:00"
+          },
+          {
+            "child_phase": "model_load_start",
+            "details": {
+              "is_hf_directory": false,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf"
+            },
+            "timestamp": "2026-05-08T07:28:30.055410300+00:00"
+          },
+          {
+            "child_phase": "model_load_complete",
+            "details": {
+              "loader_mode": "real_gguf",
+              "model_load_ms": 86602.028
+            },
+            "timestamp": "2026-05-08T07:29:56.658168700+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_start",
+            "details": {
+              "has_tokenizer_path": true,
+              "strict_tokenizer": true
+            },
+            "timestamp": "2026-05-08T07:29:56.660348500+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_complete",
+            "details": {
+              "tokenizer_load_ms": 2087.012,
+              "tokenizer_source": "explicit",
+              "tokenizer_strict": true
+            },
+            "timestamp": "2026-05-08T07:29:58.747437200+00:00"
+          },
+          {
+            "child_phase": "prompt_render_start",
+            "details": {
+              "has_system_prompt": false,
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T07:29:58.751464500+00:00"
+          },
+          {
+            "child_phase": "prompt_render_complete",
+            "details": {
+              "rendered_prompt_bytes": 67,
+              "rendered_prompt_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T07:29:58.754198900+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_start",
+            "details": {
+              "bos_policy": true,
+              "parse_special": true
+            },
+            "timestamp": "2026-05-08T07:29:58.910907700+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_complete",
+            "details": {
+              "prompt_token_count": 19,
+              "prompt_tokenize_ms": 2.899
+            },
+            "timestamp": "2026-05-08T07:29:58.913798+00:00"
+          },
+          {
+            "child_phase": "prompt_prefill_start",
+            "details": {
+              "prefill_prefix_tokens": 18,
+              "prompt_token_count": 19,
+              "strict_cuda_backend_selected": false
+            },
+            "timestamp": "2026-05-08T07:29:58.917399100+00:00"
+          }
+        ],
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-25140-1778225309477049500-2-phases.log",
+        "receipt_observed": false,
+        "stderr_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-25140-1778225309477046400-1-stderr.log",
+        "stdout_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-25140-1778225309477018200-0-stdout.log",
+        "success": false,
+        "timed_out": true
+      },
+      "exit_code": 1,
+      "id": "math_2_plus_2",
+      "kernel": {
+        "family": null,
+        "requested_cpu_kernel": "avx2",
+        "selected_kernel": null,
+        "source": "missing_child_receipt"
+      },
+      "quality": {
+        "failed_rules": [
+          "timeout"
+        ],
+        "passed": false
+      },
+      "question": "What is 2+2? Answer with only the number.",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-runs\\math_2_plus_2.json",
+      "status": "timeout",
+      "stderr_tail": "answer_corpus_child_phase=process_start\nanswer_corpus_child_phase=args_parsed\nanswer_corpus_child_phase=backend_select_start\nanswer_corpus_child_phase=backend_select_complete\nΓä╣ Using QK256 quantization with AVX2 acceleration\nanswer_corpus_child_phase=model_load_start\nDEBUG from_gguf: Received config: hidden=2560, n_heads=20, n_kv_heads=5\nDEBUG from_gguf: Received 332 tensors, 210 raw QK256 tensors\nanswer_corpus_child_phase=model_load_complete\nanswer_corpus_child_phase=tokenizer_load_start\nanswer_corpus_child_phase=tokenizer_load_complete\nanswer_corpus_child_phase=prompt_render_start\nanswer_corpus_child_phase=prompt_render_complete\nanswer_corpus_child_phase=prompt_tokenize_start\nanswer_corpus_child_phase=prompt_tokenize_complete\nanswer_corpus_child_phase=prompt_prefill_start\n",
+      "stdout_tail": "Loading model from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf\nLoading tokenizer from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json\nInput tokens (19): [128000, 1502, 25, 3639, 374, 220, 17, 10, 17, 30]\nGenerating: User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+      "timeout_seconds": 420
+    }
+  ],
+  "claim_boundary": {
+    "broad_performance_claimed": false,
+    "coherent_answer_claimed": false,
+    "cuda_answer_corpus": false,
+    "diagnostic_only_until_answer_ready_artifact": true,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_answer_path": false,
+    "strict_cuda_answer_claimed": false
+  },
+  "corpus": {
+    "case_count": 5,
+    "description": "Fixed deterministic prompt set for answer-readiness baselines.",
+    "name": "strict-bitnet-answer-corpus-v1",
+    "path": "ci/quality/bitnet-answer-corpus.yaml",
+    "selected_case_count": 1,
+    "selected_case_ids": [
+      "math_2_plus_2"
+    ]
+  },
+  "generation": {
+    "default_max_new_tokens": 8,
+    "deterministic": true,
+    "logits_dump_steps": 1,
+    "logits_topk": 5,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 420,
+    "requested_cpu_kernel": "avx2",
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "architecture": null,
+    "fallback_loader_used": false,
+    "family": null,
+    "file": "ggml-model-i2_s.gguf",
+    "loader_mode": "real_gguf",
+    "path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+    "quant_format": null,
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": null,
+    "tokenizer": "externally_supplied_llama_bpe",
+    "tokenizer_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json"
+  },
+  "prompt_template": {
+    "family": "bitnetcpp-answer"
+  },
+  "quality_summary": {
+    "failed": 0,
+    "not_run": 0,
+    "passed": 0,
+    "timeout": 1,
+    "total": 1
+  },
+  "schema_version": "1.0.0",
+  "speedup_claim": false,
+  "timestamp": "2026-05-08T07:35:29.604262200+00:00"
+}

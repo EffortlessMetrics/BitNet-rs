@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T07:36:09Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-009"
+event = "ready"
+branch = "codex/intel-258v-platform/CPU258V-009-single-case-answer"
+base_sha = "0039a42b3072dbde905f02b157642bfc94847346"
+summary = "Readied CPU258V-009 to record a bounded single-case 258V AVX2 answer-corpus attempt."
+
+details = [
+  "CPU258V-008 made answer-corpus case selection available after the full BitNet.cpp-template AVX2 answer refresh timed out.",
+  "The selected math_2_plus_2 case still timed out within the 420-second local child-run window and emitted a missing_child_receipt row.",
+  "This is blocker evidence only and does not prove selected-case completion, answer quality, scalar/AVX2 parity, sustained throughput, Arc 140V execution, or Intel NPU execution.",
+]

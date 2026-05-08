@@ -25,6 +25,7 @@
 
 | CPU258V-007 | merged | #4006 | `codex/intel-258v-platform/CPU258V-007-answer-template-refresh` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record the first 258V AVX2 answer-corpus refresh using the BitNet.cpp answer-ready prompt envelope, preserving timeout rows and missing child receipts as blocker evidence without answer-quality, parity, speed, Arc, or NPU claims. |
 | CPU258V-008 | merged | #4008 | `codex/intel-258v-platform/CPU258V-008-answer-case-filter` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add an answer-corpus case-id filter so 258V answer-template refreshes can run one bounded corpus case at a time, preserving full corpus identity plus selected case IDs in the aggregate receipt without answer-quality, parity, speed, Arc, or NPU claims. |
+| CPU258V-009 | ready | TBD | `codex/intel-258v-platform/CPU258V-009-single-case-answer` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record a bounded 258V AVX2 answer-corpus attempt for a single BitNet.cpp-template case selected with --case-id, preserving the timeout row and missing child receipt as blocker evidence without answer-quality, parity, speed, Arc, or NPU claims. |
 
 ## Hard Constraints
 
