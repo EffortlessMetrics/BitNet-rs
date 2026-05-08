@@ -70,7 +70,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-PROD-002"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-productization/M4-PROD-002-model-cache"
 stackable = false
 review_mode = "codex_premerge"
@@ -87,6 +87,7 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "Cargo.lock",
   "crates/bitnet-cli/**",
   "crates/**/tests/**",
   "docs/slm/**",

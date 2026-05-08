@@ -60,6 +60,7 @@ Usage: bitnet [OPTIONS] [COMMAND]
 Commands:
   run                                Run simple text generation
   ask                                Ask one question using the answer-readiness generation path
+  model                              Fetch, verify, list, and prune supported local model artifacts
   tokenize                           Tokenize text and output token IDs as JSON
   score                              Calculate perplexity score for a model
   inference                          Run inference on a model
@@ -68,6 +69,7 @@ Commands:
   answer-parity                      Compare answer-corpus receipts for backend parity diagnostics
   reference-compare                  Validate an external-reference divergence artifact
   slm-warm-session                   Run multiple SLM prompts in one warm process with one model/tokenizer load
+  cpu-phase-warm-session             Run 258V CPU phase prompts in one warm strict BitNet process
   convert                            Convert between model formats
   benchmark                          Benchmark model performance
   serve                              Start inference server

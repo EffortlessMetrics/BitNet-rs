@@ -86,6 +86,7 @@ mod intel_arc;
 mod intel_npu;
 #[cfg(feature = "full-cli")]
 mod ln_rules;
+mod model_cache;
 mod score;
 pub mod tokenizer_discovery;
 
@@ -127,6 +128,7 @@ use commands::{
     ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
+use model_cache::ModelCommand;
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
 #[derive(Parser)]
@@ -431,6 +433,9 @@ enum Commands {
         #[arg(long, value_name = "PATH")]
         receipt_out: Option<std::path::PathBuf>,
     },
+
+    /// Fetch, verify, list, and prune supported local model artifacts
+    Model(ModelCommand),
 
     /// Tokenize text and output token IDs as JSON
     Tokenize {
@@ -1116,6 +1121,7 @@ async fn async_main() -> Result<()> {
             )
             .await
         }
+        Some(Commands::Model(cmd)) => cmd.execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Inference(cmd)) => (*cmd).execute(&config).await,
         #[cfg(feature = "full-cli")]

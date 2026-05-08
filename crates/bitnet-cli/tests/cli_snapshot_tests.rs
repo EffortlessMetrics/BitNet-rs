@@ -85,6 +85,36 @@ fn compat_check_help() {
     assert_snapshot!("compat_check_help", help);
 }
 
+#[test]
+fn model_help() {
+    let help = bitnet_stdout(&["model", "--help"]);
+    assert_snapshot!("model_help", help);
+}
+
+#[test]
+fn model_fetch_help() {
+    let help = bitnet_stdout(&["model", "fetch", "--help"]);
+    assert_snapshot!("model_fetch_help", help);
+}
+
+#[test]
+fn model_verify_help() {
+    let help = bitnet_stdout(&["model", "verify", "--help"]);
+    assert_snapshot!("model_verify_help", help);
+}
+
+#[test]
+fn model_list_help() {
+    let help = bitnet_stdout(&["model", "list", "--help"]);
+    assert_snapshot!("model_list_help", help);
+}
+
+#[test]
+fn model_prune_help() {
+    let help = bitnet_stdout(&["model", "prune", "--help"]);
+    assert_snapshot!("model_prune_help", help);
+}
+
 // ---------------------------------------------------------------------------
 // Error output for invalid / missing arguments
 // ---------------------------------------------------------------------------

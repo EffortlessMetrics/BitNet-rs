@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Remove cached model artifacts
+
+Usage: bitnet model prune [OPTIONS] [ID]
+
+Arguments:
+  [ID]  Supported model id to remove. Use --all to remove every supported artifact
+
+Options:
+      --all                Remove every supported cached artifact
+  -c, --config <PATH>      Configuration file path
+  -d, --device <DEVICE>    Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+      --dry-run            Show what would be removed without deleting files
+      --cache-dir <PATH>   Override cache root. Defaults to ~/.cache/bitnet-rs/models
+      --log-level <LEVEL>  Log level (trace, debug, info, warn, error)
+      --json               Emit JSON instead of text
+      --threads <N>        Number of CPU threads
+      --batch-size <SIZE>  Batch size for processing
+  -h, --help               Print help

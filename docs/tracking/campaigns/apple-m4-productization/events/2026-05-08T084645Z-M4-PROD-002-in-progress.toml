@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T08:46:45Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started storage-conscious model cache commands for supported Apple M4 SLM artifacts.",
+  "Scope is CLI cache management, docs, and campaign tracking; no model binaries, Metal kernels, QK256, qk256-dispatch, server inference, or broad performance claims.",
+]
