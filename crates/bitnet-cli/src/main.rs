@@ -8597,6 +8597,7 @@ fn allocation_samples_json(samples: &[AllocationAuditSnapshot]) -> serde_json::V
     })
 }
 
+#[cfg(feature = "full-cli")]
 struct WarmSessionPromptAllocationAudit<'a> {
     enabled: bool,
     prompt_tokenize: AllocationAuditSnapshot,
@@ -8613,6 +8614,7 @@ struct WarmSessionPromptAllocationAudit<'a> {
     receipt_construction: AllocationAuditSnapshot,
 }
 
+#[cfg(feature = "full-cli")]
 fn warm_session_prompt_allocation_audit_json(
     audit: WarmSessionPromptAllocationAudit<'_>,
 ) -> serde_json::Value {
@@ -8702,6 +8704,7 @@ fn warm_session_prompt_allocation_audit_json(
     })
 }
 
+#[cfg(feature = "full-cli")]
 fn warm_session_aggregate_allocation_audit_json(
     enabled: bool,
     prompt_summaries: &[serde_json::Value],
@@ -8768,12 +8771,14 @@ fn warm_session_aggregate_allocation_audit_json(
     })
 }
 
+#[cfg(feature = "full-cli")]
 struct AllocationHotspot {
     component: &'static str,
     alloc_count: u64,
     alloc_bytes: u64,
 }
 
+#[cfg(feature = "full-cli")]
 impl AllocationHotspot {
     fn to_json(&self) -> serde_json::Value {
         serde_json::json!({
@@ -8784,6 +8789,7 @@ impl AllocationHotspot {
     }
 }
 
+#[cfg(feature = "full-cli")]
 fn allocation_hotspot(
     component: &'static str,
     samples: &[AllocationAuditSnapshot],
