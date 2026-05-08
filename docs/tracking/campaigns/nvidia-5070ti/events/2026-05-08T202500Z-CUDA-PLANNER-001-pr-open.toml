@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T20:25:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-001"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-planner-001-model-aware"
+pr = 4127
+head_sha = "9d6700e6b0020e8e97fbb50a435b856ad2e55c7d"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4127 for the model-aware CUDA dispatch planner contract.",
+  "The PR adds additive planner types and tests that keep BitNet QK256 CUDA and dense regular-LLM CUDA route labels separate.",
+  "Strict CUDA unsupported routes are recorded as unsupported rather than silent CPU fallback.",
+]
