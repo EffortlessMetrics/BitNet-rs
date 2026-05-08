@@ -4167,6 +4167,18 @@ async fn run_simple_generation(
             strict_cuda_selected_artifact.then(|| nvidia_smi_memory_used_bytes(Some(0))).flatten();
         let cuda_memory_hwm_bytes =
             cuda_memory_before_bytes.into_iter().chain(cuda_memory_after_bytes).max();
+        let cuda_execution_residency = strict_cuda_selected_artifact.then(|| {
+            cuda_execution_residency_receipt(
+                &bitnet_linear_coverage,
+                cuda_weight_residency.as_ref(),
+                prompt_tokens_len,
+                generated_tokens.len(),
+                "cpu",
+                "per_run_incremental_decode",
+                if strict_cuda_short_decode_artifact { "short_decode" } else { "decode" },
+                "strict_cuda_ask_or_run",
+            )
+        });
         let expected_reference_path =
             strict_cuda_proof_artifact.then(|| strict_reference_receipt_path(&json_path));
         let strict_reference_receipt = match expected_reference_path.as_deref() {
@@ -4478,6 +4490,9 @@ async fn run_simple_generation(
         if strict_cuda_proof_artifact && let Some(object) = output.as_object_mut() {
             object.insert("claim".to_string(), serde_json::json!("strict_bitnet_cuda_inference"));
             object.insert("speedup_claim".to_string(), serde_json::json!(false));
+            if let Some(residency) = &cuda_execution_residency {
+                object.insert("cuda_execution_residency".to_string(), residency.clone());
+            }
             object.insert(
                 "reference_backend".to_string(),
                 serde_json::json!("amd-9950x3d-cpu-avx512"),
@@ -4565,6 +4580,9 @@ async fn run_simple_generation(
             object
                 .insert("claim".to_string(), serde_json::json!("strict_bitnet_cuda_short_decode"));
             object.insert("speedup_claim".to_string(), serde_json::json!(false));
+            if let Some(residency) = &cuda_execution_residency {
+                object.insert("cuda_execution_residency".to_string(), residency.clone());
+            }
             object.insert(
                 "reference_backend".to_string(),
                 serde_json::json!("amd-9950x3d-cpu-avx512"),
@@ -5898,6 +5916,16 @@ async fn run_cuda_warm_session(
         let coverage_after = bitnet_qk256_dispatch::qk256_dispatch_coverage();
         let coverage_delta = qk256_dispatch_coverage_delta(&coverage_before, &coverage_after);
         let residency_after = bitnet_qk256_dispatch::qk256_cuda_weight_residency();
+        let cuda_execution_residency = cuda_execution_residency_receipt(
+            &coverage_delta,
+            residency_after.as_ref(),
+            prompt_token_count,
+            generated_tokens.len(),
+            "cpu",
+            "recreated_per_turn_for_prompt_isolation",
+            "warm_session_turn",
+            "strict_cuda_warm_session_turn",
+        );
         let turn_receipt_path = receipt_dir.join(format!(
             "{:02}-{}.json",
             index + 1,
@@ -5994,6 +6022,7 @@ async fn run_cuda_warm_session(
                 "kernel_time_ms": serde_json::Value::Null,
             }],
             "execution_coverage": qk256_dispatch_coverage_receipt(&coverage_delta),
+            "cuda_execution_residency": cuda_execution_residency,
             "bitnet": {
                 "weight_quantization": if canonical_bitnet_model { "W1.58" } else { "unknown" },
                 "activation_quantization": if canonical_bitnet_model { "A8" } else { "unknown" },
@@ -6061,8 +6090,10 @@ async fn run_cuda_warm_session(
                 "fallback_used": backend_identity.fallback_used,
             },
             "execution_coverage": turn_receipt["execution_coverage"].clone(),
+            "cuda_execution_residency": turn_receipt["cuda_execution_residency"].clone(),
             "bitnet": turn_receipt["bitnet"].clone(),
             "session_reuse": turn_receipt["session_reuse"].clone(),
+            "prompt_tokens": prompt_token_count,
         }));
         turn_receipts.push(turn_receipt_path.display().to_string());
     }
@@ -6080,6 +6111,24 @@ async fn run_cuda_warm_session(
         && final_residency.as_ref().is_some_and(|value| !value.per_token_weight_upload);
     let speed_summary =
         speed_accumulator.receipt(model_load_ms, tokenizer_load_ms, total_session_ms);
+    let cuda_execution_residency = cuda_execution_residency_receipt(
+        &total_coverage,
+        final_residency.as_ref(),
+        turn_summaries
+            .iter()
+            .filter_map(|turn| turn["prompt_tokens"].as_u64())
+            .map(|value| value as usize)
+            .sum(),
+        turn_summaries
+            .iter()
+            .filter_map(|turn| turn["generated_tokens"].as_u64())
+            .map(|value| value as usize)
+            .sum(),
+        "cpu",
+        "recreated_per_turn_for_prompt_isolation",
+        "warm_session",
+        "strict_cuda_warm_session",
+    );
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "bitnet_cuda_warm_session",
@@ -6190,6 +6239,7 @@ async fn run_cuda_warm_session(
             "kernel_time_ms": serde_json::Value::Null,
         }],
         "execution_coverage": qk256_dispatch_coverage_receipt(&total_coverage),
+        "cuda_execution_residency": cuda_execution_residency,
         "bitnet": {
             "weight_quantization": if canonical_bitnet_model { "W1.58" } else { "unknown" },
             "activation_quantization": if canonical_bitnet_model { "A8" } else { "unknown" },
@@ -6294,6 +6344,149 @@ fn qk256_dispatch_coverage_receipt(
         "bitnet_linear_layers_cpu_fallback": coverage.bitnet_linear_layers_cpu_fallback,
         "unsupported_ops": coverage.unsupported_ops,
         "execution_claim": coverage.execution_claim,
+    })
+}
+
+fn cuda_execution_residency_receipt(
+    coverage: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    residency: Option<&bitnet_qk256_dispatch::Qk256CudaWeightResidency>,
+    prompt_tokens: usize,
+    generated_tokens: usize,
+    kv_cache_device: &str,
+    kv_cache_reuse_policy: &str,
+    execution_phase: &str,
+    coverage_scope: &str,
+) -> serde_json::Value {
+    let qk256_on_cuda = coverage.bitnet_linear_layers_on_cuda;
+    let qk256_cpu_fallback = coverage.bitnet_linear_layers_cpu_fallback;
+    let weight_handle_count = residency.map(|value| value.weight_handle_count).unwrap_or(0);
+    let weights_uploaded_once = residency.map(|value| value.weights_uploaded_once).unwrap_or(false);
+    let per_token_weight_upload =
+        residency.map(|value| value.per_token_weight_upload).unwrap_or(qk256_on_cuda > 0);
+    let qk256_residency = if qk256_on_cuda > 0 && qk256_cpu_fallback == 0 {
+        "cuda_resident_compute"
+    } else if qk256_on_cuda > 0 {
+        "mixed_cuda_and_cpu_fallback"
+    } else {
+        "not_observed"
+    };
+    let qk256_weight_status = if weight_handle_count > 0 && weights_uploaded_once {
+        "cuda_resident_upload_once_handles"
+    } else if weight_handle_count > 0 {
+        "cuda_handles_observed_without_upload_once_claim"
+    } else {
+        "not_observed"
+    };
+    let kv_cache_residency =
+        if kv_cache_device == "cuda" { "cuda_resident" } else { "cpu_resident" };
+    let non_resident_or_unmeasured_phases = [
+        "token_embeddings",
+        "rmsnorm",
+        "sub_layernorm",
+        "rope",
+        "attention_scores",
+        "attention_softmax",
+        "attention_value_mix",
+        "relu2_activation",
+        "kv_cache",
+        "lm_head",
+        "sampling",
+        "host_device_transfer_bytes",
+        "kernel_time_ms",
+    ];
+
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "coverage_scope": coverage_scope,
+        "execution_phase": execution_phase,
+        "full_cuda_residency_claimed": false,
+        "speedup_claim": false,
+        "prompt_and_decode": {
+            "prompt_tokens": prompt_tokens,
+            "generated_tokens": generated_tokens,
+        },
+        "qk256_bitnet_linears": {
+            "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+            "residency": qk256_residency,
+            "bitnet_linear_layers_total": coverage.bitnet_linear_layers_total,
+            "bitnet_linear_layers_on_cuda": qk256_on_cuda,
+            "bitnet_linear_layers_cpu_fallback": qk256_cpu_fallback,
+            "unsupported_ops": coverage.unsupported_ops,
+            "fallback_used": qk256_cpu_fallback > 0,
+        },
+        "weight_residency": {
+            "status": qk256_weight_status,
+            "weight_handle_count": weight_handle_count,
+            "weights_uploaded_once": weights_uploaded_once,
+            "per_token_weight_upload": per_token_weight_upload,
+            "scope": "qk256_cuda_weight_handles_only",
+        },
+        "kv_cache": {
+            "enabled": true,
+            "device": kv_cache_device,
+            "residency": kv_cache_residency,
+            "reuse_policy": kv_cache_reuse_policy,
+            "cuda_residency_claimed": kv_cache_device == "cuda",
+        },
+        "phase_residency": {
+            "token_embeddings": {
+                "residency": "cpu_resident_or_not_cuda_claimed",
+                "cuda_residency_claimed": false,
+            },
+            "rmsnorm": {
+                "residency": "cpu_resident_or_not_cuda_claimed",
+                "cuda_residency_claimed": false,
+            },
+            "sub_layernorm": {
+                "residency": "cpu_resident_or_not_cuda_claimed",
+                "cuda_residency_claimed": false,
+            },
+            "rope": {
+                "residency": "cpu_resident_or_not_cuda_claimed",
+                "cuda_residency_claimed": false,
+            },
+            "attention_scores": {
+                "residency": "cpu_resident_or_not_cuda_claimed",
+                "cuda_residency_claimed": false,
+            },
+            "attention_softmax": {
+                "residency": "cpu_resident_or_not_cuda_claimed",
+                "cuda_residency_claimed": false,
+            },
+            "attention_value_mix": {
+                "residency": "cpu_resident_or_not_cuda_claimed",
+                "cuda_residency_claimed": false,
+            },
+            "relu2_activation": {
+                "residency": "cpu_resident_or_not_cuda_claimed",
+                "cuda_residency_claimed": false,
+            },
+            "lm_head": {
+                "residency": "cpu_resident_or_not_cuda_claimed",
+                "cuda_residency_claimed": false,
+            },
+            "sampling": {
+                "residency": "cpu_resident",
+                "cuda_residency_claimed": false,
+            },
+        },
+        "host_device_transfer_accounting": {
+            "status": "not_measured",
+            "host_to_device_bytes": serde_json::Value::Null,
+            "device_to_host_bytes": serde_json::Value::Null,
+            "kernel_time_ms": serde_json::Value::Null,
+            "note": "QK256 routing and weight-handle residency are recorded; per-phase transfer bytes and kernel timings require a later benchmark/instrumentation gate.",
+        },
+        "unresident_or_unmeasured_phases": non_resident_or_unmeasured_phases,
+        "claim_boundary": {
+            "strict_cuda_answer_path": true,
+            "qk256_cuda_residency_claimed": qk256_on_cuda > 0 && qk256_cpu_fallback == 0,
+            "upload_once_weight_residency_claimed": weights_uploaded_once && !per_token_weight_upload,
+            "full_transformer_cuda_residency_claimed": false,
+            "kv_cache_cuda_residency_claimed": kv_cache_device == "cuda",
+            "transfer_timing_claimed": false,
+            "speedup_claim": false,
+        },
     })
 }
 
@@ -7748,6 +7941,7 @@ async fn run_ask_generation(
             "per_token_weight_upload": run_receipt["bitnet"]["per_token_weight_upload"].clone(),
         },
         "execution_coverage": run_receipt["execution_coverage"].clone(),
+        "cuda_execution_residency": run_receipt["cuda_execution_residency"].clone(),
         "quality": quality,
         "receipt": {
             "requested": !receipt_out_was_defaulted,
@@ -9294,6 +9488,89 @@ mod tests {
                 .join("cuda-answer-readiness")
                 .join("strict-cpu-ask-latest.json")
         );
+    }
+
+    #[test]
+    fn cuda_execution_residency_receipt_preserves_claim_boundary() {
+        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+            bitnet_linear_layers_total: 42,
+            bitnet_linear_layers_on_cuda: 42,
+            bitnet_linear_layers_cpu_fallback: 0,
+            unsupported_ops: Vec::new(),
+            execution_claim: "cuda_inference_contribution",
+        };
+        let residency = bitnet_qk256_dispatch::Qk256CudaWeightResidency {
+            weight_handle_count: 21,
+            weights_uploaded_once: true,
+            per_token_weight_upload: false,
+        };
+
+        let receipt = cuda_execution_residency_receipt(
+            &coverage,
+            Some(&residency),
+            18,
+            8,
+            "cpu",
+            "recreated_per_turn_for_prompt_isolation",
+            "warm_session_turn",
+            "strict_cuda_warm_session_turn",
+        );
+
+        assert_eq!(receipt["full_cuda_residency_claimed"], false);
+        assert_eq!(receipt["speedup_claim"], false);
+        assert_eq!(
+            receipt["qk256_bitnet_linears"]["kernel_id"],
+            bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID
+        );
+        assert_eq!(receipt["qk256_bitnet_linears"]["bitnet_linear_layers_on_cuda"], 42);
+        assert_eq!(receipt["qk256_bitnet_linears"]["bitnet_linear_layers_cpu_fallback"], 0);
+        assert_eq!(receipt["weight_residency"]["weights_uploaded_once"], true);
+        assert_eq!(receipt["weight_residency"]["per_token_weight_upload"], false);
+        assert_eq!(receipt["kv_cache"]["device"], "cpu");
+        assert_eq!(receipt["kv_cache"]["cuda_residency_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["upload_once_weight_residency_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["full_transformer_cuda_residency_claimed"], false);
+    }
+
+    #[test]
+    fn cuda_execution_residency_receipt_marks_non_linear_phases_not_resident() {
+        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+            bitnet_linear_layers_total: 2,
+            bitnet_linear_layers_on_cuda: 1,
+            bitnet_linear_layers_cpu_fallback: 1,
+            unsupported_ops: vec!["qk256_cpu_fallback".to_string()],
+            execution_claim: "cuda_inference_contribution",
+        };
+
+        let receipt = cuda_execution_residency_receipt(
+            &coverage,
+            None,
+            4,
+            1,
+            "cpu",
+            "per_run_incremental_decode",
+            "decode",
+            "strict_cuda_ask_or_run",
+        );
+
+        assert_eq!(receipt["qk256_bitnet_linears"]["residency"], "mixed_cuda_and_cpu_fallback");
+        assert_eq!(receipt["weight_residency"]["status"], "not_observed");
+        assert_eq!(receipt["phase_residency"]["rmsnorm"]["cuda_residency_claimed"], false);
+        assert_eq!(receipt["phase_residency"]["rope"]["cuda_residency_claimed"], false);
+        assert_eq!(
+            receipt["phase_residency"]["attention_softmax"]["cuda_residency_claimed"],
+            false
+        );
+        assert_eq!(receipt["phase_residency"]["sampling"]["residency"], "cpu_resident");
+        assert_eq!(receipt["host_device_transfer_accounting"]["status"], "not_measured");
+        assert!(
+            receipt["unresident_or_unmeasured_phases"]
+                .as_array()
+                .expect("phase list")
+                .iter()
+                .any(|value| value == "host_device_transfer_bytes")
+        );
+        assert_eq!(receipt["claim_boundary"]["qk256_cuda_residency_claimed"], false);
     }
 
     #[test]

@@ -4,4 +4,5 @@
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
 | apple-m4-slm-performance | M4-SLM-PERF-005 | #4069 | `codex/apple-m4-slm-performance/M4-SLM-PERF-005-metal-phase-expansion` | Expand only named Apple Metal prefill/projection phases after CPU baseline stability, requiring CPU-only versus CPU-plus-Metal greedy parity, Metal phase fallback_used=false, explicit CPU fallback for the rest of the pipeline, and timing delta receipts. |
+| nvidia-5070ti | CUDA-PROD-003 | #4073 | `codex/cuda-prod/CUDA-PROD-003-residency-coverage` | Add CUDA execution-residency coverage receipts for the strict RTX 5070 Ti answer path so QK256 linears, upload-once weights, KV cache, norms, RoPE, attention/softmax, LM head, sampling, host/device transfer accounting, and non-resident phases are visible without claiming speedup or full residency before coverage proves it. |
 | tracker-infra | TRACKER-003 | #3724 | `codex/tracker-infra/TRACKER-003-current-pr-reconciliation` | Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes. |

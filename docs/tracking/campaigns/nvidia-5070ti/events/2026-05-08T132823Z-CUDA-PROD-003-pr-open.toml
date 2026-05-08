@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T13:28:23Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-003"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-003-residency-coverage"
+pr = 4073
+head_sha = "b4f14534d29ce7e79f0f12435800b46963910272"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4073 to add CUDA execution-residency receipts for strict RTX 5070 Ti run, ask, and warm-session paths.",
+  "The PR keeps speedup_claim=false and full_cuda_residency_claimed=false while exposing QK256 CUDA coverage, upload-once weight residency, CPU-resident KV cache, and unmeasured transfer/timing phases.",
+  "No kernel, QK256 dispatch, transformer math, tokenizer, loader, server, speed, broad chat-quality, or full-residency claim is in scope.",
+]
