@@ -956,10 +956,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-PERF-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-bitnet-perf-003-warm-session-benchmark"
 pr = 4117
-head_sha = "8ae23e222dd40e8c1696f79f66a5cd0171218492"
+head_sha = "c15690ccfc9633e73c37372255c143b0e00ea602"
+merge_sha = "1351ab04b2d49dbb7402982984116bc3e799665e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
