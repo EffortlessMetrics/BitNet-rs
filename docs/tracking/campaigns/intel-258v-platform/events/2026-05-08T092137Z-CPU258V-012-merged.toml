@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T09:21:37Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-012"
+event = "merged"
+pr = 4022
+merge_sha = "9804aa706bbaec101a67bd8f2e23c5d8365291a4"
+summary = "Merged CPU258V-012, correcting BitNet b1.58 CPU mechanics and preserving the shared answer-quality finding."
+
+details = [
+  "BitNet b1.58 CPU construction now routes architecture defaults through RMSNorm and ReLU2.",
+  "The transformer FFN now honors configured activation instead of always applying SiLU.",
+  "Canonical BitNet run receipts now record tied token embeddings instead of an absent output.weight.",
+  "The strict scalar one-token raw fixture still produces a bad token after the mechanics correction, so the shared answer-quality issue remains open.",
+  "No answer-quality, scalar/AVX2 parity, sustained throughput, Arc 140V, or Intel NPU claims were added.",
+]
