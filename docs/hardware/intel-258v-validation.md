@@ -432,11 +432,12 @@ ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
 ```
 
 It points at the post-mechanics 258V CPU full-corpus parity receipts, the warm
-CPU phase receipts, the Arc 140V OpenCL tiny-kernel smoke receipt, and the NPU
-OpenVINO llama.cpp GGUF reference blocker receipt. This makes the available
-CPU, GPU, and NPU evidence discoverable from one artifact while preserving
-separate proof boundaries. It is not a cross-device performance comparison and
-does not imply that Arc 140V or Intel NPU run BitNet.
+CPU phase receipts, the Arc 140V OpenCL tiny-kernel smoke receipt, the live
+OpenVINO NPU runtime/smoke/subgraph receipts, and the NPU OpenVINO llama.cpp
+GGUF reference blocker receipt. This makes the available CPU, GPU, and NPU
+evidence discoverable from one artifact while preserving separate proof
+boundaries. It is not a cross-device performance comparison and does not imply
+that Arc 140V or Intel NPU run full BitNet inference.
 
 ## Windows PowerShell Bundle
 
@@ -613,7 +614,53 @@ Proof lanes:
 
 The platform profile ties the lanes together for comparison, but it does not merge their claims.
 
-## Current NPU Reference Evidence
+## Current NPU Live Evidence
+
+`NPU-010` records live OpenVINO 2026.1 evidence from the 258V laptop:
+
+```text
+ci/hardware/intel-258v/2026-05-08/npu-openvino-runtime-probe.json
+ci/hardware/intel-258v/2026-05-08/npu-openvino-tiny-graph-smoke.json
+ci/hardware/intel-258v/2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json
+ci/hardware/intel-258v/2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json
+```
+
+The runtime probe records OpenVINO
+`2026.1.0-21367-63e31528c62-releases/2026/1`, available devices `CPU`, `GPU`,
+and `NPU`, selected backend `intel-npu-openvino`, runtime device `NPU`, full
+device name `Intel(R) AI Boost`, driver version `1004512`, compiler version
+`458781`, total device memory `17179869184`, and `fallback_used=false`.
+
+The tiny graph smoke records static OpenVINO NPU execution for
+`tiny_matmul_add_f16_1x16` with `graph_execution=true`,
+`bitnet_inference=false`, `qk256_decode=false`, and `fallback_used=false`.
+
+The selected BitNet-shaped subgraph receipts record OpenVINO NPU parity for
+`bitnet_rmsnorm_f16_1x16` and
+`bitnet_linear_projection_f16_1x16x16` against CPU NumPy references. They record
+`proof_stage=parity_tested`, `runtime_api=openvino`, `runtime_device=NPU`,
+`fallback_used=false`, and CPU-reference error within the declared tolerance.
+
+Allowed claims:
+
+```text
+OpenVINO 2026.1 can see and select the Intel AI Boost NPU on this 258V laptop.
+The recorded tiny static graph executed on NPU with fallback_used=false.
+The recorded RMSNorm and linear-projection static BitNet-shaped subgraphs
+matched CPU NumPy references within tolerance on NPU.
+```
+
+Not allowed:
+
+```text
+Full BitNet inference works on Intel NPU.
+Native bitnet-rs NPU inference works.
+Intel NPU accelerates BitNet.
+Packed BitNet QK256 decode works on Intel NPU.
+CPU fallback satisfies NPU proof.
+```
+
+## External NPU Reference Evidence
 
 `NPU-009` tracks OpenVINO llama.cpp GGUF as an external Intel NPU reference
 lane. The first 258V receipt is:

@@ -2,7 +2,7 @@
   "schema": 1,
   "artifact_kind": "lunar_lake_platform_comparison_index",
   "machine_id": "intel-258v",
-  "captured_at_utc": "2026-05-08T13:38:16Z",
+  "captured_at_utc": "2026-05-08T14:00:01Z",
   "proof_stage": "comparison_indexed",
   "comparison_scope": "same_machine_artifact_index",
   "artifact_dates": [
@@ -22,7 +22,10 @@
     "cpu_answer_parity": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
     "arc140v_runtime_probe": "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json",
     "arc140v_opencl_smoke": "ci/hardware/intel-258v/2026-05-07/arc-140v-opencl-smoke.json",
-    "npu_runtime_probe": "ci/hardware/intel-258v/2026-05-06/npu-openvino-runtime-probe.json",
+    "npu_runtime_probe": "ci/hardware/intel-258v/2026-05-08/npu-openvino-runtime-probe.json",
+    "npu_openvino_tiny_graph_smoke": "ci/hardware/intel-258v/2026-05-08/npu-openvino-tiny-graph-smoke.json",
+    "npu_bitnet_rmsnorm_subgraph_parity": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
+    "npu_bitnet_linear_projection_subgraph_parity": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
     "npu_openvino_llamacpp_gguf_reference": "ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json"
   },
   "lanes": {
@@ -75,23 +78,31 @@
     },
     "npu": {
       "proof_label": "intel-npu-openvino",
-      "role": "Intel NPU OpenVINO reference and blocker lane",
-      "runtime_api": null,
+      "role": "Intel NPU OpenVINO graph and selected subgraph parity lane",
+      "runtime_api": "openvino",
       "requested_backend": "intel-npu",
-      "selected_backend": null,
+      "selected_backend": "intel-npu-openvino",
+      "runtime_device": "NPU",
       "proof_stages": [
         "runtime_detected",
-        "static_subgraph_parity_tracked",
-        "blocked_reference"
+        "kernel_smoke_tested",
+        "selected_static_subgraph_parity_tested",
+        "blocked_external_gguf_reference"
       ],
       "fallback_used": false,
-      "primary_artifact": "ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json",
-      "claim_allowed": "OpenVINO llama.cpp GGUF is tracked as an external Intel NPU reference lane and is currently blocked before execution in this local environment.",
+      "primary_artifact": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
+      "supporting_artifacts": [
+        "ci/hardware/intel-258v/2026-05-08/npu-openvino-runtime-probe.json",
+        "ci/hardware/intel-258v/2026-05-08/npu-openvino-tiny-graph-smoke.json",
+        "ci/hardware/intel-258v/2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
+        "ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json"
+      ],
+      "claim_allowed": "OpenVINO 2026.1 sees Intel AI Boost NPU on the 258V, executes the recorded tiny static graph on NPU, and executes the recorded RMSNorm and linear-projection static BitNet-shaped subgraphs on NPU with CPU NumPy parity.",
       "claims_not_allowed": [
         "Full BitNet inference works on Intel NPU.",
         "Native bitnet-rs NPU inference works.",
         "Intel NPU accelerates BitNet.",
-        "Packed BitNet QK256 GGUF decode works on Intel NPU.",
+        "Packed BitNet QK256 decode works on Intel NPU.",
         "CPU fallback satisfies NPU proof."
       ]
     }
@@ -112,7 +123,8 @@
   "may_claim": [
     "The repository has a same-machine 258V comparison index linking CPU, Arc 140V, and Intel NPU artifacts by path, backend identity, proof stage, and fallback status.",
     "The 258V CPU reference plate is available for later accelerator comparisons.",
-    "Arc 140V and Intel NPU evidence remain separately scoped and do not inherit CPU proof."
+    "Arc 140V and Intel NPU evidence remain separately scoped and do not inherit CPU proof.",
+    "Intel NPU live OpenVINO evidence includes runtime visibility, tiny static graph smoke, and selected static BitNet-shaped subgraph parity receipts."
   ],
   "must_not_claim": [
     "CPU, Arc 140V, and Intel NPU performance are comparable from this index.",

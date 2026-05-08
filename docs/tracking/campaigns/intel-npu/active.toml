@@ -396,3 +396,52 @@ must_not_claim = [
   "Packed BitNet QK256 GGUF decode works on Intel NPU.",
   "CPU fallback satisfies NPU proof.",
 ]
+
+[[work_item]]
+id = "NPU-010"
+status = "pr_open"
+pr = 4080
+branch = "codex/intel-npu/NPU-010-live-openvino-receipts"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["NPU-009"]
+acceptance = "Record live 258V OpenVINO 2026.1 Intel NPU runtime visibility, tiny static graph smoke, and selected BitNet RMSNorm and linear-projection static subgraph parity receipts with selected_backend=intel-npu-openvino, runtime_api=openvino, runtime_device=NPU, fallback_used=false, and no full BitNet inference, acceleration, QK256 decode, or CPU fallback proof claims."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/npu-openvino-runtime-probe.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/npu-openvino-tiny-graph-smoke.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
+  "Parse docs/tracking/campaigns/intel-npu/active.toml",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-npu-roadmap.md",
+  "docs/tracking/campaigns/intel-npu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+]
+may_claim = [
+  "OpenVINO 2026.1 sees Intel AI Boost NPU on the 258V and selects intel-npu-openvino.",
+  "The recorded tiny static OpenVINO graph executed on NPU with fallback_used=false.",
+  "The recorded RMSNorm and linear-projection static BitNet-shaped subgraphs executed on NPU and matched CPU NumPy references within tolerance.",
+]
+must_not_claim = [
+  "Full BitNet inference works on Intel NPU.",
+  "Native bitnet-rs NPU inference works.",
+  "Intel NPU accelerates BitNet.",
+  "Packed BitNet QK256 decode works on Intel NPU.",
+  "CPU fallback satisfies NPU proof.",
+]

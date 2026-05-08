@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T14:00:01Z"
+campaign = "intel-npu"
+item = "NPU-010"
+event = "ready"
+from = "proposed"
+to = "ready"
+actor = "codex"
+branch = "codex/intel-npu/NPU-010-live-openvino-receipts"
+summary = "Readied NPU-010 to record live OpenVINO NPU receipts from the 258V laptop."
+
+notes = [
+  "The local 258V environment now has OpenVINO 2026.1 available through a workspace-local Python target directory and reports CPU, GPU, and NPU devices.",
+  "NPU-010 records runtime visibility, tiny static graph smoke, and selected BitNet RMSNorm plus linear-projection static subgraph parity receipts.",
+  "The item remains docs/artifacts only and does not claim full BitNet inference, native bitnet-rs NPU inference, acceleration, packed QK256 decode, or CPU fallback proof.",
+]
