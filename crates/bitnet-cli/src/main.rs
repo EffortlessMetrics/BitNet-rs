@@ -640,6 +640,94 @@ enum Commands {
     },
 
     #[cfg(feature = "full-cli")]
+    /// Run strict RTX 5070 Ti CUDA prompts in one warm BitNet process
+    CudaWarmSession {
+        /// Model GGUF file path
+        #[arg(short, long)]
+        model: std::path::PathBuf,
+
+        /// Model format: auto (detect from path) or gguf
+        #[arg(long, value_name = "FORMAT", default_value = "auto")]
+        model_format: String,
+
+        /// Explicit tokenizer path; strict mode does not guess
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+
+        /// Prompt to answer; pass multiple times for a warm multi-turn session
+        #[arg(long = "prompt", value_name = "TEXT")]
+        prompts: Vec<String>,
+
+        /// Maximum new tokens to generate per prompt
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 8)]
+        max_new_tokens: usize,
+
+        /// Temperature for sampling (0 = greedy)
+        #[arg(long, default_value_t = 0.0)]
+        temperature: f32,
+
+        /// Top-k sampling (0 = disabled)
+        #[arg(long, default_value_t = 0)]
+        top_k: usize,
+
+        /// Top-p (nucleus) sampling
+        #[arg(long, default_value_t = 1.0)]
+        top_p: f32,
+
+        /// Repetition penalty
+        #[arg(long, default_value_t = 1.1)]
+        repetition_penalty: f32,
+
+        /// Random seed for reproducibility
+        #[arg(long)]
+        seed: Option<u64>,
+
+        /// Require strict tokenizer authority
+        #[arg(long, default_value_t = false)]
+        strict_tokenizer: bool,
+
+        /// Require real GGUF loader and strict backend routing
+        #[arg(long, default_value_t = false)]
+        strict_loader: bool,
+
+        /// Use greedy decoding (overrides temperature)
+        #[arg(long, default_value_t = false)]
+        greedy: bool,
+
+        /// Enable deterministic mode (single-threaded)
+        #[arg(long, default_value_t = false)]
+        deterministic: bool,
+
+        /// Number of threads to use (0 = all cores)
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Prompt template for all turns
+        #[arg(long, value_name = "TEMPLATE", default_value = "bitnetcpp-answer")]
+        prompt_template: String,
+
+        /// System prompt for chat models
+        #[arg(long, value_name = "TEXT")]
+        system_prompt: Option<String>,
+
+        /// Stop sequences (can be repeated for multiple sequences)
+        #[arg(long = "stop", value_name = "SEQ")]
+        stop: Vec<String>,
+
+        /// Stop token IDs (numeric token IDs, can be repeated)
+        #[arg(long = "stop-id", value_name = "ID")]
+        stop_id: Vec<u32>,
+
+        /// Fail after writing receipts if any turn fails the answer quality gate
+        #[arg(long, default_value_t = false)]
+        fail_on_quality: bool,
+
+        /// Output aggregate CUDA warm-session receipt
+        #[arg(long, value_name = "PATH")]
+        json_out: std::path::PathBuf,
+    },
+
+    #[cfg(feature = "full-cli")]
     /// Run 258V CPU phase prompts in one warm strict BitNet process
     CpuPhaseWarmSession {
         /// Model GGUF file path
@@ -1207,6 +1295,56 @@ async fn async_main() -> Result<()> {
                 allocation_audit,
                 min_generated_tokens,
                 min_distinct_generated_tokens,
+                json_out,
+            )
+            .await
+        }
+        #[cfg(feature = "full-cli")]
+        Some(Commands::CudaWarmSession {
+            model,
+            model_format,
+            tokenizer,
+            prompts,
+            max_new_tokens,
+            temperature,
+            top_k,
+            top_p,
+            repetition_penalty,
+            seed,
+            strict_tokenizer,
+            strict_loader,
+            greedy,
+            deterministic,
+            threads,
+            prompt_template,
+            system_prompt,
+            stop,
+            stop_id,
+            fail_on_quality,
+            json_out,
+        }) => {
+            run_cuda_warm_session(
+                &requested_backend_label,
+                model,
+                model_format,
+                tokenizer,
+                prompts,
+                max_new_tokens,
+                temperature,
+                top_k,
+                top_p,
+                repetition_penalty,
+                seed,
+                strict_tokenizer,
+                strict_loader,
+                greedy,
+                deterministic,
+                threads,
+                prompt_template,
+                system_prompt,
+                stop,
+                stop_id,
+                fail_on_quality,
                 json_out,
             )
             .await
@@ -5407,6 +5545,755 @@ fn cpu_phase_strict_profile_receipt(
             "stop_policy": "fixed_token_count_no_eos_stop",
         },
         "speedup_claim": false,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+#[cfg(feature = "full-cli")]
+async fn run_cuda_warm_session(
+    requested_backend_label: &str,
+    model_path: std::path::PathBuf,
+    model_format: String,
+    tokenizer_path: Option<std::path::PathBuf>,
+    prompts: Vec<String>,
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    repetition_penalty: f32,
+    seed: Option<u64>,
+    strict_tokenizer: bool,
+    strict_loader: bool,
+    greedy: bool,
+    deterministic: bool,
+    threads: usize,
+    prompt_template: String,
+    system_prompt: Option<String>,
+    stop: Vec<String>,
+    stop_id: Vec<u32>,
+    fail_on_quality: bool,
+    json_out: std::path::PathBuf,
+) -> Result<()> {
+    use bitnet_common::Device;
+    use bitnet_models::{Model, transformer::KVCache};
+    use bitnet_sampling::{SamplingConfig, SamplingStrategy};
+    use bitnet_tokenizers::Tokenizer;
+    use std::sync::Arc;
+
+    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+
+    if requested_backend_label != RTX_5070_TI_CUDA {
+        anyhow::bail!(
+            "cuda-warm-session requires --device {RTX_5070_TI_CUDA}; requested backend was {requested_backend_label}"
+        );
+    }
+    if prompts.len() < 2 {
+        anyhow::bail!("cuda-warm-session requires at least two --prompt values");
+    }
+    if !strict_loader {
+        anyhow::bail!("cuda-warm-session requires --strict-loader");
+    }
+    if !strict_tokenizer {
+        anyhow::bail!("cuda-warm-session requires --strict-tokenizer");
+    }
+    match model_format.as_str() {
+        "auto" | "gguf" => {}
+        other => {
+            anyhow::bail!(
+                "Invalid --model-format '{}'. cuda-warm-session supports GGUF only: auto, gguf",
+                other
+            );
+        }
+    }
+    if model_path.is_dir() {
+        anyhow::bail!(
+            "cuda-warm-session requires a GGUF model file, not a model directory: {}",
+            model_path.display()
+        );
+    }
+    if deterministic {
+        unsafe {
+            std::env::set_var("BITNET_DETERMINISTIC", "1");
+            std::env::set_var("RAYON_NUM_THREADS", "1");
+            if threads > 0 {
+                std::env::set_var("RAYON_NUM_THREADS", threads.to_string());
+            }
+        }
+    }
+    unsafe {
+        std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");
+        std::env::set_var("BITNET_STRICT_MODE", "1");
+    }
+
+    let backend_identity = resolve_run_backend_identity(requested_backend_label, true)?;
+    if backend_identity.selected_backend.as_str() != RTX_5070_TI_CUDA
+        || backend_identity.runtime_api.as_str() != "cuda"
+        || backend_identity.fallback_used
+    {
+        anyhow::bail!(
+            "cuda-warm-session requires strict RTX 5070 Ti CUDA routing; requested_backend={}, selected_backend={}, runtime_api={}, fallback_used={}, fallback_reason={:?}",
+            backend_identity.requested_backend,
+            backend_identity.selected_backend,
+            backend_identity.runtime_api,
+            backend_identity.fallback_used,
+            backend_identity.fallback_reason
+        );
+    }
+    if let Some(cuda_bin) = ensure_strict_cuda_runtime_libraries_visible()? {
+        debug!(
+            "added CUDA Toolkit bin directory to process PATH for strict CUDA warm session: {}",
+            cuda_bin.display()
+        );
+    }
+    bitnet_qk256_dispatch::reset_qk256_dispatch_coverage();
+    unsafe {
+        std::env::set_var("BITNET_REQUESTED_BACKEND", backend_identity.requested_backend.as_str());
+        std::env::set_var("BITNET_SELECTED_BACKEND", backend_identity.selected_backend.as_str());
+        std::env::set_var("BITNET_RUNTIME_API", backend_identity.runtime_api.as_str());
+        std::env::set_var("BITNET_STRICT_CUDA_BACKEND", "1");
+    }
+
+    let template_type: bitnet_inference::TemplateType =
+        prompt_template.parse().with_context(|| {
+            format!(
+                "Invalid prompt template '{}'. Supported: raw, instruct, llama3-chat, bitnetcpp-answer",
+                prompt_template
+            )
+        })?;
+    let temperature = if greedy { 0.0 } else { temperature };
+    let is_hf_directory = false;
+    let session_start = std::time::Instant::now();
+    let cuda_memory_before_bytes = nvidia_smi_memory_used_bytes(Some(0));
+
+    let loader = bitnet_models::loader::ModelLoader::new(Device::Cpu);
+    let load_config = bitnet_models::loader::LoadConfig {
+        use_mmap: true,
+        validate_checksums: false,
+        progress_callback: None,
+    };
+    println!("Strict CUDA warm session loading model once from: {}", model_path.display());
+    let model_load_start = std::time::Instant::now();
+    let loaded_model = loader.load_with_config(&model_path, &load_config).with_context(|| {
+        format!("Failed to load real model for CUDA warm session: {}", model_path.display())
+    })?;
+    let config = loaded_model.config().clone();
+    let model: Arc<dyn Model> = Arc::from(loaded_model);
+    let model_load_ms = elapsed_ms(model_load_start);
+    let loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
+    if loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str() {
+        anyhow::bail!("cuda-warm-session requires real_gguf loader mode; got {loader_mode}");
+    }
+
+    let tokenizer_load_start = std::time::Instant::now();
+    let tokenizer_resolution =
+        bitnet_tokenizers::auto::resolve_tokenizer(&model_path, tokenizer_path.as_deref(), true)
+            .with_context(|| format!("Failed to resolve tokenizer for {}", model_path.display()))?;
+    let tokenizer_load_ms = elapsed_ms(tokenizer_load_start);
+    let tokenizer_source = tokenizer_resolution.source;
+    let tokenizer_strict = tokenizer_resolution.strict;
+    let tokenizer: Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+    let tokenizer_source_str = tokenizer_source.as_str();
+    let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+    let pretokenizer_authority =
+        tokenizer_pretokenizer_authority(tokenizer_source, &tokenizer_label);
+    let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
+    let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
+    let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
+    let model_sha256 = compute_model_sha256(&model_path)?;
+    let model_repo = infer_model_repo(&model_path);
+    let canonical_bitnet_model = model_repo == "microsoft/bitnet-b1.58-2B-4T-gguf";
+    let model_architecture = infer_model_architecture(&model_path);
+    let model_family = receipt_model_family(&model_architecture);
+    let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
+    let model_file =
+        model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
+    let layout_source = layout_source_for_quantization(config.quantization.quantization_type);
+    let kernel_layout = kernel_layout_for_quantization(config.quantization.quantization_type);
+    let kernel_family = kernel_family_for_quantization(config.quantization.quantization_type);
+    let thread_count = effective_thread_count(threads);
+    let cpu_features = detected_cpu_feature_labels();
+    let cpu_model = detected_cpu_model_label();
+    let cuda_probe = bitnet_device_probe::probe_nvidia_cuda(Some(0));
+
+    let receipt_dir = json_out
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join(format!(
+            "{}-turns",
+            json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("cuda-warm-session")
+        ));
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("Failed to create {}", receipt_dir.display()))?;
+
+    let mut turn_receipts = Vec::with_capacity(prompts.len());
+    let mut turn_summaries = Vec::with_capacity(prompts.len());
+    let mut quality_failed_turns = Vec::new();
+    let mut speed_accumulator = WarmSessionSpeedAccumulator::default();
+    let mut first_cuda_forward_observed = false;
+
+    for (index, prompt) in prompts.iter().enumerate() {
+        let prompt_start = std::time::Instant::now();
+        let coverage_before = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+        let formatted_prompt = template_type.apply(prompt, system_prompt.as_deref());
+        let rendered_prompt_sha256 = compute_sha256_bytes(formatted_prompt.as_bytes());
+
+        let mut all_stop_sequences = stop.clone();
+        for template_stop in template_type.default_stop_sequences() {
+            if !all_stop_sequences.contains(&template_stop) {
+                all_stop_sequences.push(template_stop);
+            }
+        }
+        let mut all_stop_ids = stop_id.clone();
+        for template_id in template_type.resolve_stop_token_ids(tokenizer.as_ref()) {
+            if !all_stop_ids.contains(&template_id) {
+                all_stop_ids.push(template_id);
+            }
+        }
+
+        let bos_policy = template_type.should_add_bos();
+        let parse_special = template_type.parse_special();
+        let prompt_tokenize_start = std::time::Instant::now();
+        let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
+        ensure_non_empty_generation_context(&mut tokens, tokenizer.as_ref())?;
+        let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
+        let prompt_token_ids = tokens.clone();
+        let prompt_token_count = prompt_token_ids.len();
+        let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
+
+        let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+        let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
+        let mut sampler = SamplingStrategy::new(SamplingConfig {
+            temperature,
+            top_k: top_k as u32,
+            top_p,
+            repetition_penalty,
+            seed,
+        });
+        let mut generated_tokens = Vec::with_capacity(max_new_tokens);
+        let mut decode_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut embed_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut forward_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut logits_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut sample_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut token_decode_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut first_token_ms = None;
+        let mut first_token_decode_ms = None;
+        let mut stop_tail = String::with_capacity(max_stop_len.saturating_add(16));
+
+        let prefill_start = std::time::Instant::now();
+        let mut prefill_token_count = 0usize;
+        if tokens.len() > 1 {
+            for token in &tokens[..tokens.len() - 1] {
+                let x = model.embed(&[*token])?;
+                if !first_cuda_forward_observed {
+                    first_cuda_forward_observed = true;
+                }
+                let _ = model.forward(&x, any_cache.as_mut())?;
+                prefill_token_count += 1;
+            }
+        }
+        let prefill_ms = if prefill_token_count > 0 { elapsed_ms(prefill_start) } else { 0.0 };
+
+        for _step_idx in 0..max_new_tokens {
+            let decode_step_start = std::time::Instant::now();
+            let last_token = tokens.last().copied().expect("tokens must be non-empty");
+
+            let embed_start = std::time::Instant::now();
+            let x = model.embed(&[last_token])?;
+            embed_step_ms.push(elapsed_ms(embed_start));
+
+            let forward_start = std::time::Instant::now();
+            if !first_cuda_forward_observed {
+                first_cuda_forward_observed = true;
+            }
+            let h = model.forward(&x, any_cache.as_mut())?;
+            forward_step_ms.push(elapsed_ms(forward_start));
+
+            let last_hidden = extract_last_token_hidden(&h)?;
+            let logits_start = std::time::Instant::now();
+            let logits = model.logits(&last_hidden)?;
+            let logits_vec = extract_logits_2d(&logits)?;
+            logits_step_ms.push(elapsed_ms(logits_start));
+
+            let sample_start = std::time::Instant::now();
+            let next_token = sampler.sample(&logits_vec, &generated_tokens)?;
+            sample_step_ms.push(elapsed_ms(sample_start));
+
+            tokens.push(next_token);
+            generated_tokens.push(next_token);
+            if first_token_ms.is_none() {
+                first_token_ms = Some(prompt_start.elapsed().as_millis() as u64);
+            }
+
+            let token_decode_start = std::time::Instant::now();
+            let token_text = tokenizer.decode(&[next_token])?;
+            token_decode_step_ms.push(elapsed_ms(token_decode_start));
+            if max_stop_len > 0 {
+                stop_tail.push_str(&token_text);
+                if stop_tail.len() > max_stop_len {
+                    let cut = stop_tail.len() - max_stop_len;
+                    let mut safe_cut = cut;
+                    while safe_cut > 0 && !stop_tail.is_char_boundary(safe_cut) {
+                        safe_cut -= 1;
+                    }
+                    stop_tail.drain(..safe_cut);
+                }
+            }
+            let step_ms = elapsed_ms(decode_step_start);
+            if first_token_decode_ms.is_none() {
+                first_token_decode_ms = Some(step_ms);
+            }
+            decode_step_ms.push(step_ms);
+
+            if all_stop_ids.contains(&next_token) {
+                break;
+            }
+            if let Some(eos) = tokenizer.eos_token_id()
+                && next_token == eos
+            {
+                break;
+            }
+            if max_stop_len > 0
+                && !all_stop_sequences.is_empty()
+                && all_stop_sequences.iter().any(|pat| stop_tail.ends_with(pat))
+            {
+                break;
+            }
+        }
+
+        let generated_text = tokenizer.decode(&generated_tokens)?;
+        let run_receipt_for_quality = serde_json::json!({
+            "tokens": {
+                "generated": generated_tokens.len(),
+            },
+        });
+        let quality =
+            answer_quality_receipt(&generated_text, &run_receipt_for_quality, max_new_tokens);
+        if !quality["garbage_filter_passed"].as_bool().unwrap_or(false) {
+            quality_failed_turns.push(index);
+        }
+        let prompt_total_ms = elapsed_ms(prompt_start);
+        let decode_total_ms = decode_step_ms.iter().sum::<f64>();
+        let sampling_total_ms = sample_step_ms.iter().sum::<f64>();
+        let sampling_ms_per_token = if sample_step_ms.is_empty() {
+            None
+        } else {
+            Some(sampling_total_ms / sample_step_ms.len() as f64)
+        };
+        let decode_steady_state_tok_s =
+            steady_decode_tps_ms(&decode_step_ms).map(|value| (value * 1000.0).round() / 1000.0);
+        speed_accumulator.record(WarmSessionPromptSpeed {
+            prompt_tokens: prompt_token_count,
+            generated_tokens: generated_tokens.len(),
+            tokenize_ms: prompt_tokenize_ms,
+            prefill_ms,
+            decode_total_ms,
+            sampling_ms: sampling_total_ms,
+            prompt_total_ms,
+            first_token_ms: first_token_ms.map(|value| value as f64),
+            steady_decode_tok_s: decode_steady_state_tok_s,
+        });
+
+        let coverage_after = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+        let coverage_delta = qk256_dispatch_coverage_delta(&coverage_before, &coverage_after);
+        let residency_after = bitnet_qk256_dispatch::qk256_cuda_weight_residency();
+        let turn_receipt_path = receipt_dir.join(format!(
+            "{:02}-{}.json",
+            index + 1,
+            sanitize_warm_session_prompt_stem(prompt)
+        ));
+        let turn_receipt = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "bitnet_cuda_warm_session_turn",
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "session_artifact_path": json_out.display().to_string(),
+            "artifact_path": turn_receipt_path.display().to_string(),
+            "turn_index": index,
+            "requested_backend": backend_identity.requested_backend.as_str(),
+            "selected_backend": backend_identity.selected_backend.as_str(),
+            "runtime_api": backend_identity.runtime_api.as_str(),
+            "fallback_used": backend_identity.fallback_used,
+            "fallback_reason": backend_identity.fallback_reason.as_deref(),
+            "prompt": prompt,
+            "answer": generated_text,
+            "text": generated_text,
+            "prompt_render": {
+                "template": template_type.to_string(),
+                "rendered_text": formatted_prompt,
+                "rendered_sha256": rendered_prompt_sha256,
+                "add_bos": bos_policy,
+                "parse_special": parse_special,
+                "stop_sequences": all_stop_sequences,
+                "stop_token_ids": all_stop_ids,
+            },
+            "tokens": {
+                "prompt": prompt_token_count,
+                "generated": generated_tokens.len(),
+                "total": tokens.len(),
+                "prompt_ids": prompt_token_ids,
+                "generated_ids": generated_tokens.clone(),
+                "ids": generated_tokens.clone(),
+            },
+            "quality": quality,
+            "timing": {
+                "model_load_ms": 0.0,
+                "tokenizer_load_ms": 0.0,
+                "session_model_load_ms": rounded_ms(model_load_ms),
+                "session_tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+                "tokenize_ms": rounded_ms(prompt_tokenize_ms),
+                "prefill_ms": rounded_ms(prefill_ms),
+                "first_token_ms": first_token_ms,
+                "first_token_decode_ms": first_token_decode_ms.map(rounded_ms),
+                "decode_total_ms": rounded_ms(decode_total_ms),
+                "decode_steady_state_tok_s": decode_steady_state_tok_s,
+                "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
+                "total_ms": rounded_ms(prompt_total_ms),
+                "embed_ms": timing_samples_json(&embed_step_ms),
+                "forward_ms": timing_samples_json(&forward_step_ms),
+                "logits_ms": timing_samples_json(&logits_step_ms),
+                "sample_ms": timing_samples_json(&sample_step_ms),
+                "token_decode_ms": timing_samples_json(&token_decode_step_ms),
+            },
+            "model": {
+                "repo": model_repo.as_str(),
+                "file": model_file.as_str(),
+                "path": model_path.display().to_string(),
+                "sha256": model_sha256.as_str(),
+                "format": model_format_label.as_str(),
+                "family": model_family,
+                "architecture": model_architecture,
+                "loader_mode": loader_mode,
+                "fallback_loader_used": false,
+                "tokenizer": tokenizer_label.as_str(),
+                "vocab_size": tokenizer.vocab_size(),
+            },
+            "tokenizer": {
+                "type": tokenizer_type.as_str(),
+                "model_family": tokenizer_type.as_str(),
+                "source": tokenizer_source_str,
+                "strict": tokenizer_strict,
+                "pretokenizer_authority": pretokenizer_authority,
+                "bos": tokenizer.bos_token_id().unwrap_or(1),
+                "eos": tokenizer.eos_token_id().unwrap_or(2),
+            },
+            "kernel": {
+                "family": "qk256",
+                "implementation": "cuda",
+                "layout": kernel_layout,
+                "dequantizes_before_compute": false,
+                "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+            },
+            "kernel_stats": [{
+                "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+                "invocations": coverage_delta.bitnet_linear_layers_on_cuda,
+                "fallback_invocations": coverage_delta.bitnet_linear_layers_cpu_fallback,
+                "kernel_launches": coverage_delta.bitnet_linear_layers_on_cuda,
+                "host_to_device_bytes": serde_json::Value::Null,
+                "device_to_host_bytes": serde_json::Value::Null,
+                "kernel_time_ms": serde_json::Value::Null,
+            }],
+            "execution_coverage": qk256_dispatch_coverage_receipt(&coverage_delta),
+            "bitnet": {
+                "weight_quantization": if canonical_bitnet_model { "W1.58" } else { "unknown" },
+                "activation_quantization": if canonical_bitnet_model { "A8" } else { "unknown" },
+                "quantization": if canonical_bitnet_model { "W1.58A8" } else { "unknown" },
+                "kernel_format": kernel_family,
+                "kernel_family": kernel_family,
+                "execution_phase": "warm_session_turn",
+                "layout_source": layout_source,
+                "weights_uploaded_once": residency_after.as_ref().map(|value| value.weights_uploaded_once).unwrap_or(false),
+                "per_token_weight_upload": residency_after.as_ref().map(|value| value.per_token_weight_upload).unwrap_or(true),
+                "weight_handle_count": residency_after.as_ref().map(|value| value.weight_handle_count).unwrap_or(0),
+            },
+            "prompt_prefill": {
+                "exercised": prefill_token_count > 0,
+                "tokens": prefill_token_count,
+                "kv_cache_behavior": if prefill_token_count > 0 {
+                    "prompt_prefix_prefilled_before_decode"
+                } else {
+                    "single_token_prompt_no_prefix_prefill"
+                },
+            },
+            "kv_cache": {
+                "enabled": true,
+                "mode": "incremental_decode",
+                "device": "cpu",
+                "reuse_policy": "recreated_per_turn_for_prompt_isolation",
+                "prompt_tokens": prompt_token_count,
+                "generated_tokens": generated_tokens.len(),
+                "decode_steps": generated_tokens.len(),
+            },
+            "session_reuse": {
+                "reuse_scope": "resident_cuda_warm_session",
+                "model_loaded_once": true,
+                "tokenizer_loaded_once": true,
+                "cuda_context_reuse_policy": "single_process_thread_local_qk256_context_after_session_reset",
+                "qk256_weight_reuse_policy": "upload_once_handles_reused_across_turns",
+                "weights_uploaded_once": residency_after.as_ref().map(|value| value.weights_uploaded_once).unwrap_or(false),
+                "per_token_weight_upload": residency_after.as_ref().map(|value| value.per_token_weight_upload).unwrap_or(true),
+                "kv_cache_reuse_policy": "recreated_per_turn_for_prompt_isolation",
+                "full_transformer_cuda_residency_claimed": false,
+            },
+            "claim_boundary": {
+                "strict_cuda_warm_session": true,
+                "answer_readiness_scope": "deterministic_prompts_only",
+                "broad_chat_quality_claim": false,
+                "speedup_claim": false,
+                "server_readiness_claim": false,
+                "full_cuda_residency_claimed": false,
+            },
+            "speedup_claim": false,
+        });
+        write_json_output(Some(&turn_receipt_path), &turn_receipt)?;
+        println!("Turn {}: {}", index + 1, strip_answer_special_markers(&generated_text).trim());
+        turn_summaries.push(serde_json::json!({
+            "turn_index": index,
+            "prompt": prompt,
+            "answer": turn_receipt["answer"].clone(),
+            "receipt_path": turn_receipt_path.display().to_string(),
+            "generated_tokens": generated_tokens.len(),
+            "generated_token_ids": generated_tokens.clone(),
+            "quality": turn_receipt["quality"].clone(),
+            "backend": {
+                "selected_backend": backend_identity.selected_backend.as_str(),
+                "runtime_api": backend_identity.runtime_api.as_str(),
+                "fallback_used": backend_identity.fallback_used,
+            },
+            "execution_coverage": turn_receipt["execution_coverage"].clone(),
+            "bitnet": turn_receipt["bitnet"].clone(),
+            "session_reuse": turn_receipt["session_reuse"].clone(),
+        }));
+        turn_receipts.push(turn_receipt_path.display().to_string());
+    }
+
+    let total_session_ms = elapsed_ms(session_start);
+    let total_coverage = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+    let final_residency = bitnet_qk256_dispatch::qk256_cuda_weight_residency();
+    let cuda_memory_after_bytes = nvidia_smi_memory_used_bytes(Some(0));
+    let cuda_memory_hwm_bytes =
+        cuda_memory_before_bytes.into_iter().chain(cuda_memory_after_bytes).max();
+    let quality_passed = quality_failed_turns.is_empty();
+    let strict_cuda_session_passed = total_coverage.bitnet_linear_layers_on_cuda > 0
+        && total_coverage.bitnet_linear_layers_cpu_fallback == 0
+        && final_residency.as_ref().is_some_and(|value| value.weights_uploaded_once)
+        && final_residency.as_ref().is_some_and(|value| !value.per_token_weight_upload);
+    let speed_summary =
+        speed_accumulator.receipt(model_load_ms, tokenizer_load_ms, total_session_ms);
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_cuda_warm_session",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": backend_identity.requested_backend.as_str(),
+        "selected_backend": backend_identity.selected_backend.as_str(),
+        "runtime_api": backend_identity.runtime_api.as_str(),
+        "fallback_used": backend_identity.fallback_used,
+        "fallback_reason": backend_identity.fallback_reason.as_deref(),
+        "session": {
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "cuda_context_initialized_once": strict_cuda_session_passed,
+            "cuda_context_reuse_policy": "single_process_thread_local_qk256_context_after_session_reset",
+            "qk256_weights_uploaded_once": final_residency.as_ref().map(|value| value.weights_uploaded_once).unwrap_or(false),
+            "per_token_weight_upload": final_residency.as_ref().map(|value| value.per_token_weight_upload).unwrap_or(true),
+            "turn_count": prompts.len(),
+            "per_turn_receipt_dir": receipt_dir.display().to_string(),
+            "per_turn_receipts": turn_receipts,
+            "kv_cache_reuse_policy": "recreated_per_turn_for_prompt_isolation",
+        },
+        "generation": {
+            "mode": if greedy { "greedy" } else { "sampling" },
+            "temperature": temperature,
+            "top_k": top_k,
+            "top_p": top_p,
+            "repetition_penalty": repetition_penalty,
+            "deterministic": deterministic,
+            "max_new_tokens": max_new_tokens,
+            "prompt_template": prompt_template,
+        },
+        "model": {
+            "repo": model_repo.as_str(),
+            "file": model_file.as_str(),
+            "path": model_path.display().to_string(),
+            "sha256": model_sha256.as_str(),
+            "format": model_format_label.as_str(),
+            "family": model_family,
+            "architecture": model_architecture,
+            "loader_mode": loader_mode,
+            "fallback_loader_used": false,
+            "tokenizer": tokenizer_label.as_str(),
+            "vocab_size": tokenizer.vocab_size(),
+        },
+        "tokenizer": {
+            "type": tokenizer_type.as_str(),
+            "model_family": tokenizer_type.as_str(),
+            "source": tokenizer_source_str,
+            "strict": tokenizer_strict,
+            "pretokenizer_authority": pretokenizer_authority,
+            "bos": tokenizer.bos_token_id().unwrap_or(1),
+            "eos": tokenizer.eos_token_id().unwrap_or(2),
+        },
+        "timing": {
+            "model_load_ms": rounded_ms(model_load_ms),
+            "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+            "total_session_ms": rounded_ms(total_session_ms),
+        },
+        "speed": speed_summary,
+        "backend": {
+            "requested_backend": backend_identity.requested_backend.as_str(),
+            "selected_backend": backend_identity.selected_backend.as_str(),
+            "runtime_api": backend_identity.runtime_api.as_str(),
+            "fallback_used": backend_identity.fallback_used,
+            "fallback_reason": backend_identity.fallback_reason.as_deref(),
+        },
+        "cuda": {
+            "available": cuda_probe.available,
+            "device_count": cuda_probe.device_count,
+            "device_index": cuda_probe.selected_device_index,
+            "device_name": cuda_probe.selected_device_name,
+            "compute_capability": cuda_probe.compute_capability,
+            "driver_version": cuda_probe.driver_version,
+            "cuda_runtime_version": cuda_probe.cuda_runtime_version,
+            "cuda_toolkit_version": cuda_probe.cuda_toolkit_version,
+            "nvrtc_version": cuda_probe.nvrtc_version,
+            "vram_bytes": cuda_probe.vram_bytes,
+            "memory_used_before_bytes": cuda_memory_before_bytes,
+            "memory_used_after_bytes": cuda_memory_after_bytes,
+            "memory_hwm_bytes": cuda_memory_hwm_bytes,
+            "memory_hwm_source": "nvidia-smi-memory.used-sampled",
+        },
+        "cpu": {
+            "model": cpu_model.as_str(),
+            "arch": std::env::consts::ARCH,
+            "features": &cpu_features,
+            "threads": thread_count,
+        },
+        "counts": {
+            "n_kv": n_kv,
+            "n_tensors": n_tensors,
+        },
+        "kernel": {
+            "family": "qk256",
+            "implementation": "cuda",
+            "layout": kernel_layout,
+            "dequantizes_before_compute": false,
+            "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+        },
+        "kernel_stats": [{
+            "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+            "invocations": total_coverage.bitnet_linear_layers_on_cuda,
+            "fallback_invocations": total_coverage.bitnet_linear_layers_cpu_fallback,
+            "kernel_launches": total_coverage.bitnet_linear_layers_on_cuda,
+            "host_to_device_bytes": serde_json::Value::Null,
+            "device_to_host_bytes": serde_json::Value::Null,
+            "kernel_time_ms": serde_json::Value::Null,
+        }],
+        "execution_coverage": qk256_dispatch_coverage_receipt(&total_coverage),
+        "bitnet": {
+            "weight_quantization": if canonical_bitnet_model { "W1.58" } else { "unknown" },
+            "activation_quantization": if canonical_bitnet_model { "A8" } else { "unknown" },
+            "quantization": if canonical_bitnet_model { "W1.58A8" } else { "unknown" },
+            "kernel_format": kernel_family,
+            "kernel_family": kernel_family,
+            "execution_phase": "warm_session",
+            "layout_source": layout_source,
+            "weights_uploaded_once": final_residency.as_ref().map(|value| value.weights_uploaded_once).unwrap_or(false),
+            "per_token_weight_upload": final_residency.as_ref().map(|value| value.per_token_weight_upload).unwrap_or(true),
+            "weight_handle_count": final_residency.as_ref().map(|value| value.weight_handle_count).unwrap_or(0),
+        },
+        "quality_summary": {
+            "passed": quality_passed,
+            "failed_turn_indices": quality_failed_turns,
+            "fail_on_quality": fail_on_quality,
+        },
+        "strict_session_validation": {
+            "passed": strict_cuda_session_passed,
+            "cuda_kernel_invocations_gt_zero": total_coverage.bitnet_linear_layers_on_cuda > 0,
+            "bitnet_linear_layers_cpu_fallback": total_coverage.bitnet_linear_layers_cpu_fallback,
+            "weights_uploaded_once": final_residency.as_ref().map(|value| value.weights_uploaded_once).unwrap_or(false),
+            "per_token_weight_upload": final_residency.as_ref().map(|value| value.per_token_weight_upload).unwrap_or(true),
+        },
+        "turns": turn_summaries,
+        "claim_boundary": {
+            "strict_cuda_warm_session": true,
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "cuda_context_reused": strict_cuda_session_passed,
+            "qk256_weight_handles_reused": final_residency.as_ref().map(|value| value.weight_handle_count > 0).unwrap_or(false),
+            "answer_readiness_scope": "deterministic_prompts_only",
+            "broad_chat_quality_claim": false,
+            "speedup_claim": false,
+            "server_readiness_claim": false,
+            "full_cuda_residency_claimed": false,
+            "kv_cache_reuse_claimed": false,
+        },
+        "speedup_claim": false,
+    });
+    write_json_output(Some(&json_out), &aggregate)?;
+    println!(
+        "CUDA warm session receipt written to {} ({} turns, model/tokenizer loaded once)",
+        json_out.display(),
+        prompts.len()
+    );
+    if !strict_cuda_session_passed {
+        anyhow::bail!(
+            "strict CUDA warm-session validation failed after writing receipt: {}",
+            aggregate["strict_session_validation"]
+        );
+    }
+    if fail_on_quality && !quality_passed {
+        anyhow::bail!(
+            "CUDA warm-session answer quality gate failed after writing receipt: {}",
+            aggregate["quality_summary"]
+        );
+    }
+    Ok(())
+}
+
+#[cfg(feature = "full-cli")]
+fn qk256_dispatch_coverage_delta(
+    before: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    after: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+) -> bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+    let cpu_fallback = after
+        .bitnet_linear_layers_cpu_fallback
+        .saturating_sub(before.bitnet_linear_layers_cpu_fallback);
+    let unsupported_after =
+        after.unsupported_ops.iter().cloned().collect::<std::collections::BTreeSet<_>>();
+    let unsupported_before =
+        before.unsupported_ops.iter().cloned().collect::<std::collections::BTreeSet<_>>();
+    bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+        bitnet_linear_layers_total: after
+            .bitnet_linear_layers_total
+            .saturating_sub(before.bitnet_linear_layers_total),
+        bitnet_linear_layers_on_cuda: after
+            .bitnet_linear_layers_on_cuda
+            .saturating_sub(before.bitnet_linear_layers_on_cuda),
+        bitnet_linear_layers_cpu_fallback: cpu_fallback,
+        unsupported_ops: unsupported_after
+            .difference(&unsupported_before)
+            .cloned()
+            .collect::<Vec<_>>(),
+        execution_claim: if after.bitnet_linear_layers_on_cuda > before.bitnet_linear_layers_on_cuda
+        {
+            "cuda_inference_contribution"
+        } else {
+            after.execution_claim
+        },
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn qk256_dispatch_coverage_receipt(
+    coverage: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+) -> serde_json::Value {
+    serde_json::json!({
+        "bitnet_linear_layers_total": coverage.bitnet_linear_layers_total,
+        "bitnet_linear_layers_on_cuda": coverage.bitnet_linear_layers_on_cuda,
+        "bitnet_linear_layers_cpu_fallback": coverage.bitnet_linear_layers_cpu_fallback,
+        "unsupported_ops": coverage.unsupported_ops,
+        "execution_claim": coverage.execution_claim,
     })
 }
 
