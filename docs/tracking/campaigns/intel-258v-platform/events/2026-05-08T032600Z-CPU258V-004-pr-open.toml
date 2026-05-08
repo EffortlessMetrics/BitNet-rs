@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T03:26:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-004"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 3981
+head_sha = "b2d1c926121a11bfd2749d1820de0d3dce34d978"
+actor = "codex"
+
+notes = [
+  "Opened #3981 to require token-count thresholds before promoting 258V decode_128 or prefill_512 CPU phase evidence.",
+  "The PR keeps existing one-token 258V CPU proof receipts as explicit not_run gaps for decode_128 and prefill_512 rather than treating short proxy evidence as measured.",
+  "This is CPU phase receipt hardening only; it does not claim sustained throughput, Arc 140V performance, Intel NPU performance, or new model execution.",
+]

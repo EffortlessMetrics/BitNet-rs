@@ -480,7 +480,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-004"
-status = "ready"
+status = "pr_open"
+pr = 3981
 branch = "codex/intel-258v-platform/CPU258V-004-phase-thresholds"
 stackable = false
 review_mode = "codex_premerge"
