@@ -26,6 +26,13 @@ pub enum ModelArchitecture {
     Qwen,
     /// Gemma family (Gemma / Gemma-2)
     Gemma,
+    /// Gemma 4 family (E2B/E4B dense, 31B dense, 26B-A4B MoE).
+    ///
+    /// This is intentionally distinct from [`ModelArchitecture::Gemma`] because
+    /// Gemma 4 requires variant-specific metadata such as PLE/shared-KV for E
+    /// variants, hybrid sliding/global attention, and future-gated MoE or
+    /// multimodal support.
+    Gemma4,
     /// Mistral / Mixtral
     Mistral,
     /// LLaMA family (LLaMA / LLaMA-2 / LLaMA-3)
@@ -126,6 +133,7 @@ impl std::fmt::Display for ModelArchitecture {
             Self::Phi => write!(f, "phi"),
             Self::Qwen => write!(f, "qwen"),
             Self::Gemma => write!(f, "gemma"),
+            Self::Gemma4 => write!(f, "gemma4"),
             Self::Mistral => write!(f, "mistral"),
             Self::Llama => write!(f, "llama"),
             Self::SmolLM => write!(f, "smollm"),
@@ -216,6 +224,13 @@ pub fn detect_architecture(model_name: &str) -> ModelArchitecture {
     if lower.contains("qwen") {
         return ModelArchitecture::Qwen;
     }
+    if lower.contains("gemma-4")
+        || lower.contains("gemma4")
+        || lower.contains("gemma_4")
+        || lower.contains("gemma 4")
+    {
+        return ModelArchitecture::Gemma4;
+    }
     if lower.contains("gemma") {
         return ModelArchitecture::Gemma;
     }
@@ -287,6 +302,15 @@ pub fn get_defaults(arch: &ModelArchitecture) -> ArchitectureConfig {
             max_context: 8192,
             vocab_size: 256_000,
             typical_hidden_size: 3072,
+        },
+        ModelArchitecture::Gemma4 => ArchitectureConfig {
+            architecture: ModelArchitecture::Gemma4,
+            activation: ActivationType::Gelu,
+            normalization: NormType::RmsNorm,
+            rope_base: 10_000.0,
+            max_context: 131_072,
+            vocab_size: 262_144,
+            typical_hidden_size: 2304,
         },
         ModelArchitecture::Mistral => ArchitectureConfig {
             architecture: ModelArchitecture::Mistral,
@@ -442,6 +466,7 @@ pub fn supported_architectures() -> Vec<ModelArchitecture> {
         ModelArchitecture::Phi,
         ModelArchitecture::Qwen,
         ModelArchitecture::Gemma,
+        ModelArchitecture::Gemma4,
         ModelArchitecture::Mistral,
         ModelArchitecture::Llama,
         ModelArchitecture::SmolLM,
@@ -475,6 +500,7 @@ mod tests {
         assert_eq!(detect_architecture("microsoft/phi-4"), ModelArchitecture::Phi);
         assert_eq!(detect_architecture("Qwen/Qwen2.5-7B"), ModelArchitecture::Qwen);
         assert_eq!(detect_architecture("google/gemma-2-9b"), ModelArchitecture::Gemma);
+        assert_eq!(detect_architecture("google/gemma-4-E2B-it"), ModelArchitecture::Gemma4);
         assert_eq!(detect_architecture("mistralai/Mistral-7B-v0.1"), ModelArchitecture::Mistral);
         assert_eq!(detect_architecture("meta-llama/Llama-3-8B"), ModelArchitecture::Llama);
         assert_eq!(detect_architecture("microsoft/BitNet-b1.58-2B-4T"), ModelArchitecture::BitNet,);
@@ -489,6 +515,8 @@ mod tests {
         assert_eq!(detect_architecture("qwen2"), ModelArchitecture::Qwen);
         assert_eq!(detect_architecture("qwen3"), ModelArchitecture::Qwen);
         assert_eq!(detect_architecture("gemma"), ModelArchitecture::Gemma);
+        assert_eq!(detect_architecture("gemma4"), ModelArchitecture::Gemma4);
+        assert_eq!(detect_architecture("gemma-4-26B-A4B-it"), ModelArchitecture::Gemma4);
         assert_eq!(detect_architecture("bitnet"), ModelArchitecture::BitNet);
         assert_eq!(detect_architecture("falcon"), ModelArchitecture::Falcon);
         assert_eq!(detect_architecture("mpt"), ModelArchitecture::Mpt);
@@ -501,6 +529,7 @@ mod tests {
         assert_eq!(detect_architecture("LLAMA"), ModelArchitecture::Llama);
         assert_eq!(detect_architecture("BitNet"), ModelArchitecture::BitNet);
         assert_eq!(detect_architecture("Gemma2"), ModelArchitecture::Gemma);
+        assert_eq!(detect_architecture("Gemma 4"), ModelArchitecture::Gemma4);
     }
 
     #[test]
@@ -607,6 +636,16 @@ mod tests {
         assert_eq!(cfg.rope_base, 10_000.0);
         assert_eq!(cfg.max_context, 8192);
         assert_eq!(cfg.vocab_size, 256_000);
+    }
+
+    #[test]
+    fn defaults_gemma4() {
+        let cfg = get_defaults(&ModelArchitecture::Gemma4);
+        assert_eq!(cfg.activation, ActivationType::Gelu);
+        assert_eq!(cfg.normalization, NormType::RmsNorm);
+        assert_eq!(cfg.rope_base, 10_000.0);
+        assert_eq!(cfg.max_context, 131_072);
+        assert_eq!(cfg.vocab_size, 262_144);
     }
 
     #[test]
