@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T04:52:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-003"
+event = "merged"
+pr = 3993
+merge_sha = "04ab0e65551a4e4acc0c17c937cb92def3be1759"
+actor = "codex"
+
+notes = [
+  "BitNet CPU reference-divergence artifact validation merged in #3993.",
+  "The merge gives strict CPU answer failures a known-good reference comparison surface while preserving the no answer-quality, throughput, server, GPU, or NPU claim boundary.",
+]
