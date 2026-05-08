@@ -29,13 +29,14 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | LNL258V-RUN-001 | merged | Add JSON-ready Lunar Lake platform probe structs. |
 | ARC140V-002 | merged | Add exact Arc 140V runtime identity probe logic. |
 | ARC140V-003 | merged | Add Arc 140V OpenVINO GPU.0 tiny graph smoke; merged in #3942. |
-| ARC140V-004 | ready | Add Arc 140V native OpenCL tiny kernel smoke. |
+| ARC140V-004 | merged | Add Arc 140V native OpenCL tiny kernel smoke; merged in #3953. |
 | LNL258V-002 | merged | Add 258V probe bundle and same-machine comparison hooks. |
 | LNL258V-003 | merged | Add CLI platform probe emission for the current 258V machine. |
 | CPU258V-001 | merged | Add a validation-only CPU BitNet preflight harness for the 258V lane. |
 | LNL258V-OWNERSHIP-001 | merged | Made the 258V CPU the BitNet CPU lead and set priority order: CPU, NPU, Arc 140V; merged in #3914. |
 | CPU258V-002 | merged | Add scalar-vs-AVX2 strict CPU answer parity on the 258V; merged in #3929. |
 | CPU258V-003 | merged | Add 258V CPU phase benchmark receipts for the CPU reference plate; merged in #3938. |
+| CPU258V-004 | ready | Require real token-count thresholds before promoting 258V `decode_128` or `prefill_512` phase evidence. |
 
 ## Review Policy
 

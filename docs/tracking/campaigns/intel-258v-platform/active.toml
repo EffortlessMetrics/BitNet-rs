@@ -477,3 +477,47 @@ must_not_claim = [
   "Arc 140V or Intel NPU performance is proven.",
   "Full platform performance comparison is complete.",
 ]
+
+[[work_item]]
+id = "CPU258V-004"
+status = "ready"
+branch = "codex/intel-258v-platform/CPU258V-004-phase-thresholds"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-003"]
+acceptance = "Require 258V CPU phase benchmark receipts to keep decode_128 and prefill_512 as not_run unless supplied strict CPU proof receipts meet the corresponding generated-token and prompt-token thresholds, preserving explicit gaps rather than promoting proxy evidence."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-bench-receipts/src/bin/cpu_phase_benchmark_receipt.rs --edition 2024",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features cpu258v_003_ -- --nocapture",
+  "cargo run --locked -p bitnet-bench-receipts --bin cpu_phase_benchmark_receipt --no-default-features -- --strict-proof-receipt ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json --machine-id intel-258v --hardware-lane intel-258v-cpu-avx2 --selected-backend cpu-rust --model-quant-format QK256/I2_S --platform-artifact ci/hardware/intel-258v/2026-05-06/platform-probe.json --receipt-out target/cpu258v-phase-threshold-check.json",
+  "Parse target/cpu258v-phase-threshold-check.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/src/bin/cpu_phase_benchmark_receipt.rs",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "258V phase receipts preserve not_run gaps when strict proof receipts do not satisfy decode_128 or prefill_512 token thresholds.",
+]
+must_not_claim = [
+  "decode_128 is measured from a short decode proof.",
+  "prefill_512 is measured from a short prompt proof.",
+  "Sustained 258V throughput is proven.",
+  "Arc 140V or Intel NPU performance is proven.",
+]
