@@ -1,0 +1,11 @@
+timestamp = "2026-05-08T10:37:24Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-005"
+event = "in_progress"
+branch = "codex/apple-m4-productization/M4-PROD-005-metal-phase"
+actor = "codex"
+
+notes = [
+  "Started the first Apple Metal prefill linear projection microphase proof.",
+  "Keeps normal Mac SLM answer generation on apple-m4-cpu-neon and records Metal only as a phase contribution with fallback_used=false.",
+]

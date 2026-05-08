@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T10:40:13Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-005"
+event = "pr_open"
+pr = 4034
+head_sha = "aac2714329747d90e3c80c4e0bc9bfdebe67248d"
+branch = "codex/apple-m4-productization/M4-PROD-005-metal-phase"
+actor = "codex"
+
+notes = [
+  "Opened the Apple M4 dense prefill linear Metal phase proof PR.",
+  "The PR records Metal only as a named phase contribution with CPU/NEON remaining pipeline visibility and no full Metal inference, Neural Engine, MPSGraph, QK256, BitNet quality, or broad performance claim.",
+]

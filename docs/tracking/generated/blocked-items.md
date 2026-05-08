@@ -35,7 +35,7 @@
 | apple-m4-productization | M4-PROD-002 | M4-PROD-001 | merged |
 | apple-m4-productization | M4-PROD-003 | M4-PROD-002 | merged |
 | apple-m4-productization | M4-PROD-004 | M4-PROD-003 | merged |
-| apple-m4-productization | M4-PROD-005 | M4-PROD-004 | ready |
+| apple-m4-productization | M4-PROD-005 | M4-PROD-004 | pr_open |
 | apple-m4-slm-answer | SLM-M4-002 | SLM-M4-001 | merged |
 | apple-m4-slm-answer | SLM-M4-003 | SLM-M4-002 | merged |
 | apple-m4-slm-answer | SLM-M4-004 | SLM-M4-003 | merged |
