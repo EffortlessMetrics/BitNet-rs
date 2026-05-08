@@ -1,10 +1,8 @@
 timestamp = "2026-05-08T20:30:00Z"
 campaign = "slm-cpu"
 item = "SLM-CPU-007"
-event = "pr_open"
-pr = 4126
+event = "in_progress"
 branch = "codex/slm-cpu-007-logits-root-cause"
-head_sha = "4ee5fdf8f078e682d37c96368edd4017cf084b92"
 actor = "codex"
 notes = [
   "Opened #4126 to add SLM-CPU-007 as the next dense Qwen3 logits root-cause item after SLM-CPU-006B.",
