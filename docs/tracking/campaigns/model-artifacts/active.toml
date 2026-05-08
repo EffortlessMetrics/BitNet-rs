@@ -160,8 +160,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-ARTIFACT-004"
-status = "pr_open"
+status = "merged"
 pr = 3939
+merge_sha = "1c06b3367d7d49b3c44a37dec29bc2d69687bd66"
 branch = "codex/model-artifacts/MODEL-ARTIFACT-004-ikllama-intended-runner"
 stackable = false
 review_mode = "codex_premerge"
@@ -202,6 +203,47 @@ may_claim = [
 must_not_claim = [
   "A shared answer_ready BitNet artifact has been acquired.",
   "tdh111 IQ2_BN_R4 satisfies the official Microsoft I2_S CUDA answer target.",
+  "CPU or CUDA local-answer generation is coherent in Rust.",
+  "Any backend speedup is proven.",
+]
+
+[[work_item]]
+id = "MODEL-ARTIFACT-005"
+status = "ready"
+branch = "claude/untangle-authority-gates-5oPxH"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-ARTIFACT-004"]
+acceptance = "Split artifact authority into explicit machine-readable dimensions (target_alignment, runner_authority, tokenizer_authority, pretokenizer_authority, prompt_suite_result, can_unblock_official_i2s_cuda, can_unblock_alt_quant_control) across all manifest files. Produce MODEL_ARTIFACT_005_AUTHORITY_DIMENSIONS.md report. Preserve current claim boundary: official I2_S remains rejected, tdh111 remains rejected for official target; no artifact is promoted to answer_ready."
+commands = [
+  "python3 -c \"import tomllib; [tomllib.loads(open(f).read()) for f in ['ci/model-artifacts/artifact-manifest.toml','ci/model-artifacts/candidate-artifacts.toml','ci/model-artifacts/rejected-artifacts.toml']]\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/model-artifacts/**",
+  "ci/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/specs/rtx5070ti-cuda-answer-readiness.md",
+]
+forbidden_paths = [
+  "crates/**",
+  "src/**",
+]
+may_claim = [
+  "Artifact authority is now split into target_alignment, runner_authority, tokenizer_authority, pretokenizer_authority, prompt_suite_result, can_unblock_official_i2s_cuda, and can_unblock_alt_quant_control dimensions.",
+  "Official Microsoft I2_S is recorded as official_i2s_cuda_target with prompt_suite_result=failed and can_unblock_official_i2s_cuda=false.",
+  "tdh111 IQ2_BN_R4 is recorded as official_derived_alt_quant with can_unblock_alt_quant_control=true and can_unblock_official_i2s_cuda=false.",
+  "Missing pre-tokenizer authority is the concrete next blocker for both artifacts.",
+]
+must_not_claim = [
+  "Any artifact is answer_ready for the official I2_S CUDA target.",
+  "tdh111 IQ2_BN_R4 unblocks the RTX 5070 Ti official I2_S CUDA answer path.",
   "CPU or CUDA local-answer generation is coherent in Rust.",
   "Any backend speedup is proven.",
 ]

@@ -1,6 +1,6 @@
-schema = 1
+schema = 2
 artifact_kind = "model_answer_artifact_manifest"
-updated = "2026-05-07"
+updated = "2026-05-08"
 
 [gate]
 doc = "docs/model-artifacts/ANSWER_ARTIFACT_GATE.md"
@@ -9,10 +9,49 @@ candidate_artifacts = "ci/model-artifacts/candidate-artifacts.toml"
 rejected_artifacts = "ci/model-artifacts/rejected-artifacts.toml"
 reference_runner_compatibility_report = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
 intended_runner_report = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
+authority_dimensions_report = "docs/reports/MODEL_ARTIFACT_005_AUTHORITY_DIMENSIONS.md"
 reference_runner_coherent_output_required = true
 sha256_required = true
 tokenizer_metadata_required = true
 pretokenizer_metadata_required = true
+
+# Authority dimension schema added in MODEL-ARTIFACT-005.
+# Each artifact record must carry these fields.
+[gate.authority_dimensions]
+answer_readiness_scope_values = [
+  "official_target",
+  "alternate_quant_control",
+  "diagnostic_only",
+]
+target_alignment_values = [
+  "official_i2s_cuda_target",
+  "official_derived_alt_quant",
+  "unrelated",
+]
+runner_authority_values = [
+  "stock_llama_cpp",
+  "ik_llama_cpp",
+  "microsoft_bitnet",
+  "unknown",
+]
+tokenizer_authority_values = [
+  "present",
+  "missing",
+  "defaulted",
+  "externally_supplied",
+]
+pretokenizer_authority_values = [
+  "present",
+  "missing",
+  "defaulted",
+  "externally_supplied",
+]
+prompt_suite_result_values = [
+  "passed",
+  "failed",
+  "blocked",
+  "not_run",
+]
 
 states = [
   "unknown",
@@ -29,7 +68,7 @@ structural_validity_is_not_answer_readiness = true
 backend_execution_is_not_answer_readiness = true
 speedup_requires_answer_ready_artifact = true
 answer_ready_artifact_available = false
-current_blocker = "MODEL-ARTIFACT-002 did not find a BitNet GGUF/tokenizer artifact that passes the full shared answer gate. MODEL-ARTIFACT-003 records that latest stock llama.cpp cannot load the official I2_S or tdh111 IQ2_BN_R4 candidates before prompt execution. MODEL-ARTIFACT-004 records that tdh111 IQ2_BN_R4 passes the tiny prompt suite under its intended ik_llama.cpp runner but is still not answer_ready because pre-tokenizer authority is missing and it does not unblock the official Microsoft I2_S CUDA target; the official Microsoft I2_S artifact still fails the prompt suite under ik_llama.cpp."
+current_blocker = "Official Microsoft I2_S is structurally valid but fails the prompt suite under both stock llama.cpp and ik_llama.cpp; missing pre-tokenizer authority is the concrete blocker. tdh111 IQ2_BN_R4 passes the tiny prompt suite under its intended ik_llama.cpp runner but is an alternate-quant control artifact, not the official I2_S CUDA target, and also lacks pre-tokenizer authority. MODEL-ARTIFACT-006 (tokenizer/pre-tokenizer authority audit) is the next unblocker."
 
 allowed_before_answer_ready = [
   "structural GGUF validity",
@@ -66,3 +105,12 @@ tokenizer_authority = "missing_pretokenizer_authority"
 reference_runner = "llama-cli via local BitNet.cpp checkout"
 legacy_evidence = "ci/quality/apple-m4-local-answer-model-artifacts.toml"
 rejection_reason = "Structurally valid GGUF, but missing tokenizer pre-tokenizer authority and failing reference prompt-suite output quality."
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "official_target"
+target_alignment = "official_i2s_cuda_target"
+runner_authority = "ik_llama_cpp"
+tokenizer_authority_dim = "missing"
+pretokenizer_authority = "missing"
+prompt_suite_result = "failed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false

@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T00:01:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-005"
+event = "in_progress"
+actor = "codex"
+branch = "claude/untangle-authority-gates-5oPxH"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Starting work on MODEL-ARTIFACT-005: split target, runner, and tokenizer authority dimensions.",
+  "Extending ci/model-artifacts/*.toml with explicit authority dimension fields.",
+  "Adding docs/reports/MODEL_ARTIFACT_005_AUTHORITY_DIMENSIONS.md.",
+  "No runtime code changes; docs and manifests only.",
+]

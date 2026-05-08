@@ -1,0 +1,18 @@
+timestamp = "2026-05-07T23:18:41Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-004"
+event = "merged"
+actor = "github"
+pr = 3939
+merge_sha = "1c06b3367d7d49b3c44a37dec29bc2d69687bd66"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #3939 merged at 1c06b3367d7d49b3c44a37dec29bc2d69687bd66.",
+  "Records intended ik_llama.cpp runner evidence for tdh111 IQ2_BN_R4 and official Microsoft I2_S.",
+  "tdh111 IQ2_BN_R4 passes the tiny deterministic prompt suite under ik_llama.cpp but remains rejected for answer readiness.",
+  "Official Microsoft I2_S still fails the prompt suite under ik_llama.cpp with repeated colon output.",
+  "No artifact promoted to answer_ready; no runtime changes.",
+  "Pre-tokenizer authority is the identified concrete next blocker.",
+]

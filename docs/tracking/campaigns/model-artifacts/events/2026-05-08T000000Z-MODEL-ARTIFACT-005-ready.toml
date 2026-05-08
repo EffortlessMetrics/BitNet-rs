@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T00:00:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-005"
+event = "ready"
+actor = "codex"
+previous_status = "none"
+new_status = "ready"
+
+notes = [
+  "MODEL-ARTIFACT-005 unblocked after MODEL-ARTIFACT-004 merged.",
+  "Goal: split artifact authority into explicit machine-readable dimensions.",
+  "New dimensions: target_alignment, runner_authority, tokenizer_authority, pretokenizer_authority, prompt_suite_result, can_unblock_official_i2s_cuda, can_unblock_alt_quant_control.",
+  "Implements the authority-split described in docs/reports/MODEL_ARTIFACT_005_AUTHORITY_DIMENSIONS.md.",
+  "No artifact is promoted to answer_ready; no runtime changes.",
+]

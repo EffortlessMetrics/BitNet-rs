@@ -1,8 +1,8 @@
-schema = 1
+schema = 2
 artifact_kind = "model_answer_candidate_artifacts"
 campaign = "model-artifacts"
 work_item = "MODEL-ARTIFACT-002"
-updated = "2026-05-07"
+updated = "2026-05-08"
 
 [search]
 status = "blocked"
@@ -13,6 +13,7 @@ legacy_search_report = "docs/reports/M4_QA_MODEL_002_ARTIFACT_SEARCH.md"
 shared_search_report = "docs/reports/MODEL_ARTIFACT_002_REFERENCE_GOOD_SEARCH.md"
 reference_runner_compatibility_report = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
 intended_runner_report = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
+authority_dimensions_report = "docs/reports/MODEL_ARTIFACT_005_AUTHORITY_DIMENSIONS.md"
 claim_boundary = "All candidates below are diagnostic-only until a later artifact passes the shared answer artifact gate."
 
 [local_environment]
@@ -69,6 +70,15 @@ notes = [
 intended_runner = "ik_llama.cpp llama-cli"
 intended_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c20fe2c66"
 intended_runner_prompt_suite = "failed"
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "official_target"
+target_alignment = "official_i2s_cuda_target"
+runner_authority = "ik_llama_cpp"
+tokenizer_authority_dim = "missing"
+pretokenizer_authority_dim = "missing"
+prompt_suite_result = "failed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 
 [[candidate]]
 id = "jpacifico_aramis_2b_i2s"
@@ -87,6 +97,15 @@ status = "rejected_prompt_suite_failed"
 notes = [
   "Published artifact and a local tokenizer.ggml.pre metadata repair both produced non-coherent reference output.",
 ]
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "diagnostic_only"
+target_alignment = "unrelated"
+runner_authority = "stock_llama_cpp"
+tokenizer_authority_dim = "missing"
+pretokenizer_authority_dim = "missing"
+prompt_suite_result = "failed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 
 [[candidate]]
 id = "richarderkhov_bitnet_b158_large_q8_0"
@@ -105,6 +124,15 @@ status = "rejected_prompt_suite_failed"
 notes = [
   "France and Rust continuations were plausible, but the math gate repeated the prompt instead of answering with 4 or four.",
 ]
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "diagnostic_only"
+target_alignment = "unrelated"
+runner_authority = "stock_llama_cpp"
+tokenizer_authority_dim = "missing"
+pretokenizer_authority_dim = "defaulted"
+prompt_suite_result = "failed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 
 [[candidate]]
 id = "imi2_bitnet_b158_large_instruct_tq2_0"
@@ -123,6 +151,15 @@ status = "rejected_prompt_suite_failed"
 notes = [
   "France and Rust continuations were plausible, but the math gate answered incoherently.",
 ]
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "diagnostic_only"
+target_alignment = "unrelated"
+runner_authority = "stock_llama_cpp"
+tokenizer_authority_dim = "missing"
+pretokenizer_authority_dim = "defaulted"
+prompt_suite_result = "failed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 
 [[candidate]]
 id = "bosco_bessie_bitnet_instruct_100k_published"
@@ -141,6 +178,15 @@ status = "rejected_reference_runner_failed"
 notes = [
   "The local reference runner aborted while loading the published GGUF with a tensor dimension assertion.",
 ]
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "diagnostic_only"
+target_alignment = "unrelated"
+runner_authority = "stock_llama_cpp"
+tokenizer_authority_dim = "missing"
+pretokenizer_authority_dim = "defaulted"
+prompt_suite_result = "blocked"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 
 [[candidate]]
 id = "greensky_bitnet_b158_3b_q2_q1"
@@ -159,6 +205,15 @@ status = "rejected_reference_runner_failed"
 notes = [
   "Published checksums matched, but the reference loader reported tensor data outside file bounds.",
 ]
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "diagnostic_only"
+target_alignment = "unrelated"
+runner_authority = "stock_llama_cpp"
+tokenizer_authority_dim = "missing"
+pretokenizer_authority_dim = "missing"
+prompt_suite_result = "blocked"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 
 [[candidate]]
 id = "larenspear_bitnet_b158_large_q4_k_m"
@@ -177,6 +232,15 @@ status = "rejected_prompt_suite_failed"
 notes = [
   "Raw, instruct, and LLaMA-3 chat prompt shapes all failed the math gate; LLaMA-3 chat also failed France.",
 ]
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "diagnostic_only"
+target_alignment = "unrelated"
+runner_authority = "stock_llama_cpp"
+tokenizer_authority_dim = "missing"
+pretokenizer_authority_dim = "defaulted"
+prompt_suite_result = "failed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 
 [[candidate]]
 id = "bifrost_sol_2b_i2s"
@@ -195,6 +259,15 @@ status = "rejected_prompt_suite_failed"
 notes = [
   "Loads with a missing pre-tokenizer warning, but raw and LLaMA-3 chat prompt shapes failed all gates.",
 ]
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "diagnostic_only"
+target_alignment = "unrelated"
+runner_authority = "stock_llama_cpp"
+tokenizer_authority_dim = "missing"
+pretokenizer_authority_dim = "missing"
+prompt_suite_result = "failed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 
 [[candidate]]
 id = "bosco_bitnet_instruct_100k_regenerated_q8_0"
@@ -213,6 +286,15 @@ status = "rejected_prompt_suite_failed"
 notes = [
   "Local regeneration fixed loader compatibility enough to run, but raw, instruct, and Human:/BITNETAssistant: prompt shapes all produced non-coherent output.",
 ]
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "diagnostic_only"
+target_alignment = "unrelated"
+runner_authority = "stock_llama_cpp"
+tokenizer_authority_dim = "present"
+pretokenizer_authority_dim = "defaulted"
+prompt_suite_result = "failed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
 
 [[candidate]]
 id = "tdh111_bitnet_b158_2b_4t_iq2_bn_r4"
@@ -242,3 +324,12 @@ stock_reference_runner = "stock llama.cpp b9061 llama-completion"
 stock_reference_runner_version = "9061 (deab41ec6)"
 stock_reference_runner_result = "rejected_reference_runner_failed"
 stock_reference_runner_error = "gguf_init_from_file_ptr: tensor 'blk.0.ffn_down.weight' has invalid ggml type 335. should be in [0, 42)"
+# Authority dimensions (MODEL-ARTIFACT-005)
+answer_readiness_scope = "alternate_quant_control"
+target_alignment = "official_derived_alt_quant"
+runner_authority = "ik_llama_cpp"
+tokenizer_authority_dim = "present"
+pretokenizer_authority_dim = "missing"
+prompt_suite_result = "passed"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = true
