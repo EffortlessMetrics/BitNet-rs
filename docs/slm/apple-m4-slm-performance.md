@@ -157,6 +157,36 @@ session.logits_buffer_reuse_policy = not_claimed_until_logits_extraction_uses_re
 
 The important boundary is that this is session hygiene, not a speed claim. KV cache and sampler state remain reset per prompt to preserve independent prompt correctness. Logits extraction still materializes a fresh vector, so logits buffer reuse is deliberately not claimed.
 
+## CPU/NEON Hot-Path Optimization
+
+`M4-SLM-PERF-004` starts with a narrow transformer-side optimization in the measured `model.forward` decode path. The single-token decode path no longer materializes and broadcasts an all-zero causal mask, and static debug/trace environment flags are cached so disabled diagnostics do not repeatedly query the process environment inside every layer and generated token.
+
+This item preserves the existing generation path and claim boundary:
+
+```text
+requested_backend = apple-m4-cpu-neon
+selected_backend = apple-m4-cpu-neon
+runtime_api = cpu
+fallback_used = false
+```
+
+The optimization is valid only if the same greedy prompt/profile receipts keep the same generated token IDs and quality status. It does not claim broad Apple M4 performance, BitNet quality, full Metal inference, or QK256 support.
+
+Local M4 proof receipt:
+
+```text
+target/apple-m4-slm-performance/M4-SLM-PERF-004/cpu-neon-hotpath.json
+```
+
+Compared with the `M4-SLM-PERF-001` release baseline, the recorded run preserved generated token IDs for every warm profile and prompt:
+
+| Profile | Baseline decode tok/s | Optimized decode tok/s | Baseline warm tok/s | Optimized warm tok/s |
+|---|---:|---:|---:|---:|
+| `warm_16` | 14.517 | 15.131 | 4.266 | 4.425 |
+| `warm_32` | 15.187 | 15.246 | 5.879 | 5.923 |
+| `warm_64` | 14.909 | 15.250 | 7.663 | 7.819 |
+| `warm_128` | 14.925 | 15.132 | 8.847 | 9.061 |
+
 ## Optimization Order
 
 1. Measure release-mode warm-session bottlenecks.

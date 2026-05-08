@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T12:35:54Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-004"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started Apple M4 SLM CPU/NEON hot-path optimization work.",
+  "Scope is one measured CPU/NEON bottleneck with greedy-output preservation and before/after receipts; no QK256, qk256-dispatch, server, Metal kernel, MPSGraph, Neural Engine, or broad performance claim work.",
+]

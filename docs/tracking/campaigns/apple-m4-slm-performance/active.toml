@@ -172,7 +172,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-004"
-status = "ready"
+status = "pr_open"
+pr = 4057
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-004-cpu-neon-hotpath"
 stackable = false
 review_mode = "codex_premerge"
@@ -183,6 +184,8 @@ acceptance = "Optimize the highest measured Apple M4 CPU/NEON bottleneck while p
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set performance --json-out target/apple-m4-slm-performance/M4-SLM-PERF-004/cpu-neon-hotpath.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check target/apple-m4-slm-performance/M4-SLM-PERF-004/cpu-neon-hotpath.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-performance",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
@@ -190,6 +193,7 @@ commands = [
 ]
 allowed_paths = [
   "crates/bitnet-cli/**",
+  "crates/bitnet-transformer/**",
   "crates/**/tests/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-slm-performance/**",
