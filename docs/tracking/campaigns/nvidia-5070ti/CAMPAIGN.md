@@ -156,7 +156,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-PROD-003 | merged | CUDA execution-residency coverage for the strict answer path. |
 | CUDA-PROD-004 | merged | Strict answer-path benchmark baseline with `speedup_claim=false`. |
 | CUDA-DENSE-001 | merged | Dense regular-LLM CUDA receipt boundary; not part of BitNet packed proof completion. |
-| CUDA-DENSE-002 | in_progress | First dense CUDA FP16 GEMM smoke/parity fixture after the dense receipt boundary. |
+| CUDA-DENSE-002 | merged | First dense CUDA FP16 GEMM smoke/parity fixture after the dense receipt boundary. |
 
 ## Review Policy
 

@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T17:28:37Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-002"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-002-gemm-parity"
+pr = 4106
+head_sha = "5f6cd1ff56d0c0b659debc9c89a0f5f73aec4653"
+merge_sha = "0de3a32c5ba973515bf9f4eeba981ec396d8ed9b"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4106 merged the dense regular-LLM CUDA FP16 GEMM smoke/parity fixture.",
+  "The committed RTX 5070 Ti receipt records dense_f16_gemm_cuda CPU/CUDA parity with fallback_used=false and speedup_claim=false.",
+  "This remains separate from BitNet packed I2S/QK256 proof and does not claim general dense GGUF inference or full CUDA residency.",
+]
