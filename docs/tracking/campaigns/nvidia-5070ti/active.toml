@@ -905,10 +905,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-001-receipt-boundary"
 pr = 4104
-head_sha = "d170ed578184a842825740df32339662952fdbfe"
+head_sha = "fb306c7becdb11ca7fb4b21e122f6ba287331cb9"
+merge_sha = "44c6eac5d27107a83dc94e97b0c75ec8308932a9"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
