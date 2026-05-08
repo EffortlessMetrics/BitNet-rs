@@ -436,8 +436,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-007"
-status = "ready"
-branch = "codex/slm-cpu-007-logits-root-cause"
+status = "pr_open"
+pr = 4132
+branch = "codex/slm-cpu-007-checkpoint-probes"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

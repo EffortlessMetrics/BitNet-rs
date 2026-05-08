@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T21:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-007"
+event = "pr_open"
+pr = 4132
+branch = "codex/slm-cpu-007-checkpoint-probes"
+head_sha = "1d1caa27ba8253f6e5263bb5bdd9d21c2afc2f47"
+actor = "codex"
+
+notes = [
+  "Opened #4132 to expose bounded Qwen checkpoint tracing through bitnet run flags for SLM-CPU-007.",
+  "The PR only surfaces existing first-token trace capture and documents the first-drift workflow; it does not claim first-token parity, answer quality, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]

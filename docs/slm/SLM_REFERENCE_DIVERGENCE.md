@@ -87,6 +87,49 @@ Qwen template, BOS policy, prompt IDs, and greedy-equivalent first-token
 settings. If the external runner cannot emit logits, keep the artifact
 diagnostic-only and do not close `SLM-CPU-006` as a logit-localized result.
 
+## First-Drift Checkpoint Trace
+
+For `SLM-CPU-007`, capture bounded bitnet-rs checkpoint summaries for the first
+generated token. This uses the same strict run shape as first-token top-k capture
+and writes JSONL tensor summaries instead of full tensors:
+
+```powershell
+cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli" -- `
+  --device cpu `
+  run `
+  --model models\slm\Qwen3-0.6B-Q8_0.gguf `
+  --prompt-template qwen `
+  --prompt "What is 2+2? Answer with only the number." `
+  --max-new-tokens 1 `
+  --temperature 0.0 `
+  --greedy `
+  --deterministic `
+  --strict-loader `
+  --strict-tokenizer `
+  --logits-dump-steps 1 `
+  --logits-topk 10 `
+  --assert-greedy `
+  --qwen-trace-jsonl ci\slm-cpu\intel-i5-8250u\2026-05-07\qwen3-bitnet-rs-checkpoints.jsonl `
+  --qwen-trace-layer 0 `
+  --qwen-trace-full-prompt `
+  --json-out ci\slm-cpu\intel-i5-8250u\2026-05-07\qwen3-bitnet-rs-first-token-topk.json
+```
+
+Each `qwen_trace_tensor` row records the checkpoint name, step, optional layer,
+shape, dtype, finite/nonfinite counts, mean, RMS, min/max, checksum, and a small
+sample. The intended first pass is layer 0 with stages such as
+`decode.input_embedding`, `block.attention_norm`, `attention.q_proj`,
+`attention.k_proj`, `attention.v_proj`, `attention.q_rope`,
+`attention.k_rope`, `attention.scores_post_mask`, `attention.weights`,
+`attention.o_proj`, `block.ffn_norm`, `mlp.gate_proj`, `mlp.up_proj`,
+`mlp.down_proj`, `block.output`, `model.final_norm`, and `lm_head.logits`.
+
+If the external reference provides prompt token IDs, pass them through
+`--qwen-trace-prompt-ids 1,2,3` to force the bitnet-rs trace onto exactly the
+same prompt IDs before comparing checkpoint summaries. The trace remains a
+diagnostic artifact: it localizes the first drift point and does not claim Qwen
+answer quality or throughput.
+
 ## Divergence Classification
 
 The validator records a `classification` alongside
