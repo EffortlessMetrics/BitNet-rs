@@ -3,7 +3,10 @@
 //! These tests validate strict smoke/parity proof artifacts without claiming
 //! benchmark or full BitNet inference readiness.
 
-use bitnet_receipts::{validate_cuda_parity_receipt_json, validate_cuda_smoke_receipt_json};
+use bitnet_receipts::{
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof, validate_cuda_parity_receipt_json,
+    validate_cuda_smoke_receipt_json, validate_dense_regular_llm_cuda_receipt_json,
+};
 use serde_json::{Value, json};
 
 #[test]
@@ -91,6 +94,59 @@ fn strict_cuda_parity_rejects_missing_runtime_identity() {
     assert!(err.contains("driver_version"), "unexpected error: {err}");
 }
 
+#[test]
+fn dense_regular_llm_cuda_receipt_validates_with_separate_label() {
+    let receipt = valid_dense_regular_llm_cuda_receipt();
+
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap();
+}
+
+#[test]
+fn dense_regular_llm_cuda_receipt_rejects_bitnet_kernel_label() {
+    let mut receipt = valid_dense_regular_llm_cuda_receipt();
+    receipt["kernel_stats"][0]["kernel_id"] = json!("qk256_gemv_cuda");
+
+    let err = validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("kernel_stats[0].kernel_id"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_receipt_rejects_bitnet_model_family() {
+    let mut receipt = valid_dense_regular_llm_cuda_receipt();
+    receipt["model"]["model_family"] = json!("bitnet");
+
+    let err = validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("model.model_family"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_receipt_rejects_speedup_claim() {
+    let mut receipt = valid_dense_regular_llm_cuda_receipt();
+    receipt["speedup_claim"] = json!(true);
+    receipt["claim_boundary"]["speedup_claim"] = json!(true);
+
+    let err = validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_receipt_cannot_satisfy_bitnet_packed_proof() {
+    let receipt = valid_dense_regular_llm_cuda_receipt();
+
+    let err =
+        reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err().to_string();
+
+    assert!(
+        err.contains("cannot satisfy BitNet packed I2_S/QK256 proof"),
+        "unexpected error: {err}"
+    );
+    validate_cuda_smoke_receipt_json(&receipt).unwrap_err();
+    validate_cuda_parity_receipt_json(&receipt).unwrap_err();
+}
+
 fn valid_smoke_receipt() -> Value {
     json!({
         "schema": 1,
@@ -153,6 +209,53 @@ fn valid_parity_receipt() -> Value {
         "result": "pass",
         "claim": "cuda_cpu_parity_tested",
         "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-parity.json",
+        "error": null
+    })
+}
+
+fn valid_dense_regular_llm_cuda_receipt() -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_regular_llm_cuda",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-08T00:00:00Z",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity(),
+        "model": {
+            "model_family": "qwen",
+            "artifact_kind": "dense_gguf",
+            "file": "qwen3-0.6b-q4_k_m.gguf",
+            "sha256": "0".repeat(64)
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "cublas_dense_gemm",
+            "quantization_family": "fp16_bf16_dense",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "kernel_stats": [{
+            "kernel_id": "cublaslt_dense_gemm",
+            "invocations": 1,
+            "fallback_invocations": 0,
+            "host_to_device_bytes": 8192,
+            "device_to_host_bytes": 4096,
+            "kernel_launches": 1,
+            "kernel_time_ms": 0.25
+        }],
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
         "error": null
     })
 }

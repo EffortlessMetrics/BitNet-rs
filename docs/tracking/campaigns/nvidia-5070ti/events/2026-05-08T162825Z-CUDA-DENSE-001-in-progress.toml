@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T16:28:25Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-001-receipt-boundary"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started the dense regular-LLM CUDA receipt-boundary lane after the BitNet QK256 RTX 5070 Ti proof/product ladder completed through CUDA-PROD-004 and CUDA-PERF-001.",
+  "Scope is receipt labels, validation, tracker state, and claim boundaries only; no dense GEMM, cuBLAS, QK256, transformer, tokenizer, loader, server, speedup, or full-residency implementation is included.",
+  "CUDA-DENSE-002 will own the first dense CUDA GEMM smoke/parity fixture after dense_regular_llm_cuda receipts have a distinct contract.",
+]

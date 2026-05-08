@@ -111,11 +111,11 @@ that loads the model once, initializes CUDA once, uploads BitNet weights once,
 serves multiple deterministic turns, and emits per-turn plus session-summary
 receipts without broad chat, speed, server, or full-residency claims.
 
-`CUDA-PROD-003` is the next product-path gate: explicit CUDA execution-residency
-coverage for the strict answer path. Receipts should make QK256 linears,
-upload-once weights, KV cache, norms, RoPE, attention/softmax, LM head,
-sampling, host/device transfer accounting, and non-resident phases visible
-without claiming speedup or full residency before coverage proves it.
+`CUDA-PROD-003` added explicit CUDA execution-residency coverage for the strict
+answer path. `CUDA-PROD-004` added the strict answer-path benchmark baseline,
+and `CUDA-PERF-001` added measured QK256 kernel time plus activation/output
+transfer byte accounting. These remain scoped measurements; they do not claim
+speedup or full transformer CUDA residency.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -153,8 +153,10 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-ANSWER-012 | merged | CUDA QK256 I8_S activation semantics close generated-token parity for all five committed corpus cases; exact top-k parity remains open. |
 | CUDA-PROD-001 | merged | Strict `bitnet ask` validates through a default answer receipt when `--receipt-out` is omitted. |
 | CUDA-PROD-002 | merged | Strict RTX 5070 Ti CUDA warm-session receipts with load/context/upload reuse across multiple deterministic turns. |
-| CUDA-PROD-003 | ready | CUDA execution-residency coverage for the strict answer path. |
-| CUDA-DENSE-001 | proposed | Optional dense regular-LLM CUDA reference lane; not part of BitNet packed proof completion. |
+| CUDA-PROD-003 | merged | CUDA execution-residency coverage for the strict answer path. |
+| CUDA-PROD-004 | merged | Strict answer-path benchmark baseline with `speedup_claim=false`. |
+| CUDA-DENSE-001 | in_progress | Dense regular-LLM CUDA receipt boundary; not part of BitNet packed proof completion. |
+| CUDA-DENSE-002 | proposed | First dense CUDA GEMM smoke/parity fixture after the dense receipt boundary. |
 
 ## Review Policy
 
