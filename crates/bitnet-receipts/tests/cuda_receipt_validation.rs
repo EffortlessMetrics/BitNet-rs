@@ -6,6 +6,7 @@
 use bitnet_receipts::{
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof, validate_cuda_parity_receipt_json,
     validate_cuda_smoke_receipt_json, validate_dense_regular_llm_cuda_receipt_json,
+    validate_dense_regular_llm_cuda_tensor_residency_receipt_json,
 };
 use serde_json::{Value, json};
 
@@ -37,6 +38,17 @@ fn committed_dense_regular_llm_cuda_gemm_receipt_validates() {
     .unwrap();
 
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_regular_llm_cuda_residency_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-residency.json"
+    ))
+    .unwrap();
+
+    validate_dense_regular_llm_cuda_tensor_residency_receipt_json(&receipt).unwrap();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
 
@@ -178,6 +190,49 @@ fn dense_regular_llm_cuda_receipt_cannot_satisfy_bitnet_packed_proof() {
     validate_cuda_parity_receipt_json(&receipt).unwrap_err();
 }
 
+#[test]
+fn dense_regular_llm_cuda_residency_receipt_validates() {
+    let receipt = valid_dense_regular_llm_cuda_residency_receipt();
+
+    validate_dense_regular_llm_cuda_tensor_residency_receipt_json(&receipt).unwrap();
+}
+
+#[test]
+fn dense_regular_llm_cuda_residency_rejects_missing_tensor_section() {
+    let receipt = valid_dense_regular_llm_cuda_receipt();
+
+    let err = validate_dense_regular_llm_cuda_tensor_residency_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("claim"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_residency_rejects_persistent_handle_claim() {
+    let mut receipt = valid_dense_regular_llm_cuda_residency_receipt();
+    receipt["tensor_residency"]["allocation"]["persistent_handles_claimed"] = json!(true);
+    receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(true);
+
+    let err = validate_dense_regular_llm_cuda_tensor_residency_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("persistent_session_residency_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_residency_rejects_transfer_mismatch() {
+    let mut receipt = valid_dense_regular_llm_cuda_residency_receipt();
+    receipt["tensor_residency"]["transfer_accounting"]["host_to_device_bytes"] = json!(1);
+
+    let err = validate_dense_regular_llm_cuda_tensor_residency_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("host_to_device_bytes"), "unexpected error: {err}");
+}
+
 fn valid_smoke_receipt() -> Value {
     json!({
         "schema": 1,
@@ -300,6 +355,71 @@ fn valid_dense_regular_llm_cuda_receipt() -> Value {
         },
         "error": null
     })
+}
+
+fn valid_dense_regular_llm_cuda_residency_receipt() -> Value {
+    let mut receipt = valid_dense_regular_llm_cuda_receipt();
+    receipt["claim"] = json!("dense_regular_llm_cuda_tensor_residency_tested");
+    receipt["artifact_path"] =
+        json!("ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-residency.json");
+    receipt["claim_boundary"]["dense_tensor_residency_claimed"] = json!(true);
+    receipt["claim_boundary"]["dense_gguf_inference_claimed"] = json!(false);
+    receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
+    receipt["tensor_residency"] = json!({
+        "schema_version": "1.0.0",
+        "scope": "single_dense_f16_gemm_fixture",
+        "model_class": "dense_regular_llm",
+        "fixture_id": "dense_f16_gemm_m2_n3_k4",
+        "dense_tensor_residency_claimed": true,
+        "dense_gguf_inference_claimed": false,
+        "persistent_session_residency_claimed": false,
+        "full_cuda_residency_claimed": false,
+        "input_tensors_uploaded_once": true,
+        "output_tensor_cuda_resident_during_kernel": true,
+        "host_device_transfer_accounting_matches_kernel_stats": true,
+        "inputs": [
+            {
+                "name": "a",
+                "dtype": "f16",
+                "shape": [2, 4],
+                "host_bytes": 16,
+                "device_residency": "cuda_device_buffer",
+                "upload_count": 1,
+                "reuse_scope": "single_fixture_launch"
+            },
+            {
+                "name": "b",
+                "dtype": "f16",
+                "shape": [4, 3],
+                "host_bytes": 24,
+                "device_residency": "cuda_device_buffer",
+                "upload_count": 1,
+                "reuse_scope": "single_fixture_launch"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "c",
+                "dtype": "f32",
+                "shape": [2, 3],
+                "device_residency": "cuda_device_buffer",
+                "device_to_host_bytes": 24,
+                "download_scope": "parity_check_only"
+            }
+        ],
+        "allocation": {
+            "device_buffer_count": 3,
+            "temporary_workspace_bytes": 0,
+            "persistent_handle_count": 0,
+            "persistent_handles_claimed": false
+        },
+        "transfer_accounting": {
+            "status": "measured",
+            "host_to_device_bytes": 40,
+            "device_to_host_bytes": 24
+        }
+    });
+    receipt
 }
 
 fn cuda_identity() -> Value {
