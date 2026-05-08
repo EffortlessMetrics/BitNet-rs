@@ -1,11 +1,11 @@
-timestamp = "2026-05-08T06:29:00Z"
+timestamp = "2026-05-08T05:55:00Z"
 campaign = "intel-258v-platform"
 item = "CPU258V-005"
 event = "pr_open"
 from = "ready"
 to = "pr_open"
 pr = 3999
-head_sha = "25576b49e40a9b6c77a865e206512f6d3887feb0"
+head_sha = "8952eefac614fee938498890a756aee360da9152"
 actor = "codex"
 
 notes = [
