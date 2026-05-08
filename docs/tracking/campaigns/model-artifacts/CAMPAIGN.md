@@ -40,6 +40,8 @@ GGUF that only proves structural validity or backend execution.
 | MODEL-ARTIFACT-004 | merged | PR #3939 records intended `ik_llama.cpp` runner evidence for `tdh111` IQ2_BN_R4 and the official Microsoft I2_S artifact. This is diagnostic-only and does not promote an `answer_ready` artifact. |
 | MODEL-ARTIFACT-005 | merged | PR #3977 splits official-target, alternate-quant control, runner authority, tokenizer/pre-tokenizer authority, and per-lane unblock fields so `tdh111` evidence cannot be mistaken for official I2_S CUDA readiness. |
 | MODEL-ARTIFACT-006 | merged | PR #3979 audits official I2_S and `tdh111` tokenizer/pre-tokenizer authority, including GGUF metadata, external tokenizer assets, and why external authority does not itself promote an `answer_ready` artifact. |
+| MODEL-ARTIFACT-007 | merged | PR #3988 records Microsoft BitNet.cpp prompt-suite evidence for official I2_S with external `tokenizer.ggml.pre=llama-bpe`, promoting the artifact for backend gates only. |
+| BITNET-COMPAT-001 | in_progress | Record upstream model/kernel compatibility constraints so `1bitLLM/bitnet_b1_58-3B` x86 `I2_S` cannot become answer, reference, parity, or speed authority. |
 
 ## Review Policy
 

@@ -1,0 +1,111 @@
+schema = 1
+artifact_kind = "bitnet_model_kernel_compatibility"
+updated = "2026-05-08"
+work_item = "BITNET-COMPAT-001"
+source = "microsoft/BitNet README supported model table"
+source_url = "https://github.com/microsoft/BitNet/blob/main/README.md"
+claim_boundary = "Upstream model/kernel support is a precondition for answer_ready, reference_authority, backend_parity, and speedup claims. Unsupported combinations may only be used for diagnostic runs, artifact inspection, or unsupported-path receipts."
+
+proof_claims_rejected_when_unsupported = [
+  "answer_ready",
+  "reference_authority",
+  "backend_parity",
+  "speedup",
+]
+
+diagnostic_claims_allowed_when_unsupported = [
+  "diagnostic_run",
+  "artifact_inspection",
+  "unsupported_path_receipt",
+]
+
+[[model_kernel_support]]
+model = "microsoft/BitNet-b1.58-2B-4T"
+model_aliases = [
+  "microsoft/bitnet-b1.58-2B-4T",
+  "microsoft/bitnet-b1.58-2B-4T-gguf",
+  "microsoft_bitnet_b158_2b_4t_gguf_i2s_current",
+]
+family = "bitnet_b1_58"
+role = "official_model"
+answer_authority = true
+reference_artifact_id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
+notes = [
+  "This is the official Microsoft model family and the current answer_ready artifact when paired with documented external tokenizer/pre-tokenizer authority.",
+  "x86 I2_S is the reference path for the BitNet-rs CPU/CUDA answer lanes.",
+]
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "i2_s"
+  status = "supported_reference"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl1"
+  status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl2"
+  status = "supported"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "supported"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "supported"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "unsupported_upstream"
+
+[[model_kernel_support]]
+model = "1bitLLM/bitnet_b1_58-3B"
+model_aliases = [
+  "bitnet_b1_58-3B",
+  "1bitllm_bitnet_b1_58_3b",
+]
+family = "bitnet_b1_58"
+role = "supported_model"
+answer_authority = false
+notes = [
+  "Upstream bitnet.cpp lists 3B under Supported Models, not Official Models.",
+  "Upstream marks x86 I2_S unsupported for this model; do not treat x86 I2_S failures as BitNet-rs CPU, AVX-512, or CUDA regressions.",
+  "Upstream lists x86 TL2 and ARM TL1 support, but the shown setup_env.py quant-type help lists i2_s and tl1 only. Treat TL2 as listed support that still needs runner-path verification before proof claims.",
+]
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "i2_s"
+  status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl1"
+  status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl2"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "unsupported_upstream"

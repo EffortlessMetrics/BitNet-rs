@@ -10,12 +10,14 @@ rejected_artifacts = "ci/model-artifacts/rejected-artifacts.toml"
 reference_runner_compatibility_report = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
 intended_runner_report = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
 tokenizer_authority = "ci/model-artifacts/tokenizer-authority.toml"
+model_kernel_compatibility = "ci/model-artifacts/model-kernel-compatibility.toml"
 tokenizer_authority_report = "docs/reports/MODEL_ARTIFACT_006_TOKENIZER_AUTHORITY.md"
 external_pretokenizer_reference_runner_report = "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md"
 reference_runner_coherent_output_required = true
 sha256_required = true
 tokenizer_metadata_required = true
 pretokenizer_metadata_required = true
+upstream_model_kernel_compatibility_required = true
 
 states = [
   "unknown",

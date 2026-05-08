@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T21:10:00Z"
+campaign = "model-artifacts"
+item = "BITNET-COMPAT-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/bitnet-compat-001-model-kernel-ledger"
+previous_status = "planned"
+new_status = "in_progress"
+
+notes = [
+  "Started upstream model/kernel compatibility ledger and validator work.",
+  "The scope records 1bitLLM/bitnet_b1_58-3B x86 I2_S as unsupported_upstream for answer_ready, reference_authority, backend_parity, and speedup claims.",
+  "Diagnostic runs, artifact inspection, and unsupported-path receipts remain allowed; no QK256 math, tokenizer behavior, loader behavior, transformer, CUDA kernel, or server behavior changes are in scope.",
+]

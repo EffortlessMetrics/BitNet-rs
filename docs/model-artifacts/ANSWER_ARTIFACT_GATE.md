@@ -51,6 +51,33 @@ CUDA answer lane or only a separate alternate-quant control lane. Passing output
 from an alternate quantization is useful control evidence, but it is not proof
 that the official I2_S CUDA target is answer-ready.
 
+## Model/Kernel Compatibility
+
+Model/kernel support is a separate precondition from answer quality. A model can
+be a valid diagnostic target and still be invalid as an answer, reference,
+parity, or benchmark authority for a specific CPU architecture and quantization
+kernel.
+
+The compatibility ledger is:
+
+- `ci/model-artifacts/model-kernel-compatibility.toml`
+
+The official Microsoft `BitNet-b1.58-2B-4T` I2_S path remains the x86 reference
+authority for BitNet-rs CPU and CUDA answer lanes. By contrast,
+`1bitLLM/bitnet_b1_58-3B` on x86 with `I2_S` is marked
+`unsupported_upstream`, matching the upstream bitnet.cpp support table. That
+combination may be used for diagnostic runs, artifact inspection, or
+unsupported-path receipts, but it must not be used for:
+
+- `answer_ready`
+- `reference_authority`
+- `backend_parity`
+- `speedup`
+
+Upstream lists `1bitLLM/bitnet_b1_58-3B` x86 `TL2` and ARM `TL1` support, but
+those paths still require runner-path verification before they can become proof
+authority in this repo.
+
 ## Answer-Ready Requirements
 
 An `answer_ready` artifact must record:
@@ -123,6 +150,7 @@ Shared manifests:
 - `ci/model-artifacts/candidate-artifacts.toml`
 - `ci/model-artifacts/rejected-artifacts.toml`
 - `ci/model-artifacts/tokenizer-authority.toml`
+- `ci/model-artifacts/model-kernel-compatibility.toml`
 
 The shared search and promotion reports are:
 

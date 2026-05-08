@@ -352,3 +352,55 @@ must_not_claim = [
   "Apple M4, NPU, SLM, server, or any other backend answer-readiness is proven.",
   "Any backend speedup is proven.",
 ]
+
+[[work_item]]
+id = "BITNET-COMPAT-001"
+status = "in_progress"
+branch = "codex/bitnet-compat-001-model-kernel-ledger"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-ARTIFACT-007"]
+acceptance = "Record upstream model/kernel compatibility constraints so 1bitLLM/bitnet_b1_58-3B on x86 I2_S is unsupported_upstream and cannot be used as answer_ready, reference_authority, backend_parity, or speedup evidence, while diagnostic and unsupported-path receipts remain allowed."
+commands = [
+  "Parse ci/model-artifacts/*.toml",
+  "cargo test --locked -p bitnet-models --lib --no-default-features model_kernel_compat -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/**",
+  "crates/bitnet-models/src/lib.rs",
+  "crates/bitnet-models/src/model_kernel_compat.rs",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "server inference",
+  "speed claims",
+]
+may_claim = [
+  "Upstream model/kernel compatibility constraints are recorded for official Microsoft 2B and 1bitLLM 3B BitNet model families.",
+  "1bitLLM/bitnet_b1_58-3B x86 I2_S is rejected as answer_ready, reference_authority, backend_parity, or speedup evidence.",
+  "Unsupported model/kernel combinations remain usable for diagnostic-only runs and unsupported-path receipts.",
+]
+must_not_claim = [
+  "3B x86 I2_S failure is a BitNet-rs CPU, AVX-512, or CUDA regression.",
+  "3B x86 TL2 is proof-authoritative before runner-path verification.",
+  "Rust CPU or CUDA behavior changed.",
+  "Any backend speedup is proven.",
+]
