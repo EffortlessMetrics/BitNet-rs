@@ -1261,10 +1261,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-PLANNER-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-planner-001-model-aware"
 pr = 4127
-head_sha = "b5943e9ad58079518d598b3f3ab3046d4e28bb97"
+head_sha = "4d2ec6815fec2ff1bf68da6f9e17e5bbf1c53291"
+merge_sha = "191ad376baa39fa04dc8ce9e5113e35c9b045dd6"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

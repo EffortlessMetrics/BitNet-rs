@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T20:35:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-001"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-planner-001-model-aware"
+pr = 4127
+head_sha = "4d2ec6815fec2ff1bf68da6f9e17e5bbf1c53291"
+merge_sha = "191ad376baa39fa04dc8ce9e5113e35c9b045dd6"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4127 merged the model-aware CUDA dispatch planner contract.",
+  "The merged planner keeps BitNet QK256 CUDA and dense regular-LLM CUDA route labels separate.",
+  "Strict CUDA unsupported routes are represented explicitly without changing kernels, QK256 math, tokenizer, loader, transformer, server, or dense GGUF inference behavior.",
+]
