@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T08:55:11Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-002"
+event = "pr_open"
+pr = 4020
+head_sha = "5da4a3532b7209e7f125392179be0c04c4a138c5"
+actor = "codex"
+
+notes = [
+  "Opened Apple M4 SLM model cache command PR.",
+  "Scope is CLI cache management, docs, and campaign tracking; no model binaries, Metal kernels, QK256, qk256-dispatch, server inference, or broad performance claims.",
+]

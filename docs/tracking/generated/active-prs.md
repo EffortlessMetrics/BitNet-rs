@@ -3,5 +3,6 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
+| apple-m4-productization | M4-PROD-002 | #4020 | `codex/apple-m4-productization/M4-PROD-002-model-cache` | Add storage-conscious model cache commands to fetch, verify, list, and prune supported SLM artifacts under the user cache, recording source, size, SHA256, and tokenizer metadata while warning on low disk and never committing binaries. |
 | cpu-proof | CPU-ANSWER-006 | #4005 | `codex/cpu-answer-006-reference-token-artifact` | A Microsoft BitNet.cpp reference-divergence artifact records the MODEL-ARTIFACT-007 prompt envelope, BOS policy, external Llama-BPE tokenizer/pre-tokenizer authority, prompt token IDs, generated token IDs, decoded text, and first-step top-k/logit evidence where available, so strict Rust CPU failures can be classified as prompt/tokenizer divergence, shared decode/logits divergence, or backend-specific execution without claiming answer quality. |
 | tracker-infra | TRACKER-003 | #3724 | `codex/tracker-infra/TRACKER-003-current-pr-reconciliation` | Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes. |
