@@ -1262,6 +1262,9 @@ fn validate_metal_phase_receipt(
     if metal_phase["kernel_id"].as_str().is_none() {
         anyhow::bail!("{} Metal phase receipt is missing kernel_id", path.display());
     }
+    if metal_phase["timing_recorded"].as_bool() != Some(true) {
+        anyhow::bail!("{} Metal phase receipt must record phase timing", path.display());
+    }
 
     let layout = &receipt["layout"];
     if layout["consumes_dense_f32_directly"].as_bool() != Some(true)
@@ -1290,6 +1293,27 @@ fn validate_metal_phase_receipt(
     }
     if parity["max_abs_error"].is_null() || parity["mean_abs_error"].is_null() {
         anyhow::bail!("{} Metal phase parity is missing error metrics", path.display());
+    }
+
+    let timing = &receipt["timing"];
+    if !timing.is_object() {
+        anyhow::bail!("{} Metal phase receipt is missing timing delta metrics", path.display());
+    }
+    if timing["scope"].as_str().is_none() {
+        anyhow::bail!("{} Metal phase timing is missing scope", path.display());
+    }
+    for field in ["cpu_reference_ms", "metal_phase_ms", "timing_delta_ms"] {
+        if timing[field].as_f64().is_none() {
+            anyhow::bail!("{} Metal phase timing is missing {field}", path.display());
+        }
+    }
+    if timing["cpu_reference_ms"].as_f64().unwrap_or_default() < 0.0
+        || timing["metal_phase_ms"].as_f64().unwrap_or_default() < 0.0
+    {
+        anyhow::bail!("{} Metal phase timing must be non-negative", path.display());
+    }
+    if timing["speedup_claim"].as_bool() != Some(false) {
+        anyhow::bail!("{} Metal phase timing must not claim speedup", path.display());
     }
 
     Ok(ReceiptCheckSummary {

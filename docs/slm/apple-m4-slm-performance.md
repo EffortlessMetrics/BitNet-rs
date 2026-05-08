@@ -197,6 +197,26 @@ Compared with the `M4-SLM-PERF-001` release baseline, the recorded run preserved
 6. Add streaming and time-to-first-token UX.
 7. Publish a measured performance envelope for supported profiles only.
 
+## Metal Phase Expansion
+
+`M4-SLM-PERF-005` keeps the existing first Metal phase narrow: the deterministic
+Qwen2.5 dense f32 prefill linear projection fixture. The receipt records:
+
+```text
+slm_pipeline.selected_backend = apple-m4-cpu-neon
+metal_phase.selected_backend = apple-m4-metal
+metal_phase.execution_phase = prefill_linear_projection
+metal_phase.fallback_used = false
+parity.greedy_token_ids_match_cpu_reference = true
+timing.cpu_reference_ms
+timing.metal_phase_ms
+timing.timing_delta_ms
+timing.speedup_claim = false
+```
+
+This timing is phase-local. It does not claim full SLM inference, full
+`apple-m4-metal` routing, or broad M4 performance.
+
 ## Claim Boundary
 
 Performance claims must be tied to a receipt with:

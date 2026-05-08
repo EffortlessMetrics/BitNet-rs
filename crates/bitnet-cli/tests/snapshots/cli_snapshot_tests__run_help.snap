@@ -130,6 +130,8 @@ Options:
       --dump-logit-steps <DUMP_LOGIT_STEPS>
           Dump logit steps during generation (max steps)
 
+          [aliases: --logits-dump-steps]
+
       --logits-topk <K>
           Top-k tokens to include in logit dump
 

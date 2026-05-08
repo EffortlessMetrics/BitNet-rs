@@ -31,6 +31,8 @@ pub const DENSE_PREFILL_LINEAR_PHASE_SCOPE: &str =
     "qwen2_5_dense_prefill_linear_projection_fixture";
 pub const DENSE_PREFILL_LINEAR_KV_CACHE_BEHAVIOR: &str = "not_exercised";
 pub const DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND: &str = "apple-m4-cpu-neon";
+pub const DENSE_PREFILL_LINEAR_TIMING_SCOPE: &str =
+    "single_live_phase_dispatch_readback_vs_cpu_reference_fixture";
 pub const I2S_PROJECTION_RESIDUAL_EXECUTION_PHASE: &str = "parity";
 pub const I2S_PROJECTION_RESIDUAL_PHASE_SCOPE: &str = "projection_residual_subgraph";
 pub const I2S_PROJECTION_RESIDUAL_OPS: [&str; 2] = ["packed_i2_s_matmul", "residual_add"];
@@ -213,6 +215,28 @@ pub struct DenseMetalPrefillLinearReceipt {
     pub mean_abs_error: f32,
     pub cpu_reference_token_id: usize,
     pub metal_phase_token_id: usize,
+    pub timing: DenseMetalPrefillLinearTiming,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DenseMetalPrefillLinearTiming {
+    pub cpu_reference_ms: f64,
+    pub metal_phase_ms: f64,
+    pub timing_delta_ms: f64,
+    pub timing_scope: &'static str,
+    pub speedup_claim: bool,
+}
+
+impl DenseMetalPrefillLinearTiming {
+    pub fn measured(cpu_reference_ms: f64, metal_phase_ms: f64) -> Self {
+        Self {
+            cpu_reference_ms,
+            metal_phase_ms,
+            timing_delta_ms: metal_phase_ms - cpu_reference_ms,
+            timing_scope: DENSE_PREFILL_LINEAR_TIMING_SCOPE,
+            speedup_claim: false,
+        }
+    }
 }
 
 impl TinyMetalAddParityReceipt {
@@ -334,6 +358,7 @@ impl DenseMetalPrefillLinearReceipt {
         comparison: SmokeComparison,
         cpu_reference_token_id: usize,
         metal_phase_token_id: usize,
+        timing: DenseMetalPrefillLinearTiming,
     ) -> Self {
         Self {
             machine_id: MACHINE_ID,
@@ -362,6 +387,7 @@ impl DenseMetalPrefillLinearReceipt {
             mean_abs_error: comparison.mean_abs_error,
             cpu_reference_token_id,
             metal_phase_token_id,
+            timing,
         }
     }
 }
