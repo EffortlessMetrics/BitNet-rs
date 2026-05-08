@@ -20,6 +20,6 @@
 | model-artifacts | Model artifact answer authority | BITNET-COMPAT-001 | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-PLANNER-002 | CUDA visibility is not kernel execution. |
 | server-real-inference | Server real inference | SERVER-001 | Do not reintroduce simulated inference. |
-| slm-cpu | Small dense model CPU proof | SLM-CPU-007 | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | Small dense model CPU proof | SLM-CPU-007B | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | Tracker infrastructure | TRACKER-003 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM inference proof lane | WASM-001 | WASM detection is not inference. |

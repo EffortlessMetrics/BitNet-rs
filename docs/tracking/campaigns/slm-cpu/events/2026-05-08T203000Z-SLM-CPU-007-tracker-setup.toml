@@ -1,11 +1,11 @@
 timestamp = "2026-05-08T20:30:00Z"
 campaign = "slm-cpu"
-item = "SLM-CPU-007"
+item = "SLM-CPU-007A"
 event = "in_progress"
 branch = "codex/slm-cpu-007-logits-root-cause"
 actor = "codex"
 notes = [
-  "Opened #4126 to add SLM-CPU-007 as the next dense Qwen3 logits root-cause item after SLM-CPU-006B.",
+  "Opened #4126 to add the SLM-CPU-007 root-cause sequence after SLM-CPU-006B.",
   "The item is bounded to checkpoint-summary diagnostics for the Qwen3-0.6B Q8_0 first-token logits_or_shared_transformer_math divergence.",
   "No answer-quality, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is introduced.",
 ]
