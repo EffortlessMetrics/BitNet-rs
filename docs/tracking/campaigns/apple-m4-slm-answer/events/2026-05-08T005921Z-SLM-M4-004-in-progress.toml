@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T00:59:21Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-004"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started warm-session SLM work so the validated Qwen model and tokenizer load once for multiple apple-m4-cpu-neon prompts.",
+  "Scope is Rust CLI warm-session receipts and timing separation only; no BitNet local-answer quality, full apple-m4-metal inference, QK256, Neural Engine, or broad performance claim is made.",
+]

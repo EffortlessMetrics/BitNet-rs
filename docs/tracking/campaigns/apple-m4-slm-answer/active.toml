@@ -164,7 +164,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-004"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-answer/SLM-M4-004-warm-session"
 stackable = false
 review_mode = "codex_premerge"
