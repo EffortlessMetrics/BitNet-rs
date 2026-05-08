@@ -169,7 +169,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-PROD-004 | merged | Strict answer-path benchmark baseline with `speedup_claim=false`. |
 | CUDA-BITNET-PERF-002 | merged | Repeated strict ask benchmark receipts with same-model CPU AVX-512 and RTX 5070 Ti CUDA runs; `speedup_claim=false`. |
 | CUDA-BITNET-PERF-003 | merged | Repeated strict CUDA warm-session benchmark receipts with load/context/upload reuse and measured QK256 timing/transfer counters; `speedup_claim=false`. |
-| CUDA-BITNET-PERF-004 | pr_open | Benchmark qualification review for repeated strict ask and warm-session evidence; no profile upgraded, `speedup_claim=false`. |
+| CUDA-BITNET-PERF-004 | merged | Benchmark qualification review for repeated strict ask and warm-session evidence; no profile upgraded, `speedup_claim=false`. |
 | CUDA-DENSE-001 | merged | Dense regular-LLM CUDA receipt boundary; not part of BitNet packed proof completion. |
 | CUDA-DENSE-002 | merged | First dense CUDA FP16 GEMM smoke/parity fixture after the dense receipt boundary. |
 | CUDA-DENSE-003 | merged | Dense regular-LLM CUDA tensor-residency receipt for the FP16 GEMM fixture; still no BitNet packed, dense GGUF inference, speedup, persistent session, or full-residency claim. |

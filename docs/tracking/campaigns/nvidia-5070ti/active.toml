@@ -1006,10 +1006,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-PERF-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-bitnet-perf-004-qualification"
 pr = 4124
 head_sha = "9628ca403d431ceb44535fd694b5ee833adf26f2"
+merge_sha = "4a314ba9e8ddf530d8916d10cceaf0d858a5593e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T20:15:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-PERF-004"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-bitnet-perf-004-qualification"
+pr = 4124
+head_sha = "9628ca403d431ceb44535fd694b5ee833adf26f2"
+merge_sha = "4a314ba9e8ddf530d8916d10cceaf0d858a5593e"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4124 merged the RTX 5070 Ti BitNet CUDA benchmark qualification review.",
+  "The review validates existing repeated strict ask and warm-session benchmark evidence while keeping speedup_claim=false and benchmark_qualified_speedup=false.",
+  "The next benchmark evidence gap remains repeated CPU AVX-512 and CUDA decode-profile receipts plus transfer timing and complete power/thermal context.",
+]
