@@ -621,6 +621,18 @@ fn operator_profile_summary(
         "model_loaded_once": receipt["session"]["model_loaded_once"].as_bool().unwrap_or(false),
         "tokenizer_loaded_once": receipt["session"]["tokenizer_loaded_once"].as_bool().unwrap_or(false),
         "reuse_scope": "within_profile",
+        "resident_session": {
+            "reuse_scope": receipt["session"]["reuse_scope"].clone(),
+            "session_owned_buffers": receipt["session"]["session_owned_buffers"].clone(),
+            "prompt_token_buffer_reused": receipt["session"]["prompt_token_buffer_reused"].clone(),
+            "generated_token_buffer_reused": receipt["session"]["generated_token_buffer_reused"].clone(),
+            "timing_buffers_reused": receipt["session"]["timing_buffers_reused"].clone(),
+            "allocation_audit_buffers_reused": receipt["session"]["allocation_audit_buffers_reused"].clone(),
+            "stop_tail_buffer_reused": receipt["session"]["stop_tail_buffer_reused"].clone(),
+            "kv_cache_reuse_policy": receipt["session"]["kv_cache_reuse_policy"].clone(),
+            "sampler_reuse_policy": receipt["session"]["sampler_reuse_policy"].clone(),
+            "logits_buffer_reuse_policy": receipt["session"]["logits_buffer_reuse_policy"].clone(),
+        },
         "timing": {
             "model_load_ms": receipt["timing"]["model_load_ms"].clone(),
             "tokenizer_load_ms": receipt["timing"]["tokenizer_load_ms"].clone(),
@@ -1087,6 +1099,24 @@ fn validate_profile_set_receipt(
         }
         if profile["reuse_scope"].as_str() != Some("within_profile") {
             anyhow::bail!("{} profile must record reuse_scope=within_profile", path.display());
+        }
+        if profile["resident_session"]["reuse_scope"].as_str() != Some("resident_session")
+            || profile["resident_session"]["session_owned_buffers"].as_bool() != Some(true)
+            || profile["resident_session"]["prompt_token_buffer_reused"].as_bool() != Some(true)
+            || profile["resident_session"]["generated_token_buffer_reused"].as_bool() != Some(true)
+            || profile["resident_session"]["timing_buffers_reused"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} profile must record resident-session owned buffer reuse",
+                path.display()
+            );
+        }
+        if profile["resident_session"]["kv_cache_reuse_policy"].as_str()
+            != Some("recreated_per_prompt_for_prompt_isolation")
+            || profile["resident_session"]["sampler_reuse_policy"].as_str()
+                != Some("recreated_per_prompt_for_deterministic_prompt_independence")
+        {
+            anyhow::bail!("{} profile must record prompt runtime reset policies", path.display());
         }
         if allocation_audit_enabled {
             if profile["allocation_audit"]["enabled"].as_bool() != Some(true) {

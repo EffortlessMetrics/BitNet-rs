@@ -125,7 +125,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-003"
-status = "ready"
+status = "pr_open"
+pr = 4050
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-003-resident-session"
 stackable = false
 review_mode = "codex_premerge"
@@ -136,6 +137,8 @@ acceptance = "Make resident model/tokenizer reuse the normal multi-prompt path, 
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set operator --json-out target/apple-m4-slm-performance/M4-SLM-PERF-003/resident-session.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check target/apple-m4-slm-performance/M4-SLM-PERF-003/resident-session.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-performance",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",

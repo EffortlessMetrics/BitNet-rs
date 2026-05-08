@@ -331,6 +331,7 @@ fn mac_receipts_check_accepts_operator_profile_summary() {
                     "model_loaded_once": true,
                     "tokenizer_loaded_once": true,
                     "reuse_scope": "within_profile",
+                    "resident_session": resident_session_json(),
                     "timing": {
                         "model_load_ms": 1000.0,
                         "tokenizer_load_ms": 25.0,
@@ -351,6 +352,7 @@ fn mac_receipts_check_accepts_operator_profile_summary() {
                     "model_loaded_once": true,
                     "tokenizer_loaded_once": true,
                     "reuse_scope": "within_profile",
+                    "resident_session": resident_session_json(),
                     "timing": {
                         "model_load_ms": 1000.0,
                         "tokenizer_load_ms": 25.0,
@@ -371,6 +373,7 @@ fn mac_receipts_check_accepts_operator_profile_summary() {
                     "model_loaded_once": true,
                     "tokenizer_loaded_once": true,
                     "reuse_scope": "within_profile",
+                    "resident_session": resident_session_json(),
                     "timing": {
                         "model_load_ms": 1000.0,
                         "tokenizer_load_ms": 25.0,
@@ -737,6 +740,7 @@ fn performance_profile_json(
         "model_loaded_once": true,
         "tokenizer_loaded_once": true,
         "reuse_scope": "within_profile",
+        "resident_session": resident_session_json(),
         "timing": {
             "model_load_ms": 1000.0,
             "tokenizer_load_ms": 25.0,
@@ -760,6 +764,21 @@ fn performance_profile_json(
                 {"component": "model.forward", "alloc_count": 10, "alloc_bytes": 1024}
             ]
         }
+    })
+}
+
+fn resident_session_json() -> serde_json::Value {
+    serde_json::json!({
+        "reuse_scope": "resident_session",
+        "session_owned_buffers": true,
+        "prompt_token_buffer_reused": true,
+        "generated_token_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "allocation_audit_buffers_reused": true,
+        "stop_tail_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage"
     })
 }
 
@@ -1025,6 +1044,18 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     assert_eq!(receipt["session"]["model_loaded_once"], true);
     assert_eq!(receipt["session"]["tokenizer_loaded_once"], true);
     assert_eq!(receipt["session"]["prompt_count"], 6);
+    assert_eq!(receipt["session"]["reuse_scope"], "resident_session");
+    assert_eq!(receipt["session"]["session_owned_buffers"], true);
+    assert_eq!(receipt["session"]["prompt_token_buffer_reused"], true);
+    assert_eq!(receipt["session"]["generated_token_buffer_reused"], true);
+    assert_eq!(
+        receipt["session"]["kv_cache_reuse_policy"],
+        "recreated_per_prompt_for_prompt_isolation"
+    );
+    assert_eq!(
+        receipt["session"]["sampler_reuse_policy"],
+        "recreated_per_prompt_for_deterministic_prompt_independence"
+    );
     assert_eq!(receipt["corpus"]["artifact_kind"], "apple_m4_slm_quality_corpus");
     assert_eq!(receipt["quality_summary"]["passed"], true);
     assert_eq!(receipt["determinism"]["checked"], true);
@@ -1050,6 +1081,10 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
         .expect("json prompt receipt");
         assert_eq!(prompt_receipt["fallback_used"], false);
         assert_eq!(prompt_receipt["speedup_claim"], false);
+        assert_eq!(prompt_receipt["session_reuse"]["reuse_scope"], "resident_session");
+        assert_eq!(prompt_receipt["session_reuse"]["session_owned_buffers"], true);
+        assert_eq!(prompt_receipt["session_reuse"]["prompt_token_buffer_reused"], true);
+        assert_eq!(prompt_receipt["session_reuse"]["generated_token_buffer_reused"], true);
         assert_eq!(prompt_receipt["timing"]["model_load_ms"], 0.0);
         assert_eq!(prompt_receipt["timing"]["tokenizer_load_ms"], 0.0);
         assert!(

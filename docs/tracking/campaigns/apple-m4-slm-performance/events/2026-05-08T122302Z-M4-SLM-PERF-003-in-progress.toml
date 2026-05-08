@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T12:23:02Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started resident-session hardening for the Apple M4 SLM performance campaign.",
+  "Scope is warm-session reuse, session-owned buffers, receipts, and tests; no QK256, qk256-dispatch, server, Metal kernel, MPSGraph, Neural Engine, or broad performance claim work.",
+]
