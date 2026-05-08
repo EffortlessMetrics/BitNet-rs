@@ -9,7 +9,6 @@
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use std::collections::HashMap;
 
 /// Sampling strategy for text generation
 pub struct Sampler {
@@ -18,7 +17,6 @@ pub struct Sampler {
     top_k: usize,
     top_p: f32,
     repetition_penalty: f32,
-    token_counts: HashMap<u32, usize>,
 }
 
 impl Sampler {
@@ -36,18 +34,13 @@ impl Sampler {
             ChaCha20Rng::from_rng(&mut rand::rng())
         };
 
-        Self { rng, temperature, top_k, top_p, repetition_penalty, token_counts: HashMap::new() }
+        Self { rng, temperature, top_k, top_p, repetition_penalty }
     }
 
     /// Sample next token from logits
     pub fn sample(&mut self, logits: &[f32], generated_tokens: &[u32]) -> u32 {
-        // Update token counts
-        for &token in generated_tokens {
-            *self.token_counts.entry(token).or_insert(0) += 1;
-        }
-
         // Apply repetition penalty
-        let mut logits = self.apply_repetition_penalty(logits);
+        let mut logits = self.apply_repetition_penalty(logits, generated_tokens);
 
         // Replace NaN logits with -inf so they are ignored by later steps
         for logit in &mut logits {
@@ -88,19 +81,22 @@ impl Sampler {
     }
 
     /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(&self, logits: &[f32]) -> Vec<f32> {
-        if self.repetition_penalty == 1.0 {
+    fn apply_repetition_penalty(&self, logits: &[f32], generated_tokens: &[u32]) -> Vec<f32> {
+        if self.repetition_penalty == 1.0 || generated_tokens.is_empty() {
             return logits.to_vec();
         }
 
         let mut penalized = logits.to_vec();
-        for (&token_id, &count) in &self.token_counts {
-            if (token_id as usize) < penalized.len() && count > 0 {
-                let penalty = self.repetition_penalty.powi(count as i32);
-                if penalized[token_id as usize] > 0.0 {
-                    penalized[token_id as usize] /= penalty;
+        let penalty = self.repetition_penalty;
+        let inv_penalty = 1.0 / penalty;
+
+        for &token_id in generated_tokens {
+            let idx = token_id as usize;
+            if let Some(logit) = penalized.get_mut(idx) {
+                if *logit > 0.0 {
+                    *logit *= inv_penalty;
                 } else {
-                    penalized[token_id as usize] *= penalty;
+                    *logit *= penalty;
                 }
             }
         }
