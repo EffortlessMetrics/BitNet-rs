@@ -1,6 +1,6 @@
 id = "apple-m4-slm-answer"
 title = "Apple M4 SLM local answer usability"
-status = "active"
+status = "complete"
 
 objective = "Make the M4 Mac mini produce prompt-in, intelligible-answer-out local runs with a small storage-conscious dense SLM while preserving receipt-backed hardware routing and keeping blocked BitNet local-answer gates honest."
 
@@ -294,7 +294,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-007"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-slm-answer/SLM-M4-007-metal-phase-decision"
 stackable = false
 review_mode = "codex_premerge"
@@ -302,6 +302,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-M4-005", "SLM-M4-006"]
 pr = 3991
+merge_sha = "0588f042196f6193bd96bb5ac9dffbe452e3dfb9"
 acceptance = "Decide the first safe Apple Metal phase contribution for the validated SLM only after CPU/NEON answers are stable; require CPU-only vs CPU+Metal greedy comparison, Metal phase fallback=false, and explicit CPU fallback for the rest."
 commands = [
   "cargo fmt --all -- --check",
