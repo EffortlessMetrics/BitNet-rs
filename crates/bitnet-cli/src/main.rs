@@ -590,6 +590,18 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Run a tiny native OpenCL kernel smoke for Arc 140V
+    #[command(name = "intel-arc-140v-opencl-smoke")]
+    IntelArc140vOpenclSmoke {
+        /// Require Arc 140V native OpenCL kernel execution to pass
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// Output JSON smoke receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Run validation-only preflight checks
     Validate {
         #[command(subcommand)]
@@ -948,6 +960,9 @@ async fn async_main() -> Result<()> {
         }
         Some(Commands::IntelArc140vOpenvinoGpuSmoke { strict, json_out }) => {
             intel_arc::handle_openvino_gpu_smoke_command(strict, json_out).await
+        }
+        Some(Commands::IntelArc140vOpenclSmoke { strict, json_out }) => {
+            intel_arc::handle_opencl_smoke_command(strict, json_out).await
         }
         Some(Commands::Validate { action }) => handle_validate_command(action).await,
         Some(Commands::CudaSmoke { device_index, json_out }) => {

@@ -232,6 +232,20 @@ This is not native OpenCL execution. Native OpenCL starts at `ARC140V-004`.
 
 Compile and run a tiny OpenCL kernel on Arc 140V.
 
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli,opencl \
+  -- intel-arc-140v-opencl-smoke \
+  --json-out ci/hardware/intel-258v/YYYY-MM-DD/arc-140v-opencl-smoke.json
+```
+
+The receipt must keep `requested_backend=intel-arc-140v`,
+`selected_backend=intel-arc-140v-opencl`, `runtime_api=opencl`,
+`kernel_execution=true`, `fallback_used=false`, `bitnet_inference=false`, and
+`qk256_decode=false` only when the selected OpenCL device resolves to Arc 140V
+and the tiny vector-add output matches the CPU expected output.
+
 ### ARC140V-005 - CPU/iGPU Parity
 
 Run one isolated kernel or subgraph through OpenCL and compare against CPU.

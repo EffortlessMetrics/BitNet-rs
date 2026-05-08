@@ -13,7 +13,7 @@
     clippy::too_many_lines
 )]
 
-use std::fmt;
+use std::{ffi::CString, fmt, os::raw::c_void, ptr, time::Instant};
 
 use bitnet_intel_gpu_id::{
     is_intel_arc_device as shared_is_intel_arc_device, is_intel_vendor as shared_is_intel_vendor,
@@ -22,6 +22,7 @@ use bitnet_intel_gpu_id::{
 // ── OpenCL C constants ──────────────────────────────────────────────────────
 
 const CL_SUCCESS: i32 = 0;
+const CL_TRUE: u32 = 1;
 
 // Platform info keys
 const CL_PLATFORM_PROFILE: u32 = 0x0900;
@@ -47,6 +48,13 @@ const CL_DEVICE_TYPE_ALL: u64 = 0xFFFF_FFFF;
 const CL_DEVICE_TYPE_GPU: u64 = 1 << 2;
 const CL_DEVICE_TYPE_CPU: u64 = 1 << 1;
 const CL_DEVICE_TYPE_ACCELERATOR: u64 = 1 << 3;
+
+// Memory flags
+const CL_MEM_READ_ONLY: u64 = 1 << 2;
+const CL_MEM_WRITE_ONLY: u64 = 1 << 1;
+
+// Program build info keys
+const CL_PROGRAM_BUILD_LOG: u32 = 0x1183;
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -163,6 +171,27 @@ pub struct ProbeResult {
     pub cpu: super::CpuCapabilities,
 }
 
+/// Raw native OpenCL tiny vector-add smoke result.
+#[derive(Debug, Clone, PartialEq)]
+pub struct OpenClTinyVectorAddExecution {
+    pub passed: bool,
+    pub proof_stage: String,
+    pub platform_name: Option<String>,
+    pub device_name: Option<String>,
+    pub vendor: Option<String>,
+    pub driver_version: Option<String>,
+    pub kernel_name: String,
+    pub input_len: usize,
+    pub tolerance: f32,
+    pub max_abs_error: Option<f32>,
+    pub mean_abs_error: Option<f32>,
+    pub enqueue_ms: Option<f64>,
+    pub readback_ms: Option<f64>,
+    pub kernel_execution: bool,
+    pub fallback_used: bool,
+    pub error: Option<String>,
+}
+
 impl ProbeResult {
     /// Build a full probe result from all sources.
     pub fn detect() -> Self {
@@ -212,6 +241,69 @@ type ClGetPlatformIDs = unsafe extern "C" fn(u32, *mut usize, *mut u32) -> i32;
 type ClGetPlatformInfo = unsafe extern "C" fn(usize, u32, usize, *mut u8, *mut usize) -> i32;
 type ClGetDeviceIDs = unsafe extern "C" fn(usize, u64, u32, *mut usize, *mut u32) -> i32;
 type ClGetDeviceInfo = unsafe extern "C" fn(usize, u32, usize, *mut u8, *mut usize) -> i32;
+type ClCreateContext = unsafe extern "C" fn(
+    *const isize,
+    u32,
+    *const usize,
+    Option<unsafe extern "C" fn(*const i8, *const c_void, usize, *mut c_void)>,
+    *mut c_void,
+    *mut i32,
+) -> usize;
+type ClCreateCommandQueue = unsafe extern "C" fn(usize, usize, u64, *mut i32) -> usize;
+type ClCreateProgramWithSource =
+    unsafe extern "C" fn(usize, u32, *const *const i8, *const usize, *mut i32) -> usize;
+type ClBuildProgram = unsafe extern "C" fn(
+    usize,
+    u32,
+    *const usize,
+    *const i8,
+    Option<unsafe extern "C" fn(usize, *mut c_void)>,
+    *mut c_void,
+) -> i32;
+type ClGetProgramBuildInfo =
+    unsafe extern "C" fn(usize, usize, u32, usize, *mut u8, *mut usize) -> i32;
+type ClCreateKernel = unsafe extern "C" fn(usize, *const i8, *mut i32) -> usize;
+type ClCreateBuffer = unsafe extern "C" fn(usize, u64, usize, *mut c_void, *mut i32) -> usize;
+type ClSetKernelArg = unsafe extern "C" fn(usize, u32, usize, *const c_void) -> i32;
+type ClEnqueueWriteBuffer = unsafe extern "C" fn(
+    usize,
+    usize,
+    u32,
+    usize,
+    usize,
+    *const c_void,
+    u32,
+    *const usize,
+    *mut usize,
+) -> i32;
+type ClEnqueueNDRangeKernel = unsafe extern "C" fn(
+    usize,
+    usize,
+    u32,
+    *const usize,
+    *const usize,
+    *const usize,
+    u32,
+    *const usize,
+    *mut usize,
+) -> i32;
+type ClEnqueueReadBuffer = unsafe extern "C" fn(
+    usize,
+    usize,
+    u32,
+    usize,
+    usize,
+    *mut c_void,
+    u32,
+    *const usize,
+    *mut usize,
+) -> i32;
+type ClFinish = unsafe extern "C" fn(usize) -> i32;
+type ClReleaseMemObject = unsafe extern "C" fn(usize) -> i32;
+type ClReleaseKernel = unsafe extern "C" fn(usize) -> i32;
+type ClReleaseProgram = unsafe extern "C" fn(usize) -> i32;
+type ClReleaseCommandQueue = unsafe extern "C" fn(usize) -> i32;
+type ClReleaseContext = unsafe extern "C" fn(usize) -> i32;
 
 /// Holds dynamically-loaded OpenCL function pointers.
 struct OpenClFunctions {
@@ -220,6 +312,32 @@ struct OpenClFunctions {
     get_device_ids: ClGetDeviceIDs,
     get_device_info: ClGetDeviceInfo,
     // Keep library alive while functions are in use.
+    _lib: libloading::Library,
+}
+
+/// Holds dynamically-loaded OpenCL function pointers needed for kernel smoke.
+struct OpenClExecutionFunctions {
+    get_platform_ids: ClGetPlatformIDs,
+    get_platform_info: ClGetPlatformInfo,
+    get_device_ids: ClGetDeviceIDs,
+    get_device_info: ClGetDeviceInfo,
+    create_context: ClCreateContext,
+    create_command_queue: ClCreateCommandQueue,
+    create_program_with_source: ClCreateProgramWithSource,
+    build_program: ClBuildProgram,
+    get_program_build_info: ClGetProgramBuildInfo,
+    create_kernel: ClCreateKernel,
+    create_buffer: ClCreateBuffer,
+    set_kernel_arg: ClSetKernelArg,
+    enqueue_write_buffer: ClEnqueueWriteBuffer,
+    enqueue_nd_range_kernel: ClEnqueueNDRangeKernel,
+    enqueue_read_buffer: ClEnqueueReadBuffer,
+    finish: ClFinish,
+    release_mem_object: ClReleaseMemObject,
+    release_kernel: ClReleaseKernel,
+    release_program: ClReleaseProgram,
+    release_command_queue: ClReleaseCommandQueue,
+    release_context: ClReleaseContext,
     _lib: libloading::Library,
 }
 
@@ -247,6 +365,83 @@ impl OpenClFunctions {
                 get_platform_info,
                 get_device_ids,
                 get_device_info,
+                _lib: lib,
+            })
+        }
+    }
+}
+
+impl OpenClExecutionFunctions {
+    fn load() -> Result<Self, String> {
+        // SAFETY: We load a well-known system OpenCL ICD library and resolve
+        // standard OpenCL entry points. Calls below use OpenCL C ABI-compatible
+        // argument types.
+        let lib = unsafe { libloading::Library::new(OPENCL_LIB_NAME) }
+            .map_err(|e| format!("failed to load {OPENCL_LIB_NAME}: {e}"))?;
+
+        unsafe {
+            Ok(Self {
+                get_platform_ids: *lib
+                    .get(b"clGetPlatformIDs\0")
+                    .map_err(|e| format!("clGetPlatformIDs: {e}"))?,
+                get_platform_info: *lib
+                    .get(b"clGetPlatformInfo\0")
+                    .map_err(|e| format!("clGetPlatformInfo: {e}"))?,
+                get_device_ids: *lib
+                    .get(b"clGetDeviceIDs\0")
+                    .map_err(|e| format!("clGetDeviceIDs: {e}"))?,
+                get_device_info: *lib
+                    .get(b"clGetDeviceInfo\0")
+                    .map_err(|e| format!("clGetDeviceInfo: {e}"))?,
+                create_context: *lib
+                    .get(b"clCreateContext\0")
+                    .map_err(|e| format!("clCreateContext: {e}"))?,
+                create_command_queue: *lib
+                    .get(b"clCreateCommandQueue\0")
+                    .map_err(|e| format!("clCreateCommandQueue: {e}"))?,
+                create_program_with_source: *lib
+                    .get(b"clCreateProgramWithSource\0")
+                    .map_err(|e| format!("clCreateProgramWithSource: {e}"))?,
+                build_program: *lib
+                    .get(b"clBuildProgram\0")
+                    .map_err(|e| format!("clBuildProgram: {e}"))?,
+                get_program_build_info: *lib
+                    .get(b"clGetProgramBuildInfo\0")
+                    .map_err(|e| format!("clGetProgramBuildInfo: {e}"))?,
+                create_kernel: *lib
+                    .get(b"clCreateKernel\0")
+                    .map_err(|e| format!("clCreateKernel: {e}"))?,
+                create_buffer: *lib
+                    .get(b"clCreateBuffer\0")
+                    .map_err(|e| format!("clCreateBuffer: {e}"))?,
+                set_kernel_arg: *lib
+                    .get(b"clSetKernelArg\0")
+                    .map_err(|e| format!("clSetKernelArg: {e}"))?,
+                enqueue_write_buffer: *lib
+                    .get(b"clEnqueueWriteBuffer\0")
+                    .map_err(|e| format!("clEnqueueWriteBuffer: {e}"))?,
+                enqueue_nd_range_kernel: *lib
+                    .get(b"clEnqueueNDRangeKernel\0")
+                    .map_err(|e| format!("clEnqueueNDRangeKernel: {e}"))?,
+                enqueue_read_buffer: *lib
+                    .get(b"clEnqueueReadBuffer\0")
+                    .map_err(|e| format!("clEnqueueReadBuffer: {e}"))?,
+                finish: *lib.get(b"clFinish\0").map_err(|e| format!("clFinish: {e}"))?,
+                release_mem_object: *lib
+                    .get(b"clReleaseMemObject\0")
+                    .map_err(|e| format!("clReleaseMemObject: {e}"))?,
+                release_kernel: *lib
+                    .get(b"clReleaseKernel\0")
+                    .map_err(|e| format!("clReleaseKernel: {e}"))?,
+                release_program: *lib
+                    .get(b"clReleaseProgram\0")
+                    .map_err(|e| format!("clReleaseProgram: {e}"))?,
+                release_command_queue: *lib
+                    .get(b"clReleaseCommandQueue\0")
+                    .map_err(|e| format!("clReleaseCommandQueue: {e}"))?,
+                release_context: *lib
+                    .get(b"clReleaseContext\0")
+                    .map_err(|e| format!("clReleaseContext: {e}"))?,
                 _lib: lib,
             })
         }
@@ -487,6 +682,422 @@ pub fn list_opencl_devices() -> Vec<OpenClDeviceInfo> {
 /// OpenCL.
 pub fn is_intel_arc_available() -> bool {
     probe_opencl().devices.iter().any(|d| d.is_intel_arc())
+}
+
+/// Compile and run a tiny vector-add kernel on the Arc 140V OpenCL device.
+pub fn run_intel_arc_140v_tiny_vector_add_smoke() -> OpenClTinyVectorAddExecution {
+    const KERNEL_NAME: &str = "tiny_vector_add";
+    const INPUT_LEN: usize = 16;
+    const TOLERANCE: f32 = 1.0e-6;
+
+    let mut result = OpenClTinyVectorAddExecution {
+        passed: false,
+        proof_stage: "runtime_detected".to_owned(),
+        platform_name: None,
+        device_name: None,
+        vendor: None,
+        driver_version: None,
+        kernel_name: KERNEL_NAME.to_owned(),
+        input_len: INPUT_LEN,
+        tolerance: TOLERANCE,
+        max_abs_error: None,
+        mean_abs_error: None,
+        enqueue_ms: None,
+        readback_ms: None,
+        kernel_execution: false,
+        fallback_used: false,
+        error: None,
+    };
+
+    let funcs = match OpenClExecutionFunctions::load() {
+        Ok(funcs) => funcs,
+        Err(err) => {
+            result.error = Some(err);
+            return result;
+        }
+    };
+
+    let Some((platform_id, device_id, platform_name, device_name, vendor, driver_version)) =
+        find_arc_140v_device(&funcs)
+    else {
+        result.error = Some("Arc 140V OpenCL device was not visible".to_owned());
+        return result;
+    };
+
+    result.platform_name = Some(platform_name);
+    result.device_name = Some(device_name);
+    result.vendor = Some(vendor);
+    result.driver_version = Some(driver_version);
+
+    match run_vector_add_on_device(&funcs, platform_id, device_id, INPUT_LEN, TOLERANCE) {
+        Ok(metrics) => {
+            result.proof_stage = "kernel_smoke_tested".to_owned();
+            result.passed = metrics.passed;
+            result.kernel_execution = true;
+            result.max_abs_error = Some(metrics.max_abs_error);
+            result.mean_abs_error = Some(metrics.mean_abs_error);
+            result.enqueue_ms = Some(metrics.enqueue_ms);
+            result.readback_ms = Some(metrics.readback_ms);
+            if !metrics.passed {
+                result.error = Some(format!(
+                    "tiny OpenCL vector add exceeded tolerance: max_abs_error={} tolerance={}",
+                    metrics.max_abs_error, TOLERANCE
+                ));
+            }
+        }
+        Err(err) => {
+            result.error = Some(err);
+        }
+    }
+
+    result
+}
+
+struct VectorAddMetrics {
+    passed: bool,
+    max_abs_error: f32,
+    mean_abs_error: f32,
+    enqueue_ms: f64,
+    readback_ms: f64,
+}
+
+fn find_arc_140v_device(
+    funcs: &OpenClExecutionFunctions,
+) -> Option<(usize, usize, String, String, String, String)> {
+    let mut num_platforms: u32 = 0;
+    let rc = unsafe { (funcs.get_platform_ids)(0, ptr::null_mut(), &mut num_platforms) };
+    if rc != CL_SUCCESS || num_platforms == 0 {
+        return None;
+    }
+
+    let mut platform_ids = vec![0usize; num_platforms as usize];
+    let rc = unsafe {
+        (funcs.get_platform_ids)(num_platforms, platform_ids.as_mut_ptr(), ptr::null_mut())
+    };
+    if rc != CL_SUCCESS {
+        return None;
+    }
+
+    for &platform_id in &platform_ids {
+        let platform_name = query_string(funcs.get_platform_info, platform_id, CL_PLATFORM_NAME);
+        let mut num_devices: u32 = 0;
+        let rc = unsafe {
+            (funcs.get_device_ids)(
+                platform_id,
+                CL_DEVICE_TYPE_GPU,
+                0,
+                ptr::null_mut(),
+                &mut num_devices,
+            )
+        };
+        if rc != CL_SUCCESS || num_devices == 0 {
+            continue;
+        }
+
+        let mut device_ids = vec![0usize; num_devices as usize];
+        let rc = unsafe {
+            (funcs.get_device_ids)(
+                platform_id,
+                CL_DEVICE_TYPE_GPU,
+                num_devices,
+                device_ids.as_mut_ptr(),
+                ptr::null_mut(),
+            )
+        };
+        if rc != CL_SUCCESS {
+            continue;
+        }
+
+        for &device_id in &device_ids {
+            let device_name = query_device_string(funcs.get_device_info, device_id, CL_DEVICE_NAME);
+            let vendor = query_device_string(funcs.get_device_info, device_id, CL_DEVICE_VENDOR);
+            if !name_matches_arc_140v(&device_name) || !shared_is_intel_vendor(&vendor) {
+                continue;
+            }
+            let driver_version =
+                query_device_string(funcs.get_device_info, device_id, CL_DRIVER_VERSION);
+            return Some((
+                platform_id,
+                device_id,
+                platform_name,
+                device_name,
+                vendor,
+                driver_version,
+            ));
+        }
+    }
+
+    None
+}
+
+fn name_matches_arc_140v(value: &str) -> bool {
+    let lower = value.to_ascii_lowercase();
+    (lower.contains("arc") && lower.contains("140v")) || lower.contains("64a0")
+}
+
+fn run_vector_add_on_device(
+    funcs: &OpenClExecutionFunctions,
+    _platform_id: usize,
+    device_id: usize,
+    input_len: usize,
+    tolerance: f32,
+) -> Result<VectorAddMetrics, String> {
+    let kernel_source = CString::new(
+        r#"
+        __kernel void tiny_vector_add(
+            __global const float* a,
+            __global const float* b,
+            __global float* out
+        ) {
+            const uint gid = get_global_id(0);
+            out[gid] = a[gid] + b[gid];
+        }
+        "#,
+    )
+    .map_err(|err| format!("build OpenCL source CString: {err}"))?;
+    let kernel_name =
+        CString::new("tiny_vector_add").map_err(|err| format!("build kernel name: {err}"))?;
+
+    let a: Vec<f32> = (0..input_len).map(|idx| idx as f32).collect();
+    let b: Vec<f32> = (0..input_len).map(|idx| 0.5 + idx as f32 * 0.25).collect();
+    let expected: Vec<f32> = a.iter().zip(&b).map(|(lhs, rhs)| lhs + rhs).collect();
+    let mut actual = vec![0.0f32; input_len];
+    let bytes = input_len * std::mem::size_of::<f32>();
+
+    let mut err = CL_SUCCESS;
+    let context = unsafe {
+        (funcs.create_context)(ptr::null(), 1, &device_id, None, ptr::null_mut(), &mut err)
+    };
+    if err != CL_SUCCESS || context == 0 {
+        return Err(format!("clCreateContext failed with {err}"));
+    }
+
+    let mut queue = 0usize;
+    let mut program = 0usize;
+    let mut kernel = 0usize;
+    let mut a_buf = 0usize;
+    let mut b_buf = 0usize;
+    let mut out_buf = 0usize;
+
+    let run_result = (|| {
+        queue = unsafe { (funcs.create_command_queue)(context, device_id, 0, &mut err) };
+        check_handle(queue, err, "clCreateCommandQueue")?;
+
+        let source_ptr = kernel_source.as_ptr();
+        let source_len = kernel_source.as_bytes().len();
+        program = unsafe {
+            (funcs.create_program_with_source)(context, 1, &source_ptr, &source_len, &mut err)
+        };
+        check_handle(program, err, "clCreateProgramWithSource")?;
+
+        let build_rc = unsafe {
+            (funcs.build_program)(program, 1, &device_id, ptr::null(), None, ptr::null_mut())
+        };
+        if build_rc != CL_SUCCESS {
+            return Err(format!(
+                "clBuildProgram failed with {build_rc}: {}",
+                program_build_log(funcs, program, device_id)
+            ));
+        }
+
+        kernel = unsafe { (funcs.create_kernel)(program, kernel_name.as_ptr(), &mut err) };
+        check_handle(kernel, err, "clCreateKernel")?;
+
+        a_buf = unsafe {
+            (funcs.create_buffer)(context, CL_MEM_READ_ONLY, bytes, ptr::null_mut(), &mut err)
+        };
+        check_handle(a_buf, err, "clCreateBuffer(a)")?;
+        b_buf = unsafe {
+            (funcs.create_buffer)(context, CL_MEM_READ_ONLY, bytes, ptr::null_mut(), &mut err)
+        };
+        check_handle(b_buf, err, "clCreateBuffer(b)")?;
+        out_buf = unsafe {
+            (funcs.create_buffer)(context, CL_MEM_WRITE_ONLY, bytes, ptr::null_mut(), &mut err)
+        };
+        check_handle(out_buf, err, "clCreateBuffer(out)")?;
+
+        let start_enqueue = Instant::now();
+        check_rc(
+            unsafe {
+                (funcs.enqueue_write_buffer)(
+                    queue,
+                    a_buf,
+                    CL_TRUE,
+                    0,
+                    bytes,
+                    a.as_ptr().cast(),
+                    0,
+                    ptr::null(),
+                    ptr::null_mut(),
+                )
+            },
+            "clEnqueueWriteBuffer(a)",
+        )?;
+        check_rc(
+            unsafe {
+                (funcs.enqueue_write_buffer)(
+                    queue,
+                    b_buf,
+                    CL_TRUE,
+                    0,
+                    bytes,
+                    b.as_ptr().cast(),
+                    0,
+                    ptr::null(),
+                    ptr::null_mut(),
+                )
+            },
+            "clEnqueueWriteBuffer(b)",
+        )?;
+
+        set_kernel_mem_arg(funcs, kernel, 0, a_buf)?;
+        set_kernel_mem_arg(funcs, kernel, 1, b_buf)?;
+        set_kernel_mem_arg(funcs, kernel, 2, out_buf)?;
+
+        let global = [input_len];
+        check_rc(
+            unsafe {
+                (funcs.enqueue_nd_range_kernel)(
+                    queue,
+                    kernel,
+                    1,
+                    ptr::null(),
+                    global.as_ptr(),
+                    ptr::null(),
+                    0,
+                    ptr::null(),
+                    ptr::null_mut(),
+                )
+            },
+            "clEnqueueNDRangeKernel",
+        )?;
+        check_rc(unsafe { (funcs.finish)(queue) }, "clFinish(kernel)")?;
+        let enqueue_ms = start_enqueue.elapsed().as_secs_f64() * 1000.0;
+
+        let start_readback = Instant::now();
+        check_rc(
+            unsafe {
+                (funcs.enqueue_read_buffer)(
+                    queue,
+                    out_buf,
+                    CL_TRUE,
+                    0,
+                    bytes,
+                    actual.as_mut_ptr().cast(),
+                    0,
+                    ptr::null(),
+                    ptr::null_mut(),
+                )
+            },
+            "clEnqueueReadBuffer(out)",
+        )?;
+        check_rc(unsafe { (funcs.finish)(queue) }, "clFinish(readback)")?;
+        let readback_ms = start_readback.elapsed().as_secs_f64() * 1000.0;
+
+        let mut max_abs_error = 0.0f32;
+        let mut sum_abs_error = 0.0f32;
+        for (actual, expected) in actual.iter().zip(&expected) {
+            let error = (actual - expected).abs();
+            max_abs_error = max_abs_error.max(error);
+            sum_abs_error += error;
+        }
+        let mean_abs_error = sum_abs_error / input_len as f32;
+
+        Ok(VectorAddMetrics {
+            passed: max_abs_error <= tolerance,
+            max_abs_error,
+            mean_abs_error,
+            enqueue_ms,
+            readback_ms,
+        })
+    })();
+
+    unsafe {
+        if out_buf != 0 {
+            let _ = (funcs.release_mem_object)(out_buf);
+        }
+        if b_buf != 0 {
+            let _ = (funcs.release_mem_object)(b_buf);
+        }
+        if a_buf != 0 {
+            let _ = (funcs.release_mem_object)(a_buf);
+        }
+        if kernel != 0 {
+            let _ = (funcs.release_kernel)(kernel);
+        }
+        if program != 0 {
+            let _ = (funcs.release_program)(program);
+        }
+        if queue != 0 {
+            let _ = (funcs.release_command_queue)(queue);
+        }
+        let _ = (funcs.release_context)(context);
+    }
+
+    run_result
+}
+
+fn set_kernel_mem_arg(
+    funcs: &OpenClExecutionFunctions,
+    kernel: usize,
+    index: u32,
+    buffer: usize,
+) -> Result<(), String> {
+    check_rc(
+        unsafe {
+            (funcs.set_kernel_arg)(
+                kernel,
+                index,
+                std::mem::size_of::<usize>(),
+                (&buffer as *const usize).cast(),
+            )
+        },
+        "clSetKernelArg",
+    )
+}
+
+fn program_build_log(funcs: &OpenClExecutionFunctions, program: usize, device_id: usize) -> String {
+    let mut size = 0usize;
+    let rc = unsafe {
+        (funcs.get_program_build_info)(
+            program,
+            device_id,
+            CL_PROGRAM_BUILD_LOG,
+            0,
+            ptr::null_mut(),
+            &mut size,
+        )
+    };
+    if rc != CL_SUCCESS || size == 0 {
+        return "<build log unavailable>".to_owned();
+    }
+
+    let mut buf = vec![0u8; size];
+    let rc = unsafe {
+        (funcs.get_program_build_info)(
+            program,
+            device_id,
+            CL_PROGRAM_BUILD_LOG,
+            size,
+            buf.as_mut_ptr(),
+            ptr::null_mut(),
+        )
+    };
+    if rc != CL_SUCCESS {
+        return format!("<build log query failed with {rc}>");
+    }
+    if buf.last() == Some(&0) {
+        buf.pop();
+    }
+    String::from_utf8_lossy(&buf).trim().to_owned()
+}
+
+fn check_handle(handle: usize, rc: i32, label: &str) -> Result<(), String> {
+    if rc == CL_SUCCESS && handle != 0 { Ok(()) } else { Err(format!("{label} failed with {rc}")) }
+}
+
+fn check_rc(rc: i32, label: &str) -> Result<(), String> {
+    if rc == CL_SUCCESS { Ok(()) } else { Err(format!("{label} failed with {rc}")) }
 }
 
 // ── Mock / fallback helpers (always available, useful for testing) ───────────
