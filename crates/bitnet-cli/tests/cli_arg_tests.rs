@@ -164,6 +164,169 @@ fn apple_m4_run_help_documents_strict_cpu_neon_receipt_flow() {
 }
 
 #[test]
+fn slm_warm_session_help_documents_warm_receipts() {
+    bitnet()
+        .args(["slm-warm-session", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("one model/tokenizer load"))
+        .stdout(predicate::str::contains("--prompt"))
+        .stdout(predicate::str::contains("--json-out"))
+        .stdout(predicate::str::contains("qwen2.5"));
+}
+
+#[test]
+fn slm_warm_session_requires_multiple_prompts_before_loading_model() {
+    bitnet()
+        .args([
+            "--device",
+            "apple-m4-cpu-neon",
+            "slm-warm-session",
+            "--model",
+            "missing.gguf",
+            "--prompt",
+            "Only one prompt",
+            "--json-out",
+            "target/test-warm-session.json",
+            "--strict-loader",
+            "--strict-tokenizer",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("requires at least two --prompt values"));
+}
+
+#[test]
+fn slm_warm_session_requires_apple_m4_cpu_neon_before_loading_model() {
+    bitnet()
+        .args([
+            "--device",
+            "cpu",
+            "slm-warm-session",
+            "--model",
+            "missing.gguf",
+            "--prompt",
+            "One",
+            "--prompt",
+            "Two",
+            "--json-out",
+            "target/test-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("scoped to --device apple-m4-cpu-neon"));
+}
+
+#[test]
+fn slm_warm_session_rejects_non_gguf_format_before_loading_model() {
+    bitnet()
+        .args([
+            "--device",
+            "apple-m4-cpu-neon",
+            "slm-warm-session",
+            "--model",
+            "missing-model-dir",
+            "--model-format",
+            "safetensors",
+            "--prompt",
+            "One",
+            "--prompt",
+            "Two",
+            "--json-out",
+            "target/test-warm-session.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("supports GGUF only"));
+}
+
+#[test]
+fn slm_warm_session_real_model_receipt_fields_when_enabled() {
+    let Ok(model) = std::env::var("BITNET_M4_SLM_QWEN_GGUF") else {
+        eprintln!("skipping real SLM warm-session receipt test; set BITNET_M4_SLM_QWEN_GGUF");
+        return;
+    };
+    let model_path = {
+        let path = std::path::PathBuf::from(&model);
+        if path.is_absolute() { path } else { workspace_path(&model) }
+    };
+    if !model_path.exists() {
+        eprintln!("skipping real SLM warm-session receipt test; missing {}", model_path.display());
+        return;
+    }
+    let dir = tempfile::tempdir().expect("tempdir");
+    let out = dir.path().join("warm-session.json");
+    let out_str = out.to_string_lossy().into_owned();
+    let model_str = model_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "--device",
+            "apple-m4-cpu-neon",
+            "slm-warm-session",
+            "--model",
+            model_str.as_str(),
+            "--prompt",
+            "What is 2+2? Answer briefly.",
+            "--prompt",
+            "Name the capital of France.",
+            "--max-new-tokens",
+            "16",
+            "--temperature",
+            "0",
+            "--prompt-template",
+            "qwen2.5",
+            "--greedy",
+            "--deterministic",
+            "--strict-loader",
+            "--strict-tokenizer",
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&out).expect("read aggregate receipt"))
+            .expect("json aggregate receipt");
+    assert_eq!(receipt["artifact_kind"], "slm_apple_m4_warm_session");
+    assert_eq!(receipt["requested_backend"], "apple-m4-cpu-neon");
+    assert_eq!(receipt["selected_backend"], "apple-m4-cpu-neon");
+    assert_eq!(receipt["runtime_api"], "cpu");
+    assert_eq!(receipt["fallback_used"], false);
+    assert_eq!(receipt["session"]["model_loaded_once"], true);
+    assert_eq!(receipt["session"]["tokenizer_loaded_once"], true);
+    assert_eq!(receipt["session"]["prompt_count"], 2);
+    assert_eq!(receipt["claim_boundary"]["speedup_claim"], false);
+    assert_eq!(receipt["claim_boundary"]["full_metal_inference_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["bitnet_quality_claimed"], false);
+    let prompts = receipt["prompts"].as_array().expect("prompt summaries");
+    assert_eq!(prompts.len(), 2);
+    for prompt in prompts {
+        assert_eq!(prompt["backend"]["fallback_used"], false);
+        assert_eq!(prompt["timing"]["model_load_ms"], 0.0);
+        assert_eq!(prompt["timing"]["tokenizer_load_ms"], 0.0);
+        assert!(
+            prompt["timing"]["session_model_load_ms"].as_f64().unwrap_or_default() > 0.0,
+            "session model load timing should be recorded"
+        );
+        let prompt_receipt_path = prompt["receipt_path"].as_str().expect("prompt receipt path");
+        let prompt_receipt: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(prompt_receipt_path).expect("read prompt receipt"),
+        )
+        .expect("json prompt receipt");
+        assert_eq!(prompt_receipt["fallback_used"], false);
+        assert_eq!(prompt_receipt["speedup_claim"], false);
+        assert_eq!(prompt_receipt["timing"]["model_load_ms"], 0.0);
+        assert_eq!(prompt_receipt["timing"]["tokenizer_load_ms"], 0.0);
+        assert!(
+            prompt_receipt["tokens"]["generated"].as_u64().unwrap_or_default() > 0,
+            "prompt should generate at least one token"
+        );
+    }
+}
+
+#[test]
 fn legacy_inference_apple_label_error_points_to_receipt_backed_run_path() {
     bitnet()
         .args([

@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T01:08:06Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-004"
+event = "pr_open"
+pr = 3956
+head_sha = "157465ffe0c0dc322f7700e049b5ab2cfba02d3c"
+actor = "codex"
+
+notes = [
+  "Opened a scoped SLM-M4-004 warm-session PR.",
+  "The PR adds an Apple M4 CPU/NEON GGUF-only SLM warm-session command with aggregate and per-prompt receipts.",
+  "It records model/tokenizer loaded once, per-prompt fallback_used=false, timing separation, and no speedup, BitNet quality, full Metal inference, QK256, or Neural Engine claim.",
+]

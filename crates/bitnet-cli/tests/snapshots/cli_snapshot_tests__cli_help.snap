@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 57
 expression: help
 ---
 BitNet-rs CLI - one-shot generation and chat with strict receipts
@@ -65,6 +66,7 @@ Commands:
   chat                               Interactive chat mode (streaming)
   answer-corpus                      Run the fixed CPU answer-readiness corpus through the `run` surface
   answer-parity                      Compare answer-corpus receipts for backend parity diagnostics
+  slm-warm-session                   Run multiple SLM prompts in one warm process with one model/tokenizer load
   convert                            Convert between model formats
   benchmark                          Benchmark model performance
   serve                              Start inference server
@@ -76,6 +78,7 @@ Commands:
   intel-npu-smoke                    Run a tiny static OpenVINO NPU graph smoke without BitNet inference
   intel-npu-bitnet-subgraph          Run selected static BitNet subgraph parity on OpenVINO NPU
   intel-arc-140v-openvino-gpu-smoke  Run a tiny static OpenVINO GPU.0 graph smoke for Arc 140V
+  intel-arc-140v-opencl-smoke        Run a tiny native OpenCL kernel smoke for Arc 140V
   validate                           Run validation-only preflight checks
   cuda-smoke                         Compile and launch a tiny CUDA vector-add kernel
   inspect                            Inspect model metadata and diagnostics

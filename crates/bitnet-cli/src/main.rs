@@ -508,6 +508,90 @@ enum Commands {
     AnswerParity(Box<AnswerParityCommand>),
 
     #[cfg(feature = "full-cli")]
+    /// Run multiple SLM prompts in one warm process with one model/tokenizer load
+    SlmWarmSession {
+        /// Model file or directory path (.gguf file or HuggingFace model directory)
+        #[arg(short, long)]
+        model: std::path::PathBuf,
+
+        /// Model format: auto (detect from path) or gguf
+        #[arg(long, value_name = "FORMAT", default_value = "auto")]
+        model_format: String,
+
+        /// Optional explicit tokenizer path
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+
+        /// Prompt to answer; pass multiple times for a warm multi-prompt session
+        #[arg(long = "prompt", required = true, value_name = "TEXT")]
+        prompts: Vec<String>,
+
+        /// Maximum new tokens to generate per prompt
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 32)]
+        max_new_tokens: usize,
+
+        /// Temperature for sampling (0 = greedy)
+        #[arg(long, default_value_t = 0.0)]
+        temperature: f32,
+
+        /// Top-k sampling (0 = disabled)
+        #[arg(long, default_value_t = 0)]
+        top_k: usize,
+
+        /// Top-p (nucleus) sampling
+        #[arg(long, default_value_t = 1.0)]
+        top_p: f32,
+
+        /// Repetition penalty
+        #[arg(long, default_value_t = 1.1)]
+        repetition_penalty: f32,
+
+        /// Random seed for reproducibility
+        #[arg(long)]
+        seed: Option<u64>,
+
+        /// Strict tokenizer mode: fail if no real tokenizer available
+        #[arg(long, default_value_t = false)]
+        strict_tokenizer: bool,
+
+        /// Strict loader mode: fail-fast with enhanced loader and no fallback
+        #[arg(long, default_value_t = false)]
+        strict_loader: bool,
+
+        /// Use greedy decoding (overrides temperature)
+        #[arg(long, default_value_t = false)]
+        greedy: bool,
+
+        /// Enable deterministic mode (single-threaded)
+        #[arg(long, default_value_t = false)]
+        deterministic: bool,
+
+        /// Number of threads to use (0 = all cores)
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Prompt template: qwen2.5 is the validated Apple M4 SLM default
+        #[arg(long, value_name = "TEMPLATE", default_value = "qwen2.5")]
+        prompt_template: String,
+
+        /// System prompt for chat models
+        #[arg(long, value_name = "TEXT")]
+        system_prompt: Option<String>,
+
+        /// Stop sequences (can be repeated for multiple sequences)
+        #[arg(long = "stop", value_name = "SEQ")]
+        stop: Vec<String>,
+
+        /// Stop token IDs (numeric token IDs, can be repeated)
+        #[arg(long = "stop-id", value_name = "ID")]
+        stop_id: Vec<u32>,
+
+        /// Output aggregate warm-session receipt
+        #[arg(long, value_name = "PATH")]
+        json_out: std::path::PathBuf,
+    },
+
+    #[cfg(feature = "full-cli")]
     /// Convert between model formats
     #[command(alias = "conv")]
     Convert(ConvertCommand),
@@ -931,6 +1015,54 @@ async fn async_main() -> Result<()> {
         Some(Commands::AnswerCorpus(cmd)) => (*cmd).execute(&requested_backend_label).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::AnswerParity(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::SlmWarmSession {
+            model,
+            model_format,
+            tokenizer,
+            prompts,
+            max_new_tokens,
+            temperature,
+            top_k,
+            top_p,
+            repetition_penalty,
+            seed,
+            strict_tokenizer,
+            strict_loader,
+            greedy,
+            deterministic,
+            threads,
+            prompt_template,
+            system_prompt,
+            stop,
+            stop_id,
+            json_out,
+        }) => {
+            run_slm_warm_session(
+                &requested_backend_label,
+                model,
+                model_format,
+                tokenizer,
+                prompts,
+                max_new_tokens,
+                temperature,
+                top_k,
+                top_p,
+                repetition_penalty,
+                seed,
+                strict_tokenizer,
+                strict_loader,
+                greedy,
+                deterministic,
+                threads,
+                prompt_template,
+                system_prompt,
+                stop,
+                stop_id,
+                json_out,
+            )
+            .await
+        }
         #[cfg(feature = "full-cli")]
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]
@@ -3960,6 +4092,549 @@ async fn run_simple_generation(
         println!("Token IDs: {:?}", generated_tokens);
     }
 
+    Ok(())
+}
+
+fn sanitize_warm_session_prompt_stem(prompt: &str) -> String {
+    let mut stem = prompt
+        .chars()
+        .filter_map(|ch| {
+            if ch.is_ascii_alphanumeric() {
+                Some(ch.to_ascii_lowercase())
+            } else if ch.is_whitespace() || matches!(ch, '-' | '_' | '.') {
+                Some('-')
+            } else {
+                None
+            }
+        })
+        .collect::<String>();
+    while stem.contains("--") {
+        stem = stem.replace("--", "-");
+    }
+    let stem = stem.trim_matches('-');
+    if stem.is_empty() { "prompt".to_string() } else { stem.chars().take(48).collect() }
+}
+
+fn tokenizer_pretokenizer_authority(
+    source: bitnet_tokenizers::auto::TokenizerSource,
+) -> &'static str {
+    match source {
+        bitnet_tokenizers::auto::TokenizerSource::Explicit => "explicit_tokenizer",
+        bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => "gguf_metadata",
+        bitnet_tokenizers::auto::TokenizerSource::Sibling => "sibling_tokenizer",
+        bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => "compatibility_fallback",
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_slm_warm_session(
+    requested_backend_label: &str,
+    model_path: std::path::PathBuf,
+    model_format: String,
+    tokenizer_path: Option<std::path::PathBuf>,
+    prompts: Vec<String>,
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    repetition_penalty: f32,
+    seed: Option<u64>,
+    strict_tokenizer: bool,
+    strict_loader: bool,
+    greedy: bool,
+    deterministic: bool,
+    threads: usize,
+    prompt_template: String,
+    system_prompt: Option<String>,
+    stop: Vec<String>,
+    stop_id: Vec<u32>,
+    json_out: std::path::PathBuf,
+) -> Result<()> {
+    use bitnet_common::Device;
+    use bitnet_models::{Model, transformer::KVCache};
+    use bitnet_sampling::{SamplingConfig, SamplingStrategy};
+    use bitnet_tokenizers::Tokenizer;
+    use std::sync::Arc;
+
+    if prompts.len() < 2 {
+        anyhow::bail!("slm-warm-session requires at least two --prompt values");
+    }
+    if requested_backend_label != "apple-m4-cpu-neon" {
+        anyhow::bail!(
+            "slm-warm-session is scoped to --device apple-m4-cpu-neon for Apple M4 SLM receipts; got {requested_backend_label}"
+        );
+    }
+    match model_format.as_str() {
+        "auto" | "gguf" => {}
+        other => {
+            anyhow::bail!(
+                "Invalid --model-format '{}'. slm-warm-session supports GGUF only: auto, gguf",
+                other
+            );
+        }
+    }
+
+    if deterministic {
+        unsafe {
+            std::env::set_var("BITNET_DETERMINISTIC", "1");
+            std::env::set_var("RAYON_NUM_THREADS", "1");
+            if threads > 0 {
+                std::env::set_var("RAYON_NUM_THREADS", threads.to_string());
+            }
+        }
+    }
+    if strict_loader {
+        unsafe {
+            std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");
+            std::env::set_var("BITNET_STRICT_MODE", "1");
+        }
+    }
+
+    let strict_backend = strict_loader
+        || std::env::var("BITNET_STRICT_MODE")
+            .map(|value| matches!(value.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+            .unwrap_or(false);
+    let backend_identity = resolve_run_backend_identity(requested_backend_label, strict_backend)?;
+    if backend_identity.fallback_used {
+        anyhow::bail!(
+            "slm-warm-session requires visible no-fallback backend routing; requested_backend={}, selected_backend={}, fallback_reason={:?}",
+            backend_identity.requested_backend,
+            backend_identity.selected_backend,
+            backend_identity.fallback_reason
+        );
+    }
+    if backend_identity.runtime_api != "cpu" {
+        anyhow::bail!(
+            "slm-warm-session is CPU/NEON scoped; selected runtime_api={}",
+            backend_identity.runtime_api
+        );
+    }
+    unsafe {
+        std::env::set_var("BITNET_REQUESTED_BACKEND", backend_identity.requested_backend.as_str());
+        std::env::set_var("BITNET_SELECTED_BACKEND", backend_identity.selected_backend.as_str());
+        std::env::set_var("BITNET_RUNTIME_API", backend_identity.runtime_api.as_str());
+    }
+
+    if model_path.is_dir() {
+        anyhow::bail!(
+            "slm-warm-session requires a GGUF model file, not a model directory: {}",
+            model_path.display()
+        );
+    }
+    let is_hf_directory = false;
+    let template_type: bitnet_inference::TemplateType =
+        prompt_template.parse().with_context(|| {
+            format!(
+                "Invalid prompt template '{}'. Supported: raw, instruct, llama3-chat, qwen2.5",
+                prompt_template
+            )
+        })?;
+    let temperature = if greedy { 0.0 } else { temperature };
+    let session_start = std::time::Instant::now();
+
+    let loader = bitnet_models::loader::ModelLoader::new(Device::Cpu);
+    let load_config = bitnet_models::loader::LoadConfig {
+        use_mmap: true,
+        validate_checksums: false,
+        progress_callback: None,
+    };
+    println!("Warm session loading model once from: {}", model_path.display());
+    let model_load_start = std::time::Instant::now();
+    let loaded_model = loader.load_with_config(&model_path, &load_config).with_context(|| {
+        format!("Failed to load real model for warm session: {}", model_path.display())
+    })?;
+    let config = loaded_model.config().clone();
+    let model: Arc<dyn Model> = Arc::from(loaded_model);
+    let model_load_ms = elapsed_ms(model_load_start);
+    let loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
+    if loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str() {
+        anyhow::bail!("slm-warm-session requires real_gguf loader mode; got {loader_mode}");
+    }
+
+    let effective_strict_tokenizer = strict_tokenizer || strict_loader;
+    let tokenizer_load_start = std::time::Instant::now();
+    let tokenizer_resolution = bitnet_tokenizers::auto::resolve_tokenizer(
+        &model_path,
+        tokenizer_path.as_deref(),
+        effective_strict_tokenizer,
+    )
+    .with_context(|| format!("Failed to resolve tokenizer for {}", model_path.display()))?;
+    let tokenizer_load_ms = elapsed_ms(tokenizer_load_start);
+    let tokenizer_source = tokenizer_resolution.source;
+    let tokenizer_strict = tokenizer_resolution.strict;
+    let tokenizer: Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+    let tokenizer_source_str = tokenizer_source.as_str();
+    let pretokenizer_authority = tokenizer_pretokenizer_authority(tokenizer_source);
+    let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+    let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
+    let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
+    let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
+    let model_sha256 = compute_model_sha256(&model_path)?;
+    let model_repo = infer_model_repo(&model_path);
+    let model_architecture = infer_model_architecture(&model_path);
+    let model_family = receipt_model_family(&model_architecture);
+    let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
+    let model_file =
+        model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
+    let kernel_family = kernel_family_for_quantization(config.quantization.quantization_type);
+    let kernel_implementation = cpu_kernel_implementation(config.quantization.quantization_type);
+    let selected_kernel = format!("{kernel_family}-{kernel_implementation}-reference");
+    let thread_count = effective_thread_count(threads);
+    let cpu_features = detected_cpu_feature_labels();
+    let cpu_model = detected_cpu_model_label();
+    let apple_machine = apple_machine_receipt_json(
+        backend_identity.requested_backend.as_str(),
+        backend_identity.selected_backend.as_str(),
+    );
+
+    let receipt_dir = json_out
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join(format!(
+            "{}-prompts",
+            json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("slm-warm-session")
+        ));
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("Failed to create {}", receipt_dir.display()))?;
+
+    let mut prompt_receipts = Vec::with_capacity(prompts.len());
+    let mut prompt_summaries = Vec::with_capacity(prompts.len());
+    for (index, prompt) in prompts.iter().enumerate() {
+        let prompt_start = std::time::Instant::now();
+        let formatted_prompt = template_type.apply(prompt, system_prompt.as_deref());
+
+        let mut all_stop_sequences = stop.clone();
+        for template_stop in template_type.default_stop_sequences() {
+            if !all_stop_sequences.contains(&template_stop) {
+                all_stop_sequences.push(template_stop);
+            }
+        }
+        let mut all_stop_ids = stop_id.clone();
+        for template_id in template_type.resolve_stop_token_ids(tokenizer.as_ref()) {
+            if !all_stop_ids.contains(&template_id) {
+                all_stop_ids.push(template_id);
+            }
+        }
+
+        let bos_policy = template_type.should_add_bos();
+        let parse_special = template_type.parse_special();
+        let prompt_tokenize_start = std::time::Instant::now();
+        let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
+        ensure_non_empty_generation_context(&mut tokens, tokenizer.as_ref())?;
+        let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
+        let prompt_token_count = tokens.len();
+
+        let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+        let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
+        let mut sampler = SamplingStrategy::new(SamplingConfig {
+            temperature,
+            top_k: top_k as u32,
+            top_p,
+            repetition_penalty,
+            seed,
+        });
+        let mut generated_tokens = Vec::with_capacity(max_new_tokens);
+        let mut decode_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut embed_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut forward_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut logits_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut sample_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut token_decode_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut first_token_ms = None;
+        let mut first_token_decode_ms = None;
+
+        let prefill_start = std::time::Instant::now();
+        let mut prefill_token_count = 0usize;
+        if tokens.len() > 1 {
+            for token in &tokens[..tokens.len() - 1] {
+                let x = model.embed(&[*token])?;
+                let _ = model.forward(&x, any_cache.as_mut())?;
+                prefill_token_count += 1;
+            }
+        }
+        let prefill_ms = if prefill_token_count > 0 { elapsed_ms(prefill_start) } else { 0.0 };
+
+        let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
+        let mut tail = if max_stop_len > 0 {
+            Some(String::with_capacity(max_stop_len.saturating_add(16)))
+        } else {
+            None
+        };
+
+        for _step_idx in 0..max_new_tokens {
+            let decode_step_start = std::time::Instant::now();
+            let last_token = tokens.last().copied().expect("tokens must be non-empty");
+
+            let embed_start = std::time::Instant::now();
+            let x = model.embed(&[last_token])?;
+            embed_step_ms.push(elapsed_ms(embed_start));
+
+            let forward_start = std::time::Instant::now();
+            let h = model.forward(&x, any_cache.as_mut())?;
+            forward_step_ms.push(elapsed_ms(forward_start));
+
+            let last_hidden = extract_last_token_hidden(&h)?;
+            let logits_start = std::time::Instant::now();
+            let logits = model.logits(&last_hidden)?;
+            let logits_vec = extract_logits_2d(&logits)?;
+            logits_step_ms.push(elapsed_ms(logits_start));
+
+            let sample_start = std::time::Instant::now();
+            let next_token = sampler.sample(&logits_vec, &generated_tokens)?;
+            sample_step_ms.push(elapsed_ms(sample_start));
+
+            tokens.push(next_token);
+            generated_tokens.push(next_token);
+            if first_token_ms.is_none() {
+                first_token_ms = Some(prompt_start.elapsed().as_millis() as u64);
+            }
+
+            let token_decode_start = std::time::Instant::now();
+            let token_text = tokenizer.decode(&[next_token])?;
+            token_decode_step_ms.push(elapsed_ms(token_decode_start));
+            if let Some(tail) = &mut tail {
+                tail.push_str(&token_text);
+                if tail.len() > max_stop_len {
+                    let cut = tail.len() - max_stop_len;
+                    let mut safe_cut = cut;
+                    while safe_cut > 0 && !tail.is_char_boundary(safe_cut) {
+                        safe_cut -= 1;
+                    }
+                    tail.drain(..safe_cut);
+                }
+            }
+            let step_ms = elapsed_ms(decode_step_start);
+            if first_token_decode_ms.is_none() {
+                first_token_decode_ms = Some(step_ms);
+            }
+            decode_step_ms.push(step_ms);
+
+            if all_stop_ids.contains(&next_token) {
+                break;
+            }
+            if let Some(eos) = tokenizer.eos_token_id()
+                && next_token == eos
+            {
+                break;
+            }
+            if let Some(tail) = &tail
+                && !all_stop_sequences.is_empty()
+                && all_stop_sequences.iter().any(|pat| tail.ends_with(pat))
+            {
+                break;
+            }
+        }
+
+        let generated_text = tokenizer.decode(&generated_tokens)?;
+        let prompt_total_ms = elapsed_ms(prompt_start);
+        let decode_total_ms = decode_step_ms.iter().sum::<f64>();
+        let sampling_ms_per_token = if sample_step_ms.is_empty() {
+            None
+        } else {
+            Some(sample_step_ms.iter().sum::<f64>() / sample_step_ms.len() as f64)
+        };
+        let decode_steady_state_tok_s =
+            steady_decode_tps_ms(&decode_step_ms).map(|value| (value * 1000.0).round() / 1000.0);
+        let prompt_receipt_path = receipt_dir.join(format!(
+            "{:02}-{}.json",
+            index + 1,
+            sanitize_warm_session_prompt_stem(prompt)
+        ));
+        let prompt_receipt = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "slm_apple_m4_warm_session_prompt",
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "session_artifact_path": json_out.display().to_string(),
+            "artifact_path": prompt_receipt_path.display().to_string(),
+            "prompt_index": index,
+            "requested_backend": backend_identity.requested_backend.as_str(),
+            "selected_backend": backend_identity.selected_backend.as_str(),
+            "runtime_api": backend_identity.runtime_api.as_str(),
+            "fallback_used": backend_identity.fallback_used,
+            "fallback_reason": backend_identity.fallback_reason.as_deref(),
+            "prompt": prompt,
+            "text": generated_text,
+            "tokens": {
+                "prompt": prompt_token_count,
+                "generated": generated_tokens.len(),
+                "total": tokens.len(),
+                "prompt_ids": tokens[..prompt_token_count].to_vec(),
+                "generated_ids": generated_tokens.clone(),
+                "ids": generated_tokens.clone(),
+            },
+            "timing": {
+                "model_load_ms": 0.0,
+                "tokenizer_load_ms": 0.0,
+                "session_model_load_ms": rounded_ms(model_load_ms),
+                "session_tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+                "tokenize_ms": rounded_ms(prompt_tokenize_ms),
+                "prefill_ms": rounded_ms(prefill_ms),
+                "first_token_ms": first_token_ms,
+                "first_token_decode_ms": first_token_decode_ms.map(rounded_ms),
+                "decode_total_ms": rounded_ms(decode_total_ms),
+                "decode_steady_state_tok_s": decode_steady_state_tok_s,
+                "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
+                "total_ms": rounded_ms(prompt_total_ms),
+                "embed_ms": timing_samples_json(&embed_step_ms),
+                "forward_ms": timing_samples_json(&forward_step_ms),
+                "logits_ms": timing_samples_json(&logits_step_ms),
+                "sample_ms": timing_samples_json(&sample_step_ms),
+                "token_decode_ms": timing_samples_json(&token_decode_step_ms),
+            },
+            "model": {
+                "repo": model_repo.as_str(),
+                "file": model_file.as_str(),
+                "path": model_path.display().to_string(),
+                "sha256": model_sha256.as_str(),
+                "format": model_format_label.as_str(),
+                "family": model_family,
+                "architecture": model_architecture,
+                "loader_mode": loader_mode,
+                "fallback_loader_used": false,
+                "tokenizer": tokenizer_label.as_str(),
+            },
+            "tokenizer": {
+                "type": tokenizer_type.as_str(),
+                "model_family": tokenizer_type.as_str(),
+                "source": tokenizer_source_str,
+                "strict": tokenizer_strict,
+                "pretokenizer_authority": pretokenizer_authority,
+                "bos": tokenizer.bos_token_id().unwrap_or(1),
+                "eos": tokenizer.eos_token_id().unwrap_or(2),
+            },
+            "kernel": {
+                "family": kernel_family,
+                "implementation": kernel_implementation,
+                "kernel_id": selected_kernel.as_str(),
+            },
+            "execution": {
+                "phase": "warm_session_decode",
+                "prompt_tokens": prompt_token_count,
+                "generated_tokens": generated_tokens.len(),
+                "thread_count": thread_count,
+                "requested_backend": backend_identity.requested_backend.as_str(),
+                "selected_backend": backend_identity.selected_backend.as_str(),
+                "runtime_api": backend_identity.runtime_api.as_str(),
+                "fallback_used": backend_identity.fallback_used,
+                "fallback_reason": backend_identity.fallback_reason.as_deref(),
+            },
+            "prompt_prefill": {
+                "exercised": prefill_token_count > 0,
+                "tokens": prefill_token_count,
+                "kv_cache_behavior": if prefill_token_count > 0 {
+                    "prompt_prefix_prefilled_before_decode"
+                } else {
+                    "single_token_prompt_no_prefix_prefill"
+                },
+            },
+            "speedup_claim": false,
+        });
+        write_json_output(Some(&prompt_receipt_path), &prompt_receipt)?;
+        prompt_summaries.push(serde_json::json!({
+            "prompt_index": index,
+            "prompt": prompt,
+            "text": prompt_receipt["text"].clone(),
+            "receipt_path": prompt_receipt_path.display().to_string(),
+            "generated_tokens": generated_tokens.len(),
+            "timing": prompt_receipt["timing"].clone(),
+            "backend": {
+                "requested_backend": backend_identity.requested_backend.as_str(),
+                "selected_backend": backend_identity.selected_backend.as_str(),
+                "runtime_api": backend_identity.runtime_api.as_str(),
+                "fallback_used": backend_identity.fallback_used,
+            },
+        }));
+        prompt_receipts.push(prompt_receipt_path.display().to_string());
+    }
+
+    let total_session_ms = elapsed_ms(session_start);
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "slm_apple_m4_warm_session",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": backend_identity.requested_backend.as_str(),
+        "selected_backend": backend_identity.selected_backend.as_str(),
+        "runtime_api": backend_identity.runtime_api.as_str(),
+        "fallback_used": backend_identity.fallback_used,
+        "fallback_reason": backend_identity.fallback_reason.as_deref(),
+        "session": {
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "prompt_count": prompts.len(),
+            "per_prompt_receipt_dir": receipt_dir.display().to_string(),
+            "per_prompt_receipts": prompt_receipts,
+        },
+        "model": {
+            "repo": model_repo.as_str(),
+            "file": model_file.as_str(),
+            "path": model_path.display().to_string(),
+            "sha256": model_sha256.as_str(),
+            "format": model_format_label.as_str(),
+            "family": model_family,
+            "architecture": model_architecture,
+            "loader_mode": loader_mode,
+            "fallback_loader_used": false,
+            "tokenizer": tokenizer_label.as_str(),
+            "vocab_size": tokenizer.vocab_size(),
+        },
+        "tokenizer": {
+            "type": tokenizer_type.as_str(),
+            "model_family": tokenizer_type.as_str(),
+            "source": tokenizer_source_str,
+            "strict": tokenizer_strict,
+            "pretokenizer_authority": pretokenizer_authority,
+            "bos": tokenizer.bos_token_id().unwrap_or(1),
+            "eos": tokenizer.eos_token_id().unwrap_or(2),
+        },
+        "timing": {
+            "model_load_ms": rounded_ms(model_load_ms),
+            "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+            "total_session_ms": rounded_ms(total_session_ms),
+        },
+        "backend": {
+            "requested_backend": backend_identity.requested_backend.as_str(),
+            "selected_backend": backend_identity.selected_backend.as_str(),
+            "runtime_api": backend_identity.runtime_api.as_str(),
+            "fallback_used": backend_identity.fallback_used,
+            "fallback_reason": backend_identity.fallback_reason.as_deref(),
+        },
+        "cpu": {
+            "model": cpu_model.as_str(),
+            "arch": std::env::consts::ARCH,
+            "features": &cpu_features,
+            "threads": thread_count,
+        },
+        "counts": {
+            "n_kv": n_kv,
+            "n_tensors": n_tensors,
+        },
+        "prompts": prompt_summaries,
+        "claim_boundary": {
+            "warm_session_flow": true,
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "speedup_claim": false,
+            "full_metal_inference_claimed": false,
+            "bitnet_quality_claimed": false,
+        },
+        "speedup_claim": false,
+    });
+    let mut aggregate = aggregate;
+    if let Some(apple_machine) = apple_machine
+        && let Some(object) = aggregate.as_object_mut()
+    {
+        object.insert("machine_id".to_string(), apple_machine["machine_id"].clone());
+        object.insert("resolved_device".to_string(), apple_machine["resolved_device"].clone());
+        object.insert("apple".to_string(), apple_machine);
+    }
+    write_json_output(Some(&json_out), &aggregate)?;
+    println!(
+        "warm session receipt written to {} ({} prompts, model/tokenizer loaded once)",
+        json_out.display(),
+        prompts.len()
+    );
     Ok(())
 }
 
