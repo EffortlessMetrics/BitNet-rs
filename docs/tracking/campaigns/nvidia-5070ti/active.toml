@@ -1471,8 +1471,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-005"
-status = "in_progress"
+status = "merged"
 branch = "codex/cuda-dense-005-model-family-planner-bridge"
+pr = 4150
+head_sha = "0b805c9931aba0d80eef03c5fc3da8aa85a07e26"
+merge_sha = "bacc3d753bd6ac385f08b160cf3f253f5deb43ce"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
