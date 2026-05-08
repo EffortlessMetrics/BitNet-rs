@@ -704,7 +704,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-PROD-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-prod/CUDA-PROD-001-strict-ask-receipt-default"
 pr = 4054
 stackable = false
@@ -748,6 +748,55 @@ must_not_claim = [
   "CUDA speedup exists before a same-model fallback-free benchmark receipt upgrades speedup_claim.",
   "Full CUDA residency for every transformer operation is proven.",
   "The model fetch/verify/install UX is complete.",
+]
+
+[[work_item]]
+id = "CUDA-PROD-002"
+status = "ready"
+branch = "codex/cuda-prod/CUDA-PROD-002-warm-session-receipts"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-PROD-001"]
+acceptance = "Add a strict CUDA warm-session ask/chat path that loads the model once, initializes the RTX 5070 Ti CUDA context once, uploads BitNet weights once, serves multiple deterministic turns, and emits per-turn or session-summary receipts without broad chat, speed, server, or full-residency claims."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli session -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/reports/**",
+  "docs/specs/rtx5070ti-cuda-answer-readiness.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "dense CUDA reference lanes",
+  "WGPU, Vulkan, D3D12, OpenCL, Metal, NPU, or SLM runtime work",
+]
+may_claim = [
+  "The strict RTX 5070 Ti CUDA session path reuses model load, CUDA context, and upload-once BitNet weights across multiple deterministic turns.",
+  "Session receipts preserve selected backend, runtime API, fallback status, per-turn quality, and speedup_claim=false.",
+]
+must_not_claim = [
+  "CUDA speedup exists before a same-model fallback-free benchmark receipt upgrades speedup_claim.",
+  "Broad chat quality is proven beyond committed deterministic prompts.",
+  "Full CUDA residency for every transformer operation is proven.",
+  "Server inference readiness is complete.",
 ]
 
 [[work_item]]
