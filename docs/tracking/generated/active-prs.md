@@ -4,5 +4,4 @@
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
 | intel-258v-platform | CPU258V-017 | #4123 | `codex/lunar-lake/CPU258V-017-prompt-token-audit` | Emit a BitNet prompt/token authority audit receipt for the 258V CPU path that records GGUF metadata, tokenizer source/family/vocab, selected template policy, rendered prompt, BOS/EOS/special-token policy, prompt token IDs, generated-token/logit availability, and a first-divergence classification without claiming answer quality, speed, Arc/NPU execution, or QK256 changes. |
-| model-artifacts | BITNET-COMPAT-001 | #4134 | `codex/bitnet-compat-001-model-kernel-ledger` | Record upstream model/kernel compatibility constraints so 1bitLLM/bitnet_b1_58-3B on x86 I2_S is unsupported_upstream and cannot be used as answer_ready, reference_authority, backend_parity, or speedup evidence, while diagnostic and unsupported-path receipts remain allowed. |
 | tracker-infra | TRACKER-003 | #3724 | `codex/tracker-infra/TRACKER-003-current-pr-reconciliation` | Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes. |
