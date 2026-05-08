@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T07:39:02Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-009"
+event = "pr_open"
+pr = 4010
+branch = "codex/intel-258v-platform/CPU258V-009-single-case-answer"
+head_sha = "9575a61aa07c5616cb03b3718283abd0ea98f8d9"
+summary = "Opened CPU258V-009 to record a bounded single-case 258V AVX2 answer-corpus timeout."
+
+details = [
+  "The selected math_2_plus_2 case timed out within the 420-second local child-run window and emitted a missing_child_receipt row.",
+  "The aggregate receipt preserves full corpus identity with selected_case_count=1 and selected_case_ids=[math_2_plus_2].",
+  "This PR does not claim selected-case completion, answer quality, scalar/AVX2 parity, sustained throughput, Arc 140V execution, or Intel NPU execution.",
+]

@@ -67,7 +67,7 @@
 | intel-258v-platform | CPU258V-006 | CPU258V-005 | merged |
 | intel-258v-platform | CPU258V-007 | CPU258V-006 | merged |
 | intel-258v-platform | CPU258V-008 | CPU258V-007 | merged |
-| intel-258v-platform | CPU258V-009 | CPU258V-008 | ready |
+| intel-258v-platform | CPU258V-009 | CPU258V-008 | pr_open |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
