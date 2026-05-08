@@ -853,9 +853,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-PROD-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-prod/CUDA-PROD-004-benchmark-baseline"
 pr = 4093
+merge_sha = "85aba1312b9e21523b459d90010bf67f5594830c"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
