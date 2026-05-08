@@ -1192,8 +1192,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-017"
-status = "pr_open"
+status = "merged"
 pr = 4123
+merge_sha = "964341ecdd7f9d9a5c5762de2caf2168c39f9b64"
 branch = "codex/lunar-lake/CPU258V-017-prompt-token-audit"
 stackable = false
 review_mode = "codex_premerge"
