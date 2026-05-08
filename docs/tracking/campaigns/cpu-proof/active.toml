@@ -569,3 +569,51 @@ must_not_claim = [
   "Server inference is complete.",
   "GPU or NPU execution is involved.",
 ]
+
+[[work_item]]
+id = "CPU-ANSWER-003"
+status = "ready"
+branch = "codex/cpu-answer-003-reference-divergence-triage"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-002"]
+acceptance = "Strict BitNet CPU answer runs can be compared against a known-good reference artifact for the same model SHA, tokenizer, prompt bytes/template/BOS policy, prompt token IDs, generated token IDs, decoded text, and first-step top-k/logit evidence so the first divergence is attributed to prompt/tokenizer/template, shared decode math, logits/sampler, or backend-specific execution; scalar-vs-AVX2 parity remains preserved and non-answer-ready artifacts stay diagnostic-only."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo test --locked -p bitnet-inference --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-receipts --no-default-features",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "ci/quality/**",
+  "ci/hardware/intel-258v/**",
+  "docs/bitnet/**",
+  "docs/model-artifacts/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "tests/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "BitNet CPU answer failures can be triaged against a known-good reference artifact after merge.",
+  "The first divergence can be attributed to prompt/template/tokenizer, shared decode, logits/sampler, or backend-specific execution after merge.",
+  "Scalar-versus-AVX2 full-decode parity remains a preserved diagnostic input after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "A rejected or non-answer-ready artifact is coherent local-answer evidence.",
+  "258V sustained throughput is proven.",
+  "Server inference is complete.",
+  "GPU or NPU execution is involved.",
+]
