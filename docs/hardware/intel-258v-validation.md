@@ -89,6 +89,7 @@ real machine artifact and does not prove runtime execution.
 
 ```text
 ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json
+ci/hardware/intel-258v/YYYY-MM-DD/platform-probe-cli.json
 ci/hardware/intel-258v/YYYY-MM-DD/arc-140v-runtime-probe.json
 ci/hardware/intel-258v/YYYY-MM-DD/arc-140v-openvino-gpu-smoke.json
 ci/hardware/intel-258v/YYYY-MM-DD/npu-openvino-runtime-probe.json
@@ -100,6 +101,7 @@ The bundle must keep each lane independently addressable:
 | Artifact | Proof stage | Scope | Claim boundary |
 |---|---|---|---|
 | `platform-probe.json` | `runtime_detected` | OS, CPU, memory, power, OpenVINO device list, shared platform context | Machine visibility only |
+| `platform-probe-cli.json` | `runtime_detected` | CLI-emitted OS, CPU, memory, OpenVINO CPU/GPU/NPU, Arc/NPU identity, and missing-runtime state | Machine visibility only |
 | `arc-140v-runtime-probe.json` | `runtime_detected` | Arc 140V OpenCL, Level Zero, OpenVINO `GPU.0`, exact device identity | No OpenCL kernel execution claim |
 | `arc-140v-openvino-gpu-smoke.json` | `kernel_smoke_tested` | Tiny static OpenVINO `GPU.0` graph execution with Arc 140V identity and CPU expected-output comparison | No native OpenCL, BitNet, QK256, or acceleration claim |
 | `npu-openvino-runtime-probe.json` | `runtime_detected` | OS NPU evidence, OpenVINO `NPU`, driver/compiler/memory properties | No graph execution claim |
@@ -154,6 +156,18 @@ map for CPU, Arc 140V, and Intel NPU receipts. It must not claim cross-lane
 performance comparability, Arc 140V BitNet inference, Intel NPU BitNet
 inference, QK256 accelerator decode, acceleration, or CPU fallback as
 accelerator proof.
+
+The 2026-05-08 CLI platform probe refresh is:
+
+```text
+ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json
+```
+
+It records OpenVINO 2026.1 visibility for `CPU`, `GPU`, and `NPU`, identifies
+the Arc 140V OpenVINO GPU device as `Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)`,
+and keeps Level Zero unavailable because `sycl-ls`/`ze_info` tooling is not
+installed in the current environment. Native OpenCL execution remains proven by
+the separate OpenCL smoke/parity receipts.
 
 ### CLI Platform Probe
 
