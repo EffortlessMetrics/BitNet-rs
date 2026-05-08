@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T04:42:05Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-007"
+event = "merged"
+pr = 3991
+merge_sha = "0588f042196f6193bd96bb5ac9dffbe452e3dfb9"
+actor = "codex"
+
+notes = [
+  "Merged first safe Apple Metal phase decision for the validated SLM lane.",
+  "Marked the apple-m4-slm-answer campaign complete after reference artifact, Rust answer, warm session, quality/determinism, warm speed, and Metal phase decision items landed.",
+]
