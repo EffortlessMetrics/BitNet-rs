@@ -1,7 +1,7 @@
 timestamp = "2026-05-08T07:59:14Z"
 campaign = "intel-258v-platform"
 item = "CPU258V-011"
-event = "ready"
+event = "in_progress"
 branch = "codex/intel-258v-platform/CPU258V-011-release-scalar-case"
 base_sha = "aae753c8b51e32c2be2ac88407857f579ba3f371"
 summary = "Readied CPU258V-011 to record release-built scalar and scalar-vs-AVX2 selected-case answer parity."

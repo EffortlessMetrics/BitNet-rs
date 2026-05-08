@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T08:21:53Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started Apple M4 productization campaign after apple-m4-slm-answer completed.",
+  "Scope is documentation and campaign control for the working CPU/NEON SLM baseline; no runtime, Metal, QK256, server, MPSGraph, Neural Engine, dependency, or model-binary changes.",
+]

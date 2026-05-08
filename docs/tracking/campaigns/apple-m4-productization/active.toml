@@ -1,0 +1,235 @@
+id = "apple-m4-productization"
+title = "Apple M4 local answer productization"
+status = "active"
+
+objective = "Turn the completed Apple M4 SLM proof lane into a practical Mac user flow with documented baseline commands, model cache management, Mac-oriented CLI wrappers, warm-session speed polish, and a parity-gated Metal phase handoff."
+
+end_state = [
+  "The working Rust-native Apple M4 CPU/NEON SLM local-answer baseline is documented as the practical Mac path.",
+  "A model cache surface can fetch, verify, list, and prune supported artifacts without committing binaries.",
+  "Mac-oriented CLI commands wrap check, ask, validate, and receipt-bundle flows with clear strict failures.",
+  "Warm-session speed remains separated from cold load and records load, tokenize, prefill, decode, sampling, and total timing.",
+  "The first Apple Metal contribution is implemented only as a named phase with CPU parity and explicit fallback boundaries.",
+]
+
+hard_constraints = [
+  "Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns.",
+  "Do not weaken the blocked BitNet apple-m4-local-answer gates.",
+  "Do not claim BitNet local-answer quality from dense SLM evidence.",
+  "Do not claim full apple-m4-metal inference until a strict real-model receipt proves it.",
+  "Do not claim Neural Engine execution from MPSGraph or any unresolved Apple graph target.",
+  "Do not claim QK256 support on Apple Silicon from SLM evidence.",
+  "Do not claim broad performance from warm-session or tiny phase receipts.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M4-PROD-001"
+status = "pr_open"
+branch = "codex/apple-m4-productization/M4-PROD-001-user-facing-baseline"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+pr = 4017
+acceptance = "Document the working Rust-native Apple M4 CPU/NEON SLM local-answer baseline, including the current warm-session command, expected model artifact, receipt fields, failure boundaries, and unsupported claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-productization",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/bitnet-alignment.md",
+  ".codex/campaigns/apple-m4-productization/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-productization/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The working Rust-native Apple M4 CPU/NEON SLM local-answer baseline is documented.",
+  "Dense SLM Mac productization is separated from blocked BitNet local-answer quality.",
+]
+must_not_claim = [
+  "BitNet local-answer quality is proven.",
+  "Full apple-m4-metal inference works.",
+  "Neural Engine execution is proven.",
+  "QK256 works on Apple Silicon.",
+  "General M4 performance is proven.",
+]
+
+[[work_item]]
+id = "M4-PROD-002"
+status = "proposed"
+branch = "codex/apple-m4-productization/M4-PROD-002-model-cache"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-PROD-001"]
+acceptance = "Add storage-conscious model cache commands to fetch, verify, list, and prune supported SLM artifacts under the user cache, recording source, size, SHA256, and tokenizer metadata while warning on low disk and never committing binaries."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-productization",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-productization/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "A supported SLM artifact cache surface exists if fetch, verify, list, and prune pass.",
+]
+must_not_claim = [
+  "The cache proves BitNet local-answer quality.",
+  "The cache proves Metal inference.",
+  "General performance is proven.",
+]
+
+[[work_item]]
+id = "M4-PROD-003"
+status = "proposed"
+branch = "codex/apple-m4-productization/M4-PROD-003-mac-cli"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-PROD-002"]
+acceptance = "Add Mac-oriented check, ask, validate, and receipts-check CLI wrappers that route the supported SLM path through apple-m4-cpu-neon with strict loader/tokenizer behavior and clear errors for missing models, wrong hashes, unsupported backends, hidden fallback, and premature full Metal requests."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-productization",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-productization/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Mac-oriented SLM local-answer CLI wrappers exist if strict CLI tests pass.",
+]
+must_not_claim = [
+  "BitNet local-answer quality is proven.",
+  "Full apple-m4-metal inference works.",
+  "Neural Engine execution is proven.",
+]
+
+[[work_item]]
+id = "M4-PROD-004"
+status = "proposed"
+branch = "codex/apple-m4-productization/M4-PROD-004-warm-speed-polish"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-PROD-003"]
+acceptance = "Polish warm-session timing and operator thresholds so 16, 32, and 64 token warm answers are measured with cold load separated, model/tokenizer reuse visible, and no broad performance claim."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-productization",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-productization/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Warm Apple M4 SLM timing is measured for the supported model and profile.",
+]
+must_not_claim = [
+  "Broad M4 performance is proven.",
+  "BitNet performance is proven.",
+  "Metal acceleration is proven.",
+]
+
+[[work_item]]
+id = "M4-PROD-005"
+status = "proposed"
+branch = "codex/apple-m4-productization/M4-PROD-005-metal-phase"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-PROD-004"]
+acceptance = "Implement the first Apple Metal prefill linear projection microphase only with CPU-only versus CPU-plus-Metal greedy parity, Metal phase fallback_used=false, the rest of the pipeline recorded as CPU/NEON, layout handling recorded, and no full Metal inference claim."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,metal,full-cli",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features metal",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-productization",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-kernels/tests/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-productization/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "models/**",
+]
+may_claim = [
+  "A named Apple Metal phase participates in the SLM flow if CPU parity and fallback=false receipts pass.",
+]
+must_not_claim = [
+  "Full apple-m4-metal inference works.",
+  "Neural Engine execution is proven.",
+  "QK256 works on Apple Silicon.",
+  "General performance is proven.",
+]
