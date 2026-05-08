@@ -6,14 +6,14 @@ work_item = "MODEL-ARTIFACT-006"
 [source]
 gguf_parser = "local Python GGUF metadata reader against official Microsoft I2_S GGUF"
 huggingface_api = "https://huggingface.co/api/models"
-claim_boundary = "Tokenizer/pre-tokenizer authority evidence only; no artifact is promoted to answer_ready."
+claim_boundary = "Tokenizer/pre-tokenizer authority evidence only. MODEL-ARTIFACT-007 promotes the official Microsoft I2_S artifact for backend gates when paired with external tokenizer.ggml.pre=llama-bpe authority; Rust CPU/CUDA still need strict receipts before local-answer claims."
 
 [[artifact]]
 id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
-state = "rejected_prompt_suite_failed"
+state = "answer_ready"
 answer_readiness_scope = "official_target"
 target_alignment = "official_i2s_cuda_target"
-can_unblock_official_i2s_cuda = false
+can_unblock_official_i2s_cuda = true
 can_unblock_alt_quant_control = false
 repo = "microsoft/bitnet-b1.58-2B-4T-gguf"
 repo_revision = "a1f2f1c765812aa8af3f6eda4a313707064bba15"
@@ -68,16 +68,18 @@ model_config_model_type = "bitnet"
 model_config_tie_word_embeddings = true
 generation_config_sha256 = "af34a37cd006fd230106fcefc6bfdc1f775503aee05a80c174ccc5c6594f7054"
 
-authority_decision = "external_tokenizer_assets_available_but_artifact_still_not_answer_ready"
-prompt_suite_result = "failed"
-prompt_suite_evidence = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
+authority_decision = "external_tokenizer_authority_plus_microsoft_bitnetcpp_prompt_suite_passes"
+pretokenizer_compatibility_decision = "tokenizer.ggml.pre=llama-bpe"
+prompt_suite_result = "passed"
+prompt_suite_evidence = "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md"
 notes = [
   "tokenizer.ggml.pre is absent from the GGUF metadata, not merely unparsed by Rust.",
   "The GGUF repository exposes only the GGUF file in the Hugging Face model listing.",
   "The source Microsoft model repository exposes tokenizer.json, tokenizer_config.json, special_tokens_map.json, config.json, and generation_config.json.",
   "The external tokenizer.json provides explicit pre-tokenizer authority and has the same BPE merges hash as the GGUF metadata.",
   "The GGUF chat template and tokenizer_config chat template are different authority sources.",
-  "Supplying external tokenizer authority does not by itself promote the official I2_S GGUF: recorded intended-runner evidence still fails the prompt suite with repeated colon output.",
+  "MODEL-ARTIFACT-007 records that Microsoft BitNet.cpp passes the committed deterministic answer corpus when external tokenizer.ggml.pre=llama-bpe authority is supplied.",
+  "This promotes the artifact only for downstream backend answer-readiness gates; Rust CPU/CUDA still need strict receipts before local-answer claims.",
 ]
 
 [[artifact]]

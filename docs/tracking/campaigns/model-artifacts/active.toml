@@ -302,3 +302,52 @@ must_not_claim = [
   "CPU or CUDA local-answer generation is coherent in Rust.",
   "Any backend speedup is proven.",
 ]
+
+[[work_item]]
+id = "MODEL-ARTIFACT-007"
+status = "in_progress"
+branch = "codex/model-artifacts/MODEL-ARTIFACT-007-msft-bitnetcpp-external-pretokenizer"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-ARTIFACT-006"]
+acceptance = "Record Microsoft BitNet.cpp reference-runner evidence showing the official Microsoft I2_S GGUF passes the committed deterministic answer corpus when the externally supplied Microsoft tokenizer pre-tokenizer authority is injected with tokenizer.ggml.pre=llama-bpe, without changing Rust runtime behavior or making backend answer claims."
+commands = [
+  "cargo run --release --locked -p xtask --no-default-features -- fetch-cpp --backend cpu",
+  "Microsoft BitNet.cpp llama-cli prompt-suite runs with --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap",
+  "Parse ci/model-artifacts/*.toml",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/model-artifacts/**",
+  "ci/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "runtime behavior",
+  "tokenizer behavior",
+  "model loader behavior",
+  "transformer/math code",
+  "QK256/CUDA",
+  "server/NPU/Metal/A770/SLM runtime",
+  "speed claims",
+  "quality gate weakening",
+]
+may_claim = [
+  "The official Microsoft I2_S GGUF has reference-runner prompt-suite evidence under Microsoft BitNet.cpp when external tokenizer pre-tokenizer authority is supplied.",
+  "The official Microsoft I2_S artifact can unblock backend answer-readiness gates as an answer_ready artifact after merge.",
+  "Backend lanes must still rerun their own strict CPU/CUDA/accelerator receipt gates before claiming local-answer success.",
+]
+must_not_claim = [
+  "Rust CPU local-answer generation is coherent.",
+  "Rust CUDA local-answer generation is coherent.",
+  "Apple M4, NPU, SLM, server, or any other backend answer-readiness is proven.",
+  "Any backend speedup is proven.",
+]

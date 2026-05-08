@@ -94,16 +94,23 @@ Not allowed before this gate passes:
 - NPU, SLM, server, or other hardware answer claims.
 - Speedup claims based on generated text quality.
 
-## Current Shared Blocker
+## Current Shared Artifact
 
-The current Microsoft BitNet I2_S GGUF is structurally valid, but it is rejected
-for answer-readiness claims because reference-runner evidence records missing
-pre-tokenizer authority and deterministic prompt-suite failure.
+The official Microsoft BitNet I2_S GGUF is the shared `answer_ready` artifact
+for backend answer-readiness gates when paired with the documented external
+Microsoft tokenizer authority and `tokenizer.ggml.pre=llama-bpe` compatibility
+decision.
 
-The source Microsoft model repository publishes an external `tokenizer.json`
-with explicit pre-tokenizer behavior. That is useful diagnostic authority, but
-it does not by itself make the official I2_S GGUF answer-ready because the
-recorded prompt-suite output still fails.
+The GGUF remains structurally unchanged and still lacks embedded
+`tokenizer.ggml.pre`. The source Microsoft model repository publishes an
+external `tokenizer.json` with explicit pre-tokenizer behavior. `MODEL-ARTIFACT-007`
+records that Microsoft BitNet.cpp passes the committed deterministic answer
+corpus for the official I2_S artifact when that external authority is supplied
+to the runner with:
+
+```text
+--override-kv tokenizer.ggml.pre=str:llama-bpe
+```
 
 The `tdh111` IQ2_BN_R4 artifact is recorded separately as alternate-quant
 control evidence: it passes the tiny prompt suite under its intended
@@ -117,9 +124,10 @@ Shared manifests:
 - `ci/model-artifacts/rejected-artifacts.toml`
 - `ci/model-artifacts/tokenizer-authority.toml`
 
-The shared search report is:
+The shared search and promotion reports are:
 
 - `docs/reports/MODEL_ARTIFACT_002_REFERENCE_GOOD_SEARCH.md`
+- `docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md`
 
 Apple-local evidence remains at:
 
