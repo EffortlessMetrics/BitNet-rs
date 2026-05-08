@@ -134,18 +134,19 @@ graph execution, parity, or benchmark performance.
 
 ### Current Comparison Index
 
-`LNL258V-COMPARE-001` updates the same-machine comparison index after the 258V
-CPU, Arc 140V, and Intel NPU lanes produced independently scoped evidence:
+`LNL258V-COMPARE-002` refreshes the same-machine comparison index after the
+post-mechanics 258V CPU reference bundle, selected NPU FFN/ReLU2 subgraph
+parity, and Arc 140V native OpenCL CPU/iGPU parity receipts landed:
 
 ```text
 ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
 ```
 
-The index links the CPU full-corpus scalar-vs-AVX2 parity receipt, CPU warm
-phase receipts, Arc 140V native OpenCL tiny-kernel smoke, and the NPU OpenVINO
-llama.cpp GGUF external-reference blocker receipt. It is not a proof artifact
-by itself. A lane claim is allowed only when the cited lane artifact
-independently proves it.
+The index links the CPU reference bundle, CPU full-corpus scalar-vs-AVX2 parity
+receipts, CPU warm phase receipts, Arc 140V native OpenCL CPU-reference parity,
+and the NPU OpenVINO runtime/smoke/RMSNorm/linear/FFN selected subgraph parity
+receipts. It is not a proof artifact by itself. A lane claim is allowed only
+when the cited lane artifact independently proves it.
 
 The comparison index may claim that the repository has a same-machine artifact
 map for CPU, Arc 140V, and Intel NPU receipts. It must not claim cross-lane
@@ -431,13 +432,14 @@ The current Lunar Lake comparison index is:
 ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
 ```
 
-It points at the post-mechanics 258V CPU full-corpus parity receipts, the warm
-CPU phase receipts, the Arc 140V OpenCL tiny-kernel smoke receipt, the live
-OpenVINO NPU runtime/smoke/subgraph receipts, and the NPU OpenVINO llama.cpp
-GGUF reference blocker receipt. This makes the available CPU, GPU, and NPU
-evidence discoverable from one artifact while preserving separate proof
-boundaries. It is not a cross-device performance comparison and does not imply
-that Arc 140V or Intel NPU run full BitNet inference.
+It points at the post-mechanics 258V CPU reference bundle, the CPU full-corpus
+parity receipts, the warm CPU phase receipts, the Arc 140V native OpenCL
+CPU/iGPU parity receipt, the live OpenVINO NPU runtime/smoke/RMSNorm/linear/FFN
+selected subgraph parity receipts, and the NPU OpenVINO llama.cpp GGUF reference
+blocker receipt. This makes the available CPU, GPU, and NPU evidence
+discoverable from one artifact while preserving separate proof boundaries. It is
+not a cross-device performance comparison and does not imply that Arc 140V or
+Intel NPU run full BitNet inference.
 
 ## Windows PowerShell Bundle
 
@@ -741,8 +743,8 @@ ARC140V-005:
   anchor: ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
 
 LNL258V-COMPARE-002:
-  refresh the same-machine comparison index after the new CPU reference bundle
-  and the next independent accelerator parity receipts
+  refreshed the same-machine comparison index after the new CPU reference
+  bundle and independent NPU/Arc parity receipts
 ```
 
 These follow-ups preserve the current priority order:

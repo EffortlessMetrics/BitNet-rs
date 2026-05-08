@@ -21,6 +21,8 @@ ci/hardware/intel-258v/<date>/npu-openvino-runtime-probe.json
 ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
 ci/hardware/intel-258v/<date>/npu-bitnet-linear-projection-subgraph-parity.json
+ci/hardware/intel-258v/<date>/npu-bitnet-ffn-subgraph-parity.json
+ci/hardware/intel-258v/<date>/arc-140v-opencl-parity.json
 ci/hardware/intel-258v/<date>/platform-comparison-index.json
 ```
 
@@ -75,6 +77,12 @@ record artifact paths, backend identity, runtime API, proof stage, and fallback
 status, but it must not merge CPU, GPU, or NPU claims or introduce performance,
 BitNet inference, QK256 decode, or acceleration claims.
 
+`arc-140v-opencl-parity.json` records one isolated native OpenCL vector-add
+parity run on Arc 140V against the selected 258V CPU reference bundle. It may
+claim only native OpenCL CPU/iGPU parity for that kernel. It must not claim
+BitNet inference, Arc acceleration, packed QK256 decode, OpenVINO GPU proof as
+native OpenCL proof, or CPU fallback as Arc proof.
+
 `npu-openvino-runtime-probe.json` records live OpenVINO NPU visibility on the
 258V. It may claim that OpenVINO selected `intel-npu-openvino` with runtime
 device `NPU`; it must not claim graph execution or inference from visibility
@@ -86,7 +94,9 @@ graph smoke. It may claim only that the recorded graph executed on NPU with
 
 `npu-bitnet-rmsnorm-subgraph-parity.json` and
 `npu-bitnet-linear-projection-subgraph-parity.json` record selected static
-BitNet-shaped OpenVINO NPU subgraph parity against CPU NumPy references. They
-may claim selected subgraph parity only. They must not claim full BitNet
-inference, native bitnet-rs NPU inference, NPU acceleration, packed QK256
-decode, or CPU fallback proof.
+BitNet-shaped OpenVINO NPU subgraph parity against CPU NumPy references.
+`npu-bitnet-ffn-subgraph-parity.json` adds the selected static FFN/ReLU2
+subgraph anchored to the 258V CPU reference bundle. They may claim selected
+subgraph parity only. They must not claim full BitNet inference, native
+bitnet-rs NPU inference, NPU acceleration, packed QK256 decode, or CPU fallback
+proof.
