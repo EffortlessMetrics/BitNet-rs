@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T10:53:28Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-013"
+event = "merged"
+pr = 4036
+merge_sha = "6393da542dff571c18d8d92c4a3d96a260b32fff"
+actor = "codex"
+summary = "Merged CPU258V-013, recording release-built 258V warm-session phase receipts."
+
+notes = [
+  "The merged artifacts add strict CPU profile receipts for prefill_512 and decode_128 under the 258V CPU lead lane.",
+  "The receipts record real_gguf loading, explicit strict tokenizer resolution, selected i2_s-avx2-reference, and fallback_used=false.",
+  "The claim boundary remains CPU phase timing only: no answer-quality, sustained throughput, speedup, Arc 140V execution, Intel NPU execution, or acceleration claims.",
+]
