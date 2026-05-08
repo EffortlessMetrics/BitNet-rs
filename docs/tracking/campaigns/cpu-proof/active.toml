@@ -666,7 +666,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-005"
-status = "pr_open"
+status = "merged"
 pr = 4003
 branch = "codex/cpu-answer-005-tokenizer-authority"
 stackable = false
