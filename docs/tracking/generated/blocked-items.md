@@ -58,7 +58,7 @@
 | cpu-proof | CPU-ANSWER-003 | CPU-ANSWER-002 | merged |
 | cpu-proof | CPU-ANSWER-004 | CPU-ANSWER-003 | merged |
 | cpu-proof | CPU-ANSWER-005 | CPU-ANSWER-004 | merged |
-| cpu-proof | CPU-ANSWER-006 | CPU-ANSWER-005 | pr_open |
+| cpu-proof | CPU-ANSWER-006 | CPU-ANSWER-005 | merged |
 | cpu-proof | CPU-ANSWER-007 | CPU-ANSWER-006 | pr_open |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | merged |
 | crate-collapse | LEAF-001 | INV-001 | proposed |

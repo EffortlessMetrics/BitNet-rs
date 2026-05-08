@@ -10,7 +10,7 @@
 | apple-m4-productization | Apple M4 local answer productization | M4-PROD-004 | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
 | apple-m4-slm-answer | Apple M4 SLM local answer usability | SLM-M4-007 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | ci-coverage | CI coverage | CI-COVERAGE-001 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | BitNet CPU proof | CPU-ANSWER-006 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
+| cpu-proof | BitNet CPU proof | CPU-ANSWER-007 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | CPU QK256 performance | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | Intel 258V platform validation | CPU258V-012 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
