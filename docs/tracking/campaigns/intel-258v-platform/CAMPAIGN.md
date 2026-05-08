@@ -42,7 +42,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | CPU258V-007 | merged | Record the 258V AVX2 answer-corpus refresh under the BitNet.cpp answer-ready prompt envelope as timeout/blocker evidence; merged in #4006. |
 | CPU258V-008 | merged | Add bounded `answer-corpus --case-id` diagnostics so the 258V answer-template refresh can run one corpus case at a time without answer-quality, parity, speed, Arc, or NPU claims; merged in #4008. |
 | CPU258V-009 | merged | Record a bounded single-case 258V AVX2 answer-corpus attempt for `math_2_plus_2`, preserving timeout/blocker evidence without answer-quality, parity, speed, Arc, or NPU claims; merged in #4010. |
-| CPU258V-010 | pr_open | Record a release-built single-case 258V AVX2 answer-corpus attempt that completes strict CPU execution but fails the answer-quality gate; no parity, speed, Arc, or NPU claims; open in #4012. |
+| CPU258V-010 | merged | Record a release-built single-case 258V AVX2 answer-corpus attempt that completes strict CPU execution but fails the answer-quality gate; no parity, speed, Arc, or NPU claims; merged in #4012. |
 
 ## Review Policy
 

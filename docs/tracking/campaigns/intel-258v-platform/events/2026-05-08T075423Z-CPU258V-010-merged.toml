@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T07:54:23Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-010"
+event = "merged"
+pr = 4012
+merge_sha = "673b3de9c93d159c037478fb695b4137e04c31cd"
+summary = "Merged CPU258V-010, recording release-built single-case 258V AVX2 answer-corpus evidence."
+
+details = [
+  "The merged artifact shows the selected math_2_plus_2 case completes strict CPU AVX2 execution under release.",
+  "The receipt records real_gguf loading, explicit tokenizer resolution, selected i2_s-avx2-reference kernel, fallback_used=false, 19 prompt tokens, and 4 generated tokens.",
+  "The generated answer fails the exact-answer gate, so no answer readiness, scalar/AVX2 parity, sustained throughput, Arc 140V execution, or Intel NPU execution is claimed.",
+]
