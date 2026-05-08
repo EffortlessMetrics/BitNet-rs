@@ -572,7 +572,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-003"
-status = "pr_open"
+status = "merged"
 pr = 3993
 branch = "codex/cpu-answer-003-reference-comparator"
 stackable = false
