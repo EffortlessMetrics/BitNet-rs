@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T22:29:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-003"
+event = "merged"
+actor = "codex"
+pr = 4140
+head_sha = "f7dee3f86534d322bd4fb8e92f19d4bc089fab49"
+merge_sha = "e2b261c9cb53d0bcbed0abe00ed2018bda1d67aa"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4140 merged receipt-ready model-aware CUDA planner summaries.",
+  "The summary separates BitNet QK256 CUDA ops, dense regular-LLM CUDA ops, CPU fallback ops, unsupported ops, fallback_used, selected route labeling, and strict_cuda_ready.",
+  "The PR did not emit real ask, answer-corpus, warm-session, or benchmark execution_plan receipts and did not claim speedup or full CUDA residency.",
+]
