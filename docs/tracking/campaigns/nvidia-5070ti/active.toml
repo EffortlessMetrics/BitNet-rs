@@ -1357,3 +1357,53 @@ must_not_claim = [
   "CUDA speedup is accepted.",
   "Full CUDA residency for every transformer operation is proven.",
 ]
+
+[[work_item]]
+id = "CUDA-PLANNER-003"
+status = "pr_open"
+branch = "codex/cuda-planner-003-receipts"
+pr = 4140
+head_sha = "df6b623774b0290dc7b3a95b98a6c5f48d317fd0"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-PLANNER-002"]
+acceptance = "Add receipt-ready model-aware planner summaries with separate BitNet QK256 CUDA op counts, dense regular-LLM CUDA op counts, CPU fallback op counts, unsupported op counts, fallback_used, selected route labeling, and strict_cuda_ready without emitting real ask/session/benchmark receipts yet."
+commands = [
+  "cargo fmt -p bitnet-kernels -- --check",
+  "cargo test --locked -p bitnet-kernels --lib --no-default-features dispatch_planner -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/dispatch_planner.rs",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF inference implementation",
+  "ask, answer-corpus, warm-session, or benchmark receipt emission changes",
+]
+may_claim = [
+  "The planner can summarize BitNet QK256 CUDA, dense regular-LLM CUDA, CPU fallback, and unsupported op counts for future receipts.",
+  "Mixed BitNet and dense CUDA routes are visible and do not produce an unambiguous selected-route claim.",
+  "Strict CUDA readiness is true only for non-empty, unambiguous, all-CUDA, fallback-free, supported plans.",
+]
+must_not_claim = [
+  "Real ask, answer-corpus, warm-session, or benchmark receipts emit execution_plan yet.",
+  "Any new CUDA kernel exists.",
+  "Runtime model loading or tokenizer behavior changed.",
+  "General dense GGUF CUDA inference is complete.",
+  "CUDA speedup is accepted.",
+  "Full CUDA residency for every transformer operation is proven.",
+]

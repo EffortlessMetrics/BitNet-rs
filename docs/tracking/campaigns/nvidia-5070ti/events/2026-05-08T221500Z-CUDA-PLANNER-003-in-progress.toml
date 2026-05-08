@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T22:15:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-003"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-planner-003-receipts"
+previous_status = "planned"
+new_status = "in_progress"
+
+notes = [
+  "Started receipt-ready summaries for model-aware CUDA planner decisions.",
+  "Scope is planner/test/tracker only; no CUDA kernels, QK256 math, tokenizer, loader, transformer, server, dense GGUF inference, or real receipt-emission behavior changes.",
+  "The summary must keep BitNet QK256 CUDA, dense regular-LLM CUDA, CPU fallback, and unsupported op counts separate for later execution_plan receipt emission.",
+]

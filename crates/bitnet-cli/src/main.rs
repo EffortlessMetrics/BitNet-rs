@@ -231,6 +231,7 @@ struct Cli {
     command: Option<Commands>,
 }
 
+#[allow(clippy::large_enum_variant)] // Clap command shape keeps argument definitions local and readable.
 #[derive(Subcommand)]
 enum Commands {
     /// Run simple text generation
