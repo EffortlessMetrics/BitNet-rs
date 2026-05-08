@@ -4,6 +4,19 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Rust 1.95 / 0.3.0 Quality-Wave Rollout (planned)
+
+- docs(policy): map Rust 1.95 and 0.3.0 quality rollout — `docs/development/RUST_1_95_ROLLOUT.md`
+  - Planned 17-PR ladder: compatibility spike → MSRV bump → rustc lint floor →
+    Clippy 1.95 ratchets → remove test carveouts → exact no-panic identity →
+    no-new-debt baseline → file-policy tightening → real ripr advisory →
+    targeted 1.95 API cleanup → numeric/kernel lint cleanup →
+    no-panic owner-lane burndown → LEM/risk-pack tightening →
+    0.3.0 release prep → release dry-run proof.
+  - Raising MSRV from 1.93.0 to 1.95.0 accompanies a minor version bump to
+    `0.3.0` (MSRV change is a user-visible build-requirement break under semver).
+  - No toolchain, Cargo, clippy.toml, workflow, or code changes in this PR.
+
 ### CPU Kernel Optimization & AVX2 Parity Hardening
 
 - perf(kernels): eliminate per-head/per-block allocations in CPU attention - PR #3289

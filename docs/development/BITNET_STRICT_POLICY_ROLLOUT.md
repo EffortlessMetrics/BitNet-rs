@@ -148,3 +148,33 @@ Every policy file in `policy/` has an `expires` field on each
 exception. Expired exceptions fail their check. Reviewing the policy
 ledgers is part of the routine maintenance covered by the
 `review_after` dates in each file.
+
+## Next wave: Rust 1.95 / 0.3.0 rollout
+
+The rollout described above (PRs 01–20) brought BitNet-rs to MSRV 1.93.0 with
+a full policy control plane in place. The next quality wave moves to Rust 1.95.0
+and releases version 0.3.0.
+
+Raising the MSRV is a user-visible breaking change to the build requirement; it
+warrants a **minor** release under semver. The development line therefore moves
+from `0.2.1-dev` to `0.3.0-dev` and the release tag becomes `v0.3.0`.
+
+The implementation ladder for the 1.95 wave is documented in:
+
+```text
+docs/development/RUST_1_95_ROLLOUT.md
+```
+
+That document contains:
+
+- the current vs. target state table;
+- the PR ladder (PRs 1–17) with branch names, titles, and acceptance gates;
+- the `disallowed_fields` candidate seams;
+- the `clippy.toml` carveout mismatch resolution plan;
+- the no-panic identity hardening prerequisites;
+- the operating rules for commits, PRs, bots, and CI;
+- the required self-review checklist.
+
+**The 1.95 wave does not replace or modify any artefact from the 1.93 rollout.**
+It builds on top of the existing policy machinery. All PRs from the 1.93 rollout
+remain the canonical reference for the control plane they introduced.

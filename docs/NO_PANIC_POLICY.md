@@ -88,3 +88,90 @@ receipt must answer:
 * When does the receipt expire?
 
 Any "we panic so the upstream API is simpler" rationale is rejected.
+
+## Rust 1.95 rollout target state
+
+The following changes are planned as part of the Rust 1.95 / 0.3.0 wave.
+See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder.
+
+### Identity hardening (PR 7)
+
+Current allowlist identity is `path + family + selector`. Before bulk baseline
+work begins, identity must expand to include `snippet` and `count`:
+
+```text
+path
+family
+selector_kind
+selector_callee
+snippet
+count
+```
+
+Matching becomes **counted and consumptive**:
+
+1. Consume exact allowlist count slots.
+2. Then consume baseline count slots, unless in blocking mode.
+3. Anything remaining is new debt.
+
+This prevents one allow entry from accidentally covering unrelated calls in the
+same file with the same callee.
+
+Required tests before PR 7 merges:
+
+```text
+allowlist_entry_requires_exact_snippet
+allowlist_count_is_consumed_per_occurrence
+allowlist_does_not_cover_same_file_same_callee_different_snippet
+duplicate_allowlist_keys_are_rejected
+blocking_mode_ignores_baseline_but_honors_counted_allowlist
+```
+
+### Baseline and no-new-debt mode (PR 8)
+
+After identity hardening, a generated baseline is created from current `main`
+and the policy mode is set to `no-new-debt`. The baseline file is marked
+generated in `.gitattributes` so it collapses in GitHub review:
+
+```gitattributes
+policy/no-panic-baseline.toml text eol=lf linguist-generated=true
+```
+
+Baseline refresh may only drop disappeared entries, never absorb new findings.
+Allowlist entries added after baseline generation must be exact-counted and
+explicitly reviewed.
+
+### Diagnostic improvements (PR 9)
+
+PR 9 adds:
+
+- Missing baseline setup error (clear message when baseline file absent).
+- Stale baseline entries in Markdown/JSON reports.
+- Baseline refresh delta details (what appeared, what disappeared).
+- Blocking-mode baseline messaging (explain that baseline is ignored in
+  blocking mode).
+
+### First burndown lane (PR 14)
+
+The first burndown PR targets one narrow lane. Good starting candidates:
+
+```text
+bitnet-atomic-file-core
+bitnet-http-retry
+bitnet-api-key-auth-core
+bitnet-client-ip-core
+bitnet-request-router-core
+bitnet-server-health-types-core
+xtask policy/report helpers
+```
+
+Avoid starting with `bitnet-kernels`, FFI, GPU backends, large CLI/server
+integration tests, or Python/WASM bindings.
+
+Replacement strategy:
+
+```text
+production unwrap/expect → ? / ok_or_else / typed error
+test setup unwrap/expect → fallible helper
+intentional retained panic → exact allowlist with count + expiry
+```

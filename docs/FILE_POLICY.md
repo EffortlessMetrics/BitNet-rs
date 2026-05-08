@@ -85,3 +85,43 @@ If a new file legitimately belongs in the repository:
 PR 04 introduces the allowlist, the prose, and runs the checker
 advisory. Promotion to `--fail-on-error` happens in the same PR
 once the in-tree finding count is 0.
+
+## Rust 1.95 rollout target state
+
+The following changes are planned as part of the Rust 1.95 / 0.3.0 wave.
+See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder.
+
+### Allowlist tightening (PR 10)
+
+PR 10 reviews the current `policy/non-rust-allowlist.toml` and:
+
+- Removes stale entries that no longer match any tracked file.
+- Narrows over-broad agent metadata globs where a more specific pattern fits.
+- Adds `review_after` / `expires` fields to entries where the checker supports
+  them.
+- Verifies that production non-Rust surfaces have real `covered_by` commands.
+- Ensures GPU shader, FFI, Python, and WASM surfaces are explicit entries, not
+  hidden under broad `scripts/**` or `crates/**` catch-alls.
+
+The following constraints apply to PR 10:
+
+- No broad catch-all globs added.
+- Checker policy is not weakened.
+- Production GPU/FFI code is not reclassified as docs or tooling.
+
+### Non-Rust surfaces that must remain explicit
+
+The following surface categories must be individually allowlisted, not merged
+into a single broad glob:
+
+```text
+GPU compute shaders (.metal, .glsl, .hlsl, .wgsl, .cl)
+FFI headers and generated bindings (.h, .hpp, generated .rs via build.rs)
+Python bindings and package metadata (setup.py, pyproject.toml, *.py)
+WASM bindings (*.wasm, wasm-pack artifacts)
+C++ cross-validation code (.cpp, .cc, .cxx)
+Runtime config (e.g. ONNX/GGUF metadata, JSON schemas)
+```
+
+Each surface requires a `covered_by` entry that references an actual
+verification command or workflow file.

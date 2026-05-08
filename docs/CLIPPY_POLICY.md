@@ -101,3 +101,57 @@ Order of preference:
 
 There is no "permanent allow" path: receipts must be reviewed by their
 expiry date.
+
+## Rust 1.95 rollout target state
+
+The following changes are planned as part of the Rust 1.95 / 0.3.0 wave.
+See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder.
+
+### Lint ratchets (PR 5)
+
+The lints staged in `policy/clippy-lints.toml` for MSRV 1.95 will be
+promoted to `[workspace.lints.clippy]`:
+
+| Lint | Level | Reason |
+|---|---|---|
+| `same_length_and_capacity` | `deny` | Catch raw-parts reconstruction mistakes (also staged at 1.94) |
+| `manual_checked_ops` | `warn` | Prefer checked arithmetic over manual divide-by-zero guards |
+| `manual_take` | `warn` | Use standard ownership helper instead of local reimplementation |
+| `manual_pop_if` | `warn` | Use collection APIs that encode predicate-and-pop intent |
+| `duration_suboptimal_units` | `warn` | Make durations legible without mental unit conversion |
+| `needless_type_cast` | `warn` | Avoid stale numeric type drift (also staged at 1.94) |
+| `unnecessary_trailing_comma` | `warn` | Keep format macro calls clean |
+
+Lints are only promoted after a clean measurement pass confirms zero or
+cheap-to-fix violations in the workspace.
+
+### `disallowed_fields` (PR 5 prerequisite)
+
+`disallowed_fields` is not activated globally until protected seam definitions
+are present in `clippy.toml`. Candidate seams are listed in
+`docs/development/RUST_1_95_ROLLOUT.md`. Activation is a deliberate step after
+the seams are specified, not an automatic promotion.
+
+### Test carveout removal (PR 6)
+
+The following lines in `clippy.toml` are a staging window and will be removed
+in PR 6:
+
+```toml
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true
+```
+
+PR 6 also adds any remaining ergonomic fallible helpers to the appropriate
+test-support crate and converts a first narrow batch of tests before removal.
+
+### Clippy debt and exceptions (PR 5–6 and later)
+
+`policy/clippy-debt.toml` currently contains placeholder entries only.
+The 1.95 wave requires real entries with `owner`, `reason`, and `expiry`
+for any debt that cannot be resolved immediately. Placeholder entries
+that lack these fields are invalid under the updated checker.
+
+`policy/clippy-exceptions.toml` currently has no entries. Exceptions added
+during the 1.95 wave must follow the exact `#[expect]` receipt schema with
+a `clippy-NNNN` identifier.
