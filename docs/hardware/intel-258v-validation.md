@@ -737,6 +737,8 @@ NPU-011:
 
 ARC140V-005:
   native OpenCL CPU/iGPU parity for one isolated kernel or subgraph
+  artifact: ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json
+  anchor: ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
 
 LNL258V-COMPARE-002:
   refresh the same-machine comparison index after the new CPU reference bundle
@@ -758,3 +760,11 @@ These follow-ups preserve the current priority order:
 `fallback_used=false`. This is selected static subgraph parity only; it is not
 full BitNet inference, NPU acceleration, packed QK256 decode, or CPU fallback
 proof.
+
+`ARC140V-005` records native OpenCL CPU/iGPU parity for the same-machine 258V
+platform. The live receipt records `selected_backend=intel-arc-140v-opencl`,
+`runtime_api=opencl`, `proof_stage=parity_tested`, `kernel_execution=true`,
+`graph_execution=false`, and `fallback_used=false` for the isolated
+`tiny_vector_add` kernel against the post-mechanics 258V CPU reference bundle.
+This is native OpenCL parity only; it is not BitNet inference, Arc acceleration,
+packed QK256 decode, OpenVINO GPU proof, or CPU fallback proof.

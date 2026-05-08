@@ -1109,7 +1109,7 @@ acceptance = "Run one isolated Arc 140V native OpenCL kernel or static subgraph 
 commands = [
   "cargo test --locked -p bitnet-device-probe --no-default-features --features opencl opencl -- --nocapture",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli,opencl --bin bitnet intel_arc::tests -- --nocapture",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli,opencl -- intel-arc-140v-opencl-parity --cpu-reference ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json --json-out ci/hardware/intel-258v/<date>/arc-140v-opencl-parity.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli,opencl -- intel-arc-140v-opencl-parity --cpu-reference ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json --json-out ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
