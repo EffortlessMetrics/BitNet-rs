@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T02:09:47Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-004"
+event = "merged"
+
+pr = 3956
+merge_sha = "69d85792b6c377d290e2de2af4d304c3a4e570ce"
+actor = "codex"
+
+notes = [
+  "Merged warm-session Apple M4 SLM answer receipts.",
+  "Model and tokenizer load once per session, per-prompt receipts are emitted, and timing separates load, tokenize, prefill, decode, sampling, and total time.",
+  "No BitNet local-answer quality, full apple-m4-metal inference, QK256, Neural Engine, Metal kernel, MPSGraph, server inference, model binary, or broad performance claim was added.",
+]
