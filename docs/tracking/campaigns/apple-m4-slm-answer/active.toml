@@ -164,13 +164,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-004"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-slm-answer/SLM-M4-004-warm-session"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-M4-003"]
+pr = 3956
 acceptance = "Add warm-session behavior so the validated model and tokenizer are loaded once, multiple prompts can run in one process, per-prompt receipts are emitted, and model_load, tokenize, prefill, decode, sampling, and total timing are separated."
 commands = [
   "cargo fmt --all -- --check",
