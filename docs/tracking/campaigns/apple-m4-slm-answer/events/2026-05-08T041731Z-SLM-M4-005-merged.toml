@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T04:17:31Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-005"
+event = "merged"
+pr = 3973
+merge_sha = "b00e11631691212702c7d2f22564d1fabc6e59e6"
+actor = "codex"
+
+notes = [
+  "Merged deterministic Apple M4 SLM quality corpus and receipt checks.",
+  "Promoted SLM-M4-006 for warm-answer speed measurement without broad performance claims.",
+]
