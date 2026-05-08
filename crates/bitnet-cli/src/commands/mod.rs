@@ -10,6 +10,7 @@ pub mod convert;
 pub mod eval;
 pub mod inference;
 pub mod inspect;
+pub mod reference_compare;
 pub mod serve;
 pub mod template_util;
 
@@ -20,4 +21,5 @@ pub use benchmark::BenchmarkCommand;
 pub use convert::ConvertCommand;
 pub use inference::InferenceCommand;
 pub use inspect::InspectCommand;
+pub use reference_compare::ReferenceCompareCommand;
 pub use serve::ServeCommand;

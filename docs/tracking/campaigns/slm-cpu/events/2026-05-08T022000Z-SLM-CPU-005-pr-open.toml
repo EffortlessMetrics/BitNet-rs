@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T02:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-005"
+event = "pr_open"
+pr = 3969
+head_sha = "f47ecf7c9be25d1ebfd7f89f2704c99517dc33d8"
+branch = "codex/slm-cpu-005-reference-divergence"
+actor = "codex"
+notes = [
+  "Opened #3969 for the SLM reference divergence artifact schema and validator.",
+  "The PR validates external-reference comparison artifacts without running the external reference engine.",
+  "Scope remains SLM CPU answer diagnostics only; no server, GPU/NPU, BitNet QK256, or sustained-performance claim is included.",
+]

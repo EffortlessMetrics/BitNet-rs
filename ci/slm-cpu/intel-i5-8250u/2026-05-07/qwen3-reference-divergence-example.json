@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "backend_reference_compare",
+  "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+  "model_family": "qwen3",
+  "prompt_text": "What is 2+2? Answer with only the number.",
+  "prompt_template": "qwen",
+  "bos": false,
+  "reference": {
+    "backend": "known-good-external",
+    "kernel": "external-reference",
+    "prompt_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      3838,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30,
+      21806,
+      448,
+      1172,
+      279,
+      1372,
+      13,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ],
+    "generated_ids": [
+      19
+    ],
+    "text": "4",
+    "topk_step0": [
+      [
+        19,
+        10.0
+      ],
+      [
+        20,
+        1.0
+      ]
+    ],
+    "chosen_id": 19
+  },
+  "bitnet_rs": {
+    "backend": "cpu-rust",
+    "kernel": "dense-q8_0-reference",
+    "prompt_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      3838,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30,
+      21806,
+      448,
+      1172,
+      279,
+      1372,
+      13,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ],
+    "generated_ids": [
+      4594,
+      25593,
+      145051,
+      126490
+    ],
+    "text": "łitosųطال",
+    "topk_step0": null,
+    "chosen_id": 4594
+  }
+}

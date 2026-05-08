@@ -696,6 +696,66 @@ fn answer_corpus_dry_run_accepts_slm_answer_corpus() {
     assert_eq!(receipt["quality_summary"]["not_run"], 5);
 }
 
+/// `reference-compare` validates an external SLM reference divergence artifact.
+#[cfg(feature = "full-cli")]
+#[test]
+fn reference_compare_validates_slm_external_reference_artifact() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let artifact = dir.path().join("qwen3-reference.json");
+    let out = dir.path().join("qwen3-reference-validation.json");
+    std::fs::write(
+        &artifact,
+        r#"{
+          "schema_version": "1.0.0",
+          "artifact_kind": "backend_reference_compare",
+          "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+          "model_family": "qwen3",
+          "prompt_text": "What is 2+2?",
+          "prompt_template": "qwen",
+          "bos": false,
+          "reference": {
+            "backend": "known-good-reference",
+            "kernel": "reference",
+            "prompt_ids": [1, 2, 3],
+            "generated_ids": [4],
+            "text": "4",
+            "topk_step0": [[4, 10.0], [5, 1.0]],
+            "chosen_id": 4
+          },
+          "bitnet_rs": {
+            "backend": "cpu-rust",
+            "kernel": "dense-q8_0-reference",
+            "prompt_ids": [1, 2, 3],
+            "generated_ids": [5],
+            "text": "5",
+            "topk_step0": [[5, 10.0], [4, 1.0]],
+            "chosen_id": 5
+          }
+        }"#,
+    )
+    .expect("write artifact");
+
+    bitnet()
+        .args([
+            "reference-compare",
+            "--artifact",
+            artifact.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    assert_eq!(receipt["artifact_kind"], "slm_reference_divergence_validation");
+    assert_eq!(receipt["validation"]["passed"], true);
+    assert_eq!(receipt["comparison"]["passed"], false);
+    assert_eq!(receipt["comparison"]["first_divergence"]["phase"], "decode");
+    assert_eq!(receipt["comparison"]["first_divergence"]["index"], 0);
+    assert_eq!(receipt["speedup_claim"], false);
+}
+
 /// `answer-corpus` can target the Apple M4 CPU/NEON local-answer lane.
 #[cfg(feature = "full-cli")]
 #[test]

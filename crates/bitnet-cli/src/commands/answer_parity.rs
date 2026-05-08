@@ -161,6 +161,7 @@ fn read_json(path: &Path) -> Result<Value> {
     .with_context(|| format!("failed to parse {}", path.display()))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_answer_parity_receipt(
     left_path: &Path,
     left: &Value,
@@ -708,6 +709,7 @@ fn case_comparison_row(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn check_case_contract(
     id: &str,
     lane: &str,
@@ -749,6 +751,7 @@ fn check_case_contract(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn check_equal(
     id: &str,
     rule: &'static str,
@@ -973,6 +976,7 @@ fn case_status_summary(case: &Value) -> Value {
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn set_first(
     first_divergence: &mut Option<Value>,
     id: &str,
