@@ -3313,12 +3313,12 @@ fn resolve_fetch_cpp_bash() -> Result<PathBuf> {
             }
         }
 
-        return Err(anyhow!(
+        Err(anyhow!(
             "fetch-cpp requires Git Bash on Windows, but no Git Bash bash.exe was found. \
              Install Git for Windows or set BITNET_FETCH_CPP_BASH to the full path of bash.exe. \
              The Windows WSL launcher at C:\\Windows\\System32\\bash.exe is not used because it \
              can hang when WSL is unavailable or unconfigured."
-        ));
+        ))
     }
 
     #[cfg(not(windows))]
