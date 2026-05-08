@@ -1,4 +1,4 @@
-//! SLM reference divergence artifact validator.
+//! Reference divergence artifact validator for answer-readiness bring-up.
 
 use anyhow::{Context, Result};
 use clap::Args;
@@ -72,13 +72,24 @@ fn build_reference_divergence_receipt(path: &Path, artifact: &Value) -> Value {
     let first_divergence =
         if validation_failures.is_empty() { first_divergence(artifact) } else { None };
     let passed = validation_failures.is_empty() && first_divergence.is_none();
+    let bitnet_artifact = is_bitnet_artifact(artifact);
+    let artifact_kind = if bitnet_artifact {
+        "bitnet_cpu_reference_divergence_validation"
+    } else {
+        "slm_reference_divergence_validation"
+    };
+    let claim = if bitnet_artifact {
+        "bitnet_cpu_reference_divergence_diagnostic"
+    } else {
+        "slm_reference_divergence_diagnostic"
+    };
 
     json!({
         "schema_version": "1.0.0",
-        "artifact_kind": "slm_reference_divergence_validation",
+        "artifact_kind": artifact_kind,
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "proof_stage": "external_reference_compared",
-        "claim": "slm_reference_divergence_diagnostic",
+        "claim": claim,
         "speedup_claim": false,
         "inputs": {
             "artifact_path": path.display().to_string(),
@@ -89,6 +100,7 @@ fn build_reference_divergence_receipt(path: &Path, artifact: &Value) -> Value {
         },
         "prompt": {
             "text": artifact["prompt_text"].clone(),
+            "bytes": artifact["prompt_bytes"].clone(),
             "template": artifact["prompt_template"].clone(),
             "bos": artifact.get("bos").or_else(|| artifact.get("add_bos")).cloned().unwrap_or(Value::Null),
         },
@@ -104,12 +116,13 @@ fn build_reference_divergence_receipt(path: &Path, artifact: &Value) -> Value {
         },
         "may_claim": [
             "The artifact is machine-checkable against an external reference run.",
-            "First divergence evidence can separate tokenizer, prompt-template, decode, logits, and text-decoding issues."
+            "First divergence evidence can separate tokenizer, prompt-template, decode, logits, and text-decoding issues.",
+            "For BitNet CPU artifacts, strict loader, tokenizer, backend, kernel, and fallback evidence was checked."
         ],
         "must_not_claim": [
             "BitNet-rs can run the external reference engine.",
             "General chat quality is proven.",
-            "Sustained 8250U throughput is proven.",
+            "Sustained CPU throughput is proven.",
             "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved."
         ],
     })
@@ -117,9 +130,14 @@ fn build_reference_divergence_receipt(path: &Path, artifact: &Value) -> Value {
 
 fn validate_artifact(artifact: &Value) -> Vec<&'static str> {
     let mut failures = Vec::new();
+    let bitnet_artifact = is_bitnet_artifact(artifact);
     if !matches!(
         artifact["artifact_kind"].as_str(),
-        Some("backend_reference_compare" | "slm_reference_divergence")
+        Some(
+            "backend_reference_compare"
+                | "slm_reference_divergence"
+                | "bitnet_cpu_reference_compare"
+        )
     ) {
         failures.push("artifact_kind");
     }
@@ -133,8 +151,14 @@ fn validate_artifact(artifact: &Value) -> Vec<&'static str> {
     if artifact["model_family"].as_str().unwrap_or_default().is_empty() {
         failures.push("model_family");
     }
+    if bitnet_artifact && artifact["model_family"].as_str() != Some("bitnet") {
+        failures.push("bitnet_model_family");
+    }
     if artifact["prompt_text"].as_str().unwrap_or_default().is_empty() {
         failures.push("prompt_text");
+    }
+    if bitnet_artifact && artifact["prompt_bytes"].as_array().is_none_or(|bytes| bytes.is_empty()) {
+        failures.push("prompt_bytes");
     }
     if !artifact["prompt_template"].is_string() && !artifact["prompt_template"].is_object() {
         failures.push("prompt_template");
@@ -144,6 +168,9 @@ fn validate_artifact(artifact: &Value) -> Vec<&'static str> {
     }
     validate_side("reference", &artifact["reference"], &mut failures);
     validate_side("bitnet_rs", bitnet_side(artifact), &mut failures);
+    if bitnet_artifact {
+        validate_bitnet_contract(artifact, &mut failures);
+    }
     failures
 }
 
@@ -177,6 +204,48 @@ fn validate_side(label: &'static str, side: &Value, failures: &mut Vec<&'static 
     }
 }
 
+fn validate_bitnet_contract(artifact: &Value, failures: &mut Vec<&'static str>) {
+    let reference = &artifact["reference"];
+    let bitnet = bitnet_side(artifact);
+
+    if string_at(bitnet, &[&["loader_mode"], &["loader", "mode"]]) != Some("real_gguf") {
+        failures.push("bitnet_loader_mode");
+    }
+    if string_at(bitnet, &[&["tokenizer_source"], &["tokenizer", "source"]])
+        .unwrap_or_default()
+        .is_empty()
+    {
+        failures.push("bitnet_tokenizer_source");
+    }
+    if bool_at(bitnet, &[&["tokenizer_strict"], &["tokenizer", "strict"]]) != Some(true) {
+        failures.push("bitnet_tokenizer_strict");
+    }
+    if bool_at(bitnet, &[&["fallback_used"], &["backend", "fallback_used"]]) != Some(false) {
+        failures.push("bitnet_fallback_used");
+    }
+    if string_at(bitnet, &[&["runtime_api"], &["backend", "runtime_api"]]) != Some("cpu") {
+        failures.push("bitnet_runtime_api");
+    }
+    let kernel = bitnet["kernel"]
+        .as_str()
+        .or_else(|| string_at(bitnet, &[&["selected_kernel"], &["kernel", "selected_kernel"]]));
+    if kernel.map(|value| value.contains("mock") || value.contains("diagnostic")).unwrap_or(true) {
+        failures.push("bitnet_selected_kernel");
+    }
+    if topk(reference).is_none() {
+        failures.push("reference_topk_step0");
+    }
+    if topk(bitnet).is_none() {
+        failures.push("bitnet_rs_topk_step0");
+    }
+    if chosen_id(reference).is_none() {
+        failures.push("reference_chosen_id");
+    }
+    if chosen_id(bitnet).is_none() {
+        failures.push("bitnet_rs_chosen_id");
+    }
+}
+
 fn bitnet_side(artifact: &Value) -> &Value {
     artifact.get("bitnet_rs").or_else(|| artifact.get("candidate")).unwrap_or(&Value::Null)
 }
@@ -199,13 +268,13 @@ fn first_divergence(artifact: &Value) -> Option<Value> {
             &bitnet["generated_ids"],
         ));
     }
-    if reference["text"] != bitnet["text"] {
-        return Some(divergence("text", 0, &reference["text"], &bitnet["text"]));
-    }
     if let (Some(reference_topk), Some(bitnet_topk)) = (topk(reference), topk(bitnet))
         && reference_topk != bitnet_topk
     {
         return Some(divergence("logits", 0, reference_topk, bitnet_topk));
+    }
+    if reference["text"] != bitnet["text"] {
+        return Some(divergence("text", 0, &reference["text"], &bitnet["text"]));
     }
     None
 }
@@ -225,7 +294,22 @@ fn ids(value: Option<&Value>) -> Option<Vec<u64>> {
 }
 
 fn topk(side: &Value) -> Option<&Value> {
-    side.get("topk").or_else(|| side.get("topk_step0"))
+    side.get("topk").or_else(|| side.get("topk_step0")).or_else(|| {
+        side.get("logits_dump")
+            .and_then(Value::as_array)
+            .and_then(|steps| steps.first())
+            .and_then(|step| step.get("top_logits"))
+    })
+}
+
+fn chosen_id(side: &Value) -> Option<u64> {
+    side.get("chosen_id").and_then(Value::as_u64).or_else(|| {
+        side.get("logits_dump")
+            .and_then(Value::as_array)
+            .and_then(|steps| steps.first())
+            .and_then(|step| step.get("chosen_id"))
+            .and_then(Value::as_u64)
+    })
 }
 
 fn divergence(phase: &'static str, index: usize, reference: &Value, bitnet: &Value) -> Value {
@@ -241,12 +325,54 @@ fn side_summary(side: &Value) -> Value {
     json!({
         "backend": side["backend"],
         "kernel": side["kernel"],
+        "loader_mode": string_at(side, &[&["loader_mode"], &["loader", "mode"]]),
+        "tokenizer_source": string_at(side, &[&["tokenizer_source"], &["tokenizer", "source"]]),
+        "tokenizer_strict": bool_at(side, &[&["tokenizer_strict"], &["tokenizer", "strict"]]),
+        "fallback_used": bool_at(side, &[&["fallback_used"], &["backend", "fallback_used"]]),
+        "runtime_api": string_at(side, &[&["runtime_api"], &["backend", "runtime_api"]]),
         "prompt_ids": side["prompt_ids"],
         "generated_ids": side["generated_ids"],
         "text": side["text"],
-        "chosen_id": side["chosen_id"],
+        "chosen_id": chosen_id(side),
         "topk_step0": topk(side).cloned().unwrap_or(Value::Null),
     })
+}
+
+fn is_bitnet_artifact(artifact: &Value) -> bool {
+    artifact["model_family"].as_str() == Some("bitnet")
+        || artifact["artifact_kind"].as_str() == Some("bitnet_cpu_reference_compare")
+}
+
+fn string_at<'a>(value: &'a Value, paths: &[&[&str]]) -> Option<&'a str> {
+    'paths: for path in paths {
+        let mut current = value;
+        for key in *path {
+            let Some(next) = current.get(*key) else {
+                continue 'paths;
+            };
+            current = next;
+        }
+        if let Some(text) = current.as_str() {
+            return Some(text);
+        }
+    }
+    None
+}
+
+fn bool_at(value: &Value, paths: &[&[&str]]) -> Option<bool> {
+    'paths: for path in paths {
+        let mut current = value;
+        for key in *path {
+            let Some(next) = current.get(*key) else {
+                continue 'paths;
+            };
+            current = next;
+        }
+        if let Some(flag) = current.as_bool() {
+            return Some(flag);
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -283,6 +409,52 @@ mod tests {
         })
     }
 
+    fn bitnet_artifact() -> Value {
+        json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "bitnet_cpu_reference_compare",
+            "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+            "model_family": "bitnet",
+            "prompt_text": "What is 2+2?",
+            "prompt_bytes": [87, 104, 97, 116, 32, 105, 115, 32, 50, 43, 50, 63],
+            "prompt_template": "llama3-chat",
+            "bos": true,
+            "reference": {
+                "backend": "known-good-bitnet-reference",
+                "kernel": "reference",
+                "prompt_ids": [128000, 3923, 374, 220, 17, 10, 17, 30],
+                "generated_ids": [19],
+                "text": "4",
+                "topk_step0": [[19, 12.0], [20, 8.0]],
+                "chosen_id": 19
+            },
+            "bitnet_rs": {
+                "backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "kernel": "i2_s-avx2-reference",
+                "loader": {
+                    "mode": "real_gguf"
+                },
+                "tokenizer": {
+                    "source": "gguf_metadata",
+                    "strict": true
+                },
+                "fallback_used": false,
+                "prompt_ids": [128000, 3923, 374, 220, 17, 10, 17, 30],
+                "generated_ids": [19],
+                "text": "4",
+                "logits_dump": [{
+                    "step": 0,
+                    "chosen_id": 19,
+                    "top_logits": [
+                        {"token_id": 19, "logit": 12.0},
+                        {"token_id": 20, "logit": 8.0}
+                    ]
+                }]
+            }
+        })
+    }
+
     #[test]
     fn reference_divergence_passes_matching_artifact() {
         let report =
@@ -315,5 +487,42 @@ mod tests {
         assert_eq!(report["validation"]["passed"], false);
         let failed = report["validation"]["failed_rules"].as_array().unwrap();
         assert!(failed.iter().any(|rule| rule == "bos_policy"));
+    }
+
+    #[test]
+    fn bitnet_reference_divergence_validates_strict_cpu_provenance() {
+        let report =
+            build_reference_divergence_receipt(Path::new("compare.json"), &bitnet_artifact());
+
+        assert_eq!(report["artifact_kind"], "bitnet_cpu_reference_divergence_validation");
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "logits");
+        assert_eq!(report["comparison"]["bitnet_rs"]["loader_mode"], "real_gguf");
+        assert_eq!(report["comparison"]["bitnet_rs"]["tokenizer_source"], "gguf_metadata");
+    }
+
+    #[test]
+    fn bitnet_reference_divergence_rejects_hidden_fallback() {
+        let mut input = bitnet_artifact();
+        input["bitnet_rs"]["fallback_used"] = Value::Bool(true);
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], false);
+        let failed = report["validation"]["failed_rules"].as_array().unwrap();
+        assert!(failed.iter().any(|rule| rule == "bitnet_fallback_used"));
+    }
+
+    #[test]
+    fn bitnet_reference_divergence_requires_prompt_bytes() {
+        let mut input = bitnet_artifact();
+        input.as_object_mut().unwrap().remove("prompt_bytes");
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], false);
+        let failed = report["validation"]["failed_rules"].as_array().unwrap();
+        assert!(failed.iter().any(|rule| rule == "prompt_bytes"));
     }
 }
