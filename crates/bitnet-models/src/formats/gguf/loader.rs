@@ -19,6 +19,8 @@ use tracing::{debug, info};
 
 /// Type alias for tensor load result with optional raw tensors and correction record.
 type TensorLoadResult = Result<(Tensor, Vec<(String, Tensor)>, Option<CorrectionRecord>)>;
+type Qk256RawEntries = (Tensor, Vec<(String, Tensor)>, Option<f32>, usize);
+type Qk256RawEntriesResult = Result<Qk256RawEntries>;
 
 /// GGUF format loader
 pub struct GgufLoader;
@@ -95,7 +97,7 @@ impl GgufLoader {
         rows: usize,
         cols: usize,
         device: &candle_core::Device,
-    ) -> Result<(Tensor, Vec<(String, Tensor)>, Option<f32>, usize)> {
+    ) -> Qk256RawEntriesResult {
         let blocks_per_row = cols.div_ceil(QK256_BLOCK);
         let row_stride_bytes = blocks_per_row.checked_mul(QK256_PACKED_BYTES).ok_or_else(|| {
             BitNetError::Validation(format!(
@@ -2179,7 +2181,7 @@ impl GgufLoader {
                         );
                         let f32_data = bytemuck::cast_slice::<u8, f32>(data);
                         let (rows, cols) = (info.shape[1], info.shape[0]);
-                        Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
+                        Tensor::from_slice(f32_data, &[rows, cols], &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?
                     } else if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
                         // Apply unified transpose logic for F32 projection weights
