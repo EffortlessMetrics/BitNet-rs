@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T00:13:53Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-003"
+event = "pr_open"
+pr = 3948
+head_sha = "8738cc5ba0c71c348d72b38455776e4c1ab3414a"
+actor = "codex"
+
+notes = [
+  "Opened a scoped SLM-M4-003 Rust-native Qwen answer smoke PR.",
+  "The PR restores first-token parity for the Qwen2.5 ChatML prompt and records apple-m4-cpu-neon fallback_used=false answer receipt evidence.",
+  "It does not claim BitNet local-answer quality, QK256, MPSGraph, Neural Engine, full apple-m4-metal inference, or general performance.",
+]

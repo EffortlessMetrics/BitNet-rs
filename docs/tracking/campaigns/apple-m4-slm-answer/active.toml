@@ -117,7 +117,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-003"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-slm-answer/SLM-M4-003-qwen-trace"
 stackable = false
 review_mode = "codex_premerge"
