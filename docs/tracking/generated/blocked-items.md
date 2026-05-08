@@ -138,7 +138,7 @@
 | nvidia-5070ti | CUDA-PLANNER-003 | CUDA-PLANNER-002 | merged |
 | nvidia-5070ti | CUDA-PLANNER-004 | CUDA-PLANNER-003 | merged |
 | nvidia-5070ti | CUDA-DENSE-005 | CUDA-DENSE-004, CUDA-PLANNER-004 | merged |
-| nvidia-5070ti | CUDA-DENSE-006 | CUDA-DENSE-005 | in_progress |
+| nvidia-5070ti | CUDA-DENSE-006 | CUDA-DENSE-005 | merged |
 | slm-cpu | SLM-CPU-001 | SLM-CPU-000 | merged |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | merged |
 | slm-cpu | SLM-CPU-002A | SLM-CPU-002 | merged |

@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T23:48:05Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-006"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-006-gguf-descriptors"
+pr = 4152
+head_sha = "122fddbfd4cd3aba1fbab4f9e3e7d4c029b239e9"
+merge_sha = "1afc9a7cbdfb8164333e4829ccb6815556c27094"
+previous_status = "in_progress"
+new_status = "merged"
+
+notes = [
+  "Merged PR #4152 to add dense GGUF tensor descriptor inspection through the existing GGUF reader.",
+  "The merged descriptor receipt records Qwen-family dense tensor roles and keeps Q8_0 descriptor-only pending a future quant bridge.",
+  "No dense GGUF inference, CUDA kernel, BitNet QK256 math, tokenizer, loader semantics, transformer, server, speedup, or full-residency claim was added.",
+]

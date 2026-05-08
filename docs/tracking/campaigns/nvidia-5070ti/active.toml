@@ -1526,8 +1526,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-006"
-status = "in_progress"
+status = "merged"
 branch = "codex/cuda-dense-006-gguf-descriptors"
+pr = 4152
+head_sha = "122fddbfd4cd3aba1fbab4f9e3e7d4c029b239e9"
+merge_sha = "1afc9a7cbdfb8164333e4829ccb6815556c27094"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
