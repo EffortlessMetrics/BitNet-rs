@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T19:20:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-PERF-003"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-bitnet-perf-003-warm-session-benchmark"
+pr = 4117
+head_sha = "8ae23e222dd40e8c1696f79f66a5cd0171218492"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4117 for repeated strict CUDA warm-session benchmark receipts on the Windows 9950X3D + RTX 5070 Ti BitNet CUDA lane.",
+  "The PR commits three two-turn strict CUDA warm-session runs with model/tokenizer/context loaded once, upload-once QK256 handles, fallback_used=false, and measured QK256 kernel time plus transfer byte counters.",
+  "The benchmark remains baseline evidence with speedup_claim=false, benchmark_qualified_speedup=false, and full_cuda_residency_claimed=false.",
+]
