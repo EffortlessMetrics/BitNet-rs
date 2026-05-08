@@ -353,8 +353,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-009"
-status = "pr_open"
+status = "merged"
 pr = 4068
+merge_sha = "d90daacbc927f00a1cc355208ab63139a1b5aa08"
 branch = "codex/intel-npu/NPU-009-openvino-llamacpp-gguf-reference"
 stackable = false
 review_mode = "codex_premerge"

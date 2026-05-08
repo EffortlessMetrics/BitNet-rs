@@ -16,7 +16,7 @@
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | CPU258V-015 | #4046 | merged | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
 | intel-a770 | A770-003 | TBD | ready | none | OpenCL-first for native A770 proof. |
-| intel-npu | NPU-009 | #4068 | pr_open | none | Device-node detection is not inference. |
+| intel-npu | NPU-009 | #4068 | merged | none | Device-node detection is not inference. |
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | CUDA-PROD-003 | TBD | ready | CUDA-DENSE-001 | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
