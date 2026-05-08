@@ -7,7 +7,6 @@ pub mod commands;
 pub mod config;
 pub mod exit;
 pub mod ln_rules;
-#[cfg(feature = "full-cli")]
 pub mod planner_receipts;
 pub mod tokenizer_discovery;
 

@@ -89,7 +89,6 @@ mod ln_rules;
 #[cfg(feature = "full-cli")]
 mod mac;
 mod model_cache;
-#[cfg(feature = "full-cli")]
 mod planner_receipts;
 mod score;
 pub mod tokenizer_discovery;

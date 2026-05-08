@@ -22,10 +22,14 @@
       "failure_reason": null,
       "fallback_used": false,
       "identity_evidence": [
+        "level_zero:Intel(R) Arc(TM) 140V GPU (16GB)",
+        "level_zero_pci_device_id:0x64A0",
         "openvino:GPU:Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)"
       ],
-      "level_zero_available": false,
-      "level_zero_devices": [],
+      "level_zero_available": true,
+      "level_zero_devices": [
+        "Intel(R) Arc(TM) 140V GPU (16GB)"
+      ],
       "opencl_available": false,
       "opencl_device_name": null,
       "opencl_driver_version": null,
@@ -340,5 +344,5 @@
   "runtime_api": "platform_probe",
   "schema": 1,
   "selected_backend": "core-ultra-7-258v",
-  "timestamp_utc": "2026-05-08T22:21:06Z"
+  "timestamp_utc": "2026-05-08T22:57:23Z"
 }
