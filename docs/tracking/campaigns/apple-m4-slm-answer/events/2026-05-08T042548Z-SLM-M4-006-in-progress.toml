@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T04:25:48Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-006"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started warm-answer speed measurement after SLM-M4-005 merged.",
+  "Scope is Apple M4 SLM CPU/NEON warm-session timing only; no broad performance, BitNet performance, Metal inference, QK256, server, or model binary changes.",
+]
