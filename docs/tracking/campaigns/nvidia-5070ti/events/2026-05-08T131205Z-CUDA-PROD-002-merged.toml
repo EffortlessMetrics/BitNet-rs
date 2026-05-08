@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T13:12:05Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-002"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-002-warm-session-receipts"
+pr = 4059
+merge_sha = "00d9e3ef5f859100a1bca8e965023fed2c6442c6"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "Merged strict RTX 5070 Ti CUDA warm-session receipts.",
+  "The merged path writes per-turn and aggregate receipts with strict CUDA backend identity, QK256 kernel coverage, upload-once weight residency, answer quality, and speedup_claim=false.",
+  "CUDA-PROD-003 is ready for explicit CUDA execution-residency coverage; no speed, broad chat, server, or full-residency claim is implied by this closeout.",
+]
