@@ -1,0 +1,1089 @@
+{
+  "artifact_kind": "bitnet_cpu_answer_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu"
+  },
+  "cases": [
+    {
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu",
+        "source": "answer_corpus_launcher"
+      },
+      "child_invocation": {
+        "args": [
+          "--device",
+          "cpu",
+          "run",
+          "--model",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+          "--prompt",
+          "What is 2+2? Answer with only the number.",
+          "--max-new-tokens",
+          "4",
+          "--temperature",
+          "0",
+          "--prompt-template",
+          "bitnetcpp-answer",
+          "--json-out",
+          "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\math_2_plus_2.json",
+          "--tokenizer",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json",
+          "--greedy",
+          "--deterministic",
+          "--strict-loader",
+          "--strict-tokenizer",
+          "--dump-logit-steps",
+          "1",
+          "--logits-topk",
+          "5",
+          "--assert-greedy"
+        ],
+        "environment_overrides": {
+          "BITNET_CPU_KERNEL": "avx2",
+          "BITNET_FORCE_SCALAR": "0",
+          "RUST_LOG": "warn"
+        },
+        "executable": "C:\\Code\\Rust\\BitNet-rs-arc140v004-opencl-smoke\\target\\debug\\bitnet.exe",
+        "expected_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\math_2_plus_2.json",
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778221756725306400-2-phases.log",
+        "timeout_seconds": 420
+      },
+      "child_process": {
+        "crash_class": "timeout",
+        "exit_code": 1,
+        "exit_code_hex": "0x00000001",
+        "last_observed_phase": "prompt_prefill_start",
+        "phase_events": [
+          {
+            "child_phase": "process_start",
+            "details": {
+              "command": "run"
+            },
+            "timestamp": "2026-05-08T06:29:16.793328900+00:00"
+          },
+          {
+            "child_phase": "args_parsed",
+            "details": {
+              "has_tokenizer_path": true,
+              "json_out": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\math_2_plus_2.json",
+              "max_new_tokens": 4,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+              "prompt_template": "bitnetcpp-answer",
+              "requested_backend": "cpu"
+            },
+            "timestamp": "2026-05-08T06:29:16.794187100+00:00"
+          },
+          {
+            "child_phase": "backend_select_start",
+            "details": {
+              "requested_backend": "cpu",
+              "strict_backend": true
+            },
+            "timestamp": "2026-05-08T06:29:16.795273400+00:00"
+          },
+          {
+            "child_phase": "backend_select_complete",
+            "details": {
+              "fallback_reason": null,
+              "fallback_used": false,
+              "requested_backend": "cpu",
+              "runtime_api": "cpu",
+              "selected_backend": "cpu-rust"
+            },
+            "timestamp": "2026-05-08T06:29:16.795662400+00:00"
+          },
+          {
+            "child_phase": "model_load_start",
+            "details": {
+              "is_hf_directory": false,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf"
+            },
+            "timestamp": "2026-05-08T06:29:17.429170400+00:00"
+          },
+          {
+            "child_phase": "model_load_complete",
+            "details": {
+              "loader_mode": "real_gguf",
+              "model_load_ms": 85255.972
+            },
+            "timestamp": "2026-05-08T06:30:42.685858+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_start",
+            "details": {
+              "has_tokenizer_path": true,
+              "strict_tokenizer": true
+            },
+            "timestamp": "2026-05-08T06:30:42.687827600+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_complete",
+            "details": {
+              "tokenizer_load_ms": 1679.828,
+              "tokenizer_source": "explicit",
+              "tokenizer_strict": true
+            },
+            "timestamp": "2026-05-08T06:30:44.367714100+00:00"
+          },
+          {
+            "child_phase": "prompt_render_start",
+            "details": {
+              "has_system_prompt": false,
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:30:44.369667+00:00"
+          },
+          {
+            "child_phase": "prompt_render_complete",
+            "details": {
+              "rendered_prompt_bytes": 67,
+              "rendered_prompt_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:30:44.371341300+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_start",
+            "details": {
+              "bos_policy": true,
+              "parse_special": true
+            },
+            "timestamp": "2026-05-08T06:30:44.511688600+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_complete",
+            "details": {
+              "prompt_token_count": 19,
+              "prompt_tokenize_ms": 2.429
+            },
+            "timestamp": "2026-05-08T06:30:44.514111200+00:00"
+          },
+          {
+            "child_phase": "prompt_prefill_start",
+            "details": {
+              "prefill_prefix_tokens": 18,
+              "prompt_token_count": 19,
+              "strict_cuda_backend_selected": false
+            },
+            "timestamp": "2026-05-08T06:30:44.517101200+00:00"
+          }
+        ],
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778221756725306400-2-phases.log",
+        "receipt_observed": false,
+        "stderr_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778221756725304500-1-stderr.log",
+        "stdout_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778221756725272900-0-stdout.log",
+        "success": false,
+        "timed_out": true
+      },
+      "exit_code": 1,
+      "id": "math_2_plus_2",
+      "kernel": {
+        "family": null,
+        "requested_cpu_kernel": "avx2",
+        "selected_kernel": null,
+        "source": "missing_child_receipt"
+      },
+      "quality": {
+        "failed_rules": [
+          "timeout"
+        ],
+        "passed": false
+      },
+      "question": "What is 2+2? Answer with only the number.",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\math_2_plus_2.json",
+      "status": "timeout",
+      "stderr_tail": "answer_corpus_child_phase=process_start\nanswer_corpus_child_phase=args_parsed\nanswer_corpus_child_phase=backend_select_start\nanswer_corpus_child_phase=backend_select_complete\nΓä╣ Using QK256 quantization with AVX2 acceleration\nanswer_corpus_child_phase=model_load_start\nDEBUG from_gguf: Received config: hidden=2560, n_heads=20, n_kv_heads=5\nDEBUG from_gguf: Received 332 tensors, 210 raw QK256 tensors\nanswer_corpus_child_phase=model_load_complete\nanswer_corpus_child_phase=tokenizer_load_start\nanswer_corpus_child_phase=tokenizer_load_complete\nanswer_corpus_child_phase=prompt_render_start\nanswer_corpus_child_phase=prompt_render_complete\nanswer_corpus_child_phase=prompt_tokenize_start\nanswer_corpus_child_phase=prompt_tokenize_complete\nanswer_corpus_child_phase=prompt_prefill_start\n",
+      "stdout_tail": "Loading model from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf\nLoading tokenizer from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json\nInput tokens (19): [128000, 1502, 25, 3639, 374, 220, 17, 10, 17, 30]\nGenerating: User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+      "timeout_seconds": 420
+    },
+    {
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu",
+        "source": "answer_corpus_launcher"
+      },
+      "child_invocation": {
+        "args": [
+          "--device",
+          "cpu",
+          "run",
+          "--model",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+          "--prompt",
+          "What is the capital of France? Answer with one word.",
+          "--max-new-tokens",
+          "8",
+          "--temperature",
+          "0",
+          "--prompt-template",
+          "bitnetcpp-answer",
+          "--json-out",
+          "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\capital_france.json",
+          "--tokenizer",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json",
+          "--greedy",
+          "--deterministic",
+          "--strict-loader",
+          "--strict-tokenizer",
+          "--dump-logit-steps",
+          "1",
+          "--logits-topk",
+          "5",
+          "--assert-greedy"
+        ],
+        "environment_overrides": {
+          "BITNET_CPU_KERNEL": "avx2",
+          "BITNET_FORCE_SCALAR": "0",
+          "RUST_LOG": "warn"
+        },
+        "executable": "C:\\Code\\Rust\\BitNet-rs-arc140v004-opencl-smoke\\target\\debug\\bitnet.exe",
+        "expected_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\capital_france.json",
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778222176967730500-5-phases.log",
+        "timeout_seconds": 420
+      },
+      "child_process": {
+        "crash_class": "timeout",
+        "exit_code": 1,
+        "exit_code_hex": "0x00000001",
+        "last_observed_phase": "prompt_prefill_start",
+        "phase_events": [
+          {
+            "child_phase": "process_start",
+            "details": {
+              "command": "run"
+            },
+            "timestamp": "2026-05-08T06:36:17.099769600+00:00"
+          },
+          {
+            "child_phase": "args_parsed",
+            "details": {
+              "has_tokenizer_path": true,
+              "json_out": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\capital_france.json",
+              "max_new_tokens": 8,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+              "prompt_template": "bitnetcpp-answer",
+              "requested_backend": "cpu"
+            },
+            "timestamp": "2026-05-08T06:36:17.100746800+00:00"
+          },
+          {
+            "child_phase": "backend_select_start",
+            "details": {
+              "requested_backend": "cpu",
+              "strict_backend": true
+            },
+            "timestamp": "2026-05-08T06:36:17.101903600+00:00"
+          },
+          {
+            "child_phase": "backend_select_complete",
+            "details": {
+              "fallback_reason": null,
+              "fallback_used": false,
+              "requested_backend": "cpu",
+              "runtime_api": "cpu",
+              "selected_backend": "cpu-rust"
+            },
+            "timestamp": "2026-05-08T06:36:17.102209+00:00"
+          },
+          {
+            "child_phase": "model_load_start",
+            "details": {
+              "is_hf_directory": false,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf"
+            },
+            "timestamp": "2026-05-08T06:36:17.591900200+00:00"
+          },
+          {
+            "child_phase": "model_load_complete",
+            "details": {
+              "loader_mode": "real_gguf",
+              "model_load_ms": 87080.583
+            },
+            "timestamp": "2026-05-08T06:37:44.673224900+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_start",
+            "details": {
+              "has_tokenizer_path": true,
+              "strict_tokenizer": true
+            },
+            "timestamp": "2026-05-08T06:37:44.674847+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_complete",
+            "details": {
+              "tokenizer_load_ms": 2017.682,
+              "tokenizer_source": "explicit",
+              "tokenizer_strict": true
+            },
+            "timestamp": "2026-05-08T06:37:46.692567400+00:00"
+          },
+          {
+            "child_phase": "prompt_render_start",
+            "details": {
+              "has_system_prompt": false,
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:37:46.694221600+00:00"
+          },
+          {
+            "child_phase": "prompt_render_complete",
+            "details": {
+              "rendered_prompt_bytes": 78,
+              "rendered_prompt_sha256": "a507f5762572d6c022afe961fc653c9b6a6a62d748545eb7e55919c4e9cf31e4",
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:37:46.695101900+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_start",
+            "details": {
+              "bos_policy": true,
+              "parse_special": true
+            },
+            "timestamp": "2026-05-08T06:37:46.834141900+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_complete",
+            "details": {
+              "prompt_token_count": 18,
+              "prompt_tokenize_ms": 1.494
+            },
+            "timestamp": "2026-05-08T06:37:46.835630300+00:00"
+          },
+          {
+            "child_phase": "prompt_prefill_start",
+            "details": {
+              "prefill_prefix_tokens": 17,
+              "prompt_token_count": 18,
+              "strict_cuda_backend_selected": false
+            },
+            "timestamp": "2026-05-08T06:37:46.837849100+00:00"
+          }
+        ],
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778222176967730500-5-phases.log",
+        "receipt_observed": false,
+        "stderr_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778222176967727500-4-stderr.log",
+        "stdout_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778222176967714700-3-stdout.log",
+        "success": false,
+        "timed_out": true
+      },
+      "exit_code": 1,
+      "id": "capital_france",
+      "kernel": {
+        "family": null,
+        "requested_cpu_kernel": "avx2",
+        "selected_kernel": null,
+        "source": "missing_child_receipt"
+      },
+      "quality": {
+        "failed_rules": [
+          "timeout"
+        ],
+        "passed": false
+      },
+      "question": "What is the capital of France? Answer with one word.",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\capital_france.json",
+      "status": "timeout",
+      "stderr_tail": "answer_corpus_child_phase=process_start\nanswer_corpus_child_phase=args_parsed\nanswer_corpus_child_phase=backend_select_start\nanswer_corpus_child_phase=backend_select_complete\nΓä╣ Using QK256 quantization with AVX2 acceleration\nanswer_corpus_child_phase=model_load_start\nDEBUG from_gguf: Received config: hidden=2560, n_heads=20, n_kv_heads=5\nDEBUG from_gguf: Received 332 tensors, 210 raw QK256 tensors\nanswer_corpus_child_phase=model_load_complete\nanswer_corpus_child_phase=tokenizer_load_start\nanswer_corpus_child_phase=tokenizer_load_complete\nanswer_corpus_child_phase=prompt_render_start\nanswer_corpus_child_phase=prompt_render_complete\nanswer_corpus_child_phase=prompt_tokenize_start\nanswer_corpus_child_phase=prompt_tokenize_complete\nanswer_corpus_child_phase=prompt_prefill_start\n",
+      "stdout_tail": "Loading model from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf\nLoading tokenizer from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json\nInput tokens (18): [128000, 1502, 25, 3639, 374, 279, 6864, 315, 9822, 30]\nGenerating: User: What is the capital of France? Answer with one word.<|eot_id|>Assistant:",
+      "timeout_seconds": 420
+    },
+    {
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu",
+        "source": "answer_corpus_launcher"
+      },
+      "child_invocation": {
+        "args": [
+          "--device",
+          "cpu",
+          "run",
+          "--model",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+          "--prompt",
+          "Repeat exactly: red blue green",
+          "--max-new-tokens",
+          "8",
+          "--temperature",
+          "0",
+          "--prompt-template",
+          "bitnetcpp-answer",
+          "--json-out",
+          "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\repeat_colors.json",
+          "--tokenizer",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json",
+          "--greedy",
+          "--deterministic",
+          "--strict-loader",
+          "--strict-tokenizer",
+          "--dump-logit-steps",
+          "1",
+          "--logits-topk",
+          "5",
+          "--assert-greedy"
+        ],
+        "environment_overrides": {
+          "BITNET_CPU_KERNEL": "avx2",
+          "BITNET_FORCE_SCALAR": "0",
+          "RUST_LOG": "warn"
+        },
+        "executable": "C:\\Code\\Rust\\BitNet-rs-arc140v004-opencl-smoke\\target\\debug\\bitnet.exe",
+        "expected_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\repeat_colors.json",
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778222597100021500-8-phases.log",
+        "timeout_seconds": 420
+      },
+      "child_process": {
+        "crash_class": "timeout",
+        "exit_code": 1,
+        "exit_code_hex": "0x00000001",
+        "last_observed_phase": "decode_step_0_complete",
+        "phase_events": [
+          {
+            "child_phase": "process_start",
+            "details": {
+              "command": "run"
+            },
+            "timestamp": "2026-05-08T06:43:17.225069300+00:00"
+          },
+          {
+            "child_phase": "args_parsed",
+            "details": {
+              "has_tokenizer_path": true,
+              "json_out": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\repeat_colors.json",
+              "max_new_tokens": 8,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+              "prompt_template": "bitnetcpp-answer",
+              "requested_backend": "cpu"
+            },
+            "timestamp": "2026-05-08T06:43:17.225906800+00:00"
+          },
+          {
+            "child_phase": "backend_select_start",
+            "details": {
+              "requested_backend": "cpu",
+              "strict_backend": true
+            },
+            "timestamp": "2026-05-08T06:43:17.227222400+00:00"
+          },
+          {
+            "child_phase": "backend_select_complete",
+            "details": {
+              "fallback_reason": null,
+              "fallback_used": false,
+              "requested_backend": "cpu",
+              "runtime_api": "cpu",
+              "selected_backend": "cpu-rust"
+            },
+            "timestamp": "2026-05-08T06:43:17.227604+00:00"
+          },
+          {
+            "child_phase": "model_load_start",
+            "details": {
+              "is_hf_directory": false,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf"
+            },
+            "timestamp": "2026-05-08T06:43:17.689279+00:00"
+          },
+          {
+            "child_phase": "model_load_complete",
+            "details": {
+              "loader_mode": "real_gguf",
+              "model_load_ms": 92745.299
+            },
+            "timestamp": "2026-05-08T06:44:50.435381200+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_start",
+            "details": {
+              "has_tokenizer_path": true,
+              "strict_tokenizer": true
+            },
+            "timestamp": "2026-05-08T06:44:50.437429600+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_complete",
+            "details": {
+              "tokenizer_load_ms": 1956.524,
+              "tokenizer_source": "explicit",
+              "tokenizer_strict": true
+            },
+            "timestamp": "2026-05-08T06:44:52.394001400+00:00"
+          },
+          {
+            "child_phase": "prompt_render_start",
+            "details": {
+              "has_system_prompt": false,
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:44:52.396772300+00:00"
+          },
+          {
+            "child_phase": "prompt_render_complete",
+            "details": {
+              "rendered_prompt_bytes": 56,
+              "rendered_prompt_sha256": "5580ceb6184a7fa43039f2fdb6607b452e777808e1c1d443c33579c33b2633f4",
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:44:52.398190300+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_start",
+            "details": {
+              "bos_policy": true,
+              "parse_special": true
+            },
+            "timestamp": "2026-05-08T06:44:52.544181300+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_complete",
+            "details": {
+              "prompt_token_count": 12,
+              "prompt_tokenize_ms": 2.126
+            },
+            "timestamp": "2026-05-08T06:44:52.546292600+00:00"
+          },
+          {
+            "child_phase": "prompt_prefill_start",
+            "details": {
+              "prefill_prefix_tokens": 11,
+              "prompt_token_count": 12,
+              "strict_cuda_backend_selected": false
+            },
+            "timestamp": "2026-05-08T06:44:52.549467900+00:00"
+          },
+          {
+            "child_phase": "prompt_prefill_complete",
+            "details": {
+              "prefill_ms": 292127.404,
+              "prefill_tokens": 11
+            },
+            "timestamp": "2026-05-08T06:49:44.679361600+00:00"
+          },
+          {
+            "child_phase": "decode_step_0_start",
+            "details": {
+              "context_token_count": 12,
+              "strict_cuda_backend_selected": false
+            },
+            "timestamp": "2026-05-08T06:49:44.680648400+00:00"
+          },
+          {
+            "child_phase": "decode_step_0_complete",
+            "details": {
+              "chosen_token": 57186,
+              "generated_tokens": 1
+            },
+            "timestamp": "2026-05-08T06:50:11.762321+00:00"
+          }
+        ],
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778222597100021500-8-phases.log",
+        "receipt_observed": false,
+        "stderr_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778222597100019400-7-stderr.log",
+        "stdout_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778222597100007200-6-stdout.log",
+        "success": false,
+        "timed_out": true
+      },
+      "exit_code": 1,
+      "id": "repeat_colors",
+      "kernel": {
+        "family": null,
+        "requested_cpu_kernel": "avx2",
+        "selected_kernel": null,
+        "source": "missing_child_receipt"
+      },
+      "quality": {
+        "failed_rules": [
+          "timeout"
+        ],
+        "passed": false
+      },
+      "question": "Repeat exactly: red blue green",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\repeat_colors.json",
+      "status": "timeout",
+      "stderr_tail": "answer_corpus_child_phase=process_start\nanswer_corpus_child_phase=args_parsed\nanswer_corpus_child_phase=backend_select_start\nanswer_corpus_child_phase=backend_select_complete\nΓä╣ Using QK256 quantization with AVX2 acceleration\nanswer_corpus_child_phase=model_load_start\nDEBUG from_gguf: Received config: hidden=2560, n_heads=20, n_kv_heads=5\nDEBUG from_gguf: Received 332 tensors, 210 raw QK256 tensors\nanswer_corpus_child_phase=model_load_complete\nanswer_corpus_child_phase=tokenizer_load_start\nanswer_corpus_child_phase=tokenizer_load_complete\nanswer_corpus_child_phase=prompt_render_start\nanswer_corpus_child_phase=prompt_render_complete\nanswer_corpus_child_phase=prompt_tokenize_start\nanswer_corpus_child_phase=prompt_tokenize_complete\nanswer_corpus_child_phase=prompt_prefill_start\nanswer_corpus_child_phase=prompt_prefill_complete\nanswer_corpus_child_phase=decode_step_0_start\nanswer_corpus_child_phase=decode_step_0_complete\n",
+      "stdout_tail": "Loading model from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf\nLoading tokenizer from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json\nInput tokens (12): [128000, 1502, 25, 45901, 7041, 25, 2579, 6437, 6307, 128009]\nGenerating: User: Repeat exactly: red blue green<|eot_id|>Assistant:ции",
+      "timeout_seconds": 420
+    },
+    {
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu",
+        "source": "answer_corpus_launcher"
+      },
+      "child_invocation": {
+        "args": [
+          "--device",
+          "cpu",
+          "run",
+          "--model",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+          "--prompt",
+          "Say exactly: OK",
+          "--max-new-tokens",
+          "4",
+          "--temperature",
+          "0",
+          "--prompt-template",
+          "bitnetcpp-answer",
+          "--json-out",
+          "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\say_ok.json",
+          "--tokenizer",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json",
+          "--greedy",
+          "--deterministic",
+          "--strict-loader",
+          "--strict-tokenizer",
+          "--dump-logit-steps",
+          "1",
+          "--logits-topk",
+          "5",
+          "--assert-greedy"
+        ],
+        "environment_overrides": {
+          "BITNET_CPU_KERNEL": "avx2",
+          "BITNET_FORCE_SCALAR": "0",
+          "RUST_LOG": "warn"
+        },
+        "executable": "C:\\Code\\Rust\\BitNet-rs-arc140v004-opencl-smoke\\target\\debug\\bitnet.exe",
+        "expected_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\say_ok.json",
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778223017232196500-11-phases.log",
+        "timeout_seconds": 420
+      },
+      "child_process": {
+        "crash_class": "timeout",
+        "exit_code": 1,
+        "exit_code_hex": "0x00000001",
+        "last_observed_phase": "decode_step_0_complete",
+        "phase_events": [
+          {
+            "child_phase": "process_start",
+            "details": {
+              "command": "run"
+            },
+            "timestamp": "2026-05-08T06:50:17.359817700+00:00"
+          },
+          {
+            "child_phase": "args_parsed",
+            "details": {
+              "has_tokenizer_path": true,
+              "json_out": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\say_ok.json",
+              "max_new_tokens": 4,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+              "prompt_template": "bitnetcpp-answer",
+              "requested_backend": "cpu"
+            },
+            "timestamp": "2026-05-08T06:50:17.361182700+00:00"
+          },
+          {
+            "child_phase": "backend_select_start",
+            "details": {
+              "requested_backend": "cpu",
+              "strict_backend": true
+            },
+            "timestamp": "2026-05-08T06:50:17.362515200+00:00"
+          },
+          {
+            "child_phase": "backend_select_complete",
+            "details": {
+              "fallback_reason": null,
+              "fallback_used": false,
+              "requested_backend": "cpu",
+              "runtime_api": "cpu",
+              "selected_backend": "cpu-rust"
+            },
+            "timestamp": "2026-05-08T06:50:17.362784700+00:00"
+          },
+          {
+            "child_phase": "model_load_start",
+            "details": {
+              "is_hf_directory": false,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf"
+            },
+            "timestamp": "2026-05-08T06:50:17.818521700+00:00"
+          },
+          {
+            "child_phase": "model_load_complete",
+            "details": {
+              "loader_mode": "real_gguf",
+              "model_load_ms": 91659.979
+            },
+            "timestamp": "2026-05-08T06:51:49.479291200+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_start",
+            "details": {
+              "has_tokenizer_path": true,
+              "strict_tokenizer": true
+            },
+            "timestamp": "2026-05-08T06:51:49.481137300+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_complete",
+            "details": {
+              "tokenizer_load_ms": 1997.235,
+              "tokenizer_source": "explicit",
+              "tokenizer_strict": true
+            },
+            "timestamp": "2026-05-08T06:51:51.478430600+00:00"
+          },
+          {
+            "child_phase": "prompt_render_start",
+            "details": {
+              "has_system_prompt": false,
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:51:51.481855500+00:00"
+          },
+          {
+            "child_phase": "prompt_render_complete",
+            "details": {
+              "rendered_prompt_bytes": 41,
+              "rendered_prompt_sha256": "f440a4461f1b169b58200f7c1fd49efbdce96d260827283b0b7f9d5fb9c1bc76",
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:51:51.482833100+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_start",
+            "details": {
+              "bos_policy": true,
+              "parse_special": true
+            },
+            "timestamp": "2026-05-08T06:51:51.641513700+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_complete",
+            "details": {
+              "prompt_token_count": 10,
+              "prompt_tokenize_ms": 1.943
+            },
+            "timestamp": "2026-05-08T06:51:51.643447100+00:00"
+          },
+          {
+            "child_phase": "prompt_prefill_start",
+            "details": {
+              "prefill_prefix_tokens": 9,
+              "prompt_token_count": 10,
+              "strict_cuda_backend_selected": false
+            },
+            "timestamp": "2026-05-08T06:51:51.645929300+00:00"
+          },
+          {
+            "child_phase": "prompt_prefill_complete",
+            "details": {
+              "prefill_ms": 238824.612,
+              "prefill_tokens": 9
+            },
+            "timestamp": "2026-05-08T06:55:50.472601600+00:00"
+          },
+          {
+            "child_phase": "decode_step_0_start",
+            "details": {
+              "context_token_count": 10,
+              "strict_cuda_backend_selected": false
+            },
+            "timestamp": "2026-05-08T06:55:50.474131300+00:00"
+          },
+          {
+            "child_phase": "decode_step_0_complete",
+            "details": {
+              "chosen_token": 89048,
+              "generated_tokens": 1
+            },
+            "timestamp": "2026-05-08T06:56:17.425683500+00:00"
+          }
+        ],
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778223017232196500-11-phases.log",
+        "receipt_observed": false,
+        "stderr_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778223017232193400-10-stderr.log",
+        "stdout_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778223017232179000-9-stdout.log",
+        "success": false,
+        "timed_out": true
+      },
+      "exit_code": 1,
+      "id": "say_ok",
+      "kernel": {
+        "family": null,
+        "requested_cpu_kernel": "avx2",
+        "selected_kernel": null,
+        "source": "missing_child_receipt"
+      },
+      "quality": {
+        "failed_rules": [
+          "timeout"
+        ],
+        "passed": false
+      },
+      "question": "Say exactly: OK",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\say_ok.json",
+      "status": "timeout",
+      "stderr_tail": "answer_corpus_child_phase=process_start\nanswer_corpus_child_phase=args_parsed\nanswer_corpus_child_phase=backend_select_start\nanswer_corpus_child_phase=backend_select_complete\nΓä╣ Using QK256 quantization with AVX2 acceleration\nanswer_corpus_child_phase=model_load_start\nDEBUG from_gguf: Received config: hidden=2560, n_heads=20, n_kv_heads=5\nDEBUG from_gguf: Received 332 tensors, 210 raw QK256 tensors\nanswer_corpus_child_phase=model_load_complete\nanswer_corpus_child_phase=tokenizer_load_start\nanswer_corpus_child_phase=tokenizer_load_complete\nanswer_corpus_child_phase=prompt_render_start\nanswer_corpus_child_phase=prompt_render_complete\nanswer_corpus_child_phase=prompt_tokenize_start\nanswer_corpus_child_phase=prompt_tokenize_complete\nanswer_corpus_child_phase=prompt_prefill_start\nanswer_corpus_child_phase=prompt_prefill_complete\nanswer_corpus_child_phase=decode_step_0_start\nanswer_corpus_child_phase=decode_step_0_complete\n",
+      "stdout_tail": "Loading model from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf\nLoading tokenizer from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json\nInput tokens (10): [128000, 1502, 25, 25961, 7041, 25, 10619, 128009, 72803, 25]\nGenerating: User: Say exactly: OK<|eot_id|>Assistant:'E swapping مسئله",
+      "timeout_seconds": 420
+    },
+    {
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu",
+        "source": "answer_corpus_launcher"
+      },
+      "child_invocation": {
+        "args": [
+          "--device",
+          "cpu",
+          "run",
+          "--model",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+          "--prompt",
+          "Answer yes or no: is water wet?",
+          "--max-new-tokens",
+          "4",
+          "--temperature",
+          "0",
+          "--prompt-template",
+          "bitnetcpp-answer",
+          "--json-out",
+          "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\yes_no_water.json",
+          "--tokenizer",
+          "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json",
+          "--greedy",
+          "--deterministic",
+          "--strict-loader",
+          "--strict-tokenizer",
+          "--dump-logit-steps",
+          "1",
+          "--logits-topk",
+          "5",
+          "--assert-greedy"
+        ],
+        "environment_overrides": {
+          "BITNET_CPU_KERNEL": "avx2",
+          "BITNET_FORCE_SCALAR": "0",
+          "RUST_LOG": "warn"
+        },
+        "executable": "C:\\Code\\Rust\\BitNet-rs-arc140v004-opencl-smoke\\target\\debug\\bitnet.exe",
+        "expected_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\yes_no_water.json",
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778223437414852000-14-phases.log",
+        "timeout_seconds": 420
+      },
+      "child_process": {
+        "crash_class": "timeout",
+        "exit_code": 1,
+        "exit_code_hex": "0x00000001",
+        "last_observed_phase": "prompt_prefill_start",
+        "phase_events": [
+          {
+            "child_phase": "process_start",
+            "details": {
+              "command": "run"
+            },
+            "timestamp": "2026-05-08T06:57:17.487608300+00:00"
+          },
+          {
+            "child_phase": "args_parsed",
+            "details": {
+              "has_tokenizer_path": true,
+              "json_out": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\yes_no_water.json",
+              "max_new_tokens": 4,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+              "prompt_template": "bitnetcpp-answer",
+              "requested_backend": "cpu"
+            },
+            "timestamp": "2026-05-08T06:57:17.488431100+00:00"
+          },
+          {
+            "child_phase": "backend_select_start",
+            "details": {
+              "requested_backend": "cpu",
+              "strict_backend": true
+            },
+            "timestamp": "2026-05-08T06:57:17.489718400+00:00"
+          },
+          {
+            "child_phase": "backend_select_complete",
+            "details": {
+              "fallback_reason": null,
+              "fallback_used": false,
+              "requested_backend": "cpu",
+              "runtime_api": "cpu",
+              "selected_backend": "cpu-rust"
+            },
+            "timestamp": "2026-05-08T06:57:17.490019500+00:00"
+          },
+          {
+            "child_phase": "model_load_start",
+            "details": {
+              "is_hf_directory": false,
+              "model_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf"
+            },
+            "timestamp": "2026-05-08T06:57:17.948968300+00:00"
+          },
+          {
+            "child_phase": "model_load_complete",
+            "details": {
+              "loader_mode": "real_gguf",
+              "model_load_ms": 87854.534
+            },
+            "timestamp": "2026-05-08T06:58:45.804248800+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_start",
+            "details": {
+              "has_tokenizer_path": true,
+              "strict_tokenizer": true
+            },
+            "timestamp": "2026-05-08T06:58:45.805878500+00:00"
+          },
+          {
+            "child_phase": "tokenizer_load_complete",
+            "details": {
+              "tokenizer_load_ms": 1974.058,
+              "tokenizer_source": "explicit",
+              "tokenizer_strict": true
+            },
+            "timestamp": "2026-05-08T06:58:47.779974700+00:00"
+          },
+          {
+            "child_phase": "prompt_render_start",
+            "details": {
+              "has_system_prompt": false,
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:58:47.782761200+00:00"
+          },
+          {
+            "child_phase": "prompt_render_complete",
+            "details": {
+              "rendered_prompt_bytes": 57,
+              "rendered_prompt_sha256": "99e5b6953cc57a6114b3f4bbea800e57606ed8a07aa77d58f942de6bdcc8e0ee",
+              "template": "bitnetcpp-answer"
+            },
+            "timestamp": "2026-05-08T06:58:47.783300800+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_start",
+            "details": {
+              "bos_policy": true,
+              "parse_special": true
+            },
+            "timestamp": "2026-05-08T06:58:47.918654100+00:00"
+          },
+          {
+            "child_phase": "prompt_tokenize_complete",
+            "details": {
+              "prompt_token_count": 15,
+              "prompt_tokenize_ms": 1.69
+            },
+            "timestamp": "2026-05-08T06:58:47.920329100+00:00"
+          },
+          {
+            "child_phase": "prompt_prefill_start",
+            "details": {
+              "prefill_prefix_tokens": 14,
+              "prompt_token_count": 15,
+              "strict_cuda_backend_selected": false
+            },
+            "timestamp": "2026-05-08T06:58:47.921750800+00:00"
+          }
+        ],
+        "phase_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778223437414852000-14-phases.log",
+        "receipt_observed": false,
+        "stderr_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778223437414848000-13-stderr.log",
+        "stdout_path": "C:\\Users\\szim9\\AppData\\Local\\Temp\\bitnet-answer-corpus-1760-1778223437414829900-12-stdout.log",
+        "success": false,
+        "timed_out": true
+      },
+      "exit_code": 1,
+      "id": "yes_no_water",
+      "kernel": {
+        "family": null,
+        "requested_cpu_kernel": "avx2",
+        "selected_kernel": null,
+        "source": "missing_child_receipt"
+      },
+      "quality": {
+        "failed_rules": [
+          "timeout"
+        ],
+        "passed": false
+      },
+      "question": "Answer yes or no: is water wet?",
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-runs\\yes_no_water.json",
+      "status": "timeout",
+      "stderr_tail": "answer_corpus_child_phase=process_start\nanswer_corpus_child_phase=args_parsed\nanswer_corpus_child_phase=backend_select_start\nanswer_corpus_child_phase=backend_select_complete\nΓä╣ Using QK256 quantization with AVX2 acceleration\nanswer_corpus_child_phase=model_load_start\nDEBUG from_gguf: Received config: hidden=2560, n_heads=20, n_kv_heads=5\nDEBUG from_gguf: Received 332 tensors, 210 raw QK256 tensors\nanswer_corpus_child_phase=model_load_complete\nanswer_corpus_child_phase=tokenizer_load_start\nanswer_corpus_child_phase=tokenizer_load_complete\nanswer_corpus_child_phase=prompt_render_start\nanswer_corpus_child_phase=prompt_render_complete\nanswer_corpus_child_phase=prompt_tokenize_start\nanswer_corpus_child_phase=prompt_tokenize_complete\nanswer_corpus_child_phase=prompt_prefill_start\n",
+      "stdout_tail": "Loading model from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf\nLoading tokenizer from: C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json\nInput tokens (15): [128000, 1502, 25, 22559, 10035, 477, 912, 25, 374, 3090]\nGenerating: User: Answer yes or no: is water wet?<|eot_id|>Assistant:",
+      "timeout_seconds": 420
+    }
+  ],
+  "claim_boundary": {
+    "broad_performance_claimed": false,
+    "coherent_answer_claimed": false,
+    "cuda_answer_corpus": false,
+    "diagnostic_only_until_answer_ready_artifact": true,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_answer_path": false,
+    "strict_cuda_answer_claimed": false
+  },
+  "corpus": {
+    "case_count": 5,
+    "description": "Fixed deterministic prompt set for answer-readiness baselines.",
+    "name": "strict-bitnet-answer-corpus-v1",
+    "path": "ci/quality/bitnet-answer-corpus.yaml"
+  },
+  "generation": {
+    "default_max_new_tokens": 8,
+    "deterministic": true,
+    "logits_dump_steps": 1,
+    "logits_topk": 5,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 420,
+    "requested_cpu_kernel": "avx2",
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "architecture": null,
+    "fallback_loader_used": false,
+    "family": null,
+    "file": "ggml-model-i2_s.gguf",
+    "loader_mode": "real_gguf",
+    "path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+    "quant_format": null,
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": null,
+    "tokenizer": "externally_supplied_llama_bpe",
+    "tokenizer_path": "C:\\Code\\Rust\\BitNet-rs-lnl258v002\\models\\BitNet-b1.58-2B-4T\\tokenizer.json"
+  },
+  "prompt_template": {
+    "family": "bitnetcpp-answer"
+  },
+  "quality_summary": {
+    "failed": 0,
+    "not_run": 0,
+    "passed": 0,
+    "timeout": 5,
+    "total": 5
+  },
+  "schema_version": "1.0.0",
+  "speedup_claim": false,
+  "timestamp": "2026-05-08T07:04:17.577533200+00:00"
+}

@@ -267,6 +267,21 @@ The command emits per-profile strict CPU receipts under
 claim answer quality, sustained throughput, Arc 140V execution, Intel NPU
 execution, or acceleration.
 
+### CPU Answer Template Refresh
+
+CPU258V-007 records the first 258V AVX2 answer-corpus refresh after the CPU
+answer lane adopted the BitNet.cpp answer-ready prompt envelope:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template.json
+```
+
+The artifact records five timeout rows with `missing_child_receipt` kernels.
+It is blocker evidence only: it shows that the newer answer-ready prompt path
+did not complete within the bounded local child-run window. It does not prove
+answer quality, scalar/AVX2 parity under the new prompt, sustained throughput,
+Arc 140V execution, or Intel NPU execution.
+
 ## Windows PowerShell Bundle
 
 ```powershell
