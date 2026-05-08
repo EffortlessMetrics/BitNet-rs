@@ -309,8 +309,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-005"
-status = "pr_open"
+status = "merged"
 pr = 3969
+merge_sha = "ae2fc47e78ce4b446f2b5c042606f3017fdf3223"
 branch = "codex/slm-cpu-005-reference-divergence"
 stackable = false
 review_mode = "codex_premerge"
