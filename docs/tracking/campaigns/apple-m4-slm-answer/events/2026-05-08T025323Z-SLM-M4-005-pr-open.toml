@@ -3,7 +3,7 @@ campaign = "apple-m4-slm-answer"
 item = "SLM-M4-005"
 event = "pr_open"
 pr = 3973
-head_sha = "d93b1b0ed79b75b6fe546625a7d72ad9860b990b"
+head_sha = "259c74d1060c8fc7a30350ee33fa57132f5059a6"
 actor = "codex"
 
 notes = [
