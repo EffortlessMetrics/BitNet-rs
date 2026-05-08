@@ -1,0 +1,11 @@
+timestamp = "2026-05-08T12:11:47Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started Apple M4 SLM allocation and hot-loop audit.",
+  "Scope is instrumentation, receipt-backed hotspot ranking, and audit documentation only.",
+  "No CPU/NEON optimization, Metal inference, BitNet quality, QK256, Neural Engine, MPSGraph model inference, or broad performance claim.",
+]

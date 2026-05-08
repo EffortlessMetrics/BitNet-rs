@@ -621,6 +621,10 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         require_determinism: bool,
 
+        /// Measure scoped hot-loop allocation counter deltas in warm-session receipts
+        #[arg(long, default_value_t = false)]
+        allocation_audit: bool,
+
         /// Minimum generated tokens required by the warm-session quality gate
         #[arg(long, default_value_t = 1)]
         min_generated_tokens: usize,
@@ -1169,6 +1173,7 @@ async fn async_main() -> Result<()> {
             stop_id,
             fail_on_quality,
             require_determinism,
+            allocation_audit,
             min_generated_tokens,
             min_distinct_generated_tokens,
             json_out,
@@ -1198,6 +1203,7 @@ async fn async_main() -> Result<()> {
                 stop_id,
                 fail_on_quality,
                 require_determinism,
+                allocation_audit,
                 min_generated_tokens,
                 min_distinct_generated_tokens,
                 json_out,
@@ -5430,6 +5436,7 @@ async fn run_slm_warm_session(
     stop_id: Vec<u32>,
     fail_on_quality: bool,
     require_determinism: bool,
+    allocation_audit: bool,
     min_generated_tokens: usize,
     min_distinct_generated_tokens: usize,
     json_out: std::path::PathBuf,
@@ -5613,7 +5620,10 @@ async fn run_slm_warm_session(
     let mut quality_failed_prompts = Vec::new();
     let mut determinism_records = Vec::with_capacity(prompt_inputs.len());
     let mut speed_accumulator = WarmSessionSpeedAccumulator::default();
+    let allocation_audit_enabled = allocation_audit;
+    let allocation_audit_guard = AllocationAuditGuard::enable(allocation_audit_enabled);
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
+        let prompt_alloc_start = AllocationAuditSnapshot::current();
         let prompt = &prompt_input.prompt;
         let prompt_start = std::time::Instant::now();
         let formatted_prompt = template_type.apply(prompt, system_prompt.as_deref());
@@ -5634,11 +5644,15 @@ async fn run_slm_warm_session(
         let bos_policy = template_type.should_add_bos();
         let parse_special = template_type.parse_special();
         let prompt_tokenize_start = std::time::Instant::now();
+        let prompt_tokenize_alloc_start = AllocationAuditSnapshot::current();
         let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
         ensure_non_empty_generation_context(&mut tokens, tokenizer.as_ref())?;
         let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
+        let prompt_tokenize_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
         let prompt_token_count = tokens.len();
 
+        let prompt_setup_alloc_start = AllocationAuditSnapshot::current();
         let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
         let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
         let mut sampler = SamplingStrategy::new(SamplingConfig {
@@ -5655,15 +5669,30 @@ async fn run_slm_warm_session(
         let mut logits_step_ms = Vec::with_capacity(max_new_tokens);
         let mut sample_step_ms = Vec::with_capacity(max_new_tokens);
         let mut token_decode_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut prefill_step_allocs = Vec::with_capacity(tokens.len().saturating_sub(1));
+        let mut decode_step_allocs = Vec::with_capacity(max_new_tokens);
+        let mut embed_step_allocs = Vec::with_capacity(max_new_tokens);
+        let mut forward_step_allocs = Vec::with_capacity(max_new_tokens);
+        let mut logits_step_allocs = Vec::with_capacity(max_new_tokens);
+        let mut sample_step_allocs = Vec::with_capacity(max_new_tokens);
+        let mut token_vector_update_allocs = Vec::with_capacity(max_new_tokens);
+        let mut token_decode_step_allocs = Vec::with_capacity(max_new_tokens);
+        let mut stop_tail_update_allocs = Vec::with_capacity(max_new_tokens);
         let mut first_token_ms = None;
         let mut first_token_decode_ms = None;
+        let prompt_setup_alloc = AllocationAuditSnapshot::delta_since(prompt_setup_alloc_start);
 
         let prefill_start = std::time::Instant::now();
         let mut prefill_token_count = 0usize;
         if tokens.len() > 1 {
             for token in &tokens[..tokens.len() - 1] {
+                let prefill_alloc_start = AllocationAuditSnapshot::current();
                 let x = model.embed(&[*token])?;
                 let _ = model.forward(&x, any_cache.as_mut())?;
+                if allocation_audit_enabled {
+                    prefill_step_allocs
+                        .push(AllocationAuditSnapshot::delta_since(prefill_alloc_start));
+                }
                 prefill_token_count += 1;
             }
         }
@@ -5678,35 +5707,63 @@ async fn run_slm_warm_session(
 
         for _step_idx in 0..max_new_tokens {
             let decode_step_start = std::time::Instant::now();
+            let decode_alloc_start = AllocationAuditSnapshot::current();
             let last_token = tokens.last().copied().expect("tokens must be non-empty");
 
             let embed_start = std::time::Instant::now();
+            let embed_alloc_start = AllocationAuditSnapshot::current();
             let x = model.embed(&[last_token])?;
+            if allocation_audit_enabled {
+                embed_step_allocs.push(AllocationAuditSnapshot::delta_since(embed_alloc_start));
+            }
             embed_step_ms.push(elapsed_ms(embed_start));
 
             let forward_start = std::time::Instant::now();
+            let forward_alloc_start = AllocationAuditSnapshot::current();
             let h = model.forward(&x, any_cache.as_mut())?;
+            if allocation_audit_enabled {
+                forward_step_allocs.push(AllocationAuditSnapshot::delta_since(forward_alloc_start));
+            }
             forward_step_ms.push(elapsed_ms(forward_start));
 
             let last_hidden = extract_last_token_hidden(&h)?;
             let logits_start = std::time::Instant::now();
+            let logits_alloc_start = AllocationAuditSnapshot::current();
             let logits = model.logits(&last_hidden)?;
             let logits_vec = extract_logits_2d(&logits)?;
+            if allocation_audit_enabled {
+                logits_step_allocs.push(AllocationAuditSnapshot::delta_since(logits_alloc_start));
+            }
             logits_step_ms.push(elapsed_ms(logits_start));
 
             let sample_start = std::time::Instant::now();
+            let sample_alloc_start = AllocationAuditSnapshot::current();
             let next_token = sampler.sample(&logits_vec, &generated_tokens)?;
+            if allocation_audit_enabled {
+                sample_step_allocs.push(AllocationAuditSnapshot::delta_since(sample_alloc_start));
+            }
             sample_step_ms.push(elapsed_ms(sample_start));
 
+            let token_vector_update_alloc_start = AllocationAuditSnapshot::current();
             tokens.push(next_token);
             generated_tokens.push(next_token);
+            if allocation_audit_enabled {
+                token_vector_update_allocs
+                    .push(AllocationAuditSnapshot::delta_since(token_vector_update_alloc_start));
+            }
             if first_token_ms.is_none() {
                 first_token_ms = Some(prompt_start.elapsed().as_millis() as u64);
             }
 
             let token_decode_start = std::time::Instant::now();
+            let token_decode_alloc_start = AllocationAuditSnapshot::current();
             let token_text = tokenizer.decode(&[next_token])?;
+            if allocation_audit_enabled {
+                token_decode_step_allocs
+                    .push(AllocationAuditSnapshot::delta_since(token_decode_alloc_start));
+            }
             token_decode_step_ms.push(elapsed_ms(token_decode_start));
+            let stop_tail_alloc_start = AllocationAuditSnapshot::current();
             if let Some(tail) = &mut tail {
                 tail.push_str(&token_text);
                 if tail.len() > max_stop_len {
@@ -5718,11 +5775,18 @@ async fn run_slm_warm_session(
                     tail.drain(..safe_cut);
                 }
             }
+            if allocation_audit_enabled {
+                stop_tail_update_allocs
+                    .push(AllocationAuditSnapshot::delta_since(stop_tail_alloc_start));
+            }
             let step_ms = elapsed_ms(decode_step_start);
             if first_token_decode_ms.is_none() {
                 first_token_decode_ms = Some(step_ms);
             }
             decode_step_ms.push(step_ms);
+            if allocation_audit_enabled {
+                decode_step_allocs.push(AllocationAuditSnapshot::delta_since(decode_alloc_start));
+            }
 
             if all_stop_ids.contains(&next_token) {
                 break;
@@ -5785,7 +5849,9 @@ async fn run_slm_warm_session(
             index + 1,
             sanitize_warm_session_prompt_stem(prompt)
         ));
-        let prompt_receipt = serde_json::json!({
+        let prompt_total_alloc = AllocationAuditSnapshot::delta_since(prompt_alloc_start);
+        let prompt_receipt_construct_alloc_start = AllocationAuditSnapshot::current();
+        let mut prompt_receipt = serde_json::json!({
             "schema_version": "1.0.0",
             "artifact_kind": "slm_apple_m4_warm_session_prompt",
             "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -5877,6 +5943,41 @@ async fn run_slm_warm_session(
             },
             "speedup_claim": false,
         });
+        let prompt_receipt_construct_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_receipt_construct_alloc_start);
+        let prompt_allocation_audit =
+            warm_session_prompt_allocation_audit_json(WarmSessionPromptAllocationAudit {
+                enabled: allocation_audit_enabled,
+                prompt_tokenize: prompt_tokenize_alloc,
+                prompt_setup: prompt_setup_alloc,
+                prompt_prefill: &prefill_step_allocs,
+                decode_total: &decode_step_allocs,
+                embed: &embed_step_allocs,
+                forward: &forward_step_allocs,
+                logits: &logits_step_allocs,
+                sample: &sample_step_allocs,
+                token_vector_update: &token_vector_update_allocs,
+                token_decode: &token_decode_step_allocs,
+                stop_tail_update: &stop_tail_update_allocs,
+                receipt_construction: prompt_receipt_construct_alloc,
+            });
+        if let Some(object) = prompt_receipt.as_object_mut() {
+            object.insert(
+                "allocation_audit".to_string(),
+                if allocation_audit_enabled {
+                    let mut audit = prompt_allocation_audit;
+                    if let Some(audit_object) = audit.as_object_mut() {
+                        audit_object.insert(
+                            "prompt_total_counter_delta".to_string(),
+                            allocation_samples_json(std::slice::from_ref(&prompt_total_alloc)),
+                        );
+                    }
+                    audit
+                } else {
+                    prompt_allocation_audit
+                },
+            );
+        }
         write_json_output(Some(&prompt_receipt_path), &prompt_receipt)?;
         prompt_summaries.push(serde_json::json!({
             "prompt_index": index,
@@ -5895,9 +5996,11 @@ async fn run_slm_warm_session(
                 "runtime_api": backend_identity.runtime_api.as_str(),
                 "fallback_used": backend_identity.fallback_used,
             },
+            "allocation_audit": prompt_receipt["allocation_audit"].clone(),
         }));
         prompt_receipts.push(prompt_receipt_path.display().to_string());
     }
+    drop(allocation_audit_guard);
 
     let total_session_ms = elapsed_ms(session_start);
     let speed_summary =
@@ -5996,6 +6099,7 @@ async fn run_slm_warm_session(
         },
         "determinism": determinism,
         "prompts": prompt_summaries,
+        "allocation_audit": warm_session_aggregate_allocation_audit_json(allocation_audit_enabled, &prompt_summaries),
         "claim_boundary": {
             "warm_session_flow": true,
             "model_loaded_once": true,
@@ -7435,6 +7539,204 @@ fn allocation_samples_json(samples: &[AllocationAuditSnapshot]) -> serde_json::V
         "max_alloc_count_per_token": max_alloc_count,
         "max_alloc_bytes_per_token": max_alloc_bytes,
     })
+}
+
+struct WarmSessionPromptAllocationAudit<'a> {
+    enabled: bool,
+    prompt_tokenize: AllocationAuditSnapshot,
+    prompt_setup: AllocationAuditSnapshot,
+    prompt_prefill: &'a [AllocationAuditSnapshot],
+    decode_total: &'a [AllocationAuditSnapshot],
+    embed: &'a [AllocationAuditSnapshot],
+    forward: &'a [AllocationAuditSnapshot],
+    logits: &'a [AllocationAuditSnapshot],
+    sample: &'a [AllocationAuditSnapshot],
+    token_vector_update: &'a [AllocationAuditSnapshot],
+    token_decode: &'a [AllocationAuditSnapshot],
+    stop_tail_update: &'a [AllocationAuditSnapshot],
+    receipt_construction: AllocationAuditSnapshot,
+}
+
+fn warm_session_prompt_allocation_audit_json(
+    audit: WarmSessionPromptAllocationAudit<'_>,
+) -> serde_json::Value {
+    if !audit.enabled {
+        return serde_json::json!({
+            "enabled": false,
+            "method": "not_requested",
+            "scope": "not_requested",
+        });
+    }
+
+    let prompt_tokenize = std::slice::from_ref(&audit.prompt_tokenize);
+    let prompt_setup = std::slice::from_ref(&audit.prompt_setup);
+    let receipt_construction = std::slice::from_ref(&audit.receipt_construction);
+    let mut hotspots = vec![
+        allocation_hotspot("prompt_tokenize", prompt_tokenize),
+        allocation_hotspot("prompt_setup", prompt_setup),
+        allocation_hotspot("prompt_prefill", audit.prompt_prefill),
+        allocation_hotspot("decode_total", audit.decode_total),
+        allocation_hotspot("model.embed", audit.embed),
+        allocation_hotspot("model.forward", audit.forward),
+        allocation_hotspot("model.logits_and_extract", audit.logits),
+        allocation_hotspot("sampler.sample", audit.sample),
+        allocation_hotspot("token_vector_updates", audit.token_vector_update),
+        allocation_hotspot("tokenizer.decode", audit.token_decode),
+        allocation_hotspot("stop_tail_updates", audit.stop_tail_update),
+        allocation_hotspot("receipt_construction", receipt_construction),
+    ];
+    hotspots.retain(|hotspot| hotspot.alloc_count > 0 || hotspot.alloc_bytes > 0);
+    hotspots.sort_by(|left, right| {
+        right
+            .alloc_bytes
+            .cmp(&left.alloc_bytes)
+            .then_with(|| right.alloc_count.cmp(&left.alloc_count))
+            .then_with(|| left.component.cmp(right.component))
+    });
+
+    serde_json::json!({
+        "enabled": true,
+        "method": "process_global_allocator_counter_delta",
+        "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
+        "claim_scope": "allocation counter deltas for this prompt/profile only; no optimization or performance improvement claimed",
+        "optimization_deferred": true,
+        "unavoidable_candidates_named_before_optimization": true,
+        "ranked_hotspots": hotspots.iter().map(AllocationHotspot::to_json).collect::<Vec<_>>(),
+        "unavoidable_candidates": [
+            "model.embed/model.forward/model.logits tensor outputs from the current dense Qwen CPU execution path",
+            "tokenizer.decode allocation for per-token text and stop-tail checks",
+            "receipt construction outside the decode hot loop",
+            "prompt token vector growth until a reusable session buffer is introduced"
+        ],
+        "instrumentation_included": [
+            "prompt_tokenize",
+            "prompt_setup",
+            "prompt_prefill_step",
+            "decode_step_total",
+            "model.embed",
+            "model.forward",
+            "model.logits_and_extract",
+            "sampler.sample",
+            "token_vector_updates",
+            "tokenizer.decode",
+            "stop_tail_updates",
+            "receipt_construction"
+        ],
+        "instrumentation_excluded": [
+            "model_load",
+            "tokenizer_load",
+            "aggregate_receipt_serialization",
+            "OS allocator reuse and fragmentation outside counter deltas"
+        ],
+        "prompt_tokenize": allocation_samples_json(prompt_tokenize),
+        "prompt_setup": allocation_samples_json(prompt_setup),
+        "prompt_prefill": allocation_samples_json(audit.prompt_prefill),
+        "decode": {
+            "total": allocation_samples_json(audit.decode_total),
+            "steady_state": allocation_samples_json(audit.decode_total.get(1..).unwrap_or(&[])),
+            "embed": allocation_samples_json(audit.embed),
+            "forward": allocation_samples_json(audit.forward),
+            "logits": allocation_samples_json(audit.logits),
+            "sample": allocation_samples_json(audit.sample),
+            "token_vector_update": allocation_samples_json(audit.token_vector_update),
+            "token_decode": allocation_samples_json(audit.token_decode),
+            "stop_tail_update": allocation_samples_json(audit.stop_tail_update),
+        },
+        "receipt_construction": allocation_samples_json(receipt_construction),
+    })
+}
+
+fn warm_session_aggregate_allocation_audit_json(
+    enabled: bool,
+    prompt_summaries: &[serde_json::Value],
+) -> serde_json::Value {
+    if !enabled {
+        return serde_json::json!({
+            "enabled": false,
+            "method": "not_requested",
+            "scope": "not_requested",
+        });
+    }
+
+    let mut totals = std::collections::BTreeMap::<String, (u64, u64)>::new();
+    for prompt in prompt_summaries {
+        let Some(hotspots) = prompt["allocation_audit"]["ranked_hotspots"].as_array() else {
+            continue;
+        };
+        for hotspot in hotspots {
+            let Some(component) = hotspot["component"].as_str() else {
+                continue;
+            };
+            let entry = totals.entry(component.to_string()).or_default();
+            entry.0 += hotspot["alloc_count"].as_u64().unwrap_or_default();
+            entry.1 += hotspot["alloc_bytes"].as_u64().unwrap_or_default();
+        }
+    }
+    let mut ranked = totals
+        .into_iter()
+        .map(|(component, (alloc_count, alloc_bytes))| {
+            serde_json::json!({
+                "component": component,
+                "alloc_count": alloc_count,
+                "alloc_bytes": alloc_bytes,
+            })
+        })
+        .collect::<Vec<_>>();
+    ranked.sort_by(|left, right| {
+        right["alloc_bytes"]
+            .as_u64()
+            .unwrap_or_default()
+            .cmp(&left["alloc_bytes"].as_u64().unwrap_or_default())
+            .then_with(|| {
+                right["alloc_count"]
+                    .as_u64()
+                    .unwrap_or_default()
+                    .cmp(&left["alloc_count"].as_u64().unwrap_or_default())
+            })
+            .then_with(|| {
+                left["component"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .cmp(right["component"].as_str().unwrap_or_default())
+            })
+    });
+
+    serde_json::json!({
+        "enabled": true,
+        "method": "process_global_allocator_counter_delta",
+        "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
+        "claim_scope": "aggregate of prompt-level allocation counter deltas; no optimization or performance improvement claimed",
+        "prompt_count": prompt_summaries.len(),
+        "ranked_hotspots": ranked,
+        "optimization_deferred": true,
+    })
+}
+
+struct AllocationHotspot {
+    component: &'static str,
+    alloc_count: u64,
+    alloc_bytes: u64,
+}
+
+impl AllocationHotspot {
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "component": self.component,
+            "alloc_count": self.alloc_count,
+            "alloc_bytes": self.alloc_bytes,
+        })
+    }
+}
+
+fn allocation_hotspot(
+    component: &'static str,
+    samples: &[AllocationAuditSnapshot],
+) -> AllocationHotspot {
+    AllocationHotspot {
+        component,
+        alloc_count: samples.iter().map(|sample| sample.alloc_count).sum(),
+        alloc_bytes: samples.iter().map(|sample| sample.alloc_bytes).sum(),
+    }
 }
 
 fn allocation_count_delta_json(samples: &[AllocationAuditSnapshot]) -> serde_json::Value {

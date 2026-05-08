@@ -137,6 +137,10 @@ enum MacAction {
         #[arg(long, default_value_t = 0)]
         threads: usize,
 
+        /// Include scoped hot-loop allocation counter deltas in warm-session profile receipts.
+        #[arg(long, default_value_t = false)]
+        allocation_audit: bool,
+
         /// Output aggregate warm-session receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_VALIDATE_DEFAULT_RECEIPT)]
         json_out: PathBuf,
@@ -212,6 +216,7 @@ impl MacCommand {
                 profile_set,
                 max_new_tokens,
                 threads,
+                allocation_audit,
                 json_out,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac validate")?;
@@ -223,6 +228,7 @@ impl MacCommand {
                     profile_set,
                     max_new_tokens,
                     threads,
+                    allocation_audit,
                     json_out,
                 )
                 .await
@@ -328,6 +334,7 @@ async fn run_validate(
     profile_set: MacValidateProfileSet,
     max_new_tokens: usize,
     threads: usize,
+    allocation_audit: bool,
     json_out: PathBuf,
 ) -> Result<()> {
     if profile_set == MacValidateProfileSet::Performance && cfg!(debug_assertions) {
@@ -337,10 +344,10 @@ async fn run_validate(
     }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     if profile_set == MacValidateProfileSet::Operator {
-        return run_operator_profiles(model, json_out, threads).await;
+        return run_operator_profiles(model, json_out, threads, allocation_audit).await;
     }
     if profile_set == MacValidateProfileSet::Performance {
-        return run_performance_profiles(model, json_out, threads).await;
+        return run_performance_profiles(model, json_out, threads, allocation_audit).await;
     }
     crate::run_slm_warm_session(
         APPLE_M4_CPU_NEON,
@@ -367,6 +374,7 @@ async fn run_validate(
         Vec::new(),
         true,
         true,
+        allocation_audit,
         1,
         1,
         json_out.clone(),
@@ -380,6 +388,7 @@ async fn run_operator_profiles(
     model: VerifiedCachedModel,
     json_out: PathBuf,
     threads: usize,
+    allocation_audit: bool,
 ) -> Result<()> {
     run_warm_profile_set(
         model,
@@ -391,6 +400,7 @@ async fn run_operator_profiles(
             tokens: OPERATOR_PROFILE_TOKENS,
             command: "mac validate --profile-set operator",
             required_release: false,
+            allocation_audit,
         },
     )
     .await
@@ -400,6 +410,7 @@ async fn run_performance_profiles(
     model: VerifiedCachedModel,
     json_out: PathBuf,
     threads: usize,
+    allocation_audit: bool,
 ) -> Result<()> {
     if cfg!(debug_assertions) {
         anyhow::bail!(
@@ -416,6 +427,7 @@ async fn run_performance_profiles(
             tokens: PERFORMANCE_PROFILE_TOKENS,
             command: "mac validate --profile-set performance",
             required_release: true,
+            allocation_audit,
         },
     )
     .await
@@ -427,6 +439,7 @@ struct WarmProfileSetSpec {
     tokens: &'static [usize],
     command: &'static str,
     required_release: bool,
+    allocation_audit: bool,
 }
 
 async fn run_warm_profile_set(
@@ -474,6 +487,7 @@ async fn run_warm_profile_set(
             Vec::new(),
             true,
             false,
+            spec.allocation_audit,
             1,
             1,
             receipt_path.clone(),
@@ -555,6 +569,7 @@ async fn run_warm_profile_set(
             "broad_performance_claim": false,
             "speedup_claim": false
         },
+        "allocation_audit": profile_set_allocation_audit_json(&summaries, spec.allocation_audit),
         "speedup_claim": false,
     });
     std::fs::write(&json_out, serde_json::to_vec_pretty(&aggregate)?)
@@ -627,8 +642,75 @@ fn operator_profile_summary(
             "speedup_claim": false,
             "broad_performance_claim": false,
             "scope": "this profile, model, backend, and machine receipt only",
-        }
+        },
+        "allocation_audit": receipt["allocation_audit"].clone(),
     }))
+}
+
+fn profile_set_allocation_audit_json(
+    summaries: &[serde_json::Value],
+    enabled: bool,
+) -> serde_json::Value {
+    if !enabled {
+        return serde_json::json!({
+            "enabled": false,
+            "method": "not_requested",
+            "scope": "not_requested",
+        });
+    }
+
+    let mut totals = std::collections::BTreeMap::<String, (u64, u64)>::new();
+    for summary in summaries {
+        let Some(hotspots) = summary["allocation_audit"]["ranked_hotspots"].as_array() else {
+            continue;
+        };
+        for hotspot in hotspots {
+            let Some(component) = hotspot["component"].as_str() else {
+                continue;
+            };
+            let entry = totals.entry(component.to_string()).or_default();
+            entry.0 += hotspot["alloc_count"].as_u64().unwrap_or_default();
+            entry.1 += hotspot["alloc_bytes"].as_u64().unwrap_or_default();
+        }
+    }
+    let mut ranked = totals
+        .into_iter()
+        .map(|(component, (alloc_count, alloc_bytes))| {
+            serde_json::json!({
+                "component": component,
+                "alloc_count": alloc_count,
+                "alloc_bytes": alloc_bytes,
+            })
+        })
+        .collect::<Vec<_>>();
+    ranked.sort_by(|left, right| {
+        right["alloc_bytes"]
+            .as_u64()
+            .unwrap_or_default()
+            .cmp(&left["alloc_bytes"].as_u64().unwrap_or_default())
+            .then_with(|| {
+                right["alloc_count"]
+                    .as_u64()
+                    .unwrap_or_default()
+                    .cmp(&left["alloc_count"].as_u64().unwrap_or_default())
+            })
+            .then_with(|| {
+                left["component"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .cmp(right["component"].as_str().unwrap_or_default())
+            })
+    });
+
+    serde_json::json!({
+        "enabled": true,
+        "method": "process_global_allocator_counter_delta",
+        "scope": "selected Apple M4 CPU/NEON SLM warm-session profile set",
+        "claim_scope": "aggregate of prompt-level allocation counter deltas; no optimization or performance improvement claimed",
+        "profile_count": summaries.len(),
+        "ranked_hotspots": ranked,
+        "optimization_deferred": true,
+    })
 }
 
 fn profile_ids_json(tokens: &[usize]) -> serde_json::Value {
@@ -951,6 +1033,30 @@ fn validate_profile_set_receipt(
             anyhow::bail!("{} performance summary must include warm_128", path.display());
         }
     }
+    let allocation_audit_enabled =
+        receipt["allocation_audit"]["enabled"].as_bool().unwrap_or(false);
+    if allocation_audit_enabled {
+        if receipt["allocation_audit"]["method"].as_str()
+            != Some("process_global_allocator_counter_delta")
+        {
+            anyhow::bail!(
+                "{} allocation audit must record process-global allocator counter deltas",
+                path.display()
+            );
+        }
+        if receipt["allocation_audit"]["optimization_deferred"].as_bool() != Some(true) {
+            anyhow::bail!(
+                "{} allocation audit must record that optimization is deferred",
+                path.display()
+            );
+        }
+        if receipt["allocation_audit"]["ranked_hotspots"]
+            .as_array()
+            .is_none_or(|hotspots| hotspots.is_empty())
+        {
+            anyhow::bail!("{} allocation audit must rank hotspots", path.display());
+        }
+    }
     for (profile_id, requested_tokens) in required {
         if !profiles.iter().any(|profile| {
             profile["profile_id"] == *profile_id
@@ -981,6 +1087,20 @@ fn validate_profile_set_receipt(
         }
         if profile["reuse_scope"].as_str() != Some("within_profile") {
             anyhow::bail!("{} profile must record reuse_scope=within_profile", path.display());
+        }
+        if allocation_audit_enabled {
+            if profile["allocation_audit"]["enabled"].as_bool() != Some(true) {
+                anyhow::bail!(
+                    "{} profile summary must include enabled allocation audit details",
+                    path.display()
+                );
+            }
+            if profile["allocation_audit"]["ranked_hotspots"]
+                .as_array()
+                .is_none_or(|hotspots| hotspots.is_empty())
+            {
+                anyhow::bail!("{} profile allocation audit must rank hotspots", path.display());
+            }
         }
         let timing = &profile["timing"];
         for field in [

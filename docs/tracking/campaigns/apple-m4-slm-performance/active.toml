@@ -77,7 +77,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-002"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-002-allocation-audit"
 stackable = false
 review_mode = "codex_premerge"
@@ -88,6 +88,8 @@ acceptance = "Audit decode-loop allocations, logits and sampling scratch allocat
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set performance --allocation-audit --json-out ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-performance",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
@@ -99,6 +101,7 @@ allowed_paths = [
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-slm-performance/**",
   "docs/tracking/generated/**",
+  "ci/hardware/apple-m4-mac-mini/**",
 ]
 forbidden_paths = [
   "crates/bitnet-quantization/src/qk256/**",

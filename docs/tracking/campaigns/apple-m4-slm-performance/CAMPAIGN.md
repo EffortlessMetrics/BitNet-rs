@@ -38,8 +38,8 @@ That is working, but not yet excellent. This campaign owns the next layer: relea
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-SLM-PERF-001 | ready | Add release-mode warm-session baseline profiles for 16, 32, 64, and 128 generated tokens. |
-| M4-SLM-PERF-002 | proposed | Audit decode and receipt hot-loop allocations before optimizing math. |
+| M4-SLM-PERF-001 | merged | Add release-mode warm-session baseline profiles for 16, 32, 64, and 128 generated tokens. |
+| M4-SLM-PERF-002 | in_progress | Audit decode and receipt hot-loop allocations before optimizing math. |
 | M4-SLM-PERF-003 | proposed | Harden resident-session reuse as the normal multi-prompt path. |
 | M4-SLM-PERF-004 | proposed | Optimize the measured CPU/NEON bottleneck while preserving greedy output. |
 | M4-SLM-PERF-005 | proposed | Expand only parity-gated Metal prefill/projection phases with explicit fallback boundaries. |
