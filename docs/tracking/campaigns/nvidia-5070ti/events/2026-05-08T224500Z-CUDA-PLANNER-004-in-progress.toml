@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T22:45:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-004"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-planner-004-execution-plan-receipts"
+previous_status = "planned"
+new_status = "in_progress"
+
+notes = [
+  "Started real receipt integration for model-aware execution_plan fields.",
+  "Scope is strict ask/run receipts, answer-corpus rows/aggregate, warm-session receipts, benchmark receipt validators/generators, and tracker state.",
+  "The change must keep BitNet QK256 CUDA separate from dense regular-LLM CUDA and must not alter QK256 math, tokenizer, loader, transformer, server, speedup claims, or full-residency claims.",
+]

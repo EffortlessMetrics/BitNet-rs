@@ -124,6 +124,7 @@ fn build_receipt(args: &Args, cpu: &Value, cuda: &Value) -> Result<Value, Box<dy
         .pointer("/cuda_execution_residency")
         .cloned()
         .unwrap_or_else(default_cuda_residency);
+    let execution_plan = execution_plan_from_source(cuda_source)?;
 
     Ok(json!({
         "schema": 1,
@@ -141,6 +142,7 @@ fn build_receipt(args: &Args, cpu: &Value, cuda: &Value) -> Result<Value, Box<dy
         "fallback_used": false,
         "fallback_backend": null,
         "fallback_reason": null,
+        "execution_plan": execution_plan,
         "proof_inputs": {
             "cpu_avx512_ask_receipt": path_label(&args.cpu_avx512_ask_receipt),
             "cuda_ask_receipt": path_label(&args.cuda_ask_receipt),
@@ -300,6 +302,14 @@ fn assert_same_answer_path_inputs(cpu: &Value, cuda: &Value) -> Result<(), Box<d
 
 fn source_receipt(receipt: &Value) -> &Value {
     receipt.get("source_receipt").unwrap_or(receipt)
+}
+
+fn execution_plan_from_source(source: &Value) -> Result<Value, Box<dyn Error>> {
+    source
+        .pointer("/execution_plan")
+        .filter(|plan| plan.is_object())
+        .cloned()
+        .ok_or_else(|| "CUDA source receipt must include execution_plan".into())
 }
 
 fn same_model(left: &Value, right: &Value) -> bool {

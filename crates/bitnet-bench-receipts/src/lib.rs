@@ -351,6 +351,7 @@ pub fn validate_strict_cuda_answer_path_benchmark_receipt_json(
     require_bool_eq(receipt, "benchmark_qualified_speedup", false)?;
     require_null(receipt, "fallback_backend")?;
     require_null(receipt, "fallback_reason")?;
+    validate_bitnet_qk256_execution_plan(require_object(receipt, "execution_plan")?)?;
 
     let model = require_object(receipt, "model")?;
     require_string_eq(model, "repo", "microsoft/bitnet-b1.58-2B-4T-gguf")?;
@@ -509,6 +510,7 @@ pub fn validate_strict_cuda_repeated_ask_benchmark_receipt_json(
     require_bool_eq(receipt, "benchmark_qualified_speedup", false)?;
     require_null(receipt, "fallback_backend")?;
     require_null(receipt, "fallback_reason")?;
+    validate_bitnet_qk256_execution_plan(require_object(receipt, "execution_plan")?)?;
 
     let model = require_object(receipt, "model")?;
     require_string_eq(model, "repo", "microsoft/bitnet-b1.58-2B-4T-gguf")?;
@@ -704,6 +706,7 @@ pub fn validate_strict_cuda_warm_session_benchmark_receipt_json(
     require_bool_eq(receipt, "full_cuda_residency_claimed", false)?;
     require_null(receipt, "fallback_backend")?;
     require_null(receipt, "fallback_reason")?;
+    validate_bitnet_qk256_execution_plan(require_object(receipt, "execution_plan")?)?;
 
     let model = require_object(receipt, "model")?;
     require_string_eq(model, "repo", "microsoft/bitnet-b1.58-2B-4T-gguf")?;
@@ -1406,6 +1409,28 @@ fn validate_u64_summary(
     Ok(())
 }
 
+fn validate_bitnet_qk256_execution_plan(plan: &serde_json::Value) -> Result<(), ReceiptError> {
+    require_string_eq(plan, "planner_version", "cuda-planner-004")?;
+    require_string_eq(plan, "model_family", "bitnet_b1_58")?;
+    require_string_eq(plan, "quantization", "i2_s_qk256")?;
+    require_string_eq(plan, "selected_route", "bitnet_qk256_cuda")?;
+    require_string_eq(plan, "runtime_api", "cuda")?;
+    require_string_eq(plan, "strict_fallback_policy", "reject")?;
+    require_bool_eq(plan, "bitnet_packed_qk256_cuda", true)?;
+    require_bool_eq(plan, "dense_regular_llm_cuda", false)?;
+    require_bool_eq(plan, "fallback_used", false)?;
+    require_bool_eq(plan, "strict_cuda_ready", true)?;
+    require_bool_eq(plan, "speedup_claim", false)?;
+    require_bool_eq(plan, "full_cuda_residency_claimed", false)?;
+    require_u64_at_least(plan, "cuda_bitnet_qk256_ops", 1)?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 0)?;
+    require_u64_eq(plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(plan, "unsupported_ops", 0)?;
+    require_u64_at_least(plan, "total_ops", 1)?;
+    require_u64_at_least(plan, "cuda_ops", 1)?;
+    Ok(())
+}
+
 fn validate_repeated_ask_run(run: &serde_json::Value) -> Result<(), ReceiptError> {
     require_string_eq(run, "profile", "strict_ask_math_8")?;
     let backend = require_string(run, "backend")?;
@@ -1968,6 +1993,19 @@ mod tests {
     }
 
     #[test]
+    fn strict_cuda_answer_path_benchmark_rejects_dense_execution_plan() {
+        let mut receipt = sample_strict_cuda_answer_path_benchmark_receipt();
+        receipt["execution_plan"]["selected_route"] = json!("dense_regular_llm_cuda");
+        receipt["execution_plan"]["bitnet_packed_qk256_cuda"] = json!(false);
+        receipt["execution_plan"]["dense_regular_llm_cuda"] = json!(true);
+
+        let err = validate_strict_cuda_answer_path_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("selected_route"), "unexpected error: {err}");
+    }
+
+    #[test]
     fn strict_cuda_answer_path_benchmark_rejects_missing_long_profile_disposition() {
         let mut receipt = sample_strict_cuda_answer_path_benchmark_receipt();
         receipt["profiles"] = json!([
@@ -2373,6 +2411,32 @@ mod tests {
         })
     }
 
+    fn sample_bitnet_qk256_execution_plan() -> serde_json::Value {
+        json!({
+            "planner_version": "cuda-planner-004",
+            "model_family": "bitnet_b1_58",
+            "quantization": "i2_s_qk256",
+            "selected_route": "bitnet_qk256_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": false,
+            "bitnet_packed_qk256_cuda": true,
+            "cuda_bitnet_qk256_ops": 4410,
+            "cuda_dense_regular_llm_ops": 0,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 4410,
+            "cuda_ops": 4410,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        })
+    }
+
     fn sample_strict_cuda_warm_session_benchmark_receipt() -> serde_json::Value {
         json!({
             "schema": 1,
@@ -2390,6 +2454,7 @@ mod tests {
             "speedup_claim": false,
             "benchmark_qualified_speedup": false,
             "full_cuda_residency_claimed": false,
+            "execution_plan": sample_bitnet_qk256_execution_plan(),
             "model": {
                 "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
                 "file": "ggml-model-i2_s.gguf",
@@ -2627,6 +2692,7 @@ mod tests {
             "fallback_used": false,
             "fallback_backend": null,
             "fallback_reason": null,
+            "execution_plan": sample_bitnet_qk256_execution_plan(),
             "model": {
                 "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
                 "file": "ggml-model-i2_s.gguf",
@@ -3053,6 +3119,7 @@ mod tests {
             "fallback_used": false,
             "fallback_backend": null,
             "fallback_reason": null,
+            "execution_plan": sample_bitnet_qk256_execution_plan(),
             "proof_inputs": {
                 "cpu_avx512_ask_receipt": "target/bitnet/receipts/cpu.json",
                 "cuda_ask_receipt": "target/bitnet/receipts/cuda.json",
