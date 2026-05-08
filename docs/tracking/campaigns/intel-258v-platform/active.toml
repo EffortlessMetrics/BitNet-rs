@@ -525,7 +525,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-005"
-status = "pr_open"
+status = "merged"
 pr = 3999
 branch = "codex/intel-258v-platform/CPU258V-005-phase-evidence"
 stackable = false

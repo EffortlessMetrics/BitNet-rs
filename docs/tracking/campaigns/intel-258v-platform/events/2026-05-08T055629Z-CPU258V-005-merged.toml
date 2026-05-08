@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T05:56:29Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 3999
+merge_sha = "8bac2b40241eed15309f656dd31f8684bb04f1f1"
+actor = "codex"
+
+notes = [
+  "Merged #3999, recording local strict CPU phase evidence attempts for the 258V CPU lead lane.",
+  "The merged artifact records that calibrated prefill_512 attempts timed out without emitting proof receipts under local debug and release runs.",
+  "decode_128 and prefill_512 remain unmeasured gaps until a receipt-emitting warm phase runner or faster CPU path exists.",
+]
