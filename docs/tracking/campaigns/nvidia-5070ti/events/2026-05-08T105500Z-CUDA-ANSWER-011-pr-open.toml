@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T10:55:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-ANSWER-011"
+event = "pr_open"
+actor = "codex"
+pr = 4039
+head_sha = "258070ab26e539274da7b401c6a11c370a75670d"
+
+notes = [
+  "Opened CPU/CUDA answer parity evidence PR after CUDA-ANSWER-010 strict corpus proof merged.",
+  "The 9950X3D AVX-512 CPU and RTX 5070 Ti CUDA corpus receipts both pass the committed answer suite for the official Microsoft I2_S artifact.",
+  "The generic parity receipt preserves the remaining gap: first-step top-k logits differ for all cases and yes_no_water generates different passing answers.",
+]

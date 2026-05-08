@@ -1,0 +1,629 @@
+{
+  "artifact_kind": "bitnet_answer_corpus_parity",
+  "cases": [
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "capital_france",
+      "left": {
+        "answer": " Paris",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          12366,
+          128009
+        ],
+        "label": "9950x3d-avx512",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx512-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": " Paris",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "nvidia-rtx-5070-ti-cuda",
+          "runtime_api": "cuda",
+          "selected_backend": "nvidia-rtx-5070-ti-cuda"
+        },
+        "generated_token_ids": [
+          12366,
+          128009
+        ],
+        "label": "rtx5070ti-cuda",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "qk256_gemv_cuda",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "math_2_plus_2",
+      "left": {
+        "answer": " 4",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          220,
+          19,
+          128009
+        ],
+        "label": "9950x3d-avx512",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx512-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": " 4",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "nvidia-rtx-5070-ti-cuda",
+          "runtime_api": "cuda",
+          "selected_backend": "nvidia-rtx-5070-ti-cuda"
+        },
+        "generated_token_ids": [
+          220,
+          19,
+          128009
+        ],
+        "label": "rtx5070ti-cuda",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "qk256_gemv_cuda",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "repeat_colors",
+      "left": {
+        "answer": " red blue green",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          2579,
+          6437,
+          6307,
+          128009
+        ],
+        "label": "9950x3d-avx512",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx512-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": " red blue green",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "nvidia-rtx-5070-ti-cuda",
+          "runtime_api": "cuda",
+          "selected_backend": "nvidia-rtx-5070-ti-cuda"
+        },
+        "generated_token_ids": [
+          2579,
+          6437,
+          6307,
+          128009
+        ],
+        "label": "rtx5070ti-cuda",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "qk256_gemv_cuda",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "say_ok",
+      "left": {
+        "answer": " OK",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          10619,
+          128009
+        ],
+        "label": "9950x3d-avx512",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx512-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": " OK",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "nvidia-rtx-5070-ti-cuda",
+          "runtime_api": "cuda",
+          "selected_backend": "nvidia-rtx-5070-ti-cuda"
+        },
+        "generated_token_ids": [
+          10619,
+          128009
+        ],
+        "label": "rtx5070ti-cuda",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "qk256_gemv_cuda",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "generated_token_ids",
+        "decoded_text",
+        "logits_topk"
+      ],
+      "id": "yes_no_water",
+      "left": {
+        "answer": " No. Water is",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          2360,
+          13,
+          10164,
+          374
+        ],
+        "label": "9950x3d-avx512",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx512-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": " Yes.",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "nvidia-rtx-5070-ti-cuda",
+          "runtime_api": "cuda",
+          "selected_backend": "nvidia-rtx-5070-ti-cuda"
+        },
+        "generated_token_ids": [
+          7566,
+          13,
+          128009
+        ],
+        "label": "rtx5070ti-cuda",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "qk256_gemv_cuda",
+        "status": "passed"
+      }
+    }
+  ],
+  "claim": "full_decode_answer_parity_diagnostic",
+  "inputs": {
+    "left_label": "9950x3d-avx512",
+    "left_receipt_path": "target\\bitnet\\receipts\\cuda-answer-readiness\\cpu-avx512-answer-corpus-closeout.json",
+    "right_label": "rtx5070ti-cuda",
+    "right_receipt_path": "ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-08\\cuda-answer-corpus.json"
+  },
+  "machine": {
+    "cpu": null,
+    "machine_id": "windows-9950x3d-rtx5070ti",
+    "memory": null,
+    "platform_artifact": null,
+    "power": null
+  },
+  "may_claim": [
+    "Full-decode answer parity can be audited for the compared receipts.",
+    "First divergence evidence can separate backend issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
+  ],
+  "must_not_claim": [
+    "General chat quality is proven.",
+    "Sustained throughput is proven.",
+    "Server inference is complete.",
+    "A backend is answer-ready when the compared model artifact is not answer-ready."
+  ],
+  "proof_stage": "full_decode_parity_compared",
+  "schema_version": "1.0.0",
+  "shared_contract": {
+    "failed_rules": [],
+    "same_greedy_settings": true,
+    "same_prompt_template": true,
+    "same_real_gguf": true,
+    "same_tokenizer": true
+  },
+  "speedup_claim": false,
+  "summary": {
+    "failed": 5,
+    "first_divergence": {
+      "case_id": "capital_france",
+      "kind": "logits_topk",
+      "left": {
+        "chosen_id": 12366,
+        "step": 0,
+        "top_logits": [
+          {
+            "logit": 12.9736328125,
+            "token_id": 12366
+          },
+          {
+            "logit": 11.337346076965332,
+            "token_id": 60704
+          },
+          {
+            "logit": 7.589106559753418,
+            "token_id": 20437
+          },
+          {
+            "logit": 6.074317455291748,
+            "token_id": 95509
+          },
+          {
+            "logit": 5.049978733062744,
+            "token_id": 7295
+          },
+          {
+            "logit": 4.681511402130127,
+            "token_id": 22463
+          },
+          {
+            "logit": 4.632469177246094,
+            "token_id": 3320
+          },
+          {
+            "logit": 4.544726371765137,
+            "token_id": 41958
+          },
+          {
+            "logit": 4.150467395782471,
+            "token_id": 88793
+          },
+          {
+            "logit": 4.115462303161621,
+            "token_id": 9822
+          },
+          {
+            "logit": 3.3729000091552734,
+            "token_id": 6971
+          },
+          {
+            "logit": 3.319430351257324,
+            "token_id": 9893
+          },
+          {
+            "logit": 3.211212158203125,
+            "token_id": 50100
+          },
+          {
+            "logit": 3.1008830070495605,
+            "token_id": 56301
+          },
+          {
+            "logit": 3.040907859802246,
+            "token_id": 25048
+          },
+          {
+            "logit": 2.8107805252075195,
+            "token_id": 12036
+          },
+          {
+            "logit": 2.787341356277466,
+            "token_id": 13789
+          },
+          {
+            "logit": 2.5453789234161377,
+            "token_id": 426
+          },
+          {
+            "logit": 2.377531051635742,
+            "token_id": 2939
+          },
+          {
+            "logit": 2.1974430084228516,
+            "token_id": 40672
+          }
+        ]
+      },
+      "left_label": "9950x3d-avx512",
+      "right": {
+        "chosen_id": 12366,
+        "step": 0,
+        "top_logits": [
+          {
+            "logit": 13.215259552001951,
+            "token_id": 12366
+          },
+          {
+            "logit": 9.921792984008787,
+            "token_id": 60704
+          },
+          {
+            "logit": 7.451303482055664,
+            "token_id": 20437
+          },
+          {
+            "logit": 5.202884674072266,
+            "token_id": 7295
+          },
+          {
+            "logit": 4.720974922180176,
+            "token_id": 9822
+          },
+          {
+            "logit": 4.713718414306641,
+            "token_id": 3320
+          },
+          {
+            "logit": 4.5349531173706055,
+            "token_id": 22463
+          },
+          {
+            "logit": 4.484357833862305,
+            "token_id": 95509
+          },
+          {
+            "logit": 4.203612327575684,
+            "token_id": 88793
+          },
+          {
+            "logit": 4.053102016448975,
+            "token_id": 41958
+          },
+          {
+            "logit": 3.9248085021972656,
+            "token_id": 9893
+          },
+          {
+            "logit": 3.5431487560272217,
+            "token_id": 56301
+          },
+          {
+            "logit": 3.194727897644043,
+            "token_id": 13789
+          },
+          {
+            "logit": 3.04585337638855,
+            "token_id": 25048
+          },
+          {
+            "logit": 3.0216946601867676,
+            "token_id": 426
+          },
+          {
+            "logit": 2.8568906784057617,
+            "token_id": 12036
+          },
+          {
+            "logit": 2.783170461654663,
+            "token_id": 432
+          },
+          {
+            "logit": 2.613537311553955,
+            "token_id": 362
+          },
+          {
+            "logit": 2.546295166015625,
+            "token_id": 2939
+          },
+          {
+            "logit": 2.3129072189331055,
+            "token_id": 46168
+          }
+        ]
+      },
+      "right_label": "rtx5070ti-cuda",
+      "scope": "logits_or_kernel",
+      "step": 0
+    },
+    "passed": 0,
+    "total": 5
+  },
+  "timestamp": "2026-05-08T10:50:59.740994300+00:00"
+}

@@ -606,6 +606,48 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-ANSWER-011"
+status = "pr_open"
+branch = "codex/cuda-answer/CUDA-ANSWER-011-cpu-cuda-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-ANSWER-010"]
+acceptance = "Record same-box 9950X3D AVX-512 CPU and RTX 5070 Ti CUDA answer-corpus receipts for the official Microsoft I2_S artifact, compare them with the generic answer parity tool, and preserve the first divergence evidence without claiming exact CPU/CUDA parity when generated tokens or top-k logits differ."
+commands = [
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --device cpu --cpu-kernel avx512 --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/bitnet-answer-corpus.yaml --per-prompt-timeout-seconds 300 --dump-logit-steps 1 --logits-topk 20 --fail-on-quality --json-out target/bitnet/receipts/cuda-answer-readiness/cpu-avx512-answer-corpus-closeout.json",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-parity --left target/bitnet/receipts/cuda-answer-readiness/cpu-avx512-answer-corpus-closeout.json --right ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json --left-label 9950x3d-avx512 --right-label rtx5070ti-cuda --machine windows-9950x3d-rtx5070ti --json-out target/bitnet/receipts/cuda-answer-readiness/cpu-avx512-vs-cuda-answer-parity-closeout.json",
+  "Parse committed CPU and parity JSON receipts with Python.",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-answer-corpus.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json",
+  "docs/reports/CUDA_ANSWER_011_CPU_CUDA_PARITY.md",
+  "docs/specs/rtx5070ti-cuda-answer-readiness.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "dense CUDA reference lanes",
+  "WGPU, Vulkan, D3D12, OpenCL, Metal, NPU, or SLM runtime work",
+]
+may_claim = [
+  "Both same-box 9950X3D AVX-512 CPU and RTX 5070 Ti CUDA answer-corpus receipts pass the committed deterministic corpus for the official Microsoft I2_S artifact.",
+  "The current CPU/CUDA parity receipt records the first divergence as logits_or_kernel/top-k evidence and preserves the yes_no_water generated-answer divergence.",
+]
+must_not_claim = [
+  "Exact CPU/CUDA generated-token parity is proven.",
+  "Exact CPU/CUDA top-k logit parity is proven.",
+  "CUDA speedup exists before a same-model fallback-free benchmark receipt upgrades speedup_claim.",
+  "Broad chat quality is proven beyond the committed deterministic answer corpus.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-001"
 status = "proposed"
 branch = "codex/cuda-dense-001-reference-lane"

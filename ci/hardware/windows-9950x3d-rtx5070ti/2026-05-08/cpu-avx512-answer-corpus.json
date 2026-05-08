@@ -1,0 +1,1142 @@
+{
+  "artifact_kind": "bitnet_cpu_answer_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu"
+  },
+  "cases": [
+    {
+      "answer": " 4",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "math_2_plus_2",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx512-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 220,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 6.6697001457214355,
+              "token_id": 220
+            },
+            {
+              "logit": -6.725193023681641,
+              "token_id": 256
+            },
+            {
+              "logit": -7.214357852935791,
+              "token_id": 482
+            },
+            {
+              "logit": -7.763550758361816,
+              "token_id": 666
+            },
+            {
+              "logit": -8.280210494995117,
+              "token_id": 2355
+            },
+            {
+              "logit": -8.36298656463623,
+              "token_id": 262
+            },
+            {
+              "logit": -8.56418228149414,
+              "token_id": 11410
+            },
+            {
+              "logit": -8.660755157470703,
+              "token_id": 720
+            },
+            {
+              "logit": -8.800400733947754,
+              "token_id": 86043
+            },
+            {
+              "logit": -8.810816764831543,
+              "token_id": 49617
+            },
+            {
+              "logit": -9.253315925598145,
+              "token_id": 29753
+            },
+            {
+              "logit": -9.453521728515623,
+              "token_id": 949
+            },
+            {
+              "logit": -9.71738052368164,
+              "token_id": 1144
+            },
+            {
+              "logit": -9.807024002075195,
+              "token_id": 674
+            },
+            {
+              "logit": -9.825096130371094,
+              "token_id": 55375
+            },
+            {
+              "logit": -9.866958618164062,
+              "token_id": 7860
+            },
+            {
+              "logit": -9.900510787963867,
+              "token_id": 20339
+            },
+            {
+              "logit": -9.939922332763672,
+              "token_id": 3146
+            },
+            {
+              "logit": -10.057714462280272,
+              "token_id": 415
+            },
+            {
+              "logit": -10.119361877441406,
+              "token_id": 257
+            }
+          ]
+        }
+      ],
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 19
+      },
+      "prompt": {
+        "add_bos": true,
+        "add_special": true,
+        "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+        "rendered_text": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 19,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 19,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 3,
+        "failed_rules": [],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 3,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "What is 2+2? Answer with only the number.",
+      "run_receipt_path": "target\\bitnet\\receipts\\cuda-answer-readiness\\cpu-avx512-answer-corpus-closeout-runs\\math_2_plus_2.json",
+      "status": "passed",
+      "token_ids": {
+        "generated": [
+          220,
+          19,
+          128009
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 3,
+        "generated_ids": [
+          220,
+          19,
+          128009
+        ],
+        "ids": [
+          220,
+          19,
+          128009
+        ],
+        "prompt": 19,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "total": 22
+      }
+    },
+    {
+      "answer": " Paris",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "capital_france",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx512-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 12366,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 12.9736328125,
+              "token_id": 12366
+            },
+            {
+              "logit": 11.337346076965332,
+              "token_id": 60704
+            },
+            {
+              "logit": 7.589106559753418,
+              "token_id": 20437
+            },
+            {
+              "logit": 6.074317455291748,
+              "token_id": 95509
+            },
+            {
+              "logit": 5.049978733062744,
+              "token_id": 7295
+            },
+            {
+              "logit": 4.681511402130127,
+              "token_id": 22463
+            },
+            {
+              "logit": 4.632469177246094,
+              "token_id": 3320
+            },
+            {
+              "logit": 4.544726371765137,
+              "token_id": 41958
+            },
+            {
+              "logit": 4.150467395782471,
+              "token_id": 88793
+            },
+            {
+              "logit": 4.115462303161621,
+              "token_id": 9822
+            },
+            {
+              "logit": 3.3729000091552734,
+              "token_id": 6971
+            },
+            {
+              "logit": 3.319430351257324,
+              "token_id": 9893
+            },
+            {
+              "logit": 3.211212158203125,
+              "token_id": 50100
+            },
+            {
+              "logit": 3.1008830070495605,
+              "token_id": 56301
+            },
+            {
+              "logit": 3.040907859802246,
+              "token_id": 25048
+            },
+            {
+              "logit": 2.8107805252075195,
+              "token_id": 12036
+            },
+            {
+              "logit": 2.787341356277466,
+              "token_id": 13789
+            },
+            {
+              "logit": 2.5453789234161377,
+              "token_id": 426
+            },
+            {
+              "logit": 2.377531051635742,
+              "token_id": 2939
+            },
+            {
+              "logit": 2.1974430084228516,
+              "token_id": 40672
+            }
+          ]
+        }
+      ],
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 18
+      },
+      "prompt": {
+        "add_bos": true,
+        "add_special": true,
+        "rendered_sha256": "a507f5762572d6c022afe961fc653c9b6a6a62d748545eb7e55919c4e9cf31e4",
+        "rendered_text": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant:",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 18,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 18,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 2,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "generated_tokens": 2,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "What is the capital of France? Answer with one word.",
+      "run_receipt_path": "target\\bitnet\\receipts\\cuda-answer-readiness\\cpu-avx512-answer-corpus-closeout-runs\\capital_france.json",
+      "status": "passed",
+      "token_ids": {
+        "generated": [
+          12366,
+          128009
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 2,
+        "generated_ids": [
+          12366,
+          128009
+        ],
+        "ids": [
+          12366,
+          128009
+        ],
+        "prompt": 18,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "total": 20
+      }
+    },
+    {
+      "answer": " red blue green",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "repeat_colors",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx512-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 2579,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 13.539472579956056,
+              "token_id": 2579
+            },
+            {
+              "logit": 12.851278305053713,
+              "token_id": 358
+            },
+            {
+              "logit": 12.048626899719238,
+              "token_id": 23371
+            },
+            {
+              "logit": 10.597929000854492,
+              "token_id": 3816
+            },
+            {
+              "logit": 10.586831092834473,
+              "token_id": 33386
+            },
+            {
+              "logit": 8.669726371765137,
+              "token_id": 2684
+            },
+            {
+              "logit": 8.20438003540039,
+              "token_id": 14931
+            },
+            {
+              "logit": 7.891770362854004,
+              "token_id": 6437
+            },
+            {
+              "logit": 7.60446310043335,
+              "token_id": 1102
+            },
+            {
+              "logit": 7.584073543548584,
+              "token_id": 98693
+            },
+            {
+              "logit": 7.5802717208862305,
+              "token_id": 36539
+            },
+            {
+              "logit": 7.4009528160095215,
+              "token_id": 9930
+            },
+            {
+              "logit": 7.347794532775879,
+              "token_id": 19173
+            },
+            {
+              "logit": 7.026235580444336,
+              "token_id": 2771
+            },
+            {
+              "logit": 6.745534420013428,
+              "token_id": 11410
+            },
+            {
+              "logit": 6.744195938110352,
+              "token_id": 53466
+            },
+            {
+              "logit": 6.496873378753662,
+              "token_id": 7566
+            },
+            {
+              "logit": 6.3778181076049805,
+              "token_id": 5810
+            },
+            {
+              "logit": 6.317324638366699,
+              "token_id": 63244
+            },
+            {
+              "logit": 6.023068428039551,
+              "token_id": 16910
+            }
+          ]
+        }
+      ],
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 12
+      },
+      "prompt": {
+        "add_bos": true,
+        "add_special": true,
+        "rendered_sha256": "5580ceb6184a7fa43039f2fdb6607b452e777808e1c1d443c33579c33b2633f4",
+        "rendered_text": "User: Repeat exactly: red blue green<|eot_id|>Assistant:",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 12,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 12,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "Repeat exactly: red blue green",
+      "run_receipt_path": "target\\bitnet\\receipts\\cuda-answer-readiness\\cpu-avx512-answer-corpus-closeout-runs\\repeat_colors.json",
+      "status": "passed",
+      "token_ids": {
+        "generated": [
+          2579,
+          6437,
+          6307,
+          128009
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          2579,
+          6437,
+          6307,
+          128009
+        ],
+        "ids": [
+          2579,
+          6437,
+          6307,
+          128009
+        ],
+        "prompt": 12,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25
+        ],
+        "total": 16
+      }
+    },
+    {
+      "answer": " OK",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "say_ok",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx512-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 10619,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 15.580217361450195,
+              "token_id": 10619
+            },
+            {
+              "logit": 11.900142669677734,
+              "token_id": 4012
+            },
+            {
+              "logit": 8.971776008605957,
+              "token_id": 36539
+            },
+            {
+              "logit": 8.304010391235352,
+              "token_id": 8840
+            },
+            {
+              "logit": 8.298528671264648,
+              "token_id": 98693
+            },
+            {
+              "logit": 7.800164222717285,
+              "token_id": 23371
+            },
+            {
+              "logit": 7.592212200164795,
+              "token_id": 358
+            },
+            {
+              "logit": 7.579687118530273,
+              "token_id": 7777
+            },
+            {
+              "logit": 7.421642780303955,
+              "token_id": 7566
+            },
+            {
+              "logit": 7.333705902099609,
+              "token_id": 9930
+            },
+            {
+              "logit": 6.387417793273926,
+              "token_id": 22691
+            },
+            {
+              "logit": 6.152182579040527,
+              "token_id": 29822
+            },
+            {
+              "logit": 6.022740364074707,
+              "token_id": 56647
+            },
+            {
+              "logit": 5.960512161254883,
+              "token_id": 33386
+            },
+            {
+              "logit": 5.905291557312012,
+              "token_id": 25545
+            },
+            {
+              "logit": 5.6338396072387695,
+              "token_id": 2052
+            },
+            {
+              "logit": 5.519793510437012,
+              "token_id": 2684
+            },
+            {
+              "logit": 5.364076137542725,
+              "token_id": 564
+            },
+            {
+              "logit": 5.324070930480957,
+              "token_id": 1102
+            },
+            {
+              "logit": 5.317379474639893,
+              "token_id": 1472
+            }
+          ]
+        }
+      ],
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 10
+      },
+      "prompt": {
+        "add_bos": true,
+        "add_special": true,
+        "rendered_sha256": "f440a4461f1b169b58200f7c1fd49efbdce96d260827283b0b7f9d5fb9c1bc76",
+        "rendered_text": "User: Say exactly: OK<|eot_id|>Assistant:",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 10,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 10,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 2,
+        "failed_rules": [],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 2,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "Say exactly: OK",
+      "run_receipt_path": "target\\bitnet\\receipts\\cuda-answer-readiness\\cpu-avx512-answer-corpus-closeout-runs\\say_ok.json",
+      "status": "passed",
+      "token_ids": {
+        "generated": [
+          10619,
+          128009
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 2,
+        "generated_ids": [
+          10619,
+          128009
+        ],
+        "ids": [
+          10619,
+          128009
+        ],
+        "prompt": 10,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ],
+        "total": 12
+      }
+    },
+    {
+      "answer": " No. Water is",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "yes_no_water",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx512-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 2360,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 18.681175231933594,
+              "token_id": 2360
+            },
+            {
+              "logit": 18.514739990234375,
+              "token_id": 7566
+            },
+            {
+              "logit": 10.178853034973145,
+              "token_id": 9642
+            },
+            {
+              "logit": 10.076376914978027,
+              "token_id": 2209
+            },
+            {
+              "logit": 9.761270523071287,
+              "token_id": 86819
+            },
+            {
+              "logit": 9.606740951538086,
+              "token_id": 720
+            },
+            {
+              "logit": 9.488526344299316,
+              "token_id": 2822
+            },
+            {
+              "logit": 9.11773681640625,
+              "token_id": 3053
+            },
+            {
+              "logit": 9.109825134277344,
+              "token_id": 8886
+            },
+            {
+              "logit": 9.01432991027832,
+              "token_id": 10035
+            },
+            {
+              "logit": 8.95936107635498,
+              "token_id": 2876
+            },
+            {
+              "logit": 8.358314514160156,
+              "token_id": 2650
+            },
+            {
+              "logit": 7.994510650634766,
+              "token_id": 912
+            },
+            {
+              "logit": 7.525498867034912,
+              "token_id": 12838
+            },
+            {
+              "logit": 7.40406608581543,
+              "token_id": 3641
+            },
+            {
+              "logit": 6.939639091491699,
+              "token_id": 16910
+            },
+            {
+              "logit": 6.846402645111084,
+              "token_id": 22559
+            },
+            {
+              "logit": 6.778704643249512,
+              "token_id": 320
+            },
+            {
+              "logit": 6.494909763336182,
+              "token_id": 220
+            },
+            {
+              "logit": 6.40617036819458,
+              "token_id": 3639
+            }
+          ]
+        }
+      ],
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 15
+      },
+      "prompt": {
+        "add_bos": true,
+        "add_special": true,
+        "rendered_sha256": "99e5b6953cc57a6114b3f4bbea800e57606ed8a07aa77d58f942de6bdcc8e0ee",
+        "rendered_text": "User: Answer yes or no: is water wet?<|eot_id|>Assistant:",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 15,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 15,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [],
+        "gate_kind": "starts_with_any",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "Answer yes or no: is water wet?",
+      "run_receipt_path": "target\\bitnet\\receipts\\cuda-answer-readiness\\cpu-avx512-answer-corpus-closeout-runs\\yes_no_water.json",
+      "status": "passed",
+      "token_ids": {
+        "generated": [
+          2360,
+          13,
+          10164,
+          374
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          2360,
+          13,
+          10164,
+          374
+        ],
+        "ids": [
+          2360,
+          13,
+          10164,
+          374
+        ],
+        "prompt": 15,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ],
+        "total": 19
+      }
+    }
+  ],
+  "claim_boundary": {
+    "broad_performance_claimed": false,
+    "coherent_answer_claimed": false,
+    "cuda_answer_corpus": false,
+    "diagnostic_only_until_answer_ready_artifact": true,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_answer_path": false,
+    "strict_cuda_answer_claimed": false
+  },
+  "corpus": {
+    "case_count": 5,
+    "description": "Fixed deterministic prompt set for answer-readiness baselines.",
+    "name": "strict-bitnet-answer-corpus-v1",
+    "path": "ci\\quality\\bitnet-answer-corpus.yaml",
+    "selected_case_count": 5,
+    "selected_case_ids": [
+      "math_2_plus_2",
+      "capital_france",
+      "repeat_colors",
+      "say_ok",
+      "yes_no_water"
+    ]
+  },
+  "generation": {
+    "default_max_new_tokens": 8,
+    "deterministic": true,
+    "logits_dump_steps": 1,
+    "logits_topk": 20,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 300,
+    "requested_cpu_kernel": "avx512",
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "architecture": null,
+    "fallback_loader_used": false,
+    "family": null,
+    "file": "ggml-model-i2_s.gguf",
+    "loader_mode": "real_gguf",
+    "path": "D:\\Code\\Rust\\BitNet\\models\\microsoft-bitnet-b1.58-2B-4T-gguf\\ggml-model-i2_s.gguf",
+    "quant_format": null,
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": null,
+    "tokenizer": "externally_supplied_llama_bpe",
+    "tokenizer_path": "D:\\Code\\Rust\\BitNet\\models\\microsoft-bitnet-b1.58-2B-4T\\tokenizer.json"
+  },
+  "prompt_template": {
+    "family": "bitnetcpp-answer"
+  },
+  "quality_summary": {
+    "failed": 0,
+    "not_run": 0,
+    "passed": 5,
+    "timeout": 0,
+    "total": 5
+  },
+  "schema_version": "1.0.0",
+  "speedup_claim": false,
+  "timestamp": "2026-05-08T10:50:50.803369400+00:00"
+}
