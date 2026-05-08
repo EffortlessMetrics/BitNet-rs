@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T05:14:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-004"
+event = "merged"
+pr = 3995
+merge_sha = "dd48ec87a85368c0e8256f57a8e42d3fca82a8f5"
+actor = "codex"
+
+notes = [
+  "BitNet CPU answer-corpus prompt alignment merged in #3995.",
+  "The corpus now uses the Microsoft BitNet.cpp answer-ready prompt envelope from MODEL-ARTIFACT-007; fresh strict Rust CPU corpus evidence is still required before any answer-quality claim.",
+]
