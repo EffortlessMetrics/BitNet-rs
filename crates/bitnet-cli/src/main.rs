@@ -526,8 +526,16 @@ enum Commands {
         #[arg(long)]
         tokenizer: Option<std::path::PathBuf>,
 
+        /// Deterministic SLM quality corpus; when set, corpus cases are run in a warm session
+        #[arg(long, value_name = "PATH")]
+        corpus: Option<std::path::PathBuf>,
+
+        /// Number of repeated runs for each corpus case when --corpus is set
+        #[arg(long, default_value_t = 2)]
+        corpus_repeat_runs: usize,
+
         /// Prompt to answer; pass multiple times for a warm multi-prompt session
-        #[arg(long = "prompt", required = true, value_name = "TEXT")]
+        #[arg(long = "prompt", value_name = "TEXT")]
         prompts: Vec<String>,
 
         /// Maximum new tokens to generate per prompt
@@ -589,6 +597,22 @@ enum Commands {
         /// Stop token IDs (numeric token IDs, can be repeated)
         #[arg(long = "stop-id", value_name = "ID")]
         stop_id: Vec<u32>,
+
+        /// Fail after writing receipts if any prompt fails the SLM quality gate
+        #[arg(long, default_value_t = false)]
+        fail_on_quality: bool,
+
+        /// Require repeated identical prompts to produce stable generated token IDs and text
+        #[arg(long, default_value_t = false)]
+        require_determinism: bool,
+
+        /// Minimum generated tokens required by the warm-session quality gate
+        #[arg(long, default_value_t = 1)]
+        min_generated_tokens: usize,
+
+        /// Minimum distinct generated token IDs required by the warm-session quality gate
+        #[arg(long, default_value_t = 1)]
+        min_distinct_generated_tokens: usize,
 
         /// Output aggregate warm-session receipt
         #[arg(long, value_name = "PATH")]
@@ -1037,6 +1061,8 @@ async fn async_main() -> Result<()> {
             model,
             model_format,
             tokenizer,
+            corpus,
+            corpus_repeat_runs,
             prompts,
             max_new_tokens,
             temperature,
@@ -1053,6 +1079,10 @@ async fn async_main() -> Result<()> {
             system_prompt,
             stop,
             stop_id,
+            fail_on_quality,
+            require_determinism,
+            min_generated_tokens,
+            min_distinct_generated_tokens,
             json_out,
         }) => {
             run_slm_warm_session(
@@ -1060,6 +1090,8 @@ async fn async_main() -> Result<()> {
                 model,
                 model_format,
                 tokenizer,
+                corpus,
+                corpus_repeat_runs,
                 prompts,
                 max_new_tokens,
                 temperature,
@@ -1076,6 +1108,10 @@ async fn async_main() -> Result<()> {
                 system_prompt,
                 stop,
                 stop_id,
+                fail_on_quality,
+                require_determinism,
+                min_generated_tokens,
+                min_distinct_generated_tokens,
                 json_out,
             )
             .await
@@ -4389,6 +4425,7 @@ async fn run_simple_generation(
     Ok(())
 }
 
+#[cfg(feature = "full-cli")]
 fn sanitize_warm_session_prompt_stem(prompt: &str) -> String {
     let mut stem = prompt
         .chars()
@@ -4409,6 +4446,7 @@ fn sanitize_warm_session_prompt_stem(prompt: &str) -> String {
     if stem.is_empty() { "prompt".to_string() } else { stem.chars().take(48).collect() }
 }
 
+#[cfg(feature = "full-cli")]
 fn tokenizer_pretokenizer_authority(
     source: bitnet_tokenizers::auto::TokenizerSource,
 ) -> &'static str {
@@ -4421,11 +4459,14 @@ fn tokenizer_pretokenizer_authority(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg(feature = "full-cli")]
 async fn run_slm_warm_session(
     requested_backend_label: &str,
     model_path: std::path::PathBuf,
     model_format: String,
     tokenizer_path: Option<std::path::PathBuf>,
+    corpus_path: Option<std::path::PathBuf>,
+    corpus_repeat_runs: usize,
     prompts: Vec<String>,
     max_new_tokens: usize,
     temperature: f32,
@@ -4442,6 +4483,10 @@ async fn run_slm_warm_session(
     system_prompt: Option<String>,
     stop: Vec<String>,
     stop_id: Vec<u32>,
+    fail_on_quality: bool,
+    require_determinism: bool,
+    min_generated_tokens: usize,
+    min_distinct_generated_tokens: usize,
     json_out: std::path::PathBuf,
 ) -> Result<()> {
     use bitnet_common::Device;
@@ -4450,9 +4495,34 @@ async fn run_slm_warm_session(
     use bitnet_tokenizers::Tokenizer;
     use std::sync::Arc;
 
-    if prompts.len() < 2 {
-        anyhow::bail!("slm-warm-session requires at least two --prompt values");
+    let corpus = corpus_path.as_deref().map(SlmWarmSessionCorpus::load).transpose()?;
+    if corpus.is_some() && !prompts.is_empty() {
+        anyhow::bail!(
+            "slm-warm-session accepts either --corpus or repeated --prompt values, not both"
+        );
     }
+    if corpus.is_none() && prompts.len() < 2 {
+        anyhow::bail!("slm-warm-session requires at least two --prompt values or --corpus");
+    }
+    let prompt_inputs = warm_session_prompt_inputs(
+        &prompts,
+        corpus.as_ref(),
+        corpus_repeat_runs,
+        min_generated_tokens,
+        min_distinct_generated_tokens,
+    )?;
+    let max_new_tokens =
+        corpus.as_ref().and_then(|corpus| corpus.defaults.max_new_tokens).unwrap_or(max_new_tokens);
+    let temperature =
+        corpus.as_ref().and_then(|corpus| corpus.defaults.temperature).unwrap_or(temperature);
+    let top_k = corpus.as_ref().and_then(|corpus| corpus.defaults.top_k).unwrap_or(top_k);
+    let greedy = corpus.as_ref().and_then(|corpus| corpus.defaults.greedy).unwrap_or(greedy);
+    let deterministic =
+        corpus.as_ref().and_then(|corpus| corpus.defaults.deterministic).unwrap_or(deterministic);
+    let prompt_template = corpus
+        .as_ref()
+        .and_then(|corpus| corpus.defaults.prompt_template.clone())
+        .unwrap_or(prompt_template);
     if requested_backend_label != "apple-m4-cpu-neon" {
         anyhow::bail!(
             "slm-warm-session is scoped to --device apple-m4-cpu-neon for Apple M4 SLM receipts; got {requested_backend_label}"
@@ -4592,9 +4662,12 @@ async fn run_slm_warm_session(
     std::fs::create_dir_all(&receipt_dir)
         .with_context(|| format!("Failed to create {}", receipt_dir.display()))?;
 
-    let mut prompt_receipts = Vec::with_capacity(prompts.len());
-    let mut prompt_summaries = Vec::with_capacity(prompts.len());
-    for (index, prompt) in prompts.iter().enumerate() {
+    let mut prompt_receipts = Vec::with_capacity(prompt_inputs.len());
+    let mut prompt_summaries = Vec::with_capacity(prompt_inputs.len());
+    let mut quality_failed_prompts = Vec::new();
+    let mut determinism_records = Vec::with_capacity(prompt_inputs.len());
+    for (index, prompt_input) in prompt_inputs.iter().enumerate() {
+        let prompt = &prompt_input.prompt;
         let prompt_start = std::time::Instant::now();
         let formatted_prompt = template_type.apply(prompt, system_prompt.as_deref());
 
@@ -4721,6 +4794,24 @@ async fn run_slm_warm_session(
         }
 
         let generated_text = tokenizer.decode(&generated_tokens)?;
+        let quality = slm_warm_session_quality_receipt(
+            &generated_text,
+            &generated_tokens,
+            prompt_input.min_generated_tokens,
+            prompt_input.min_distinct_generated_tokens,
+            prompt_input.gate.as_ref(),
+        );
+        let quality_passed = quality["passed"].as_bool().unwrap_or(false);
+        if !quality_passed {
+            quality_failed_prompts.push(index);
+        }
+        determinism_records.push(WarmSessionDeterminismRecord {
+            prompt_index: index,
+            case_id: prompt_input.case_id.clone(),
+            prompt: prompt.clone(),
+            text: generated_text.clone(),
+            generated_ids: generated_tokens.clone(),
+        });
         let prompt_total_ms = elapsed_ms(prompt_start);
         let decode_total_ms = decode_step_ms.iter().sum::<f64>();
         let sampling_ms_per_token = if sample_step_ms.is_empty() {
@@ -4742,6 +4833,8 @@ async fn run_slm_warm_session(
             "session_artifact_path": json_out.display().to_string(),
             "artifact_path": prompt_receipt_path.display().to_string(),
             "prompt_index": index,
+            "case_id": prompt_input.case_id.as_str(),
+            "repeat_index": prompt_input.repeat_index,
             "requested_backend": backend_identity.requested_backend.as_str(),
             "selected_backend": backend_identity.selected_backend.as_str(),
             "runtime_api": backend_identity.runtime_api.as_str(),
@@ -4757,6 +4850,7 @@ async fn run_slm_warm_session(
                 "generated_ids": generated_tokens.clone(),
                 "ids": generated_tokens.clone(),
             },
+            "quality": quality,
             "timing": {
                 "model_load_ms": 0.0,
                 "tokenizer_load_ms": 0.0,
@@ -4827,10 +4921,14 @@ async fn run_slm_warm_session(
         write_json_output(Some(&prompt_receipt_path), &prompt_receipt)?;
         prompt_summaries.push(serde_json::json!({
             "prompt_index": index,
+            "case_id": prompt_input.case_id.as_str(),
+            "repeat_index": prompt_input.repeat_index,
             "prompt": prompt,
             "text": prompt_receipt["text"].clone(),
             "receipt_path": prompt_receipt_path.display().to_string(),
             "generated_tokens": generated_tokens.len(),
+            "generated_token_ids": generated_tokens.clone(),
+            "quality": prompt_receipt["quality"].clone(),
             "timing": prompt_receipt["timing"].clone(),
             "backend": {
                 "requested_backend": backend_identity.requested_backend.as_str(),
@@ -4843,6 +4941,18 @@ async fn run_slm_warm_session(
     }
 
     let total_session_ms = elapsed_ms(session_start);
+    let determinism = slm_warm_session_determinism_receipt(&determinism_records);
+    let quality_passed = quality_failed_prompts.is_empty();
+    let effective_min_generated_tokens = prompt_inputs
+        .iter()
+        .map(|prompt| prompt.min_generated_tokens)
+        .min()
+        .unwrap_or(min_generated_tokens);
+    let effective_min_distinct_generated_tokens = prompt_inputs
+        .iter()
+        .map(|prompt| prompt.min_distinct_generated_tokens)
+        .min()
+        .unwrap_or(min_distinct_generated_tokens);
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "slm_apple_m4_warm_session",
@@ -4856,9 +4966,20 @@ async fn run_slm_warm_session(
         "session": {
             "model_loaded_once": true,
             "tokenizer_loaded_once": true,
-            "prompt_count": prompts.len(),
+            "prompt_count": prompt_inputs.len(),
             "per_prompt_receipt_dir": receipt_dir.display().to_string(),
             "per_prompt_receipts": prompt_receipts,
+        },
+        "corpus": slm_warm_session_corpus_receipt(corpus_path.as_deref(), corpus.as_ref(), corpus_repeat_runs),
+        "generation": {
+            "mode": if greedy { "greedy" } else { "sampling" },
+            "temperature": temperature,
+            "top_k": top_k,
+            "top_p": top_p,
+            "repetition_penalty": repetition_penalty,
+            "deterministic": deterministic,
+            "max_new_tokens": max_new_tokens,
+            "prompt_template": prompt_template,
         },
         "model": {
             "repo": model_repo.as_str(),
@@ -4904,6 +5025,14 @@ async fn run_slm_warm_session(
             "n_kv": n_kv,
             "n_tensors": n_tensors,
         },
+        "quality_summary": {
+            "passed": quality_passed,
+            "failed_prompt_indices": quality_failed_prompts,
+            "min_generated_tokens": effective_min_generated_tokens,
+            "min_distinct_generated_tokens": effective_min_distinct_generated_tokens,
+            "fail_on_quality": fail_on_quality,
+        },
+        "determinism": determinism,
         "prompts": prompt_summaries,
         "claim_boundary": {
             "warm_session_flow": true,
@@ -4927,9 +5056,376 @@ async fn run_slm_warm_session(
     println!(
         "warm session receipt written to {} ({} prompts, model/tokenizer loaded once)",
         json_out.display(),
-        prompts.len()
+        prompt_inputs.len()
     );
+    let quality_summary = &aggregate["quality_summary"];
+    if fail_on_quality && !quality_summary["passed"].as_bool().unwrap_or(false) {
+        anyhow::bail!("SLM warm-session quality gate failed: {}", quality_summary);
+    }
+    let determinism = &aggregate["determinism"];
+    if require_determinism && !determinism["checked"].as_bool().unwrap_or(false) {
+        anyhow::bail!("SLM warm-session determinism gate requires at least one repeated prompt");
+    }
+    if require_determinism && !determinism["passed"].as_bool().unwrap_or(false) {
+        anyhow::bail!("SLM warm-session determinism gate failed: {}", determinism);
+    }
     Ok(())
+}
+
+#[derive(Clone, Debug)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionDeterminismRecord {
+    prompt_index: usize,
+    case_id: String,
+    prompt: String,
+    text: String,
+    generated_ids: Vec<u32>,
+}
+
+#[derive(Clone, Debug)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionPromptInput {
+    case_id: String,
+    prompt: String,
+    repeat_index: usize,
+    gate: Option<SlmWarmSessionGate>,
+    min_generated_tokens: usize,
+    min_distinct_generated_tokens: usize,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[cfg(feature = "full-cli")]
+struct SlmWarmSessionCorpus {
+    schema: u32,
+    artifact_kind: String,
+    name: String,
+    description: String,
+    model: SlmWarmSessionCorpusModel,
+    defaults: SlmWarmSessionCorpusDefaults,
+    cases: Vec<SlmWarmSessionCorpusCase>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[cfg(feature = "full-cli")]
+struct SlmWarmSessionCorpusModel {
+    repo: String,
+    file: String,
+    #[serde(default)]
+    sha256: Option<String>,
+    #[serde(default)]
+    family: Option<String>,
+    #[serde(default)]
+    architecture: Option<String>,
+    #[serde(default)]
+    quant_format: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[cfg(feature = "full-cli")]
+struct SlmWarmSessionCorpusDefaults {
+    #[serde(default)]
+    prompt_template: Option<String>,
+    #[serde(default)]
+    max_new_tokens: Option<usize>,
+    #[serde(default)]
+    greedy: Option<bool>,
+    #[serde(default)]
+    deterministic: Option<bool>,
+    #[serde(default)]
+    temperature: Option<f32>,
+    #[serde(default)]
+    top_k: Option<usize>,
+    #[serde(default)]
+    repeat_runs: Option<usize>,
+    #[serde(default)]
+    min_generated_tokens: Option<usize>,
+    #[serde(default)]
+    min_distinct_generated_tokens: Option<usize>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[cfg(feature = "full-cli")]
+struct SlmWarmSessionCorpusCase {
+    id: String,
+    question: String,
+    #[serde(default)]
+    min_generated_tokens: Option<usize>,
+    #[serde(default)]
+    min_distinct_generated_tokens: Option<usize>,
+    #[serde(default)]
+    gate: Option<SlmWarmSessionGate>,
+}
+
+#[derive(Clone, Debug, serde::Deserialize)]
+#[cfg(feature = "full-cli")]
+struct SlmWarmSessionGate {
+    kind: String,
+    #[serde(default)]
+    expected: Option<String>,
+    #[serde(default)]
+    contains_any: Option<Vec<String>>,
+    #[serde(default)]
+    starts_with_any: Option<Vec<String>>,
+    #[serde(default)]
+    min_words: Option<usize>,
+}
+
+#[cfg(feature = "full-cli")]
+impl SlmWarmSessionCorpus {
+    fn load(path: &std::path::Path) -> Result<Self> {
+        let corpus: Self =
+            serde_yaml::from_slice(&std::fs::read(path).with_context(|| {
+                format!("failed to read warm-session corpus {}", path.display())
+            })?)
+            .with_context(|| format!("failed to parse warm-session corpus {}", path.display()))?;
+        if corpus.schema != 1 {
+            anyhow::bail!("unsupported warm-session corpus schema {}", corpus.schema);
+        }
+        if corpus.artifact_kind != "apple_m4_slm_quality_corpus" {
+            anyhow::bail!(
+                "unexpected warm-session corpus artifact_kind {}; expected apple_m4_slm_quality_corpus",
+                corpus.artifact_kind
+            );
+        }
+        if corpus.cases.is_empty() {
+            anyhow::bail!("warm-session corpus must contain at least one case");
+        }
+        Ok(corpus)
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_prompt_inputs(
+    prompts: &[String],
+    corpus: Option<&SlmWarmSessionCorpus>,
+    corpus_repeat_runs: usize,
+    cli_min_generated_tokens: usize,
+    cli_min_distinct_generated_tokens: usize,
+) -> Result<Vec<WarmSessionPromptInput>> {
+    if let Some(corpus) = corpus {
+        let repeat_runs = corpus.defaults.repeat_runs.unwrap_or(corpus_repeat_runs).max(1);
+        let default_min_generated_tokens =
+            corpus.defaults.min_generated_tokens.unwrap_or(cli_min_generated_tokens);
+        let default_min_distinct_generated_tokens = corpus
+            .defaults
+            .min_distinct_generated_tokens
+            .unwrap_or(cli_min_distinct_generated_tokens);
+        let mut inputs = Vec::with_capacity(corpus.cases.len() * repeat_runs);
+        for case in &corpus.cases {
+            for repeat_index in 0..repeat_runs {
+                inputs.push(WarmSessionPromptInput {
+                    case_id: case.id.clone(),
+                    prompt: case.question.clone(),
+                    repeat_index,
+                    gate: case.gate.clone(),
+                    min_generated_tokens: case
+                        .min_generated_tokens
+                        .unwrap_or(default_min_generated_tokens),
+                    min_distinct_generated_tokens: case
+                        .min_distinct_generated_tokens
+                        .unwrap_or(default_min_distinct_generated_tokens),
+                });
+            }
+        }
+        return Ok(inputs);
+    }
+
+    Ok(prompts
+        .iter()
+        .enumerate()
+        .map(|(index, prompt)| WarmSessionPromptInput {
+            case_id: format!("prompt_{:02}", index + 1),
+            prompt: prompt.clone(),
+            repeat_index: 0,
+            gate: None,
+            min_generated_tokens: cli_min_generated_tokens,
+            min_distinct_generated_tokens: cli_min_distinct_generated_tokens,
+        })
+        .collect())
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_warm_session_corpus_receipt(
+    path: Option<&std::path::Path>,
+    corpus: Option<&SlmWarmSessionCorpus>,
+    corpus_repeat_runs: usize,
+) -> serde_json::Value {
+    let Some(corpus) = corpus else {
+        return serde_json::Value::Null;
+    };
+    serde_json::json!({
+        "path": path.map(|path| path.display().to_string()),
+        "artifact_kind": corpus.artifact_kind.as_str(),
+        "name": corpus.name.as_str(),
+        "description": corpus.description.as_str(),
+        "case_count": corpus.cases.len(),
+        "repeat_runs": corpus.defaults.repeat_runs.unwrap_or(corpus_repeat_runs).max(1),
+        "model": {
+            "repo": corpus.model.repo.as_str(),
+            "file": corpus.model.file.as_str(),
+            "sha256": corpus.model.sha256.as_deref(),
+            "family": corpus.model.family.as_deref(),
+            "architecture": corpus.model.architecture.as_deref(),
+            "quant_format": corpus.model.quant_format.as_deref(),
+        },
+        "defaults": {
+            "prompt_template": corpus.defaults.prompt_template.as_deref(),
+            "max_new_tokens": corpus.defaults.max_new_tokens,
+            "greedy": corpus.defaults.greedy,
+            "deterministic": corpus.defaults.deterministic,
+            "temperature": corpus.defaults.temperature,
+            "top_k": corpus.defaults.top_k,
+            "min_generated_tokens": corpus.defaults.min_generated_tokens,
+            "min_distinct_generated_tokens": corpus.defaults.min_distinct_generated_tokens,
+        },
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_warm_session_quality_receipt(
+    answer: &str,
+    generated_ids: &[u32],
+    min_generated_tokens: usize,
+    min_distinct_generated_tokens: usize,
+    gate: Option<&SlmWarmSessionGate>,
+) -> serde_json::Value {
+    let normalized = strip_slm_special_markers(answer).trim().to_string();
+    let valid_utf8 = true;
+    let printable_utf8 = normalized.chars().all(|ch| ch == '\n' || ch == '\t' || !ch.is_control());
+    let non_empty = !normalized.is_empty();
+    let no_replacement_chars = !normalized.contains('\u{FFFD}');
+    let mostly_text = answer_mostly_text(&normalized);
+    let distinct_generated_tokens =
+        generated_ids.iter().copied().collect::<std::collections::BTreeSet<_>>().len();
+    let mut failed_rules = Vec::new();
+    if !printable_utf8 {
+        failed_rules.push("printable_utf8");
+    }
+    if !non_empty {
+        failed_rules.push("non_empty");
+    }
+    if !no_replacement_chars {
+        failed_rules.push("replacement_chars");
+    }
+    if !mostly_text {
+        failed_rules.push("mostly_text");
+    }
+    if generated_ids.len() < min_generated_tokens {
+        failed_rules.push("generated_token_min");
+    }
+    if distinct_generated_tokens < min_distinct_generated_tokens {
+        failed_rules.push("generated_token_variation");
+    }
+    let gate_passed =
+        gate.map(|gate| slm_warm_session_gate_passed(&normalized, gate)).unwrap_or(true);
+    if !gate_passed {
+        let kind = gate.map(|gate| gate.kind.as_str()).unwrap_or("unknown");
+        failed_rules.push(match kind {
+            "exact_trimmed" => "gate_exact_trimmed",
+            "contains_any" => "gate_contains_any",
+            "starts_with_any" => "gate_starts_with_any",
+            "readable" => "gate_readable",
+            _ => "gate_unknown",
+        });
+    }
+
+    serde_json::json!({
+        "passed": failed_rules.is_empty(),
+        "valid_utf8": valid_utf8,
+        "printable_utf8": printable_utf8,
+        "non_empty": non_empty,
+        "no_replacement_chars": no_replacement_chars,
+        "mostly_text": mostly_text,
+        "non_degenerate": generated_ids.len() >= min_generated_tokens
+            && distinct_generated_tokens >= min_distinct_generated_tokens,
+        "generated_tokens": generated_ids.len(),
+        "distinct_generated_tokens": distinct_generated_tokens,
+        "min_generated_tokens": min_generated_tokens,
+        "min_distinct_generated_tokens": min_distinct_generated_tokens,
+        "gate_kind": gate.map(|gate| gate.kind.as_str()),
+        "gate_passed": gate_passed,
+        "normalized_text": normalized,
+        "failed_rules": failed_rules,
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_warm_session_gate_passed(answer: &str, gate: &SlmWarmSessionGate) -> bool {
+    match gate.kind.as_str() {
+        "exact_trimmed" => gate
+            .expected
+            .as_ref()
+            .is_some_and(|expected| answer.trim().eq_ignore_ascii_case(expected.trim())),
+        "contains_any" => {
+            let lower = answer.to_ascii_lowercase();
+            gate.contains_any.as_ref().is_some_and(|items| {
+                items.iter().any(|needle| lower.contains(&needle.to_ascii_lowercase()))
+            })
+        }
+        "starts_with_any" => {
+            let lower = answer.trim_start().to_ascii_lowercase();
+            gate.starts_with_any.as_ref().is_some_and(|items| {
+                items.iter().any(|needle| lower.starts_with(&needle.to_ascii_lowercase()))
+            })
+        }
+        "readable" => answer.split_whitespace().count() >= gate.min_words.unwrap_or(1),
+        _ => false,
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn strip_slm_special_markers(answer: &str) -> String {
+    answer
+        .replace("<|im_start|>", "")
+        .replace("<|im_end|>", "")
+        .replace("<|begin_of_text|>", "")
+        .replace("<|end_of_text|>", "")
+        .replace("<|eot_id|>", "")
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_warm_session_determinism_receipt(
+    records: &[WarmSessionDeterminismRecord],
+) -> serde_json::Value {
+    let mut by_prompt: std::collections::BTreeMap<&str, Vec<&WarmSessionDeterminismRecord>> =
+        std::collections::BTreeMap::new();
+    for record in records {
+        by_prompt.entry(record.prompt.as_str()).or_default().push(record);
+    }
+
+    let mut groups = Vec::new();
+    let mut checked = false;
+    let mut passed = true;
+    for (prompt, records) in by_prompt {
+        if records.len() < 2 {
+            continue;
+        }
+        checked = true;
+        let first = records[0];
+        let stable_generated_token_ids =
+            records.iter().all(|record| record.generated_ids == first.generated_ids);
+        let stable_text = records.iter().all(|record| record.text == first.text);
+        if !stable_generated_token_ids || !stable_text {
+            passed = false;
+        }
+        groups.push(serde_json::json!({
+            "prompt": prompt,
+            "attempt_count": records.len(),
+            "case_id": first.case_id.as_str(),
+            "prompt_indices": records.iter().map(|record| record.prompt_index).collect::<Vec<_>>(),
+            "stable_generated_token_ids": stable_generated_token_ids,
+            "stable_text": stable_text,
+            "reference_generated_ids": first.generated_ids.clone(),
+            "reference_text": first.text.as_str(),
+        }));
+    }
+
+    serde_json::json!({
+        "checked": checked,
+        "passed": checked && passed,
+        "repeated_prompt_groups": groups.len(),
+        "groups": groups,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -6195,6 +6691,85 @@ mod tests {
 
         assert_eq!(quality["language_signal"], true);
         assert_eq!(quality["garbage_filter_passed"], true);
+    }
+
+    #[test]
+    fn slm_warm_session_quality_accepts_qwen_marker_answer() {
+        let gate = SlmWarmSessionGate {
+            kind: "contains_any".to_string(),
+            expected: None,
+            contains_any: Some(vec!["4".to_string()]),
+            starts_with_any: None,
+            min_words: None,
+        };
+
+        let quality = slm_warm_session_quality_receipt(
+            "\n2+2 equals 4.<|im_end|>",
+            &[198, 17, 10, 17, 16819, 220, 19, 13, 151645],
+            1,
+            2,
+            Some(&gate),
+        );
+
+        assert_eq!(quality["passed"], true);
+        assert_eq!(quality["valid_utf8"], true);
+        assert_eq!(quality["non_empty"], true);
+        assert_eq!(quality["non_degenerate"], true);
+        assert_eq!(quality["gate_passed"], true);
+        assert_eq!(quality["normalized_text"], "2+2 equals 4.");
+    }
+
+    #[test]
+    fn slm_warm_session_determinism_accepts_matching_repeats() {
+        let records = vec![
+            WarmSessionDeterminismRecord {
+                prompt_index: 0,
+                case_id: "math".to_string(),
+                prompt: "What is 2+2?".to_string(),
+                text: "4".to_string(),
+                generated_ids: vec![19],
+            },
+            WarmSessionDeterminismRecord {
+                prompt_index: 1,
+                case_id: "math".to_string(),
+                prompt: "What is 2+2?".to_string(),
+                text: "4".to_string(),
+                generated_ids: vec![19],
+            },
+        ];
+
+        let determinism = slm_warm_session_determinism_receipt(&records);
+
+        assert_eq!(determinism["checked"], true);
+        assert_eq!(determinism["passed"], true);
+        assert_eq!(determinism["repeated_prompt_groups"], 1);
+    }
+
+    #[test]
+    fn slm_warm_session_determinism_rejects_divergent_repeats() {
+        let records = vec![
+            WarmSessionDeterminismRecord {
+                prompt_index: 0,
+                case_id: "math".to_string(),
+                prompt: "What is 2+2?".to_string(),
+                text: "4".to_string(),
+                generated_ids: vec![19],
+            },
+            WarmSessionDeterminismRecord {
+                prompt_index: 1,
+                case_id: "math".to_string(),
+                prompt: "What is 2+2?".to_string(),
+                text: "four".to_string(),
+                generated_ids: vec![913],
+            },
+        ];
+
+        let determinism = slm_warm_session_determinism_receipt(&records);
+
+        assert_eq!(determinism["checked"], true);
+        assert_eq!(determinism["passed"], false);
+        assert_eq!(determinism["groups"][0]["stable_generated_token_ids"], false);
+        assert_eq!(determinism["groups"][0]["stable_text"], false);
     }
 
     #[test]
