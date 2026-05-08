@@ -33,7 +33,7 @@
 | apple-m4-operational | M4-OP-005 | M4-OP-002 | merged |
 | apple-m4-operational | M4-OP-006 | M4-OP-004, M4-OP-005 | merged |
 | apple-m4-productization | M4-PROD-002 | M4-PROD-001 | merged |
-| apple-m4-productization | M4-PROD-003 | M4-PROD-002 | in_progress |
+| apple-m4-productization | M4-PROD-003 | M4-PROD-002 | pr_open |
 | apple-m4-productization | M4-PROD-004 | M4-PROD-003 | proposed |
 | apple-m4-productization | M4-PROD-005 | M4-PROD-004 | proposed |
 | apple-m4-slm-answer | SLM-M4-002 | SLM-M4-001 | merged |

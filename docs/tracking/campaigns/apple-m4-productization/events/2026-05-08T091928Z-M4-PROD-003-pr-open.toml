@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T09:19:28Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-003"
+event = "pr_open"
+pr = 4025
+head_sha = "dfb21b76bb9cb1e9ddf12b49de620f4dfcff8351"
+actor = "codex"
+
+notes = [
+  "Opened Mac-oriented SLM CLI wrapper PR.",
+  "Adds check, ask, validate, and receipts-check wrappers for the supported apple-m4-cpu-neon SLM path.",
+  "No BitNet quality, full Metal inference, Neural Engine, QK256, server, model binary, or broad performance claims.",
+]
