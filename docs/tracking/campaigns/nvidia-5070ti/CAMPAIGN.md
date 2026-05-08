@@ -59,6 +59,8 @@ Committed proof receipts:
 - `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json`
 - `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/strict-cuda-ask-math.json`
 - `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json`
+- `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-answer-corpus.json`
+- `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json`
 
 Allowed claims:
 
@@ -87,6 +89,11 @@ deterministic corpus.
 Coherent CUDA answer claims still remain scoped. The current proof covers the
 committed deterministic answer corpus, not broad chat quality, production server
 readiness, or speedup.
+
+`CUDA-ANSWER-011` records the first same-box CPU AVX-512 versus RTX 5070 Ti CUDA
+answer-corpus comparison. Both backends pass the corpus, but exact CPU/CUDA
+parity remains open because top-k logits differ for every case and
+`yes_no_water` produces different passing answers.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -120,6 +127,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-BITNET-008 | merged | Strict BitNet CUDA benchmark baseline merged in #3823. |
 | CUDA-BITNET-009 | merged | Routed upload-once strict proof receipts merged in #3837. |
 | CUDA-ANSWER-010 | merged | Strict RTX 5070 Ti CUDA answer corpus passes after the QK256 I2_S layout alignment in #4024. |
+| CUDA-ANSWER-011 | pr_open | Same-box CPU AVX-512 and RTX 5070 Ti CUDA both pass the corpus, but exact parity remains open due top-k logit divergence and one generated-answer divergence. |
 | CUDA-DENSE-001 | proposed | Optional dense regular-LLM CUDA reference lane; not part of BitNet packed proof completion. |
 
 ## Review Policy

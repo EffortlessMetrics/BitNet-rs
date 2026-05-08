@@ -298,6 +298,15 @@ the selected backend is `nvidia-rtx-5070-ti-cuda`, runtime API is `cuda`,
 fallback is false, the selected kernel is `qk256_gemv_cuda`, prompt prefill is
 exercised, upload-once weights are preserved, and `speedup_claim=false`.
 
+### CUDA-ANSWER-011 - CPU/CUDA Answer Parity Evidence
+
+Record same-box 9950X3D AVX-512 CPU and RTX 5070 Ti CUDA answer-corpus receipts
+for the same official artifact, external tokenizer authority, BitNet.cpp prompt
+template, and deterministic corpus. This item may land divergence evidence: if
+quality passes on both backends but token IDs or top-k logits differ, the
+receipt must preserve the first divergence instead of upgrading the parity
+claim.
+
 ### CUDA-ANSWER-006 - Interactive CUDA Chat Session
 
 Add a session path that loads the model once, uploads weights once, reuses the
