@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T20:58:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-007"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "After #4126 merged the tracker item definition, SLM-CPU-007 is ready for the actual Qwen3 logits root-cause implementation.",
+  "The implementation remains bounded to checkpoint summaries and first-drift localization; it must not claim answer quality, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]

@@ -436,8 +436,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-007"
-status = "pr_open"
-pr = 4126
+status = "ready"
 branch = "codex/slm-cpu-007-logits-root-cause"
 stackable = false
 review_mode = "codex_premerge"
