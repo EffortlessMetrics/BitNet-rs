@@ -4225,8 +4225,16 @@ async fn run_simple_generation(
                 "context_length": config.model.max_position_embeddings,
                 "tokenizer": tokenizer_label,
                 "vocab_size": tokenizer.vocab_size(),
-                "tie_word_embeddings": serde_json::Value::Null,
-                "output_head_tensor": "output.weight",
+                "tie_word_embeddings": if canonical_bitnet_model {
+                    serde_json::json!(true)
+                } else {
+                    serde_json::Value::Null
+                },
+                "output_head_tensor": if canonical_bitnet_model {
+                    "tied_token_embeddings"
+                } else {
+                    "output.weight"
+                },
                 "loader_mode": loader_mode,
                 "fallback_loader_used": loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str(),
             },

@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T08:52:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-012"
+event = "ready"
+branch = "codex/intel-258v-platform/CPU258V-012-gamma-rootcause"
+base_sha = "10d52f2163fbb4a48718beb886aef274d966709c"
+summary = "Readied CPU258V-012 to correct BitNet b1.58 CPU model mechanics and receipt output-head metadata."
+
+details = [
+  "The prior CPU258V-011 artifacts showed scalar and AVX2 share the selected bad math_2_plus_2 answer, so CPU258V-012 targets shared model mechanics rather than AVX2 divergence.",
+  "The canonical BitNet b1.58 config uses hidden_act=relu2, rms_norm_eps=1e-5, and tied word embeddings; the local defaults and receipt metadata were stale against those mechanics.",
+  "The strict scalar raw fixture remains a bad answer after the RMSNorm/ReLU2 correction, so this item narrows the next root cause without claiming answer quality, speed, Arc 140V execution, or Intel NPU execution.",
+]

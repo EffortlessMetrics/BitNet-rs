@@ -944,9 +944,9 @@ impl FeedForward {
         }
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
-            && let Ok(silu_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+            && let Ok(activation_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
-            tracing::debug!("MLP ||silu(u)||: {:.6e}", silu_norm);
+            tracing::debug!("MLP ||activation(u)||: {:.6e}", activation_norm);
         }
 
         let up = self.apply_linear(x, &self.up_proj, "up_proj", raw_tensors)?;
@@ -995,11 +995,7 @@ impl FeedForward {
     }
 
     fn apply_activation(&self, input: &Tensor) -> Result<Tensor> {
-        match self.activation_type {
-            ActivationType::Silu => input.silu().map_err(BitNetError::from),
-            ActivationType::Relu2 => input.relu()?.sqr().map_err(BitNetError::from),
-            ActivationType::Gelu => input.gelu_erf().map_err(BitNetError::from),
-        }
+        apply_ffn_activation(input, self.activation_type)
     }
 
     /// Apply linear transformation with QK256 dispatch
@@ -1038,6 +1034,14 @@ impl FeedForward {
         );
         record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
+    }
+}
+
+fn apply_ffn_activation(input: &Tensor, activation_type: ActivationType) -> Result<Tensor> {
+    match activation_type {
+        ActivationType::Silu => input.silu().map_err(BitNetError::from),
+        ActivationType::Relu2 => input.relu()?.sqr().map_err(BitNetError::from),
+        ActivationType::Gelu => input.gelu_erf().map_err(BitNetError::from),
     }
 }
 
@@ -1971,6 +1975,17 @@ mod tests {
         let mean = squared.mean_all()?;
         let rms = mean.sqrt()?.to_scalar::<f32>()? as f64;
         Ok(rms)
+    }
+
+    #[test]
+    fn test_relu2_activation_squares_positive_values() -> Result<()> {
+        let device = Device::Cpu;
+        let input = Tensor::from_slice(&[-2.0f32, -0.5, 0.0, 2.0, 3.0], (5,), &device)?;
+        let output = apply_ffn_activation(&input, ActivationType::Relu2)?;
+        let values = output.to_vec1::<f32>()?;
+
+        assert_eq!(values, vec![0.0, 0.0, 0.0, 4.0, 9.0]);
+        Ok(())
     }
 
     #[test]
