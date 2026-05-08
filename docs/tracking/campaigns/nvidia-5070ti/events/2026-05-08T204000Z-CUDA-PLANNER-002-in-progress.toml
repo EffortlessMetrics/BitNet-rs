@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T20:40:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-002"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-planner-002-capability-spec"
+previous_status = "planned"
+new_status = "in_progress"
+
+notes = [
+  "Started conservative metadata-label mapping for the model-aware CUDA planner contract.",
+  "Scope is planner/test/tracker only; no CUDA kernels, QK256 math, tokenizer, loader, transformer, server, or dense GGUF inference behavior changes.",
+  "Recognized BitNet I2_S/QK256 and dense regular-LLM FP16/BF16 metadata should route separately; unknown or mismatched metadata must remain unsupported in strict CUDA.",
+]
