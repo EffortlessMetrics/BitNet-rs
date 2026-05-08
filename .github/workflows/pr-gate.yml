@@ -58,7 +58,7 @@ jobs:
   pr-gate-success:
     name: PR Gate Success
     runs-on: ubuntu-22.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - name: Determine head SHA
         id: head
@@ -155,10 +155,10 @@ jobs:
           # lanes.)
           optional_jobs=()
 
-          # Poll for up to 25 minutes (50 * 30s). Most PRs take ~10-15
-          # minutes for these lanes. Anything beyond 25 minutes warrants
-          # human intervention.
-          deadline=$((SECONDS + 1500))
+          # Poll for up to 35 minutes (70 * 30s). Most PRs take ~10-15
+          # minutes, but CI Core can trail the feature and policy lanes
+          # when slower platform tests run near the end of the matrix.
+          deadline=$((SECONDS + 2100))
           api="repos/${OWNER}/${REPO}/commits/${HEAD_SHA}/check-runs"
           missing="${required_jobs[*]}"
 
@@ -204,7 +204,7 @@ jobs:
             sleep 30
           done
 
-          echo "❌ Timed out waiting for upstream lanes after 25 minutes"
+          echo "❌ Timed out waiting for upstream lanes after 35 minutes"
           exit 1
 
       - name: Step summary
