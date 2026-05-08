@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T13:49:01Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4076
+merge_sha = "8efc69d37ead27806edcc6807149069bbf83d401"
+branch = "codex/lunar-lake/LNL258V-COMPARE-001"
+actor = "codex"
+summary = "Merged LNL258V-COMPARE-001, adding the same-machine Lunar Lake comparison index."
+
+notes = [
+  "Merged #4076, adding ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json.",
+  "The comparison index links the current 258V CPU reference plate, Arc 140V OpenCL smoke evidence, and Intel NPU OpenVINO llama.cpp GGUF reference blocker evidence without merging lane claims.",
+  "No runtime code, tests, CPU kernels, OpenCL kernels, OpenVINO graph execution, model/tokenizer logic, performance comparison, BitNet accelerator inference, or acceleration claim was added.",
+]
