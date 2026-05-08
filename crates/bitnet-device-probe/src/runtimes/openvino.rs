@@ -276,7 +276,7 @@ impl OpenVinoGpuTinyGraphSmoke {
 }
 
 impl OpenVinoNpuBitnetSubgraphParity {
-    fn unavailable(reason: impl Into<String>) -> Self {
+    fn rmsnorm_unavailable(reason: impl Into<String>) -> Self {
         Self {
             passed: false,
             proof_stage: "runtime_detected".to_owned(),
@@ -295,6 +295,38 @@ impl OpenVinoNpuBitnetSubgraphParity {
             precision: "F16".to_owned(),
             epsilon: 0.00001,
             tolerance: 0.005,
+            max_abs_error: None,
+            mean_abs_error: None,
+            compile_ms: None,
+            first_infer_ms: None,
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: false,
+            bitnet_inference: false,
+            qk256_decode: false,
+            error: Some(reason.into()),
+        }
+    }
+
+    fn linear_projection_unavailable(reason: impl Into<String>) -> Self {
+        Self {
+            passed: false,
+            proof_stage: "runtime_detected".to_owned(),
+            requested_backend: "intel-npu".to_owned(),
+            selected_backend: None,
+            runtime_api: None,
+            runtime_device: None,
+            openvino_version: None,
+            openvino_available_devices: Vec::new(),
+            subgraph_name: "bitnet_linear_projection_f16_1x16x16".to_owned(),
+            bitnet_op: "linear_projection".to_owned(),
+            reference_path: "cpu_numpy_linear_f32".to_owned(),
+            shape_mode: "static".to_owned(),
+            input_shape: vec![1, 16],
+            output_shape: None,
+            precision: "F16".to_owned(),
+            epsilon: 0.0,
+            tolerance: 0.01,
             max_abs_error: None,
             mean_abs_error: None,
             compile_ms: None,
@@ -646,7 +678,98 @@ except Exception as exc:
         }
     }
 
-    OpenVinoNpuBitnetSubgraphParity::unavailable("python openvino subgraph parity unavailable")
+    OpenVinoNpuBitnetSubgraphParity::rmsnorm_unavailable(
+        "python openvino subgraph parity unavailable",
+    )
+}
+
+/// Run a static BitNet-shaped linear projection parity graph on `NPU` through Python.
+pub fn run_openvino_npu_bitnet_linear_projection_parity() -> OpenVinoNpuBitnetSubgraphParity {
+    let script = r#"
+import time
+
+try:
+    import openvino as ov
+    import numpy as np
+    from openvino import opset8 as opset
+
+    core = ov.Core()
+    print("OPENVINO_VERSION=" + str(ov.__version__))
+    for dev in core.available_devices:
+        print("AVAILABLE_DEVICE=" + str(dev))
+
+    if not any(str(dev) == "NPU" or str(dev).startswith("NPU.") for dev in core.available_devices):
+        print("RESULT=fail")
+        print("ERROR=OpenVINO did not report NPU")
+    else:
+        device = "NPU"
+        tolerance = np.float32(0.01)
+        input_data = np.linspace(-1.0, 1.0, 16, dtype=np.float16).reshape(1, 16)
+        weight_data = (np.arange(256, dtype=np.float32).reshape(16, 16) / 255.0 - 0.5).astype(np.float16)
+
+        expected = input_data.astype(np.float32) @ weight_data.astype(np.float32)
+
+        param = opset.parameter([1, 16], dtype=np.float16, name="input")
+        weights = opset.constant(weight_data.astype(np.float16))
+        output = opset.matmul(param, weights, False, False)
+        model = ov.Model([output], [param], "bitnet_linear_projection_f16_1x16x16")
+
+        compile_start = time.perf_counter()
+        compiled = core.compile_model(model, device)
+        compile_ms = (time.perf_counter() - compile_start) * 1000.0
+
+        infer_start = time.perf_counter()
+        result = compiled([input_data])
+        first_infer_ms = (time.perf_counter() - infer_start) * 1000.0
+        actual = np.asarray(next(iter(result.values())))
+
+        diff = np.abs(actual.astype(np.float32) - expected.astype(np.float32))
+        max_abs = float(np.max(diff))
+        mean_abs = float(np.mean(diff))
+        passed = bool(max_abs <= tolerance)
+
+        print("SELECTED_DEVICE=" + device)
+        print("SUBGRAPH_NAME=bitnet_linear_projection_f16_1x16x16")
+        print("BITNET_OP=linear_projection")
+        print("REFERENCE_PATH=cpu_numpy_linear_f32")
+        print("SHAPE_MODE=static")
+        print("PRECISION=F16")
+        print("EPSILON=0.0")
+        print("TOLERANCE=" + str(float(tolerance)))
+        print("INPUT_SHAPE=1,16")
+        print("OUTPUT_SHAPE=" + ",".join(str(dim) for dim in actual.shape))
+        print("COMPILE_MS=" + str(compile_ms))
+        print("FIRST_INFER_MS=" + str(first_infer_ms))
+        print("MAX_ABS_ERROR=" + str(max_abs))
+        print("MEAN_ABS_ERROR=" + str(mean_abs))
+        print("RESULT=" + ("pass" if passed else "fail"))
+        if not passed:
+            print("ERROR=Linear projection output mismatch versus CPU reference output")
+except Exception as exc:
+    print("RESULT=fail")
+    print("ERROR=" + repr(exc))
+"#;
+
+    for python in ["python3", "python"] {
+        if let Ok(stdout) = command_output(python, ["-c", script]) {
+            return parse_openvino_npu_bitnet_linear_projection_parity_output(&stdout);
+        }
+    }
+
+    OpenVinoNpuBitnetSubgraphParity::linear_projection_unavailable(
+        "python openvino linear projection parity unavailable",
+    )
+}
+
+pub(crate) fn parse_openvino_npu_bitnet_linear_projection_parity_output(
+    output: &str,
+) -> OpenVinoNpuBitnetSubgraphParity {
+    parse_openvino_npu_bitnet_subgraph_parity_output_with_default(
+        output,
+        OpenVinoNpuBitnetSubgraphParity::linear_projection_unavailable(
+            "OpenVINO NPU BitNet linear projection parity did not pass",
+        ),
+    )
 }
 
 pub(crate) fn parse_openvino_line_output(output: &str) -> OpenVinoProbe {
@@ -808,9 +931,18 @@ pub(crate) fn parse_openvino_gpu_tiny_graph_smoke_output(
 pub(crate) fn parse_openvino_npu_bitnet_subgraph_parity_output(
     output: &str,
 ) -> OpenVinoNpuBitnetSubgraphParity {
-    let mut parity = OpenVinoNpuBitnetSubgraphParity::unavailable(
-        "OpenVINO NPU BitNet subgraph parity did not pass",
-    );
+    parse_openvino_npu_bitnet_subgraph_parity_output_with_default(
+        output,
+        OpenVinoNpuBitnetSubgraphParity::rmsnorm_unavailable(
+            "OpenVINO NPU BitNet subgraph parity did not pass",
+        ),
+    )
+}
+
+fn parse_openvino_npu_bitnet_subgraph_parity_output_with_default(
+    output: &str,
+    mut parity: OpenVinoNpuBitnetSubgraphParity,
+) -> OpenVinoNpuBitnetSubgraphParity {
     parity.openvino_available_devices.clear();
 
     for line in output.lines().map(str::trim).filter(|line| !line.is_empty()) {
@@ -943,6 +1075,7 @@ fn upsert_property_value(device: &mut OpenVinoDeviceProbe, property: &str, value
 mod tests {
     use super::{
         parse_openvino_gpu_tiny_graph_smoke_output, parse_openvino_line_output,
+        parse_openvino_npu_bitnet_linear_projection_parity_output,
         parse_openvino_npu_bitnet_subgraph_parity_output,
         parse_openvino_npu_tiny_graph_smoke_output,
     };
@@ -1179,6 +1312,52 @@ RESULT=pass
         assert_eq!(parity.output_shape.as_deref(), Some(&[1, 16][..]));
         assert_eq!(parity.max_abs_error, Some(0.0009));
         assert_eq!(parity.mean_abs_error, Some(0.0002));
+        assert!(!parity.fallback_used);
+        assert!(!parity.cpu_fallback_allowed);
+        assert!(parity.graph_execution);
+        assert!(!parity.bitnet_inference);
+        assert!(!parity.qk256_decode);
+        assert!(parity.error.is_none());
+    }
+
+    #[test]
+    fn parses_openvino_npu_bitnet_linear_projection_parity_pass() {
+        let output = r"
+OPENVINO_VERSION=2026.1
+AVAILABLE_DEVICE=CPU
+AVAILABLE_DEVICE=NPU
+SELECTED_DEVICE=NPU
+SUBGRAPH_NAME=bitnet_linear_projection_f16_1x16x16
+BITNET_OP=linear_projection
+REFERENCE_PATH=cpu_numpy_linear_f32
+SHAPE_MODE=static
+PRECISION=F16
+EPSILON=0.0
+TOLERANCE=0.01
+INPUT_SHAPE=1,16
+OUTPUT_SHAPE=1,16
+COMPILE_MS=15.5
+FIRST_INFER_MS=1.75
+MAX_ABS_ERROR=0.001
+MEAN_ABS_ERROR=0.0003
+RESULT=pass
+";
+
+        let parity = parse_openvino_npu_bitnet_linear_projection_parity_output(output);
+
+        assert!(parity.passed);
+        assert_eq!(parity.proof_stage, "parity_tested");
+        assert_eq!(parity.selected_backend.as_deref(), Some("intel-npu-openvino"));
+        assert_eq!(parity.runtime_api.as_deref(), Some("openvino"));
+        assert_eq!(parity.runtime_device.as_deref(), Some("NPU"));
+        assert_eq!(parity.subgraph_name, "bitnet_linear_projection_f16_1x16x16");
+        assert_eq!(parity.bitnet_op, "linear_projection");
+        assert_eq!(parity.reference_path, "cpu_numpy_linear_f32");
+        assert_eq!(parity.input_shape, [1, 16]);
+        assert_eq!(parity.output_shape.as_deref(), Some(&[1, 16][..]));
+        assert_eq!(parity.epsilon, 0.0);
+        assert_eq!(parity.max_abs_error, Some(0.001));
+        assert_eq!(parity.mean_abs_error, Some(0.0003));
         assert!(!parity.fallback_used);
         assert!(!parity.cpu_fallback_allowed);
         assert!(parity.graph_execution);

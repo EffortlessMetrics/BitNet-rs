@@ -662,6 +662,17 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Run static BitNet linear-projection subgraph parity on OpenVINO NPU
+    IntelNpuBitnetLinearSubgraph {
+        /// Require selected subgraph parity to pass
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// Output JSON parity receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Run a tiny static OpenVINO GPU.0 graph smoke for Arc 140V
     #[command(name = "intel-arc-140v-openvino-gpu-smoke")]
     IntelArc140vOpenvinoGpuSmoke {
@@ -1089,6 +1100,9 @@ async fn async_main() -> Result<()> {
         }
         Some(Commands::IntelNpuBitnetSubgraph { strict, json_out }) => {
             intel_npu::handle_bitnet_subgraph_command(strict, json_out).await
+        }
+        Some(Commands::IntelNpuBitnetLinearSubgraph { strict, json_out }) => {
+            intel_npu::handle_bitnet_linear_subgraph_command(strict, json_out).await
         }
         Some(Commands::IntelArc140vOpenvinoGpuSmoke { strict, json_out }) => {
             intel_arc::handle_openvino_gpu_smoke_command(strict, json_out).await
