@@ -1,0 +1,874 @@
+{
+  "artifact_kind": "slm_cpu_answer_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu"
+  },
+  "cases": [
+    {
+      "answer": "łitosųطال",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "math_2_plus_2",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "output.weight",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": null,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 32
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_text": "What is 2+2? Answer with only the number.",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 32,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 32,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [
+          "gate_exact_trimmed"
+        ],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "What is 2+2? Answer with only the number.",
+      "run_receipt_path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-answer-corpus-runs\\math_2_plus_2.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          4594,
+          25593,
+          145051,
+          126490
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          3838,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          21806,
+          448,
+          1172,
+          279,
+          1372,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "unknown",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          4594,
+          25593,
+          145051,
+          126490
+        ],
+        "ids": [
+          4594,
+          25593,
+          145051,
+          126490
+        ],
+        "prompt": 32,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          3838,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          21806,
+          448,
+          1172,
+          279,
+          1372,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ],
+        "total": 36
+      }
+    },
+    {
+      "answer": "iauxmaiauxámara işaret��在此较",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "capital_france",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "output.weight",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": null,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 31
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_text": "What is the capital of France? Answer with one word.",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 31,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 31,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 7,
+        "failed_rules": [
+          "replacement_chars",
+          "gate_contains_any"
+        ],
+        "gate_kind": "contains_any",
+        "generated_tokens": 8,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": false,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "What is the capital of France? Answer with one word.",
+      "run_receipt_path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-answer-corpus-runs\\capital_france.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          82291,
+          1728,
+          82291,
+          84001,
+          138296,
+          36097,
+          102252,
+          99260
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          3838,
+          374,
+          279,
+          6722,
+          315,
+          9625,
+          30,
+          21806,
+          448,
+          825,
+          3409,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "unknown",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 8,
+        "generated_ids": [
+          82291,
+          1728,
+          82291,
+          84001,
+          138296,
+          36097,
+          102252,
+          99260
+        ],
+        "ids": [
+          82291,
+          1728,
+          82291,
+          84001,
+          138296,
+          36097,
+          102252,
+          99260
+        ],
+        "prompt": 31,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          3838,
+          374,
+          279,
+          6722,
+          315,
+          9625,
+          30,
+          21806,
+          448,
+          825,
+          3409,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ],
+        "total": 39
+      }
+    },
+    {
+      "answer": "�빠 circuits龄耐.Checkedá<",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "repeat_colors",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "output.weight",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": null,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 25
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_text": "Repeat exactly: red blue green",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 25,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 25,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 8,
+        "failed_rules": [
+          "replacement_chars",
+          "gate_contains_any"
+        ],
+        "gate_kind": "contains_any",
+        "generated_tokens": 8,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": false,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "Repeat exactly: red blue green",
+      "run_receipt_path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-answer-corpus-runs\\repeat_colors.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          136,
+          134246,
+          45021,
+          100820,
+          100796,
+          17037,
+          1953,
+          27
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          38718,
+          6896,
+          25,
+          2518,
+          6303,
+          6176,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "unknown",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 8,
+        "generated_ids": [
+          136,
+          134246,
+          45021,
+          100820,
+          100796,
+          17037,
+          1953,
+          27
+        ],
+        "ids": [
+          136,
+          134246,
+          45021,
+          100820,
+          100796,
+          17037,
+          1953,
+          27
+        ],
+        "prompt": 25,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          38718,
+          6896,
+          25,
+          2518,
+          6303,
+          6176,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ],
+        "total": 33
+      }
+    },
+    {
+      "answer": "iedoهل☆über",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "say_ok",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "output.weight",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": null,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 23
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_text": "Say exactly: OK",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 23,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 23,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [
+          "gate_exact_trimmed"
+        ],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "Say exactly: OK",
+      "run_receipt_path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-answer-corpus-runs\\say_ok.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          87051,
+          125750,
+          46138,
+          48985
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          45764,
+          6896,
+          25,
+          10402,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "unknown",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          87051,
+          125750,
+          46138,
+          48985
+        ],
+        "ids": [
+          87051,
+          125750,
+          46138,
+          48985
+        ],
+        "prompt": 23,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          45764,
+          6896,
+          25,
+          10402,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ],
+        "total": 27
+      }
+    },
+    {
+      "answer": " TV�**chen",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "id": "yes_no_water",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-avx2-reference"
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "model": {
+        "architecture": "qwen3",
+        "family": "qwen",
+        "file": "Qwen3-0.6B-Q8_0.gguf",
+        "output_head_tensor": "output.weight",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen3-0.6B-GGUF",
+        "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "tie_word_embeddings": null,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 28
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_text": "Answer yes or no: is water wet?",
+        "template_family": "qwen"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 28,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 28,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [
+          "replacement_chars",
+          "gate_starts_with_any"
+        ],
+        "gate_kind": "starts_with_any",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": false,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true
+      },
+      "question": "Answer yes or no: is water wet?",
+      "run_receipt_path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-answer-corpus-runs\\yes_no_water.json",
+      "status": "quality_failed",
+      "token_ids": {
+        "generated": [
+          5883,
+          97,
+          334,
+          7522
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          16141,
+          9834,
+          476,
+          902,
+          25,
+          374,
+          3015,
+          14401,
+          30,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "unknown",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          5883,
+          97,
+          334,
+          7522
+        ],
+        "ids": [
+          5883,
+          97,
+          334,
+          7522
+        ],
+        "prompt": 28,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          16141,
+          9834,
+          476,
+          902,
+          25,
+          374,
+          3015,
+          14401,
+          30,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ],
+        "total": 32
+      }
+    }
+  ],
+  "claim_boundary": {
+    "broad_performance_claimed": false,
+    "coherent_answer_claimed": false,
+    "diagnostic_only_until_answer_ready_artifact": true,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_answer_path": true
+  },
+  "corpus": {
+    "case_count": 5,
+    "description": "Tiny deterministic Qwen3 dense SLM answer-readiness corpus for strict CPU receipts.",
+    "name": "qwen3-0-6b-strict-slm-answer-corpus-v1",
+    "path": "ci\\quality\\slm-answer-corpus.yaml"
+  },
+  "generation": {
+    "default_max_new_tokens": 8,
+    "deterministic": true,
+    "logits_dump_steps": null,
+    "logits_topk": null,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 180,
+    "requested_cpu_kernel": "avx2",
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "architecture": "qwen3",
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "loader_mode": "real_gguf",
+    "path": "models\\slm\\Qwen3-0.6B-Q8_0.gguf",
+    "quant_format": "Q8_0",
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "tokenizer": "gguf_metadata",
+    "tokenizer_path": null
+  },
+  "prompt_template": {
+    "family": "qwen"
+  },
+  "quality_summary": {
+    "failed": 5,
+    "not_run": 0,
+    "passed": 0,
+    "timeout": 0,
+    "total": 5
+  },
+  "schema_version": "1.0.0",
+  "speedup_claim": false,
+  "timestamp": "2026-05-08T01:16:36.964787200+00:00"
+}

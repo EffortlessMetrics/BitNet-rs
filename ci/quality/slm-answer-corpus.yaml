@@ -1,0 +1,61 @@
+schema: 1
+artifact_kind: slm_answer_corpus
+name: qwen3-0-6b-strict-slm-answer-corpus-v1
+description: Tiny deterministic Qwen3 dense SLM answer-readiness corpus for strict CPU receipts.
+model:
+  repo: Qwen/Qwen3-0.6B-GGUF
+  file: Qwen3-0.6B-Q8_0.gguf
+  sha256: 9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031
+  family: qwen
+  architecture: qwen3
+  quant_format: Q8_0
+defaults:
+  prompt_template: qwen
+  max_new_tokens: 8
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 420
+  min_generated_tokens: 1
+cases:
+  - id: math_2_plus_2
+    question: "What is 2+2? Answer with only the number."
+    max_new_tokens: 4
+    gate:
+      kind: exact_trimmed
+      expected: "4"
+
+  - id: capital_france
+    question: "What is the capital of France? Answer with one word."
+    max_new_tokens: 8
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"
+
+  - id: repeat_colors
+    question: "Repeat exactly: red blue green"
+    max_new_tokens: 8
+    gate:
+      kind: contains_any
+      contains_any:
+        - "red blue green"
+        - "Red blue green"
+
+  - id: say_ok
+    question: "Say exactly: OK"
+    max_new_tokens: 4
+    gate:
+      kind: exact_trimmed
+      expected: "OK"
+
+  - id: yes_no_water
+    question: "Answer yes or no: is water wet?"
+    max_new_tokens: 4
+    gate:
+      kind: starts_with_any
+      starts_with_any:
+        - "yes"
+        - "no"
