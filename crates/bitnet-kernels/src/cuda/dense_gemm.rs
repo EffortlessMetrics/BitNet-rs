@@ -1,0 +1,715 @@
+//! Dense regular-LLM CUDA GEMM smoke fixture.
+//!
+//! This module is deliberately narrower than the existing dense matmul
+//! scaffold. It provides the first fallback-free CUDA FP16 GEMM smoke/parity
+//! fixture for the `dense_regular_llm_cuda` lane. It is not a BitNet packed
+//! I2_S/QK256 proof and it is not a general dense GGUF inference path.
+
+use bitnet_common::{KernelError, Result};
+
+#[cfg(feature = "cuda")]
+use cudarc::driver::{CudaContext, CudaSlice, LaunchConfig, PushKernelArg};
+#[cfg(feature = "cuda")]
+use cudarc::nvrtc::Ptx;
+
+use super::half_precision::f32_to_f16_bits;
+use super::matmul::{MatmulConfig, MatmulDtype, matmul_f16_cpu};
+
+/// Kernel ID recorded by dense regular-LLM CUDA GEMM receipts.
+pub const CUDA_DENSE_F16_GEMM_KERNEL_ID: &str = "dense_f16_gemm_cuda";
+
+/// Fixture ID for the first dense regular-LLM CUDA GEMM parity smoke.
+pub const CUDA_DENSE_F16_GEMM_FIXTURE_ID: &str = "dense_f16_gemm_m2_n3_k4";
+
+/// CPU reference backend recorded by dense CUDA parity receipts.
+pub const CUDA_DENSE_GEMM_REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+
+/// RTX 5070 Ti CUDA backend recorded by dense CUDA parity receipts.
+pub const CUDA_DENSE_GEMM_TARGET_BACKEND: &str = "nvidia-rtx-5070-ti-cuda";
+
+/// Tolerance for the deterministic FP16 smoke fixture.
+pub const CUDA_DENSE_F16_GEMM_TOLERANCE: f32 = 0.002;
+
+#[cfg(feature = "cuda")]
+const CUDA_DENSE_F16_GEMM_PTX: &str = r#"
+.version 8.0
+.target sm_80
+.address_size 64
+
+.visible .entry dense_f16_gemm_cuda(
+    .param .u64 dense_f16_gemm_cuda_param_0,
+    .param .u64 dense_f16_gemm_cuda_param_1,
+    .param .u64 dense_f16_gemm_cuda_param_2,
+    .param .u32 dense_f16_gemm_cuda_param_3,
+    .param .u32 dense_f16_gemm_cuda_param_4,
+    .param .u32 dense_f16_gemm_cuda_param_5
+)
+{
+    .reg .pred  %p<2>;
+    .reg .b16   %h<3>;
+    .reg .b32   %r<18>;
+    .reg .b64   %rd<12>;
+    .reg .f32   %f<4>;
+
+    ld.param.u64    %rd1, [dense_f16_gemm_cuda_param_0];
+    ld.param.u64    %rd2, [dense_f16_gemm_cuda_param_1];
+    ld.param.u64    %rd3, [dense_f16_gemm_cuda_param_2];
+    ld.param.u32    %r1, [dense_f16_gemm_cuda_param_3];
+    ld.param.u32    %r2, [dense_f16_gemm_cuda_param_4];
+    ld.param.u32    %r3, [dense_f16_gemm_cuda_param_5];
+
+    mov.u32         %r4, %ctaid.x;
+    mov.u32         %r5, %ntid.x;
+    mov.u32         %r6, %tid.x;
+    mad.lo.s32      %r7, %r4, %r5, %r6;
+    mul.lo.s32      %r8, %r1, %r2;
+    setp.ge.s32     %p1, %r7, %r8;
+    @%p1 bra        DONE;
+
+    div.u32         %r9, %r7, %r2;
+    rem.u32         %r10, %r7, %r2;
+    mov.f32         %f1, 0f00000000;
+    mov.u32         %r11, 0;
+
+LOOP:
+    setp.ge.s32     %p1, %r11, %r3;
+    @%p1 bra        STORE;
+    mad.lo.s32      %r12, %r9, %r3, %r11;
+    mad.lo.s32      %r13, %r11, %r2, %r10;
+    mul.wide.u32    %rd4, %r12, 2;
+    add.s64         %rd5, %rd1, %rd4;
+    mul.wide.u32    %rd6, %r13, 2;
+    add.s64         %rd7, %rd2, %rd6;
+    ld.global.u16   %h1, [%rd5];
+    ld.global.u16   %h2, [%rd7];
+    cvt.f32.f16     %f2, %h1;
+    cvt.f32.f16     %f3, %h2;
+    fma.rn.f32      %f1, %f2, %f3, %f1;
+    add.s32         %r11, %r11, 1;
+    bra             LOOP;
+
+STORE:
+    mul.wide.u32    %rd8, %r7, 4;
+    add.s64         %rd9, %rd3, %rd8;
+    st.global.f32   [%rd9], %f1;
+
+DONE:
+    ret;
+}
+"#;
+
+/// CUDA execution counters for the dense FP16 GEMM smoke fixture.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CudaDenseGemmStats {
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Number of CUDA kernel invocations.
+    pub invocations: u64,
+    /// CPU fallback invocations under strict CUDA.
+    pub fallback_invocations: u64,
+    /// Host-to-device bytes copied for the fixture.
+    pub host_to_device_bytes: u64,
+    /// Device-to-host bytes copied for the fixture.
+    pub device_to_host_bytes: u64,
+    /// CUDA kernel launches.
+    pub kernel_launches: u64,
+    /// Optional measured kernel time.
+    pub kernel_time_ms: Option<f64>,
+}
+
+/// Dense CUDA GEMM parity result against the CPU reference.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CudaDenseGemmParity {
+    /// Fixture identifier.
+    pub fixture_id: &'static str,
+    /// CPU reference backend.
+    pub reference_backend: &'static str,
+    /// CUDA target backend.
+    pub target_backend: &'static str,
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Maximum absolute error against the CPU reference.
+    pub max_abs_error: f32,
+    /// Mean absolute error against the CPU reference.
+    pub mean_abs_error: f32,
+    /// Fixture tolerance.
+    pub tolerance: f32,
+    /// Whether the fixture passed tolerance.
+    pub passed: bool,
+    /// CUDA execution counters.
+    pub stats: CudaDenseGemmStats,
+}
+
+/// Deterministic dense FP16 GEMM smoke fixture.
+pub fn dense_f16_gemm_fixture() -> Result<(Vec<u16>, Vec<u16>, MatmulConfig)> {
+    let a_f32 = [1.0, -2.0, 0.5, 3.0, 0.0, 4.0, -1.0, 2.0];
+    let b_f32 = [1.0, 0.5, -1.0, 2.0, -2.0, 0.0, -0.5, 1.0, 2.0, 3.0, 0.25, -1.0];
+    let a = a_f32.iter().map(|value| f32_to_f16_bits(*value)).collect::<Vec<_>>();
+    let b = b_f32.iter().map(|value| f32_to_f16_bits(*value)).collect::<Vec<_>>();
+    let cfg = MatmulConfig::for_shape(2, 3, 4)?.with_dtype(MatmulDtype::F16);
+    Ok((a, b, cfg))
+}
+
+/// CPU reference output for the deterministic dense FP16 GEMM smoke fixture.
+pub fn dense_f16_gemm_cpu_reference() -> Result<Vec<f32>> {
+    let (a, b, cfg) = dense_f16_gemm_fixture()?;
+    let mut out = vec![0.0f32; cfg.m * cfg.n];
+    matmul_f16_cpu(&a, &b, &mut out, &cfg)?;
+    Ok(out)
+}
+
+/// Run the deterministic dense FP16 GEMM smoke fixture on CUDA and compare it
+/// against the CPU reference.
+///
+/// # Errors
+///
+/// Returns an error if CUDA/NVRTC is unavailable, the fixture cannot launch, or
+/// the fixture buffers are invalid.
+pub fn run_dense_f16_gemm_cuda_parity(device_index: usize) -> Result<CudaDenseGemmParity> {
+    let (a, b, cfg) = dense_f16_gemm_fixture()?;
+    let expected = dense_f16_gemm_cpu_reference()?;
+    let mut actual = vec![0.0f32; cfg.m * cfg.n];
+    let stats = launch_dense_f16_gemm_cuda(device_index, &a, &b, &mut actual, &cfg)?;
+    let (max_abs_error, mean_abs_error) = compare_outputs(&expected, &actual)?;
+    Ok(CudaDenseGemmParity {
+        fixture_id: CUDA_DENSE_F16_GEMM_FIXTURE_ID,
+        reference_backend: CUDA_DENSE_GEMM_REFERENCE_BACKEND,
+        target_backend: CUDA_DENSE_GEMM_TARGET_BACKEND,
+        kernel_id: CUDA_DENSE_F16_GEMM_KERNEL_ID,
+        max_abs_error,
+        mean_abs_error,
+        tolerance: CUDA_DENSE_F16_GEMM_TOLERANCE,
+        passed: max_abs_error <= CUDA_DENSE_F16_GEMM_TOLERANCE,
+        stats,
+    })
+}
+
+/// Launch the dense FP16 GEMM CUDA smoke kernel.
+///
+/// This is a strict CUDA fixture: unsupported shapes return an error instead
+/// of falling back to CPU.
+pub fn launch_dense_f16_gemm_cuda(
+    device_index: usize,
+    a: &[u16],
+    b: &[u16],
+    output: &mut [f32],
+    config: &MatmulConfig,
+) -> Result<CudaDenseGemmStats> {
+    validate_dense_f16_gemm_inputs(a, b, output, config)?;
+
+    #[cfg(feature = "cuda")]
+    {
+        return launch_dense_f16_gemm_cuda_impl(device_index, a, b, output, config);
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = device_index;
+        Err(KernelError::DeviceUnavailable {
+            reason: "CUDA dense FP16 GEMM requires the cuda feature".to_string(),
+        }
+        .into())
+    }
+}
+
+fn validate_dense_f16_gemm_inputs(
+    a: &[u16],
+    b: &[u16],
+    output: &[f32],
+    config: &MatmulConfig,
+) -> Result<()> {
+    if config.dtype != MatmulDtype::F16 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense CUDA GEMM smoke fixture requires MatmulDtype::F16".into(),
+        }
+        .into());
+    }
+    if config.batch_size != 1 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense CUDA GEMM smoke fixture currently supports batch_size=1".into(),
+        }
+        .into());
+    }
+    if config.transpose_a || config.transpose_b {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense CUDA GEMM smoke fixture currently requires non-transposed operands"
+                .into(),
+        }
+        .into());
+    }
+    let a_required = checked_mul(config.m, config.k, "A")?;
+    let b_required = checked_mul(config.k, config.n, "B")?;
+    let out_required = checked_mul(config.m, config.n, "output")?;
+    if a.len() < a_required {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense CUDA GEMM A buffer too short: expected >= {a_required}, got {}",
+                a.len()
+            ),
+        }
+        .into());
+    }
+    if b.len() < b_required {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense CUDA GEMM B buffer too short: expected >= {b_required}, got {}",
+                b.len()
+            ),
+        }
+        .into());
+    }
+    if output.len() < out_required {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense CUDA GEMM output buffer too short: expected >= {out_required}, got {}",
+                output.len()
+            ),
+        }
+        .into());
+    }
+    validate_i32_arg(config.m, "m")?;
+    validate_i32_arg(config.n, "n")?;
+    validate_i32_arg(config.k, "k")?;
+    Ok(())
+}
+
+#[cfg(feature = "cuda")]
+fn launch_dense_f16_gemm_cuda_impl(
+    device_index: usize,
+    a: &[u16],
+    b: &[u16],
+    output: &mut [f32],
+    config: &MatmulConfig,
+) -> Result<CudaDenseGemmStats> {
+    let ctx = CudaContext::new(device_index).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to create CUDA context for dense FP16 GEMM: {err:?}"),
+    })?;
+    let stream = ctx.default_stream();
+    let ptx = compile_dense_f16_gemm_ptx()?;
+    let module = ctx.load_module(ptx).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to load dense FP16 GEMM CUDA module: {err:?}"),
+    })?;
+    let function = module.load_function(CUDA_DENSE_F16_GEMM_KERNEL_ID).map_err(|err| {
+        KernelError::GpuError {
+            reason: format!("failed to load dense FP16 GEMM CUDA kernel: {err:?}"),
+        }
+    })?;
+
+    let a_len = checked_mul(config.m, config.k, "A")?;
+    let b_len = checked_mul(config.k, config.n, "B")?;
+    let output_len = checked_mul(config.m, config.n, "output")?;
+
+    let a_dev = stream.memcpy_stod(&a[..a_len]).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to copy dense FP16 GEMM A to device: {err:?}"),
+    })?;
+    let b_dev = stream.memcpy_stod(&b[..b_len]).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to copy dense FP16 GEMM B to device: {err:?}"),
+    })?;
+    let mut output_dev: CudaSlice<f32> =
+        stream.alloc_zeros(output_len).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to allocate dense FP16 GEMM output on device: {err:?}"),
+        })?;
+
+    let threads_per_block = 128u32;
+    let launch_config = LaunchConfig {
+        grid_dim: ((output_len as u32).div_ceil(threads_per_block), 1, 1),
+        block_dim: (threads_per_block, 1, 1),
+        shared_mem_bytes: 0,
+    };
+    let mut builder = stream.launch_builder(&function);
+    builder.arg(&a_dev);
+    builder.arg(&b_dev);
+    builder.arg(&mut output_dev);
+    let m_arg = i32::try_from(config.m).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense CUDA GEMM m exceeds i32: {}", config.m),
+    })?;
+    let n_arg = i32::try_from(config.n).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense CUDA GEMM n exceeds i32: {}", config.n),
+    })?;
+    let k_arg = i32::try_from(config.k).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense CUDA GEMM k exceeds i32: {}", config.k),
+    })?;
+    builder.arg(&m_arg);
+    builder.arg(&n_arg);
+    builder.arg(&k_arg);
+
+    unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
+        reason: format!("failed to launch dense FP16 GEMM CUDA kernel: {err:?}"),
+    })?;
+    stream.synchronize().map_err(|err| KernelError::GpuError {
+        reason: format!("failed to synchronize dense FP16 GEMM CUDA kernel: {err:?}"),
+    })?;
+
+    let output_host: Vec<f32> =
+        stream.memcpy_dtov(&output_dev).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to copy dense FP16 GEMM output from device: {err:?}"),
+        })?;
+    output[..output_len].copy_from_slice(&output_host[..output_len]);
+
+    Ok(CudaDenseGemmStats {
+        kernel_id: CUDA_DENSE_F16_GEMM_KERNEL_ID,
+        invocations: 1,
+        fallback_invocations: 0,
+        host_to_device_bytes: bytes_for::<u16>(a_len + b_len)?,
+        device_to_host_bytes: bytes_for::<f32>(output_len)?,
+        kernel_launches: 1,
+        kernel_time_ms: None,
+    })
+}
+
+#[cfg(feature = "cuda")]
+fn compile_dense_f16_gemm_ptx() -> Result<Ptx> {
+    Ok(Ptx::from_src(CUDA_DENSE_F16_GEMM_PTX))
+}
+
+fn compare_outputs(expected: &[f32], actual: &[f32]) -> Result<(f32, f32)> {
+    if expected.len() != actual.len() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense CUDA GEMM parity length mismatch: expected {}, got {}",
+                expected.len(),
+                actual.len()
+            ),
+        }
+        .into());
+    }
+    let mut max_abs = 0.0f32;
+    let mut sum_abs = 0.0f32;
+    for (expected, actual) in expected.iter().zip(actual) {
+        let abs = (expected - actual).abs();
+        max_abs = max_abs.max(abs);
+        sum_abs += abs;
+    }
+    Ok((max_abs, sum_abs / expected.len() as f32))
+}
+
+fn checked_mul(lhs: usize, rhs: usize, label: &str) -> Result<usize> {
+    lhs.checked_mul(rhs).ok_or_else(|| {
+        KernelError::InvalidArguments {
+            reason: format!("dense CUDA GEMM {label} length overflow: {lhs} * {rhs}"),
+        }
+        .into()
+    })
+}
+
+#[cfg(feature = "cuda")]
+fn bytes_for<T>(count: usize) -> Result<u64> {
+    count
+        .checked_mul(std::mem::size_of::<T>())
+        .and_then(|bytes| u64::try_from(bytes).ok())
+        .ok_or_else(|| {
+            KernelError::InvalidArguments {
+                reason: format!("dense CUDA GEMM byte count overflow for {count} elements"),
+            }
+            .into()
+        })
+}
+
+fn validate_i32_arg(value: usize, label: &str) -> Result<()> {
+    i32::try_from(value).map(|_| ()).map_err(|_| {
+        KernelError::InvalidArguments {
+            reason: format!("dense CUDA GEMM {label} exceeds i32: {value}"),
+        }
+        .into()
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{Value, json};
+    use std::error::Error;
+    use std::io;
+    use std::path::{Path, PathBuf};
+
+    const RUN_ENV: &str = "BITNET_RUN_RTX5070TI_DENSE_CUDA_GEMM";
+    const RECEIPT_ENV: &str = "BITNET_RTX5070TI_DENSE_CUDA_GEMM_RECEIPT";
+    const ARTIFACT_PATH_ENV: &str = "BITNET_RTX5070TI_DENSE_CUDA_GEMM_ARTIFACT_PATH";
+    const TIMESTAMP_ENV: &str = "BITNET_RTX5070TI_DENSE_CUDA_GEMM_TIMESTAMP_UTC";
+    const DEVICE_INDEX_ENV: &str = "BITNET_RTX5070TI_CUDA_DEVICE_INDEX";
+    const MACHINE_ID: &str = "windows-9950x3d-rtx5070ti";
+    const HARDWARE_LANE: &str = "nvidia-rtx-5070-ti-cuda";
+
+    #[test]
+    fn dense_f16_fixture_cpu_reference_is_stable() {
+        let reference = dense_f16_gemm_cpu_reference().unwrap();
+        assert_eq!(reference.len(), 6);
+        assert_eq!(reference, vec![5.75, 5.75, -3.0, 14.5, -8.5, -4.0]);
+    }
+
+    #[test]
+    fn dense_f16_launch_rejects_non_f16_dtype_before_cuda() {
+        let (a, b, mut cfg) = dense_f16_gemm_fixture().unwrap();
+        cfg.dtype = MatmulDtype::F32;
+        let mut output = vec![0.0; cfg.m * cfg.n];
+
+        let err = launch_dense_f16_gemm_cuda(0, &a, &b, &mut output, &cfg).unwrap_err();
+
+        assert!(err.to_string().contains("MatmulDtype::F16"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_f16_launch_rejects_hidden_batch_before_cuda() {
+        let (a, b, mut cfg) = dense_f16_gemm_fixture().unwrap();
+        cfg.batch_size = 2;
+        let mut output = vec![0.0; cfg.m * cfg.n];
+
+        let err = launch_dense_f16_gemm_cuda(0, &a, &b, &mut output, &cfg).unwrap_err();
+
+        assert!(err.to_string().contains("batch_size=1"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_f16_launch_rejects_transpose_before_cuda() {
+        let (a, b, mut cfg) = dense_f16_gemm_fixture().unwrap();
+        cfg.transpose_a = true;
+        let mut output = vec![0.0; cfg.m * cfg.n];
+
+        let err = launch_dense_f16_gemm_cuda(0, &a, &b, &mut output, &cfg).unwrap_err();
+
+        assert!(err.to_string().contains("non-transposed"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_f16_gemm_receipt_contract_preserves_dense_boundary() {
+        let parity = synthetic_passed_parity();
+        let receipt = dense_gemm_receipt_json(
+            &parity,
+            None,
+            "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-parity.json",
+            "2026-05-08T00:00:00Z",
+        );
+
+        assert_eq!(receipt["artifact_kind"], "dense_regular_llm_cuda");
+        assert_eq!(receipt["requested_backend"], HARDWARE_LANE);
+        assert_eq!(receipt["selected_backend"], HARDWARE_LANE);
+        assert_eq!(receipt["runtime_api"], "cuda");
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["speedup_claim"], false);
+        assert_eq!(receipt["execution_path"]["model_class"], "dense_regular_llm");
+        assert_eq!(receipt["execution_path"]["bitnet_packed_kernel_proof"], false);
+        assert_eq!(receipt["execution_path"]["qk256_proof"], false);
+        assert_eq!(receipt["kernel_stats"][0]["kernel_id"], CUDA_DENSE_F16_GEMM_KERNEL_ID);
+        assert_eq!(receipt["kernel_stats"][0]["fallback_invocations"], 0);
+        assert_eq!(receipt["parity"]["reference_backend"], CUDA_DENSE_GEMM_REFERENCE_BACKEND);
+        assert_eq!(receipt["parity"]["target_backend"], CUDA_DENSE_GEMM_TARGET_BACKEND);
+        assert_eq!(receipt["parity"]["fixture_id"], CUDA_DENSE_F16_GEMM_FIXTURE_ID);
+        assert_eq!(receipt["parity"]["passed"], true);
+        assert_eq!(receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(receipt["claim_boundary"]["speedup_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["full_cuda_residency_claimed"], false);
+    }
+
+    #[test]
+    fn live_rtx5070ti_dense_f16_cuda_gemm_matches_cpu_reference_when_enabled()
+    -> std::result::Result<(), Box<dyn Error>> {
+        if std::env::var(RUN_ENV).as_deref() != Ok("1") {
+            eprintln!("skipping live dense CUDA GEMM parity; set {RUN_ENV}=1 to run it");
+            return Ok(());
+        }
+
+        let device_index = selected_device_index()?;
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(device_index));
+        if !probe.available {
+            return Err(io_error(format!(
+                "CUDA-DENSE-002 requires CUDA probe success: {:?}",
+                probe.failure_reason
+            )));
+        }
+
+        let parity = run_dense_f16_gemm_cuda_parity(device_index)?;
+        if !is_rtx5070ti_device_name(probe.selected_device_name.as_deref().unwrap_or_default()) {
+            return Err(io_error(format!(
+                "CUDA-DENSE-002 requires NVIDIA GeForce RTX 5070 Ti; found '{}'",
+                probe.selected_device_name.as_deref().unwrap_or("unknown")
+            )));
+        }
+
+        let artifact_path = std::env::var(ARTIFACT_PATH_ENV).unwrap_or_else(|_| {
+            "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-parity.json"
+                .to_string()
+        });
+        let timestamp_utc =
+            std::env::var(TIMESTAMP_ENV).unwrap_or_else(|_| "2026-05-08T00:00:00Z".to_string());
+        let receipt_json =
+            dense_gemm_receipt_json(&parity, Some(&probe), &artifact_path, &timestamp_utc);
+
+        if let Ok(path) = std::env::var(RECEIPT_ENV) {
+            write_json_file(&path, &receipt_json)?;
+        }
+        println!("{}", serde_json::to_string_pretty(&receipt_json)?);
+
+        if !parity.passed {
+            return Err(io_error(format!(
+                "CUDA-DENSE-002 dense FP16 GEMM parity failed: max_abs_error={} tolerance={}",
+                parity.max_abs_error, parity.tolerance
+            )));
+        }
+
+        Ok(())
+    }
+
+    fn synthetic_passed_parity() -> CudaDenseGemmParity {
+        CudaDenseGemmParity {
+            fixture_id: CUDA_DENSE_F16_GEMM_FIXTURE_ID,
+            reference_backend: CUDA_DENSE_GEMM_REFERENCE_BACKEND,
+            target_backend: CUDA_DENSE_GEMM_TARGET_BACKEND,
+            kernel_id: CUDA_DENSE_F16_GEMM_KERNEL_ID,
+            max_abs_error: 0.0,
+            mean_abs_error: 0.0,
+            tolerance: CUDA_DENSE_F16_GEMM_TOLERANCE,
+            passed: true,
+            stats: CudaDenseGemmStats {
+                kernel_id: CUDA_DENSE_F16_GEMM_KERNEL_ID,
+                invocations: 1,
+                fallback_invocations: 0,
+                host_to_device_bytes: 40,
+                device_to_host_bytes: 24,
+                kernel_launches: 1,
+                kernel_time_ms: None,
+            },
+        }
+    }
+
+    fn selected_device_index() -> std::result::Result<usize, Box<dyn Error>> {
+        match std::env::var(DEVICE_INDEX_ENV) {
+            Ok(value) => value.parse::<usize>().map_err(|error| {
+                io_error(format!("{DEVICE_INDEX_ENV} must be a non-negative integer: {error}"))
+            }),
+            Err(_) => Ok(0),
+        }
+    }
+
+    fn is_rtx5070ti_device_name(name: &str) -> bool {
+        let compact = name
+            .chars()
+            .filter(|ch| ch.is_ascii_alphanumeric())
+            .collect::<String>()
+            .to_ascii_lowercase();
+
+        compact.contains("nvidia") && compact.contains("rtx5070ti")
+    }
+
+    fn dense_gemm_receipt_json(
+        parity: &CudaDenseGemmParity,
+        probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
+        artifact_path: &str,
+        timestamp_utc: &str,
+    ) -> Value {
+        let cuda = match probe {
+            Some(probe) => json!({
+                "available": probe.available,
+                "device_count": probe.device_count,
+                "device_index": probe.selected_device_index.unwrap_or(0),
+                "device_name": probe.selected_device_name.clone().unwrap_or_else(|| "unknown".into()),
+                "compute_capability": probe.compute_capability.clone().unwrap_or_else(|| "12.0".into()),
+                "driver_version": probe.driver_version.clone().unwrap_or_else(|| "unknown".into()),
+                "cuda_runtime_version": probe.cuda_runtime_version.clone().unwrap_or_else(|| "unknown".into()),
+                "cuda_toolkit_version": probe.cuda_toolkit_version.clone().unwrap_or_else(|| "unknown".into()),
+                "nvrtc_version": probe.nvrtc_version.clone().unwrap_or_else(|| "unknown".into()),
+                "nvml_available": probe.nvml_available,
+                "vram_bytes": probe.vram_bytes.unwrap_or(1),
+                "power_limit_watts": probe.power_limit_watts,
+                "power_draw_watts": probe.power_draw_watts,
+                "temperature_c": probe.temperature_c,
+            }),
+            None => json!({
+                "available": true,
+                "device_count": 1,
+                "device_index": 0,
+                "device_name": "NVIDIA GeForce RTX 5070 Ti",
+                "compute_capability": "12.0",
+                "driver_version": "591.86",
+                "cuda_runtime_version": "12.9",
+                "cuda_toolkit_version": "12.9",
+                "nvrtc_version": "12.9",
+                "nvml_available": true,
+                "vram_bytes": 17094475776_u64,
+                "power_limit_watts": 300.0,
+                "power_draw_watts": 34.97,
+                "temperature_c": 38.0,
+            }),
+        };
+
+        json!({
+            "schema": 1,
+            "artifact_kind": "dense_regular_llm_cuda",
+            "artifact_path": artifact_path,
+            "claim": "dense_regular_llm_cuda_gemm_parity_tested",
+            "machine_id": MACHINE_ID,
+            "hardware_lane": HARDWARE_LANE,
+            "timestamp_utc": timestamp_utc,
+            "requested_backend": HARDWARE_LANE,
+            "selected_backend": HARDWARE_LANE,
+            "runtime_api": "cuda",
+            "fallback_used": false,
+            "fallback_backend": null,
+            "fallback_reason": null,
+            "speedup_claim": false,
+            "cuda": cuda,
+            "model": {
+                "model_family": "qwen",
+                "artifact_kind": "dense_gguf",
+                "file": "dense-f16-gemm-smoke-fixture",
+                "sha256": "0".repeat(64)
+            },
+            "execution_path": {
+                "model_class": "dense_regular_llm",
+                "kernel_family": "dense_fp16_gemm",
+                "quantization_family": "fp16_dense",
+                "bitnet_packed_kernel_proof": false,
+                "qk256_proof": false
+            },
+            "kernel_stats": [{
+                "kernel_id": parity.stats.kernel_id,
+                "invocations": parity.stats.invocations,
+                "fallback_invocations": parity.stats.fallback_invocations,
+                "host_to_device_bytes": parity.stats.host_to_device_bytes,
+                "device_to_host_bytes": parity.stats.device_to_host_bytes,
+                "kernel_launches": parity.stats.kernel_launches,
+                "kernel_time_ms": parity.stats.kernel_time_ms
+            }],
+            "parity": {
+                "reference_backend": parity.reference_backend,
+                "target_backend": parity.target_backend,
+                "kernel_id": parity.kernel_id,
+                "fixture_id": parity.fixture_id,
+                "max_abs_error": parity.max_abs_error,
+                "mean_abs_error": parity.mean_abs_error,
+                "passed": parity.passed,
+                "tolerance": parity.tolerance,
+                "tolerance_source": "CUDA-DENSE-002 deterministic FP16 smoke fixture"
+            },
+            "claim_boundary": {
+                "dense_regular_llm_cuda_claimed": true,
+                "bitnet_packed_i2s_qk256_proof": false,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            },
+            "error": null
+        })
+    }
+
+    fn write_json_file(path: &str, value: &Value) -> std::result::Result<(), Box<dyn Error>> {
+        let output_path = workspace_relative_path(path);
+        if let Some(parent) = output_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(output_path, serde_json::to_string_pretty(value)?)?;
+        Ok(())
+    }
+
+    fn workspace_relative_path(path: &str) -> PathBuf {
+        let path = Path::new(path);
+        if path.is_absolute() {
+            return path.to_path_buf();
+        }
+
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join(path)
+    }
+
+    fn io_error(message: String) -> Box<dyn Error> {
+        Box::new(io::Error::other(message))
+    }
+}

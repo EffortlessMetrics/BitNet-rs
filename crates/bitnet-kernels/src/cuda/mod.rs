@@ -47,6 +47,7 @@ pub mod constant_memory;
 pub mod conv1d;
 pub mod cooperative_groups;
 pub mod cooperative_launch;
+pub mod dense_gemm;
 pub mod dequant;
 pub mod dynamic_parallelism;
 pub mod elementwise;
@@ -211,6 +212,12 @@ pub use softmax::{
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use softmax::SOFTMAX_KERNEL_SRC;
 
+pub use dense_gemm::{
+    CUDA_DENSE_F16_GEMM_FIXTURE_ID, CUDA_DENSE_F16_GEMM_KERNEL_ID, CUDA_DENSE_F16_GEMM_TOLERANCE,
+    CUDA_DENSE_GEMM_REFERENCE_BACKEND, CUDA_DENSE_GEMM_TARGET_BACKEND, CudaDenseGemmParity,
+    CudaDenseGemmStats, dense_f16_gemm_cpu_reference, dense_f16_gemm_fixture,
+    launch_dense_f16_gemm_cuda, run_dense_f16_gemm_cuda_parity,
+};
 pub use dequant::{
     DequantConfig, DequantPrecision, QK256_BLOCK_SIZE, QuantBitWidth, ScaleMode,
     batch_dequantize_int2_to_f32, dequantize_int2_per_channel_f32, dequantize_int2_to_f16,

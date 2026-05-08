@@ -355,6 +355,19 @@ pub fn validate_dense_regular_llm_cuda_receipt_json(receipt: &Value) -> Result<(
     require_optional_positive_u64(stats, "device_to_host_bytes")?;
     require_optional_non_negative_number(stats, "kernel_time_ms")?;
 
+    let parity = object_field(receipt, "parity")?;
+    require_string_non_empty(parity, "reference_backend")?;
+    require_string_eq(parity, "target_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_non_empty(parity, "kernel_id")?;
+    reject_bitnet_packed_marker(required_string(parity, "kernel_id")?, "parity.kernel_id")?;
+    require_string_non_empty(parity, "fixture_id")?;
+    reject_bitnet_packed_marker(required_string(parity, "fixture_id")?, "parity.fixture_id")?;
+    require_bool_eq(parity, "passed", true)?;
+    require_non_negative_number(parity, "max_abs_error")?;
+    require_non_negative_number(parity, "mean_abs_error")?;
+    require_non_negative_number(parity, "tolerance")?;
+    require_string_non_empty(parity, "tolerance_source")?;
+
     Ok(())
 }
 

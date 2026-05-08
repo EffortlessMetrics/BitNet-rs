@@ -119,7 +119,7 @@ The Windows CUDA proof bench is `windows-9950x3d-rtx5070ti`: AMD Ryzen 9 9950X3D
 
 The current CUDA code is scaffolded kernel-provider infrastructure, not end-to-end CUDA inference. QK256 CUDA is scaffold-only until the packed fused dequant GEMV path is implemented and wired. The staged order is `RTX5070TI-003` backend identity, `RTX5070TI-004` CUDA/NVML probe, `RTX5070TI-005` tiny CUDA kernel smoke, `RTX5070TI-006` CPU/CUDA parity, `RTX5070TI-007` receipt/kernel counters, and `RTX5070TI-008` benchmark baseline. Only after those land should the `CUDA-BITNET-001` through `CUDA-BITNET-008` wave start persistent CUDA BitNet context, upload-once weights, reusable I2S linear, real QK256 CUDA, BitNetLinear routing, one-token strict proof, short decode proof, and full benchmark baselines.
 
-Dense regular-LLM CUDA work has started as `CUDA-DENSE-001`, scoped first to a `dense_regular_llm_cuda` receipt boundary. It must remain labeled as dense regular LLM execution, cannot claim BitNet packed I2S/QK256 inference, and must not claim dense CUDA GEMM parity until `CUDA-DENSE-002`.
+Dense regular-LLM CUDA work has moved past the receipt boundary. `CUDA-DENSE-001` established the `dense_regular_llm_cuda` label, and `CUDA-DENSE-002` is adding the first dense FP16 GEMM smoke/parity fixture. It must remain labeled as dense regular LLM execution and cannot claim BitNet packed I2S/QK256 inference, speedup, full dense residency, or general dense GGUF inference.
 
 ## Tracker Notes
 

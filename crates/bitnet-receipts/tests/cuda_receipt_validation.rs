@@ -30,6 +30,17 @@ fn committed_cuda_parity_receipt_validates() {
 }
 
 #[test]
+fn committed_dense_regular_llm_cuda_gemm_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-parity.json"
+    ))
+    .unwrap();
+
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
 fn strict_cuda_smoke_rejects_top_level_fallback() {
     let mut receipt = valid_smoke_receipt();
     receipt["fallback_used"] = json!(true);
@@ -130,6 +141,26 @@ fn dense_regular_llm_cuda_receipt_rejects_speedup_claim() {
     let err = validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err().to_string();
 
     assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_receipt_requires_passing_cpu_cuda_parity() {
+    let mut receipt = valid_dense_regular_llm_cuda_receipt();
+    receipt["parity"]["passed"] = json!(false);
+
+    let err = validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("`passed`"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_receipt_rejects_bitnet_parity_fixture() {
+    let mut receipt = valid_dense_regular_llm_cuda_receipt();
+    receipt["parity"]["fixture_id"] = json!("qk256_bitnet_fixture");
+
+    let err = validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("parity.fixture_id"), "unexpected error: {err}");
 }
 
 #[test]
@@ -242,14 +273,25 @@ fn valid_dense_regular_llm_cuda_receipt() -> Value {
             "qk256_proof": false
         },
         "kernel_stats": [{
-            "kernel_id": "cublaslt_dense_gemm",
+            "kernel_id": "dense_f16_gemm_cuda",
             "invocations": 1,
             "fallback_invocations": 0,
-            "host_to_device_bytes": 8192,
-            "device_to_host_bytes": 4096,
+            "host_to_device_bytes": 40,
+            "device_to_host_bytes": 24,
             "kernel_launches": 1,
-            "kernel_time_ms": 0.25
+            "kernel_time_ms": null
         }],
+        "parity": {
+            "reference_backend": "amd-9950x3d-cpu-avx512",
+            "target_backend": "nvidia-rtx-5070-ti-cuda",
+            "kernel_id": "dense_f16_gemm_cuda",
+            "fixture_id": "dense_f16_gemm_m2_n3_k4",
+            "max_abs_error": 0.0,
+            "mean_abs_error": 0.0,
+            "passed": true,
+            "tolerance": 0.002,
+            "tolerance_source": "CUDA-DENSE-002 deterministic FP16 smoke fixture"
+        },
         "claim_boundary": {
             "dense_regular_llm_cuda_claimed": true,
             "bitnet_packed_i2s_qk256_proof": false,

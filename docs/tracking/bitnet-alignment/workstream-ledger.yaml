@@ -2600,7 +2600,7 @@ items:
 
   - id: CUDA-DENSE-001
     title: Add regular LLM CUDA dense-lane receipt boundary
-    state: in_progress
+    state: merged
     priority: P2
     workstream: nvidia_cuda
     depends_on:
@@ -2633,20 +2633,23 @@ items:
 
   - id: CUDA-DENSE-002
     title: Add dense CUDA GEMM smoke/parity fixture
-    state: proposed
+    state: in_progress
     priority: P2
     workstream: nvidia_cuda
     depends_on:
       - CUDA-DENSE-001
     scope:
       allowed_paths:
+        - ci/hardware/windows-9950x3d-rtx5070ti/**
         - crates/bitnet-kernels/src/cuda/**
         - crates/bitnet-receipts/**
         - crates/bitnet-receipts-core/**
+        - docs/reports/**
         - docs/tracking/bitnet-alignment/backend-status.yaml
         - docs/tracking/bitnet-alignment/status.md
         - docs/tracking/bitnet-alignment/workstream-ledger.yaml
         - docs/tracking/campaigns/nvidia-5070ti/**
+        - docs/tracking/generated/**
       forbidden_paths:
         - crates/bitnet-server/**
         - BitNet QK256 CUDA math changes
@@ -2656,9 +2659,11 @@ items:
       - Dense-lane receipts cannot satisfy CUDA-BITNET packed I2S/QK256 acceptance criteria.
       - speedup_claim remains false.
     verification:
-      - cargo fmt --all -- --check
-      - cargo test --locked -p bitnet-kernels --no-default-features --features cuda
+      - cargo fmt -p bitnet-kernels -p bitnet-receipts-core -p bitnet-receipts -- --check
+      - cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda dense_f16 -- --nocapture
+      - BITNET_RUN_RTX5070TI_DENSE_CUDA_GEMM=1 BITNET_RTX5070TI_DENSE_CUDA_GEMM_RECEIPT=ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-parity.json cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda live_rtx5070ti_dense_f16_cuda_gemm_matches_cpu_reference_when_enabled -- --nocapture
       - cargo test --locked -p bitnet-receipts --test cuda_receipt_validation -- --nocapture
+      - cargo test --locked -p bitnet-receipts-core --lib -- --nocapture
     notes:
       - This is the first item allowed to touch dense CUDA math, not CUDA-DENSE-001.
     followups: []

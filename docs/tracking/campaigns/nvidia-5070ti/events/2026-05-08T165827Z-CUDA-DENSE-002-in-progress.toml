@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T16:58:27Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-002"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-002-gemm-parity"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started the first dense regular-LLM CUDA GEMM smoke/parity fixture after CUDA-DENSE-001 established a separate receipt boundary.",
+  "Scope is a deterministic dense FP16 GEMM fixture, CPU reference comparison, dense_regular_llm_cuda receipt validation, and committed RTX 5070 Ti evidence.",
+  "No BitNet packed I2S/QK256 proof, dense GGUF inference, speedup, full residency, tokenizer, loader, transformer, or server claim is in scope.",
+]
