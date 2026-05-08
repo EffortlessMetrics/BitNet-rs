@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T19:43:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-004"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-004-persistent-gemm"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started persistent dense regular-LLM CUDA FP16 GEMM fixture-session residency after CUDA-DENSE-003 merged.",
+  "Scope is repeated fixture launches with one CUDA context/module, upload-once input device buffers, one output device buffer, zero per-run H2D bytes, validators, and committed RTX 5070 Ti evidence.",
+  "No BitNet packed I2S/QK256 proof, dense GGUF inference, speedup, tokenizer, loader, transformer, server, or full CUDA residency claim is in scope.",
+]

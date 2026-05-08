@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T19:51:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-004"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-004-persistent-gemm"
+pr = 4121
+head_sha = "0fd3642e1dc3493dc8cb7ee16203cdbbcf817d5e"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4121 for persistent dense regular-LLM CUDA FP16 GEMM fixture-session residency.",
+  "The receipt records one CUDA context/module, upload-once input device buffers, one output device buffer, repeated launches, zero per-run H2D bytes, fallback_used=false, and speedup_claim=false.",
+  "The PR preserves the dense boundary: no BitNet packed I2S/QK256 proof, dense GGUF inference, persistent dense model/session inference, server readiness, or full CUDA residency claim.",
+]

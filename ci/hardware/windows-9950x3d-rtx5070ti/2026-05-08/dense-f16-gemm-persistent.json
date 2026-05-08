@@ -1,0 +1,157 @@
+{
+  "artifact_kind": "dense_regular_llm_cuda",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-persistent.json",
+  "claim": "dense_regular_llm_cuda_persistent_fixture_residency_tested",
+  "claim_boundary": {
+    "bitnet_packed_i2s_qk256_proof": false,
+    "dense_gguf_inference_claimed": false,
+    "dense_regular_llm_cuda_claimed": true,
+    "dense_tensor_residency_claimed": true,
+    "full_cuda_residency_claimed": false,
+    "persistent_session_residency_claimed": true,
+    "speedup_claim": false
+  },
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_runtime_version": "unknown",
+    "cuda_toolkit_version": "unknown",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "nvml_available": true,
+    "nvrtc_version": "unknown",
+    "power_draw_watts": 75.89,
+    "power_limit_watts": 300.0,
+    "temperature_c": 52.0,
+    "vram_bytes": 17094475776
+  },
+  "error": null,
+  "execution_path": {
+    "bitnet_packed_kernel_proof": false,
+    "kernel_family": "dense_fp16_gemm",
+    "model_class": "dense_regular_llm",
+    "qk256_proof": false,
+    "quantization_family": "fp16_dense"
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "kernel_stats": [
+    {
+      "device_to_host_bytes": 72,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 40,
+      "invocations": 3,
+      "kernel_id": "dense_f16_gemm_cuda",
+      "kernel_launches": 3,
+      "kernel_time_ms": null
+    }
+  ],
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "artifact_kind": "dense_gguf",
+    "file": "dense-f16-gemm-persistent-fixture",
+    "model_family": "qwen",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "parity": {
+    "fixture_id": "dense_f16_gemm_m2_n3_k4",
+    "kernel_id": "dense_f16_gemm_cuda",
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0,
+    "passed": true,
+    "reference_backend": "amd-9950x3d-cpu-avx512",
+    "runs": 3,
+    "target_backend": "nvidia-rtx-5070-ti-cuda",
+    "tolerance": 0.0020000000949949026,
+    "tolerance_source": "CUDA-DENSE-004 persistent deterministic FP16 fixture"
+  },
+  "persistent_session": {
+    "context_creations": 1,
+    "dense_gguf_inference_claimed": false,
+    "full_cuda_residency_claimed": false,
+    "input_uploads": 2,
+    "kernel_launches": 3,
+    "module_loads": 1,
+    "output_allocations": 1,
+    "per_run_host_to_device_bytes": 0,
+    "persistent_handle_count": 3,
+    "repeated_runs": 3,
+    "schema_version": "1.0.0",
+    "scope": "persistent_dense_f16_gemm_fixture_session",
+    "speedup_claim": false
+  },
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "speedup_claim": false,
+  "tensor_residency": {
+    "allocation": {
+      "device_buffer_count": 3,
+      "persistent_handle_count": 3,
+      "persistent_handles_claimed": true,
+      "temporary_workspace_bytes": 0
+    },
+    "dense_gguf_inference_claimed": false,
+    "dense_tensor_residency_claimed": true,
+    "fixture_id": "dense_f16_gemm_m2_n3_k4",
+    "full_cuda_residency_claimed": false,
+    "host_device_transfer_accounting_matches_kernel_stats": true,
+    "input_tensors_uploaded_once": true,
+    "inputs": [
+      {
+        "device_residency": "cuda_device_buffer",
+        "dtype": "f16",
+        "host_bytes": 16,
+        "name": "a",
+        "reuse_scope": "persistent_fixture_session",
+        "shape": [
+          2,
+          4
+        ],
+        "upload_count": 1
+      },
+      {
+        "device_residency": "cuda_device_buffer",
+        "dtype": "f16",
+        "host_bytes": 24,
+        "name": "b",
+        "reuse_scope": "persistent_fixture_session",
+        "shape": [
+          4,
+          3
+        ],
+        "upload_count": 1
+      }
+    ],
+    "model_class": "dense_regular_llm",
+    "output_tensor_cuda_resident_during_kernel": true,
+    "outputs": [
+      {
+        "device_residency": "cuda_device_buffer",
+        "device_to_host_bytes": 72,
+        "download_scope": "parity_check_each_run",
+        "dtype": "f32",
+        "name": "c",
+        "shape": [
+          2,
+          3
+        ]
+      }
+    ],
+    "per_run_host_to_device_bytes": 0,
+    "persistent_session_residency_claimed": true,
+    "schema_version": "1.0.0",
+    "scope": "persistent_dense_f16_gemm_fixture_session",
+    "transfer_accounting": {
+      "device_to_host_bytes": 72,
+      "host_to_device_bytes": 40,
+      "status": "measured"
+    }
+  },
+  "timestamp_utc": "2026-05-08T00:00:00Z"
+}

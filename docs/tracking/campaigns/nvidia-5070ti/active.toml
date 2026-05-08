@@ -1155,3 +1155,56 @@ must_not_claim = [
   "Persistent dense model/session residency exists.",
   "Full dense regular LLM CUDA residency exists.",
 ]
+
+[[work_item]]
+id = "CUDA-DENSE-004"
+status = "pr_open"
+branch = "codex/cuda-dense-004-persistent-gemm"
+pr = 4121
+head_sha = "0fd3642e1dc3493dc8cb7ee16203cdbbcf817d5e"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-003"]
+acceptance = "Add persistent fixture-session residency for the dense regular-LLM CUDA FP16 GEMM path, proving one CUDA context/module, upload-once input device buffers, one output device buffer, repeated launches, per-run host-to-device bytes equal zero, fallback_used=false, and no BitNet packed I2S/QK256, speedup, dense GGUF inference, or full CUDA residency claim."
+commands = [
+  "cargo fmt -p bitnet-kernels -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda dense_f16 -- --nocapture",
+  "BITNET_RUN_RTX5070TI_DENSE_CUDA_GEMM_SESSION=1 BITNET_RTX5070TI_DENSE_CUDA_GEMM_SESSION_RECEIPT=ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-persistent.json BITNET_RTX5070TI_DENSE_CUDA_GEMM_SESSION_ARTIFACT_PATH=ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-persistent.json BITNET_RTX5070TI_DENSE_CUDA_GEMM_SESSION_RUNS=3 cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda live_rtx5070ti_dense_f16_cuda_gemm_persistent_session_when_enabled -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation -- --nocapture",
+  "cargo test --locked -p bitnet-receipts-core --lib -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense GGUF inference implementation",
+]
+may_claim = [
+  "Dense regular-LLM CUDA persistent fixture-session residency is recorded for the deterministic FP16 GEMM fixture.",
+  "The fixture proves fallback-free repeated RTX 5070 Ti CUDA launches with one context/module and upload-once input device buffers.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Persistent dense model/session inference exists.",
+  "Full dense regular LLM CUDA residency exists.",
+]
