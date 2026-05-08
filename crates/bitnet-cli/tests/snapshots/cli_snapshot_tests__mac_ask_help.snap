@@ -4,13 +4,16 @@ expression: help
 ---
 Ask one question through the Rust-native Apple M4 CPU/NEON SLM path
 
-Usage: bitnet mac ask [OPTIONS] --question <QUESTION>
+Usage: bitnet mac ask [OPTIONS] [QUESTION]
+
+Arguments:
+  [QUESTION]  Question to answer. This is the shortest Mac path: `bitnet mac ask "What is 2+2?"`
 
 Options:
   -c, --config <PATH>
           Configuration file path
   -q, --question <QUESTION>
-          Question to answer
+          Question to answer. Kept for scripts that already use `--question`
   -d, --device <DEVICE>
           Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
       --model-id <MODEL_ID>

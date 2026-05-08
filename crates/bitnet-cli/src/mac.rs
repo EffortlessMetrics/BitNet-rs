@@ -58,9 +58,13 @@ enum MacAction {
 
     /// Ask one question through the Rust-native Apple M4 CPU/NEON SLM path.
     Ask {
-        /// Question to answer.
-        #[arg(short, long)]
-        question: String,
+        /// Question to answer. This is the shortest Mac path: `bitnet mac ask "What is 2+2?"`.
+        #[arg(value_name = "QUESTION")]
+        question: Option<String>,
+
+        /// Question to answer. Kept for scripts that already use `--question`.
+        #[arg(short, long = "question", value_name = "QUESTION")]
+        question_flag: Option<String>,
 
         /// Supported model id. Defaults to the validated Apple M4 SLM runtime artifact.
         #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
@@ -187,6 +191,7 @@ impl MacCommand {
             }
             MacAction::Ask {
                 question,
+                question_flag,
                 model_id,
                 cache_dir,
                 system_prompt,
@@ -200,6 +205,7 @@ impl MacCommand {
                 json_out,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac ask")?;
+                let question = resolve_mac_question(question, question_flag)?;
                 run_ask(
                     &model_id,
                     cache_dir,
@@ -247,6 +253,20 @@ impl MacCommand {
             }
             MacAction::ReceiptsCheck { path, json } => run_receipts_check(&path, json),
         }
+    }
+}
+
+fn resolve_mac_question(positional: Option<String>, flag: Option<String>) -> Result<String> {
+    match (positional, flag) {
+        (Some(_), Some(_)) => anyhow::bail!(
+            "provide the Mac question either positionally, e.g. `bitnet mac ask \"What is 2+2?\"`, or with --question, not both"
+        ),
+        (Some(question), None) | (None, Some(question)) if !question.trim().is_empty() => {
+            Ok(question)
+        }
+        _ => anyhow::bail!(
+            "missing Mac question; pass it positionally, e.g. `bitnet mac ask \"What is 2+2?\"`, or with --question"
+        ),
     }
 }
 
