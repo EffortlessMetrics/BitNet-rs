@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T01:40:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-004"
+event = "merged"
+pr = 3957
+merge_sha = "a9e7835e6480b9277b80bf76cda6be6653942eec"
+branch = "codex/slm-cpu-004-answer-corpus"
+actor = "codex"
+
+notes = [
+  "Merged #3957 to add the tiny Qwen3 SLM answer corpus, SLM-specific corpus receipt identity, and i5-8250U corpus evidence.",
+  "The corpus evidence records prompt IDs, generated IDs, selected backend/kernel, fallback=false, model SHA/family/architecture, and quality failures; it does not claim answer quality or performance.",
+]
