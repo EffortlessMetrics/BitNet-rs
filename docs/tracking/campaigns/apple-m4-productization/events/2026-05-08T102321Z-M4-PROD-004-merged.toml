@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T10:23:21Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-004"
+event = "merged"
+pr = 4029
+merge_sha = "97dbcecf6f8095fb7d1f01fa83088c238675a7ec"
+actor = "codex"
+
+notes = [
+  "M4-PROD-004 operator warm profiles merged.",
+  "Promoted M4-PROD-005 for the first parity-gated Apple Metal phase contribution.",
+  "Closeout is tracker-only; no runtime, kernel, QK256, server, model binary, full Metal inference, Neural Engine, or broad performance claim changes.",
+]
