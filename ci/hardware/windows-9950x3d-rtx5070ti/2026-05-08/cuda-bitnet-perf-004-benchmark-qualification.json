@@ -1,0 +1,168 @@
+{
+  "artifact_kind": "strict_cuda_benchmark_qualification_review",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json",
+  "benchmark_qualified_speedup": false,
+  "claim": "strict_cuda_benchmark_qualification_review",
+  "claim_boundaries": [
+    "speedup_claim=false; no reviewed profile is upgraded by this receipt.",
+    "This review uses only BitNet packed QK256 evidence and explicitly excludes dense regular-LLM CUDA proof.",
+    "This review does not claim broad chat quality, production server readiness, or full CUDA residency."
+  ],
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "memory_hwm_bytes": 10078912512,
+    "nvrtc_version": "12.9",
+    "vram_bytes": 17094475776
+  },
+  "evidence_summary": {
+    "strict_ask_math_8": {
+      "cpu_avx512_median_total_ms": 18797.0,
+      "cpu_cuda_answer_match": true,
+      "cuda_median_total_ms": 2136.0,
+      "device_to_host_bytes": 172247040,
+      "fallback_free": true,
+      "host_to_device_bytes": 168376320,
+      "observed_median_cpu_total_ms_div_cuda_total_ms": 8.800093632958802,
+      "qk256_kernel_time_ms": 2977.406,
+      "runs_per_backend": 3,
+      "speedup_claim": false
+    },
+    "strict_cuda_warm_session_2_turns": {
+      "cuda_median_generated_tokens_per_second": 1.368439700077827,
+      "cuda_median_kernel_time_ms": 2036.619,
+      "cuda_median_total_session_ms": 8038.352,
+      "cuda_runs": 3,
+      "fallback_free": true,
+      "model_tokenizer_context_loaded_once": true,
+      "qk256_weights_uploaded_once": true,
+      "speedup_claim": false,
+      "turns_per_run": 2
+    }
+  },
+  "fallback_used": false,
+  "full_cuda_residency_claimed": false,
+  "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "fallback_loader_used": false,
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "strict_real_gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "next_required_evidence": [
+    "repeated CPU AVX-512 and CUDA decode-profile receipt",
+    "host/device transfer timing fields, not only byte counters",
+    "complete power and thermal samples for strict ask repeats",
+    "profile-specific speedup acceptance thresholds"
+  ],
+  "profile_reviews": [
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "transfer timing not measured",
+        "power and thermal samples incomplete",
+        "no explicit benchmark qualification threshold accepted"
+      ],
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": false,
+      "fallback_free": true,
+      "profile": "strict_ask_math_8",
+      "quality_passed": true,
+      "reason": "The repeated strict ask ratio is baseline evidence only until acceptance thresholds and transfer/power evidence are complete.",
+      "speedup_claim_allowed": false
+    },
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "CPU AVX-512 warm-session comparator absent",
+        "speedup acceptance threshold not reviewed"
+      ],
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": false,
+      "fallback_free": true,
+      "profile": "strict_cuda_warm_session_2_turns",
+      "quality_passed": true,
+      "reason": "The warm-session receipt is CUDA-only baseline evidence and has no same-profile CPU AVX-512 comparator.",
+      "speedup_claim_allowed": false
+    }
+  ],
+  "prompt_template": {
+    "family": "bitnetcpp-answer",
+    "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3"
+  },
+  "proof_inputs": {
+    "answer_path_baseline_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-prod-004-answer-path-benchmark.json",
+    "cpu_cuda_answer_parity_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json",
+    "repeated_strict_ask_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-002-repeated-strict-ask.json",
+    "warm_session_benchmark_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json"
+  },
+  "qualification_decision": {
+    "accepted_profiles": [],
+    "benchmark_qualified_speedup": false,
+    "blocked_profiles": [
+      "strict_ask_math_8",
+      "strict_cuda_warm_session_2_turns"
+    ],
+    "reason": "Current evidence is strong baseline data, but speedup acceptance still lacks decode-profile repetitions, profile-specific acceptance thresholds, and complete transfer timing/power coverage.",
+    "speedup_claim_allowed": false,
+    "status": "not_accepted"
+  },
+  "qualification_requirements": [
+    {
+      "description": "Same official model, tokenizer authority, prompt template, deterministic policy, and fallback-free CPU/CUDA path.",
+      "id": "same_model_tokenizer_prompt_policy",
+      "status": "passed"
+    },
+    {
+      "description": "Repeated strict ask measurements exist for CPU AVX-512 and RTX 5070 Ti CUDA.",
+      "id": "repeated_strict_ask_cpu_cuda",
+      "status": "passed"
+    },
+    {
+      "description": "Repeated strict CUDA warm-session measurements exist with load/context/upload reuse.",
+      "id": "warm_session_cuda_repeated",
+      "status": "passed"
+    },
+    {
+      "blocker": "No repeated prefill/decode profile receipt is committed for CPU AVX-512 and CUDA.",
+      "description": "Repeated same-model decode profile measurements exist for CPU AVX-512 and CUDA.",
+      "id": "decode_profile_repeated_cpu_cuda",
+      "status": "blocked"
+    },
+    {
+      "blocker": "Current receipts record QK256 transfer bytes but transfer_timing_claimed remains false.",
+      "description": "Host/device transfer timing is measured, not only byte counts.",
+      "id": "transfer_timing",
+      "status": "blocked"
+    },
+    {
+      "blocker": "Warm-session has power/thermal samples; repeated strict ask has null power and temperature fields.",
+      "description": "Driver, runtime, VRAM, power, and thermal context are complete for reviewed profiles.",
+      "id": "power_thermal_complete",
+      "status": "blocked"
+    }
+  ],
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "speedup_claim": false,
+  "timestamp_utc": "2026-05-08T20:05:00Z",
+  "tokenizer": {
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  }
+}

@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T20:10:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-PERF-004"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-bitnet-perf-004-qualification"
+pr = 4124
+head_sha = "9628ca403d431ceb44535fd694b5ee833adf26f2"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4124 for the RTX 5070 Ti BitNet CUDA benchmark qualification review.",
+  "The PR adds a review receipt and validator that keep speedup_claim=false and benchmark_qualified_speedup=false.",
+  "The review records missing decode-profile repetitions, transfer timing, complete power/thermal context, and accepted profile thresholds before any speedup claim can be upgraded.",
+]

@@ -888,6 +888,182 @@ pub fn validate_strict_cuda_warm_session_benchmark_receipt_file(
     validate_strict_cuda_warm_session_benchmark_receipt_json(&receipt)
 }
 
+/// Validate a benchmark qualification review receipt for the RTX 5070 Ti lane.
+///
+/// This receipt reviews existing repeated strict ask and warm-session evidence.
+/// It is deliberately conservative: the only accepted decision in this schema
+/// is to keep `speedup_claim=false` until profile-specific benchmark evidence
+/// satisfies every recorded requirement.
+pub fn validate_strict_cuda_benchmark_qualification_receipt_json(
+    receipt: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", "strict_cuda_benchmark_qualification_review")?;
+    require_string_eq(receipt, "machine_id", "windows-9950x3d-rtx5070ti")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia_rtx_5070_ti_cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "claim", "strict_cuda_benchmark_qualification_review")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_bool_eq(receipt, "benchmark_qualified_speedup", false)?;
+    require_bool_eq(receipt, "full_cuda_residency_claimed", false)?;
+
+    let model = require_object(receipt, "model")?;
+    require_string_eq(model, "repo", "microsoft/bitnet-b1.58-2B-4T-gguf")?;
+    require_string_eq(model, "file", "ggml-model-i2_s.gguf")?;
+    require_non_empty_string(model, "sha256")?;
+    require_string_eq(model, "loader_mode", "strict_real_gguf")?;
+    require_bool_eq(model, "fallback_loader_used", false)?;
+
+    let tokenizer = require_object(receipt, "tokenizer")?;
+    require_string_eq(tokenizer, "source", "explicit")?;
+    require_bool_eq(tokenizer, "strict", true)?;
+    require_string_eq(tokenizer, "pretokenizer_authority", "llama-bpe")?;
+
+    let prompt_template = require_object(receipt, "prompt_template")?;
+    require_string_eq(prompt_template, "family", "bitnetcpp-answer")?;
+    require_non_empty_string(prompt_template, "rendered_sha256")?;
+
+    let proof_inputs = require_object(receipt, "proof_inputs")?;
+    require_non_empty_string(proof_inputs, "repeated_strict_ask_receipt")?;
+    require_non_empty_string(proof_inputs, "warm_session_benchmark_receipt")?;
+    require_non_empty_string(proof_inputs, "answer_path_baseline_receipt")?;
+    require_non_empty_string(proof_inputs, "cpu_cuda_answer_parity_receipt")?;
+
+    let decision = require_object(receipt, "qualification_decision")?;
+    require_string_eq(decision, "status", "not_accepted")?;
+    require_bool_eq(decision, "speedup_claim_allowed", false)?;
+    require_bool_eq(decision, "benchmark_qualified_speedup", false)?;
+    require_non_empty_string(decision, "reason")?;
+    let accepted_profiles = require_array(decision, "accepted_profiles")?;
+    if !accepted_profiles.is_empty() {
+        return Err(validation_error(
+            "qualification_decision.accepted_profiles must be empty while status is not_accepted",
+        ));
+    }
+    let blocked_profiles = require_array(decision, "blocked_profiles")?;
+    if blocked_profiles.is_empty() {
+        return Err(validation_error("qualification_decision.blocked_profiles must not be empty"));
+    }
+
+    let requirements = require_array(receipt, "qualification_requirements")?;
+    if requirements.is_empty() {
+        return Err(validation_error("qualification_requirements must not be empty"));
+    }
+    let mut blocked_requirements = 0;
+    for requirement in requirements {
+        let status = validate_qualification_requirement(requirement)?;
+        if status == "blocked" {
+            blocked_requirements += 1;
+        }
+    }
+    if blocked_requirements == 0 {
+        return Err(validation_error(
+            "qualification_requirements must include at least one blocked requirement",
+        ));
+    }
+
+    let profile_reviews = require_array(receipt, "profile_reviews")?;
+    if profile_reviews.len() < 2 {
+        return Err(validation_error(
+            "profile_reviews must include strict ask and warm-session entries",
+        ));
+    }
+    for profile in profile_reviews {
+        validate_qualification_profile_review(profile)?;
+    }
+
+    let evidence = require_object(receipt, "evidence_summary")?;
+    let strict_ask = require_object(evidence, "strict_ask_math_8")?;
+    require_u64_at_least(strict_ask, "runs_per_backend", 2)?;
+    require_bool_eq(strict_ask, "cpu_cuda_answer_match", true)?;
+    require_bool_eq(strict_ask, "fallback_free", true)?;
+    require_non_negative_number(strict_ask, "observed_median_cpu_total_ms_div_cuda_total_ms")?;
+    require_bool_eq(strict_ask, "speedup_claim", false)?;
+    let warm_session = require_object(evidence, "strict_cuda_warm_session_2_turns")?;
+    require_u64_at_least(warm_session, "cuda_runs", 2)?;
+    require_bool_eq(warm_session, "fallback_free", true)?;
+    require_bool_eq(warm_session, "model_tokenizer_context_loaded_once", true)?;
+    require_bool_eq(warm_session, "qk256_weights_uploaded_once", true)?;
+    require_bool_eq(warm_session, "speedup_claim", false)?;
+
+    let cuda = require_object(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_u64_at_least(cuda, "device_count", 1)?;
+    require_u64(cuda, "device_index")?;
+    let device_name = require_string(cuda, "device_name")?;
+    if !is_rtx5070ti_device_name(device_name) {
+        return Err(validation_error(format!(
+            "cuda.device_name must identify NVIDIA GeForce RTX 5070 Ti, got {device_name}"
+        )));
+    }
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_non_empty_string(cuda, "driver_version")?;
+    require_non_empty_string(cuda, "cuda_runtime_version")?;
+    require_non_empty_string(cuda, "cuda_toolkit_version")?;
+    require_non_empty_string(cuda, "nvrtc_version")?;
+    require_u64_at_least(cuda, "vram_bytes", 1)?;
+
+    let boundaries = require_array(receipt, "claim_boundaries")?;
+    if boundaries.is_empty() {
+        return Err(validation_error("claim_boundaries must not be empty"));
+    }
+
+    Ok(())
+}
+
+/// Validate a benchmark qualification review receipt file.
+pub fn validate_strict_cuda_benchmark_qualification_receipt_file(
+    path: &Path,
+) -> Result<(), ReceiptError> {
+    let receipt = serde_json::from_slice(&std::fs::read(path)?)?;
+    validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+}
+
+fn validate_qualification_requirement(
+    requirement: &serde_json::Value,
+) -> Result<&str, ReceiptError> {
+    require_non_empty_string(requirement, "id")?;
+    require_non_empty_string(requirement, "description")?;
+    let status = require_string(requirement, "status")?;
+    match status {
+        "passed" | "blocked" | "not_applicable" => {}
+        other => {
+            return Err(validation_error(format!(
+                "qualification requirement status must be passed, blocked, or not_applicable, got {other}"
+            )));
+        }
+    }
+    if status == "blocked" {
+        require_non_empty_string(requirement, "blocker")?;
+    }
+    Ok(status)
+}
+
+fn validate_qualification_profile_review(profile: &serde_json::Value) -> Result<(), ReceiptError> {
+    require_non_empty_string(profile, "profile")?;
+    let decision = require_string(profile, "decision")?;
+    if decision != "not_accepted" {
+        return Err(validation_error(format!(
+            "profile review decision must be not_accepted, got {decision}"
+        )));
+    }
+    require_bool_eq(profile, "speedup_claim_allowed", false)?;
+    require_bool_eq(profile, "benchmark_qualified_speedup", false)?;
+    require_bool_eq(profile, "fallback_free", true)?;
+    require_bool_eq(profile, "quality_passed", true)?;
+    require_bool_eq(profile, "dense_cuda_evidence_used", false)?;
+    require_non_empty_string(profile, "reason")?;
+    let blockers = require_array(profile, "blockers")?;
+    if blockers.is_empty() {
+        return Err(validation_error("profile_review.blockers must not be empty"));
+    }
+    Ok(())
+}
+
 fn validate_warm_session_run(
     run: &serde_json::Value,
     expected_turn_count: u64,
@@ -1915,6 +2091,227 @@ mod tests {
             "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json",
         );
         validate_strict_cuda_warm_session_benchmark_receipt_file(&path).unwrap();
+    }
+
+    #[test]
+    fn strict_cuda_benchmark_qualification_receipt_validates() {
+        let receipt = sample_strict_cuda_benchmark_qualification_receipt();
+        validate_strict_cuda_benchmark_qualification_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cuda_benchmark_qualification_rejects_speedup_claim() {
+        let mut receipt = sample_strict_cuda_benchmark_qualification_receipt();
+        receipt["speedup_claim"] = json!(true);
+
+        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_benchmark_qualification_rejects_accepted_profile() {
+        let mut receipt = sample_strict_cuda_benchmark_qualification_receipt();
+        receipt["profile_reviews"][0]["decision"] = json!("accepted");
+
+        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("not_accepted"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_benchmark_qualification_requires_blocked_requirement() {
+        let mut receipt = sample_strict_cuda_benchmark_qualification_receipt();
+        for requirement in receipt["qualification_requirements"].as_array_mut().unwrap() {
+            requirement["status"] = json!("passed");
+            requirement.as_object_mut().unwrap().remove("blocker");
+        }
+
+        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("blocked requirement"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn committed_strict_cuda_benchmark_qualification_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json",
+        );
+        validate_strict_cuda_benchmark_qualification_receipt_file(&path).unwrap();
+    }
+
+    fn sample_strict_cuda_benchmark_qualification_receipt() -> serde_json::Value {
+        json!({
+            "schema": 1,
+            "artifact_kind": "strict_cuda_benchmark_qualification_review",
+            "machine_id": "windows-9950x3d-rtx5070ti",
+            "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+            "timestamp_utc": "2026-05-08T20:05:00Z",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "reference_backend": "amd-9950x3d-cpu-avx512",
+            "runtime_api": "cuda",
+            "claim": "strict_cuda_benchmark_qualification_review",
+            "fallback_used": false,
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "full_cuda_residency_claimed": false,
+            "model": {
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "file": "ggml-model-i2_s.gguf",
+                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "format": "gguf",
+                "architecture": "bitnet_b1_58",
+                "loader_mode": "strict_real_gguf",
+                "fallback_loader_used": false
+            },
+            "tokenizer": {
+                "source": "explicit",
+                "strict": true,
+                "type": "llama3",
+                "pretokenizer_authority": "llama-bpe"
+            },
+            "prompt_template": {
+                "family": "bitnetcpp-answer",
+                "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3"
+            },
+            "proof_inputs": {
+                "answer_path_baseline_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-prod-004-answer-path-benchmark.json",
+                "repeated_strict_ask_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-002-repeated-strict-ask.json",
+                "warm_session_benchmark_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json",
+                "cpu_cuda_answer_parity_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json"
+            },
+            "qualification_decision": {
+                "status": "not_accepted",
+                "speedup_claim_allowed": false,
+                "benchmark_qualified_speedup": false,
+                "accepted_profiles": [],
+                "blocked_profiles": [
+                    "strict_ask_math_8",
+                    "strict_cuda_warm_session_2_turns"
+                ],
+                "reason": "Current evidence is strong baseline data, but speedup acceptance still lacks decode-profile repetitions, profile-specific acceptance thresholds, and complete transfer timing/power coverage."
+            },
+            "qualification_requirements": [
+                {
+                    "id": "same_model_tokenizer_prompt_policy",
+                    "description": "Same official model, tokenizer authority, prompt template, deterministic policy, and fallback-free CPU/CUDA path.",
+                    "status": "passed"
+                },
+                {
+                    "id": "repeated_strict_ask_cpu_cuda",
+                    "description": "Repeated strict ask measurements exist for CPU AVX-512 and RTX 5070 Ti CUDA.",
+                    "status": "passed"
+                },
+                {
+                    "id": "warm_session_cuda_repeated",
+                    "description": "Repeated strict CUDA warm-session measurements exist with load/context/upload reuse.",
+                    "status": "passed"
+                },
+                {
+                    "id": "decode_profile_repeated_cpu_cuda",
+                    "description": "Repeated same-model decode profile measurements exist for CPU AVX-512 and CUDA.",
+                    "status": "blocked",
+                    "blocker": "No repeated prefill/decode profile receipt is committed for CPU AVX-512 and CUDA."
+                },
+                {
+                    "id": "transfer_timing",
+                    "description": "Host/device transfer timing is measured, not only byte counts.",
+                    "status": "blocked",
+                    "blocker": "Current receipts record QK256 transfer bytes but transfer_timing_claimed remains false."
+                },
+                {
+                    "id": "power_thermal_complete",
+                    "description": "Driver, runtime, VRAM, power, and thermal context are complete for reviewed profiles.",
+                    "status": "blocked",
+                    "blocker": "Warm-session has power/thermal samples; repeated strict ask has null power and temperature fields."
+                }
+            ],
+            "profile_reviews": [
+                {
+                    "profile": "strict_ask_math_8",
+                    "decision": "not_accepted",
+                    "speedup_claim_allowed": false,
+                    "benchmark_qualified_speedup": false,
+                    "fallback_free": true,
+                    "quality_passed": true,
+                    "dense_cuda_evidence_used": false,
+                    "reason": "The repeated strict ask ratio is baseline evidence only until acceptance thresholds and transfer/power evidence are complete.",
+                    "blockers": [
+                        "transfer timing not measured",
+                        "power and thermal samples incomplete",
+                        "no explicit benchmark qualification threshold accepted"
+                    ]
+                },
+                {
+                    "profile": "strict_cuda_warm_session_2_turns",
+                    "decision": "not_accepted",
+                    "speedup_claim_allowed": false,
+                    "benchmark_qualified_speedup": false,
+                    "fallback_free": true,
+                    "quality_passed": true,
+                    "dense_cuda_evidence_used": false,
+                    "reason": "The warm-session receipt is CUDA-only baseline evidence and has no same-profile CPU AVX-512 comparator.",
+                    "blockers": [
+                        "CPU AVX-512 warm-session comparator absent",
+                        "speedup acceptance threshold not reviewed"
+                    ]
+                }
+            ],
+            "evidence_summary": {
+                "strict_ask_math_8": {
+                    "runs_per_backend": 3,
+                    "cpu_avx512_median_total_ms": 18797.0,
+                    "cuda_median_total_ms": 2136.0,
+                    "observed_median_cpu_total_ms_div_cuda_total_ms": 8.800093632958802,
+                    "cpu_cuda_answer_match": true,
+                    "fallback_free": true,
+                    "qk256_kernel_time_ms": 2977.406,
+                    "host_to_device_bytes": 168376320u64,
+                    "device_to_host_bytes": 172247040u64,
+                    "speedup_claim": false
+                },
+                "strict_cuda_warm_session_2_turns": {
+                    "cuda_runs": 3,
+                    "turns_per_run": 2,
+                    "cuda_median_total_session_ms": 8038.352,
+                    "cuda_median_kernel_time_ms": 2036.619,
+                    "cuda_median_generated_tokens_per_second": 1.368439700077827,
+                    "fallback_free": true,
+                    "model_tokenizer_context_loaded_once": true,
+                    "qk256_weights_uploaded_once": true,
+                    "speedup_claim": false
+                }
+            },
+            "cuda": {
+                "available": true,
+                "device_count": 1,
+                "device_index": 0,
+                "device_name": "NVIDIA GeForce RTX 5070 Ti",
+                "compute_capability": "12.0",
+                "driver_version": "591.86",
+                "cuda_runtime_version": "12.9",
+                "cuda_toolkit_version": "12.9",
+                "nvrtc_version": "12.9",
+                "vram_bytes": 17094475776u64,
+                "memory_hwm_bytes": 10078912512u64
+            },
+            "next_required_evidence": [
+                "repeated CPU AVX-512 and CUDA decode-profile receipt",
+                "host/device transfer timing fields, not only byte counters",
+                "complete power and thermal samples for strict ask repeats",
+                "profile-specific speedup acceptance thresholds"
+            ],
+            "claim_boundaries": [
+                "speedup_claim=false; no reviewed profile is upgraded by this receipt.",
+                "This review uses only BitNet packed QK256 evidence and explicitly excludes dense regular-LLM CUDA proof.",
+                "This review does not claim broad chat quality, production server readiness, or full CUDA residency."
+            ],
+            "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json"
+        })
     }
 
     fn sample_cpu_benchmark_receipt() -> serde_json::Value {

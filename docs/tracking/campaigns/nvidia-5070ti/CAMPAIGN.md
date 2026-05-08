@@ -125,8 +125,9 @@ transfer byte accounting. `CUDA-BITNET-PERF-002` starts the performance
 qualification lane by recording repeated strict ask CPU AVX-512 and CUDA runs.
 `CUDA-BITNET-PERF-003` extends that lane to repeated strict CUDA warm sessions
 with model/tokenizer/context loaded once and upload-once QK256 handles. These
-remain scoped measurements; they do not claim speedup or full transformer CUDA
-residency.
+remain scoped measurements. `CUDA-BITNET-PERF-004` reviews that evidence and
+keeps `speedup_claim=false` until decode-profile repetitions, transfer timing,
+power/thermal context, and profile-specific acceptance thresholds are complete.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -168,10 +169,11 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-PROD-004 | merged | Strict answer-path benchmark baseline with `speedup_claim=false`. |
 | CUDA-BITNET-PERF-002 | merged | Repeated strict ask benchmark receipts with same-model CPU AVX-512 and RTX 5070 Ti CUDA runs; `speedup_claim=false`. |
 | CUDA-BITNET-PERF-003 | merged | Repeated strict CUDA warm-session benchmark receipts with load/context/upload reuse and measured QK256 timing/transfer counters; `speedup_claim=false`. |
+| CUDA-BITNET-PERF-004 | pr_open | Benchmark qualification review for repeated strict ask and warm-session evidence; no profile upgraded, `speedup_claim=false`. |
 | CUDA-DENSE-001 | merged | Dense regular-LLM CUDA receipt boundary; not part of BitNet packed proof completion. |
 | CUDA-DENSE-002 | merged | First dense CUDA FP16 GEMM smoke/parity fixture after the dense receipt boundary. |
 | CUDA-DENSE-003 | merged | Dense regular-LLM CUDA tensor-residency receipt for the FP16 GEMM fixture; still no BitNet packed, dense GGUF inference, speedup, persistent session, or full-residency claim. |
-| CUDA-DENSE-004 | in_progress | Persistent dense regular-LLM CUDA FP16 GEMM fixture session with one context/module, upload-once input buffers, repeated launches, and no dense GGUF inference, speedup, or full-residency claim. |
+| CUDA-DENSE-004 | merged | Persistent dense regular-LLM CUDA FP16 GEMM fixture session with one context/module, upload-once input buffers, repeated launches, and no dense GGUF inference, speedup, or full-residency claim. |
 
 ## Review Policy
 
