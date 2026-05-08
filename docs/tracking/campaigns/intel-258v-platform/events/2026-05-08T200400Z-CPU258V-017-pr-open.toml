@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T20:04:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-017"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4123
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-017-prompt-token-audit"
+summary = "Opened CPU258V-017 to add a BitNet prompt/token authority audit receipt for the 258V CPU shared input-contract investigation."
+notes = [
+  "The audit records GGUF metadata, strict tokenizer source/family/vocab, prompt-template policy, rendered prompts, BOS/special-token policy, prompt token IDs, and classification between current default and metadata authority.",
+  "The PR is diagnostic only and does not claim answer quality, speed, Arc 140V execution, Intel NPU execution, QK256 decode, or accelerator performance.",
+]

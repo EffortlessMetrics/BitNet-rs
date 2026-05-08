@@ -3,4 +3,5 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
+| intel-258v-platform | CPU258V-017 | #4123 | `codex/lunar-lake/CPU258V-017-prompt-token-audit` | Emit a BitNet prompt/token authority audit receipt for the 258V CPU path that records GGUF metadata, tokenizer source/family/vocab, selected template policy, rendered prompt, BOS/EOS/special-token policy, prompt token IDs, generated-token/logit availability, and a first-divergence classification without claiming answer quality, speed, Arc/NPU execution, or QK256 changes. |
 | tracker-infra | TRACKER-003 | #3724 | `codex/tracker-infra/TRACKER-003-current-pr-reconciliation` | Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes. |
