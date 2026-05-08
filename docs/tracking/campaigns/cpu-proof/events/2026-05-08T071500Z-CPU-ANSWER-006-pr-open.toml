@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T07:15:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-006"
+event = "pr_open"
+pr = 4005
+head_sha = "693c95388940edf7064429973ed489b53113b0e4"
+actor = "codex"
+
+notes = [
+  "Opened #4005 for CPU-ANSWER-006 after #4003/#4004 preserved external Llama-BPE tokenizer authority in strict Rust CPU receipts.",
+  "The next evidence gap is reference-side prompt token IDs, generated token IDs, decoded text, and first-step top-k/logit evidence for the MODEL-ARTIFACT-007 Microsoft BitNet.cpp prompt envelope.",
+  "Strict Rust CPU execution is real but still emits the wrong first token for the math smoke, so this item must not claim answer quality, throughput, server inference, GPU, or NPU execution.",
+]
