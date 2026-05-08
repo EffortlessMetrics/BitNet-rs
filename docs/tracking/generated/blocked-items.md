@@ -55,7 +55,7 @@
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
 | intel-258v-platform | ARC140V-003 | ARC140V-002, CPU258V-003 | merged |
-| intel-258v-platform | ARC140V-004 | ARC140V-003, CPU258V-003 | pr_open |
+| intel-258v-platform | ARC140V-004 | ARC140V-003, CPU258V-003 | merged |
 | intel-258v-platform | LNL258V-003 | LNL258V-002 | merged |
 | intel-258v-platform | CPU258V-001 | LNL258V-003 | merged |
 | intel-258v-platform | LNL258V-OWNERSHIP-001 | CPU258V-001 | merged |

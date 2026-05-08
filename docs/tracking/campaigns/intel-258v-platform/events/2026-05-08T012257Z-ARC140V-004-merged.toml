@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T01:22:57Z"
+campaign = "intel-258v-platform"
+item = "ARC140V-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 3953
+merge_sha = "ec15e4def5dfe84bb2c6110a78f540ccc0e4d7a4"
+actor = "codex"
+
+notes = [
+  "Merged #3953, adding an Arc 140V native OpenCL tiny vector-add smoke command and 258V receipt.",
+  "The merged artifact records selected Arc 140V OpenCL runtime/device identity, kernel execution, timing, tolerance fields, and fallback_used=false.",
+  "This is native OpenCL kernel-smoke evidence only; it does not claim BitNet inference, QK256 decode, acceleration, OpenVINO proof as native OpenCL proof, or CPU fallback as Arc proof.",
+]
