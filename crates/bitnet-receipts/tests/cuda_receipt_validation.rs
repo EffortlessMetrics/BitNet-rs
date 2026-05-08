@@ -6,6 +6,7 @@
 use bitnet_receipts::{
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof, validate_cuda_parity_receipt_json,
     validate_cuda_smoke_receipt_json,
+    validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
     validate_dense_regular_llm_cuda_receipt_json,
     validate_dense_regular_llm_cuda_tensor_residency_receipt_json,
@@ -62,6 +63,18 @@ fn committed_dense_regular_llm_cuda_persistent_residency_receipt_validates() {
     .unwrap();
 
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json(&receipt).unwrap();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_gguf_descriptor_inspection_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-gguf-descriptor-inspection.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_tensor_descriptor_inspection_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
 
@@ -318,6 +331,56 @@ fn dense_regular_llm_cuda_persistent_residency_rejects_full_residency_claim() {
         .to_string();
 
     assert!(err.contains("full_cuda_residency_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_descriptor_inspection_receipt_validates() {
+    let receipt = valid_dense_gguf_descriptor_inspection_receipt();
+
+    validate_dense_gguf_tensor_descriptor_inspection_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_descriptor_inspection_rejects_missing_required_role() {
+    let mut receipt = valid_dense_gguf_descriptor_inspection_receipt();
+    receipt["descriptor_inspection"]["descriptors"]
+        .as_array_mut()
+        .expect("descriptors array")
+        .retain(|descriptor| descriptor["role"] != json!("mlp_down"));
+
+    let err = validate_dense_gguf_tensor_descriptor_inspection_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("mlp_down"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_descriptor_inspection_rejects_cuda_claim_leakage() {
+    let mut receipt = valid_dense_gguf_descriptor_inspection_receipt();
+    receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"] = json!(true);
+    receipt["descriptor_inspection"]["dense_regular_llm_cuda_claimed"] = json!(true);
+
+    let err = validate_dense_gguf_tensor_descriptor_inspection_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("dense_regular_llm_cuda_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_descriptor_inspection_rejects_bitnet_tensor_marker() {
+    let mut receipt = valid_dense_gguf_descriptor_inspection_receipt();
+    receipt["descriptor_inspection"]["descriptors"][2]["tensor_type"] = json!("i2_s");
+    receipt["descriptor_inspection"]["quantization_families"] = json!(["q8_0", "i2_s"]);
+
+    let err = validate_dense_gguf_tensor_descriptor_inspection_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("BitNet packed I2_S/QK256"), "unexpected error: {err}");
 }
 
 fn valid_smoke_receipt() -> Value {
@@ -615,6 +678,195 @@ fn valid_dense_regular_llm_cuda_persistent_residency_receipt() -> Value {
         }
     });
     receipt
+}
+
+fn valid_dense_gguf_descriptor_inspection_receipt() -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-08T23:45:00Z",
+        "claim": "dense_gguf_tensor_descriptors_inspected",
+        "inspection_source": "synthetic_gguf_reader_fixture",
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "quantization_family": "q8_0_dense_gguf",
+            "file": "synthetic-qwen3-q8_0-descriptor-fixture.gguf",
+            "fixture": true
+        },
+        "descriptor_inspection": {
+            "schema": 1,
+            "artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "architecture": "qwen3",
+            "model_family": "qwen",
+            "tensor_count": 11,
+            "metadata_count": 4,
+            "quantization_families": ["f32", "q8_0"],
+            "descriptors": dense_gguf_descriptor_entries(),
+            "required_roles_present": true,
+            "missing_required_roles": [],
+            "strict_descriptor_complete": true,
+            "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+            "bitnet_packed_marker_found": false,
+            "dense_gguf_inference_claimed": false,
+            "dense_regular_llm_cuda_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "claim_boundary": {
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_regular_llm_cuda_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "notes": [
+            "Descriptor-only GGUF reader fixture; no CUDA kernel or dense GGUF inference was executed.",
+            "Q8_0 tensors require a future quant bridge before strict dense CUDA routing can be claimed."
+        ],
+        "error": null
+    })
+}
+
+fn dense_gguf_descriptor_entries() -> Value {
+    json!([
+        dense_descriptor(
+            "token_embd.weight",
+            "token_embedding",
+            json!([16, 16]),
+            "q8_0",
+            0,
+            272,
+            true,
+            "dense_quant_descriptor_only"
+        ),
+        dense_descriptor(
+            "output.weight",
+            "output",
+            json!([16, 16]),
+            "q8_0",
+            272,
+            272,
+            true,
+            "dense_quant_descriptor_only"
+        ),
+        dense_descriptor(
+            "blk.0.attn_q.weight",
+            "attention_q",
+            json!([16, 16]),
+            "q8_0",
+            544,
+            272,
+            true,
+            "dense_quant_descriptor_only"
+        ),
+        dense_descriptor(
+            "blk.0.attn_k.weight",
+            "attention_k",
+            json!([16, 16]),
+            "q8_0",
+            816,
+            272,
+            true,
+            "dense_quant_descriptor_only"
+        ),
+        dense_descriptor(
+            "blk.0.attn_v.weight",
+            "attention_v",
+            json!([16, 16]),
+            "q8_0",
+            1088,
+            272,
+            true,
+            "dense_quant_descriptor_only"
+        ),
+        dense_descriptor(
+            "blk.0.attn_output.weight",
+            "attention_output",
+            json!([16, 16]),
+            "q8_0",
+            1360,
+            272,
+            true,
+            "dense_quant_descriptor_only"
+        ),
+        dense_descriptor(
+            "blk.0.ffn_gate.weight",
+            "mlp_gate",
+            json!([16, 16]),
+            "q8_0",
+            1632,
+            272,
+            true,
+            "dense_quant_descriptor_only"
+        ),
+        dense_descriptor(
+            "blk.0.ffn_up.weight",
+            "mlp_up",
+            json!([16, 16]),
+            "q8_0",
+            1904,
+            272,
+            true,
+            "dense_quant_descriptor_only"
+        ),
+        dense_descriptor(
+            "blk.0.ffn_down.weight",
+            "mlp_down",
+            json!([16, 16]),
+            "q8_0",
+            2176,
+            272,
+            true,
+            "dense_quant_descriptor_only"
+        ),
+        dense_descriptor(
+            "blk.0.attn_norm.weight",
+            "attention_norm",
+            json!([16]),
+            "f32",
+            2448,
+            64,
+            false,
+            "norm_or_metadata_descriptor_only"
+        ),
+        dense_descriptor(
+            "blk.0.ffn_norm.weight",
+            "ffn_norm",
+            json!([16]),
+            "f32",
+            2512,
+            64,
+            false,
+            "norm_or_metadata_descriptor_only"
+        )
+    ])
+}
+
+fn dense_descriptor(
+    name: &str,
+    role: &str,
+    shape: Value,
+    tensor_type: &str,
+    offset: u64,
+    size_bytes: u64,
+    quantized: bool,
+    descriptor_status: &str,
+) -> Value {
+    json!({
+        "name": name,
+        "role": role,
+        "shape": shape,
+        "tensor_type": tensor_type,
+        "offset": offset,
+        "size_bytes": size_bytes,
+        "quantized": quantized,
+        "descriptor_status": descriptor_status
+    })
 }
 
 fn cuda_identity() -> Value {

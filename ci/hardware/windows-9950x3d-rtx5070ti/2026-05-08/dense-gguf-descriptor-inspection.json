@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "timestamp_utc": "2026-05-08T23:45:00Z",
+  "claim": "dense_gguf_tensor_descriptors_inspected",
+  "inspection_source": "synthetic_gguf_reader_fixture",
+  "model": {
+    "model_family": "qwen",
+    "architecture": "qwen3",
+    "artifact_kind": "dense_gguf",
+    "quantization_family": "q8_0_dense_gguf",
+    "file": "synthetic-qwen3-q8_0-descriptor-fixture.gguf",
+    "fixture": true
+  },
+  "descriptor_inspection": {
+    "schema": 1,
+    "artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+    "architecture": "qwen3",
+    "model_family": "qwen",
+    "tensor_count": 11,
+    "metadata_count": 4,
+    "quantization_families": [
+      "f32",
+      "q8_0"
+    ],
+    "descriptors": [
+      {
+        "name": "token_embd.weight",
+        "role": "token_embedding",
+        "shape": [
+          16,
+          16
+        ],
+        "tensor_type": "q8_0",
+        "offset": 0,
+        "size_bytes": 272,
+        "quantized": true,
+        "descriptor_status": "dense_quant_descriptor_only"
+      },
+      {
+        "name": "output.weight",
+        "role": "output",
+        "shape": [
+          16,
+          16
+        ],
+        "tensor_type": "q8_0",
+        "offset": 272,
+        "size_bytes": 272,
+        "quantized": true,
+        "descriptor_status": "dense_quant_descriptor_only"
+      },
+      {
+        "name": "blk.0.attn_q.weight",
+        "role": "attention_q",
+        "shape": [
+          16,
+          16
+        ],
+        "tensor_type": "q8_0",
+        "offset": 544,
+        "size_bytes": 272,
+        "quantized": true,
+        "descriptor_status": "dense_quant_descriptor_only"
+      },
+      {
+        "name": "blk.0.attn_k.weight",
+        "role": "attention_k",
+        "shape": [
+          16,
+          16
+        ],
+        "tensor_type": "q8_0",
+        "offset": 816,
+        "size_bytes": 272,
+        "quantized": true,
+        "descriptor_status": "dense_quant_descriptor_only"
+      },
+      {
+        "name": "blk.0.attn_v.weight",
+        "role": "attention_v",
+        "shape": [
+          16,
+          16
+        ],
+        "tensor_type": "q8_0",
+        "offset": 1088,
+        "size_bytes": 272,
+        "quantized": true,
+        "descriptor_status": "dense_quant_descriptor_only"
+      },
+      {
+        "name": "blk.0.attn_output.weight",
+        "role": "attention_output",
+        "shape": [
+          16,
+          16
+        ],
+        "tensor_type": "q8_0",
+        "offset": 1360,
+        "size_bytes": 272,
+        "quantized": true,
+        "descriptor_status": "dense_quant_descriptor_only"
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "role": "mlp_gate",
+        "shape": [
+          16,
+          16
+        ],
+        "tensor_type": "q8_0",
+        "offset": 1632,
+        "size_bytes": 272,
+        "quantized": true,
+        "descriptor_status": "dense_quant_descriptor_only"
+      },
+      {
+        "name": "blk.0.ffn_up.weight",
+        "role": "mlp_up",
+        "shape": [
+          16,
+          16
+        ],
+        "tensor_type": "q8_0",
+        "offset": 1904,
+        "size_bytes": 272,
+        "quantized": true,
+        "descriptor_status": "dense_quant_descriptor_only"
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "role": "mlp_down",
+        "shape": [
+          16,
+          16
+        ],
+        "tensor_type": "q8_0",
+        "offset": 2176,
+        "size_bytes": 272,
+        "quantized": true,
+        "descriptor_status": "dense_quant_descriptor_only"
+      },
+      {
+        "name": "blk.0.attn_norm.weight",
+        "role": "attention_norm",
+        "shape": [
+          16
+        ],
+        "tensor_type": "f32",
+        "offset": 2448,
+        "size_bytes": 64,
+        "quantized": false,
+        "descriptor_status": "norm_or_metadata_descriptor_only"
+      },
+      {
+        "name": "blk.0.ffn_norm.weight",
+        "role": "ffn_norm",
+        "shape": [
+          16
+        ],
+        "tensor_type": "f32",
+        "offset": 2512,
+        "size_bytes": 64,
+        "quantized": false,
+        "descriptor_status": "norm_or_metadata_descriptor_only"
+      }
+    ],
+    "required_roles_present": true,
+    "missing_required_roles": [],
+    "strict_descriptor_complete": true,
+    "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+    "bitnet_packed_marker_found": false,
+    "dense_gguf_inference_claimed": false,
+    "dense_regular_llm_cuda_claimed": false,
+    "speedup_claim": false,
+    "full_cuda_residency_claimed": false
+  },
+  "claim_boundary": {
+    "dense_gguf_descriptor_inspection_claimed": true,
+    "dense_regular_llm_cuda_claimed": false,
+    "dense_gguf_inference_claimed": false,
+    "bitnet_packed_i2s_qk256_proof": false,
+    "speedup_claim": false,
+    "full_cuda_residency_claimed": false
+  },
+  "notes": [
+    "Descriptor-only GGUF reader fixture; no CUDA kernel or dense GGUF inference was executed.",
+    "Q8_0 tensors require a future quant bridge before strict dense CUDA routing can be claimed."
+  ],
+  "error": null
+}
