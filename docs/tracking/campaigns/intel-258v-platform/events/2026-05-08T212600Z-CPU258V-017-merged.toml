@@ -1,0 +1,18 @@
+timestamp = "2026-05-08T21:26:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-017"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4123
+merge_sha = "964341ecdd7f9d9a5c5762de2caf2168c39f9b64"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-017-prompt-token-audit"
+summary = "Merged CPU258V-017, adding a no-inference BitNet prompt/token authority audit receipt surface for the 258V CPU input-contract investigation."
+
+notes = [
+  "The live audit artifact is ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json.",
+  "The audit records real GGUF metadata, explicit Llama 3 tokenizer authority, vocab size 128256, prompt template policy, rendered prompts, BOS/special-token policy, and prompt token IDs.",
+  "For the selected math prompt, current default and metadata-authoritative BitnetCppAnswer prompt token IDs match, so first-token logits remain the next diagnostic stage.",
+  "The merged PR and closeout do not claim BitNet answer quality, CPU speed, Arc 140V execution, Intel NPU execution, or packed QK256 decode correctness.",
+]
