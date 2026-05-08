@@ -1411,10 +1411,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-PLANNER-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-planner-004-execution-plan-receipts"
 pr = 4146
-head_sha = "d760656d8c7884fdf9a55a2c21b028b4a9bf358a"
+head_sha = "75215f07536b2cb0af390469cda735a2666cfa29"
+merge_sha = "52165f2dbd67ab7dcc5caf4e7f496b57290253a7"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
