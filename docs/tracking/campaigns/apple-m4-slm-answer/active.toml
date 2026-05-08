@@ -164,7 +164,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-slm-answer/SLM-M4-004-warm-session"
 stackable = false
 review_mode = "codex_premerge"
@@ -172,6 +172,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-M4-003"]
 pr = 3956
+merge_sha = "69d85792b6c377d290e2de2af4d304c3a4e570ce"
 acceptance = "Add warm-session behavior so the validated model and tokenizer are loaded once, multiple prompts can run in one process, per-prompt receipts are emitted, and model_load, tokenize, prefill, decode, sampling, and total timing are separated."
 commands = [
   "cargo fmt --all -- --check",
@@ -207,13 +208,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-M4-005"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-answer/SLM-M4-005-quality-determinism"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["SLM-M4-003"]
+blocked_by = ["SLM-M4-004"]
 acceptance = "Add a deterministic Apple M4 SLM quality corpus so temperature=0 runs produce stable token IDs and receipts record valid UTF-8, non-empty, non-degenerate answers, model/tokenizer identity, backend routing, fallback status, and timing."
 commands = [
   "cargo fmt --all -- --check",
