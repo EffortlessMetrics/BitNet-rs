@@ -194,15 +194,11 @@ impl ScenarioConfigManager {
             && let Some(ref os) = platform.os
         {
             match os.as_str() {
-                "windows" => {
-                    if cfg.max_parallel_tests > 8 {
-                        cfg.max_parallel_tests = 8;
-                    }
+                "windows" if cfg.max_parallel_tests > 8 => {
+                    cfg.max_parallel_tests = 8;
                 }
-                "macos" => {
-                    if cfg.max_parallel_tests > 6 {
-                        cfg.max_parallel_tests = 6;
-                    }
+                "macos" if cfg.max_parallel_tests > 6 => {
+                    cfg.max_parallel_tests = 6;
                 }
                 _ => {}
             }
