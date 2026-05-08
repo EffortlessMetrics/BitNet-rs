@@ -338,6 +338,40 @@ fn mac_check_missing_cache_points_to_model_fetch() {
 }
 
 #[test]
+fn mac_ask_help_documents_positional_question() {
+    bitnet()
+        .args(["mac", "ask", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[QUESTION]"))
+        .stdout(predicate::str::contains("--question <QUESTION>"));
+}
+
+#[test]
+fn mac_ask_accepts_positional_question_before_cache_lookup() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "ask", "What is 2+2? Answer briefly.", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"))
+        .stderr(predicate::str::contains("unexpected argument").not());
+}
+
+#[test]
+fn mac_ask_rejects_positional_and_flag_question_together() {
+    bitnet()
+        .args(["mac", "ask", "What is 2+2?", "--question", "Name the capital of France."])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("either positionally"))
+        .stderr(predicate::str::contains("not both"));
+}
+
+#[test]
 #[cfg(debug_assertions)]
 fn mac_validate_performance_requires_release_before_cache_lookup() {
     let dir = tempfile::tempdir().expect("tempdir");

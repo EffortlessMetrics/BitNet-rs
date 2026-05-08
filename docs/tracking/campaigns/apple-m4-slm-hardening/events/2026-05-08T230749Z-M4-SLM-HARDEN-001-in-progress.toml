@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T23:07:49Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started positional Mac ask UX hardening.",
+  "Scope is CLI/docs/tracker only; no model binaries, QK256, server inference, Metal kernels, or backend claim changes.",
+]

@@ -1,0 +1,191 @@
+id = "apple-m4-slm-hardening"
+title = "Apple M4 SLM hardening"
+status = "active"
+
+objective = "Make the completed Apple M4 SLM path boring for local users through simple Mac commands, default verified model-cache behavior, clear first-run guidance, stable receipts, and conservative hardware claim boundaries."
+
+end_state = [
+  "bitnet mac ask \"question\" works as the shortest supported Mac local-answer command.",
+  "Existing bitnet mac ask --question \"question\" scripts continue to work.",
+  "First-run and missing-cache failures point directly to bitnet model fetch qwen2.5-0.5b-instruct-q8_0.",
+  "Device-boundary failures still reject full apple-m4-metal, MPSGraph inference, and hidden fallback before cache or model work.",
+  "Receipts and docs preserve model, tokenizer, backend, fallback, generated text, token IDs, and timing expectations.",
+]
+
+hard_constraints = [
+  "Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns.",
+  "Do not weaken blocked BitNet local-answer gates.",
+  "Do not claim BitNet local-answer quality from dense SLM evidence.",
+  "Do not claim full apple-m4-metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance.",
+  "Do not touch QK256, bitnet-qk256-dispatch, server inference, or Metal kernels.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M4-SLM-HARDEN-001"
+status = "in_progress"
+branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-001-positional-mac-ask"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Allow bitnet mac ask \"What is 2+2?\" as the shortest supported Mac local-answer command, keep bitnet mac ask --question compatible, reject ambiguous double question input, preserve default verified Qwen2.5 cache resolution, and keep device-boundary errors before cache/model work."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests mac_ask -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_snapshot_tests mac_ask_help",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-hardening",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-slm-hardening/**",
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-hardening/**",
+  "docs/tracking/generated/**",
+  "xtask/src/campaign.rs",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The default Mac SLM local-answer command accepts a positional question.",
+  "The existing --question form remains compatible.",
+  "The default verified Qwen2.5 cache flow and apple-m4-cpu-neon boundary are preserved.",
+]
+must_not_claim = [
+  "BitNet local-answer quality is proven.",
+  "Full apple-m4-metal inference works.",
+  "MPSGraph or Neural Engine model inference works.",
+  "QK256 works on Apple Silicon.",
+  "Broad M4 performance is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-HARDEN-002"
+status = "proposed"
+branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-002-cache-repair"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-HARDEN-001"]
+acceptance = "Improve first-run, corrupted-cache, low-disk, offline, verify, and prune guidance for Mac SLM operators without changing model artifacts or backend claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests model mac -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-hardening",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/model_cache.rs",
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-hardening/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Mac SLM first-run and cache repair guidance is clearer.",
+]
+must_not_claim = [
+  "A new model artifact is accepted.",
+  "Runtime speed is improved.",
+  "Full apple-m4-metal inference works.",
+]
+
+[[work_item]]
+id = "M4-SLM-HARDEN-003"
+status = "proposed"
+branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-003-quality-corpus"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-HARDEN-002"]
+acceptance = "Expand the tiny Mac SLM operator quality corpus with a few deterministic factual, short-instruction, and format-constrained prompts while preserving fast runtime and avoiding broad eval claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-hardening",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/**",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-hardening/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The Mac SLM operator quality corpus covers a slightly broader deterministic smoke surface.",
+]
+must_not_claim = [
+  "Broad chat quality is proven.",
+  "BitNet local-answer quality is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-HARDEN-004"
+status = "proposed"
+branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-004-regression-seed"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-HARDEN-003"]
+acceptance = "Define the next regression campaign and thresholds from the measured Apple M4 SLM performance envelope without turning one machine run into a broad performance guarantee."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-hardening",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/**",
+  "docs/tracking/generated/**",
+  "xtask/src/campaign.rs",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "A measured-regression campaign is defined for future Apple M4 SLM guardrails.",
+]
+must_not_claim = [
+  "Nightly regression infrastructure is already running.",
+  "Broad M4 performance is proven.",
+]
