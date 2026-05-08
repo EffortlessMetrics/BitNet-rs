@@ -15,15 +15,15 @@
         "net_bytes_total": 35712
       },
       "forward": {
-        "alloc_bytes_total": 121632912,
-        "alloc_count_total": 149256,
+        "alloc_bytes_total": 120889872,
+        "alloc_count_total": 145800,
         "count": 9,
-        "dealloc_bytes_total": 121376016,
-        "dealloc_count_total": 149211,
-        "max_alloc_bytes_per_token": 14339216,
-        "max_alloc_count_per_token": 16584,
-        "mean_alloc_bytes_per_token": 13514768.0,
-        "mean_alloc_count_per_token": 16584.0,
+        "dealloc_bytes_total": 120632976,
+        "dealloc_count_total": 145755,
+        "max_alloc_bytes_per_token": 14250896,
+        "max_alloc_count_per_token": 16200,
+        "mean_alloc_bytes_per_token": 13432208.0,
+        "mean_alloc_count_per_token": 16200.0,
         "net_bytes_total": 256896
       },
       "logits": {
@@ -51,16 +51,16 @@
         "net_bytes_total": 608024
       },
       "steady_state": {
-        "alloc_bytes_total": 123588482,
-        "alloc_count_total": 133124,
+        "alloc_bytes_total": 122921938,
+        "alloc_count_total": 130051,
         "count": 8,
-        "dealloc_bytes_total": 113598965,
-        "dealloc_count_total": 132964,
-        "max_alloc_bytes_per_token": 16169891,
-        "max_alloc_count_per_token": 16641,
-        "mean_alloc_bytes_per_token": 15448560.25,
-        "mean_alloc_count_per_token": 16640.5,
-        "net_bytes_total": 9989517
+        "dealloc_bytes_total": 112932573,
+        "dealloc_count_total": 129891,
+        "max_alloc_bytes_per_token": 16081571,
+        "max_alloc_count_per_token": 16257,
+        "mean_alloc_bytes_per_token": 15365242.25,
+        "mean_alloc_count_per_token": 16256.375,
+        "net_bytes_total": 9989365
       },
       "stop_tail_update": {
         "alloc_bytes_total": 0,
@@ -87,28 +87,28 @@
         "net_bytes_total": 42
       },
       "token_vector_update": {
-        "alloc_bytes_total": 304,
-        "alloc_count_total": 1,
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
         "count": 9,
-        "dealloc_bytes_total": 152,
-        "dealloc_count_total": 1,
-        "max_alloc_bytes_per_token": 304,
-        "max_alloc_count_per_token": 1,
-        "mean_alloc_bytes_per_token": 33.778,
-        "mean_alloc_count_per_token": 0.111,
-        "net_bytes_total": 152
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": 0,
+        "max_alloc_count_per_token": 0,
+        "mean_alloc_bytes_per_token": 0.0,
+        "mean_alloc_count_per_token": 0.0,
+        "net_bytes_total": 0
       },
       "total": {
-        "alloc_bytes_total": 138717253,
-        "alloc_count_total": 149766,
+        "alloc_bytes_total": 137973909,
+        "alloc_count_total": 146309,
         "count": 9,
-        "dealloc_bytes_total": 126871275,
-        "dealloc_count_total": 149584,
-        "max_alloc_bytes_per_token": 16169891,
-        "max_alloc_count_per_token": 16642,
-        "mean_alloc_bytes_per_token": 15413028.111,
-        "mean_alloc_count_per_token": 16640.667,
-        "net_bytes_total": 11845978
+        "dealloc_bytes_total": 126128083,
+        "dealloc_count_total": 146127,
+        "max_alloc_bytes_per_token": 16081571,
+        "max_alloc_count_per_token": 16258,
+        "mean_alloc_bytes_per_token": 15330434.333,
+        "mean_alloc_count_per_token": 16256.556,
+        "net_bytes_total": 11845826
       }
     },
     "enabled": true,
@@ -135,28 +135,28 @@
     "method": "process_global_allocator_counter_delta",
     "optimization_deferred": true,
     "prompt_prefill": {
-      "alloc_bytes_total": 303250140,
-      "alloc_count_total": 547377,
+      "alloc_bytes_total": 301523580,
+      "alloc_count_total": 534705,
       "count": 33,
-      "dealloc_bytes_total": 1107614556,
-      "dealloc_count_total": 547212,
-      "max_alloc_bytes_per_token": 12489116,
-      "max_alloc_count_per_token": 16601,
-      "mean_alloc_bytes_per_token": 9189398.182,
-      "mean_alloc_count_per_token": 16587.182,
+      "dealloc_bytes_total": 1105887996,
+      "dealloc_count_total": 534540,
+      "max_alloc_bytes_per_token": 12413756,
+      "max_alloc_count_per_token": 16217,
+      "mean_alloc_bytes_per_token": 9137078.182,
+      "mean_alloc_count_per_token": 16203.182,
       "net_bytes_total": -804364416
     },
     "prompt_setup": {
-      "alloc_bytes_total": 805337080,
-      "alloc_count_total": 258,
+      "alloc_bytes_total": 805326168,
+      "alloc_count_total": 242,
       "count": 1,
       "dealloc_bytes_total": 0,
       "dealloc_count_total": 0,
-      "max_alloc_bytes_per_token": 805337080,
-      "max_alloc_count_per_token": 258,
-      "mean_alloc_bytes_per_token": 805337080.0,
-      "mean_alloc_count_per_token": 258.0,
-      "net_bytes_total": 805337080
+      "max_alloc_bytes_per_token": 805326168,
+      "max_alloc_count_per_token": 242,
+      "mean_alloc_bytes_per_token": 805326168.0,
+      "mean_alloc_count_per_token": 242.0,
+      "net_bytes_total": 805326168
     },
     "prompt_tokenize": {
       "alloc_bytes_total": 126598159,
@@ -171,31 +171,31 @@
       "net_bytes_total": 152
     },
     "prompt_total_counter_delta": {
-      "alloc_bytes_total": 1373907430,
-      "alloc_count_total": 2217573,
+      "alloc_bytes_total": 1371426622,
+      "alloc_count_total": 2201427,
       "count": 1,
-      "dealloc_bytes_total": 1372233266,
-      "dealloc_count_total": 2217281,
-      "max_alloc_bytes_per_token": 1373907430,
-      "max_alloc_count_per_token": 2217573,
-      "mean_alloc_bytes_per_token": 1373907430.0,
-      "mean_alloc_count_per_token": 2217573.0,
-      "net_bytes_total": 1674164
+      "dealloc_bytes_total": 1369763526,
+      "dealloc_count_total": 2201152,
+      "max_alloc_bytes_per_token": 1371426622,
+      "max_alloc_count_per_token": 2201427,
+      "mean_alloc_bytes_per_token": 1371426622.0,
+      "mean_alloc_count_per_token": 2201427.0,
+      "net_bytes_total": 1663096
     },
     "ranked_hotspots": [
       {
-        "alloc_bytes": 805337080,
-        "alloc_count": 258,
+        "alloc_bytes": 805326168,
+        "alloc_count": 242,
         "component": "prompt_setup"
       },
       {
-        "alloc_bytes": 303250140,
-        "alloc_count": 547377,
+        "alloc_bytes": 301523580,
+        "alloc_count": 534705,
         "component": "prompt_prefill"
       },
       {
-        "alloc_bytes": 138717253,
-        "alloc_count": 149766,
+        "alloc_bytes": 137973909,
+        "alloc_count": 146309,
         "component": "decode_total"
       },
       {
@@ -204,8 +204,8 @@
         "component": "prompt_tokenize"
       },
       {
-        "alloc_bytes": 121632912,
-        "alloc_count": 149256,
+        "alloc_bytes": 120889872,
+        "alloc_count": 145800,
         "component": "model.forward"
       },
       {
@@ -224,32 +224,27 @@
         "component": "model.embed"
       },
       {
-        "alloc_bytes": 21723,
-        "alloc_count": 238,
+        "alloc_bytes": 25691,
+        "alloc_count": 273,
         "component": "receipt_construction"
       },
       {
         "alloc_bytes": 1374,
         "alloc_count": 64,
         "component": "tokenizer.decode"
-      },
-      {
-        "alloc_bytes": 304,
-        "alloc_count": 1,
-        "component": "token_vector_updates"
       }
     ],
     "receipt_construction": {
-      "alloc_bytes_total": 21723,
-      "alloc_count_total": 238,
+      "alloc_bytes_total": 25691,
+      "alloc_count_total": 273,
       "count": 1,
-      "dealloc_bytes_total": 4312,
+      "dealloc_bytes_total": 4336,
       "dealloc_count_total": 52,
-      "max_alloc_bytes_per_token": 21723,
-      "max_alloc_count_per_token": 238,
-      "mean_alloc_bytes_per_token": 21723.0,
-      "mean_alloc_count_per_token": 238.0,
-      "net_bytes_total": 17411
+      "max_alloc_bytes_per_token": 25691,
+      "max_alloc_count_per_token": 273,
+      "mean_alloc_bytes_per_token": 25691.0,
+      "mean_alloc_count_per_token": 273.0,
+      "net_bytes_total": 21355
     },
     "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
     "unavoidable_candidates": [
@@ -261,7 +256,7 @@
     "unavoidable_candidates_named_before_optimization": true
   },
   "artifact_kind": "slm_apple_m4_warm_session_prompt",
-  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_32-prompts/02-name-the-capital-of-france.json",
+  "artifact_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_32-prompts/02-name-the-capital-of-france.json",
   "case_id": "prompt_02",
   "execution": {
     "fallback_reason": null,
@@ -293,6 +288,17 @@
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
     "tokenizer": "gguf_metadata"
   },
+  "operator_ux": {
+    "clear_failure_messages": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": true,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipt": true,
+    "token_stream": "disabled"
+  },
   "prompt": "Name the capital of France.",
   "prompt_index": 1,
   "prompt_prefill": {
@@ -322,56 +328,71 @@
   "runtime_api": "cpu",
   "schema_version": "1.0.0",
   "selected_backend": "apple-m4-cpu-neon",
-  "session_artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_32.json",
+  "session_artifact_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_32.json",
+  "session_reuse": {
+    "allocation_audit_buffers_reused": true,
+    "generated_token_buffer_reused": true,
+    "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+    "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+    "model_loaded_once": true,
+    "prompt_token_buffer_reused": true,
+    "reuse_scope": "resident_session",
+    "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+    "session_owned_buffers": true,
+    "stop_tail_buffer_reused": true,
+    "timing_buffers_reused": true,
+    "tokenizer_loaded_once": true
+  },
   "speedup_claim": false,
   "text": "\nThe capital of France is Paris.<|im_end|>",
-  "timestamp": "2026-05-08T12:10:36.220424+00:00",
+  "timestamp": "2026-05-08T14:11:59.059563+00:00",
   "timing": {
-    "decode_steady_state_tok_s": 15.741,
-    "decode_total_ms": 571.896,
+    "decode_steady_state_tok_s": 15.609,
+    "decode_total_ms": 576.551,
     "embed_ms": {
       "count": 9,
-      "max_ms": 0.003,
+      "max_ms": 0.004,
       "mean_ms": 0.002,
       "min_ms": 0.001,
       "p50_ms": 0.002,
-      "p95_ms": 0.003,
-      "total_ms": 0.018
+      "p95_ms": 0.004,
+      "total_ms": 0.019
     },
-    "first_token_decode_ms": 63.66,
-    "first_token_ms": 1687,
+    "first_token_decode_ms": 64.02,
+    "first_token_ms": 1710,
     "forward_ms": {
       "count": 9,
-      "max_ms": 46.764,
-      "mean_ms": 46.431,
-      "min_ms": 45.703,
-      "p50_ms": 46.517,
-      "p95_ms": 46.764,
-      "total_ms": 417.879
+      "max_ms": 46.901,
+      "mean_ms": 46.781,
+      "min_ms": 46.656,
+      "p50_ms": 46.764,
+      "p95_ms": 46.901,
+      "total_ms": 421.033
     },
     "logits_ms": {
       "count": 9,
-      "max_ms": 17.157,
-      "mean_ms": 17.044,
-      "min_ms": 16.72,
-      "p50_ms": 17.109,
-      "p95_ms": 17.157,
-      "total_ms": 153.397
+      "max_ms": 17.239,
+      "mean_ms": 17.21,
+      "min_ms": 17.189,
+      "p50_ms": 17.202,
+      "p95_ms": 17.239,
+      "total_ms": 154.886
     },
     "model_load_ms": 0.0,
-    "prefill_ms": 1538.491,
+    "prefill_ms": 1554.556,
     "sample_ms": {
       "count": 9,
       "max_ms": 0.066,
-      "mean_ms": 0.064,
-      "min_ms": 0.061,
+      "mean_ms": 0.065,
+      "min_ms": 0.065,
       "p50_ms": 0.065,
       "p95_ms": 0.066,
-      "total_ms": 0.576
+      "total_ms": 0.588
     },
-    "sampling_ms_per_token": 0.064,
-    "session_model_load_ms": 3068.7,
-    "session_tokenizer_load_ms": 47.369,
+    "sampling_ms_per_token": 0.065,
+    "session_model_load_ms": 3092.226,
+    "session_tokenizer_load_ms": 48.287,
+    "time_to_first_token_ms": 1710,
     "token_decode_ms": {
       "count": 9,
       "max_ms": 0.004,
@@ -379,11 +400,11 @@
       "min_ms": 0.001,
       "p50_ms": 0.002,
       "p95_ms": 0.004,
-      "total_ms": 0.02
+      "total_ms": 0.018
     },
-    "tokenize_ms": 36.947,
+    "tokenize_ms": 39.08,
     "tokenizer_load_ms": 0.0,
-    "total_ms": 2195.625
+    "total_ms": 2223.358
   },
   "tokenizer": {
     "bos": 151643,

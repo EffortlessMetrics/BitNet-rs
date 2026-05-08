@@ -1,4 +1,9 @@
 {
+  "allocation_audit": {
+    "enabled": false,
+    "method": "not_requested",
+    "scope": "not_requested"
+  },
   "apple": {
     "machine_id": "apple-m4-mac-mini",
     "macos": {
@@ -16,7 +21,7 @@
     }
   },
   "artifact_kind": "slm_apple_m4_warm_session",
-  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16.json",
+  "artifact_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_16.json",
   "backend": {
     "fallback_reason": null,
     "fallback_used": false,
@@ -103,8 +108,24 @@
     "tokenizer_pre": "qwen2"
   },
   "operator_command": "mac validate --profile-set performance",
+  "operator_ux": {
+    "clear_failure_messages": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": true,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipts": true,
+    "token_stream": "disabled"
+  },
   "prompts": [
     {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
       "backend": {
         "fallback_used": false,
         "requested_backend": "apple-m4-cpu-neon",
@@ -124,6 +145,17 @@
         151645
       ],
       "generated_tokens": 9,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
       "prompt": "What is 2+2? Answer briefly.",
       "prompt_index": 0,
       "quality": {
@@ -143,70 +175,90 @@
         "printable_utf8": true,
         "valid_utf8": true
       },
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16-prompts/01-what-is-22-answer-briefly.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_16-prompts/01-what-is-22-answer-briefly.json",
       "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
       "text": "\n2+2 equals 4.<|im_end|>",
       "timing": {
-        "decode_steady_state_tok_s": 15.099,
-        "decode_total_ms": 668.814,
+        "decode_steady_state_tok_s": 15.316,
+        "decode_total_ms": 656.451,
         "embed_ms": {
           "count": 9,
-          "max_ms": 0.016,
-          "mean_ms": 0.007,
-          "min_ms": 0.003,
-          "p50_ms": 0.004,
-          "p95_ms": 0.016,
-          "total_ms": 0.065
+          "max_ms": 0.012,
+          "mean_ms": 0.005,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.012,
+          "total_ms": 0.043
         },
-        "first_token_decode_ms": 138.967,
-        "first_token_ms": 2200,
+        "first_token_decode_ms": 134.121,
+        "first_token_ms": 2078,
         "forward_ms": {
           "count": 9,
-          "max_ms": 48.954,
-          "mean_ms": 48.458,
-          "min_ms": 48.117,
-          "p50_ms": 48.353,
-          "p95_ms": 48.954,
-          "total_ms": 436.125
+          "max_ms": 48.155,
+          "mean_ms": 47.72,
+          "min_ms": 47.524,
+          "p50_ms": 47.614,
+          "p95_ms": 48.155,
+          "total_ms": 429.481
         },
         "logits_ms": {
           "count": 9,
-          "max_ms": 90.256,
-          "mean_ms": 25.772,
-          "min_ms": 17.583,
-          "p50_ms": 17.726,
-          "p95_ms": 90.256,
-          "total_ms": 231.951
+          "max_ms": 86.473,
+          "mean_ms": 25.14,
+          "min_ms": 17.458,
+          "p50_ms": 17.472,
+          "p95_ms": 86.473,
+          "total_ms": 226.257
         },
         "model_load_ms": 0.0,
-        "prefill_ms": 2013.246,
+        "prefill_ms": 1905.129,
         "sample_ms": {
           "count": 9,
-          "max_ms": 0.083,
-          "mean_ms": 0.07,
-          "min_ms": 0.067,
-          "p50_ms": 0.068,
-          "p95_ms": 0.083,
-          "total_ms": 0.627
+          "max_ms": 0.081,
+          "mean_ms": 0.068,
+          "min_ms": 0.066,
+          "p50_ms": 0.066,
+          "p95_ms": 0.081,
+          "total_ms": 0.612
         },
-        "sampling_ms_per_token": 0.07,
-        "session_model_load_ms": 3444.566,
-        "session_tokenizer_load_ms": 63.323,
+        "sampling_ms_per_token": 0.068,
+        "session_model_load_ms": 3254.63,
+        "session_tokenizer_load_ms": 72.183,
+        "time_to_first_token_ms": 2078,
         "token_decode_ms": {
           "count": 9,
-          "max_ms": 0.019,
-          "mean_ms": 0.004,
+          "max_ms": 0.033,
+          "mean_ms": 0.005,
           "min_ms": 0.001,
-          "p50_ms": 0.003,
-          "p95_ms": 0.019,
-          "total_ms": 0.037
+          "p50_ms": 0.002,
+          "p95_ms": 0.033,
+          "total_ms": 0.048
         },
-        "tokenize_ms": 42.977,
+        "tokenize_ms": 38.115,
         "tokenizer_load_ms": 0.0,
-        "total_ms": 2730.841
+        "total_ms": 2601.031
       }
     },
     {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
       "backend": {
         "fallback_used": false,
         "requested_backend": "apple-m4-cpu-neon",
@@ -226,6 +278,17 @@
         151645
       ],
       "generated_tokens": 9,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
       "prompt": "Name the capital of France.",
       "prompt_index": 1,
       "quality": {
@@ -245,70 +308,90 @@
         "printable_utf8": true,
         "valid_utf8": true
       },
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16-prompts/02-name-the-capital-of-france.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_16-prompts/02-name-the-capital-of-france.json",
       "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
       "text": "\nThe capital of France is Paris.<|im_end|>",
       "timing": {
-        "decode_steady_state_tok_s": 14.734,
-        "decode_total_ms": 608.794,
+        "decode_steady_state_tok_s": 15.239,
+        "decode_total_ms": 590.041,
         "embed_ms": {
           "count": 9,
-          "max_ms": 0.013,
-          "mean_ms": 0.005,
-          "min_ms": 0.003,
-          "p50_ms": 0.004,
-          "p95_ms": 0.013,
-          "total_ms": 0.047
+          "max_ms": 0.011,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.002,
+          "p95_ms": 0.011,
+          "total_ms": 0.036
         },
-        "first_token_decode_ms": 65.823,
-        "first_token_ms": 1868,
+        "first_token_decode_ms": 65.075,
+        "first_token_ms": 1843,
         "forward_ms": {
           "count": 9,
-          "max_ms": 51.317,
-          "mean_ms": 49.354,
-          "min_ms": 48.063,
-          "p50_ms": 49.374,
-          "p95_ms": 51.317,
-          "total_ms": 444.188
+          "max_ms": 48.124,
+          "mean_ms": 47.893,
+          "min_ms": 47.496,
+          "p50_ms": 47.886,
+          "p95_ms": 48.124,
+          "total_ms": 431.039
         },
         "logits_ms": {
           "count": 9,
-          "max_ms": 18.917,
-          "mean_ms": 18.198,
-          "min_ms": 17.634,
-          "p50_ms": 18.146,
-          "p95_ms": 18.917,
-          "total_ms": 163.783
+          "max_ms": 17.666,
+          "mean_ms": 17.594,
+          "min_ms": 17.455,
+          "p50_ms": 17.621,
+          "p95_ms": 17.666,
+          "total_ms": 158.343
         },
         "model_load_ms": 0.0,
-        "prefill_ms": 1612.65,
+        "prefill_ms": 1571.022,
         "sample_ms": {
           "count": 9,
-          "max_ms": 0.116,
-          "mean_ms": 0.075,
-          "min_ms": 0.067,
-          "p50_ms": 0.071,
-          "p95_ms": 0.116,
-          "total_ms": 0.676
+          "max_ms": 0.067,
+          "mean_ms": 0.067,
+          "min_ms": 0.066,
+          "p50_ms": 0.067,
+          "p95_ms": 0.067,
+          "total_ms": 0.599
         },
-        "sampling_ms_per_token": 0.075,
-        "session_model_load_ms": 3444.566,
-        "session_tokenizer_load_ms": 63.323,
+        "sampling_ms_per_token": 0.067,
+        "session_model_load_ms": 3254.63,
+        "session_tokenizer_load_ms": 72.183,
+        "time_to_first_token_ms": 1843,
         "token_decode_ms": {
           "count": 9,
-          "max_ms": 0.015,
-          "mean_ms": 0.01,
-          "min_ms": 0.004,
-          "p50_ms": 0.01,
-          "p95_ms": 0.015,
-          "total_ms": 0.089
+          "max_ms": 0.003,
+          "mean_ms": 0.002,
+          "min_ms": 0.001,
+          "p50_ms": 0.002,
+          "p95_ms": 0.003,
+          "total_ms": 0.017
         },
-        "tokenize_ms": 39.52,
+        "tokenize_ms": 36.951,
         "tokenizer_load_ms": 0.0,
-        "total_ms": 2411.875
+        "total_ms": 2368.829
       }
     },
     {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
       "backend": {
         "fallback_used": false,
         "requested_backend": "apple-m4-cpu-neon",
@@ -335,6 +418,17 @@
         369
       ],
       "generated_tokens": 16,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
       "prompt": "Write one short sentence about Rust.",
       "prompt_index": 2,
       "quality": {
@@ -354,67 +448,82 @@
         "printable_utf8": true,
         "valid_utf8": true
       },
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16-prompts/03-write-one-short-sentence-about-rust.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_16-prompts/03-write-one-short-sentence-about-rust.json",
       "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
       "text": " Rust is a powerful, versatile programming language that has gained popularity in recent years for",
       "timing": {
-        "decode_steady_state_tok_s": 15.075,
-        "decode_total_ms": 1064.469,
+        "decode_steady_state_tok_s": 15.595,
+        "decode_total_ms": 1025.862,
         "embed_ms": {
           "count": 16,
-          "max_ms": 0.02,
-          "mean_ms": 0.011,
-          "min_ms": 0.003,
-          "p50_ms": 0.011,
-          "p95_ms": 0.02,
-          "total_ms": 0.178
+          "max_ms": 0.015,
+          "mean_ms": 0.007,
+          "min_ms": 0.002,
+          "p50_ms": 0.007,
+          "p95_ms": 0.015,
+          "total_ms": 0.114
         },
-        "first_token_decode_ms": 69.424,
-        "first_token_ms": 1832,
+        "first_token_decode_ms": 64.026,
+        "first_token_ms": 1734,
         "forward_ms": {
           "count": 16,
-          "max_ms": 51.533,
-          "mean_ms": 48.669,
-          "min_ms": 48.006,
-          "p50_ms": 48.349,
-          "p95_ms": 51.533,
-          "total_ms": 778.709
+          "max_ms": 47.0,
+          "mean_ms": 46.824,
+          "min_ms": 46.72,
+          "p50_ms": 46.806,
+          "p95_ms": 47.0,
+          "total_ms": 749.179
         },
         "logits_ms": {
           "count": 16,
-          "max_ms": 18.238,
-          "mean_ms": 17.776,
-          "min_ms": 17.603,
-          "p50_ms": 17.691,
-          "p95_ms": 18.238,
-          "total_ms": 284.42
+          "max_ms": 17.248,
+          "mean_ms": 17.218,
+          "min_ms": 17.183,
+          "p50_ms": 17.218,
+          "p95_ms": 17.248,
+          "total_ms": 275.486
         },
         "model_load_ms": 0.0,
-        "prefill_ms": 1676.086,
+        "prefill_ms": 1599.465,
         "sample_ms": {
           "count": 16,
-          "max_ms": 0.072,
-          "mean_ms": 0.069,
-          "min_ms": 0.067,
-          "p50_ms": 0.068,
-          "p95_ms": 0.072,
-          "total_ms": 1.096
+          "max_ms": 0.066,
+          "mean_ms": 0.065,
+          "min_ms": 0.065,
+          "p50_ms": 0.065,
+          "p95_ms": 0.066,
+          "total_ms": 1.046
         },
-        "sampling_ms_per_token": 0.069,
-        "session_model_load_ms": 3444.566,
-        "session_tokenizer_load_ms": 63.323,
+        "sampling_ms_per_token": 0.065,
+        "session_model_load_ms": 3254.63,
+        "session_tokenizer_load_ms": 72.183,
+        "time_to_first_token_ms": 1734,
         "token_decode_ms": {
           "count": 16,
-          "max_ms": 0.004,
-          "mean_ms": 0.003,
+          "max_ms": 0.003,
+          "mean_ms": 0.002,
           "min_ms": 0.001,
-          "p50_ms": 0.003,
-          "p95_ms": 0.004,
-          "total_ms": 0.048
+          "p50_ms": 0.001,
+          "p95_ms": 0.003,
+          "total_ms": 0.027
         },
-        "tokenize_ms": 44.801,
+        "tokenize_ms": 36.134,
         "tokenizer_load_ms": 0.0,
-        "total_ms": 2827.829
+        "total_ms": 2696.615
       }
     }
   ],
@@ -437,14 +546,24 @@
   "schema_version": "1.0.0",
   "selected_backend": "apple-m4-cpu-neon",
   "session": {
+    "allocation_audit_buffers_reused": true,
+    "generated_token_buffer_reused": true,
+    "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+    "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
     "model_loaded_once": true,
-    "per_prompt_receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16-prompts",
+    "per_prompt_receipt_dir": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_16-prompts",
     "per_prompt_receipts": [
-      "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16-prompts/01-what-is-22-answer-briefly.json",
-      "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16-prompts/02-name-the-capital-of-france.json",
-      "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16-prompts/03-write-one-short-sentence-about-rust.json"
+      "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_16-prompts/01-what-is-22-answer-briefly.json",
+      "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_16-prompts/02-name-the-capital-of-france.json",
+      "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_16-prompts/03-write-one-short-sentence-about-rust.json"
     ],
     "prompt_count": 3,
+    "prompt_token_buffer_reused": true,
+    "reuse_scope": "resident_session",
+    "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+    "session_owned_buffers": true,
+    "stop_tail_buffer_reused": true,
+    "timing_buffers_reused": true,
     "tokenizer_loaded_once": true
   },
   "speed": {
@@ -457,54 +576,73 @@
     },
     "measurement_scope": "validated SLM warm session on apple-m4-cpu-neon",
     "reuse": {
+      "allocation_audit_buffers_reused": true,
+      "generated_token_buffer_reused": true,
       "kv_cache_recreated_per_prompt": true,
+      "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
       "logits_buffer_reuse_claimed": false,
+      "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
       "model_loaded_once": true,
       "per_prompt_model_load_ms": 0.0,
       "per_prompt_tokenizer_load_ms": 0.0,
+      "prompt_token_buffer_reused": true,
+      "reuse_scope": "resident_session",
       "sampler_recreated_per_prompt": true,
+      "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+      "session_owned_buffers": true,
+      "stop_tail_buffer_reused": true,
+      "timing_buffers_reused": true,
       "tokenizer_loaded_once": true
     },
     "speedup_claim": false,
     "throughput": {
-      "cold_session_generated_tok_s": 2.598,
-      "decode_generated_tok_s": 14.517,
-      "warm_prompt_generated_tok_s": 4.266
+      "cold_session_generated_tok_s": 2.703,
+      "decode_generated_tok_s": 14.962,
+      "warm_prompt_generated_tok_s": 4.435
     },
     "timing": {
-      "decode_total_ms": 2342.077,
+      "decode_total_ms": 2272.354,
       "first_token_ms": {
         "count": 3,
-        "max_ms": 2200.0,
-        "mean_ms": 1966.667,
-        "min_ms": 1832.0,
-        "p50_ms": 1868.0,
-        "p95_ms": 2200.0,
-        "total_ms": 5900.0
+        "max_ms": 2078.0,
+        "mean_ms": 1885.0,
+        "min_ms": 1734.0,
+        "p50_ms": 1843.0,
+        "p95_ms": 2078.0,
+        "total_ms": 5655.0
       },
-      "model_load_ms": 3444.566,
-      "prefill_ms": 5301.982,
-      "sampling_ms": 2.399,
+      "model_load_ms": 3254.63,
+      "prefill_ms": 5075.616,
+      "sampling_ms": 2.257,
       "steady_decode_tok_s": {
         "count": 3,
-        "max": 15.099,
-        "mean": 14.969,
-        "min": 14.734,
-        "p50": 15.075,
-        "p95": 15.099
+        "max": 15.595,
+        "mean": 15.383,
+        "min": 15.239,
+        "p50": 15.316,
+        "p95": 15.595
       },
-      "tokenize_ms": 127.299,
-      "tokenizer_load_ms": 63.323,
-      "total_session_ms": 13085.842,
-      "warm_prompt_wall_ms": 7970.545
+      "time_to_first_token_ms": {
+        "count": 3,
+        "max_ms": 2078.0,
+        "mean_ms": 1885.0,
+        "min_ms": 1734.0,
+        "p50_ms": 1843.0,
+        "p95_ms": 2078.0,
+        "total_ms": 5655.0
+      },
+      "tokenize_ms": 111.201,
+      "tokenizer_load_ms": 72.183,
+      "total_session_ms": 12576.726,
+      "warm_prompt_wall_ms": 7666.475
     }
   },
   "speedup_claim": false,
-  "timestamp": "2026-05-08T11:48:06.878733+00:00",
+  "timestamp": "2026-05-08T14:10:31.334003+00:00",
   "timing": {
-    "model_load_ms": 3444.566,
-    "tokenizer_load_ms": 63.323,
-    "total_session_ms": 13085.842
+    "model_load_ms": 3254.63,
+    "tokenizer_load_ms": 72.183,
+    "total_session_ms": 12576.726
   },
   "tokenizer": {
     "bos": 151643,

@@ -1,6 +1,11 @@
 {
+  "allocation_audit": {
+    "enabled": false,
+    "method": "not_requested",
+    "scope": "not_requested"
+  },
   "artifact_kind": "apple_m4_slm_performance_profiles",
-  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline.json",
+  "artifact_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline.json",
   "build": {
     "profile": "release",
     "release_mode": true
@@ -56,6 +61,15 @@
     "scope": "supported Apple M4 SLM warm-answer timing only",
     "thresholds_are_claim_bounds_not_speed_guarantees": true
   },
+  "operator_ux": {
+    "clear_failure_messages": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": true,
+    "status_stream": "stderr",
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipts": true
+  },
   "performance_baseline": {
     "baseline_scope": "release-mode warm-session timing for this model, backend, machine, and profile set only",
     "broad_performance_claim": false,
@@ -68,6 +82,11 @@
   "profile_set": "performance",
   "profiles": [
     {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
       "claim_boundary": {
         "broad_performance_claim": false,
         "scope": "this profile, model, backend, and machine receipt only",
@@ -76,40 +95,77 @@
       "cold_load_separated": true,
       "generated_tokens": 34,
       "memory": {
-        "peak_memory_mb": 3646.453,
+        "peak_memory_mb": 3772.469,
         "peak_memory_source": "getrusage.ru_maxrss"
       },
       "model_loaded_once": true,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipts": true,
+        "token_stream": "disabled"
+      },
       "profile_id": "warm_16",
       "prompt_count": 3,
       "quality_passed": true,
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_16.json",
       "requested_max_new_tokens": 16,
+      "resident_session": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true
+      },
       "reuse_scope": "within_profile",
       "timing": {
-        "decode_generated_tok_s": 14.517,
-        "decode_total_ms": 2342.077,
+        "decode_generated_tok_s": 14.962,
+        "decode_total_ms": 2272.354,
         "first_token_ms": {
           "count": 3,
-          "max_ms": 2200.0,
-          "mean_ms": 1966.667,
-          "min_ms": 1832.0,
-          "p50_ms": 1868.0,
-          "p95_ms": 2200.0,
-          "total_ms": 5900.0
+          "max_ms": 2078.0,
+          "mean_ms": 1885.0,
+          "min_ms": 1734.0,
+          "p50_ms": 1843.0,
+          "p95_ms": 2078.0,
+          "total_ms": 5655.0
         },
-        "model_load_ms": 3444.566,
-        "prefill_ms": 5301.982,
-        "sampling_ms": 2.399,
-        "tokenize_ms": 127.299,
-        "tokenizer_load_ms": 63.323,
-        "total_session_ms": 13085.842,
-        "warm_prompt_generated_tok_s": 4.266,
-        "warm_prompt_wall_ms": 7970.545
+        "model_load_ms": 3254.63,
+        "prefill_ms": 5075.616,
+        "sampling_ms": 2.257,
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max_ms": 2078.0,
+          "mean_ms": 1885.0,
+          "min_ms": 1734.0,
+          "p50_ms": 1843.0,
+          "p95_ms": 2078.0,
+          "total_ms": 5655.0
+        },
+        "tokenize_ms": 111.201,
+        "tokenizer_load_ms": 72.183,
+        "total_session_ms": 12576.726,
+        "warm_prompt_generated_tok_s": 4.435,
+        "warm_prompt_wall_ms": 7666.475
       },
       "tokenizer_loaded_once": true
     },
     {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
       "claim_boundary": {
         "broad_performance_claim": false,
         "scope": "this profile, model, backend, and machine receipt only",
@@ -118,40 +174,77 @@
       "cold_load_separated": true,
       "generated_tokens": 50,
       "memory": {
-        "peak_memory_mb": 4010.359,
+        "peak_memory_mb": 4009.078,
         "peak_memory_source": "getrusage.ru_maxrss"
       },
       "model_loaded_once": true,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipts": true,
+        "token_stream": "disabled"
+      },
       "profile_id": "warm_32",
       "prompt_count": 3,
       "quality_passed": true,
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_32.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_32.json",
       "requested_max_new_tokens": 32,
+      "resident_session": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true
+      },
       "reuse_scope": "within_profile",
       "timing": {
-        "decode_generated_tok_s": 15.187,
-        "decode_total_ms": 3292.184,
+        "decode_generated_tok_s": 15.317,
+        "decode_total_ms": 3264.305,
         "first_token_ms": {
           "count": 3,
-          "max_ms": 1881.0,
-          "mean_ms": 1804.0,
-          "min_ms": 1762.0,
-          "p50_ms": 1769.0,
-          "p95_ms": 1881.0,
-          "total_ms": 5412.0
+          "max_ms": 1857.0,
+          "mean_ms": 1779.333,
+          "min_ms": 1726.0,
+          "p50_ms": 1755.0,
+          "p95_ms": 1857.0,
+          "total_ms": 5338.0
         },
-        "model_load_ms": 3204.287,
-        "prefill_ms": 4982.993,
-        "sampling_ms": 3.437,
-        "tokenize_ms": 121.441,
-        "tokenizer_load_ms": 54.655,
-        "total_session_ms": 13513.646,
-        "warm_prompt_generated_tok_s": 5.879,
-        "warm_prompt_wall_ms": 8505.453
+        "model_load_ms": 3118.775,
+        "prefill_ms": 4935.186,
+        "sampling_ms": 3.395,
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max_ms": 1857.0,
+          "mean_ms": 1779.333,
+          "min_ms": 1726.0,
+          "p50_ms": 1755.0,
+          "p95_ms": 1857.0,
+          "total_ms": 5338.0
+        },
+        "tokenize_ms": 112.379,
+        "tokenizer_load_ms": 49.173,
+        "total_session_ms": 13117.047,
+        "warm_prompt_generated_tok_s": 5.947,
+        "warm_prompt_wall_ms": 8407.277
       },
       "tokenizer_loaded_once": true
     },
     {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
       "claim_boundary": {
         "broad_performance_claim": false,
         "scope": "this profile, model, backend, and machine receipt only",
@@ -160,40 +253,77 @@
       "cold_load_separated": true,
       "generated_tokens": 82,
       "memory": {
-        "peak_memory_mb": 4028.125,
+        "peak_memory_mb": 4026.438,
         "peak_memory_source": "getrusage.ru_maxrss"
       },
       "model_loaded_once": true,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipts": true,
+        "token_stream": "disabled"
+      },
       "profile_id": "warm_64",
       "prompt_count": 3,
       "quality_passed": true,
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_64.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_64.json",
       "requested_max_new_tokens": 64,
+      "resident_session": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true
+      },
       "reuse_scope": "within_profile",
       "timing": {
-        "decode_generated_tok_s": 14.909,
-        "decode_total_ms": 5500.146,
+        "decode_generated_tok_s": 15.269,
+        "decode_total_ms": 5370.421,
         "first_token_ms": {
           "count": 3,
-          "max_ms": 1890.0,
-          "mean_ms": 1802.667,
-          "min_ms": 1727.0,
-          "p50_ms": 1791.0,
-          "p95_ms": 1890.0,
-          "total_ms": 5408.0
+          "max_ms": 1838.0,
+          "mean_ms": 1763.0,
+          "min_ms": 1700.0,
+          "p50_ms": 1751.0,
+          "p95_ms": 1838.0,
+          "total_ms": 5289.0
         },
-        "model_load_ms": 3137.188,
-        "prefill_ms": 5016.013,
-        "sampling_ms": 5.856,
-        "tokenize_ms": 119.605,
-        "tokenizer_load_ms": 53.414,
-        "total_session_ms": 15483.482,
-        "warm_prompt_generated_tok_s": 7.663,
-        "warm_prompt_wall_ms": 10700.936
+        "model_load_ms": 3105.861,
+        "prefill_ms": 4902.51,
+        "sampling_ms": 5.512,
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max_ms": 1838.0,
+          "mean_ms": 1763.0,
+          "min_ms": 1700.0,
+          "p50_ms": 1751.0,
+          "p95_ms": 1838.0,
+          "total_ms": 5289.0
+        },
+        "tokenize_ms": 114.555,
+        "tokenizer_load_ms": 49.333,
+        "total_session_ms": 15228.741,
+        "warm_prompt_generated_tok_s": 7.84,
+        "warm_prompt_wall_ms": 10459.755
       },
       "tokenizer_loaded_once": true
     },
     {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
       "claim_boundary": {
         "broad_performance_claim": false,
         "scope": "this profile, model, backend, and machine receipt only",
@@ -202,36 +332,68 @@
       "cold_load_separated": true,
       "generated_tokens": 123,
       "memory": {
-        "peak_memory_mb": 4028.125,
+        "peak_memory_mb": 4033.422,
         "peak_memory_source": "getrusage.ru_maxrss"
       },
       "model_loaded_once": true,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipts": true,
+        "token_stream": "disabled"
+      },
       "profile_id": "warm_128",
       "prompt_count": 3,
       "quality_passed": true,
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_128.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_128.json",
       "requested_max_new_tokens": 128,
+      "resident_session": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true
+      },
       "reuse_scope": "within_profile",
       "timing": {
-        "decode_generated_tok_s": 14.925,
-        "decode_total_ms": 8241.127,
+        "decode_generated_tok_s": 15.313,
+        "decode_total_ms": 8032.375,
         "first_token_ms": {
           "count": 3,
-          "max_ms": 2235.0,
-          "mean_ms": 1975.333,
-          "min_ms": 1801.0,
-          "p50_ms": 1890.0,
-          "p95_ms": 2235.0,
-          "total_ms": 5926.0
+          "max_ms": 1884.0,
+          "mean_ms": 1775.333,
+          "min_ms": 1720.0,
+          "p50_ms": 1722.0,
+          "p95_ms": 1884.0,
+          "total_ms": 5326.0
         },
-        "model_load_ms": 3288.352,
-        "prefill_ms": 5139.688,
-        "sampling_ms": 8.504,
-        "tokenize_ms": 123.755,
-        "tokenizer_load_ms": 52.313,
-        "total_session_ms": 18977.237,
-        "warm_prompt_generated_tok_s": 8.847,
-        "warm_prompt_wall_ms": 13903.115
+        "model_load_ms": 3174.666,
+        "prefill_ms": 4932.381,
+        "sampling_ms": 8.202,
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max_ms": 1884.0,
+          "mean_ms": 1775.333,
+          "min_ms": 1720.0,
+          "p50_ms": 1722.0,
+          "p95_ms": 1884.0,
+          "total_ms": 5326.0
+        },
+        "tokenize_ms": 115.256,
+        "tokenizer_load_ms": 54.097,
+        "total_session_ms": 17896.347,
+        "warm_prompt_generated_tok_s": 9.347,
+        "warm_prompt_wall_ms": 13158.941
       },
       "tokenizer_loaded_once": true
     }
@@ -241,5 +403,5 @@
   "schema_version": "1.0.0",
   "selected_backend": "apple-m4-cpu-neon",
   "speedup_claim": false,
-  "timestamp": "2026-05-08T11:48:55.078612+00:00"
+  "timestamp": "2026-05-08T14:11:17.747394+00:00"
 }

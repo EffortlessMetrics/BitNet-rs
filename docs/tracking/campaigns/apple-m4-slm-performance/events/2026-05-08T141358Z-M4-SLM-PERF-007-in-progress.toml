@@ -1,0 +1,11 @@
+timestamp = "2026-05-08T14:13:58Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-007"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started the measured Apple M4 SLM performance envelope item.",
+  "Fresh current-shape release baseline and allocation-audit receipts are being used so the envelope is backed by validator-passing artifacts.",
+  "No runtime, QK256, server, Neural Engine, MPSGraph, or full Metal inference changes are in scope.",
+]

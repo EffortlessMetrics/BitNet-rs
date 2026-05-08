@@ -1,6 +1,11 @@
 {
+  "allocation_audit": {
+    "enabled": false,
+    "method": "not_requested",
+    "scope": "not_requested"
+  },
   "artifact_kind": "slm_apple_m4_warm_session_prompt",
-  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_32-prompts/03-write-one-short-sentence-about-rust.json",
+  "artifact_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_32-prompts/03-write-one-short-sentence-about-rust.json",
   "case_id": "prompt_03",
   "execution": {
     "fallback_reason": null,
@@ -32,6 +37,17 @@
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
     "tokenizer": "gguf_metadata"
   },
+  "operator_ux": {
+    "clear_failure_messages": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": true,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipt": true,
+    "token_stream": "disabled"
+  },
   "prompt": "Write one short sentence about Rust.",
   "prompt_index": 2,
   "prompt_prefill": {
@@ -61,68 +77,83 @@
   "runtime_api": "cpu",
   "schema_version": "1.0.0",
   "selected_backend": "apple-m4-cpu-neon",
-  "session_artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_32.json",
+  "session_artifact_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-baseline-profiles/warm_32.json",
+  "session_reuse": {
+    "allocation_audit_buffers_reused": true,
+    "generated_token_buffer_reused": true,
+    "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+    "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+    "model_loaded_once": true,
+    "prompt_token_buffer_reused": true,
+    "reuse_scope": "resident_session",
+    "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+    "session_owned_buffers": true,
+    "stop_tail_buffer_reused": true,
+    "timing_buffers_reused": true,
+    "tokenizer_loaded_once": true
+  },
   "speedup_claim": false,
   "text": " Rust is a powerful, versatile programming language that has gained popularity in recent years for its simplicity and efficiency. It's known for its ability to handle large amounts of",
-  "timestamp": "2026-05-08T11:48:20.468912+00:00",
+  "timestamp": "2026-05-08T14:10:44.517137+00:00",
   "timing": {
-    "decode_steady_state_tok_s": 15.189,
-    "decode_total_ms": 2106.294,
+    "decode_steady_state_tok_s": 15.313,
+    "decode_total_ms": 2089.655,
     "embed_ms": {
       "count": 32,
-      "max_ms": 0.008,
-      "mean_ms": 0.004,
-      "min_ms": 0.002,
-      "p50_ms": 0.003,
-      "p95_ms": 0.008,
-      "total_ms": 0.123
+      "max_ms": 0.006,
+      "mean_ms": 0.002,
+      "min_ms": 0.001,
+      "p50_ms": 0.002,
+      "p95_ms": 0.005,
+      "total_ms": 0.076
     },
-    "first_token_decode_ms": 65.397,
-    "first_token_ms": 1762,
+    "first_token_decode_ms": 65.284,
+    "first_token_ms": 1755,
     "forward_ms": {
       "count": 32,
-      "max_ms": 48.943,
-      "mean_ms": 48.119,
-      "min_ms": 47.771,
-      "p50_ms": 48.099,
-      "p95_ms": 48.503,
-      "total_ms": 1539.799
+      "max_ms": 48.047,
+      "mean_ms": 47.734,
+      "min_ms": 47.513,
+      "p50_ms": 47.731,
+      "p95_ms": 47.942,
+      "total_ms": 1527.473
     },
     "logits_ms": {
       "count": 32,
-      "max_ms": 17.85,
-      "mean_ms": 17.628,
-      "min_ms": 17.527,
-      "p50_ms": 17.609,
-      "p95_ms": 17.833,
-      "total_ms": 564.095
+      "max_ms": 17.631,
+      "mean_ms": 17.496,
+      "min_ms": 17.451,
+      "p50_ms": 17.483,
+      "p95_ms": 17.609,
+      "total_ms": 559.884
     },
     "model_load_ms": 0.0,
-    "prefill_ms": 1620.138,
+    "prefill_ms": 1612.046,
     "sample_ms": {
       "count": 32,
-      "max_ms": 0.073,
-      "mean_ms": 0.068,
+      "max_ms": 0.07,
+      "mean_ms": 0.067,
       "min_ms": 0.066,
       "p50_ms": 0.067,
-      "p95_ms": 0.071,
-      "total_ms": 2.172
+      "p95_ms": 0.069,
+      "total_ms": 2.146
     },
-    "sampling_ms_per_token": 0.068,
-    "session_model_load_ms": 3204.287,
-    "session_tokenizer_load_ms": 54.655,
+    "sampling_ms_per_token": 0.067,
+    "session_model_load_ms": 3118.775,
+    "session_tokenizer_load_ms": 49.173,
+    "time_to_first_token_ms": 1755,
     "token_decode_ms": {
       "count": 32,
       "max_ms": 0.003,
       "mean_ms": 0.002,
       "min_ms": 0.001,
-      "p50_ms": 0.003,
+      "p50_ms": 0.002,
       "p95_ms": 0.003,
-      "total_ms": 0.077
+      "total_ms": 0.053
     },
-    "tokenize_ms": 38.413,
+    "tokenize_ms": 38.804,
     "tokenizer_load_ms": 0.0,
-    "total_ms": 3803.41
+    "total_ms": 3779.536
   },
   "tokenizer": {
     "bos": 151643,
