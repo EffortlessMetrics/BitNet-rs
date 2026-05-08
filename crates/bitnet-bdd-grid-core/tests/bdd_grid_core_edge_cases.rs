@@ -62,6 +62,12 @@ fn scenario_case_insensitive() {
 }
 
 #[test]
+fn scenario_normalizes_trimmed_underscored_and_spaced_values() {
+    assert_eq!(TestingScenario::from_str(" end_to_end "), Ok(TestingScenario::EndToEnd));
+    assert_eq!(TestingScenario::from_str("cross validation"), Ok(TestingScenario::CrossValidation));
+}
+
+#[test]
 fn scenario_display_roundtrip() {
     let scenarios = [
         TestingScenario::Unit,
@@ -164,6 +170,18 @@ fn env_case_insensitive() {
 }
 
 #[test]
+fn env_normalizes_trimmed_underscored_and_spaced_values() {
+    assert_eq!(
+        ExecutionEnvironment::from_str(" pre_production "),
+        Ok(ExecutionEnvironment::PreProduction)
+    );
+    assert_eq!(
+        ExecutionEnvironment::from_str("pre production"),
+        Ok(ExecutionEnvironment::PreProduction)
+    );
+}
+
+#[test]
 fn env_display_roundtrip() {
     let envs = [
         ExecutionEnvironment::Local,
@@ -248,6 +266,14 @@ fn feature_case_insensitive() {
 }
 
 #[test]
+fn feature_normalizes_trimmed_underscored_and_spaced_values() {
+    assert_eq!(BitnetFeature::from_str(" integration_tests "), Ok(BitnetFeature::IntegrationTests));
+    assert_eq!(BitnetFeature::from_str("cpp_ffi"), Ok(BitnetFeature::CppFfi));
+    assert_eq!(BitnetFeature::from_str("iq2s ffi"), Ok(BitnetFeature::Iq2sFfi));
+    assert_eq!(BitnetFeature::from_str("cross validation"), Ok(BitnetFeature::CrossValidation));
+}
+
+#[test]
 fn feature_display_roundtrip() {
     let features = [
         BitnetFeature::Cpu,
@@ -310,6 +336,20 @@ fn feature_set_from_names_skips_unknown() {
     assert!(set.contains(BitnetFeature::Cpu));
     assert!(set.contains(BitnetFeature::Gpu));
     assert!(!set.contains(BitnetFeature::Cuda));
+}
+
+#[test]
+fn feature_set_try_from_names_reports_unknowns() {
+    let result = FeatureSet::try_from_names(["cpu", "unknown-thing", "gpu", "also-unknown"]);
+    assert_eq!(result, Err(vec!["unknown-thing".to_string(), "also-unknown".to_string()]));
+}
+
+#[test]
+fn feature_set_from_names_normalizes_common_aliases() {
+    let set = FeatureSet::from_names([" cpu ", "integration_tests", "iq2s ffi"]);
+    assert!(set.contains(BitnetFeature::Cpu));
+    assert!(set.contains(BitnetFeature::IntegrationTests));
+    assert!(set.contains(BitnetFeature::Iq2sFfi));
 }
 
 #[test]
