@@ -658,7 +658,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-008"
-status = "ready"
+status = "pr_open"
+pr = 4008
 branch = "codex/intel-258v-platform/CPU258V-008-answer-case-filter"
 stackable = false
 review_mode = "codex_premerge"
