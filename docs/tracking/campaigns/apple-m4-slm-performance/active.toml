@@ -172,8 +172,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-004"
-status = "pr_open"
+status = "merged"
 pr = 4057
+merge_sha = "61953abd85ba4ecf1ba4025831e93974b2fde639"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-004-cpu-neon-hotpath"
 stackable = false
 review_mode = "codex_premerge"
@@ -219,7 +220,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-005"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-005-metal-phase-expansion"
 stackable = false
 review_mode = "codex_premerge"
@@ -252,8 +253,18 @@ forbidden_paths = [
   "crates/bitnet-server/**",
   "models/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "A named Apple Metal prefill/projection phase participates in the SLM path with CPU-only versus CPU-plus-Metal greedy parity.",
+  "The named Metal phase records fallback_used=false and timing delta receipts for that phase only.",
+]
+must_not_claim = [
+  "Full apple-m4-metal inference works.",
+  "Apple Metal accelerates the full SLM answer path.",
+  "BitNet local-answer quality or performance is proven.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "Broad Apple M4 performance is proven.",
+]
 
 [[work_item]]
 id = "M4-SLM-PERF-006"

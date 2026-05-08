@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T12:54:14Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-004"
+event = "merged"
+pr = 4057
+merge_sha = "61953abd85ba4ecf1ba4025831e93974b2fde639"
+actor = "codex"
+
+notes = [
+  "M4-SLM-PERF-004 CPU/NEON hot-path optimization merged.",
+  "Single-token decode skips all-zero causal mask materialization, static debug/trace env flags are cached, generated token IDs matched the release baseline across warm profiles and prompts, and M4-SLM-PERF-005 is ready.",
+]
