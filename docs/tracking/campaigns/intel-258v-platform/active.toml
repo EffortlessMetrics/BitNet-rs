@@ -744,3 +744,42 @@ must_not_claim = [
   "Sustained throughput is proven.",
   "Arc 140V or Intel NPU execution is proven.",
 ]
+
+[[work_item]]
+id = "CPU258V-010"
+status = "pr_open"
+pr = 4012
+branch = "codex/intel-258v-platform/CPU258V-010-release-single-case"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-009"]
+acceptance = "Record a release-built 258V AVX2 answer-corpus attempt for the selected math_2_plus_2 BitNet.cpp-template case, preserving the completed strict CPU receipt row and quality failure evidence without parity, speed, Arc, or NPU claims."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-release.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "ci/hardware/intel-258v/README.md",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The selected release-built 258V AVX2 math_2_plus_2 answer-corpus case completed within the bounded child-run window.",
+  "The completed strict CPU row used real_gguf loading, explicit strict tokenizer resolution, selected i2_s-avx2-reference kernel, and fallback_used=false.",
+  "The selected case failed the exact answer-quality gate with recorded generated token IDs and decoded text.",
+]
+must_not_claim = [
+  "The selected case answered correctly.",
+  "Scalar/AVX2 parity under the new prompt is proven.",
+  "Sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+]

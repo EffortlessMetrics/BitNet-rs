@@ -14,6 +14,7 @@ ci/hardware/intel-258v/<date>/cpu-phase-warm-session.json
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template.json
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-case.json
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2.json
+ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-release.json
 ```
 
 `platform-probe.json` is visibility-only. It may record CPU AVX2 facts, Arc
@@ -49,3 +50,8 @@ child receipt is emitted.
 `cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2.json` records the
 first 258V AVX2 single-case follow-up. The selected `math_2_plus_2` case still
 timed out within the bounded child-run window, so it is blocker evidence only.
+
+`cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-release.json` records
+the same selected case through a release-built CLI. The strict CPU run completes
+with real GGUF loading, explicit tokenizer resolution, `i2_s-avx2-reference`,
+and `fallback_used=false`, but the generated answer fails the exact-answer gate.
