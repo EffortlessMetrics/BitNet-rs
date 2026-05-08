@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T07:10:23Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-007"
+event = "merged"
+pr = 4006
+branch = "codex/intel-258v-platform/CPU258V-007-answer-template-refresh"
+merge_sha = "2188b175629374073896c1f5f2c9234bee47a304"
+summary = "Merged #4006, recording 258V AVX2 timeout evidence under the BitNet.cpp answer-ready prompt envelope."
+
+details = [
+  "The committed artifact records five timeout rows and missing_child_receipt kernels for the refreshed answer-corpus attempt.",
+  "This remains blocker evidence only; it does not prove answer quality, scalar/AVX2 parity under the new prompt, sustained throughput, Arc 140V execution, or Intel NPU execution.",
+]

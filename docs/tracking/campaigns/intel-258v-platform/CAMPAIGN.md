@@ -39,7 +39,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | CPU258V-004 | merged | Require real token-count thresholds before promoting 258V `decode_128` or `prefill_512` phase evidence; merged in #3981. |
 | CPU258V-005 | merged | Record local strict CPU phase evidence attempts and keep `prefill_512`/`decode_128` blocked until a receipt-emitting phase runner exists; merged in #3999. |
 | CPU258V-006 | merged | Add a strict CPU warm phase runner that emits receipt-converter inputs for `prefill_512` and `decode_128` without speedup, Arc, or NPU claims; merged in #4001. |
-| CPU258V-007 | pr_open | Record the 258V AVX2 answer-corpus refresh under the BitNet.cpp answer-ready prompt envelope as timeout/blocker evidence; open in #4006. |
+| CPU258V-007 | merged | Record the 258V AVX2 answer-corpus refresh under the BitNet.cpp answer-ready prompt envelope as timeout/blocker evidence; merged in #4006. |
 
 ## Review Policy
 
