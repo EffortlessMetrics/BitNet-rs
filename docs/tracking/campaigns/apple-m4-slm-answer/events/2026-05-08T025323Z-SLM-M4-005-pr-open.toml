@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T02:53:23Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-005"
+event = "pr_open"
+pr = 3973
+head_sha = "a33691e627c4ebd4baecaffd6ddda233d95442ee"
+actor = "codex"
+
+notes = [
+  "Opened deterministic Apple M4 SLM quality corpus PR.",
+  "The PR adds corpus-driven warm-session quality and determinism receipts for apple-m4-cpu-neon only.",
+  "No BitNet local-answer quality, full apple-m4-metal inference, QK256, Neural Engine, MPSGraph, server inference, model binary, or broad performance claim is in scope.",
+]
