@@ -43,6 +43,7 @@ commands = [
 ]
 allowed_paths = [
   ".codex/campaigns/apple-m4-slm-hardening/**",
+  "crates/bitnet-cli/src/main.rs",
   "crates/bitnet-cli/src/mac.rs",
   "crates/bitnet-cli/tests/**",
   "docs/slm/**",
