@@ -82,6 +82,7 @@ Commands:
   intel-npu-smoke                    Run a tiny static OpenVINO NPU graph smoke without BitNet inference
   intel-npu-bitnet-subgraph          Run selected static BitNet subgraph parity on OpenVINO NPU
   intel-npu-bitnet-linear-subgraph   Run static BitNet linear-projection subgraph parity on OpenVINO NPU
+  intel-npu-bitnet-ffn-subgraph      Run static BitNet FFN/ReLU2 subgraph parity on OpenVINO NPU
   intel-arc-140v-openvino-gpu-smoke  Run a tiny static OpenVINO GPU.0 graph smoke for Arc 140V
   intel-arc-140v-opencl-smoke        Run a tiny native OpenCL kernel smoke for Arc 140V
   validate                           Run validation-only preflight checks

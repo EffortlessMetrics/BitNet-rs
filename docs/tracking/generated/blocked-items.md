@@ -98,7 +98,7 @@
 | intel-npu | NPU-008 | NPU-007 | merged |
 | intel-npu | NPU-009 | NPU-008 | merged |
 | intel-npu | NPU-010 | NPU-009 | merged |
-| intel-npu | NPU-011 | NPU-010 | ready |
+| intel-npu | NPU-011 | NPU-010 | pr_open |
 | model-artifacts | MODEL-ARTIFACT-002 | MODEL-ARTIFACT-001 | blocked |
 | model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | merged |
 | model-artifacts | MODEL-ARTIFACT-004 | MODEL-ARTIFACT-003 | merged |

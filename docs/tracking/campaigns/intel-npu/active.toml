@@ -449,19 +449,20 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-011"
-status = "ready"
+status = "pr_open"
+pr = 4097
 branch = "codex/intel-npu/NPU-011-ffn-subgraph-parity"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["NPU-010"]
-acceptance = "Add the next selected static BitNet-shaped OpenVINO NPU subgraph parity experiment, focused on an FFN/ReLU2 block or another explicitly scoped post-linear BitNet operation, with CPU reference comparison, static shape metadata, tolerance, timing, selected backend/runtime identity, fallback_used=false, and no full inference, acceleration, QK256, or CPU fallback proof claims."
+acceptance = "Add a selected static BitNet-shaped OpenVINO NPU FFN/ReLU2 subgraph parity experiment with CPU reference comparison, static shape metadata, tolerance, timing, selected backend/runtime identity, fallback_used=false, and no full inference, acceleration, QK256, or CPU fallback proof claims."
 commands = [
   "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs crates/bitnet-device-probe/src/runtimes/openvino.rs crates/bitnet-device-probe/src/runtimes/mod.rs --edition 2024",
   "cargo test --locked -p bitnet-device-probe --no-default-features runtimes::openvino::tests -- --nocapture",
   "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests -- --nocapture",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu -- intel-npu-bitnet-ffn-subgraph --cpu-reference ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json --json-out ci/hardware/intel-258v/<date>/npu-bitnet-ffn-subgraph-parity.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu -- intel-npu-bitnet-ffn-subgraph --cpu-reference ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json --json-out ci/hardware/intel-258v/2026-05-08/npu-bitnet-ffn-subgraph-parity.json",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",

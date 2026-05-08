@@ -229,6 +229,24 @@ fn build_bitnet_subgraph_receipt(
     timestamp_utc: String,
     artifact_path: Option<String>,
 ) -> serde_json::Value {
+    build_bitnet_subgraph_receipt_with_cpu_reference(
+        probe,
+        parity,
+        strict,
+        timestamp_utc,
+        artifact_path,
+        None,
+    )
+}
+
+fn build_bitnet_subgraph_receipt_with_cpu_reference(
+    probe: bitnet_device_probe::IntelNpuProbe,
+    parity: bitnet_device_probe::runtimes::OpenVinoNpuBitnetSubgraphParity,
+    strict: bool,
+    timestamp_utc: String,
+    artifact_path: Option<String>,
+    cpu_reference_artifact: Option<String>,
+) -> serde_json::Value {
     let selected_backend =
         parity.selected_backend.clone().or_else(|| probe.selected_backend.clone());
     let runtime_api = parity.runtime_api.clone().or_else(|| probe.runtime_api.clone());
@@ -308,6 +326,11 @@ fn build_bitnet_subgraph_receipt(
             "tolerance": parity.tolerance,
             "result": if parity.passed { "pass" } else { "fail" },
         },
+        "cpu_reference": {
+            "artifact_path": cpu_reference_artifact,
+            "reference_path": parity.reference_path.clone(),
+            "comparison": "openvino_npu_output_vs_cpu_numpy_reference",
+        },
         "timing": {
             "first_ever_compile_and_infer_ms": null,
             "cached_compile_ms": parity.compile_ms,
@@ -323,6 +346,7 @@ fn build_bitnet_subgraph_receipt(
         "claim": claim,
         "must_not_claim": [
             "Full BitNet inference works on Intel NPU",
+            "Native bitnet-rs NPU inference works",
             "Intel NPU accelerates BitNet",
             "Packed BitNet QK256 decode works on Intel NPU",
             "CPU fallback satisfies NPU proof"
@@ -362,6 +386,35 @@ pub(crate) async fn handle_bitnet_linear_subgraph_command(
     let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
     let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
     let receipt = build_bitnet_subgraph_receipt(npu, parity, strict, timestamp_utc, artifact_path);
+
+    crate::write_json_output(json_out.as_ref(), &receipt)?;
+
+    if strict && let Some(error) = receipt.get("error").and_then(serde_json::Value::as_str) {
+        anyhow::bail!("{error}");
+    }
+
+    Ok(())
+}
+
+pub(crate) async fn handle_bitnet_ffn_subgraph_command(
+    strict: bool,
+    cpu_reference: Option<PathBuf>,
+    json_out: Option<PathBuf>,
+) -> Result<()> {
+    let openvino = bitnet_device_probe::runtimes::openvino::probe_openvino();
+    let npu = bitnet_device_probe::intel::lunar_lake::probe_intel_npu(&openvino);
+    let parity = bitnet_device_probe::runtimes::run_openvino_npu_bitnet_ffn_relu2_parity();
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let cpu_reference_artifact = cpu_reference.as_ref().map(|path| path.display().to_string());
+    let receipt = build_bitnet_subgraph_receipt_with_cpu_reference(
+        npu,
+        parity,
+        strict,
+        timestamp_utc,
+        artifact_path,
+        cpu_reference_artifact,
+    );
 
     crate::write_json_output(json_out.as_ref(), &receipt)?;
 
@@ -752,6 +805,81 @@ mod tests {
         assert_eq!(
             receipt["kernels_or_graphs"],
             serde_json::json!(["bitnet_linear_projection_openvino_npu"])
+        );
+        assert_eq!(receipt["claim"], "openvino_npu_bitnet_subgraph_parity_passed");
+        assert!(receipt["error"].is_null());
+    }
+
+    #[test]
+    fn intel_npu_bitnet_ffn_subgraph_receipt_records_parity_only() {
+        let parity = bitnet_device_probe::runtimes::OpenVinoNpuBitnetSubgraphParity {
+            passed: true,
+            proof_stage: "parity_tested".to_string(),
+            requested_backend: "intel-npu".to_string(),
+            selected_backend: Some("intel-npu-openvino".to_string()),
+            runtime_api: Some("openvino".to_string()),
+            runtime_device: Some("NPU".to_string()),
+            openvino_version: Some("2026.1".to_string()),
+            openvino_available_devices: vec!["CPU".to_string(), "NPU".to_string()],
+            subgraph_name: "bitnet_ffn_relu2_f16_1x16x32".to_string(),
+            bitnet_op: "ffn_relu2".to_string(),
+            reference_path: "cpu_numpy_ffn_relu2_f32".to_string(),
+            shape_mode: "static".to_string(),
+            input_shape: vec![1, 16],
+            output_shape: Some(vec![1, 16]),
+            precision: "F16".to_string(),
+            epsilon: 0.0,
+            tolerance: 0.05,
+            max_abs_error: Some(0.004),
+            mean_abs_error: Some(0.0007),
+            compile_ms: Some(18.5),
+            first_infer_ms: Some(2.25),
+            fallback_used: false,
+            cpu_fallback_allowed: false,
+            graph_execution: true,
+            bitnet_inference: false,
+            qk256_decode: false,
+            error: None,
+        };
+        let receipt = build_bitnet_subgraph_receipt_with_cpu_reference(
+            visible_npu_probe(vec!["CPU".to_string(), "NPU".to_string()]),
+            parity,
+            true,
+            "2026-05-06T00:00:00Z".to_string(),
+            Some("ci/hardware/intel-258v/2026-05-06/npu-bitnet-ffn-subgraph.json".to_string()),
+            Some(
+                "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json"
+                    .to_string(),
+            ),
+        );
+
+        assert_eq!(receipt["artifact_kind"], "intel_npu_bitnet_subgraph_parity");
+        assert_eq!(receipt["proof_stage"], "parity_tested");
+        assert_eq!(receipt["selected_backend"], "intel-npu-openvino");
+        assert_eq!(receipt["runtime_api"], "openvino");
+        assert_eq!(receipt["runtime_device"], "NPU");
+        assert_eq!(receipt["shape_contract"]["input_shape"], serde_json::json!([1, 16]));
+        assert_eq!(receipt["shape_contract"]["output_shape"], serde_json::json!([1, 16]));
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["fallback_policy"]["cpu_fallback_allowed"], false);
+        assert_eq!(receipt["graph_execution"], true);
+        assert_eq!(receipt["bitnet_inference"], false);
+        assert_eq!(receipt["qk256_decode"], false);
+        assert_eq!(receipt["subgraph"]["name"], "bitnet_ffn_relu2_f16_1x16x32");
+        assert_eq!(receipt["subgraph"]["bitnet_op"], "ffn_relu2");
+        assert_eq!(receipt["subgraph"]["reference_path"], "cpu_numpy_ffn_relu2_f32");
+        assert_eq!(receipt["subgraph"]["epsilon"], 0.0);
+        assert!(
+            (receipt["subgraph"]["tolerance"].as_f64().unwrap_or_default() - 0.05).abs() < 1e-6
+        );
+        assert_eq!(receipt["subgraph"]["result"], "pass");
+        assert_eq!(
+            receipt["cpu_reference"]["artifact_path"],
+            "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json"
+        );
+        assert_eq!(
+            receipt["kernels_or_graphs"],
+            serde_json::json!(["bitnet_ffn_relu2_openvino_npu"])
         );
         assert_eq!(receipt["claim"], "openvino_npu_bitnet_subgraph_parity_passed");
         assert!(receipt["error"].is_null());

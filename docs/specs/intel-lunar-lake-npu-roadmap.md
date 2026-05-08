@@ -821,9 +821,9 @@ Intel NPU may be useful for graph-level INT8 or FP16 workloads before it is usef
 4. Fallback path: keep NPU smoke or OpenVINO GenAI only and prioritize CPU AVX2 or Intel GPU/OpenCL for custom kernels.
 
 After `NPU-010`, the lane has live runtime visibility, tiny static graph
-smoke, and selected static RMSNorm/linear-projection parity receipts. The next
-meaningful milestone is another deliberately scoped graph-lowering experiment,
-such as FFN or attention-block parity, not full decode or packed QK256.
+smoke, and selected static RMSNorm/linear-projection parity receipts. `NPU-011`
+adds the next deliberately scoped graph-lowering experiment: an FFN/ReLU2
+static subgraph. It is still not full decode or packed QK256.
 
 ### NPU-011 - Next Static BitNet-Shaped Subgraph Parity
 
@@ -833,8 +833,16 @@ such as FFN or attention-block parity, not full decode or packed QK256.
 ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
 ```
 
-The preferred next candidate is a static FFN/ReLU2 or other explicitly scoped
-post-linear BitNet-shaped operation. The receipt must record:
+The selected candidate is a static FFN/ReLU2 BitNet-shaped operation:
+
+```text
+cargo run --locked -p bitnet-cli --no-default-features --features cpu -- \
+  intel-npu-bitnet-ffn-subgraph \
+  --cpu-reference ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json \
+  --json-out ci/hardware/intel-258v/2026-05-08/npu-bitnet-ffn-subgraph-parity.json
+```
+
+The receipt must record:
 
 ```text
 requested_backend=intel-npu
@@ -842,12 +850,18 @@ selected_backend=intel-npu-openvino
 runtime_api=openvino
 runtime_device=NPU
 shape_mode=static
-reference_path=258V CPU / NumPy reference
+reference_path=cpu_numpy_ffn_relu2_f32
+cpu_reference=ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
 fallback_used=false
 cpu_fallback_allowed=false
 bitnet_inference=false
 qk256_decode=false
 ```
+
+Current live 258V evidence records `proof_stage=parity_tested`,
+`selected_backend=intel-npu-openvino`, `runtime_device=NPU`,
+`graph_execution=true`, `fallback_used=false`, and
+`subgraph.name=bitnet_ffn_relu2_f16_1x16x32`.
 
 The allowed claim is selected static subgraph parity only. `NPU-011` must not
 claim full BitNet inference, native bitnet-rs NPU inference, NPU acceleration,

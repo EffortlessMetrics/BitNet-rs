@@ -731,8 +731,9 @@ After `CPU258V-016`, the next Lunar Lake work should remain CPU-referenced:
 
 ```text
 NPU-011:
-  next selected static BitNet-shaped OpenVINO NPU subgraph parity
-  candidate: FFN/ReLU2 or another scoped post-linear operation
+  selected static BitNet-shaped OpenVINO NPU FFN/ReLU2 subgraph parity
+  artifact: ci/hardware/intel-258v/2026-05-08/npu-bitnet-ffn-subgraph-parity.json
+  anchor: ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
 
 ARC140V-005:
   native OpenCL CPU/iGPU parity for one isolated kernel or subgraph
@@ -749,3 +750,11 @@ These follow-ups preserve the current priority order:
 2. Intel NPU selected static subgraph parity
 3. Arc 140V native OpenCL parity
 ```
+
+`NPU-011` extends the selected NPU subgraph ladder with
+`bitnet_ffn_relu2_f16_1x16x32`. The live receipt records
+`selected_backend=intel-npu-openvino`, `runtime_api=openvino`,
+`runtime_device=NPU`, `proof_stage=parity_tested`, `graph_execution=true`, and
+`fallback_used=false`. This is selected static subgraph parity only; it is not
+full BitNet inference, NPU acceleration, packed QK256 decode, or CPU fallback
+proof.
