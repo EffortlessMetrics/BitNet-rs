@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T08:48:33Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-007"
+event = "pr_open"
+pr = 4019
+head_sha = "65ee53989bb2b61ab09cfd5b84e50c4fcea41289"
+actor = "codex"
+
+notes = [
+  "Opened #4019 to align strict Rust CPU BitNet B1.58 answer math with BitNet.cpp evidence.",
+  "The PR keeps the scope to CPU/model math and tracker state: no CUDA kernels, GPU/NPU/server execution, speed claim, or general chat-quality claim.",
+]

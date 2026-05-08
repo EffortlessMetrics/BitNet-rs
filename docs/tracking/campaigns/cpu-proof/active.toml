@@ -752,7 +752,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-007"
-status = "ready"
+status = "pr_open"
+pr = 4019
 branch = "codex/cpu-answer-007-bitnet-subnorms"
 stackable = false
 review_mode = "codex_premerge"
