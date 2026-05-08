@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T07:26:40Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-008"
+event = "merged"
+pr = 4008
+merge_sha = "d4979be17c107200a723bbc8d5c24553983c04e3"
+summary = "Merged CPU258V-008, adding bounded answer-corpus case selection for 258V answer-template refresh diagnostics."
+
+details = [
+  "The merged command can run selected answer-corpus case IDs and records selected_case_count plus selected_case_ids in the aggregate receipt.",
+  "The claim boundary remains diagnostic only: no selected-case completion, answer quality, scalar/AVX2 parity, sustained throughput, Arc 140V execution, or Intel NPU execution is claimed.",
+]
