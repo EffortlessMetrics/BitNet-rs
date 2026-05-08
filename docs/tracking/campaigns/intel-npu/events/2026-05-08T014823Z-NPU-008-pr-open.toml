@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T01:48:23Z"
+campaign = "intel-npu"
+item = "NPU-008"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 3963
+head_sha = "6edafdc2cab425d43e15c15053273f142555c592"
+actor = "codex"
+
+notes = [
+  "Opened #3963 for NPU-008, adding a selected static BitNet linear-projection subgraph parity command for OpenVINO NPU.",
+  "The PR keeps the claim boundary to selected static subgraph parity only: no full BitNet inference, NPU acceleration, packed QK256 decode, model loading, tokenizer handling, or CPU fallback as NPU proof.",
+]

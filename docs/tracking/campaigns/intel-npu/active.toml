@@ -255,6 +255,55 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "NPU-008"
+status = "pr_open"
+pr = 3963
+branch = "codex/intel-npu/NPU-008-linear-subgraph-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["NPU-007"]
+acceptance = "Add selected static BitNet linear-projection subgraph parity through OpenVINO NPU with CPU reference comparison, selected backend/runtime identity, timing, fallback_used=false, and no full BitNet inference, acceleration, or QK256 decode claims."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/intel_npu.rs crates/bitnet-device-probe/src/runtimes/openvino.rs crates/bitnet-device-probe/src/runtimes/mod.rs --edition 2024",
+  "cargo test --locked -p bitnet-device-probe --no-default-features runtimes::openvino::tests::parses_openvino_npu_bitnet_linear_projection_parity_pass -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet intel_npu::tests::intel_npu_bitnet_linear_subgraph_receipt_records_parity_only -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu -- intel-npu-bitnet-linear-subgraph --json-out target/intel-npu-bitnet-linear-subgraph-parity.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/intel_npu.rs",
+  "crates/bitnet-device-probe/src/runtimes/openvino.rs",
+  "crates/bitnet-device-probe/src/runtimes/mod.rs",
+  "docs/specs/intel-lunar-lake-npu-roadmap.md",
+  "docs/tracking/campaigns/intel-npu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The CLI can attempt selected static BitNet linear-projection subgraph parity on OpenVINO NPU and emits parity_tested only when NPU execution matches the CPU reference.",
+]
+must_not_claim = [
+  "Full BitNet inference works on Intel NPU.",
+  "Intel NPU accelerates BitNet.",
+  "Packed BitNet QK256 decode works on Intel NPU.",
+  "CPU fallback satisfies NPU proof.",
+]
+
+[[work_item]]
 id = "NPU-006"
 status = "merged"
 branch = "codex/intel-npu/NPU-006-receipt-fields"

@@ -14,8 +14,8 @@ pub use opencl::{OpenClRuntimeDevice, OpenClRuntimeProbe, OpenClTinyKernelSmoke}
 pub use openvino::{
     OpenVinoDeviceProbe, OpenVinoGpuTinyGraphSmoke, OpenVinoNpuBitnetSubgraphParity,
     OpenVinoNpuTinyGraphSmoke, OpenVinoProbe, OpenVinoPropertyProbe,
-    run_openvino_gpu_tiny_graph_smoke, run_openvino_npu_bitnet_subgraph_parity,
-    run_openvino_npu_tiny_graph_smoke,
+    run_openvino_gpu_tiny_graph_smoke, run_openvino_npu_bitnet_linear_projection_parity,
+    run_openvino_npu_bitnet_subgraph_parity, run_openvino_npu_tiny_graph_smoke,
 };
 
 pub(crate) fn command_output<I, S>(command: &str, args: I) -> Result<String, String>
