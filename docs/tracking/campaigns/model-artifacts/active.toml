@@ -355,9 +355,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "BITNET-COMPAT-001"
-status = "pr_open"
+status = "merged"
 pr = 4134
-head_sha = "a1628153e0ce83fe3bf4d8e0906173969c995e7f"
 branch = "codex/bitnet-compat-001-model-kernel-ledger"
 stackable = false
 review_mode = "codex_premerge"
