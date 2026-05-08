@@ -85,6 +85,7 @@ Commands:
   intel-npu-bitnet-ffn-subgraph      Run static BitNet FFN/ReLU2 subgraph parity on OpenVINO NPU
   intel-arc-140v-openvino-gpu-smoke  Run a tiny static OpenVINO GPU.0 graph smoke for Arc 140V
   intel-arc-140v-opencl-smoke        Run a tiny native OpenCL kernel smoke for Arc 140V
+  intel-arc-140v-opencl-parity       Run a native OpenCL CPU-reference parity kernel for Arc 140V
   validate                           Run validation-only preflight checks
   cuda-smoke                         Compile and launch a tiny CUDA vector-add kernel
   inspect                            Inspect model metadata and diagnostics

@@ -256,6 +256,17 @@ Use the post-mechanics 258V CPU reference bundle as the comparison anchor:
 ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
 ```
 
+The first live receipt is:
+
+```text
+ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json
+```
+
+It runs the same tiny native OpenCL vector-add kernel as `ARC140V-004`,
+but records the post-mechanics 258V CPU reference bundle as the comparison
+anchor and promotes the proof stage to `parity_tested` only when the Arc 140V
+OpenCL output matches the CPU reference within tolerance.
+
 The first `ARC140V-005` receipt should stay narrow:
 
 ```text
@@ -263,6 +274,8 @@ requested_backend=intel-arc-140v
 selected_backend=intel-arc-140v-opencl
 runtime_api=opencl
 proof_stage=parity_tested
+kernel_execution=true
+graph_execution=false
 fallback_used=false
 bitnet_inference=false
 qk256_decode=false

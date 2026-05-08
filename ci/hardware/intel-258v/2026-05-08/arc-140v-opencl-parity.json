@@ -1,0 +1,90 @@
+{
+  "artifact_kind": "intel_arc_140v_opencl_cpu_parity",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json",
+  "backend_runtime": {
+    "device": "Intel(R) Arc(TM) 140V GPU (16GB)",
+    "driver_version": "32.0.101.7026",
+    "name": "opencl",
+    "platform": "Intel(R) OpenCL Graphics",
+    "vendor": "Intel(R) Corporation"
+  },
+  "bitnet_inference": false,
+  "claim": "opencl_arc140v_cpu_parity_passed",
+  "cpu_fallback_allowed": false,
+  "cpu_reference": {
+    "artifact_path": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json",
+    "comparison": "opencl_arc140v_output_vs_cpu_reference",
+    "reference_path": "cpu_vector_add_f32"
+  },
+  "error": null,
+  "fallback_backend": null,
+  "fallback_policy": {
+    "cpu_fallback_allowed": false,
+    "fallback_backend": null,
+    "fallback_reason": null,
+    "fallback_used": false
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "graph_execution": false,
+  "hardware_lane": "intel-arc-140v-opencl",
+  "kernel": {
+    "input_len": 16,
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0,
+    "name": "tiny_vector_add",
+    "operation": "vector_add",
+    "precision": "F32",
+    "result": "pass",
+    "tolerance": 9.999999974752427e-7
+  },
+  "kernel_execution": true,
+  "kernels_or_graphs": [
+    "tiny_vector_add_opencl_cpu_parity"
+  ],
+  "machine_id": "intel-258v",
+  "must_not_claim": [
+    "BitNet inference works on Arc 140V",
+    "Arc 140V accelerates BitNet",
+    "Packed BitNet QK256 decode works on Arc 140V",
+    "OpenVINO GPU smoke proves native OpenCL parity",
+    "CPU fallback satisfies Arc 140V proof"
+  ],
+  "opencl_parity": {
+    "bitnet_inference": false,
+    "cpu_fallback_allowed": false,
+    "driver_version": "32.0.101.7026",
+    "enqueue_ms": 4.2261,
+    "error": null,
+    "fallback_used": false,
+    "input_len": 16,
+    "kernel_execution": true,
+    "kernel_name": "tiny_vector_add",
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0,
+    "passed": true,
+    "platform_name": "Intel(R) OpenCL Graphics",
+    "proof_stage": "kernel_smoke_tested",
+    "qk256_decode": false,
+    "readback_ms": 0.0204,
+    "requested_backend": "intel-arc-140v",
+    "runtime_api": "opencl",
+    "runtime_device": "Intel(R) Arc(TM) 140V GPU (16GB)",
+    "selected_backend": "intel-arc-140v-opencl",
+    "tolerance": 9.999999974752427e-7,
+    "vendor": "Intel(R) Corporation"
+  },
+  "proof_stage": "parity_tested",
+  "qk256_decode": false,
+  "requested_backend": "intel-arc-140v",
+  "runtime_api": "opencl",
+  "runtime_device": "Intel(R) Arc(TM) 140V GPU (16GB)",
+  "schema": 1,
+  "selected_backend": "intel-arc-140v-opencl",
+  "strict_mode": false,
+  "timestamp_utc": "2026-05-08T16:29:18Z",
+  "timing": {
+    "enqueue_ms": 4.2261,
+    "readback_ms": 0.0204
+  }
+}

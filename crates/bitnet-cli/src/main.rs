@@ -929,6 +929,22 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    /// Run a native OpenCL CPU-reference parity kernel for Arc 140V
+    #[command(name = "intel-arc-140v-opencl-parity")]
+    IntelArc140vOpenclParity {
+        /// Require Arc 140V native OpenCL parity to pass
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// CPU reference bundle artifact used as the comparison anchor
+        #[arg(long)]
+        cpu_reference: Option<std::path::PathBuf>,
+
+        /// Output JSON parity receipt to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
+
     /// Run validation-only preflight checks
     Validate {
         #[command(subcommand)]
@@ -1457,6 +1473,9 @@ async fn async_main() -> Result<()> {
         }
         Some(Commands::IntelArc140vOpenclSmoke { strict, json_out }) => {
             intel_arc::handle_opencl_smoke_command(strict, json_out).await
+        }
+        Some(Commands::IntelArc140vOpenclParity { strict, cpu_reference, json_out }) => {
+            intel_arc::handle_opencl_parity_command(strict, cpu_reference, json_out).await
         }
         Some(Commands::Validate { action }) => handle_validate_command(action).await,
         Some(Commands::CudaSmoke { device_index, json_out }) => {

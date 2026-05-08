@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T16:34:33Z"
+campaign = "intel-258v-platform"
+item = "ARC140V-005"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4103
+actor = "codex"
+branch = "codex/intel-258v-platform/ARC140V-005-opencl-cpu-parity"
+summary = "Opened ARC140V-005 to record native Arc 140V OpenCL CPU-reference parity against the post-mechanics 258V CPU bundle."
+
+notes = [
+  "The PR adds intel-arc-140v-opencl-parity and a live ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json receipt.",
+  "The receipt records selected_backend=intel-arc-140v-opencl, runtime_api=opencl, kernel_execution=true, proof_stage=parity_tested, and fallback_used=false.",
+  "The PR does not claim BitNet inference, packed QK256 decode, Arc acceleration, OpenVINO GPU proof as native OpenCL proof, or CPU fallback as Arc proof.",
+]
