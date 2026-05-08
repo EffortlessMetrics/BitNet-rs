@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T14:10:00Z"
+campaign = "intel-npu"
+item = "NPU-010"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4080
+merge_sha = "7303c0d174bb32df525ea5af30e2441769937be0"
+actor = "codex"
+summary = "Merged NPU-010, recording live 258V OpenVINO NPU receipts."
+
+notes = [
+  "Merged #4080, recording live OpenVINO 2026.1 NPU runtime visibility on the Core Ultra 7 258V laptop.",
+  "The receipts include tiny static graph smoke plus selected RMSNorm and linear-projection BitNet-shaped static subgraph parity with selected_backend=intel-npu-openvino, runtime_api=openvino, runtime_device=NPU, and fallback_used=false.",
+  "The closeout does not claim full BitNet inference, native bitnet-rs NPU inference, NPU acceleration, packed QK256 decode, or CPU fallback proof.",
+]

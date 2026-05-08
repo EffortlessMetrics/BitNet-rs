@@ -250,6 +250,29 @@ and the tiny vector-add output matches the CPU expected output.
 
 Run one isolated kernel or subgraph through OpenCL and compare against CPU.
 
+Use the post-mechanics 258V CPU reference bundle as the comparison anchor:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
+```
+
+The first `ARC140V-005` receipt should stay narrow:
+
+```text
+requested_backend=intel-arc-140v
+selected_backend=intel-arc-140v-opencl
+runtime_api=opencl
+proof_stage=parity_tested
+fallback_used=false
+bitnet_inference=false
+qk256_decode=false
+```
+
+It may claim only that the selected native OpenCL kernel or static subgraph
+matches the selected 258V CPU reference within the declared tolerance. It must
+not claim Arc 140V BitNet inference, packed QK256 decode, acceleration, or CPU
+fallback as Arc proof.
+
 ### ARC140V-006 - Shared-Memory Benchmark Receipt
 
 Benchmark a validated kernel/subgraph with memory pressure, power mode, runtime versions, and fallback status.

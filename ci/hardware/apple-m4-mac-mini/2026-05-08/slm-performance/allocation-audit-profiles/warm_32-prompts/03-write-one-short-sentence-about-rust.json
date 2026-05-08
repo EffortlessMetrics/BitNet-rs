@@ -15,15 +15,15 @@
         "net_bytes_total": 126976
       },
       "forward": {
-        "alloc_bytes_total": 514917376,
-        "alloc_count_total": 530688,
+        "alloc_bytes_total": 511699456,
+        "alloc_count_total": 518400,
         "count": 32,
-        "dealloc_bytes_total": 514003968,
-        "dealloc_count_total": 530528,
-        "max_alloc_bytes_per_token": 19285904,
-        "max_alloc_count_per_token": 16584,
-        "mean_alloc_bytes_per_token": 16091168.0,
-        "mean_alloc_count_per_token": 16584.0,
+        "dealloc_bytes_total": 510786048,
+        "dealloc_count_total": 518240,
+        "max_alloc_bytes_per_token": 19163024,
+        "max_alloc_count_per_token": 16200,
+        "mean_alloc_bytes_per_token": 15990608.0,
+        "mean_alloc_count_per_token": 16200.0,
         "net_bytes_total": 913408
       },
       "logits": {
@@ -51,16 +51,16 @@
         "net_bytes_total": 608840
       },
       "steady_state": {
-        "alloc_bytes_total": 558773448,
-        "alloc_count_total": 515852,
+        "alloc_bytes_total": 555633464,
+        "alloc_count_total": 503947,
         "count": 31,
-        "dealloc_bytes_total": 520064258,
-        "dealloc_count_total": 515232,
-        "max_alloc_bytes_per_token": 21116541,
-        "max_alloc_count_per_token": 16643,
-        "mean_alloc_bytes_per_token": 18024949.935,
-        "mean_alloc_count_per_token": 16640.387,
-        "net_bytes_total": 38709190
+        "dealloc_bytes_total": 516924426,
+        "dealloc_count_total": 503327,
+        "max_alloc_bytes_per_token": 20993661,
+        "max_alloc_count_per_token": 16258,
+        "mean_alloc_bytes_per_token": 17923660.129,
+        "mean_alloc_count_per_token": 16256.355,
+        "net_bytes_total": 38709038
       },
       "stop_tail_update": {
         "alloc_bytes_total": 0,
@@ -87,28 +87,28 @@
         "net_bytes_total": 183
       },
       "token_vector_update": {
-        "alloc_bytes_total": 304,
-        "alloc_count_total": 1,
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
         "count": 32,
-        "dealloc_bytes_total": 152,
-        "dealloc_count_total": 1,
-        "max_alloc_bytes_per_token": 304,
-        "max_alloc_count_per_token": 1,
-        "mean_alloc_bytes_per_token": 9.5,
-        "mean_alloc_count_per_token": 0.031,
-        "net_bytes_total": 152
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": 0,
+        "max_alloc_count_per_token": 0,
+        "mean_alloc_bytes_per_token": 0.0,
+        "mean_alloc_count_per_token": 0.0,
+        "net_bytes_total": 0
       },
       "total": {
-        "alloc_bytes_total": 574108343,
-        "alloc_count_total": 532494,
+        "alloc_bytes_total": 570890119,
+        "alloc_count_total": 520205,
         "count": 32,
-        "dealloc_bytes_total": 533542688,
-        "dealloc_count_total": 531852,
-        "max_alloc_bytes_per_token": 21116541,
-        "max_alloc_count_per_token": 16643,
-        "mean_alloc_bytes_per_token": 17940885.719,
-        "mean_alloc_count_per_token": 16640.438,
-        "net_bytes_total": 40565655
+        "dealloc_bytes_total": 530324616,
+        "dealloc_count_total": 519563,
+        "max_alloc_bytes_per_token": 20993661,
+        "max_alloc_count_per_token": 16258,
+        "mean_alloc_bytes_per_token": 17840316.219,
+        "mean_alloc_count_per_token": 16256.406,
+        "net_bytes_total": 40565503
       }
     },
     "enabled": true,
@@ -135,28 +135,28 @@
     "method": "process_global_allocator_counter_delta",
     "optimization_deferred": true,
     "prompt_prefill": {
-      "alloc_bytes_total": 315945368,
-      "alloc_count_total": 563978,
+      "alloc_bytes_total": 314142008,
+      "alloc_count_total": 550922,
       "count": 34,
-      "dealloc_bytes_total": 1120281240,
-      "dealloc_count_total": 563808,
-      "max_alloc_bytes_per_token": 12695228,
-      "max_alloc_count_per_token": 16601,
-      "mean_alloc_bytes_per_token": 9292510.824,
-      "mean_alloc_count_per_token": 16587.588,
+      "dealloc_bytes_total": 1118477880,
+      "dealloc_count_total": 550752,
+      "max_alloc_bytes_per_token": 12618428,
+      "max_alloc_count_per_token": 16217,
+      "mean_alloc_bytes_per_token": 9239470.824,
+      "mean_alloc_count_per_token": 16203.588,
       "net_bytes_total": -804335872
     },
     "prompt_setup": {
-      "alloc_bytes_total": 805337112,
-      "alloc_count_total": 258,
+      "alloc_bytes_total": 805326168,
+      "alloc_count_total": 242,
       "count": 1,
       "dealloc_bytes_total": 0,
       "dealloc_count_total": 0,
-      "max_alloc_bytes_per_token": 805337112,
-      "max_alloc_count_per_token": 258,
-      "mean_alloc_bytes_per_token": 805337112.0,
-      "mean_alloc_count_per_token": 258.0,
-      "net_bytes_total": 805337112
+      "max_alloc_bytes_per_token": 805326168,
+      "max_alloc_count_per_token": 242,
+      "mean_alloc_bytes_per_token": 805326168.0,
+      "mean_alloc_count_per_token": 242.0,
+      "net_bytes_total": 805326168
     },
     "prompt_tokenize": {
       "alloc_bytes_total": 126606157,
@@ -171,36 +171,36 @@
       "net_bytes_total": 152
     },
     "prompt_total_counter_delta": {
-      "alloc_bytes_total": 1822005747,
-      "alloc_count_total": 2616995,
+      "alloc_bytes_total": 1816973227,
+      "alloc_count_total": 2591633,
       "count": 1,
-      "dealloc_bytes_total": 1819740203,
-      "dealloc_count_total": 2616703,
-      "max_alloc_bytes_per_token": 1822005747,
-      "max_alloc_count_per_token": 2616995,
-      "mean_alloc_bytes_per_token": 1822005747.0,
-      "mean_alloc_count_per_token": 2616995.0,
-      "net_bytes_total": 2265544
+      "dealloc_bytes_total": 1814718783,
+      "dealloc_count_total": 2591358,
+      "max_alloc_bytes_per_token": 1816973227,
+      "max_alloc_count_per_token": 2591633,
+      "mean_alloc_bytes_per_token": 1816973227.0,
+      "mean_alloc_count_per_token": 2591633.0,
+      "net_bytes_total": 2254444
     },
     "ranked_hotspots": [
       {
-        "alloc_bytes": 805337112,
-        "alloc_count": 258,
+        "alloc_bytes": 805326168,
+        "alloc_count": 242,
         "component": "prompt_setup"
       },
       {
-        "alloc_bytes": 574108343,
-        "alloc_count": 532494,
+        "alloc_bytes": 570890119,
+        "alloc_count": 520205,
         "component": "decode_total"
       },
       {
-        "alloc_bytes": 514917376,
-        "alloc_count": 530688,
+        "alloc_bytes": 511699456,
+        "alloc_count": 518400,
         "component": "model.forward"
       },
       {
-        "alloc_bytes": 315945368,
-        "alloc_count": 563978,
+        "alloc_bytes": 314142008,
+        "alloc_count": 550922,
         "component": "prompt_prefill"
       },
       {
@@ -224,32 +224,27 @@
         "component": "model.embed"
       },
       {
-        "alloc_bytes": 24654,
-        "alloc_count": 238,
+        "alloc_bytes": 28622,
+        "alloc_count": 273,
         "component": "receipt_construction"
       },
       {
         "alloc_bytes": 5059,
         "alloc_count": 231,
         "component": "tokenizer.decode"
-      },
-      {
-        "alloc_bytes": 304,
-        "alloc_count": 1,
-        "component": "token_vector_updates"
       }
     ],
     "receipt_construction": {
-      "alloc_bytes_total": 24654,
-      "alloc_count_total": 238,
+      "alloc_bytes_total": 28622,
+      "alloc_count_total": 273,
       "count": 1,
-      "dealloc_bytes_total": 5429,
+      "dealloc_bytes_total": 5453,
       "dealloc_count_total": 52,
-      "max_alloc_bytes_per_token": 24654,
-      "max_alloc_count_per_token": 238,
-      "mean_alloc_bytes_per_token": 24654.0,
-      "mean_alloc_count_per_token": 238.0,
-      "net_bytes_total": 19225
+      "max_alloc_bytes_per_token": 28622,
+      "max_alloc_count_per_token": 273,
+      "mean_alloc_bytes_per_token": 28622.0,
+      "mean_alloc_count_per_token": 273.0,
+      "net_bytes_total": 23169
     },
     "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
     "unavoidable_candidates": [
@@ -261,7 +256,7 @@
     "unavoidable_candidates_named_before_optimization": true
   },
   "artifact_kind": "slm_apple_m4_warm_session_prompt",
-  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_32-prompts/03-write-one-short-sentence-about-rust.json",
+  "artifact_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_32-prompts/03-write-one-short-sentence-about-rust.json",
   "case_id": "prompt_03",
   "execution": {
     "fallback_reason": null,
@@ -293,6 +288,17 @@
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
     "tokenizer": "gguf_metadata"
   },
+  "operator_ux": {
+    "clear_failure_messages": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": true,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipt": true,
+    "token_stream": "disabled"
+  },
   "prompt": "Write one short sentence about Rust.",
   "prompt_index": 2,
   "prompt_prefill": {
@@ -322,68 +328,83 @@
   "runtime_api": "cpu",
   "schema_version": "1.0.0",
   "selected_backend": "apple-m4-cpu-neon",
-  "session_artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_32.json",
+  "session_artifact_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_32.json",
+  "session_reuse": {
+    "allocation_audit_buffers_reused": true,
+    "generated_token_buffer_reused": true,
+    "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+    "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+    "model_loaded_once": true,
+    "prompt_token_buffer_reused": true,
+    "reuse_scope": "resident_session",
+    "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+    "session_owned_buffers": true,
+    "stop_tail_buffer_reused": true,
+    "timing_buffers_reused": true,
+    "tokenizer_loaded_once": true
+  },
   "speedup_claim": false,
   "text": " Rust is a powerful, versatile programming language that has gained popularity in recent years for its simplicity and efficiency. It's known for its ability to handle large amounts of",
-  "timestamp": "2026-05-08T12:10:39.883983+00:00",
+  "timestamp": "2026-05-08T14:12:02.801201+00:00",
   "timing": {
-    "decode_steady_state_tok_s": 15.692,
-    "decode_total_ms": 2039.583,
+    "decode_steady_state_tok_s": 15.424,
+    "decode_total_ms": 2073.939,
     "embed_ms": {
+      "count": 32,
+      "max_ms": 0.004,
+      "mean_ms": 0.002,
+      "min_ms": 0.001,
+      "p50_ms": 0.002,
+      "p95_ms": 0.003,
+      "total_ms": 0.065
+    },
+    "first_token_decode_ms": 64.051,
+    "first_token_ms": 1731,
+    "forward_ms": {
+      "count": 32,
+      "max_ms": 49.318,
+      "mean_ms": 47.367,
+      "min_ms": 46.628,
+      "p50_ms": 46.95,
+      "p95_ms": 48.473,
+      "total_ms": 1515.73
+    },
+    "logits_ms": {
+      "count": 32,
+      "max_ms": 18.48,
+      "mean_ms": 17.373,
+      "min_ms": 17.197,
+      "p50_ms": 17.245,
+      "p95_ms": 17.664,
+      "total_ms": 555.944
+    },
+    "model_load_ms": 0.0,
+    "prefill_ms": 1604.491,
+    "sample_ms": {
+      "count": 32,
+      "max_ms": 0.074,
+      "mean_ms": 0.066,
+      "min_ms": 0.065,
+      "p50_ms": 0.066,
+      "p95_ms": 0.07,
+      "total_ms": 2.124
+    },
+    "sampling_ms_per_token": 0.066,
+    "session_model_load_ms": 3092.226,
+    "session_tokenizer_load_ms": 48.287,
+    "time_to_first_token_ms": 1731,
+    "token_decode_ms": {
       "count": 32,
       "max_ms": 0.003,
       "mean_ms": 0.002,
       "min_ms": 0.001,
       "p50_ms": 0.002,
-      "p95_ms": 0.002,
-      "total_ms": 0.05
+      "p95_ms": 0.003,
+      "total_ms": 0.055
     },
-    "first_token_decode_ms": 64.039,
-    "first_token_ms": 1687,
-    "forward_ms": {
-      "count": 32,
-      "max_ms": 47.053,
-      "mean_ms": 46.525,
-      "min_ms": 45.693,
-      "p50_ms": 46.493,
-      "p95_ms": 46.997,
-      "total_ms": 1488.798
-    },
-    "logits_ms": {
-      "count": 32,
-      "max_ms": 17.301,
-      "mean_ms": 17.143,
-      "min_ms": 16.836,
-      "p50_ms": 17.139,
-      "p95_ms": 17.287,
-      "total_ms": 548.574
-    },
-    "model_load_ms": 0.0,
-    "prefill_ms": 1563.465,
-    "sample_ms": {
-      "count": 32,
-      "max_ms": 0.072,
-      "mean_ms": 0.065,
-      "min_ms": 0.06,
-      "p50_ms": 0.065,
-      "p95_ms": 0.068,
-      "total_ms": 2.089
-    },
-    "sampling_ms_per_token": 0.065,
-    "session_model_load_ms": 3068.7,
-    "session_tokenizer_load_ms": 47.369,
-    "token_decode_ms": {
-      "count": 32,
-      "max_ms": 0.004,
-      "mean_ms": 0.002,
-      "min_ms": 0.001,
-      "p50_ms": 0.001,
-      "p95_ms": 0.004,
-      "total_ms": 0.057
-    },
-    "tokenize_ms": 35.506,
+    "tokenize_ms": 35.875,
     "tokenizer_load_ms": 0.0,
-    "total_ms": 3663.272
+    "total_ms": 3741.337
   },
   "tokenizer": {
     "bos": 151643,

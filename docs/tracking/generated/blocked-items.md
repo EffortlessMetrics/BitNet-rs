@@ -47,7 +47,7 @@
 | apple-m4-slm-performance | M4-SLM-PERF-004 | M4-SLM-PERF-003 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-005 | M4-SLM-PERF-004 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-006 | M4-SLM-PERF-005 | merged |
-| apple-m4-slm-performance | M4-SLM-PERF-007 | M4-SLM-PERF-006 | ready |
+| apple-m4-slm-performance | M4-SLM-PERF-007 | M4-SLM-PERF-006 | merged |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | merged |
@@ -87,6 +87,9 @@
 | intel-258v-platform | CPU258V-014 | CPU258V-012, CPU258V-013 | merged |
 | intel-258v-platform | CPU258V-015 | CPU258V-014 | merged |
 | intel-258v-platform | LNL258V-COMPARE-001 | CPU258V-015, ARC140V-004 | merged |
+| intel-258v-platform | CPU258V-016 | CPU258V-015, CPU258V-013, LNL258V-COMPARE-001 | merged |
+| intel-258v-platform | ARC140V-005 | ARC140V-004, CPU258V-016 | ready |
+| intel-258v-platform | LNL258V-COMPARE-002 | CPU258V-016, ARC140V-005 | ready |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
@@ -94,7 +97,8 @@
 | intel-npu | NPU-007 | NPU-006 | merged |
 | intel-npu | NPU-008 | NPU-007 | merged |
 | intel-npu | NPU-009 | NPU-008 | merged |
-| intel-npu | NPU-010 | NPU-009 | pr_open |
+| intel-npu | NPU-010 | NPU-009 | merged |
+| intel-npu | NPU-011 | NPU-010 | ready |
 | model-artifacts | MODEL-ARTIFACT-002 | MODEL-ARTIFACT-001 | blocked |
 | model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | merged |
 | model-artifacts | MODEL-ARTIFACT-004 | MODEL-ARTIFACT-003 | merged |

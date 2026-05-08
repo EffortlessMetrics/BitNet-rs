@@ -689,3 +689,63 @@ Intel NPU accelerates BitNet.
 Packed BitNet QK256 GGUF decode works on Intel NPU.
 CPU fallback satisfies NPU proof.
 ```
+
+## Post-Baseline CPU Reference Bundle
+
+`CPU258V-016` records the current 258V CPU reference plate as a single
+same-machine bundle:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
+```
+
+The bundle links the strict real-GGUF decode smoke, the post-mechanics full
+fixed-corpus scalar and AVX2 answer-corpus receipts, the scalar-vs-AVX2
+answer-parity receipt, and the warm-session `prefill_512` / `decode_128` phase
+receipts. It records the Microsoft BitNet b1.58 I2_S GGUF SHA, explicit LLaMA 3
+tokenizer source, selected scalar and AVX2 CPU kernel IDs, and
+`fallback_used=false`.
+
+Allowed claims:
+
+```text
+The 258V CPU reference plate is bundled from strict real-GGUF receipts,
+full fixed-corpus scalar-vs-AVX2 answer parity, and warm-session phase receipts.
+The bundle is a CPU reference input for later Arc 140V and Intel NPU parity
+comparisons.
+```
+
+Not allowed:
+
+```text
+General chat quality is proven.
+Sustained throughput is proven.
+A CPU speedup is proven.
+Arc 140V or Intel NPU execution is proven by this CPU bundle.
+CPU fallback can satisfy Arc 140V or Intel NPU proof.
+```
+
+## Post-Baseline Next Queue
+
+After `CPU258V-016`, the next Lunar Lake work should remain CPU-referenced:
+
+```text
+NPU-011:
+  next selected static BitNet-shaped OpenVINO NPU subgraph parity
+  candidate: FFN/ReLU2 or another scoped post-linear operation
+
+ARC140V-005:
+  native OpenCL CPU/iGPU parity for one isolated kernel or subgraph
+
+LNL258V-COMPARE-002:
+  refresh the same-machine comparison index after the new CPU reference bundle
+  and the next independent accelerator parity receipts
+```
+
+These follow-ups preserve the current priority order:
+
+```text
+1. 258V CPU reference
+2. Intel NPU selected static subgraph parity
+3. Arc 140V native OpenCL parity
+```

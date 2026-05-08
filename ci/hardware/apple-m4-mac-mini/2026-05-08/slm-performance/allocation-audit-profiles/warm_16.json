@@ -7,23 +7,23 @@
     "prompt_count": 3,
     "ranked_hotspots": [
       {
-        "alloc_bytes": 2415996960,
-        "alloc_count": 775,
+        "alloc_bytes": 2415985204,
+        "alloc_count": 745,
         "component": "prompt_setup"
       },
       {
-        "alloc_bytes": 974463232,
-        "alloc_count": 1725136,
+        "alloc_bytes": 968890912,
+        "alloc_count": 1685200,
         "component": "prompt_prefill"
       },
       {
-        "alloc_bytes": 545842511,
-        "alloc_count": 565790,
+        "alloc_bytes": 542879039,
+        "alloc_count": 552731,
         "component": "decode_total"
       },
       {
-        "alloc_bytes": 481762208,
-        "alloc_count": 563856,
+        "alloc_bytes": 478799648,
+        "alloc_count": 550800,
         "component": "model.forward"
       },
       {
@@ -47,19 +47,14 @@
         "component": "model.embed"
       },
       {
-        "alloc_bytes": 66245,
-        "alloc_count": 714,
+        "alloc_bytes": 78149,
+        "alloc_count": 819,
         "component": "receipt_construction"
       },
       {
         "alloc_bytes": 17413,
         "alloc_count": 252,
         "component": "tokenizer.decode"
-      },
-      {
-        "alloc_bytes": 912,
-        "alloc_count": 3,
-        "component": "token_vector_updates"
       }
     ],
     "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path"
@@ -81,7 +76,7 @@
     }
   },
   "artifact_kind": "slm_apple_m4_warm_session",
-  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_16.json",
+  "artifact_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_16.json",
   "backend": {
     "fallback_reason": null,
     "fallback_used": false,
@@ -168,6 +163,17 @@
     "tokenizer_pre": "qwen2"
   },
   "operator_command": "mac validate --profile-set performance",
+  "operator_ux": {
+    "clear_failure_messages": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": true,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipts": true,
+    "token_stream": "disabled"
+  },
   "prompts": [
     {
       "allocation_audit": {
@@ -186,15 +192,15 @@
             "net_bytes_total": 35712
           },
           "forward": {
-            "alloc_bytes_total": 129052944,
-            "alloc_count_total": 149256,
+            "alloc_bytes_total": 128258064,
+            "alloc_count_total": 145800,
             "count": 9,
-            "dealloc_bytes_total": 128796048,
-            "dealloc_count_total": 149211,
-            "max_alloc_bytes_per_token": 15163664,
-            "max_alloc_count_per_token": 16584,
-            "mean_alloc_bytes_per_token": 14339216.0,
-            "mean_alloc_count_per_token": 16584.0,
+            "dealloc_bytes_total": 128001168,
+            "dealloc_count_total": 145755,
+            "max_alloc_bytes_per_token": 15069584,
+            "max_alloc_count_per_token": 16200,
+            "mean_alloc_bytes_per_token": 14250896.0,
+            "mean_alloc_count_per_token": 16200.0,
             "net_bytes_total": 256896
           },
           "logits": {
@@ -222,15 +228,15 @@
             "net_bytes_total": 608024
           },
           "steady_state": {
-            "alloc_bytes_total": 130183705,
-            "alloc_count_total": 133123,
+            "alloc_bytes_total": 129471385,
+            "alloc_count_total": 130051,
             "count": 8,
-            "dealloc_bytes_total": 120194358,
-            "dealloc_count_total": 132963,
-            "max_alloc_bytes_per_token": 16994619,
-            "max_alloc_count_per_token": 16642,
-            "mean_alloc_bytes_per_token": 16272963.125,
-            "mean_alloc_count_per_token": 16640.375,
+            "dealloc_bytes_total": 119482038,
+            "dealloc_count_total": 129891,
+            "max_alloc_bytes_per_token": 16900539,
+            "max_alloc_count_per_token": 16258,
+            "mean_alloc_bytes_per_token": 16183923.125,
+            "mean_alloc_count_per_token": 16256.375,
             "net_bytes_total": 9989347
           },
           "stop_tail_update": {
@@ -258,28 +264,28 @@
             "net_bytes_total": 4640
           },
           "token_vector_update": {
-            "alloc_bytes_total": 304,
-            "alloc_count_total": 1,
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
             "count": 9,
-            "dealloc_bytes_total": 152,
-            "dealloc_count_total": 1,
-            "max_alloc_bytes_per_token": 304,
-            "max_alloc_count_per_token": 1,
-            "mean_alloc_bytes_per_token": 33.778,
-            "mean_alloc_count_per_token": 0.111,
-            "net_bytes_total": 152
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": 0,
+            "max_alloc_count_per_token": 0,
+            "mean_alloc_bytes_per_token": 0.0,
+            "mean_alloc_count_per_token": 0.0,
+            "net_bytes_total": 0
           },
           "total": {
-            "alloc_bytes_total": 146149374,
-            "alloc_count_total": 149773,
+            "alloc_bytes_total": 145354190,
+            "alloc_count_total": 146316,
             "count": 9,
-            "dealloc_bytes_total": 134298798,
-            "dealloc_count_total": 149590,
-            "max_alloc_bytes_per_token": 16994619,
-            "max_alloc_count_per_token": 16650,
-            "mean_alloc_bytes_per_token": 16238819.333,
-            "mean_alloc_count_per_token": 16641.444,
-            "net_bytes_total": 11850576
+            "dealloc_bytes_total": 133503766,
+            "dealloc_count_total": 146133,
+            "max_alloc_bytes_per_token": 16900539,
+            "max_alloc_count_per_token": 16265,
+            "mean_alloc_bytes_per_token": 16150465.556,
+            "mean_alloc_count_per_token": 16257.333,
+            "net_bytes_total": 11850424
           }
         },
         "enabled": true,
@@ -306,28 +312,28 @@
         "method": "process_global_allocator_counter_delta",
         "optimization_deferred": true,
         "prompt_prefill": {
-          "alloc_bytes_total": 355267724,
-          "alloc_count_total": 613781,
+          "alloc_bytes_total": 353225324,
+          "alloc_count_total": 599573,
           "count": 37,
-          "dealloc_bytes_total": 1159517964,
-          "dealloc_count_total": 613596,
-          "max_alloc_bytes_per_token": 13313564,
-          "max_alloc_count_per_token": 16601,
-          "mean_alloc_bytes_per_token": 9601830.378,
-          "mean_alloc_count_per_token": 16588.676,
+          "dealloc_bytes_total": 1157475564,
+          "dealloc_count_total": 599388,
+          "max_alloc_bytes_per_token": 13232444,
+          "max_alloc_count_per_token": 16217,
+          "mean_alloc_bytes_per_token": 9546630.378,
+          "mean_alloc_count_per_token": 16204.676,
           "net_bytes_total": -804250240
         },
         "prompt_setup": {
-          "alloc_bytes_total": 805332624,
-          "alloc_count_total": 259,
+          "alloc_bytes_total": 805332868,
+          "alloc_count_total": 261,
           "count": 1,
           "dealloc_bytes_total": 0,
           "dealloc_count_total": 0,
-          "max_alloc_bytes_per_token": 805332624,
-          "max_alloc_count_per_token": 259,
-          "mean_alloc_bytes_per_token": 805332624.0,
-          "mean_alloc_count_per_token": 259.0,
-          "net_bytes_total": 805332624
+          "max_alloc_bytes_per_token": 805332868,
+          "max_alloc_count_per_token": 261,
+          "mean_alloc_bytes_per_token": 805332868.0,
+          "mean_alloc_count_per_token": 261.0,
+          "net_bytes_total": 805332868
         },
         "prompt_tokenize": {
           "alloc_bytes_total": 126611110,
@@ -342,36 +348,36 @@
           "net_bytes_total": 4832
         },
         "prompt_total_counter_delta": {
-          "alloc_bytes_total": 1433365775,
-          "alloc_count_total": 2284052,
+          "alloc_bytes_total": 1430528443,
+          "alloc_count_total": 2266388,
           "count": 1,
-          "dealloc_bytes_total": 1431588282,
-          "dealloc_count_total": 2283754,
-          "max_alloc_bytes_per_token": 1433365775,
-          "max_alloc_count_per_token": 2284052,
-          "mean_alloc_bytes_per_token": 1433365775.0,
-          "mean_alloc_count_per_token": 2284052.0,
-          "net_bytes_total": 1777493
+          "dealloc_bytes_total": 1428750862,
+          "dealloc_count_total": 2266089,
+          "max_alloc_bytes_per_token": 1430528443,
+          "max_alloc_count_per_token": 2266388,
+          "mean_alloc_bytes_per_token": 1430528443.0,
+          "mean_alloc_count_per_token": 2266388.0,
+          "net_bytes_total": 1777581
         },
         "ranked_hotspots": [
           {
-            "alloc_bytes": 805332624,
-            "alloc_count": 259,
+            "alloc_bytes": 805332868,
+            "alloc_count": 261,
             "component": "prompt_setup"
           },
           {
-            "alloc_bytes": 355267724,
-            "alloc_count": 613781,
+            "alloc_bytes": 353225324,
+            "alloc_count": 599573,
             "component": "prompt_prefill"
           },
           {
-            "alloc_bytes": 146149374,
-            "alloc_count": 149773,
+            "alloc_bytes": 145354190,
+            "alloc_count": 146316,
             "component": "decode_total"
           },
           {
-            "alloc_bytes": 129052944,
-            "alloc_count": 149256,
+            "alloc_bytes": 128258064,
+            "alloc_count": 145800,
             "component": "model.forward"
           },
           {
@@ -395,32 +401,27 @@
             "component": "model.embed"
           },
           {
-            "alloc_bytes": 21830,
-            "alloc_count": 238,
+            "alloc_bytes": 25798,
+            "alloc_count": 273,
             "component": "receipt_construction"
           },
           {
             "alloc_bytes": 13463,
             "alloc_count": 71,
             "component": "tokenizer.decode"
-          },
-          {
-            "alloc_bytes": 304,
-            "alloc_count": 1,
-            "component": "token_vector_updates"
           }
         ],
         "receipt_construction": {
-          "alloc_bytes_total": 21830,
-          "alloc_count_total": 238,
+          "alloc_bytes_total": 25798,
+          "alloc_count_total": 273,
           "count": 1,
-          "dealloc_bytes_total": 4327,
+          "dealloc_bytes_total": 4351,
           "dealloc_count_total": 52,
-          "max_alloc_bytes_per_token": 21830,
-          "max_alloc_count_per_token": 238,
-          "mean_alloc_bytes_per_token": 21830.0,
-          "mean_alloc_count_per_token": 238.0,
-          "net_bytes_total": 17503
+          "max_alloc_bytes_per_token": 25798,
+          "max_alloc_count_per_token": 273,
+          "mean_alloc_bytes_per_token": 25798.0,
+          "mean_alloc_count_per_token": 273.0,
+          "net_bytes_total": 21447
         },
         "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
         "unavoidable_candidates": [
@@ -450,6 +451,17 @@
         151645
       ],
       "generated_tokens": 9,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
       "prompt": "What is 2+2? Answer briefly.",
       "prompt_index": 0,
       "quality": {
@@ -469,67 +481,82 @@
         "printable_utf8": true,
         "valid_utf8": true
       },
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_16-prompts/01-what-is-22-answer-briefly.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_16-prompts/01-what-is-22-answer-briefly.json",
       "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
       "text": "\n2+2 equals 4.<|im_end|>",
       "timing": {
-        "decode_steady_state_tok_s": 15.6,
-        "decode_total_ms": 640.621,
+        "decode_steady_state_tok_s": 15.26,
+        "decode_total_ms": 596.586,
         "embed_ms": {
           "count": 9,
-          "max_ms": 0.023,
-          "mean_ms": 0.006,
+          "max_ms": 0.005,
+          "mean_ms": 0.003,
           "min_ms": 0.002,
-          "p50_ms": 0.003,
-          "p95_ms": 0.023,
-          "total_ms": 0.058
+          "p50_ms": 0.002,
+          "p95_ms": 0.005,
+          "total_ms": 0.023
         },
-        "first_token_decode_ms": 127.787,
-        "first_token_ms": 1961,
+        "first_token_decode_ms": 72.33,
+        "first_token_ms": 1889,
         "forward_ms": {
           "count": 9,
-          "max_ms": 47.396,
-          "mean_ms": 46.856,
-          "min_ms": 46.176,
-          "p50_ms": 46.973,
-          "p95_ms": 47.396,
-          "total_ms": 421.7
+          "max_ms": 49.4,
+          "mean_ms": 47.934,
+          "min_ms": 47.536,
+          "p50_ms": 47.746,
+          "p95_ms": 49.4,
+          "total_ms": 431.41
         },
         "logits_ms": {
           "count": 9,
-          "max_ms": 80.685,
-          "mean_ms": 24.242,
-          "min_ms": 17.013,
-          "p50_ms": 17.235,
-          "p95_ms": 80.685,
-          "total_ms": 218.181
+          "max_ms": 24.467,
+          "mean_ms": 18.275,
+          "min_ms": 17.441,
+          "p50_ms": 17.502,
+          "p95_ms": 24.467,
+          "total_ms": 164.479
         },
         "model_load_ms": 0.0,
-        "prefill_ms": 1791.819,
+        "prefill_ms": 1777.122,
         "sample_ms": {
           "count": 9,
           "max_ms": 0.082,
-          "mean_ms": 0.068,
-          "min_ms": 0.06,
+          "mean_ms": 0.069,
+          "min_ms": 0.066,
           "p50_ms": 0.068,
           "p95_ms": 0.082,
-          "total_ms": 0.612
+          "total_ms": 0.622
         },
-        "sampling_ms_per_token": 0.068,
-        "session_model_load_ms": 3276.546,
-        "session_tokenizer_load_ms": 53.013,
+        "sampling_ms_per_token": 0.069,
+        "session_model_load_ms": 3113.789,
+        "session_tokenizer_load_ms": 48.138,
+        "time_to_first_token_ms": 1889,
         "token_decode_ms": {
           "count": 9,
-          "max_ms": 0.028,
+          "max_ms": 0.029,
           "mean_ms": 0.005,
           "min_ms": 0.001,
           "p50_ms": 0.002,
-          "p95_ms": 0.028,
-          "total_ms": 0.044
+          "p95_ms": 0.029,
+          "total_ms": 0.045
         },
-        "tokenize_ms": 41.722,
+        "tokenize_ms": 39.091,
         "tokenizer_load_ms": 0.0,
-        "total_ms": 2474.713
+        "total_ms": 2413.866
       }
     },
     {
@@ -549,15 +576,15 @@
             "net_bytes_total": 35712
           },
           "forward": {
-            "alloc_bytes_total": 121632912,
-            "alloc_count_total": 149256,
+            "alloc_bytes_total": 120889872,
+            "alloc_count_total": 145800,
             "count": 9,
-            "dealloc_bytes_total": 121376016,
-            "dealloc_count_total": 149211,
-            "max_alloc_bytes_per_token": 14339216,
-            "max_alloc_count_per_token": 16584,
-            "mean_alloc_bytes_per_token": 13514768.0,
-            "mean_alloc_count_per_token": 16584.0,
+            "dealloc_bytes_total": 120632976,
+            "dealloc_count_total": 145755,
+            "max_alloc_bytes_per_token": 14250896,
+            "max_alloc_count_per_token": 16200,
+            "mean_alloc_bytes_per_token": 13432208.0,
+            "mean_alloc_count_per_token": 16200.0,
             "net_bytes_total": 256896
           },
           "logits": {
@@ -585,16 +612,16 @@
             "net_bytes_total": 608024
           },
           "steady_state": {
-            "alloc_bytes_total": 123588482,
-            "alloc_count_total": 133124,
+            "alloc_bytes_total": 122921938,
+            "alloc_count_total": 130051,
             "count": 8,
-            "dealloc_bytes_total": 113598965,
-            "dealloc_count_total": 132964,
-            "max_alloc_bytes_per_token": 16169891,
-            "max_alloc_count_per_token": 16641,
-            "mean_alloc_bytes_per_token": 15448560.25,
-            "mean_alloc_count_per_token": 16640.5,
-            "net_bytes_total": 9989517
+            "dealloc_bytes_total": 112932573,
+            "dealloc_count_total": 129891,
+            "max_alloc_bytes_per_token": 16081571,
+            "max_alloc_count_per_token": 16257,
+            "mean_alloc_bytes_per_token": 15365242.25,
+            "mean_alloc_count_per_token": 16256.375,
+            "net_bytes_total": 9989365
           },
           "stop_tail_update": {
             "alloc_bytes_total": 0,
@@ -621,28 +648,28 @@
             "net_bytes_total": 42
           },
           "token_vector_update": {
-            "alloc_bytes_total": 304,
-            "alloc_count_total": 1,
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
             "count": 9,
-            "dealloc_bytes_total": 152,
-            "dealloc_count_total": 1,
-            "max_alloc_bytes_per_token": 304,
-            "max_alloc_count_per_token": 1,
-            "mean_alloc_bytes_per_token": 33.778,
-            "mean_alloc_count_per_token": 0.111,
-            "net_bytes_total": 152
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": 0,
+            "max_alloc_count_per_token": 0,
+            "mean_alloc_bytes_per_token": 0.0,
+            "mean_alloc_count_per_token": 0.0,
+            "net_bytes_total": 0
           },
           "total": {
-            "alloc_bytes_total": 138717253,
-            "alloc_count_total": 149766,
+            "alloc_bytes_total": 137973909,
+            "alloc_count_total": 146309,
             "count": 9,
-            "dealloc_bytes_total": 126871275,
-            "dealloc_count_total": 149584,
-            "max_alloc_bytes_per_token": 16169891,
-            "max_alloc_count_per_token": 16642,
-            "mean_alloc_bytes_per_token": 15413028.111,
-            "mean_alloc_count_per_token": 16640.667,
-            "net_bytes_total": 11845978
+            "dealloc_bytes_total": 126128083,
+            "dealloc_count_total": 146127,
+            "max_alloc_bytes_per_token": 16081571,
+            "max_alloc_count_per_token": 16258,
+            "mean_alloc_bytes_per_token": 15330434.333,
+            "mean_alloc_count_per_token": 16256.556,
+            "net_bytes_total": 11845826
           }
         },
         "enabled": true,
@@ -669,28 +696,28 @@
         "method": "process_global_allocator_counter_delta",
         "optimization_deferred": true,
         "prompt_prefill": {
-          "alloc_bytes_total": 303250140,
-          "alloc_count_total": 547377,
+          "alloc_bytes_total": 301523580,
+          "alloc_count_total": 534705,
           "count": 33,
-          "dealloc_bytes_total": 1107614556,
-          "dealloc_count_total": 547212,
-          "max_alloc_bytes_per_token": 12489116,
-          "max_alloc_count_per_token": 16601,
-          "mean_alloc_bytes_per_token": 9189398.182,
-          "mean_alloc_count_per_token": 16587.182,
+          "dealloc_bytes_total": 1105887996,
+          "dealloc_count_total": 534540,
+          "max_alloc_bytes_per_token": 12413756,
+          "max_alloc_count_per_token": 16217,
+          "mean_alloc_bytes_per_token": 9137078.182,
+          "mean_alloc_count_per_token": 16203.182,
           "net_bytes_total": -804364416
         },
         "prompt_setup": {
-          "alloc_bytes_total": 805332152,
-          "alloc_count_total": 258,
+          "alloc_bytes_total": 805326168,
+          "alloc_count_total": 242,
           "count": 1,
           "dealloc_bytes_total": 0,
           "dealloc_count_total": 0,
-          "max_alloc_bytes_per_token": 805332152,
-          "max_alloc_count_per_token": 258,
-          "mean_alloc_bytes_per_token": 805332152.0,
-          "mean_alloc_count_per_token": 258.0,
-          "net_bytes_total": 805332152
+          "max_alloc_bytes_per_token": 805326168,
+          "max_alloc_count_per_token": 242,
+          "mean_alloc_bytes_per_token": 805326168.0,
+          "mean_alloc_count_per_token": 242.0,
+          "net_bytes_total": 805326168
         },
         "prompt_tokenize": {
           "alloc_bytes_total": 126598159,
@@ -705,31 +732,31 @@
           "net_bytes_total": 152
         },
         "prompt_total_counter_delta": {
-          "alloc_bytes_total": 1373902502,
-          "alloc_count_total": 2217573,
+          "alloc_bytes_total": 1371426622,
+          "alloc_count_total": 2201427,
           "count": 1,
-          "dealloc_bytes_total": 1372233266,
-          "dealloc_count_total": 2217281,
-          "max_alloc_bytes_per_token": 1373902502,
-          "max_alloc_count_per_token": 2217573,
-          "mean_alloc_bytes_per_token": 1373902502.0,
-          "mean_alloc_count_per_token": 2217573.0,
-          "net_bytes_total": 1669236
+          "dealloc_bytes_total": 1369763526,
+          "dealloc_count_total": 2201152,
+          "max_alloc_bytes_per_token": 1371426622,
+          "max_alloc_count_per_token": 2201427,
+          "mean_alloc_bytes_per_token": 1371426622.0,
+          "mean_alloc_count_per_token": 2201427.0,
+          "net_bytes_total": 1663096
         },
         "ranked_hotspots": [
           {
-            "alloc_bytes": 805332152,
-            "alloc_count": 258,
+            "alloc_bytes": 805326168,
+            "alloc_count": 242,
             "component": "prompt_setup"
           },
           {
-            "alloc_bytes": 303250140,
-            "alloc_count": 547377,
+            "alloc_bytes": 301523580,
+            "alloc_count": 534705,
             "component": "prompt_prefill"
           },
           {
-            "alloc_bytes": 138717253,
-            "alloc_count": 149766,
+            "alloc_bytes": 137973909,
+            "alloc_count": 146309,
             "component": "decode_total"
           },
           {
@@ -738,8 +765,8 @@
             "component": "prompt_tokenize"
           },
           {
-            "alloc_bytes": 121632912,
-            "alloc_count": 149256,
+            "alloc_bytes": 120889872,
+            "alloc_count": 145800,
             "component": "model.forward"
           },
           {
@@ -758,32 +785,27 @@
             "component": "model.embed"
           },
           {
-            "alloc_bytes": 21723,
-            "alloc_count": 238,
+            "alloc_bytes": 25691,
+            "alloc_count": 273,
             "component": "receipt_construction"
           },
           {
             "alloc_bytes": 1374,
             "alloc_count": 64,
             "component": "tokenizer.decode"
-          },
-          {
-            "alloc_bytes": 304,
-            "alloc_count": 1,
-            "component": "token_vector_updates"
           }
         ],
         "receipt_construction": {
-          "alloc_bytes_total": 21723,
-          "alloc_count_total": 238,
+          "alloc_bytes_total": 25691,
+          "alloc_count_total": 273,
           "count": 1,
-          "dealloc_bytes_total": 4312,
+          "dealloc_bytes_total": 4336,
           "dealloc_count_total": 52,
-          "max_alloc_bytes_per_token": 21723,
-          "max_alloc_count_per_token": 238,
-          "mean_alloc_bytes_per_token": 21723.0,
-          "mean_alloc_count_per_token": 238.0,
-          "net_bytes_total": 17411
+          "max_alloc_bytes_per_token": 25691,
+          "max_alloc_count_per_token": 273,
+          "mean_alloc_bytes_per_token": 25691.0,
+          "mean_alloc_count_per_token": 273.0,
+          "net_bytes_total": 21355
         },
         "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
         "unavoidable_candidates": [
@@ -813,6 +835,17 @@
         151645
       ],
       "generated_tokens": 9,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
       "prompt": "Name the capital of France.",
       "prompt_index": 1,
       "quality": {
@@ -832,67 +865,82 @@
         "printable_utf8": true,
         "valid_utf8": true
       },
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_16-prompts/02-name-the-capital-of-france.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_16-prompts/02-name-the-capital-of-france.json",
       "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
       "text": "\nThe capital of France is Paris.<|im_end|>",
       "timing": {
-        "decode_steady_state_tok_s": 15.726,
-        "decode_total_ms": 571.933,
+        "decode_steady_state_tok_s": 15.277,
+        "decode_total_ms": 605.29,
         "embed_ms": {
           "count": 9,
-          "max_ms": 0.013,
-          "mean_ms": 0.004,
+          "max_ms": 0.004,
+          "mean_ms": 0.003,
           "min_ms": 0.001,
           "p50_ms": 0.002,
-          "p95_ms": 0.013,
-          "total_ms": 0.037
+          "p95_ms": 0.004,
+          "total_ms": 0.024
         },
-        "first_token_decode_ms": 63.22,
-        "first_token_ms": 1738,
+        "first_token_decode_ms": 81.626,
+        "first_token_ms": 2034,
         "forward_ms": {
           "count": 9,
-          "max_ms": 47.232,
-          "mean_ms": 46.358,
-          "min_ms": 45.428,
-          "p50_ms": 46.382,
-          "p95_ms": 47.232,
-          "total_ms": 417.22
+          "max_ms": 48.301,
+          "mean_ms": 47.78,
+          "min_ms": 46.59,
+          "p50_ms": 48.066,
+          "p95_ms": 48.301,
+          "total_ms": 430.023
         },
         "logits_ms": {
           "count": 9,
-          "max_ms": 17.273,
-          "mean_ms": 17.117,
-          "min_ms": 17.033,
-          "p50_ms": 17.08,
-          "p95_ms": 17.273,
-          "total_ms": 154.055
+          "max_ms": 34.692,
+          "mean_ms": 19.377,
+          "min_ms": 17.202,
+          "p50_ms": 17.491,
+          "p95_ms": 34.692,
+          "total_ms": 174.394
         },
         "model_load_ms": 0.0,
-        "prefill_ms": 1525.29,
+        "prefill_ms": 1677.237,
         "sample_ms": {
           "count": 9,
-          "max_ms": 0.069,
-          "mean_ms": 0.065,
-          "min_ms": 0.06,
-          "p50_ms": 0.065,
-          "p95_ms": 0.069,
-          "total_ms": 0.587
+          "max_ms": 0.144,
+          "mean_ms": 0.077,
+          "min_ms": 0.065,
+          "p50_ms": 0.068,
+          "p95_ms": 0.144,
+          "total_ms": 0.691
         },
-        "sampling_ms_per_token": 0.065,
-        "session_model_load_ms": 3276.546,
-        "session_tokenizer_load_ms": 53.013,
+        "sampling_ms_per_token": 0.077,
+        "session_model_load_ms": 3113.789,
+        "session_tokenizer_load_ms": 48.138,
+        "time_to_first_token_ms": 2034,
         "token_decode_ms": {
           "count": 9,
-          "max_ms": 0.006,
-          "mean_ms": 0.003,
-          "min_ms": 0.002,
-          "p50_ms": 0.002,
-          "p95_ms": 0.006,
-          "total_ms": 0.024
+          "max_ms": 0.021,
+          "mean_ms": 0.016,
+          "min_ms": 0.006,
+          "p50_ms": 0.016,
+          "p95_ms": 0.021,
+          "total_ms": 0.143
         },
-        "tokenize_ms": 35.781,
+        "tokenize_ms": 39.411,
         "tokenizer_load_ms": 0.0,
-        "total_ms": 2247.586
+        "total_ms": 2558.41
       }
     },
     {
@@ -912,15 +960,15 @@
             "net_bytes_total": 63488
           },
           "forward": {
-            "alloc_bytes_total": 231076352,
-            "alloc_count_total": 265344,
+            "alloc_bytes_total": 229651712,
+            "alloc_count_total": 259200,
             "count": 16,
-            "dealloc_bytes_total": 230619648,
-            "dealloc_count_total": 265264,
-            "max_alloc_bytes_per_token": 15988112,
-            "max_alloc_count_per_token": 16584,
-            "mean_alloc_bytes_per_token": 14442272.0,
-            "mean_alloc_count_per_token": 16584.0,
+            "dealloc_bytes_total": 229195008,
+            "dealloc_count_total": 259120,
+            "max_alloc_bytes_per_token": 15888272,
+            "max_alloc_count_per_token": 16200,
+            "mean_alloc_bytes_per_token": 14353232.0,
+            "mean_alloc_count_per_token": 16200.0,
             "net_bytes_total": 456704
           },
           "logits": {
@@ -948,16 +996,16 @@
             "net_bytes_total": 608296
           },
           "steady_state": {
-            "alloc_bytes_total": 245640989,
-            "alloc_count_total": 249609,
+            "alloc_bytes_total": 244294285,
+            "alloc_count_total": 243848,
             "count": 15,
-            "dealloc_bytes_total": 226910668,
-            "dealloc_count_total": 249309,
-            "max_alloc_bytes_per_token": 17818752,
-            "max_alloc_count_per_token": 16643,
-            "mean_alloc_bytes_per_token": 16376065.933,
-            "mean_alloc_count_per_token": 16640.6,
-            "net_bytes_total": 18730321
+            "dealloc_bytes_total": 225564116,
+            "dealloc_count_total": 243548,
+            "max_alloc_bytes_per_token": 17718912,
+            "max_alloc_count_per_token": 16258,
+            "mean_alloc_bytes_per_token": 16286285.667,
+            "mean_alloc_count_per_token": 16256.533,
+            "net_bytes_total": 18730169
           },
           "stop_tail_update": {
             "alloc_bytes_total": 0,
@@ -984,28 +1032,28 @@
             "net_bytes_total": 98
           },
           "token_vector_update": {
-            "alloc_bytes_total": 304,
-            "alloc_count_total": 1,
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
             "count": 16,
-            "dealloc_bytes_total": 152,
-            "dealloc_count_total": 1,
-            "max_alloc_bytes_per_token": 304,
-            "max_alloc_count_per_token": 1,
-            "mean_alloc_bytes_per_token": 19.0,
-            "mean_alloc_count_per_token": 0.063,
-            "net_bytes_total": 152
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": 0,
+            "max_alloc_count_per_token": 0,
+            "mean_alloc_bytes_per_token": 0.0,
+            "mean_alloc_count_per_token": 0.0,
+            "net_bytes_total": 0
           },
           "total": {
-            "alloc_bytes_total": 260975884,
-            "alloc_count_total": 266251,
+            "alloc_bytes_total": 259550940,
+            "alloc_count_total": 260106,
             "count": 16,
-            "dealloc_bytes_total": 240389098,
-            "dealloc_count_total": 265929,
-            "max_alloc_bytes_per_token": 17818752,
-            "max_alloc_count_per_token": 16643,
-            "mean_alloc_bytes_per_token": 16310992.75,
-            "mean_alloc_count_per_token": 16640.688,
-            "net_bytes_total": 20586786
+            "dealloc_bytes_total": 238964306,
+            "dealloc_count_total": 259784,
+            "max_alloc_bytes_per_token": 17718912,
+            "max_alloc_count_per_token": 16258,
+            "mean_alloc_bytes_per_token": 16221933.75,
+            "mean_alloc_count_per_token": 16256.625,
+            "net_bytes_total": 20586634
           }
         },
         "enabled": true,
@@ -1032,28 +1080,28 @@
         "method": "process_global_allocator_counter_delta",
         "optimization_deferred": true,
         "prompt_prefill": {
-          "alloc_bytes_total": 315945368,
-          "alloc_count_total": 563978,
+          "alloc_bytes_total": 314142008,
+          "alloc_count_total": 550922,
           "count": 34,
-          "dealloc_bytes_total": 1120281240,
-          "dealloc_count_total": 563808,
-          "max_alloc_bytes_per_token": 12695228,
-          "max_alloc_count_per_token": 16601,
-          "mean_alloc_bytes_per_token": 9292510.824,
-          "mean_alloc_count_per_token": 16587.588,
+          "dealloc_bytes_total": 1118477880,
+          "dealloc_count_total": 550752,
+          "max_alloc_bytes_per_token": 12618428,
+          "max_alloc_count_per_token": 16217,
+          "mean_alloc_bytes_per_token": 9239470.824,
+          "mean_alloc_count_per_token": 16203.588,
           "net_bytes_total": -804335872
         },
         "prompt_setup": {
-          "alloc_bytes_total": 805332184,
-          "alloc_count_total": 258,
+          "alloc_bytes_total": 805326168,
+          "alloc_count_total": 242,
           "count": 1,
           "dealloc_bytes_total": 0,
           "dealloc_count_total": 0,
-          "max_alloc_bytes_per_token": 805332184,
-          "max_alloc_count_per_token": 258,
-          "mean_alloc_bytes_per_token": 805332184.0,
-          "mean_alloc_count_per_token": 258.0,
-          "net_bytes_total": 805332184
+          "max_alloc_bytes_per_token": 805326168,
+          "max_alloc_count_per_token": 242,
+          "mean_alloc_bytes_per_token": 805326168.0,
+          "mean_alloc_count_per_token": 242.0,
+          "net_bytes_total": 805326168
         },
         "prompt_tokenize": {
           "alloc_bytes_total": 126606157,
@@ -1068,36 +1116,36 @@
           "net_bytes_total": 152
         },
         "prompt_total_counter_delta": {
-          "alloc_bytes_total": 1508866043,
-          "alloc_count_total": 2350715,
+          "alloc_bytes_total": 1505631731,
+          "alloc_count_total": 2331497,
           "count": 1,
-          "dealloc_bytes_total": 1506999506,
-          "dealloc_count_total": 2350423,
-          "max_alloc_bytes_per_token": 1508866043,
-          "max_alloc_count_per_token": 2350715,
-          "mean_alloc_bytes_per_token": 1508866043.0,
-          "mean_alloc_count_per_token": 2350715.0,
-          "net_bytes_total": 1866537
+          "dealloc_bytes_total": 1503771366,
+          "dealloc_count_total": 2331222,
+          "max_alloc_bytes_per_token": 1505631731,
+          "max_alloc_count_per_token": 2331497,
+          "mean_alloc_bytes_per_token": 1505631731.0,
+          "mean_alloc_count_per_token": 2331497.0,
+          "net_bytes_total": 1860365
         },
         "ranked_hotspots": [
           {
-            "alloc_bytes": 805332184,
-            "alloc_count": 258,
+            "alloc_bytes": 805326168,
+            "alloc_count": 242,
             "component": "prompt_setup"
           },
           {
-            "alloc_bytes": 315945368,
-            "alloc_count": 563978,
+            "alloc_bytes": 314142008,
+            "alloc_count": 550922,
             "component": "prompt_prefill"
           },
           {
-            "alloc_bytes": 260975884,
-            "alloc_count": 266251,
+            "alloc_bytes": 259550940,
+            "alloc_count": 260106,
             "component": "decode_total"
           },
           {
-            "alloc_bytes": 231076352,
-            "alloc_count": 265344,
+            "alloc_bytes": 229651712,
+            "alloc_count": 259200,
             "component": "model.forward"
           },
           {
@@ -1121,32 +1169,27 @@
             "component": "model.embed"
           },
           {
-            "alloc_bytes": 22692,
-            "alloc_count": 238,
+            "alloc_bytes": 26660,
+            "alloc_count": 273,
             "component": "receipt_construction"
           },
           {
             "alloc_bytes": 2576,
             "alloc_count": 117,
             "component": "tokenizer.decode"
-          },
-          {
-            "alloc_bytes": 304,
-            "alloc_count": 1,
-            "component": "token_vector_updates"
           }
         ],
         "receipt_construction": {
-          "alloc_bytes_total": 22692,
-          "alloc_count_total": 238,
+          "alloc_bytes_total": 26660,
+          "alloc_count_total": 273,
           "count": 1,
-          "dealloc_bytes_total": 4661,
+          "dealloc_bytes_total": 4685,
           "dealloc_count_total": 52,
-          "max_alloc_bytes_per_token": 22692,
-          "max_alloc_count_per_token": 238,
-          "mean_alloc_bytes_per_token": 22692.0,
-          "mean_alloc_count_per_token": 238.0,
-          "net_bytes_total": 18031
+          "max_alloc_bytes_per_token": 26660,
+          "max_alloc_count_per_token": 273,
+          "mean_alloc_bytes_per_token": 26660.0,
+          "mean_alloc_count_per_token": 273.0,
+          "net_bytes_total": 21975
         },
         "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
         "unavoidable_candidates": [
@@ -1183,6 +1226,17 @@
         369
       ],
       "generated_tokens": 16,
+      "operator_ux": {
+        "clear_failure_messages": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
       "prompt": "Write one short sentence about Rust.",
       "prompt_index": 2,
       "quality": {
@@ -1202,67 +1256,82 @@
         "printable_utf8": true,
         "valid_utf8": true
       },
-      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_16-prompts/03-write-one-short-sentence-about-rust.json",
+      "receipt_path": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_16-prompts/03-write-one-short-sentence-about-rust.json",
       "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
       "text": " Rust is a powerful, versatile programming language that has gained popularity in recent years for",
       "timing": {
-        "decode_steady_state_tok_s": 15.425,
-        "decode_total_ms": 1039.583,
+        "decode_steady_state_tok_s": 15.338,
+        "decode_total_ms": 1043.422,
         "embed_ms": {
           "count": 16,
-          "max_ms": 0.017,
-          "mean_ms": 0.008,
-          "min_ms": 0.002,
-          "p50_ms": 0.008,
-          "p95_ms": 0.017,
-          "total_ms": 0.123
+          "max_ms": 0.102,
+          "mean_ms": 0.014,
+          "min_ms": 0.001,
+          "p50_ms": 0.01,
+          "p95_ms": 0.102,
+          "total_ms": 0.23
         },
-        "first_token_decode_ms": 67.142,
-        "first_token_ms": 1705,
+        "first_token_decode_ms": 65.47,
+        "first_token_ms": 1930,
         "forward_ms": {
           "count": 16,
-          "max_ms": 49.084,
-          "mean_ms": 47.516,
-          "min_ms": 46.632,
-          "p50_ms": 47.14,
-          "p95_ms": 49.084,
-          "total_ms": 760.251
+          "max_ms": 48.415,
+          "mean_ms": 47.562,
+          "min_ms": 46.559,
+          "p50_ms": 47.687,
+          "p95_ms": 48.415,
+          "total_ms": 760.985
         },
         "logits_ms": {
           "count": 16,
-          "max_ms": 17.985,
-          "mean_ms": 17.382,
-          "min_ms": 16.851,
-          "p50_ms": 17.269,
-          "p95_ms": 17.985,
-          "total_ms": 278.113
+          "max_ms": 18.677,
+          "mean_ms": 17.568,
+          "min_ms": 17.2,
+          "p50_ms": 17.486,
+          "p95_ms": 18.677,
+          "total_ms": 281.085
         },
         "model_load_ms": 0.0,
-        "prefill_ms": 1571.21,
+        "prefill_ms": 1592.146,
         "sample_ms": {
           "count": 16,
           "max_ms": 0.071,
-          "mean_ms": 0.066,
-          "min_ms": 0.061,
-          "p50_ms": 0.065,
+          "mean_ms": 0.067,
+          "min_ms": 0.065,
+          "p50_ms": 0.067,
           "p95_ms": 0.071,
-          "total_ms": 1.052
+          "total_ms": 1.074
         },
-        "sampling_ms_per_token": 0.066,
-        "session_model_load_ms": 3276.546,
-        "session_tokenizer_load_ms": 53.013,
+        "sampling_ms_per_token": 0.067,
+        "session_model_load_ms": 3113.789,
+        "session_tokenizer_load_ms": 48.138,
+        "time_to_first_token_ms": 1930,
         "token_decode_ms": {
           "count": 16,
           "max_ms": 0.003,
           "mean_ms": 0.002,
-          "min_ms": 0.001,
+          "min_ms": 0.002,
           "p50_ms": 0.002,
           "p95_ms": 0.003,
-          "total_ms": 0.031
+          "total_ms": 0.035
         },
-        "tokenize_ms": 35.446,
+        "tokenize_ms": 52.631,
         "tokenizer_load_ms": 0.0,
-        "total_ms": 2677.747
+        "total_ms": 2908.625
       }
     }
   ],
@@ -1285,14 +1354,24 @@
   "schema_version": "1.0.0",
   "selected_backend": "apple-m4-cpu-neon",
   "session": {
+    "allocation_audit_buffers_reused": true,
+    "generated_token_buffer_reused": true,
+    "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+    "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
     "model_loaded_once": true,
-    "per_prompt_receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_16-prompts",
+    "per_prompt_receipt_dir": "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_16-prompts",
     "per_prompt_receipts": [
-      "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_16-prompts/01-what-is-22-answer-briefly.json",
-      "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_16-prompts/02-name-the-capital-of-france.json",
-      "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/allocation-audit-profiles/warm_16-prompts/03-write-one-short-sentence-about-rust.json"
+      "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_16-prompts/01-what-is-22-answer-briefly.json",
+      "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_16-prompts/02-name-the-capital-of-france.json",
+      "target/apple-m4-slm-performance/M4-SLM-PERF-007/performance-envelope-allocation-audit-profiles/warm_16-prompts/03-write-one-short-sentence-about-rust.json"
     ],
     "prompt_count": 3,
+    "prompt_token_buffer_reused": true,
+    "reuse_scope": "resident_session",
+    "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+    "session_owned_buffers": true,
+    "stop_tail_buffer_reused": true,
+    "timing_buffers_reused": true,
     "tokenizer_loaded_once": true
   },
   "speed": {
@@ -1305,54 +1384,73 @@
     },
     "measurement_scope": "validated SLM warm session on apple-m4-cpu-neon",
     "reuse": {
+      "allocation_audit_buffers_reused": true,
+      "generated_token_buffer_reused": true,
       "kv_cache_recreated_per_prompt": true,
+      "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
       "logits_buffer_reuse_claimed": false,
+      "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
       "model_loaded_once": true,
       "per_prompt_model_load_ms": 0.0,
       "per_prompt_tokenizer_load_ms": 0.0,
+      "prompt_token_buffer_reused": true,
+      "reuse_scope": "resident_session",
       "sampler_recreated_per_prompt": true,
+      "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+      "session_owned_buffers": true,
+      "stop_tail_buffer_reused": true,
+      "timing_buffers_reused": true,
       "tokenizer_loaded_once": true
     },
     "speedup_claim": false,
     "throughput": {
-      "cold_session_generated_tok_s": 2.753,
-      "decode_generated_tok_s": 15.097,
-      "warm_prompt_generated_tok_s": 4.595
+      "cold_session_generated_tok_s": 2.686,
+      "decode_generated_tok_s": 15.143,
+      "warm_prompt_generated_tok_s": 4.314
     },
     "timing": {
-      "decode_total_ms": 2252.137,
+      "decode_total_ms": 2245.298,
       "first_token_ms": {
         "count": 3,
-        "max_ms": 1961.0,
-        "mean_ms": 1801.333,
-        "min_ms": 1705.0,
-        "p50_ms": 1738.0,
-        "p95_ms": 1961.0,
-        "total_ms": 5404.0
+        "max_ms": 2034.0,
+        "mean_ms": 1951.0,
+        "min_ms": 1889.0,
+        "p50_ms": 1930.0,
+        "p95_ms": 2034.0,
+        "total_ms": 5853.0
       },
-      "model_load_ms": 3276.546,
-      "prefill_ms": 4888.319,
-      "sampling_ms": 2.251,
+      "model_load_ms": 3113.789,
+      "prefill_ms": 5046.505,
+      "sampling_ms": 2.388,
       "steady_decode_tok_s": {
         "count": 3,
-        "max": 15.726,
-        "mean": 15.584,
-        "min": 15.425,
-        "p50": 15.6,
-        "p95": 15.726
+        "max": 15.338,
+        "mean": 15.292,
+        "min": 15.26,
+        "p50": 15.277,
+        "p95": 15.338
       },
-      "tokenize_ms": 112.949,
-      "tokenizer_load_ms": 53.013,
-      "total_session_ms": 12350.112,
-      "warm_prompt_wall_ms": 7400.046
+      "time_to_first_token_ms": {
+        "count": 3,
+        "max_ms": 2034.0,
+        "mean_ms": 1951.0,
+        "min_ms": 1889.0,
+        "p50_ms": 1930.0,
+        "p95_ms": 2034.0,
+        "total_ms": 5853.0
+      },
+      "tokenize_ms": 131.133,
+      "tokenizer_load_ms": 48.138,
+      "total_session_ms": 12660.162,
+      "warm_prompt_wall_ms": 7880.901
     }
   },
   "speedup_claim": false,
-  "timestamp": "2026-05-08T12:10:26.902670+00:00",
+  "timestamp": "2026-05-08T14:11:49.711173+00:00",
   "timing": {
-    "model_load_ms": 3276.546,
-    "tokenizer_load_ms": 53.013,
-    "total_session_ms": 12350.112
+    "model_load_ms": 3113.789,
+    "tokenizer_load_ms": 48.138,
+    "total_session_ms": 12660.162
   },
   "tokenizer": {
     "bos": 151643,

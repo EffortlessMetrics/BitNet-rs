@@ -1053,3 +1053,136 @@ must_not_claim = [
   "The comparison index proves acceleration.",
   "The comparison index permits CPU fallback as Arc 140V or Intel NPU proof.",
 ]
+
+[[work_item]]
+id = "CPU258V-016"
+status = "merged"
+pr = 4087
+merge_sha = "197fd54e725ee6e40b87288d7636810cbeed9692"
+branch = "codex/lunar-lake/post-baseline-next-items"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-015", "CPU258V-013", "LNL258V-COMPARE-001"]
+acceptance = "Record a post-mechanics 258V CPU reference bundle that links strict real-GGUF decode smoke, full fixed-corpus scalar-vs-AVX2 answer parity, warm-session prefill/decode phase receipts, model/tokenizer/kernel identity, fallback=false, and accelerator comparison claim boundaries."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "Parse docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The 258V CPU reference plate is bundled from strict real-GGUF receipts, full fixed-corpus scalar-vs-AVX2 answer parity, and warm-session phase receipts.",
+  "The bundled CPU artifacts are suitable as CPU reference inputs for later Arc 140V and Intel NPU parity comparisons.",
+  "The referenced CPU receipts used real GGUF loading, explicit strict tokenizer resolution, selected i2_s scalar/AVX2 CPU kernels, and fallback_used=false.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "Sustained throughput is proven.",
+  "A CPU speedup is proven.",
+  "Arc 140V or Intel NPU execution is proven by this CPU bundle.",
+  "CPU fallback can satisfy Arc 140V or Intel NPU proof.",
+]
+
+[[work_item]]
+id = "ARC140V-005"
+status = "ready"
+branch = "codex/intel-258v-platform/ARC140V-005-opencl-cpu-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["ARC140V-004", "CPU258V-016"]
+acceptance = "Run one isolated Arc 140V native OpenCL kernel or static subgraph and compare its output against the 258V CPU reference, recording requested/selected backend identity, runtime API, device identity, input shape, tolerance, timing, fallback=false, and no BitNet/QK256/acceleration claims."
+commands = [
+  "cargo test --locked -p bitnet-device-probe --no-default-features --features opencl opencl -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli,opencl --bin bitnet intel_arc::tests -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli,opencl -- intel-arc-140v-opencl-parity --cpu-reference ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json --json-out ci/hardware/intel-258v/<date>/arc-140v-opencl-parity.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/src/opencl.rs",
+  "crates/bitnet-device-probe/src/runtimes/opencl.rs",
+  "crates/bitnet-device-probe/src/runtimes/mod.rs",
+  "crates/bitnet-cli/Cargo.toml",
+  "crates/bitnet-cli/src/intel_arc.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/specs/intel-lunar-lake-gpu-roadmap.md",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Arc 140V native OpenCL output matches the selected 258V CPU reference for one isolated parity kernel or subgraph when the receipt passes.",
+]
+must_not_claim = [
+  "BitNet inference works on Arc 140V.",
+  "Packed QK256 decode works on Arc 140V.",
+  "Arc 140V accelerates BitNet.",
+  "OpenVINO GPU smoke proves native OpenCL parity.",
+  "CPU fallback satisfies Arc 140V proof.",
+]
+
+[[work_item]]
+id = "LNL258V-COMPARE-002"
+status = "ready"
+branch = "codex/lunar-lake/LNL258V-COMPARE-002"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-016", "ARC140V-005"]
+acceptance = "Refresh the Lunar Lake same-machine comparison index after the post-mechanics CPU reference bundle and the next Arc 140V native OpenCL parity receipt, preserving independent lane claims, missing-artifact states, fallback status, and no platform performance or acceleration claims."
+commands = [
+  "Parse ci/hardware/intel-258v/<date>/platform-comparison-index.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "Parse docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The Lunar Lake comparison index links the updated CPU reference bundle and independently scoped Arc/NPU receipts by path, backend identity, runtime API, proof stage, and fallback status.",
+]
+must_not_claim = [
+  "The comparison index proves CPU, Arc 140V, or Intel NPU performance.",
+  "The comparison index proves full BitNet inference on Arc 140V or Intel NPU.",
+  "The comparison index proves acceleration.",
+  "CPU fallback satisfies Arc 140V or Intel NPU proof.",
+]
