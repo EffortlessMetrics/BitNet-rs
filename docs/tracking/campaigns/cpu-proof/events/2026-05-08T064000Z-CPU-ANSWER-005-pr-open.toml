@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T06:40:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-005"
+event = "pr_open"
+pr = 4003
+head_sha = "87dfcbf291b0a0e6ca69b156ee815cd87d86c2e5"
+actor = "codex"
+
+notes = [
+  "Opened #4003 to preserve external Llama-BPE tokenizer/pre-tokenizer authority in strict Rust CPU answer receipts.",
+  "Local Kaby smoke evidence still fails answer quality, so the PR is receipt-authority hardening only and does not claim answer readiness, throughput, server inference, GPU, or NPU execution.",
+]

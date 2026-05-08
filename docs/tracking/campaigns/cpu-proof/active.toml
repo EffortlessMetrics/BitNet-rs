@@ -663,3 +663,43 @@ must_not_claim = [
   "Server inference is complete.",
   "GPU or NPU execution is involved.",
 ]
+
+[[work_item]]
+id = "CPU-ANSWER-005"
+status = "pr_open"
+pr = 4003
+branch = "codex/cpu-answer-005-tokenizer-authority"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-004"]
+acceptance = "Strict Rust CPU answer receipts record the MODEL-ARTIFACT-007 external Llama-BPE tokenizer/pre-tokenizer authority instead of `unknown` when an explicit or sibling Llama-3 tokenizer is used; failed answer-corpus artifacts remain diagnostic and no answer-quality, throughput, server, GPU, or NPU claim is made."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli pretokenizer_authority",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Strict Rust CPU answer receipts record external Llama-BPE tokenizer authority after merge.",
+  "MODEL-ARTIFACT-007 tokenizer/pre-tokenizer authority is no longer collapsed to unknown in run receipts after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "Rust CPU answer quality is proven.",
+  "258V or Kaby Lake sustained throughput is proven.",
+  "Server inference is complete.",
+  "GPU or NPU execution is involved.",
+]

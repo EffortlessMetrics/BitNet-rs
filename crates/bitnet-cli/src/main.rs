@@ -3789,7 +3789,8 @@ async fn run_simple_generation(
         let tokenizer_source_str = tokenizer_source.as_str();
         let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
         let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
-        let pretokenizer_authority = tokenizer_pretokenizer_authority(tokenizer_source);
+        let pretokenizer_authority =
+            tokenizer_pretokenizer_authority(tokenizer_source, &tokenizer_label);
         let tokenizer_info = serde_json::json!({
             "type": tokenizer_type,
             "model_family": tokenizer_type,
@@ -4478,8 +4479,15 @@ fn sanitize_warm_session_prompt_stem(prompt: &str) -> String {
 #[cfg(feature = "full-cli")]
 fn tokenizer_pretokenizer_authority(
     source: bitnet_tokenizers::auto::TokenizerSource,
+    tokenizer_label: &str,
 ) -> &'static str {
     match source {
+        bitnet_tokenizers::auto::TokenizerSource::Explicit
+        | bitnet_tokenizers::auto::TokenizerSource::Sibling
+            if tokenizer_label == "llama3" =>
+        {
+            "llama-bpe"
+        }
         bitnet_tokenizers::auto::TokenizerSource::Explicit => "externally_supplied",
         bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => "present",
         bitnet_tokenizers::auto::TokenizerSource::Sibling => "externally_supplied",
@@ -4657,8 +4665,9 @@ async fn run_slm_warm_session(
     let tokenizer_strict = tokenizer_resolution.strict;
     let tokenizer: Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
     let tokenizer_source_str = tokenizer_source.as_str();
-    let pretokenizer_authority = tokenizer_pretokenizer_authority(tokenizer_source);
     let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+    let pretokenizer_authority =
+        tokenizer_pretokenizer_authority(tokenizer_source, &tokenizer_label);
     let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
     let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
     let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
@@ -7150,6 +7159,31 @@ mod tests {
                 bitnet_tokenizers::auto::TokenizerSource::Explicit
             ),
             "external_tokenizer_file"
+        );
+    }
+
+    #[test]
+    fn receipt_pretokenizer_authority_records_external_llama_bpe() {
+        assert_eq!(
+            tokenizer_pretokenizer_authority(
+                bitnet_tokenizers::auto::TokenizerSource::Explicit,
+                "llama3"
+            ),
+            "llama-bpe"
+        );
+        assert_eq!(
+            tokenizer_pretokenizer_authority(
+                bitnet_tokenizers::auto::TokenizerSource::Sibling,
+                "llama3"
+            ),
+            "llama-bpe"
+        );
+        assert_eq!(
+            tokenizer_pretokenizer_authority(
+                bitnet_tokenizers::auto::TokenizerSource::Explicit,
+                "external_tokenizer_file"
+            ),
+            "externally_supplied"
         );
     }
 
