@@ -138,6 +138,30 @@ fn dense_regular_llm_cuda_receipt_validates_with_separate_label() {
 }
 
 #[test]
+fn dense_regular_llm_cuda_receipt_requires_dense_execution_plan() {
+    let mut receipt = valid_dense_regular_llm_cuda_receipt();
+    receipt.as_object_mut().expect("receipt object").remove("execution_plan");
+
+    let err = validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("execution_plan"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_regular_llm_cuda_receipt_rejects_bitnet_execution_plan_route() {
+    let mut receipt = valid_dense_regular_llm_cuda_receipt();
+    receipt["execution_plan"]["selected_route"] = json!("bitnet_qk256_cuda");
+    receipt["execution_plan"]["bitnet_packed_qk256_cuda"] = json!(true);
+    receipt["execution_plan"]["dense_regular_llm_cuda"] = json!(false);
+    receipt["execution_plan"]["cuda_bitnet_qk256_ops"] = json!(1);
+    receipt["execution_plan"]["cuda_dense_regular_llm_ops"] = json!(0);
+
+    let err = validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("selected_route"), "unexpected error: {err}");
+}
+
+#[test]
 fn dense_regular_llm_cuda_receipt_rejects_bitnet_kernel_label() {
     let mut receipt = valid_dense_regular_llm_cuda_receipt();
     receipt["kernel_stats"][0]["kernel_id"] = json!("qk256_gemv_cuda");
@@ -389,6 +413,29 @@ fn valid_dense_regular_llm_cuda_receipt() -> Value {
             "quantization_family": "fp16_bf16_dense",
             "bitnet_packed_kernel_proof": false,
             "qk256_proof": false
+        },
+        "execution_plan": {
+            "planner_version": "cuda-planner-004",
+            "model_family": "qwen",
+            "quantization": "dense_fp16",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "cuda_bitnet_qk256_ops": 0,
+            "cuda_dense_regular_llm_ops": 1,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 1,
+            "cuda_ops": 1,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
         },
         "kernel_stats": [{
             "kernel_id": "dense_f16_gemm_cuda",

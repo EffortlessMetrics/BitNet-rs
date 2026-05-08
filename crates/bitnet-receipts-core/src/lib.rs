@@ -42,6 +42,9 @@ pub const DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND: &str = "dense_regular_llm_cuda";
 /// Model class label for CUDA receipts that exercise dense regular LLM kernels.
 pub const DENSE_REGULAR_LLM_MODEL_CLASS: &str = "dense_regular_llm";
 
+/// Planner receipt schema version currently emitted by CUDA execution receipts.
+pub const CUDA_PLANNER_RECEIPT_VERSION: &str = "cuda-planner-004";
+
 /// Model information in receipt
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ModelInfo {
@@ -346,6 +349,8 @@ pub fn validate_dense_regular_llm_cuda_receipt_json(receipt: &Value) -> Result<(
     require_bool_eq(claim_boundary, "speedup_claim", false)?;
     require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
 
+    validate_dense_regular_llm_execution_plan(receipt)?;
+
     let stats = first_kernel_stats(receipt)?;
     require_string_non_empty(stats, "kernel_id")?;
     reject_bitnet_packed_marker(required_string(stats, "kernel_id")?, "kernel_stats[0].kernel_id")?;
@@ -367,6 +372,41 @@ pub fn validate_dense_regular_llm_cuda_receipt_json(receipt: &Value) -> Result<(
     require_non_negative_number(parity, "mean_abs_error")?;
     require_non_negative_number(parity, "tolerance")?;
     require_string_non_empty(parity, "tolerance_source")?;
+
+    Ok(())
+}
+
+fn validate_dense_regular_llm_execution_plan(receipt: &Value) -> Result<()> {
+    let plan = object_field(receipt, "execution_plan")?;
+    require_string_eq(plan, "planner_version", CUDA_PLANNER_RECEIPT_VERSION)?;
+    require_string_non_empty(plan, "model_family")?;
+    reject_bitnet_packed_marker(
+        required_string(plan, "model_family")?,
+        "execution_plan.model_family",
+    )?;
+    require_string_non_empty(plan, "quantization")?;
+    reject_bitnet_packed_marker(
+        required_string(plan, "quantization")?,
+        "execution_plan.quantization",
+    )?;
+    require_string_eq(plan, "selected_route", DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)?;
+    require_string_eq(plan, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "runtime_api", "cuda")?;
+    require_string_eq(plan, "strict_fallback_policy", "reject")?;
+    require_bool_eq(plan, "dense_regular_llm_cuda", true)?;
+    require_bool_eq(plan, "bitnet_packed_qk256_cuda", false)?;
+    require_u64_eq(plan, "cuda_bitnet_qk256_ops", 0)?;
+    require_positive_u64(plan, "cuda_dense_regular_llm_ops")?;
+    require_u64_eq(plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(plan, "unsupported_ops", 0)?;
+    require_positive_u64(plan, "total_ops")?;
+    require_positive_u64(plan, "cuda_ops")?;
+    require_bool_eq(plan, "mixed_cuda_routes", false)?;
+    require_bool_eq(plan, "fallback_used", false)?;
+    require_bool_eq(plan, "strict_cuda_ready", true)?;
+    require_bool_eq(plan, "speedup_claim", false)?;
+    require_bool_eq(plan, "full_cuda_residency_claimed", false)?;
 
     Ok(())
 }

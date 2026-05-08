@@ -704,6 +704,7 @@ mod tests {
     const DEVICE_INDEX_ENV: &str = "BITNET_RTX5070TI_CUDA_DEVICE_INDEX";
     const MACHINE_ID: &str = "windows-9950x3d-rtx5070ti";
     const HARDWARE_LANE: &str = "nvidia-rtx-5070-ti-cuda";
+    const CUDA_PLANNER_RECEIPT_VERSION: &str = "cuda-planner-004";
 
     #[test]
     fn dense_f16_fixture_cpu_reference_is_stable() {
@@ -771,6 +772,19 @@ mod tests {
         assert_eq!(receipt["execution_path"]["model_class"], "dense_regular_llm");
         assert_eq!(receipt["execution_path"]["bitnet_packed_kernel_proof"], false);
         assert_eq!(receipt["execution_path"]["qk256_proof"], false);
+        assert_eq!(receipt["execution_plan"]["planner_version"], CUDA_PLANNER_RECEIPT_VERSION);
+        assert_eq!(receipt["execution_plan"]["model_family"], "qwen");
+        assert_eq!(receipt["execution_plan"]["quantization"], "dense_fp16");
+        assert_eq!(receipt["execution_plan"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(receipt["execution_plan"]["dense_regular_llm_cuda"], true);
+        assert_eq!(receipt["execution_plan"]["bitnet_packed_qk256_cuda"], false);
+        assert_eq!(receipt["execution_plan"]["cuda_bitnet_qk256_ops"], 0);
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 1);
+        assert_eq!(receipt["execution_plan"]["cpu_fallback_ops"], 0);
+        assert_eq!(receipt["execution_plan"]["unsupported_ops"], 0);
+        assert_eq!(receipt["execution_plan"]["strict_cuda_ready"], true);
+        assert_eq!(receipt["execution_plan"]["speedup_claim"], false);
+        assert_eq!(receipt["execution_plan"]["full_cuda_residency_claimed"], false);
         assert_eq!(receipt["kernel_stats"][0]["kernel_id"], CUDA_DENSE_F16_GEMM_KERNEL_ID);
         assert_eq!(receipt["kernel_stats"][0]["fallback_invocations"], 0);
         assert_eq!(receipt["parity"]["reference_backend"], CUDA_DENSE_GEMM_REFERENCE_BACKEND);
@@ -814,6 +828,11 @@ mod tests {
         assert_eq!(receipt["execution_path"]["model_class"], "dense_regular_llm");
         assert_eq!(receipt["execution_path"]["bitnet_packed_kernel_proof"], false);
         assert_eq!(receipt["execution_path"]["qk256_proof"], false);
+        assert_eq!(receipt["execution_plan"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(receipt["execution_plan"]["dense_regular_llm_cuda"], true);
+        assert_eq!(receipt["execution_plan"]["bitnet_packed_qk256_cuda"], false);
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 1);
+        assert_eq!(receipt["execution_plan"]["strict_cuda_ready"], true);
         assert_eq!(receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"], true);
         assert_eq!(receipt["claim_boundary"]["dense_tensor_residency_claimed"], true);
         assert_eq!(receipt["claim_boundary"]["persistent_session_residency_claimed"], true);
@@ -1097,6 +1116,7 @@ mod tests {
                 "bitnet_packed_kernel_proof": false,
                 "qk256_proof": false
             },
+            "execution_plan": dense_regular_llm_execution_plan(1),
             "kernel_stats": [{
                 "kernel_id": parity.stats.kernel_id,
                 "invocations": parity.stats.invocations,
@@ -1254,6 +1274,7 @@ mod tests {
                 "bitnet_packed_kernel_proof": false,
                 "qk256_proof": false
             },
+            "execution_plan": dense_regular_llm_execution_plan(1),
             "kernel_stats": [{
                 "kernel_id": parity.stats.kernel_id,
                 "invocations": parity.stats.invocations,
@@ -1355,6 +1376,32 @@ mod tests {
                 }
             },
             "error": null
+        })
+    }
+
+    fn dense_regular_llm_execution_plan(dense_cuda_ops: u64) -> Value {
+        json!({
+            "planner_version": CUDA_PLANNER_RECEIPT_VERSION,
+            "model_family": "qwen",
+            "quantization": "dense_fp16",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": HARDWARE_LANE,
+            "selected_backend": HARDWARE_LANE,
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "cuda_bitnet_qk256_ops": 0,
+            "cuda_dense_regular_llm_ops": dense_cuda_ops,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": dense_cuda_ops,
+            "cuda_ops": dense_cuda_ops,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": dense_cuda_ops > 0,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
         })
     }
 

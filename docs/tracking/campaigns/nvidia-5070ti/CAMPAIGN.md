@@ -186,9 +186,11 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-002 | merged | First dense CUDA FP16 GEMM smoke/parity fixture after the dense receipt boundary. |
 | CUDA-DENSE-003 | merged | Dense regular-LLM CUDA tensor-residency receipt for the FP16 GEMM fixture; still no BitNet packed, dense GGUF inference, speedup, persistent session, or full-residency claim. |
 | CUDA-DENSE-004 | merged | Persistent dense regular-LLM CUDA FP16 GEMM fixture session with one context/module, upload-once input buffers, repeated launches, and no dense GGUF inference, speedup, or full-residency claim. |
+| CUDA-DENSE-005 | in_progress | Dense regular-LLM CUDA fixture receipts carry a model-aware `dense_regular_llm_cuda` execution plan while remaining rejected as BitNet packed I2_S/QK256 proof. |
 | CUDA-PLANNER-001 | merged | Model-aware planner contract separating BitNet QK256 CUDA from dense regular-LLM CUDA and making unsupported strict CUDA fallback explicit. |
 | CUDA-PLANNER-002 | merged | Conservative model-family and quantization metadata mapping into the model-aware planner spec. |
 | CUDA-PLANNER-003 | merged | Receipt-ready planner summary fields for BitNet QK256 CUDA, dense regular-LLM CUDA, CPU fallback, unsupported ops, selected route labeling, and strict CUDA readiness. |
+| CUDA-PLANNER-004 | merged | Real strict ask, answer-corpus, warm-session, and benchmark receipts emit model-aware `execution_plan` fields. |
 
 ## Review Policy
 
