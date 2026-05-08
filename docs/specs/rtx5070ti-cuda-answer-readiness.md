@@ -189,6 +189,18 @@ hard failures:
 - Weights are uploaded per token.
 - Answer quality gate fails after the answer receipt is written.
 
+Strict `bitnet ask` must still write and validate an answer-shaped receipt when
+the user omits `--receipt-out`. In that case, the command writes a default
+receipt under:
+
+```text
+target/bitnet/receipts/cuda-answer-readiness/strict-cuda-ask-latest.json
+```
+
+The receipt is not a speed claim; it is the local proof that strict backend,
+fallback, kernel, prompt-prefill, and quality gates were applied to the normal
+ask command.
+
 Generic `cuda` remains distinct from the RTX 5070 Ti proof lane and must not be
 reported as `nvidia-rtx-5070-ti-cuda`.
 
@@ -329,6 +341,14 @@ CUDA BitNet context, and emits per-turn or session-summary receipts.
 
 Benchmark the user-facing ask/chat path only after answer quality passes. Keep
 `speedup_claim=false` until the benchmark policy explicitly qualifies it.
+
+### CUDA-PROD-001 - Strict Ask Receipt Default
+
+Make strict `bitnet ask` validate backend, fallback, and answer quality even
+when `--receipt-out` is omitted. Strict CPU/CUDA modes must write a default
+answer-shaped receipt, preserve `speedup_claim=false`, and print a compact proof
+summary. This closes a product-path gap where receipt output was optional but
+strict validation had depended on a user-supplied receipt path.
 
 ## Diagnosis Commands
 

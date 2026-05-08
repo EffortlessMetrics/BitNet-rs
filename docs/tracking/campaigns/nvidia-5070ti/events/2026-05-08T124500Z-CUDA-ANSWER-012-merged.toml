@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T12:45:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-ANSWER-012"
+event = "merged"
+actor = "codex"
+pr = 4048
+merge_sha = "104afe6f9a2e49b3916ae39495c1f2cf88f081cd"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4048 merged the CUDA QK256 inline-scale alignment with BitNet.cpp I2_S x I8_S activation semantics.",
+  "The refreshed receipts keep the strict RTX 5070 Ti CUDA answer corpus at 5/5 pass and close generated-token and decoded-text parity for all five committed CPU/CUDA cases.",
+  "Exact top-k logit parity, speedup, broad chat quality, and full CUDA residency remain unclaimed.",
+]

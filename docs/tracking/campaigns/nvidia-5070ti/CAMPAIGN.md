@@ -101,6 +101,11 @@ AVX-512 and RTX 5070 Ti CUDA now match generated token IDs and decoded text for
 all five committed deterministic corpus cases. Exact top-k logit parity remains
 open for four cases.
 
+`CUDA-PROD-001` starts the user-path work after the strict corpus and parity
+proofs. Strict `bitnet ask` must validate backend, fallback, and answer quality
+even when the user omits `--receipt-out`; a default receipt path is acceptable
+for strict ask, but the receipt still must preserve `speedup_claim=false`.
+
 Answer receipts must keep the completed proof invariants intact:
 
 - selected backend: `nvidia-rtx-5070-ti-cuda`
@@ -134,7 +139,8 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-BITNET-009 | merged | Routed upload-once strict proof receipts merged in #3837. |
 | CUDA-ANSWER-010 | merged | Strict RTX 5070 Ti CUDA answer corpus passes after the QK256 I2_S layout alignment in #4024. |
 | CUDA-ANSWER-011 | merged | Same-box CPU AVX-512 and RTX 5070 Ti CUDA both pass the corpus, but the original receipt preserved top-k logit divergence and one generated-answer divergence. |
-| CUDA-ANSWER-012 | in_progress | CUDA QK256 I8_S activation semantics close generated-token parity for all five committed corpus cases; exact top-k parity remains open. |
+| CUDA-ANSWER-012 | merged | CUDA QK256 I8_S activation semantics close generated-token parity for all five committed corpus cases; exact top-k parity remains open. |
+| CUDA-PROD-001 | in_progress | Strict `bitnet ask` validates through a default answer receipt when `--receipt-out` is omitted. |
 | CUDA-DENSE-001 | proposed | Optional dense regular-LLM CUDA reference lane; not part of BitNet packed proof completion. |
 
 ## Review Policy

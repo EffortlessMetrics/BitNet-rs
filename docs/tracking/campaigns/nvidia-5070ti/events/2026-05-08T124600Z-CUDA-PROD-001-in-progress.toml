@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T12:46:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-001-strict-ask-receipt-default"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started the first CUDA product-path follow-up after CUDA-ANSWER-012.",
+  "The scope is strict `bitnet ask` behavior: strict CPU/CUDA ask must validate backend, fallback, and quality even when --receipt-out is omitted.",
+  "No kernel, transformer, tokenizer, loader, server, speed, or broad chat-quality claim is in scope.",
+]

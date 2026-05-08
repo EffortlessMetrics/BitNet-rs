@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T12:47:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-001"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-001-strict-ask-receipt-default"
+pr = 4054
+head_sha = "8acf206ab8df72a1b5c540b68e7c149bf14b700e"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4054 to make strict CPU/CUDA ask receipt-backed by default when --receipt-out is omitted.",
+  "The PR preserves strict backend, fallback, kernel, and quality validation without claiming CUDA speedup, broad chat quality, full CUDA residency, or model fetch/verify UX completion.",
+]
