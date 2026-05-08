@@ -1,6 +1,6 @@
 schema = 1
 artifact_kind = "model_answer_rejected_artifacts"
-updated = "2026-05-07"
+updated = "2026-05-08"
 
 [[artifact]]
 id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
@@ -34,6 +34,7 @@ intended_runner = "ik_llama.cpp llama-cli"
 intended_runner_version = "1 (9a26522), commit 9a26522af234f8db079ae3735f35ab6c20fe2c66"
 intended_runner_result = "failed_prompt_suite"
 intended_runner_rejection_reason = "The artifact loads under ik_llama.cpp but emits repeated colon output for every deterministic prompt-suite row."
+tokenizer_authority_evidence = "ci/model-artifacts/tokenizer-authority.toml"
 claim_boundary = "May be used for diagnostic-only receipts; must not be used for coherent local-answer claims."
 
   [[artifact.prompt_result]]
@@ -239,6 +240,7 @@ stock_reference_runner_version = "9061 (deab41ec6)"
 stock_reference_runner_error = "gguf_init_from_file_ptr: tensor 'blk.0.ffn_down.weight' has invalid ggml type 335. should be in [0, 42)"
 evidence = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
 prior_evidence = "docs/reports/MODEL_ARTIFACT_003_REFERENCE_RUNNER_COMPAT.md"
+tokenizer_authority_evidence = "ci/model-artifacts/tokenizer-authority.toml"
 rejection_reason = "The intended ik_llama.cpp runner loads the GGUF and passes the tiny deterministic prompt suite, but the artifact still lacks required pre-tokenizer authority and is an alternate IQ2_BN_R4 artifact rather than the official Microsoft I2_S CUDA target."
 claim_boundary = "May be used for diagnostic-only receipts; must not be used for coherent local-answer claims."
 

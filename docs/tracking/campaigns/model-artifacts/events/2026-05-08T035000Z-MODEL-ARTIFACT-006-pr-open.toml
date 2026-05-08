@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T03:50:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-006"
+event = "pr_open"
+actor = "codex"
+pr = 3979
+head_sha = "bd7cef3af03b02f1a86c93e7e64995d7445b10e0"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "PR #3979 records tokenizer/pre-tokenizer authority evidence for official Microsoft I2_S and tdh111 IQ2_BN_R4.",
+  "The official GGUF lacks tokenizer.ggml.pre, while the source Microsoft tokenizer.json can provide external pre-tokenizer authority for diagnostics.",
+  "External tokenizer authority does not promote the official I2_S artifact to answer_ready because prompt-suite evidence still fails.",
+  "No answer_ready artifact, backend answer claim, runtime change, or speed claim is introduced.",
+]

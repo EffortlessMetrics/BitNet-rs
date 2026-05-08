@@ -1,0 +1,109 @@
+schema = 1
+artifact_kind = "model_answer_tokenizer_authority"
+updated = "2026-05-08"
+work_item = "MODEL-ARTIFACT-006"
+
+[source]
+gguf_parser = "local Python GGUF metadata reader against official Microsoft I2_S GGUF"
+huggingface_api = "https://huggingface.co/api/models"
+claim_boundary = "Tokenizer/pre-tokenizer authority evidence only; no artifact is promoted to answer_ready."
+
+[[artifact]]
+id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
+state = "rejected_prompt_suite_failed"
+answer_readiness_scope = "official_target"
+target_alignment = "official_i2s_cuda_target"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = false
+repo = "microsoft/bitnet-b1.58-2B-4T-gguf"
+repo_revision = "a1f2f1c765812aa8af3f6eda4a313707064bba15"
+file = "ggml-model-i2_s.gguf"
+local_path = "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
+sha256 = "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+size_bytes = 1187801280
+
+gguf_tokenizer_model = "gpt2"
+gguf_tokenizer_pre = "missing"
+gguf_metadata_kv_count = 24
+gguf_token_count = 128256
+gguf_merges_count = 280147
+gguf_tokens_sha256 = "6bb6260c5c190a8672e1023063a1085a2296ec3b5d2d84ff143d216652fce6be"
+gguf_merges_sha256 = "cfe2e1ca857e85780db48349c18f4dc6e5262573b9a25e79e15f93f2a2d43339"
+gguf_scores_sha256 = "48d658c8483cf6e6a59683560dd428d86e5bf507da4090b3f2601af22b230c64"
+gguf_token_types_sha256 = "c16af4ba08199cd0335275131f47dd4f959b838c3e3a5d9749e39836181a1040"
+gguf_add_bos_token = true
+gguf_bos_token_id = 128000
+gguf_eos_token_id = 128001
+gguf_chat_template_sha256 = "6feccacdd8c7094ee8de807281b2f2a077d538832a4c220c7a2375e32ae5c89d"
+gguf_chat_template_family = "human-bitnetassistant"
+gguf_chat_template_summary = "Human: <content> blank line BITNETAssistant: <eos_token>"
+
+external_tokenizer_repo = "microsoft/bitnet-b1.58-2B-4T"
+external_tokenizer_repo_revision = "04c3b9ad9361b824064a1f25ea60a8be9599b127"
+external_tokenizer_json = "tokenizer.json"
+external_tokenizer_json_sha256 = "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+external_tokenizer_json_size_bytes = 9085698
+external_tokenizer_model_type = "BPE"
+external_tokenizer_vocab_size = 128000
+external_tokenizer_added_tokens = 256
+external_tokenizer_combined_vocab_entries = 128256
+external_tokenizer_merges_count = 280147
+external_tokenizer_merges_sha256 = "cfe2e1ca857e85780db48349c18f4dc6e5262573b9a25e79e15f93f2a2d43339"
+external_tokenizer_added_tokens_sha256 = "d2b2434d6a6d7d37c8166c1ab1a842f6a3f1f4dbbfabd85cb7a80a537bf876db"
+external_pretokenizer_source = "tokenizer_json"
+external_pretokenizer_authority = "externally_supplied"
+external_pretokenizer_summary = "Sequence: Regex Split with GPT-4/Llama-3-style pattern, then ByteLevel add_prefix_space=false trim_offsets=true use_regex=false"
+
+external_tokenizer_config = "tokenizer_config.json"
+external_tokenizer_config_sha256 = "d27b698683435b0b0dd544a591a30196b2b63f5fd4c8c64b9060a84dc185386f"
+external_tokenizer_config_size_bytes = 50834
+external_tokenizer_config_tokenizer_class = "PreTrainedTokenizerFast"
+external_tokenizer_config_chat_template_sha256 = "dae57a011117d68afc11906cd5bfe7124df8027a2fcfe5134a7184aaba26fc1b"
+external_tokenizer_config_chat_template_family = "user-assistant-eot"
+external_tokenizer_config_eos_token = "<|eot_id|>"
+special_tokens_map_sha256 = "462d91939dbc37178aa5a3eae7068d1990ccc92e09f288cc71f42cdf139d69cc"
+special_tokens_map_eos_token = "<|end_of_text|>"
+model_config_sha256 = "2b43e80788972e6d53967b01ac3609d7df23cf0aabb0c866e51be694a59c1149"
+model_config_model_type = "bitnet"
+model_config_tie_word_embeddings = true
+generation_config_sha256 = "af34a37cd006fd230106fcefc6bfdc1f775503aee05a80c174ccc5c6594f7054"
+
+authority_decision = "external_tokenizer_assets_available_but_artifact_still_not_answer_ready"
+prompt_suite_result = "failed"
+prompt_suite_evidence = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
+notes = [
+  "tokenizer.ggml.pre is absent from the GGUF metadata, not merely unparsed by Rust.",
+  "The GGUF repository exposes only the GGUF file in the Hugging Face model listing.",
+  "The source Microsoft model repository exposes tokenizer.json, tokenizer_config.json, special_tokens_map.json, config.json, and generation_config.json.",
+  "The external tokenizer.json provides explicit pre-tokenizer authority and has the same BPE merges hash as the GGUF metadata.",
+  "The GGUF chat template and tokenizer_config chat template are different authority sources.",
+  "Supplying external tokenizer authority does not by itself promote the official I2_S GGUF: recorded intended-runner evidence still fails the prompt suite with repeated colon output.",
+]
+
+[[artifact]]
+id = "tdh111_bitnet_b158_2b_4t_iq2_bn_r4"
+state = "rejected_missing_tokenizer_authority"
+answer_readiness_scope = "alternate_quant_control"
+target_alignment = "official_derived_alt_quant"
+can_unblock_official_i2s_cuda = false
+can_unblock_alt_quant_control = true
+repo = "tdh111/bitnet-b1.58-2B-4T-GGUF"
+repo_revision = "e10f9e8b720e90c8f3f0071bba30d50d7f0d4bc7"
+file = "bitnet1582b4t-iq2_bn_r4.gguf"
+sha256 = "a99001aaa5c1dc24acffe8035315c7d2970e82d8ccd3189383275c5d5a5287b5"
+size_bytes = 987884192
+
+gguf_tokenizer_model = "gpt2"
+gguf_tokenizer_pre = "missing"
+external_tokenizer_assets_in_repo = false
+external_pretokenizer_authority = "missing"
+runner_authority = "ik_llama_cpp"
+prompt_suite_result = "passed"
+prompt_suite_evidence = "docs/reports/MODEL_ARTIFACT_004_IKLLAMA_INTENDED_RUNNER.md"
+authority_decision = "alternate_quant_control_only_missing_pretokenizer_authority"
+notes = [
+  "The Hugging Face repository listing exposes GGUF files but no tokenizer.json, tokenizer_config.json, vocab, or merges assets.",
+  "The intended ik_llama.cpp runner reported missing pre-tokenizer type and used default behavior.",
+  "The tiny prompt suite passed under ik_llama.cpp, but missing pre-tokenizer authority still blocks shared answer_ready promotion.",
+  "This artifact remains useful control evidence and cannot unblock official Microsoft I2_S CUDA answer-readiness.",
+]

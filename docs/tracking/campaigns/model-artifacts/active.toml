@@ -208,7 +208,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-ARTIFACT-005"
-status = "pr_open"
+status = "merged"
 pr = 3977
 branch = "codex/model-artifacts/MODEL-ARTIFACT-005-authority-dimensions"
 stackable = false
@@ -251,6 +251,54 @@ may_claim = [
 must_not_claim = [
   "A shared answer_ready BitNet artifact has been acquired.",
   "tdh111 IQ2_BN_R4 satisfies the official Microsoft I2_S CUDA answer target.",
+  "CPU or CUDA local-answer generation is coherent in Rust.",
+  "Any backend speedup is proven.",
+]
+
+[[work_item]]
+id = "MODEL-ARTIFACT-006"
+status = "pr_open"
+pr = 3979
+branch = "codex/model-artifacts/MODEL-ARTIFACT-006-tokenizer-authority"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-ARTIFACT-005"]
+acceptance = "Audit tokenizer and pre-tokenizer authority for the official Microsoft I2_S target and tdh111 alternate-quant control, including GGUF metadata, external tokenizer assets, prompt-template authority, and whether external authority can unblock official I2_S CUDA answer-readiness."
+commands = [
+  "Parse ci/model-artifacts/*.toml",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/model-artifacts/**",
+  "ci/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "runtime behavior",
+  "tokenizer behavior",
+  "model loader behavior",
+  "transformer/math code",
+  "QK256/CUDA",
+  "server/NPU/Metal/A770/SLM runtime",
+  "speed claims",
+  "quality gate weakening",
+]
+may_claim = [
+  "The official Microsoft I2_S GGUF truly lacks tokenizer.ggml.pre metadata.",
+  "The source Microsoft tokenizer.json can supply external pre-tokenizer authority for diagnostics.",
+  "External tokenizer authority alone does not promote the official I2_S artifact to answer_ready.",
+  "tdh111 IQ2_BN_R4 remains alternate-quant control evidence only.",
+]
+must_not_claim = [
+  "A shared answer_ready BitNet artifact has been acquired.",
+  "External tokenizer authority makes official I2_S coherent.",
   "CPU or CUDA local-answer generation is coherent in Rust.",
   "Any backend speedup is proven.",
 ]

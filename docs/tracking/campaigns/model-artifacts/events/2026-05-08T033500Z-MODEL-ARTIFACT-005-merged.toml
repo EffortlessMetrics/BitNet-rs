@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T03:35:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-005"
+event = "merged"
+actor = "codex"
+pr = 3977
+merge_sha = "40b6f9fab3c3bee08fa05d77e0d9da44ee501b0f"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #3977 merged explicit artifact authority dimensions.",
+  "Official Microsoft I2_S remains the official CUDA target and remains blocked.",
+  "tdh111 IQ2_BN_R4 remains alternate-quant control evidence only.",
+  "No answer_ready artifact, backend answer claim, runtime change, or speed claim was introduced.",
+]
