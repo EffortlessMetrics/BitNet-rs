@@ -1,6 +1,6 @@
 timestamp = "2026-05-08T12:41:00Z"
 campaign = "slm-cpu"
-item = "SLM-CPU-006"
+item = "SLM-CPU-006A"
 event = "merged"
 pr = 4051
 merge_sha = "9974bbcc66ad6abd5c7867a4193744186283bc2a"
@@ -9,5 +9,5 @@ actor = "codex"
 notes = [
   "Merged #4051 as a first-token divergence tooling slice.",
   "The merge adds logit-dump flag aliases, comparator classification, and Kaby Lake Qwen3 capture docs.",
-  "SLM-CPU-006 remains ready because the real i5-8250U bitnet-rs and external-reference artifact pair has not been captured yet.",
+  "SLM-CPU-006B remains ready because the real i5-8250U bitnet-rs and external-reference artifact pair has not been captured yet.",
 ]

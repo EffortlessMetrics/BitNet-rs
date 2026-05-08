@@ -349,14 +349,57 @@ must_not_claim = [
 ]
 
 [[work_item]]
-id = "SLM-CPU-006"
-status = "ready"
-branch = "codex/slm-cpu-006-first-token-artifact"
+id = "SLM-CPU-006A"
+status = "merged"
+pr = 4051
+merge_sha = "9974bbcc66ad6abd5c7867a4193744186283bc2a"
+branch = "codex/slm-cpu-006-first-token-capture"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["SLM-CPU-005"]
+acceptance = "Land first-token divergence support tooling for the Qwen3 i5-8250U lane: --logits-dump-steps alias support, reference-compare first-token failure classification, and documented first-token workflow. This support slice does not capture the actual bitnet-rs and external-reference artifact pair."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_divergence",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The first-token divergence tooling and runbook support landed in #4051.",
+  "The actual Qwen3 first-token artifact capture remains open as SLM-CPU-006B.",
+]
+must_not_claim = [
+  "The actual i5-8250U Qwen3 first-token artifact pair is captured.",
+  "Qwen answer quality is proven.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-006B"
+status = "ready"
+branch = "codex/slm-cpu-006b-first-token-artifact"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-006A"]
 acceptance = "Capture a real first-token divergence artifact for Qwen3-0.6B Q8_0 on the i5-8250U by running bitnet-rs and a known-good external reference with identical model SHA, prompt text, Qwen template, BOS policy, prompt IDs, generated IDs, decoded text, chosen token, and first-step top-k/logit evidence where available. The artifact classifies the first divergence as prompt/tokenizer/template, logits/sampler, output-head/vocab indexing, or shared transformer math without claiming answer quality, throughput, server, GPU, NPU, or Qwen3.5 support."
 commands = [
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_divergence",
