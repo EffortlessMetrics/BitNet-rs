@@ -4250,17 +4250,21 @@ async fn run_simple_generation(
         let cuda_memory_hwm_bytes =
             cuda_memory_before_bytes.into_iter().chain(cuda_memory_after_bytes).max();
         let cuda_execution_residency = strict_cuda_selected_artifact.then(|| {
-            cuda_execution_residency_receipt(
-                &bitnet_linear_coverage,
-                cuda_weight_residency.as_ref(),
-                cuda_runtime_stats.as_ref(),
-                prompt_tokens_len,
-                generated_tokens.len(),
-                "cpu",
-                "per_run_incremental_decode",
-                if strict_cuda_short_decode_artifact { "short_decode" } else { "decode" },
-                "strict_cuda_ask_or_run",
-            )
+            cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
+                coverage: &bitnet_linear_coverage,
+                residency: cuda_weight_residency.as_ref(),
+                runtime_stats: cuda_runtime_stats.as_ref(),
+                prompt_tokens: prompt_tokens_len,
+                generated_tokens: generated_tokens.len(),
+                kv_cache_device: "cpu",
+                kv_cache_reuse_policy: "per_run_incremental_decode",
+                execution_phase: if strict_cuda_short_decode_artifact {
+                    "short_decode"
+                } else {
+                    "decode"
+                },
+                coverage_scope: "strict_cuda_ask_or_run",
+            })
         });
         let expected_reference_path =
             strict_cuda_proof_artifact.then(|| strict_reference_receipt_path(&json_path));
@@ -6025,17 +6029,18 @@ async fn run_cuda_warm_session(
         let runtime_stats_delta =
             qk256_cuda_runtime_stats_delta(&runtime_stats_before, &runtime_stats_after);
         let residency_after = bitnet_qk256_dispatch::qk256_cuda_weight_residency();
-        let cuda_execution_residency = cuda_execution_residency_receipt(
-            &coverage_delta,
-            residency_after.as_ref(),
-            Some(&runtime_stats_delta),
-            prompt_token_count,
-            generated_tokens.len(),
-            "cpu",
-            "recreated_per_turn_for_prompt_isolation",
-            "warm_session_turn",
-            "strict_cuda_warm_session_turn",
-        );
+        let cuda_execution_residency =
+            cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
+                coverage: &coverage_delta,
+                residency: residency_after.as_ref(),
+                runtime_stats: Some(&runtime_stats_delta),
+                prompt_tokens: prompt_token_count,
+                generated_tokens: generated_tokens.len(),
+                kv_cache_device: "cpu",
+                kv_cache_reuse_policy: "recreated_per_turn_for_prompt_isolation",
+                execution_phase: "warm_session_turn",
+                coverage_scope: "strict_cuda_warm_session_turn",
+            });
         let turn_receipt_path = receipt_dir.join(format!(
             "{:02}-{}.json",
             index + 1,
@@ -6222,25 +6227,26 @@ async fn run_cuda_warm_session(
         "strict RTX 5070 Ti CUDA warm answer session",
         "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
     );
-    let cuda_execution_residency = cuda_execution_residency_receipt(
-        &total_coverage,
-        final_residency.as_ref(),
-        Some(&total_runtime_stats),
-        turn_summaries
-            .iter()
-            .filter_map(|turn| turn["prompt_tokens"].as_u64())
-            .map(|value| value as usize)
-            .sum(),
-        turn_summaries
-            .iter()
-            .filter_map(|turn| turn["generated_tokens"].as_u64())
-            .map(|value| value as usize)
-            .sum(),
-        "cpu",
-        "recreated_per_turn_for_prompt_isolation",
-        "warm_session",
-        "strict_cuda_warm_session",
-    );
+    let cuda_execution_residency =
+        cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
+            coverage: &total_coverage,
+            residency: final_residency.as_ref(),
+            runtime_stats: Some(&total_runtime_stats),
+            prompt_tokens: turn_summaries
+                .iter()
+                .filter_map(|turn| turn["prompt_tokens"].as_u64())
+                .map(|value| value as usize)
+                .sum(),
+            generated_tokens: turn_summaries
+                .iter()
+                .filter_map(|turn| turn["generated_tokens"].as_u64())
+                .map(|value| value as usize)
+                .sum(),
+            kv_cache_device: "cpu",
+            kv_cache_reuse_policy: "recreated_per_turn_for_prompt_isolation",
+            execution_phase: "warm_session",
+            coverage_scope: "strict_cuda_warm_session",
+        });
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "bitnet_cuda_warm_session",
@@ -6512,17 +6518,30 @@ fn qk256_kernel_stats_receipt(
     }])
 }
 
-fn cuda_execution_residency_receipt(
-    coverage: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
-    residency: Option<&bitnet_qk256_dispatch::Qk256CudaWeightResidency>,
-    runtime_stats: Option<&bitnet_qk256_dispatch::Qk256CudaRuntimeStats>,
+struct CudaExecutionResidencyReceiptInput<'a> {
+    coverage: &'a bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    residency: Option<&'a bitnet_qk256_dispatch::Qk256CudaWeightResidency>,
+    runtime_stats: Option<&'a bitnet_qk256_dispatch::Qk256CudaRuntimeStats>,
     prompt_tokens: usize,
     generated_tokens: usize,
-    kv_cache_device: &str,
-    kv_cache_reuse_policy: &str,
-    execution_phase: &str,
-    coverage_scope: &str,
+    kv_cache_device: &'a str,
+    kv_cache_reuse_policy: &'a str,
+    execution_phase: &'a str,
+    coverage_scope: &'a str,
+}
+
+fn cuda_execution_residency_receipt(
+    input: CudaExecutionResidencyReceiptInput<'_>,
 ) -> serde_json::Value {
+    let coverage = input.coverage;
+    let residency = input.residency;
+    let runtime_stats = input.runtime_stats;
+    let prompt_tokens = input.prompt_tokens;
+    let generated_tokens = input.generated_tokens;
+    let kv_cache_device = input.kv_cache_device;
+    let kv_cache_reuse_policy = input.kv_cache_reuse_policy;
+    let execution_phase = input.execution_phase;
+    let coverage_scope = input.coverage_scope;
     let qk256_on_cuda = coverage.bitnet_linear_layers_on_cuda;
     let qk256_cpu_fallback = coverage.bitnet_linear_layers_cpu_fallback;
     let weight_handle_count = residency.map(|value| value.weight_handle_count).unwrap_or(0);
@@ -9880,17 +9899,17 @@ mod tests {
             per_token_weight_upload: false,
         };
 
-        let receipt = cuda_execution_residency_receipt(
-            &coverage,
-            Some(&residency),
-            None,
-            18,
-            8,
-            "cpu",
-            "recreated_per_turn_for_prompt_isolation",
-            "warm_session_turn",
-            "strict_cuda_warm_session_turn",
-        );
+        let receipt = cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
+            coverage: &coverage,
+            residency: Some(&residency),
+            runtime_stats: None,
+            prompt_tokens: 18,
+            generated_tokens: 8,
+            kv_cache_device: "cpu",
+            kv_cache_reuse_policy: "recreated_per_turn_for_prompt_isolation",
+            execution_phase: "warm_session_turn",
+            coverage_scope: "strict_cuda_warm_session_turn",
+        });
 
         assert_eq!(receipt["full_cuda_residency_claimed"], false);
         assert_eq!(receipt["speedup_claim"], false);
@@ -9918,17 +9937,17 @@ mod tests {
             execution_claim: "cuda_inference_contribution",
         };
 
-        let receipt = cuda_execution_residency_receipt(
-            &coverage,
-            None,
-            None,
-            4,
-            1,
-            "cpu",
-            "per_run_incremental_decode",
-            "decode",
-            "strict_cuda_ask_or_run",
-        );
+        let receipt = cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
+            coverage: &coverage,
+            residency: None,
+            runtime_stats: None,
+            prompt_tokens: 4,
+            generated_tokens: 1,
+            kv_cache_device: "cpu",
+            kv_cache_reuse_policy: "per_run_incremental_decode",
+            execution_phase: "decode",
+            coverage_scope: "strict_cuda_ask_or_run",
+        });
 
         assert_eq!(receipt["qk256_bitnet_linears"]["residency"], "mixed_cuda_and_cpu_fallback");
         assert_eq!(receipt["weight_residency"]["status"], "not_observed");
@@ -9993,17 +10012,17 @@ mod tests {
             kernel_time_samples: 4,
         };
 
-        let receipt = cuda_execution_residency_receipt(
-            &coverage,
-            None,
-            Some(&runtime_stats),
-            12,
-            3,
-            "cpu",
-            "per_run_incremental_decode",
-            "decode",
-            "strict_cuda_ask_or_run",
-        );
+        let receipt = cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
+            coverage: &coverage,
+            residency: None,
+            runtime_stats: Some(&runtime_stats),
+            prompt_tokens: 12,
+            generated_tokens: 3,
+            kv_cache_device: "cpu",
+            kv_cache_reuse_policy: "per_run_incremental_decode",
+            execution_phase: "decode",
+            coverage_scope: "strict_cuda_ask_or_run",
+        });
 
         assert_eq!(receipt["host_device_transfer_accounting"]["status"], "qk256_measured");
         assert_eq!(receipt["host_device_transfer_accounting"]["host_to_device_bytes"], 4096);
