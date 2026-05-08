@@ -785,8 +785,13 @@ struct ChildRun {
     success: bool,
     timed_out: bool,
     exit_code: Option<i32>,
+    stdout_path: PathBuf,
+    stderr_path: PathBuf,
+    phase_path: PathBuf,
     stdout: String,
     stderr: String,
+    child_phases: Vec<Value>,
+    last_observed_phase: Option<String>,
 }
 
 struct ChildFailureRowInput<'a> {
@@ -834,6 +839,7 @@ fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
             "environment_overrides": child_environment_json(input.child_env),
             "timeout_seconds": input.timeout_seconds,
             "expected_receipt_path": input.case_receipt.display().to_string(),
+            "phase_path": input.run.phase_path.display().to_string(),
         },
         "child_process": {
             "success": input.run.success,
@@ -842,6 +848,11 @@ fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
             "exit_code_hex": input.run.exit_code.map(exit_code_hex),
             "crash_class": classify_child_exit(input.run),
             "receipt_observed": input.case_receipt.exists(),
+            "last_observed_phase": input.run.last_observed_phase,
+            "phase_events": input.run.child_phases,
+            "stdout_path": input.run.stdout_path.display().to_string(),
+            "stderr_path": input.run.stderr_path.display().to_string(),
+            "phase_path": input.run.phase_path.display().to_string(),
         },
         "stdout_tail": tail_string(&input.run.stdout, 4096),
         "stderr_tail": tail_string(&input.run.stderr, 4096),
@@ -905,6 +916,7 @@ fn run_child_with_timeout(
     let child_rust_log = child_rust_log_value();
     let stdout_path = child_capture_path("stdout");
     let stderr_path = child_capture_path("stderr");
+    let phase_path = child_capture_path("phases");
     let stdout_file = File::create(&stdout_path)
         .with_context(|| format!("failed to create {}", stdout_path.display()))?;
     let stderr_file = File::create(&stderr_path)
@@ -913,6 +925,7 @@ fn run_child_with_timeout(
         .args(args)
         .envs(envs.iter().copied())
         .env("RUST_LOG", child_rust_log)
+        .env("BITNET_ANSWER_CORPUS_CHILD_PHASE_PATH", &phase_path)
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(stderr_file))
         .spawn()
@@ -922,14 +935,24 @@ fn run_child_with_timeout(
         if let Some(status) = child.try_wait()? {
             let stdout = read_child_capture(&stdout_path);
             let stderr = read_child_capture(&stderr_path);
-            remove_child_capture(&stdout_path);
-            remove_child_capture(&stderr_path);
+            let child_phases = read_child_phase_events(&phase_path);
+            let last_observed_phase = last_observed_child_phase(&child_phases, &stderr);
+            if status.success() {
+                remove_child_capture(&stdout_path);
+                remove_child_capture(&stderr_path);
+                remove_child_capture(&phase_path);
+            }
             return Ok(ChildRun {
                 success: status.success(),
                 timed_out: false,
                 exit_code: status.code(),
+                stdout_path,
+                stderr_path,
+                phase_path,
                 stdout,
                 stderr,
+                child_phases,
+                last_observed_phase,
             });
         }
         if start.elapsed() >= timeout {
@@ -937,18 +960,47 @@ fn run_child_with_timeout(
             let status = child.wait()?;
             let stdout = read_child_capture(&stdout_path);
             let stderr = read_child_capture(&stderr_path);
-            remove_child_capture(&stdout_path);
-            remove_child_capture(&stderr_path);
+            let child_phases = read_child_phase_events(&phase_path);
+            let last_observed_phase = last_observed_child_phase(&child_phases, &stderr);
             return Ok(ChildRun {
                 success: false,
                 timed_out: true,
                 exit_code: status.code(),
+                stdout_path,
+                stderr_path,
+                phase_path,
                 stdout,
                 stderr,
+                child_phases,
+                last_observed_phase,
             });
         }
         thread::sleep(Duration::from_millis(100));
     }
+}
+
+fn read_child_phase_events(path: &Path) -> Vec<Value> {
+    fs::read_to_string(path)
+        .map(|contents| {
+            contents.lines().filter_map(|line| serde_json::from_str::<Value>(line).ok()).collect()
+        })
+        .unwrap_or_default()
+}
+
+fn last_observed_child_phase(events: &[Value], stderr: &str) -> Option<String> {
+    events
+        .iter()
+        .rev()
+        .find_map(|event| {
+            event["child_phase"].as_str().or_else(|| event["phase"].as_str()).map(str::to_string)
+        })
+        .or_else(|| {
+            stderr.lines().rev().find_map(|line| {
+                line.split_once("answer_corpus_child_phase=")
+                    .map(|(_, phase)| phase.trim().to_string())
+                    .filter(|phase| !phase.is_empty())
+            })
+        })
 }
 
 fn cpu_avx2_available() -> bool {
@@ -1136,8 +1188,21 @@ mod tests {
             success: false,
             timed_out: false,
             exit_code: Some(-1_073_740_791),
+            stdout_path: PathBuf::from("target/bitnet/receipts/math.stdout.log"),
+            stderr_path: PathBuf::from("target/bitnet/receipts/math.stderr.log"),
+            phase_path: PathBuf::from("target/bitnet/receipts/math.phases.jsonl"),
             stdout: "selected_backend=nvidia-rtx-5070-ti-cuda".to_string(),
-            stderr: "child terminated before receipt".to_string(),
+            stderr:
+                "answer_corpus_child_phase=prompt_prefill_start\nchild terminated before receipt"
+                    .to_string(),
+            child_phases: vec![json!({
+                "child_phase": "backend_select_complete",
+                "details": {
+                    "selected_backend": RTX_5070_TI_CUDA,
+                    "runtime_api": "cuda"
+                }
+            })],
+            last_observed_phase: Some("backend_select_complete".to_string()),
         };
         let args = vec![
             "--device".into(),
@@ -1168,6 +1233,16 @@ mod tests {
             "windows_stack_buffer_overrun_or_fast_fail"
         );
         assert_eq!(row["child_process"]["receipt_observed"], false);
+        assert_eq!(row["child_process"]["last_observed_phase"], "backend_select_complete");
+        assert_eq!(
+            row["child_process"]["phase_events"][0]["child_phase"],
+            "backend_select_complete"
+        );
+        assert_eq!(row["child_process"]["stdout_path"], "target/bitnet/receipts/math.stdout.log");
+        assert_eq!(
+            row["child_invocation"]["phase_path"],
+            "target/bitnet/receipts/math.phases.jsonl"
+        );
         assert_eq!(row["child_invocation"]["timeout_seconds"], 120);
         assert_eq!(row["quality"]["failed_rules"], json!(["command_failed"]));
     }
@@ -1187,8 +1262,13 @@ mod tests {
             success: false,
             timed_out: true,
             exit_code: None,
+            stdout_path: PathBuf::from("target/bitnet/receipts/math.stdout.log"),
+            stderr_path: PathBuf::from("target/bitnet/receipts/math.stderr.log"),
+            phase_path: PathBuf::from("target/bitnet/receipts/math.phases.jsonl"),
             stdout: String::new(),
             stderr: "timeout".to_string(),
+            child_phases: Vec::new(),
+            last_observed_phase: None,
         };
         let env = AnswerCpuKernel::Avx512.child_env();
         let args = vec!["--device".into(), "cpu".into(), "run".into()];
@@ -1211,6 +1291,27 @@ mod tests {
         assert_eq!(row["kernel"]["requested_cpu_kernel"], "avx512");
         assert_eq!(row["child_invocation"]["environment_overrides"]["BITNET_CPU_KERNEL"], "avx512");
         assert_eq!(row["child_invocation"]["environment_overrides"]["BITNET_FORCE_SCALAR"], "0");
+    }
+
+    #[test]
+    fn last_child_phase_prefers_phase_jsonl_over_stderr_tail() {
+        let events = vec![
+            json!({ "child_phase": "model_load_start" }),
+            json!({ "child_phase": "tokenizer_load_complete" }),
+        ];
+        let stderr = "answer_corpus_child_phase=prompt_render_start";
+
+        assert_eq!(
+            last_observed_child_phase(&events, stderr),
+            Some("tokenizer_load_complete".to_string())
+        );
+    }
+
+    #[test]
+    fn last_child_phase_falls_back_to_stderr_marker() {
+        let stderr = "line one\nanswer_corpus_child_phase=decode_step_0_start\n";
+
+        assert_eq!(last_observed_child_phase(&[], stderr), Some("decode_step_0_start".to_string()));
     }
 
     #[test]
