@@ -227,6 +227,17 @@ NPU performance comparison. The CPU258V-003 profile summary records `smoke_1`
 and `first_token` from the one-token proof and keeps `decode_128` and
 `prefill_512` as explicit `not_run` gaps until matching strict proofs exist.
 
+Follow-up CPU258V-005 evidence attempts are recorded at:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-phase-evidence-attempts.json
+```
+
+That artifact records timed-out strict CPU attempts for calibrated
+`prefill_512` collection and preserves `decode_128` as `not_run`. It is
+blocker evidence only; it does not prove prefill, decode, throughput, Arc 140V,
+or Intel NPU performance.
+
 ## Windows PowerShell Bundle
 
 ```powershell
