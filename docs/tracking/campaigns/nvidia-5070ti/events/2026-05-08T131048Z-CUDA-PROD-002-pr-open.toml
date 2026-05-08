@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T13:10:48Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-002"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-002-warm-session-receipts"
+pr = 4059
+head_sha = "fc84a2e744739e8441e59d273f65ed2eeea0896c"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened strict RTX 5070 Ti CUDA warm-session receipt PR.",
+  "The PR adds `cuda-warm-session`, per-turn receipts, aggregate session receipts, and CUDA-PROD-002 evidence without kernel, transformer, tokenizer, loader, server, speed, broad-chat, or full-residency claims.",
+]
