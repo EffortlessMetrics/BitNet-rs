@@ -178,7 +178,10 @@ The xtask commands are designed for CI/CD pipelines:
 
 ## Windows Support
 
-On Windows, the `fetch-cpp` command requires WSL or Git Bash for the shell scripts. All other commands work natively.
+On Windows, the `fetch-cpp` command requires Git Bash for the shell scripts.
+If Git Bash is installed outside the usual Git for Windows location, set
+`BITNET_FETCH_CPP_BASH` to the full `bash.exe` path. All other commands work
+natively.
 
 ## Troubleshooting
 

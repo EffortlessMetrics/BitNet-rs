@@ -3189,10 +3189,6 @@ fn fetch_cpp_cmd(
         ));
     }
 
-    if cfg!(windows) {
-        eprintln!("⚠️  Note: On Windows, run this command under WSL or Git Bash");
-    }
-
     println!("🔧 Fetching Microsoft BitNet C++ implementation");
     println!("   Repository: {}", repo);
     println!("   Branch/Rev: {}", tag);
@@ -3238,7 +3234,11 @@ fn fetch_cpp_cmd(
 
     args.push(all_flags);
 
-    run("bash", std::iter::once(script.to_string_lossy().to_string()).chain(args).collect())?;
+    let bash = resolve_fetch_cpp_bash()?;
+    println!("   Shell: {}", bash.display());
+    let mut cmd = Command::new(&bash);
+    cmd.arg(script).args(args);
+    run_cmd(&mut cmd)?;
 
     // Verify the build succeeded by checking for libraries or binaries
     let cpp_dir = dirs::home_dir().unwrap().join(".cache/bitnet_cpp");
@@ -3286,6 +3286,83 @@ fn fetch_cpp_cmd(
         println!("   ✓ C++ build artifacts verified in: {}", build_dir.display());
     }
     Ok(())
+}
+
+fn resolve_fetch_cpp_bash() -> Result<PathBuf> {
+    if let Some(path) = std::env::var_os("BITNET_FETCH_CPP_BASH").filter(|v| !v.is_empty()) {
+        let path = PathBuf::from(path);
+        if path.is_file() {
+            return Ok(path);
+        }
+        return Err(anyhow!("BITNET_FETCH_CPP_BASH points to a missing file: {}", path.display()));
+    }
+
+    #[cfg(windows)]
+    {
+        if let Ok(paths) = which::which_all("bash") {
+            for path in paths {
+                if is_git_bash_path(&path) {
+                    return Ok(path);
+                }
+            }
+        }
+
+        for path in git_bash_candidates() {
+            if path.is_file() {
+                return Ok(path);
+            }
+        }
+
+        return Err(anyhow!(
+            "fetch-cpp requires Git Bash on Windows, but no Git Bash bash.exe was found. \
+             Install Git for Windows or set BITNET_FETCH_CPP_BASH to the full path of bash.exe. \
+             The Windows WSL launcher at C:\\Windows\\System32\\bash.exe is not used because it \
+             can hang when WSL is unavailable or unconfigured."
+        ));
+    }
+
+    #[cfg(not(windows))]
+    {
+        Ok(PathBuf::from("bash"))
+    }
+}
+
+#[cfg(windows)]
+fn is_git_bash_path(path: &Path) -> bool {
+    let normalized = path.to_string_lossy().replace('/', "\\").to_ascii_lowercase();
+    normalized.contains("\\git\\") && normalized.ends_with("\\bash.exe")
+}
+
+#[cfg(windows)]
+fn git_bash_candidates() -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+
+    if let Ok(git) = which::which("git")
+        && let Some(root) = git.parent().and_then(Path::parent).filter(|p| {
+            p.file_name().is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case("Git"))
+        })
+    {
+        candidates.push(root.join("bin").join("bash.exe"));
+    }
+
+    candidates.push(PathBuf::from(r"C:\Program Files\Git\bin\bash.exe"));
+    candidates.push(PathBuf::from(r"C:\Program Files (x86)\Git\bin\bash.exe"));
+    candidates
+}
+
+#[cfg(all(test, windows))]
+mod fetch_cpp_bash_tests {
+    use super::is_git_bash_path;
+    use std::path::Path;
+
+    #[test]
+    fn fetch_cpp_prefers_git_bash_over_wsl_launcher() {
+        assert!(is_git_bash_path(Path::new(r"C:\Program Files\Git\bin\bash.exe")));
+        assert!(!is_git_bash_path(Path::new(r"C:\Windows\System32\bash.exe")));
+        assert!(!is_git_bash_path(Path::new(
+            r"C:\Users\steven\AppData\Local\Microsoft\WindowsApps\bash.exe"
+        )));
+    }
 }
 
 /// Apply C++ environment variables for Linux
@@ -5138,12 +5215,6 @@ fn compare_metrics(
 
     println!("\n✅ All metrics within acceptable thresholds!");
     Ok(())
-}
-
-fn run(bin: &str, args: Vec<String>) -> Result<()> {
-    let mut cmd = Command::new(bin);
-    cmd.args(args);
-    run_cmd(&mut cmd)
 }
 
 fn run_cmd(cmd: &mut Command) -> Result<()> {
