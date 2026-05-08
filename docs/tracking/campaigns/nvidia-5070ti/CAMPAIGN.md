@@ -106,10 +106,16 @@ proofs. Strict `bitnet ask` now validates backend, fallback, and answer quality
 even when the user omits `--receipt-out`; the default strict ask receipt still
 preserves `speedup_claim=false`.
 
-`CUDA-PROD-002` is open as the active product-path gate: a strict CUDA warm session that
-loads the model once, initializes CUDA once, uploads BitNet weights once, serves
-multiple deterministic turns, and emits per-turn plus session-summary receipts
-without broad chat, speed, server, or full-residency claims.
+`CUDA-PROD-002` merged the active product-path gate: a strict CUDA warm session
+that loads the model once, initializes CUDA once, uploads BitNet weights once,
+serves multiple deterministic turns, and emits per-turn plus session-summary
+receipts without broad chat, speed, server, or full-residency claims.
+
+`CUDA-PROD-003` is the next product-path gate: explicit CUDA execution-residency
+coverage for the strict answer path. Receipts should make QK256 linears,
+upload-once weights, KV cache, norms, RoPE, attention/softmax, LM head,
+sampling, host/device transfer accounting, and non-resident phases visible
+without claiming speedup or full residency before coverage proves it.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -146,7 +152,8 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-ANSWER-011 | merged | Same-box CPU AVX-512 and RTX 5070 Ti CUDA both pass the corpus, but the original receipt preserved top-k logit divergence and one generated-answer divergence. |
 | CUDA-ANSWER-012 | merged | CUDA QK256 I8_S activation semantics close generated-token parity for all five committed corpus cases; exact top-k parity remains open. |
 | CUDA-PROD-001 | merged | Strict `bitnet ask` validates through a default answer receipt when `--receipt-out` is omitted. |
-| CUDA-PROD-002 | pr_open | Strict RTX 5070 Ti CUDA warm-session receipts with load/context/upload reuse across multiple deterministic turns. |
+| CUDA-PROD-002 | merged | Strict RTX 5070 Ti CUDA warm-session receipts with load/context/upload reuse across multiple deterministic turns. |
+| CUDA-PROD-003 | ready | CUDA execution-residency coverage for the strict answer path. |
 | CUDA-DENSE-001 | proposed | Optional dense regular-LLM CUDA reference lane; not part of BitNet packed proof completion. |
 
 ## Review Policy
