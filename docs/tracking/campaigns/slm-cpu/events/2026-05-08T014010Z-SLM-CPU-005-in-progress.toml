@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T01:40:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-005"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Advanced SLM-CPU-005 after #3957 merged SLM-CPU-004.",
+  "The next item is a machine-checkable reference divergence artifact schema and validator for comparing bitnet-rs output against a known-good external run.",
+]
