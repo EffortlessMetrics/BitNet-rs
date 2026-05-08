@@ -4798,8 +4798,9 @@ async fn run_cpu_phase_warm_session(
     let tokenizer_strict = tokenizer_resolution.strict;
     let tokenizer: Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
     let tokenizer_source_str = tokenizer_source.as_str();
-    let pretokenizer_authority = tokenizer_pretokenizer_authority(tokenizer_source);
     let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+    let pretokenizer_authority =
+        tokenizer_pretokenizer_authority(tokenizer_source, &tokenizer_label);
     let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
     let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
     let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));

@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T07:19:10Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-008"
+event = "ready"
+branch = "codex/intel-258v-platform/CPU258V-008-answer-case-filter"
+base_sha = "832e7c846d8c4e66310f3771b65b63539b8543ba"
+summary = "Readied CPU258V-008 to add bounded answer-corpus case selection for 258V answer-template refresh diagnostics."
+
+details = [
+  "CPU258V-007 showed the BitNet.cpp answer-ready prompt envelope timing out across the full 258V AVX2 answer corpus, with missing child receipts.",
+  "CPU258V-008 narrows follow-up runs with repeatable --case-id filters while preserving full corpus identity and selected case IDs in the aggregate receipt.",
+  "This is diagnostic scope only and does not claim selected-case completion, answer quality, scalar/AVX2 parity, sustained throughput, Arc 140V execution, or Intel NPU execution.",
+]

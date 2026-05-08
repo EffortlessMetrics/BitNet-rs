@@ -282,6 +282,32 @@ did not complete within the bounded local child-run window. It does not prove
 answer quality, scalar/AVX2 parity under the new prompt, sustained throughput,
 Arc 140V execution, or Intel NPU execution.
 
+CPU258V-008 adds a bounded answer-corpus case filter so the next 258V refresh
+can isolate a single prompt before spending a full-corpus local decode window:
+
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- \
+  --device cpu \
+  answer-corpus \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/BitNet-b1.58-2B-4T/tokenizer.json \
+  --cpu-kernel avx2 \
+  --case-id arithmetic-single-digit \
+  --dump-logit-steps 1 \
+  --logits-topk 5 \
+  --per-prompt-timeout-seconds 420 \
+  --json-out ci/hardware/intel-258v/YYYY-MM-DD/cpu-answer-corpus-avx2-bitnetcpp-template-case.json
+```
+
+The aggregate receipt preserves the full corpus `case_count` and records
+`selected_case_count` plus `selected_case_ids`. This is diagnostic scope only:
+it narrows timeout evidence collection and does not prove selected-case
+completion, answer quality, scalar/AVX2 parity, sustained throughput, Arc 140V
+execution, or Intel NPU execution.
+
 ## Windows PowerShell Bundle
 
 ```powershell
