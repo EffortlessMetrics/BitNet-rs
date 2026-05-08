@@ -28,6 +28,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 |---|---|---|
 | LNL258V-RUN-001 | merged | Add JSON-ready Lunar Lake platform probe structs. |
 | ARC140V-002 | merged | Add exact Arc 140V runtime identity probe logic. |
+| ARC140V-003 | merged | Add Arc 140V OpenVINO GPU.0 tiny graph smoke; merged in #3942. |
 | LNL258V-002 | merged | Add 258V probe bundle and same-machine comparison hooks. |
 | LNL258V-003 | merged | Add CLI platform probe emission for the current 258V machine. |
 | CPU258V-001 | merged | Add a validation-only CPU BitNet preflight harness for the 258V lane. |

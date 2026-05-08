@@ -54,6 +54,7 @@
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | merged |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
+| intel-258v-platform | ARC140V-003 | ARC140V-002, CPU258V-003 | merged |
 | intel-258v-platform | LNL258V-003 | LNL258V-002 | merged |
 | intel-258v-platform | CPU258V-001 | LNL258V-003 | merged |
 | intel-258v-platform | LNL258V-OWNERSHIP-001 | CPU258V-001 | merged |

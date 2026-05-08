@@ -115,6 +115,56 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "ARC140V-003"
+status = "merged"
+pr = 3942
+branch = "codex/intel-258v-platform/ARC140V-003-openvino-gpu-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["ARC140V-002", "CPU258V-003"]
+acceptance = "Run a tiny static OpenVINO GPU.0 graph smoke for the Arc 140V reference lane, recording Arc 140V device identity, graph shape/timing/tolerance fields, fallback=false, and no BitNet/QK256/native OpenCL claims."
+commands = [
+  "cargo test --locked -p bitnet-device-probe --no-default-features openvino_gpu -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet intel_arc::tests -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- intel-arc-140v-openvino-gpu-smoke --json-out target/arc140v-openvino-gpu-smoke.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/src/runtimes/openvino.rs",
+  "crates/bitnet-device-probe/src/runtimes/mod.rs",
+  "crates/bitnet-cli/src/intel_arc.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/specs/intel-lunar-lake-gpu-roadmap.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Arc 140V OpenVINO GPU.0 tiny graph smoke is available when GPU.0 resolves to Arc 140V and the static graph output matches CPU expected output.",
+]
+must_not_claim = [
+  "Arc 140V native OpenCL execution works.",
+  "BitNet inference works on Arc 140V.",
+  "Packed QK256 decode works on Arc 140V.",
+  "OpenVINO GPU smoke proves acceleration or native BitNet kernels.",
+  "CPU fallback satisfies Arc 140V proof.",
+]
+
+[[work_item]]
 id = "LNL258V-002"
 status = "merged"
 branch = "codex/intel-258v-platform/LNL258V-002-probe-bundle"

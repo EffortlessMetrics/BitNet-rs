@@ -1,0 +1,15 @@
+timestamp = "2026-05-07T23:50:13Z"
+campaign = "intel-258v-platform"
+item = "ARC140V-003"
+event = "merged"
+from = "ready"
+to = "merged"
+pr = 3942
+merge_sha = "109f54f45b73a8a8f1685a4f4dc2514dff1b4bc8"
+actor = "codex"
+
+notes = [
+  "Merged #3942, adding an Arc 140V OpenVINO GPU.0 tiny static graph smoke command and receipt path.",
+  "The merged receipt preserves Arc 140V identity, OpenVINO runtime/device fields, graph shape/timing/tolerance fields, and fallback_used=false.",
+  "This is OpenVINO GPU graph-smoke evidence only; it does not claim native OpenCL execution, BitNet inference, QK256 decode, acceleration, or CPU fallback as Arc proof.",
+]
