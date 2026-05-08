@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T04:33:24Z"
+campaign = "apple-m4-slm-answer"
+item = "SLM-M4-006"
+event = "merged"
+pr = 3986
+merge_sha = "e51a78950ad1d124dab212bffc34a55ea595037b"
+actor = "codex"
+
+notes = [
+  "Merged Apple M4 SLM warm-answer speed receipt fields.",
+  "Promoted SLM-M4-007 for first safe Metal phase decision without claiming full Metal inference.",
+]
