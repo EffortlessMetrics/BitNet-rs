@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T15:18:10Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-004"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-004-benchmark-baseline"
+pr = 4093
+merge_sha = "85aba1312b9e21523b459d90010bf67f5594830c"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "Merged the strict RTX 5070 Ti answer-path benchmark baseline.",
+  "The merged receipt compares same-model CPU AVX-512 and RTX 5070 Ti CUDA strict ask evidence, records fallback-free QK256 CUDA execution, and preserves speedup_claim=false.",
+  "The long CPU AVX-512 prefill/decode profile remains blocked_timeout, so no accepted speedup, broad chat, server, or full-residency claim is implied.",
+]
