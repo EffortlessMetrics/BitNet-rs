@@ -399,6 +399,50 @@ fn answer_corpus_subcommand_help() {
         .stdout(predicate::str::contains("--dump-logit-steps"));
 }
 
+/// `answer-parity --help` advertises both legacy and generic comparison inputs.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_parity_subcommand_help_lists_legacy_and_generic_inputs() {
+    bitnet()
+        .args(["answer-parity", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--scalar"))
+        .stdout(predicate::str::contains("--avx2"))
+        .stdout(predicate::str::contains("--left"))
+        .stdout(predicate::str::contains("--right"));
+}
+
+/// Generic answer parity requires both sides.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_parity_rejects_partial_generic_inputs() {
+    bitnet()
+        .args(["answer-parity", "--left", "left.json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--right is required"));
+}
+
+/// Legacy and generic answer parity inputs are mutually exclusive.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_parity_rejects_mixed_input_modes() {
+    bitnet()
+        .args([
+            "answer-parity",
+            "--left",
+            "left.json",
+            "--right",
+            "right.json",
+            "--scalar",
+            "scalar.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("use either --left/--right"));
+}
+
 /// `answer-corpus --dry-run` validates corpus shape without requiring a model load.
 #[cfg(feature = "full-cli")]
 #[test]

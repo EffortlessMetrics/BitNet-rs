@@ -64,7 +64,7 @@ Commands:
   inference                          Run inference on a model
   chat                               Interactive chat mode (streaming)
   answer-corpus                      Run the fixed CPU answer-readiness corpus through the `run` surface
-  answer-parity                      Compare scalar and AVX2 strict CPU answer-corpus receipts
+  answer-parity                      Compare answer-corpus receipts for backend parity diagnostics
   convert                            Convert between model formats
   benchmark                          Benchmark model performance
   serve                              Start inference server

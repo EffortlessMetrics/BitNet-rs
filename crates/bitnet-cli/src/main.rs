@@ -504,7 +504,7 @@ enum Commands {
     AnswerCorpus(Box<AnswerCorpusCommand>),
 
     #[cfg(feature = "full-cli")]
-    /// Compare scalar and AVX2 strict CPU answer-corpus receipts
+    /// Compare answer-corpus receipts for backend parity diagnostics
     AnswerParity(Box<AnswerParityCommand>),
 
     #[cfg(feature = "full-cli")]
