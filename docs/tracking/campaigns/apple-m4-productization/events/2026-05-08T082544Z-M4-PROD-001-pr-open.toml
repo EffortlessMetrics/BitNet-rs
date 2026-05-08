@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T08:25:44Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-001"
+event = "pr_open"
+pr = 4017
+head_sha = "4e001dcad50fd444eafbd0184bb81481361c2d35"
+actor = "codex"
+
+notes = [
+  "Opened Apple M4 productization baseline PR.",
+  "Scope is campaign tracking and docs for the working CPU/NEON SLM baseline; no runtime, Metal, QK256, server, MPSGraph, Neural Engine, dependency, or model-binary changes.",
+]
