@@ -496,7 +496,6 @@ fn kernel_backend_is_compiled_cpu_feature() {
 #[test]
 fn kernel_capabilities_from_compile_time_cpu_only() {
     let caps = KernelCapabilities::from_compile_time();
-    #[cfg(feature = "cpu")]
     assert!(caps.cpu_rust);
     // No runtime probing done, so cuda_runtime is always false
     assert!(!caps.cuda_runtime);

@@ -275,6 +275,13 @@ fn from_compile_time_cpp_ffi_is_false() {
     assert!(!caps.cpp_ffi);
 }
 
+#[test]
+fn from_compile_time_always_enables_cpu_rust_baseline() {
+    let caps = KernelCapabilities::from_compile_time();
+    assert!(caps.cpu_rust);
+    assert!(caps.compiled_backends().contains(&KernelBackend::CpuRust));
+}
+
 // ── KernelCapabilities: builder methods ──────────────────────────────────────
 
 #[test]

@@ -2450,13 +2450,13 @@ fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: us
     // (This is conservative - the actual dispatch depends on runtime detection in the kernel)
     if avx2_available {
         // Still show a minimal note about QK256 usage
-        eprintln!("{} Using QK256 quantization with AVX2 acceleration", style("Γä╣").cyan().bold());
+        eprintln!("{} Using QK256 quantization with AVX2 acceleration", style("ℹ").cyan().bold());
         return Ok(());
     }
 
     // Show performance warning for scalar kernels
     eprintln!();
-    eprintln!("{}", style("ΓÜá  WARNING: Using QK256 scalar kernels (~0.1 tok/s)").yellow().bold());
+    eprintln!("{}", style("⚠  WARNING: Using QK256 scalar kernels (~0.1 tok/s)").yellow().bold());
     eprintln!();
     eprintln!("For quick validation, use --max-tokens 4-16");
     eprintln!("Performance: ~10 seconds per token (2B models)");
@@ -2471,7 +2471,7 @@ fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: us
         eprintln!("Estimated time for {} tokens: ~{} seconds", max_tokens, estimated_seconds);
     }
     eprintln!();
-    eprintln!("SIMD optimizations coming in v0.2.0 (ΓëÑ3├ù faster)");
+    eprintln!("SIMD optimizations coming in v0.2.0 (≥3× faster)");
     eprintln!();
     eprintln!("Use --no-warnings to suppress this message");
     eprintln!();
@@ -3715,14 +3715,14 @@ async fn run_simple_generation(
     // Each step:
     //   1. Embed ONLY the new token (last in sequence)
     //   2. Forward pass uses KV cache for historical context
-    //   3. No need to re-embed previous tokens (O(N) not O(N┬▓))
+    //   3. No need to re-embed previous tokens (O(N) not O(N²))
     //
     // Historical context is maintained via:
     //   - KV cache: stores key/value tensors from previous steps
     //   - `tokens` vector: tracks full sequence for stop detection/logging
     //
-    // Performance impact: This changes embedding from O(N┬▓) to O(N), providing
-    // ~50├ù speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
+    // Performance impact: This changes embedding from O(N²) to O(N), providing
+    // ~50× speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
     let mut decode_step_ms = Vec::with_capacity(max_new_tokens);
     let mut embed_step_ms = Vec::with_capacity(max_new_tokens);
     let mut forward_step_ms = Vec::with_capacity(max_new_tokens);
@@ -3832,7 +3832,7 @@ async fn run_simple_generation(
             eprintln!("timing: forward_us={}", ms_to_us(forward_ms));
         }
 
-        // Extract last token hidden state first to avoid 3D├ù2D matmul issues
+        // Extract last token hidden state first to avoid 3D×2D matmul issues
         let last_hidden = extract_last_token_hidden(&h)?;
         if qwen_trace_this_step {
             qwen_trace_tensor("decode.last_hidden", Some(step_idx), &last_hidden)?;
@@ -10193,21 +10193,21 @@ async fn show_system_info() -> Result<()> {
     println!("{}", style("Features:").bold());
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
-        println!("  GPU support: {}", style("Γ£ô Enabled").green());
+        println!("  GPU support: {}", style("✓ Enabled").green());
         // Check CUDA availability
         #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             match candle_core::Device::cuda_if_available(0).is_ok() {
-                true => println!("  CUDA: {}", style("Γ£ô Available").green()),
-                false => println!("  CUDA: {}", style("Γ£ù Not available").red()),
+                true => println!("  CUDA: {}", style("✓ Available").green()),
+                false => println!("  CUDA: {}", style("✗ Not available").red()),
             }
         }
         #[cfg(not(any(feature = "gpu", feature = "cuda")))]
-        println!("  CUDA: {}", style("Γ£ù Not compiled").yellow())
+        println!("  CUDA: {}", style("✗ Not compiled").yellow())
     }
     #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     {
-        println!("  GPU support: {}", style("Γ£ù Disabled").red());
+        println!("  GPU support: {}", style("✗ Disabled").red());
     }
 
     // CPU features
@@ -10215,22 +10215,22 @@ async fn show_system_info() -> Result<()> {
     #[cfg(target_arch = "x86_64")]
     {
         if is_x86_feature_detected!("avx2") {
-            println!("    AVX2: {}", style("Γ£ô").green());
+            println!("    AVX2: {}", style("✓").green());
         } else {
-            println!("    AVX2: {}", style("Γ£ù").red());
+            println!("    AVX2: {}", style("✗").red());
         }
         if is_x86_feature_detected!("avx512f") {
-            println!("    AVX-512: {}", style("Γ£ô").green());
+            println!("    AVX-512: {}", style("✓").green());
         } else {
-            println!("    AVX-512: {}", style("Γ£ù").red());
+            println!("    AVX-512: {}", style("✗").red());
         }
     }
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
-            println!("    NEON: {}", style("Γ£ô").green());
+            println!("    NEON: {}", style("✓").green());
         } else {
-            println!("    NEON: {}", style("Γ£ù").red());
+            println!("    NEON: {}", style("✗").red());
         }
     }
 
@@ -10238,16 +10238,16 @@ async fn show_system_info() -> Result<()> {
 
     // Model formats
     println!("{}", style("Supported formats:").bold());
-    println!("  GGUF: {}", style("Γ£ô").green());
-    println!("  SafeTensors: {}", style("Γ£ô").green());
-    println!("  HuggingFace: {}", style("Γ£ô").green());
+    println!("  GGUF: {}", style("✓").green());
+    println!("  SafeTensors: {}", style("✓").green());
+    println!("  HuggingFace: {}", style("✓").green());
     println!();
 
     // Quantization types
     println!("{}", style("Quantization types:").bold());
-    println!("  I2_S (2-bit signed): {}", style("Γ£ô").green());
-    println!("  TL1 (ARM optimized): {}", style("Γ£ô").green());
-    println!("  TL2 (x86 optimized): {}", style("Γ£ô").green());
+    println!("  I2_S (2-bit signed): {}", style("✓").green());
+    println!("  TL1 (ARM optimized): {}", style("✓").green());
+    println!("  TL2 (x86 optimized): {}", style("✓").green());
 
     Ok(())
 }
@@ -10513,7 +10513,7 @@ async fn handle_compat_check_command(
         println!("{}", serde_json::to_string_pretty(&obj)?);
     } else {
         println!("File:      {}", path.display());
-        println!("Status:    Γ£ô Valid GGUF");
+        println!("Status:    ✓ Valid GGUF");
         println!(
             "Version:   {} {}",
             header.version,
@@ -10551,10 +10551,10 @@ async fn handle_compat_check_command(
         }
 
         if suspicious {
-            eprintln!("ΓÜá Unusually high tensor/KV counts detected");
+            eprintln!("⚠ Unusually high tensor/KV counts detected");
         }
         if !supported {
-            eprintln!("ΓÜá Unsupported GGUF version");
+            eprintln!("⚠ Unsupported GGUF version");
         }
     }
 

@@ -84,10 +84,7 @@ fn kernel_backend_requires_gpu() {
 
 #[test]
 fn kernel_backend_is_compiled_cpu() {
-    // Built with --features cpu, so CpuRust should be compiled
-    if cfg!(feature = "cpu") {
-        assert!(KernelBackend::CpuRust.is_compiled());
-    }
+    assert!(KernelBackend::CpuRust.is_compiled());
 }
 
 #[test]
