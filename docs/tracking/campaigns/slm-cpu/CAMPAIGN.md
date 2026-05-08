@@ -32,10 +32,11 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-001 | merged | Model candidate manifest, artifact policy, and 8250U runbook merged in #3905. |
 | SLM-CPU-002 | merged | Dense Qwen preflight foundations merged in #3910. |
 | SLM-CPU-002A | merged | Dense Qwen strict-load blocker hardening merged in #3917. |
-| SLM-CPU-002B | ready | Add dense standard GGUF Q8_0/Q*_K support before the first tiny run. |
-| SLM-CPU-003 | proposed | Run the first tiny dense CPU receipt. |
-| SLM-CPU-004 | proposed | Add SLM answer corpus evidence. |
-| SLM-CPU-005 | proposed | Add reference divergence artifact schema. |
+| SLM-CPU-002B | merged | Dense standard GGUF Q8_0/Q*_K support merged in #3926. |
+| SLM-CPU-003 | merged | Tiny strict dense CPU receipt merged in #3940. |
+| SLM-CPU-004 | merged | SLM answer corpus evidence merged in #3957. |
+| SLM-CPU-005 | merged | Reference divergence artifact schema and validator merged in #3969. |
+| SLM-CPU-006 | pr_open (#4031) | Capture Qwen3-0.6B first-token divergence with bitnet-rs and known-good reference top-k/logit evidence. |
 
 ## Review Policy
 

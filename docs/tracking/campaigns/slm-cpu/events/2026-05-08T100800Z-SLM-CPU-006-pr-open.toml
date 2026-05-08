@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T10:08:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-006"
+event = "pr_open"
+pr = 4031
+branch = "codex/slm-cpu-006-first-token-divergence"
+actor = "codex"
+notes = [
+  "Opened #4031 for the SLM-CPU-006 first-token divergence tracker item.",
+  "The PR keeps scope to Kaby Lake Qwen3 dense SLM correctness triage and does not add runtime code.",
+  "The next implementation artifact must capture bitnet-rs and known-good reference first-token top-k/logit evidence before making any answer-quality claim.",
+]
