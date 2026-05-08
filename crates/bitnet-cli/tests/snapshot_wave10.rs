@@ -95,32 +95,37 @@ fn exit_codes_snapshot() {
 
 #[test]
 fn cli_config_validate_invalid_device_error() {
-    let mut cfg = CliConfig::default();
-    cfg.default_device = "quantum".to_string();
+    let cfg = CliConfig { default_device: "quantum".to_string(), ..CliConfig::default() };
     let err = cfg.validate().unwrap_err();
     insta::assert_snapshot!(err.to_string());
 }
 
 #[test]
 fn cli_config_validate_invalid_log_level_error() {
-    let mut cfg = CliConfig::default();
-    cfg.logging.level = "verbose".to_string();
+    let cfg = CliConfig {
+        logging: LoggingConfig { level: "verbose".to_string(), ..LoggingConfig::default() },
+        ..CliConfig::default()
+    };
     let err = cfg.validate().unwrap_err();
     insta::assert_snapshot!(err.to_string());
 }
 
 #[test]
 fn cli_config_validate_invalid_log_format_error() {
-    let mut cfg = CliConfig::default();
-    cfg.logging.format = "xml".to_string();
+    let cfg = CliConfig {
+        logging: LoggingConfig { format: "xml".to_string(), ..LoggingConfig::default() },
+        ..CliConfig::default()
+    };
     let err = cfg.validate().unwrap_err();
     insta::assert_snapshot!(err.to_string());
 }
 
 #[test]
 fn cli_config_validate_zero_batch_size_error() {
-    let mut cfg = CliConfig::default();
-    cfg.performance.batch_size = 0;
+    let cfg = CliConfig {
+        performance: PerformanceConfig { batch_size: 0, ..PerformanceConfig::default() },
+        ..CliConfig::default()
+    };
     let err = cfg.validate().unwrap_err();
     insta::assert_snapshot!(err.to_string());
 }

@@ -299,6 +299,8 @@ fn cpu_phase_warm_session_rejects_safetensors_before_loading_model() {
             "cpu-phase-warm-session",
             "--model",
             "missing.safetensors",
+            "--cpu-kernel",
+            "scalar",
             "--strict-loader",
             "--strict-tokenizer",
             "--json-out",

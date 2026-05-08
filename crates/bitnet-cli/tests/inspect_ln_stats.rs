@@ -3,15 +3,14 @@
 //! This test suite validates the LayerNorm gamma diagnostics functionality.
 
 #[cfg(feature = "full-cli")]
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 #[cfg(feature = "full-cli")]
 use predicates::prelude::*;
 
 #[cfg(feature = "full-cli")]
 #[test]
 fn inspect_help_works() {
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--help"])
         .assert()
         .success()
@@ -21,8 +20,7 @@ fn inspect_help_works() {
 #[cfg(feature = "full-cli")]
 #[test]
 fn inspect_requires_model_path() {
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats"])
         .assert()
         .failure()
@@ -32,8 +30,7 @@ fn inspect_requires_model_path() {
 #[cfg(feature = "full-cli")]
 #[test]
 fn inspect_fails_on_missing_file() {
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "--ln-stats", "/nonexistent/model.gguf"])
         .assert()
         .failure()
@@ -44,8 +41,7 @@ fn inspect_fails_on_missing_file() {
 #[test]
 fn inspect_requires_inspection_mode() {
     // When no inspection mode is specified, should error
-    Command::cargo_bin("bitnet")
-        .unwrap()
+    cargo_bin_cmd!("bitnet")
         .args(["inspect", "/some/path.gguf"])
         .assert()
         .failure()

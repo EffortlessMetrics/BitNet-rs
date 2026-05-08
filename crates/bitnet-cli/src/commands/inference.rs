@@ -2244,8 +2244,8 @@ mod tests {
         let detected = cmd.auto_detect_template();
         assert_eq!(
             detected,
-            TemplateType::Instruct,
-            "Microsoft BitNet base model should prefer Instruct template for Q&A"
+            TemplateType::BitnetCppAnswer,
+            "Microsoft BitNet base model should prefer the bitnet.cpp answer template"
         );
     }
 
@@ -2268,8 +2268,8 @@ mod tests {
             let detected = cmd.auto_detect_template();
             assert_eq!(
                 detected,
-                TemplateType::Instruct,
-                "BitNet path '{}' should detect Instruct template",
+                TemplateType::BitnetCppAnswer,
+                "BitNet path '{}' should detect the bitnet.cpp answer template",
                 path
             );
         }
@@ -2278,8 +2278,7 @@ mod tests {
     /// Tests feature spec: template-auto-detection.md#bitnet-priority-before-generic
     #[test]
     fn test_auto_detect_bitnet_priority() {
-        // BitNet detection should occur before generic instruct/chat detection
-        // to ensure base models get proper Q&A formatting
+        // BitNet detection should occur before generic instruct/chat detection.
         let cmd = InferenceCommand {
             model: Some(PathBuf::from("models/microsoft-bitnet-b1.58-2B.gguf")),
             prompt_template: "auto".into(),
@@ -2288,8 +2287,8 @@ mod tests {
         let detected = cmd.auto_detect_template();
         assert_eq!(
             detected,
-            TemplateType::Instruct,
-            "BitNet base model should be detected with Instruct template (better Q&A than Raw)"
+            TemplateType::BitnetCppAnswer,
+            "BitNet base model should be detected with the bitnet.cpp answer template"
         );
     }
 }

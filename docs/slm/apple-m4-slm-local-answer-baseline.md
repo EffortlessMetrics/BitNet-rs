@@ -34,6 +34,34 @@ target/apple-m4-slm-answer/SLM-M4-003/candidates/qwen2_5_0_5b_q8_0/qwen2.5-0.5b-
 
 Do not commit model binaries. Productized model cache commands are tracked as `M4-PROD-002`.
 
+## Model Cache
+
+`M4-PROD-002` adds a user cache for supported SLM artifacts. By default it uses:
+
+```text
+~/.cache/bitnet-rs/models/
+```
+
+The cache root can be overridden with `BITNET_MODEL_CACHE_DIR` or `--cache-dir`.
+
+Supported model IDs:
+
+```text
+qwen2.5-0.5b-instruct-q8_0    Rust-native Apple M4 CPU/NEON baseline artifact
+qwen2.5-0.5b-instruct-q4_k_m  Reference-good storage-preferred artifact; strict Rust execution remains unsupported
+```
+
+Useful commands:
+
+```bash
+bitnet model list
+bitnet model fetch qwen2.5-0.5b-instruct-q8_0
+bitnet model verify qwen2.5-0.5b-instruct-q8_0
+bitnet model prune qwen2.5-0.5b-instruct-q8_0
+```
+
+Cache metadata records source repository, revision, filename, SHA256, size, quantization, tokenizer metadata, chat-template presence, and Apple M4 CPU/NEON support status. Fetch warns on low disk headroom and honors `--offline` / `BITNET_OFFLINE`.
+
 ## Working Command Today
 
 Use the warm-session command for the validated path:

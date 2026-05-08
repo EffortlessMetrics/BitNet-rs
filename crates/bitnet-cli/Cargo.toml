@@ -42,12 +42,14 @@ bitnet-cli-sampling-core = { path = "../bitnet-cli-sampling-core", version = "0.
 bitnet-cli-config-core = { path = "../bitnet-cli-config-core", version = "0.2.1-dev" }
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev", default-features = false }
 bitnet-scoring-core = { path = "../bitnet-scoring-core", version = "0.2.1-dev" }
+bitnet-download = { path = "../bitnet-download", version = "0.2.1-dev" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
 candle-core.workspace = true
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive", "env", "color"] }
 tokio = { workspace = true, features = ["full"] }
 futures.workspace = true
+reqwest = { workspace = true, features = ["stream"] }
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 indicatif = { workspace = true, features = ["tokio"] }
@@ -55,6 +57,7 @@ serde_json.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_yaml = { workspace = true }
 toml.workspace = true
+dirs.workspace = true
 console.workspace = true
 humantime.workspace = true
 humansize.workspace = true
