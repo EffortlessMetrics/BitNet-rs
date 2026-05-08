@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T19:50:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-003"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-003-tensor-residency"
+pr = 4119
+head_sha = "f920790a957b7968ea4db896595c0041d935ce62"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4119 for fixture-level dense regular-LLM CUDA tensor residency evidence.",
+  "The receipt records CUDA device-buffer residency for dense FP16 GEMM inputs/output, measured H2D/D2H transfer bytes, fallback_used=false, and speedup_claim=false.",
+  "The PR preserves the dense boundary: no BitNet packed I2S/QK256 proof, dense GGUF inference, persistent session residency, full CUDA residency, tokenizer, loader, transformer, or server claim.",
+]
