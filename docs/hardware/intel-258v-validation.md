@@ -165,9 +165,8 @@ ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json
 
 It records OpenVINO 2026.1 visibility for `CPU`, `GPU`, and `NPU`, identifies
 the Arc 140V OpenVINO GPU device as `Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)`,
-and keeps Level Zero unavailable because `sycl-ls`/`ze_info` tooling is not
-installed in the current environment. Native OpenCL execution remains proven by
-the separate OpenCL smoke/parity receipts.
+and records Level Zero as unavailable in the current probe. Native OpenCL
+execution remains proven by the separate OpenCL smoke/parity receipts.
 
 ### CLI Platform Probe
 
@@ -179,7 +178,7 @@ cargo run --locked -p bitnet-cli \
   --no-default-features \
   --features cpu,full-cli \
   -- lunar-lake-probe \
-  --json-out ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json
+  --json-out ci/hardware/intel-258v/YYYY-MM-DD/platform-probe-cli.json
 ```
 
 The command records `proof_stage=runtime_detected`, `runtime_api=platform_probe`,
