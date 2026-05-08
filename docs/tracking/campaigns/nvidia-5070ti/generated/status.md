@@ -2,8 +2,8 @@
 # NVIDIA RTX 5070 Ti validation Campaign Status
 
 - Campaign: `nvidia-5070ti`
-- State: `complete`
-- Objective: Maintain the completed RTX 5070 Ti CUDA BitNet proof lane with selected-device receipts and no CPU, OpenCL, WGPU, dense CUDA, or generic GPU conflation.
+- State: `active`
+- Objective: Maintain the completed RTX 5070 Ti CUDA BitNet proof lane while qualifying strict BitNet CUDA performance with selected-device receipts and no CPU, OpenCL, WGPU, dense CUDA, or generic GPU conflation.
 
 ## Work Items
 
@@ -31,6 +31,7 @@
 | CUDA-PROD-002 | merged | #4059 | `codex/cuda-prod/CUDA-PROD-002-warm-session-receipts` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a strict CUDA warm-session ask/chat path that loads the model once, initializes the RTX 5070 Ti CUDA context once, uploads BitNet weights once, serves multiple deterministic turns, and emits per-turn or session-summary receipts without broad chat, speed, server, or full-residency claims. |
 | CUDA-PROD-003 | merged | #4073 | `codex/cuda-prod/CUDA-PROD-003-residency-coverage` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add CUDA execution-residency coverage receipts for the strict RTX 5070 Ti answer path so QK256 linears, upload-once weights, KV cache, norms, RoPE, attention/softmax, LM head, sampling, host/device transfer accounting, and non-resident phases are visible without claiming speedup or full residency before coverage proves it. |
 | CUDA-PROD-004 | merged | #4093 | `codex/cuda-prod/CUDA-PROD-004-benchmark-baseline` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add strict RTX 5070 Ti answer-path benchmark receipts after residency coverage, measuring same-model CPU AVX-512 and CUDA runs across deterministic profiles with model load, tokenizer load, CUDA context init, weight upload, prompt render/tokenize, prefill, first token, steady decode, kernel time, host/device transfer accounting, VRAM, power/temperature where available, and speedup_claim=false until the benchmark evidence is explicitly accepted. |
+| CUDA-BITNET-PERF-002 | pr_open | #4112 | `codex/cuda-bitnet-perf-002-repeated-strict-ask` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add repeated strict ask benchmark receipts for the official Microsoft I2_S model, comparing same-model 9950X3D CPU AVX-512 and RTX 5070 Ti CUDA runs with deterministic policy, fallback_used=false, measured QK256 timing/transfer counters, and speedup_claim=false pending explicit benchmark review. |
 | CUDA-DENSE-001 | merged | #4104 | `codex/cuda-dense-001-receipt-boundary` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add the regular LLM CUDA dense-lane receipt boundary with dense_regular_llm_cuda labels, speedup/full-residency claims false, and a validator proving dense receipts cannot satisfy BitNet packed I2S or QK256 proof acceptance. |
 | CUDA-DENSE-002 | merged | #4106 | `codex/cuda-dense-002-gemm-parity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add the first dense CUDA FP16/BF16 or cuBLAS-backed GEMM smoke/parity fixture with dense_regular_llm_cuda receipts, fallback_used=false, CPU reference comparison, and no BitNet packed I2S/QK256 or speedup claim. |
 

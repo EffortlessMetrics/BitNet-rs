@@ -1,0 +1,538 @@
+{
+  "artifact_kind": "strict_cuda_repeated_ask_benchmark",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-002-repeated-strict-ask.json",
+  "benchmark": {
+    "benchmark_qualified_speedup": false,
+    "cpu_avx512_median_total_ms": 18797.0,
+    "cpu_cuda_answer_match": true,
+    "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+    "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+    "cuda_median_total_ms": 2136.0,
+    "observed_median_cpu_total_ms_div_cuda_total_ms": 8.800093632958802,
+    "profile": "strict_ask_math_8",
+    "runs_per_backend": 3,
+    "speedup_claim": false
+  },
+  "benchmark_qualified_speedup": false,
+  "claim": "strict_cuda_repeated_ask_benchmark_baseline",
+  "claim_boundaries": [
+    "speedup_claim=false; repeated strict ask timing is baseline evidence only until explicit benchmark review upgrades a specific profile.",
+    "All repeated runs use the same official Microsoft I2_S model, explicit tokenizer, bitnetcpp-answer prompt template, deterministic sampling policy, and fallback-free CPU/CUDA paths.",
+    "This receipt qualifies only strict_ask_math_8 process-level repeated asks; it does not claim broad chat quality, production server readiness, full CUDA residency, or general speedup.",
+    "Dense regular-LLM CUDA evidence remains separate from BitNet packed QK256 evidence."
+  ],
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_kernel_invocations": 13230,
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "memory_hwm_bytes": 9608101888,
+    "memory_hwm_source": "nvidia-smi-memory.used-sampled",
+    "nvrtc_version": "12.9",
+    "power_draw_watts": null,
+    "power_limit_watts": null,
+    "temperature_c": null,
+    "vram_bytes": 17094475776
+  },
+  "cuda_execution_residency": {
+    "claim_boundary": {
+      "full_transformer_cuda_residency_claimed": false,
+      "kv_cache_cuda_residency_claimed": false,
+      "qk256_cuda_residency_claimed": true,
+      "qk256_kernel_timing_claimed": true,
+      "qk256_transfer_byte_accounting_claimed": true,
+      "speedup_claim": false,
+      "strict_cuda_answer_path": true,
+      "transfer_timing_claimed": false,
+      "upload_once_weight_residency_claimed": true
+    },
+    "coverage_scope": "strict_cuda_ask_or_run",
+    "execution_phase": "short_decode",
+    "full_cuda_residency_claimed": false,
+    "host_device_transfer_accounting": {
+      "device_to_host_bytes": 172247040,
+      "host_to_device_bytes": 168376320,
+      "kernel_time_ms": 2977.406,
+      "note": "Repeated strict ask aggregate of QK256 activation/output transfer bytes and CUDA event kernel time; not a full transformer residency claim.",
+      "status": "qk256_measured"
+    },
+    "kv_cache": {
+      "cuda_residency_claimed": false,
+      "device": "cpu",
+      "enabled": true,
+      "residency": "cpu_resident",
+      "reuse_policy": "per_run_incremental_decode"
+    },
+    "phase_residency": {
+      "attention_scores": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "attention_softmax": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "attention_value_mix": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "lm_head": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "relu2_activation": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "rmsnorm": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "rope": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "sampling": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident"
+      },
+      "sub_layernorm": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "token_embeddings": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      }
+    },
+    "prompt_and_decode": {
+      "generated_tokens": 3,
+      "prompt_tokens": 19
+    },
+    "qk256_bitnet_linears": {
+      "bitnet_linear_layers_cpu_fallback": 0,
+      "bitnet_linear_layers_on_cuda": 4410,
+      "bitnet_linear_layers_total": 4410,
+      "fallback_used": false,
+      "kernel_id": "qk256_gemv_cuda",
+      "residency": "cuda_resident_compute",
+      "unsupported_ops": []
+    },
+    "schema_version": "1.0.0",
+    "speedup_claim": false,
+    "unresident_or_unmeasured_phases": [
+      "token_embeddings",
+      "rmsnorm",
+      "sub_layernorm",
+      "rope",
+      "attention_scores",
+      "attention_softmax",
+      "attention_value_mix",
+      "relu2_activation",
+      "kv_cache",
+      "lm_head",
+      "sampling"
+    ],
+    "weight_residency": {
+      "per_token_weight_upload": false,
+      "scope": "qk256_cuda_weight_handles_only",
+      "status": "cuda_resident_upload_once_handles",
+      "weight_handle_count": 210,
+      "weights_uploaded_once": true
+    }
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+  "kernel_stats": [
+    {
+      "device_to_host_bytes": 172247040,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 168376320,
+      "invocations": 13230,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_launches": 13230,
+      "kernel_time_ms": 2977.406
+    }
+  ],
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "fallback_loader_used": false,
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "strict_real_gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "source_loader_mode": "real_gguf"
+  },
+  "pair_contracts": [
+    {
+      "fallback_free": true,
+      "repeat_index": 1,
+      "same_answer": true,
+      "same_generated_token_ids": true,
+      "same_model": true,
+      "same_prompt_template": true,
+      "same_question": true,
+      "same_sampling_policy": true,
+      "same_tokenizer": true
+    },
+    {
+      "fallback_free": true,
+      "repeat_index": 2,
+      "same_answer": true,
+      "same_generated_token_ids": true,
+      "same_model": true,
+      "same_prompt_template": true,
+      "same_question": true,
+      "same_sampling_policy": true,
+      "same_tokenizer": true
+    },
+    {
+      "fallback_free": true,
+      "repeat_index": 3,
+      "same_answer": true,
+      "same_generated_token_ids": true,
+      "same_model": true,
+      "same_prompt_template": true,
+      "same_question": true,
+      "same_sampling_policy": true,
+      "same_tokenizer": true
+    }
+  ],
+  "prompt_template": {
+    "assistant_prefix_inserted": true,
+    "bos_inserted": true,
+    "family": "bitnetcpp-answer",
+    "parse_special": true,
+    "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+    "stop_token_ids": [
+      128009,
+      128001
+    ]
+  },
+  "proof_inputs": {
+    "cpu_avx512_answer_corpus_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-answer-corpus.json",
+    "cpu_avx512_ask_receipts": [
+      "target/bitnet/receipts/cuda-bitnet-perf-002/cpu-avx512-strict-ask-run-1.json",
+      "target/bitnet/receipts/cuda-bitnet-perf-002/cpu-avx512-strict-ask-run-2.json",
+      "target/bitnet/receipts/cuda-bitnet-perf-002/cpu-avx512-strict-ask-run-3.json"
+    ],
+    "cpu_cuda_answer_parity_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json",
+    "cuda_answer_corpus_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json",
+    "cuda_ask_receipts": [
+      "target/bitnet/receipts/cuda-bitnet-perf-002/cuda-strict-ask-run-1.json",
+      "target/bitnet/receipts/cuda-bitnet-perf-002/cuda-strict-ask-run-2.json",
+      "target/bitnet/receipts/cuda-bitnet-perf-002/cuda-strict-ask-run-3.json"
+    ]
+  },
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "repeat_policy": {
+    "cold_warm_split": "process-level repeated strict ask; every source receipt records a full strict ask process including model load and backend setup",
+    "fallback_free": true,
+    "runs_per_backend": 3,
+    "same_model": true,
+    "same_prompt_template": true,
+    "same_question": true,
+    "same_sampling_policy": true,
+    "same_tokenizer": true,
+    "speedup_claim": false
+  },
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runs": [
+    {
+      "answer_trimmed": "4",
+      "backend": "amd-9950x3d-cpu-avx512",
+      "decode_total_ms": 2592.591,
+      "fallback_used": false,
+      "first_token_ms": 17092.0,
+      "generated_token_ids": [
+        220,
+        19,
+        128009
+      ],
+      "generated_tokens": 3,
+      "kernel_id": "i2_s-avx512-reference",
+      "profile": "strict_ask_math_8",
+      "prompt_tokens": 19,
+      "quality_passed": true,
+      "repeat_index": 1,
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust",
+      "source_receipt_path": "target/bitnet/receipts/cuda-bitnet-perf-002/cpu-avx512-strict-ask-run-1.json",
+      "status": "measured",
+      "tokens_per_second": 0.15959993616002552,
+      "total_ms": 18797.0
+    },
+    {
+      "answer_trimmed": "4",
+      "backend": "amd-9950x3d-cpu-avx512",
+      "decode_total_ms": 2635.848,
+      "fallback_used": false,
+      "first_token_ms": 16808.0,
+      "generated_token_ids": [
+        220,
+        19,
+        128009
+      ],
+      "generated_tokens": 3,
+      "kernel_id": "i2_s-avx512-reference",
+      "profile": "strict_ask_math_8",
+      "prompt_tokens": 19,
+      "quality_passed": true,
+      "repeat_index": 2,
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust",
+      "source_receipt_path": "target/bitnet/receipts/cuda-bitnet-perf-002/cpu-avx512-strict-ask-run-2.json",
+      "status": "measured",
+      "tokens_per_second": 0.16137708445400753,
+      "total_ms": 18590.0
+    },
+    {
+      "answer_trimmed": "4",
+      "backend": "amd-9950x3d-cpu-avx512",
+      "decode_total_ms": 2899.373,
+      "fallback_used": false,
+      "first_token_ms": 17820.0,
+      "generated_token_ids": [
+        220,
+        19,
+        128009
+      ],
+      "generated_tokens": 3,
+      "kernel_id": "i2_s-avx512-reference",
+      "profile": "strict_ask_math_8",
+      "prompt_tokens": 19,
+      "quality_passed": true,
+      "repeat_index": 3,
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust",
+      "source_receipt_path": "target/bitnet/receipts/cuda-bitnet-perf-002/cpu-avx512-strict-ask-run-3.json",
+      "status": "measured",
+      "tokens_per_second": 0.1518372304889159,
+      "total_ms": 19758.0
+    },
+    {
+      "answer_trimmed": "4",
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "decode_total_ms": 337.774,
+      "device_to_host_bytes": 57415680,
+      "fallback_used": false,
+      "first_token_ms": 2145.0,
+      "generated_token_ids": [
+        220,
+        19,
+        128009
+      ],
+      "generated_tokens": 3,
+      "host_to_device_bytes": 56125440,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_invocations": 4410,
+      "kernel_time_ms": 997.852,
+      "profile": "strict_ask_math_8",
+      "prompt_tokens": 19,
+      "quality_passed": true,
+      "repeat_index": 1,
+      "runtime_api": "cuda",
+      "selected_backend": "nvidia-rtx-5070-ti-cuda",
+      "source_receipt_path": "target/bitnet/receipts/cuda-bitnet-perf-002/cuda-strict-ask-run-1.json",
+      "status": "measured",
+      "tokens_per_second": 1.2620950778291966,
+      "total_ms": 2377.0
+    },
+    {
+      "answer_trimmed": "4",
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "decode_total_ms": 290.024,
+      "device_to_host_bytes": 57415680,
+      "fallback_used": false,
+      "first_token_ms": 1702.0,
+      "generated_token_ids": [
+        220,
+        19,
+        128009
+      ],
+      "generated_tokens": 3,
+      "host_to_device_bytes": 56125440,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_invocations": 4410,
+      "kernel_time_ms": 983.531,
+      "profile": "strict_ask_math_8",
+      "prompt_tokens": 19,
+      "quality_passed": true,
+      "repeat_index": 2,
+      "runtime_api": "cuda",
+      "selected_backend": "nvidia-rtx-5070-ti-cuda",
+      "source_receipt_path": "target/bitnet/receipts/cuda-bitnet-perf-002/cuda-strict-ask-run-2.json",
+      "status": "measured",
+      "tokens_per_second": 1.5822784810126582,
+      "total_ms": 1896.0
+    },
+    {
+      "answer_trimmed": "4",
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "decode_total_ms": 313.789,
+      "device_to_host_bytes": 57415680,
+      "fallback_used": false,
+      "first_token_ms": 1929.0,
+      "generated_token_ids": [
+        220,
+        19,
+        128009
+      ],
+      "generated_tokens": 3,
+      "host_to_device_bytes": 56125440,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_invocations": 4410,
+      "kernel_time_ms": 996.023,
+      "profile": "strict_ask_math_8",
+      "prompt_tokens": 19,
+      "quality_passed": true,
+      "repeat_index": 3,
+      "runtime_api": "cuda",
+      "selected_backend": "nvidia-rtx-5070-ti-cuda",
+      "source_receipt_path": "target/bitnet/receipts/cuda-bitnet-perf-002/cuda-strict-ask-run-3.json",
+      "status": "measured",
+      "tokens_per_second": 1.4044943820224718,
+      "total_ms": 2136.0
+    }
+  ],
+  "runtime_api": "cuda",
+  "sampling": {
+    "deterministic": true,
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "speedup_claim": false,
+  "summary": {
+    "cpu_avx512": {
+      "backend": "amd-9950x3d-cpu-avx512",
+      "decode_total_ms": {
+        "max": 2899.373,
+        "mean": 2709.270666666667,
+        "median": 2635.848,
+        "min": 2592.591,
+        "samples": 3
+      },
+      "fallback_used": false,
+      "first_token_ms": {
+        "max": 17820.0,
+        "mean": 17240.0,
+        "median": 17092.0,
+        "min": 16808.0,
+        "samples": 3
+      },
+      "quality_passed": true,
+      "runs": 3,
+      "runtime_api": "cpu",
+      "tokens_per_second": {
+        "max": 0.16137708445400753,
+        "mean": 0.15760475036764965,
+        "median": 0.15959993616002552,
+        "min": 0.1518372304889159,
+        "samples": 3
+      },
+      "total_ms": {
+        "max": 19758.0,
+        "mean": 19048.333333333332,
+        "median": 18797.0,
+        "min": 18590.0,
+        "samples": 3
+      }
+    },
+    "cuda": {
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "decode_total_ms": {
+        "max": 337.774,
+        "mean": 313.8623333333333,
+        "median": 313.789,
+        "min": 290.024,
+        "samples": 3
+      },
+      "device_to_host_bytes": {
+        "max": 57415680,
+        "mean": 57415680.0,
+        "median": 57415680.0,
+        "min": 57415680,
+        "samples": 3
+      },
+      "fallback_used": false,
+      "first_token_ms": {
+        "max": 2145.0,
+        "mean": 1925.3333333333333,
+        "median": 1929.0,
+        "min": 1702.0,
+        "samples": 3
+      },
+      "host_to_device_bytes": {
+        "max": 56125440,
+        "mean": 56125440.0,
+        "median": 56125440.0,
+        "min": 56125440,
+        "samples": 3
+      },
+      "kernel_time_ms": {
+        "max": 997.852,
+        "mean": 992.4686666666666,
+        "median": 996.023,
+        "min": 983.531,
+        "samples": 3
+      },
+      "quality_passed": true,
+      "runs": 3,
+      "runtime_api": "cuda",
+      "tokens_per_second": {
+        "max": 1.5822784810126582,
+        "mean": 1.4162893136214423,
+        "median": 1.4044943820224718,
+        "min": 1.2620950778291966,
+        "samples": 3
+      },
+      "total_ms": {
+        "max": 2377.0,
+        "mean": 2136.3333333333335,
+        "median": 2136.0,
+        "min": 1896.0,
+        "samples": 3
+      }
+    }
+  },
+  "timestamp_utc": "2026-05-08T18:20:05Z",
+  "tokenizer": {
+    "model_family": "llama3",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "workload": {
+    "answer": " 4",
+    "cpu_cuda_answer_match": true,
+    "cpu_cuda_generated_ids_match": true,
+    "cpu_generated_token_ids": [
+      220,
+      19,
+      128009
+    ],
+    "cuda_generated_token_ids": [
+      220,
+      19,
+      128009
+    ],
+    "generated_tokens": 3,
+    "profile": "strict_ask_math_8",
+    "prompt_tokens": 19,
+    "quality_passed": true,
+    "question": "What is 2+2? Answer with only the number."
+  }
+}

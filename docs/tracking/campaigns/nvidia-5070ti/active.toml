@@ -1,14 +1,15 @@
 id = "nvidia-5070ti"
 title = "NVIDIA RTX 5070 Ti validation"
-status = "complete"
+status = "active"
 
-objective = "Maintain the completed RTX 5070 Ti CUDA BitNet proof lane with selected-device receipts and no CPU, OpenCL, WGPU, dense CUDA, or generic GPU conflation."
+objective = "Maintain the completed RTX 5070 Ti CUDA BitNet proof lane while qualifying strict BitNet CUDA performance with selected-device receipts and no CPU, OpenCL, WGPU, dense CUDA, or generic GPU conflation."
 
 end_state = [
   "RTX 5070 Ti CUDA backend identity is distinct from generic CUDA and WGPU.",
   "CUDA and NVML probe facts are recorded before kernel execution claims.",
   "CUDA smoke, parity, receipts, and benchmarks are sequenced after identity.",
   "Strict BitNet CUDA proof receipts name the official GGUF, explicit tokenizer, W1.58A8 layout, selected RTX 5070 Ti CUDA backend, 9950X3D CPU reference, fallback status, QK256 CUDA invocation counts, upload-once weight residency, and measured timing.",
+  "Repeated strict ask benchmark receipts preserve same-model CPU AVX-512 and RTX 5070 Ti CUDA evidence before any speedup claim is accepted.",
   "CUDA-DENSE-001 remains an optional dense regular-LLM reference lane and is not part of completed BitNet packed-kernel proof.",
 ]
 
@@ -900,6 +901,55 @@ must_not_claim = [
   "CUDA speedup exists before a same-model fallback-free benchmark receipt is reviewed and accepted.",
   "Broad chat quality is proven beyond committed deterministic prompts.",
   "Full CUDA residency for every transformer operation is proven unless every phase is counted as resident.",
+  "Server inference readiness is complete.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-PERF-002"
+status = "pr_open"
+branch = "codex/cuda-bitnet-perf-002-repeated-strict-ask"
+pr = 4112
+head_sha = "66894fb8de7bc7f3c8bea6147883c7e22615b1f3"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-PROD-004"]
+acceptance = "Add repeated strict ask benchmark receipts for the official Microsoft I2_S model, comparing same-model 9950X3D CPU AVX-512 and RTX 5070 Ti CUDA runs with deterministic policy, fallback_used=false, measured QK256 timing/transfer counters, and speedup_claim=false pending explicit benchmark review."
+commands = [
+  "cargo fmt -p bitnet-bench-receipts -- --check",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "dense CUDA reference lanes",
+  "WGPU, Vulkan, D3D12, OpenCL, Metal, NPU, or SLM runtime work",
+]
+may_claim = [
+  "Repeated strict ask benchmark evidence exists for the exact committed strict_ask_math_8 profile on 9950X3D CPU AVX-512 and RTX 5070 Ti CUDA.",
+  "The repeated receipt records measured QK256 CUDA kernel time and transfer byte counters with fallback_used=false.",
+]
+must_not_claim = [
+  "CUDA speedup is accepted before a later benchmark qualification review upgrades the exact profile.",
+  "Broad chat quality is proven beyond committed deterministic prompts.",
+  "Full CUDA residency for every transformer operation is proven.",
+  "Dense regular-LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
   "Server inference readiness is complete.",
 ]
 

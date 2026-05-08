@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T18:30:35Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-PERF-002"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-bitnet-perf-002-repeated-strict-ask"
+pr = 4112
+head_sha = "66894fb8de7bc7f3c8bea6147883c7e22615b1f3"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4112 for repeated strict ask benchmark receipts on the Windows 9950X3D + RTX 5070 Ti BitNet CUDA lane.",
+  "The PR commits 3 CPU AVX-512 and 3 RTX 5070 Ti CUDA strict ask runs under the same official Microsoft I2_S model, tokenizer authority, prompt template, deterministic policy, and fallback_used=false boundary.",
+  "The repeated benchmark receipt records measured QK256 CUDA kernel time and transfer byte counters while preserving speedup_claim=false and benchmark_qualified_speedup=false.",
+]

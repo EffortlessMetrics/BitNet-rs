@@ -486,6 +486,201 @@ pub fn validate_strict_cuda_answer_path_benchmark_receipt_file(
     validate_strict_cuda_answer_path_benchmark_receipt_json(&receipt)
 }
 
+/// Validate a repeated strict CUDA ask benchmark receipt for the RTX 5070 Ti lane.
+///
+/// This receipt qualifies the single strict ask baseline with repeated
+/// same-model CPU AVX-512 and RTX 5070 Ti CUDA runs. It still records
+/// `speedup_claim=false`; the repeated timing ratio is evidence for later
+/// review, not an accepted broad performance claim.
+pub fn validate_strict_cuda_repeated_ask_benchmark_receipt_json(
+    receipt: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", "strict_cuda_repeated_ask_benchmark")?;
+    require_string_eq(receipt, "machine_id", "windows-9950x3d-rtx5070ti")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia_rtx_5070_ti_cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "claim", "strict_cuda_repeated_ask_benchmark_baseline")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_bool_eq(receipt, "benchmark_qualified_speedup", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+
+    let model = require_object(receipt, "model")?;
+    require_string_eq(model, "repo", "microsoft/bitnet-b1.58-2B-4T-gguf")?;
+    require_string_eq(model, "file", "ggml-model-i2_s.gguf")?;
+    require_non_empty_string(model, "sha256")?;
+    require_string_eq(model, "loader_mode", "strict_real_gguf")?;
+    require_bool_eq(model, "fallback_loader_used", false)?;
+
+    let tokenizer = require_object(receipt, "tokenizer")?;
+    require_string_eq(tokenizer, "source", "explicit")?;
+    require_bool_eq(tokenizer, "strict", true)?;
+    require_string_eq(tokenizer, "pretokenizer_authority", "llama-bpe")?;
+
+    let prompt_template = require_object(receipt, "prompt_template")?;
+    require_string_eq(prompt_template, "family", "bitnetcpp-answer")?;
+    require_non_empty_string(prompt_template, "rendered_sha256")?;
+
+    let workload = require_object(receipt, "workload")?;
+    require_string_eq(workload, "profile", "strict_ask_math_8")?;
+    require_non_empty_string(workload, "question")?;
+    let answer = require_string(workload, "answer")?;
+    if answer.trim() != "4" {
+        return Err(validation_error(format!("workload.answer must trim to 4, got {answer:?}")));
+    }
+    require_u64_at_least(workload, "prompt_tokens", 1)?;
+    require_u64_at_least(workload, "generated_tokens", 1)?;
+    require_bool_eq(workload, "quality_passed", true)?;
+    require_bool_eq(workload, "cpu_cuda_answer_match", true)?;
+    require_bool_eq(workload, "cpu_cuda_generated_ids_match", true)?;
+
+    let repeat_policy = require_object(receipt, "repeat_policy")?;
+    let runs_per_backend = require_u64(repeat_policy, "runs_per_backend")?;
+    if runs_per_backend < 2 {
+        return Err(validation_error(format!(
+            "runs_per_backend must be >= 2, got {runs_per_backend}"
+        )));
+    }
+    require_bool_eq(repeat_policy, "same_model", true)?;
+    require_bool_eq(repeat_policy, "same_tokenizer", true)?;
+    require_bool_eq(repeat_policy, "same_prompt_template", true)?;
+    require_bool_eq(repeat_policy, "same_question", true)?;
+    require_bool_eq(repeat_policy, "same_sampling_policy", true)?;
+    require_bool_eq(repeat_policy, "fallback_free", true)?;
+    require_non_empty_string(repeat_policy, "cold_warm_split")?;
+    require_bool_eq(repeat_policy, "speedup_claim", false)?;
+
+    let benchmark = require_object(receipt, "benchmark")?;
+    require_string_eq(benchmark, "profile", "strict_ask_math_8")?;
+    require_string_eq(benchmark, "cpu_reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(benchmark, "cuda_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_u64_eq(benchmark, "runs_per_backend", runs_per_backend)?;
+    require_non_negative_number(benchmark, "cpu_avx512_median_total_ms")?;
+    require_non_negative_number(benchmark, "cuda_median_total_ms")?;
+    require_non_negative_number(benchmark, "observed_median_cpu_total_ms_div_cuda_total_ms")?;
+    require_bool_eq(benchmark, "cpu_cuda_answer_match", true)?;
+    require_bool_eq(benchmark, "speedup_claim", false)?;
+    require_bool_eq(benchmark, "benchmark_qualified_speedup", false)?;
+
+    let summary = require_object(receipt, "summary")?;
+    validate_repeated_backend_summary(
+        require_object(summary, "cpu_avx512")?,
+        "amd-9950x3d-cpu-avx512",
+        "cpu",
+        runs_per_backend,
+        false,
+    )?;
+    validate_repeated_backend_summary(
+        require_object(summary, "cuda")?,
+        "nvidia-rtx-5070-ti-cuda",
+        "cuda",
+        runs_per_backend,
+        true,
+    )?;
+
+    let runs = require_array(receipt, "runs")?;
+    let mut cpu_runs = 0;
+    let mut cuda_runs = 0;
+    for run in runs {
+        validate_repeated_ask_run(run)?;
+        match require_string(run, "backend")? {
+            "amd-9950x3d-cpu-avx512" => cpu_runs += 1,
+            "nvidia-rtx-5070-ti-cuda" => cuda_runs += 1,
+            other => {
+                return Err(validation_error(format!("unexpected repeated run backend {other}")));
+            }
+        }
+    }
+    if cpu_runs != runs_per_backend || cuda_runs != runs_per_backend {
+        return Err(validation_error(format!(
+            "runs must contain {runs_per_backend} CPU and {runs_per_backend} CUDA entries, got {cpu_runs} CPU and {cuda_runs} CUDA"
+        )));
+    }
+
+    let pair_contracts = require_array(receipt, "pair_contracts")?;
+    if pair_contracts.len() != runs_per_backend as usize {
+        return Err(validation_error(format!(
+            "pair_contracts must contain {runs_per_backend} entries"
+        )));
+    }
+    for pair in pair_contracts {
+        require_u64_at_least(pair, "repeat_index", 1)?;
+        for field in [
+            "same_model",
+            "same_tokenizer",
+            "same_prompt_template",
+            "same_question",
+            "same_sampling_policy",
+            "same_generated_token_ids",
+            "same_answer",
+            "fallback_free",
+        ] {
+            require_bool_eq(pair, field, true)?;
+        }
+    }
+
+    let cuda = require_object(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_u64_at_least(cuda, "device_count", 1)?;
+    require_u64(cuda, "device_index")?;
+    let device_name = require_string(cuda, "device_name")?;
+    if !is_rtx5070ti_device_name(device_name) {
+        return Err(validation_error(format!(
+            "cuda.device_name must identify NVIDIA GeForce RTX 5070 Ti, got {device_name}"
+        )));
+    }
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_non_empty_string(cuda, "driver_version")?;
+    require_non_empty_string(cuda, "cuda_runtime_version")?;
+    require_non_empty_string(cuda, "cuda_toolkit_version")?;
+    require_non_empty_string(cuda, "nvrtc_version")?;
+    require_u64_at_least(cuda, "vram_bytes", 1)?;
+    require_u64_at_least(cuda, "memory_hwm_bytes", 1)?;
+    require_u64_at_least(cuda, "cuda_kernel_invocations", 1)?;
+
+    let stats = receipt
+        .get("kernel_stats")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|items| items.first())
+        .ok_or_else(|| validation_error("kernel_stats must contain at least one entry"))?;
+    require_string_eq(stats, "kernel_id", "qk256_gemv_cuda")?;
+    require_u64_at_least(stats, "invocations", 1)?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+    require_u64_at_least(stats, "kernel_launches", 1)?;
+    require_non_negative_number(stats, "kernel_time_ms")?;
+    require_u64_at_least(stats, "host_to_device_bytes", 1)?;
+    require_u64_at_least(stats, "device_to_host_bytes", 1)?;
+
+    let residency = require_object(receipt, "cuda_execution_residency")?;
+    require_bool_eq(residency, "speedup_claim", false)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+    let transfer = require_object(residency, "host_device_transfer_accounting")?;
+    require_string_eq(transfer, "status", "qk256_measured")?;
+    require_u64_at_least(transfer, "host_to_device_bytes", 1)?;
+    require_u64_at_least(transfer, "device_to_host_bytes", 1)?;
+    require_non_negative_number(transfer, "kernel_time_ms")?;
+
+    let boundaries = require_array(receipt, "claim_boundaries")?;
+    if boundaries.is_empty() {
+        return Err(validation_error("claim_boundaries must not be empty"));
+    }
+
+    Ok(())
+}
+
+/// Validate a repeated strict CUDA ask benchmark receipt file.
+pub fn validate_strict_cuda_repeated_ask_benchmark_receipt_file(
+    path: &Path,
+) -> Result<(), ReceiptError> {
+    let receipt = serde_json::from_slice(&std::fs::read(path)?)?;
+    validate_strict_cuda_repeated_ask_benchmark_receipt_json(&receipt)
+}
+
 /// Validate a strict CPU BitNet benchmark receipt.
 ///
 /// This validator checks the benchmark evidence contract, not performance
@@ -715,6 +910,108 @@ fn validate_answer_path_profile(
             )));
         }
     }
+    Ok(())
+}
+
+fn validate_repeated_backend_summary(
+    summary: &serde_json::Value,
+    expected_backend: &str,
+    expected_runtime_api: &str,
+    expected_runs: u64,
+    cuda: bool,
+) -> Result<(), ReceiptError> {
+    require_string_eq(summary, "backend", expected_backend)?;
+    require_string_eq(summary, "runtime_api", expected_runtime_api)?;
+    require_u64_eq(summary, "runs", expected_runs)?;
+    require_bool_eq(summary, "quality_passed", true)?;
+    require_bool_eq(summary, "fallback_used", false)?;
+    validate_metric_summary(require_object(summary, "total_ms")?, expected_runs)?;
+    validate_metric_summary(require_object(summary, "first_token_ms")?, expected_runs)?;
+    validate_metric_summary(require_object(summary, "decode_total_ms")?, expected_runs)?;
+    validate_metric_summary(require_object(summary, "tokens_per_second")?, expected_runs)?;
+    if cuda {
+        validate_metric_summary(require_object(summary, "kernel_time_ms")?, expected_runs)?;
+        validate_u64_summary(require_object(summary, "host_to_device_bytes")?, expected_runs)?;
+        validate_u64_summary(require_object(summary, "device_to_host_bytes")?, expected_runs)?;
+    }
+    Ok(())
+}
+
+fn validate_metric_summary(
+    summary: &serde_json::Value,
+    expected_samples: u64,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(summary, "samples", expected_samples)?;
+    require_non_negative_number(summary, "min")?;
+    require_non_negative_number(summary, "max")?;
+    require_non_negative_number(summary, "mean")?;
+    require_non_negative_number(summary, "median")?;
+    let min = summary["min"].as_f64().unwrap_or(0.0);
+    let max = summary["max"].as_f64().unwrap_or(0.0);
+    if max < min {
+        return Err(validation_error(format!("metric summary max {max} is less than min {min}")));
+    }
+    Ok(())
+}
+
+fn validate_u64_summary(
+    summary: &serde_json::Value,
+    expected_samples: u64,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(summary, "samples", expected_samples)?;
+    let min = require_u64(summary, "min")?;
+    let max = require_u64(summary, "max")?;
+    require_non_negative_number(summary, "mean")?;
+    require_non_negative_number(summary, "median")?;
+    if max < min {
+        return Err(validation_error(format!("u64 summary max {max} is less than min {min}")));
+    }
+    Ok(())
+}
+
+fn validate_repeated_ask_run(run: &serde_json::Value) -> Result<(), ReceiptError> {
+    require_string_eq(run, "profile", "strict_ask_math_8")?;
+    let backend = require_string(run, "backend")?;
+    let runtime_api = require_string(run, "runtime_api")?;
+    match backend {
+        "amd-9950x3d-cpu-avx512" => {
+            if runtime_api != "cpu" {
+                return Err(validation_error("CPU repeated run runtime_api must be cpu"));
+            }
+        }
+        "nvidia-rtx-5070-ti-cuda" => {
+            if runtime_api != "cuda" {
+                return Err(validation_error("CUDA repeated run runtime_api must be cuda"));
+            }
+            require_string_eq(run, "kernel_id", "qk256_gemv_cuda")?;
+            require_u64_at_least(run, "kernel_invocations", 1)?;
+            require_non_negative_number(run, "kernel_time_ms")?;
+            require_u64_at_least(run, "host_to_device_bytes", 1)?;
+            require_u64_at_least(run, "device_to_host_bytes", 1)?;
+        }
+        other => return Err(validation_error(format!("unexpected repeated run backend {other}"))),
+    }
+    require_string_eq(run, "status", "measured")?;
+    require_u64_at_least(run, "repeat_index", 1)?;
+    require_non_empty_string(run, "source_receipt_path")?;
+    require_non_empty_string(run, "selected_backend")?;
+    require_non_empty_string(run, "kernel_id")?;
+    require_non_negative_number(run, "total_ms")?;
+    require_non_negative_number(run, "first_token_ms")?;
+    require_non_negative_number(run, "decode_total_ms")?;
+    require_non_negative_number(run, "tokens_per_second")?;
+    require_u64_at_least(run, "prompt_tokens", 1)?;
+    require_u64_at_least(run, "generated_tokens", 1)?;
+    let answer = require_string(run, "answer_trimmed")?;
+    if answer != "4" {
+        return Err(validation_error(format!("answer_trimmed must be 4, got {answer:?}")));
+    }
+    let generated_ids = require_array(run, "generated_token_ids")?;
+    if generated_ids.is_empty() {
+        return Err(validation_error("generated_token_ids must not be empty"));
+    }
+    require_bool_eq(run, "quality_passed", true)?;
+    require_bool_eq(run, "fallback_used", false)?;
     Ok(())
 }
 
@@ -1265,6 +1562,42 @@ mod tests {
         validate_strict_cuda_answer_path_benchmark_receipt_file(&path).unwrap();
     }
 
+    #[test]
+    fn strict_cuda_repeated_ask_benchmark_receipt_validates() {
+        let receipt = sample_strict_cuda_repeated_ask_benchmark_receipt();
+        validate_strict_cuda_repeated_ask_benchmark_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cuda_repeated_ask_benchmark_rejects_single_run() {
+        let mut receipt = sample_strict_cuda_repeated_ask_benchmark_receipt();
+        receipt["repeat_policy"]["runs_per_backend"] = json!(1);
+
+        let err = validate_strict_cuda_repeated_ask_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("runs_per_backend"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_repeated_ask_benchmark_rejects_unmeasured_transfer_bytes() {
+        let mut receipt = sample_strict_cuda_repeated_ask_benchmark_receipt();
+        receipt["kernel_stats"][0]["host_to_device_bytes"] = json!(0);
+
+        let err = validate_strict_cuda_repeated_ask_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("host_to_device_bytes"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn committed_strict_cuda_repeated_ask_benchmark_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-002-repeated-strict-ask.json",
+        );
+        validate_strict_cuda_repeated_ask_benchmark_receipt_file(&path).unwrap();
+    }
+
     fn sample_cpu_benchmark_receipt() -> serde_json::Value {
         json!({
             "schema": 1,
@@ -1321,6 +1654,224 @@ mod tests {
                 measured_cpu_profile("decode")
             ],
             "artifact_path": "ci/hardware/intel-i5-8250u-cpu-avx2/benchmark-receipt.json"
+        })
+    }
+
+    fn sample_strict_cuda_repeated_ask_benchmark_receipt() -> serde_json::Value {
+        json!({
+            "schema": 1,
+            "artifact_kind": "strict_cuda_repeated_ask_benchmark",
+            "machine_id": "windows-9950x3d-rtx5070ti",
+            "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+            "timestamp_utc": "2026-05-08T00:00:00Z",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "reference_backend": "amd-9950x3d-cpu-avx512",
+            "runtime_api": "cuda",
+            "claim": "strict_cuda_repeated_ask_benchmark_baseline",
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "fallback_used": false,
+            "fallback_backend": null,
+            "fallback_reason": null,
+            "model": {
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "file": "ggml-model-i2_s.gguf",
+                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "format": "gguf",
+                "architecture": "bitnet_b1_58",
+                "loader_mode": "strict_real_gguf",
+                "fallback_loader_used": false
+            },
+            "tokenizer": {
+                "source": "explicit",
+                "strict": true,
+                "type": "llama3",
+                "pretokenizer_authority": "llama-bpe"
+            },
+            "prompt_template": {
+                "family": "bitnetcpp-answer",
+                "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3"
+            },
+            "workload": {
+                "profile": "strict_ask_math_8",
+                "question": "What is 2+2? Answer with only the number.",
+                "answer": " 4",
+                "prompt_tokens": 19,
+                "generated_tokens": 3,
+                "quality_passed": true,
+                "cpu_cuda_answer_match": true,
+                "cpu_cuda_generated_ids_match": true
+            },
+            "repeat_policy": {
+                "runs_per_backend": 2,
+                "cold_warm_split": "process-level repeated strict ask; each run reloads the model and reinitializes backend state",
+                "same_model": true,
+                "same_tokenizer": true,
+                "same_prompt_template": true,
+                "same_question": true,
+                "same_sampling_policy": true,
+                "fallback_free": true,
+                "speedup_claim": false
+            },
+            "benchmark": {
+                "profile": "strict_ask_math_8",
+                "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+                "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+                "runs_per_backend": 2,
+                "cpu_avx512_median_total_ms": 19450.0,
+                "cuda_median_total_ms": 1830.0,
+                "observed_median_cpu_total_ms_div_cuda_total_ms": 10.6284,
+                "cpu_cuda_answer_match": true,
+                "speedup_claim": false,
+                "benchmark_qualified_speedup": false
+            },
+            "summary": {
+                "cpu_avx512": repeated_backend_summary("amd-9950x3d-cpu-avx512", "cpu", false),
+                "cuda": repeated_backend_summary("nvidia-rtx-5070-ti-cuda", "cuda", true)
+            },
+            "runs": [
+                repeated_run(1, "amd-9950x3d-cpu-avx512", "cpu", "i2_s-avx512-reference"),
+                repeated_run(2, "amd-9950x3d-cpu-avx512", "cpu", "i2_s-avx512-reference"),
+                repeated_run(1, "nvidia-rtx-5070-ti-cuda", "cuda", "qk256_gemv_cuda"),
+                repeated_run(2, "nvidia-rtx-5070-ti-cuda", "cuda", "qk256_gemv_cuda")
+            ],
+            "pair_contracts": [
+                repeated_pair_contract(1),
+                repeated_pair_contract(2)
+            ],
+            "cuda": {
+                "available": true,
+                "device_count": 1,
+                "device_index": 0,
+                "device_name": "NVIDIA GeForce RTX 5070 Ti",
+                "compute_capability": "12.0",
+                "driver_version": "591.86",
+                "cuda_runtime_version": "12.9",
+                "cuda_toolkit_version": "12.9",
+                "nvrtc_version": "12.9",
+                "vram_bytes": 17094475776u64,
+                "memory_hwm_bytes": 9201254400u64,
+                "cuda_kernel_invocations": 8820
+            },
+            "kernel_stats": [
+                {
+                    "kernel_id": "qk256_gemv_cuda",
+                    "invocations": 8820,
+                    "fallback_invocations": 0,
+                    "kernel_launches": 8820,
+                    "kernel_time_ms": 12.5,
+                    "host_to_device_bytes": 8192,
+                    "device_to_host_bytes": 4096
+                }
+            ],
+            "cuda_execution_residency": {
+                "schema_version": "1.0.0",
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false,
+                "host_device_transfer_accounting": {
+                    "status": "qk256_measured",
+                    "host_to_device_bytes": 8192,
+                    "device_to_host_bytes": 4096,
+                    "kernel_time_ms": 12.5
+                }
+            },
+            "claim_boundaries": [
+                "speedup_claim=false; repeated strict ask timing remains baseline evidence only.",
+                "This receipt does not claim broad chat quality, production server readiness, or full CUDA residency."
+            ],
+            "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-002-repeated-strict-ask.json"
+        })
+    }
+
+    fn repeated_backend_summary(backend: &str, runtime_api: &str, cuda: bool) -> serde_json::Value {
+        let mut summary = json!({
+            "backend": backend,
+            "runtime_api": runtime_api,
+            "runs": 2,
+            "quality_passed": true,
+            "fallback_used": false,
+            "total_ms": repeated_metric_summary(),
+            "first_token_ms": repeated_metric_summary(),
+            "decode_total_ms": repeated_metric_summary(),
+            "tokens_per_second": repeated_metric_summary()
+        });
+        if cuda {
+            let object = summary.as_object_mut().expect("summary object");
+            object.insert("kernel_time_ms".to_string(), repeated_metric_summary());
+            object.insert("host_to_device_bytes".to_string(), repeated_u64_summary());
+            object.insert("device_to_host_bytes".to_string(), repeated_u64_summary());
+        }
+        summary
+    }
+
+    fn repeated_metric_summary() -> serde_json::Value {
+        json!({
+            "samples": 2,
+            "min": 1.0,
+            "max": 2.0,
+            "mean": 1.5,
+            "median": 1.5
+        })
+    }
+
+    fn repeated_u64_summary() -> serde_json::Value {
+        json!({
+            "samples": 2,
+            "min": 4096,
+            "max": 8192,
+            "mean": 6144.0,
+            "median": 6144.0
+        })
+    }
+
+    fn repeated_run(
+        index: u64,
+        backend: &str,
+        runtime_api: &str,
+        kernel_id: &str,
+    ) -> serde_json::Value {
+        let mut run = json!({
+            "profile": "strict_ask_math_8",
+            "backend": backend,
+            "runtime_api": runtime_api,
+            "status": "measured",
+            "repeat_index": index,
+            "source_receipt_path": format!("target/bitnet/receipts/cuda-bitnet-perf-002/{runtime_api}-{index}.json"),
+            "selected_backend": if runtime_api == "cuda" { "nvidia-rtx-5070-ti-cuda" } else { "cpu-rust" },
+            "kernel_id": kernel_id,
+            "total_ms": 1.0 + index as f64,
+            "first_token_ms": 1.0 + index as f64,
+            "decode_total_ms": 1.0,
+            "tokens_per_second": 1.0,
+            "prompt_tokens": 19,
+            "generated_tokens": 3,
+            "answer_trimmed": "4",
+            "generated_token_ids": [220, 19, 128009],
+            "quality_passed": true,
+            "fallback_used": false
+        });
+        if runtime_api == "cuda" {
+            let object = run.as_object_mut().expect("run object");
+            object.insert("kernel_invocations".to_string(), json!(4410));
+            object.insert("kernel_time_ms".to_string(), json!(6.25));
+            object.insert("host_to_device_bytes".to_string(), json!(4096));
+            object.insert("device_to_host_bytes".to_string(), json!(2048));
+        }
+        run
+    }
+
+    fn repeated_pair_contract(index: u64) -> serde_json::Value {
+        json!({
+            "repeat_index": index,
+            "same_model": true,
+            "same_tokenizer": true,
+            "same_prompt_template": true,
+            "same_question": true,
+            "same_sampling_policy": true,
+            "same_generated_token_ids": true,
+            "same_answer": true,
+            "fallback_free": true
         })
     }
 
