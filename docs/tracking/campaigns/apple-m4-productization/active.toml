@@ -157,8 +157,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-PROD-004"
-status = "pr_open"
+status = "merged"
 pr = 4029
+merge_sha = "97dbcecf6f8095fb7d1f01fa83088c238675a7ec"
 branch = "codex/apple-m4-productization/M4-PROD-004-warm-speed-polish"
 stackable = false
 review_mode = "codex_premerge"
@@ -199,7 +200,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-PROD-005"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-productization/M4-PROD-005-metal-phase"
 stackable = false
 review_mode = "codex_premerge"
