@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T10:55:23Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-005"
+event = "merged"
+pr = 4034
+merge_sha = "b7782f2c98f874d13a08bd9dfac9d5efc91d3dd8"
+actor = "codex"
+
+notes = [
+  "M4-PROD-005 Apple Metal dense prefill linear phase proof merged.",
+  "The merged proof records Metal only as a named phase contribution with CPU/NEON remaining pipeline visibility and no full Metal inference, Neural Engine, MPSGraph, QK256, BitNet quality, or broad performance claim.",
+]

@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T10:55:24Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-005"
+event = "closeout"
+pr = 4034
+merge_sha = "b7782f2c98f874d13a08bd9dfac9d5efc91d3dd8"
+actor = "codex"
+
+notes = [
+  "Closed the Apple M4 productization campaign after M4-PROD-001 through M4-PROD-005 merged.",
+  "The productized Mac path now covers documented CPU/NEON SLM answers, model cache management, Mac CLI wrappers, warm-session timing, and the first parity-gated Metal phase contribution.",
+]
