@@ -22,6 +22,10 @@ static BITNET_LINEAR_TOTAL: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_ON_CUDA: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_CPU_FALLBACK: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_UNSUPPORTED: AtomicU64 = AtomicU64::new(0);
+static CUDA_QK256_HOST_TO_DEVICE_BYTES: AtomicU64 = AtomicU64::new(0);
+static CUDA_QK256_DEVICE_TO_HOST_BYTES: AtomicU64 = AtomicU64::new(0);
+static CUDA_QK256_KERNEL_TIME_MICROS: AtomicU64 = AtomicU64::new(0);
+static CUDA_QK256_KERNEL_TIME_SAMPLES: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(feature = "cuda")]
 thread_local! {
@@ -52,6 +56,19 @@ pub struct Qk256CudaWeightResidency {
     pub weights_uploaded_once: bool,
     /// True if the CUDA context recorded any per-token weight upload.
     pub per_token_weight_upload: bool,
+}
+
+/// Aggregate CUDA QK256 runtime counters for receipt timing and transfer accounting.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Qk256CudaRuntimeStats {
+    /// Host-to-device activation bytes copied for QK256 CUDA GEMV calls.
+    pub host_to_device_bytes: u64,
+    /// Device-to-host output bytes copied for QK256 CUDA GEMV calls.
+    pub device_to_host_bytes: u64,
+    /// Aggregate measured CUDA event time for QK256 kernel launches, in milliseconds.
+    pub kernel_time_ms: Option<f64>,
+    /// Number of kernel launches with a measured CUDA event time.
+    pub kernel_time_samples: u64,
 }
 
 /// Snapshot the current QK256 dispatch coverage counters.
@@ -91,12 +108,28 @@ pub fn reset_qk256_dispatch_coverage() {
     BITNET_LINEAR_ON_CUDA.store(0, Ordering::Relaxed);
     BITNET_LINEAR_CPU_FALLBACK.store(0, Ordering::Relaxed);
     BITNET_LINEAR_UNSUPPORTED.store(0, Ordering::Relaxed);
+    CUDA_QK256_HOST_TO_DEVICE_BYTES.store(0, Ordering::Relaxed);
+    CUDA_QK256_DEVICE_TO_HOST_BYTES.store(0, Ordering::Relaxed);
+    CUDA_QK256_KERNEL_TIME_MICROS.store(0, Ordering::Relaxed);
+    CUDA_QK256_KERNEL_TIME_SAMPLES.store(0, Ordering::Relaxed);
     reset_cuda_qk256_context();
 }
 
 /// Snapshot CUDA QK256 weight residency for the current thread-local proof run.
 pub fn qk256_cuda_weight_residency() -> Option<Qk256CudaWeightResidency> {
     cuda_qk256_weight_residency()
+}
+
+/// Snapshot CUDA QK256 timing and transfer counters for the current process.
+pub fn qk256_cuda_runtime_stats() -> Qk256CudaRuntimeStats {
+    let samples = CUDA_QK256_KERNEL_TIME_SAMPLES.load(Ordering::Relaxed);
+    let kernel_time_micros = CUDA_QK256_KERNEL_TIME_MICROS.load(Ordering::Relaxed);
+    Qk256CudaRuntimeStats {
+        host_to_device_bytes: CUDA_QK256_HOST_TO_DEVICE_BYTES.load(Ordering::Relaxed),
+        device_to_host_bytes: CUDA_QK256_DEVICE_TO_HOST_BYTES.load(Ordering::Relaxed),
+        kernel_time_ms: (samples > 0).then(|| kernel_time_micros as f64 / 1000.0),
+        kernel_time_samples: samples,
+    }
 }
 
 /// Record a BitNet linear CPU fallback outside the QK256 raw-tensor path.
@@ -281,9 +314,13 @@ fn forward_qk256_cuda(
         };
         let mut stats =
             bitnet_kernels::cuda::CudaBitnetKernelInvocationStats::new(CUDA_QK256_GEMV_KERNEL_ID);
-        context
+        let result = context
             .qk256_gemv(&handle, &input_flat, &mut output_flat, seq_len, inline_scale, &mut stats)
-            .map_err(BitNetError::from)
+            .map_err(BitNetError::from);
+        if result.is_ok() {
+            record_cuda_qk256_runtime_stats(&stats);
+        }
+        result
     })?;
 
     tensor_from_flat_output(output_flat, &prepared.shape, &prepared.layout, input)
@@ -436,6 +473,17 @@ fn tensor_from_flat_output(
     };
 
     Ok(output_tensor)
+}
+
+#[cfg(feature = "cuda")]
+fn record_cuda_qk256_runtime_stats(stats: &bitnet_kernels::cuda::CudaBitnetKernelInvocationStats) {
+    CUDA_QK256_HOST_TO_DEVICE_BYTES.fetch_add(stats.host_to_device_bytes, Ordering::Relaxed);
+    CUDA_QK256_DEVICE_TO_HOST_BYTES.fetch_add(stats.device_to_host_bytes, Ordering::Relaxed);
+    if let Some(kernel_time_ms) = stats.kernel_time_ms {
+        let micros = (kernel_time_ms.max(0.0) * 1000.0).round() as u64;
+        CUDA_QK256_KERNEL_TIME_MICROS.fetch_add(micros, Ordering::Relaxed);
+        CUDA_QK256_KERNEL_TIME_SAMPLES.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 fn backend_env_matches(name: &str) -> bool {

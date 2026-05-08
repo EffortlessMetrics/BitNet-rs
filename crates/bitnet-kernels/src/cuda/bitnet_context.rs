@@ -21,7 +21,8 @@ use super::quantized_matmul::{I2S_MATMUL_KERNEL_SRC, I2sMatmulConfig};
 #[cfg(feature = "cuda")]
 use cudarc::driver::{
     CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, LaunchConfig, PushKernelArg,
-    result::device as cu_device, sys::CUdevice_attribute,
+    result::device as cu_device,
+    sys::{self, CUdevice_attribute},
 };
 #[cfg(feature = "cuda")]
 use cudarc::nvrtc::{Ptx, compile_ptx};
@@ -429,6 +430,7 @@ impl CudaBitnetKernelInvocationStats {
         &mut self,
         host_to_device_bytes: u64,
         device_to_host_bytes: u64,
+        kernel_time_ms: Option<f64>,
         weights_uploaded_once: bool,
         per_token_weight_upload: bool,
     ) {
@@ -437,6 +439,10 @@ impl CudaBitnetKernelInvocationStats {
         self.kernel_launches += 1;
         self.host_to_device_bytes += host_to_device_bytes;
         self.device_to_host_bytes += device_to_host_bytes;
+        if let Some(kernel_time_ms) = kernel_time_ms {
+            self.kernel_time_ms =
+                Some(self.kernel_time_ms.unwrap_or(0.0) + kernel_time_ms.max(0.0));
+        }
         self.weights_uploaded_once = weights_uploaded_once;
         self.per_token_weight_upload = per_token_weight_upload;
     }
@@ -969,7 +975,7 @@ impl CudaBitnetContext {
         activation: &[f32],
         output: &mut [f32],
         config: &Qk256GemvConfig,
-    ) -> Result<()> {
+    ) -> Result<Option<f64>> {
         self.ensure_qk256_gemv_function()?;
 
         let stream = self.stream.as_ref().ok_or_else(|| KernelError::DeviceUnavailable {
@@ -1033,9 +1039,25 @@ impl CudaBitnetContext {
         builder.arg(&bitnet_i8s_weight_scale_arg);
         builder.arg(&use_bitnet_i8s_arg);
 
+        let start_event =
+            stream.record_event(Some(sys::CUevent_flags::CU_EVENT_DEFAULT)).map_err(|err| {
+                KernelError::GpuError {
+                    reason: format!("failed to record CUDA QK256 GEMV start event: {err:?}"),
+                }
+            })?;
         unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
             reason: format!("failed to launch CUDA QK256 GEMV kernel: {err:?}"),
         })?;
+        let end_event =
+            stream.record_event(Some(sys::CUevent_flags::CU_EVENT_DEFAULT)).map_err(|err| {
+                KernelError::GpuError {
+                    reason: format!("failed to record CUDA QK256 GEMV end event: {err:?}"),
+                }
+            })?;
+        let kernel_time_ms =
+            f64::from(start_event.elapsed_ms(&end_event).map_err(|err| KernelError::GpuError {
+                reason: format!("failed to measure CUDA QK256 GEMV event time: {err:?}"),
+            })?);
         stream.synchronize().map_err(|err| KernelError::GpuError {
             reason: format!("failed to synchronize CUDA QK256 GEMV kernel: {err:?}"),
         })?;
@@ -1045,7 +1067,7 @@ impl CudaBitnetContext {
                 reason: format!("failed to copy CUDA QK256 GEMV output to host: {err:?}"),
             })?;
         output[..output_len].copy_from_slice(&output_host[..output_len]);
-        Ok(())
+        Ok(Some(kernel_time_ms))
     }
 }
 
@@ -1248,7 +1270,12 @@ impl CudaBitnetLinearBackend for CudaBitnetContext {
         {
             let mut config = Qk256GemvConfig::for_shape(seq_len, output_features, input_features)?;
             config.bitnet_i8s_weight_scale = bitnet_i8s_weight_scale;
-            self.launch_qk256_gemv_cuda(weights, &activation[..activation_len], output, &config)?;
+            let kernel_time_ms = self.launch_qk256_gemv_cuda(
+                weights,
+                &activation[..activation_len],
+                output,
+                &config,
+            )?;
             stats.record_qk256_gemv(
                 u64::try_from(activation_bytes).map_err(|_| KernelError::InvalidArguments {
                     reason: "QK256 activation byte count exceeds receipt counter range".to_string(),
@@ -1256,6 +1283,7 @@ impl CudaBitnetLinearBackend for CudaBitnetContext {
                 u64::try_from(output_bytes).map_err(|_| KernelError::InvalidArguments {
                     reason: "QK256 output byte count exceeds receipt counter range".to_string(),
                 })?,
+                kernel_time_ms,
                 weights.uploaded_once,
                 self.stats.per_token_weight_uploads > 0,
             );
@@ -1822,6 +1850,25 @@ mod tests {
         assert!(!fields.per_token_weight_upload);
         assert!(fields.activation_workspace_reused);
         assert!(!fields.full_inference_claim);
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn qk256_invocation_stats_accumulate_transfer_bytes_and_event_time() {
+        let mut stats = CudaBitnetKernelInvocationStats::new(CUDA_QK256_GEMV_KERNEL_ID);
+
+        stats.record_qk256_gemv(1024, 512, Some(0.25), true, false);
+        stats.record_qk256_gemv(2048, 1024, Some(0.5), true, false);
+
+        assert_eq!(stats.kernel_id, CUDA_QK256_GEMV_KERNEL_ID);
+        assert_eq!(stats.invocations, 2);
+        assert_eq!(stats.kernel_launches, 2);
+        assert_eq!(stats.fallback_invocations, 0);
+        assert_eq!(stats.host_to_device_bytes, 3072);
+        assert_eq!(stats.device_to_host_bytes, 1536);
+        assert_eq!(stats.kernel_time_ms, Some(0.75));
+        assert!(stats.weights_uploaded_once);
+        assert!(!stats.per_token_weight_upload);
     }
 
     #[cfg(not(feature = "cuda"))]
