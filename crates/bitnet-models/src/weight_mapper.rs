@@ -297,6 +297,10 @@ fn map_tensor_name(name: &str) -> Option<String> {
                 "attn_k.weight" => "attention.k_proj.weight",
                 "attn_v.weight" => "attention.v_proj.weight",
                 "attn_output.weight" | "attn_o.weight" => "attention.o_proj.weight",
+                "attn_q.bias" => "attention.q_proj.bias",
+                "attn_k.bias" => "attention.k_proj.bias",
+                "attn_v.bias" => "attention.v_proj.bias",
+                "attn_output.bias" | "attn_o.bias" => "attention.o_proj.bias",
 
                 // Attention normalization - use attention_norm prefix
                 "attn_norm.weight" => "attention_norm.weight",
@@ -333,6 +337,10 @@ fn map_tensor_name(name: &str) -> Option<String> {
                 "attention.wk.weight" | "self_attn.k_proj.weight" => "attention.k_proj.weight",
                 "attention.wv.weight" | "self_attn.v_proj.weight" => "attention.v_proj.weight",
                 "attention.wo.weight" | "self_attn.o_proj.weight" => "attention.o_proj.weight",
+                "attention.wq.bias" | "self_attn.q_proj.bias" => "attention.q_proj.bias",
+                "attention.wk.bias" | "self_attn.k_proj.bias" => "attention.k_proj.bias",
+                "attention.wv.bias" | "self_attn.v_proj.bias" => "attention.v_proj.bias",
+                "attention.wo.bias" | "self_attn.o_proj.bias" => "attention.o_proj.bias",
 
                 // Normalization - map to expected names
                 "attention_norm.weight" | "input_layernorm.weight" => "attention_norm.weight",
@@ -975,6 +983,10 @@ fn llama_family_rules() -> Vec<MappingRule> {
         rule("model.layers.{n}.self_attn.k_proj.weight", "blk.{n}.attn_k.weight"),
         rule("model.layers.{n}.self_attn.v_proj.weight", "blk.{n}.attn_v.weight"),
         rule("model.layers.{n}.self_attn.o_proj.weight", "blk.{n}.attn_output.weight"),
+        rule("model.layers.{n}.self_attn.q_proj.bias", "blk.{n}.attn_q.bias"),
+        rule("model.layers.{n}.self_attn.k_proj.bias", "blk.{n}.attn_k.bias"),
+        rule("model.layers.{n}.self_attn.v_proj.bias", "blk.{n}.attn_v.bias"),
+        rule("model.layers.{n}.self_attn.o_proj.bias", "blk.{n}.attn_output.bias"),
         rule("model.layers.{n}.mlp.gate_proj.weight", "blk.{n}.ffn_gate.weight"),
         rule("model.layers.{n}.mlp.up_proj.weight", "blk.{n}.ffn_up.weight"),
         rule("model.layers.{n}.mlp.down_proj.weight", "blk.{n}.ffn_down.weight"),
@@ -1166,6 +1178,26 @@ mod tests {
         assert_eq!(
             normalize_vendor_key("layers.3.post_attention_layernorm.weight").as_deref(),
             Some("layers.3.post_attention_layernorm.weight")
+        );
+    }
+
+    #[test]
+    fn maps_qwen_attention_bias_variants() {
+        assert_eq!(
+            map_tensor_name("blk.0.attn_q.bias").as_deref(),
+            Some("layers.0.attention.q_proj.bias")
+        );
+        assert_eq!(
+            map_tensor_name("blk.0.attn_k.bias").as_deref(),
+            Some("layers.0.attention.k_proj.bias")
+        );
+        assert_eq!(
+            map_tensor_name("blk.0.attn_v.bias").as_deref(),
+            Some("layers.0.attention.v_proj.bias")
+        );
+        assert_eq!(
+            map_tensor_name("model.layers.0.self_attn.q_proj.bias").as_deref(),
+            Some("layers.0.attention.q_proj.bias")
         );
     }
 
@@ -1473,8 +1505,9 @@ mod tests {
         let m = WeightMapper::for_architecture(ModelArchitecture::Phi);
         let num_layers = 32;
         let (hf, internal) = m.all_names(num_layers);
-        // 9 per-layer rules × 32 layers + 3 global (embed + norm + lm_head) = 291
-        let expected = 9 * num_layers + 3;
+        // 13 per-layer rules × 32 layers + 3 global (embed + norm + lm_head) = 419.
+        // Qwen-style attention biases are part of the shared LLaMA-family map.
+        let expected = 13 * num_layers + 3;
         assert_eq!(hf.len(), expected, "HF names count");
         assert_eq!(internal.len(), expected, "internal names count");
     }

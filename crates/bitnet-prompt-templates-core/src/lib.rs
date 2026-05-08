@@ -72,6 +72,37 @@ fn render_chatml(sys: &str, history: &[ChatTurn]) -> String {
     out
 }
 
+/// Build a Qwen 2.5 ChatML prompt. Qwen 2.5 reference runners leave the
+/// assistant generation marker without a trailing newline.
+fn apply_qwen25_chatml(system: &str, user_text: &str) -> String {
+    let mut result = String::new();
+    result.push_str("<|im_start|>system\n");
+    result.push_str(system);
+    result.push_str("<|im_end|>\n");
+    result.push_str("<|im_start|>user\n");
+    result.push_str(user_text);
+    result.push_str("<|im_end|>\n");
+    result.push_str("<|im_start|>assistant");
+    result
+}
+
+/// Render a multi-turn Qwen 2.5 chat conversation in ChatML format.
+fn render_qwen25_chatml(sys: &str, history: &[ChatTurn]) -> String {
+    let mut out = String::new();
+    out.push_str("<|im_start|>system\n");
+    out.push_str(sys);
+    out.push_str("<|im_end|>\n");
+    for turn in history {
+        out.push_str("<|im_start|>");
+        out.push_str(turn.role.as_str());
+        out.push('\n');
+        out.push_str(&turn.text);
+        out.push_str("<|im_end|>\n");
+    }
+    out.push_str("<|im_start|>assistant");
+    out
+}
+
 /// Common stop sequences for ChatML variants using `<|im_end|>` / `<|im_start|>` tokens.
 const CHATML_STOP_SEQUENCES: &[&str] = &["<|im_end|>", "<|im_start|>"];
 
@@ -1887,7 +1918,7 @@ impl TemplateType {
     fn apply_qwen25_chat(user_text: &str, system_prompt: Option<&str>) -> String {
         let system = system_prompt
             .unwrap_or("You are Qwen, created by Alibaba Cloud. You are a helpful assistant.");
-        apply_chatml(system, user_text)
+        apply_qwen25_chatml(system, user_text)
     }
 
     /// Apply Mistral Nemo [INST] format (same structure as Mistral, no <s> prefix)
@@ -2982,7 +3013,7 @@ impl TemplateType {
                 let sys = system.unwrap_or(
                     "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.",
                 );
-                out = render_chatml(sys, history);
+                out = render_qwen25_chatml(sys, history);
             }
             TemplateType::MistralNemoChat => {
                 // Mistral Nemo uses same [INST] format as Mistral
@@ -5890,7 +5921,7 @@ mod detect_logging_tests {
         assert!(result.contains("You are Qwen, created by Alibaba Cloud."));
         assert!(result.contains("<|im_end|>"));
         assert!(result.contains("<|im_start|>user\nHello!"));
-        assert!(result.ends_with("<|im_start|>assistant\n"));
+        assert!(result.ends_with("<|im_start|>assistant"));
 
         // With custom system prompt
         let result = t.apply("Hello!", Some("You are a math tutor."));
@@ -5919,7 +5950,7 @@ mod detect_logging_tests {
         assert!(s.contains("<|im_start|>system\nBe helpful.<|im_end|>"));
         assert!(s.contains("<|im_start|>user\nHello<|im_end|>"));
         assert!(s.contains("<|im_start|>assistant\nHi!<|im_end|>"));
-        assert!(s.ends_with("<|im_start|>assistant\n"));
+        assert!(s.ends_with("<|im_start|>assistant"));
     }
 
     #[test]

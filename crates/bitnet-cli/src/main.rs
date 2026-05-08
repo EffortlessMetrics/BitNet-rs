@@ -2218,6 +2218,177 @@ fn greedy_top1_token_id(logits: &[f32]) -> Option<u32> {
         .map(|(token_id, _)| token_id as u32)
 }
 
+fn qwen_trace_path() -> Option<std::path::PathBuf> {
+    std::env::var("BITNET_QWEN_TRACE_JSONL")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .map(std::path::PathBuf::from)
+}
+
+fn qwen_trace_enabled() -> bool {
+    qwen_trace_path().is_some() || std::env::var("BITNET_QWEN_TRACE").as_deref() == Ok("1")
+}
+
+fn qwen_trace_reset_file() -> Result<()> {
+    let Some(path) = qwen_trace_path() else {
+        return Ok(());
+    };
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create {}", parent.display()))?;
+    }
+    std::fs::write(&path, b"")
+        .with_context(|| format!("Failed to reset Qwen trace {}", path.display()))?;
+    Ok(())
+}
+
+fn qwen_trace_write(value: serde_json::Value) -> Result<()> {
+    if !qwen_trace_enabled() {
+        return Ok(());
+    }
+    let line = serde_json::to_string(&value)?;
+    if let Some(path) = qwen_trace_path() {
+        use std::io::Write as _;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .with_context(|| format!("Failed to open Qwen trace {}", path.display()))?;
+        writeln!(file, "{line}")
+            .with_context(|| format!("Failed to append Qwen trace {}", path.display()))?;
+    } else {
+        eprintln!("{line}");
+    }
+    Ok(())
+}
+
+fn qwen_trace_number(value: f64) -> serde_json::Value {
+    if value.is_finite() { serde_json::json!(value) } else { serde_json::Value::Null }
+}
+
+fn qwen_trace_tensor(
+    stage: &str,
+    step: Option<usize>,
+    tensor: &bitnet_common::ConcreteTensor,
+) -> Result<()> {
+    if !qwen_trace_enabled() {
+        return Ok(());
+    }
+    let values = tensor_to_vec(tensor)?;
+    let mut finite_count = 0usize;
+    let mut nonfinite_count = 0usize;
+    let mut sum = 0.0f64;
+    let mut sum_sq = 0.0f64;
+    let mut min = f64::INFINITY;
+    let mut max = f64::NEG_INFINITY;
+    let mut checksum = 0.0f64;
+    for (idx, value) in values.iter().enumerate() {
+        let value = *value as f64;
+        if value.is_finite() {
+            finite_count += 1;
+            sum += value;
+            sum_sq += value * value;
+            min = min.min(value);
+            max = max.max(value);
+            if idx < 4096 {
+                checksum += value * ((idx % 257) + 1) as f64;
+            }
+        } else {
+            nonfinite_count += 1;
+        }
+    }
+    let denom = finite_count.max(1) as f64;
+    qwen_trace_write(serde_json::json!({
+        "kind": "qwen_trace_tensor",
+        "stage": stage,
+        "step": step,
+        "dims": tensor.shape(),
+        "len": values.len(),
+        "finite": finite_count,
+        "nonfinite": nonfinite_count,
+        "mean": qwen_trace_number(sum / denom),
+        "rms": qwen_trace_number((sum_sq / denom).sqrt()),
+        "min": qwen_trace_number(min),
+        "max": qwen_trace_number(max),
+        "checksum": qwen_trace_number(checksum),
+        "sample": values
+            .iter()
+            .take(8)
+            .map(|value| qwen_trace_number(*value as f64))
+            .collect::<Vec<_>>(),
+    }))
+}
+
+fn qwen_trace_top_logits_stage(
+    stage: &str,
+    step: Option<usize>,
+    logits_vec: &[f32],
+    chosen_id: Option<u32>,
+) -> Result<()> {
+    if !qwen_trace_enabled() {
+        return Ok(());
+    }
+    let mut indexed: Vec<(usize, f32)> = logits_vec.iter().copied().enumerate().collect();
+    indexed.sort_by(|a, b| match (a.1.is_finite(), b.1.is_finite()) {
+        (false, true) => std::cmp::Ordering::Greater,
+        (true, false) => std::cmp::Ordering::Less,
+        _ => {
+            let cmp = b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal);
+            if cmp == std::cmp::Ordering::Equal { a.0.cmp(&b.0) } else { cmp }
+        }
+    });
+    let top_logits = indexed
+        .into_iter()
+        .take(20)
+        .map(|(token_id, logit)| {
+            serde_json::json!({
+                "token_id": token_id,
+                "logit": qwen_trace_number(logit as f64),
+            })
+        })
+        .collect::<Vec<_>>();
+    qwen_trace_write(serde_json::json!({
+        "kind": "qwen_trace_logits",
+        "stage": stage,
+        "step": step,
+        "chosen_id": chosen_id,
+        "top_logits": top_logits,
+    }))
+}
+
+fn qwen_trace_top_logits(step: usize, logits_vec: &[f32], chosen_id: Option<u32>) -> Result<()> {
+    qwen_trace_top_logits_stage("lm_head.top_logits", Some(step), logits_vec, chosen_id)
+}
+
+fn qwen_trace_full_prompt_enabled() -> bool {
+    qwen_trace_enabled() && std::env::var("BITNET_QWEN_TRACE_FULL_PROMPT").as_deref() == Ok("1")
+}
+
+fn qwen_trace_prompt_id_override() -> Result<Option<Vec<u32>>> {
+    let Ok(raw) = std::env::var("BITNET_QWEN_TRACE_PROMPT_IDS") else {
+        return Ok(None);
+    };
+    if !qwen_trace_enabled() {
+        anyhow::bail!(
+            "BITNET_QWEN_TRACE_PROMPT_IDS requires BITNET_QWEN_TRACE_JSONL or BITNET_QWEN_TRACE=1"
+        );
+    }
+    let mut ids = Vec::new();
+    for part in raw.split(',') {
+        let trimmed = part.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        ids.push(trimmed.parse::<u32>().with_context(|| {
+            format!("invalid token id in BITNET_QWEN_TRACE_PROMPT_IDS: {trimmed}")
+        })?);
+    }
+    if ids.is_empty() {
+        anyhow::bail!("BITNET_QWEN_TRACE_PROMPT_IDS did not contain any token ids");
+    }
+    Ok(Some(ids))
+}
+
 fn nvidia_smi_memory_used_bytes(device_index: Option<usize>) -> Option<u64> {
     let mut command = std::process::Command::new("nvidia-smi");
     let index_arg;
@@ -2417,6 +2588,25 @@ async fn run_simple_generation(
         println!("Loading HuggingFace model from directory: {}", model_path.display());
     } else {
         println!("Loading model from: {}", model_path.display());
+    }
+    if qwen_trace_enabled() {
+        qwen_trace_reset_file()?;
+        unsafe {
+            std::env::remove_var("BITNET_QWEN_TRACE_ACTIVE");
+            std::env::remove_var("BITNET_QWEN_TRACE_STEP");
+        }
+        qwen_trace_write(serde_json::json!({
+            "kind": "qwen_trace_event",
+            "stage": "trace_start",
+            "model_path": model_path.display().to_string(),
+            "requested_backend": requested_backend_label,
+            "prompt_template": prompt_template.clone(),
+            "max_new_tokens": max_new_tokens,
+            "temperature": temperature,
+            "top_k": top_k,
+            "greedy": greedy,
+            "deterministic": deterministic,
+        }))?;
     }
 
     // Check for QK256 scalar kernel usage and emit performance warnings (GGUF only)
@@ -2620,9 +2810,63 @@ async fn run_simple_generation(
     let parse_special = template_type.parse_special();
     let prompt_tokenize_start = std::time::Instant::now();
     let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
+    if let Some(override_ids) = qwen_trace_prompt_id_override()? {
+        qwen_trace_write(serde_json::json!({
+            "kind": "qwen_trace_event",
+            "stage": "prompt.ids_override",
+            "original_prompt_ids": tokens.clone(),
+            "override_prompt_ids": override_ids.clone(),
+        }))?;
+        tokens = override_ids;
+    }
     ensure_non_empty_generation_context(&mut tokens, tokenizer.as_ref())?;
     let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
+    qwen_trace_write(serde_json::json!({
+        "kind": "qwen_trace_prompt",
+        "stage": "prompt.ids",
+        "template": template_type.to_string(),
+        "bos_policy": bos_policy,
+        "parse_special": parse_special,
+        "formatted_prompt": formatted_prompt.clone(),
+        "prompt_ids": tokens.clone(),
+    }))?;
+
+    if qwen_trace_full_prompt_enabled() {
+        unsafe {
+            std::env::set_var("BITNET_QWEN_TRACE_ACTIVE", "1");
+            std::env::set_var("BITNET_QWEN_TRACE_STEP", "-1");
+        }
+        let full_prompt_result: Result<()> = (|| {
+            let full_x = model.embed(&tokens)?;
+            qwen_trace_tensor("full_prompt.input_embedding", None, &full_x)?;
+            let mut no_cache: Box<dyn std::any::Any> = Box::new(());
+            let full_h = model.forward(&full_x, no_cache.as_mut())?;
+            qwen_trace_tensor("full_prompt.forward_output", None, &full_h)?;
+            let full_last_hidden = extract_last_token_hidden(&full_h)?;
+            qwen_trace_tensor("full_prompt.last_hidden", None, &full_last_hidden)?;
+            let full_logits = model.logits(&full_last_hidden)?;
+            let full_logits_vec = extract_logits_2d(&full_logits)?;
+            let full_top1 = greedy_top1_token_id(&full_logits_vec);
+            qwen_trace_top_logits_stage(
+                "full_prompt.lm_head.top_logits",
+                None,
+                &full_logits_vec,
+                full_top1,
+            )?;
+            qwen_trace_write(serde_json::json!({
+                "kind": "qwen_trace_event",
+                "stage": "full_prompt.first_generated_token",
+                "token_id": full_top1,
+            }))?;
+            Ok(())
+        })();
+        unsafe {
+            std::env::remove_var("BITNET_QWEN_TRACE_ACTIVE");
+            std::env::remove_var("BITNET_QWEN_TRACE_STEP");
+        }
+        full_prompt_result?;
+    }
 
     // Create KV cache
     let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
@@ -2733,6 +2977,13 @@ async fn run_simple_generation(
     let mut sample_step_allocs = Vec::with_capacity(max_new_tokens);
     let mut token_decode_step_allocs = Vec::with_capacity(max_new_tokens);
     for step_idx in 0..max_new_tokens {
+        let qwen_trace_this_step = qwen_trace_enabled() && step_idx == 0;
+        if qwen_trace_this_step {
+            unsafe {
+                std::env::set_var("BITNET_QWEN_TRACE_ACTIVE", "1");
+                std::env::set_var("BITNET_QWEN_TRACE_STEP", step_idx.to_string());
+            }
+        }
         let decode_step_start = std::time::Instant::now();
         let decode_alloc_start = AllocationAuditSnapshot::current();
         // Embed only the LAST token (incremental)
@@ -2742,6 +2993,15 @@ async fn run_simple_generation(
         let t0 = std::time::Instant::now();
         let embed_alloc_start = AllocationAuditSnapshot::current();
         let x = model.embed(&[last_token])?;
+        if qwen_trace_this_step {
+            qwen_trace_write(serde_json::json!({
+                "kind": "qwen_trace_event",
+                "stage": "decode.input_token",
+                "step": step_idx,
+                "token_id": last_token,
+            }))?;
+            qwen_trace_tensor("decode.input_embedding", Some(step_idx), &x)?;
+        }
         let embed_ms = elapsed_ms(t0);
         if allocation_audit_enabled {
             embed_step_allocs.push(AllocationAuditSnapshot::delta_since(embed_alloc_start));
@@ -2755,6 +3015,9 @@ async fn run_simple_generation(
         let t1 = std::time::Instant::now();
         let forward_alloc_start = AllocationAuditSnapshot::current();
         let h = model.forward(&x, any_cache.as_mut())?;
+        if qwen_trace_this_step {
+            qwen_trace_tensor("decode.forward_output", Some(step_idx), &h)?;
+        }
         let forward_ms = elapsed_ms(t1);
         if allocation_audit_enabled {
             forward_step_allocs.push(AllocationAuditSnapshot::delta_since(forward_alloc_start));
@@ -2766,6 +3029,9 @@ async fn run_simple_generation(
 
         // Extract last token hidden state first to avoid 3D├ù2D matmul issues
         let last_hidden = extract_last_token_hidden(&h)?;
+        if qwen_trace_this_step {
+            qwen_trace_tensor("decode.last_hidden", Some(step_idx), &last_hidden)?;
+        }
 
         // Debug tap: hidden state RMS sanity (catches "everything is zero")
         if std::env::var("BITNET_DEBUG_LOGITS").as_deref() == Ok("1") && step_idx == 0 {
@@ -2853,6 +3119,19 @@ async fn run_simple_generation(
         let t3 = std::time::Instant::now();
         let sample_alloc_start = AllocationAuditSnapshot::current();
         let next_token = sampler.sample(&logits_vec, &generated_tokens)?;
+        if qwen_trace_this_step {
+            qwen_trace_top_logits(step_idx, &logits_vec, Some(next_token))?;
+            qwen_trace_write(serde_json::json!({
+                "kind": "qwen_trace_event",
+                "stage": "decode.first_generated_token",
+                "step": step_idx,
+                "token_id": next_token,
+            }))?;
+            unsafe {
+                std::env::remove_var("BITNET_QWEN_TRACE_ACTIVE");
+                std::env::remove_var("BITNET_QWEN_TRACE_STEP");
+            }
+        }
         let sample_ms = elapsed_ms(t3);
         if allocation_audit_enabled {
             sample_step_allocs.push(AllocationAuditSnapshot::delta_since(sample_alloc_start));
