@@ -1,0 +1,506 @@
+{
+  "artifact_kind": "strict_cuda_warm_session_benchmark",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json",
+  "benchmark": {
+    "benchmark_qualified_speedup": false,
+    "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+    "cuda_median_device_to_host_bytes": 117565440,
+    "cuda_median_generated_tokens_per_second": 1.368439700077827,
+    "cuda_median_host_to_device_bytes": 114923520,
+    "cuda_median_kernel_time_ms": 2036.619,
+    "cuda_median_total_session_ms": 8038.352,
+    "profile": "strict_cuda_warm_session_2_turns",
+    "quality_passed": true,
+    "runs_per_backend": 3,
+    "speedup_claim": false,
+    "turns_per_run": 2
+  },
+  "benchmark_qualified_speedup": false,
+  "claim": "strict_cuda_warm_session_benchmark_baseline",
+  "claim_boundaries": [
+    "speedup_claim=false; repeated strict CUDA warm-session timing is baseline evidence only until explicit benchmark review upgrades a specific profile.",
+    "Every run uses the same official Microsoft I2_S model, explicit tokenizer, bitnetcpp-answer prompt template, deterministic policy, and fallback_used=false boundary.",
+    "This receipt qualifies only strict_cuda_warm_session_2_turns; it does not claim broad chat quality, production server readiness, full CUDA residency, or general speedup.",
+    "Dense regular-LLM CUDA evidence remains separate from BitNet packed QK256 evidence."
+  ],
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_kernel_invocations": 27090,
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "memory_hwm_bytes": 10078912512,
+    "memory_hwm_source": "nvidia-smi-memory.used-sampled",
+    "nvrtc_version": "12.9",
+    "power_draw_watts": 47.79,
+    "power_draw_watts_summary": {
+      "max": 47.79,
+      "mean": 43.47333333333333,
+      "median": 46.13,
+      "min": 36.5,
+      "samples": 3
+    },
+    "power_limit_watts": 300.0,
+    "temperature_c": 42.0,
+    "temperature_c_summary": {
+      "max": 43.0,
+      "mean": 42.333333333333336,
+      "median": 42.0,
+      "min": 42.0,
+      "samples": 3
+    },
+    "vram_bytes": 17094475776
+  },
+  "cuda_execution_residency": {
+    "claim_boundary": {
+      "full_transformer_cuda_residency_claimed": false,
+      "kv_cache_cuda_residency_claimed": false,
+      "qk256_cuda_residency_claimed": true,
+      "qk256_kernel_timing_claimed": true,
+      "qk256_transfer_byte_accounting_claimed": true,
+      "speedup_claim": false,
+      "strict_cuda_answer_path": true,
+      "transfer_timing_claimed": false,
+      "upload_once_weight_residency_claimed": true
+    },
+    "coverage_scope": "strict_cuda_warm_session",
+    "execution_phase": "warm_session",
+    "full_cuda_residency_claimed": false,
+    "host_device_transfer_accounting": {
+      "device_to_host_bytes": 352696320,
+      "host_to_device_bytes": 344770560,
+      "kernel_time_ms": 6102.457,
+      "note": "Repeated strict warm-session aggregate of QK256 activation/output transfer bytes and CUDA event kernel time; not a full transformer residency claim.",
+      "status": "qk256_measured"
+    },
+    "kv_cache": {
+      "cuda_residency_claimed": false,
+      "device": "cpu",
+      "enabled": true,
+      "residency": "cpu_resident",
+      "reuse_policy": "recreated_per_turn_for_prompt_isolation"
+    },
+    "phase_residency": {
+      "attention_scores": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "attention_softmax": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "attention_value_mix": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "lm_head": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "relu2_activation": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "rmsnorm": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "rope": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "sampling": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident"
+      },
+      "sub_layernorm": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "token_embeddings": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      }
+    },
+    "prompt_and_decode": {
+      "generated_tokens": 11,
+      "prompt_tokens": 34
+    },
+    "qk256_bitnet_linears": {
+      "bitnet_linear_layers_cpu_fallback": 0,
+      "bitnet_linear_layers_on_cuda": 9030,
+      "bitnet_linear_layers_total": 9030,
+      "fallback_used": false,
+      "kernel_id": "qk256_gemv_cuda",
+      "residency": "cuda_resident_compute",
+      "unsupported_ops": []
+    },
+    "schema_version": "1.0.0",
+    "speedup_claim": false,
+    "unresident_or_unmeasured_phases": [
+      "token_embeddings",
+      "rmsnorm",
+      "sub_layernorm",
+      "rope",
+      "attention_scores",
+      "attention_softmax",
+      "attention_value_mix",
+      "relu2_activation",
+      "kv_cache",
+      "lm_head",
+      "sampling"
+    ],
+    "weight_residency": {
+      "per_token_weight_upload": false,
+      "scope": "qk256_cuda_weight_handles_only",
+      "status": "cuda_resident_upload_once_handles",
+      "weight_handle_count": 210,
+      "weights_uploaded_once": true
+    }
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "full_cuda_residency_claimed": false,
+  "generation": {
+    "deterministic": true,
+    "max_new_tokens": 8,
+    "mode": "greedy",
+    "prompt_template": "bitnetcpp-answer",
+    "temperature": 0.0
+  },
+  "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+  "kernel_stats": [
+    {
+      "device_to_host_bytes": 352696320,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 344770560,
+      "invocations": 27090,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_launches": 27090,
+      "kernel_time_ms": 6102.457
+    }
+  ],
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "fallback_loader_used": false,
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "strict_real_gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "source_loader_mode": "real_gguf"
+  },
+  "proof_inputs": {
+    "cuda_warm_session_receipts": [
+      "target/bitnet/receipts/cuda-bitnet-perf-003/cuda-warm-session-run-1.json",
+      "target/bitnet/receipts/cuda-bitnet-perf-003/cuda-warm-session-run-2.json",
+      "target/bitnet/receipts/cuda-bitnet-perf-003/cuda-warm-session-run-3.json"
+    ],
+    "strict_ask_reference_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-002-repeated-strict-ask.json"
+  },
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runs": [
+    {
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "cuda_context_initialized_once": true,
+      "cuda_probe_ms": 335.42,
+      "device_to_host_bytes": 117565440,
+      "fallback_used": false,
+      "generated_tokens_per_second": 1.3067401418929723,
+      "generated_tokens_total": 11,
+      "host_to_device_bytes": 114923520,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_invocations": 9030,
+      "kernel_time_ms": 2022.735,
+      "memory_hwm_bytes": 9969860608,
+      "model_load_ms": 2946.312,
+      "model_loaded_once": true,
+      "per_token_weight_upload": false,
+      "profile": "strict_cuda_warm_session_2_turns",
+      "prompt_tokens_total": 34,
+      "qk256_weights_uploaded_once": true,
+      "quality_passed": true,
+      "repeat_index": 1,
+      "runtime_api": "cuda",
+      "selected_backend": "nvidia-rtx-5070-ti-cuda",
+      "source_receipt_path": "target/bitnet/receipts/cuda-bitnet-perf-003/cuda-warm-session-run-1.json",
+      "status": "measured",
+      "tokenizer_load_ms": 409.994,
+      "tokenizer_loaded_once": true,
+      "total_session_ms": 8417.894,
+      "turn_count": 2,
+      "turns": [
+        {
+          "answer_trimmed": "4",
+          "device_to_host_bytes": 57415680,
+          "fallback_used": false,
+          "generated_tokens": 3,
+          "host_to_device_bytes": 56125440,
+          "kernel_time_ms": 990.312,
+          "prompt": "What is 2+2? Answer with only the number.",
+          "prompt_tokens": 19,
+          "quality_passed": true,
+          "source_turn_index": 0,
+          "turn_index": 1
+        },
+        {
+          "answer_trimmed": "No. Water is not wet; it",
+          "device_to_host_bytes": 60149760,
+          "fallback_used": false,
+          "generated_tokens": 8,
+          "host_to_device_bytes": 58798080,
+          "kernel_time_ms": 1032.423,
+          "prompt": "Answer yes or no: is water wet?",
+          "prompt_tokens": 15,
+          "quality_passed": true,
+          "source_turn_index": 1,
+          "turn_index": 2
+        }
+      ]
+    },
+    {
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "cuda_context_initialized_once": true,
+      "cuda_probe_ms": 210.675,
+      "device_to_host_bytes": 117565440,
+      "fallback_used": false,
+      "generated_tokens_per_second": 1.396651413963543,
+      "generated_tokens_total": 11,
+      "host_to_device_bytes": 114923520,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_invocations": 9030,
+      "kernel_time_ms": 2036.619,
+      "memory_hwm_bytes": 9783214080,
+      "model_load_ms": 2575.575,
+      "model_loaded_once": true,
+      "per_token_weight_upload": false,
+      "profile": "strict_cuda_warm_session_2_turns",
+      "prompt_tokens_total": 34,
+      "qk256_weights_uploaded_once": true,
+      "quality_passed": true,
+      "repeat_index": 2,
+      "runtime_api": "cuda",
+      "selected_backend": "nvidia-rtx-5070-ti-cuda",
+      "source_receipt_path": "target/bitnet/receipts/cuda-bitnet-perf-003/cuda-warm-session-run-2.json",
+      "status": "measured",
+      "tokenizer_load_ms": 330.291,
+      "tokenizer_loaded_once": true,
+      "total_session_ms": 7875.981,
+      "turn_count": 2,
+      "turns": [
+        {
+          "answer_trimmed": "4",
+          "device_to_host_bytes": 57415680,
+          "fallback_used": false,
+          "generated_tokens": 3,
+          "host_to_device_bytes": 56125440,
+          "kernel_time_ms": 1000.179,
+          "prompt": "What is 2+2? Answer with only the number.",
+          "prompt_tokens": 19,
+          "quality_passed": true,
+          "source_turn_index": 0,
+          "turn_index": 1
+        },
+        {
+          "answer_trimmed": "No. Water is not wet; it",
+          "device_to_host_bytes": 60149760,
+          "fallback_used": false,
+          "generated_tokens": 8,
+          "host_to_device_bytes": 58798080,
+          "kernel_time_ms": 1036.44,
+          "prompt": "Answer yes or no: is water wet?",
+          "prompt_tokens": 15,
+          "quality_passed": true,
+          "source_turn_index": 1,
+          "turn_index": 2
+        }
+      ]
+    },
+    {
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "cuda_context_initialized_once": true,
+      "cuda_probe_ms": 269.79,
+      "device_to_host_bytes": 117565440,
+      "fallback_used": false,
+      "generated_tokens_per_second": 1.368439700077827,
+      "generated_tokens_total": 11,
+      "host_to_device_bytes": 114923520,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_invocations": 9030,
+      "kernel_time_ms": 2043.103,
+      "memory_hwm_bytes": 10078912512,
+      "model_load_ms": 2649.597,
+      "model_loaded_once": true,
+      "per_token_weight_upload": false,
+      "profile": "strict_cuda_warm_session_2_turns",
+      "prompt_tokens_total": 34,
+      "qk256_weights_uploaded_once": true,
+      "quality_passed": true,
+      "repeat_index": 3,
+      "runtime_api": "cuda",
+      "selected_backend": "nvidia-rtx-5070-ti-cuda",
+      "source_receipt_path": "target/bitnet/receipts/cuda-bitnet-perf-003/cuda-warm-session-run-3.json",
+      "status": "measured",
+      "tokenizer_load_ms": 321.019,
+      "tokenizer_loaded_once": true,
+      "total_session_ms": 8038.352,
+      "turn_count": 2,
+      "turns": [
+        {
+          "answer_trimmed": "4",
+          "device_to_host_bytes": 57415680,
+          "fallback_used": false,
+          "generated_tokens": 3,
+          "host_to_device_bytes": 56125440,
+          "kernel_time_ms": 1000.7,
+          "prompt": "What is 2+2? Answer with only the number.",
+          "prompt_tokens": 19,
+          "quality_passed": true,
+          "source_turn_index": 0,
+          "turn_index": 1
+        },
+        {
+          "answer_trimmed": "No. Water is not wet; it",
+          "device_to_host_bytes": 60149760,
+          "fallback_used": false,
+          "generated_tokens": 8,
+          "host_to_device_bytes": 58798080,
+          "kernel_time_ms": 1042.403,
+          "prompt": "Answer yes or no: is water wet?",
+          "prompt_tokens": 15,
+          "quality_passed": true,
+          "source_turn_index": 1,
+          "turn_index": 2
+        }
+      ]
+    }
+  ],
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "session_contract": {
+    "cuda_context_initialized_once": true,
+    "fallback_free": true,
+    "kv_cache_reuse_claimed": false,
+    "kv_cache_reuse_policy": "recreated_per_turn_for_prompt_isolation",
+    "model_loaded_once": true,
+    "per_token_weight_upload": false,
+    "qk256_weights_uploaded_once": true,
+    "runs_per_backend": 3,
+    "same_model": true,
+    "same_prompts": true,
+    "same_sampling_policy": true,
+    "same_tokenizer": true,
+    "speedup_claim": false,
+    "tokenizer_loaded_once": true,
+    "turn_count": 2
+  },
+  "speedup_claim": false,
+  "summary": {
+    "backend": "nvidia-rtx-5070-ti-cuda",
+    "cuda_probe_ms": {
+      "max": 335.42,
+      "mean": 271.96166666666664,
+      "median": 269.79,
+      "min": 210.675,
+      "samples": 3
+    },
+    "device_to_host_bytes": {
+      "max": 117565440,
+      "mean": 117565440.0,
+      "median": 117565440.0,
+      "min": 117565440,
+      "samples": 3
+    },
+    "fallback_used": false,
+    "generated_tokens_per_second": {
+      "max": 1.396651413963543,
+      "mean": 1.3572770853114475,
+      "median": 1.368439700077827,
+      "min": 1.3067401418929723,
+      "samples": 3
+    },
+    "host_to_device_bytes": {
+      "max": 114923520,
+      "mean": 114923520.0,
+      "median": 114923520.0,
+      "min": 114923520,
+      "samples": 3
+    },
+    "kernel_time_ms": {
+      "max": 2043.103,
+      "mean": 2034.1523333333334,
+      "median": 2036.619,
+      "min": 2022.735,
+      "samples": 3
+    },
+    "memory_hwm_bytes": {
+      "max": 10078912512,
+      "mean": 9943995733.333334,
+      "median": 9969860608.0,
+      "min": 9783214080,
+      "samples": 3
+    },
+    "model_load_ms": {
+      "max": 2946.312,
+      "mean": 2723.828,
+      "median": 2649.597,
+      "min": 2575.575,
+      "samples": 3
+    },
+    "quality_passed": true,
+    "runs": 3,
+    "runtime_api": "cuda",
+    "tokenizer_load_ms": {
+      "max": 409.994,
+      "mean": 353.76800000000003,
+      "median": 330.291,
+      "min": 321.019,
+      "samples": 3
+    },
+    "total_session_ms": {
+      "max": 8417.894,
+      "mean": 8110.742333333333,
+      "median": 8038.352,
+      "min": 7875.981,
+      "samples": 3
+    }
+  },
+  "timestamp_utc": "2026-05-08T18:54:55Z",
+  "tokenizer": {
+    "model_family": "llama3",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "workload": {
+    "answers": [
+      " 4",
+      " No. Water is not wet; it"
+    ],
+    "generated_tokens_total": 11,
+    "profile": "strict_cuda_warm_session_2_turns",
+    "prompt_tokens_total": 34,
+    "prompts": [
+      {
+        "expected_answer_scope": "exact_trimmed_4",
+        "prompt": "What is 2+2? Answer with only the number.",
+        "turn_index": 1
+      },
+      {
+        "expected_answer_scope": "quality_gate",
+        "prompt": "Answer yes or no: is water wet?",
+        "turn_index": 2
+      }
+    ],
+    "quality_passed": true,
+    "turn_count": 2
+  }
+}

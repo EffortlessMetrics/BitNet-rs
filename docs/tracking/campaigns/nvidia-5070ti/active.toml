@@ -906,10 +906,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-PERF-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-bitnet-perf-002-repeated-strict-ask"
 pr = 4112
 head_sha = "66894fb8de7bc7f3c8bea6147883c7e22615b1f3"
+merge_sha = "699b1204bba9443c59c243c82a2f6cc0acccdcea"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -944,6 +945,55 @@ forbidden_paths = [
 may_claim = [
   "Repeated strict ask benchmark evidence exists for the exact committed strict_ask_math_8 profile on 9950X3D CPU AVX-512 and RTX 5070 Ti CUDA.",
   "The repeated receipt records measured QK256 CUDA kernel time and transfer byte counters with fallback_used=false.",
+]
+must_not_claim = [
+  "CUDA speedup is accepted before a later benchmark qualification review upgrades the exact profile.",
+  "Broad chat quality is proven beyond committed deterministic prompts.",
+  "Full CUDA residency for every transformer operation is proven.",
+  "Dense regular-LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+  "Server inference readiness is complete.",
+]
+
+[[work_item]]
+id = "CUDA-BITNET-PERF-003"
+status = "pr_open"
+branch = "codex/cuda-bitnet-perf-003-warm-session-benchmark"
+pr = 4117
+head_sha = "8ae23e222dd40e8c1696f79f66a5cd0171218492"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-BITNET-PERF-002", "CUDA-PROD-002", "CUDA-PROD-003"]
+acceptance = "Add repeated strict CUDA warm-session benchmark receipts for the official Microsoft I2_S model with two deterministic turns per run, model/tokenizer/context loaded once, upload-once QK256 weight handles, fallback_used=false, measured QK256 timing/transfer counters, and speedup_claim=false pending explicit benchmark review."
+commands = [
+  "cargo fmt -p bitnet-bench-receipts -- --check",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "dense CUDA reference lanes",
+  "WGPU, Vulkan, D3D12, OpenCL, Metal, NPU, or SLM runtime work",
+]
+may_claim = [
+  "Repeated strict CUDA warm-session benchmark evidence exists for the exact strict_cuda_warm_session_2_turns profile on RTX 5070 Ti CUDA.",
+  "The repeated warm-session receipt records model/tokenizer/context loaded once, upload-once QK256 weight handles, fallback_used=false, and measured QK256 CUDA kernel time plus transfer byte counters.",
 ]
 must_not_claim = [
   "CUDA speedup is accepted before a later benchmark qualification review upgrades the exact profile.",

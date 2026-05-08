@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T19:05:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-PERF-002"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-bitnet-perf-002-repeated-strict-ask"
+pr = 4112
+head_sha = "66894fb8de7bc7f3c8bea6147883c7e22615b1f3"
+merge_sha = "699b1204bba9443c59c243c82a2f6cc0acccdcea"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4112 merged the repeated strict ask benchmark receipt for the Windows 9950X3D + RTX 5070 Ti BitNet CUDA lane.",
+  "The committed receipt records three same-model CPU AVX-512 strict ask runs and three RTX 5070 Ti CUDA strict ask runs with matching deterministic outputs and fallback_used=false.",
+  "The benchmark remains baseline evidence with speedup_claim=false and benchmark_qualified_speedup=false.",
+]
