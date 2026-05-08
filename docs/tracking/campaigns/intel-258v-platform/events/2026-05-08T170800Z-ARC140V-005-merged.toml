@@ -1,0 +1,19 @@
+timestamp = "2026-05-08T17:08:00Z"
+campaign = "intel-258v-platform"
+item = "ARC140V-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4103
+merge_sha = "cb48e2924209ad71be1ac9ce83db90ce4679a48e"
+actor = "codex"
+branch = "codex/intel-258v-platform/ARC140V-005-opencl-cpu-parity"
+summary = "Merged ARC140V-005, recording native Arc 140V OpenCL CPU-reference parity against the post-mechanics 258V CPU bundle."
+
+notes = [
+  "The live receipt is ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json.",
+  "The receipt records selected_backend=intel-arc-140v-opencl, runtime_api=opencl, proof_stage=parity_tested, kernel_execution=true, and fallback_used=false for tiny_vector_add.",
+  "The merged PR may claim isolated native OpenCL vector-add parity against the 258V CPU reference only.",
+  "The merged PR does not claim BitNet inference, packed QK256 decode, Arc acceleration, OpenVINO GPU proof as native OpenCL proof, or CPU fallback as Arc proof.",
+  "LNL258V-COMPARE-002 is the next same-machine comparison-index item.",
+]

@@ -56,7 +56,7 @@ pub(crate) fn cmd_quality_gate(root: &Path) -> Result<()> {
 pub(crate) fn cmd_verify_tests(root: &Path) -> Result<()> {
     println!("=== BitNet-rs Verification Tests ===");
 
-    let preflight = collect_preflight_env()?;
+    let preflight = collect_preflight_env(false)?;
     let preflight_refs = env_refs_from_pairs(&preflight);
 
     println!("== Pre-flight test discovery ==");

@@ -15,6 +15,7 @@ use std::{
 mod ci;
 mod docker;
 mod hooks;
+mod locking;
 mod models;
 mod testing;
 mod validation;
@@ -23,6 +24,7 @@ use self::{
     ci::{cmd_ci_local, cmd_quality_gate, cmd_sanity_check, cmd_verify_crossval, cmd_verify_tests},
     docker::{cmd_build_cpp_static, cmd_docker_build},
     hooks::cmd_install_hooks,
+    locking::{FixLockedMode, cmd_fix_locked},
     models::{
         cmd_bitnet_accept, cmd_generate_policy, cmd_resolve_model_path, cmd_show_quant_status,
         cmd_vendor_ggml_quants,
@@ -57,6 +59,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Task {
+    /// Equivalent of scripts/preflight.sh
+    Preflight {
+        /// Print shell exports for callers that source scripts/preflight.sh.
+        #[arg(long)]
+        emit_env: bool,
+    },
     /// Equivalent of scripts/bitnet_accept.sh
     BitnetAccept {
         #[arg(default_value = DEFAULT_MODEL)]
@@ -187,6 +195,18 @@ enum Task {
     TestGeneration,
     /// Equivalent of scripts/test_quant_support.sh
     TestQuantSupport,
+    /// Equivalent of scripts/fix-locked.sh
+    FixLocked {
+        /// Preview changes without modifying files.
+        #[arg(long, alias = "preview")]
+        dry_run: bool,
+        /// Exit non-zero if changes would be made.
+        #[arg(long)]
+        check: bool,
+        /// Files to update or check.
+        #[arg(required = true)]
+        files: Vec<String>,
+    },
     /// Equivalent of scripts/install-hooks.sh
     InstallHooks,
     /// Equivalent of scripts/check-feature-gates.sh
@@ -235,6 +255,7 @@ fn main() -> Result<()> {
     let root = workspace_root()?;
 
     match cli.command {
+        Task::Preflight { emit_env } => cmd_preflight(emit_env),
         Task::BitnetAccept { model, tokenizer } => cmd_bitnet_accept(&root, &model, &tokenizer),
         Task::BuildCppStatic { cpp_dir } => cmd_build_cpp_static(&root, cpp_dir.as_deref()),
         Task::CheckIgnoreAnnotations => cmd_check_ignore_annotations(&root),
@@ -275,6 +296,15 @@ fn main() -> Result<()> {
         Task::TestDownload => cmd_test_download(&root),
         Task::TestGeneration => cmd_test_generation(&root),
         Task::TestQuantSupport => cmd_test_quant_support(&root),
+        Task::FixLocked { dry_run, check, files } => {
+            let mode = match (dry_run, check) {
+                (true, true) => bail!("--dry-run and --check are mutually exclusive"),
+                (true, false) => FixLockedMode::DryRun,
+                (false, true) => FixLockedMode::Check,
+                (false, false) => FixLockedMode::Apply,
+            };
+            cmd_fix_locked(&root, mode, files)
+        }
         Task::InstallHooks => cmd_install_hooks(&root),
         Task::CheckFeatureGates => cmd_check_feature_gates(&root),
         Task::CiLocal { mode } => cmd_ci_local(&root, mode),
@@ -446,7 +476,29 @@ fn run_xtask_binary<S: AsRef<str>>(
     run_capture(root, program, args, &[], allow_failure)
 }
 
-fn collect_preflight_env() -> Result<Vec<(String, String)>> {
+fn cmd_preflight(emit_env: bool) -> Result<()> {
+    let envs = collect_preflight_env(emit_env)?;
+    if emit_env {
+        for (name, value) in envs {
+            println!("export {name}={}", shell_quote(&value));
+        }
+    }
+    Ok(())
+}
+
+fn preflight_line(diagnostics_to_stderr: bool, message: impl AsRef<str>) {
+    if diagnostics_to_stderr {
+        eprintln!("{}", message.as_ref());
+    } else {
+        println!("{}", message.as_ref());
+    }
+}
+
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace("'", "'\''"))
+}
+
+fn collect_preflight_env(diagnostics_to_stderr: bool) -> Result<Vec<(String, String)>> {
     let pids_used = if command_available("ps") {
         let output = run_capture(Path::new("."), "ps", &["-e"], &[], true)?;
         if output.status.success() {
@@ -479,10 +531,13 @@ fn collect_preflight_env() -> Result<Vec<(String, String)>> {
     let pids_pct = if pid_max > 0 { pids_used.saturating_mul(100) / pid_max } else { 0 };
     let files_pct = if files_max > 0 { files_used.saturating_mul(100) / files_max } else { 0 };
 
-    println!("=== BitNet-rs System Resource Check ===");
-    println!("PIDs: {pids_used} / {pid_max} ({pids_pct}%)");
-    println!("Open files: {files_used} / {files_max} ({files_pct}%)");
-    println!("Load average: {load_avg}");
+    preflight_line(diagnostics_to_stderr, "=== BitNet-rs System Resource Check ===");
+    preflight_line(diagnostics_to_stderr, format!("PIDs: {pids_used} / {pid_max} ({pids_pct}%)"));
+    preflight_line(
+        diagnostics_to_stderr,
+        format!("Open files: {files_used} / {files_max} ({files_pct}%)"),
+    );
+    preflight_line(diagnostics_to_stderr, format!("Load average: {load_avg}"));
 
     let mut envs = vec![
         (
@@ -536,19 +591,27 @@ fn collect_preflight_env() -> Result<Vec<(String, String)>> {
                 }
             }
         }
-        println!("⚠️  System hot ({pids_pct}% PID usage) → auto-degraded to single-threaded mode");
+        preflight_line(
+            diagnostics_to_stderr,
+            format!(
+                "⚠️  System hot ({pids_pct}% PID usage) → auto-degraded to single-threaded mode"
+            ),
+        );
     } else {
-        println!(
-            "✅ System resources OK → using capped concurrency (RUST_TEST_THREADS={}, RAYON={} )",
-            envs[0].1, envs[1].1,
+        preflight_line(
+            diagnostics_to_stderr,
+            format!(
+                "✅ System resources OK → using capped concurrency (RUST_TEST_THREADS={}, RAYON={} )",
+                envs[0].1, envs[1].1,
+            ),
         );
     }
 
-    println!("=== BitNet-rs Concurrency Configuration ===");
+    preflight_line(diagnostics_to_stderr, "=== BitNet-rs Concurrency Configuration ===");
     for (name, value) in &envs {
-        println!("{name}={value}");
+        preflight_line(diagnostics_to_stderr, format!("{name}={value}"));
     }
-    println!("========================================");
+    preflight_line(diagnostics_to_stderr, "========================================");
 
     Ok(envs)
 }
@@ -846,6 +909,7 @@ fn relevant_flake_output(text: &str) -> Vec<String> {
 mod tests {
     use super::{
         command_available, command_available_in_path, command_failure_details, is_executable_file,
+        shell_quote,
     };
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
@@ -856,6 +920,12 @@ mod tests {
         let mut permissions = fs::metadata(path).expect("metadata").permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(path, permissions).expect("set executable bit");
+    }
+
+    #[test]
+    fn shell_quote_escapes_single_quotes() {
+        assert_eq!(shell_quote("plain"), "'plain'");
+        assert_eq!(shell_quote("can't"), "'can'\''t'");
     }
 
     #[test]
