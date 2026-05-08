@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T20:20:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-planner-001-model-aware"
+previous_status = "planned"
+new_status = "in_progress"
+
+notes = [
+  "Started model-aware CUDA dispatch planner contract work after BitNet CUDA performance qualification and dense regular-LLM persistent fixture evidence.",
+  "Scope is additive planner/test/tracker work only; no CUDA kernels, QK256 math, tokenizer, loader, transformer, server, or dense GGUF inference behavior changes.",
+  "The planner must keep BitNet QK256 CUDA and dense regular-LLM CUDA routes separate and make strict CUDA unsupported fallback explicit.",
+]

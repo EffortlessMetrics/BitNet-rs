@@ -128,6 +128,10 @@ with model/tokenizer/context loaded once and upload-once QK256 handles. These
 remain scoped measurements. `CUDA-BITNET-PERF-004` reviews that evidence and
 keeps `speedup_claim=false` until decode-profile repetitions, transfer timing,
 power/thermal context, and profile-specific acceptance thresholds are complete.
+`CUDA-PLANNER-001` adds the next contract layer: model-aware dispatch planning
+that keeps BitNet QK256 CUDA and dense regular-LLM CUDA routes separate and
+records unsupported strict CUDA routes instead of silently selecting CPU
+fallback.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -174,6 +178,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-002 | merged | First dense CUDA FP16 GEMM smoke/parity fixture after the dense receipt boundary. |
 | CUDA-DENSE-003 | merged | Dense regular-LLM CUDA tensor-residency receipt for the FP16 GEMM fixture; still no BitNet packed, dense GGUF inference, speedup, persistent session, or full-residency claim. |
 | CUDA-DENSE-004 | merged | Persistent dense regular-LLM CUDA FP16 GEMM fixture session with one context/module, upload-once input buffers, repeated launches, and no dense GGUF inference, speedup, or full-residency claim. |
+| CUDA-PLANNER-001 | in_progress | Model-aware planner contract separating BitNet QK256 CUDA from dense regular-LLM CUDA and making unsupported strict CUDA fallback explicit. |
 
 ## Review Policy
 
