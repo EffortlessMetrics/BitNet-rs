@@ -607,7 +607,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-ANSWER-011"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-answer/CUDA-ANSWER-011-cpu-cuda-parity"
 stackable = false
 review_mode = "codex_premerge"
@@ -638,13 +638,68 @@ forbidden_paths = [
 ]
 may_claim = [
   "Both same-box 9950X3D AVX-512 CPU and RTX 5070 Ti CUDA answer-corpus receipts pass the committed deterministic corpus for the official Microsoft I2_S artifact.",
-  "The current CPU/CUDA parity receipt records the first divergence as logits_or_kernel/top-k evidence and preserves the yes_no_water generated-answer divergence.",
+  "The original CPU/CUDA parity receipt recorded first divergence as logits_or_kernel/top-k evidence and preserved the yes_no_water generated-answer divergence.",
 ]
 must_not_claim = [
   "Exact CPU/CUDA generated-token parity is proven.",
   "Exact CPU/CUDA top-k logit parity is proven.",
   "CUDA speedup exists before a same-model fallback-free benchmark receipt upgrades speedup_claim.",
   "Broad chat quality is proven beyond the committed deterministic answer corpus.",
+]
+
+[[work_item]]
+id = "CUDA-ANSWER-012"
+status = "in_progress"
+branch = "codex/cuda-answer/CUDA-ANSWER-012-logit-divergence"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-ANSWER-011"]
+acceptance = "Align the RTX 5070 Ti CUDA QK256 inline-scale path with BitNet.cpp I2_S x I8_S activation semantics so same-box CPU AVX-512 and RTX 5070 Ti CUDA generated token IDs and decoded text match for the five committed deterministic corpus cases while preserving remaining top-k-only divergence evidence without speed or broad-chat claims."
+commands = [
+  "cargo fmt -p bitnet-kernels -p bitnet-qk256-dispatch -- --check",
+  "cargo check --locked -p bitnet-qk256-dispatch --no-default-features --features cuda",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "BITNET_RUN_CUDA_QK256_GEMV=1 cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda test_cuda_qk256_gemv_live_parity_opt_in -- --nocapture",
+  "BITNET_RUN_CUDA_QK256_GEMV=1 cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda test_cuda_qk256_gemv_live_bitnet_i8s_scaled_parity_opt_in -- --nocapture",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- answer-corpus --device nvidia-rtx-5070-ti-cuda --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/bitnet-answer-corpus.yaml --per-prompt-timeout-seconds 300 --dump-logit-steps 1 --logits-topk 20 --fail-on-quality --json-out target/bitnet/receipts/cuda-answer-readiness/cuda-answer-corpus-i8s-scale-fix.json",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-parity --left ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-answer-corpus.json --right target/bitnet/receipts/cuda-answer-readiness/cuda-answer-corpus-i8s-scale-fix.json --left-label 9950x3d-avx512 --right-label rtx5070ti-cuda --machine windows-9950x3d-rtx5070ti --json-out target/bitnet/receipts/cuda-answer-readiness/cpu-avx512-vs-cuda-answer-parity-i8s-scale-fix.json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+  "crates/bitnet-kernels/src/cuda/bitnet_context.rs",
+  "crates/bitnet-kernels/tests/snapshots/snapshot_wave19__qk256_gemv_config_default_debug.snap",
+  "crates/bitnet-qk256-dispatch/src/lib.rs",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json",
+  "docs/reports/CUDA_ANSWER_011_CPU_CUDA_PARITY.md",
+  "docs/reports/CUDA_ANSWER_012_BITNET_I8S_CUDA_PARITY.md",
+  "docs/specs/rtx5070ti-cuda-answer-readiness.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "model loader behavior",
+  "dense CUDA reference lanes",
+  "WGPU, Vulkan, D3D12, OpenCL, Metal, NPU, or SLM runtime work",
+]
+may_claim = [
+  "The strict RTX 5070 Ti CUDA answer corpus still passes all five committed deterministic cases for the official Microsoft I2_S artifact.",
+  "Same-box 9950X3D AVX-512 CPU and RTX 5070 Ti CUDA generated token IDs and decoded text match for all five committed deterministic corpus cases after the CUDA QK256 BitNet I8_S activation fix.",
+  "The yes_no_water generated-answer divergence from CUDA-ANSWER-011 is closed.",
+]
+must_not_claim = [
+  "Exact CPU/CUDA top-k logit parity is proven.",
+  "CUDA speedup exists before a same-model fallback-free benchmark receipt upgrades speedup_claim.",
+  "Broad chat quality is proven beyond the committed deterministic answer corpus.",
+  "Full CUDA residency for every transformer operation is proven.",
 ]
 
 [[work_item]]

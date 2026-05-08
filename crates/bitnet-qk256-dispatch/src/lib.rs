@@ -143,10 +143,10 @@ pub fn forward_qk256_with_scale(
     if cuda_bitnet_backend_requested() {
         #[cfg(feature = "cuda")]
         {
-            match forward_qk256_cuda(input, qk256_tensor, weight_name) {
+            match forward_qk256_cuda(input, qk256_tensor, weight_name, inline_scale) {
                 Ok(output) => {
                     BITNET_LINEAR_ON_CUDA.fetch_add(1, Ordering::Relaxed);
-                    return apply_inline_scale_to_tensor(output, inline_scale);
+                    return Ok(output);
                 }
                 Err(err) if strict_cuda_bitnet_backend_requested() => {
                     return Err(BitNetError::Validation(format!(
@@ -176,21 +176,6 @@ pub fn forward_qk256_with_scale(
     }
 
     forward_qk256_cpu(input, qk256_tensor, weight_name, inline_scale)
-}
-
-#[cfg(feature = "cuda")]
-fn apply_inline_scale_to_tensor(output: Tensor, inline_scale: Option<f32>) -> Result<Tensor> {
-    let Some(scale) = inline_scale else {
-        return Ok(output);
-    };
-    if !scale.is_finite() {
-        return Err(BitNetError::Validation(format!("QK256 inline scale is not finite: {scale}")));
-    }
-    if (scale - 1.0).abs() <= f32::EPSILON {
-        Ok(output)
-    } else {
-        output.affine(scale as f64, 0.0).map_err(BitNetError::from)
-    }
 }
 
 fn forward_qk256_cpu(
@@ -260,7 +245,17 @@ fn forward_qk256_cpu(
 }
 
 #[cfg(feature = "cuda")]
-fn forward_qk256_cuda(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
+fn forward_qk256_cuda(
+    input: &Tensor,
+    qk256_tensor: &Tensor,
+    weight_name: &str,
+    inline_scale: Option<f32>,
+) -> Result<Tensor> {
+    if let Some(scale) = inline_scale
+        && !scale.is_finite()
+    {
+        return Err(BitNetError::Validation(format!("QK256 inline scale is not finite: {scale}")));
+    }
     let prepared = prepare_qk256_activation(input, qk256_tensor, weight_name)?;
     let mut input_flat = Vec::with_capacity(prepared.input_rows.len() * prepared.layout.cols);
     for row in &prepared.input_rows {
@@ -287,7 +282,7 @@ fn forward_qk256_cuda(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) 
         let mut stats =
             bitnet_kernels::cuda::CudaBitnetKernelInvocationStats::new(CUDA_QK256_GEMV_KERNEL_ID);
         context
-            .qk256_gemv(&handle, &input_flat, &mut output_flat, seq_len, &mut stats)
+            .qk256_gemv(&handle, &input_flat, &mut output_flat, seq_len, inline_scale, &mut stats)
             .map_err(BitNetError::from)
     })?;
 

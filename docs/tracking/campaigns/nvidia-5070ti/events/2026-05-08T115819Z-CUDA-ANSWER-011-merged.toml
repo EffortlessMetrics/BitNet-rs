@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T11:58:19Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-ANSWER-011"
+event = "merged"
+actor = "codex"
+pr = 4039
+merge_sha = "8b07ec43d9255fc96d722a42229b0bf18319a9bd"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4039 merged the first same-box 9950X3D AVX-512 CPU versus RTX 5070 Ti CUDA answer-corpus parity evidence.",
+  "Both backends passed the committed deterministic answer corpus for the official Microsoft I2_S artifact.",
+  "The original parity receipt preserved a real gap: first-step top-k logits differed for every case and yes_no_water generated a different passing answer.",
+]

@@ -46,7 +46,9 @@ void qk256_gemv_cuda(
     int seq_len,
     int n_out,
     int k,
-    int row_stride_bytes
+    int row_stride_bytes,
+    float bitnet_i8s_weight_scale,
+    int use_bitnet_i8s
 ) {
     int out_col = blockIdx.x * blockDim.x + threadIdx.x;
     int token = blockIdx.y;
@@ -57,6 +59,100 @@ void qk256_gemv_cuda(
 
     const unsigned char* row = packed_weights + ((long long)out_col * row_stride_bytes);
     const float* x = input + ((long long)token * k);
+
+    if (use_bitnet_i8s != 0) {
+        float max_abs = 0.00001f;
+        for (int col = 0; col < k; ++col) {
+            float value = fabsf(x[col]);
+            if (value > max_abs) {
+                max_abs = value;
+            }
+        }
+
+        float act_scale = 127.0f / max_abs;
+        int act_sum = 0;
+        for (int col = 0; col < k; ++col) {
+            int q = __float_as_int((x[col] * act_scale) + 12582912.0f);
+            q = (q & 0x007fffff) - 0x00400000;
+            q = q < -128 ? -128 : (q > 127 ? 127 : q);
+            act_sum += q;
+        }
+
+        int int_dot = 0;
+        int full_chunks = k / 128;
+        int chunk = 0;
+        while (chunk < full_chunks) {
+            int remaining = full_chunks - chunk;
+            int take = remaining < 32 ? remaining : 32;
+            int acc16[16];
+            for (int pair = 0; pair < 16; ++pair) {
+                acc16[pair] = 0;
+            }
+
+            for (int chunk_offset = 0; chunk_offset < take; ++chunk_offset) {
+                int chunk_index = chunk + chunk_offset;
+                int byte_base = chunk_index * 32;
+                int q_base = chunk_index * 128;
+
+                for (int pair = 0; pair < 16; ++pair) {
+                    int gp0 = pair * 2;
+                    int gp1 = gp0 + 1;
+                    int pair_sum = 0;
+                    for (int lane = 0; lane < 4; ++lane) {
+                        int shift = 6 - lane * 2;
+                        unsigned char packed0 = row[byte_base + gp0];
+                        unsigned char packed1 = row[byte_base + gp1];
+                        int code0 = (packed0 >> shift) & 0x3;
+                        int code1 = (packed1 >> shift) & 0x3;
+
+                        int q_index0 = q_base + lane * 32 + gp0;
+                        int q_index1 = q_base + lane * 32 + gp1;
+                        int q0 = __float_as_int((x[q_index0] * act_scale) + 12582912.0f);
+                        int q1 = __float_as_int((x[q_index1] * act_scale) + 12582912.0f);
+                        q0 = (q0 & 0x007fffff) - 0x00400000;
+                        q1 = (q1 & 0x007fffff) - 0x00400000;
+                        q0 = q0 < -128 ? -128 : (q0 > 127 ? 127 : q0);
+                        q1 = q1 < -128 ? -128 : (q1 > 127 ? 127 : q1);
+
+                        pair_sum += code0 * q0 + code1 * q1;
+                    }
+
+                    int wrapped = acc16[pair] + pair_sum;
+                    wrapped &= 0xffff;
+                    if (wrapped >= 0x8000) {
+                        wrapped -= 0x10000;
+                    }
+                    acc16[pair] = wrapped;
+                }
+            }
+
+            for (int pair = 0; pair < 16; ++pair) {
+                int_dot += acc16[pair];
+            }
+            chunk += take;
+        }
+
+        int tail_start = full_chunks * 128;
+        for (int col = tail_start; col < k; ++col) {
+            int block_base = (col / 256) * 64;
+            int in_block = col % 256;
+            int chunk_in_block = in_block / 128;
+            int within_chunk = in_block % 128;
+            int lane = within_chunk / 32;
+            int group_pos = within_chunk % 32;
+            unsigned char packed = row[block_base + chunk_in_block * 32 + group_pos];
+            int code = (packed >> (6 - lane * 2)) & 0x3;
+            int q = __float_as_int((x[col] * act_scale) + 12582912.0f);
+            q = (q & 0x007fffff) - 0x00400000;
+            q = q < -128 ? -128 : (q > 127 ? 127 : q);
+            int_dot += code * q;
+        }
+
+        output[((long long)token * n_out) + out_col] =
+            (((float)(int_dot - act_sum)) / act_scale) * bitnet_i8s_weight_scale;
+        return;
+    }
+
     float acc = 0.0f;
 
     for (int col = 0; col < k; ++col) {
@@ -110,6 +206,8 @@ pub struct Qk256GemvConfig {
     pub k: usize,
     /// Packed bytes per output row.
     pub row_stride_bytes: usize,
+    /// Optional BitNet.cpp inline weight scale for I2_S × I8_S activation semantics.
+    pub bitnet_i8s_weight_scale: Option<f32>,
 }
 
 impl Default for Qk256GemvConfig {
@@ -123,6 +221,7 @@ impl Default for Qk256GemvConfig {
             n_out: 1,
             k: 256,
             row_stride_bytes: QK256_PACKED_BYTES_PER_BLOCK,
+            bitnet_i8s_weight_scale: None,
         }
     }
 }
@@ -159,6 +258,7 @@ impl Qk256GemvConfig {
             n_out,
             k,
             row_stride_bytes,
+            bitnet_i8s_weight_scale: None,
         })
     }
 
@@ -288,6 +388,14 @@ fn validate_qk256_launch_inputs(
     validate_cuda_i32_arg(config.n_out, "n_out")?;
     validate_cuda_i32_arg(config.k, "k")?;
     validate_cuda_i32_arg(config.row_stride_bytes, "row_stride_bytes")?;
+    if let Some(scale) = config.bitnet_i8s_weight_scale
+        && !scale.is_finite()
+    {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("QK256 GEMV BitNet I8_S weight scale is not finite: {scale}"),
+        }
+        .into());
+    }
     Ok(())
 }
 
@@ -352,6 +460,10 @@ fn launch_qk256_gemv_cuda(
     builder.arg(&n_out_arg);
     builder.arg(&k_arg);
     builder.arg(&row_stride_arg);
+    let bitnet_i8s_weight_scale_arg = config.bitnet_i8s_weight_scale.unwrap_or(1.0);
+    let use_bitnet_i8s_arg = i32::from(config.bitnet_i8s_weight_scale.is_some());
+    builder.arg(&bitnet_i8s_weight_scale_arg);
+    builder.arg(&use_bitnet_i8s_arg);
 
     unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
         reason: format!("failed to launch QK256 GEMV CUDA kernel: {err:?}"),
@@ -494,6 +606,7 @@ mod tests {
         assert_eq!(cfg.k, 256);
         assert_eq!(cfg.row_stride_bytes, QK256_PACKED_BYTES_PER_BLOCK);
         assert_eq!(cfg.shared_mem_bytes, 0);
+        assert_eq!(cfg.bitnet_i8s_weight_scale, None);
     }
 
     #[test]
@@ -632,6 +745,19 @@ mod tests {
         assert!(err.to_string().contains("row_stride_bytes"), "unexpected error: {err}");
     }
 
+    #[test]
+    fn test_qk256_launch_rejects_nonfinite_bitnet_i8s_scale() {
+        let mut cfg = Qk256GemvConfig::for_shape(1, 1, 256).unwrap();
+        cfg.bitnet_i8s_weight_scale = Some(f32::NAN);
+        let packed = vec![0xAAu8; cfg.row_stride_bytes];
+        let input = vec![1.0f32; 256];
+        let mut output = vec![0.0f32; 1];
+
+        let err = launch_qk256_gemv(&packed, &[], &input, &mut output, &cfg)
+            .expect_err("non-finite BitNet I8_S scale should fail before CUDA launch");
+        assert!(err.to_string().contains("not finite"), "unexpected error: {err}");
+    }
+
     #[cfg(not(feature = "cuda"))]
     #[test]
     fn test_qk256_launch_cpu_build_reports_cuda_unavailable() {
@@ -672,6 +798,54 @@ mod tests {
             assert!(
                 diff <= 1e-4,
                 "QK256 CUDA parity mismatch at {index}: got {got}, expected {expected}, diff {diff}"
+            );
+        }
+
+        Ok(())
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn test_cuda_qk256_gemv_live_bitnet_i8s_scaled_parity_opt_in() -> Result<()> {
+        if std::env::var("BITNET_RUN_CUDA_QK256_GEMV").as_deref() != Ok("1") {
+            return Ok(());
+        }
+
+        let seq_len = 2usize;
+        let n_out = 4usize;
+        let k = 4096usize;
+        let weight_scale = 0.5f32;
+        let mut cfg = Qk256GemvConfig::for_shape(seq_len, n_out, k)?;
+        cfg.bitnet_i8s_weight_scale = Some(weight_scale);
+        let mut packed = Vec::new();
+        for row in 0..n_out {
+            let codes: Vec<u8> = (0..k).map(|col| ((row + col) % 4) as u8).collect();
+            packed.extend_from_slice(&pack_codes_for_cols(&codes, k));
+        }
+        let input: Vec<f32> = (0..seq_len * k).map(|i| ((i % 17) as f32 - 8.0) * 0.0625).collect();
+        let mut expected = vec![0.0f32; seq_len * n_out];
+        for token in 0..seq_len {
+            let x = &input[token * k..(token + 1) * k];
+            bitnet_quantization::i2s_qk256::gemv_qk256_bitnet_i8s_scaled(
+                &packed,
+                x,
+                &mut expected[token * n_out..(token + 1) * n_out],
+                n_out,
+                k,
+                cfg.row_stride_bytes,
+                weight_scale,
+            )
+            .expect("canonical BitNet I8_S CPU oracle should accept CUDA fixture");
+        }
+        let mut output = vec![0.0f32; seq_len * n_out];
+
+        launch_qk256_gemv(&packed, &[], &input, &mut output, &cfg)?;
+
+        for (index, (got, expected)) in output.iter().zip(expected).enumerate() {
+            let diff = (got - expected).abs();
+            assert!(
+                diff <= 1e-4,
+                "QK256 CUDA BitNet I8_S parity mismatch at {index}: got {got}, expected {expected}, diff {diff}"
             );
         }
 

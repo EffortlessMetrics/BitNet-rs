@@ -322,11 +322,7 @@
       }
     },
     {
-      "failed_rules": [
-        "generated_token_ids",
-        "decoded_text",
-        "logits_topk"
-      ],
+      "failed_rules": [],
       "id": "yes_no_water",
       "left": {
         "answer": " No. Water is",
@@ -366,9 +362,9 @@
         "selected_kernel": "i2_s-avx512-reference",
         "status": "passed"
       },
-      "passed": false,
+      "passed": true,
       "right": {
-        "answer": " Yes.",
+        "answer": " No. Water is",
         "backend": {
           "fallback_used": false,
           "requested_backend": "nvidia-rtx-5070-ti-cuda",
@@ -376,9 +372,10 @@
           "selected_backend": "nvidia-rtx-5070-ti-cuda"
         },
         "generated_token_ids": [
-          7566,
+          2360,
           13,
-          128009
+          10164,
+          374
         ],
         "label": "rtx5070ti-cuda",
         "logits_steps": 1,
@@ -409,7 +406,7 @@
   "claim": "full_decode_answer_parity_diagnostic",
   "inputs": {
     "left_label": "9950x3d-avx512",
-    "left_receipt_path": "target\\bitnet\\receipts\\cuda-answer-readiness\\cpu-avx512-answer-corpus-closeout.json",
+    "left_receipt_path": "ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-08\\cpu-avx512-answer-corpus.json",
     "right_label": "rtx5070ti-cuda",
     "right_receipt_path": "ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-08\\cuda-answer-corpus.json"
   },
@@ -441,7 +438,7 @@
   },
   "speedup_claim": false,
   "summary": {
-    "failed": 5,
+    "failed": 4,
     "first_divergence": {
       "case_id": "capital_france",
       "kind": "logits_topk",
@@ -537,84 +534,84 @@
         "step": 0,
         "top_logits": [
           {
-            "logit": 13.215259552001951,
+            "logit": 13.429710388183594,
             "token_id": 12366
           },
           {
-            "logit": 9.921792984008787,
+            "logit": 10.582106590270996,
             "token_id": 60704
           },
           {
-            "logit": 7.451303482055664,
+            "logit": 7.458858013153076,
             "token_id": 20437
           },
           {
-            "logit": 5.202884674072266,
+            "logit": 5.347799301147461,
             "token_id": 7295
           },
           {
-            "logit": 4.720974922180176,
-            "token_id": 9822
-          },
-          {
-            "logit": 4.713718414306641,
-            "token_id": 3320
-          },
-          {
-            "logit": 4.5349531173706055,
+            "logit": 4.855011463165283,
             "token_id": 22463
           },
           {
-            "logit": 4.484357833862305,
+            "logit": 4.845612525939941,
             "token_id": 95509
           },
           {
-            "logit": 4.203612327575684,
+            "logit": 4.768749713897705,
             "token_id": 88793
           },
           {
-            "logit": 4.053102016448975,
+            "logit": 4.766817092895508,
+            "token_id": 3320
+          },
+          {
+            "logit": 4.698392391204834,
+            "token_id": 9822
+          },
+          {
+            "logit": 4.3873066902160645,
             "token_id": 41958
           },
           {
-            "logit": 3.9248085021972656,
-            "token_id": 9893
-          },
-          {
-            "logit": 3.5431487560272217,
+            "logit": 3.905130624771118,
             "token_id": 56301
           },
           {
-            "logit": 3.194727897644043,
-            "token_id": 13789
+            "logit": 3.656137466430664,
+            "token_id": 9893
           },
           {
-            "logit": 3.04585337638855,
+            "logit": 3.2958245277404785,
             "token_id": 25048
           },
           {
-            "logit": 3.0216946601867676,
-            "token_id": 426
-          },
-          {
-            "logit": 2.8568906784057617,
+            "logit": 2.9252495765686035,
             "token_id": 12036
           },
           {
-            "logit": 2.783170461654663,
+            "logit": 2.8612873554229736,
+            "token_id": 13789
+          },
+          {
+            "logit": 2.7747721672058105,
+            "token_id": 426
+          },
+          {
+            "logit": 2.708284854888916,
             "token_id": 432
           },
           {
-            "logit": 2.613537311553955,
-            "token_id": 362
-          },
-          {
-            "logit": 2.546295166015625,
+            "logit": 2.601320743560791,
             "token_id": 2939
           },
           {
-            "logit": 2.3129072189331055,
-            "token_id": 46168
+            "logit": 2.5302791595458984,
+            "token_id": 362
+          },
+          {
+            "logit": 2.517850160598755,
+            "token_id": 50100
           }
         ]
       },
@@ -622,8 +619,8 @@
       "scope": "logits_or_kernel",
       "step": 0
     },
-    "passed": 0,
+    "passed": 1,
     "total": 5
   },
-  "timestamp": "2026-05-08T10:50:59.740994300+00:00"
+  "timestamp": "2026-05-08T12:08:54.595204+00:00"
 }
