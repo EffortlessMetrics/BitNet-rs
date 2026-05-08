@@ -87,6 +87,9 @@
 | intel-258v-platform | CPU258V-014 | CPU258V-012, CPU258V-013 | merged |
 | intel-258v-platform | CPU258V-015 | CPU258V-014 | merged |
 | intel-258v-platform | LNL258V-COMPARE-001 | CPU258V-015, ARC140V-004 | merged |
+| intel-258v-platform | CPU258V-016 | CPU258V-015, CPU258V-013, LNL258V-COMPARE-001 | pr_open |
+| intel-258v-platform | ARC140V-005 | ARC140V-004, CPU258V-016 | ready |
+| intel-258v-platform | LNL258V-COMPARE-002 | CPU258V-016, ARC140V-005 | ready |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
@@ -95,6 +98,7 @@
 | intel-npu | NPU-008 | NPU-007 | merged |
 | intel-npu | NPU-009 | NPU-008 | merged |
 | intel-npu | NPU-010 | NPU-009 | merged |
+| intel-npu | NPU-011 | NPU-010, CPU258V-016 | ready |
 | model-artifacts | MODEL-ARTIFACT-002 | MODEL-ARTIFACT-001 | blocked |
 | model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | merged |
 | model-artifacts | MODEL-ARTIFACT-004 | MODEL-ARTIFACT-003 | merged |

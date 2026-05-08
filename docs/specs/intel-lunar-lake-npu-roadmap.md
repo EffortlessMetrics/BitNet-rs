@@ -825,6 +825,34 @@ smoke, and selected static RMSNorm/linear-projection parity receipts. The next
 meaningful milestone is another deliberately scoped graph-lowering experiment,
 such as FFN or attention-block parity, not full decode or packed QK256.
 
+### NPU-011 - Next Static BitNet-Shaped Subgraph Parity
+
+`NPU-011` should use the 258V CPU reference bundle as its comparison anchor:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
+```
+
+The preferred next candidate is a static FFN/ReLU2 or other explicitly scoped
+post-linear BitNet-shaped operation. The receipt must record:
+
+```text
+requested_backend=intel-npu
+selected_backend=intel-npu-openvino
+runtime_api=openvino
+runtime_device=NPU
+shape_mode=static
+reference_path=258V CPU / NumPy reference
+fallback_used=false
+cpu_fallback_allowed=false
+bitnet_inference=false
+qk256_decode=false
+```
+
+The allowed claim is selected static subgraph parity only. `NPU-011` must not
+claim full BitNet inference, native bitnet-rs NPU inference, NPU acceleration,
+packed QK256 decode, or CPU fallback as NPU proof.
+
 The Lunar Lake data bundle should decide the next implementation target:
 
 ```text

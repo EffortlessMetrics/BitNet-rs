@@ -33,6 +33,10 @@ Do these identity and validation surfaces before claiming real BitNet performanc
 7. **NPU-007 / ARC140V-003**: advance NPU selected RMSNorm subgraph parity and Arc 140V OpenVINO `GPU.0` smoke against the 258V CPU-first priority order.
 8. **ARC140V-004**: only after OpenVINO GPU smoke, advance Arc 140V to tiny native OpenCL execution.
 9. **Comparison work**: only after the lane receipts exist, compare CPU AVX2, Arc 140V, and OpenVINO NPU artifacts on the same shared-memory platform.
+10. **CPU258V-016**: bundle the post-mechanics CPU reference plate before
+    driving additional accelerator parity.
+11. **NPU-011 / ARC140V-005**: run the next selected NPU static subgraph
+    parity and Arc native OpenCL CPU/iGPU parity against the 258V CPU bundle.
 
 ## PR Contracts
 
@@ -46,6 +50,9 @@ Do these identity and validation surfaces before claiming real BitNet performanc
 | `CPU258V-003` | 258V phase benchmark receipts. | Benchmark receipt generation, 258V artifacts, hardware/tracking docs. | Accelerator code, server inference, and thread pinning unless separately scoped. | Receipt records smoke, first-token, decode, and prefill phase timing when available with CPU feature, power, topology, selected backend/kernel, and fallback status. |
 | `ARC140V-003` | Tiny OpenVINO `GPU.0` graph smoke for the Arc 140V reference lane. | OpenVINO runtime probe, CLI smoke receipt, Arc 140V hardware docs. | Native OpenCL kernels, BitNet model/tokenizer/QK256/inference code. | Receipt records Arc 140V OpenVINO GPU identity, static tiny graph execution, shape/timing/tolerance fields, fallback=false, and no BitNet/QK256/native OpenCL claims. |
 | `LNL258V-COMPARE-001` | Same-machine comparison index for the Lunar Lake platform. | 258V artifact index, hardware docs, platform tracker docs. | Runtime code, tests, CPU kernels, OpenCL kernels, OpenVINO graph execution, model/tokenizer logic. | Index links separate platform, CPU, Arc 140V, and NPU receipts by artifact path, backend identity, runtime API, proof stage, fallback status, and missing-artifact state without merging CPU, GPU, or NPU proof claims. |
+| `CPU258V-016` | Post-mechanics CPU reference bundle. | 258V CPU artifact bundle, hardware docs, platform tracker docs. | Runtime code, tests, CPU kernels, OpenCL kernels, OpenVINO graph execution, model/tokenizer logic. | Bundle links strict real-GGUF decode smoke, full fixed-corpus scalar/AVX2 answer parity, warm prefill/decode phase receipts, model/tokenizer/kernel identity, fallback=false, and accelerator comparison claim boundaries. |
+| `ARC140V-005` | Native OpenCL CPU/iGPU parity. | OpenCL runtime/CLI parity command, 258V artifacts, Arc 140V docs. | BitNet model/tokenizer/QK256/inference code and OpenVINO NPU execution. | Receipt compares one isolated Arc 140V native OpenCL kernel or static subgraph against the selected 258V CPU reference, recording tolerance, timing, selected backend/device identity, fallback=false, and no BitNet/QK256/acceleration claims. |
+| `LNL258V-COMPARE-002` | Post-baseline same-machine comparison refresh. | 258V artifact index, hardware docs, platform tracker docs. | Runtime code, tests, CPU kernels, OpenCL kernels, OpenVINO graph execution, model/tokenizer logic. | Index refresh links the CPU reference bundle and the next independent accelerator parity receipts without merging lane claims or making platform performance claims. |
 
 ## Required Platform Probe Surface
 
@@ -420,3 +427,20 @@ Minimum fields:
 
 The index is not proof by itself. It must preserve lane-specific proof labels
 and may only claim what the linked lane artifacts independently prove.
+
+## Post-Baseline CPU Reference Bundle
+
+`CPU258V-016` adds the current CPU reference bundle:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
+```
+
+That bundle is the comparison anchor for follow-on accelerator work. It links
+the post-mechanics full fixed-corpus scalar and AVX2 answer-corpus receipts, the
+scalar-vs-AVX2 answer-parity receipt, and warm-session `prefill_512` /
+`decode_128` phase receipts. Accelerator lanes may use it as a CPU reference,
+but the bundle itself does not prove Arc 140V or Intel NPU execution.
+
+The next comparison refresh is `LNL258V-COMPARE-002`, after the new CPU bundle
+and the next independent Arc/NPU parity receipts exist.
