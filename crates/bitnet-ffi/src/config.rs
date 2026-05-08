@@ -283,7 +283,7 @@ impl BitNetCInferenceConfig {
         config.repetition_penalty = self.repetition_penalty;
 
         if self.seed != 0 {
-            config = config.with_seed(self.seed);
+            config = config.with_seed(self.seed as u64);
         }
 
         config

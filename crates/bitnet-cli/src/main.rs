@@ -999,6 +999,7 @@ async fn async_main() -> Result<()> {
 
     let requested_backend_label =
         cli.device.clone().unwrap_or_else(|| config.default_device.clone());
+    #[cfg(feature = "full-cli")]
     let explicit_device_label = cli.device.clone();
 
     // Report backend selection at startup so logs and receipts are deterministic.
@@ -7360,6 +7361,7 @@ fn timing_samples_json(samples: &[f64]) -> serde_json::Value {
     })
 }
 
+#[cfg(feature = "full-cli")]
 fn numeric_samples_json(samples: &[f64]) -> serde_json::Value {
     if samples.is_empty() {
         return serde_json::json!({
@@ -7386,6 +7388,7 @@ fn numeric_samples_json(samples: &[f64]) -> serde_json::Value {
     })
 }
 
+#[cfg(feature = "full-cli")]
 fn tokens_per_second_json(tokens: usize, elapsed_ms: f64) -> serde_json::Value {
     if tokens == 0 || elapsed_ms <= 0.0 {
         serde_json::Value::Null
