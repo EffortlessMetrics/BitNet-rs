@@ -433,7 +433,8 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         strict_cpu: bool,
 
-        /// Output answer-shaped receipt to file
+        /// Output answer-shaped receipt to file; strict CPU/CUDA ask defaults to
+        /// target/bitnet/receipts/cuda-answer-readiness/strict-*-ask-latest.json
         #[arg(long, value_name = "PATH")]
         receipt_out: Option<std::path::PathBuf>,
     },
@@ -6626,6 +6627,8 @@ async fn run_ask_generation(
         );
     }
 
+    let effective_receipt_out =
+        receipt_out.clone().or_else(|| strict_ask_default_receipt_path(strict_cuda, strict_cpu));
     let question_for_receipt = question.clone();
     let system_prompt_for_receipt = system_prompt.clone();
     run_simple_generation(
@@ -6645,7 +6648,7 @@ async fn run_ask_generation(
         false,
         true,
         true,
-        receipt_out.clone(),
+        effective_receipt_out.clone(),
         false,
         false,
         true,
@@ -6664,9 +6667,10 @@ async fn run_ask_generation(
     )
     .await?;
 
-    let Some(receipt_path) = receipt_out else {
+    let Some(receipt_path) = effective_receipt_out else {
         return Ok(());
     };
+    let receipt_out_was_defaulted = receipt_out.is_none();
     let run_receipt: serde_json::Value = serde_json::from_slice(
         &std::fs::read(&receipt_path)
             .with_context(|| format!("failed to read run receipt {}", receipt_path.display()))?,
@@ -6739,6 +6743,11 @@ async fn run_ask_generation(
         },
         "execution_coverage": run_receipt["execution_coverage"].clone(),
         "quality": quality,
+        "receipt": {
+            "requested": !receipt_out_was_defaulted,
+            "defaulted_for_strict_ask": receipt_out_was_defaulted && (strict_cuda || strict_cpu),
+            "path": receipt_path.display().to_string(),
+        },
         "speedup_claim": false,
         "source_receipt": run_receipt,
     });
@@ -6749,7 +6758,48 @@ async fn run_ask_generation(
     if strict_cpu {
         validate_strict_cpu_answer_quality(&answer_receipt)?;
     }
+    if strict_cuda || strict_cpu {
+        print_strict_ask_proof_summary(&answer_receipt, &receipt_path);
+    }
     Ok(())
+}
+
+fn strict_ask_default_receipt_path(
+    strict_cuda: bool,
+    strict_cpu: bool,
+) -> Option<std::path::PathBuf> {
+    match (strict_cuda, strict_cpu) {
+        (true, false) => Some(
+            std::path::PathBuf::from("target")
+                .join("bitnet")
+                .join("receipts")
+                .join("cuda-answer-readiness")
+                .join("strict-cuda-ask-latest.json"),
+        ),
+        (false, true) => Some(
+            std::path::PathBuf::from("target")
+                .join("bitnet")
+                .join("receipts")
+                .join("cuda-answer-readiness")
+                .join("strict-cpu-ask-latest.json"),
+        ),
+        _ => None,
+    }
+}
+
+fn print_strict_ask_proof_summary(
+    answer_receipt: &serde_json::Value,
+    receipt_path: &std::path::Path,
+) {
+    let backend = answer_receipt["backend"]["selected_backend"].as_str().unwrap_or("unknown");
+    let runtime = answer_receipt["backend"]["runtime_api"].as_str().unwrap_or("unknown");
+    let fallback = answer_receipt["backend"]["fallback_used"].as_bool().unwrap_or(true);
+    let kernel = answer_receipt["bitnet"]["kernel_id"].as_str().unwrap_or("unknown");
+    let quality = answer_receipt["quality"]["garbage_filter_passed"].as_bool().unwrap_or(false);
+    println!(
+        "Proof: backend={backend} runtime={runtime} kernel={kernel} fallback={fallback} quality={quality} speedup_claim=false receipt={}",
+        receipt_path.display()
+    );
 }
 
 fn validate_strict_cuda_ask_receipt(run_receipt: &serde_json::Value) -> Result<()> {
@@ -8200,6 +8250,38 @@ mod tests {
         });
 
         validate_strict_cuda_answer_quality(&answer_receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_ask_default_receipt_path_is_only_for_strict_modes() {
+        assert!(
+            strict_ask_default_receipt_path(false, false).is_none(),
+            "non-strict ask should not force a receipt"
+        );
+        assert!(
+            strict_ask_default_receipt_path(true, true).is_none(),
+            "mutually exclusive strict modes are rejected before receipt resolution"
+        );
+
+        let cuda = strict_ask_default_receipt_path(true, false).unwrap();
+        assert_eq!(
+            cuda,
+            std::path::PathBuf::from("target")
+                .join("bitnet")
+                .join("receipts")
+                .join("cuda-answer-readiness")
+                .join("strict-cuda-ask-latest.json")
+        );
+
+        let cpu = strict_ask_default_receipt_path(false, true).unwrap();
+        assert_eq!(
+            cpu,
+            std::path::PathBuf::from("target")
+                .join("bitnet")
+                .join("receipts")
+                .join("cuda-answer-readiness")
+                .join("strict-cpu-ask-latest.json")
+        );
     }
 
     #[test]

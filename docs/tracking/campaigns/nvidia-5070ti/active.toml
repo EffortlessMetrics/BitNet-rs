@@ -649,7 +649,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-ANSWER-012"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-answer/CUDA-ANSWER-012-logit-divergence"
 stackable = false
 review_mode = "codex_premerge"
@@ -700,6 +700,53 @@ must_not_claim = [
   "CUDA speedup exists before a same-model fallback-free benchmark receipt upgrades speedup_claim.",
   "Broad chat quality is proven beyond the committed deterministic answer corpus.",
   "Full CUDA residency for every transformer operation is proven.",
+]
+
+[[work_item]]
+id = "CUDA-PROD-001"
+status = "in_progress"
+branch = "codex/cuda-prod/CUDA-PROD-001-strict-ask-receipt-default"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-ANSWER-012"]
+acceptance = "Make strict `bitnet ask` validate backend, fallback, and answer quality even when the user does not pass --receipt-out by writing a default answer receipt for strict CPU/CUDA ask runs, preserving no speed claim and no broad chat claim."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli strict_ask -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "docs/reports/CUDA_PROD_001_STRICT_ASK_RECEIPT_DEFAULT.md",
+  "docs/specs/rtx5070ti-cuda-answer-readiness.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "model loader behavior",
+  "dense CUDA reference lanes",
+  "WGPU, Vulkan, D3D12, OpenCL, Metal, NPU, or SLM runtime work",
+]
+may_claim = [
+  "Strict `bitnet ask` writes and validates an answer receipt by default for strict CPU/CUDA modes when --receipt-out is omitted.",
+  "The default strict CUDA ask receipt preserves selected backend, runtime API, fallback status, QK256 kernel identity, answer quality, and speedup_claim=false.",
+]
+must_not_claim = [
+  "Broad chat quality is proven beyond the committed deterministic answer corpus.",
+  "CUDA speedup exists before a same-model fallback-free benchmark receipt upgrades speedup_claim.",
+  "Full CUDA residency for every transformer operation is proven.",
+  "The model fetch/verify/install UX is complete.",
 ]
 
 [[work_item]]
