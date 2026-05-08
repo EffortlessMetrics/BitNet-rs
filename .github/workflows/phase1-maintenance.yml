@@ -33,7 +33,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -58,41 +58,8 @@ jobs:
       - name: Generate artifacts
         run: scripts/ci/generate-phase1-artifacts.sh
 
-      - name: Upload artifacts on PR
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Upload generated artifacts
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
         with:
           name: phase1-maintenance-artifacts
           path: docs/generated/phase1
-
-  phase1-commit-generated:
-    name: Commit generated artifacts
-    if: ${{ github.event_name != 'pull_request' }}
-    needs: phase1-generate
-    runs-on: ubuntu-22.04
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
-        with:
-          fetch-depth: 0
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6
-        with:
-          toolchain: stable
-
-      - name: Regenerate artifacts
-        run: scripts/ci/generate-phase1-artifacts.sh
-
-      - name: Commit if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/generated/phase1
-          if git diff --cached --quiet; then
-            echo "No generated artifact changes."
-            exit 0
-          fi
-          git commit -m "ci(phase1): refresh generated maintenance artifacts [skip ci]"
-          git push
