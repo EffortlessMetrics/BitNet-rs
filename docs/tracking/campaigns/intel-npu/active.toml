@@ -449,8 +449,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-011"
-status = "pr_open"
+status = "merged"
 pr = 4097
+merge_sha = "a53b3e8fee2e68beec28904b15f23db65438b8f7"
 branch = "codex/intel-npu/NPU-011-ffn-subgraph-parity"
 stackable = false
 review_mode = "codex_premerge"
