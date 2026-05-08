@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T08:21:00Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-006"
+event = "merged"
+pr = 4005
+merge_sha = "e268bffdf92ae58b5e5281f2842b2e19d720cbf1"
+actor = "codex"
+
+notes = [
+  "Reference-token artifact readiness merged in #4005.",
+  "The merge preserves the answer-quality boundary: strict Rust CPU failures are diagnosable against reference prompt/token evidence, but Rust CPU answer quality and logits parity are not claimed.",
+]

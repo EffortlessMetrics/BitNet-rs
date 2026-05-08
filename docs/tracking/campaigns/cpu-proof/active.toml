@@ -706,7 +706,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-ANSWER-006"
-status = "pr_open"
+status = "merged"
 pr = 4005
 branch = "codex/cpu-answer-006-reference-token-artifact"
 stackable = false
