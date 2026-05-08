@@ -314,14 +314,14 @@ backends:
       - Record backend API, adapter name, driver, and fallback status.
 
   cuda_dense_regular_llm:
-    status: receipt_boundary_in_progress
+    status: gemm_parity_in_progress
     notes:
       - CUDA reference lane for regular FP16/BF16/INT8 dense LLM kernels.
       - Can share CUDA probe, context, allocator, workspace, stats, parity, receipts, and benchmark protocol.
       - Dense regular-LLM kernels cannot count as BitNet packed I2S or QK256 proof.
-      - CUDA-DENSE-001 establishes the dense_regular_llm_cuda receipt label and proof boundary before dense GEMM implementation.
+      - CUDA-DENSE-001 established the dense_regular_llm_cuda receipt label and proof boundary.
+      - CUDA-DENSE-002 adds the first dense FP16 GEMM CPU/CUDA parity fixture with committed RTX 5070 Ti receipt evidence.
     blockers:
-      - Add dense FP16/BF16 or cuBLAS-backed matmul parity in CUDA-DENSE-002.
       - Add model-family routing so dense GGUF models cannot enter the BitNet packed QK256 path.
 
   rocm:

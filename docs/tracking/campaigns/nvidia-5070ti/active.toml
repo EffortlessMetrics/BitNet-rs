@@ -953,8 +953,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-002"
-status = "proposed"
+status = "pr_open"
 branch = "codex/cuda-dense-002-gemm-parity"
+pr = 4106
+head_sha = "36136b8bc33ec8a78415b8baeba6927998f65db6"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -962,16 +964,26 @@ human_gate = "on_blocker_only"
 blocked_by = ["CUDA-DENSE-001"]
 acceptance = "Add the first dense CUDA FP16/BF16 or cuBLAS-backed GEMM smoke/parity fixture with dense_regular_llm_cuda receipts, fallback_used=false, CPU reference comparison, and no BitNet packed I2S/QK256 or speedup claim."
 commands = [
-  "cargo fmt --all -- --check",
-  "cargo test --locked -p bitnet-kernels --no-default-features --features cuda",
+  "cargo fmt -p bitnet-kernels -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda dense_f16 -- --nocapture",
+  "BITNET_RUN_RTX5070TI_DENSE_CUDA_GEMM=1 BITNET_RTX5070TI_DENSE_CUDA_GEMM_RECEIPT=ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-f16-gemm-parity.json cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda live_rtx5070ti_dense_f16_cuda_gemm_matches_cpu_reference_when_enabled -- --nocapture",
   "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation -- --nocapture",
+  "cargo test --locked -p bitnet-receipts-core --lib -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
   "crates/bitnet-kernels/src/cuda/**",
   "crates/bitnet-receipts/**",
   "crates/bitnet-receipts-core/**",
+  "docs/reports/**",
+  "docs/tracking/bitnet-alignment/backend-status.yaml",
+  "docs/tracking/bitnet-alignment/status.md",
+  "docs/tracking/bitnet-alignment/workstream-ledger.yaml",
   "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
 ]
 forbidden_paths = [
   "crates/bitnet-server/**",
