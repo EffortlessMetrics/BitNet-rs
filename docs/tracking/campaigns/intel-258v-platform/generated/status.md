@@ -23,6 +23,8 @@
 | CPU258V-005 | merged | #3999 | `codex/intel-258v-platform/CPU258V-005-phase-evidence` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record local strict CPU attempts to collect 258V prefill_512 and decode_128 phase evidence, preserve missing proof receipts as blocker evidence, and require a receipt-emitting warm phase runner or faster decode path before promoting these profiles. |
 | CPU258V-006 | merged | #4001 | `codex/intel-258v-platform/CPU258V-006-warm-phase` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a strict CPU warm phase runner that loads the 258V BitNet GGUF model/tokenizer once, emits per-profile strict CPU receipts for prefill_512 and decode_128, preserves selected backend/kernel and fallback=false, and keeps phase evidence separate from speedup, Arc, or NPU claims. |
 
+| CPU258V-007 | pr_open | #4006 | `codex/intel-258v-platform/CPU258V-007-answer-template-refresh` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record the first 258V AVX2 answer-corpus refresh using the BitNet.cpp answer-ready prompt envelope, preserving timeout rows and missing child receipts as blocker evidence without answer-quality, parity, speed, Arc, or NPU claims. |
+
 ## Hard Constraints
 
 - 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims.

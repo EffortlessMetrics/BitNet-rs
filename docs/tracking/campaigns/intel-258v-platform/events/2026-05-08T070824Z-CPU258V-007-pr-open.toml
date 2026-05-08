@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T07:08:24Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-007"
+event = "pr_open"
+pr = 4006
+branch = "codex/intel-258v-platform/CPU258V-007-answer-template-refresh"
+head_sha = "aea84921246f6578d270b3131dcc0ce9ae73a4ab"
+summary = "Opened #4006 to record 258V AVX2 answer-corpus timeout evidence under the BitNet.cpp answer-ready prompt envelope."
+
+details = [
+  "The artifact records five timeout rows and missing_child_receipt kernels for the refreshed answer-corpus attempt.",
+  "This is blocker evidence only and does not prove answer quality, scalar/AVX2 parity under the new prompt, sustained throughput, Arc 140V execution, or Intel NPU execution.",
+]

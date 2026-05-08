@@ -617,3 +617,41 @@ must_not_claim = [
   "Arc 140V or Intel NPU execution is proven.",
   "CPU phase timings prove answer quality or acceleration.",
 ]
+
+[[work_item]]
+id = "CPU258V-007"
+status = "pr_open"
+pr = 4006
+branch = "codex/intel-258v-platform/CPU258V-007-answer-template-refresh"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-006"]
+acceptance = "Record the first 258V AVX2 answer-corpus refresh using the BitNet.cpp answer-ready prompt envelope, preserving timeout rows and missing child receipts as blocker evidence without answer-quality, parity, speed, Arc, or NPU claims."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The 258V AVX2 answer-corpus refresh under the BitNet.cpp answer-ready prompt envelope timed out within the bounded local child-run window.",
+]
+must_not_claim = [
+  "The BitNet.cpp answer-ready prompt envelope improves 258V answer quality.",
+  "Scalar/AVX2 parity under the new prompt is proven.",
+  "Sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+]

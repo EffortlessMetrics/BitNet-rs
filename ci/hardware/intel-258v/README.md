@@ -11,6 +11,7 @@ ci/hardware/intel-258v/<date>/cpu-bitnet-validation.json
 ci/hardware/intel-258v/<date>/cpu-phase-benchmark.json
 ci/hardware/intel-258v/<date>/cpu-phase-evidence-attempts.json
 ci/hardware/intel-258v/<date>/cpu-phase-warm-session.json
+ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template.json
 ```
 
 `platform-probe.json` is visibility-only. It may record CPU AVX2 facts, Arc
@@ -31,3 +32,8 @@ phase collection run. It loads the real GGUF model and tokenizer once, writes
 per-profile strict CPU receipts under `cpu-phase-warm-session-profiles/`, and
 remains CPU-only phase timing evidence until those profile receipts are
 converted by `cpu_phase_benchmark_receipt`.
+
+`cpu-answer-corpus-avx2-bitnetcpp-template.json` records the first 258V AVX2
+attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready
+prompt envelope. Timeout rows and `missing_child_receipt` kernels are blocker
+evidence only; they do not prove answer quality or AVX2 correctness.
