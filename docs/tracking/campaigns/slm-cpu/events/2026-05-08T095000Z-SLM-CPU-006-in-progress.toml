@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T09:50:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-006"
+event = "in_progress"
+branch = "codex/slm-cpu-006-first-token-divergence"
+base_sha = "9f61cf00a575cbd0f5d5e54c6a0f9c971bb2cfbf"
+actor = "codex"
+
+summary = "Prepared SLM-CPU-006 as the next i5-8250U dense Qwen correctness item."
+
+details = [
+  "The SLM-CPU lane has merged Qwen3-0.6B Q8_0 strict-load, tiny-run, answer-corpus, and reference-divergence validation through SLM-CPU-005.",
+  "SLM-CPU-006 localizes the first generated-token divergence by requiring matching prompt/template/BOS/token evidence and first-step top-k/logit evidence from bitnet-rs and a known-good external reference where available.",
+  "The item remains bounded to dense SLM correctness triage and does not claim answer quality, throughput, Qwen3.5 support, server, GPU, NPU, or BitNet QK256/I2_S changes.",
+]

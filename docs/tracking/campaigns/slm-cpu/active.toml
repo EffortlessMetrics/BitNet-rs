@@ -347,3 +347,45 @@ must_not_claim = [
   "General chat quality is proven.",
   "Sustained 8250U throughput is proven.",
 ]
+
+[[work_item]]
+id = "SLM-CPU-006"
+status = "pr_open"
+pr = 4031
+branch = "codex/slm-cpu-006-first-token-divergence"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-005"]
+acceptance = "Capture a real first-token divergence artifact for Qwen3-0.6B Q8_0 on the i5-8250U by running bitnet-rs and a known-good external reference with identical model SHA, prompt text, Qwen template, BOS policy, prompt IDs, generated IDs, decoded text, chosen token, and first-step top-k/logit evidence where available. The artifact classifies the first divergence as prompt/tokenizer/template, logits/sampler, output-head/vocab indexing, or shared transformer math without claiming answer quality, throughput, server, GPU, NPU, or Qwen3.5 support."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_divergence",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Qwen3 first-token divergence can be localized against reference prompt/token/logit evidence after merge.",
+  "The SLM-CPU lane remains a correctness and operability lane for the i5-8250U, not a throughput lane.",
+]
+must_not_claim = [
+  "Qwen answer quality is proven.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
