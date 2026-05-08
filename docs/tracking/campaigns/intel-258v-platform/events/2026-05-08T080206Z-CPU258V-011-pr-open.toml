@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T08:02:06Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-011"
+event = "pr_open"
+pr = 4014
+branch = "codex/intel-258v-platform/CPU258V-011-release-scalar-case"
+head_sha = "dd2169a1a40b9f455d24bc12a49b832e18532afb"
+summary = "Opened CPU258V-011 to record release-built scalar and scalar-vs-AVX2 selected-case parity evidence."
+
+details = [
+  "The selected scalar and AVX2 release runs complete strict CPU execution with real GGUF loading, explicit tokenizer resolution, selected i2_s kernels, and fallback_used=false.",
+  "Both lanes produce identical prompt IDs, generated IDs [89048, 124979, 70232, 88162], and decoded text for math_2_plus_2.",
+  "This PR proves selected-case answer parity only, not answer correctness, full-corpus parity, speed, Arc 140V execution, or Intel NPU execution.",
+]
