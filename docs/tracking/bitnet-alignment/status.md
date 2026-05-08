@@ -1,6 +1,6 @@
 # bitnet-rs Alignment Status
 
-Updated: 2026-05-06
+Updated: 2026-05-08
 
 ## Current Focus
 
@@ -29,11 +29,22 @@ Transition note: campaign-local `active.toml` files and append-only `events/*.to
 | RTX5070TI-003 | #3679 | pr_open | Preserve RTX 5070 Ti CUDA selected-device identity |
 | AMD9950X3D-003 | TBD | ready | Prove 9950X3D scalar AVX2 and AVX-512 dispatch |
 | AMD5700X-003 | TBD | ready | Prove 5700X scalar and AVX2 dispatch |
+| GEMMA4-000 | TBD | ready | Document Gemma 4 tracker rows and claim boundaries; docs only, no inference claim |
+| GEMMA4-001 | TBD | ready | Add Gemma 4 architecture/catalog scaffold; no runtime, kernel, QK256, or model-weight changes |
 
 These rows are coordination markers, not implementation proof. Merged scaffold
 rows stay visible so the A770, NPU, 258V, 8250U, AMD, NVIDIA, and Mac lanes can
 coordinate follow-up work without implying that runtime execution has been built
 or tested.
+
+
+## Model Family Expansion Boundary
+
+Gemma 4 enters bitnet-rs through the existing architecture, catalog, backend-status, and receipt truth system. It must not create a parallel tracker tree. `ModelArchitecture::Gemma4` is distinct from generic `Gemma`/Gemma 2 support, and catalog scaffold entries do not imply runtime inference support.
+
+The first Gemma 4 proof target is E2B IT text-only Q4 GGUF on the dense regular-LLM lane with strict receipt, limited runtime context, explicit tokenizer/template authority, PLE loaded, shared KV enabled, no fallback, and no BitNet QK256/I2S kernel usage. E4B follows after E2B. The 31B dense and 26B-A4B MoE variants remain later or design-only targets until separate loader, kernel, and receipt work lands.
+
+Gemma 4 text-only support, when it exists, must not imply image, audio, video, MoE, MTP, full 128K/256K context, accelerator, or speedup claims. Receipts must distinguish model capabilities from implementation coverage.
 
 ## Hardware Lanes
 

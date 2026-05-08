@@ -5,6 +5,101 @@
 
 use std::collections::HashMap;
 
+/// Gemma 4 variant-level metadata tracked before runtime support exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Gemma4Variant {
+    E2B,
+    E4B,
+    Dense31B,
+    Moe26BA4B,
+}
+
+impl Gemma4Variant {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::E2B => "e2b-it",
+            Self::E4B => "e4b-it",
+            Self::Dense31B => "31b-it",
+            Self::Moe26BA4B => "26b-a4b-it",
+        }
+    }
+}
+
+/// Static Gemma 4 family facts used for catalog and receipt planning.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Gemma4Spec {
+    pub variant: Gemma4Variant,
+    pub layers: usize,
+    pub vocab_size: usize,
+    pub context_length: usize,
+    pub sliding_window: usize,
+    pub has_ple: bool,
+    pub has_shared_kv: bool,
+    pub is_moe: bool,
+    pub supports_image: bool,
+    pub supports_audio: bool,
+    pub runtime_supported: bool,
+}
+
+impl Gemma4Spec {
+    pub fn for_variant(variant: Gemma4Variant) -> Self {
+        match variant {
+            Gemma4Variant::E2B => Self {
+                variant,
+                layers: 35,
+                vocab_size: 262_144,
+                context_length: 131_072,
+                sliding_window: 512,
+                has_ple: true,
+                has_shared_kv: true,
+                is_moe: false,
+                supports_image: true,
+                supports_audio: true,
+                runtime_supported: false,
+            },
+            Gemma4Variant::E4B => Self {
+                variant,
+                layers: 42,
+                vocab_size: 262_144,
+                context_length: 131_072,
+                sliding_window: 512,
+                has_ple: true,
+                has_shared_kv: true,
+                is_moe: false,
+                supports_image: true,
+                supports_audio: true,
+                runtime_supported: false,
+            },
+            Gemma4Variant::Dense31B => Self {
+                variant,
+                layers: 60,
+                vocab_size: 262_144,
+                context_length: 262_144,
+                sliding_window: 1024,
+                has_ple: false,
+                has_shared_kv: false,
+                is_moe: false,
+                supports_image: true,
+                supports_audio: false,
+                runtime_supported: false,
+            },
+            Gemma4Variant::Moe26BA4B => Self {
+                variant,
+                layers: 30,
+                vocab_size: 262_144,
+                context_length: 262_144,
+                sliding_window: 1024,
+                has_ple: false,
+                has_shared_kv: false,
+                is_moe: true,
+                supports_image: true,
+                supports_audio: false,
+                runtime_supported: false,
+            },
+        }
+    }
+}
+
 /// Model license type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum License {
@@ -191,6 +286,23 @@ impl ModelCard {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_gemma4_variant_specs_are_scaffold_only() {
+        let e2b = Gemma4Spec::for_variant(Gemma4Variant::E2B);
+        assert_eq!(e2b.variant.as_str(), "e2b-it");
+        assert_eq!(e2b.context_length, 131_072);
+        assert_eq!(e2b.vocab_size, 262_144);
+        assert!(e2b.has_ple);
+        assert!(e2b.has_shared_kv);
+        assert!(!e2b.is_moe);
+        assert!(!e2b.runtime_supported);
+
+        let moe = Gemma4Spec::for_variant(Gemma4Variant::Moe26BA4B);
+        assert_eq!(moe.variant.as_str(), "26b-a4b-it");
+        assert!(moe.is_moe);
+        assert!(!moe.runtime_supported);
+    }
 
     #[test]
     fn test_basic_metadata() {

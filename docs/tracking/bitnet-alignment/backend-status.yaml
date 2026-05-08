@@ -1,5 +1,5 @@
 schema: 1
-updated: 2026-05-05
+updated: 2026-05-08
 
 status_values:
   - not_present
@@ -21,6 +21,13 @@ hard_rules:
   - Server inference is not working until it returns real model output.
   - QK256 is validation-only until performance target and receipts exist.
   - Minimal GGUF fallback cannot support correctness or performance claims.
+
+model_claim_rules:
+  - Non-BitNet dense models must not use QK256 receipts.
+  - Multimodal support must be explicitly claimed in receipts.
+  - MoE support must record active vs total params.
+  - Token classification must not be recorded as generation.
+  - Gemma 4 E2B/E4B strict claims must record PLE and shared-KV loading.
 
 backends:
   cpu:

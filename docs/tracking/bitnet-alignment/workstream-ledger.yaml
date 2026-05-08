@@ -1,6 +1,6 @@
 schema: 1
 project: bitnet-rs-alignment
-updated: 2026-05-06
+updated: 2026-05-08
 
 states:
   - proposed
@@ -109,7 +109,93 @@ workstreams:
     title: NVIDIA CUDA validation
     objective: Validate RTX 5070 Ti execution through CUDA kernels, CPU/CUDA parity, receipts, and benchmark artifacts, with wgpu/Vulkan as a separate cross-platform comparison lane.
 
+  model_families:
+    title: Model-family expansion
+    objective: Add non-BitNet model families with strict claim boundaries and receipts inside the existing architecture/catalog/backend truth system.
+
 items:
+  - id: GEMMA4-000
+    title: Add Gemma 4 tracker rows and claim boundaries
+    state: ready
+    priority: P1
+    workstream: model_families
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/models/families/gemma-4.md
+        - docs/models/lanes/dense-decoder.md
+      forbidden_paths:
+        - crates/**
+        - ci/model-receipts/**
+        - models/**
+    acceptance:
+      - Gemma 4 is represented as a non-BitNet dense/MoE family in the existing tracker.
+      - E2B/E4B text-only dense inference is documented as the first target sequence.
+      - 26B-A4B MoE, multimodal, long-context, MTP, and accelerator claims are future-gated.
+      - BitNet QK256 kernels are explicitly rejected as Gemma 4 proof.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+    notes:
+      - Docs/tracker only; no runtime, kernel, or receipt proof exists.
+      - Generic Gemma support is not Gemma 4 support.
+    claim_boundary:
+      may_claim:
+        - Gemma 4 planning and claim boundaries are documented.
+      must_not_claim:
+        - Gemma 4 inference works.
+        - Gemma 4 uses BitNet QK256/I2S kernels.
+    receipt_required: false
+    followups:
+      - GEMMA4-001
+
+  - id: GEMMA4-001
+    title: Add Gemma 4 architecture and catalog scaffold
+    state: ready
+    priority: P1
+    workstream: model_families
+    depends_on:
+      - GEMMA4-000
+    scope:
+      allowed_paths:
+        - crates/bitnet-models/src/architecture.rs
+        - crates/bitnet-models/src/model_catalog.rs
+        - crates/bitnet-models/src/model_metadata.rs
+        - docs/models/families/gemma-4.md
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+      forbidden_paths:
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/**
+        - crates/bitnet-quantization/**
+        - crates/bitnet-receipts/**
+        - models/**
+    acceptance:
+      - ModelArchitecture::Gemma4 exists and detects separately from Gemma/Gemma2.
+      - Gemma 4 E2B, E4B, 31B, and 26B-A4B variant metadata exists.
+      - ModelCatalog::builtin() includes google/gemma-4-E2B-it, google/gemma-4-E4B-it, google/gemma-4-31B-it, and google/gemma-4-26B-A4B-it entries.
+      - E2B/E4B defaults record 128K context and 262K vocabulary, while 31B/26B-A4B catalog metadata records 256K context.
+      - All Gemma 4 entries remain scaffold-only and do not claim runtime inference support.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+    notes:
+      - Do not touch inference runtime, kernels, QK256, GPU/NPU/Mac lanes, or model weights.
+      - First real proof remains E2B IT text-only Q4 GGUF with strict receipt and no fallback.
+    claim_boundary:
+      may_claim:
+        - Gemma 4 is represented in architecture detection, variant metadata, and catalog scaffolding.
+      must_not_claim:
+        - Gemma 4 inference works.
+        - Multimodal, MoE, MTP, full-context, accelerator, or speedup support exists.
+    receipt_required: false
+    followups:
+      - GEMMA4-002
+
   - id: TRUTH-001
     title: Fence server simulated inference
     state: merged

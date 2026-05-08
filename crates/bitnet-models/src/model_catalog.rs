@@ -38,6 +38,27 @@ impl ModelSize {
     }
 }
 
+/// Implementation maturity tier for a catalog entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImplementationTier {
+    /// Intended to fit the current CPU or RTX 5070 Ti-class local proof lane.
+    LocalTestable,
+    /// Recognized but expected to need partial offload or reduced-context operation.
+    PartialOffload,
+    /// Design metadata only; no local inference proof is claimed.
+    DesignOnly,
+}
+
+impl ImplementationTier {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::LocalTestable => "local_testable",
+            Self::PartialOffload => "partial_offload",
+            Self::DesignOnly => "design_only",
+        }
+    }
+}
+
 /// Catalog entry for a known model.
 #[derive(Debug, Clone)]
 pub struct CatalogEntry {
@@ -51,6 +72,8 @@ pub struct CatalogEntry {
     pub vocab_size: usize,
     pub license: String,
     pub hf_repo: String,
+    pub implementation_tier: ImplementationTier,
+    pub inference_supported: bool,
 }
 
 /// Model catalog.
@@ -79,6 +102,8 @@ impl ModelCatalog {
             vocab_size: 32000,
             license: "MIT".into(),
             hf_repo: "microsoft/bitnet-b1.58-2B-4T-gguf".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: true,
         });
 
         cat.add(CatalogEntry {
@@ -92,6 +117,8 @@ impl ModelCatalog {
             vocab_size: 100352,
             license: "MIT".into(),
             hf_repo: "microsoft/phi-4".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: true,
         });
 
         cat.add(CatalogEntry {
@@ -105,6 +132,8 @@ impl ModelCatalog {
             vocab_size: 100352,
             license: "MIT".into(),
             hf_repo: "microsoft/phi-4-mini".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: true,
         });
 
         cat.add(CatalogEntry {
@@ -118,6 +147,8 @@ impl ModelCatalog {
             vocab_size: 151936,
             license: "Apache-2.0".into(),
             hf_repo: "Qwen/Qwen2.5-3B-Instruct".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: true,
         });
 
         cat.add(CatalogEntry {
@@ -131,6 +162,8 @@ impl ModelCatalog {
             vocab_size: 128256,
             license: "Llama3".into(),
             hf_repo: "meta-llama/Meta-Llama-3-8B-Instruct".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: true,
         });
 
         cat.add(CatalogEntry {
@@ -144,6 +177,68 @@ impl ModelCatalog {
             vocab_size: 256128,
             license: "Gemma".into(),
             hf_repo: "google/gemma-2-2b-it".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: true,
+        });
+
+        cat.add(CatalogEntry {
+            id: "gemma4-e2b-it".into(),
+            name: "Gemma 4 E2B IT".into(),
+            family: "gemma4".into(),
+            params_b: 2.0,
+            size: ModelSize::Small,
+            architecture: "Gemma4ForConditionalGeneration".into(),
+            context_length: 131072,
+            vocab_size: 262144,
+            license: "Gemma".into(),
+            hf_repo: "google/gemma-4-E2B-it".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: false,
+        });
+
+        cat.add(CatalogEntry {
+            id: "gemma4-e4b-it".into(),
+            name: "Gemma 4 E4B IT".into(),
+            family: "gemma4".into(),
+            params_b: 4.0,
+            size: ModelSize::Medium,
+            architecture: "Gemma4ForConditionalGeneration".into(),
+            context_length: 131072,
+            vocab_size: 262144,
+            license: "Gemma".into(),
+            hf_repo: "google/gemma-4-E4B-it".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: false,
+        });
+
+        cat.add(CatalogEntry {
+            id: "gemma4-31b-it".into(),
+            name: "Gemma 4 31B IT".into(),
+            family: "gemma4".into(),
+            params_b: 31.0,
+            size: ModelSize::XLarge,
+            architecture: "Gemma4ForConditionalGeneration".into(),
+            context_length: 262144,
+            vocab_size: 262144,
+            license: "Gemma".into(),
+            hf_repo: "google/gemma-4-31B-it".into(),
+            implementation_tier: ImplementationTier::PartialOffload,
+            inference_supported: false,
+        });
+
+        cat.add(CatalogEntry {
+            id: "gemma4-26b-a4b-it".into(),
+            name: "Gemma 4 26B-A4B IT".into(),
+            family: "gemma4".into(),
+            params_b: 25.2,
+            size: ModelSize::Large,
+            architecture: "Gemma4MoeForConditionalGeneration".into(),
+            context_length: 262144,
+            vocab_size: 262144,
+            license: "Gemma".into(),
+            hf_repo: "google/gemma-4-26B-A4B-it".into(),
+            implementation_tier: ImplementationTier::DesignOnly,
+            inference_supported: false,
         });
 
         cat.add(CatalogEntry {
@@ -157,6 +252,8 @@ impl ModelCatalog {
             vocab_size: 32000,
             license: "Apache-2.0".into(),
             hf_repo: "mistralai/Mistral-7B-Instruct-v0.3".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: true,
         });
 
         cat.add(CatalogEntry {
@@ -170,6 +267,8 @@ impl ModelCatalog {
             vocab_size: 49152,
             license: "Apache-2.0".into(),
             hf_repo: "HuggingFaceTB/SmolLM2-1.7B-Instruct".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: true,
         });
 
         cat
@@ -267,6 +366,22 @@ mod tests {
         let fams = cat.families();
         assert!(fams.contains(&"phi".to_string()));
         assert!(fams.contains(&"llama".to_string()));
+        assert!(fams.contains(&"gemma4".to_string()));
+    }
+
+    #[test]
+    fn test_gemma4_catalog_entries_are_scaffold_only() {
+        let cat = ModelCatalog::builtin();
+        let e2b = cat.get("gemma4-e2b-it").unwrap();
+        assert_eq!(e2b.hf_repo, "google/gemma-4-E2B-it");
+        assert_eq!(e2b.context_length, 131072);
+        assert_eq!(e2b.vocab_size, 262144);
+        assert_eq!(e2b.implementation_tier, ImplementationTier::LocalTestable);
+        assert!(!e2b.inference_supported);
+
+        let moe = cat.get("gemma4-26b-a4b-it").unwrap();
+        assert_eq!(moe.implementation_tier, ImplementationTier::DesignOnly);
+        assert!(!moe.inference_supported);
     }
 
     #[test]
@@ -305,6 +420,8 @@ mod tests {
             vocab_size: 1000,
             license: "MIT".into(),
             hf_repo: "test/test".into(),
+            implementation_tier: ImplementationTier::LocalTestable,
+            inference_supported: true,
         });
         assert_eq!(cat.count(), 1);
     }
