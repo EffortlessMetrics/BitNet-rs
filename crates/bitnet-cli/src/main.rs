@@ -1999,6 +1999,33 @@ fn write_json_output(path: Option<&std::path::PathBuf>, value: &serde_json::Valu
     Ok(())
 }
 
+fn answer_corpus_child_phase(phase: &str, details: serde_json::Value) {
+    let Some(path) = std::env::var_os("BITNET_ANSWER_CORPUS_CHILD_PHASE_PATH") else {
+        return;
+    };
+    let event = serde_json::json!({
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "child_phase": phase,
+        "details": details,
+    });
+    eprintln!("answer_corpus_child_phase={phase}");
+    let path = std::path::PathBuf::from(path);
+    let write_result = (|| -> std::io::Result<()> {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent)?;
+        }
+        use std::io::Write as _;
+        let mut file = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
+        writeln!(file, "{event}")?;
+        Ok(())
+    })();
+    if let Err(error) = write_result {
+        eprintln!("answer_corpus_child_phase_write_error={error}");
+    }
+}
+
 async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Result<()> {
     match action {
         ConfigAction::Show => {
@@ -2700,6 +2727,19 @@ async fn run_simple_generation(
     use bitnet_tokenizers::Tokenizer;
     use std::sync::Arc;
 
+    answer_corpus_child_phase("process_start", serde_json::json!({ "command": "run" }));
+    answer_corpus_child_phase(
+        "args_parsed",
+        serde_json::json!({
+            "requested_backend": requested_backend_label,
+            "model_path": model_path.display().to_string(),
+            "has_tokenizer_path": tokenizer_path.is_some(),
+            "max_new_tokens": max_new_tokens,
+            "prompt_template": prompt_template.clone(),
+            "json_out": json_out.as_ref().map(|path| path.display().to_string()),
+        }),
+    );
+
     // Validate --model-format
     match model_format.as_str() {
         "auto" | "gguf" | "safetensors" => {}
@@ -2753,7 +2793,24 @@ async fn run_simple_generation(
         || std::env::var("BITNET_STRICT_MODE")
             .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
             .unwrap_or(false);
+    answer_corpus_child_phase(
+        "backend_select_start",
+        serde_json::json!({
+            "requested_backend": requested_backend_label,
+            "strict_backend": strict_backend,
+        }),
+    );
     let backend_identity = resolve_run_backend_identity(requested_backend_label, strict_backend)?;
+    answer_corpus_child_phase(
+        "backend_select_complete",
+        serde_json::json!({
+            "requested_backend": backend_identity.requested_backend.as_str(),
+            "selected_backend": backend_identity.selected_backend.as_str(),
+            "runtime_api": backend_identity.runtime_api.as_str(),
+            "fallback_used": backend_identity.fallback_used,
+            "fallback_reason": backend_identity.fallback_reason.as_deref(),
+        }),
+    );
     bitnet_qk256_dispatch::reset_qk256_dispatch_coverage();
     let strict_cuda_backend_selected = strict_backend
         && backend_identity.selected_backend.as_str() == "nvidia-rtx-5070-ti-cuda"
@@ -2824,6 +2881,13 @@ async fn run_simple_generation(
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
     let loader_mode;
     let model_load_start = std::time::Instant::now();
+    answer_corpus_child_phase(
+        "model_load_start",
+        serde_json::json!({
+            "model_path": model_path.display().to_string(),
+            "is_hf_directory": is_hf_directory,
+        }),
+    );
 
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
@@ -2834,6 +2898,14 @@ async fn run_simple_generation(
             (Arc::from(m) as Arc<dyn Model>, cfg)
         }
         Err(e) => {
+            answer_corpus_child_phase(
+                "model_load_error",
+                serde_json::json!({
+                    "allow_mock": allow_mock,
+                    "strict_loader": strict_loader,
+                    "error": e.to_string(),
+                }),
+            );
             if !allow_mock {
                 anyhow::bail!(
                     "Failed to load real model: {e}\n\
@@ -2894,6 +2966,13 @@ async fn run_simple_generation(
         }
     };
     let model_load_ms = elapsed_ms(model_load_start);
+    answer_corpus_child_phase(
+        "model_load_complete",
+        serde_json::json!({
+            "loader_mode": loader_mode,
+            "model_load_ms": rounded_ms(model_load_ms),
+        }),
+    );
 
     // Load tokenizer with deterministic CPU-BITNET authority.
     // Priority: explicit path -> GGUF metadata -> sibling tokenizer asset.
@@ -2903,6 +2982,13 @@ async fn run_simple_generation(
     let effective_strict_tokenizer = strict_tokenizer || strict_loader;
 
     let tokenizer_load_start = std::time::Instant::now();
+    answer_corpus_child_phase(
+        "tokenizer_load_start",
+        serde_json::json!({
+            "strict_tokenizer": effective_strict_tokenizer,
+            "has_tokenizer_path": tokenizer_path.is_some(),
+        }),
+    );
     let tokenizer_resolution = match bitnet_tokenizers::auto::resolve_tokenizer(
         &model_path,
         tokenizer_path.as_deref(),
@@ -2924,6 +3010,14 @@ async fn run_simple_generation(
             resolution
         }
         Err(e) => {
+            answer_corpus_child_phase(
+                "tokenizer_load_error",
+                serde_json::json!({
+                    "strict_tokenizer": effective_strict_tokenizer,
+                    "allow_mock": allow_mock,
+                    "error": e.to_string(),
+                }),
+            );
             if effective_strict_tokenizer {
                 eprintln!("Strict tokenizer failed: {e}");
                 std::process::exit(EXIT_STRICT_TOKENIZER);
@@ -2960,6 +3054,14 @@ async fn run_simple_generation(
     let tokenizer_source = tokenizer_resolution.source;
     let tokenizer_strict = tokenizer_resolution.strict;
     let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+    answer_corpus_child_phase(
+        "tokenizer_load_complete",
+        serde_json::json!({
+            "tokenizer_source": tokenizer_source.as_str(),
+            "tokenizer_strict": tokenizer_strict,
+            "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+        }),
+    );
 
     // Auto-detect template if needed
     let template_type = if prompt_template == "auto" {
@@ -2976,7 +3078,21 @@ async fn run_simple_generation(
     };
 
     // Format prompt using the template
+    answer_corpus_child_phase(
+        "prompt_render_start",
+        serde_json::json!({
+            "template": template_type.to_string(),
+            "has_system_prompt": system_prompt.is_some(),
+        }),
+    );
     let formatted_prompt = template_type.apply(&prompt, system_prompt.as_deref());
+    answer_corpus_child_phase(
+        "prompt_render_complete",
+        serde_json::json!({
+            "template": template_type.to_string(),
+            "rendered_prompt_bytes": formatted_prompt.len(),
+        }),
+    );
 
     // Get template's default stop sequences and merge with manual stops
     let template_stops = template_type.default_stop_sequences();
@@ -3011,6 +3127,13 @@ async fn run_simple_generation(
     // Tokenize formatted prompt with proper BOS policy and special token parsing
     let parse_special = template_type.parse_special();
     let prompt_tokenize_start = std::time::Instant::now();
+    answer_corpus_child_phase(
+        "prompt_tokenize_start",
+        serde_json::json!({
+            "bos_policy": bos_policy,
+            "parse_special": parse_special,
+        }),
+    );
     let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
     if let Some(override_ids) = qwen_trace_prompt_id_override()? {
         qwen_trace_write(serde_json::json!({
@@ -3023,6 +3146,13 @@ async fn run_simple_generation(
     }
     ensure_non_empty_generation_context(&mut tokens, tokenizer.as_ref())?;
     let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
+    answer_corpus_child_phase(
+        "prompt_tokenize_complete",
+        serde_json::json!({
+            "prompt_token_count": tokens.len(),
+            "prompt_tokenize_ms": rounded_ms(prompt_tokenize_ms),
+        }),
+    );
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
     qwen_trace_write(serde_json::json!({
         "kind": "qwen_trace_prompt",
@@ -3120,12 +3250,59 @@ async fn run_simple_generation(
     let mut prefill_step_ms = Vec::new();
     let mut prefill_step_allocs = Vec::new();
     let prefill_start = std::time::Instant::now();
+    let mut cuda_first_forward_started = false;
+    let mut cuda_first_forward_completed = false;
+    answer_corpus_child_phase(
+        "prompt_prefill_start",
+        serde_json::json!({
+            "prompt_token_count": tokens.len(),
+            "prefill_prefix_tokens": tokens.len().saturating_sub(1),
+            "strict_cuda_backend_selected": strict_cuda_backend_selected,
+        }),
+    );
     if tokens.len() > 1 {
         for token in &tokens[..tokens.len() - 1] {
             let step_start = std::time::Instant::now();
             let step_alloc_start = AllocationAuditSnapshot::current();
             let x = model.embed(&[*token])?;
+            if strict_cuda_backend_selected && !cuda_first_forward_started {
+                answer_corpus_child_phase(
+                    "cuda_context_start",
+                    serde_json::json!({
+                        "trigger": "prompt_prefill_first_forward",
+                        "selected_backend": backend_identity.selected_backend.as_str(),
+                    }),
+                );
+                answer_corpus_child_phase(
+                    "weight_upload_start",
+                    serde_json::json!({
+                        "trigger": "prompt_prefill_first_forward",
+                        "selected_backend": backend_identity.selected_backend.as_str(),
+                    }),
+                );
+                cuda_first_forward_started = true;
+            }
             let _ = model.forward(&x, any_cache.as_mut())?;
+            if strict_cuda_backend_selected
+                && cuda_first_forward_started
+                && !cuda_first_forward_completed
+            {
+                answer_corpus_child_phase(
+                    "weight_upload_complete",
+                    serde_json::json!({
+                        "trigger": "prompt_prefill_first_forward",
+                        "selected_backend": backend_identity.selected_backend.as_str(),
+                    }),
+                );
+                answer_corpus_child_phase(
+                    "cuda_context_complete",
+                    serde_json::json!({
+                        "trigger": "prompt_prefill_first_forward",
+                        "selected_backend": backend_identity.selected_backend.as_str(),
+                    }),
+                );
+                cuda_first_forward_completed = true;
+            }
             let step_ms = elapsed_ms(step_start);
             if profile_requested {
                 prefill_step_ms.push(step_ms);
@@ -3137,6 +3314,13 @@ async fn run_simple_generation(
         }
     }
     let prefill_ms = if prefill_token_count > 0 { elapsed_ms(prefill_start) } else { 0.0 };
+    answer_corpus_child_phase(
+        "prompt_prefill_complete",
+        serde_json::json!({
+            "prefill_tokens": prefill_token_count,
+            "prefill_ms": rounded_ms(prefill_ms),
+        }),
+    );
 
     // Track logits dump if requested
     let mut logits_dump: Vec<LogitStep> = Vec::new();
@@ -3180,6 +3364,15 @@ async fn run_simple_generation(
     let mut token_decode_step_allocs = Vec::with_capacity(max_new_tokens);
     for step_idx in 0..max_new_tokens {
         let qwen_trace_this_step = qwen_trace_enabled() && step_idx == 0;
+        if step_idx == 0 {
+            answer_corpus_child_phase(
+                "decode_step_0_start",
+                serde_json::json!({
+                    "context_token_count": tokens.len(),
+                    "strict_cuda_backend_selected": strict_cuda_backend_selected,
+                }),
+            );
+        }
         if qwen_trace_this_step {
             unsafe {
                 std::env::set_var("BITNET_QWEN_TRACE_ACTIVE", "1");
@@ -3216,7 +3409,44 @@ async fn run_simple_generation(
         // Forward pass (with KV cache handling history)
         let t1 = std::time::Instant::now();
         let forward_alloc_start = AllocationAuditSnapshot::current();
+        if strict_cuda_backend_selected && !cuda_first_forward_started {
+            answer_corpus_child_phase(
+                "cuda_context_start",
+                serde_json::json!({
+                    "trigger": "decode_step_0_forward",
+                    "selected_backend": backend_identity.selected_backend.as_str(),
+                }),
+            );
+            answer_corpus_child_phase(
+                "weight_upload_start",
+                serde_json::json!({
+                    "trigger": "decode_step_0_forward",
+                    "selected_backend": backend_identity.selected_backend.as_str(),
+                }),
+            );
+            cuda_first_forward_started = true;
+        }
         let h = model.forward(&x, any_cache.as_mut())?;
+        if strict_cuda_backend_selected
+            && cuda_first_forward_started
+            && !cuda_first_forward_completed
+        {
+            answer_corpus_child_phase(
+                "weight_upload_complete",
+                serde_json::json!({
+                    "trigger": "decode_step_0_forward",
+                    "selected_backend": backend_identity.selected_backend.as_str(),
+                }),
+            );
+            answer_corpus_child_phase(
+                "cuda_context_complete",
+                serde_json::json!({
+                    "trigger": "decode_step_0_forward",
+                    "selected_backend": backend_identity.selected_backend.as_str(),
+                }),
+            );
+            cuda_first_forward_completed = true;
+        }
         if qwen_trace_this_step {
             qwen_trace_tensor("decode.forward_output", Some(step_idx), &h)?;
         }
@@ -3401,6 +3631,15 @@ async fn run_simple_generation(
         token_decode_step_ms.push(elapsed_ms(token_decode_start));
         print!("{}", token_text);
         std::io::Write::flush(&mut std::io::stdout())?;
+        if step_idx == 0 {
+            answer_corpus_child_phase(
+                "decode_step_0_complete",
+                serde_json::json!({
+                    "chosen_token": next_token,
+                    "generated_tokens": generated_tokens.len(),
+                }),
+            );
+        }
 
         // Maintain rolling tail (if present)
         if let Some(t) = &mut tail {
@@ -4104,7 +4343,20 @@ async fn run_simple_generation(
             object.insert("resolved_device".to_string(), apple_machine["resolved_device"].clone());
             object.insert("apple".to_string(), apple_machine);
         }
+        answer_corpus_child_phase(
+            "receipt_write_start",
+            serde_json::json!({
+                "json_out": json_path.display().to_string(),
+                "artifact_kind": output["artifact_kind"].as_str(),
+            }),
+        );
         write_json_output(Some(&json_path), &output)?;
+        answer_corpus_child_phase(
+            "receipt_write_complete",
+            serde_json::json!({
+                "json_out": json_path.display().to_string(),
+            }),
+        );
     }
 
     // Dump IDs if requested
