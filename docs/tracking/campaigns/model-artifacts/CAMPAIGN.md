@@ -38,7 +38,7 @@ GGUF that only proves structural validity or backend execution.
 | MODEL-ARTIFACT-002 | blocked | Shared search merged in #3928 and records no `answer_ready` BitNet artifact. Backend local-answer lanes remain blocked or diagnostic-only until a future artifact passes the reference prompt suite. |
 | MODEL-ARTIFACT-003 | merged | PR #3932 records latest stock llama.cpp reference-runner compatibility for official-derived candidates. This is diagnostic-only and does not unblock backend answer claims. |
 | MODEL-ARTIFACT-004 | merged | PR #3939 records intended `ik_llama.cpp` runner evidence for `tdh111` IQ2_BN_R4 and the official Microsoft I2_S artifact. This is diagnostic-only and does not promote an `answer_ready` artifact. |
-| MODEL-ARTIFACT-005 | in_progress | Split official-target, alternate-quant control, runner authority, tokenizer/pre-tokenizer authority, and per-lane unblock fields so `tdh111` evidence cannot be mistaken for official I2_S CUDA readiness. |
+| MODEL-ARTIFACT-005 | pr_open | PR #3977 splits official-target, alternate-quant control, runner authority, tokenizer/pre-tokenizer authority, and per-lane unblock fields so `tdh111` evidence cannot be mistaken for official I2_S CUDA readiness. |
 
 ## Review Policy
 

@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T03:30:00Z"
+campaign = "model-artifacts"
+item = "MODEL-ARTIFACT-005"
+event = "pr_open"
+actor = "codex"
+pr = 3977
+head_sha = "dbdb5822132750cbe1ce91ecf9d1db2c82b919ac"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "PR #3977 splits official-target and alternate-quant artifact authority dimensions.",
+  "The official Microsoft I2_S artifact remains blocked for answer readiness.",
+  "The tdh111 IQ2_BN_R4 artifact remains alternate-quant control evidence only and cannot unblock official I2_S CUDA readiness.",
+  "No answer_ready artifact, backend answer claim, runtime change, or speed claim is introduced.",
+]

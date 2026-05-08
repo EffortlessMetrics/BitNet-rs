@@ -208,7 +208,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-ARTIFACT-005"
-status = "in_progress"
+status = "pr_open"
+pr = 3977
 branch = "codex/model-artifacts/MODEL-ARTIFACT-005-authority-dimensions"
 stackable = false
 review_mode = "codex_premerge"
