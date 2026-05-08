@@ -128,6 +128,7 @@
 | nvidia-5070ti | CUDA-PROD-004 | CUDA-PROD-003 | merged |
 | nvidia-5070ti | CUDA-BITNET-PERF-002 | CUDA-PROD-004 | merged |
 | nvidia-5070ti | CUDA-BITNET-PERF-003 | CUDA-BITNET-PERF-002, CUDA-PROD-002, CUDA-PROD-003 | merged |
+| nvidia-5070ti | CUDA-BITNET-PERF-004 | CUDA-BITNET-PERF-002, CUDA-BITNET-PERF-003 | in_progress |
 | nvidia-5070ti | CUDA-DENSE-001 | RTX5070TI-007 | merged |
 | nvidia-5070ti | CUDA-DENSE-002 | CUDA-DENSE-001 | merged |
 | nvidia-5070ti | CUDA-DENSE-003 | CUDA-DENSE-002 | merged |

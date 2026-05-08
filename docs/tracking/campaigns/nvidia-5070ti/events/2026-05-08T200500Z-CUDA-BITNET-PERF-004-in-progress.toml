@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T20:05:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-PERF-004"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-bitnet-perf-004-qualification"
+previous_status = "planned"
+new_status = "in_progress"
+
+notes = [
+  "Started benchmark qualification review for the existing repeated strict ask and warm-session RTX 5070 Ti BitNet CUDA receipts.",
+  "Scope is receipt/report/tracker only; no CUDA kernels, QK256 math, tokenizer, loader, transformer, server, or dense CUDA changes.",
+  "The review must keep speedup_claim=false and record missing evidence before any profile-specific speedup claim can be accepted.",
+]

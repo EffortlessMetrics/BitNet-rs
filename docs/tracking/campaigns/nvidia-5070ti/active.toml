@@ -1005,6 +1005,52 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-BITNET-PERF-004"
+status = "in_progress"
+branch = "codex/cuda-bitnet-perf-004-qualification"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-BITNET-PERF-002", "CUDA-BITNET-PERF-003"]
+acceptance = "Add a governed benchmark qualification review for the repeated strict ask and warm-session RTX 5070 Ti BitNet CUDA receipts, explicitly keeping speedup_claim=false and recording the missing evidence before any profile-specific speedup claim can be accepted."
+commands = [
+  "cargo fmt -p bitnet-bench-receipts -- --check",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "dense CUDA reference lanes",
+  "WGPU, Vulkan, D3D12, OpenCL, Metal, NPU, or SLM runtime work",
+]
+may_claim = [
+  "Benchmark qualification review evidence exists for the current repeated strict ask and warm-session RTX 5070 Ti BitNet CUDA receipts.",
+  "The review records why speedup_claim and benchmark_qualified_speedup remain false for the reviewed profiles.",
+]
+must_not_claim = [
+  "CUDA speedup is accepted for any profile.",
+  "Broad chat quality is proven beyond committed deterministic prompts.",
+  "Full CUDA residency for every transformer operation is proven.",
+  "Dense regular-LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+  "Server inference readiness is complete.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-001"
 status = "merged"
 branch = "codex/cuda-dense-001-receipt-boundary"
