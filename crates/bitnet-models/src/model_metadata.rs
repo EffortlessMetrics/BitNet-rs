@@ -50,6 +50,101 @@ impl License {
     }
 }
 
+/// Gemma 4 variant metadata used by catalog and loader planning.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Gemma4Variant {
+    E2B,
+    E4B,
+    Dense31B,
+    Moe26BA4B,
+}
+
+impl Gemma4Variant {
+    pub fn id(&self) -> &'static str {
+        match self {
+            Self::E2B => "e2b-it",
+            Self::E4B => "e4b-it",
+            Self::Dense31B => "31b-it",
+            Self::Moe26BA4B => "26b-a4b-it",
+        }
+    }
+}
+
+/// Static Gemma 4 shape/capability facts for foundation planning.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Gemma4Spec {
+    pub variant: Gemma4Variant,
+    pub layers: usize,
+    pub vocab_size: usize,
+    pub context_length: usize,
+    pub sliding_window: usize,
+    pub has_ple: bool,
+    pub has_shared_kv: bool,
+    pub is_moe: bool,
+    pub image_capable: bool,
+    pub audio_capable: bool,
+    pub first_text_only_target: bool,
+}
+
+impl Gemma4Spec {
+    pub fn for_variant(variant: Gemma4Variant) -> Self {
+        match variant {
+            Gemma4Variant::E2B => Self {
+                variant,
+                layers: 35,
+                vocab_size: 262_144,
+                context_length: 131_072,
+                sliding_window: 512,
+                has_ple: true,
+                has_shared_kv: true,
+                is_moe: false,
+                image_capable: true,
+                audio_capable: true,
+                first_text_only_target: true,
+            },
+            Gemma4Variant::E4B => Self {
+                variant,
+                layers: 42,
+                vocab_size: 262_144,
+                context_length: 131_072,
+                sliding_window: 512,
+                has_ple: true,
+                has_shared_kv: true,
+                is_moe: false,
+                image_capable: true,
+                audio_capable: true,
+                first_text_only_target: false,
+            },
+            Gemma4Variant::Dense31B => Self {
+                variant,
+                layers: 60,
+                vocab_size: 262_144,
+                context_length: 262_144,
+                sliding_window: 1024,
+                has_ple: false,
+                has_shared_kv: false,
+                is_moe: false,
+                image_capable: true,
+                audio_capable: false,
+                first_text_only_target: false,
+            },
+            Gemma4Variant::Moe26BA4B => Self {
+                variant,
+                layers: 30,
+                vocab_size: 262_144,
+                context_length: 262_144,
+                sliding_window: 1024,
+                has_ple: false,
+                has_shared_kv: false,
+                is_moe: true,
+                image_capable: true,
+                audio_capable: false,
+                first_text_only_target: false,
+            },
+        }
+    }
+}
+
 /// Quantization information.
 #[derive(Debug, Clone)]
 pub struct QuantInfo {
@@ -285,5 +380,27 @@ mod tests {
         let lic = License::from_str_relaxed("");
         assert_eq!(lic, License::Unknown);
         assert_eq!(lic.name(), "Unknown");
+    }
+
+    #[test]
+    fn test_gemma4_e2b_spec_marks_first_text_only_target() {
+        let spec = Gemma4Spec::for_variant(Gemma4Variant::E2B);
+        assert_eq!(spec.layers, 35);
+        assert_eq!(spec.context_length, 131_072);
+        assert_eq!(spec.vocab_size, 262_144);
+        assert!(spec.has_ple);
+        assert!(spec.has_shared_kv);
+        assert!(!spec.is_moe);
+        assert!(spec.first_text_only_target);
+    }
+
+    #[test]
+    fn test_gemma4_moe_spec_is_future_gated_shape() {
+        let spec = Gemma4Spec::for_variant(Gemma4Variant::Moe26BA4B);
+        assert_eq!(spec.variant.id(), "26b-a4b-it");
+        assert_eq!(spec.context_length, 262_144);
+        assert!(spec.is_moe);
+        assert!(!spec.audio_capable);
+        assert!(!spec.first_text_only_target);
     }
 }

@@ -147,6 +147,58 @@ impl ModelCatalog {
         });
 
         cat.add(CatalogEntry {
+            id: "gemma4-e2b-it".into(),
+            name: "Gemma 4 E2B IT".into(),
+            family: "gemma4".into(),
+            params_b: 2.0,
+            size: ModelSize::Small,
+            architecture: "Gemma4ForConditionalGeneration".into(),
+            context_length: 131072,
+            vocab_size: 262144,
+            license: "Gemma".into(),
+            hf_repo: "google/gemma-4-E2B-it".into(),
+        });
+
+        cat.add(CatalogEntry {
+            id: "gemma4-e4b-it".into(),
+            name: "Gemma 4 E4B IT".into(),
+            family: "gemma4".into(),
+            params_b: 4.0,
+            size: ModelSize::Medium,
+            architecture: "Gemma4ForConditionalGeneration".into(),
+            context_length: 131072,
+            vocab_size: 262144,
+            license: "Gemma".into(),
+            hf_repo: "google/gemma-4-E4B-it".into(),
+        });
+
+        cat.add(CatalogEntry {
+            id: "gemma4-31b-it".into(),
+            name: "Gemma 4 31B IT".into(),
+            family: "gemma4".into(),
+            params_b: 31.0,
+            size: ModelSize::XLarge,
+            architecture: "Gemma4ForConditionalGeneration".into(),
+            context_length: 262144,
+            vocab_size: 262144,
+            license: "Gemma".into(),
+            hf_repo: "google/gemma-4-31B-it".into(),
+        });
+
+        cat.add(CatalogEntry {
+            id: "gemma4-26b-a4b-it".into(),
+            name: "Gemma 4 26B-A4B IT".into(),
+            family: "gemma4".into(),
+            params_b: 25.2,
+            size: ModelSize::Large,
+            architecture: "Gemma4ForConditionalGeneration".into(),
+            context_length: 262144,
+            vocab_size: 262144,
+            license: "Gemma".into(),
+            hf_repo: "google/gemma-4-26B-A4B-it".into(),
+        });
+
+        cat.add(CatalogEntry {
             id: "mistral-7b".into(),
             name: "Mistral 7B".into(),
             family: "mistral".into(),
@@ -289,6 +341,20 @@ mod tests {
         let cat = ModelCatalog::builtin();
         let bitnet = cat.get("bitnet-2b").unwrap();
         assert_eq!(bitnet.vocab_size, 32000);
+    }
+
+    #[test]
+    fn test_gemma4_entries_in_catalog() {
+        let cat = ModelCatalog::builtin();
+        let e2b = cat.get("gemma4-e2b-it").unwrap();
+        assert_eq!(e2b.family, "gemma4");
+        assert_eq!(e2b.context_length, 131072);
+        assert_eq!(e2b.vocab_size, 262144);
+        assert_eq!(e2b.hf_repo, "google/gemma-4-E2B-it");
+
+        let moe = cat.get("gemma4-26b-a4b-it").unwrap();
+        assert_eq!(moe.context_length, 262144);
+        assert_eq!(moe.params_b, 25.2);
     }
 
     #[test]

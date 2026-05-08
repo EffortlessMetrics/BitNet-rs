@@ -73,6 +73,10 @@ workstreams:
     title: CPU runtime proof
     objective: Make strict CPU QK256 CLI inference receipt-backed and measurable.
 
+  model_families:
+    title: Model-family expansion
+    objective: Add non-BitNet model families with strict claim boundaries and receipts.
+
   legacy_mobile_cpu:
     title: Legacy mobile CPU validation
     objective: Validate the CPU-first BitNet path on Intel Core i5-8250U-class AVX2 mobile hardware, with receipts that separate short turbo behavior from sustained low-power operation.
@@ -110,6 +114,57 @@ workstreams:
     objective: Validate RTX 5070 Ti execution through CUDA kernels, CPU/CUDA parity, receipts, and benchmark artifacts, with wgpu/Vulkan as a separate cross-platform comparison lane.
 
 items:
+  - id: GEMMA4-000
+    title: Gemma 4 tracker and claim-boundary scaffold
+    state: proposed
+    priority: P1
+    workstream: model_families
+    depends_on: []
+    scope:
+      allowed_paths:
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/models/families/gemma-4.md
+      forbidden_paths:
+        - crates/**
+    acceptance:
+      - Gemma 4 is represented as a non-BitNet dense/MoE model family.
+      - E2B/E4B text-only is the first target.
+      - 26B-A4B, multimodal, long context, and MTP are future-gated.
+      - BitNet QK256 kernels do not count as Gemma 4 dense inference proof.
+    verification:
+      - cargo fmt --all -- --check
+    notes:
+      - Generic Gemma support is not Gemma 4 support.
+      - First target is Gemma 4 E2B IT text-only Q4 GGUF.
+      - Text-only support does not imply image, audio, video, MoE, MTP, or full-context support.
+
+  - id: GEMMA4-001
+    title: Gemma 4 architecture and catalog foundation
+    state: proposed
+    priority: P1
+    workstream: model_families
+    depends_on:
+      - GEMMA4-000
+    scope:
+      allowed_paths:
+        - crates/bitnet-models/src/architecture.rs
+        - crates/bitnet-models/src/model_catalog.rs
+        - crates/bitnet-models/src/model_metadata.rs
+      forbidden_paths:
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/**
+    acceptance:
+      - ModelArchitecture::Gemma4 exists without claiming runtime support.
+      - Gemma and Gemma4 detection are distinct.
+      - E2B, E4B, 31B, and 26B-A4B catalog and metadata scaffold exists.
+      - MoE, multimodal, long context, and MTP behavior is future-gated.
+    verification:
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+    notes:
+      - Add ModelArchitecture::Gemma4 without inference runtime changes.
+
   - id: TRUTH-001
     title: Fence server simulated inference
     state: merged

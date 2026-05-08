@@ -29,11 +29,17 @@ Transition note: campaign-local `active.toml` files and append-only `events/*.to
 | RTX5070TI-003 | #3679 | pr_open | Preserve RTX 5070 Ti CUDA selected-device identity |
 | AMD9950X3D-003 | TBD | ready | Prove 9950X3D scalar AVX2 and AVX-512 dispatch |
 | AMD5700X-003 | TBD | ready | Prove 5700X scalar and AVX2 dispatch |
+| GEMMA4-000 | TBD | proposed | Add Gemma 4 tracker and claim-boundary scaffold; no runtime execution |
+| GEMMA4-001 | TBD | proposed | Add Gemma 4 architecture/catalog foundation; no inference claim |
 
 These rows are coordination markers, not implementation proof. Merged scaffold
 rows stay visible so the A770, NPU, 258V, 8250U, AMD, NVIDIA, and Mac lanes can
 coordinate follow-up work without implying that runtime execution has been built
 or tested.
+
+## Model-family Lanes
+
+Gemma 4 is tracked under the shared backend/receipt truth system rather than a parallel tracker. The first target is Gemma 4 E2B IT text-only Q4 GGUF with strict receipts. Generic Gemma support is not Gemma 4 support, and BitNet QK256 execution does not count as Gemma 4 dense inference proof. MoE, multimodal, MTP, and long-context behavior remain future-gated until their own receipts exist. See `docs/models/families/gemma-4.md`.
 
 ## Hardware Lanes
 
