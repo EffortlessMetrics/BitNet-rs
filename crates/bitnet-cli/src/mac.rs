@@ -3,6 +3,7 @@
 use anyhow::{Context, Result, anyhow};
 use clap::{Args, Subcommand, ValueEnum};
 use serde::Serialize;
+use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
 use crate::model_cache::{self, VerifiedCachedModel};
@@ -14,6 +15,7 @@ const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-v
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
 const QWEN_PROMPT_TEMPLATE: &str = "qwen2.5";
 const OPERATOR_PROFILE_TOKENS: &[usize] = &[16, 32, 64];
+const PERFORMANCE_PROFILE_TOKENS: &[usize] = &[16, 32, 64, 128];
 const OPERATOR_PROFILE_PROMPTS: &[&str] = &[
     "What is 2+2? Answer briefly.",
     "Name the capital of France.",
@@ -26,6 +28,8 @@ enum MacValidateProfileSet {
     Smoke,
     /// Run bounded 16/32/64 warm-answer timing profiles and write an aggregate summary.
     Operator,
+    /// Run release-mode 16/32/64/128 warm-answer timing profiles.
+    Performance,
 }
 
 /// Run the supported Apple M4 local-answer flow with strict receipts.
@@ -121,7 +125,7 @@ enum MacAction {
         #[arg(long, default_value_t = 2)]
         corpus_repeat_runs: usize,
 
-        /// Validation profile set. Use operator to measure 16/32/64 token warm-answer profiles.
+        /// Validation profile set. Use operator for 16/32/64 profiles or performance for release-mode 16/32/64/128 profiles.
         #[arg(long, value_enum, default_value_t = MacValidateProfileSet::Smoke)]
         profile_set: MacValidateProfileSet,
 
@@ -326,9 +330,17 @@ async fn run_validate(
     threads: usize,
     json_out: PathBuf,
 ) -> Result<()> {
+    if profile_set == MacValidateProfileSet::Performance && cfg!(debug_assertions) {
+        anyhow::bail!(
+            "mac validate --profile-set performance must be run from a release build; use `cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set performance ...`"
+        );
+    }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     if profile_set == MacValidateProfileSet::Operator {
         return run_operator_profiles(model, json_out, threads).await;
+    }
+    if profile_set == MacValidateProfileSet::Performance {
+        return run_performance_profiles(model, json_out, threads).await;
     }
     crate::run_slm_warm_session(
         APPLE_M4_CPU_NEON,
@@ -369,6 +381,60 @@ async fn run_operator_profiles(
     json_out: PathBuf,
     threads: usize,
 ) -> Result<()> {
+    run_warm_profile_set(
+        model,
+        json_out,
+        threads,
+        WarmProfileSetSpec {
+            name: "operator",
+            artifact_kind: "apple_m4_slm_operator_profiles",
+            tokens: OPERATOR_PROFILE_TOKENS,
+            command: "mac validate --profile-set operator",
+            required_release: false,
+        },
+    )
+    .await
+}
+
+async fn run_performance_profiles(
+    model: VerifiedCachedModel,
+    json_out: PathBuf,
+    threads: usize,
+) -> Result<()> {
+    if cfg!(debug_assertions) {
+        anyhow::bail!(
+            "mac validate --profile-set performance must be run from a release build; use `cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set performance ...`"
+        );
+    }
+    run_warm_profile_set(
+        model,
+        json_out,
+        threads,
+        WarmProfileSetSpec {
+            name: "performance",
+            artifact_kind: "apple_m4_slm_performance_profiles",
+            tokens: PERFORMANCE_PROFILE_TOKENS,
+            command: "mac validate --profile-set performance",
+            required_release: true,
+        },
+    )
+    .await
+}
+
+struct WarmProfileSetSpec {
+    name: &'static str,
+    artifact_kind: &'static str,
+    tokens: &'static [usize],
+    command: &'static str,
+    required_release: bool,
+}
+
+async fn run_warm_profile_set(
+    model: VerifiedCachedModel,
+    json_out: PathBuf,
+    threads: usize,
+    spec: WarmProfileSetSpec,
+) -> Result<()> {
     let receipt_dir =
         json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from(".")).join(
             format!(
@@ -379,8 +445,8 @@ async fn run_operator_profiles(
     std::fs::create_dir_all(&receipt_dir)
         .with_context(|| format!("failed to create {}", receipt_dir.display()))?;
 
-    let mut summaries = Vec::with_capacity(OPERATOR_PROFILE_TOKENS.len());
-    for tokens in OPERATOR_PROFILE_TOKENS {
+    let mut summaries = Vec::with_capacity(spec.tokens.len());
+    for tokens in spec.tokens {
         let profile_id = format!("warm_{tokens}");
         let receipt_path = receipt_dir.join(format!("{profile_id}.json"));
         crate::run_slm_warm_session(
@@ -413,21 +479,21 @@ async fn run_operator_profiles(
             receipt_path.clone(),
         )
         .await?;
-        annotate_and_validate_mac_receipt(
-            &receipt_path,
-            &model,
-            "mac validate --profile-set operator",
-        )?;
+        annotate_and_validate_mac_receipt(&receipt_path, &model, spec.command)?;
         let receipt: serde_json::Value = serde_json::from_slice(
             &std::fs::read(&receipt_path)
                 .with_context(|| format!("failed to read {}", receipt_path.display()))?,
         )?;
         summaries.push(operator_profile_summary(&profile_id, *tokens, &receipt_path, &receipt)?);
     }
+    let profile_ids = profile_ids_json(spec.tokens);
+    let profile_set_model_loads = spec.tokens.len();
+    let build_profile = if cfg!(debug_assertions) { "debug" } else { "release" };
+    let release_mode = !cfg!(debug_assertions);
 
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
-        "artifact_kind": "apple_m4_slm_operator_profiles",
+        "artifact_kind": spec.artifact_kind,
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "artifact_path": json_out.display().to_string(),
         "requested_backend": APPLE_M4_CPU_NEON,
@@ -435,25 +501,34 @@ async fn run_operator_profiles(
         "runtime_api": "cpu",
         "fallback_used": false,
         "fallback_reason": serde_json::Value::Null,
-        "profile_set": "operator",
+        "profile_set": spec.name,
         "profiles": summaries,
+        "build": {
+            "profile": build_profile,
+            "release_mode": release_mode,
+        },
         "operator_thresholds": {
             "scope": "supported Apple M4 SLM warm-answer timing only",
             "profile_execution_model": "one warm-session run per token budget",
             "profiles_loaded_independently": true,
-            "profile_set_model_loads": OPERATOR_PROFILE_TOKENS.len(),
-            "profiles_required": ["warm_16", "warm_32", "warm_64"],
+            "profile_set_model_loads": profile_set_model_loads,
+            "profiles_required": profile_ids,
             "cold_load_separated": true,
             "model_tokenizer_reuse_visible": true,
             "model_tokenizer_reuse_visible_per_profile": true,
             "reuse_scope": "within_each_profile",
-            "initial_targets": {
-                "warm_16": "complete reliably",
-                "warm_32": "complete without timeout",
-                "warm_64": "measured and bounded"
-            },
+            "initial_targets": initial_targets_json(spec.tokens),
             "hard_latency_thresholds": serde_json::Value::Null,
             "thresholds_are_claim_bounds_not_speed_guarantees": true
+        },
+        "performance_baseline": {
+            "release_mode_required": spec.required_release,
+            "release_mode_observed": release_mode,
+            "warm_128_included": spec.tokens.contains(&128),
+            "baseline_scope": "release-mode warm-session timing for this model, backend, machine, and profile set only",
+            "cold_load_separated": true,
+            "broad_performance_claim": false,
+            "speedup_claim": false
         },
         "model_cache": {
             "id": model.id,
@@ -486,8 +561,10 @@ async fn run_operator_profiles(
         .with_context(|| format!("failed to write {}", json_out.display()))?;
     validate_mac_receipt_value(&json_out, &aggregate)?;
     println!(
-        "Mac operator profile summary written to {} (profiles: warm_16, warm_32, warm_64)",
-        json_out.display()
+        "Mac {} profile summary written to {} (profiles: {})",
+        spec.name,
+        json_out.display(),
+        profile_ids_display(spec.tokens)
     );
     Ok(())
 }
@@ -532,11 +609,19 @@ fn operator_profile_summary(
         "timing": {
             "model_load_ms": receipt["timing"]["model_load_ms"].clone(),
             "tokenizer_load_ms": receipt["timing"]["tokenizer_load_ms"].clone(),
+            "total_session_ms": receipt["speed"]["timing"]["total_session_ms"].clone(),
+            "tokenize_ms": receipt["speed"]["timing"]["tokenize_ms"].clone(),
+            "prefill_ms": receipt["speed"]["timing"]["prefill_ms"].clone(),
             "warm_prompt_wall_ms": receipt["speed"]["timing"]["warm_prompt_wall_ms"].clone(),
+            "first_token_ms": receipt["speed"]["timing"]["first_token_ms"].clone(),
             "decode_total_ms": receipt["speed"]["timing"]["decode_total_ms"].clone(),
             "sampling_ms": receipt["speed"]["timing"]["sampling_ms"].clone(),
             "warm_prompt_generated_tok_s": receipt["speed"]["throughput"]["warm_prompt_generated_tok_s"].clone(),
             "decode_generated_tok_s": receipt["speed"]["throughput"]["decode_generated_tok_s"].clone(),
+        },
+        "memory": {
+            "peak_memory_mb": peak_memory_mb(),
+            "peak_memory_source": "getrusage.ru_maxrss",
         },
         "claim_boundary": {
             "speedup_claim": false,
@@ -544,6 +629,55 @@ fn operator_profile_summary(
             "scope": "this profile, model, backend, and machine receipt only",
         }
     }))
+}
+
+fn profile_ids_json(tokens: &[usize]) -> serde_json::Value {
+    serde_json::Value::Array(
+        tokens.iter().map(|tokens| serde_json::Value::String(format!("warm_{tokens}"))).collect(),
+    )
+}
+
+fn profile_ids_display(tokens: &[usize]) -> String {
+    tokens.iter().map(|tokens| format!("warm_{tokens}")).collect::<Vec<_>>().join(", ")
+}
+
+fn initial_targets_json(tokens: &[usize]) -> serde_json::Value {
+    let mut targets = serde_json::Map::new();
+    for tokens in tokens {
+        let target = match *tokens {
+            16 => "complete reliably",
+            32 => "complete without timeout",
+            64 => "measured and bounded",
+            128 => "release-mode baseline only; no latency guarantee",
+            _ => "measured and bounded",
+        };
+        targets.insert(format!("warm_{tokens}"), serde_json::Value::String(target.to_string()));
+    }
+    serde_json::Value::Object(targets)
+}
+
+#[cfg(unix)]
+fn peak_memory_mb() -> Option<f64> {
+    let mut usage = MaybeUninit::<libc::rusage>::uninit();
+    if unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) } != 0 {
+        return None;
+    }
+    let usage = unsafe { usage.assume_init() };
+    let raw = usage.ru_maxrss as f64;
+    #[cfg(target_os = "macos")]
+    let bytes = raw;
+    #[cfg(not(target_os = "macos"))]
+    let bytes = raw * 1024.0;
+    Some(round3(bytes / (1024.0 * 1024.0)))
+}
+
+#[cfg(not(unix))]
+fn peak_memory_mb() -> Option<f64> {
+    None
+}
+
+fn round3(value: f64) -> f64 {
+    (value * 1000.0).round() / 1000.0
 }
 
 fn annotate_and_validate_mac_receipt(
@@ -717,8 +851,10 @@ fn validate_mac_receipt_value(
 
     let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session" {
         validate_warm_session_receipt(path, receipt)?
-    } else if artifact_kind == "apple_m4_slm_operator_profiles" {
-        validate_operator_profiles_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_operator_profiles"
+        || artifact_kind == "apple_m4_slm_performance_profiles"
+    {
+        validate_profile_set_receipt(path, receipt, artifact_kind.as_str())?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -736,89 +872,115 @@ fn validate_mac_receipt_value(
     })
 }
 
-fn validate_operator_profiles_receipt(
+fn validate_profile_set_receipt(
     path: &Path,
     receipt: &serde_json::Value,
+    artifact_kind: &str,
 ) -> Result<(Option<usize>, Option<usize>)> {
+    let required = match artifact_kind {
+        "apple_m4_slm_operator_profiles" => {
+            &[("warm_16", 16_u64), ("warm_32", 32_u64), ("warm_64", 64_u64)][..]
+        }
+        "apple_m4_slm_performance_profiles" => {
+            &[("warm_16", 16_u64), ("warm_32", 32_u64), ("warm_64", 64_u64), ("warm_128", 128_u64)]
+                [..]
+        }
+        _ => {
+            anyhow::bail!("{} has unsupported profile receipt kind {artifact_kind}", path.display())
+        }
+    };
     if receipt["operator_thresholds"]["cold_load_separated"] != true {
-        anyhow::bail!("{} operator profiles must separate cold load timing", path.display());
+        anyhow::bail!("{} profile summary must separate cold load timing", path.display());
     }
     if receipt["operator_thresholds"]["model_tokenizer_reuse_visible"] != true {
-        anyhow::bail!("{} operator profiles must record model/tokenizer reuse", path.display());
+        anyhow::bail!("{} profile summary must record model/tokenizer reuse", path.display());
     }
     if receipt["operator_thresholds"]["model_tokenizer_reuse_visible_per_profile"] != true {
         anyhow::bail!(
-            "{} operator profiles must scope model/tokenizer reuse visibility per profile",
+            "{} profile summary must scope model/tokenizer reuse visibility per profile",
             path.display()
         );
     }
     if receipt["operator_thresholds"]["thresholds_are_claim_bounds_not_speed_guarantees"] != true {
         anyhow::bail!(
-            "{} operator profiles must record that thresholds are claim bounds, not speed guarantees",
+            "{} profile summary must record that thresholds are claim bounds, not speed guarantees",
             path.display()
         );
     }
     if receipt["operator_thresholds"]["profiles_loaded_independently"] != true {
         anyhow::bail!(
-            "{} operator profiles must disclose independent per-token-budget warm-session runs",
+            "{} profile summary must disclose independent per-token-budget warm-session runs",
             path.display()
         );
     }
-    let profiles = receipt["profiles"].as_array().ok_or_else(|| {
-        anyhow!("{} operator profile summary is missing profiles", path.display())
-    })?;
-    if profiles.len() != 3 {
+    let profiles = receipt["profiles"]
+        .as_array()
+        .ok_or_else(|| anyhow!("{} profile summary is missing profiles", path.display()))?;
+    if profiles.len() != required.len() {
         anyhow::bail!(
-            "{} operator profile summary must contain exactly warm_16, warm_32, and warm_64",
-            path.display()
+            "{} profile summary must contain exactly {}",
+            path.display(),
+            required.iter().map(|(profile, _)| *profile).collect::<Vec<_>>().join(", ")
         );
     }
-    if receipt["operator_thresholds"]["profile_set_model_loads"].as_u64() != Some(3) {
+    if receipt["operator_thresholds"]["profile_set_model_loads"].as_u64()
+        != Some(required.len() as u64)
+    {
         anyhow::bail!(
-            "{} operator profile summary must record profile_set_model_loads=3",
-            path.display()
+            "{} profile summary must record profile_set_model_loads={}",
+            path.display(),
+            required.len()
         );
     }
-    let required = [("warm_16", 16_u64), ("warm_32", 32_u64), ("warm_64", 64_u64)];
+    if artifact_kind == "apple_m4_slm_performance_profiles" {
+        if receipt["profile_set"].as_str() != Some("performance") {
+            anyhow::bail!(
+                "{} performance summary must record profile_set=performance",
+                path.display()
+            );
+        }
+        if receipt["build"]["release_mode"].as_bool() != Some(true)
+            || receipt["performance_baseline"]["release_mode_observed"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} performance summary must be recorded from a release build",
+                path.display()
+            );
+        }
+        if receipt["performance_baseline"]["warm_128_included"].as_bool() != Some(true) {
+            anyhow::bail!("{} performance summary must include warm_128", path.display());
+        }
+    }
     for (profile_id, requested_tokens) in required {
         if !profiles.iter().any(|profile| {
-            profile["profile_id"] == profile_id
-                && profile["requested_max_new_tokens"].as_u64() == Some(requested_tokens)
+            profile["profile_id"] == *profile_id
+                && profile["requested_max_new_tokens"].as_u64() == Some(*requested_tokens)
         }) {
-            anyhow::bail!("{} operator profile summary is missing {profile_id}", path.display());
+            anyhow::bail!("{} profile summary is missing {profile_id}", path.display());
         }
     }
     let mut generated_total = 0usize;
     for profile in profiles {
         if profile["quality_passed"].as_bool() != Some(true) {
-            anyhow::bail!("{} operator profile quality failed", path.display());
+            anyhow::bail!("{} profile quality failed", path.display());
         }
         if profile["prompt_count"].as_u64().unwrap_or_default() == 0 {
-            anyhow::bail!("{} operator profile records zero prompts", path.display());
+            anyhow::bail!("{} profile records zero prompts", path.display());
         }
         let generated = profile["generated_tokens"].as_u64().unwrap_or_default();
         if generated == 0 {
-            anyhow::bail!("{} operator profile records zero generated tokens", path.display());
+            anyhow::bail!("{} profile records zero generated tokens", path.display());
         }
         if profile["model_loaded_once"].as_bool() != Some(true)
             || profile["tokenizer_loaded_once"].as_bool() != Some(true)
         {
-            anyhow::bail!(
-                "{} operator profile does not record model/tokenizer reuse",
-                path.display()
-            );
+            anyhow::bail!("{} profile does not record model/tokenizer reuse", path.display());
         }
         if profile["cold_load_separated"].as_bool() != Some(true) {
-            anyhow::bail!(
-                "{} operator profile must record cold_load_separated=true",
-                path.display()
-            );
+            anyhow::bail!("{} profile must record cold_load_separated=true", path.display());
         }
         if profile["reuse_scope"].as_str() != Some("within_profile") {
-            anyhow::bail!(
-                "{} operator profile must record reuse_scope=within_profile",
-                path.display()
-            );
+            anyhow::bail!("{} profile must record reuse_scope=within_profile", path.display());
         }
         let timing = &profile["timing"];
         for field in [
@@ -832,7 +994,25 @@ fn validate_operator_profiles_receipt(
         ] {
             if timing[field].is_null() {
                 anyhow::bail!(
-                    "{} operator profile {} is missing timing.{field}",
+                    "{} profile {} is missing timing.{field}",
+                    path.display(),
+                    profile["profile_id"].as_str().unwrap_or("<unknown>")
+                );
+            }
+        }
+        if artifact_kind == "apple_m4_slm_performance_profiles" {
+            for field in ["total_session_ms", "tokenize_ms", "prefill_ms", "first_token_ms"] {
+                if timing[field].is_null() {
+                    anyhow::bail!(
+                        "{} performance profile {} is missing timing.{field}",
+                        path.display(),
+                        profile["profile_id"].as_str().unwrap_or("<unknown>")
+                    );
+                }
+            }
+            if profile["memory"]["peak_memory_mb"].is_null() {
+                anyhow::bail!(
+                    "{} performance profile {} is missing memory.peak_memory_mb",
                     path.display(),
                     profile["profile_id"].as_str().unwrap_or("<unknown>")
                 );

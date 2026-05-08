@@ -197,7 +197,9 @@ fn mac_validate_help_documents_operator_profile_set() {
         .assert()
         .success()
         .stdout(predicate::str::contains("--profile-set"))
-        .stdout(predicate::str::contains("16/32/64 token warm-answer profiles"));
+        .stdout(predicate::str::contains("16/32/64 profiles"))
+        .stdout(predicate::str::contains("performance"))
+        .stdout(predicate::str::contains("16/32/64/128"));
 }
 
 #[test]
@@ -211,6 +213,27 @@ fn mac_check_missing_cache_points_to_model_fetch() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+#[cfg(debug_assertions)]
+fn mac_validate_performance_requires_release_before_cache_lookup() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "validate",
+            "--profile-set",
+            "performance",
+            "--cache-dir",
+            cache_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("must be run from a release build"));
 }
 
 #[test]
@@ -377,6 +400,128 @@ fn mac_receipts_check_accepts_operator_profile_summary() {
         .success()
         .stdout(predicate::str::contains("apple_m4_slm_operator_profiles"))
         .stdout(predicate::str::contains("\"prompt_count\": 3"));
+}
+
+#[test]
+fn mac_receipts_check_accepts_performance_profile_summary() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("performance-profiles.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "apple_m4_slm_performance_profiles",
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "profile_set": "performance",
+            "build": {
+                "profile": "release",
+                "release_mode": true
+            },
+            "operator_thresholds": {
+                "cold_load_separated": true,
+                "model_tokenizer_reuse_visible": true,
+                "model_tokenizer_reuse_visible_per_profile": true,
+                "profiles_loaded_independently": true,
+                "profile_set_model_loads": 4,
+                "reuse_scope": "within_each_profile",
+                "profiles_required": ["warm_16", "warm_32", "warm_64", "warm_128"],
+                "thresholds_are_claim_bounds_not_speed_guarantees": true
+            },
+            "performance_baseline": {
+                "release_mode_required": true,
+                "release_mode_observed": true,
+                "warm_128_included": true,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            },
+            "profiles": [
+                performance_profile_json("warm_16", 16, 8000.0, 5000.0),
+                performance_profile_json("warm_32", 32, 16000.0, 10000.0),
+                performance_profile_json("warm_64", 64, 32000.0, 20000.0),
+                performance_profile_json("warm_128", 128, 64000.0, 40000.0)
+            ],
+            "mac_claim_boundary": {
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "bitnet_quality_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_slm_performance_profiles"))
+        .stdout(predicate::str::contains("\"prompt_count\": 4"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_performance_profile_missing_warm_128() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("bad-performance-profiles.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "apple_m4_slm_performance_profiles",
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "profile_set": "performance",
+            "build": {
+                "profile": "release",
+                "release_mode": true
+            },
+            "operator_thresholds": {
+                "cold_load_separated": true,
+                "model_tokenizer_reuse_visible": true,
+                "model_tokenizer_reuse_visible_per_profile": true,
+                "profiles_loaded_independently": true,
+                "profile_set_model_loads": 3,
+                "reuse_scope": "within_each_profile",
+                "profiles_required": ["warm_16", "warm_32", "warm_64"],
+                "thresholds_are_claim_bounds_not_speed_guarantees": true
+            },
+            "performance_baseline": {
+                "release_mode_required": true,
+                "release_mode_observed": true,
+                "warm_128_included": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            },
+            "profiles": [
+                performance_profile_json("warm_16", 16, 8000.0, 5000.0),
+                performance_profile_json("warm_32", 32, 16000.0, 10000.0),
+                performance_profile_json("warm_64", 64, 32000.0, 20000.0)
+            ],
+            "mac_claim_boundary": {
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "bitnet_quality_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet().args(["mac", "receipts-check", receipt_str.as_str()]).assert().failure().stderr(
+        predicate::str::contains(
+            "profile summary must contain exactly warm_16, warm_32, warm_64, warm_128",
+        ),
+    );
 }
 
 #[test]
@@ -562,10 +707,44 @@ fn mac_receipts_check_rejects_operator_profile_missing_profile() {
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet().args(["mac", "receipts-check", receipt_str.as_str()]).assert().failure().stderr(
-        predicate::str::contains(
-            "operator profile summary must contain exactly warm_16, warm_32, and warm_64",
-        ),
+        predicate::str::contains("profile summary must contain exactly warm_16, warm_32, warm_64"),
     );
+}
+
+fn performance_profile_json(
+    profile_id: &str,
+    requested_max_new_tokens: u64,
+    warm_prompt_wall_ms: f64,
+    decode_total_ms: f64,
+) -> serde_json::Value {
+    serde_json::json!({
+        "profile_id": profile_id,
+        "requested_max_new_tokens": requested_max_new_tokens,
+        "prompt_count": 1,
+        "generated_tokens": requested_max_new_tokens,
+        "quality_passed": true,
+        "cold_load_separated": true,
+        "model_loaded_once": true,
+        "tokenizer_loaded_once": true,
+        "reuse_scope": "within_profile",
+        "timing": {
+            "model_load_ms": 1000.0,
+            "tokenizer_load_ms": 25.0,
+            "total_session_ms": warm_prompt_wall_ms + 1025.0,
+            "tokenize_ms": 20.0,
+            "prefill_ms": 100.0,
+            "warm_prompt_wall_ms": warm_prompt_wall_ms,
+            "first_token_ms": [100.0],
+            "decode_total_ms": decode_total_ms,
+            "sampling_ms": 12.0,
+            "warm_prompt_generated_tok_s": 2.0,
+            "decode_generated_tok_s": 3.2
+        },
+        "memory": {
+            "peak_memory_mb": 512.0,
+            "peak_memory_source": "getrusage.ru_maxrss"
+        }
+    })
 }
 
 #[test]
