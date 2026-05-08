@@ -22,6 +22,7 @@ ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
 ci/hardware/intel-258v/<date>/npu-bitnet-linear-projection-subgraph-parity.json
 ci/hardware/intel-258v/<date>/npu-bitnet-ffn-subgraph-parity.json
+ci/hardware/intel-258v/<date>/arc-140v-openvino-gpu-smoke.json
 ci/hardware/intel-258v/<date>/arc-140v-opencl-parity.json
 ci/hardware/intel-258v/<date>/platform-comparison-index.json
 ```
@@ -82,6 +83,12 @@ parity run on Arc 140V against the selected 258V CPU reference bundle. It may
 claim only native OpenCL CPU/iGPU parity for that kernel. It must not claim
 BitNet inference, Arc acceleration, packed QK256 decode, OpenVINO GPU proof as
 native OpenCL proof, or CPU fallback as Arc proof.
+
+`arc-140v-openvino-gpu-smoke.json` records one tiny static OpenVINO GPU graph
+smoke on Arc 140V. It may claim only OpenVINO GPU graph execution with
+`fallback_used=false` and CPU expected-output agreement. It must not claim
+native OpenCL execution, BitNet inference, Arc acceleration, packed QK256
+decode, or CPU fallback proof.
 
 `npu-openvino-runtime-probe.json` records live OpenVINO NPU visibility on the
 258V. It may claim that OpenVINO selected `intel-npu-openvino` with runtime

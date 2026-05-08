@@ -1,0 +1,121 @@
+{
+  "arc140v_identity_matched": true,
+  "artifact_kind": "intel_arc_140v_openvino_gpu_smoke",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08/arc-140v-openvino-gpu-smoke.json",
+  "backend_runtime": {
+    "device": "GPU",
+    "device_name": "Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)",
+    "name": "openvino",
+    "version": "2026.1.0-21367-63e31528c62-releases/2026/1"
+  },
+  "bitnet_inference": false,
+  "claim": "openvino_gpu_arc140v_tiny_graph_smoke_passed",
+  "cpu_fallback_allowed": false,
+  "error": null,
+  "fallback_backend": null,
+  "fallback_policy": {
+    "cpu_fallback_allowed": false,
+    "fallback_backend": null,
+    "fallback_reason": null,
+    "fallback_used": false
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "graph": {
+    "cache_dir": null,
+    "input_shape": [
+      1,
+      16
+    ],
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0,
+    "name": "tiny_matmul_add_f16_1x16",
+    "output_shape": [
+      1,
+      16
+    ],
+    "precision": "F16",
+    "result": "pass",
+    "tolerance": 0.0010000000474974513
+  },
+  "graph_execution": true,
+  "hardware_lane": "intel-arc-140v-openvino-gpu",
+  "kernel_execution": false,
+  "kernels_or_graphs": [
+    "tiny_matmul_openvino_gpu"
+  ],
+  "machine_id": "intel-258v",
+  "must_not_claim": [
+    "Native OpenCL kernels work on Arc 140V",
+    "BitNet inference works on Arc 140V",
+    "Arc 140V accelerates BitNet",
+    "Packed BitNet QK256 decode works on Arc 140V",
+    "CPU fallback satisfies Arc 140V proof"
+  ],
+  "openvino_gpu_smoke": {
+    "arc140v_identity_matched": true,
+    "bitnet_inference": false,
+    "compile_ms": 937.247900001239,
+    "cpu_fallback_allowed": false,
+    "error": null,
+    "fallback_used": false,
+    "first_infer_ms": 3.9135999977588654,
+    "graph_execution": true,
+    "graph_name": "tiny_matmul_add_f16_1x16",
+    "input_shape": [
+      1,
+      16
+    ],
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0,
+    "openvino_available_devices": [
+      "CPU",
+      "GPU",
+      "NPU"
+    ],
+    "openvino_gpu_full_name": "Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)",
+    "openvino_version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+    "output_shape": [
+      1,
+      16
+    ],
+    "passed": true,
+    "precision": "F16",
+    "proof_stage": "kernel_smoke_tested",
+    "qk256_decode": false,
+    "requested_backend": "intel-arc-140v",
+    "runtime_api": "openvino",
+    "runtime_device": "GPU",
+    "selected_backend": "intel-arc-140v-openvino-gpu",
+    "shape_mode": "static",
+    "tolerance": 0.0010000000474974513
+  },
+  "proof_stage": "kernel_smoke_tested",
+  "qk256_decode": false,
+  "requested_backend": "intel-arc-140v",
+  "runtime_api": "openvino",
+  "runtime_device": "GPU",
+  "schema": 1,
+  "selected_backend": "intel-arc-140v-openvino-gpu",
+  "shape_contract": {
+    "input_shape": [
+      1,
+      16
+    ],
+    "output_shape": [
+      1,
+      16
+    ],
+    "shape_mode": "static"
+  },
+  "shape_mode": "static",
+  "strict_mode": false,
+  "timestamp_utc": "2026-05-08T22:03:17Z",
+  "timing": {
+    "cached_compile_ms": 937.247900001239,
+    "compile_ms": 937.247900001239,
+    "first_ever_compile_and_infer_ms": null,
+    "first_infer_ms": 3.9135999977588654,
+    "steady_state_infer_ms": null
+  }
+}
