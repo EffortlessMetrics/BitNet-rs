@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T07:41:10Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-009"
+event = "merged"
+pr = 4010
+merge_sha = "8be1358782649a90bfa21697980bf0613733badf"
+summary = "Merged CPU258V-009, recording bounded single-case 258V AVX2 answer-corpus timeout evidence."
+
+details = [
+  "The merged artifact records selected_case_count=1 and selected_case_ids=[math_2_plus_2] while preserving full corpus identity.",
+  "The selected case timed out and emitted no child receipt, so the evidence remains diagnostic blocker evidence only.",
+  "No answer quality, scalar/AVX2 parity, sustained throughput, Arc 140V execution, or Intel NPU execution is claimed.",
+]
