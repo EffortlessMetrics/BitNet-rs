@@ -2,11 +2,13 @@
 
 Campaign ID: `nvidia-5070ti`
 
-Status: complete
+Status: active
 
 ## Objective
 
-Maintain the completed RTX 5070 Ti CUDA BitNet proof lane with selected-device receipts and no CPU, OpenCL, WGPU, dense CUDA, or generic GPU conflation.
+Maintain the completed RTX 5070 Ti CUDA BitNet proof lane while qualifying
+strict BitNet CUDA performance with selected-device receipts and no CPU,
+OpenCL, WGPU, dense CUDA, or generic GPU conflation.
 
 ## End State
 
@@ -17,6 +19,8 @@ Maintain the completed RTX 5070 Ti CUDA BitNet proof lane with selected-device r
   W1.58A8 layout, selected RTX 5070 Ti CUDA backend, 9950X3D CPU reference,
   fallback status, QK256 CUDA invocation counts, upload-once weight residency,
   and measured timing.
+- Repeated strict ask benchmark receipts preserve same-model CPU AVX-512 and
+  RTX 5070 Ti CUDA evidence before any speedup claim is accepted.
 - CUDA-DENSE-001 remains an optional dense regular-LLM reference lane and is not
   part of completed BitNet packed-kernel proof.
 
@@ -61,6 +65,7 @@ Committed proof receipts:
 - `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json`
 - `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-answer-corpus.json`
 - `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json`
+- `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-002-repeated-strict-ask.json`
 
 Allowed claims:
 
@@ -114,8 +119,10 @@ receipts without broad chat, speed, server, or full-residency claims.
 `CUDA-PROD-003` added explicit CUDA execution-residency coverage for the strict
 answer path. `CUDA-PROD-004` added the strict answer-path benchmark baseline,
 and `CUDA-PERF-001` added measured QK256 kernel time plus activation/output
-transfer byte accounting. These remain scoped measurements; they do not claim
-speedup or full transformer CUDA residency.
+transfer byte accounting. `CUDA-BITNET-PERF-002` starts the performance
+qualification lane by recording repeated strict ask CPU AVX-512 and CUDA runs.
+These remain scoped measurements; they do not claim speedup or full transformer
+CUDA residency.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -155,6 +162,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-PROD-002 | merged | Strict RTX 5070 Ti CUDA warm-session receipts with load/context/upload reuse across multiple deterministic turns. |
 | CUDA-PROD-003 | merged | CUDA execution-residency coverage for the strict answer path. |
 | CUDA-PROD-004 | merged | Strict answer-path benchmark baseline with `speedup_claim=false`. |
+| CUDA-BITNET-PERF-002 | in_progress | Repeated strict ask benchmark receipts with same-model CPU AVX-512 and RTX 5070 Ti CUDA runs; `speedup_claim=false`. |
 | CUDA-DENSE-001 | merged | Dense regular-LLM CUDA receipt boundary; not part of BitNet packed proof completion. |
 | CUDA-DENSE-002 | merged | First dense CUDA FP16 GEMM smoke/parity fixture after the dense receipt boundary. |
 

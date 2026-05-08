@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T18:10:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-PERF-002"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-bitnet-perf-002-repeated-strict-ask"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started repeated strict ask benchmark qualification after CUDA-PROD-004 and QK256 timing/transfer receipts.",
+  "Scope is same-model 9950X3D CPU AVX-512 versus RTX 5070 Ti CUDA strict_ask_math_8 repetitions with fallback_used=false and measured QK256 timing/transfer counters.",
+  "speedup_claim remains false; this does not touch QK256 math, tokenizer, loader, transformer, server, dense CUDA, or full residency claims.",
+]
