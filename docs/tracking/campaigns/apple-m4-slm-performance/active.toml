@@ -77,7 +77,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-002"
-status = "in_progress"
+status = "pr_open"
+pr = 4047
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-002-allocation-audit"
 stackable = false
 review_mode = "codex_premerge"

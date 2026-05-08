@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T12:16:33Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-002"
+event = "pr_open"
+pr = 4047
+head_sha = "0e00b9af7db43580c37525302cfb12fb16d68a7f"
+actor = "codex"
+
+notes = [
+  "Opened Apple M4 SLM allocation audit PR.",
+  "Adds receipt-scoped allocation counter deltas and release-mode audit artifacts for warm_16, warm_32, warm_64, and warm_128.",
+  "No CPU/NEON optimization, BitNet quality, full apple-m4-metal inference, QK256, Neural Engine, MPSGraph model inference, or broad performance claim.",
+]
