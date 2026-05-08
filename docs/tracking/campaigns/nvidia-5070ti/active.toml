@@ -1158,8 +1158,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-004"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-004-persistent-gemm"
+pr = 4121
+head_sha = "0fd3642e1dc3493dc8cb7ee16203cdbbcf817d5e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
