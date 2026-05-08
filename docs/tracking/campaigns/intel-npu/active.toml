@@ -256,7 +256,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-008"
-status = "pr_open"
+status = "merged"
 pr = 3963
 branch = "codex/intel-npu/NPU-008-linear-subgraph-parity"
 stackable = false
