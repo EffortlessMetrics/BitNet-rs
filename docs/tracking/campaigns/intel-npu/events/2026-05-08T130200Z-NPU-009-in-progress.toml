@@ -1,12 +1,12 @@
 timestamp = "2026-05-08T13:02:00Z"
 campaign = "intel-npu"
 item = "NPU-009"
-event = "ready"
-from = "proposed"
-to = "ready"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
 actor = "codex"
 branch = "codex/intel-npu/NPU-009-openvino-llamacpp-gguf-reference"
-summary = "Ready NPU-009 to evaluate OpenVINO llama.cpp GGUF as an external Intel NPU reference lane."
+summary = "Started NPU-009 to evaluate OpenVINO llama.cpp GGUF as an external Intel NPU reference lane."
 
 notes = [
   "NPU-007 and NPU-008 already cover selected RMSNorm and linear-projection static subgraph parity.",

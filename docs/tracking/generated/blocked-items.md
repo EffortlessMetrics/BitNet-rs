@@ -45,8 +45,8 @@
 | apple-m4-slm-performance | M4-SLM-PERF-002 | M4-SLM-PERF-001 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-003 | M4-SLM-PERF-002 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-004 | M4-SLM-PERF-003 | merged |
-| apple-m4-slm-performance | M4-SLM-PERF-005 | M4-SLM-PERF-004 | pr_open |
-| apple-m4-slm-performance | M4-SLM-PERF-006 | M4-SLM-PERF-005 | proposed |
+| apple-m4-slm-performance | M4-SLM-PERF-005 | M4-SLM-PERF-004 | merged |
+| apple-m4-slm-performance | M4-SLM-PERF-006 | M4-SLM-PERF-005 | ready |
 | apple-m4-slm-performance | M4-SLM-PERF-007 | M4-SLM-PERF-006 | proposed |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
@@ -92,7 +92,7 @@
 | intel-npu | NPU-006 | NPU-005 | merged |
 | intel-npu | NPU-007 | NPU-006 | merged |
 | intel-npu | NPU-008 | NPU-007 | merged |
-| intel-npu | NPU-009 | NPU-008, CPU258V-015 | merged |
+| intel-npu | NPU-009 | NPU-008 | merged |
 | model-artifacts | MODEL-ARTIFACT-002 | MODEL-ARTIFACT-001 | blocked |
 | model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | merged |
 | model-artifacts | MODEL-ARTIFACT-004 | MODEL-ARTIFACT-003 | merged |

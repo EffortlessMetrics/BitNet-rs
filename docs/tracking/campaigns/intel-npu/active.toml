@@ -361,7 +361,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["NPU-008", "CPU258V-015"]
+blocked_by = ["NPU-008"]
 acceptance = "Evaluate OpenVINO llama.cpp GGUF as an external Intel NPU reference lane by recording a Lunar Lake GGUF reference receipt or explicit blocked receipt with model, runtime, selected device, shape/context, fallback status, and claim boundary. This does not prove native bitnet-rs NPU inference, packed QK256 decode, or acceleration."
 commands = [
   "Parse ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json",
