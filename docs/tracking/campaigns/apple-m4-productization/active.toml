@@ -1,6 +1,6 @@
 id = "apple-m4-productization"
 title = "Apple M4 local answer productization"
-status = "active"
+status = "complete"
 
 objective = "Turn the completed Apple M4 SLM proof lane into a practical Mac user flow with documented baseline commands, model cache management, Mac-oriented CLI wrappers, warm-session speed polish, and a parity-gated Metal phase handoff."
 
@@ -200,13 +200,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-PROD-005"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-productization/M4-PROD-005-metal-phase"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 pr = 4034
+merge_sha = "b7782f2c98f874d13a08bd9dfac9d5efc91d3dd8"
 blocked_by = ["M4-PROD-004"]
 acceptance = "Implement the first Apple Metal prefill linear projection microphase only with CPU-only versus CPU-plus-Metal greedy parity, Metal phase fallback_used=false, the rest of the pipeline recorded as CPU/NEON, layout handling recorded, and no full Metal inference claim."
 commands = [
