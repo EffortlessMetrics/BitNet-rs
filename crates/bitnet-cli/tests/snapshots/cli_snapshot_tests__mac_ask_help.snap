@@ -1,0 +1,43 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Ask one question through the Rust-native Apple M4 CPU/NEON SLM path
+
+Usage: bitnet mac ask [OPTIONS] --question <QUESTION>
+
+Options:
+  -c, --config <PATH>
+          Configuration file path
+  -q, --question <QUESTION>
+          Question to answer
+  -d, --device <DEVICE>
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+      --model-id <MODEL_ID>
+          Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
+      --cache-dir <PATH>
+          Override model cache root. Defaults to ~/.cache/bitnet-rs/models
+      --log-level <LEVEL>
+          Log level (trace, debug, info, warn, error)
+      --system <TEXT>
+          Optional system prompt
+      --batch-size <SIZE>
+          Batch size for processing
+      --max-new-tokens <MAX_NEW_TOKENS>
+          Maximum new tokens to generate [default: 32] [aliases: --max-tokens, --n-predict]
+      --temperature <TEMPERATURE>
+          Temperature for sampling. The Mac wrapper defaults to deterministic greedy [default: 0]
+      --top-k <TOP_K>
+          Top-k sampling. The Mac wrapper defaults to greedy top-1 behavior [default: 1]
+      --top-p <TOP_P>
+          Top-p sampling [default: 1]
+      --repetition-penalty <REPETITION_PENALTY>
+          Repetition penalty [default: 1.1]
+      --seed <SEED>
+          Random seed for reproducibility
+      --threads <THREADS>
+          Number of CPU threads to use (0 = all cores; deterministic mode may override) [default: 0]
+      --json-out <PATH>
+          Output strict Mac answer receipt [default: target/apple-m4-productization/mac-ask.json]
+  -h, --help
+          Print help

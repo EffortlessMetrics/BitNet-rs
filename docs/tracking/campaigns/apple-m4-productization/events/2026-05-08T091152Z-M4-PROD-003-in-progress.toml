@@ -1,0 +1,12 @@
+timestamp = "2026-05-08T09:11:52Z"
+campaign = "apple-m4-productization"
+item = "M4-PROD-003"
+event = "in_progress"
+actor = "codex"
+branch = "codex/apple-m4-productization/M4-PROD-003-mac-cli"
+
+notes = [
+  "Started Mac-oriented SLM CLI wrapper work.",
+  "Scope is bitnet-cli/model-cache wrappers, docs, campaign tracking, and generated dashboards only.",
+  "No BitNet quality, full Metal inference, Neural Engine, QK256, server, or broad performance claims.",
+]

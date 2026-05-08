@@ -115,6 +115,36 @@ fn model_prune_help() {
     assert_snapshot!("model_prune_help", help);
 }
 
+#[test]
+fn mac_help() {
+    let help = bitnet_stdout(&["mac", "--help"]);
+    assert_snapshot!("mac_help", help);
+}
+
+#[test]
+fn mac_check_help() {
+    let help = bitnet_stdout(&["mac", "check", "--help"]);
+    assert_snapshot!("mac_check_help", help);
+}
+
+#[test]
+fn mac_ask_help() {
+    let help = bitnet_stdout(&["mac", "ask", "--help"]);
+    assert_snapshot!("mac_ask_help", help);
+}
+
+#[test]
+fn mac_validate_help() {
+    let help = bitnet_stdout(&["mac", "validate", "--help"]);
+    assert_snapshot!("mac_validate_help", help);
+}
+
+#[test]
+fn mac_receipts_check_help() {
+    let help = bitnet_stdout(&["mac", "receipts-check", "--help"]);
+    assert_snapshot!("mac_receipts_check_help", help);
+}
+
 // ---------------------------------------------------------------------------
 // Error output for invalid / missing arguments
 // ---------------------------------------------------------------------------

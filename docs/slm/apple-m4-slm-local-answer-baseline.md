@@ -62,9 +62,37 @@ bitnet model prune qwen2.5-0.5b-instruct-q8_0
 
 Cache metadata records source repository, revision, filename, SHA256, size, quantization, tokenizer metadata, chat-template presence, and Apple M4 CPU/NEON support status. Fetch warns on low disk headroom and honors `--offline` / `BITNET_OFFLINE`.
 
-## Working Command Today
+## Working Commands
 
-Use the warm-session command for the validated path:
+Fetch and verify the supported runtime artifact once:
+
+```bash
+bitnet model fetch qwen2.5-0.5b-instruct-q8_0
+bitnet mac check
+```
+
+Ask one question through the supported Mac wrapper:
+
+```bash
+bitnet mac ask \
+  --question "What is 2+2? Answer briefly." \
+  --json-out target/apple-m4-productization/mac-ask.json
+```
+
+Run the deterministic warm-session validation corpus:
+
+```bash
+bitnet mac validate \
+  --json-out target/apple-m4-productization/mac-validate.json
+```
+
+Check answer or warm-session receipts:
+
+```bash
+bitnet mac receipts-check target/apple-m4-productization/mac-validate.json
+```
+
+The lower-level warm-session command remains available for debugging:
 
 ```bash
 RUST_LOG=warn cargo run --locked -p bitnet-cli \
@@ -95,19 +123,10 @@ determinism.passed = true
 timing separates load, tokenize, prefill, decode, sampling, and total time
 ```
 
-## Target Mac UX
-
-The productized user command should eventually become:
-
-```bash
-bitnet mac ask \
-  --device apple-m4-cpu-neon \
-  --model qwen2.5-0.5b-instruct-q8_0 \
-  --question "What is 2+2? Answer briefly." \
-  --strict
-```
-
-That wrapper is not this item. It is tracked as `M4-PROD-003` after model cache management lands.
+`bitnet mac ask` and `bitnet mac validate` intentionally route to
+`apple-m4-cpu-neon`. Passing `--device apple-m4-metal`, `apple-m4-mpsgraph`, or
+another accelerator label is rejected because full Metal/MPSGraph model
+inference is not a proven user-facing path yet.
 
 ## Failure Boundaries
 

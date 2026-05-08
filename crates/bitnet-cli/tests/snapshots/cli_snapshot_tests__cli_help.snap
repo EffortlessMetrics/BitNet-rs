@@ -1,6 +1,5 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
-assertion_line: 57
 expression: help
 ---
 BitNet-rs CLI - one-shot generation and chat with strict receipts
@@ -61,6 +60,7 @@ Commands:
   run                                Run simple text generation
   ask                                Ask one question using the answer-readiness generation path
   model                              Fetch, verify, list, and prune supported local model artifacts
+  mac                                Mac-oriented SLM check, ask, validate, and receipt-check wrappers
   tokenize                           Tokenize text and output token IDs as JSON
   score                              Calculate perplexity score for a model
   inference                          Run inference on a model
