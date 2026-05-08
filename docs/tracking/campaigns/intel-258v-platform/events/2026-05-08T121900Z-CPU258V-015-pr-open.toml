@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T12:19:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-015"
+event = "pr_open"
+actor = "codex"
+pr = 4046
+branch = "codex/intel-258v-platform/CPU258V-015-post-mechanics-corpus"
+head_sha = "ce145f594efeeccd32028a7215f95bae780cfb69"
+summary = "Opened CPU258V-015 to record full-corpus post-mechanics answer readiness on the 258V CPU."
+
+notes = [
+  "PR #4046 records scalar and AVX2 release-built answer-corpus receipts for all five fixed strict-bitnet-answer-corpus-v1 cases after the BitNet b1.58 mechanics correction.",
+  "The PR includes a scalar-vs-AVX2 full-corpus parity receipt with summary.passed=5, summary.failed=0, and no first divergence.",
+  "The claim boundary remains fixed-corpus CPU answer readiness and parity only: no general chat quality, sustained throughput, speedup, Arc 140V execution, Intel NPU execution, or acceleration claims.",
+]

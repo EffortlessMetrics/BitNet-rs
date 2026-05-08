@@ -385,6 +385,23 @@ This is selected-case answer recovery and scalar-vs-AVX2 parity evidence only:
 it does not prove general chat quality, full-corpus answer readiness, sustained
 throughput, speedup, Arc 140V execution, Intel NPU execution, or acceleration.
 
+CPU258V-015 expands the same post-mechanics run to the full committed
+`strict-bitnet-answer-corpus-v1` prompt set:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json
+ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json
+```
+
+Both release-built scalar and AVX2 runs pass all five fixed corpus gates:
+`math_2_plus_2`, `capital_france`, `repeat_colors`, `say_ok`, and
+`yes_no_water`. The parity receipt records `summary.passed=5`,
+`summary.failed=0`, and no first divergence. This is 258V CPU answer readiness
+for the committed deterministic corpus and scalar-vs-AVX2 full-corpus parity
+only. It does not prove general chat quality, sustained throughput, speedup,
+Arc 140V execution, Intel NPU execution, or acceleration.
+
 ## Windows PowerShell Bundle
 
 ```powershell

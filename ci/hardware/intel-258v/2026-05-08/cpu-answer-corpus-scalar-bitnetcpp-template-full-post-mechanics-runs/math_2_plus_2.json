@@ -1,0 +1,478 @@
+{
+  "artifact_kind": "strict_bitnet_cpu_reference",
+  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics-runs\\math_2_plus_2.json",
+  "bitnet": {
+    "activation_quantization": "A8",
+    "execution_phase": "decode",
+    "fallback_layout": null,
+    "kernel_family": "i2_s",
+    "kernel_format": "i2_s",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "per_token_weight_upload": false,
+    "quantization": "W1.58A8",
+    "weight_quantization": "W1.58",
+    "weights_uploaded_once": false
+  },
+  "counts": {
+    "n_kv": 24,
+    "n_tensors": 332,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "threads": 1
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 3,
+    "phase": "decode",
+    "prompt_tokens": 19,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_cuda": 0,
+    "bitnet_linear_layers_total": 4410,
+    "execution_claim": "cpu_reference",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": true,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "parse_special": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "family": "i2_s",
+    "implementation": "scalar",
+    "kernel_id": "i2_s-scalar-reference",
+    "layout": "gguf_packed_i2_s"
+  },
+  "latency": {
+    "cmd_to_first_ms": 31934,
+    "decode_first_ms": 31934,
+    "total_ms": 35493
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "explicit"
+  },
+  "logits_dump": [
+    {
+      "chosen_id": 220,
+      "step": 0,
+      "top_logits": [
+        {
+          "logit": 6.6697001457214355,
+          "token_id": 220
+        },
+        {
+          "logit": -6.725193023681641,
+          "token_id": 256
+        },
+        {
+          "logit": -7.214357852935791,
+          "token_id": 482
+        },
+        {
+          "logit": -7.763550758361816,
+          "token_id": 666
+        },
+        {
+          "logit": -8.280210494995117,
+          "token_id": 2355
+        }
+      ]
+    }
+  ],
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "tied_token_embeddings",
+    "path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tie_word_embeddings": true,
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "cpu",
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 3,
+        "max_ms": 0.013,
+        "mean_ms": 0.012,
+        "min_ms": 0.012,
+        "p50_ms": 0.012,
+        "p95_ms": 0.013,
+        "total_ms": 0.037
+      },
+      "first_token_decode_ms": 1801.953,
+      "forward_ms": {
+        "count": 3,
+        "max_ms": 1710.909,
+        "mean_ms": 1700.508,
+        "min_ms": 1691.162,
+        "p50_ms": 1699.452,
+        "p95_ms": 1710.909,
+        "total_ms": 5101.523
+      },
+      "generated_tokens": 3,
+      "logits_ms": {
+        "count": 3,
+        "max_ms": 86.855,
+        "mean_ms": 77.623,
+        "min_ms": 71.84,
+        "p50_ms": 74.174,
+        "p95_ms": 86.855,
+        "total_ms": 232.869
+      },
+      "per_token_ms": {
+        "count": 3,
+        "max_ms": 1801.953,
+        "mean_ms": 1786.579,
+        "min_ms": 1774.416,
+        "p50_ms": 1783.369,
+        "p95_ms": 1801.953,
+        "total_ms": 5359.738
+      },
+      "sample_ms": {
+        "count": 3,
+        "max_ms": 0.427,
+        "mean_ms": 0.27,
+        "min_ms": 0.192,
+        "p50_ms": 0.192,
+        "p95_ms": 0.427,
+        "total_ms": 0.811
+      },
+      "steady_per_token_ms": {
+        "count": 2,
+        "max_ms": 1783.369,
+        "mean_ms": 1778.892,
+        "min_ms": 1774.416,
+        "p50_ms": 1774.416,
+        "p95_ms": 1783.369,
+        "total_ms": 3557.785
+      },
+      "steady_state_tok_s": 0.562,
+      "steady_state_tokens": 2,
+      "token_decode_ms": {
+        "count": 3,
+        "max_ms": 0.071,
+        "mean_ms": 0.03,
+        "min_ms": 0.008,
+        "p50_ms": 0.01,
+        "p95_ms": 0.071,
+        "total_ms": 0.089
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 2516.06,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 30131.378,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 18
+    },
+    "prompt_tokenize_ms": 1.727,
+    "requested": false,
+    "tokenizer_load_ms": 763.496
+  },
+  "prompt": "What is 2+2? Answer with only the number.",
+  "prompt_render": {
+    "add_bos": true,
+    "parse_special": true,
+    "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+    "rendered_text": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+    "stop_sequences": [
+      "<|eot_id|>",
+      "<|end_of_text|>"
+    ],
+    "stop_token_ids": [
+      128009,
+      128001
+    ],
+    "template_family": "bitnetcpp-answer"
+  },
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
+  "strict_provenance": {
+    "cpu_features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "decode_tokens": 3,
+    "decode_tps": 0.08452370890034654,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "bitnet",
+    "phase": "decode",
+    "prompt_tokens": 19,
+    "quant_format": "I2_S",
+    "requested_backend": "cpu",
+    "requested_kernel": "i2_s-scalar-reference",
+    "selected_backend": "cpu-rust",
+    "selected_kernel": "i2_s-scalar-reference",
+    "thread_count": 1,
+    "tokenizer_source": "explicit",
+    "tokenizer_strict": true
+  },
+  "text": " 4",
+  "throughput": {
+    "decoded_tokens": 3,
+    "tokens_per_second": 0.08452370890034654
+  },
+  "timestamp": "2026-05-08T12:05:14.199328200+00:00",
+  "timing": {
+    "decode_steady_state_tok_s": 0.562,
+    "decode_total_ms": 5359.738,
+    "first_token_decode_ms": 1801.953,
+    "first_token_ms": 31934,
+    "model_load_ms": 2516.06,
+    "prefill_ms": 30131.378,
+    "sampling_ms_per_token": 0.27,
+    "tokenize_ms": 1.727,
+    "tokenizer_load_ms": 763.496
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "model_family": "llama3",
+    "origin": "external",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "tokens": {
+    "generated": 3,
+    "generated_ids": [
+      220,
+      19,
+      128009
+    ],
+    "ids": [
+      220,
+      19,
+      128009
+    ],
+    "prompt": 19,
+    "prompt_ids": [
+      128000,
+      1502,
+      25,
+      3639,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30,
+      22559,
+      449,
+      1193,
+      279,
+      1396,
+      13,
+      128009,
+      72803,
+      25
+    ],
+    "total": 22
+  }
+}
