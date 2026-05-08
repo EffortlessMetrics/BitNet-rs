@@ -1,5 +1,5 @@
-//! `xtask ci plan` — Rust port of the inline Python planner that
-//! lives in `.github/workflows/pr-plan.yml`.
+//! `xtask ci plan` — Rust-native PR planner used by
+//! `.github/workflows/pr-plan.yml`.
 //!
 //! The planner classifies changed files by area, picks expected CI
 //! lanes given those areas plus the PR's labels, and assigns each
@@ -10,9 +10,9 @@
 //! * a markdown table appended to `$GITHUB_STEP_SUMMARY` for engineer
 //!   visibility
 //!
-//! The planner is intentionally faithful to the existing Python
-//! implementation so PR 14 is a pure port; PR 15 then layers
-//! policy-backed cost / risk-pack files on top.
+//! The planner replaces the legacy inline Python workflow implementation and
+//! centralizes path classification, LEM heuristics, risk-pack detection, and
+//! soft budget guard output in Rust.
 
 use anyhow::{Context, Result, bail};
 use regex::Regex;
