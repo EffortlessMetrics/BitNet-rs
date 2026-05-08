@@ -12,7 +12,9 @@ description = "Vulkan GLSL compute shaders for BitNet GPU inference"
 rust-version.workspace = true
 
 [dependencies]
+ash = { version = "0.38", default-features = false, features = ["loaded"], optional = true }
 bitnet-vulkan-shaders = { path = "../bitnet-vulkan-shaders", version = "0.2.1-dev" }
+log.workspace = true
 
 [dev-dependencies]
 
@@ -21,6 +23,7 @@ default = []
 cpu = []
 gpu = ["cuda"]
 cuda = []
+vulkan-runtime = ["dep:ash"]
 
 [lints]
 workspace = true
