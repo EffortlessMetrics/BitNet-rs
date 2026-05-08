@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T19:55:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-004"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-004-persistent-gemm"
+pr = 4121
+head_sha = "0fd3642e1dc3493dc8cb7ee16203cdbbcf817d5e"
+merge_sha = "4c67f3e096ea7eeb1fceb4ff1dcaf69c3461eb3c"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4121 merged persistent dense regular-LLM CUDA FP16 GEMM fixture-session residency.",
+  "The committed RTX 5070 Ti receipt records one CUDA context/module, upload-once input device buffers, one output device buffer, repeated launches, zero per-run H2D bytes, fallback_used=false, and speedup_claim=false.",
+  "The dense boundary remains explicit: no BitNet packed I2S/QK256 proof, dense GGUF inference, persistent dense model/session inference, server readiness, or full CUDA residency claim.",
+]
