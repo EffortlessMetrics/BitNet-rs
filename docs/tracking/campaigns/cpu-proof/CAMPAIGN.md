@@ -44,7 +44,8 @@ Make real BitNet CPU inference strict, receipt-backed, and measurable. The campa
 | CPU-ANSWER-001 | merged | Strict CPU answer-readiness gates merged in #3898. |
 | CPU-ANSWER-002 | merged | Scalar-vs-AVX2 full-decode answer parity merged in #3906, with the 258V CPU as the lead BitNet CPU reference machine. Runs against a rejected answer artifact are diagnostic-only until `MODEL-ARTIFACT-002` provides an `answer_ready` artifact. |
 | CPU-ANSWER-003 | merged | Reference-divergence triage merged in #3993: strict BitNet CPU answer runs can now be compared against known-good reference artifacts before blaming AVX2 or claiming answer quality. |
-| CPU-ANSWER-004 | ready | Align the strict Rust CPU answer corpus to the MODEL-ARTIFACT-007 Microsoft BitNet.cpp prompt authority before rerunning answer-readiness evidence. |
+| CPU-ANSWER-004 | merged | Align the strict Rust CPU answer corpus to the MODEL-ARTIFACT-007 Microsoft BitNet.cpp prompt authority before rerunning answer-readiness evidence. |
+| CPU-ANSWER-005 | ready | Preserve external Llama-BPE tokenizer/pre-tokenizer authority in strict Rust CPU answer receipts before interpreting failed corpus artifacts. |
 
 ## Review Policy
 

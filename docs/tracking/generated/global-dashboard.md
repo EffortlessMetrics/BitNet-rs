@@ -9,7 +9,7 @@
 | apple-m4-operational | M4-OP-006 | #3882 | merged | none | Do not reopen the completed apple-m4 proof campaign. |
 | apple-m4-slm-answer | SLM-M4-007 | #3991 | merged | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | CPU-ANSWER-004 | #3995 | merged | none | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
+| cpu-proof | CPU-ANSWER-005 | #4003 | pr_open | none | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | CPU258V-006 | #4001 | merged | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
