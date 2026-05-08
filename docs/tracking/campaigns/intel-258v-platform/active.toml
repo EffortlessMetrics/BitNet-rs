@@ -1152,7 +1152,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-COMPARE-002"
-status = "pr_open"
+status = "merged"
 pr = 4110
 branch = "codex/lunar-lake/LNL258V-COMPARE-002"
 stackable = false

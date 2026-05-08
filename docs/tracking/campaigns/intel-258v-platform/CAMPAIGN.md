@@ -51,7 +51,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | LNL258V-COMPARE-001 | merged | Add a same-machine comparison index that links CPU, Arc 140V, and Intel NPU artifacts by path, backend identity, proof stage, and fallback status without merging lane claims; merged in #4076. |
 | CPU258V-016 | merged | Record the post-mechanics 258V CPU reference bundle used by accelerator parity receipts; merged in #4087. |
 | ARC140V-005 | merged | Add native OpenCL CPU/iGPU parity for one isolated Arc 140V kernel against the 258V CPU reference bundle; merged in #4103. |
-| LNL258V-COMPARE-002 | pr_open | Refresh the same-machine evidence index after the post-mechanics CPU reference bundle, NPU selected subgraph receipts, and Arc 140V native OpenCL parity; opened in #4110. |
+| LNL258V-COMPARE-002 | merged | Refresh the same-machine evidence index after the post-mechanics CPU reference bundle, NPU selected subgraph receipts, and Arc 140V native OpenCL parity; merged in #4110. |
 
 ## Review Policy
 
