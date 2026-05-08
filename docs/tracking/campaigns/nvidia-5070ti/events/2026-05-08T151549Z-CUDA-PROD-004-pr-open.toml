@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T15:15:49Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-004"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-prod/CUDA-PROD-004-benchmark-baseline"
+pr = 4093
+head_sha = "5911506a7cdce91c30db9c5eea8062a4be4b622b"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4093 for the strict RTX 5070 Ti answer-path benchmark baseline.",
+  "The PR adds a governed benchmark receipt comparing same-model CPU AVX-512 and RTX 5070 Ti CUDA strict ask evidence, keeps speedup_claim=false, and records the long CPU AVX-512 prefill/decode profile as blocked_timeout.",
+  "No CUDA kernel, QK256 dispatch, transformer, tokenizer, model-loader, server, speedup, broad chat, or full-residency claim is in scope.",
+]

@@ -1,0 +1,350 @@
+{
+  "artifact_kind": "strict_cuda_answer_path_benchmark",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-prod-004-answer-path-benchmark.json",
+  "benchmark": {
+    "benchmark_qualified_speedup": false,
+    "cpu_avx512_first_token_ms": 17460.0,
+    "cpu_avx512_tokens_per_second": 0.1545595054095827,
+    "cpu_avx512_total_ms": 19410.0,
+    "cpu_cuda_answer_match": true,
+    "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+    "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+    "cuda_first_token_ms": 1645.0,
+    "cuda_kernel_invocations": 4410,
+    "cuda_tokens_per_second": 1.6366612111292962,
+    "cuda_total_ms": 1833.0,
+    "observed_cpu_total_ms_div_cuda_total_ms": 10.589198036006547,
+    "profile": "strict_ask_math_8",
+    "speedup_claim": false
+  },
+  "benchmark_qualified_speedup": false,
+  "claim": "strict_cuda_answer_path_benchmark_baseline",
+  "claim_boundaries": [
+    "speedup_claim=false; observed timing ratios are baseline evidence only.",
+    "The strict ask profile is measured for the same official model, tokenizer, prompt template, and deterministic math prompt on CPU AVX-512 and RTX 5070 Ti CUDA.",
+    "The 512-prefill/128-decode CPU AVX-512 phase profile timed out after 1800 seconds and is recorded as blocked rather than treated as benchmark-qualified evidence.",
+    "CUDA context initialization, weight-upload timing, kernel time, and host/device transfer bytes remain not separately measured in the current ask receipt.",
+    "This receipt does not claim broad chat quality, production server readiness, full CUDA residency, or accepted speedup."
+  ],
+  "comparison_contract": {
+    "fallback_free": true,
+    "same_answer": true,
+    "same_generated_token_ids": true,
+    "same_model": true,
+    "same_prompt_template": true,
+    "same_question": true,
+    "same_sampling_policy": true,
+    "same_tokenizer": true
+  },
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_kernel_invocations": 4410,
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "memory_hwm_bytes": 9201254400,
+    "memory_hwm_source": "nvidia-smi-memory.used-sampled",
+    "nvrtc_version": "12.9",
+    "power_draw_watts": null,
+    "power_limit_watts": null,
+    "temperature_c": null,
+    "vram_bytes": 17094475776
+  },
+  "cuda_execution_residency": {
+    "claim_boundary": {
+      "full_transformer_cuda_residency_claimed": false,
+      "kv_cache_cuda_residency_claimed": false,
+      "qk256_cuda_residency_claimed": true,
+      "speedup_claim": false,
+      "strict_cuda_answer_path": true,
+      "transfer_timing_claimed": false,
+      "upload_once_weight_residency_claimed": true
+    },
+    "coverage_scope": "strict_cuda_ask_or_run",
+    "execution_phase": "short_decode",
+    "full_cuda_residency_claimed": false,
+    "host_device_transfer_accounting": {
+      "device_to_host_bytes": null,
+      "host_to_device_bytes": null,
+      "kernel_time_ms": null,
+      "note": "QK256 routing and weight-handle residency are recorded; per-phase transfer bytes and kernel timings require a later benchmark/instrumentation gate.",
+      "status": "not_measured"
+    },
+    "kv_cache": {
+      "cuda_residency_claimed": false,
+      "device": "cpu",
+      "enabled": true,
+      "residency": "cpu_resident",
+      "reuse_policy": "per_run_incremental_decode"
+    },
+    "phase_residency": {
+      "attention_scores": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "attention_softmax": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "attention_value_mix": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "lm_head": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "relu2_activation": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "rmsnorm": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "rope": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "sampling": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident"
+      },
+      "sub_layernorm": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      },
+      "token_embeddings": {
+        "cuda_residency_claimed": false,
+        "residency": "cpu_resident_or_not_cuda_claimed"
+      }
+    },
+    "prompt_and_decode": {
+      "generated_tokens": 3,
+      "prompt_tokens": 19
+    },
+    "qk256_bitnet_linears": {
+      "bitnet_linear_layers_cpu_fallback": 0,
+      "bitnet_linear_layers_on_cuda": 4410,
+      "bitnet_linear_layers_total": 4410,
+      "fallback_used": false,
+      "kernel_id": "qk256_gemv_cuda",
+      "residency": "cuda_resident_compute",
+      "unsupported_ops": []
+    },
+    "schema_version": "1.0.0",
+    "speedup_claim": false,
+    "unresident_or_unmeasured_phases": [
+      "token_embeddings",
+      "rmsnorm",
+      "sub_layernorm",
+      "rope",
+      "attention_scores",
+      "attention_softmax",
+      "attention_value_mix",
+      "relu2_activation",
+      "kv_cache",
+      "lm_head",
+      "sampling",
+      "host_device_transfer_bytes",
+      "kernel_time_ms"
+    ],
+    "weight_residency": {
+      "per_token_weight_upload": false,
+      "scope": "qk256_cuda_weight_handles_only",
+      "status": "cuda_resident_upload_once_handles",
+      "weight_handle_count": 210,
+      "weights_uploaded_once": true
+    }
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_cuda": 4410,
+    "bitnet_linear_layers_total": 4410,
+    "execution_claim": "cuda_inference_contribution",
+    "unsupported_ops": []
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+  "kernel_stats": [
+    {
+      "device_to_host_bytes": null,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": null,
+      "invocations": 4410,
+      "kernel_id": "qk256_gemv_cuda",
+      "kernel_launches": 4410,
+      "kernel_time_ms": null
+    }
+  ],
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "fallback_loader_used": false,
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "strict_real_gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "source_loader_mode": "real_gguf"
+  },
+  "profiles": [
+    {
+      "backend": "amd-9950x3d-cpu-avx512",
+      "fallback_used": false,
+      "first_token_ms": 17460.0,
+      "generated_tokens": 3,
+      "kernel_id": "i2_s-avx512-reference",
+      "profile": "strict_ask_math_8",
+      "prompt_tokens": 19,
+      "quality_passed": true,
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust",
+      "status": "measured",
+      "tokens_per_second": 0.1545595054095827,
+      "total_ms": 19410.0
+    },
+    {
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "fallback_used": false,
+      "first_token_ms": 1645.0,
+      "generated_tokens": 3,
+      "kernel_id": "qk256_gemv_cuda",
+      "profile": "strict_ask_math_8",
+      "prompt_tokens": 19,
+      "quality_passed": true,
+      "runtime_api": "cuda",
+      "selected_backend": "nvidia-rtx-5070-ti-cuda",
+      "status": "measured",
+      "tokens_per_second": 1.6366612111292962,
+      "total_ms": 1833.0
+    },
+    {
+      "backend": "amd-9950x3d-cpu-avx512",
+      "fallback_used": false,
+      "profile": "answer_corpus_5",
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-answer-corpus.json",
+      "runtime_api": "cpu",
+      "status": "measured_existing_receipt"
+    },
+    {
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "fallback_used": false,
+      "profile": "answer_corpus_5",
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json",
+      "runtime_api": "cuda",
+      "status": "measured_existing_receipt"
+    },
+    {
+      "backend": "amd-9950x3d-cpu-avx512",
+      "profile": "prefill_512_decode_128",
+      "reason": "CPU AVX-512 phase benchmark timed out before producing profile receipts; not accepted as benchmark-qualified evidence",
+      "runtime_api": "cpu",
+      "status": "blocked_timeout",
+      "timeout_seconds": 1800
+    },
+    {
+      "backend": "nvidia-rtx-5070-ti-cuda",
+      "profile": "prefill_512_decode_128",
+      "reason": "CUDA long decode profile is held until the same-profile CPU AVX-512 baseline completes",
+      "runtime_api": "cuda",
+      "status": "not_run"
+    }
+  ],
+  "prompt_template": {
+    "assistant_prefix_inserted": true,
+    "bos_inserted": true,
+    "family": "bitnetcpp-answer",
+    "parse_special": true,
+    "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+    "stop_token_ids": [
+      128009,
+      128001
+    ]
+  },
+  "proof_inputs": {
+    "cpu_avx512_answer_corpus_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-answer-corpus.json",
+    "cpu_avx512_ask_receipt": "target/bitnet/receipts/cuda-answer-readiness/strict-cpu-avx512-ask-math-benchmark.json",
+    "cpu_cuda_answer_parity_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json",
+    "cuda_answer_corpus_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json",
+    "cuda_ask_receipt": "target/bitnet/receipts/cuda-answer-readiness/strict-cuda-ask-math-benchmark.json"
+  },
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "sampling": {
+    "deterministic": true,
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "speedup_claim": false,
+  "timestamp_utc": "2026-05-08T15:08:35Z",
+  "timing_split": {
+    "cpu_avx512": {
+      "decode_total_ms": 2912.929,
+      "first_token_ms": 17460.0,
+      "model_load_ms": 2781.206,
+      "prefill_ms": 16497.948,
+      "prompt_render_tokenize_ms": 0.258,
+      "steady_decode_tokens_per_second": 1.026,
+      "tokenizer_load_ms": 340.326
+    },
+    "cuda": {
+      "cuda_context_init_ms": null,
+      "cuda_context_init_ms_source": "not_separately_measured; included in strict CUDA setup and first CUDA work",
+      "decode_total_ms": 285.554,
+      "device_to_host_bytes": null,
+      "device_to_host_bytes_source": "kernel_stats[0].device_to_host_bytes; null means not measured by current receipt",
+      "first_token_ms": 1645.0,
+      "host_to_device_bytes": null,
+      "host_to_device_bytes_source": "kernel_stats[0].host_to_device_bytes; null means not measured by current receipt",
+      "kernel_time_ms": null,
+      "kernel_time_ms_source": "kernel_stats[0].kernel_time_ms; null means not measured by current receipt",
+      "model_load_ms": 2845.54,
+      "prefill_ms": 1547.927,
+      "prompt_render_tokenize_ms": 0.257,
+      "steady_decode_tokens_per_second": 10.668,
+      "tokenizer_load_ms": 307.915,
+      "weight_upload_ms": null,
+      "weight_upload_ms_source": "not_separately_measured; upload-once residency is verified by QK256 counters"
+    }
+  },
+  "tokenizer": {
+    "model_family": "llama3",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "workload": {
+    "answer": " 4",
+    "cpu_cuda_answer_match": true,
+    "cpu_cuda_generated_ids_match": true,
+    "cpu_generated_token_ids": [
+      220,
+      19,
+      128009
+    ],
+    "cuda_generated_token_ids": [
+      220,
+      19,
+      128009
+    ],
+    "generated_tokens": 3,
+    "profile": "strict_ask_math_8",
+    "prompt_tokens": 19,
+    "quality_passed": true,
+    "question": "What is 2+2? Answer with only the number."
+  }
+}

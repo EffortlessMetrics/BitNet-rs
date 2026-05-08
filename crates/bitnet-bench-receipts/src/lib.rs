@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 //! Benchmark receipts for tracking kernel performance over time.
 
 use serde::{Deserialize, Serialize};
@@ -324,6 +326,166 @@ pub fn validate_strict_bitnet_cuda_benchmark_receipt_file(path: &Path) -> Result
     validate_strict_bitnet_cuda_benchmark_receipt_json(&receipt)
 }
 
+/// Validate a strict CUDA answer-path benchmark receipt for the RTX 5070 Ti lane.
+///
+/// This validator covers the product-facing ask path rather than the older
+/// fixed short-decode benchmark. It requires the official BitNet artifact,
+/// explicit tokenizer/prompt authority, measured CPU AVX-512 and RTX 5070 Ti
+/// CUDA ask profiles, fallback-free CUDA QK256 execution, and no speedup claim.
+/// Longer profiles may be recorded as blocked or not-run entries, but the
+/// receipt must keep those gaps explicit.
+pub fn validate_strict_cuda_answer_path_benchmark_receipt_json(
+    receipt: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", "strict_cuda_answer_path_benchmark")?;
+    require_string_eq(receipt, "machine_id", "windows-9950x3d-rtx5070ti")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia_rtx_5070_ti_cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "claim", "strict_cuda_answer_path_benchmark_baseline")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_bool_eq(receipt, "benchmark_qualified_speedup", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+
+    let model = require_object(receipt, "model")?;
+    require_string_eq(model, "repo", "microsoft/bitnet-b1.58-2B-4T-gguf")?;
+    require_string_eq(model, "file", "ggml-model-i2_s.gguf")?;
+    require_non_empty_string(model, "sha256")?;
+    require_string_eq(model, "loader_mode", "strict_real_gguf")?;
+    require_bool_eq(model, "fallback_loader_used", false)?;
+
+    let tokenizer = require_object(receipt, "tokenizer")?;
+    require_string_eq(tokenizer, "source", "explicit")?;
+    require_bool_eq(tokenizer, "strict", true)?;
+    require_string_eq(tokenizer, "pretokenizer_authority", "llama-bpe")?;
+
+    let prompt_template = require_object(receipt, "prompt_template")?;
+    require_string_eq(prompt_template, "family", "bitnetcpp-answer")?;
+    require_non_empty_string(prompt_template, "rendered_sha256")?;
+
+    let workload = require_object(receipt, "workload")?;
+    require_string_eq(workload, "profile", "strict_ask_math_8")?;
+    require_non_empty_string(workload, "question")?;
+    let answer = require_string(workload, "answer")?;
+    if answer.trim() != "4" {
+        return Err(validation_error(format!("workload.answer must trim to 4, got {answer:?}")));
+    }
+    require_u64_at_least(workload, "prompt_tokens", 1)?;
+    require_u64_at_least(workload, "generated_tokens", 1)?;
+    require_bool_eq(workload, "quality_passed", true)?;
+    require_bool_eq(workload, "cpu_cuda_answer_match", true)?;
+    require_bool_eq(workload, "cpu_cuda_generated_ids_match", true)?;
+
+    let contract = require_object(receipt, "comparison_contract")?;
+    for field in [
+        "same_model",
+        "same_tokenizer",
+        "same_prompt_template",
+        "same_question",
+        "same_sampling_policy",
+        "same_generated_token_ids",
+        "same_answer",
+        "fallback_free",
+    ] {
+        require_bool_eq(contract, field, true)?;
+    }
+
+    let cuda = require_object(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_u64_at_least(cuda, "device_count", 1)?;
+    require_u64(cuda, "device_index")?;
+    let device_name = require_string(cuda, "device_name")?;
+    if !is_rtx5070ti_device_name(device_name) {
+        return Err(validation_error(format!(
+            "cuda.device_name must identify NVIDIA GeForce RTX 5070 Ti, got {device_name}"
+        )));
+    }
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_non_empty_string(cuda, "driver_version")?;
+    require_non_empty_string(cuda, "cuda_runtime_version")?;
+    require_non_empty_string(cuda, "cuda_toolkit_version")?;
+    require_non_empty_string(cuda, "nvrtc_version")?;
+    require_u64_at_least(cuda, "vram_bytes", 1)?;
+    require_u64_at_least(cuda, "memory_hwm_bytes", 1)?;
+    require_u64_at_least(cuda, "cuda_kernel_invocations", 1)?;
+
+    let benchmark = require_object(receipt, "benchmark")?;
+    require_string_eq(benchmark, "profile", "strict_ask_math_8")?;
+    require_string_eq(benchmark, "cpu_reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(benchmark, "cuda_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_non_negative_number(benchmark, "cpu_avx512_total_ms")?;
+    require_non_negative_number(benchmark, "cuda_total_ms")?;
+    require_non_negative_number(benchmark, "cpu_avx512_tokens_per_second")?;
+    require_non_negative_number(benchmark, "cuda_tokens_per_second")?;
+    require_non_negative_number(benchmark, "observed_cpu_total_ms_div_cuda_total_ms")?;
+    require_u64_at_least(benchmark, "cuda_kernel_invocations", 1)?;
+    require_bool_eq(benchmark, "cpu_cuda_answer_match", true)?;
+    require_bool_eq(benchmark, "speedup_claim", false)?;
+    require_bool_eq(benchmark, "benchmark_qualified_speedup", false)?;
+
+    let timing = require_object(receipt, "timing_split")?;
+    let cpu_timing = require_object(timing, "cpu_avx512")?;
+    validate_answer_path_timing(cpu_timing, false)?;
+    let cuda_timing = require_object(timing, "cuda")?;
+    validate_answer_path_timing(cuda_timing, true)?;
+
+    let profiles = require_array(receipt, "profiles")?;
+    validate_answer_path_profile(
+        require_profile(profiles, "strict_ask_math_8", "amd-9950x3d-cpu-avx512")?,
+        true,
+    )?;
+    validate_answer_path_profile(
+        require_profile(profiles, "strict_ask_math_8", "nvidia-rtx-5070-ti-cuda")?,
+        true,
+    )?;
+    validate_answer_path_profile(
+        require_profile(profiles, "answer_corpus_5", "amd-9950x3d-cpu-avx512")?,
+        false,
+    )?;
+    validate_answer_path_profile(
+        require_profile(profiles, "answer_corpus_5", "nvidia-rtx-5070-ti-cuda")?,
+        false,
+    )?;
+    validate_answer_path_profile(
+        require_profile(profiles, "prefill_512_decode_128", "amd-9950x3d-cpu-avx512")?,
+        false,
+    )?;
+
+    let stats = receipt
+        .get("kernel_stats")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|items| items.first())
+        .ok_or_else(|| validation_error("kernel_stats must contain at least one entry"))?;
+    require_string_eq(stats, "kernel_id", "qk256_gemv_cuda")?;
+    require_u64_at_least(stats, "invocations", 1)?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+    require_u64_at_least(stats, "kernel_launches", 1)?;
+
+    let residency = require_object(receipt, "cuda_execution_residency")?;
+    require_bool_eq(residency, "speedup_claim", false)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+
+    let boundaries = require_array(receipt, "claim_boundaries")?;
+    if boundaries.is_empty() {
+        return Err(validation_error("claim_boundaries must not be empty"));
+    }
+
+    Ok(())
+}
+
+/// Validate a strict CUDA answer-path benchmark receipt file.
+pub fn validate_strict_cuda_answer_path_benchmark_receipt_file(
+    path: &Path,
+) -> Result<(), ReceiptError> {
+    let receipt = serde_json::from_slice(&std::fs::read(path)?)?;
+    validate_strict_cuda_answer_path_benchmark_receipt_json(&receipt)
+}
+
 /// Validate a strict CPU BitNet benchmark receipt.
 ///
 /// This validator checks the benchmark evidence contract, not performance
@@ -478,6 +640,84 @@ fn require_backend_profile<'a>(
         .ok_or_else(|| validation_error(format!("profiles missing backend {backend}")))
 }
 
+fn require_profile<'a>(
+    profiles: &'a [serde_json::Value],
+    profile: &str,
+    backend: &str,
+) -> Result<&'a serde_json::Value, ReceiptError> {
+    profiles
+        .iter()
+        .find(|entry| {
+            entry.get("profile").and_then(serde_json::Value::as_str) == Some(profile)
+                && entry.get("backend").and_then(serde_json::Value::as_str) == Some(backend)
+        })
+        .ok_or_else(|| validation_error(format!("profiles missing {profile} for {backend}")))
+}
+
+fn validate_answer_path_timing(timing: &serde_json::Value, cuda: bool) -> Result<(), ReceiptError> {
+    require_non_negative_number(timing, "model_load_ms")?;
+    require_non_negative_number(timing, "tokenizer_load_ms")?;
+    require_non_negative_number(timing, "prompt_render_tokenize_ms")?;
+    require_non_negative_number(timing, "prefill_ms")?;
+    require_non_negative_number(timing, "first_token_ms")?;
+    require_non_negative_number(timing, "decode_total_ms")?;
+    require_non_negative_number(timing, "steady_decode_tokens_per_second")?;
+    if cuda {
+        require_nullable_number_with_source(timing, "cuda_context_init_ms")?;
+        require_nullable_number_with_source(timing, "weight_upload_ms")?;
+        require_nullable_number_with_source(timing, "kernel_time_ms")?;
+        require_nullable_u64_with_source(timing, "host_to_device_bytes")?;
+        require_nullable_u64_with_source(timing, "device_to_host_bytes")?;
+    }
+    Ok(())
+}
+
+fn validate_answer_path_profile(
+    profile: &serde_json::Value,
+    must_be_measured: bool,
+) -> Result<(), ReceiptError> {
+    require_non_empty_string(profile, "profile")?;
+    require_non_empty_string(profile, "backend")?;
+    let status = require_string(profile, "status")?;
+    match status {
+        "measured" => {
+            require_non_negative_number(profile, "total_ms")?;
+            require_non_negative_number(profile, "first_token_ms")?;
+            require_non_negative_number(profile, "tokens_per_second")?;
+            require_u64_at_least(profile, "prompt_tokens", 1)?;
+            require_u64_at_least(profile, "generated_tokens", 1)?;
+            require_bool_eq(profile, "quality_passed", true)?;
+            require_bool_eq(profile, "fallback_used", false)?;
+        }
+        "measured_existing_receipt" => {
+            require_non_empty_string(profile, "receipt_path")?;
+            require_bool_eq(profile, "quality_passed", true)?;
+            require_bool_eq(profile, "fallback_used", false)?;
+        }
+        "blocked_timeout" => {
+            if must_be_measured {
+                let backend = require_string(profile, "backend")?;
+                return Err(validation_error(format!("profile {backend} must be measured")));
+            }
+            require_u64_at_least(profile, "timeout_seconds", 1)?;
+            require_non_empty_string(profile, "reason")?;
+        }
+        "not_run" => {
+            if must_be_measured {
+                let backend = require_string(profile, "backend")?;
+                return Err(validation_error(format!("profile {backend} must be measured")));
+            }
+            require_non_empty_string(profile, "reason")?;
+        }
+        other => {
+            return Err(validation_error(format!(
+                "answer-path profile status must be measured, measured_existing_receipt, blocked_timeout, or not_run, got {other}"
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn validate_bitnet_benchmark_profile(
     profile: &serde_json::Value,
     must_be_measured: bool,
@@ -624,6 +864,34 @@ fn require_non_negative_number(value: &serde_json::Value, field: &str) -> Result
     if actual < 0.0 {
         return Err(validation_error(format!("{field} must be non-negative, got {actual}")));
     }
+    Ok(())
+}
+
+fn require_nullable_number_with_source(
+    value: &serde_json::Value,
+    field: &str,
+) -> Result<(), ReceiptError> {
+    if let Some(actual) = value.get(field).and_then(serde_json::Value::as_f64) {
+        if actual < 0.0 {
+            return Err(validation_error(format!("{field} must be non-negative, got {actual}")));
+        }
+    } else if !value.get(field).is_some_and(serde_json::Value::is_null) {
+        return Err(validation_error(format!("{field} must be a number or null")));
+    }
+    require_non_empty_string(value, &format!("{field}_source"))?;
+    Ok(())
+}
+
+fn require_nullable_u64_with_source(
+    value: &serde_json::Value,
+    field: &str,
+) -> Result<(), ReceiptError> {
+    if value.get(field).and_then(serde_json::Value::as_u64).is_none()
+        && !value.get(field).is_some_and(serde_json::Value::is_null)
+    {
+        return Err(validation_error(format!("{field} must be an unsigned integer or null")));
+    }
+    require_non_empty_string(value, &format!("{field}_source"))?;
     Ok(())
 }
 
@@ -938,11 +1206,63 @@ mod tests {
     }
 
     #[test]
+    fn strict_cuda_answer_path_benchmark_receipt_validates() {
+        let receipt = sample_strict_cuda_answer_path_benchmark_receipt();
+        validate_strict_cuda_answer_path_benchmark_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cuda_answer_path_benchmark_rejects_speedup_claim() {
+        let mut receipt = sample_strict_cuda_answer_path_benchmark_receipt();
+        receipt["speedup_claim"] = json!(true);
+
+        let err = validate_strict_cuda_answer_path_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_answer_path_benchmark_rejects_hidden_fallback() {
+        let mut receipt = sample_strict_cuda_answer_path_benchmark_receipt();
+        receipt["profiles"][1]["fallback_used"] = json!(true);
+
+        let err = validate_strict_cuda_answer_path_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("fallback_used"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_answer_path_benchmark_rejects_missing_long_profile_disposition() {
+        let mut receipt = sample_strict_cuda_answer_path_benchmark_receipt();
+        receipt["profiles"] = json!([
+            measured_answer_path_profile("strict_ask_math_8", "amd-9950x3d-cpu-avx512", "cpu"),
+            measured_answer_path_profile("strict_ask_math_8", "nvidia-rtx-5070-ti-cuda", "cuda"),
+            existing_answer_path_profile("answer_corpus_5", "amd-9950x3d-cpu-avx512"),
+            existing_answer_path_profile("answer_corpus_5", "nvidia-rtx-5070-ti-cuda")
+        ]);
+
+        let err = validate_strict_cuda_answer_path_benchmark_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("prefill_512_decode_128"), "unexpected error: {err}");
+    }
+
+    #[test]
     fn committed_strict_bitnet_cuda_benchmark_receipt_validates() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json",
         );
         validate_strict_bitnet_cuda_benchmark_receipt_file(&path).unwrap();
+    }
+
+    #[test]
+    fn committed_strict_cuda_answer_path_benchmark_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-prod-004-answer-path-benchmark.json",
+        );
+        validate_strict_cuda_answer_path_benchmark_receipt_file(&path).unwrap();
     }
 
     fn sample_cpu_benchmark_receipt() -> serde_json::Value {
@@ -1209,6 +1529,197 @@ mod tests {
                 "CPU scalar and AVX2 strict end-to-end profiles are explicitly present but not_run because this CLI path does not expose selectors for those modes."
             ],
             "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json"
+        })
+    }
+
+    fn sample_strict_cuda_answer_path_benchmark_receipt() -> serde_json::Value {
+        json!({
+            "schema": 1,
+            "artifact_kind": "strict_cuda_answer_path_benchmark",
+            "machine_id": "windows-9950x3d-rtx5070ti",
+            "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+            "timestamp_utc": "2026-05-08T00:00:00Z",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "reference_backend": "amd-9950x3d-cpu-avx512",
+            "runtime_api": "cuda",
+            "claim": "strict_cuda_answer_path_benchmark_baseline",
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "fallback_used": false,
+            "fallback_backend": null,
+            "fallback_reason": null,
+            "proof_inputs": {
+                "cpu_avx512_ask_receipt": "target/bitnet/receipts/cpu.json",
+                "cuda_ask_receipt": "target/bitnet/receipts/cuda.json",
+                "cpu_avx512_answer_corpus_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-answer-corpus.json",
+                "cuda_answer_corpus_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json",
+                "cpu_cuda_answer_parity_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json"
+            },
+            "model": {
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "file": "ggml-model-i2_s.gguf",
+                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "format": "gguf",
+                "architecture": "bitnet_b1_58",
+                "loader_mode": "strict_real_gguf",
+                "fallback_loader_used": false
+            },
+            "tokenizer": {
+                "source": "explicit",
+                "strict": true,
+                "type": "llama3",
+                "pretokenizer_authority": "llama-bpe"
+            },
+            "prompt_template": {
+                "family": "bitnetcpp-answer",
+                "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3"
+            },
+            "workload": {
+                "profile": "strict_ask_math_8",
+                "question": "What is 2+2? Answer with only the number.",
+                "answer": " 4",
+                "prompt_tokens": 19,
+                "generated_tokens": 3,
+                "quality_passed": true,
+                "cpu_cuda_answer_match": true,
+                "cpu_cuda_generated_ids_match": true
+            },
+            "comparison_contract": {
+                "same_model": true,
+                "same_tokenizer": true,
+                "same_prompt_template": true,
+                "same_question": true,
+                "same_sampling_policy": true,
+                "same_generated_token_ids": true,
+                "same_answer": true,
+                "fallback_free": true
+            },
+            "cuda": {
+                "available": true,
+                "device_count": 1,
+                "device_index": 0,
+                "device_name": "NVIDIA GeForce RTX 5070 Ti",
+                "compute_capability": "12.0",
+                "driver_version": "591.86",
+                "cuda_runtime_version": "12.9",
+                "cuda_toolkit_version": "12.9",
+                "nvrtc_version": "12.9",
+                "vram_bytes": 17094475776u64,
+                "memory_hwm_bytes": 9201254400u64,
+                "cuda_kernel_invocations": 4410,
+                "power_draw_watts": null,
+                "temperature_c": null
+            },
+            "benchmark": {
+                "profile": "strict_ask_math_8",
+                "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+                "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+                "cpu_avx512_total_ms": 19410.0,
+                "cuda_total_ms": 1833.0,
+                "cpu_avx512_tokens_per_second": 0.1545,
+                "cuda_tokens_per_second": 1.6366,
+                "observed_cpu_total_ms_div_cuda_total_ms": 10.59,
+                "cuda_kernel_invocations": 4410,
+                "cpu_cuda_answer_match": true,
+                "speedup_claim": false,
+                "benchmark_qualified_speedup": false
+            },
+            "timing_split": {
+                "cpu_avx512": {
+                    "model_load_ms": 2781.206,
+                    "tokenizer_load_ms": 340.326,
+                    "prompt_render_tokenize_ms": 0.258,
+                    "prefill_ms": 16497.948,
+                    "first_token_ms": 17460.0,
+                    "decode_total_ms": 2912.929,
+                    "steady_decode_tokens_per_second": 1.026
+                },
+                "cuda": {
+                    "model_load_ms": 2845.54,
+                    "tokenizer_load_ms": 307.915,
+                    "prompt_render_tokenize_ms": 0.257,
+                    "prefill_ms": 1547.927,
+                    "first_token_ms": 1645.0,
+                    "decode_total_ms": 285.554,
+                    "steady_decode_tokens_per_second": 10.668,
+                    "cuda_context_init_ms": null,
+                    "cuda_context_init_ms_source": "not_separately_measured",
+                    "weight_upload_ms": null,
+                    "weight_upload_ms_source": "not_separately_measured",
+                    "kernel_time_ms": null,
+                    "kernel_time_ms_source": "not_measured_by_current_receipt",
+                    "host_to_device_bytes": null,
+                    "host_to_device_bytes_source": "not_measured_by_current_receipt",
+                    "device_to_host_bytes": null,
+                    "device_to_host_bytes_source": "not_measured_by_current_receipt"
+                }
+            },
+            "profiles": [
+                measured_answer_path_profile("strict_ask_math_8", "amd-9950x3d-cpu-avx512", "cpu"),
+                measured_answer_path_profile("strict_ask_math_8", "nvidia-rtx-5070-ti-cuda", "cuda"),
+                existing_answer_path_profile("answer_corpus_5", "amd-9950x3d-cpu-avx512"),
+                existing_answer_path_profile("answer_corpus_5", "nvidia-rtx-5070-ti-cuda"),
+                {
+                    "profile": "prefill_512_decode_128",
+                    "backend": "amd-9950x3d-cpu-avx512",
+                    "runtime_api": "cpu",
+                    "status": "blocked_timeout",
+                    "timeout_seconds": 1800,
+                    "reason": "30-minute CPU AVX-512 phase benchmark timed out before producing profile receipts"
+                }
+            ],
+            "kernel_stats": [
+                {
+                    "kernel_id": "qk256_gemv_cuda",
+                    "invocations": 4410,
+                    "fallback_invocations": 0,
+                    "kernel_launches": 4410,
+                    "kernel_time_ms": null
+                }
+            ],
+            "cuda_execution_residency": {
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            },
+            "claim_boundaries": [
+                "speedup_claim=false",
+                "strict ask timing is measured; long prefill/decode remains blocked",
+                "kernel time and transfer byte timing are not separately measured"
+            ],
+            "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-prod-004-answer-path-benchmark.json"
+        })
+    }
+
+    fn measured_answer_path_profile(
+        profile: &str,
+        backend: &str,
+        runtime_api: &str,
+    ) -> serde_json::Value {
+        json!({
+            "profile": profile,
+            "backend": backend,
+            "runtime_api": runtime_api,
+            "status": "measured",
+            "total_ms": 1.0,
+            "first_token_ms": 1.0,
+            "tokens_per_second": 1.0,
+            "prompt_tokens": 19,
+            "generated_tokens": 3,
+            "quality_passed": true,
+            "fallback_used": false
+        })
+    }
+
+    fn existing_answer_path_profile(profile: &str, backend: &str) -> serde_json::Value {
+        json!({
+            "profile": profile,
+            "backend": backend,
+            "runtime_api": if backend.contains("cuda") { "cuda" } else { "cpu" },
+            "status": "measured_existing_receipt",
+            "receipt_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-answer-corpus.json",
+            "quality_passed": true,
+            "fallback_used": false
         })
     }
 
