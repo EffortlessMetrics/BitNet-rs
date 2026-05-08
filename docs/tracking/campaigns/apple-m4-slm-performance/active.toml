@@ -26,8 +26,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-SLM-PERF-001"
-status = "pr_open"
+status = "merged"
 pr = 4044
+merge_sha = "de442a1a5a863c7b5acbbdb26c0a3a69e1b3c4eb"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-001-release-baseline"
 stackable = false
 review_mode = "codex_premerge"
@@ -76,7 +77,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-002"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-002-allocation-audit"
 stackable = false
 review_mode = "codex_premerge"
@@ -106,8 +107,16 @@ forbidden_paths = [
   "crates/bitnet-kernels/src/metal/**",
   "models/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "Apple M4 SLM decode-loop allocation and temporary-buffer hotspots are identified and ranked.",
+  "Unavoidable per-token allocations, if any, are named before optimization work starts.",
+]
+must_not_claim = [
+  "CPU/NEON performance is improved.",
+  "A specific hot-path optimization is complete.",
+  "Broad M4 performance is proven.",
+  "Full apple-m4-metal inference works.",
+]
 
 [[work_item]]
 id = "M4-SLM-PERF-003"

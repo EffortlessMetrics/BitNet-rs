@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T12:00:45Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-001"
+event = "merged"
+pr = 4044
+merge_sha = "de442a1a5a863c7b5acbbdb26c0a3a69e1b3c4eb"
+actor = "codex"
+
+notes = [
+  "Release-mode warm-session baseline merged.",
+  "Recorded warm_16, warm_32, warm_64, and warm_128 Apple M4 SLM profiles with cold load separated from warm prompt timing.",
+  "Promoted M4-SLM-PERF-002 allocation and hot-loop audit.",
+  "No BitNet quality, full apple-m4-metal inference, QK256, Neural Engine, MPSGraph model inference, or broad M4 performance claim made.",
+]
