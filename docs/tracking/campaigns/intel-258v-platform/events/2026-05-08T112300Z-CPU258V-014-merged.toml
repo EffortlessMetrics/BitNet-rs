@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T11:23:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-014"
+event = "merged"
+actor = "codex"
+pr = 4041
+merge_sha = "7fe8e3aa139148fcf05c64d5ddc63430e2aea2d7"
+summary = "Merged CPU258V-014, recording selected-case post-mechanics answer recovery on the 258V CPU."
+
+notes = [
+  "The merged receipts show the selected math_2_plus_2 BitNet.cpp-template case now passes the exact answer gate in both scalar and AVX2 release-built runs.",
+  "The scalar-vs-AVX2 parity receipt records summary.failed=0 and no first divergence for the selected case.",
+  "This closeout preserves the claim boundary: selected-case CPU answer recovery and parity only, without general chat, full-corpus, speed, Arc 140V, or Intel NPU claims.",
+]
