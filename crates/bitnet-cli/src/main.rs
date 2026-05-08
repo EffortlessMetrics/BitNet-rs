@@ -622,6 +622,74 @@ enum Commands {
     },
 
     #[cfg(feature = "full-cli")]
+    /// Run 258V CPU phase prompts in one warm strict BitNet process
+    CpuPhaseWarmSession {
+        /// Model GGUF file path
+        #[arg(short, long)]
+        model: std::path::PathBuf,
+
+        /// Model format: auto (detect from path) or gguf
+        #[arg(long, value_name = "FORMAT", default_value = "auto")]
+        model_format: String,
+
+        /// Explicit tokenizer path; strict mode does not guess
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+
+        /// Platform artifact to reference in the aggregate receipt
+        #[arg(long, value_name = "PATH")]
+        platform_artifact: Option<std::path::PathBuf>,
+
+        /// Prompt text for the prefill_512 phase
+        #[arg(long, value_name = "TEXT")]
+        prefill_prompt: Option<String>,
+
+        /// Prompt file for the prefill_512 phase
+        #[arg(long, value_name = "PATH")]
+        prefill_prompt_file: Option<std::path::PathBuf>,
+
+        /// Prompt text for the decode_128 phase
+        #[arg(
+            long,
+            value_name = "TEXT",
+            default_value = "Answer with a deterministic continuation: one two three"
+        )]
+        decode_prompt: String,
+
+        /// Generated tokens requested for the decode_128 phase
+        #[arg(long, default_value_t = 128)]
+        decode_tokens: usize,
+
+        /// Generated tokens requested for the prefill_512 phase
+        #[arg(long, default_value_t = 1)]
+        prefill_tokens: usize,
+
+        /// Requested CPU kernel identity: auto, scalar, or avx2
+        #[arg(long, value_name = "KERNEL", default_value = "avx2")]
+        cpu_kernel: String,
+
+        /// Strict tokenizer mode: fail if no real tokenizer is available
+        #[arg(long, default_value_t = false)]
+        strict_tokenizer: bool,
+
+        /// Strict loader mode: fail-fast with enhanced loader and no fallback
+        #[arg(long, default_value_t = false)]
+        strict_loader: bool,
+
+        /// Number of threads to use (0 = all cores)
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Prompt template for both phase prompts
+        #[arg(long, value_name = "TEMPLATE", default_value = "raw")]
+        prompt_template: String,
+
+        /// Output aggregate warm-session receipt
+        #[arg(long, value_name = "PATH")]
+        json_out: std::path::PathBuf,
+    },
+
+    #[cfg(feature = "full-cli")]
     /// Convert between model formats
     #[command(alias = "conv")]
     Convert(ConvertCommand),
@@ -1114,6 +1182,44 @@ async fn async_main() -> Result<()> {
                 require_determinism,
                 min_generated_tokens,
                 min_distinct_generated_tokens,
+                json_out,
+            )
+            .await
+        }
+        #[cfg(feature = "full-cli")]
+        Some(Commands::CpuPhaseWarmSession {
+            model,
+            model_format,
+            tokenizer,
+            platform_artifact,
+            prefill_prompt,
+            prefill_prompt_file,
+            decode_prompt,
+            decode_tokens,
+            prefill_tokens,
+            cpu_kernel,
+            strict_tokenizer,
+            strict_loader,
+            threads,
+            prompt_template,
+            json_out,
+        }) => {
+            run_cpu_phase_warm_session(
+                &requested_backend_label,
+                model,
+                model_format,
+                tokenizer,
+                platform_artifact,
+                prefill_prompt,
+                prefill_prompt_file,
+                decode_prompt,
+                decode_tokens,
+                prefill_tokens,
+                cpu_kernel,
+                strict_tokenizer,
+                strict_loader,
+                threads,
+                prompt_template,
                 json_out,
             )
             .await
@@ -4485,6 +4591,782 @@ fn tokenizer_pretokenizer_authority(
         bitnet_tokenizers::auto::TokenizerSource::Sibling => "externally_supplied",
         bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => "defaulted",
     }
+}
+
+#[derive(Clone, Debug)]
+#[cfg(feature = "full-cli")]
+struct CpuPhasePromptPlan {
+    profile_id: &'static str,
+    phase: &'static str,
+    prompt: String,
+    max_new_tokens: usize,
+}
+
+#[derive(Clone, Debug)]
+#[cfg(feature = "full-cli")]
+struct CpuPhasePromptRun {
+    profile_id: &'static str,
+    phase: &'static str,
+    prompt: String,
+    formatted_prompt: String,
+    prompt_template_family: String,
+    add_bos: bool,
+    parse_special: bool,
+    prompt_token_ids: Vec<u32>,
+    generated_token_ids: Vec<u32>,
+    generated_text: String,
+    prompt_token_count: usize,
+    prefill_token_count: usize,
+    prompt_tokenize_ms: f64,
+    prefill_ms: f64,
+    first_token_ms: Option<f64>,
+    first_token_decode_ms: Option<f64>,
+    decode_total_ms: f64,
+    prompt_total_ms: f64,
+    embed_step_ms: Vec<f64>,
+    forward_step_ms: Vec<f64>,
+    logits_step_ms: Vec<f64>,
+    sample_step_ms: Vec<f64>,
+    token_decode_step_ms: Vec<f64>,
+    decode_step_ms: Vec<f64>,
+    prefill_step_ms: Vec<f64>,
+}
+
+#[allow(clippy::too_many_arguments)]
+#[cfg(feature = "full-cli")]
+async fn run_cpu_phase_warm_session(
+    requested_backend_label: &str,
+    model_path: std::path::PathBuf,
+    model_format: String,
+    tokenizer_path: Option<std::path::PathBuf>,
+    platform_artifact: Option<std::path::PathBuf>,
+    prefill_prompt: Option<String>,
+    prefill_prompt_file: Option<std::path::PathBuf>,
+    decode_prompt: String,
+    decode_tokens: usize,
+    prefill_tokens: usize,
+    cpu_kernel: String,
+    strict_tokenizer: bool,
+    strict_loader: bool,
+    threads: usize,
+    prompt_template: String,
+    json_out: std::path::PathBuf,
+) -> Result<()> {
+    use bitnet_common::Device;
+    use bitnet_models::Model;
+    use bitnet_tokenizers::Tokenizer;
+    use std::sync::Arc;
+
+    if requested_backend_label != "cpu" {
+        anyhow::bail!(
+            "cpu-phase-warm-session is scoped to --device cpu for 258V CPU phase receipts; got {requested_backend_label}"
+        );
+    }
+    if !strict_loader {
+        anyhow::bail!("cpu-phase-warm-session requires --strict-loader");
+    }
+    if !strict_tokenizer {
+        anyhow::bail!("cpu-phase-warm-session requires --strict-tokenizer");
+    }
+    if decode_tokens < 128 {
+        anyhow::bail!("cpu-phase-warm-session requires --decode-tokens >= 128");
+    }
+    if prefill_tokens == 0 {
+        anyhow::bail!("cpu-phase-warm-session requires --prefill-tokens >= 1");
+    }
+    if prefill_prompt.is_some() && prefill_prompt_file.is_some() {
+        anyhow::bail!("pass either --prefill-prompt or --prefill-prompt-file, not both");
+    }
+    match model_format.as_str() {
+        "auto" | "gguf" => {}
+        other => {
+            anyhow::bail!(
+                "Invalid --model-format '{}'. cpu-phase-warm-session supports GGUF only: auto, gguf",
+                other
+            );
+        }
+    }
+    match cpu_kernel.as_str() {
+        "auto" | "scalar" | "avx2" => {}
+        other => anyhow::bail!("invalid --cpu-kernel {other}; expected auto, scalar, or avx2"),
+    }
+    if cpu_kernel == "avx2" && !bitnet_common::runtime_diag::CpuFeatures::detect().avx2 {
+        anyhow::bail!("--cpu-kernel avx2 requested but AVX2 is not available");
+    }
+    if model_path.is_dir() {
+        anyhow::bail!(
+            "cpu-phase-warm-session requires a GGUF model file, not a model directory: {}",
+            model_path.display()
+        );
+    }
+    if model_path.extension().and_then(|ext| ext.to_str()).map(str::to_ascii_lowercase).as_deref()
+        == Some("safetensors")
+    {
+        anyhow::bail!("cpu-phase-warm-session supports GGUF only, not safetensors");
+    }
+
+    unsafe {
+        std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");
+        std::env::set_var("BITNET_STRICT_MODE", "1");
+        if threads > 0 {
+            std::env::set_var("RAYON_NUM_THREADS", threads.to_string());
+        }
+        match cpu_kernel.as_str() {
+            "scalar" => {
+                std::env::set_var("BITNET_CPU_KERNEL", "scalar");
+                std::env::set_var("BITNET_FORCE_SCALAR", "1");
+            }
+            "avx2" => {
+                std::env::set_var("BITNET_CPU_KERNEL", "avx2");
+            }
+            "auto" => {}
+            _ => unreachable!("validated cpu_kernel"),
+        }
+    }
+
+    let backend_identity = resolve_run_backend_identity(requested_backend_label, true)?;
+    if backend_identity.fallback_used {
+        anyhow::bail!(
+            "cpu-phase-warm-session requires no-fallback CPU routing; requested_backend={}, selected_backend={}, fallback_reason={:?}",
+            backend_identity.requested_backend,
+            backend_identity.selected_backend,
+            backend_identity.fallback_reason
+        );
+    }
+    if backend_identity.runtime_api != "cpu" {
+        anyhow::bail!(
+            "cpu-phase-warm-session is CPU scoped; selected runtime_api={}",
+            backend_identity.runtime_api
+        );
+    }
+    unsafe {
+        std::env::set_var("BITNET_REQUESTED_BACKEND", backend_identity.requested_backend.as_str());
+        std::env::set_var("BITNET_SELECTED_BACKEND", backend_identity.selected_backend.as_str());
+        std::env::set_var("BITNET_RUNTIME_API", backend_identity.runtime_api.as_str());
+    }
+
+    let session_start = std::time::Instant::now();
+    let is_hf_directory = false;
+    let template_type: bitnet_inference::TemplateType =
+        prompt_template.parse().with_context(|| {
+            format!(
+                "Invalid prompt template '{}'. Supported: raw, instruct, llama3-chat, qwen2.5",
+                prompt_template
+            )
+        })?;
+    let prefill_prompt_text = match (prefill_prompt, prefill_prompt_file) {
+        (Some(prompt), None) => prompt,
+        (None, Some(path)) => std::fs::read_to_string(&path)
+            .with_context(|| format!("failed to read {}", path.display()))?,
+        (None, None) => "benchmark token ".repeat(256),
+        (Some(_), Some(_)) => unreachable!("validated prompt exclusivity"),
+    };
+
+    let loader = bitnet_models::loader::ModelLoader::new(Device::Cpu);
+    let load_config = bitnet_models::loader::LoadConfig {
+        use_mmap: true,
+        validate_checksums: false,
+        progress_callback: None,
+    };
+    println!("CPU phase warm session loading model once from: {}", model_path.display());
+    let model_load_start = std::time::Instant::now();
+    let loaded_model = loader.load_with_config(&model_path, &load_config).with_context(|| {
+        format!("Failed to load real model for CPU phase session: {}", model_path.display())
+    })?;
+    let config = loaded_model.config().clone();
+    let model: Arc<dyn Model> = Arc::from(loaded_model);
+    let model_load_ms = elapsed_ms(model_load_start);
+    let loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
+    if loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str() {
+        anyhow::bail!("cpu-phase-warm-session requires real_gguf loader mode; got {loader_mode}");
+    }
+
+    let tokenizer_load_start = std::time::Instant::now();
+    let tokenizer_resolution =
+        bitnet_tokenizers::auto::resolve_tokenizer(&model_path, tokenizer_path.as_deref(), true)
+            .with_context(|| format!("Failed to resolve tokenizer for {}", model_path.display()))?;
+    let tokenizer_load_ms = elapsed_ms(tokenizer_load_start);
+    let tokenizer_source = tokenizer_resolution.source;
+    let tokenizer_strict = tokenizer_resolution.strict;
+    let tokenizer: Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+    let tokenizer_source_str = tokenizer_source.as_str();
+    let pretokenizer_authority = tokenizer_pretokenizer_authority(tokenizer_source);
+    let tokenizer_label = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
+    let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
+    let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
+    let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
+    let model_sha256 = compute_model_sha256(&model_path)?;
+    let model_repo = infer_model_repo(&model_path);
+    let model_architecture = infer_model_architecture(&model_path);
+    let model_family = receipt_model_family(&model_architecture);
+    let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
+    let model_file =
+        model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
+    let kernel_family = kernel_family_for_quantization(config.quantization.quantization_type);
+    let kernel_implementation = cpu_kernel_implementation(config.quantization.quantization_type);
+    if cpu_kernel == "avx2" && kernel_implementation != "avx2" {
+        anyhow::bail!(
+            "--cpu-kernel avx2 requested but selected CPU kernel implementation is {kernel_implementation}"
+        );
+    }
+    if cpu_kernel == "scalar" && kernel_implementation != "scalar" {
+        anyhow::bail!(
+            "--cpu-kernel scalar requested but selected CPU kernel implementation is {kernel_implementation}"
+        );
+    }
+    let selected_kernel = format!("{kernel_family}-{kernel_implementation}-reference");
+    let layout_source = layout_source_for_quantization(config.quantization.quantization_type);
+    let kernel_layout = kernel_layout_for_quantization(config.quantization.quantization_type);
+    let dequantizes_before_compute =
+        dequantizes_before_compute(config.quantization.quantization_type);
+    let thread_count = effective_thread_count(threads);
+    let cpu_features = detected_cpu_feature_labels();
+    let cpu_model = detected_cpu_model_label();
+
+    let receipt_dir = json_out
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join(format!(
+            "{}-profiles",
+            json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("cpu-phase-warm-session")
+        ));
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("Failed to create {}", receipt_dir.display()))?;
+
+    let plans = [
+        CpuPhasePromptPlan {
+            profile_id: "prefill_512",
+            phase: "prefill",
+            prompt: prefill_prompt_text,
+            max_new_tokens: prefill_tokens,
+        },
+        CpuPhasePromptPlan {
+            profile_id: "decode_128",
+            phase: "decode",
+            prompt: decode_prompt,
+            max_new_tokens: decode_tokens,
+        },
+    ];
+
+    let mut profile_receipt_paths = Vec::with_capacity(plans.len());
+    let mut profile_summaries = Vec::with_capacity(plans.len());
+    for plan in &plans {
+        let run = run_cpu_phase_prompt(
+            plan,
+            model.as_ref(),
+            &config,
+            tokenizer.as_ref(),
+            &template_type,
+        )?;
+        if run.profile_id == "prefill_512" && run.prefill_token_count < 512 {
+            anyhow::bail!(
+                "prefill_512 prompt must prefill at least 512 tokens; got {}. Use --prefill-prompt-file with a calibrated prompt.",
+                run.prefill_token_count
+            );
+        }
+        if run.profile_id == "decode_128" && run.generated_token_ids.len() < 128 {
+            anyhow::bail!(
+                "decode_128 must generate at least 128 tokens; got {}",
+                run.generated_token_ids.len()
+            );
+        }
+        let receipt_path = receipt_dir.join(format!("{}.json", run.profile_id));
+        let receipt = cpu_phase_strict_profile_receipt(
+            &run,
+            &receipt_path,
+            &json_out,
+            &backend_identity,
+            &model_path,
+            &model_repo,
+            &model_file,
+            &model_sha256,
+            &model_format_label,
+            model_family,
+            &model_architecture,
+            loader_mode,
+            &tokenizer_label,
+            tokenizer_type.as_str(),
+            tokenizer_source_str,
+            tokenizer_strict,
+            pretokenizer_authority,
+            tokenizer.as_ref(),
+            kernel_family,
+            kernel_implementation,
+            &selected_kernel,
+            layout_source,
+            kernel_layout,
+            dequantizes_before_compute,
+            &cpu_model,
+            &cpu_features,
+            thread_count,
+            config.model.max_position_embeddings,
+            n_kv,
+            n_tensors,
+            model_load_ms,
+            tokenizer_load_ms,
+        );
+        write_json_output(Some(&receipt_path), &receipt)?;
+        profile_receipt_paths.push(receipt_path.display().to_string());
+        profile_summaries.push(serde_json::json!({
+            "profile": run.profile_id,
+            "phase": run.phase,
+            "receipt_path": receipt_path.display().to_string(),
+            "prompt_tokens": run.prompt_token_count,
+            "prefill_tokens": run.prefill_token_count,
+            "generated_tokens": run.generated_token_ids.len(),
+            "prefill_ms": rounded_ms(run.prefill_ms),
+            "decode_total_ms": rounded_ms(run.decode_total_ms),
+            "first_token_decode_ms": run.first_token_decode_ms.map(rounded_ms),
+            "fallback_used": false
+        }));
+    }
+
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "cpu_phase_warm_session",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "machine_id": "intel-258v",
+        "hardware_lane": "intel-258v-cpu-avx2",
+        "requested_backend": backend_identity.requested_backend.as_str(),
+        "selected_backend": backend_identity.selected_backend.as_str(),
+        "runtime_api": backend_identity.runtime_api.as_str(),
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "session": {
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "profile_count": plans.len(),
+            "per_profile_receipt_dir": receipt_dir.display().to_string(),
+            "per_profile_receipts": profile_receipt_paths,
+            "platform_artifact": platform_artifact.as_ref().map(|path| path.display().to_string()),
+        },
+        "model": {
+            "repo": model_repo.as_str(),
+            "file": model_file.as_str(),
+            "path": model_path.display().to_string(),
+            "sha256": model_sha256.as_str(),
+            "format": model_format_label.as_str(),
+            "family": model_family,
+            "architecture": model_architecture,
+            "loader_mode": loader_mode,
+            "fallback_loader_used": false,
+            "tokenizer": tokenizer_label.as_str(),
+            "vocab_size": tokenizer.vocab_size(),
+        },
+        "tokenizer": {
+            "type": tokenizer_type.as_str(),
+            "source": tokenizer_source_str,
+            "strict": tokenizer_strict,
+            "pretokenizer_authority": pretokenizer_authority,
+        },
+        "kernel": {
+            "family": kernel_family,
+            "implementation": kernel_implementation,
+            "kernel_id": selected_kernel.as_str(),
+            "requested_kernel": selected_kernel.as_str(),
+            "selected_kernel": selected_kernel.as_str(),
+            "fallback_used": false,
+        },
+        "cpu": {
+            "model": cpu_model.as_str(),
+            "arch": std::env::consts::ARCH,
+            "features": &cpu_features,
+            "threads": thread_count,
+        },
+        "timing": {
+            "model_load_ms": rounded_ms(model_load_ms),
+            "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+            "total_session_ms": rounded_ms(elapsed_ms(session_start)),
+        },
+        "profiles": profile_summaries,
+        "claim_boundary": {
+            "cpu_phase_timing_only": true,
+            "speedup_claim": false,
+            "sustained_throughput_claim": false,
+            "arc140v_claim": false,
+            "intel_npu_claim": false,
+            "bitnet_answer_quality_claim": false,
+        },
+        "speedup_claim": false,
+    });
+    write_json_output(Some(&json_out), &aggregate)?;
+    println!(
+        "CPU phase warm-session receipt written to {} ({} profile receipts, model/tokenizer loaded once)",
+        json_out.display(),
+        plans.len()
+    );
+    Ok(())
+}
+
+#[cfg(feature = "full-cli")]
+fn run_cpu_phase_prompt(
+    plan: &CpuPhasePromptPlan,
+    model: &dyn bitnet_models::Model,
+    config: &bitnet_common::BitNetConfig,
+    tokenizer: &(dyn bitnet_tokenizers::Tokenizer + Send + Sync),
+    template_type: &bitnet_inference::TemplateType,
+) -> Result<CpuPhasePromptRun> {
+    use bitnet_models::transformer::KVCache;
+    use bitnet_sampling::{SamplingConfig, SamplingStrategy};
+
+    let prompt_start = std::time::Instant::now();
+    let formatted_prompt = template_type.apply(&plan.prompt, None);
+    let bos_policy = template_type.should_add_bos();
+    let parse_special = template_type.parse_special();
+    let prompt_tokenize_start = std::time::Instant::now();
+    let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
+    ensure_non_empty_generation_context(&mut tokens, tokenizer)?;
+    let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
+    let prompt_token_count = tokens.len();
+    let prompt_token_ids = tokens.clone();
+
+    let cache = KVCache::new(config, 1, &candle_core::Device::Cpu)?;
+    let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
+    let mut sampler = SamplingStrategy::new(SamplingConfig {
+        temperature: 0.0,
+        top_k: 0,
+        top_p: 1.0,
+        repetition_penalty: 1.0,
+        seed: Some(0),
+    });
+    let mut prefill_step_ms = Vec::new();
+    let prefill_start = std::time::Instant::now();
+    let mut prefill_token_count = 0usize;
+    if tokens.len() > 1 {
+        for token in &tokens[..tokens.len() - 1] {
+            let step_start = std::time::Instant::now();
+            let x = model.embed(&[*token])?;
+            let _ = model.forward(&x, any_cache.as_mut())?;
+            prefill_step_ms.push(elapsed_ms(step_start));
+            prefill_token_count += 1;
+        }
+    }
+    let prefill_ms = if prefill_token_count > 0 { elapsed_ms(prefill_start) } else { 0.0 };
+
+    let mut generated_token_ids = Vec::with_capacity(plan.max_new_tokens);
+    let mut decode_step_ms = Vec::with_capacity(plan.max_new_tokens);
+    let mut embed_step_ms = Vec::with_capacity(plan.max_new_tokens);
+    let mut forward_step_ms = Vec::with_capacity(plan.max_new_tokens);
+    let mut logits_step_ms = Vec::with_capacity(plan.max_new_tokens);
+    let mut sample_step_ms = Vec::with_capacity(plan.max_new_tokens);
+    let mut token_decode_step_ms = Vec::with_capacity(plan.max_new_tokens);
+    let mut first_token_ms = None;
+    let mut first_token_decode_ms = None;
+
+    for _ in 0..plan.max_new_tokens {
+        let decode_step_start = std::time::Instant::now();
+        let last_token = tokens.last().copied().expect("tokens must be non-empty");
+
+        let embed_start = std::time::Instant::now();
+        let x = model.embed(&[last_token])?;
+        embed_step_ms.push(elapsed_ms(embed_start));
+
+        let forward_start = std::time::Instant::now();
+        let h = model.forward(&x, any_cache.as_mut())?;
+        forward_step_ms.push(elapsed_ms(forward_start));
+
+        let last_hidden = extract_last_token_hidden(&h)?;
+        let logits_start = std::time::Instant::now();
+        let logits = model.logits(&last_hidden)?;
+        let logits_vec = extract_logits_2d(&logits)?;
+        logits_step_ms.push(elapsed_ms(logits_start));
+
+        let sample_start = std::time::Instant::now();
+        let next_token = sampler.sample(&logits_vec, &generated_token_ids)?;
+        sample_step_ms.push(elapsed_ms(sample_start));
+
+        tokens.push(next_token);
+        generated_token_ids.push(next_token);
+        if first_token_ms.is_none() {
+            first_token_ms = Some(elapsed_ms(prompt_start));
+        }
+
+        let token_decode_start = std::time::Instant::now();
+        let _ = tokenizer.decode(&[next_token])?;
+        token_decode_step_ms.push(elapsed_ms(token_decode_start));
+
+        let step_ms = elapsed_ms(decode_step_start);
+        if first_token_decode_ms.is_none() {
+            first_token_decode_ms = Some(step_ms);
+        }
+        decode_step_ms.push(step_ms);
+    }
+
+    let generated_text = tokenizer.decode(&generated_token_ids)?;
+    Ok(CpuPhasePromptRun {
+        profile_id: plan.profile_id,
+        phase: plan.phase,
+        prompt: plan.prompt.clone(),
+        formatted_prompt,
+        prompt_template_family: template_type.to_string(),
+        add_bos: bos_policy,
+        parse_special,
+        prompt_token_ids,
+        generated_token_ids,
+        generated_text,
+        prompt_token_count,
+        prefill_token_count,
+        prompt_tokenize_ms,
+        prefill_ms,
+        first_token_ms,
+        first_token_decode_ms,
+        decode_total_ms: decode_step_ms.iter().sum(),
+        prompt_total_ms: elapsed_ms(prompt_start),
+        embed_step_ms,
+        forward_step_ms,
+        logits_step_ms,
+        sample_step_ms,
+        token_decode_step_ms,
+        decode_step_ms,
+        prefill_step_ms,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+#[cfg(feature = "full-cli")]
+fn cpu_phase_strict_profile_receipt(
+    run: &CpuPhasePromptRun,
+    receipt_path: &std::path::Path,
+    session_path: &std::path::Path,
+    backend_identity: &RunBackendIdentity,
+    model_path: &std::path::Path,
+    model_repo: &str,
+    model_file: &str,
+    model_sha256: &str,
+    model_format_label: &str,
+    model_family: &'static str,
+    model_architecture: &str,
+    loader_mode: &str,
+    tokenizer_label: &str,
+    tokenizer_type: &str,
+    tokenizer_source_str: &str,
+    tokenizer_strict: bool,
+    pretokenizer_authority: &str,
+    tokenizer: &(dyn bitnet_tokenizers::Tokenizer + Send + Sync),
+    kernel_family: &str,
+    kernel_implementation: &str,
+    selected_kernel: &str,
+    layout_source: &str,
+    kernel_layout: &str,
+    dequantizes_before_compute: bool,
+    cpu_model: &str,
+    cpu_features: &[String],
+    thread_count: usize,
+    context_length: usize,
+    n_kv: usize,
+    n_tensors: usize,
+    model_load_ms: f64,
+    tokenizer_load_ms: f64,
+) -> serde_json::Value {
+    let steady_decode_tps =
+        steady_decode_tps_ms(&run.decode_step_ms).map(|value| (value * 1000.0).round() / 1000.0);
+    let sampling_total_ms = run.sample_step_ms.iter().sum::<f64>();
+    let sampling_ms_per_token = if run.sample_step_ms.is_empty() {
+        None
+    } else {
+        Some(sampling_total_ms / run.sample_step_ms.len() as f64)
+    };
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "strict_bitnet_cpu_profile",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "session_artifact_path": session_path.display().to_string(),
+        "artifact_path": receipt_path.display().to_string(),
+        "profile_id": run.profile_id,
+        "requested_backend": backend_identity.requested_backend.as_str(),
+        "selected_backend": backend_identity.selected_backend.as_str(),
+        "runtime_api": backend_identity.runtime_api.as_str(),
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "prompt": run.prompt.as_str(),
+        "prompt_render": {
+            "template_family": run.prompt_template_family.as_str(),
+            "rendered_text": run.formatted_prompt.as_str(),
+            "add_bos": run.add_bos,
+            "parse_special": run.parse_special,
+            "stop_policy": "fixed_token_count_no_eos_stop",
+        },
+        "text": run.generated_text.as_str(),
+        "tokens": {
+            "prompt": run.prompt_token_count,
+            "generated": run.generated_token_ids.len(),
+            "total": run.prompt_token_count + run.generated_token_ids.len(),
+            "prompt_ids": &run.prompt_token_ids,
+            "generated_ids": &run.generated_token_ids,
+            "ids": &run.generated_token_ids,
+        },
+        "latency": {
+            "cmd_to_first_ms": run.first_token_ms.map(rounded_ms),
+            "decode_first_ms": run.first_token_decode_ms.map(rounded_ms),
+            "total_ms": rounded_ms(run.prompt_total_ms),
+        },
+        "timing": {
+            "model_load_ms": rounded_ms(model_load_ms),
+            "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+            "tokenize_ms": rounded_ms(run.prompt_tokenize_ms),
+            "prefill_ms": rounded_ms(run.prefill_ms),
+            "first_token_ms": run.first_token_ms.map(rounded_ms),
+            "first_token_decode_ms": run.first_token_decode_ms.map(rounded_ms),
+            "decode_total_ms": rounded_ms(run.decode_total_ms),
+            "decode_steady_state_tok_s": steady_decode_tps,
+            "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
+            "decode_step_ms": timing_samples_json(&run.decode_step_ms),
+            "prefill_step_ms": timing_samples_json(&run.prefill_step_ms),
+            "embed_ms": timing_samples_json(&run.embed_step_ms),
+            "forward_ms": timing_samples_json(&run.forward_step_ms),
+            "logits_ms": timing_samples_json(&run.logits_step_ms),
+            "sample_ms": timing_samples_json(&run.sample_step_ms),
+            "token_decode_ms": timing_samples_json(&run.token_decode_step_ms),
+            "total_ms": rounded_ms(run.prompt_total_ms),
+        },
+        "profile": {
+            "id": run.profile_id,
+            "requested": true,
+            "kind": "steady_decode_prefill",
+            "claim_scope": "selected CPU backend phase timing only",
+            "phase": run.phase,
+            "machine_context_recorded": true,
+            "backend": {
+                "requested_backend": backend_identity.requested_backend.as_str(),
+                "selected_backend": backend_identity.selected_backend.as_str(),
+                "runtime_api": backend_identity.runtime_api.as_str(),
+                "fallback_used": false,
+                "fallback_reason": serde_json::Value::Null,
+            },
+            "prompt_prefill": {
+                "exercised": run.prefill_token_count > 0,
+                "tokens": run.prefill_token_count,
+                "ms": rounded_ms(run.prefill_ms),
+                "per_token_ms": timing_samples_json(&run.prefill_step_ms),
+                "kv_cache_behavior": if run.prefill_token_count > 0 {
+                    "prompt_prefix_prefilled_before_decode"
+                } else {
+                    "single_token_prompt_no_prefix_prefill"
+                },
+            },
+            "decode": {
+                "generated_tokens": run.generated_token_ids.len(),
+                "warmup_tokens": usize::from(!run.decode_step_ms.is_empty()),
+                "steady_state_tokens": run.decode_step_ms.len().saturating_sub(1),
+                "first_token_decode_ms": run.first_token_decode_ms.map(rounded_ms),
+                "steady_state_tok_s": steady_decode_tps,
+                "per_token_ms": timing_samples_json(&run.decode_step_ms),
+                "steady_per_token_ms": timing_samples_json(run.decode_step_ms.get(1..).unwrap_or(&[])),
+                "embed_ms": timing_samples_json(&run.embed_step_ms),
+                "forward_ms": timing_samples_json(&run.forward_step_ms),
+                "logits_ms": timing_samples_json(&run.logits_step_ms),
+                "sample_ms": timing_samples_json(&run.sample_step_ms),
+                "token_decode_ms": timing_samples_json(&run.token_decode_step_ms),
+            },
+            "model_load_ms": rounded_ms(model_load_ms),
+            "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+            "prompt_tokenize_ms": rounded_ms(run.prompt_tokenize_ms),
+        },
+        "model": {
+            "repo": model_repo,
+            "file": model_file,
+            "path": model_path.display().to_string(),
+            "sha256": model_sha256,
+            "format": model_format_label,
+            "family": model_family,
+            "architecture": model_architecture,
+            "context_length": context_length,
+            "tokenizer": tokenizer_label,
+            "vocab_size": tokenizer.vocab_size(),
+            "loader_mode": loader_mode,
+            "fallback_loader_used": false,
+            "quant_format": "QK256/I2_S",
+        },
+        "bitnet": {
+            "weight_quantization": "W1.58",
+            "activation_quantization": "A8",
+            "quantization": "W1.58A8",
+            "kernel_format": kernel_family,
+            "kernel_family": kernel_family,
+            "execution_phase": run.phase,
+            "layout_source": layout_source,
+            "fallback_layout": serde_json::Value::Null,
+        },
+        "execution": {
+            "phase": run.phase,
+            "prompt_tokens": run.prompt_token_count,
+            "generated_tokens": run.generated_token_ids.len(),
+            "batch_size": 1,
+            "thread_count": thread_count,
+            "requested_backend": backend_identity.requested_backend.as_str(),
+            "selected_backend": backend_identity.selected_backend.as_str(),
+            "runtime_api": backend_identity.runtime_api.as_str(),
+            "fallback_used": false,
+            "fallback_reason": serde_json::Value::Null,
+        },
+        "kernel": {
+            "family": kernel_family,
+            "implementation": kernel_implementation,
+            "layout": kernel_layout,
+            "dequantizes_before_compute": dequantizes_before_compute,
+            "kernel_id": selected_kernel,
+        },
+        "cpu": {
+            "model": cpu_model,
+            "arch": std::env::consts::ARCH,
+            "features": cpu_features,
+            "threads": thread_count,
+        },
+        "strict_provenance": {
+            "requested_backend": backend_identity.requested_backend.as_str(),
+            "selected_backend": backend_identity.selected_backend.as_str(),
+            "requested_kernel": selected_kernel,
+            "selected_kernel": selected_kernel,
+            "loader_mode": loader_mode,
+            "tokenizer_source": tokenizer_source_str,
+            "tokenizer_strict": tokenizer_strict,
+            "model_family": model_family,
+            "quant_format": "QK256/I2_S",
+            "cpu_model": cpu_model,
+            "cpu_features": cpu_features,
+            "thread_count": thread_count,
+            "fallback_used": false,
+            "fallback_reason": serde_json::Value::Null,
+            "prompt_tokens": run.prompt_token_count,
+            "decode_tokens": run.generated_token_ids.len(),
+            "phase": run.phase,
+        },
+        "counts": {
+            "n_kv": n_kv,
+            "n_tensors": n_tensors,
+            "unmapped": 0,
+        },
+        "tokenizer": {
+            "type": tokenizer_type,
+            "model_family": tokenizer_type,
+            "source": tokenizer_source_str,
+            "strict": tokenizer_strict,
+            "pretokenizer_authority": pretokenizer_authority,
+            "bos": tokenizer.bos_token_id().unwrap_or(1),
+            "eos": tokenizer.eos_token_id().unwrap_or(2),
+        },
+        "loader": {
+            "mode": loader_mode,
+            "minimal_fallback_allowed": false,
+            "minimal_fallback_disabled": true,
+            "minimal_loader_fallback_used": false,
+            "tokenizer_source": tokenizer_source_str,
+            "mock_tensors_used": false,
+        },
+        "gen_policy": {
+            "temperature": 0.0,
+            "top_k": 0,
+            "top_p": 1.0,
+            "seed": 0,
+            "greedy": true,
+            "deterministic": true,
+            "fixed_token_count": true,
+            "stop_policy": "fixed_token_count_no_eos_stop",
+        },
+        "speedup_claim": false,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]

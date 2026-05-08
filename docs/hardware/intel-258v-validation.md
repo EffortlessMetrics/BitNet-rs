@@ -238,6 +238,35 @@ That artifact records timed-out strict CPU attempts for calibrated
 blocker evidence only; it does not prove prefill, decode, throughput, Arc 140V,
 or Intel NPU performance.
 
+CPU258V-006 adds a warm CPU phase runner so the model and tokenizer can be
+loaded once before collecting long `prefill_512` and `decode_128` profile
+receipts:
+
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,full-cli \
+  -- \
+  --device cpu \
+  cpu-phase-warm-session \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/BitNet-b1.58-2B-4T/tokenizer.json \
+  --strict-loader \
+  --strict-tokenizer \
+  --threads 8 \
+  --prefill-prompt-file ci/hardware/intel-258v/YYYY-MM-DD/prefill-512-prompt.txt \
+  --decode-tokens 128 \
+  --cpu-kernel avx2 \
+  --platform-artifact ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json \
+  --json-out ci/hardware/intel-258v/YYYY-MM-DD/cpu-phase-warm-session.json
+```
+
+The command emits per-profile strict CPU receipts under
+`cpu-phase-warm-session-profiles/`. Those receipts are inputs to
+`cpu_phase_benchmark_receipt`; they are phase timing evidence only and do not
+claim answer quality, sustained throughput, Arc 140V execution, Intel NPU
+execution, or acceleration.
+
 ## Windows PowerShell Bundle
 
 ```powershell

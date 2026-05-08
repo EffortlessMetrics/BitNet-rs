@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T06:22:25Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-006"
+event = "pr_open"
+pr = 4001
+branch = "codex/intel-258v-platform/CPU258V-006-warm-phase"
+head_sha = "19150dbdb39f38efeceb0331959ac9cbede0a806"
+summary = "Opened #4001 to add a strict CPU warm phase runner for 258V prefill_512 and decode_128 profile receipts."
+
+details = [
+  "The runner loads the real GGUF model and tokenizer once, then writes per-profile strict CPU receipts for the benchmark converter.",
+  "The claim boundary remains CPU phase receipt collection only: no sustained throughput, Arc 140V, Intel NPU, speedup, or answer-quality claims.",
+  "The converter now preserves the larger measured prefill receipt when decode and prefill receipts are supplied together.",
+]
