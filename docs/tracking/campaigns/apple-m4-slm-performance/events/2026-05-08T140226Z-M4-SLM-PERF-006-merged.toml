@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T14:02:26Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-006"
+event = "merged"
+pr = 4075
+merge_sha = "549d91ed8c9d431659b7a131dbb284e668ee243d"
+actor = "codex"
+
+notes = [
+  "M4-SLM-PERF-006 streaming and operator UX PR merged.",
+  "The merged work adds opt-in streaming token output, time-to-first-token UX receipt fields, quiet default receipt writes, and progress output without changing backend claim boundaries.",
+  "M4-SLM-PERF-007 is ready to publish the measured performance envelope for supported profiles and hardware only.",
+]
