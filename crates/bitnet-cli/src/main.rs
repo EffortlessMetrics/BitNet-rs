@@ -1806,8 +1806,15 @@ async fn handle_prompt_authority_audit_command(
         })
         .or_else(|| gguf.get_u32_metadata("llama.vocab_size"));
 
-    let tokenizer_json_metadata =
-        tokenizer_path.as_deref().and_then(read_tokenizer_json_prompt_metadata);
+    let tokenizer_resolution =
+        bitnet_tokenizers::auto::resolve_tokenizer(&model_path, tokenizer_path.as_deref(), true)?;
+    let tokenizer_source = tokenizer_resolution.source;
+    let tokenizer_path_resolved = tokenizer_resolution.path.clone();
+    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+    let tokenizer_json_metadata = read_resolved_tokenizer_json_prompt_metadata(
+        tokenizer_source,
+        tokenizer_path_resolved.as_deref(),
+    );
     let external_chat_template =
         tokenizer_json_metadata.as_ref().and_then(|metadata| metadata.chat_template.clone());
     let chat_template_for_detection =
@@ -1815,12 +1822,6 @@ async fn handle_prompt_authority_audit_command(
     let tokenizer_name_hint = gguf_tokenizer_model.as_deref().or_else(|| {
         tokenizer_json_metadata.as_ref().and_then(|metadata| metadata.family.as_deref())
     });
-
-    let tokenizer_resolution =
-        bitnet_tokenizers::auto::resolve_tokenizer(&model_path, tokenizer_path.as_deref(), true)?;
-    let tokenizer_source = tokenizer_resolution.source;
-    let tokenizer_path_resolved = tokenizer_resolution.path.clone();
-    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
     let tokenizer_family = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
     let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_family, tokenizer_source);
     let tokenizer_vocab_size = tokenizer.real_vocab_size();
@@ -1964,6 +1965,20 @@ async fn handle_prompt_authority_audit_command(
 struct TokenizerJsonPromptMetadata {
     family: Option<String>,
     chat_template: Option<String>,
+}
+
+fn read_resolved_tokenizer_json_prompt_metadata(
+    source: bitnet_tokenizers::auto::TokenizerSource,
+    path: Option<&std::path::Path>,
+) -> Option<TokenizerJsonPromptMetadata> {
+    match source {
+        bitnet_tokenizers::auto::TokenizerSource::Explicit
+        | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
+            path.and_then(read_tokenizer_json_prompt_metadata)
+        }
+        bitnet_tokenizers::auto::TokenizerSource::GgufMetadata
+        | bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => None,
+    }
 }
 
 fn read_tokenizer_json_prompt_metadata(
@@ -10615,6 +10630,41 @@ mod tests {
             ),
             "external_tokenizer_file"
         );
+    }
+
+    #[test]
+    fn prompt_authority_reads_sibling_tokenizer_json_metadata_after_resolution() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let tokenizer_path = temp_dir.path().join("tokenizer.json");
+        std::fs::write(
+            &tokenizer_path,
+            r#"{"tokenizer_class":"LlamaTokenizerFast","chat_template":"{{ messages[0]['content'] }}"}"#,
+        )
+        .expect("write tokenizer fixture");
+
+        let metadata = read_resolved_tokenizer_json_prompt_metadata(
+            bitnet_tokenizers::auto::TokenizerSource::Sibling,
+            Some(&tokenizer_path),
+        )
+        .expect("sibling tokenizer metadata");
+
+        assert_eq!(metadata.family.as_deref(), Some("LlamaTokenizerFast"));
+        assert_eq!(metadata.chat_template.as_deref(), Some("{{ messages[0]['content'] }}"));
+    }
+
+    #[test]
+    fn prompt_authority_does_not_parse_gguf_path_as_tokenizer_json_metadata() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let model_path = temp_dir.path().join("model.gguf");
+        std::fs::write(&model_path, br#"{"chat_template":"not-tokenizer-json"}"#)
+            .expect("write gguf-like fixture");
+
+        let metadata = read_resolved_tokenizer_json_prompt_metadata(
+            bitnet_tokenizers::auto::TokenizerSource::GgufMetadata,
+            Some(&model_path),
+        );
+
+        assert!(metadata.is_none());
     }
 
     #[test]

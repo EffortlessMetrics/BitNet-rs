@@ -114,7 +114,7 @@ fn detect_gpt2_from_vocab_size() {
 
 #[test]
 fn detect_unknown_from_unrecognized_vocab_size() {
-    assert_eq!(ModelTypeDetector::detect_from_vocab_size(100352), "unknown");
+    assert_eq!(ModelTypeDetector::detect_from_vocab_size(100353), "unknown");
     assert_eq!(ModelTypeDetector::detect_from_vocab_size(1), "unknown");
     assert_eq!(ModelTypeDetector::detect_from_vocab_size(999999), "unknown");
 }
@@ -165,8 +165,8 @@ fn expected_vocab_size_known_models() {
 
 #[test]
 fn expected_vocab_size_unknown() {
-    assert_eq!(ModelTypeDetector::expected_vocab_size("phi4"), None);
-    assert_eq!(ModelTypeDetector::expected_vocab_size("gemma"), None);
+    assert_eq!(ModelTypeDetector::expected_vocab_size("unknown-family"), None);
+    assert_eq!(ModelTypeDetector::expected_vocab_size("not-a-model"), None);
 }
 
 // --- ModelCompatibilityMatrix tests ---
