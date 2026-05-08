@@ -305,7 +305,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-ARTIFACT-007"
-status = "in_progress"
+status = "pr_open"
+pr = 3988
 branch = "codex/model-artifacts/MODEL-ARTIFACT-007-msft-bitnetcpp-external-pretokenizer"
 stackable = false
 review_mode = "codex_premerge"
