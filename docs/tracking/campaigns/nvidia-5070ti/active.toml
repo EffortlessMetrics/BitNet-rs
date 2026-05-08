@@ -1103,10 +1103,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-003-tensor-residency"
 pr = 4119
 head_sha = "f920790a957b7968ea4db896595c0041d935ce62"
+merge_sha = "11e125b4b1ba13a575e782b2e5369ea9ccd96bfa"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

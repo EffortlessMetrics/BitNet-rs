@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T19:55:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-003"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-003-tensor-residency"
+pr = 4119
+head_sha = "f920790a957b7968ea4db896595c0041d935ce62"
+merge_sha = "11e125b4b1ba13a575e782b2e5369ea9ccd96bfa"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4119 merged dense regular-LLM CUDA tensor-residency evidence for the deterministic FP16 GEMM fixture.",
+  "The committed RTX 5070 Ti receipt records CUDA device-buffer residency, measured H2D/D2H transfer bytes, fallback_used=false, and speedup_claim=false.",
+  "The dense boundary remains explicit: no BitNet packed I2S/QK256 proof, dense GGUF inference, persistent session residency, full CUDA residency, tokenizer, loader, transformer, or server claim.",
+]
