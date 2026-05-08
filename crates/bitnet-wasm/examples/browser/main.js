@@ -624,13 +624,15 @@ async function copyToClipboard() {
         await navigator.clipboard.writeText(outputText);
 
         // Visual feedback
-        const originalText = copyBtn.textContent;
+        const originalText = 'Copy';
         copyBtn.textContent = 'Copied!';
         copyBtn.style.backgroundColor = '#28a745';
+        copyBtn.disabled = true;
 
         setTimeout(() => {
             copyBtn.textContent = originalText;
             copyBtn.style.backgroundColor = '#007bff';
+            copyBtn.disabled = false;
         }, 2000);
 
     } catch (err) {
