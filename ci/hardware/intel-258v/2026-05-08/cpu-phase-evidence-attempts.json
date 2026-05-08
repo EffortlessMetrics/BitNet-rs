@@ -1,0 +1,79 @@
+{
+  "artifact_kind": "cpu_phase_evidence_attempts",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08/cpu-phase-evidence-attempts.json",
+  "claim_boundary": "This records attempted 258V CPU phase evidence collection only. It does not prove decode_128, prefill_512, sustained throughput, Arc 140V execution, Intel NPU execution, or full platform performance.",
+  "machine_id": "intel-258v",
+  "hardware_lane": "intel-258v-cpu-avx2",
+  "proof_stage": "blocked_runtime_timeout",
+  "fallback_used": false,
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "quant_format": "QK256/I2_S"
+  },
+  "tokenizer": {
+    "source": "explicit",
+    "file": "tokenizer.json"
+  },
+  "attempts": [
+    {
+      "id": "prefill_512_debug_oversized_prompt",
+      "profile_id": "prefill_512",
+      "build_profile": "debug",
+      "prompt_pattern": "benchmark token repeated 800 times",
+      "tokenizer_probe": {
+        "calibrated": false,
+        "estimated_prompt_tokens": 1601
+      },
+      "max_tokens": 1,
+      "timeout_ms": 1804030,
+      "receipt_emitted": false,
+      "result": "timed_out",
+      "notes": "This prompt overshot the intended prefill_512 threshold and was stopped without a receipt."
+    },
+    {
+      "id": "prefill_512_debug_calibrated_prompt",
+      "profile_id": "prefill_512",
+      "build_profile": "debug",
+      "prompt_pattern": "benchmark token repeated 256 times",
+      "tokenizer_probe": {
+        "calibrated": true,
+        "prompt_tokens": 513,
+        "probe_artifact": "target/tokenize-256.json"
+      },
+      "max_tokens": 1,
+      "timeout_ms": 2404027,
+      "receipt_emitted": false,
+      "result": "timed_out",
+      "notes": "The calibrated 513-token prompt did not complete under the debug binary."
+    },
+    {
+      "id": "prefill_512_release_calibrated_prompt",
+      "profile_id": "prefill_512",
+      "build_profile": "release",
+      "prompt_pattern": "benchmark token repeated 256 times",
+      "tokenizer_probe": {
+        "calibrated": true,
+        "prompt_tokens": 513,
+        "probe_artifact": "target/tokenize-256.json"
+      },
+      "max_tokens": 1,
+      "timeout_ms": 1204030,
+      "receipt_emitted": false,
+      "result": "timed_out",
+      "notes": "The calibrated 513-token prompt did not complete under the release binary within the local run window."
+    }
+  ],
+  "profiles": {
+    "decode_128": {
+      "status": "not_run",
+      "reason": "Expected runtime is longer than the local evidence window until the CPU path has a warm-run phase harness or faster decode loop."
+    },
+    "prefill_512": {
+      "status": "blocked",
+      "reason": "Calibrated strict CPU prefill_512 attempts did not complete and emitted no proof receipt."
+    }
+  },
+  "next_action": "Add a warm-process CPU phase runner or otherwise reduce strict CPU phase collection overhead before attempting to promote decode_128 or prefill_512."
+}

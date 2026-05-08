@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T06:29:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-005"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 3999
+head_sha = "25576b49e40a9b6c77a865e206512f6d3887feb0"
+actor = "codex"
+
+notes = [
+  "Opened #3999 to record local strict CPU phase evidence attempts for the 258V CPU lead lane.",
+  "The artifact records calibrated prefill_512 attempts under debug and release binaries that timed out without emitting proof receipts.",
+  "This preserves decode_128 and prefill_512 as unmeasured gaps; it does not claim throughput, Arc 140V execution, Intel NPU execution, or full platform performance.",
+]

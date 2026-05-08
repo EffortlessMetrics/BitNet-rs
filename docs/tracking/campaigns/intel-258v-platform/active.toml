@@ -522,3 +522,47 @@ must_not_claim = [
   "Sustained 258V throughput is proven.",
   "Arc 140V or Intel NPU performance is proven.",
 ]
+
+[[work_item]]
+id = "CPU258V-005"
+status = "pr_open"
+pr = 3999
+branch = "codex/intel-258v-platform/CPU258V-005-phase-evidence"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-004"]
+acceptance = "Record local strict CPU attempts to collect 258V prefill_512 and decode_128 phase evidence, preserve missing proof receipts as blocker evidence, and require a receipt-emitting warm phase runner or faster decode path before promoting these profiles."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/cpu-phase-evidence-attempts.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "258V strict CPU phase evidence collection attempted calibrated prefill_512 prompts and emitted no proof receipt within the local run windows.",
+  "decode_128 and prefill_512 remain unmeasured gaps for the 258V CPU lane.",
+]
+must_not_claim = [
+  "prefill_512 is measured.",
+  "decode_128 is measured.",
+  "Sustained 258V throughput is proven.",
+  "Arc 140V or Intel NPU performance is proven.",
+]
