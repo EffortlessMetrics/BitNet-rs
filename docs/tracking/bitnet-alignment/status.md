@@ -121,6 +121,14 @@ The current CUDA code is scaffolded kernel-provider infrastructure, not end-to-e
 
 Dense regular-LLM CUDA work has moved past the receipt boundary. `CUDA-DENSE-001` established the `dense_regular_llm_cuda` label, and `CUDA-DENSE-002` is adding the first dense FP16 GEMM smoke/parity fixture. It must remain labeled as dense regular LLM execution and cannot claim BitNet packed I2S/QK256 inference, speedup, full dense residency, or general dense GGUF inference.
 
+## Model-family expansion
+
+`GEMMA4-000` is ready as a foundation-only model-family expansion item. It adds
+Gemma 4 architecture/catalog metadata and claim boundaries without runtime, kernel,
+QK256, GPU, NPU, or inference changes. The first proof target remains Gemma 4 E2B IT
+text-only Q4 GGUF with strict receipts; E4B, 31B, 26B-A4B MoE, multimodal, long-context,
+and MTP work remain future-gated.
+
 ## Tracker Notes
 
 HW-002 remains proposed. #3625 added `ci/hardware/README.md` with artifact naming guidance, but maintainers should confirm whether that fully satisfies HW-002 before marking it merged.

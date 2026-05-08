@@ -5,6 +5,105 @@
 
 use std::collections::HashMap;
 
+/// Gemma 4 variant identity used for catalog and receipt scaffolding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Gemma4Variant {
+    E2B,
+    E4B,
+    Dense31B,
+    Moe26BA4B,
+}
+
+impl Gemma4Variant {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::E2B => "e2b-it",
+            Self::E4B => "e4b-it",
+            Self::Dense31B => "31b-it",
+            Self::Moe26BA4B => "26b-a4b-it",
+        }
+    }
+}
+
+/// Static Gemma 4 foundation metadata.
+///
+/// This is descriptive metadata only. Runtime loading, tensor maps, kernels,
+/// prompt templates, multimodal processors, and MoE dispatch are intentionally
+/// future-gated until separate proof PRs land.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Gemma4Spec {
+    pub variant: Gemma4Variant,
+    pub layers: usize,
+    pub vocab_size: usize,
+    pub context_length: usize,
+    pub sliding_window: usize,
+    pub has_ple: bool,
+    pub has_shared_kv: bool,
+    pub is_moe: bool,
+    pub supports_image: bool,
+    pub supports_audio: bool,
+    pub inference_future_gated: bool,
+}
+
+impl Gemma4Spec {
+    pub fn for_variant(variant: Gemma4Variant) -> Self {
+        match variant {
+            Gemma4Variant::E2B => Self {
+                variant,
+                layers: 35,
+                vocab_size: 262_144,
+                context_length: 131_072,
+                sliding_window: 512,
+                has_ple: true,
+                has_shared_kv: true,
+                is_moe: false,
+                supports_image: true,
+                supports_audio: true,
+                inference_future_gated: true,
+            },
+            Gemma4Variant::E4B => Self {
+                variant,
+                layers: 42,
+                vocab_size: 262_144,
+                context_length: 131_072,
+                sliding_window: 512,
+                has_ple: true,
+                has_shared_kv: true,
+                is_moe: false,
+                supports_image: true,
+                supports_audio: true,
+                inference_future_gated: true,
+            },
+            Gemma4Variant::Dense31B => Self {
+                variant,
+                layers: 60,
+                vocab_size: 262_144,
+                context_length: 262_144,
+                sliding_window: 1024,
+                has_ple: false,
+                has_shared_kv: false,
+                is_moe: false,
+                supports_image: true,
+                supports_audio: false,
+                inference_future_gated: true,
+            },
+            Gemma4Variant::Moe26BA4B => Self {
+                variant,
+                layers: 30,
+                vocab_size: 262_144,
+                context_length: 262_144,
+                sliding_window: 1024,
+                has_ple: false,
+                has_shared_kv: false,
+                is_moe: true,
+                supports_image: true,
+                supports_audio: false,
+                inference_future_gated: true,
+            },
+        }
+    }
+}
+
 /// Model license type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum License {
@@ -220,6 +319,21 @@ mod tests {
     fn test_summary_millions() {
         let md = ModelCard::new("small", "A").with_params(350_000_000);
         assert!(md.summary().contains("350.0M"));
+    }
+
+    #[test]
+    fn test_gemma4_variant_specs() {
+        let e2b = Gemma4Spec::for_variant(Gemma4Variant::E2B);
+        assert_eq!(e2b.context_length, 131_072);
+        assert_eq!(e2b.vocab_size, 262_144);
+        assert!(e2b.has_ple);
+        assert!(e2b.has_shared_kv);
+        assert!(!e2b.is_moe);
+
+        let moe = Gemma4Spec::for_variant(Gemma4Variant::Moe26BA4B);
+        assert_eq!(moe.context_length, 262_144);
+        assert!(moe.is_moe);
+        assert!(moe.inference_future_gated);
     }
 
     #[test]

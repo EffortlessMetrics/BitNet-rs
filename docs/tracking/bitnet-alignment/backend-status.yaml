@@ -1,5 +1,5 @@
 schema: 1
-updated: 2026-05-05
+updated: 2026-05-08
 
 status_values:
   - not_present
@@ -21,6 +21,28 @@ hard_rules:
   - Server inference is not working until it returns real model output.
   - QK256 is validation-only until performance target and receipts exist.
   - Minimal GGUF fallback cannot support correctness or performance claims.
+
+model_claim_rules:
+  - Non-BitNet dense models must not use QK256 receipts.
+  - Multimodal support must be explicitly claimed in receipts.
+  - MoE support must record active vs total params.
+  - Token classification must not be recorded as generation.
+  - Gemma 4 catalog metadata is scaffold-only until strict text-only receipts exist.
+
+model_families:
+  gemma4:
+    status: scaffold
+    notes:
+      - Generic Gemma support is not Gemma 4 support.
+      - First target is Gemma 4 E2B IT text-only Q4 GGUF.
+      - BitNet QK256 kernels do not count as Gemma 4 dense inference proof.
+      - Text-only support does not imply image, audio, video, MoE, MTP, or full-context support.
+      - E2B/E4B require future PLE and shared-KV validation before strict inference claims.
+    blockers:
+      - Inspect real Gemma 4 GGUF metadata and tensor names.
+      - Add dense GGUF kernel receipt identity that cannot claim QK256.
+      - Implement Gemma 4 prompt/template authority.
+      - Add E2B strict text-only proof receipt.
 
 backends:
   cpu:

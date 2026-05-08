@@ -1,6 +1,6 @@
 schema: 1
 project: bitnet-rs-alignment
-updated: 2026-05-06
+updated: 2026-05-08
 
 states:
   - proposed
@@ -109,7 +109,58 @@ workstreams:
     title: NVIDIA CUDA validation
     objective: Validate RTX 5070 Ti execution through CUDA kernels, CPU/CUDA parity, receipts, and benchmark artifacts, with wgpu/Vulkan as a separate cross-platform comparison lane.
 
+  model_families:
+    title: Model-family expansion
+    objective: Add non-BitNet model families with strict claim boundaries and receipts.
+
 items:
+
+  - id: GEMMA4-000
+    title: Add Gemma 4 architecture/catalog foundation
+    state: ready
+    priority: P1
+    workstream: model_families
+    depends_on: []
+    scope:
+      allowed_paths:
+        - crates/bitnet-models/src/architecture.rs
+        - crates/bitnet-models/src/model_catalog.rs
+        - crates/bitnet-models/src/model_metadata.rs
+        - docs/models/families/gemma-4.md
+        - docs/models/lanes/dense-decoder.md
+        - docs/tracking/bitnet-alignment/backend-status.yaml
+        - docs/tracking/bitnet-alignment/status.md
+        - docs/tracking/bitnet-alignment/workstream-ledger.yaml
+      forbidden_paths:
+        - crates/bitnet-inference/**
+        - crates/bitnet-kernels/**
+        - crates/bitnet-qk256-dispatch/**
+    acceptance:
+      - Gemma 4 is represented as a distinct non-BitNet model family.
+      - Gemma and Gemma 4 detection remain separate.
+      - Catalog entries exist for E2B IT, E4B IT, 31B IT, and 26B-A4B IT.
+      - E2B/E4B are documented as the first text-only dense targets.
+      - MoE, multimodal, MTP, and long-context runtime claims are future-gated.
+      - BitNet QK256 kernels explicitly do not count as Gemma 4 proof.
+    verification:
+      - cargo fmt --all -- --check
+      - cargo test --locked -p bitnet-models --no-default-features --features cpu
+    notes:
+      - Generic Gemma support is not Gemma 4 support.
+      - Catalog and metadata scaffolding do not claim inference works.
+      - First proof target remains Gemma 4 E2B IT text-only Q4 GGUF with strict receipts.
+    claim_boundary:
+      may_claim:
+        - Gemma 4 is modeled in architecture/catalog metadata.
+        - The first target and future-gated surfaces are documented.
+      must_not_claim:
+        - Gemma 4 inference works.
+        - Gemma 4 uses BitNet QK256 kernels.
+        - Text-only metadata implies image, audio, video, MoE, MTP, or full-context support.
+    receipt_required: false
+    followups:
+      - GEMMA4-001: Inspect real GGUF metadata and tensor names before loader work.
+      - GEMMA4-002: Add capability/receipt fields that separate model capability from runtime coverage.
   - id: TRUTH-001
     title: Fence server simulated inference
     state: merged
