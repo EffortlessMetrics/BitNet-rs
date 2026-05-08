@@ -5,6 +5,7 @@ event = "pr_open"
 pr = 4031
 branch = "codex/slm-cpu-006-first-token-divergence"
 actor = "codex"
+head_sha = "af0a2e82"
 notes = [
   "Opened #4031 for the SLM-CPU-006 first-token divergence tracker item.",
   "The PR keeps scope to Kaby Lake Qwen3 dense SLM correctness triage and does not add runtime code.",

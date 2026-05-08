@@ -8,6 +8,10 @@ actor = "codex"
 
 summary = "Prepared SLM-CPU-006 as the next i5-8250U dense Qwen correctness item."
 
+notes = [
+  "Prepared SLM-CPU-006 as the next i5-8250U dense Qwen correctness item.",
+]
+
 details = [
   "The SLM-CPU lane has merged Qwen3-0.6B Q8_0 strict-load, tiny-run, answer-corpus, and reference-divergence validation through SLM-CPU-005.",
   "SLM-CPU-006 localizes the first generated-token divergence by requiring matching prompt/template/BOS/token evidence and first-step top-k/logit evidence from bitnet-rs and a known-good external reference where available.",

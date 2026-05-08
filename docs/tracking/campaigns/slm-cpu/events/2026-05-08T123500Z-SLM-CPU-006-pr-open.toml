@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T12:35:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-006"
+event = "pr_open"
+pr = 4051
+branch = "codex/slm-cpu-006-first-token-capture"
+actor = "codex"
+head_sha = "206c59fc9"
+notes = [
+  "Opened #4051 for the SLM-CPU-006 implementation slice.",
+  "The PR adds first-token divergence classification and a logits-dump alias for Kaby Lake Qwen3 capture.",
+  "The PR does not edit BitNet QK256/I2_S kernels, server, GPU, NPU, or throughput surfaces.",
+]

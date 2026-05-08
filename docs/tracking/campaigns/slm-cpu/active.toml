@@ -350,8 +350,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-006"
-status = "ready"
-branch = "codex/slm-cpu-006-first-token-divergence"
+status = "pr_open"
+pr = 4051
+branch = "codex/slm-cpu-006-first-token-capture"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

@@ -1133,6 +1133,17 @@ fn run_help_documents_prompt_template() {
         .stdout(predicate::str::contains("--prompt-template"));
 }
 
+/// `run --help` documents the first-token logit dump aliases used by SLM divergence capture.
+#[test]
+fn run_help_documents_logit_dump_alias() {
+    bitnet()
+        .args(["run", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--dump-logit-steps"))
+        .stdout(predicate::str::contains("--logits-dump-steps"));
+}
+
 /// `run --help` documents the --repetition-penalty option.
 #[test]
 fn run_help_documents_repetition_penalty() {
@@ -1633,7 +1644,11 @@ fn reference_compare_validates_slm_external_reference_artifact() {
     assert_eq!(receipt["artifact_kind"], "slm_reference_divergence_validation");
     assert_eq!(receipt["validation"]["passed"], true);
     assert_eq!(receipt["comparison"]["passed"], false);
-    assert_eq!(receipt["comparison"]["first_divergence"]["phase"], "decode");
+    assert_eq!(receipt["comparison"]["first_divergence"]["phase"], "logits");
+    assert_eq!(
+        receipt["comparison"]["first_divergence"]["classification"],
+        "logits_or_shared_transformer_math"
+    );
     assert_eq!(receipt["comparison"]["first_divergence"]["index"], 0);
     assert_eq!(receipt["speedup_claim"], false);
 }
