@@ -257,7 +257,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-ARTIFACT-006"
-status = "in_progress"
+status = "pr_open"
+pr = 3979
 branch = "codex/model-artifacts/MODEL-ARTIFACT-006-tokenizer-authority"
 stackable = false
 review_mode = "codex_premerge"
