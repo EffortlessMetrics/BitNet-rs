@@ -906,8 +906,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-PERF-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-bitnet-perf-002-repeated-strict-ask"
+pr = 4112
+head_sha = "66894fb8de7bc7f3c8bea6147883c7e22615b1f3"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

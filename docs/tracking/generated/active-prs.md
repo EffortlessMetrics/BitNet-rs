@@ -4,4 +4,5 @@
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
 | intel-258v-platform | ARC140V-005 | #4103 | `codex/intel-258v-platform/ARC140V-005-opencl-cpu-parity` | Run one isolated Arc 140V native OpenCL kernel or static subgraph and compare its output against the 258V CPU reference, recording requested/selected backend identity, runtime API, device identity, input shape, tolerance, timing, fallback=false, and no BitNet/QK256/acceleration claims. |
+| nvidia-5070ti | CUDA-BITNET-PERF-002 | #4112 | `codex/cuda-bitnet-perf-002-repeated-strict-ask` | Add repeated strict ask benchmark receipts for the official Microsoft I2_S model, comparing same-model 9950X3D CPU AVX-512 and RTX 5070 Ti CUDA runs with deterministic policy, fallback_used=false, measured QK256 timing/transfer counters, and speedup_claim=false pending explicit benchmark review. |
 | tracker-infra | TRACKER-003 | #3724 | `codex/tracker-infra/TRACKER-003-current-pr-reconciliation` | Scope GitHub PR reconciliation to the current pull request in PR CI so parallel campaign branches do not need to carry each other's item TOML changes. |
