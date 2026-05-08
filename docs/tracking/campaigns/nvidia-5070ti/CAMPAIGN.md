@@ -132,6 +132,10 @@ power/thermal context, and profile-specific acceptance thresholds are complete.
 that keeps BitNet QK256 CUDA and dense regular-LLM CUDA routes separate and
 records unsupported strict CUDA routes instead of silently selecting CPU
 fallback.
+`CUDA-PLANNER-002` adds conservative model-family and quantization label mapping
+into that planner contract, so recognized BitNet I2_S/QK256 and dense
+regular-LLM FP16/BF16 metadata can route while unknown or mismatched metadata
+stays unsupported under strict CUDA.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -179,6 +183,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-003 | merged | Dense regular-LLM CUDA tensor-residency receipt for the FP16 GEMM fixture; still no BitNet packed, dense GGUF inference, speedup, persistent session, or full-residency claim. |
 | CUDA-DENSE-004 | merged | Persistent dense regular-LLM CUDA FP16 GEMM fixture session with one context/module, upload-once input buffers, repeated launches, and no dense GGUF inference, speedup, or full-residency claim. |
 | CUDA-PLANNER-001 | merged | Model-aware planner contract separating BitNet QK256 CUDA from dense regular-LLM CUDA and making unsupported strict CUDA fallback explicit. |
+| CUDA-PLANNER-002 | pr_open | Conservative model-family and quantization metadata mapping into the model-aware planner spec. |
 
 ## Review Policy
 

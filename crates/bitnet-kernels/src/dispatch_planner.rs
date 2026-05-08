@@ -184,6 +184,23 @@ impl ModelFamily {
             Self::Unknown => "unknown",
         }
     }
+
+    pub fn from_metadata_label(label: &str) -> Self {
+        let label = normalized_metadata_label(label);
+        if label.contains("bitnet") || label.contains("b1_58") || label.contains("w1_58") {
+            return Self::BitNet;
+        }
+
+        let dense_families = [
+            "qwen", "llama", "mistral", "mixtral", "phi", "gemma", "deepseek", "falcon", "yi",
+            "internlm", "baichuan",
+        ];
+        if dense_families.iter().any(|family| label.contains(family)) {
+            return Self::DenseRegularLlm;
+        }
+
+        Self::Unknown
+    }
 }
 
 /// Quantization or tensor layout family used by the model-aware CUDA planner.
@@ -213,6 +230,30 @@ impl QuantizationKind {
 
     pub fn is_dense_cuda(&self) -> bool {
         matches!(self, Self::DenseFp16 | Self::DenseBf16)
+    }
+
+    pub fn from_metadata_label(label: &str) -> Self {
+        let label = normalized_metadata_label(label);
+
+        if label.contains("qk256") {
+            return Self::Qk256;
+        }
+        if label.contains("i2_s")
+            || label.contains("i2s")
+            || label.contains("w1_58")
+            || label.contains("1_58")
+            || label.contains("ternary")
+        {
+            return Self::BitnetI2S;
+        }
+        if label.contains("bf16") || label.contains("bfloat16") {
+            return Self::DenseBf16;
+        }
+        if label.contains("fp16") || label.contains("f16") || label.contains("float16") {
+            return Self::DenseFp16;
+        }
+
+        Self::Unknown
     }
 }
 
@@ -253,6 +294,24 @@ pub struct ModelDispatchSpec {
     pub backend_policy: BackendPolicy,
     pub has_simd: bool,
     pub cuda: CudaPlannerCapabilities,
+}
+
+impl ModelDispatchSpec {
+    pub fn from_metadata_labels(
+        model_family: &str,
+        quantization: &str,
+        backend_policy: BackendPolicy,
+        has_simd: bool,
+        cuda: CudaPlannerCapabilities,
+    ) -> Self {
+        Self {
+            model_family: ModelFamily::from_metadata_label(model_family),
+            quantization: QuantizationKind::from_metadata_label(quantization),
+            backend_policy,
+            has_simd,
+            cuda,
+        }
+    }
 }
 
 /// Backend route selected by the model-aware planner.
@@ -413,6 +472,15 @@ fn select_model_cuda_backend(
         }
         _ => None,
     }
+}
+
+fn normalized_metadata_label(label: &str) -> String {
+    label
+        .trim()
+        .to_ascii_lowercase()
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+        .collect()
 }
 
 #[cfg(test)]
@@ -637,5 +705,137 @@ mod tests {
         assert_eq!(ModelDispatchBackend::CudaDenseRegularLlm.as_str(), "cuda_dense_regular_llm");
         assert!(ModelDispatchBackend::CudaBitnetQk256.is_cuda());
         assert!(!ModelDispatchBackend::Unsupported.is_cuda());
+    }
+
+    #[test]
+    fn metadata_labels_map_official_bitnet_i2s_to_bitnet_cuda_spec() {
+        let spec = ModelDispatchSpec::from_metadata_labels(
+            "microsoft/bitnet-b1.58-2B-4T-gguf",
+            "gguf_packed_i2_s",
+            BackendPolicy::StrictCuda,
+            true,
+            CudaPlannerCapabilities::bitnet_qk256(),
+        );
+
+        assert_eq!(spec.model_family, ModelFamily::BitNet);
+        assert_eq!(spec.quantization, QuantizationKind::BitnetI2S);
+
+        let plan = plan_model_dispatch(&[qk256_matmul_op()], spec);
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaBitnetQk256);
+    }
+
+    #[test]
+    fn metadata_labels_map_qk256_to_bitnet_cuda_spec() {
+        let spec = ModelDispatchSpec::from_metadata_labels(
+            "BitNet b1_58",
+            "QK256",
+            BackendPolicy::StrictCuda,
+            true,
+            CudaPlannerCapabilities::bitnet_qk256(),
+        );
+
+        assert_eq!(spec.model_family, ModelFamily::BitNet);
+        assert_eq!(spec.quantization, QuantizationKind::Qk256);
+
+        let plan = plan_model_dispatch(&[qk256_matmul_op()], spec);
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaBitnetQk256);
+    }
+
+    #[test]
+    fn metadata_labels_map_qwen_fp16_to_dense_cuda_spec() {
+        let spec = ModelDispatchSpec::from_metadata_labels(
+            "Qwen3-0.6B",
+            "fp16",
+            BackendPolicy::StrictCuda,
+            true,
+            CudaPlannerCapabilities::dense_regular_llm(),
+        );
+
+        assert_eq!(spec.model_family, ModelFamily::DenseRegularLlm);
+        assert_eq!(spec.quantization, QuantizationKind::DenseFp16);
+
+        let plan = plan_model_dispatch(&[matmul_op(4096)], spec);
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaDenseRegularLlm);
+    }
+
+    #[test]
+    fn metadata_labels_map_llama_bf16_to_dense_cuda_spec() {
+        let spec = ModelDispatchSpec::from_metadata_labels(
+            "Llama-3",
+            "bfloat16",
+            BackendPolicy::StrictCuda,
+            true,
+            CudaPlannerCapabilities::dense_regular_llm(),
+        );
+
+        assert_eq!(spec.model_family, ModelFamily::DenseRegularLlm);
+        assert_eq!(spec.quantization, QuantizationKind::DenseBf16);
+
+        let plan = plan_model_dispatch(&[matmul_op(4096)], spec);
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaDenseRegularLlm);
+    }
+
+    #[test]
+    fn unknown_metadata_stays_unsupported_under_strict_cuda() {
+        let spec = ModelDispatchSpec::from_metadata_labels(
+            "unclassified-model",
+            "q4_k_m",
+            BackendPolicy::StrictCuda,
+            true,
+            CudaPlannerCapabilities {
+                cuda_available: true,
+                bitnet_qk256_cuda: true,
+                dense_regular_llm_cuda: true,
+            },
+        );
+
+        assert_eq!(spec.model_family, ModelFamily::Unknown);
+        assert_eq!(spec.quantization, QuantizationKind::Unknown);
+
+        let plan = plan_model_dispatch(&[matmul_op(4096)], spec);
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::Unsupported);
+        assert!(!plan.decisions[0].fallback_used);
+    }
+
+    #[test]
+    fn dense_family_with_qk256_quantization_does_not_route_to_bitnet_cuda() {
+        let spec = ModelDispatchSpec::from_metadata_labels(
+            "qwen3",
+            "qk256",
+            BackendPolicy::StrictCuda,
+            true,
+            CudaPlannerCapabilities {
+                cuda_available: true,
+                bitnet_qk256_cuda: true,
+                dense_regular_llm_cuda: true,
+            },
+        );
+
+        assert_eq!(spec.model_family, ModelFamily::DenseRegularLlm);
+        assert_eq!(spec.quantization, QuantizationKind::Qk256);
+
+        let plan = plan_model_dispatch(&[qk256_matmul_op()], spec);
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::Unsupported);
+    }
+
+    #[test]
+    fn bitnet_family_with_dense_quantization_does_not_route_to_dense_cuda() {
+        let spec = ModelDispatchSpec::from_metadata_labels(
+            "bitnet-b1.58",
+            "fp16",
+            BackendPolicy::StrictCuda,
+            true,
+            CudaPlannerCapabilities {
+                cuda_available: true,
+                bitnet_qk256_cuda: true,
+                dense_regular_llm_cuda: true,
+            },
+        );
+
+        assert_eq!(spec.model_family, ModelFamily::BitNet);
+        assert_eq!(spec.quantization, QuantizationKind::DenseFp16);
+
+        let plan = plan_model_dispatch(&[matmul_op(4096)], spec);
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::Unsupported);
     }
 }

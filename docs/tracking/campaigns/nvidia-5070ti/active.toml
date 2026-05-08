@@ -1307,3 +1307,52 @@ must_not_claim = [
   "CUDA speedup is accepted.",
   "Full CUDA residency for every transformer operation is proven.",
 ]
+
+[[work_item]]
+id = "CUDA-PLANNER-002"
+status = "pr_open"
+branch = "codex/cuda-planner-002-capability-spec"
+pr = 4129
+head_sha = "6742dd899272bf788db41c9d25fcc49773e327a3"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add conservative model-family and quantization metadata label mapping into the model-aware CUDA dispatch spec so BitNet I2_S/QK256 and dense regular-LLM FP16/BF16 routes can be selected without treating unknown or mismatched metadata as CUDA-supported."
+commands = [
+  "cargo fmt -p bitnet-kernels -- --check",
+  "cargo test --locked -p bitnet-kernels --lib --no-default-features dispatch_planner -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/dispatch_planner.rs",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF inference implementation",
+]
+may_claim = [
+  "The planner can derive a conservative model-aware dispatch spec from model-family and quantization labels.",
+  "Recognized BitNet I2_S/QK256 labels and dense regular-LLM FP16/BF16 labels route to separate CUDA planner paths.",
+  "Unknown or mismatched labels remain unsupported under strict CUDA.",
+]
+must_not_claim = [
+  "Any new CUDA kernel exists.",
+  "Runtime model loading or tokenizer behavior changed.",
+  "General dense GGUF CUDA inference is complete.",
+  "Arbitrary GGUF quantizations are CUDA-supported.",
+  "CUDA speedup is accepted.",
+  "Full CUDA residency for every transformer operation is proven.",
+]
