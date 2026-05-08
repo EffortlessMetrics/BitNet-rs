@@ -77,8 +77,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-002"
-status = "pr_open"
+status = "merged"
 pr = 4047
+merge_sha = "eed2e06f30a866037caee07b3ad442297a190dec"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-002-allocation-audit"
 stackable = false
 review_mode = "codex_premerge"
@@ -124,7 +125,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-003"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-003-resident-session"
 stackable = false
 review_mode = "codex_premerge"
@@ -154,8 +155,16 @@ forbidden_paths = [
   "crates/bitnet-kernels/src/metal/**",
   "models/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "Apple M4 SLM warm-session model and tokenizer reuse are hardened for the normal multi-prompt path.",
+  "Per-prompt and aggregate receipts record resident-session timing and reuse state.",
+]
+must_not_claim = [
+  "CPU/NEON performance is improved.",
+  "A measured speed envelope is published.",
+  "Full apple-m4-metal inference works.",
+  "BitNet local-answer quality or performance is proven.",
+]
 
 [[work_item]]
 id = "M4-SLM-PERF-004"
