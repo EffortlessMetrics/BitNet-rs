@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T15:52:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-006B"
+event = "merged"
+pr = 4096
+merge_sha = "ee8e7ec0f4c0a7ed5cee1a10729177d5f823d02d"
+branch = "codex/slm-cpu-006b-first-token-artifact"
+actor = "codex"
+notes = [
+  "Merged #4096 with the i5-8250U Qwen3-0.6B Q8_0 first-token divergence artifact pair.",
+  "The artifact records matching prompt IDs, reference token 19 decoded as 4, bitnet-rs token 4594 decoded as U+0142, and first-step bitnet-rs top-k logits.",
+  "The validated divergence classification is logits_or_shared_transformer_math with no answer-quality, throughput, server, GPU, NPU, Qwen3.5, or BitNet QK256 claim.",
+]

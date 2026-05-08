@@ -393,7 +393,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-006B"
-status = "ready"
+status = "merged"
+pr = 4096
+merge_sha = "ee8e7ec0f4c0a7ed5cee1a10729177d5f823d02d"
 branch = "codex/slm-cpu-006b-first-token-artifact"
 stackable = false
 review_mode = "codex_premerge"
