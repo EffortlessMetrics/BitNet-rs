@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T02:18:59Z"
+campaign = "intel-npu"
+item = "NPU-008"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 3963
+merge_sha = "cfb5ab3025a78cc8e8e788de28b3922108dcd5dc"
+actor = "codex"
+
+notes = [
+  "Merged #3963, adding selected static BitNet linear-projection subgraph parity through OpenVINO NPU.",
+  "The merged command records selected backend/runtime identity, static shape, timing, tolerance, fallback_used=false, and CPU reference comparison.",
+  "This is selected static subgraph parity only; it does not claim full BitNet inference, NPU acceleration, packed QK256 decode, model loading, tokenizer handling, or CPU fallback as NPU proof.",
+]
