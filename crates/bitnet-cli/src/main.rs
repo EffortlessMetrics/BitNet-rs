@@ -4196,6 +4196,8 @@ async fn run_simple_generation(
         } else {
             None
         };
+        let cuda_runtime_stats =
+            strict_cuda_selected_artifact.then(bitnet_qk256_dispatch::qk256_cuda_runtime_stats);
         let weights_uploaded_once = cuda_weight_residency
             .as_ref()
             .map(|residency| residency.weights_uploaded_once)
@@ -4212,6 +4214,7 @@ async fn run_simple_generation(
             cuda_execution_residency_receipt(
                 &bitnet_linear_coverage,
                 cuda_weight_residency.as_ref(),
+                cuda_runtime_stats.as_ref(),
                 prompt_tokens_len,
                 generated_tokens.len(),
                 "cpu",
@@ -4418,6 +4421,16 @@ async fn run_simple_generation(
                 "decode_total_ms": rounded_ms(decode_total_ms),
                 "decode_steady_state_tok_s": decode_steady_state_tok_s,
                 "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
+                "cuda_kernel_time_ms": cuda_runtime_stats
+                    .as_ref()
+                    .and_then(|stats| stats.kernel_time_ms)
+                    .map(rounded_ms),
+                "host_to_device_bytes": cuda_runtime_stats
+                    .as_ref()
+                    .map(|stats| stats.host_to_device_bytes),
+                "device_to_host_bytes": cuda_runtime_stats
+                    .as_ref()
+                    .map(|stats| stats.device_to_host_bytes),
             },
             "throughput": {
                 "tokens_per_second": tok_per_sec,
@@ -4573,15 +4586,7 @@ async fn run_simple_generation(
             );
             object.insert(
                 "kernel_stats".to_string(),
-                serde_json::json!([{
-                    "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
-                    "invocations": cuda_kernel_invocations,
-                    "fallback_invocations": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
-                    "host_to_device_bytes": serde_json::Value::Null,
-                    "device_to_host_bytes": serde_json::Value::Null,
-                    "kernel_launches": cuda_kernel_invocations,
-                    "kernel_time_ms": serde_json::Value::Null,
-                }]),
+                qk256_kernel_stats_receipt(&bitnet_linear_coverage, cuda_runtime_stats.as_ref()),
             );
             object.insert(
                 "kernel".to_string(),
@@ -4693,6 +4698,16 @@ async fn run_simple_generation(
                     "decode_total_ms": rounded_ms(decode_total_ms),
                     "decode_steady_state_tok_s": decode_steady_state_tok_s,
                     "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
+                    "cuda_kernel_time_ms": cuda_runtime_stats
+                        .as_ref()
+                        .and_then(|stats| stats.kernel_time_ms)
+                        .map(rounded_ms),
+                    "host_to_device_bytes": cuda_runtime_stats
+                        .as_ref()
+                        .map(|stats| stats.host_to_device_bytes),
+                    "device_to_host_bytes": cuda_runtime_stats
+                        .as_ref()
+                        .map(|stats| stats.device_to_host_bytes),
                     "decode_step_ms": timing_samples_json(&decode_step_ms),
                     "embed_ms": timing_samples_json(&embed_step_ms),
                     "forward_ms": timing_samples_json(&forward_step_ms),
@@ -4716,15 +4731,7 @@ async fn run_simple_generation(
             );
             object.insert(
                 "kernel_stats".to_string(),
-                serde_json::json!([{
-                    "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
-                    "invocations": cuda_kernel_invocations,
-                    "fallback_invocations": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
-                    "host_to_device_bytes": serde_json::Value::Null,
-                    "device_to_host_bytes": serde_json::Value::Null,
-                    "kernel_launches": cuda_kernel_invocations,
-                    "kernel_time_ms": serde_json::Value::Null,
-                }]),
+                qk256_kernel_stats_receipt(&bitnet_linear_coverage, cuda_runtime_stats.as_ref()),
             );
             object.insert(
                 "kernel".to_string(),
@@ -5812,6 +5819,7 @@ async fn run_cuda_warm_session(
     for (index, prompt) in prompts.iter().enumerate() {
         let prompt_start = std::time::Instant::now();
         let coverage_before = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+        let runtime_stats_before = bitnet_qk256_dispatch::qk256_cuda_runtime_stats();
         let formatted_prompt = template_type.apply(prompt, system_prompt.as_deref());
         let rendered_prompt_sha256 = compute_sha256_bytes(formatted_prompt.as_bytes());
 
@@ -5974,10 +5982,14 @@ async fn run_cuda_warm_session(
 
         let coverage_after = bitnet_qk256_dispatch::qk256_dispatch_coverage();
         let coverage_delta = qk256_dispatch_coverage_delta(&coverage_before, &coverage_after);
+        let runtime_stats_after = bitnet_qk256_dispatch::qk256_cuda_runtime_stats();
+        let runtime_stats_delta =
+            qk256_cuda_runtime_stats_delta(&runtime_stats_before, &runtime_stats_after);
         let residency_after = bitnet_qk256_dispatch::qk256_cuda_weight_residency();
         let cuda_execution_residency = cuda_execution_residency_receipt(
             &coverage_delta,
             residency_after.as_ref(),
+            Some(&runtime_stats_delta),
             prompt_token_count,
             generated_tokens.len(),
             "cpu",
@@ -6035,6 +6047,9 @@ async fn run_cuda_warm_session(
                 "decode_total_ms": rounded_ms(decode_total_ms),
                 "decode_steady_state_tok_s": decode_steady_state_tok_s,
                 "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
+                "cuda_kernel_time_ms": runtime_stats_delta.kernel_time_ms.map(rounded_ms),
+                "host_to_device_bytes": runtime_stats_delta.host_to_device_bytes,
+                "device_to_host_bytes": runtime_stats_delta.device_to_host_bytes,
                 "total_ms": rounded_ms(prompt_total_ms),
                 "embed_ms": timing_samples_json(&embed_step_ms),
                 "forward_ms": timing_samples_json(&forward_step_ms),
@@ -6071,15 +6086,7 @@ async fn run_cuda_warm_session(
                 "dequantizes_before_compute": false,
                 "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
             },
-            "kernel_stats": [{
-                "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
-                "invocations": coverage_delta.bitnet_linear_layers_on_cuda,
-                "fallback_invocations": coverage_delta.bitnet_linear_layers_cpu_fallback,
-                "kernel_launches": coverage_delta.bitnet_linear_layers_on_cuda,
-                "host_to_device_bytes": serde_json::Value::Null,
-                "device_to_host_bytes": serde_json::Value::Null,
-                "kernel_time_ms": serde_json::Value::Null,
-            }],
+            "kernel_stats": qk256_kernel_stats_receipt(&coverage_delta, Some(&runtime_stats_delta)),
             "execution_coverage": qk256_dispatch_coverage_receipt(&coverage_delta),
             "cuda_execution_residency": cuda_execution_residency,
             "bitnet": {
@@ -6159,6 +6166,7 @@ async fn run_cuda_warm_session(
 
     let total_session_ms = elapsed_ms(session_start);
     let total_coverage = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+    let total_runtime_stats = bitnet_qk256_dispatch::qk256_cuda_runtime_stats();
     let final_residency = bitnet_qk256_dispatch::qk256_cuda_weight_residency();
     let cuda_memory_after_bytes = nvidia_smi_memory_used_bytes(Some(0));
     let cuda_memory_hwm_bytes =
@@ -6178,6 +6186,7 @@ async fn run_cuda_warm_session(
     let cuda_execution_residency = cuda_execution_residency_receipt(
         &total_coverage,
         final_residency.as_ref(),
+        Some(&total_runtime_stats),
         turn_summaries
             .iter()
             .filter_map(|turn| turn["prompt_tokens"].as_u64())
@@ -6255,6 +6264,9 @@ async fn run_cuda_warm_session(
             "cuda_context_init_timing_source": "not_separately_measured; included in strict CUDA session setup and first CUDA work",
             "weight_upload_ms": serde_json::Value::Null,
             "weight_upload_timing_source": "not_separately_measured; upload-once weight residency is verified by qk256 weight-handle counters",
+            "cuda_kernel_time_ms": total_runtime_stats.kernel_time_ms.map(rounded_ms),
+            "host_to_device_bytes": total_runtime_stats.host_to_device_bytes,
+            "device_to_host_bytes": total_runtime_stats.device_to_host_bytes,
             "total_session_ms": rounded_ms(total_session_ms),
         },
         "speed": speed_summary,
@@ -6301,15 +6313,7 @@ async fn run_cuda_warm_session(
             "dequantizes_before_compute": false,
             "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
         },
-        "kernel_stats": [{
-            "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
-            "invocations": total_coverage.bitnet_linear_layers_on_cuda,
-            "fallback_invocations": total_coverage.bitnet_linear_layers_cpu_fallback,
-            "kernel_launches": total_coverage.bitnet_linear_layers_on_cuda,
-            "host_to_device_bytes": serde_json::Value::Null,
-            "device_to_host_bytes": serde_json::Value::Null,
-            "kernel_time_ms": serde_json::Value::Null,
-        }],
+        "kernel_stats": qk256_kernel_stats_receipt(&total_coverage, Some(&total_runtime_stats)),
         "execution_coverage": qk256_dispatch_coverage_receipt(&total_coverage),
         "cuda_execution_residency": cuda_execution_residency,
         "bitnet": {
@@ -6419,9 +6423,60 @@ fn qk256_dispatch_coverage_receipt(
     })
 }
 
+#[cfg(feature = "full-cli")]
+fn qk256_cuda_runtime_stats_delta(
+    before: &bitnet_qk256_dispatch::Qk256CudaRuntimeStats,
+    after: &bitnet_qk256_dispatch::Qk256CudaRuntimeStats,
+) -> bitnet_qk256_dispatch::Qk256CudaRuntimeStats {
+    bitnet_qk256_dispatch::Qk256CudaRuntimeStats {
+        host_to_device_bytes: after
+            .host_to_device_bytes
+            .saturating_sub(before.host_to_device_bytes),
+        device_to_host_bytes: after
+            .device_to_host_bytes
+            .saturating_sub(before.device_to_host_bytes),
+        kernel_time_ms: match (before.kernel_time_ms, after.kernel_time_ms) {
+            (Some(before), Some(after)) => Some((after - before).max(0.0)),
+            (None, Some(after)) => Some(after),
+            _ => None,
+        },
+        kernel_time_samples: after.kernel_time_samples.saturating_sub(before.kernel_time_samples),
+    }
+}
+
+fn qk256_kernel_stats_receipt(
+    coverage: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    runtime_stats: Option<&bitnet_qk256_dispatch::Qk256CudaRuntimeStats>,
+) -> serde_json::Value {
+    serde_json::json!([{
+        "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+        "invocations": coverage.bitnet_linear_layers_on_cuda,
+        "fallback_invocations": coverage.bitnet_linear_layers_cpu_fallback,
+        "host_to_device_bytes": runtime_stats
+            .map(|stats| stats.host_to_device_bytes)
+            .map(serde_json::Value::from)
+            .unwrap_or(serde_json::Value::Null),
+        "device_to_host_bytes": runtime_stats
+            .map(|stats| stats.device_to_host_bytes)
+            .map(serde_json::Value::from)
+            .unwrap_or(serde_json::Value::Null),
+        "kernel_launches": coverage.bitnet_linear_layers_on_cuda,
+        "kernel_time_ms": runtime_stats
+            .and_then(|stats| stats.kernel_time_ms)
+            .map(rounded_ms)
+            .map(serde_json::Value::from)
+            .unwrap_or(serde_json::Value::Null),
+        "kernel_time_samples": runtime_stats
+            .map(|stats| stats.kernel_time_samples)
+            .map(serde_json::Value::from)
+            .unwrap_or(serde_json::Value::Null),
+    }])
+}
+
 fn cuda_execution_residency_receipt(
     coverage: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
     residency: Option<&bitnet_qk256_dispatch::Qk256CudaWeightResidency>,
+    runtime_stats: Option<&bitnet_qk256_dispatch::Qk256CudaRuntimeStats>,
     prompt_tokens: usize,
     generated_tokens: usize,
     kv_cache_device: &str,
@@ -6451,7 +6506,10 @@ fn cuda_execution_residency_receipt(
     };
     let kv_cache_residency =
         if kv_cache_device == "cuda" { "cuda_resident" } else { "cpu_resident" };
-    let non_resident_or_unmeasured_phases = [
+    let transfer_bytes_measured = runtime_stats
+        .is_some_and(|stats| stats.host_to_device_bytes > 0 || stats.device_to_host_bytes > 0);
+    let kernel_time_measured = runtime_stats.is_some_and(|stats| stats.kernel_time_ms.is_some());
+    let mut non_resident_or_unmeasured_phases = vec![
         "token_embeddings",
         "rmsnorm",
         "sub_layernorm",
@@ -6463,9 +6521,13 @@ fn cuda_execution_residency_receipt(
         "kv_cache",
         "lm_head",
         "sampling",
-        "host_device_transfer_bytes",
-        "kernel_time_ms",
     ];
+    if !transfer_bytes_measured {
+        non_resident_or_unmeasured_phases.push("host_device_transfer_bytes");
+    }
+    if !kernel_time_measured {
+        non_resident_or_unmeasured_phases.push("kernel_time_ms");
+    }
 
     serde_json::json!({
         "schema_version": "1.0.0",
@@ -6543,11 +6605,33 @@ fn cuda_execution_residency_receipt(
             },
         },
         "host_device_transfer_accounting": {
-            "status": "not_measured",
-            "host_to_device_bytes": serde_json::Value::Null,
-            "device_to_host_bytes": serde_json::Value::Null,
-            "kernel_time_ms": serde_json::Value::Null,
-            "note": "QK256 routing and weight-handle residency are recorded; per-phase transfer bytes and kernel timings require a later benchmark/instrumentation gate.",
+            "status": if transfer_bytes_measured || kernel_time_measured {
+                "qk256_measured"
+            } else {
+                "not_measured"
+            },
+            "host_to_device_bytes": runtime_stats
+                .map(|stats| stats.host_to_device_bytes)
+                .map(serde_json::Value::from)
+                .unwrap_or(serde_json::Value::Null),
+            "device_to_host_bytes": runtime_stats
+                .map(|stats| stats.device_to_host_bytes)
+                .map(serde_json::Value::from)
+                .unwrap_or(serde_json::Value::Null),
+            "kernel_time_ms": runtime_stats
+                .and_then(|stats| stats.kernel_time_ms)
+                .map(rounded_ms)
+                .map(serde_json::Value::from)
+                .unwrap_or(serde_json::Value::Null),
+            "kernel_time_samples": runtime_stats
+                .map(|stats| stats.kernel_time_samples)
+                .map(serde_json::Value::from)
+                .unwrap_or(serde_json::Value::Null),
+            "note": if transfer_bytes_measured || kernel_time_measured {
+                "QK256 activation/output transfer bytes and CUDA event kernel time are measured for the routed QK256 GEMV path only; full transformer residency and transfer timing remain separate claims."
+            } else {
+                "QK256 routing and weight-handle residency are recorded; per-phase transfer bytes and kernel timings require a later benchmark/instrumentation gate."
+            },
         },
         "unresident_or_unmeasured_phases": non_resident_or_unmeasured_phases,
         "claim_boundary": {
@@ -6556,6 +6640,8 @@ fn cuda_execution_residency_receipt(
             "upload_once_weight_residency_claimed": weights_uploaded_once && !per_token_weight_upload,
             "full_transformer_cuda_residency_claimed": false,
             "kv_cache_cuda_residency_claimed": kv_cache_device == "cuda",
+            "qk256_kernel_timing_claimed": kernel_time_measured,
+            "qk256_transfer_byte_accounting_claimed": transfer_bytes_measured,
             "transfer_timing_claimed": false,
             "speedup_claim": false,
         },
@@ -8056,6 +8142,7 @@ async fn run_ask_generation(
             "repo": run_receipt["model"]["repo"].clone(),
             "file": run_receipt["model"]["file"].clone(),
             "path": run_receipt["model"]["path"].clone(),
+            "sha256": run_receipt["model"]["sha256"].clone(),
             "loader_mode": run_receipt["model"]["loader_mode"].clone(),
             "fallback_loader_used": run_receipt["model"]["fallback_loader_used"].clone(),
             "tokenizer": run_receipt["model"]["tokenizer"].clone(),
@@ -8095,7 +8182,9 @@ async fn run_ask_generation(
             "per_token_weight_upload": run_receipt["bitnet"]["per_token_weight_upload"].clone(),
         },
         "execution_coverage": run_receipt["execution_coverage"].clone(),
+        "kernel_stats": run_receipt["kernel_stats"].clone(),
         "cuda_execution_residency": run_receipt["cuda_execution_residency"].clone(),
+        "timing": run_receipt["timing"].clone(),
         "quality": quality,
         "receipt": {
             "requested": !receipt_out_was_defaulted,
@@ -8171,6 +8260,33 @@ fn validate_strict_cuda_ask_receipt(run_receipt: &serde_json::Value) -> Result<(
         .unwrap_or(1);
     if cpu_fallback != 0 {
         anyhow::bail!("strict CUDA ask recorded {cpu_fallback} BitNet linear CPU fallback layers");
+    }
+    let kernel_stats = run_receipt["kernel_stats"]
+        .as_array()
+        .and_then(|stats| stats.first())
+        .ok_or_else(|| anyhow::anyhow!("strict CUDA ask receipt is missing kernel_stats[0]"))?;
+    let kernel_time_ms = kernel_stats["kernel_time_ms"].as_f64().unwrap_or(-1.0);
+    let host_to_device_bytes = kernel_stats["host_to_device_bytes"].as_u64().unwrap_or(0);
+    let device_to_host_bytes = kernel_stats["device_to_host_bytes"].as_u64().unwrap_or(0);
+    if kernel_time_ms < 0.0 || host_to_device_bytes == 0 || device_to_host_bytes == 0 {
+        anyhow::bail!(
+            "strict CUDA ask receipt is missing measured QK256 timing/transfer accounting: kernel_time_ms={}, host_to_device_bytes={}, device_to_host_bytes={}",
+            kernel_stats["kernel_time_ms"],
+            kernel_stats["host_to_device_bytes"],
+            kernel_stats["device_to_host_bytes"]
+        );
+    }
+    let transfer_accounting =
+        &run_receipt["cuda_execution_residency"]["host_device_transfer_accounting"];
+    if transfer_accounting["status"].as_str() != Some("qk256_measured")
+        || transfer_accounting["kernel_time_ms"].as_f64().is_none()
+        || transfer_accounting["host_to_device_bytes"].as_u64().unwrap_or(0) == 0
+        || transfer_accounting["device_to_host_bytes"].as_u64().unwrap_or(0) == 0
+    {
+        anyhow::bail!(
+            "strict CUDA ask receipt is missing measured QK256 residency accounting: {}",
+            transfer_accounting
+        );
     }
     Ok(())
 }
@@ -9613,6 +9729,72 @@ mod tests {
     }
 
     #[test]
+    fn strict_cuda_ask_receipt_accepts_measured_qk256_accounting() {
+        let run_receipt = serde_json::json!({
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "fallback_used": false,
+            "execution_coverage": {
+                "bitnet_linear_layers_cpu_fallback": 0
+            },
+            "kernel_stats": [{
+                "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+                "invocations": 4,
+                "fallback_invocations": 0,
+                "host_to_device_bytes": 4096,
+                "device_to_host_bytes": 2048,
+                "kernel_launches": 4,
+                "kernel_time_ms": 1.25,
+                "kernel_time_samples": 4
+            }],
+            "cuda_execution_residency": {
+                "host_device_transfer_accounting": {
+                    "status": "qk256_measured",
+                    "host_to_device_bytes": 4096,
+                    "device_to_host_bytes": 2048,
+                    "kernel_time_ms": 1.25,
+                    "kernel_time_samples": 4
+                }
+            }
+        });
+
+        validate_strict_cuda_ask_receipt(&run_receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cuda_ask_receipt_rejects_missing_qk256_accounting() {
+        let run_receipt = serde_json::json!({
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "fallback_used": false,
+            "execution_coverage": {
+                "bitnet_linear_layers_cpu_fallback": 0
+            },
+            "kernel_stats": [{
+                "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+                "invocations": 4,
+                "fallback_invocations": 0,
+                "host_to_device_bytes": null,
+                "device_to_host_bytes": null,
+                "kernel_launches": 4,
+                "kernel_time_ms": null
+            }],
+            "cuda_execution_residency": {
+                "host_device_transfer_accounting": {
+                    "status": "not_measured",
+                    "host_to_device_bytes": null,
+                    "device_to_host_bytes": null,
+                    "kernel_time_ms": null
+                }
+            }
+        });
+
+        let err = validate_strict_cuda_ask_receipt(&run_receipt).unwrap_err().to_string();
+
+        assert!(err.contains("measured QK256 timing/transfer accounting"), "got: {err}");
+    }
+
+    #[test]
     fn strict_ask_default_receipt_path_is_only_for_strict_modes() {
         assert!(
             strict_ask_default_receipt_path(false, false).is_none(),
@@ -9662,6 +9844,7 @@ mod tests {
         let receipt = cuda_execution_residency_receipt(
             &coverage,
             Some(&residency),
+            None,
             18,
             8,
             "cpu",
@@ -9699,6 +9882,7 @@ mod tests {
         let receipt = cuda_execution_residency_receipt(
             &coverage,
             None,
+            None,
             4,
             1,
             "cpu",
@@ -9725,6 +9909,77 @@ mod tests {
                 .any(|value| value == "host_device_transfer_bytes")
         );
         assert_eq!(receipt["claim_boundary"]["qk256_cuda_residency_claimed"], false);
+    }
+
+    #[test]
+    fn qk256_kernel_stats_receipt_records_measured_cuda_accounting() {
+        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+            bitnet_linear_layers_total: 4,
+            bitnet_linear_layers_on_cuda: 4,
+            bitnet_linear_layers_cpu_fallback: 0,
+            unsupported_ops: Vec::new(),
+            execution_claim: "cuda_inference_contribution",
+        };
+        let runtime_stats = bitnet_qk256_dispatch::Qk256CudaRuntimeStats {
+            host_to_device_bytes: 4096,
+            device_to_host_bytes: 2048,
+            kernel_time_ms: Some(1.23456),
+            kernel_time_samples: 4,
+        };
+
+        let receipt = qk256_kernel_stats_receipt(&coverage, Some(&runtime_stats));
+
+        assert_eq!(receipt[0]["kernel_id"], bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID);
+        assert_eq!(receipt[0]["invocations"], 4);
+        assert_eq!(receipt[0]["fallback_invocations"], 0);
+        assert_eq!(receipt[0]["host_to_device_bytes"], 4096);
+        assert_eq!(receipt[0]["device_to_host_bytes"], 2048);
+        assert_eq!(receipt[0]["kernel_time_ms"], 1.235);
+        assert_eq!(receipt[0]["kernel_time_samples"], 4);
+    }
+
+    #[test]
+    fn cuda_execution_residency_receipt_records_measured_qk256_accounting() {
+        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+            bitnet_linear_layers_total: 4,
+            bitnet_linear_layers_on_cuda: 4,
+            bitnet_linear_layers_cpu_fallback: 0,
+            unsupported_ops: Vec::new(),
+            execution_claim: "cuda_inference_contribution",
+        };
+        let runtime_stats = bitnet_qk256_dispatch::Qk256CudaRuntimeStats {
+            host_to_device_bytes: 4096,
+            device_to_host_bytes: 2048,
+            kernel_time_ms: Some(1.25),
+            kernel_time_samples: 4,
+        };
+
+        let receipt = cuda_execution_residency_receipt(
+            &coverage,
+            None,
+            Some(&runtime_stats),
+            12,
+            3,
+            "cpu",
+            "per_run_incremental_decode",
+            "decode",
+            "strict_cuda_ask_or_run",
+        );
+
+        assert_eq!(receipt["host_device_transfer_accounting"]["status"], "qk256_measured");
+        assert_eq!(receipt["host_device_transfer_accounting"]["host_to_device_bytes"], 4096);
+        assert_eq!(receipt["host_device_transfer_accounting"]["device_to_host_bytes"], 2048);
+        assert_eq!(receipt["host_device_transfer_accounting"]["kernel_time_ms"], 1.25);
+        assert_eq!(receipt["claim_boundary"]["qk256_kernel_timing_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["qk256_transfer_byte_accounting_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["transfer_timing_claimed"], false);
+        assert!(
+            !receipt["unresident_or_unmeasured_phases"]
+                .as_array()
+                .expect("phase list")
+                .iter()
+                .any(|value| value == "kernel_time_ms")
+        );
     }
 
     #[test]

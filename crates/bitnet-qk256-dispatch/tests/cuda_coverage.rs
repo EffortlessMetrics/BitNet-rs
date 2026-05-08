@@ -1,6 +1,7 @@
 use bitnet_qk256_dispatch::{
-    forward_qk256, qk256_dispatch_coverage, record_bitnet_linear_cpu_fallback,
-    record_bitnet_linear_unsupported, reset_qk256_dispatch_coverage,
+    forward_qk256, qk256_cuda_runtime_stats, qk256_dispatch_coverage,
+    record_bitnet_linear_cpu_fallback, record_bitnet_linear_unsupported,
+    reset_qk256_dispatch_coverage,
 };
 use candle_core::{DType, Device, Tensor};
 use std::sync::Mutex;
@@ -81,6 +82,20 @@ fn strict_unsupported_counter_records_receipt_boundary() {
     assert_eq!(coverage.unsupported_ops, vec!["qk256_strict_cuda_unsupported"]);
     assert_eq!(coverage.execution_claim, "cuda_bitnet_not_routed");
     clear_backend_env();
+}
+
+#[test]
+fn reset_clears_cuda_runtime_accounting_counters() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    clear_backend_env();
+    reset_qk256_dispatch_coverage();
+
+    let stats = qk256_cuda_runtime_stats();
+
+    assert_eq!(stats.host_to_device_bytes, 0);
+    assert_eq!(stats.device_to_host_bytes, 0);
+    assert_eq!(stats.kernel_time_ms, None);
+    assert_eq!(stats.kernel_time_samples, 0);
 }
 
 #[cfg(not(feature = "cuda"))]
