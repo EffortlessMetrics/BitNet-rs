@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T12:20:20Z"
+campaign = "apple-m4-slm-performance"
+item = "M4-SLM-PERF-002"
+event = "merged"
+pr = 4047
+merge_sha = "eed2e06f30a866037caee07b3ad442297a190dec"
+actor = "codex"
+
+notes = [
+  "Merged the Apple M4 SLM allocation audit with release-profile allocation receipts.",
+  "Promoted M4-SLM-PERF-003 resident-session hardening to ready.",
+  "No QK256, qk256-dispatch, server, Metal kernel, Neural Engine, MPSGraph, or broad performance claim changes.",
+]
