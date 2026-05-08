@@ -569,7 +569,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-006"
-status = "pr_open"
+status = "merged"
 pr = 4001
 branch = "codex/intel-258v-platform/CPU258V-006-warm-phase"
 stackable = false
