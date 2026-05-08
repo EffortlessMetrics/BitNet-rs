@@ -486,8 +486,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-007B"
-status = "pr_open"
+status = "merged"
 pr = 4138
+merge_sha = "fcc0f992a00e39fb97bb5d0770a9b1b2295322ad"
 branch = "codex/slm-cpu-007b-first-drift-capture"
 stackable = false
 review_mode = "codex_premerge"
@@ -528,5 +529,51 @@ must_not_claim = [
   "Qwen3.5 or hybrid Qwen architecture support is in scope.",
   "Sustained 8250U throughput is proven.",
   "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-008"
+status = "ready"
+branch = "codex/slm-cpu-008-qwen3-first-token-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-007B"]
+acceptance = "Fix the first Qwen3-0.6B Q8_0 divergent operation using the SLM-CPU-007B checkpoint evidence and any required known-good reference checkpoints so bitnet-rs matches the reference first generated token for the same model SHA, prompt/template/BOS policy, prompt IDs, greedy settings, and fallback=false. The target reference token is 19 / '4'. No answer-quality, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, quant-expansion, or BitNet QK256 claim is allowed."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli reference_divergence",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Qwen3 first-token parity for the fixed prompt exists after merge.",
+  "The fix is bounded to dense Qwen3 CPU correctness.",
+]
+must_not_claim = [
+  "Qwen answer quality is proven.",
+  "Qwen3 tiny answer corpus is green.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
 ]
