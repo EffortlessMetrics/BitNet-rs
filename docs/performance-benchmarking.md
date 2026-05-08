@@ -104,11 +104,11 @@ Test fixtures are automatically generated using the xtask system:
 
 ```bash
 # Generate small test fixtures
-cargo run -p xtask -- gen-fixtures --size small --output crossval/fixtures/
+cargo run --no-default-features -p xtask -- gen-fixtures --size small --output crossval/fixtures/
 
 # Generate fixtures of different sizes
-cargo run -p xtask -- gen-fixtures --size tiny --output crossval/fixtures/
-cargo run -p xtask -- gen-fixtures --size medium --output crossval/fixtures/
+cargo run --no-default-features -p xtask -- gen-fixtures --size tiny --output crossval/fixtures/
+cargo run --no-default-features -p xtask -- gen-fixtures --size medium --output crossval/fixtures/
 ```
 
 ## 📈 Running Benchmarks
@@ -378,7 +378,7 @@ cargo --version
 ls -la crossval/fixtures/
 
 # Check binary compilation
-cargo build --no-default-features --release --no-default-features --features cpu
+cargo build --release --no-default-features --features cpu
 ```
 
 **Benchmark Failures:**
@@ -511,7 +511,7 @@ All benchmarks can be reproduced with deterministic configuration:
 ```bash
 # CPU I2S BitNet32-F16 benchmark (production quantization)
 BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
-cargo run -p xtask -- benchmark --features cpu --quantization i2s
+cargo run --no-default-features -p xtask -- benchmark --features cpu --quantization i2s
 
 # QK256 scalar benchmark (validation only - SLOW)
 # WARNING: This will take ~20 minutes for 128 tokens
@@ -559,13 +559,13 @@ cat ci/inference.json | jq '.performance_baseline'
 **Benchmarking QK256 Optimizations:**
 ```bash
 # Benchmark scalar baseline
-cargo bench --bench kernel_benchmarks --features cpu -- qk256_scalar
+cargo bench --no-default-features --features cpu --bench kernel_benchmarks -- qk256_scalar
 
 # Benchmark AVX2 implementation (when available)
-cargo bench --bench kernel_benchmarks --features cpu,avx2 -- qk256_avx2
+cargo bench --no-default-features --features cpu,avx2 --bench kernel_benchmarks -- qk256_avx2
 
 # Compare scalar vs AVX2
-cargo bench --bench kernel_benchmarks --features cpu,avx2 -- qk256
+cargo bench --no-default-features --features cpu,avx2 --bench kernel_benchmarks -- qk256
 ```
 
 ### Receipt Artifact Schema
@@ -606,7 +606,7 @@ See `.github/workflows/performance-tracking.yml` for CI gate implementation.
 
 **C++ Reference Parity:**
 - **I2S Tolerance**: 1e-5 MSE
-- **Validation Command**: `cargo run -p xtask -- crossval`
+- **Validation Command**: `cargo run --no-default-features -p xtask -- crossval`
 - **Status**: Available when BITNET_GGUF environment variable set
 
 These targets are automatically validated through the regression detection system and receipt artifact generation. All claims must be backed by verifiable receipts.
@@ -634,18 +634,18 @@ BitNet-rs Issue #261 implemented comprehensive strict mode controls to eliminate
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
-cargo run -p xtask -- benchmark --features cpu --quantization i2s
+cargo run --no-default-features -p xtask -- benchmark --features cpu --quantization i2s
 
 # GPU baseline with strict mode (mixed precision, GPU-accelerated alpha)
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
-cargo run -p xtask -- benchmark --features gpu --quantization i2s
+cargo run --no-default-features -p xtask -- benchmark --features gpu --quantization i2s
 
 # Cross-validation with strict mode (validates ≥99.8% I2S accuracy)
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 
 # CI enhanced strict mode (comprehensive validation)
 CI=1 \
@@ -674,8 +674,8 @@ Strict mode enforces realistic performance expectations:
 
 ```bash
 # Unit tests for strict mode enforcement (AC2)
-cargo test -p bitnet-common test_strict_mode_from_env_detailed
-cargo test -p bitnet-common test_strict_mode_ci_enhanced
+cargo test --no-default-features --features cpu -p bitnet-common test_strict_mode_from_env_detailed
+cargo test --no-default-features --features cpu -p bitnet-common test_strict_mode_ci_enhanced
 
 # Integration tests for real quantization (AC3)
 BITNET_STRICT_MODE=1 \
@@ -689,7 +689,7 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_perfo
 
 # CI mock rejection tests (AC6)
 CI=1 BITNET_CI_ENHANCED_STRICT=1 BITNET_STRICT_MODE=1 \
-cargo test test_ci_enhanced_strict_mode_comprehensive
+cargo test --no-default-features --features cpu test_ci_enhanced_strict_mode_comprehensive
 ```
 
 ### Receipts and Evidence
