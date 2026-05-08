@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "artifact_kind": "lunar_lake_platform_comparison_index",
+  "machine_id": "intel-258v",
+  "captured_at_utc": "2026-05-08T13:38:16Z",
+  "proof_stage": "comparison_indexed",
+  "comparison_scope": "same_machine_artifact_index",
+  "artifact_dates": [
+    "2026-05-06",
+    "2026-05-07",
+    "2026-05-08"
+  ],
+  "source_artifacts": {
+    "platform_probe": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
+    "platform_probe_cli": "ci/hardware/intel-258v/2026-05-06/platform-probe-cli.json",
+    "cpu_strict_decode_smoke": "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
+    "cpu_phase_warm_session": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
+    "cpu_phase_prefill_512": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json",
+    "cpu_phase_decode_128": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/decode_128.json",
+    "cpu_answer_corpus_scalar": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json",
+    "cpu_answer_corpus_avx2": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
+    "cpu_answer_parity": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
+    "arc140v_runtime_probe": "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json",
+    "arc140v_opencl_smoke": "ci/hardware/intel-258v/2026-05-07/arc-140v-opencl-smoke.json",
+    "npu_runtime_probe": "ci/hardware/intel-258v/2026-05-06/npu-openvino-runtime-probe.json",
+    "npu_openvino_llamacpp_gguf_reference": "ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json"
+  },
+  "lanes": {
+    "cpu": {
+      "proof_label": "intel-258v-cpu-avx2",
+      "role": "BitNet CPU reference plate",
+      "runtime_api": "cpu",
+      "requested_backend": "cpu",
+      "selected_backend": "cpu-rust",
+      "proof_stages": [
+        "strict_decode_smoke",
+        "phase_timing_recorded",
+        "full_answer_corpus_passed",
+        "scalar_vs_avx2_parity_passed"
+      ],
+      "fallback_used": false,
+      "primary_artifact": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
+      "supporting_artifacts": [
+        "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/decode_128.json"
+      ],
+      "claim_allowed": "The 258V CPU reference path has strict real-GGUF receipts, phase timing receipts, and full fixed-corpus scalar-vs-AVX2 answer parity.",
+      "claims_not_allowed": [
+        "General chat quality is proven.",
+        "Sustained throughput is proven.",
+        "A CPU speedup is proven.",
+        "Arc 140V or Intel NPU execution is implied by CPU evidence."
+      ]
+    },
+    "arc140v": {
+      "proof_label": "intel-arc-140v-opencl",
+      "role": "Integrated GPU execution smoke lane",
+      "runtime_api": "opencl",
+      "requested_backend": "intel-arc-140v",
+      "selected_backend": "intel-arc-140v-opencl",
+      "proof_stages": [
+        "runtime_detected",
+        "kernel_smoke_tested"
+      ],
+      "fallback_used": false,
+      "primary_artifact": "ci/hardware/intel-258v/2026-05-07/arc-140v-opencl-smoke.json",
+      "claim_allowed": "Arc 140V OpenCL can execute the recorded tiny vector-add smoke kernel with fallback_used=false.",
+      "claims_not_allowed": [
+        "BitNet inference works on Arc 140V.",
+        "Arc 140V accelerates BitNet.",
+        "Packed BitNet QK256 decode works on Arc 140V.",
+        "OpenVINO GPU smoke proves native OpenCL BitNet kernels."
+      ]
+    },
+    "npu": {
+      "proof_label": "intel-npu-openvino",
+      "role": "Intel NPU OpenVINO reference and blocker lane",
+      "runtime_api": null,
+      "requested_backend": "intel-npu",
+      "selected_backend": null,
+      "proof_stages": [
+        "runtime_detected",
+        "static_subgraph_parity_tracked",
+        "blocked_reference"
+      ],
+      "fallback_used": false,
+      "primary_artifact": "ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json",
+      "claim_allowed": "OpenVINO llama.cpp GGUF is tracked as an external Intel NPU reference lane and is currently blocked before execution in this local environment.",
+      "claims_not_allowed": [
+        "Full BitNet inference works on Intel NPU.",
+        "Native bitnet-rs NPU inference works.",
+        "Intel NPU accelerates BitNet.",
+        "Packed BitNet QK256 GGUF decode works on Intel NPU.",
+        "CPU fallback satisfies NPU proof."
+      ]
+    }
+  },
+  "comparison_policy": {
+    "same_machine": true,
+    "same_date_required": false,
+    "performance_comparison_allowed": false,
+    "cross_lane_parity_allowed": false,
+    "requires_independent_lane_receipts": true,
+    "notes": [
+      "This index links independently scoped receipts from the same Lunar Lake laptop.",
+      "It does not normalize timings across CPU, Arc 140V, and NPU lanes.",
+      "A lane claim is allowed only when the cited lane artifact independently proves it."
+    ]
+  },
+  "fallback_used": false,
+  "may_claim": [
+    "The repository has a same-machine 258V comparison index linking CPU, Arc 140V, and Intel NPU artifacts by path, backend identity, proof stage, and fallback status.",
+    "The 258V CPU reference plate is available for later accelerator comparisons.",
+    "Arc 140V and Intel NPU evidence remain separately scoped and do not inherit CPU proof."
+  ],
+  "must_not_claim": [
+    "CPU, Arc 140V, and Intel NPU performance are comparable from this index.",
+    "Arc 140V runs BitNet.",
+    "Intel NPU runs BitNet.",
+    "Any accelerator accelerates BitNet.",
+    "CPU fallback satisfies Arc 140V or Intel NPU proof.",
+    "Full platform BitNet inference is proven."
+  ]
+}

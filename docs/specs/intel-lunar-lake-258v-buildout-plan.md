@@ -45,6 +45,7 @@ Do these identity and validation surfaces before claiming real BitNet performanc
 | `CPU258V-002` | 258V scalar-vs-AVX2 strict answer parity. | CLI parity command, answer receipts, 258V CPU artifacts, hardware/tracking docs. | OpenCL, OpenVINO NPU execution, QK256 kernel rewrites unless explicitly scoped. | Receipt compares scalar and AVX2 output for the same model/tokenizer/prompt/greedy settings, records token IDs/text, first divergence, logits/top-k evidence, selected kernels, fallback=false, and power/topology context. |
 | `CPU258V-003` | 258V phase benchmark receipts. | Benchmark receipt generation, 258V artifacts, hardware/tracking docs. | Accelerator code, server inference, and thread pinning unless separately scoped. | Receipt records smoke, first-token, decode, and prefill phase timing when available with CPU feature, power, topology, selected backend/kernel, and fallback status. |
 | `ARC140V-003` | Tiny OpenVINO `GPU.0` graph smoke for the Arc 140V reference lane. | OpenVINO runtime probe, CLI smoke receipt, Arc 140V hardware docs. | Native OpenCL kernels, BitNet model/tokenizer/QK256/inference code. | Receipt records Arc 140V OpenVINO GPU identity, static tiny graph execution, shape/timing/tolerance fields, fallback=false, and no BitNet/QK256/native OpenCL claims. |
+| `LNL258V-COMPARE-001` | Same-machine comparison index for the Lunar Lake platform. | 258V artifact index, hardware docs, platform tracker docs. | Runtime code, tests, CPU kernels, OpenCL kernels, OpenVINO graph execution, model/tokenizer logic. | Index links separate platform, CPU, Arc 140V, and NPU receipts by artifact path, backend identity, runtime API, proof stage, fallback status, and missing-artifact state without merging CPU, GPU, or NPU proof claims. |
 
 ## Required Platform Probe Surface
 
@@ -368,3 +369,54 @@ The Lunar Lake 258V buildout is ready to move from planning to proof only when a
 - 258V CPU validation receipts proving the merged CPU path on Lunar Lake with requested/selected kernel fields.
 - Benchmark artifacts split by `prefill`, `first_token`, and `decode_steady_state`.
 - Cross-device comparison docs that cite separate CPU, Arc 140V, and NPU artifacts instead of merging claims.
+
+## Comparison Artifact Schema
+
+`LNL258V-COMPARE-001` uses a dated same-machine index:
+
+```text
+ci/hardware/intel-258v/YYYY-MM-DD/platform-comparison-index.json
+```
+
+Minimum fields:
+
+```json
+{
+  "schema": 1,
+  "artifact_kind": "lunar_lake_platform_comparison_index",
+  "machine_id": "intel-258v",
+  "proof_stage": "comparison_indexed",
+  "comparison_scope": "same_machine_artifact_index",
+  "source_artifacts": {
+    "platform_probe": "ci/hardware/intel-258v/YYYY-MM-DD/platform-probe.json",
+    "cpu_answer_parity": "ci/hardware/intel-258v/YYYY-MM-DD/cpu-answer-parity.json",
+    "arc140v_opencl_smoke": "ci/hardware/intel-258v/YYYY-MM-DD/arc-140v-opencl-smoke.json",
+    "npu_reference": "ci/hardware/intel-258v/YYYY-MM-DD/npu-openvino-llamacpp-gguf-reference.json"
+  },
+  "lanes": {
+    "cpu": {
+      "proof_label": "intel-258v-cpu-avx2",
+      "proof_stages": ["full_answer_corpus_passed", "scalar_vs_avx2_parity_passed"],
+      "fallback_used": false
+    },
+    "arc140v": {
+      "proof_label": "intel-arc-140v-opencl",
+      "proof_stages": ["kernel_smoke_tested"],
+      "fallback_used": false
+    },
+    "npu": {
+      "proof_label": "intel-npu-openvino",
+      "proof_stages": ["blocked_reference"],
+      "fallback_used": false
+    }
+  },
+  "comparison_policy": {
+    "performance_comparison_allowed": false,
+    "cross_lane_parity_allowed": false,
+    "requires_independent_lane_receipts": true
+  }
+}
+```
+
+The index is not proof by itself. It must preserve lane-specific proof labels
+and may only claim what the linked lane artifacts independently prove.

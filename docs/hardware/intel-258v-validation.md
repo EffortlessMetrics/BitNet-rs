@@ -132,6 +132,27 @@ CPU, GPU, and NPU receipts can be compared without inferring cross-lane proof:
 The bundle does not prove BitNet inference, Arc 140V execution, OpenVINO NPU
 graph execution, parity, or benchmark performance.
 
+### Current Comparison Index
+
+`LNL258V-COMPARE-001` updates the same-machine comparison index after the 258V
+CPU, Arc 140V, and Intel NPU lanes produced independently scoped evidence:
+
+```text
+ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
+```
+
+The index links the CPU full-corpus scalar-vs-AVX2 parity receipt, CPU warm
+phase receipts, Arc 140V native OpenCL tiny-kernel smoke, and the NPU OpenVINO
+llama.cpp GGUF external-reference blocker receipt. It is not a proof artifact
+by itself. A lane claim is allowed only when the cited lane artifact
+independently proves it.
+
+The comparison index may claim that the repository has a same-machine artifact
+map for CPU, Arc 140V, and Intel NPU receipts. It must not claim cross-lane
+performance comparability, Arc 140V BitNet inference, Intel NPU BitNet
+inference, QK256 accelerator decode, acceleration, or CPU fallback as
+accelerator proof.
+
 ### CLI Platform Probe
 
 Use the CLI probe command to emit the visibility-only platform receipt from the
@@ -401,6 +422,21 @@ Both release-built scalar and AVX2 runs pass all five fixed corpus gates:
 for the committed deterministic corpus and scalar-vs-AVX2 full-corpus parity
 only. It does not prove general chat quality, sustained throughput, speedup,
 Arc 140V execution, Intel NPU execution, or acceleration.
+
+## Current Same-Machine Comparison Evidence
+
+The current Lunar Lake comparison index is:
+
+```text
+ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
+```
+
+It points at the post-mechanics 258V CPU full-corpus parity receipts, the warm
+CPU phase receipts, the Arc 140V OpenCL tiny-kernel smoke receipt, and the NPU
+OpenVINO llama.cpp GGUF reference blocker receipt. This makes the available
+CPU, GPU, and NPU evidence discoverable from one artifact while preserving
+separate proof boundaries. It is not a cross-device performance comparison and
+does not imply that Arc 140V or Intel NPU run BitNet.
 
 ## Windows PowerShell Bundle
 

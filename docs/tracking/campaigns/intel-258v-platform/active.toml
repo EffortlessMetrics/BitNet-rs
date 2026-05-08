@@ -1009,3 +1009,46 @@ must_not_claim = [
   "A speedup is proven.",
   "Arc 140V or Intel NPU execution is proven.",
 ]
+
+[[work_item]]
+id = "LNL258V-COMPARE-001"
+status = "pr_open"
+pr = 4076
+branch = "codex/lunar-lake/LNL258V-COMPARE-001"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-015", "ARC140V-004"]
+acceptance = "Document a Lunar Lake 258V same-machine comparison artifact that links separate platform, CPU, Arc 140V, and NPU receipts by artifact path, backend identity, runtime API, proof stage, fallback status, OS/power context, and missing-artifact state without merging CPU, GPU, or NPU proof claims."
+commands = [
+  "Parse ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json",
+  "Parse docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "Parse docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/specs/intel-lunar-lake-258v-buildout-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The repository defines a same-machine 258V comparison artifact linking CPU, Arc 140V, and Intel NPU lane receipts.",
+  "The comparison artifact records artifact paths, backend identity, runtime API, proof stage, fallback status, and lane-specific claim boundaries.",
+  "The 258V CPU reference plate, Arc 140V smoke evidence, and Intel NPU reference/blocker evidence are discoverable from one index.",
+]
+must_not_claim = [
+  "The comparison index proves CPU, Arc 140V, or Intel NPU performance.",
+  "The comparison index proves Arc 140V BitNet inference.",
+  "The comparison index proves Intel NPU BitNet inference.",
+  "The comparison index proves acceleration.",
+  "The comparison index permits CPU fallback as Arc 140V or Intel NPU proof.",
+]
