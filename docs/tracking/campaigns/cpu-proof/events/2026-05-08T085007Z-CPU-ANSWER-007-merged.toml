@@ -1,0 +1,13 @@
+timestamp = "2026-05-08T08:50:07Z"
+campaign = "cpu-proof"
+item = "CPU-ANSWER-007"
+event = "merged"
+pr = 4019
+merge_sha = "b6d8423ff9abd3edaf3b3e7678e02e9a8b3ef200"
+actor = "codex"
+
+notes = [
+  "BitNet B1.58 answer math alignment merged in #4019 for the official Microsoft I2_S answer-ready artifact.",
+  "The merge aligned RMSNorm/ReLU^2 defaults, attention and FFN sub-layernorms, BitNet.cpp I2_S QK256 layout, inline scale and I8_S GEMV semantics, and GGML token-major F16 token embeddings.",
+  "No CUDA, Arc 140V, Intel NPU, server inference, or throughput claim is made by this CPU closeout.",
+]
