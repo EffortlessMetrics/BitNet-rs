@@ -38,7 +38,7 @@ RTX 5070 Ti CUDA BitNet proof state:
 - strict selected backend: `nvidia-rtx-5070-ti-cuda`
 - runtime API: `cuda`
 - model: `microsoft/bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf`
-- tokenizer: explicit, strict `llama3`
+- tokenizer: explicit external Llama BPE with BitNet.cpp answer template
 - quantization/layout: `W1.58A8`, `gguf_packed_i2_s`
 - CUDA kernel family: `qk256`
 - weights uploaded once: `true`

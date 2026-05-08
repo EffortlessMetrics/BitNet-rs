@@ -237,7 +237,7 @@ pub struct InferenceCommand {
     #[arg(long, value_name = "TEMPLATE")]
     pub chat_template: Option<String>,
 
-    /// Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+    /// Prompt template: auto (detect), raw, instruct, llama3-chat, bitnetcpp-answer
     #[arg(long, value_name = "TEMPLATE", default_value = "auto")]
     pub prompt_template: String,
 

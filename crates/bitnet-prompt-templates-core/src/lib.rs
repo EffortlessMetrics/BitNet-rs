@@ -416,7 +416,7 @@ impl TemplateType {
                 || path_str.contains("1_58b")
                 || (path_str.contains("bitnet") && !path_str.contains("instruct"))
             {
-                return Self::Instruct;
+                return Self::BitnetCppAnswer;
             }
 
             if path_str.contains("instruct") || path_str.contains("chat") {
@@ -456,6 +456,17 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::Llama3Chat;
+            }
+            if jinja.contains("<|eot_id|>")
+                && (jinja.contains("Assistant:") || jinja.contains("BITNETAssistant"))
+                && (jinja.contains("User:") || jinja.contains("Human:"))
+            {
+                tracing::debug!(
+                    template = "BitnetCppAnswer",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::BitnetCppAnswer;
             }
             // Fill-in-the-middle signature
             if jinja.contains("<fim_prefix>") {
@@ -3523,7 +3534,7 @@ mod tests {
             Some(Path::new("models/microsoft-bitnet-b1.58-2B-4T.gguf")),
             None,
         );
-        assert_eq!(detected, TemplateType::Instruct);
+        assert_eq!(detected, TemplateType::BitnetCppAnswer);
     }
 
     #[test]
@@ -3827,6 +3838,15 @@ mod tests {
             result,
             "System: Keep answers short.<|eot_id|>User: Say exactly: OK<|eot_id|>Assistant:"
         );
+    }
+
+    #[test]
+    fn detects_bitnetcpp_answer_from_reference_template_shape() {
+        let detected = TemplateType::detect(
+            Some("gpt2"),
+            Some("{{ 'User: ' + messages[0]['content'] + '<|eot_id|>Assistant:' }}"),
+        );
+        assert_eq!(detected, TemplateType::BitnetCppAnswer);
     }
 
     #[test]
