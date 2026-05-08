@@ -576,3 +576,33 @@ Proof lanes:
 - Intel AI Boost NPU and OpenVINO NPU are owned by the Intel NPU workstream.
 
 The platform profile ties the lanes together for comparison, but it does not merge their claims.
+
+## Current NPU Reference Evidence
+
+`NPU-009` tracks OpenVINO llama.cpp GGUF as an external Intel NPU reference
+lane. The first 258V receipt is:
+
+```text
+ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json
+```
+
+That receipt is intentionally `proof_stage=blocked_reference`: the local
+environment did not have the OpenVINO Python runtime available, so the preview
+llama.cpp GGUF backend was not invoked and no NPU graph execution occurred.
+
+Allowed claim:
+
+```text
+OpenVINO llama.cpp GGUF is tracked as an external reference lane, and the
+current local reference attempt is blocked before execution.
+```
+
+Not allowed:
+
+```text
+Full BitNet inference works on Intel NPU.
+Native bitnet-rs NPU inference works.
+Intel NPU accelerates BitNet.
+Packed BitNet QK256 GGUF decode works on Intel NPU.
+CPU fallback satisfies NPU proof.
+```

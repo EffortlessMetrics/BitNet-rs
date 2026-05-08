@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T13:14:00Z"
+campaign = "intel-npu"
+item = "NPU-009"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4068
+actor = "codex"
+branch = "codex/intel-npu/NPU-009-openvino-llamacpp-gguf-reference"
+summary = "Opened NPU-009 for the OpenVINO llama.cpp GGUF external reference lane."
+
+notes = [
+  "PR #4068 records the OpenVINO llama.cpp GGUF path as an external Intel NPU reference lane and adds a blocked 258V receipt because OpenVINO is not available in the local environment.",
+  "The receipt links back to the 258V CPU reference plate and earlier NPU subgraph parity work, but it does not claim NPU graph execution.",
+  "No runtime, model, tokenizer, QK256, CPU kernel, inference, or server files are touched.",
+]

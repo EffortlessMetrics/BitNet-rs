@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T13:02:00Z"
+campaign = "intel-npu"
+item = "NPU-009"
+event = "ready"
+from = "proposed"
+to = "ready"
+actor = "codex"
+branch = "codex/intel-npu/NPU-009-openvino-llamacpp-gguf-reference"
+summary = "Ready NPU-009 to evaluate OpenVINO llama.cpp GGUF as an external Intel NPU reference lane."
+
+notes = [
+  "NPU-007 and NPU-008 already cover selected RMSNorm and linear-projection static subgraph parity.",
+  "NPU-009 is scoped to an external OpenVINO llama.cpp GGUF reference or explicit blocker receipt; it must not touch crates, tests, CPU kernels, QK256 dispatch, or inference hot paths.",
+  "The claim boundary remains external reference/blocker evidence only: no full BitNet inference, no native bitnet-rs NPU inference, no acceleration, no packed QK256 GGUF decode, and no CPU fallback as NPU proof.",
+]

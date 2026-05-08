@@ -92,6 +92,7 @@
 | intel-npu | NPU-006 | NPU-005 | merged |
 | intel-npu | NPU-007 | NPU-006 | merged |
 | intel-npu | NPU-008 | NPU-007 | merged |
+| intel-npu | NPU-009 | NPU-008, CPU258V-015 | pr_open |
 | model-artifacts | MODEL-ARTIFACT-002 | MODEL-ARTIFACT-001 | blocked |
 | model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | merged |
 | model-artifacts | MODEL-ARTIFACT-004 | MODEL-ARTIFACT-003 | merged |

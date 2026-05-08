@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "artifact_kind": "intel_npu_openvino_llamacpp_gguf_reference",
+  "machine_id": "intel-258v",
+  "hardware_lane": "intel-npu-openvino",
+  "captured_at_utc": "2026-05-08T13:01:17Z",
+  "proof_stage": "blocked_reference",
+  "requested_backend": "intel-npu",
+  "selected_backend": null,
+  "runtime_api": null,
+  "runtime_device": null,
+  "fallback_used": false,
+  "cpu_fallback_allowed": false,
+  "graph_execution": false,
+  "bitnet_inference": false,
+  "qk256_decode": false,
+  "reference_lane": {
+    "name": "openvino_llamacpp_gguf",
+    "purpose": "external Intel NPU GGUF reference lane",
+    "production_path": false,
+    "status": "blocked"
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "architecture": "bitnet_b1_58",
+    "sha256": null
+  },
+  "openvino": {
+    "required_version": "2026.1",
+    "python_module_available": false,
+    "python_import_error": "ModuleNotFoundError: No module named 'openvino'",
+    "available_devices": [],
+    "npu_visible": false,
+    "llamacpp_gguf_backend_invoked": false,
+    "llamacpp_gguf_backend_status": "not_run"
+  },
+  "shape_or_context": {
+    "shape_mode": "static_or_runtime_defined_by_external_backend",
+    "max_prompt_len": null,
+    "min_response_len": null,
+    "context_length": 4096
+  },
+  "source_evidence": {
+    "cpu_reference_plate": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
+    "prior_npu_probe": "ci/hardware/intel-258v/2026-05-06/npu-openvino-runtime-probe.json",
+    "npu_static_subgraph_predecessors": [
+      "NPU-007 bitnet_rmsnorm_f16_1x16",
+      "NPU-008 bitnet_linear_projection_f16_1x16x16"
+    ]
+  },
+  "blocker": {
+    "kind": "runtime_unavailable",
+    "message": "OpenVINO Python runtime is not installed in this local environment, so the preview llama.cpp GGUF reference backend was not invoked on Intel NPU.",
+    "next_action": "Install/activate the required OpenVINO 2026.1 runtime with NPU visibility on the 258V laptop, then run the external llama.cpp GGUF backend against the canonical GGUF and replace this blocked receipt with selected-device evidence."
+  },
+  "claim": "openvino_llamacpp_gguf_reference_blocked_before_execution",
+  "may_claim": [
+    "OpenVINO llama.cpp GGUF is tracked as an external Intel NPU reference lane.",
+    "The current local attempt is blocked before runtime execution because OpenVINO is unavailable."
+  ],
+  "must_not_claim": [
+    "Full BitNet inference works on Intel NPU.",
+    "Native bitnet-rs NPU inference works.",
+    "Intel NPU accelerates BitNet.",
+    "Packed BitNet QK256 GGUF decode works on Intel NPU.",
+    "CPU fallback satisfies NPU proof."
+  ]
+}

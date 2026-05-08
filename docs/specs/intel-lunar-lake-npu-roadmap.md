@@ -721,6 +721,23 @@ Acceptance:
 - Decide whether this informs bitnet-rs native graph lowering.
 - Do not claim BitNet QK256 GGUF NPU support from this reference lane alone.
 
+Initial NPU-009 scope:
+
+```text
+reference_lane: openvino_llamacpp_gguf
+model: microsoft/bitnet-b1.58-2B-4T-gguf / ggml-model-i2_s.gguf
+runtime: OpenVINO 2026.1 llama.cpp GGUF backend
+device: NPU only when OpenVINO reports and selects NPU
+artifact: ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json
+claim allowed: external GGUF reference evidence or explicit blocker status
+must not claim: native bitnet-rs NPU inference, packed QK256 decode, acceleration, or CPU fallback as NPU proof
+```
+
+If OpenVINO, NPU visibility, or the llama.cpp GGUF backend is unavailable, record a
+blocked reference receipt instead of substituting CPU execution. This lane is useful
+only as an external reference for graph lowering decisions; it is not the native
+BitNet-rs NPU architecture.
+
 ## Collision Avoidance
 
 The Intel NPU lane should avoid:
