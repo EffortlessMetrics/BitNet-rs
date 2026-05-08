@@ -10,8 +10,6 @@ anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 sha2 = "0.10.9"
-
-[dev-dependencies]
 tempfile.workspace = true
 
 [lints]
