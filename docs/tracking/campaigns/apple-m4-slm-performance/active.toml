@@ -220,7 +220,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-PERF-005"
-status = "in_progress"
+status = "pr_open"
+pr = 4069
 branch = "codex/apple-m4-slm-performance/M4-SLM-PERF-005-metal-phase-expansion"
 stackable = false
 review_mode = "codex_premerge"
