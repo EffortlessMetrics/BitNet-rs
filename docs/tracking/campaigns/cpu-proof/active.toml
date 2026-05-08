@@ -618,3 +618,48 @@ must_not_claim = [
   "Server inference is complete.",
   "GPU or NPU execution is involved.",
 ]
+
+[[work_item]]
+id = "CPU-ANSWER-004"
+status = "pr_open"
+pr = 3995
+branch = "codex/cpu-answer-004-bitnetcpp-template"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-003"]
+acceptance = "Strict Rust CPU answer-corpus runs use the MODEL-ARTIFACT-007 answer-ready authority: the Microsoft BitNet.cpp reference prompt envelope `User: <question><|eot_id|>Assistant:`, external tokenizer/pretokenizer provenance, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel, fallback=false, and reference-divergence evidence before any BitNet answer-quality claim."
+commands = [
+  "cargo test --locked -p bitnet-prompt-templates-core --no-default-features bitnetcpp",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-prompt-templates-core/**",
+  "crates/bitnet-cli/**",
+  "ci/quality/**",
+  "ci/hardware/intel-258v/**",
+  "docs/model-artifacts/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Strict BitNet CPU answer-corpus runs use the accepted Microsoft BitNet.cpp answer-ready prompt envelope after merge.",
+  "The answer-corpus prompt template no longer uses the rejected llama3-chat envelope for Microsoft BitNet I2_S evidence after merge.",
+  "Reference-divergence evidence can now compare Rust CPU against the MODEL-ARTIFACT-007 prompt authority after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "Rust CPU answer quality is proven without a fresh strict corpus artifact.",
+  "258V sustained throughput is proven.",
+  "Server inference is complete.",
+  "GPU or NPU execution is involved.",
+]

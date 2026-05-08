@@ -6,7 +6,7 @@ model:
   repo: microsoft/bitnet-b1.58-2B-4T-gguf
   file: ggml-model-i2_s.gguf
 defaults:
-  prompt_template: llama3-chat
+  prompt_template: bitnetcpp-answer
   max_new_tokens: 8
   greedy: true
   deterministic: true
