@@ -128,6 +128,16 @@ pub fn strict_cuda_bitnet_backend_requested() -> bool {
 
 /// Runs I2_S QK256 forward pass for input tensor shapes [B, T, H] or [B, H].
 pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
+    forward_qk256_with_scale(input, qk256_tensor, weight_name, None)
+}
+
+/// Runs I2_S QK256 forward pass with an optional BitNet.cpp inline tensor scale.
+pub fn forward_qk256_with_scale(
+    input: &Tensor,
+    qk256_tensor: &Tensor,
+    weight_name: &str,
+    inline_scale: Option<f32>,
+) -> Result<Tensor> {
     BITNET_LINEAR_TOTAL.fetch_add(1, Ordering::Relaxed);
 
     if cuda_bitnet_backend_requested() {
@@ -136,7 +146,7 @@ pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -
             match forward_qk256_cuda(input, qk256_tensor, weight_name) {
                 Ok(output) => {
                     BITNET_LINEAR_ON_CUDA.fetch_add(1, Ordering::Relaxed);
-                    return Ok(output);
+                    return apply_inline_scale_to_tensor(output, inline_scale);
                 }
                 Err(err) if strict_cuda_bitnet_backend_requested() => {
                     return Err(BitNetError::Validation(format!(
@@ -165,11 +175,31 @@ pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -
         }
     }
 
-    forward_qk256_cpu(input, qk256_tensor, weight_name)
+    forward_qk256_cpu(input, qk256_tensor, weight_name, inline_scale)
 }
 
-fn forward_qk256_cpu(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
-    use bitnet_quantization::i2s_qk256::gemv_qk256;
+#[cfg(feature = "cuda")]
+fn apply_inline_scale_to_tensor(output: Tensor, inline_scale: Option<f32>) -> Result<Tensor> {
+    let Some(scale) = inline_scale else {
+        return Ok(output);
+    };
+    if !scale.is_finite() {
+        return Err(BitNetError::Validation(format!("QK256 inline scale is not finite: {scale}")));
+    }
+    if (scale - 1.0).abs() <= f32::EPSILON {
+        Ok(output)
+    } else {
+        output.affine(scale as f64, 0.0).map_err(BitNetError::from)
+    }
+}
+
+fn forward_qk256_cpu(
+    input: &Tensor,
+    qk256_tensor: &Tensor,
+    weight_name: &str,
+    inline_scale: Option<f32>,
+) -> Result<Tensor> {
+    use bitnet_quantization::i2s_qk256::{gemv_qk256, gemv_qk256_bitnet_i8s_scaled};
 
     let prepared = prepare_qk256_forward(input, qk256_tensor, weight_name)?;
     let mut output_rows = vec![
@@ -193,15 +223,27 @@ fn forward_qk256_cpu(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -
     }
 
     for (row_index, input_row) in prepared.input_rows.iter().enumerate() {
-        gemv_qk256(
-            &prepared.flat_bytes,
-            input_row,
-            &mut output_rows[row_index],
-            prepared.layout.rows,
-            prepared.layout.cols,
-            prepared.layout.row_stride_bytes,
-        )
-        .map_err(|e| {
+        let gemv_result = if let Some(scale) = inline_scale {
+            gemv_qk256_bitnet_i8s_scaled(
+                &prepared.flat_bytes,
+                input_row,
+                &mut output_rows[row_index],
+                prepared.layout.rows,
+                prepared.layout.cols,
+                prepared.layout.row_stride_bytes,
+                scale,
+            )
+        } else {
+            gemv_qk256(
+                &prepared.flat_bytes,
+                input_row,
+                &mut output_rows[row_index],
+                prepared.layout.rows,
+                prepared.layout.cols,
+                prepared.layout.row_stride_bytes,
+            )
+        };
+        gemv_result.map_err(|e| {
             BitNetError::Validation(format!(
                 "QK256 GEMV failed for {} at row {}: {}",
                 weight_name, row_index, e

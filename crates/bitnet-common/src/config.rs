@@ -94,7 +94,7 @@ impl Default for ModelConfig {
 /// Normalization type used by the model architecture
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum NormType {
-    /// Standard LayerNorm with mean subtraction (BitNet default)
+    /// Standard LayerNorm with mean subtraction.
     #[default]
     LayerNorm,
     /// RMSNorm without mean subtraction (LLaMA/Phi/Mistral)

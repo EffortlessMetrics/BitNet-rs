@@ -168,13 +168,13 @@ proptest! {
         }
     }
 
-    /// QK256 code_to_f32 maps every valid code to {-2, -1, 1, 2}.
+    /// QK256 code_to_f32 maps every valid BitNet.cpp I2_S code to {-1, 0, 1}.
     #[test]
     fn prop_qk256_code_to_f32_valid(code in 0u8..4) {
         let val = code_to_f32(code);
         prop_assert!(
-            val == -2.0 || val == -1.0 || val == 1.0 || val == 2.0,
-            "code_to_f32({}) = {}, expected {{-2,-1,1,2}}", code, val
+            val == -1.0 || val == 0.0 || val == 1.0,
+            "code_to_f32({}) = {}, expected {{-1,0,1}}", code, val
         );
     }
 }

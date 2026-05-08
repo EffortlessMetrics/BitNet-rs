@@ -749,3 +749,54 @@ must_not_claim = [
   "Server inference is complete.",
   "GPU or NPU execution is involved.",
 ]
+
+[[work_item]]
+id = "CPU-ANSWER-007"
+status = "ready"
+branch = "codex/cpu-answer-007-bitnet-subnorms"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-006"]
+acceptance = "Strict Rust CPU answer-corpus runs pass the MODEL-ARTIFACT-007 official Microsoft I2_S answer-ready artifact by aligning BitNet B1.58 model math with BitNet.cpp: RMSNorm/ReLU^2 defaults, attention and FFN sub-layernorms, BitNet.cpp I2_S QK256 layout, inline scale and I8_S GEMV semantics, and GGML token-major F16 token embeddings."
+commands = [
+  "cargo fmt -p bitnet-common -p bitnet-models -p bitnet-quantization -p bitnet-qk256-dispatch -p bitnet-transformer -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-common --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-models qk256_token_embedding_rows -- --nocapture",
+  "cargo test --locked -p bitnet-models f16_embedding_payload_is_token_major -- --nocapture",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu qk256 -- --nocapture",
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features cpu --test forward_qk256 forward_qk256_with_scale -- --nocapture",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-common/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-cli/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Strict Rust CPU answer-corpus runs pass the MODEL-ARTIFACT-007 official Microsoft I2_S artifact after merge.",
+  "BitNet B1.58 CPU model math now matches the evidenced BitNet.cpp norm, activation, sub-layernorm, QK256 scale/layout, and token-embedding layout requirements after merge.",
+]
+must_not_claim = [
+  "General chat quality is proven.",
+  "CUDA answer readiness is proven.",
+  "GPU, NPU, or server inference is involved.",
+  "A speedup or throughput claim is proven.",
+]

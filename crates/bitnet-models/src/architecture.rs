@@ -255,7 +255,7 @@ pub fn get_defaults(arch: &ModelArchitecture) -> ArchitectureConfig {
         ModelArchitecture::BitNet => ArchitectureConfig {
             architecture: ModelArchitecture::BitNet,
             activation: ActivationType::Relu2,
-            normalization: NormType::LayerNorm,
+            normalization: NormType::RmsNorm,
             rope_base: 10_000.0,
             max_context: 4096,
             vocab_size: 32_000,
@@ -572,7 +572,7 @@ mod tests {
     fn defaults_bitnet() {
         let cfg = get_defaults(&ModelArchitecture::BitNet);
         assert_eq!(cfg.activation, ActivationType::Relu2);
-        assert_eq!(cfg.normalization, NormType::LayerNorm);
+        assert_eq!(cfg.normalization, NormType::RmsNorm);
         assert_eq!(cfg.rope_base, 10_000.0);
         assert_eq!(cfg.max_context, 4096);
         assert_eq!(cfg.vocab_size, 32_000);

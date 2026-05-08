@@ -48,7 +48,7 @@ impl ArchitectureRegistry {
             "gemma" => (RmsNorm, Gelu, None),
             "gemma2" | "gemma-2" => (RmsNorm, Gelu, Some(8192)),
 
-            "bitnet" | "bitnet-b1.58" => (LayerNorm, Silu, None),
+            "bitnet" | "bitnet-b1.58" => (RmsNorm, ActivationType::Relu2, None),
 
             "deepseek" | "deepseek2" => (RmsNorm, Silu, None),
             "deepseek-v3" | "deepseekv3" | "deepseek3" => (RmsNorm, Silu, Some(65536)),
@@ -305,13 +305,13 @@ mod tests {
     #[test]
     fn test_bitnet_defaults() {
         let d = ArchitectureRegistry::lookup("bitnet").unwrap();
-        assert_eq!(d.norm_type, NormType::LayerNorm);
-        assert_eq!(d.activation_type, ActivationType::Silu);
+        assert_eq!(d.norm_type, NormType::RmsNorm);
+        assert_eq!(d.activation_type, ActivationType::Relu2);
         assert_eq!(d.default_context_length, None);
 
         let d2 = ArchitectureRegistry::lookup("bitnet-b1.58").unwrap();
-        assert_eq!(d2.norm_type, NormType::LayerNorm);
-        assert_eq!(d2.activation_type, ActivationType::Silu);
+        assert_eq!(d2.norm_type, NormType::RmsNorm);
+        assert_eq!(d2.activation_type, ActivationType::Relu2);
         assert_eq!(d2.default_context_length, None);
     }
 

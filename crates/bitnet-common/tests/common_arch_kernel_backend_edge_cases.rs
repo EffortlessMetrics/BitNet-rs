@@ -337,8 +337,8 @@ fn arch_registry_lookup_case_insensitive() {
 fn arch_registry_lookup_bitnet() {
     use bitnet_common::config::{ActivationType, NormType};
     let defaults = bitnet_common::arch_registry::ArchitectureRegistry::lookup("bitnet").unwrap();
-    assert_eq!(defaults.norm_type, NormType::LayerNorm);
-    assert_eq!(defaults.activation_type, ActivationType::Silu);
+    assert_eq!(defaults.norm_type, NormType::RmsNorm);
+    assert_eq!(defaults.activation_type, ActivationType::Relu2);
 }
 
 #[test]

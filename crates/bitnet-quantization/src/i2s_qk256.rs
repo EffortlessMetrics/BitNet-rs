@@ -3,35 +3,31 @@
 //! This module implements pure-Rust dequantization and GEMV for GGML's I2_S format:
 //! - Block size: 256 elements
 //! - Packed format: 64 bytes per block (2 bits/element, no embedded scales)
-//! - Code mapping: **VERIFIED** against GGML reference (ggml-quants.c:62)
+//! - Code mapping: **VERIFIED** against BitNet.cpp `dequantize_row_i2_s`
 //!
 //! ## Memory Layout
 //!
-//! Each block contains 256 elements packed into 64 bytes:
+//! Each block contains 256 elements packed into 64 bytes as two 128-value
+//! chunks. Within each chunk, 32 bytes store four 32-value bitplanes:
 //! ```text
-//! [byte 0: elem 0..3] [byte 1: elem 4..7] ... [byte 63: elem 252..255]
-//! ```
-//!
-//! Each byte packs 4 elements (2 bits each):
-//! ```text
-//! byte = elem0 | (elem1 << 2) | (elem2 << 4) | (elem3 << 6)
+//! byte gp = (elem[0*32 + gp] << 6)
+//!         | (elem[1*32 + gp] << 4)
+//!         | (elem[2*32 + gp] << 2)
+//!         |  elem[3*32 + gp]
 //! ```
 //!
 //! ## Code Mapping (VERIFIED)
 //!
-//! The 2-bit codes map to signed weights according to GGML's IQ2_S specification
-//! (verified in `crates/bitnet-ggml-ffi/csrc/ggml/src/ggml-quants.c:62`):
+//! The 2-bit codes map to ternary weights according to GGML's I2_S
+//! dequantization used by BitNet.cpp:
 //!
-//! - Code 0 → -2.0
-//! - Code 1 → -1.0
+//! - Code 0 → -1.0
+//! - Code 1 →  0.0
 //! - Code 2 → +1.0
-//! - Code 3 → +2.0
+//! - Code 3 →  0.0
 //!
-//! **Format variants:**
-//! - **GgmlQk256NoScale** (MS BitNet): No per-block scale, use LUT values directly
-//! - **Full GGML IQ2_S** (82B/block): Multiply LUT values by per-block FP16 scale `d`
-//!
-//! This implementation supports the "no-scale" variant used by MS BitNet GGUF models.
+//! This implementation supports the no-scale I2_S variant used by MS BitNet
+//! GGUF models.
 
 use anyhow::{Result, bail};
 use bitnet_qk256_layout_core::{
@@ -227,19 +223,18 @@ impl I2SQk256NoScale {
 
 /// Code-to-float lookup table
 ///
-/// **VERIFIED**: This mapping matches GGML's IQ2_S dequantization (ggml-quants.c:62).
-/// Reference: `const float qmap[4] = { -2.f, -1.f, 1.f, 2.f };`
+/// **VERIFIED**: This mapping matches BitNet.cpp's GGML I2_S dequantization.
+/// Reference: `const float map2bit[4] = { -1.0f, 0.0f, +1.0f, 0.0f };`
 ///
-/// For MS BitNet "GgmlQk256NoScale" format, these values are used directly
-/// (no per-block scale). For full GGML IQ2_S format (82B/block with FP16 scale),
-/// these would be multiplied by the scale factor.
+/// For MS BitNet I2_S QK256, these values are used directly with no per-block
+/// scale.
 #[inline]
 pub fn code_to_f32(code: u8) -> f32 {
     // SAFETY: code is masked to 0..=3 by caller
     debug_assert!(code < 4, "I2S_QK256: code must be 0..=3, got {}", code);
 
-    // Verified against GGML reference (crates/bitnet-ggml-ffi/csrc/ggml/src/ggml-quants.c:62)
-    const LUT: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
+    // Verified against BitNet.cpp's dequantize_row_i2_s.
+    const LUT: [f32; 4] = [-1.0, 0.0, 1.0, 0.0];
     LUT[code as usize]
 }
 
@@ -255,13 +250,18 @@ pub fn code_to_f32(code: u8) -> f32 {
 /// Panics if slice lengths don't match expected sizes (debug builds only).
 #[inline]
 pub fn unpack_qk256_block(qs64: &[u8; QK256_PACKED_BYTES], out_codes256: &mut [u8; QK256_BLOCK]) {
-    // Each byte contains 4 codes: bits [1:0], [3:2], [5:4], [7:6]
-    for (i, &b) in qs64.iter().enumerate() {
-        let base = i * 4;
-        out_codes256[base] = b & 0x03;
-        out_codes256[base + 1] = (b >> 2) & 0x03;
-        out_codes256[base + 2] = (b >> 4) & 0x03;
-        out_codes256[base + 3] = (b >> 6) & 0x03;
+    // BitNet.cpp I2_S stores each 128-value chunk as 32 bytes, where each byte
+    // carries one group position across four 32-value lanes, high bits first.
+    for chunk in 0..2 {
+        let byte_base = chunk * 32;
+        let elem_base = chunk * 128;
+        for gp in 0..32 {
+            let b = qs64[byte_base + gp];
+            out_codes256[elem_base + gp] = (b >> 6) & 0x03;
+            out_codes256[elem_base + 32 + gp] = (b >> 4) & 0x03;
+            out_codes256[elem_base + 64 + gp] = (b >> 2) & 0x03;
+            out_codes256[elem_base + 96 + gp] = b & 0x03;
+        }
     }
 }
 
@@ -418,10 +418,200 @@ fn gemv_qk256_scalar_checked(
     Ok(())
 }
 
+fn bitnet_nearest_int(fval: f32) -> i32 {
+    debug_assert!(fval.abs() <= 4_194_303.0);
+    let val = fval + 12_582_912.0;
+    let bits = i32::from_ne_bytes(val.to_ne_bytes());
+    (bits & 0x007f_ffff) - 0x0040_0000
+}
+
+fn quantize_row_i8_s_activation(x: &[f32], cols: usize) -> (Vec<i8>, f32, i32) {
+    let mut max = 0.00001f32;
+    for &value in x.iter().take(cols) {
+        max = max.max(value.abs());
+    }
+
+    let act_scale = 127.0 / max;
+    let mut act_sum = 0i32;
+    let mut q = Vec::with_capacity(cols);
+    for &value in x.iter().take(cols) {
+        let v = bitnet_nearest_int(value * act_scale).clamp(-128, 127);
+        act_sum += v;
+        q.push(v as i8);
+    }
+
+    (q, act_scale, act_sum)
+}
+
+#[inline]
+fn i2s_chunk_code(chunk32: &[u8], lane: usize, group_pos: usize) -> i16 {
+    debug_assert!(lane < 4);
+    debug_assert!(group_pos < 32);
+    let shift = 6 - (lane * 2);
+    ((chunk32[group_pos] >> shift) & 0x03) as i16
+}
+
+#[inline]
+fn i2s_i8_pair_product_sum(
+    chunk32: &[u8],
+    q: &[i8],
+    q_base: usize,
+    lane: usize,
+    pair: usize,
+) -> i16 {
+    let gp0 = pair * 2;
+    let gp1 = gp0 + 1;
+    let q0 = q[q_base + lane * 32 + gp0] as i16;
+    let q1 = q[q_base + lane * 32 + gp1] as i16;
+    i2s_chunk_code(chunk32, lane, gp0) * q0 + i2s_chunk_code(chunk32, lane, gp1) * q1
+}
+
+#[inline]
+fn i2s_i8_chunk_pair_sum(chunk32: &[u8], q: &[i8], q_base: usize, pair: usize) -> i16 {
+    // Mirror BitNet.cpp's AVX2 `_mm256_maddubs_epi16` + wrapping
+    // `_mm256_add_epi16` accumulation order. Pair products fit in i16; the
+    // accumulation across lanes/chunks intentionally wraps before widening.
+    let lanes01 = i2s_i8_pair_product_sum(chunk32, q, q_base, 0, pair)
+        .wrapping_add(i2s_i8_pair_product_sum(chunk32, q, q_base, 1, pair));
+    let lanes23 = i2s_i8_pair_product_sum(chunk32, q, q_base, 2, pair)
+        .wrapping_add(i2s_i8_pair_product_sum(chunk32, q, q_base, 3, pair));
+    lanes01.wrapping_add(lanes23)
+}
+
+fn gemv_qk256_row_bitnet_i8s_int_dot(qs_row: &[u8], q: &[i8], cols: usize) -> i32 {
+    const QK_I2_S_X86: usize = 128;
+    const CHUNKS_PER_ACCUM_GROUP: usize = 32;
+    const PAIR_LANES: usize = 16;
+
+    let full_chunks = cols / QK_I2_S_X86;
+    let mut int_dot = 0i32;
+    let mut chunk = 0usize;
+
+    while chunk < full_chunks {
+        let take = (full_chunks - chunk).min(CHUNKS_PER_ACCUM_GROUP);
+        let mut acc16 = [0i16; PAIR_LANES];
+
+        for chunk_offset in 0..take {
+            let chunk_index = chunk + chunk_offset;
+            let byte_base = chunk_index * 32;
+            let q_base = chunk_index * QK_I2_S_X86;
+            let chunk32 = &qs_row[byte_base..byte_base + 32];
+
+            for (pair, acc) in acc16.iter_mut().enumerate() {
+                *acc = acc.wrapping_add(i2s_i8_chunk_pair_sum(chunk32, q, q_base, pair));
+            }
+        }
+
+        int_dot += acc16.iter().map(|&value| value as i32).sum::<i32>();
+        chunk += take;
+    }
+
+    let tail_start = full_chunks * QK_I2_S_X86;
+    if tail_start < cols {
+        let mut codes = [0u8; QK256_BLOCK];
+        let byte_base = full_chunks * 32;
+        let block_base = byte_base - (byte_base % QK256_PACKED_BYTES);
+        let block: &[u8; QK256_PACKED_BYTES] = qs_row[block_base..block_base + QK256_PACKED_BYTES]
+            .try_into()
+            .expect("QK256: tail block must be 64 bytes");
+        unpack_qk256_block(block, &mut codes);
+        let code_offset = tail_start - (block_base / QK256_PACKED_BYTES) * QK256_BLOCK;
+        for j in tail_start..cols {
+            int_dot += (codes[code_offset + (j - tail_start)] as i32) * q[j] as i32;
+        }
+    }
+
+    int_dot
+}
+
+fn gemv_qk256_row_bitnet_i8s_scaled(
+    qs_row: &[u8],
+    q: &[i8],
+    cols: usize,
+    act_scale: f32,
+    act_sum: i32,
+    weight_scale: f32,
+) -> f32 {
+    let int_dot = gemv_qk256_row_bitnet_i8s_int_dot(qs_row, q, cols);
+    ((int_dot - act_sum) as f32 / act_scale) * weight_scale
+}
+
+fn gemv_qk256_bitnet_i8s_scaled_checked(
+    qs_data: &[u8],
+    x: &[f32],
+    y_out: &mut [f32],
+    rows: usize,
+    cols: usize,
+    row_stride_bytes: usize,
+    weight_scale: f32,
+) -> Result<()> {
+    if !weight_scale.is_finite() {
+        bail!("I2S_QK256: weight scale is not finite: {}", weight_scale);
+    }
+    if y_out.len() != rows {
+        bail!("I2S_QK256: y_out length {} != rows {}", y_out.len(), rows);
+    }
+    if x.len() < cols {
+        bail!("I2S_QK256: x length {} < cols {}", x.len(), cols);
+    }
+
+    let expected_total = rows * row_stride_bytes;
+    if qs_data.len() < expected_total {
+        bail!("I2S_QK256: data too short: {} < {}", qs_data.len(), expected_total);
+    }
+
+    let (q, act_scale, act_sum) = quantize_row_i8_s_activation(x, cols);
+
+    for (row, output) in y_out.iter_mut().enumerate().take(rows) {
+        let start = row * row_stride_bytes;
+        let end = start + row_stride_bytes;
+        let row_bytes = &qs_data[start..end];
+        *output =
+            gemv_qk256_row_bitnet_i8s_scaled(row_bytes, &q, cols, act_scale, act_sum, weight_scale);
+    }
+
+    Ok(())
+}
+
+/// Multi-row GEMV using BitNet.cpp's I2_S × I8_S matmul semantics.
+///
+/// BitNet.cpp does not compute QK256 by dequantizing weights and multiplying by
+/// raw F32 activations. It first quantizes each activation row to I8_S, records
+/// the activation scale and sum, computes an integer dot over packed I2_S codes,
+/// then applies `(dot - act_sum) / act_scale * weight_scale`.
+pub fn gemv_qk256_bitnet_i8s_scaled(
+    qs_data: &[u8],
+    x: &[f32],
+    y_out: &mut [f32],
+    rows: usize,
+    cols: usize,
+    row_stride_bytes: usize,
+    weight_scale: f32,
+) -> Result<()> {
+    let expected_stride = qk256_row_stride_bytes(cols)?;
+    if row_stride_bytes != expected_stride {
+        bail!(
+            "I2S_QK256: row_stride_bytes {} != expected {} for cols={}",
+            row_stride_bytes,
+            expected_stride,
+            cols
+        );
+    }
+    gemv_qk256_bitnet_i8s_scaled_checked(
+        qs_data,
+        x,
+        y_out,
+        rows,
+        cols,
+        row_stride_bytes,
+        weight_scale,
+    )
+}
+
 /// Canonical scalar QK256 GEMV oracle for decode: `y = A x`.
 ///
-/// This path uses the GGML I2_S no-scale mapping from [`code_to_f32`] and the
-/// canonical QK256 packed layout. It never dispatches to SIMD.
+/// This path mirrors BitNet.cpp `dequantize_row_i2_s` via [`code_to_f32`] and
+/// the grouped QK256 packed layout. It never dispatches to SIMD.
 pub fn qk256_gemv_scalar(
     qs_data: &[u8],
     x: &[f32],
@@ -570,7 +760,14 @@ mod tests {
         let mut packed = vec![0u8; layout.row_stride_bytes];
         for (i, &code) in codes.iter().enumerate().take(cols) {
             assert!(code < 4, "test code must be 0..=3");
-            packed[i / 4] |= code << ((i % 4) * 2);
+            let block = i / QK256_BLOCK;
+            let within = i % QK256_BLOCK;
+            let chunk = within / 128;
+            let chunk_pos = within % 128;
+            let lane = chunk_pos / 32;
+            let gp = chunk_pos % 32;
+            let byte_idx = block * QK256_PACKED_BYTES + chunk * 32 + gp;
+            packed[byte_idx] |= code << (6 - lane * 2);
         }
         packed
     }
@@ -587,10 +784,10 @@ mod tests {
 
     #[test]
     fn unpack_block_smoke() {
-        // Pattern: 0b_11_10_01_00 repeated
+        // Pattern: BitNet.cpp grouped lanes [0, 1, 2, 3].
         let mut qs = [0u8; QK256_PACKED_BYTES];
-        for (i, b) in qs.iter_mut().enumerate() {
-            *b = 0b_11_10_01_00u8.wrapping_add(i as u8 & 0x03);
+        for b in &mut qs {
+            *b = 0b_00_01_10_11;
         }
         let mut codes = [0u8; QK256_BLOCK];
         unpack_qk256_block(&qs, &mut codes);
@@ -600,9 +797,9 @@ mod tests {
 
         // Verify first few codes match pattern
         assert_eq!(codes[0], 0);
-        assert_eq!(codes[1], 1);
-        assert_eq!(codes[2], 2);
-        assert_eq!(codes[3], 3);
+        assert_eq!(codes[32], 1);
+        assert_eq!(codes[64], 2);
+        assert_eq!(codes[96], 3);
     }
 
     #[test]
@@ -652,8 +849,8 @@ mod tests {
         let cols = 256usize;
         let row_stride_bytes = QK256_PACKED_BYTES;
 
-        // All codes = 1 (→ -1.0)
-        let qs_data = vec![0x55u8; rows * row_stride_bytes]; // 0b_01_01_01_01
+        // All codes = 0 (→ -1.0)
+        let qs_data = vec![0x00u8; rows * row_stride_bytes]; // 0b_00_00_00_00
 
         let x: Vec<f32> = (0..cols).map(|i| i as f32).collect();
         let mut y_out = vec![0.0f32; rows];
@@ -661,7 +858,7 @@ mod tests {
         gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, row_stride_bytes)
             .expect("gemv_qk256 should succeed");
 
-        // Code 1 → -1.0, so each row = -sum(x)
+        // Code 0 → -1.0, so each row = -sum(x)
         let expected: f32 = -x.iter().sum::<f32>();
         for (i, &val) in y_out.iter().enumerate() {
             assert!(
@@ -676,11 +873,11 @@ mod tests {
 
     #[test]
     fn code_to_f32_lut() {
-        // Verify LUT values (verified against GGML ggml-quants.c:62)
-        assert_eq!(code_to_f32(0), -2.0);
-        assert_eq!(code_to_f32(1), -1.0);
+        // Verify LUT values against BitNet.cpp dequantize_row_i2_s.
+        assert_eq!(code_to_f32(0), -1.0);
+        assert_eq!(code_to_f32(1), 0.0);
         assert_eq!(code_to_f32(2), 1.0);
-        assert_eq!(code_to_f32(3), 2.0);
+        assert_eq!(code_to_f32(3), 0.0);
     }
 
     #[test]
@@ -795,6 +992,30 @@ mod tests {
         for got in y_out {
             assert!((got - expected).abs() < 1e-3, "expected {expected}, got {got}");
         }
+        Ok(())
+    }
+
+    #[test]
+    fn gemv_qk256_bitnet_i8s_scaled_matches_simple_integer_formula() -> Result<()> {
+        let rows = 1usize;
+        let cols = 2usize;
+        let layout = Qk256Layout::from_rows_cols(rows, cols)?;
+        let qs_data = pack_codes_for_cols(&[2, 2], cols);
+        let x = vec![1.0f32, 1.0];
+        let mut y_out = vec![0.0f32; rows];
+
+        gemv_qk256_bitnet_i8s_scaled(
+            &qs_data,
+            &x,
+            &mut y_out,
+            rows,
+            cols,
+            layout.row_stride_bytes,
+            0.5,
+        )?;
+
+        assert!((y_out[0] - 1.0).abs() < 1e-6, "got {}", y_out[0]);
+
         Ok(())
     }
 
@@ -973,43 +1194,35 @@ mod tests {
     /// Test (A): LUT Sanity (NoScale)
     ///
     /// Tests feature spec: i2s-dual-flavor.md#code-mapping
-    /// Verifies that the code-to-float lookup table matches GGML reference:
-    /// - Code 0 → -2.0
-    /// - Code 1 → -1.0
+    /// Verifies that the code-to-float lookup table matches BitNet.cpp I2_S:
+    /// - Code 0 → -1.0
+    /// - Code 1 →  0.0
     /// - Code 2 → +1.0
-    /// - Code 3 → +2.0
+    /// - Code 3 →  0.0
     #[test]
     fn qk256_lut_basic() {
-        assert_eq!(code_to_f32(0), -2.0, "Code 0 should map to -2.0");
-        assert_eq!(code_to_f32(1), -1.0, "Code 1 should map to -1.0");
+        assert_eq!(code_to_f32(0), -1.0, "Code 0 should map to -1.0");
+        assert_eq!(code_to_f32(1), 0.0, "Code 1 should map to 0.0");
         assert_eq!(code_to_f32(2), 1.0, "Code 2 should map to +1.0");
-        assert_eq!(code_to_f32(3), 2.0, "Code 3 should map to +2.0");
+        assert_eq!(code_to_f32(3), 0.0, "Code 3 should map to 0.0");
     }
 
     /// Test (B): Block Decode Golden (64B → 256 f32)
     ///
     /// Tests feature spec: i2s-dual-flavor.md#memory-layout
-    /// Pack 256 two-bit codes (LSB-first) cycling 0..3 into 64 bytes.
+    /// Pack 256 two-bit codes in BitNet.cpp grouped layout cycling 0..3.
     /// Decode using the unpack path and verify:
     /// - RMS in range [0.1, 5.0]
-    /// - First 16 values contain the set {-2, -1, 1, 2}
+    /// - First 16 values contain only the expected ternary set {-1, 0, 1}
     #[test]
     fn qk256_block_decode_golden() {
-        // Pack pattern: 0,1,2,3,0,1,2,3,... (cycling through all codes)
-        let mut qs64 = [0u8; QK256_PACKED_BYTES];
-        for (i, byte) in qs64.iter_mut().enumerate() {
-            // Each byte packs 4 codes: elem0 | (elem1 << 2) | (elem2 << 4) | (elem3 << 6)
-            let base = i * 4;
-            let code0 = (base % 4) as u8;
-            let code1 = ((base + 1) % 4) as u8;
-            let code2 = ((base + 2) % 4) as u8;
-            let code3 = ((base + 3) % 4) as u8;
-            *byte = code0 | (code1 << 2) | (code2 << 4) | (code3 << 6);
-        }
+        let source_codes: Vec<u8> = (0..QK256_BLOCK).map(|i| (i % 4) as u8).collect();
+        let packed = pack_codes_for_cols(&source_codes, QK256_BLOCK);
+        let qs64: &[u8; QK256_PACKED_BYTES] = packed[..QK256_PACKED_BYTES].try_into().unwrap();
 
         // Unpack block
         let mut codes = [0u8; QK256_BLOCK];
-        unpack_qk256_block(&qs64, &mut codes);
+        unpack_qk256_block(qs64, &mut codes);
 
         // Verify codes cycle 0..3
         for (i, &code) in codes.iter().enumerate() {
@@ -1031,15 +1244,14 @@ mod tests {
         let sum_sq: f32 = weights.iter().map(|x| x * x).sum();
         let rms = (sum_sq / QK256_BLOCK as f32).sqrt();
 
-        // Verify RMS is reasonable (should be ~1.58 for uniform {-2,-1,1,2})
+        // Verify RMS is reasonable (sqrt(0.5) for uniform {-1,0,1,0})
         assert!((0.1..=5.0).contains(&rms), "RMS {} should be in range [0.1, 5.0]", rms);
 
-        // Verify first 16 values contain all expected codes
+        // Verify first 16 values stay inside the BitNet I2_S ternary values.
         let first_16: Vec<f32> = weights[..16].to_vec();
-        assert!(first_16.contains(&-2.0), "First 16 values should contain -2.0");
         assert!(first_16.contains(&-1.0), "First 16 values should contain -1.0");
+        assert!(first_16.contains(&0.0), "First 16 values should contain 0.0");
         assert!(first_16.contains(&1.0), "First 16 values should contain 1.0");
-        assert!(first_16.contains(&2.0), "First 16 values should contain 2.0");
     }
 
     /// Test (C): Tiny GEMV E2E (1×256 × 256×256)

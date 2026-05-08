@@ -3,7 +3,7 @@
 //! These tests cover invariants not already addressed in `property_tests.rs`:
 //!
 //! 1. **QK256 unpack round-trip** – pack→unpack recovers original 2-bit codes.
-//! 2. **QK256 code_to_f32 range** – all valid codes map to {-2, -1, 1, 2}.
+//! 2. **QK256 code_to_f32 range** – all valid codes map to {-1, 0, 1}.
 //! 3. **Quantize-dequantize sign preservation** – non-zero inputs preserve sign.
 //! 4. **Zero vector quantizes to all-zero output** (I2S).
 //! 5. **validate_numerical_input accepts all-finite data**.
@@ -26,9 +26,10 @@ use proptest::prelude::*;
 // ── QK256 unpack round-trip ─────────────────────────────────────────────────
 
 proptest! {
-    /// Packing 256 2-bit codes into 64 bytes and unpacking recovers the originals.
+    /// Unpacking and re-packing the BitNet.cpp grouped QK256 layout is stable.
     ///
-    /// Each byte stores 4 codes at bit offsets [1:0], [3:2], [5:4], [7:6].
+    /// Each byte stores one group position across four 32-value lanes:
+    /// [7:6], [5:4], [3:2], [1:0].
     /// This property ensures the bit-shift arithmetic is self-consistent.
     #[test]
     fn prop_qk256_unpack_recovers_packed_codes(
@@ -43,13 +44,14 @@ proptest! {
             prop_assert!(c <= 3, "code[{}] = {} is out of range 0..=3", i, c);
         }
 
-        // Re-pack and compare: byte = c0 | (c1<<2) | (c2<<4) | (c3<<6).
         for (byte_idx, &original_byte) in qs64.iter().enumerate() {
-            let base = byte_idx * 4;
-            let repacked = codes[base]
-                | (codes[base + 1] << 2)
-                | (codes[base + 2] << 4)
-                | (codes[base + 3] << 6);
+            let chunk = byte_idx / 32;
+            let gp = byte_idx % 32;
+            let base = chunk * 128;
+            let repacked = (codes[base + gp] << 6)
+                | (codes[base + 32 + gp] << 4)
+                | (codes[base + 64 + gp] << 2)
+                | codes[base + 96 + gp];
             prop_assert_eq!(
                 repacked, original_byte,
                 "re-packed byte[{}] = {:#04x} != original {:#04x}",
@@ -62,28 +64,21 @@ proptest! {
 // ── QK256 code_to_f32 range ─────────────────────────────────────────────────
 
 proptest! {
-    /// `code_to_f32` maps every valid code (0..=3) to exactly one of {-2, -1, 1, 2}.
+    /// `code_to_f32` maps every valid code (0..=3) to exactly one of {-1, 0, 1}.
     #[test]
     fn prop_code_to_f32_maps_to_expected_set(code in 0u8..=3u8) {
         let v = code_to_f32(code);
-        let valid = [-2.0_f32, -1.0, 1.0, 2.0];
+        let valid = [-1.0_f32, 0.0, 1.0];
         prop_assert!(
             valid.contains(&v),
             "code_to_f32({}) = {}; expected one of {:?}", code, v, valid
         );
     }
 
-    /// `code_to_f32` is injective: distinct codes produce distinct floats.
+    /// BitNet.cpp I2_S maps both zero-like codes to 0.0.
     #[test]
-    fn prop_code_to_f32_injective(a in 0u8..=3u8, b in 0u8..=3u8) {
-        if a != b {
-            let va = code_to_f32(a);
-            let vb = code_to_f32(b);
-            prop_assert!(
-                va != vb,
-                "codes {} and {} must map to different floats, both gave {}", a, b, va
-            );
-        }
+    fn prop_code_to_f32_zero_codes_are_zero(code in prop_oneof![Just(1u8), Just(3u8)]) {
+        prop_assert_eq!(code_to_f32(code), 0.0);
     }
 }
 

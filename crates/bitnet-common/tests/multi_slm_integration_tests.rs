@@ -72,11 +72,11 @@ fn qwen25_gets_32k_context() {
 }
 
 #[test]
-fn bitnet_uses_layernorm_silu() {
+fn bitnet_uses_rmsnorm_relu2() {
     let mut cfg = ModelConfig::default();
     cfg.apply_architecture_defaults("bitnet");
-    assert_eq!(cfg.norm_type, NormType::LayerNorm);
-    assert_eq!(cfg.activation_type, ActivationType::Silu);
+    assert_eq!(cfg.norm_type, NormType::RmsNorm);
+    assert_eq!(cfg.activation_type, ActivationType::Relu2);
 }
 
 #[test]

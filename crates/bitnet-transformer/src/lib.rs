@@ -1,6 +1,9 @@
-use bitnet_common::{BitNetConfig, BitNetError, Result, config::NormType};
+use bitnet_common::{
+    BitNetConfig, BitNetError, Result,
+    config::{ActivationType, NormType},
+};
 use bitnet_qk256_dispatch::{
-    forward_qk256, record_bitnet_linear_cpu_fallback, record_bitnet_linear_unsupported,
+    forward_qk256_with_scale, record_bitnet_linear_cpu_fallback, record_bitnet_linear_unsupported,
     strict_cuda_bitnet_backend_requested,
 };
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
@@ -256,8 +259,8 @@ fn norm_with_optional_bias(
 
             // No bias → LayerNorm without bias (but WITH mean subtraction)
             // IMPORTANT: Use LayerNorm::new_no_bias (remove_mean=true) NOT rms_norm (remove_mean=false)
-            // because the gamma weights in GGUF are calibrated for LayerNorm semantics (mean subtraction).
-            // bitnet.cpp uses full LayerNorm even when bias is absent.
+            // because these gamma weights are calibrated for LayerNorm semantics
+            // (mean subtraction). RMSNorm callers return earlier in this helper.
             tracing::debug!(
                 "Bias tensor missing for norm layer; using LayerNorm without bias (mean subtraction enabled) [{}]",
                 normalized_shape
@@ -266,6 +269,57 @@ fn norm_with_optional_bias(
         }
     }
 }
+
+fn optional_layer_norm_with_optional_bias(
+    norm_type: NormType,
+    normalized_shape: usize,
+    eps: f64,
+    vb: VarBuilder,
+) -> candle_core::Result<Option<LayerNorm>> {
+    if !vb.contains_tensor("weight") {
+        return Ok(None);
+    }
+
+    Ok(Some(norm_with_optional_bias(norm_type, normalized_shape, eps, vb)?))
+}
+
+fn qk256_scale_key(qk256_key: &str) -> String {
+    if let Some(base) = qk256_key.strip_suffix(".qk256_qs") {
+        format!("{base}.qk256_scale")
+    } else {
+        format!("{qk256_key}.qk256_scale")
+    }
+}
+
+fn qk256_inline_scale(
+    raw_tensors: &std::collections::HashMap<String, Tensor>,
+    qk256_key: &str,
+) -> Result<Option<f32>> {
+    let scale_key = qk256_scale_key(qk256_key);
+    let Some(scale_tensor) = raw_tensors.get(&scale_key) else {
+        return Ok(None);
+    };
+
+    let scale_values = scale_tensor.flatten_all()?.to_vec1::<f32>().map_err(|e| {
+        BitNetError::Validation(format!("failed to read QK256 inline scale {scale_key}: {e}"))
+    })?;
+    let [scale] = scale_values.as_slice() else {
+        return Err(BitNetError::Validation(format!(
+            "QK256 inline scale {scale_key} must contain exactly one value, got {}",
+            scale_values.len()
+        )));
+    };
+    let scale = *scale;
+    if !scale.is_finite() {
+        return Err(BitNetError::Validation(format!(
+            "QK256 inline scale {scale_key} is not finite: {scale}"
+        )));
+    }
+
+    Ok(Some(scale))
+}
+
+const TIED_EMBED_QK256_KEY: &str = "embed_tokens.weight.qk256_qs";
 
 /// Rotary Position Embedding
 pub struct RotaryEmbedding {
@@ -362,6 +416,7 @@ pub struct MultiHeadAttention {
     k_proj: Linear,
     v_proj: Linear,
     o_proj: Linear,
+    sub_layernorm: Option<LayerNorm>,
     rope: Option<RotaryEmbedding>,
     layer_idx: usize, // Layer index for QK256 weight name generation
 }
@@ -419,6 +474,12 @@ impl MultiHeadAttention {
         let k_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("k_proj"))?;
         let v_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("v_proj"))?;
         let o_proj = linear_with_optional_bias(q_out, hidden_size, vb.pp("o_proj"))?;
+        let sub_layernorm = optional_layer_norm_with_optional_bias(
+            config.model.norm_type,
+            q_out,
+            eps_from_config(config),
+            vb.pp("sub_layernorm"),
+        )?;
 
         let rope = RotaryEmbedding::new(
             head_dim,
@@ -437,6 +498,7 @@ impl MultiHeadAttention {
             k_proj,
             v_proj,
             o_proj,
+            sub_layernorm,
             rope,
             layer_idx,
         })
@@ -733,6 +795,15 @@ impl MultiHeadAttention {
             seq_len,
             self.n_heads * self.head_dim,
         ])?;
+        let attn_output = if let Some(sub_layernorm) = &self.sub_layernorm {
+            let normalized = sub_layernorm.forward(&attn_output)?;
+            if qwen_trace_layer_enabled(self.layer_idx) {
+                qwen_trace_tensor("attention.sub_layernorm", Some(self.layer_idx), &normalized)?;
+            }
+            normalized
+        } else {
+            attn_output
+        };
 
         let projected = self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)?;
         if qwen_trace_layer_enabled(self.layer_idx) {
@@ -757,7 +828,8 @@ impl MultiHeadAttention {
         // Check for QK256 data
         if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
             tracing::debug!("Using QK256 kernel for {}", qk256_key);
-            return forward_qk256(input, qk256_tensor, &qk256_key);
+            let inline_scale = qk256_inline_scale(raw_tensors, &qk256_key)?;
+            return forward_qk256_with_scale(input, qk256_tensor, &qk256_key, inline_scale);
         }
 
         if strict_cuda_bitnet_backend_requested() {
@@ -816,6 +888,8 @@ pub struct FeedForward {
     gate_proj: Linear,
     up_proj: Linear,
     down_proj: Linear,
+    sub_layernorm: Option<LayerNorm>,
+    activation_type: ActivationType,
     layer_idx: usize, // Layer index for QK256 weight name generation
 }
 
@@ -836,6 +910,13 @@ impl FeedForward {
                 hidden_size,
                 vb.pp("down_proj"),
             )?,
+            sub_layernorm: optional_layer_norm_with_optional_bias(
+                config.model.norm_type,
+                intermediate_size,
+                eps_from_config(config),
+                vb.pp("sub_layernorm"),
+            )?,
+            activation_type: config.model.activation_type,
             layer_idx,
         })
     }
@@ -857,9 +938,9 @@ impl FeedForward {
             tracing::debug!("MLP ||u|| (gate_proj): {:.6e}", u_norm);
         }
 
-        let gate = candle_nn::ops::silu(&gate)?;
+        let gate = self.apply_activation(&gate)?;
         if qwen_trace_layer_enabled(self.layer_idx) {
-            qwen_trace_tensor("mlp.gate_silu", Some(self.layer_idx), &gate)?;
+            qwen_trace_tensor("mlp.gate_activation", Some(self.layer_idx), &gate)?;
         }
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
@@ -883,6 +964,15 @@ impl FeedForward {
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("mlp.gated_product", Some(self.layer_idx), &hidden)?;
         }
+        let hidden = if let Some(sub_layernorm) = &self.sub_layernorm {
+            let normalized = sub_layernorm.forward(&hidden)?;
+            if qwen_trace_layer_enabled(self.layer_idx) {
+                qwen_trace_tensor("mlp.sub_layernorm", Some(self.layer_idx), &normalized)?;
+            }
+            normalized
+        } else {
+            hidden
+        };
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(prod_norm) = hidden.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -904,6 +994,14 @@ impl FeedForward {
         Ok(output)
     }
 
+    fn apply_activation(&self, input: &Tensor) -> Result<Tensor> {
+        match self.activation_type {
+            ActivationType::Silu => input.silu().map_err(BitNetError::from),
+            ActivationType::Relu2 => input.relu()?.sqr().map_err(BitNetError::from),
+            ActivationType::Gelu => input.gelu_erf().map_err(BitNetError::from),
+        }
+    }
+
     /// Apply linear transformation with QK256 dispatch
     fn apply_linear(
         &self,
@@ -920,7 +1018,8 @@ impl FeedForward {
         // Check for QK256 data
         if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
             tracing::debug!("Using QK256 kernel for {}", qk256_key);
-            return forward_qk256(input, qk256_tensor, &qk256_key);
+            let inline_scale = qk256_inline_scale(raw_tensors, &qk256_key)?;
+            return forward_qk256_with_scale(input, qk256_tensor, &qk256_key, inline_scale);
         }
 
         if strict_cuda_bitnet_backend_requested() {
@@ -954,7 +1053,7 @@ impl TransformerBlock {
     pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         // PATCH 1: Use RMSNorm epsilon from config header for ALL norms (per-layer + final)
-        let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
+        let eps = eps_from_config(config);
 
         tracing::debug!("TransformerBlock using RMSNorm eps={} (from header)", eps);
 
@@ -1146,6 +1245,10 @@ impl TransformerBlock {
 
         Ok(x)
     }
+}
+
+fn eps_from_config(config: &BitNetConfig) -> f64 {
+    config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5)
 }
 
 /// KV Cache for a single layer
@@ -1649,15 +1752,17 @@ impl TransformerModel {
 
     pub fn logits(&self, hidden: &Tensor) -> Result<Tensor> {
         let vocab_size = self.config.model.vocab_size;
+        let has_tied_qk256_output = self.raw_tensors.contains_key(TIED_EMBED_QK256_KEY);
         qwen_trace_tensor("lm_head.input_hidden", None, hidden)?;
         qwen_trace_event(
             "lm_head.metadata",
             &format!(
-                "\"lm_head_present\":{},\"lm_head_transposed\":{},\"embed_transposed\":{},\"has_cached_tied_weight\":{}",
+                "\"lm_head_present\":{},\"lm_head_transposed\":{},\"embed_transposed\":{},\"has_cached_tied_weight\":{},\"has_tied_qk256_output\":{}",
                 self.lm_head.is_some(),
                 self.lm_head_transposed,
                 self.embed_transposed,
-                self.embed_tied_weight.is_some()
+                self.embed_tied_weight.is_some(),
+                has_tied_qk256_output
             ),
         );
 
@@ -1681,6 +1786,20 @@ impl TransformerModel {
                     // Use dedicated LM head if available
                     let logits = lm_head.forward(hidden)?; // [B, V]
                     logits.reshape(&[b, vocab_size])?
+                } else if let Some(qk256_tensor) = self.raw_tensors.get(TIED_EMBED_QK256_KEY) {
+                    static LOGGED_QK256_TIED: std::sync::Once = std::sync::Once::new();
+                    LOGGED_QK256_TIED.call_once(|| {
+                        tracing::info!(
+                            "LM head tied to raw QK256 token embeddings for BitNet.cpp parity"
+                        );
+                    });
+                    let inline_scale = qk256_inline_scale(&self.raw_tensors, TIED_EMBED_QK256_KEY)?;
+                    forward_qk256_with_scale(
+                        hidden,
+                        qk256_tensor,
+                        TIED_EMBED_QK256_KEY,
+                        inline_scale,
+                    )?
                 } else {
                     // Tied weights: use embedding matrix
                     static LOGGED: std::sync::Once = std::sync::Once::new();
@@ -1790,6 +1909,21 @@ impl TransformerModel {
                     let hidden_2d = hidden.reshape(&[b * t, h])?;
                     let logits_2d = lm_head.forward(&hidden_2d)?;
                     Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                } else if let Some(qk256_tensor) = self.raw_tensors.get(TIED_EMBED_QK256_KEY) {
+                    static LOGGED_QK256_TIED: std::sync::Once = std::sync::Once::new();
+                    LOGGED_QK256_TIED.call_once(|| {
+                        tracing::info!(
+                            "LM head tied to raw QK256 token embeddings for BitNet.cpp parity"
+                        );
+                    });
+                    let inline_scale = qk256_inline_scale(&self.raw_tensors, TIED_EMBED_QK256_KEY)?;
+                    let logits = forward_qk256_with_scale(
+                        hidden,
+                        qk256_tensor,
+                        TIED_EMBED_QK256_KEY,
+                        inline_scale,
+                    )?;
+                    Ok(logits.reshape(&[b, t, vocab_size])?)
                 } else {
                     // Tied weights: use embedding matrix
                     static LOGGED: std::sync::Once = std::sync::Once::new();
@@ -1826,7 +1960,10 @@ impl TransformerModel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bitnet_common::config::ModelConfig;
     use candle_nn::RmsNorm;
+    use serial_test::serial;
+    use std::collections::HashMap;
 
     /// Helper to compute RMS (root mean square) of a tensor
     fn compute_rms(tensor: &Tensor) -> candle_core::Result<f64> {
@@ -1934,6 +2071,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_layer_norm_with_optional_bias() -> candle_core::Result<()> {
         // Test layer_norm_with_optional_bias helper with no-bias LayerNorm path
         let device = Device::Cpu;
@@ -1973,6 +2111,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_layer_norm_requires_bias_when_guard_enabled() -> candle_core::Result<()> {
         let device = Device::Cpu;
         let hidden_size = 64;
@@ -1994,6 +2133,189 @@ mod tests {
         assert!(
             err.to_string().contains("LayerNorm bias tensor is required"),
             "unexpected error: {err}"
+        );
+
+        Ok(())
+    }
+
+    fn tiny_bitnet_config() -> BitNetConfig {
+        BitNetConfig {
+            model: ModelConfig {
+                hidden_size: 2,
+                vocab_size: 8,
+                num_heads: 1,
+                num_key_value_heads: 1,
+                num_layers: 1,
+                intermediate_size: 2,
+                max_position_embeddings: 8,
+                rms_norm_eps: Some(1e-5),
+                norm_type: NormType::LayerNorm,
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+
+    fn identity_2(device: &Device) -> candle_core::Result<Tensor> {
+        Tensor::from_vec(vec![1.0f32, 0.0, 0.0, 1.0], &[2, 2], device)
+    }
+
+    #[test]
+    #[serial]
+    fn attention_applies_bitnet_sub_layernorm_before_output_projection() -> Result<()> {
+        let device = Device::Cpu;
+        let config = tiny_bitnet_config();
+        let mut tensors = HashMap::new();
+        for name in ["q_proj.weight", "k_proj.weight", "v_proj.weight", "o_proj.weight"] {
+            tensors.insert(name.to_string(), identity_2(&device)?);
+        }
+        tensors.insert("sub_layernorm.weight".to_string(), Tensor::ones(2, DType::F32, &device)?);
+        tensors.insert("sub_layernorm.bias".to_string(), Tensor::zeros(2, DType::F32, &device)?);
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let attention = MultiHeadAttention::new(&config, vb, 0)?;
+        let x = Tensor::from_vec(vec![1.0f32, 3.0], &[1, 1, 2], &device)?;
+        let output = attention.forward(&x, None, &HashMap::new())?;
+        let values: Vec<f32> = output.flatten_all()?.to_vec1()?;
+
+        assert!(
+            values[0] < -0.99 && values[0] > -1.01,
+            "attention sub-layernorm should center first value near -1, got {}",
+            values[0]
+        );
+        assert!(
+            values[1] > 0.99 && values[1] < 1.01,
+            "attention sub-layernorm should center second value near 1, got {}",
+            values[1]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn feed_forward_applies_bitnet_sub_layernorm_before_down_projection() -> Result<()> {
+        let device = Device::Cpu;
+        let config = tiny_bitnet_config();
+        let mut tensors = HashMap::new();
+        for name in ["gate_proj.weight", "up_proj.weight", "down_proj.weight"] {
+            tensors.insert(name.to_string(), identity_2(&device)?);
+        }
+        tensors.insert("sub_layernorm.weight".to_string(), Tensor::ones(2, DType::F32, &device)?);
+        tensors.insert("sub_layernorm.bias".to_string(), Tensor::zeros(2, DType::F32, &device)?);
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let feed_forward = FeedForward::new(&config, vb, 0)?;
+        let x = Tensor::from_vec(vec![1.0f32, 2.0], &[1, 1, 2], &device)?;
+        let output = feed_forward.forward(&x, &HashMap::new())?;
+        let values: Vec<f32> = output.flatten_all()?.to_vec1()?;
+
+        assert!(
+            values[0] < -0.99 && values[0] > -1.01,
+            "feed-forward sub-layernorm should center first value near -1, got {}",
+            values[0]
+        );
+        assert!(
+            values[1] > 0.99 && values[1] < 1.01,
+            "feed-forward sub-layernorm should center second value near 1, got {}",
+            values[1]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn feed_forward_uses_relu2_activation_when_configured() -> Result<()> {
+        let device = Device::Cpu;
+        let mut config = tiny_bitnet_config();
+        config.model.activation_type = ActivationType::Relu2;
+        let mut tensors = HashMap::new();
+        for name in ["gate_proj.weight", "up_proj.weight", "down_proj.weight"] {
+            tensors.insert(name.to_string(), identity_2(&device)?);
+        }
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let feed_forward = FeedForward::new(&config, vb, 0)?;
+        let x = Tensor::from_vec(vec![1.0f32, 2.0], &[1, 1, 2], &device)?;
+        let output = feed_forward.forward(&x, &HashMap::new())?;
+        let values: Vec<f32> = output.flatten_all()?.to_vec1()?;
+
+        assert!(
+            (values[0] - 1.0).abs() < 1e-5,
+            "relu2 gate should produce first output 1, got {}",
+            values[0]
+        );
+        assert!(
+            (values[1] - 8.0).abs() < 1e-5,
+            "relu2 gate should square ReLU before multiplying by up projection, got {}",
+            values[1]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn qk256_inline_scale_reads_sibling_raw_tensor() -> Result<()> {
+        let device = Device::Cpu;
+        let mut raw_tensors = HashMap::new();
+        raw_tensors.insert(
+            "layers.0.attention.q_proj.weight.qk256_scale".to_string(),
+            Tensor::from_vec(vec![0.25f32], &[1], &device)?,
+        );
+
+        let scale = qk256_inline_scale(&raw_tensors, "layers.0.attention.q_proj.weight.qk256_qs")?;
+
+        assert_eq!(scale, Some(0.25));
+
+        Ok(())
+    }
+
+    #[test]
+    fn logits_prefer_raw_qk256_tied_embeddings_when_present() -> Result<()> {
+        let device = Device::Cpu;
+        let mut config = BitNetConfig::default();
+        config.model.hidden_size = 256;
+        config.model.vocab_size = 2;
+        config.model.num_layers = 0;
+        config.model.num_heads = 1;
+        config.model.num_key_value_heads = 1;
+        config.model.intermediate_size = 256;
+        config.model.rms_norm_eps = Some(1e-5);
+        config.model.norm_type = NormType::RmsNorm;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::zeros((2, 256), DType::F32, &device)?,
+        );
+        tensors.insert("final_norm.weight".to_string(), Tensor::ones(256, DType::F32, &device)?);
+
+        let mut raw_tensors = HashMap::new();
+        let mut packed = vec![0x00u8; 64];
+        packed.extend(std::iter::repeat_n(0xAAu8, 64));
+        raw_tensors.insert(
+            TIED_EMBED_QK256_KEY.to_string(),
+            Tensor::from_raw_buffer(&packed, DType::U8, &[2, 64], &device)?,
+        );
+        raw_tensors.insert(
+            "embed_tokens.weight.qk256_scale".to_string(),
+            Tensor::from_vec(vec![1.0f32], &[1], &device)?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors(config, vb, raw_tensors)?;
+        let hidden = Tensor::ones((1, 256), DType::F32, &device)?;
+        let logits = model.logits(&hidden)?.to_vec2::<f32>()?;
+
+        assert!(
+            logits[0][0] < -200.0,
+            "first raw QK256 tied logit should come from packed code-0 row, got {}",
+            logits[0][0]
+        );
+        assert!(
+            logits[0][1] > 200.0,
+            "second raw QK256 tied logit should come from packed code-2 row, got {}",
+            logits[0][1]
         );
 
         Ok(())
