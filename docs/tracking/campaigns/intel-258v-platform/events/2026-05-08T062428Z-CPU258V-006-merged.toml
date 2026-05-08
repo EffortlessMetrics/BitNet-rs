@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T06:24:28Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-006"
+event = "merged"
+pr = 4001
+branch = "codex/intel-258v-platform/CPU258V-006-warm-phase"
+merge_sha = "7335e8c93d832cea6b006fa8132a3f327e12d2c9"
+summary = "Merged #4001, adding the 258V strict CPU warm phase runner."
+
+details = [
+  "CPU phase profile collection can now load the real GGUF model and tokenizer once and emit per-profile strict CPU receipts for the benchmark converter.",
+  "The claim boundary remains CPU phase receipt collection only; this does not claim sustained throughput, answer quality, Arc 140V execution, Intel NPU execution, or acceleration.",
+  "The benchmark converter preserves the larger measured prefill receipt when prefill and decode receipts are supplied together.",
+]
