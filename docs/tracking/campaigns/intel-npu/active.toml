@@ -399,8 +399,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-010"
-status = "pr_open"
+status = "merged"
 pr = 4080
+merge_sha = "7303c0d174bb32df525ea5af30e2441769937be0"
 branch = "codex/intel-npu/NPU-010-live-openvino-receipts"
 stackable = false
 review_mode = "codex_premerge"
