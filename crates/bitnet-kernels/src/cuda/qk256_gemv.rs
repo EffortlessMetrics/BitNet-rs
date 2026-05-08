@@ -4,8 +4,9 @@
 //!
 //! Microsoft BitNet GGUF models in this repo use the GGML I2_S QK256 no-scale
 //! layout: each row is block-aligned, each block stores 256 two-bit codes in
-//! 64 bytes, and codes map directly through `[-2, -1, 1, 2]`. The fused
-//! dequant+GEMV kernel avoids materialising the full FP32 weight matrix by:
+//! two 128-value chunks of four 32-value bitplanes, and codes map through
+//! BitNet.cpp's `[-1, 0, 1, 0]` lookup table. The fused dequant+GEMV kernel
+//! avoids materialising the full FP32 weight matrix by:
 //!
 //! 1. Reading one packed row without expanding it to an intermediate tensor.
 //! 2. Unpacking two-bit codes with bit-shift/mask at the point of use.
@@ -59,17 +60,23 @@ void qk256_gemv_cuda(
     float acc = 0.0f;
 
     for (int col = 0; col < k; ++col) {
-        unsigned char packed = row[col >> 2];
-        unsigned int code = (packed >> ((col & 3) << 1)) & 0x3u;
+        int block_base = (col / 256) * 64;
+        int in_block = col % 256;
+        int chunk = in_block / 128;
+        int within_chunk = in_block % 128;
+        int lane = within_chunk / 32;
+        int group_pos = within_chunk % 32;
+        unsigned char packed = row[block_base + chunk * 32 + group_pos];
+        unsigned int code = (packed >> ((3 - lane) << 1)) & 0x3u;
         float weight;
         if (code == 0u) {
-            weight = -2.0f;
-        } else if (code == 1u) {
             weight = -1.0f;
+        } else if (code == 1u) {
+            weight = 0.0f;
         } else if (code == 2u) {
             weight = 1.0f;
         } else {
-            weight = 2.0f;
+            weight = 0.0f;
         }
         acc += weight * x[col];
     }
@@ -423,10 +430,10 @@ mod tests {
 
     fn code_to_f32(code: u8) -> f32 {
         match code & 0x03 {
-            0 => -2.0,
-            1 => -1.0,
+            0 => -1.0,
+            1 => 0.0,
             2 => 1.0,
-            _ => 2.0,
+            _ => 0.0,
         }
     }
 
@@ -435,7 +442,13 @@ mod tests {
         let mut packed = vec![0u8; row_stride_bytes];
         for (index, code) in codes.iter().copied().enumerate().take(cols) {
             assert!(code < 4, "test QK256 code must be 0..=3");
-            packed[index / 4] |= code << ((index % 4) * 2);
+            let block_base = (index / QK256_BLOCK_COLS) * QK256_PACKED_BYTES_PER_BLOCK;
+            let in_block = index % QK256_BLOCK_COLS;
+            let chunk = in_block / 128;
+            let within_chunk = in_block % 128;
+            let lane = within_chunk / 32;
+            let group_pos = within_chunk % 32;
+            packed[block_base + chunk * 32 + group_pos] |= code << ((3 - lane) * 2);
         }
         packed
     }
@@ -457,8 +470,14 @@ mod tests {
                 let row_bytes = &packed_weights[row_start..row_start + row_stride_bytes];
                 let mut acc = 0.0f32;
                 for col in 0..k {
-                    let packed = row_bytes[col / 4];
-                    let code = (packed >> ((col % 4) * 2)) & 0x03;
+                    let block_base = (col / QK256_BLOCK_COLS) * QK256_PACKED_BYTES_PER_BLOCK;
+                    let in_block = col % QK256_BLOCK_COLS;
+                    let chunk = in_block / 128;
+                    let within_chunk = in_block % 128;
+                    let lane = within_chunk / 32;
+                    let group_pos = within_chunk % 32;
+                    let packed = row_bytes[block_base + chunk * 32 + group_pos];
+                    let code = (packed >> ((3 - lane) * 2)) & 0x03;
                     acc += code_to_f32(code) * x[col];
                 }
                 output[token * n_out + row] = acc;
@@ -528,11 +547,11 @@ mod tests {
         let k = 300usize;
         let cfg = Qk256GemvConfig::for_shape(seq_len, n_out, k).unwrap();
         let row0_codes: Vec<u8> = (0..k).map(|i| (i % 4) as u8).collect();
-        let row1_codes: Vec<u8> = (0..k).map(|i| ((i + 1) % 4) as u8).collect();
+        let row1_codes: Vec<u8> = (0..k).map(|i| if i % 5 == 0 { 2 } else { 0 }).collect();
         let mut packed = Vec::new();
         packed.extend_from_slice(&pack_codes_for_cols(&row0_codes, k));
         packed.extend_from_slice(&pack_codes_for_cols(&row1_codes, k));
-        let input: Vec<f32> = (0..seq_len * k).map(|i| ((i % 13) as f32 - 6.0) * 0.125).collect();
+        let input: Vec<f32> = (0..seq_len * k).map(|i| (i % 31) as f32 + 1.0).collect();
 
         let expected = reference_qk256_gemv(&packed, &input, seq_len, n_out, k);
 
