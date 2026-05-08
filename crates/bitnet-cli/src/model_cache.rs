@@ -6,11 +6,12 @@ use futures::StreamExt;
 use humansize::{DECIMAL, format_size};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
+#[cfg(unix)]
+use std::process::Command;
 use std::{
     fs,
     io::Read,
     path::{Path, PathBuf},
-    process::Command,
 };
 use tokio::io::AsyncWriteExt;
 
