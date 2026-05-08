@@ -595,7 +595,7 @@ fn answer_corpus_dry_run_accepts_rtx5070ti_cuda_lane() {
 
     let receipt: serde_json::Value =
         serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
-    assert_eq!(receipt["artifact_kind"], "bitnet_cuda_answer_corpus");
+    assert_eq!(receipt["artifact_kind"], "bitnet_cuda_answer_diagnostic_corpus");
     assert_eq!(receipt["backend"]["requested_backend"], "nvidia-rtx-5070-ti-cuda");
     assert_eq!(receipt["backend"]["selected_backend"], "nvidia-rtx-5070-ti-cuda");
     assert_eq!(receipt["backend"]["runtime_api"], "cuda");

@@ -291,32 +291,33 @@ impl AnswerCorpusCommand {
         let run =
             run_child_with_timeout(exe, &args, &child_env, Duration::from_secs(timeout_seconds))?;
         if run.timed_out {
-            return Ok(json!({
-                "id": case.id,
-                "question": case.question,
-                "status": "timeout",
-                "timeout_seconds": timeout_seconds,
-                "run_receipt_path": case_receipt.display().to_string(),
-                "quality": {
-                    "passed": false,
-                    "failed_rules": ["timeout"],
-                },
-                "stderr_tail": tail_string(&run.stderr, 4096),
+            return Ok(child_failure_row(ChildFailureRowInput {
+                case,
+                status: "timeout",
+                failed_rule: "timeout",
+                exe,
+                args: &args,
+                child_env: &child_env,
+                run: &run,
+                case_receipt: &case_receipt,
+                device,
+                timeout_seconds,
+                cpu_kernel: self.cpu_kernel,
             }));
         }
         if !run.success {
-            return Ok(json!({
-                "id": case.id,
-                "question": case.question,
-                "status": "command_failed",
-                "exit_code": run.exit_code,
-                "run_receipt_path": case_receipt.display().to_string(),
-                "quality": {
-                    "passed": false,
-                    "failed_rules": ["command_failed"],
-                },
-                "stdout_tail": tail_string(&run.stdout, 4096),
-                "stderr_tail": tail_string(&run.stderr, 4096),
+            return Ok(child_failure_row(ChildFailureRowInput {
+                case,
+                status: "command_failed",
+                failed_rule: "command_failed",
+                exe,
+                args: &args,
+                child_env: &child_env,
+                run: &run,
+                case_receipt: &case_receipt,
+                device,
+                timeout_seconds,
+                cpu_kernel: self.cpu_kernel,
             }));
         }
 
@@ -537,7 +538,7 @@ fn normalize_answer_corpus_device(device: &str) -> String {
 fn answer_corpus_artifact_kind(device: &str, corpus_artifact_kind: &str) -> &'static str {
     match (device, corpus_artifact_kind) {
         ("apple-m4-cpu-neon", _) => "bitnet_apple_m4_local_answer_corpus",
-        ("cuda" | RTX_5070_TI_CUDA, _) => "bitnet_cuda_answer_corpus",
+        ("cuda" | RTX_5070_TI_CUDA, _) => "bitnet_cuda_answer_diagnostic_corpus",
         (_, "slm_answer_corpus") => "slm_cpu_answer_corpus",
         _ => "bitnet_cpu_answer_corpus",
     }
@@ -788,14 +789,120 @@ struct ChildRun {
     stderr: String,
 }
 
+struct ChildFailureRowInput<'a> {
+    case: &'a AnswerCase,
+    status: &'static str,
+    failed_rule: &'static str,
+    exe: &'a Path,
+    args: &'a [OsString],
+    child_env: &'a [(&'static str, &'static str)],
+    run: &'a ChildRun,
+    case_receipt: &'a Path,
+    device: &'a str,
+    timeout_seconds: u64,
+    cpu_kernel: Option<AnswerCpuKernel>,
+}
+
+fn child_failure_row(input: ChildFailureRowInput<'_>) -> Value {
+    json!({
+        "id": input.case.id,
+        "question": input.case.question,
+        "status": input.status,
+        "exit_code": input.run.exit_code,
+        "timeout_seconds": input.timeout_seconds,
+        "run_receipt_path": input.case_receipt.display().to_string(),
+        "quality": {
+            "passed": false,
+            "failed_rules": [input.failed_rule],
+        },
+        "backend": {
+            "requested_backend": input.device,
+            "selected_backend": input.device,
+            "runtime_api": answer_corpus_runtime_api(input.device),
+            "fallback_used": false,
+            "source": "answer_corpus_launcher",
+        },
+        "kernel": {
+            "requested_cpu_kernel": input.cpu_kernel.map(AnswerCpuKernel::as_str),
+            "selected_kernel": Value::Null,
+            "family": Value::Null,
+            "source": "missing_child_receipt",
+        },
+        "child_invocation": {
+            "executable": input.exe.display().to_string(),
+            "args": os_args_json(input.args),
+            "environment_overrides": child_environment_json(input.child_env),
+            "timeout_seconds": input.timeout_seconds,
+            "expected_receipt_path": input.case_receipt.display().to_string(),
+        },
+        "child_process": {
+            "success": input.run.success,
+            "timed_out": input.run.timed_out,
+            "exit_code": input.run.exit_code,
+            "exit_code_hex": input.run.exit_code.map(exit_code_hex),
+            "crash_class": classify_child_exit(input.run),
+            "receipt_observed": input.case_receipt.exists(),
+        },
+        "stdout_tail": tail_string(&input.run.stdout, 4096),
+        "stderr_tail": tail_string(&input.run.stderr, 4096),
+    })
+}
+
+fn os_args_json(args: &[OsString]) -> Value {
+    Value::Array(args.iter().map(|arg| Value::String(arg.to_string_lossy().into_owned())).collect())
+}
+
+fn child_environment_json(child_env: &[(&'static str, &'static str)]) -> Value {
+    let mut env = serde_json::Map::new();
+    for (key, value) in child_env {
+        env.insert((*key).to_string(), Value::String((*value).to_string()));
+    }
+    env.insert("RUST_LOG".to_string(), Value::String(child_rust_log_value()));
+    Value::Object(env)
+}
+
+fn classify_child_exit(run: &ChildRun) -> &'static str {
+    if run.timed_out {
+        return "timeout";
+    }
+    match run.exit_code {
+        None => "terminated_without_exit_code",
+        Some(0) if run.success => "success",
+        Some(code) if is_windows_native_status(code) => classify_windows_status(code),
+        Some(_) => "nonzero_exit",
+    }
+}
+
+fn is_windows_native_status(code: i32) -> bool {
+    (code as u32) & 0xC000_0000 == 0xC000_0000
+}
+
+fn classify_windows_status(code: i32) -> &'static str {
+    match code as u32 {
+        0xC000_0005 => "windows_access_violation",
+        0xC000_001D => "windows_illegal_instruction",
+        0xC000_00FD => "windows_stack_overflow",
+        0xC000_0374 => "windows_heap_corruption",
+        0xC000_0409 => "windows_stack_buffer_overrun_or_fast_fail",
+        _ => "windows_native_status",
+    }
+}
+
+fn exit_code_hex(code: i32) -> String {
+    format!("0x{:08X}", code as u32)
+}
+
+fn child_rust_log_value() -> String {
+    std::env::var("BITNET_ANSWER_CORPUS_CHILD_RUST_LOG").unwrap_or_else(|_| "warn".into())
+}
+
 fn run_child_with_timeout(
     exe: &Path,
     args: &[OsString],
     envs: &[(&'static str, &'static str)],
     timeout: Duration,
 ) -> Result<ChildRun> {
-    let child_rust_log =
-        std::env::var("BITNET_ANSWER_CORPUS_CHILD_RUST_LOG").unwrap_or_else(|_| "warn".into());
+    let child_rust_log = child_rust_log_value();
     let stdout_path = child_capture_path("stdout");
     let stderr_path = child_capture_path("stderr");
     let stdout_file = File::create(&stdout_path)
@@ -1012,6 +1119,98 @@ mod tests {
         assert_eq!(prefill["prompt_token_count"], 7);
         assert_eq!(prefill["decode_start_position"], 7);
         assert_eq!(prefill["source"], "run_receipt_profile");
+    }
+
+    #[test]
+    fn child_failure_row_records_cuda_crash_diagnostics() {
+        let case = AnswerCase {
+            id: "math_2_plus_2".to_string(),
+            question: "What is 2+2? Answer with only the number.".to_string(),
+            max_new_tokens: Some(4),
+            timeout_seconds: None,
+            min_generated_tokens: None,
+            min_distinct_generated_tokens: None,
+            gate: gate("exact_trimmed"),
+        };
+        let run = ChildRun {
+            success: false,
+            timed_out: false,
+            exit_code: Some(-1_073_740_791),
+            stdout: "selected_backend=nvidia-rtx-5070-ti-cuda".to_string(),
+            stderr: "child terminated before receipt".to_string(),
+        };
+        let args = vec![
+            "--device".into(),
+            RTX_5070_TI_CUDA.into(),
+            "run".into(),
+            "--json-out".into(),
+            "target/bitnet/receipts/math.json".into(),
+        ];
+        let row = child_failure_row(ChildFailureRowInput {
+            case: &case,
+            status: "command_failed",
+            failed_rule: "command_failed",
+            exe: Path::new("bitnet.exe"),
+            args: &args,
+            child_env: &[],
+            run: &run,
+            case_receipt: Path::new("target/bitnet/receipts/math.json"),
+            device: RTX_5070_TI_CUDA,
+            timeout_seconds: 120,
+            cpu_kernel: None,
+        });
+
+        assert_eq!(row["status"], "command_failed");
+        assert_eq!(row["backend"]["runtime_api"], "cuda");
+        assert_eq!(row["child_process"]["exit_code_hex"], "0xC0000409");
+        assert_eq!(
+            row["child_process"]["crash_class"],
+            "windows_stack_buffer_overrun_or_fast_fail"
+        );
+        assert_eq!(row["child_process"]["receipt_observed"], false);
+        assert_eq!(row["child_invocation"]["timeout_seconds"], 120);
+        assert_eq!(row["quality"]["failed_rules"], json!(["command_failed"]));
+    }
+
+    #[test]
+    fn child_failure_row_records_requested_cpu_kernel_env() {
+        let case = AnswerCase {
+            id: "math_2_plus_2".to_string(),
+            question: "What is 2+2? Answer with only the number.".to_string(),
+            max_new_tokens: Some(4),
+            timeout_seconds: None,
+            min_generated_tokens: None,
+            min_distinct_generated_tokens: None,
+            gate: gate("exact_trimmed"),
+        };
+        let run = ChildRun {
+            success: false,
+            timed_out: true,
+            exit_code: None,
+            stdout: String::new(),
+            stderr: "timeout".to_string(),
+        };
+        let env = AnswerCpuKernel::Avx512.child_env();
+        let args = vec!["--device".into(), "cpu".into(), "run".into()];
+        let row = child_failure_row(ChildFailureRowInput {
+            case: &case,
+            status: "timeout",
+            failed_rule: "timeout",
+            exe: Path::new("bitnet.exe"),
+            args: &args,
+            child_env: &env,
+            run: &run,
+            case_receipt: Path::new("target/bitnet/receipts/math.json"),
+            device: "cpu",
+            timeout_seconds: 1,
+            cpu_kernel: Some(AnswerCpuKernel::Avx512),
+        });
+
+        assert_eq!(row["status"], "timeout");
+        assert_eq!(row["child_process"]["crash_class"], "timeout");
+        assert_eq!(row["kernel"]["requested_cpu_kernel"], "avx512");
+        assert_eq!(row["child_invocation"]["environment_overrides"]["BITNET_CPU_KERNEL"], "avx512");
+        assert_eq!(row["child_invocation"]["environment_overrides"]["BITNET_FORCE_SCALAR"], "0");
     }
 
     #[test]

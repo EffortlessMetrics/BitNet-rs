@@ -352,6 +352,7 @@ fn answer_corpus_artifact_kind_allowed(kind: Option<&str>) -> bool {
         Some(
             "bitnet_cpu_answer_corpus"
                 | "bitnet_cuda_answer_corpus"
+                | "bitnet_cuda_answer_diagnostic_corpus"
                 | "bitnet_apple_m4_local_answer_corpus"
         )
     )
@@ -442,6 +443,17 @@ fn compare_case(
 
     let mut failures = Vec::new();
     if !case_has_execution_evidence(left) || !case_has_execution_evidence(right) {
+        set_first(
+            first_divergence,
+            id,
+            "execution_evidence_recorded",
+            None,
+            case_status_summary(left),
+            case_status_summary(right),
+            left_label,
+            right_label,
+            legacy_scalar_avx2,
+        );
         check_equal(
             id,
             "question",
@@ -479,17 +491,6 @@ fn compare_case(
             first_divergence,
         );
         failures.push("execution_evidence_recorded");
-        set_first(
-            first_divergence,
-            id,
-            "execution_evidence_recorded",
-            None,
-            case_status_summary(left),
-            case_status_summary(right),
-            left_label,
-            right_label,
-            legacy_scalar_avx2,
-        );
         return case_comparison_row(
             id,
             failures,
@@ -963,6 +964,11 @@ fn case_status_summary(case: &Value) -> Value {
         "quality_failed_rules": case["quality"]["failed_rules"],
         "run_receipt_path": case["run_receipt_path"],
         "exit_code": case["exit_code"],
+        "child_process": case["child_process"],
+        "child_invocation": {
+            "expected_receipt_path": case["child_invocation"]["expected_receipt_path"],
+            "timeout_seconds": case["child_invocation"]["timeout_seconds"],
+        },
         "reason": case["reason"],
     })
 }
@@ -1086,7 +1092,7 @@ mod tests {
 
     fn cuda_receipt(generated: &[u64], answer: &str, logits: Value) -> Value {
         let mut receipt = receipt("qk256_gemv_cuda", generated, answer, logits);
-        receipt["artifact_kind"] = json!("bitnet_cuda_answer_corpus");
+        receipt["artifact_kind"] = json!("bitnet_cuda_answer_diagnostic_corpus");
         receipt["backend"] = json!({
             "requested_backend": "nvidia-rtx-5070-ti-cuda",
             "selected_backend": "nvidia-rtx-5070-ti-cuda",
@@ -1274,5 +1280,46 @@ mod tests {
         assert!(failed.iter().any(|rule| rule == "execution_evidence_recorded"));
         assert!(!failed.iter().any(|rule| rule == "left_backend_contract"));
         assert!(!failed.iter().any(|rule| rule == "right_backend_contract"));
+    }
+
+    #[test]
+    fn generic_parity_prioritizes_missing_child_receipt_over_status_difference() {
+        let scalar = receipt("i2_s-scalar-reference", &[4], "4", logits());
+        let mut cuda = cuda_receipt(&[4], "4", logits());
+        cuda["cases"][0] = json!({
+            "id": "math",
+            "question": "Answer with a single digit: 2+2=",
+            "status": "command_failed",
+            "exit_code": -1_073_740_791,
+            "run_receipt_path": "target/bitnet/receipts/math.json",
+            "quality": {
+                "passed": false,
+                "failed_rules": ["command_failed"]
+            },
+            "child_process": {
+                "success": false,
+                "timed_out": false,
+                "exit_code": -1_073_740_791,
+                "exit_code_hex": "0xC0000409",
+                "crash_class": "windows_stack_buffer_overrun_or_fast_fail",
+                "receipt_observed": false
+            },
+            "child_invocation": {
+                "expected_receipt_path": "target/bitnet/receipts/math.json",
+                "timeout_seconds": 120
+            }
+        });
+
+        let report = build_generic_report(&scalar, &cuda);
+
+        assert_eq!(report["summary"]["failed"], 1);
+        assert_eq!(report["summary"]["first_divergence"]["kind"], "execution_evidence_recorded");
+        assert_eq!(
+            report["summary"]["first_divergence"]["right"]["child_process"]["crash_class"],
+            "windows_stack_buffer_overrun_or_fast_fail"
+        );
+        let failed = report["cases"][0]["failed_rules"].as_array().unwrap();
+        assert!(failed.iter().any(|rule| rule == "status"));
+        assert!(failed.iter().any(|rule| rule == "execution_evidence_recorded"));
     }
 }
