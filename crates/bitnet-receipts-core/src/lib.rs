@@ -23,7 +23,7 @@ use bitnet_honest_compute::{
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
 /// Schema version for receipt format
@@ -38,6 +38,14 @@ pub const RECEIPT_SCHEMA: &str = RECEIPT_SCHEMA_VERSION;
 /// kinds. Dense CUDA evidence may share CUDA runtime plumbing, but it must not
 /// satisfy BitNet packed-kernel proof gates.
 pub const DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND: &str = "dense_regular_llm_cuda";
+
+/// Artifact kind for descriptor-only dense GGUF tensor inspection.
+///
+/// This is not a CUDA execution receipt. It records that a dense GGUF reader
+/// path can classify model tensor roles without claiming dense inference,
+/// speedup, full residency, or BitNet packed-kernel proof.
+pub const DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND: &str =
+    "dense_gguf_tensor_descriptor_inspection";
 
 /// Model class label for CUDA receipts that exercise dense regular LLM kernels.
 pub const DENSE_REGULAR_LLM_MODEL_CLASS: &str = "dense_regular_llm";
@@ -631,6 +639,125 @@ pub fn validate_dense_regular_llm_cuda_persistent_residency_receipt_json(
     Ok(())
 }
 
+/// Validate a descriptor-only dense GGUF tensor inspection receipt.
+///
+/// This validates model/tensor metadata coverage before any dense GGUF CUDA
+/// execution claim exists. A valid receipt may say the GGUF reader can classify
+/// Qwen/Llama-style tensor roles, but it must keep dense CUDA execution,
+/// dense GGUF inference, speedup, full residency, and BitNet packed proof
+/// claims false.
+pub fn validate_dense_gguf_tensor_descriptor_inspection_receipt_json(
+    receipt: &Value,
+) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_tensor_descriptors_inspected")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_non_empty(receipt, "inspection_source")?;
+    require_null(receipt, "error")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+
+    let inspection = object_field(receipt, "descriptor_inspection")?;
+    require_u64_eq(inspection, "schema", 1)?;
+    require_string_eq(inspection, "artifact_kind", DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)?;
+    require_string_eq(inspection, "model_family", required_string(model, "model_family")?)?;
+    require_string_eq(inspection, "architecture", required_string(model, "architecture")?)?;
+    require_positive_u64(inspection, "tensor_count")?;
+    require_positive_u64(inspection, "metadata_count")?;
+    require_bool_eq(inspection, "required_roles_present", true)?;
+    require_bool_eq(inspection, "strict_descriptor_complete", true)?;
+    require_bool_eq(inspection, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(inspection, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(inspection, "dense_regular_llm_cuda_claimed", false)?;
+    require_bool_eq(inspection, "speedup_claim", false)?;
+    require_bool_eq(inspection, "full_cuda_residency_claimed", false)?;
+
+    let route_status = required_string(inspection, "dense_cuda_route_status")?;
+    match route_status {
+        "dense_float_descriptor_candidate" | "descriptor_only_quant_bridge_required" => {}
+        other => {
+            return Err(anyhow!(
+                "descriptor_inspection.dense_cuda_route_status must be descriptor-only or float-candidate, got `{other}`"
+            ));
+        }
+    }
+
+    let quantization_families = array_field(inspection, "quantization_families")?;
+    if quantization_families.is_empty() {
+        return Err(anyhow!("descriptor_inspection.quantization_families must not be empty"));
+    }
+    for family in quantization_families {
+        let family = family
+            .as_str()
+            .ok_or_else(|| anyhow!("quantization_families entries must be strings"))?;
+        reject_bitnet_packed_marker(family, "descriptor_inspection.quantization_families")?;
+    }
+
+    let descriptors = array_field(inspection, "descriptors")?;
+    if descriptors.is_empty() {
+        return Err(anyhow!("descriptor_inspection.descriptors must not be empty"));
+    }
+    let mut roles = BTreeSet::new();
+    for descriptor in descriptors {
+        require_string_non_empty(descriptor, "name")?;
+        reject_bitnet_packed_marker(required_string(descriptor, "name")?, "descriptors.name")?;
+        let role = required_string(descriptor, "role")?;
+        roles.insert(role.to_string());
+        require_string_non_empty(descriptor, "tensor_type")?;
+        reject_bitnet_packed_marker(
+            required_string(descriptor, "tensor_type")?,
+            "descriptors.tensor_type",
+        )?;
+        require_string_non_empty(descriptor, "descriptor_status")?;
+        reject_bitnet_packed_marker(
+            required_string(descriptor, "descriptor_status")?,
+            "descriptors.descriptor_status",
+        )?;
+        require_positive_u64(descriptor, "size_bytes")?;
+        object_field(descriptor, "shape")?
+            .as_array()
+            .ok_or_else(|| anyhow!("descriptors.shape must be an array"))?;
+        object_field(descriptor, "quantized")?
+            .as_bool()
+            .ok_or_else(|| anyhow!("descriptors.quantized must be a bool"))?;
+    }
+    for role in REQUIRED_DENSE_DESCRIPTOR_ROLES {
+        if !roles.contains(*role) {
+            return Err(anyhow!("descriptor receipt missing required dense tensor role `{role}`"));
+        }
+    }
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
+const REQUIRED_DENSE_DESCRIPTOR_ROLES: &[&str] = &[
+    "token_embedding",
+    "output",
+    "attention_q",
+    "attention_k",
+    "attention_v",
+    "attention_output",
+    "mlp_gate",
+    "mlp_up",
+    "mlp_down",
+    "attention_norm",
+    "ffn_norm",
+];
+
 /// Reject dense regular-LLM CUDA receipts at BitNet packed-kernel proof gates.
 ///
 /// BitNet QK256/I2_S validators can call this before evaluating their own proof
@@ -646,10 +773,16 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         .get("claim_boundary")
         .and_then(|claim_boundary| claim_boundary.get("dense_regular_llm_cuda_claimed"))
         .and_then(Value::as_bool);
+    let descriptor_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| claim_boundary.get("dense_gguf_descriptor_inspection_claimed"))
+        .and_then(Value::as_bool);
 
     if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)
         || model_class == Some(DENSE_REGULAR_LLM_MODEL_CLASS)
         || dense_claim == Some(true)
+        || descriptor_claim == Some(true)
     {
         return Err(anyhow!(
             "dense_regular_llm CUDA receipt cannot satisfy BitNet packed I2_S/QK256 proof"
