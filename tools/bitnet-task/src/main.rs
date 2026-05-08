@@ -22,8 +22,8 @@ mod validation;
 
 use self::{
     ci::{
-        cmd_ci_acceptance_gate, cmd_ci_local, cmd_quality_gate, cmd_sanity_check,
-        cmd_verify_crossval, cmd_verify_tests,
+        cmd_ci_acceptance_gate, cmd_ci_local, cmd_e2e_gate, cmd_grep_guards, cmd_quality_gate,
+        cmd_sanity_check, cmd_validate_receipt, cmd_verify_crossval, cmd_verify_tests,
     },
     docker::{cmd_build_cpp_static, cmd_docker_build},
     hooks::cmd_install_hooks,
@@ -244,6 +244,20 @@ enum Task {
     TestOptimizations,
     /// Equivalent of scripts/verify-tests.sh
     VerifyTests,
+    /// Equivalent of ci/scripts/grep-guards.sh
+    GrepGuards,
+    /// Equivalent of ci/scripts/validate-receipt.sh
+    ValidateReceipt {
+        /// Receipt JSON file to validate.
+        #[arg(default_value = "ci/inference.json")]
+        receipt_file: PathBuf,
+    },
+    /// Equivalent of scripts/e2e-gate.sh
+    E2eGate {
+        /// Command and arguments to run while holding the E2E gate.
+        #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
+        command: Vec<String>,
+    },
     /// Equivalent of scripts/xtask_smoke.sh
     XtaskSmoke {
         /// Optional model path override (defaults to env MODEL if unset).
@@ -322,6 +336,9 @@ fn main() -> Result<()> {
         Task::VerifyCrossval => cmd_verify_crossval(&root),
         Task::TestOptimizations => cmd_test_optimizations(&root),
         Task::VerifyTests => cmd_verify_tests(&root),
+        Task::GrepGuards => cmd_grep_guards(&root),
+        Task::ValidateReceipt { receipt_file } => cmd_validate_receipt(&root, &receipt_file),
+        Task::E2eGate { command } => cmd_e2e_gate(&root, &command),
         Task::XtaskSmoke { model, tokenizer } => cmd_xtask_smoke(&root, model, tokenizer),
     }
 }
@@ -329,7 +346,10 @@ fn main() -> Result<()> {
 fn workspace_root() -> Result<PathBuf> {
     let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     loop {
-        if root.join("Cargo.toml").exists() {
+        if root.join("Cargo.toml").exists()
+            && root.join("Cargo.lock").exists()
+            && root.join("crates").is_dir()
+        {
             return Ok(root);
         }
         if !root.pop() {
