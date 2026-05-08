@@ -1,0 +1,15 @@
+timestamp = "2026-05-08T12:17:54Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-ANSWER-012"
+event = "pr_open"
+actor = "codex"
+pr = 4048
+head_sha = "a25a5cf1c0fdfb54d40a03700cdaf9e21576d4bf"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4048 to align the CUDA QK256 inline-scale path with BitNet.cpp I2_S x I8_S activation semantics.",
+  "The refreshed receipts show strict CUDA corpus pass and five-case CPU/CUDA generated-token and decoded-text parity, with remaining top-k-only divergence preserved.",
+  "No speed claim, broad chat-quality claim, transformer rewrite, tokenizer change, or model-loader change is included.",
+]

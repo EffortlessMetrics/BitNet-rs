@@ -91,9 +91,15 @@ committed deterministic answer corpus, not broad chat quality, production server
 readiness, or speedup.
 
 `CUDA-ANSWER-011` records the first same-box CPU AVX-512 versus RTX 5070 Ti CUDA
-answer-corpus comparison. Both backends pass the corpus, but exact CPU/CUDA
-parity remains open because top-k logits differ for every case and
-`yes_no_water` produces different passing answers.
+answer-corpus comparison. Both backends pass the corpus, but the original
+receipt preserved top-k logit divergence for every case and a `yes_no_water`
+generated-answer divergence.
+
+`CUDA-ANSWER-012` closes the generated-answer divergence by aligning the CUDA
+QK256 inline-scale path with BitNet.cpp I2_S x I8_S activation semantics. CPU
+AVX-512 and RTX 5070 Ti CUDA now match generated token IDs and decoded text for
+all five committed deterministic corpus cases. Exact top-k logit parity remains
+open for four cases.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -127,7 +133,8 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-BITNET-008 | merged | Strict BitNet CUDA benchmark baseline merged in #3823. |
 | CUDA-BITNET-009 | merged | Routed upload-once strict proof receipts merged in #3837. |
 | CUDA-ANSWER-010 | merged | Strict RTX 5070 Ti CUDA answer corpus passes after the QK256 I2_S layout alignment in #4024. |
-| CUDA-ANSWER-011 | pr_open | Same-box CPU AVX-512 and RTX 5070 Ti CUDA both pass the corpus, but exact parity remains open due top-k logit divergence and one generated-answer divergence. |
+| CUDA-ANSWER-011 | merged | Same-box CPU AVX-512 and RTX 5070 Ti CUDA both pass the corpus, but the original receipt preserved top-k logit divergence and one generated-answer divergence. |
+| CUDA-ANSWER-012 | in_progress | CUDA QK256 I8_S activation semantics close generated-token parity for all five committed corpus cases; exact top-k parity remains open. |
 | CUDA-DENSE-001 | proposed | Optional dense regular-LLM CUDA reference lane; not part of BitNet packed proof completion. |
 
 ## Review Policy

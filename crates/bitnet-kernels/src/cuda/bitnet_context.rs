@@ -480,6 +480,7 @@ pub trait CudaBitnetLinearBackend {
         activation: &[f32],
         output: &mut [f32],
         seq_len: usize,
+        bitnet_i8s_weight_scale: Option<f32>,
         stats: &mut CudaBitnetKernelInvocationStats,
     ) -> Result<()>;
 }
@@ -1027,6 +1028,10 @@ impl CudaBitnetContext {
         builder.arg(&n_out_arg);
         builder.arg(&k_arg);
         builder.arg(&row_stride_arg);
+        let bitnet_i8s_weight_scale_arg = config.bitnet_i8s_weight_scale.unwrap_or(1.0);
+        let use_bitnet_i8s_arg = i32::from(config.bitnet_i8s_weight_scale.is_some());
+        builder.arg(&bitnet_i8s_weight_scale_arg);
+        builder.arg(&use_bitnet_i8s_arg);
 
         unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
             reason: format!("failed to launch CUDA QK256 GEMV kernel: {err:?}"),
@@ -1219,9 +1224,18 @@ impl CudaBitnetLinearBackend for CudaBitnetContext {
         activation: &[f32],
         output: &mut [f32],
         seq_len: usize,
+        bitnet_i8s_weight_scale: Option<f32>,
         stats: &mut CudaBitnetKernelInvocationStats,
     ) -> Result<()> {
         let gemv_shape = validate_qk256_gemv_args(weights, activation, output, seq_len)?;
+        if let Some(scale) = bitnet_i8s_weight_scale
+            && !scale.is_finite()
+        {
+            return Err(KernelError::InvalidArguments {
+                reason: format!("QK256 GEMV BitNet I8_S weight scale is not finite: {scale}"),
+            }
+            .into());
+        }
         let output_features = gemv_shape.output_features;
         let input_features = gemv_shape.input_features;
         let activation_len = checked_mul(seq_len, input_features, "QK256 activation")?;
@@ -1232,7 +1246,8 @@ impl CudaBitnetLinearBackend for CudaBitnetContext {
 
         #[cfg(feature = "cuda")]
         {
-            let config = Qk256GemvConfig::for_shape(seq_len, output_features, input_features)?;
+            let mut config = Qk256GemvConfig::for_shape(seq_len, output_features, input_features)?;
+            config.bitnet_i8s_weight_scale = bitnet_i8s_weight_scale;
             self.launch_qk256_gemv_cuda(weights, &activation[..activation_len], output, &config)?;
             stats.record_qk256_gemv(
                 u64::try_from(activation_bytes).map_err(|_| KernelError::InvalidArguments {
@@ -1253,6 +1268,7 @@ impl CudaBitnetLinearBackend for CudaBitnetContext {
             let _ = activation;
             let _ = output;
             let _ = stats;
+            let _ = bitnet_i8s_weight_scale;
             Err(KernelError::DeviceUnavailable {
                 reason: "CUDA QK256 GEMV requires the cuda feature".to_string(),
             }

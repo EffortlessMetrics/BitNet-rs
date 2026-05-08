@@ -3,7 +3,8 @@
 ## Purpose
 
 The RTX 5070 Ti CUDA lane has receipt-backed execution proof and, after
-`CUDA-ANSWER-010`, strict deterministic answer-corpus proof. The next product
+`CUDA-ANSWER-010` and `CUDA-ANSWER-012`, strict deterministic answer-corpus
+proof plus five-case CPU/CUDA generated-token parity. The next product
 milestone is a normal reusable user path: one command or warm session, one or
 more questions, coherent answers, strict fallback rejection, and answer
 receipts.
@@ -62,10 +63,13 @@ The completed NVIDIA proof lane plus `CUDA-ANSWER-010` support these claims:
 - The strict CUDA `ask` path answers the constrained `math_2_plus_2` prompt.
 - The RTX 5070 Ti CUDA answer corpus passes all five committed deterministic
   answer-readiness cases.
+- The same-box CPU AVX-512 and RTX 5070 Ti CUDA receipts now agree on generated
+  token IDs and decoded text for the five committed deterministic cases.
 - `speedup_claim` remains false unless a later same-model benchmark upgrades it.
 
 That is strict corpus-scoped CUDA answer proof. It is not broad chat quality,
-production server readiness, or a speedup claim.
+production server readiness, exact CPU/CUDA top-k logit parity, or a speedup
+claim.
 
 Answer readiness also depends on the shared model-artifact gate in
 `docs/model-artifacts/ANSWER_ARTIFACT_GATE.md`. `MODEL-ARTIFACT-007` marks the
@@ -306,6 +310,15 @@ template, and deterministic corpus. This item may land divergence evidence: if
 quality passes on both backends but token IDs or top-k logits differ, the
 receipt must preserve the first divergence instead of upgrading the parity
 claim.
+
+### CUDA-ANSWER-012 - BitNet I8_S CUDA Parity
+
+Align the CUDA QK256 inline-scale path with the CPU reference and BitNet.cpp
+I2_S x I8_S activation semantics. The acceptance receipt must preserve the
+strict CUDA answer corpus pass and show that same-box CPU AVX-512 and RTX 5070
+Ti CUDA generated token IDs and decoded text match for all five committed
+deterministic corpus cases. Exact top-k logit parity and speed remain unclaimed
+unless later receipts prove them.
 
 ### CUDA-ANSWER-006 - Interactive CUDA Chat Session
 

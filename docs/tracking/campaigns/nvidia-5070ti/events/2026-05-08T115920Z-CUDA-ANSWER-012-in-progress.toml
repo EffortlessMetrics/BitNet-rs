@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T11:59:20Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-ANSWER-012"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-answer/CUDA-ANSWER-012-logit-divergence"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started the CUDA QK256 BitNet I8_S activation semantics follow-up from the CUDA-ANSWER-011 parity gap.",
+  "The intended scope is limited to QK256 CUDA inline-scale semantics, refreshed CUDA/parity receipts, and governed claim-boundary documentation.",
+  "No speed claim, broad chat claim, transformer rewrite, tokenizer change, or model-loader change is in scope.",
+]

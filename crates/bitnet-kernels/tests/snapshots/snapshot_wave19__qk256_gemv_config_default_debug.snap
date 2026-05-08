@@ -6,8 +6,10 @@ Qk256GemvConfig {
     block_m: 1,
     block_n: 256,
     threads_per_block: 256,
-    shared_mem_bytes: 4096,
+    shared_mem_bytes: 0,
     seq_len: 1,
     n_out: 1,
     k: 256,
+    row_stride_bytes: 64,
+    bitnet_i8s_weight_scale: None,
 }
