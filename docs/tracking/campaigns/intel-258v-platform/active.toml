@@ -1567,7 +1567,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-025"
-status = "ready"
+status = "pr_open"
+pr = 4356
 branch = "codex/lunar-lake/CPU258V-025-transformer-layer-parity"
 stackable = false
 review_mode = "codex_premerge"
