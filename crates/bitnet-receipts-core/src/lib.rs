@@ -114,6 +114,14 @@ pub const DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND: &str =
 pub const DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND: &str =
     "dense_gguf_attention_v_mix_fixture_extraction";
 
+/// Artifact kind for dense GGUF attention V-mix CUDA parity.
+///
+/// This receipt proves the metadata-derived attention V-mix fixture can run
+/// through a strict CUDA F32 V-mix kernel. It is below dense GGUF inference and
+/// does not by itself promote one-layer planner routing.
+pub const DENSE_GGUF_ATTENTION_V_MIX_CUDA_PARITY_ARTIFACT_KIND: &str =
+    "dense_gguf_attention_v_mix_cuda_parity";
+
 /// Artifact kind for dense GGUF single-linear CUDA parity.
 ///
 /// This receipt proves one descriptor-extracted dense GGUF linear fixture can
@@ -2197,6 +2205,271 @@ pub fn validate_dense_gguf_attention_v_mix_fixture_receipt_json(receipt: &Value)
     require_bool_eq(claim_boundary, "speedup_claim", false)?;
     require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
     require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
+/// Validate dense GGUF attention V-mix CUDA parity evidence.
+///
+/// This receipt bridges the attention V-mix fixture into a strict CUDA context
+/// kernel. It remains fixture-level evidence and must not claim dense GGUF
+/// inference, Qwen token/decode/chat, speedup, full residency, or BitNet
+/// packed I2_S/QK256 proof.
+pub fn validate_dense_gguf_attention_v_mix_cuda_parity_receipt_json(receipt: &Value) -> Result<()> {
+    let stats = validate_cuda_receipt_common(
+        receipt,
+        DENSE_GGUF_ATTENTION_V_MIX_CUDA_PARITY_ARTIFACT_KIND,
+        "dense_gguf_attention_v_mix_cuda_parity_tested",
+    )?;
+    require_string_eq(stats, "kernel_id", "dense_attention_v_mix_f32_cuda")?;
+    require_u64_eq(stats, "invocations", 1)?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+    require_u64_eq(stats, "kernel_launches", 1)?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(execution_path, "kernel_family", "dense_f32_attention_v_mix")?;
+    require_string_eq(
+        execution_path,
+        "quantization_family",
+        "metadata_derived_attention_v_mix_fixture",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    validate_dense_regular_llm_execution_plan(receipt)?;
+    let plan = object_field(receipt, "execution_plan")?;
+    require_u64_eq(plan, "total_ops", 1)?;
+    require_u64_eq(plan, "cuda_ops", 1)?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 1)?;
+    require_u64_eq(plan, "cuda_bitnet_qk256_ops", 0)?;
+    require_u64_eq(plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(plan, "unsupported_ops", 0)?;
+    require_bool_eq(plan, "strict_cuda_ready", true)?;
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+
+    let fixture = object_field(receipt, "attention_v_mix_fixture")?;
+    require_u64_eq(fixture, "schema", 1)?;
+    require_string_eq(
+        fixture,
+        "source_artifact_kind",
+        DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND,
+    )?;
+    require_string_eq(
+        fixture,
+        "source_attention_softmax_artifact_kind",
+        DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND,
+    )?;
+    require_string_non_empty(fixture, "source_attention_softmax_fixture_id")?;
+    require_string_eq(
+        fixture,
+        "source_attention_v_artifact_kind",
+        DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
+    )?;
+    require_string_eq(fixture, "source_attention_v_role", "attention_v")?;
+    require_string_non_empty(fixture, "fixture_id")?;
+    require_string_eq(fixture, "model_family", required_string(model, "model_family")?)?;
+    require_string_eq(fixture, "architecture", required_string(model, "architecture")?)?;
+    require_positive_u64(fixture, "q_heads")?;
+    require_positive_u64(fixture, "kv_heads")?;
+    require_positive_u64(fixture, "heads_per_kv_group")?;
+    require_positive_u64(fixture, "head_dim")?;
+    require_positive_u64(fixture, "seq_len")?;
+    require_positive_u64(fixture, "row_count")?;
+    require_positive_u64(fixture, "probability_count")?;
+    require_positive_u64(fixture, "value_count")?;
+    require_positive_u64(fixture, "context_count")?;
+    require_positive_u64(fixture, "compared_context_values")?;
+    require_sha256(fixture, "attention_probabilities_sha256")?;
+    require_sha256(fixture, "value_states_sha256")?;
+    require_sha256(fixture, "cpu_reference_context_sha256")?;
+    let q_heads = required_u64(fixture, "q_heads")?;
+    let kv_heads = required_u64(fixture, "kv_heads")?;
+    let heads_per_kv_group = required_u64(fixture, "heads_per_kv_group")?;
+    let seq_len = required_u64(fixture, "seq_len")?;
+    let head_dim = required_u64(fixture, "head_dim")?;
+    if q_heads % kv_heads != 0 || heads_per_kv_group != q_heads / kv_heads {
+        return Err(anyhow!(
+            "attention_v_mix_fixture heads_per_kv_group must match q_heads / kv_heads"
+        ));
+    }
+    let probability_count = q_heads * seq_len * seq_len;
+    let value_count = kv_heads * seq_len * head_dim;
+    let context_count = q_heads * seq_len * head_dim;
+    require_u64_eq(fixture, "row_count", q_heads * seq_len)?;
+    require_u64_eq(fixture, "probability_count", probability_count)?;
+    require_u64_eq(fixture, "value_count", value_count)?;
+    require_u64_eq(fixture, "context_count", context_count)?;
+    require_u64_eq(fixture, "compared_context_values", context_count)?;
+    let zero_probs =
+        object_field(fixture, "causal_zero_probabilities")?.as_u64().ok_or_else(|| {
+            anyhow!("attention_v_mix_fixture.causal_zero_probabilities must be unsigned")
+        })?;
+    if zero_probs >= probability_count {
+        return Err(anyhow!(
+            "attention_v_mix_fixture causal_zero_probabilities must leave finite probabilities"
+        ));
+    }
+    require_non_negative_number(fixture, "max_context_abs")?;
+    require_string_eq(fixture, "cuda_input_dtype", "f32")?;
+    require_string_eq(fixture, "cuda_output_dtype", "f32")?;
+    require_string_eq(fixture, "cuda_kernel_status", "parity_passed")?;
+    require_bool_eq(fixture, "strict_cuda_ready", true)?;
+    require_bool_eq(fixture, "cpu_fallback_allowed", false)?;
+    require_string_eq(fixture, "transfer_timing_status", "bytes_measured_time_unmeasured")?;
+    require_bool_eq(fixture, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(fixture, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(fixture, "cpu_cuda_parity_claimed", true)?;
+    require_bool_eq(fixture, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(fixture, "speedup_claim", false)?;
+    require_bool_eq(fixture, "full_cuda_residency_claimed", false)?;
+
+    let parity = object_field(receipt, "parity")?;
+    require_string_eq(parity, "reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(parity, "target_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(parity, "kernel_id", "dense_attention_v_mix_f32_cuda")?;
+    require_string_eq(parity, "fixture_id", required_string(fixture, "fixture_id")?)?;
+    require_bool_eq(parity, "passed", true)?;
+    require_non_negative_number(parity, "max_abs_error")?;
+    require_non_negative_number(parity, "mean_abs_error")?;
+    require_non_negative_number(parity, "tolerance")?;
+    require_string_non_empty(parity, "tolerance_source")?;
+    require_u64_eq(parity, "compared_context_values", context_count)?;
+    require_u64_eq(parity, "causal_zero_probabilities", zero_probs)?;
+    require_null(parity, "first_divergence")?;
+
+    let timing = object_field(receipt, "timing")?;
+    require_optional_non_negative_number(timing, "kernel_time_ms")?;
+    require_u64_eq(
+        timing,
+        "host_to_device_bytes",
+        object_field(stats, "host_to_device_bytes")?
+            .as_u64()
+            .ok_or_else(|| anyhow!("kernel_stats.host_to_device_bytes must be an integer"))?,
+    )?;
+    require_u64_eq(
+        timing,
+        "device_to_host_bytes",
+        object_field(stats, "device_to_host_bytes")?
+            .as_u64()
+            .ok_or_else(|| anyhow!("kernel_stats.device_to_host_bytes must be an integer"))?,
+    )?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_score_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_softmax_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_v_mix_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_v_mix_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_norm_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "cpu_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    let residency = object_field(receipt, "tensor_residency")?;
+    require_string_eq(residency, "scope", "single_dense_gguf_attention_v_mix_fixture")?;
+    require_string_eq(residency, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(residency, "fixture_id", required_string(fixture, "fixture_id")?)?;
+    require_bool_eq(residency, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(residency, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(residency, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(residency, "input_tensors_uploaded_once", true)?;
+    require_bool_eq(residency, "output_tensor_cuda_resident_during_kernel", true)?;
+    require_bool_eq(residency, "host_device_transfer_accounting_matches_kernel_stats", true)?;
+
+    let inputs = array_field(residency, "inputs")?;
+    if inputs.len() != 2 {
+        return Err(anyhow!(
+            "attention V-mix tensor_residency.inputs must contain probabilities and values"
+        ));
+    }
+    let probabilities = &inputs[0];
+    require_string_eq(probabilities, "name", "dense_gguf_attention_probabilities")?;
+    require_string_eq(probabilities, "dtype", "f32")?;
+    require_string_eq(probabilities, "device_residency", "cuda_device_buffer")?;
+    require_u64_eq(probabilities, "upload_count", 1)?;
+    require_string_eq(probabilities, "reuse_scope", "single_fixture_launch")?;
+    require_u64_eq(probabilities, "host_bytes", probability_count * 4)?;
+
+    let values = &inputs[1];
+    require_string_eq(values, "name", "dense_gguf_attention_values")?;
+    require_string_eq(values, "dtype", "f32")?;
+    require_string_eq(values, "device_residency", "cuda_device_buffer")?;
+    require_u64_eq(values, "upload_count", 1)?;
+    require_string_eq(values, "reuse_scope", "single_fixture_launch")?;
+    require_u64_eq(values, "host_bytes", value_count * 4)?;
+
+    let outputs = array_field(residency, "outputs")?;
+    if outputs.len() != 1 {
+        return Err(anyhow!("attention V-mix tensor_residency.outputs must contain context"));
+    }
+    let output = &outputs[0];
+    require_string_eq(output, "name", "dense_gguf_attention_context")?;
+    require_string_eq(output, "dtype", "f32")?;
+    require_string_eq(output, "device_residency", "cuda_device_buffer")?;
+    require_string_eq(output, "download_scope", "parity_check_only")?;
+    require_u64_eq(output, "device_to_host_bytes", context_count * 4)?;
+
+    let allocation = object_field(residency, "allocation")?;
+    require_u64_eq(allocation, "device_buffer_count", 3)?;
+    require_u64_eq(allocation, "persistent_handle_count", 0)?;
+    require_bool_eq(allocation, "persistent_handles_claimed", false)?;
+
+    let transfer = object_field(residency, "transfer_accounting")?;
+    require_string_eq(transfer, "status", "measured")?;
+    require_u64_eq(transfer, "host_to_device_bytes", (probability_count + value_count) * 4)?;
+    require_u64_eq(transfer, "device_to_host_bytes", context_count * 4)?;
+    require_u64_eq(transfer, "kernel_invocations", 1)?;
+    require_u64_eq(transfer, "kernel_launches", 1)?;
+    require_u64_eq(
+        stats,
+        "host_to_device_bytes",
+        object_field(transfer, "host_to_device_bytes")?
+            .as_u64()
+            .ok_or_else(|| anyhow!("transfer.host_to_device_bytes must be an integer"))?,
+    )?;
+    require_u64_eq(
+        stats,
+        "device_to_host_bytes",
+        object_field(transfer, "device_to_host_bytes")?
+            .as_u64()
+            .ok_or_else(|| anyhow!("transfer.device_to_host_bytes must be an integer"))?,
+    )?;
 
     Ok(())
 }

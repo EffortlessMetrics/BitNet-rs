@@ -42,11 +42,17 @@ pub const CUDA_DENSE_ATTENTION_SCORE_KERNEL_ID: &str = "dense_attention_scores_f
 /// Kernel ID recorded by dense regular-LLM CUDA attention-softmax receipts.
 pub const CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_ID: &str = "dense_attention_softmax_f32_cuda";
 
+/// Kernel ID recorded by dense regular-LLM CUDA attention V-mix receipts.
+pub const CUDA_DENSE_ATTENTION_V_MIX_KERNEL_ID: &str = "dense_attention_v_mix_f32_cuda";
+
 /// Tolerance for dense GGUF attention-score fixture parity against the CPU reference.
 pub const CUDA_DENSE_ATTENTION_SCORE_TOLERANCE: f32 = 0.000_25;
 
 /// Tolerance for dense GGUF attention-softmax fixture parity against the CPU reference.
 pub const CUDA_DENSE_ATTENTION_SOFTMAX_TOLERANCE: f32 = 0.000_25;
+
+/// Tolerance for dense GGUF attention V-mix fixture parity against the CPU reference.
+pub const CUDA_DENSE_ATTENTION_V_MIX_TOLERANCE: f32 = 0.000_25;
 
 /// CPU reference backend recorded by dense attention-score CUDA parity receipts.
 pub const CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
@@ -59,6 +65,9 @@ static DENSE_ATTENTION_SCORE_NVRTC_COMPILE_LOCK: Mutex<()> = Mutex::new(());
 
 #[cfg(feature = "cuda")]
 static DENSE_ATTENTION_SOFTMAX_NVRTC_COMPILE_LOCK: Mutex<()> = Mutex::new(());
+
+#[cfg(feature = "cuda")]
+static DENSE_ATTENTION_V_MIX_NVRTC_COMPILE_LOCK: Mutex<()> = Mutex::new(());
 
 /// Alias for [`AttentionKernelConfig`] — the CUDA-specific launch configuration.
 ///
@@ -272,6 +281,40 @@ void dense_attention_softmax_f32_cuda(
 }
 "#;
 
+#[cfg(feature = "cuda")]
+const CUDA_DENSE_ATTENTION_V_MIX_KERNEL_SRC: &str = r#"
+extern "C" __global__
+void dense_attention_v_mix_f32_cuda(
+    const float* __restrict__ probabilities,
+    const float* __restrict__ values,
+    float* __restrict__ context,
+    int q_heads,
+    int kv_heads,
+    int seq_len,
+    int head_dim
+) {
+    long long idx = (long long)blockIdx.x * blockDim.x + threadIdx.x;
+    long long total = (long long)q_heads * seq_len * head_dim;
+    if (idx >= total) {
+        return;
+    }
+
+    int dim = (int)(idx % head_dim);
+    int q_pos = (int)((idx / head_dim) % seq_len);
+    int q_head = (int)(idx / ((long long)seq_len * head_dim));
+    int heads_per_kv_group = q_heads / kv_heads;
+    int kv_head = q_head / heads_per_kv_group;
+
+    long long prob_base = ((long long)q_head * seq_len + q_pos) * seq_len;
+    float acc = 0.0f;
+    for (int k_pos = 0; k_pos < seq_len; ++k_pos) {
+        long long value_idx = ((long long)kv_head * seq_len + k_pos) * head_dim + dim;
+        acc += probabilities[prob_base + k_pos] * values[value_idx];
+    }
+    context[idx] = acc;
+}
+"#;
+
 // ---------------------------------------------------------------------------
 // Launch configuration (CUDA)
 // ---------------------------------------------------------------------------
@@ -331,6 +374,21 @@ pub struct AttentionSoftmaxConfig {
     pub threads_per_block: u32,
 }
 
+/// Launch configuration for dense attention V-mix fixture parity.
+#[derive(Debug, Clone)]
+pub struct AttentionVMixConfig {
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count.
+    pub kv_heads: usize,
+    /// Per-head dimension.
+    pub head_dim: usize,
+    /// Sequence length for query/key positions.
+    pub seq_len: usize,
+    /// Threads per CUDA block.
+    pub threads_per_block: u32,
+}
+
 /// CUDA execution counters for a dense attention-score fixture.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CudaDenseAttentionScoreStats {
@@ -362,6 +420,25 @@ pub struct CudaDenseAttentionSoftmaxStats {
     /// Host-to-device bytes copied for the attention-score tensor.
     pub host_to_device_bytes: u64,
     /// Device-to-host bytes copied for probability outputs.
+    pub device_to_host_bytes: u64,
+    /// CUDA kernel launches.
+    pub kernel_launches: u64,
+    /// Optional measured kernel time.
+    pub kernel_time_ms: Option<f64>,
+}
+
+/// CUDA execution counters for a dense attention V-mix fixture.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CudaDenseAttentionVMixStats {
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Number of CUDA kernel invocations.
+    pub invocations: u64,
+    /// CPU fallback invocations under strict CUDA.
+    pub fallback_invocations: u64,
+    /// Host-to-device bytes copied for probabilities and value states.
+    pub host_to_device_bytes: u64,
+    /// Device-to-host bytes copied for context outputs.
     pub device_to_host_bytes: u64,
     /// CUDA kernel launches.
     pub kernel_launches: u64,
@@ -443,6 +520,53 @@ pub struct DenseGgufAttentionSoftmaxCudaFixture {
     pub causal_zero_probabilities: usize,
     /// Maximum absolute row-sum error in the CPU reference.
     pub max_row_sum_abs_error: f32,
+}
+
+/// Dense GGUF attention V-mix fixture data prepared by the CLI/model layer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufAttentionVMixCudaFixture {
+    /// Fixture identifier recorded in parity receipts.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count.
+    pub kv_heads: usize,
+    /// Query heads per key/value head.
+    pub heads_per_kv_group: usize,
+    /// Per-head dimension.
+    pub head_dim: usize,
+    /// Sequence length.
+    pub seq_len: usize,
+    /// Source attention-softmax fixture identifier.
+    pub source_attention_softmax_fixture_id: String,
+    /// SHA-256 of source attention probabilities.
+    pub attention_probabilities_sha256: String,
+    /// SHA-256 of deterministic value states.
+    pub value_states_sha256: String,
+    /// Attention probabilities `[q_heads, seq_len, seq_len]`.
+    pub attention_probabilities_f32: Vec<f32>,
+    /// Value states `[kv_heads, seq_len, head_dim]`.
+    pub value_states_f32: Vec<f32>,
+    /// CPU reference context `[q_heads, seq_len, head_dim]`.
+    pub expected_context_f32: Vec<f32>,
+    /// Number of softmax rows.
+    pub row_count: usize,
+    /// Number of probabilities.
+    pub probability_count: usize,
+    /// Number of values.
+    pub value_count: usize,
+    /// Number of context values.
+    pub context_count: usize,
+    /// Number of probabilities expected to be zero from causal masking.
+    pub causal_zero_probabilities: usize,
+    /// Maximum absolute CPU reference context value.
+    pub max_context_abs: f32,
 }
 
 /// Dense GGUF attention-score CUDA parity result against the CPU reference.
@@ -527,6 +651,47 @@ pub struct DenseGgufAttentionSoftmaxCudaParity {
     pub causal_zero_probabilities: usize,
     /// CUDA execution counters.
     pub stats: CudaDenseAttentionSoftmaxStats,
+}
+
+/// Dense GGUF attention V-mix CUDA parity result against the CPU reference.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufAttentionVMixCudaParity {
+    /// Fixture identifier.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count.
+    pub kv_heads: usize,
+    /// Per-head dimension.
+    pub head_dim: usize,
+    /// Sequence length.
+    pub seq_len: usize,
+    /// CPU reference backend.
+    pub reference_backend: &'static str,
+    /// CUDA target backend.
+    pub target_backend: &'static str,
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Maximum absolute error against the CPU reference.
+    pub max_abs_error: f32,
+    /// Mean absolute error against the CPU reference.
+    pub mean_abs_error: f32,
+    /// Fixture tolerance.
+    pub tolerance: f32,
+    /// Whether the fixture passed tolerance.
+    pub passed: bool,
+    /// Number of compared context values.
+    pub compared_context_values: usize,
+    /// Number of causally masked zero probabilities from the source softmax.
+    pub causal_zero_probabilities: usize,
+    /// CUDA execution counters.
+    pub stats: CudaDenseAttentionVMixStats,
 }
 
 impl AttentionKernelConfig {
@@ -706,6 +871,76 @@ impl AttentionSoftmaxConfig {
             reason: format!("dense attention-softmax row count exceeds u32: {rows}"),
         })?;
         Ok((rows, 1, 1))
+    }
+
+    /// CUDA block dimensions.
+    pub fn block_dim(&self) -> (u32, u32, u32) {
+        (self.threads_per_block, 1, 1)
+    }
+}
+
+impl AttentionVMixConfig {
+    /// Create a dense attention V-mix configuration for context output.
+    pub fn for_shape(
+        q_heads: usize,
+        kv_heads: usize,
+        head_dim: usize,
+        seq_len: usize,
+    ) -> Result<Self> {
+        if q_heads == 0 || kv_heads == 0 || head_dim == 0 || seq_len == 0 {
+            return Err(KernelError::InvalidArguments {
+                reason: format!(
+                    "dense attention V-mix dimensions must be non-zero: q_heads={q_heads}, kv_heads={kv_heads}, head_dim={head_dim}, seq_len={seq_len}"
+                ),
+            }
+            .into());
+        }
+        if !q_heads.is_multiple_of(kv_heads) {
+            return Err(KernelError::InvalidArguments {
+                reason: format!(
+                    "dense attention V-mix q_heads must be divisible by kv_heads: q_heads={q_heads}, kv_heads={kv_heads}"
+                ),
+            }
+            .into());
+        }
+        Ok(Self { q_heads, kv_heads, head_dim, seq_len, threads_per_block: 128 })
+    }
+
+    /// Total number of probability inputs.
+    pub fn probability_count(&self) -> Result<usize> {
+        checked_mul(
+            checked_mul(self.q_heads, self.seq_len, "attention V-mix q_heads*seq_len")?,
+            self.seq_len,
+            "attention V-mix probabilities",
+        )
+    }
+
+    /// Total number of value inputs.
+    pub fn value_count(&self) -> Result<usize> {
+        checked_mul(
+            checked_mul(self.kv_heads, self.seq_len, "attention V-mix kv_heads*seq_len")?,
+            self.head_dim,
+            "attention V-mix values",
+        )
+    }
+
+    /// Total number of context outputs.
+    pub fn context_count(&self) -> Result<usize> {
+        checked_mul(
+            checked_mul(self.q_heads, self.seq_len, "attention V-mix q_heads*seq_len")?,
+            self.head_dim,
+            "attention V-mix context",
+        )
+    }
+
+    /// CUDA grid dimensions.
+    pub fn grid_dim(&self) -> Result<(u32, u32, u32)> {
+        let context_count = self.context_count()?;
+        let context_count =
+            u32::try_from(context_count).map_err(|_| KernelError::InvalidArguments {
+                reason: format!("dense attention V-mix context exceeds u32: {context_count}"),
+            })?;
+        Ok((context_count.div_ceil(self.threads_per_block), 1, 1))
     }
 
     /// CUDA block dimensions.
@@ -966,6 +1201,90 @@ pub fn run_dense_gguf_attention_softmax_cuda_parity(
     })
 }
 
+/// Launch a strict dense attention V-mix F32 CUDA fixture and return execution counters.
+///
+/// This computes `softmax(QK^T) * V` from precomputed probability and value
+/// tensors. This function never falls back to CPU.
+pub fn launch_dense_attention_v_mix_f32_cuda(
+    device_index: usize,
+    probabilities: &[f32],
+    values: &[f32],
+    context: &mut [f32],
+    config: &AttentionVMixConfig,
+) -> Result<CudaDenseAttentionVMixStats> {
+    validate_attention_v_mix_buffers(probabilities, values, context, config)?;
+
+    #[cfg(feature = "cuda")]
+    {
+        return launch_dense_attention_v_mix_f32_cuda_impl(
+            device_index,
+            probabilities,
+            values,
+            context,
+            config,
+        );
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = device_index;
+        Err(KernelError::DeviceUnavailable {
+            reason: "dense attention V-mix CUDA parity requires the cuda feature".to_string(),
+        }
+        .into())
+    }
+}
+
+/// Run a dense GGUF attention V-mix fixture on CUDA and compare it to CPU references.
+///
+/// # Errors
+///
+/// Returns an error if the fixture is invalid, CUDA is unavailable, or parity
+/// comparison cannot be computed.
+pub fn run_dense_gguf_attention_v_mix_cuda_parity(
+    device_index: usize,
+    fixture: &DenseGgufAttentionVMixCudaFixture,
+) -> Result<DenseGgufAttentionVMixCudaParity> {
+    validate_dense_gguf_attention_v_mix_fixture(fixture)?;
+    let config = AttentionVMixConfig::for_shape(
+        fixture.q_heads,
+        fixture.kv_heads,
+        fixture.head_dim,
+        fixture.seq_len,
+    )?;
+    let mut actual = vec![0.0f32; fixture.expected_context_f32.len()];
+    let stats = launch_dense_attention_v_mix_f32_cuda(
+        device_index,
+        &fixture.attention_probabilities_f32,
+        &fixture.value_states_f32,
+        &mut actual,
+        &config,
+    )?;
+    let (max_abs_error, mean_abs_error, compared_context_values) =
+        compare_attention_v_mix_outputs(&fixture.expected_context_f32, &actual)?;
+
+    Ok(DenseGgufAttentionVMixCudaParity {
+        fixture_id: fixture.fixture_id.clone(),
+        model_family: fixture.model_family.clone(),
+        architecture: fixture.architecture.clone(),
+        layer_index: fixture.layer_index,
+        q_heads: fixture.q_heads,
+        kv_heads: fixture.kv_heads,
+        head_dim: fixture.head_dim,
+        seq_len: fixture.seq_len,
+        reference_backend: CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND,
+        target_backend: CUDA_DENSE_ATTENTION_SCORE_TARGET_BACKEND,
+        kernel_id: CUDA_DENSE_ATTENTION_V_MIX_KERNEL_ID,
+        max_abs_error,
+        mean_abs_error,
+        tolerance: CUDA_DENSE_ATTENTION_V_MIX_TOLERANCE,
+        passed: max_abs_error <= CUDA_DENSE_ATTENTION_V_MIX_TOLERANCE,
+        compared_context_values,
+        causal_zero_probabilities: fixture.causal_zero_probabilities,
+        stats,
+    })
+}
+
 fn validate_attention_score_buffers(
     q: &[f32],
     k: &[f32],
@@ -1211,6 +1530,150 @@ fn validate_dense_gguf_attention_softmax_fixture(
     Ok(())
 }
 
+fn validate_attention_v_mix_buffers(
+    probabilities: &[f32],
+    values: &[f32],
+    context: &[f32],
+    config: &AttentionVMixConfig,
+) -> Result<()> {
+    if config.q_heads == 0 || config.kv_heads == 0 || config.head_dim == 0 || config.seq_len == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention V-mix dimensions must be non-zero".into(),
+        }
+        .into());
+    }
+    if !config.q_heads.is_multiple_of(config.kv_heads) {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention V-mix q_heads must be divisible by kv_heads: q_heads={}, kv_heads={}",
+                config.q_heads, config.kv_heads
+            ),
+        }
+        .into());
+    }
+    if config.threads_per_block == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention V-mix threads_per_block must be non-zero".into(),
+        }
+        .into());
+    }
+    let probability_count = config.probability_count()?;
+    let value_count = config.value_count()?;
+    let context_count = config.context_count()?;
+    if probabilities.len() != probability_count
+        || values.len() != value_count
+        || context.len() != context_count
+    {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention V-mix buffer length mismatch: expected probabilities={probability_count}, values={value_count}, context={context_count}; got probabilities={}, values={}, context={}",
+                probabilities.len(),
+                values.len(),
+                context.len()
+            ),
+        }
+        .into());
+    }
+    validate_i32_arg(config.q_heads, "q_heads")?;
+    validate_i32_arg(config.kv_heads, "kv_heads")?;
+    validate_i32_arg(config.seq_len, "seq_len")?;
+    validate_i32_arg(config.head_dim, "head_dim")?;
+    for (idx, value) in probabilities.iter().chain(values).enumerate() {
+        if !value.is_finite() {
+            return Err(KernelError::InvalidArguments {
+                reason: format!("dense attention V-mix input[{idx}] is not finite"),
+            }
+            .into());
+        }
+    }
+    Ok(())
+}
+
+fn validate_dense_gguf_attention_v_mix_fixture(
+    fixture: &DenseGgufAttentionVMixCudaFixture,
+) -> Result<()> {
+    require_sha256_like(&fixture.attention_probabilities_sha256, "attention_probabilities_sha256")?;
+    require_sha256_like(&fixture.value_states_sha256, "value_states_sha256")?;
+    if fixture.model_family.trim().is_empty() || fixture.architecture.trim().is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention V-mix fixture requires model labels".into(),
+        }
+        .into());
+    }
+    if fixture.source_attention_softmax_fixture_id.trim().is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention V-mix fixture requires source attention-softmax fixture id"
+                .into(),
+        }
+        .into());
+    }
+    let config = AttentionVMixConfig::for_shape(
+        fixture.q_heads,
+        fixture.kv_heads,
+        fixture.head_dim,
+        fixture.seq_len,
+    )?;
+    let probability_count = config.probability_count()?;
+    let value_count = config.value_count()?;
+    let context_count = config.context_count()?;
+    if fixture.row_count != fixture.q_heads * fixture.seq_len
+        || fixture.probability_count != probability_count
+        || fixture.value_count != value_count
+        || fixture.context_count != context_count
+        || fixture.attention_probabilities_f32.len() != probability_count
+        || fixture.value_states_f32.len() != value_count
+        || fixture.expected_context_f32.len() != context_count
+    {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention V-mix fixture shape mismatch: probabilities={}, values={}, context={}; expected probabilities={probability_count}, values={value_count}, context={context_count}",
+                fixture.attention_probabilities_f32.len(),
+                fixture.value_states_f32.len(),
+                fixture.expected_context_f32.len()
+            ),
+        }
+        .into());
+    }
+    if fixture.heads_per_kv_group != fixture.q_heads / fixture.kv_heads {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention V-mix fixture heads_per_kv_group mismatch".into(),
+        }
+        .into());
+    }
+    validate_attention_v_mix_buffers(
+        &fixture.attention_probabilities_f32,
+        &fixture.value_states_f32,
+        &fixture.expected_context_f32,
+        &config,
+    )?;
+    let zero_probs = fixture
+        .attention_probabilities_f32
+        .iter()
+        .filter(|probability| probability.abs() <= f32::EPSILON)
+        .count();
+    if zero_probs != fixture.causal_zero_probabilities {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention V-mix fixture causal zero count mismatch: expected {}, got {zero_probs}",
+                fixture.causal_zero_probabilities
+            ),
+        }
+        .into());
+    }
+    let max_context_abs =
+        fixture.expected_context_f32.iter().copied().map(f32::abs).fold(0.0f32, f32::max);
+    if (max_context_abs - fixture.max_context_abs).abs() > 0.000_001 {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention V-mix fixture max context abs mismatch: expected {}, got {max_context_abs}",
+                fixture.max_context_abs
+            ),
+        }
+        .into());
+    }
+    Ok(())
+}
+
 #[cfg(feature = "cuda")]
 fn launch_dense_attention_scores_f32_cuda_impl(
     device_index: usize,
@@ -1388,6 +1851,101 @@ fn launch_dense_attention_softmax_f32_cuda_impl(
 }
 
 #[cfg(feature = "cuda")]
+fn launch_dense_attention_v_mix_f32_cuda_impl(
+    device_index: usize,
+    probabilities: &[f32],
+    values: &[f32],
+    context: &mut [f32],
+    config: &AttentionVMixConfig,
+) -> Result<CudaDenseAttentionVMixStats> {
+    let probability_count = config.probability_count()?;
+    let value_count = config.value_count()?;
+    let context_count = config.context_count()?;
+
+    let ctx = CudaContext::new(device_index).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to create CUDA context for dense attention V-mix: {err:?}"),
+    })?;
+    let stream = ctx.default_stream();
+    let ptx = compile_dense_attention_v_mix_ptx()?;
+    let module = ctx.load_module(ptx).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to load dense attention V-mix CUDA module: {err:?}"),
+    })?;
+    let function = module.load_function(CUDA_DENSE_ATTENTION_V_MIX_KERNEL_ID).map_err(|err| {
+        KernelError::GpuError {
+            reason: format!("failed to load dense attention V-mix CUDA kernel: {err:?}"),
+        }
+    })?;
+
+    let probabilities_dev =
+        stream.memcpy_stod(&probabilities[..probability_count]).map_err(|err| {
+            KernelError::GpuError {
+                reason: format!(
+                    "failed to copy dense attention V-mix probabilities to device: {err:?}"
+                ),
+            }
+        })?;
+    let values_dev =
+        stream.memcpy_stod(&values[..value_count]).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to copy dense attention V-mix values to device: {err:?}"),
+        })?;
+    let mut context_dev: CudaSlice<f32> =
+        stream.alloc_zeros(context_count).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to allocate dense attention V-mix output on device: {err:?}"),
+        })?;
+
+    let launch_config = LaunchConfig {
+        grid_dim: config.grid_dim()?,
+        block_dim: config.block_dim(),
+        shared_mem_bytes: 0,
+    };
+    let mut builder = stream.launch_builder(&function);
+    builder.arg(&probabilities_dev);
+    builder.arg(&values_dev);
+    builder.arg(&mut context_dev);
+    let q_heads_arg = i32::try_from(config.q_heads).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense attention V-mix q_heads exceeds i32: {}", config.q_heads),
+    })?;
+    let kv_heads_arg =
+        i32::try_from(config.kv_heads).map_err(|_| KernelError::InvalidArguments {
+            reason: format!("dense attention V-mix kv_heads exceeds i32: {}", config.kv_heads),
+        })?;
+    let seq_len_arg = i32::try_from(config.seq_len).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense attention V-mix seq_len exceeds i32: {}", config.seq_len),
+    })?;
+    let head_dim_arg =
+        i32::try_from(config.head_dim).map_err(|_| KernelError::InvalidArguments {
+            reason: format!("dense attention V-mix head_dim exceeds i32: {}", config.head_dim),
+        })?;
+    builder.arg(&q_heads_arg);
+    builder.arg(&kv_heads_arg);
+    builder.arg(&seq_len_arg);
+    builder.arg(&head_dim_arg);
+
+    unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
+        reason: format!("failed to launch dense attention V-mix CUDA kernel: {err:?}"),
+    })?;
+    stream.synchronize().map_err(|err| KernelError::GpuError {
+        reason: format!("failed to synchronize dense attention V-mix CUDA kernel: {err:?}"),
+    })?;
+
+    let context_host: Vec<f32> =
+        stream.memcpy_dtov(&context_dev).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to copy dense attention V-mix output from device: {err:?}"),
+        })?;
+    context[..context_count].copy_from_slice(&context_host[..context_count]);
+
+    Ok(CudaDenseAttentionVMixStats {
+        kernel_id: CUDA_DENSE_ATTENTION_V_MIX_KERNEL_ID,
+        invocations: 1,
+        fallback_invocations: 0,
+        host_to_device_bytes: bytes_for::<f32>(probability_count + value_count)?,
+        device_to_host_bytes: bytes_for::<f32>(context_count)?,
+        kernel_launches: 1,
+        kernel_time_ms: None,
+    })
+}
+
+#[cfg(feature = "cuda")]
 fn compile_dense_attention_score_ptx() -> Result<Ptx> {
     let _hook_guard = DENSE_ATTENTION_SCORE_NVRTC_COMPILE_LOCK.lock().ok();
     let previous_hook = std::panic::take_hook();
@@ -1430,6 +1988,31 @@ fn compile_dense_attention_softmax_ptx() -> Result<Ptx> {
         Err(payload) => Err(KernelError::GpuError {
             reason: format!(
                 "failed to compile dense attention-softmax CUDA PTX because NVRTC was unavailable: {}",
+                panic_payload_message(&*payload)
+            ),
+        }
+        .into()),
+    }
+}
+
+#[cfg(feature = "cuda")]
+fn compile_dense_attention_v_mix_ptx() -> Result<Ptx> {
+    let _hook_guard = DENSE_ATTENTION_V_MIX_NVRTC_COMPILE_LOCK.lock().ok();
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let compile_result =
+        std::panic::catch_unwind(|| compile_ptx(CUDA_DENSE_ATTENTION_V_MIX_KERNEL_SRC));
+    std::panic::set_hook(previous_hook);
+
+    match compile_result {
+        Ok(Ok(ptx)) => Ok(ptx),
+        Ok(Err(err)) => Err(KernelError::GpuError {
+            reason: format!("failed to compile dense attention V-mix CUDA PTX: {err:?}"),
+        }
+        .into()),
+        Err(payload) => Err(KernelError::GpuError {
+            reason: format!(
+                "failed to compile dense attention V-mix CUDA PTX because NVRTC was unavailable: {}",
                 panic_payload_message(&*payload)
             ),
         }
@@ -1528,6 +2111,42 @@ fn compare_attention_softmax_outputs(
             return Err(KernelError::InvalidArguments {
                 reason: format!(
                     "dense attention-softmax parity requires finite probabilities at {idx}: expected={expected}, actual={actual}"
+                ),
+            }
+            .into());
+        }
+        let abs = (expected - actual).abs();
+        max_abs = max_abs.max(abs);
+        sum_abs += abs;
+    }
+    Ok((max_abs, sum_abs / expected.len() as f32, expected.len()))
+}
+
+fn compare_attention_v_mix_outputs(expected: &[f32], actual: &[f32]) -> Result<(f32, f32, usize)> {
+    if expected.len() != actual.len() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention V-mix parity length mismatch: expected {}, got {}",
+                expected.len(),
+                actual.len()
+            ),
+        }
+        .into());
+    }
+    if expected.is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention V-mix parity comparison requires non-empty output".into(),
+        }
+        .into());
+    }
+
+    let mut max_abs = 0.0f32;
+    let mut sum_abs = 0.0f32;
+    for (idx, (&expected, &actual)) in expected.iter().zip(actual).enumerate() {
+        if !expected.is_finite() || !actual.is_finite() {
+            return Err(KernelError::InvalidArguments {
+                reason: format!(
+                    "dense attention V-mix parity requires finite context at {idx}: expected={expected}, actual={actual}"
                 ),
             }
             .into());
@@ -2162,6 +2781,25 @@ mod tests {
     }
 
     #[test]
+    fn test_attention_v_mix_config_for_shape() {
+        let cfg = AttentionVMixConfig::for_shape(4, 2, 8, 3).unwrap();
+        assert_eq!(cfg.q_heads, 4);
+        assert_eq!(cfg.kv_heads, 2);
+        assert_eq!(cfg.head_dim, 8);
+        assert_eq!(cfg.seq_len, 3);
+        assert_eq!(cfg.probability_count().unwrap(), 36);
+        assert_eq!(cfg.value_count().unwrap(), 48);
+        assert_eq!(cfg.context_count().unwrap(), 96);
+        assert_eq!(cfg.grid_dim().unwrap(), (1, 1, 1));
+        assert_eq!(cfg.block_dim(), (128, 1, 1));
+    }
+
+    #[test]
+    fn test_attention_v_mix_config_rejects_mismatched_heads() {
+        assert!(AttentionVMixConfig::for_shape(3, 2, 8, 3).is_err());
+    }
+
+    #[test]
     fn test_attention_score_compare_handles_causal_mask() {
         let expected = vec![0.5, f32::NEG_INFINITY, -0.25, 0.75];
         let actual = vec![0.50001, f32::NEG_INFINITY, -0.25002, 0.75003];
@@ -2193,6 +2831,23 @@ mod tests {
         let expected = vec![1.0, 0.0];
         let actual = vec![1.0, f32::NAN];
         assert!(compare_attention_softmax_outputs(&expected, &actual).is_err());
+    }
+
+    #[test]
+    fn test_attention_v_mix_compare_handles_context_values() {
+        let expected = vec![0.5, -0.25, 0.75];
+        let actual = vec![0.50001, -0.25002, 0.75003];
+        let (max_abs, _mean_abs, compared) =
+            compare_attention_v_mix_outputs(&expected, &actual).unwrap();
+        assert_eq!(compared, 3);
+        assert!(max_abs < 0.000_1);
+    }
+
+    #[test]
+    fn test_attention_v_mix_compare_rejects_non_finite() {
+        let expected = vec![1.0, 0.0];
+        let actual = vec![1.0, f32::NAN];
+        assert!(compare_attention_v_mix_outputs(&expected, &actual).is_err());
     }
 
     // ── AttentionConfig tests ─────────────────────────────────────────
