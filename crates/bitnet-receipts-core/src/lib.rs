@@ -106,6 +106,14 @@ pub const DENSE_GGUF_ATTENTION_SOFTMAX_FIXTURE_ARTIFACT_KIND: &str =
 pub const DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND: &str =
     "dense_gguf_attention_softmax_cuda_parity";
 
+/// Artifact kind for dense GGUF attention V-mix fixture extraction.
+///
+/// This receipt records CPU-reference context vectors derived from verified
+/// attention-softmax probabilities and a deterministic attention-V fixture. It
+/// is below CUDA parity and dense GGUF inference.
+pub const DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND: &str =
+    "dense_gguf_attention_v_mix_fixture_extraction";
+
 /// Artifact kind for dense GGUF single-linear CUDA parity.
 ///
 /// This receipt proves one descriptor-extracted dense GGUF linear fixture can
@@ -1968,6 +1976,231 @@ pub fn validate_dense_gguf_attention_softmax_fixture_receipt_json(receipt: &Valu
     Ok(())
 }
 
+/// Validate a dense GGUF attention V-mix fixture extraction receipt.
+///
+/// This receipt records a CPU-reference `softmax(scores) x V` context fixture
+/// after the attention-softmax CUDA parity boundary. It must not claim CUDA
+/// V-mix parity, dense GGUF inference, speedup, full residency, or BitNet
+/// packed I2_S/QK256 proof.
+pub fn validate_dense_gguf_attention_v_mix_fixture_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_attention_v_mix_fixture_extracted")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_non_empty(receipt, "inspection_source")?;
+    require_null(receipt, "error")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(
+        execution_path,
+        "kernel_family",
+        "cpu_reference_attention_v_mix_after_softmax",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    let plan = object_field(receipt, "execution_plan")?;
+    require_string_eq(plan, "model_family", required_string(model, "model_family")?)?;
+    require_string_eq(plan, "selected_route", "unsupported")?;
+    require_string_eq(plan, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "selected_backend", "unsupported_strict_cuda")?;
+    require_string_eq(plan, "runtime_api", "none")?;
+    require_string_eq(plan, "strict_fallback_policy", "reject")?;
+    require_bool_eq(plan, "dense_regular_llm_cuda", false)?;
+    require_bool_eq(plan, "bitnet_packed_qk256_cuda", false)?;
+    require_u64_eq(plan, "cuda_bitnet_qk256_ops", 0)?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 0)?;
+    require_u64_eq(plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(plan, "unsupported_ops", 1)?;
+    require_u64_eq(plan, "total_ops", 1)?;
+    require_u64_eq(plan, "cuda_ops", 0)?;
+    require_bool_eq(plan, "fallback_used", false)?;
+    require_bool_eq(plan, "strict_cuda_ready", false)?;
+    require_bool_eq(plan, "speedup_claim", false)?;
+    require_bool_eq(plan, "full_cuda_residency_claimed", false)?;
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+
+    let fixture = object_field(receipt, "attention_v_mix_fixture")?;
+    require_u64_eq(fixture, "schema", 1)?;
+    require_string_eq(
+        fixture,
+        "source_artifact_kind",
+        DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND,
+    )?;
+    require_string_eq(
+        fixture,
+        "source_attention_softmax_artifact_kind",
+        DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND,
+    )?;
+    require_string_non_empty(fixture, "source_attention_softmax_fixture_id")?;
+    require_string_eq(
+        fixture,
+        "source_attention_v_artifact_kind",
+        DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
+    )?;
+    require_string_eq(fixture, "source_attention_v_role", "attention_v")?;
+    require_string_non_empty(fixture, "fixture_id")?;
+    require_string_eq(fixture, "model_family", required_string(model, "model_family")?)?;
+    require_string_eq(fixture, "architecture", required_string(model, "architecture")?)?;
+    require_positive_u64(fixture, "q_heads")?;
+    require_positive_u64(fixture, "kv_heads")?;
+    require_positive_u64(fixture, "heads_per_kv_group")?;
+    require_positive_u64(fixture, "head_dim")?;
+    require_positive_u64(fixture, "seq_len")?;
+    require_positive_u64(fixture, "row_count")?;
+    require_positive_u64(fixture, "probability_count")?;
+    require_positive_u64(fixture, "value_count")?;
+    require_positive_u64(fixture, "context_count")?;
+    require_sha256(fixture, "attention_probabilities_sha256")?;
+    require_sha256(fixture, "value_states_sha256")?;
+    require_sha256(fixture, "cpu_reference_context_sha256")?;
+    let q_heads = required_u64(fixture, "q_heads")?;
+    let kv_heads = required_u64(fixture, "kv_heads")?;
+    let heads_per_kv_group = required_u64(fixture, "heads_per_kv_group")?;
+    let seq_len = required_u64(fixture, "seq_len")?;
+    let head_dim = required_u64(fixture, "head_dim")?;
+    if q_heads % kv_heads != 0 || heads_per_kv_group != q_heads / kv_heads {
+        return Err(anyhow!(
+            "attention_v_mix_fixture heads_per_kv_group must match q_heads / kv_heads"
+        ));
+    }
+    require_u64_eq(fixture, "row_count", q_heads * seq_len)?;
+    require_u64_eq(fixture, "probability_count", q_heads * seq_len * seq_len)?;
+    require_u64_eq(fixture, "value_count", kv_heads * seq_len * head_dim)?;
+    require_u64_eq(fixture, "context_count", q_heads * seq_len * head_dim)?;
+    let zero_probs =
+        object_field(fixture, "causal_zero_probabilities")?.as_u64().ok_or_else(|| {
+            anyhow!("attention_v_mix_fixture.causal_zero_probabilities must be unsigned")
+        })?;
+    if zero_probs >= q_heads * seq_len * seq_len {
+        return Err(anyhow!(
+            "attention_v_mix_fixture causal_zero_probabilities must leave finite probabilities"
+        ));
+    }
+    require_non_negative_number(fixture, "max_context_abs")?;
+    require_bool_eq(fixture, "cpu_reference_computed", true)?;
+    require_string_eq(fixture, "cuda_kernel_status", "missing_cuda_kernel")?;
+    require_bool_eq(fixture, "strict_cuda_ready", false)?;
+    require_bool_eq(fixture, "cpu_fallback_allowed", false)?;
+    require_string_eq(fixture, "transfer_timing_status", "not_measured_no_kernel")?;
+    require_bool_eq(fixture, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(fixture, "dense_regular_llm_cuda_claimed", false)?;
+    require_bool_eq(fixture, "cpu_cuda_parity_claimed", false)?;
+    require_bool_eq(fixture, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(fixture, "speedup_claim", false)?;
+    require_bool_eq(fixture, "full_cuda_residency_claimed", false)?;
+
+    let audit = object_field(receipt, "attention_v_mix_gap_audit")?;
+    require_u64_eq(audit, "schema", 1)?;
+    require_string_eq(
+        audit,
+        "source_artifact_kind",
+        DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND,
+    )?;
+    require_string_eq(audit, "gap_role", "attention_v_mix")?;
+    require_bool_eq(audit, "source_attention_softmax_cuda_parity_required", true)?;
+    require_bool_eq(audit, "source_attention_softmax_cuda_parity_available", true)?;
+    require_bool_eq(audit, "source_attention_v_cuda_parity_required", true)?;
+    require_bool_eq(audit, "source_attention_v_cuda_parity_available", true)?;
+    require_bool_eq(audit, "cpu_reference_available", true)?;
+    require_string_eq(audit, "cuda_kernel_status", "missing_cuda_kernel")?;
+    require_bool_eq(audit, "strict_cuda_ready", false)?;
+    require_bool_eq(audit, "cpu_fallback_allowed", false)?;
+    require_bool_eq(audit, "blocks_strict_cuda_one_layer", true)?;
+    require_string_eq(audit, "next_required_proof", "cuda_attention_v_mix_kernel_parity")?;
+    let deps = array_field(audit, "input_dependencies")?;
+    let deps = deps
+        .iter()
+        .map(|dep| {
+            dep.as_str().ok_or_else(|| {
+                anyhow!("attention_v_mix_gap_audit.input_dependencies entries must be strings")
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if deps != ["attention_softmax", "attention_v"] {
+        return Err(anyhow!(
+            "attention_v_mix_gap_audit.input_dependencies must identify attention_softmax and attention_v"
+        ));
+    }
+    let candidate_order = array_field(audit, "candidate_order")?;
+    let candidate_order = candidate_order
+        .iter()
+        .map(|role| {
+            role.as_str().ok_or_else(|| {
+                anyhow!("attention_v_mix_gap_audit.candidate_order entries must be strings")
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if candidate_order != DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER {
+        return Err(anyhow!(
+            "attention_v_mix_gap_audit.candidate_order must preserve the remaining gap order"
+        ));
+    }
+    require_bool_eq(audit, "dense_gguf_attention_v_mix_fixture_extraction_claimed", true)?;
+    require_bool_eq(audit, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(audit, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(audit, "speedup_claim", false)?;
+    require_bool_eq(audit, "full_cuda_residency_claimed", false)?;
+
+    let timing = object_field(receipt, "timing")?;
+    require_null(timing, "kernel_time_ms")?;
+    require_u64_eq(timing, "host_to_device_bytes", 0)?;
+    require_u64_eq(timing, "device_to_host_bytes", 0)?;
+    require_string_eq(timing, "transfer_timing_status", "not_measured_no_kernel")?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_score_cuda_parity_claimed", false)?;
+    require_bool_eq(
+        claim_boundary,
+        "dense_gguf_attention_softmax_fixture_extraction_claimed",
+        false,
+    )?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_softmax_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_v_mix_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_rope_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_norm_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "cpu_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
 /// Validate dense GGUF attention-softmax CUDA parity evidence.
 ///
 /// This receipt bridges the attention-softmax fixture into a strict CUDA
@@ -3695,6 +3928,12 @@ fn array_field<'a>(object: &'a Value, field: &str) -> Result<&'a Vec<Value>> {
 
 fn required_string<'a>(object: &'a Value, field: &str) -> Result<&'a str> {
     object_field(object, field)?.as_str().ok_or_else(|| anyhow!("field `{field}` must be a string"))
+}
+
+fn required_u64(object: &Value, field: &str) -> Result<u64> {
+    object_field(object, field)?
+        .as_u64()
+        .ok_or_else(|| anyhow!("field `{field}` must be an unsigned integer"))
 }
 
 fn require_string_eq(object: &Value, field: &str, expected: &str) -> Result<()> {
