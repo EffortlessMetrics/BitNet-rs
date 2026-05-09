@@ -61,7 +61,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-002"
-status = "in_progress"
+status = "merged"
+pr = 4343
+merge_sha = "f7aa50ace085c5f698eb856edfe4b45d2e7b0d84"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-002-reference-sanity"
 stackable = false
 review_mode = "codex_premerge"
@@ -95,7 +97,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-003"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-003-rust-m4-quality"
 stackable = false
 review_mode = "codex_premerge"
