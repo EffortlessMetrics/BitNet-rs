@@ -97,6 +97,19 @@ That command verifies the exact official GGUF bytes and includes the
 not by itself prove CPU, CUDA, speedup, or full-residency claims; those still
 require the strict backend receipts listed by the contract.
 
+The full BitNet-family contract matrix is available through the model command:
+
+```powershell
+bitnet model contracts --json
+bitnet model contracts onebitllm_bitnet_b158_3b_i2s_x86 --json
+```
+
+Known contracts that do not yet have a supported artifact identity and SHA256
+registered for `bitnet model verify` fail closed with their contract summary.
+For example, the upstream-unsupported 3B x86 `I2_S` contract may be inspected
+or recorded as an unsupported-path diagnostic, but it cannot become answer,
+reference, backend-parity, benchmark, or speed authority.
+
 ## Strict Proof Requirements
 
 Strict BitNet proof requires:

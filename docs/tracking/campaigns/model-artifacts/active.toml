@@ -518,3 +518,57 @@ must_not_claim = [
   "Runtime tokenizer, prompt-template, loader, transformer, QK256, CUDA, dense GGUF, or server behavior changed.",
   "Any backend speedup is proven.",
 ]
+
+[[work_item]]
+id = "BITNET-CONTRACT-003"
+status = "in_progress"
+branch = "codex/bitnet-contract-003-verify-matrix"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["BITNET-CONTRACT-002"]
+acceptance = "Expose the full BitNet-family model contract matrix through `bitnet model contracts` and make `bitnet model verify` fail closed with a contract summary for known BitNet contracts that do not have supported artifact identity and SHA256 metadata, without changing runtime inference, tokenizer, loader, transformer, QK256, CUDA, dense GGUF, server, or speed-claim behavior."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli model_cache -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model contracts --json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model contracts onebitllm_bitnet_b158_3b_i2s_x86 --json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/model_cache.rs",
+  "docs/bitnet/BITNET_MODEL_CONTRACT.md",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "server inference",
+  "speed claims",
+]
+may_claim = [
+  "`bitnet model contracts` exposes every registered BitNet-family model contract.",
+  "`bitnet model verify` fails closed with a contract summary for known contracts that are not supported byte-verifiable artifacts.",
+  "The upstream-unsupported 3B x86 I2_S contract remains diagnostic/unsupported-path only.",
+]
+must_not_claim = [
+  "Official TL1 or TL2 answer readiness is proven.",
+  "3B x86 I2_S is supported or locally regressed.",
+  "Runtime tokenizer, prompt-template, loader, transformer, QK256, CUDA, dense GGUF, or server behavior changed.",
+  "Any backend speedup or full CUDA residency is proven.",
+]

@@ -1,7 +1,9 @@
 //! User-facing model cache management.
 
 use anyhow::{Context, Result, anyhow};
-use bitnet_models::model_contracts::{BitnetModelContract, find_bitnet_model_contract};
+use bitnet_models::model_contracts::{
+    BitnetModelContract, bitnet_model_contracts, find_bitnet_model_contract,
+};
 use clap::{Args, Subcommand};
 use futures::StreamExt;
 use humansize::{DECIMAL, format_size};
@@ -64,6 +66,16 @@ pub enum ModelAction {
         /// Override cache root. Defaults to ~/.cache/bitnet-rs/models.
         #[arg(long, value_name = "PATH")]
         cache_dir: Option<PathBuf>,
+
+        /// Emit JSON instead of text.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
+    /// Inspect BitNet-family model contracts and claim boundaries.
+    Contracts {
+        /// Optional contract id or alias. Omit to list every BitNet-family contract.
+        id: Option<String>,
 
         /// Emit JSON instead of text.
         #[arg(long, default_value_t = false)]
@@ -175,6 +187,16 @@ struct VerifyRouteSummary {
     status: String,
 }
 
+#[derive(Debug, Serialize)]
+struct ContractOnlyVerifyResult {
+    id: String,
+    path: Option<PathBuf>,
+    passed: bool,
+    supported_artifact: bool,
+    reason: String,
+    model_contract: VerifyContractSummary,
+}
+
 #[cfg(feature = "full-cli")]
 #[derive(Debug, Clone)]
 pub(crate) struct VerifiedCachedModel {
@@ -210,6 +232,7 @@ impl ModelCommand {
             ModelAction::Verify { id, path, cache_dir, json } => {
                 verify_model_command(&id, path, cache_dir, json)
             }
+            ModelAction::Contracts { id, json } => list_model_contracts(id.as_deref(), json),
             ModelAction::List { cache_dir, json } => list_models(cache_dir, json),
             ModelAction::Prune { id, all, dry_run, cache_dir, json } => {
                 prune_models(id, all, dry_run, cache_dir, json)
@@ -467,7 +490,9 @@ fn verify_model_command(
     cache_dir: Option<PathBuf>,
     json: bool,
 ) -> Result<()> {
-    let model = supported_model(id)?;
+    let Some(model) = find_supported_model(id) else {
+        return verify_contract_without_supported_artifact(id, path, json);
+    };
     let cache_root = resolve_cache_root(cache_dir)?;
     let cache_path = model_path(&cache_root, model);
     let path = path.unwrap_or_else(|| cache_path.clone());
@@ -488,6 +513,116 @@ fn verify_model_command(
         eprintln!("{}", verify_failure_guidance(&cache_root, model, &path, &result));
     }
     if result.passed { Ok(()) } else { anyhow::bail!("model `{}` failed verification", model.id) }
+}
+
+fn verify_contract_without_supported_artifact(
+    id: &str,
+    path: Option<PathBuf>,
+    json: bool,
+) -> Result<()> {
+    let Some(contract) = find_bitnet_model_contract(id) else {
+        return supported_model(id).map(|_| ());
+    };
+    let result = contract_only_verify_result(id, path, contract);
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!("verification rejected for {}", result.id);
+        if let Some(path) = &result.path {
+            println!("path: {}", path.display());
+        }
+        println!(
+            "contract: {} ({}, {})",
+            result.model_contract.id,
+            result.model_contract.kernel_family,
+            result.model_contract.status
+        );
+        println!("reason: {}", result.reason);
+        println!("claim boundary: {}", result.model_contract.claim_boundary);
+    }
+
+    anyhow::bail!(
+        "model contract `{}` is not a supported artifact for byte verification",
+        result.model_contract.id
+    )
+}
+
+fn contract_only_verify_result(
+    id: &str,
+    path: Option<PathBuf>,
+    contract: &BitnetModelContract,
+) -> ContractOnlyVerifyResult {
+    ContractOnlyVerifyResult {
+        id: id.to_string(),
+        path,
+        passed: false,
+        supported_artifact: false,
+        reason: "known BitNet-family contract has no supported artifact identity and SHA256 registered for `bitnet model verify`; diagnostic or unsupported-path receipts remain allowed according to the contract".to_string(),
+        model_contract: contract_summary(contract),
+    }
+}
+
+fn list_model_contracts(id: Option<&str>, json: bool) -> Result<()> {
+    if let Some(id) = id {
+        let contract = find_bitnet_model_contract(id).ok_or_else(|| {
+            let known = bitnet_model_contracts()
+                .iter()
+                .map(|contract| contract.id)
+                .collect::<Vec<_>>()
+                .join(", ");
+            anyhow!("unknown BitNet model contract `{id}`. Known contracts: {known}")
+        })?;
+        let summary = contract_summary(contract);
+        if json {
+            println!("{}", serde_json::to_string_pretty(&summary)?);
+        } else {
+            print_contract_summary(&summary);
+        }
+        return Ok(());
+    }
+
+    let summaries: Vec<_> = bitnet_model_contracts().iter().map(contract_summary).collect();
+    if json {
+        println!("{}", serde_json::to_string_pretty(&summaries)?);
+        return Ok(());
+    }
+
+    println!("{:<45} {:<16} {:<24} Artifact", "Contract", "Kernel", "Status");
+    println!("{}", "-".repeat(112));
+    for summary in &summaries {
+        println!(
+            "{:<45} {:<16} {:<24} {}",
+            summary.id,
+            summary.kernel_family,
+            summary.status,
+            summary.artifact_id.as_deref().unwrap_or("-")
+        );
+    }
+    Ok(())
+}
+
+fn print_contract_summary(summary: &VerifyContractSummary) {
+    println!("contract: {}", summary.id);
+    println!("family: {}", summary.model_family);
+    println!("format: {}", summary.artifact_format);
+    println!("kernel: {}", summary.kernel_family);
+    println!("status: {}", summary.status);
+    if let Some(artifact_id) = &summary.artifact_id {
+        println!("artifact: {artifact_id}");
+    }
+    println!("tokenizer authority: {}", summary.tokenizer_authority);
+    println!("prompt authority: {}", summary.prompt_authority);
+    println!("cpu oracle: {}", summary.cpu_oracle);
+    if !summary.accelerator_routes.is_empty() {
+        println!("routes:");
+        for route in &summary.accelerator_routes {
+            println!("  {} -> {} ({})", route.backend, route.route, route.status);
+        }
+    }
+    println!("permitted claims: {}", summary.permitted_claims.join(", "));
+    println!("required receipts: {}", summary.required_receipts.join(", "));
+    println!("claim boundary: {}", summary.claim_boundary);
 }
 
 fn list_models(cache_dir: Option<PathBuf>, json: bool) -> Result<()> {
@@ -580,18 +715,18 @@ fn prune_models(
 }
 
 fn supported_model(id: &str) -> Result<&'static SupportedModel> {
+    find_supported_model(id).ok_or_else(|| {
+        let known = SUPPORTED_MODELS.iter().map(|model| model.id).collect::<Vec<_>>().join(", ");
+        anyhow!("unsupported model `{id}`. Supported models: {known}")
+    })
+}
+
+fn find_supported_model(id: &str) -> Option<&'static SupportedModel> {
     let needle = id.to_ascii_lowercase();
-    SUPPORTED_MODELS
-        .iter()
-        .find(|model| {
-            model.id.eq_ignore_ascii_case(id)
-                || model.aliases.iter().any(|alias| alias.to_ascii_lowercase() == needle)
-        })
-        .ok_or_else(|| {
-            let known =
-                SUPPORTED_MODELS.iter().map(|model| model.id).collect::<Vec<_>>().join(", ");
-            anyhow!("unsupported model `{id}`. Supported models: {known}")
-        })
+    SUPPORTED_MODELS.iter().find(|model| {
+        model.id.eq_ignore_ascii_case(id)
+            || model.aliases.iter().any(|alias| alias.to_ascii_lowercase() == needle)
+    })
 }
 
 fn resolve_cache_root(cache_dir: Option<PathBuf>) -> Result<PathBuf> {
@@ -983,6 +1118,50 @@ mod tests {
         assert!(contract.accelerator_routes.iter().any(|route| route.route == "bitnet_qk256_cuda"));
         assert!(contract.permitted_claims.contains(&"answer_ready".to_string()));
         assert!(contract.required_receipts.contains(&"execution_plan".to_string()));
+    }
+
+    #[test]
+    fn contract_summary_exposes_unsupported_three_b_i2s_boundary() {
+        let contract = find_bitnet_model_contract("1bitLLM/bitnet_b1_58-3B:i2_s:x86")
+            .expect("3B x86 I2_S contract");
+        let summary = contract_summary(contract);
+
+        assert_eq!(summary.id, "onebitllm_bitnet_b158_3b_i2s_x86");
+        assert_eq!(summary.kernel_family, "unsupported_i2_s");
+        assert_eq!(summary.status, "upstream_unsupported");
+        assert!(summary.permitted_claims.contains(&"unsupported_path_receipt".to_string()));
+        assert!(!summary.permitted_claims.contains(&"answer_ready".to_string()));
+        assert!(summary.required_receipts.contains(&"unsupported_path_receipt".to_string()));
+    }
+
+    #[test]
+    fn known_contract_without_supported_artifact_fails_closed_with_contract_summary() {
+        let contract = find_bitnet_model_contract("microsoft_bitnet_b158_2b_4t_tl2")
+            .expect("official TL2 contract");
+        let result = contract_only_verify_result(
+            "microsoft_bitnet_b158_2b_4t_tl2",
+            Some(PathBuf::from("/tmp/tl2.gguf")),
+            contract,
+        );
+
+        assert!(!result.passed);
+        assert!(!result.supported_artifact);
+        assert_eq!(result.path.as_deref(), Some(Path::new("/tmp/tl2.gguf")));
+        assert_eq!(result.model_contract.id, "microsoft_bitnet_b158_2b_4t_tl2");
+        assert_eq!(result.model_contract.status, "planned_proof_required");
+        assert!(result.reason.contains("no supported artifact identity"));
+    }
+
+    #[test]
+    fn model_contracts_surface_covers_every_registry_contract() {
+        let summaries: Vec<_> = bitnet_model_contracts().iter().map(contract_summary).collect();
+
+        assert_eq!(summaries.len(), bitnet_model_contracts().len());
+        assert!(summaries.iter().any(|summary| summary.id == "microsoft_bitnet_b158_2b_4t_i2s"));
+        assert!(summaries.iter().any(|summary| summary.id == "microsoft_bitnet_b158_2b_4t_tl1"));
+        assert!(summaries.iter().any(|summary| summary.id == "microsoft_bitnet_b158_2b_4t_tl2"));
+        assert!(summaries.iter().any(|summary| summary.id == "onebitllm_bitnet_b158_3b_i2s_x86"));
+        assert!(summaries.iter().all(|summary| !summary.claim_boundary.trim().is_empty()));
     }
 
     #[test]
