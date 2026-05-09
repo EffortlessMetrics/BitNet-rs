@@ -119,8 +119,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-003"
-status = "pr_open"
+status = "merged"
 pr = 4158
+merge_sha = "a032ba0e3f5664abbf3aed143a88186518cf5103"
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-003-quality-corpus"
 stackable = false
 review_mode = "codex_premerge"
@@ -160,7 +161,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-004"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-004-regression-seed"
 stackable = false
 review_mode = "codex_premerge"

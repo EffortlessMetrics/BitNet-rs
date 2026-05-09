@@ -9,7 +9,7 @@
 | apple-m4-operational | Apple M4 operational readiness | M4-OP-006 | Do not reopen the completed apple-m4 proof campaign. |
 | apple-m4-productization | Apple M4 local answer productization | M4-PROD-005 | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
 | apple-m4-slm-answer | Apple M4 SLM local answer usability | SLM-M4-007 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
-| apple-m4-slm-hardening | Apple M4 SLM hardening | M4-SLM-HARDEN-003 | Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns. |
+| apple-m4-slm-hardening | Apple M4 SLM hardening | M4-SLM-HARDEN-004 | Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns. |
 | apple-m4-slm-performance | Apple M4 SLM performance | M4-SLM-PERF-007 | Do not reopen the completed apple-m4, apple-m4-operational, apple-m4-slm-answer, or apple-m4-productization campaigns. |
 | ci-coverage | CI coverage | CI-COVERAGE-001 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | BitNet CPU proof | CPU-ANSWER-007 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
