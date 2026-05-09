@@ -845,6 +845,56 @@ Arc 140V or Intel NPU execution is proven.
 Packed QK256 decode semantics are fixed.
 ```
 
+## CPU258V-021 External Reference Instrumentation Boundary
+
+Artifact:
+
+```text
+ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json
+```
+
+The CPU258V-021 instrumentation boundary classifies whether the external
+BitNet.cpp reference artifact exposes direct generated-token IDs and first-token
+logits/top-k evidence for the fixed 258V prompts. It reads the CPU258V-019
+external reference capture and records missing reference fields as explicit
+blockers rather than inferring token or logit parity from generated text.
+
+Current result:
+
+```text
+cases_total = 4
+cases_with_generated_text = 4
+cases_with_generated_token_ids = 0
+cases_with_first_token_topk_logits = 0
+generated_token_ids_available = false
+first_token_logits_available = false
+classification = reference_runner_requires_instrumentation
+```
+
+The result means Microsoft BitNet.cpp generated-text evidence remains useful,
+but the current external artifact still cannot prove generated-token-ID parity
+or first-token logits parity. The next required evidence is a patched or scripted
+reference runner path that exposes direct generated-token IDs and first-token
+logits/top-k without text re-tokenization.
+
+Allowed claim:
+
+```text
+The external reference evidence boundary is classified, and the missing
+generated-token/logit fields are explicit blockers.
+```
+
+Not allowed:
+
+```text
+Generated-token-ID parity against the external reference is proven.
+First-token logits parity is proven.
+BitNet answer quality is newly proven.
+CPU speed is proven.
+Arc 140V or Intel NPU execution is proven.
+Packed QK256 decode semantics are fixed.
+```
+
 ## CPU258V-019 External First-Token Reference Boundary
 
 Artifact:

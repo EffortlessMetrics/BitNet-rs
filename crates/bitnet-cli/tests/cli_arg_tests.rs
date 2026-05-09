@@ -2763,6 +2763,19 @@ fn first_token_divergence_subcommand_help_lists_evidence_inputs() {
         .stdout(predicate::str::contains("--answer-parity"));
 }
 
+/// `external-reference-instrumentation --help` documents the reference capability inputs.
+#[cfg(feature = "full-cli")]
+#[test]
+fn external_reference_instrumentation_help_lists_boundary_inputs() {
+    bitnet()
+        .args(["external-reference-instrumentation", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--external-reference"))
+        .stdout(predicate::str::contains("--runner-help"))
+        .stdout(predicate::str::contains("--json-out"));
+}
+
 /// `answer-corpus` can target the Apple M4 CPU/NEON local-answer lane.
 #[cfg(feature = "full-cli")]
 #[test]

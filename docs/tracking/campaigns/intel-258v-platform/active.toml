@@ -1387,10 +1387,16 @@ human_gate = "on_blocker_only"
 blocked_by = ["CPU258V-020"]
 acceptance = "Instrument or script the external BitNet reference runner boundary so the fixed 258V prompts expose prompt token IDs, first generated token IDs, decoded first tokens, and first-token logits/top-k when available; if the reference cannot expose logits or token IDs, record the blocker precisely without inferring parity."
 commands = [
+  "rustfmt --check --config skip_children=true --edition 2024 crates/bitnet-cli/src/commands/external_reference_instrumentation.rs crates/bitnet-cli/src/commands/mod.rs crates/bitnet-cli/src/main.rs crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet external_reference_instrumentation -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests external_reference_instrumentation_help_lists_boundary_inputs -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- external-reference-instrumentation --external-reference ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json --json-out ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json",
   "python3 -c \"import json; p='ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json'; a=json.load(open(p, encoding='utf-8')); assert a['summary']['classification']=='reference_generated_token_ids_and_logits_unavailable'\"",
+  "python3 -c \"import json; p='ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json'; a=json.load(open(p, encoding='utf-8')); assert a['artifact_kind']=='bitnet_external_reference_instrumentation_probe'; assert a['summary']['classification']=='reference_runner_requires_instrumentation'; assert a['summary']['cases_with_generated_token_ids'] == 0; assert a['summary']['cases_with_first_token_topk_logits'] == 0\"",
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-cli/**",
   "ci/hardware/intel-258v/**",
   "docs/hardware/intel-258v-validation.md",
   "docs/tracking/campaigns/intel-258v-platform/**",

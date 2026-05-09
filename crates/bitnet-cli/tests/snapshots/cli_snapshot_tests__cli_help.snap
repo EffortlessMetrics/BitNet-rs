@@ -84,6 +84,8 @@ Commands:
           Validate an external-reference divergence artifact
   first-token-divergence
           Classify first-token divergence from external reference and 258V CPU receipts
+  external-reference-instrumentation
+          Classify external reference token/logit instrumentation coverage
   dense-gguf-linear-parity
           Extract one dense GGUF linear fixture and run strict CUDA parity diagnostics
   dense-gguf-linear-role-sweep
