@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T05:34:41Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-012"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 4212
+head_sha = "614c2a5bdebb4a394eab9b21bdbca3b25ec315f4"
+actor = "codex"
+
+notes = [
+  "Opened the aggregate dense GGUF linear role-sweep receipt PR.",
+  "The PR adds one receipt for multiple Qwen2.5 Q8_0 dense linear roles using dense_regular_llm_cuda routing.",
+  "Dense GGUF inference, Qwen token/decode/chat, BitNet QK256 proof, speedup, and full-residency claims remain false.",
+]
