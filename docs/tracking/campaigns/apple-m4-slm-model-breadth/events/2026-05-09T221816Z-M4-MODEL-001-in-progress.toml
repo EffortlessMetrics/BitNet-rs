@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T22:18:16Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-MODEL-001 after the M4 SLM expansion roadmap seed merged.",
+  "The item selects exact dense instruct GGUF candidates only; it does not download, accept, register, or run a new model.",
+  "Candidate selection remains M4-local and keeps dense SLM evidence separate from BitNet, QK256, Neural Engine, MPSGraph, full Metal inference, MacBook, and broad performance claims.",
+]

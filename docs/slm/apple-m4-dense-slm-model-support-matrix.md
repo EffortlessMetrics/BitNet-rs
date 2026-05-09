@@ -203,3 +203,18 @@ qwen2.5-0.5b-instruct-q4_k_m
 `qwen2.5-0.5b-instruct-q8_0` remains the default. The Q4_K_M artifact is the
 first non-default supported dense SLM for the M4 lane because it passes the
 reference, Rust M4 quality, tokenizer, cache, and receipt gates in this matrix.
+
+## Next Breadth Candidates
+
+`M4-MODEL-001` selected the next exact candidate set for evaluation:
+
+```text
+qwen3-0.6b-q8_0
+smollm2-360m-instruct-q8_0
+```
+
+See [apple-m4-slm-model-breadth-candidates.md](apple-m4-slm-model-breadth-candidates.md)
+for exact source, revision, file, expected size, tokenizer expectations, prompt
+template expectations, storage budget, and rejection criteria. These candidates
+are not supported models until reference output sanity, Rust M4 quality, cache,
+receipt, and deterministic gates pass.
