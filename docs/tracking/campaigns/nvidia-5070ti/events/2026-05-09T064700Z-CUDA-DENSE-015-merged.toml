@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T06:47:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-015"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-015-norm-fixture-audit"
+pr = 4218
+head_sha = "6f446f7cec87eab569d0518ea47380cb7fb73555"
+merge_sha = "e4f0e605d49645d69e09211887de8796ea0bd9d8"
+notes = [
+  "PR #4218 merged the dense GGUF norm fixture extraction and committed Qwen2.5 0.5B Q8_0 norm fixture receipt.",
+  "CUDA-DENSE-015 remains below CUDA RMSNorm parity and dense GGUF inference; the recorded CUDA norm status is missing_cuda_kernel.",
+]
