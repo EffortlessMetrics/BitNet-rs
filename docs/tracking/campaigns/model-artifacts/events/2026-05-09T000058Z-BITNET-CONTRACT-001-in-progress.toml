@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T00:00:58Z"
+campaign = "model-artifacts"
+item = "BITNET-CONTRACT-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/bitnet-contract-001-model-contracts"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "The work is authority and registry only.",
+  "It separates official I2_S, official TL1/TL2, unsupported 3B, listed-but-unverified 3B TL routes, and alternate-control evidence into distinct claim boundaries.",
+  "It does not change model loading, tokenizer behavior, prompt templates, transformer math, QK256 kernels, CUDA behavior, dense GGUF inference, server runtime, or speed claims.",
+]

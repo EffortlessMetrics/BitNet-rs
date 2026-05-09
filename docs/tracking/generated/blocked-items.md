@@ -125,6 +125,7 @@
 | model-artifacts | MODEL-ARTIFACT-006 | MODEL-ARTIFACT-005 | merged |
 | model-artifacts | MODEL-ARTIFACT-007 | MODEL-ARTIFACT-006 | merged |
 | model-artifacts | BITNET-COMPAT-001 | MODEL-ARTIFACT-007 | merged |
+| model-artifacts | BITNET-CONTRACT-001 | BITNET-COMPAT-001 | pr_open |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
 | nvidia-5070ti | RTX5070TI-006 | RTX5070TI-005 | merged |

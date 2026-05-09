@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T00:03:20Z"
+campaign = "model-artifacts"
+item = "BITNET-CONTRACT-001"
+event = "pr_open"
+actor = "codex"
+pr = 4196
+head_sha = "959b90ee2f37d13632e866c616096c34e613fc60"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "PR #4196 adds a BitNet-family model contract matrix and typed registry.",
+  "The official Microsoft 2B I2_S lane remains the x86 CPU and RTX 5070 Ti CUDA reference route.",
+  "Official TL1/TL2, 3B listed routes, unsupported 3B I2_S, and tdh111 alternate-control evidence retain separate claim boundaries.",
+  "No runtime, tokenizer, prompt-template, transformer, QK256, CUDA, dense GGUF inference, server, quality-gate, or speed-claim behavior changes are introduced.",
+]

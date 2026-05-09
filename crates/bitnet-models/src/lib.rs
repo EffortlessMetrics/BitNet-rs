@@ -38,6 +38,7 @@ pub mod model_catalog;
 pub mod model_checkpoint;
 pub mod model_compare;
 pub mod model_config_builder;
+pub mod model_contracts;
 pub mod model_diff;
 pub mod model_fingerprint;
 pub mod model_kernel_compat;
