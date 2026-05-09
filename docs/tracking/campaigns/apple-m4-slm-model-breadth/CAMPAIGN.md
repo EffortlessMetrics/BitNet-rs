@@ -23,8 +23,8 @@ mini path without weakening the completed Qwen appliance baseline.
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-MODEL-001 | in_progress | Select the next exact dense instruct GGUF candidate set. |
-| M4-MODEL-002 | pending | Run reference output sanity and record exact artifact metadata. |
+| M4-MODEL-001 | merged | Selected the next exact dense instruct GGUF candidate set. |
+| M4-MODEL-002 | ready | Run reference output sanity and record exact artifact metadata. |
 | M4-MODEL-003 | pending | Run Rust M4 quality, receipts, and deterministic gates. |
 | M4-MODEL-004 | pending | Register cache/model selection only after quality passes. |
 | M4-MODEL-005 | pending | Update model matrix and user envelope. |
