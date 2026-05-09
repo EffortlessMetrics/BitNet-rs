@@ -9,11 +9,12 @@
 use anyhow::{Context, Result, anyhow, bail};
 use bitnet_kernels::cuda::{
     DenseGgufAttentionScoreCudaFixture, DenseGgufAttentionScoreCudaParity,
+    DenseGgufAttentionSoftmaxCudaFixture, DenseGgufAttentionSoftmaxCudaParity,
     DenseGgufLinearCudaParity, DenseGgufLinearGemmFixture, DenseGgufRmsNormCudaFixture,
     DenseGgufRmsNormCudaParity, DenseGgufRopeCudaFixture, DenseGgufRopeCudaParity, RopeConfig,
     rope_forward_cpu, run_dense_gguf_attention_score_cuda_parity,
-    run_dense_gguf_linear_f16_cuda_parity, run_dense_gguf_rmsnorm_cuda_parity,
-    run_dense_gguf_rope_cuda_parity,
+    run_dense_gguf_attention_softmax_cuda_parity, run_dense_gguf_linear_f16_cuda_parity,
+    run_dense_gguf_rmsnorm_cuda_parity, run_dense_gguf_rope_cuda_parity,
 };
 use bitnet_kernels::dispatch_planner::{
     BackendPolicy, CudaPlannerCapabilities, DispatchOp, ModelDispatchBackend, ModelDispatchSpec,
@@ -34,6 +35,7 @@ use bitnet_models::formats::gguf::GgufReader;
 use bitnet_receipts_core::{
     DENSE_GGUF_ATTENTION_SCORE_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND,
+    DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_SOFTMAX_FIXTURE_ARTIFACT_KIND,
     DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
@@ -42,6 +44,7 @@ use bitnet_receipts_core::{
     DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
     validate_dense_gguf_attention_score_cuda_parity_receipt_json,
     validate_dense_gguf_attention_score_fixture_receipt_json,
+    validate_dense_gguf_attention_softmax_cuda_parity_receipt_json,
     validate_dense_gguf_attention_softmax_fixture_receipt_json,
     validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
@@ -703,6 +706,105 @@ impl DenseGgufAttentionSoftmaxFixtureCommand {
     }
 }
 
+/// Run dense GGUF attention-softmax CUDA parity diagnostics.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufAttentionSoftmaxCudaParityCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Dense transformer layer index represented by the deterministic fixture.
+    #[arg(long, default_value_t = 0)]
+    pub layer_index: usize,
+
+    /// Number of token positions in the deterministic attention-softmax fixture.
+    #[arg(long, default_value_t = 4)]
+    pub seq_len: usize,
+
+    /// Position offset used by the metadata-derived RoPE fixture.
+    #[arg(long, default_value_t = 1)]
+    pub position_offset: usize,
+
+    /// CUDA device index.
+    #[arg(long, default_value_t = 0)]
+    pub device_index: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufAttentionSoftmaxCudaParityCommand {
+    pub async fn execute(&self) -> Result<()> {
+        if self.seq_len == 0 {
+            bail!("dense GGUF attention-softmax CUDA parity requires --seq-len > 0");
+        }
+
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
+        if !probe.available {
+            bail!("CUDA-DENSE-024 requires CUDA probe success: {:?}", probe.failure_reason);
+        }
+        let device_name = probe.selected_device_name.as_deref().unwrap_or("unknown");
+        if !is_rtx5070ti_device_name(device_name) {
+            bail!("CUDA-DENSE-024 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
+        }
+
+        let fixture = dense_gguf_attention_softmax_fixture_from_reader(
+            &reader,
+            &inspection,
+            self.layer_index,
+            self.seq_len,
+            self.position_offset,
+        )?;
+        let kernel_fixture = kernel_attention_softmax_fixture_from_extracted(&fixture);
+        let parity =
+            run_dense_gguf_attention_softmax_cuda_parity(self.device_index, &kernel_fixture)?;
+        if !parity.passed {
+            bail!(
+                "dense GGUF attention-softmax CUDA parity failed: max_abs_error={} tolerance={}",
+                parity.max_abs_error,
+                parity.tolerance
+            );
+        }
+
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_attention_softmax_cuda_parity_receipt_json(
+            &inspection,
+            &fixture,
+            &parity,
+            Some(&probe),
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        );
+        validate_dense_gguf_attention_softmax_cuda_parity_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
 /// Run dense GGUF attention-score CUDA parity diagnostics.
 #[derive(Args, Debug, Clone)]
 pub struct DenseGgufAttentionScoreCudaParityCommand {
@@ -1271,6 +1373,28 @@ fn kernel_attention_score_fixture_from_extracted(
         expected_scores_f32: fixture.expected_scores_f32.clone(),
         finite_scores: fixture.finite_scores,
         causal_masked_scores: fixture.causal_masked_scores,
+    }
+}
+
+fn kernel_attention_softmax_fixture_from_extracted(
+    fixture: &DenseGgufAttentionSoftmaxFixture,
+) -> DenseGgufAttentionSoftmaxCudaFixture {
+    DenseGgufAttentionSoftmaxCudaFixture {
+        fixture_id: fixture.fixture_id.clone(),
+        model_family: fixture.model_family.clone(),
+        architecture: fixture.architecture.clone(),
+        layer_index: fixture.layer_index,
+        q_heads: fixture.q_heads,
+        kv_heads: fixture.kv_heads,
+        seq_len: fixture.seq_len,
+        source_attention_score_fixture_id: fixture.source_attention_score_fixture_id.clone(),
+        attention_scores_sha256: sha256_f32(&fixture.attention_scores_f32),
+        attention_scores_f32: fixture.attention_scores_f32.clone(),
+        expected_probabilities_f32: fixture.expected_probabilities_f32.clone(),
+        row_count: fixture.row_count,
+        probability_count: fixture.probability_count,
+        causal_zero_probabilities: fixture.causal_zero_probabilities,
+        max_row_sum_abs_error: fixture.max_row_sum_abs_error,
     }
 }
 
@@ -2795,6 +2919,246 @@ fn dense_gguf_attention_softmax_fixture_receipt_json(
     })
 }
 
+fn dense_gguf_attention_softmax_cuda_parity_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    fixture: &DenseGgufAttentionSoftmaxFixture,
+    parity: &DenseGgufAttentionSoftmaxCudaParity,
+    probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Value {
+    let cuda = cuda_identity_json(probe);
+    let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
+        model_family: &inspection.model_family,
+        quantization: "dense_f32_attention_softmax",
+        requested_backend: HARDWARE_LANE,
+        selected_backend: HARDWARE_LANE,
+        runtime_api: "cuda",
+        strict_fallback_policy: "reject",
+        summary: ModelDispatchSummary {
+            total_ops: 1,
+            cuda_bitnet_qk256_ops: 0,
+            cuda_dense_regular_llm_ops: 1,
+            cpu_fallback_ops: 0,
+            unsupported_ops: 0,
+            fallback_used: false,
+            selected_route: Some(ModelDispatchBackend::CudaDenseRegularLlm),
+            strict_cuda_ready: true,
+        },
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    });
+
+    json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_attention_softmax_cuda_parity_tested",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": HARDWARE_LANE,
+        "selected_backend": HARDWARE_LANE,
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda,
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "quantization_families": inspection.quantization_families,
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_f32_attention_softmax",
+            "quantization_family": "metadata_derived_attention_softmax_fixture",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": execution_plan,
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "attention_softmax_fixture": {
+            "schema": 1,
+            "source_artifact_kind": DENSE_GGUF_ATTENTION_SOFTMAX_FIXTURE_ARTIFACT_KIND,
+            "source_attention_score_artifact_kind": DENSE_GGUF_ATTENTION_SCORE_CUDA_PARITY_ARTIFACT_KIND,
+            "source_attention_score_fixture_id": fixture.source_attention_score_fixture_id,
+            "fixture_id": fixture.fixture_id,
+            "model_family": fixture.model_family,
+            "architecture": fixture.architecture,
+            "layer_index": fixture.layer_index as u64,
+            "q_heads": fixture.q_heads as u64,
+            "kv_heads": fixture.kv_heads as u64,
+            "seq_len": fixture.seq_len as u64,
+            "row_count": fixture.row_count as u64,
+            "probability_count": fixture.probability_count as u64,
+            "compared_probabilities": parity.compared_probabilities as u64,
+            "causal_zero_probabilities": fixture.causal_zero_probabilities as u64,
+            "attention_scores_sha256": sha256_f32(&fixture.attention_scores_f32),
+            "cpu_reference_probabilities_sha256": sha256_f32(&fixture.expected_probabilities_f32),
+            "max_row_sum_abs_error": fixture.max_row_sum_abs_error,
+            "cuda_input_dtype": "f32",
+            "cuda_output_dtype": "f32",
+            "cuda_kernel_status": "parity_passed",
+            "strict_cuda_ready": true,
+            "cpu_fallback_allowed": false,
+            "transfer_timing_status": "bytes_measured_time_unmeasured",
+            "dense_gguf_inference_claimed": false,
+            "dense_regular_llm_cuda_claimed": true,
+            "cpu_cuda_parity_claimed": true,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "attention_softmax_gap_audit": {
+            "schema": 1,
+            "source_artifact_kind": DENSE_GGUF_ATTENTION_SOFTMAX_FIXTURE_ARTIFACT_KIND,
+            "gap_role": "attention_softmax",
+            "input_dependencies": ["attention_scores"],
+            "source_attention_score_cuda_parity_required": true,
+            "source_attention_score_cuda_parity_available": true,
+            "cpu_reference_available": true,
+            "cuda_kernel_status": "parity_passed",
+            "strict_cuda_ready": true,
+            "cpu_fallback_allowed": false,
+            "blocks_strict_cuda_one_layer": false,
+            "next_required_proof": "cuda_attention_v_mix_fixture",
+            "candidate_order": DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER,
+            "dense_gguf_attention_softmax_fixture_extraction_claimed": true,
+            "dense_gguf_attention_softmax_cuda_parity_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "kernel_stats": [{
+            "kernel_id": parity.stats.kernel_id,
+            "fixture_id": parity.fixture_id,
+            "invocations": parity.stats.invocations,
+            "fallback_invocations": parity.stats.fallback_invocations,
+            "host_to_device_bytes": parity.stats.host_to_device_bytes,
+            "device_to_host_bytes": parity.stats.device_to_host_bytes,
+            "kernel_launches": parity.stats.kernel_launches,
+            "kernel_time_ms": parity.stats.kernel_time_ms
+        }],
+        "parity": {
+            "reference_backend": parity.reference_backend,
+            "target_backend": parity.target_backend,
+            "kernel_id": parity.kernel_id,
+            "fixture_id": parity.fixture_id,
+            "max_abs_error": parity.max_abs_error,
+            "mean_abs_error": parity.mean_abs_error,
+            "passed": parity.passed,
+            "tolerance": parity.tolerance,
+            "tolerance_source": "CUDA-DENSE-024 dense GGUF attention-softmax F32 CUDA fixture",
+            "compared_probabilities": parity.compared_probabilities as u64,
+            "causal_zero_probabilities": parity.causal_zero_probabilities as u64,
+            "first_divergence": null
+        },
+        "timing": {
+            "kernel_time_ms": parity.stats.kernel_time_ms,
+            "host_to_device_bytes": parity.stats.host_to_device_bytes,
+            "device_to_host_bytes": parity.stats.device_to_host_bytes,
+            "transfer_timing_status": "bytes_measured_time_unmeasured"
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_attention_score_fixture_extraction_claimed": true,
+            "dense_gguf_attention_score_cuda_parity_claimed": true,
+            "dense_gguf_attention_softmax_fixture_extraction_claimed": true,
+            "dense_gguf_attention_softmax_cuda_parity_claimed": true,
+            "dense_gguf_rope_cuda_parity_claimed": true,
+            "dense_gguf_norm_cuda_parity_claimed": false,
+            "dense_gguf_linear_fixture_extraction_claimed": false,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": true,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "tensor_residency": {
+            "schema_version": "1.0.0",
+            "scope": "single_dense_gguf_attention_softmax_fixture",
+            "model_class": "dense_regular_llm",
+            "fixture_id": parity.fixture_id,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false,
+            "input_tensors_uploaded_once": true,
+            "output_tensor_cuda_resident_during_kernel": true,
+            "host_device_transfer_accounting_matches_kernel_stats": true,
+            "inputs": [
+                {
+                    "name": "dense_gguf_attention_scores",
+                    "dtype": "f32",
+                    "shape": [fixture.q_heads as u64, fixture.seq_len as u64, fixture.seq_len as u64],
+                    "host_bytes": (fixture.attention_scores_f32.len() * 4) as u64,
+                    "device_residency": "cuda_device_buffer",
+                    "upload_count": 1,
+                    "reuse_scope": "single_fixture_launch"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dense_gguf_attention_probabilities",
+                    "dtype": "f32",
+                    "shape": [fixture.q_heads as u64, fixture.seq_len as u64, fixture.seq_len as u64],
+                    "device_residency": "cuda_device_buffer",
+                    "device_to_host_bytes": parity.stats.device_to_host_bytes,
+                    "download_scope": "parity_check_only"
+                }
+            ],
+            "allocation": {
+                "device_buffer_count": 2,
+                "temporary_workspace_bytes": 0,
+                "persistent_handle_count": 0,
+                "persistent_handles_claimed": false
+            },
+            "transfer_accounting": {
+                "status": "measured",
+                "host_to_device_bytes": parity.stats.host_to_device_bytes,
+                "device_to_host_bytes": parity.stats.device_to_host_bytes,
+                "kernel_invocations": parity.stats.invocations,
+                "kernel_launches": parity.stats.kernel_launches
+            }
+        },
+        "notes": [
+            "Dense GGUF attention-softmax CUDA fixture parity only; no dense GGUF inference, Qwen token/decode/chat, server, speedup, persistent-session, or full-residency claim is made.",
+            "This proves metadata-derived attention-score probabilities can run through a strict CUDA attention-softmax kernel against CPU references."
+        ],
+        "error": null
+    })
+}
+
 fn dense_gguf_attention_score_cuda_parity_receipt_json(
     inspection: &DenseGgufDescriptorInspection,
     fixture: &DenseGgufAttentionScoreFixture,
@@ -3617,13 +3981,14 @@ mod tests {
     use bitnet_kernels::cuda::{
         CUDA_DENSE_ATTENTION_SCORE_KERNEL_ID, CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND,
         CUDA_DENSE_ATTENTION_SCORE_TARGET_BACKEND, CUDA_DENSE_ATTENTION_SCORE_TOLERANCE,
+        CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_ID, CUDA_DENSE_ATTENTION_SOFTMAX_TOLERANCE,
         CUDA_DENSE_F16_GEMM_KERNEL_ID, CUDA_DENSE_GEMM_REFERENCE_BACKEND,
         CUDA_DENSE_GEMM_TARGET_BACKEND, CUDA_DENSE_GGUF_LINEAR_F16_GEMM_TOLERANCE,
         CUDA_DENSE_RMSNORM_KERNEL_ID, CUDA_DENSE_RMSNORM_REFERENCE_BACKEND,
         CUDA_DENSE_RMSNORM_TARGET_BACKEND, CUDA_DENSE_RMSNORM_TOLERANCE, CUDA_DENSE_ROPE_KERNEL_ID,
         CUDA_DENSE_ROPE_REFERENCE_BACKEND, CUDA_DENSE_ROPE_TARGET_BACKEND,
-        CUDA_DENSE_ROPE_TOLERANCE, CudaDenseAttentionScoreStats, CudaDenseGemmStats,
-        CudaDenseRmsNormStats, CudaDenseRopeStats,
+        CUDA_DENSE_ROPE_TOLERANCE, CudaDenseAttentionScoreStats, CudaDenseAttentionSoftmaxStats,
+        CudaDenseGemmStats, CudaDenseRmsNormStats, CudaDenseRopeStats,
     };
     use bitnet_models::formats::gguf::GgufTensorType;
     use bitnet_models::formats::gguf::{GgufReader, GgufValue};
@@ -4022,6 +4387,47 @@ mod tests {
     }
 
     #[test]
+    fn dense_gguf_attention_softmax_cuda_parity_receipt_records_cuda_kernel() {
+        let data = build_complete_qwen_layer_gguf();
+        let reader = GgufReader::new(&data).expect("parse qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let fixture =
+            dense_gguf_attention_softmax_fixture_from_reader(&reader, &inspection, 0, 4, 1)
+                .expect("attention softmax fixture");
+        let kernel_fixture = kernel_attention_softmax_fixture_from_extracted(&fixture);
+        let parity = synthetic_attention_softmax_parity_from_fixture(&kernel_fixture);
+
+        let receipt = dense_gguf_attention_softmax_cuda_parity_receipt_json(
+            &inspection,
+            &fixture,
+            &parity,
+            None,
+            Path::new("synthetic-qwen3-q8_0-attention-softmax-cuda-parity.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-attention-softmax-cuda-parity.json",
+            "2026-05-09T00:00:00Z",
+        );
+
+        validate_dense_gguf_attention_softmax_cuda_parity_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["execution_plan"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 1);
+        assert_eq!(receipt["attention_softmax_fixture"]["cuda_kernel_status"], "parity_passed");
+        assert_eq!(receipt["kernel_stats"][0]["kernel_id"], "dense_attention_softmax_f32_cuda");
+        assert_eq!(receipt["kernel_stats"][0]["invocations"], 1);
+        assert_eq!(receipt["parity"]["passed"], true);
+        assert_eq!(
+            receipt["parity"]["compared_probabilities"],
+            fixture.expected_probabilities_f32.len() as u64
+        );
+        assert_eq!(
+            receipt["claim_boundary"]["dense_gguf_attention_softmax_cuda_parity_claimed"],
+            true
+        );
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
     fn parse_dense_linear_role_accepts_common_spellings() {
         assert_eq!(
             parse_dense_linear_role("attention_q").unwrap(),
@@ -4195,6 +4601,38 @@ mod tests {
                     + fixture.k_rope_output_f32.len())
                     * 4) as u64,
                 device_to_host_bytes: (fixture.expected_scores_f32.len() * 4) as u64,
+                kernel_launches: 1,
+                kernel_time_ms: None,
+            },
+        }
+    }
+
+    fn synthetic_attention_softmax_parity_from_fixture(
+        fixture: &DenseGgufAttentionSoftmaxCudaFixture,
+    ) -> DenseGgufAttentionSoftmaxCudaParity {
+        DenseGgufAttentionSoftmaxCudaParity {
+            fixture_id: fixture.fixture_id.clone(),
+            model_family: fixture.model_family.clone(),
+            architecture: fixture.architecture.clone(),
+            layer_index: fixture.layer_index,
+            q_heads: fixture.q_heads,
+            kv_heads: fixture.kv_heads,
+            seq_len: fixture.seq_len,
+            reference_backend: CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND,
+            target_backend: CUDA_DENSE_ATTENTION_SCORE_TARGET_BACKEND,
+            kernel_id: CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_ID,
+            max_abs_error: 0.0,
+            mean_abs_error: 0.0,
+            tolerance: CUDA_DENSE_ATTENTION_SOFTMAX_TOLERANCE,
+            passed: true,
+            compared_probabilities: fixture.expected_probabilities_f32.len(),
+            causal_zero_probabilities: fixture.causal_zero_probabilities,
+            stats: CudaDenseAttentionSoftmaxStats {
+                kernel_id: CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_ID,
+                invocations: 1,
+                fallback_invocations: 0,
+                host_to_device_bytes: (fixture.attention_scores_f32.len() * 4) as u64,
+                device_to_host_bytes: (fixture.expected_probabilities_f32.len() * 4) as u64,
                 kernel_launches: 1,
                 kernel_time_ms: None,
             },
