@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T13:48:09Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-004"
+event = "merged"
+actor = "codex"
+pr = 4286
+merge_sha = "e391c89e79aa680c2a5ccae24d8a852460bdf9ab"
+
+notes = [
+  "PR #4286 merged the M4 dense SLM hot-loop allocation cleanup for sampler logits scratch preallocation.",
+  "The before/after Mac chat allocation audit preserved generated token IDs while reducing sampler.sample prompt-level allocation from 607744 bytes / 1 allocation to 0 bytes / 0 allocations.",
+  "The M4 quality corpus and deterministic repeated prompt groups remained passing, with no BitNet, full Apple Metal inference, QK256, Neural Engine, MPSGraph, MacBook, model download, or broad M4 performance claim.",
+  "M4-SLM-EX-005 remains ready for the dense model support matrix.",
+]
