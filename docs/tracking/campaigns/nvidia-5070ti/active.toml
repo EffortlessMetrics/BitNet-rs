@@ -2506,10 +2506,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-037"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-037-all-layer-plan-impl"
 pr = 4333
-head_sha = "33f1339f92f0bafe2ede95d3f2629290ba584eb2"
+head_sha = "98bb29445b465631b7a461a1a1291b0cd1fd6b2f"
+merge_sha = "c01c82517f32c15a01674d3e453d54d99fe34273"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
