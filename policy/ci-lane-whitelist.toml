@@ -129,6 +129,26 @@ duplicate_of = ["ci-core-build-test where CPU overlap exists"]
 review_after = "2026-06-07"
 expires = "2026-11-07"
 
+[[lane]]
+id = "test-telemetry"
+workflow = ".github/workflows/test-telemetry.yml"
+job = "Test Telemetry (JUnit + slow tests)"
+kind = "observability"
+tier = "frontdoor-advisory"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 18
+owner = "testing/telemetry"
+intent = "Emit nextest JUnit and slow-test summaries for PR test-observability without replacing CI Core."
+failure_mode = "Per-test timing, slow-test, and future flake/actuals signals remain invisible."
+proof_obligation = "Run cargo-nextest on the CI Core Rust test surface and upload target/nextest/ci/junit.xml."
+evidence = ["target/nextest/ci/junit.xml", "GitHub step summary"]
+allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch"]
+duplicate_of = ["ci-core-build-test for pass/fail semantics"]
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
 # ---------------------------------------------------------------------------
 # Risk-gated and expensive lanes
 # ---------------------------------------------------------------------------
