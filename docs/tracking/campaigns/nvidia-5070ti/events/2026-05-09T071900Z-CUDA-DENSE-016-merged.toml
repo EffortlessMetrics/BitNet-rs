@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T07:19:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-016"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-016-rmsnorm-parity"
+pr = 4220
+head_sha = "5263370e2eb1859efb37025acd3511b43625e3ca"
+merge_sha = "a0773640130f2f88d8d35f0ec8267348e600d169"
+notes = [
+  "PR #4220 merged dense GGUF RMSNorm CUDA parity for the verified Qwen2.5 0.5B Q8_0 attention_norm and ffn_norm fixtures.",
+  "The committed receipt records dense_rmsnorm_f32_cuda, dense_regular_llm_cuda routing, fallback_used=false, transfer byte accounting, and parity pass.",
+  "CUDA-DENSE-016 remains below dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, QK256, and BitNet packed proof claims.",
+]
