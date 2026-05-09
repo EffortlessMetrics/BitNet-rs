@@ -17,6 +17,7 @@ let inference = null;
 let worker = null;
 let streamingActive = false;
 let benchmarkSuite = null;
+let copyFeedbackTimeout = null;
 
 // Initialize the application
 async function initApp() {
@@ -141,12 +142,7 @@ async function loadModel() {
         startStreamingBtn.disabled = false;
         startStreamingBtn.removeAttribute('title');
 
-        // Reset copy button
-        const copyBtn = document.getElementById('copy-output');
-        copyBtn.disabled = true;
-        copyBtn.title = 'No output to copy';
-        copyBtn.style.backgroundColor = '#6c757d';
-        copyBtn.style.cursor = 'not-allowed';
+        resetCopyButton();
 
         updateStatus('Model loaded successfully!', 'success');
         Logger.info('Model loaded and inference engine initialized');
@@ -203,12 +199,7 @@ async function generateText() {
         const tokensPerSec = (estimatedTokens / (generationTime / 1000)).toFixed(1);
         document.getElementById('tokens-per-sec').textContent = tokensPerSec;
 
-        // Enable copy button
-        const copyBtn = document.getElementById('copy-output');
-        copyBtn.disabled = false;
-        copyBtn.removeAttribute('title');
-        copyBtn.style.backgroundColor = '#007bff';
-        copyBtn.style.cursor = 'pointer';
+        setCopyButtonReady();
 
         updateStatus('Text generated successfully!', 'success');
         Logger.info(`Generated ${estimatedTokens} tokens in ${generationTime.toFixed(0)}ms`);
@@ -632,12 +623,35 @@ function clearOutput() {
     document.getElementById('generation-time').textContent = '-';
     document.getElementById('tokens-per-sec').textContent = '-';
 
-    // Reset copy button
+    resetCopyButton();
+}
+
+function resetCopyButton() {
+    if (copyFeedbackTimeout) {
+        clearTimeout(copyFeedbackTimeout);
+        copyFeedbackTimeout = null;
+    }
+
     const copyBtn = document.getElementById('copy-output');
+    copyBtn.textContent = 'Copy';
     copyBtn.disabled = true;
     copyBtn.title = 'No output to copy';
     copyBtn.style.backgroundColor = '#6c757d';
     copyBtn.style.cursor = 'not-allowed';
+}
+
+function setCopyButtonReady() {
+    if (copyFeedbackTimeout) {
+        clearTimeout(copyFeedbackTimeout);
+        copyFeedbackTimeout = null;
+    }
+
+    const copyBtn = document.getElementById('copy-output');
+    copyBtn.textContent = 'Copy';
+    copyBtn.disabled = false;
+    copyBtn.removeAttribute('title');
+    copyBtn.style.backgroundColor = '#007bff';
+    copyBtn.style.cursor = 'pointer';
 }
 
 async function copyToClipboard() {
@@ -648,13 +662,13 @@ async function copyToClipboard() {
         await navigator.clipboard.writeText(outputText);
 
         // Visual feedback
-        const originalText = copyBtn.textContent;
         copyBtn.textContent = 'Copied!';
         copyBtn.style.backgroundColor = '#28a745';
+        copyBtn.disabled = true;
 
-        setTimeout(() => {
-            copyBtn.textContent = originalText;
-            copyBtn.style.backgroundColor = '#007bff';
+        copyFeedbackTimeout = setTimeout(() => {
+            copyFeedbackTimeout = null;
+            setCopyButtonReady();
         }, 2000);
 
     } catch (err) {
