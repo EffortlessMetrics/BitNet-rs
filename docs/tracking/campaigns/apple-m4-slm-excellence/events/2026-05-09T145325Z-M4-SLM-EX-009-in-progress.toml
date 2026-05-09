@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T14:53:25Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-009"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-SLM-EX-009 after M4-SLM-EX-008 closed out.",
+  "The implementation adds a receipt-only bitnet mac regression command with advisory default behavior and optional --fail-on-drift.",
+  "The command compares matching M4 dense SLM performance or warm-session envelopes and does not run live generation.",
+]

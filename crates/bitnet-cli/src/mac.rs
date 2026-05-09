@@ -340,6 +340,24 @@ enum MacAction {
         #[arg(long, default_value_t = false)]
         json: bool,
     },
+
+    /// Compare Apple M4 dense-SLM receipts against a stored local envelope.
+    Regression {
+        /// Current receipt file or directory containing JSON receipts.
+        path: PathBuf,
+
+        /// Stored M4 dense-SLM envelope receipt to compare against.
+        #[arg(long = "baseline", value_name = "PATH")]
+        baseline: PathBuf,
+
+        /// Fail when drift warnings are detected. Default mode is advisory.
+        #[arg(long = "fail-on-drift", default_value_t = false)]
+        fail_on_drift: bool,
+
+        /// Emit JSON instead of text.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -534,6 +552,9 @@ impl MacCommand {
             }
             MacAction::ReceiptsCheck { path, regression_baseline, json } => {
                 run_receipts_check(&path, regression_baseline.as_deref(), json)
+            }
+            MacAction::Regression { path, baseline, fail_on_drift, json } => {
+                run_regression_check(&path, &baseline, fail_on_drift, json)
             }
         }
     }
@@ -2045,6 +2066,88 @@ fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: boo
     Ok(())
 }
 
+fn run_regression_check(
+    path: &Path,
+    baseline_path: &Path,
+    fail_on_drift: bool,
+    json: bool,
+) -> Result<()> {
+    let receipt_paths = collect_receipt_paths(path)?;
+    if receipt_paths.is_empty() {
+        anyhow::bail!("no JSON receipts found under {}", path.display());
+    }
+    let baseline = load_regression_baseline(baseline_path)?;
+    let single_input = path.is_file();
+    let mut summaries = Vec::with_capacity(receipt_paths.len());
+    let mut regression_compared = 0usize;
+    let mut warning_count = 0usize;
+    for receipt_path in receipt_paths {
+        let receipt: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(&receipt_path)
+                .with_context(|| format!("failed to read {}", receipt_path.display()))?,
+        )
+        .with_context(|| format!("invalid JSON receipt {}", receipt_path.display()))?;
+        let mut summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+        if receipt["artifact_kind"].as_str() == baseline.receipt["artifact_kind"].as_str() {
+            match compare_dense_slm_regression(&receipt_path, &receipt, &baseline) {
+                Ok(regression) => {
+                    warning_count += regression.warning_count;
+                    summary.regression = Some(regression);
+                    regression_compared += 1;
+                }
+                Err(error) if single_input => return Err(error),
+                Err(_) => {}
+            }
+        }
+        summaries.push(summary);
+    }
+    if regression_compared == 0 {
+        anyhow::bail!(
+            "no matching Apple M4 dense SLM receipts under {} could be compared to baseline {}",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    if json {
+        println!("{}", serde_json::to_string_pretty(&summaries)?);
+    } else {
+        for summary in &summaries {
+            println!(
+                "ok: {} ({}, prompts={:?}, generated_tokens={:?})",
+                summary.path.display(),
+                summary.artifact_kind,
+                summary.prompt_count,
+                summary.generated_tokens
+            );
+            if let Some(regression) = &summary.regression {
+                println!(
+                    "regression: baseline={}, advisory={}, fail_on_drift={}, warnings={}",
+                    regression.baseline_path.display(),
+                    regression.advisory,
+                    fail_on_drift,
+                    regression.warning_count
+                );
+                for warning in &regression.warnings {
+                    println!(
+                        "warning: {} {} baseline={} observed={} threshold={}%",
+                        warning.profile_id,
+                        warning.field,
+                        warning.baseline,
+                        warning.observed,
+                        warning.threshold_percent
+                    );
+                }
+            }
+        }
+    }
+    if fail_on_drift && warning_count > 0 {
+        anyhow::bail!(
+            "Mac regression drift exceeded advisory thresholds: {warning_count} warning(s)"
+        );
+    }
+    Ok(())
+}
+
 fn collect_receipt_paths(path: &Path) -> Result<Vec<PathBuf>> {
     if path.is_file() {
         return Ok(vec![path.to_path_buf()]);
@@ -2085,9 +2188,12 @@ fn load_regression_baseline(path: &Path) -> Result<RegressionBaseline> {
     )
     .with_context(|| format!("invalid JSON regression baseline {}", path.display()))?;
     validate_mac_receipt_value(path, &receipt)?;
-    if receipt["artifact_kind"].as_str() != Some("apple_m4_slm_performance_profiles") {
+    if !matches!(
+        receipt["artifact_kind"].as_str(),
+        Some("apple_m4_slm_performance_profiles") | Some("slm_apple_m4_warm_session")
+    ) {
         anyhow::bail!(
-            "regression baseline {} must be an apple_m4_slm_performance_profiles receipt",
+            "regression baseline {} must be an apple_m4_slm_performance_profiles or slm_apple_m4_warm_session receipt",
             path.display()
         );
     }
@@ -2095,6 +2201,22 @@ fn load_regression_baseline(path: &Path) -> Result<RegressionBaseline> {
 }
 
 fn compare_dense_slm_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    match receipt["artifact_kind"].as_str() {
+        Some("apple_m4_slm_performance_profiles") => {
+            compare_dense_slm_performance_regression(path, receipt, baseline)
+        }
+        Some("slm_apple_m4_warm_session") => {
+            compare_dense_slm_warm_session_regression(path, receipt, baseline)
+        }
+        _ => anyhow::bail!("{} is not an Apple M4 dense SLM envelope receipt", path.display()),
+    }
+}
+
+fn compare_dense_slm_performance_regression(
     path: &Path,
     receipt: &serde_json::Value,
     baseline: &RegressionBaseline,
@@ -2173,6 +2295,78 @@ fn compare_dense_slm_regression(
     })
 }
 
+fn compare_dense_slm_warm_session_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    const DECODE_TOK_S_LOWER_PCT: f64 = 12.5;
+    const WARM_PROMPT_TOK_S_LOWER_PCT: f64 = 15.0;
+    const TIME_TO_FIRST_TOKEN_HIGHER_PCT: f64 = 15.0;
+    const TOTAL_SESSION_MS_HIGHER_PCT: f64 = 15.0;
+    const PEAK_MEMORY_MB_HIGHER_PCT: f64 = 10.0;
+
+    ensure_warm_session_regression_context_matches(
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+    )?;
+
+    let mut warnings = Vec::new();
+    compare_lower_is_worse(
+        &mut warnings,
+        "warm_session",
+        "speed.throughput.decode_generated_tok_s",
+        regression_metric(&baseline.receipt, &["speed", "throughput", "decode_generated_tok_s"])?,
+        regression_metric(receipt, &["speed", "throughput", "decode_generated_tok_s"])?,
+        DECODE_TOK_S_LOWER_PCT,
+    );
+    compare_lower_is_worse(
+        &mut warnings,
+        "warm_session",
+        "speed.throughput.warm_prompt_generated_tok_s",
+        regression_metric(
+            &baseline.receipt,
+            &["speed", "throughput", "warm_prompt_generated_tok_s"],
+        )?,
+        regression_metric(receipt, &["speed", "throughput", "warm_prompt_generated_tok_s"])?,
+        WARM_PROMPT_TOK_S_LOWER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "warm_session",
+        "speed.timing.time_to_first_token_ms",
+        regression_metric(&baseline.receipt, &["speed", "timing", "time_to_first_token_ms"])?,
+        regression_metric(receipt, &["speed", "timing", "time_to_first_token_ms"])?,
+        TIME_TO_FIRST_TOKEN_HIGHER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "warm_session",
+        "timing.total_session_ms",
+        regression_metric(&baseline.receipt, &["timing", "total_session_ms"])?,
+        regression_metric(receipt, &["timing", "total_session_ms"])?,
+        TOTAL_SESSION_MS_HIGHER_PCT,
+    );
+    compare_higher_is_worse(
+        &mut warnings,
+        "warm_session",
+        "memory.peak_memory_mb",
+        regression_metric(&baseline.receipt, &["memory", "peak_memory_mb"])?,
+        regression_metric(receipt, &["memory", "peak_memory_mb"])?,
+        PEAK_MEMORY_MB_HIGHER_PCT,
+    );
+
+    Ok(RegressionCheckSummary {
+        baseline_path: baseline.path.clone(),
+        advisory: true,
+        matched_context: true,
+        warning_count: warnings.len(),
+        warnings,
+    })
+}
+
 fn ensure_regression_context_matches(
     path: &Path,
     receipt: &serde_json::Value,
@@ -2230,6 +2424,119 @@ fn ensure_regression_context_matches(
     if receipt["fallback_used"].as_bool() != baseline["fallback_used"].as_bool() {
         anyhow::bail!(
             "{} cannot be compared to baseline {}: fallback_used mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    Ok(())
+}
+
+fn ensure_warm_session_regression_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    for (label, observed, expected) in [
+        ("artifact_kind", receipt["artifact_kind"].as_str(), baseline["artifact_kind"].as_str()),
+        (
+            "requested_backend",
+            receipt["requested_backend"].as_str(),
+            baseline["requested_backend"].as_str(),
+        ),
+        (
+            "selected_backend",
+            receipt["selected_backend"].as_str(),
+            baseline["selected_backend"].as_str(),
+        ),
+        ("runtime_api", receipt["runtime_api"].as_str(), baseline["runtime_api"].as_str()),
+        (
+            "model_cache.id",
+            receipt["model_cache"]["id"].as_str(),
+            baseline["model_cache"]["id"].as_str(),
+        ),
+        (
+            "model_cache.sha256",
+            receipt["model_cache"]["sha256"].as_str(),
+            baseline["model_cache"]["sha256"].as_str(),
+        ),
+        (
+            "model_cache.quantization",
+            receipt["model_cache"]["quantization"].as_str(),
+            baseline["model_cache"]["quantization"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_model",
+            receipt["model_cache"]["tokenizer_model"].as_str(),
+            baseline["model_cache"]["tokenizer_model"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_pre",
+            receipt["model_cache"]["tokenizer_pre"].as_str(),
+            baseline["model_cache"]["tokenizer_pre"].as_str(),
+        ),
+        (
+            "generation.prompt_template",
+            receipt["generation"]["prompt_template"].as_str(),
+            baseline["generation"]["prompt_template"].as_str(),
+        ),
+        (
+            "generation.mode",
+            receipt["generation"]["mode"].as_str(),
+            baseline["generation"]["mode"].as_str(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        (
+            "session.prompt_count",
+            receipt["session"]["prompt_count"].as_u64(),
+            baseline["session"]["prompt_count"].as_u64(),
+        ),
+        (
+            "generation.max_new_tokens",
+            receipt["generation"]["max_new_tokens"].as_u64(),
+            baseline["generation"]["max_new_tokens"].as_u64(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    if receipt["fallback_used"].as_bool() != baseline["fallback_used"].as_bool() {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: fallback_used mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    if receipt["quality_summary"]["passed"].as_bool() != Some(true)
+        || baseline["quality_summary"]["passed"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: both warm-session receipts must pass quality",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    if receipt["determinism"].is_object()
+        && baseline["determinism"].is_object()
+        && (receipt["determinism"]["passed"].as_bool() != Some(true)
+            || baseline["determinism"]["passed"].as_bool() != Some(true))
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: both warm-session receipts must pass determinism",
             path.display(),
             baseline_path.display()
         );
