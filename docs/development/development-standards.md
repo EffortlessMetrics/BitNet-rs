@@ -96,6 +96,14 @@ The following patterns are explicitly banned to maintain API stability:
 3. **Banned Patterns Script**: Explicit pattern checking
 4. **Clippy Lints**: Code quality enforcement
 
+## Crate Boundary Doctrine
+
+BitNet-rs keeps the monorepo, but public Cargo package boundaries must be intentional. New
+`Cargo.toml` files require a passing boundary memo, and implementation seams should usually be
+internal module families instead of accidental public crates. See
+[`CRATE_BOUNDARY_POLICY.md`](CRATE_BOUNDARY_POLICY.md) and
+[`REPO_SURFACES.md`](REPO_SURFACES.md).
+
 ## Development Workflow
 
 ### Pre-Commit Checks
