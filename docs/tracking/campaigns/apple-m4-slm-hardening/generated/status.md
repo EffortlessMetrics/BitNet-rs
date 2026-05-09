@@ -2,7 +2,7 @@
 # Apple M4 SLM hardening Campaign Status
 
 - Campaign: `apple-m4-slm-hardening`
-- State: `active`
+- State: `complete`
 - Objective: Make the completed Apple M4 SLM path boring for local users through simple Mac commands, default verified model-cache behavior, clear first-run guidance, stable receipts, and conservative hardware claim boundaries.
 
 ## Work Items
@@ -12,7 +12,7 @@
 | M4-SLM-HARDEN-001 | merged | #4149 | `codex/apple-m4-slm-hardening/M4-SLM-HARDEN-001-positional-mac-ask` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Allow bitnet mac ask "What is 2+2?" as the shortest supported Mac local-answer command, keep bitnet mac ask --question compatible, reject ambiguous double question input, preserve default verified Qwen2.5 cache resolution, and keep device-boundary errors before cache/model work. |
 | M4-SLM-HARDEN-002 | merged | #4155 | `codex/apple-m4-slm-hardening/M4-SLM-HARDEN-002-cache-repair` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Improve first-run, corrupted-cache, low-disk, offline, verify, and prune guidance for Mac SLM operators without changing model artifacts or backend claims. |
 | M4-SLM-HARDEN-003 | merged | #4158 | `codex/apple-m4-slm-hardening/M4-SLM-HARDEN-003-quality-corpus` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Expand the tiny Mac SLM operator quality corpus with a few deterministic factual, short-instruction, and format-constrained prompts while preserving fast runtime and avoiding broad eval claims. |
-| M4-SLM-HARDEN-004 | pr_open | #4161 | `codex/apple-m4-slm-hardening/M4-SLM-HARDEN-004-regression-seed` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Define the next regression campaign and thresholds from the measured Apple M4 SLM performance envelope without turning one machine run into a broad performance guarantee. |
+| M4-SLM-HARDEN-004 | merged | #4161 | `codex/apple-m4-slm-hardening/M4-SLM-HARDEN-004-regression-seed` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Define the next regression campaign and thresholds from the measured Apple M4 SLM performance envelope without turning one machine run into a broad performance guarantee. |
 
 ## Hard Constraints
 
