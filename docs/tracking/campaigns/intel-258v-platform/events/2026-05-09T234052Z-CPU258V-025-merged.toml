@@ -1,0 +1,18 @@
+timestamp = "2026-05-09T23:40:52Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-025"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4356
+merge_sha = "12c08579e4c3563f25536a6da7457ea56b2d22b8"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-025-transformer-layer-parity"
+summary = "Merged CPU258V-025 transformer-layer parity ladder."
+notes = [
+  "The merged PR adds bitnet transformer-layer-parity over bounded qwen trace JSONL artifacts.",
+  "The committed 258V scalar and AVX2 layer-0 trace artifacts record 13 transformer boundaries.",
+  "The parity receipt reports primary_and_comparison_transformer_layer_ladder_matched with 13 comparison boundaries matched and zero mismatches.",
+  "The closeout promotes CPU258V-026 to refresh the 258V CPU reference bundle.",
+  "The item does not claim new answer quality, external first-token logits parity, CPU speed, Arc 140V execution, Intel NPU execution, or full model correctness.",
+]
