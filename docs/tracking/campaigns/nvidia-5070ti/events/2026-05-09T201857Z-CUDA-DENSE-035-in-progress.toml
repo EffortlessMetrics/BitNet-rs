@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T20:18:57Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-035"
+event = "in_progress"
+previous_status = "planned"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-035-one-layer-cuda-parity"
+
+notes = [
+  "Started CUDA-DENSE-035 as the implementation slice for the integrated dense GGUF one-layer CUDA parity contract defined by CUDA-DENSE-034.",
+  "Scope is a strict diagnostic command, receipt validator, per-phase CPU/CUDA comparison, per-op kernel stats, and aggregate transfer accounting for the Qwen-family layer-0 harness.",
+  "No dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, or CUDA kernel math claim is in scope.",
+]

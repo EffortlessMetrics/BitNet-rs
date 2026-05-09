@@ -2392,6 +2392,66 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-035"
+status = "pr_open"
+branch = "codex/cuda-dense-035-one-layer-cuda-parity"
+pr = 4328
+head_sha = "d4c033aa52fa726d8fd1b07781043062c4753264"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-034"]
+acceptance = "Implement the governed integrated dense GGUF one-layer CUDA parity harness defined by CUDA-DENSE-034, composing the verified layer-0 CPU reference phases through the CUDA-routable dense_regular_llm_cuda plan, comparing per-phase and final output parity, recording per-op kernel stats and aggregate H2D/D2H transfer accounting, and keeping dense GGUF inference, Qwen token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false."
+commands = [
+  "cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_one_layer -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features one_layer -- --nocapture",
+  "cargo test --locked -p bitnet-cli --test cli_smoke --no-default-features --features cpu,cuda,full-cli -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-one-layer-cuda-parity --model <verified-qwen2.5-q8-gguf> --layer-index 0 --seq-len 4 --position-offset 1 --device-index 0 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-one-layer-cuda-integrated-parity-qwen25-q8.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-one-layer-cuda-integrated-parity-qwen25-q8.json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+]
+may_claim = [
+  "CUDA-DENSE-035 implements a strict integrated dense GGUF one-layer CUDA parity diagnostic harness for the existing governed Qwen-family layer-0 contract.",
+  "The diagnostic command emits dense_gguf_one_layer_cuda_integrated_parity receipts and compares CUDA-routed phase outputs against the CUDA-DENSE-033 CPU reference harness.",
+  "The receipt validator requires 14 dense_regular_llm_cuda governed ops, explicit host glue for residual phases, fallback_used=false, transfer accounting, per-op kernel stats, and narrow one-layer claim boundaries.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Qwen one-token, short decode, or chat works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+  "A hardware receipt exists unless the real verified Qwen artifact command has been run and committed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-021"
 status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"

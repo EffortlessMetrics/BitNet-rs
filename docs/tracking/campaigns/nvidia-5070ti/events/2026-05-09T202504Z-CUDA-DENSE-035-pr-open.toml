@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T20:25:04Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-035"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-035-one-layer-cuda-parity"
+pr = 4328
+head_sha = "d4c033aa52fa726d8fd1b07781043062c4753264"
+
+notes = [
+  "Opened PR #4328 to implement the integrated dense GGUF one-layer CUDA parity harness defined by CUDA-DENSE-034.",
+  "The PR adds the dense-gguf-one-layer-cuda-parity command, dense_gguf_one_layer_cuda_integrated_parity receipt validation, per-phase parity metrics, per-op kernel stats, and transfer accounting.",
+  "The PR keeps dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false.",
+]
