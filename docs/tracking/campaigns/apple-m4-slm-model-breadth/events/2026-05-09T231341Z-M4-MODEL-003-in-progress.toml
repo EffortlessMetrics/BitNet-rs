@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T23:13:41Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-MODEL-003 Rust M4 quality gating for smollm2-360m-instruct-q8_0.",
+  "The current strict Rust M4 loader rejects the artifact before generation on the LayerNorm gamma guard.",
+  "Local diagnostic compatibility probes matched prompt/tokenizer authority but still generated incoherent text, so SmolLM2 is not accepted as a supported M4 dense SLM in this item.",
+]

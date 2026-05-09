@@ -76,6 +76,11 @@ reference output sanity:
 - Why selected: small cross-family instruct model from the Hugging Face small
   model line; useful to prove the M4 runner can support more than Qwen-class
   dense models.
+- M4-MODEL-003 outcome: rejected by Rust M4 quality for this round. The artifact
+  is reference-good, but the current strict Rust loader rejects it before
+  generation and diagnostic compatibility probes still produce incoherent text.
+  See
+  [apple-m4-slm-model-breadth-rust-m4-quality.md](apple-m4-slm-model-breadth-rust-m4-quality.md).
 - Rejection criteria:
   - GGUF metadata lacks tokenizer authority or chat template;
   - reference runner output is empty, non-UTF-8, repeated-token junk, or
