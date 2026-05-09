@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T00:37:52Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-004"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started regression guardrail campaign seeding from the measured Apple M4 dense SLM performance envelope.",
+  "Scope is limited to docs, campaign tracking, generated dashboards, and guardrail definitions.",
+  "No nightly infrastructure, broad performance claim, BitNet local-answer claim, full apple-m4-metal inference claim, QK256 support, or runtime change is included.",
+]
