@@ -7,7 +7,9 @@ use anyhow::{Context, Result};
 use bitnet_common::{BitNetTensor, Tensor};
 use candle_core::Tensor as CandleTensor;
 use rand::{Rng, RngCore};
-use std::collections::HashMap;
+
+const REPETITION_HISTORY_TARGET_LEN: usize = 1_000;
+const REPETITION_HISTORY_DRAIN_THRESHOLD: usize = REPETITION_HISTORY_TARGET_LEN * 2;
 
 /// Configuration for sampling strategies
 #[derive(Debug, Clone)]
@@ -35,7 +37,7 @@ impl Default for SamplingConfig {
 #[derive(Debug)]
 pub struct SamplingStrategy {
     config: SamplingConfig,
-    repetition_counts: HashMap<usize, usize>,
+    repetition_history: Vec<u32>,
     current_repetition_penalty: f32,
 }
 
@@ -45,7 +47,7 @@ impl SamplingStrategy {
         Self {
             current_repetition_penalty: config.repetition_penalty,
             config,
-            repetition_counts: HashMap::new(),
+            repetition_history: Vec::with_capacity(REPETITION_HISTORY_TARGET_LEN),
         }
     }
 
@@ -129,23 +131,15 @@ impl SamplingStrategy {
 
     /// Apply repetition penalty to logits
     fn apply_repetition_penalty(&self, logits: &CandleTensor) -> Result<CandleTensor> {
-        if self.current_repetition_penalty == 1.0 || self.repetition_counts.is_empty() {
+        if self.current_repetition_penalty == 1.0 || self.repetition_history.is_empty() {
             return Ok(logits.clone());
         }
 
         let mut logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
 
-        // Expand each (token, count) pair into `count` repetitions of the token ID.
-        // Passing a token N times to apply_repetition_penalty produces penalty^N,
-        // which is equivalent to the original count-based exponential formula.
-        let token_ids: Vec<u32> = self
-            .repetition_counts
-            .iter()
-            .flat_map(|(&id, &count)| std::iter::repeat_n(id as u32, count))
-            .collect();
         bitnet_logits::apply_repetition_penalty(
             &mut logits_vec,
-            &token_ids,
+            &self.repetition_history,
             self.current_repetition_penalty,
         );
 
@@ -219,11 +213,13 @@ impl SamplingStrategy {
 
     /// Update repetition tracking
     pub fn track_token(&mut self, token_id: usize) {
-        *self.repetition_counts.entry(token_id).or_insert(0) += 1;
+        let Ok(token_id) = u32::try_from(token_id) else {
+            return;
+        };
+        self.repetition_history.push(token_id);
 
-        // Clean up old entries to prevent unbounded growth
-        if self.repetition_counts.len() > 1000 {
-            self.repetition_counts.clear();
+        if self.repetition_history.len() > REPETITION_HISTORY_DRAIN_THRESHOLD {
+            self.repetition_history.drain(0..REPETITION_HISTORY_TARGET_LEN);
         }
     }
 
@@ -235,7 +231,7 @@ impl SamplingStrategy {
     /// Reset repetition penalty
     pub fn reset_repetition_penalty(&mut self) {
         self.current_repetition_penalty = self.config.repetition_penalty;
-        self.repetition_counts.clear();
+        self.repetition_history.clear();
     }
 
     /// Update configuration
@@ -299,5 +295,34 @@ impl SamplingStrategy {
             repetition_penalty: 1.05,
             do_sample: true,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn repetition_history_uses_sliding_window() {
+        let mut strategy = SamplingStrategy::new(SamplingConfig::default());
+
+        for token in 0..=REPETITION_HISTORY_DRAIN_THRESHOLD {
+            strategy.track_token(token);
+        }
+
+        assert_eq!(strategy.repetition_history.len(), REPETITION_HISTORY_TARGET_LEN + 1);
+        assert_eq!(strategy.repetition_history[0], REPETITION_HISTORY_TARGET_LEN as u32);
+    }
+
+    #[test]
+    fn reset_repetition_penalty_clears_history() {
+        let mut strategy = SamplingStrategy::new(SamplingConfig::default());
+        strategy.track_token(42);
+        strategy.increase_repetition_penalty();
+
+        strategy.reset_repetition_penalty();
+
+        assert!(strategy.repetition_history.is_empty());
+        assert_eq!(strategy.current_repetition_penalty, strategy.config.repetition_penalty);
     }
 }

@@ -10,6 +10,6 @@ SamplingStrategy {
         repetition_penalty: 1.0,
         do_sample: false,
     },
-    repetition_counts: {},
+    repetition_history: [],
     current_repetition_penalty: 1.0,
 }

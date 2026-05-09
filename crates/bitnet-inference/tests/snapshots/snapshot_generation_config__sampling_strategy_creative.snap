@@ -14,6 +14,6 @@ SamplingStrategy {
         repetition_penalty: 1.2,
         do_sample: true,
     },
-    repetition_counts: {},
+    repetition_history: [],
     current_repetition_penalty: 1.2,
 }
