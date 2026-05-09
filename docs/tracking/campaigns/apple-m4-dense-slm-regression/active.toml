@@ -115,8 +115,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-REG-003"
-status = "pr_open"
+status = "merged"
 pr = 4170
+merge_sha = "adc87739138a2e09362a1e44c1547253611e3476"
 branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-003-scheduled-hardware"
 stackable = false
 review_mode = "codex_premerge"
@@ -156,7 +157,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-REG-004"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-004-trend-history"
 stackable = false
 review_mode = "codex_premerge"
