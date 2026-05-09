@@ -192,7 +192,7 @@
 | slm-cpu | SLM-CPU-007B | SLM-CPU-007A | merged |
 | slm-cpu | SLM-CPU-008 | SLM-CPU-007B | ready |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
-| tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |
+| tracker-infra | TRACKER-003 | TRACKER-002 | merged |
 | wasm-inference | WASM-002 | WASM-001 | ready |
 | wasm-inference | WASM-003 | WASM-002 | ready |
 | wasm-inference | WASM-004 | WASM-003 | ready |

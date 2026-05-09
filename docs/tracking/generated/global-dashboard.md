@@ -25,5 +25,5 @@
 | nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
 | slm-cpu | SLM-CPU-008 | TBD | ready | none | Do not edit BitNet QK256/I2_S kernels. |
-| tracker-infra | TRACKER-003 | #3724 | pr_open | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
+| tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM-001 | TBD | ready | WASM-002 | WASM detection is not inference. |
