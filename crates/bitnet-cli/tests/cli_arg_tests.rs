@@ -307,6 +307,7 @@ fn mac_help_documents_operator_wrappers() {
         .stdout(predicate::str::contains("ask"))
         .stdout(predicate::str::contains("smoke"))
         .stdout(predicate::str::contains("validate"))
+        .stdout(predicate::str::contains("bitnet-proof"))
         .stdout(predicate::str::contains("receipts-check"));
 }
 
@@ -581,6 +582,92 @@ fn mac_chat_rejects_full_metal_request_before_cache_lookup() {
         .failure()
         .stderr(predicate::str::contains("mac chat routes the supported Mac local-answer path"))
         .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn mac_bitnet_proof_help_documents_blocked_contract() {
+    bitnet()
+        .args(["mac", "bitnet-proof", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--accepted-artifact <PATH>"))
+        .stdout(predicate::str::contains("--tokenizer-authority <AUTHORITY>"))
+        .stdout(predicate::str::contains("--strict"));
+}
+
+#[test]
+fn mac_bitnet_proof_missing_inputs_fail_clearly() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt = dir.path().join("preflight.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-proof",
+            "--model",
+            "missing-bitnet.gguf",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("M4 BitNet proof is blocked"))
+        .stderr(predicate::str::contains("--tokenizer-authority"))
+        .stderr(predicate::str::contains("--accepted-artifact"))
+        .stderr(predicate::str::contains("accepted BitNet GGUF is missing"));
+}
+
+#[test]
+fn mac_bitnet_proof_preflight_accepts_artifact_contract_without_running_model() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let model = dir.path().join("accepted-bitnet.gguf");
+    let accepted = dir.path().join("accepted-artifact.json");
+    let receipt = dir.path().join("preflight.json");
+    std::fs::write(&model, b"placeholder gguf").expect("model placeholder");
+    std::fs::write(
+        &accepted,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "accepted": true,
+            "model": {
+                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+            },
+            "tokenizer": {
+                "authority": "llama-bpe-external"
+            },
+            "kernel_family": "i2_s"
+        }))
+        .expect("json"),
+    )
+    .expect("accepted artifact");
+    let model_str = model.to_string_lossy().into_owned();
+    let accepted_str = accepted.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-proof",
+            "--model",
+            model_str.as_str(),
+            "--tokenizer-authority",
+            "llama-bpe-external",
+            "--accepted-artifact",
+            accepted_str.as_str(),
+            "--strict",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("preflight passed"));
+
+    let receipt_json: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&receipt).expect("receipt")).expect("receipt json");
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_bitnet_proof_preflight");
+    assert_eq!(receipt_json["result"], "ready");
+    assert_eq!(receipt_json["proof_executed"], false);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_answer_quality_claimed"], false);
 }
 
 #[test]
