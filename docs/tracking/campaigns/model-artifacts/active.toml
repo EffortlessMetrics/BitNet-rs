@@ -521,8 +521,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "BITNET-CONTRACT-003"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/bitnet-contract-003-verify-matrix"
+pr = 4201
+head_sha = "96233f926e826b26b5d5d5fa819ede6b943dd7cd"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
