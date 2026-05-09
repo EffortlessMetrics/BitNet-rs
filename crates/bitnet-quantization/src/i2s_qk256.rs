@@ -1254,6 +1254,112 @@ mod tests {
         assert!(first_16.contains(&1.0), "First 16 values should contain 1.0");
     }
 
+    #[test]
+    fn qk256_bitnet_i2s_grouped_layout_byte_exact_fixture() {
+        let mut source_codes = vec![0u8; QK256_BLOCK];
+        // First 128-value chunk, group position 0:
+        // lane0=0, lane1=1, lane2=2, lane3=3 -> byte 0b00_01_10_11.
+        source_codes[0] = 0;
+        source_codes[32] = 1;
+        source_codes[64] = 2;
+        source_codes[96] = 3;
+        // First 128-value chunk, group position 1:
+        // lane0=3, lane1=2, lane2=1, lane3=0 -> byte 0b11_10_01_00.
+        source_codes[1] = 3;
+        source_codes[33] = 2;
+        source_codes[65] = 1;
+        source_codes[97] = 0;
+        // Second 128-value chunk uses the same byte-local encoding at offset 32.
+        source_codes[128] = 2;
+        source_codes[160] = 0;
+        source_codes[192] = 3;
+        source_codes[224] = 1;
+
+        let packed = pack_codes_for_cols(&source_codes, QK256_BLOCK);
+        assert_eq!(packed[0], 0b00_01_10_11, "first chunk byte 0 must use grouped lanes");
+        assert_eq!(packed[1], 0b11_10_01_00, "first chunk byte 1 must use grouped lanes");
+        assert_eq!(packed[32], 0b10_00_11_01, "second chunk byte 0 must use grouped lanes");
+
+        let qs64: &[u8; QK256_PACKED_BYTES] = packed[..QK256_PACKED_BYTES].try_into().unwrap();
+        let mut unpacked = [0u8; QK256_BLOCK];
+        unpack_qk256_block(qs64, &mut unpacked);
+        assert_eq!(&unpacked[..], &source_codes[..]);
+    }
+
+    #[test]
+    fn bitnet_i8s_activation_quantization_uses_absmax_scale_and_sum() {
+        let x = [-127.0f32, -1.0, 0.0, 1.0, 127.0];
+        let (q, act_scale, act_sum) = quantize_row_i8_s_activation(&x, x.len());
+
+        assert_eq!(act_scale, 1.0);
+        assert_eq!(q, vec![-127, -1, 0, 1, 127]);
+        assert_eq!(act_sum, 0);
+    }
+
+    #[test]
+    fn bitnet_i8s_scaled_formula_subtracts_activation_sum_before_weight_scale() -> Result<()> {
+        let rows = 1usize;
+        let cols = 4usize;
+        let layout = Qk256Layout::from_rows_cols(rows, cols)?;
+        let codes = [0, 1, 2, 3];
+        let qs_data = pack_codes_for_cols(&codes, cols);
+        let x = vec![-127.0f32, -1.0, 1.0, 127.0];
+        let weight_scale = 0.25f32;
+        let mut y_out = vec![0.0f32; rows];
+
+        gemv_qk256_bitnet_i8s_scaled(
+            &qs_data,
+            &x,
+            &mut y_out,
+            rows,
+            cols,
+            layout.row_stride_bytes,
+            weight_scale,
+        )?;
+
+        let expected_int_dot = 0 * -127 + 1 * -1 + 2 * 1 + 3 * 127;
+        let expected_act_sum = -127 - 1 + 1 + 127;
+        let expected = ((expected_int_dot - expected_act_sum) as f32 / 1.0) * weight_scale;
+        assert_eq!(expected, 95.5);
+        assert!((y_out[0] - expected).abs() < 1e-6, "got {}, expected {}", y_out[0], expected);
+
+        let f32_dequant_reference: f32 = codes
+            .iter()
+            .copied()
+            .zip(x.iter().copied())
+            .map(|(code, x)| code_to_f32(code) * x)
+            .sum();
+        assert_ne!(
+            y_out[0], f32_dequant_reference,
+            "I2_S x I8_S scaled semantics must not silently collapse to F32 dequant GEMV"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn bitnet_i8s_scaled_rejects_nonfinite_weight_scale() {
+        let rows = 1usize;
+        let cols = 4usize;
+        let layout = Qk256Layout::from_rows_cols(rows, cols).expect("layout");
+        let qs_data = pack_codes_for_cols(&[2, 2, 2, 2], cols);
+        let x = vec![1.0f32; cols];
+        let mut y_out = vec![0.0f32; rows];
+
+        let err = gemv_qk256_bitnet_i8s_scaled(
+            &qs_data,
+            &x,
+            &mut y_out,
+            rows,
+            cols,
+            layout.row_stride_bytes,
+            f32::NAN,
+        )
+        .expect_err("non-finite weight scale must fail");
+
+        assert!(err.to_string().contains("weight scale is not finite"));
+    }
+
     /// Test (C): Tiny GEMV E2E (1×256 × 256×256)
     ///
     /// Tests feature spec: i2s-dual-flavor.md#gemv-operation

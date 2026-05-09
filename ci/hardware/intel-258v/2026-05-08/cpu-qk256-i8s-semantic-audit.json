@@ -1,0 +1,108 @@
+{
+  "artifact_kind": "bitnet_cpu_qk256_i8s_semantic_audit",
+  "machine_id": "intel-258v",
+  "proof_stage": "semantic_audited",
+  "source_commit": "e069cd22ffa7406dded0934b8ad566933f2bebe6",
+  "claim": "cpu258v_qk256_i2s_i8s_semantic_boundary",
+  "implementation": {
+    "primary_file": "crates/bitnet-quantization/src/i2s_qk256.rs",
+    "scope": "CPU scalar QK256/I2_S and BitNet I8_S activation semantic fixtures",
+    "runtime_inference_executed": false
+  },
+  "audited_semantics": {
+    "i2s_code_map": {
+      "0": -1.0,
+      "1": 0.0,
+      "2": 1.0,
+      "3": 0.0
+    },
+    "packed_layout": {
+      "block_values": 256,
+      "packed_bytes": 64,
+      "chunk_count": 2,
+      "chunk_values": 128,
+      "group_bytes_per_chunk": 32,
+      "byte_encoding": "lane0<<6 | lane1<<4 | lane2<<2 | lane3",
+      "byte_exact_fixture_passed": true
+    },
+    "i8s_activation": {
+      "scale_policy": "127.0 / max(1e-5, max(abs(x)))",
+      "rounding": "round_to_nearest_then_clamp_i8",
+      "activation_sum_recorded": true,
+      "fixture": {
+        "input": [-127.0, -1.0, 0.0, 1.0, 127.0],
+        "expected_quantized": [-127, -1, 0, 1, 127],
+        "expected_activation_scale": 1.0,
+        "expected_activation_sum": 0
+      }
+    },
+    "scaled_output_formula": {
+      "formula": "((int_dot - activation_sum) / activation_scale) * inline_weight_scale",
+      "subtracts_activation_sum_before_weight_scale": true,
+      "nonfinite_weight_scale_rejected": true,
+      "fixture": {
+        "codes": [0, 1, 2, 3],
+        "activation": [-127.0, -1.0, 1.0, 127.0],
+        "inline_weight_scale": 0.25,
+        "expected_int_dot": 382,
+        "expected_activation_sum": 0,
+        "expected_output": 95.5
+      }
+    }
+  },
+  "test_evidence": [
+    {
+      "command": "rustfmt --check --config skip_children=true --edition 2024 crates/bitnet-quantization/src/i2s_qk256.rs",
+      "status": "passed"
+    },
+    {
+      "command": "cargo test --locked -p bitnet-quantization --no-default-features bitnet_i8s -- --nocapture",
+      "status": "passed",
+      "tests_passed": [
+        "i2s_qk256::tests::bitnet_i8s_activation_quantization_uses_absmax_scale_and_sum",
+        "i2s_qk256::tests::gemv_qk256_bitnet_i8s_scaled_matches_simple_integer_formula",
+        "i2s_qk256::tests::bitnet_i8s_scaled_formula_subtracts_activation_sum_before_weight_scale",
+        "i2s_qk256::tests::bitnet_i8s_scaled_rejects_nonfinite_weight_scale"
+      ]
+    },
+    {
+      "command": "cargo test --locked -p bitnet-quantization --no-default-features qk256_bitnet_i2s_grouped_layout_byte_exact_fixture -- --nocapture",
+      "status": "passed",
+      "tests_passed": [
+        "i2s_qk256::tests::qk256_bitnet_i2s_grouped_layout_byte_exact_fixture"
+      ]
+    },
+    {
+      "command": "cargo test --locked -p bitnet-quantization --no-default-features qk256 -- --nocapture",
+      "status": "passed",
+      "summary": "35 unit tests plus filtered qk256 integration/property tests passed; ignored documentation/integration placeholders remained ignored."
+    }
+  ],
+  "classification": {
+    "first_mismatch": null,
+    "audited_fixture_status": "matches_canonical_oracle_semantics",
+    "answer_quality_classification": "not_evaluated",
+    "accelerator_execution_classification": "not_evaluated"
+  },
+  "claim_boundary": {
+    "may_claim": [
+      "CPU scalar QK256/I2_S grouped layout byte fixtures are audited.",
+      "CPU BitNet I8_S activation scaling and activation-sum handling are audited.",
+      "CPU scaled I2_S x I8_S output formula fixtures pass against the canonical oracle semantics."
+    ],
+    "must_not_claim": [
+      "BitNet answer quality is proven.",
+      "First-token logits parity is proven.",
+      "CPU speed or sustained throughput is proven.",
+      "Arc 140V or Intel NPU execution is proven.",
+      "QK256 decode on an accelerator is proven.",
+      "Full model correctness is proven."
+    ]
+  },
+  "fallback_used": false,
+  "known_gaps": [
+    "This artifact does not execute a full BitNet model.",
+    "This artifact does not compare external BitNet.cpp first-token logits because CPU258V-021 recorded those fields as unavailable from the current reference boundary.",
+    "This artifact does not prove answer quality, sustained throughput, or accelerator execution."
+  ]
+}
