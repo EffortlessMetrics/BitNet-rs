@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T11:32:44Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-023"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-023-attention-softmax-fixture"
+pr = 4257
+head_sha = "7a73a0bc85de90d1acc3758ff82fbdcdd453e8da"
+notes = [
+  "Opened PR #4257 for dense GGUF attention-softmax CPU-reference fixture extraction.",
+  "The receipt records attention-score dependency, probability hash, causal zero-probability count, row-sum error, and the missing CUDA attention-softmax kernel gap.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, CUDA kernel math, and planner route promotion remain out of scope.",
+]
