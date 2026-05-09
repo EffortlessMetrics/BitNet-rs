@@ -1,0 +1,109 @@
+schema = 1
+artifact_kind = "apple_m4_slm_model_breadth_rust_m4_quality"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-003"
+created_utc = "2026-05-09T23:13:41Z"
+host = "apple-m4-mac-mini"
+claim_boundary = "Rust M4 quality-gate evidence only. This rejects SmolLM2 as an M4 supported dense SLM for this round; it does not register a model, change the default, prove BitNet behavior, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance."
+
+[candidate]
+id = "smollm2-360m-instruct-q8_0"
+source = "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF"
+revision = "593b5a2e04c8f3e4ee880263f93e0bd2901ad47f"
+file = "smollm2-360m-instruct-q8_0.gguf"
+source_url = "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/blob/593b5a2e04c8f3e4ee880263f93e0bd2901ad47f/smollm2-360m-instruct-q8_0.gguf"
+size_bytes = 386404992
+sha256 = "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201"
+license = "apache-2.0"
+local_path = "target/apple-m4-slm-model-breadth/M4-MODEL-002/candidates/smollm2_360m_instruct_q8_0/HuggingFaceTB-SmolLM2-360M-Instruct-GGUF/smollm2-360m-instruct-q8_0.gguf"
+gguf_architecture = "llama"
+gguf_basename = "smollm2"
+gguf_file_type = "Q8_0"
+tokenizer_model = "gpt2"
+tokenizer_pre = "smollm"
+chat_template_present = true
+eos_token_id = 2
+bos_token_id = 1
+padding_token_id = 2
+reference_status = "accepted_reference_good_by_M4-MODEL-002"
+rust_m4_status = "rejected"
+
+[[gate]]
+id = "strict_loader_current"
+status = "failed"
+phase = "model_load"
+requested_backend = "apple-m4-cpu-neon"
+selected_backend = "not_reached"
+runtime_api = "not_reached"
+fallback_used = false
+command_shape = "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device apple-m4-cpu-neon run --model <smollm2.gguf> --prompt 'What is 2+2? Answer briefly.' --max-new-tokens 1 --temperature 0 --top-k 1 --top-p 1 --prompt-template smollm-chat --system-prompt '<smollm2 reference system>' --greedy --deterministic --strict-loader --strict-tokenizer --repetition-penalty 1.0 --json-out <target receipt> --no-warnings"
+exit_code = 1
+failure_class = "strict_loader_layernorm_gamma_guard"
+error = "Failed to load real model: Security error: Malformed data structure: LayerNorm gamma 'blk.0.ffn_norm.weight' suspicious: rms=0.09831 (expected approximately 1.0 or pre-scaled approximately 1/sqrt(hidden_size))"
+decision = "Do not register or support SmolLM2 from this gate. Current Rust M4 strict loader rejects the artifact before generation."
+
+[[diagnostic_probe]]
+id = "temporary_smollm_loader_prompt_id_parity_no_assistant_newline"
+status = "failed_quality"
+committed_runtime_change = false
+purpose = "Local diagnostic only: bypassed the dense LayerNorm guard and used the 39-token reference prompt variant to check whether output quality passed after prompt IDs matched."
+prompt = "What is 2+2? Answer briefly."
+prompt_template = "smollm-chat diagnostic no assistant newline"
+prompt_tokens = 39
+prompt_ids_match_reference = true
+requested_backend = "apple-m4-cpu-neon"
+selected_backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+generated_tokens = 16
+generated_token_ids = [198, 1780, 314, 260, 1462, 282, 260, 1462, 282, 260, 1462, 282, 260, 1462, 282, 260]
+generated_text = "\\nWhat is the name of the name of the name of the name of the"
+valid_utf8 = true
+non_empty = true
+non_degenerate = false
+semantically_plausible = false
+first_reference_token_id = 198
+first_divergent_observed_token_id = 1780
+first_divergent_expected_token_id = 34
+decision = "Prompt/tokenizer parity alone is insufficient; Rust M4 generation remains incoherent."
+
+[[diagnostic_probe]]
+id = "temporary_smollm_loader_metadata_assistant_newline"
+status = "failed_quality"
+committed_runtime_change = false
+purpose = "Local diagnostic only: bypassed the dense LayerNorm guard and used the GGUF chat-template assistant newline to check whether metadata-template parity fixed the output."
+prompt = "What is 2+2? Answer briefly."
+prompt_template = "smollm-chat metadata assistant newline"
+prompt_tokens = 40
+requested_backend = "apple-m4-cpu-neon"
+selected_backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+generated_tokens = 16
+generated_token_ids = [1780, 314, 260, 1462, 282, 260, 1462, 282, 260, 1462, 282, 260, 1462, 282, 260, 1462]
+generated_text = "What is the name of the name of the name of the name of the name"
+valid_utf8 = true
+non_empty = true
+non_degenerate = false
+semantically_plausible = false
+decision = "The embedded assistant-newline template does not make Rust M4 output coherent."
+
+[[diagnostic_probe]]
+id = "temporary_q8_layout_variants"
+status = "failed_quality"
+committed_runtime_change = false
+purpose = "Local diagnostic only: tested square projection transpose, non-square projection transpose, and tied-embedding transpose hypotheses without retaining those changes."
+observed_results = [
+  "square projection transpose produced repeated newline output",
+  "non-square projection transpose produced tokenizer garbage",
+  "embedding transpose produced repeated 'dates' output",
+]
+decision = "Do not commit speculative Q8_0 layout changes from this item."
+
+[decision]
+result = "rejected_rust_m4_quality"
+supported_model = false
+register_in_cache = false
+default_model_change = false
+next_item_unblocked = false
+summary = "SmolLM2 remains reference-good but is not accepted as a supported M4 dense SLM. Current Rust M4 strict loading rejects the artifact, and diagnostic compatibility probes still produce incoherent output."

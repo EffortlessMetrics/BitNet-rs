@@ -210,7 +210,7 @@ reference, Rust M4 quality, tokenizer, cache, and receipt gates in this matrix.
 
 ```text
 qwen3-0.6b-q8_0                 rejected by current reference runner
-smollm2-360m-instruct-q8_0      reference-good, pending Rust M4 quality
+smollm2-360m-instruct-q8_0      reference-good, rejected by Rust M4 quality
 ```
 
 See [apple-m4-slm-model-breadth-candidates.md](apple-m4-slm-model-breadth-candidates.md)
@@ -221,3 +221,8 @@ receipt, and deterministic gates pass.
 
 `M4-MODEL-002` records the reference sanity result in
 [apple-m4-slm-model-breadth-reference-sanity.md](apple-m4-slm-model-breadth-reference-sanity.md).
+`M4-MODEL-003` records the Rust M4 quality result in
+[apple-m4-slm-model-breadth-rust-m4-quality.md](apple-m4-slm-model-breadth-rust-m4-quality.md):
+SmolLM2 is not registered as a supported M4 dense SLM because the strict Rust
+loader rejects the artifact and diagnostic compatibility probes still produce
+incoherent output.
