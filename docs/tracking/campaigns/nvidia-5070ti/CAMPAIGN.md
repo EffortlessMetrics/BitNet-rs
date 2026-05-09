@@ -143,6 +143,9 @@ real ask/session/benchmark receipts yet.
 `CUDA-UX-001` starts the operator-facing proof cockpit: `bitnet receipts explain`
 summarizes existing BitNet CUDA and dense regular-LLM CUDA receipts without
 changing inference behavior or accepting new claims.
+`CUDA-UX-002` reuses that receipt explanation layer for strict `bitnet ask`
+proof summaries so the live user path prints the same route, backend, kernel,
+fallback, timing, residency, and claim-limit fields as `receipts explain`.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -195,6 +198,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-PLANNER-003 | merged | Receipt-ready planner summary fields for BitNet QK256 CUDA, dense regular-LLM CUDA, CPU fallback, unsupported ops, selected route labeling, and strict CUDA readiness. |
 | CUDA-PLANNER-004 | merged | Real strict ask, answer-corpus, warm-session, and benchmark receipts emit model-aware `execution_plan` fields. |
 | CUDA-UX-001 | merged | User-facing `bitnet receipts explain` command summarizes existing receipt proof fields, planner routes, kernels, timing, residency, and claim limits. |
+| CUDA-UX-002 | in_progress | Strict `bitnet ask` proof summaries reuse the receipt explainer compact summary instead of a one-line bespoke formatter. |
 
 ## Review Policy
 

@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T03:45:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-002"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-ux-002-ask-proof-summary"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started strict ask proof-summary reuse after CUDA-UX-001 merged.",
+  "Scope is CLI UX and receipt normalization only; no inference, tokenizer, loader, transformer, kernel, benchmark, dense GGUF inference, or server behavior changes.",
+  "The live strict ask output should expose the same compact proof fields as the receipt explanation cockpit.",
+]
