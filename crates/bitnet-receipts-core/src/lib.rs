@@ -3191,8 +3191,7 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
     {
         return Err(anyhow!("one_layer_plan operation route counts do not match summary"));
     }
-    validate_dense_one_layer_gap_audit(
-        receipt,
+    let counts = DenseOneLayerGapCounts {
         cuda_routable_ops,
         linear_cuda_ops,
         norm_cuda_ops,
@@ -3200,8 +3199,8 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
         attention_score_cuda_ops,
         attention_softmax_cuda_ops,
         unsupported_ops,
-        &seen_unsupported_roles,
-    )?;
+    };
+    validate_dense_one_layer_gap_audit(receipt, &counts, &seen_unsupported_roles)?;
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
@@ -3224,8 +3223,7 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
     Ok(())
 }
 
-fn validate_dense_one_layer_gap_audit(
-    receipt: &Value,
+struct DenseOneLayerGapCounts {
     cuda_routable_ops: u64,
     linear_cuda_ops: u64,
     norm_cuda_ops: u64,
@@ -3233,6 +3231,11 @@ fn validate_dense_one_layer_gap_audit(
     attention_score_cuda_ops: u64,
     attention_softmax_cuda_ops: u64,
     unsupported_ops: u64,
+}
+
+fn validate_dense_one_layer_gap_audit(
+    receipt: &Value,
+    counts: &DenseOneLayerGapCounts,
     expected_unsupported_roles: &BTreeSet<String>,
 ) -> Result<()> {
     let audit = object_field(receipt, "gap_audit")?;
@@ -3242,13 +3245,21 @@ fn validate_dense_one_layer_gap_audit(
         "source_artifact_kind",
         DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
     )?;
-    require_u64_eq(audit, "cuda_routable_ops_total", cuda_routable_ops)?;
-    require_u64_eq(audit, "cuda_routable_linear_ops_total", linear_cuda_ops)?;
-    require_u64_eq(audit, "cuda_routable_norm_ops_total", norm_cuda_ops)?;
-    require_u64_eq(audit, "cuda_routable_rope_ops_total", rope_cuda_ops)?;
-    require_u64_eq(audit, "cuda_routable_attention_score_ops_total", attention_score_cuda_ops)?;
-    require_u64_eq(audit, "cuda_routable_attention_softmax_ops_total", attention_softmax_cuda_ops)?;
-    require_u64_eq(audit, "unsupported_ops_total", unsupported_ops)?;
+    require_u64_eq(audit, "cuda_routable_ops_total", counts.cuda_routable_ops)?;
+    require_u64_eq(audit, "cuda_routable_linear_ops_total", counts.linear_cuda_ops)?;
+    require_u64_eq(audit, "cuda_routable_norm_ops_total", counts.norm_cuda_ops)?;
+    require_u64_eq(audit, "cuda_routable_rope_ops_total", counts.rope_cuda_ops)?;
+    require_u64_eq(
+        audit,
+        "cuda_routable_attention_score_ops_total",
+        counts.attention_score_cuda_ops,
+    )?;
+    require_u64_eq(
+        audit,
+        "cuda_routable_attention_softmax_ops_total",
+        counts.attention_softmax_cuda_ops,
+    )?;
+    require_u64_eq(audit, "unsupported_ops_total", counts.unsupported_ops)?;
     require_u64_eq(audit, "cpu_fallback_ops_total", 0)?;
     require_bool_eq(audit, "strict_cuda_ready", false)?;
     require_bool_eq(audit, "unsupported_ops_have_dependency_notes", true)?;
@@ -3264,7 +3275,7 @@ fn validate_dense_one_layer_gap_audit(
     require_bool_eq(audit, "full_cuda_residency_claimed", false)?;
 
     let cuda_roles = array_field(audit, "cuda_routable_roles")?;
-    if cuda_roles.len() != cuda_routable_ops as usize {
+    if cuda_roles.len() != counts.cuda_routable_ops as usize {
         return Err(anyhow!("gap_audit.cuda_routable_roles length must match CUDA op count"));
     }
     for role in cuda_roles {
@@ -3275,7 +3286,7 @@ fn validate_dense_one_layer_gap_audit(
     }
 
     let linear_roles = array_field(audit, "linears_routable_roles")?;
-    if linear_roles.len() != linear_cuda_ops as usize {
+    if linear_roles.len() != counts.linear_cuda_ops as usize {
         return Err(anyhow!(
             "gap_audit.linears_routable_roles length must match CUDA linear op count"
         ));
@@ -3288,7 +3299,7 @@ fn validate_dense_one_layer_gap_audit(
     }
 
     let norm_roles = array_field(audit, "norms_routable_roles")?;
-    if norm_roles.len() != norm_cuda_ops as usize {
+    if norm_roles.len() != counts.norm_cuda_ops as usize {
         return Err(anyhow!(
             "gap_audit.norms_routable_roles length must match CUDA RMSNorm op count"
         ));
@@ -3302,7 +3313,7 @@ fn validate_dense_one_layer_gap_audit(
     require_bool_eq(audit, "rmsnorm_cuda_parity_available", true)?;
 
     let rope_roles = array_field(audit, "rope_routable_roles")?;
-    if rope_roles.len() != rope_cuda_ops as usize {
+    if rope_roles.len() != counts.rope_cuda_ops as usize {
         return Err(anyhow!("gap_audit.rope_routable_roles length must match CUDA RoPE op count"));
     }
     for role in rope_roles {
@@ -3314,7 +3325,7 @@ fn validate_dense_one_layer_gap_audit(
     require_bool_eq(audit, "rope_cuda_parity_available", true)?;
 
     let attention_score_roles = array_field(audit, "attention_scores_routable_roles")?;
-    if attention_score_roles.len() != attention_score_cuda_ops as usize {
+    if attention_score_roles.len() != counts.attention_score_cuda_ops as usize {
         return Err(anyhow!(
             "gap_audit.attention_scores_routable_roles length must match CUDA attention-score op count"
         ));
@@ -3327,7 +3338,7 @@ fn validate_dense_one_layer_gap_audit(
     }
     require_bool_eq(audit, "attention_score_cuda_parity_available", true)?;
     let attention_softmax_roles = array_field(audit, "attention_softmax_routable_roles")?;
-    if attention_softmax_roles.len() != attention_softmax_cuda_ops as usize {
+    if attention_softmax_roles.len() != counts.attention_softmax_cuda_ops as usize {
         return Err(anyhow!(
             "gap_audit.attention_softmax_routable_roles length must match CUDA attention-softmax op count"
         ));
@@ -3342,7 +3353,7 @@ fn validate_dense_one_layer_gap_audit(
     require_string_eq(audit, "next_candidate_gap", "attention_v_mix")?;
 
     let unsupported_entries = array_field(audit, "unsupported_ops")?;
-    if unsupported_entries.len() != unsupported_ops as usize {
+    if unsupported_entries.len() != counts.unsupported_ops as usize {
         return Err(anyhow!("gap_audit.unsupported_ops length must match unsupported op count"));
     }
     let mut audit_roles = BTreeSet::new();
@@ -3410,12 +3421,12 @@ fn validate_dense_one_layer_gap_audit(
             anyhow!("gap_audit.unsupported_op_type_counts values must be unsigned integers")
         })?;
     }
-    if op_type_sum != unsupported_ops {
+    if op_type_sum != counts.unsupported_ops {
         return Err(anyhow!("gap_audit.unsupported_op_type_counts must sum to unsupported_ops"));
     }
 
     let dependency_edges = array_field(audit, "dependency_edges")?;
-    if dependency_edges.len() < unsupported_ops as usize {
+    if dependency_edges.len() < counts.unsupported_ops as usize {
         return Err(anyhow!(
             "gap_audit.dependency_edges must describe unsupported op dependencies"
         ));
