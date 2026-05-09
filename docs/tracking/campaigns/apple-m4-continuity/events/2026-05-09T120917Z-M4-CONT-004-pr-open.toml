@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T12:09:17Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-004"
+event = "pr_open"
+actor = "codex"
+pr = 4267
+head_sha = "99fdcbe076f7d7935f311b93d2dd628c4330e8e1"
+
+notes = [
+  "Opened PR #4267 for dense Mac SLM resident-session memory and timing envelope receipts.",
+  "The PR records 64-token and 128-token resident sessions with apple-m4-cpu-neon routing, fallback_used=false, model/tokenizer reuse, quality pass status, timing, and peak memory.",
+  "Claim boundary remains dense Qwen SLM M4 continuity only; no BitNet, QK256, Neural Engine, MPSGraph, full Metal inference, MacBook, or broad Apple Silicon performance claim is added.",
+]
