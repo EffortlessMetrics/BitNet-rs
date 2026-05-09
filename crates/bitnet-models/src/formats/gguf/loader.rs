@@ -1460,7 +1460,7 @@ impl GgufLoader {
                 for l in 0..32 {
                     let is = l / 16;
                     let qh_l = qh[qh_offset + l];
-                    let q1 = i32::from((ql[ql_offset + l] & 0x0f) | (((qh_l >> 0) & 3) << 4)) - 32;
+                    let q1 = i32::from((ql[ql_offset + l] & 0x0f) | ((qh_l & 3) << 4)) - 32;
                     let q2 =
                         i32::from((ql[ql_offset + l + 32] & 0x0f) | (((qh_l >> 2) & 3) << 4)) - 32;
                     let q3 = i32::from((ql[ql_offset + l] >> 4) | (((qh_l >> 4) & 3) << 4)) - 32;
