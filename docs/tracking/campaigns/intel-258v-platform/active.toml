@@ -1519,8 +1519,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-024"
-status = "pr_open"
+status = "merged"
 pr = 4342
+merge_sha = "614b3bc97fd12c3a01dfc36efc9f66949b2f7d85"
 branch = "codex/lunar-lake/CPU258V-024-observed-logits-length"
 stackable = false
 review_mode = "codex_premerge"
@@ -1555,6 +1556,50 @@ forbidden_paths = [
 may_claim = [
   "The 258V CPU observed logits vector length is recorded or its absence remains explicitly classified.",
   "The observed logits length is compared against the tokenizer/output-head expected vocab boundary when available.",
+]
+must_not_claim = [
+  "BitNet answer quality is newly proven.",
+  "First-token logits parity with the external reference is proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Full model correctness is proven.",
+]
+
+[[work_item]]
+id = "CPU258V-025"
+status = "ready"
+branch = "codex/lunar-lake/CPU258V-025-transformer-layer-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-024"]
+acceptance = "Add a 258V CPU transformer-layer parity ladder that records or classifies the first internal divergence across embedding, normalization, Q/K/V projection, RoPE, attention, FFN/ReLU2, residual, final norm, and lm_head boundaries after prompt/token, QK256 semantics, output-head, and logits-index checks are recorded."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet transformer_layer_parity -- --nocapture",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/transformer-layer-parity.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The 258V CPU transformer-layer parity ladder records the first available internal boundary or an explicit blocker.",
+  "The next CPU semantic-debug stage is classified after prompt/token, QK256, output-head, and logits-index checks.",
 ]
 must_not_claim = [
   "BitNet answer quality is newly proven.",
