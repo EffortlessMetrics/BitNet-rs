@@ -449,7 +449,7 @@ impl HNSWIndex {
     }
 
     fn prune_neighbors(&mut self, node: usize, level: usize) {
-        let query = &self.vectors[node].vector.clone();
+        let query = &self.vectors[node].vector; // Borrow instead of clone
         let neighbors = &self.nodes[node].neighbors[level];
         let mut scored: Vec<(usize, f32)> = neighbors
             .iter()
