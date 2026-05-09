@@ -137,7 +137,8 @@ bitnet mac smoke \
 receipt, writes an aggregate golden-smoke receipt with backend/fallback identity
 and disk/cache health, and keeps the same dense-SLM-only claim boundary. It is a
 local appliance check, not a BitNet, Metal, Neural Engine, QK256, or broad
-performance proof.
+performance proof. The cache health receipt records `verification_passes=1` so
+the smoke avoids hashing the same cached model twice before the tiny generation.
 
 Run the deterministic warm-session validation corpus:
 

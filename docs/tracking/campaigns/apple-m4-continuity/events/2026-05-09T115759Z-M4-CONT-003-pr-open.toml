@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T11:57:59Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-003"
+event = "pr_open"
+pr = 4263
+head_sha = "f558eb5fcb88aacc652ffa42cc6ac11e977cecbd"
+actor = "codex"
+
+notes = [
+  "Opened M4 dense-SLM latency polish PR.",
+  "The PR removes redundant cache SHA verification from `bitnet mac smoke`, keeps one strict verification pass before generation, and records verification_passes=1 in the smoke receipt.",
+  "The live smoke still produced the expected fixed `2+2` answer and passed Mac receipt validation with apple-m4-cpu-neon and fallback_used=false.",
+]
