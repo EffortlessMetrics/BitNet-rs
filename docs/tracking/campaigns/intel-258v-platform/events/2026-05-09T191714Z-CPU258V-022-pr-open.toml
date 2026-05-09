@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T19:17:14Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-022"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4321
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-022-qk256-semantic-audit"
+head_sha = "34b8b253efea5c23e35ee6164cbd3c2186b350f8"
+summary = "Opened CPU258V-022 to audit CPU scalar QK256/I2_S/I8_S semantics against the canonical BitNet.cpp/CUDA-aligned boundary."
+notes = [
+  "The PR adds focused CPU scalar fixtures for grouped QK256/I2_S packing, BitNet I8_S activation scaling, activation-sum subtraction, inline weight-scale handling, and non-finite scale rejection.",
+  "The live 258V artifact records the semantic-audit claim boundary at ci/hardware/intel-258v/2026-05-08/cpu-qk256-i8s-semantic-audit.json.",
+  "The PR does not claim BitNet answer quality, first-token logits parity, CPU speed, Arc 140V execution, Intel NPU execution, accelerator QK256 decode, or full model correctness.",
+]

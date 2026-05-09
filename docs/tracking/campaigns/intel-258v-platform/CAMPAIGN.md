@@ -57,7 +57,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | CPU258V-019 | merged | Capture the external first-token reference boundary from HF or bitnet.cpp for the fixed 258V prompts, recording generated token/text when available and explicit missing-logits status without claiming logits parity; merged in #4248. |
 | CPU258V-020 | merged | Classify first-token divergence using external reference evidence, prompt-authority audit output, and 258V scalar/AVX2 receipts, preserving inconclusive status when reference generated token IDs or logits are unavailable; merged in #4295. |
 | CPU258V-021 | merged | Instrument or script the external BitNet reference boundary so generated-token IDs and first-token logits/top-k are captured when available, or blocked with precise evidence when the reference cannot expose them; merged in #4315. |
-| CPU258V-022 | ready | Audit 258V CPU scalar QK256/I2_S/I8_S semantics against the canonical BitNet.cpp/CUDA-aligned oracle, covering code mapping, packed bitplane layout, inline scale handling, activation scale use, and accumulator scaling order. |
+| CPU258V-022 | pr_open | Audit 258V CPU scalar QK256/I2_S/I8_S semantics against the canonical BitNet.cpp/CUDA-aligned oracle, covering code mapping, packed bitplane layout, inline scale handling, activation scale use, and accumulator scaling order; open in #4321. |
 | LNL258V-004 | merged | Add Windows Level Zero loader fallback and refresh the 258V platform probe so Arc 140V records Level Zero identity and PCI ID `0x64A0`; merged in #4148. |
 
 ## Review Policy
