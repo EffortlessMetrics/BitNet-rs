@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T22:35:36Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-002"
+event = "pr_open"
+actor = "codex"
+pr = 4343
+head_sha = "8957f44d02cceb994b7d3b7683b8c16ff16f9e52"
+
+notes = [
+  "Opened PR #4343 for M4-MODEL-002 reference output sanity.",
+  "The PR rejects qwen3-0.6b-q8_0 because the current reference runner cannot load qwen3 architecture.",
+  "The PR accepts smollm2-360m-instruct-q8_0 as reference-good for bounded prompts and records compact TOML plus docs evidence only.",
+]

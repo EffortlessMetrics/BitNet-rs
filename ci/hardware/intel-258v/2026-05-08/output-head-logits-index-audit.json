@@ -16,18 +16,16 @@
     ]
   },
   "classification": {
-    "classification": "output_head_logits_index_boundary_has_gaps",
-    "first_mismatch_stage": "logits_index_contract",
-    "notes": [
-      "observed_logits_vector_length_not_available"
-    ]
+    "classification": "output_head_logits_index_boundary_recorded",
+    "first_mismatch_stage": null,
+    "notes": []
   },
   "fallback_used": false,
   "inputs": {
-    "avx2_answer_corpus": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
+    "avx2_answer_corpus": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-full-observed-logits.json",
     "model": "C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
     "prompt_audit": "ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json",
-    "scalar_answer_corpus": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json",
+    "scalar_answer_corpus": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-full-observed-logits.json",
     "tokenizer": "C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json"
   },
   "logits_index_boundary": {
@@ -35,8 +33,9 @@
     "expected_logits_vector_length_source": "gguf_metadata_vocab_size",
     "metadata_vocab_matches_tokenizer": true,
     "metadata_vocab_size": 128256,
-    "observed_logits_vector_length": null,
-    "observed_logits_vector_length_source": "not_available",
+    "model_vocab_size_proxy": 128256,
+    "observed_logits_vector_length": 128256,
+    "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
     "special_tokens": {
       "all_present_ids_within_vocab": true,
       "entries": [
@@ -77,8 +76,7 @@
         }
       ]
     },
-    "tokenizer_real_vocab_size": 128256,
-    "model_vocab_size_proxy": 128256
+    "tokenizer_real_vocab_size": 128256
   },
   "machine_id": "intel-258v",
   "model": {
@@ -220,7 +218,7 @@
     "selected_output_head": null,
     "tied_output_policy": "tied_token_embeddings"
   },
-  "timestamp": "2026-05-09T20:45:22.647073600+00:00",
+  "timestamp": "2026-05-09T22:28:30.490483+00:00",
   "tokenizer": {
     "bos_token_id": null,
     "end_of_text_token_id": 128001,
@@ -283,13 +281,13 @@
           ],
           "id": "math_2_plus_2",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         },
         {
           "chosen_id": 12366,
@@ -332,13 +330,13 @@
           ],
           "id": "capital_france",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         },
         {
           "chosen_id": 2579,
@@ -381,13 +379,13 @@
           ],
           "id": "repeat_colors",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         },
         {
           "chosen_id": 10619,
@@ -430,13 +428,13 @@
           ],
           "id": "say_ok",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         },
         {
           "chosen_id": 2360,
@@ -479,22 +477,28 @@
           ],
           "id": "yes_no_water",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         }
       ],
       "label": "avx2",
-      "path": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
+      "path": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-full-observed-logits.json",
       "provided": true,
       "summary": {
         "cases_total": 5,
         "cases_with_first_step_topk": 5,
-        "observed_logits_vector_lengths": []
+        "observed_logits_vector_lengths": [
+          128256,
+          128256,
+          128256,
+          128256,
+          128256
+        ]
       }
     },
     "scalar": {
@@ -547,13 +551,13 @@
           ],
           "id": "math_2_plus_2",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         },
         {
           "chosen_id": 12366,
@@ -596,13 +600,13 @@
           ],
           "id": "capital_france",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         },
         {
           "chosen_id": 2579,
@@ -645,13 +649,13 @@
           ],
           "id": "repeat_colors",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         },
         {
           "chosen_id": 10619,
@@ -694,13 +698,13 @@
           ],
           "id": "say_ok",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         },
         {
           "chosen_id": 2360,
@@ -743,22 +747,28 @@
           ],
           "id": "yes_no_water",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": null,
-          "observed_logits_vector_length_source": "not_available",
+          "model_vocab_size_proxy": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true,
-          "model_vocab_size_proxy": 128256
+          "tie_word_embeddings": true
         }
       ],
       "label": "scalar",
-      "path": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json",
+      "path": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-full-observed-logits.json",
       "provided": true,
       "summary": {
         "cases_total": 5,
         "cases_with_first_step_topk": 5,
-        "observed_logits_vector_lengths": []
+        "observed_logits_vector_lengths": [
+          128256,
+          128256,
+          128256,
+          128256,
+          128256
+        ]
       }
     },
     "scalar_avx2_comparison": {

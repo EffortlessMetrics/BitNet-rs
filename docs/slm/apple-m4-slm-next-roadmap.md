@@ -34,6 +34,10 @@ after source, revision, file, size, SHA256, tokenizer authority, prompt
 template, reference output sanity, Rust M4 output quality, cache metadata,
 receipt validation, and deterministic behavior where required are recorded.
 
+The first selected breadth candidates are `qwen3-0.6b-q8_0` and
+`smollm2-360m-instruct-q8_0`. They are evaluation candidates only, not supported
+M4 models.
+
 ### `apple-m4-slm-metal-phases`
 
 Goal: expand Apple Metal contribution phase by phase while preserving CPU/NEON

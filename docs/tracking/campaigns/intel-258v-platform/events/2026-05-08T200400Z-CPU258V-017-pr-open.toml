@@ -6,6 +6,7 @@ from = "ready"
 to = "pr_open"
 pr = 4123
 actor = "codex"
+head_sha = "dcdea3234c23d9185339e02db0b0d24d2cddeba8"
 branch = "codex/lunar-lake/CPU258V-017-prompt-token-audit"
 summary = "Opened CPU258V-017 to add a BitNet prompt/token authority audit receipt for the 258V CPU shared input-contract investigation."
 notes = [

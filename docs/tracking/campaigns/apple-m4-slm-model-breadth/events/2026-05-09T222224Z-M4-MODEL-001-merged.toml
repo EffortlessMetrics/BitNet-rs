@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T22:22:24Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-001"
+event = "merged"
+actor = "codex"
+pr = 4339
+merge_sha = "7f1e5d91bee56cd8ff03d62b670f506a23d03a07"
+
+notes = [
+  "Merged PR #4339, selecting Qwen3 0.6B Q8_0 and SmolLM2 360M Instruct Q8_0 as exact M4 dense SLM breadth candidates.",
+  "The merge records source revisions, files, expected sizes, license notes, tokenizer and prompt-template expectations, storage budgets, and rejection criteria.",
+  "M4-MODEL-002 is now ready for reference output sanity; no model artifact was downloaded, accepted, registered, or claimed supported by M4-MODEL-001.",
+]
