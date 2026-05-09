@@ -139,7 +139,7 @@ impl Profiler {
     /// Get all regions sorted by total time (descending).
     pub fn sorted_regions(&self) -> Vec<&RegionStats> {
         let mut regions: Vec<_> = self.regions.values().collect();
-        regions.sort_by(|a, b| b.total_time.cmp(&a.total_time));
+        regions.sort_by_key(|a| std::cmp::Reverse(a.total_time));
         regions
     }
 
