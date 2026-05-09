@@ -1614,11 +1614,11 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "dense_regular_llm_cuda": true,
             "bitnet_packed_qk256_cuda": false,
             "cuda_bitnet_qk256_ops": 0,
-            "cuda_dense_regular_llm_ops": 10,
+            "cuda_dense_regular_llm_ops": 11,
             "cpu_fallback_ops": 0,
-            "unsupported_ops": 4,
+            "unsupported_ops": 3,
             "total_ops": 14,
-            "cuda_ops": 10,
+            "cuda_ops": 11,
             "mixed_cuda_routes": false,
             "fallback_used": false,
             "strict_cuda_ready": false,
@@ -1643,11 +1643,12 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "schema": 1,
             "layer_index": 0,
             "total_ops": 14,
-            "cuda_routable_ops_total": 10,
+            "cuda_routable_ops_total": 11,
             "linear_cuda_ops_total": 7,
             "norm_cuda_ops_total": 2,
             "rope_cuda_ops_total": 1,
-            "unsupported_strict_cuda_ops_total": 4,
+            "attention_score_cuda_ops_total": 1,
+            "unsupported_strict_cuda_ops_total": 3,
             "cpu_fallback_ops_total": 0,
             "strict_cuda_ready": false,
             "unsupported_ops_explicitly_listed": true,
@@ -2021,11 +2022,12 @@ fn dense_one_layer_gap_audit() -> Value {
         "schema": 1,
         "source_artifact_kind": "dense_gguf_one_layer_execution_plan",
         "layer_index": 0,
-        "cuda_routable_ops_total": 10,
+        "cuda_routable_ops_total": 11,
         "cuda_routable_linear_ops_total": 7,
         "cuda_routable_norm_ops_total": 2,
         "cuda_routable_rope_ops_total": 1,
-        "unsupported_ops_total": 4,
+        "cuda_routable_attention_score_ops_total": 1,
+        "unsupported_ops_total": 3,
         "cpu_fallback_ops_total": 0,
         "strict_cuda_ready": false,
         "unsupported_ops_have_dependency_notes": true,
@@ -2036,6 +2038,7 @@ fn dense_one_layer_gap_audit() -> Value {
             "attention_k",
             "attention_v",
             "rope",
+            "attention_scores",
             "attention_output",
             "ffn_norm",
             "mlp_gate",
@@ -2058,16 +2061,19 @@ fn dense_one_layer_gap_audit() -> Value {
         "rope_routable_roles": [
             "rope"
         ],
+        "attention_scores_routable_roles": [
+            "attention_scores"
+        ],
         "rmsnorm_cuda_parity_available": true,
         "rope_cuda_parity_available": true,
-        "next_candidate_gap": "attention_scores",
+        "attention_score_cuda_parity_available": true,
+        "next_candidate_gap": "attention_softmax",
         "unsupported_op_type_counts": {
             "activation": 1,
-            "attention": 2,
+            "attention": 1,
             "softmax": 1
         },
         "candidate_order": [
-            "attention_scores",
             "attention_softmax",
             "attention_v_mix",
             "mlp_activation"
@@ -2090,14 +2096,6 @@ fn dense_one_layer_gap_audit() -> Value {
             { "from": "mlp_activation", "to": "mlp_down" }
         ],
         "unsupported_ops": [
-            gap_unsupported_op(
-                "blk.0.attention_scores",
-                "attention_scores",
-                "attention",
-                Value::Null,
-                Value::Null,
-                json!(["rope_q", "rope_k", "causal_mask"])
-            ),
             gap_unsupported_op(
                 "blk.0.attention_softmax",
                 "attention_softmax",
@@ -2172,12 +2170,11 @@ fn dense_one_layer_operations() -> Value {
     push_one_layer_cuda_op(&mut operations, 2, "blk.0.attn_k.weight", "attention_k");
     push_one_layer_cuda_op(&mut operations, 3, "blk.0.attn_v.weight", "attention_v");
     push_one_layer_cuda_rope_op(&mut operations, 4, "blk.0.rope", "rope");
-    push_one_layer_unsupported_op(
+    push_one_layer_cuda_attention_score_op(
         &mut operations,
         5,
         "blk.0.attention_scores",
         "attention_scores",
-        "attention",
     );
     push_one_layer_unsupported_op(
         &mut operations,
@@ -2252,6 +2249,30 @@ fn push_one_layer_cuda_rope_op(operations: &mut Vec<Value>, index: u64, name: &s
         "name": name,
         "role": role,
         "op_type": "rope",
+        "size": 16,
+        "source": "derived_transformer_op",
+        "source_tensor": Value::Null,
+        "source_tensor_type": Value::Null,
+        "source_shape": Value::Null,
+        "is_quantized": false,
+        "route": "dense_regular_llm_cuda",
+        "status": "cuda_routable",
+        "fallback_used": false,
+        "reason": format!("cuda_dense_regular_llm route selected for {name}")
+    }));
+}
+
+fn push_one_layer_cuda_attention_score_op(
+    operations: &mut Vec<Value>,
+    index: u64,
+    name: &str,
+    role: &str,
+) {
+    operations.push(json!({
+        "index": index,
+        "name": name,
+        "role": role,
+        "op_type": "attention",
         "size": 16,
         "source": "derived_transformer_op",
         "source_tensor": Value::Null,

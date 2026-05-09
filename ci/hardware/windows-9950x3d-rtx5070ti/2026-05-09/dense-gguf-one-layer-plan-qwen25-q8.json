@@ -23,17 +23,17 @@
   "cuda": {
     "available": true,
     "compute_capability": "12.0",
-    "cuda_runtime_version": "12.9",
-    "cuda_toolkit_version": "12.9",
+    "cuda_runtime_version": "unknown",
+    "cuda_toolkit_version": "unknown",
     "device_count": 1,
     "device_index": 0,
     "device_name": "NVIDIA GeForce RTX 5070 Ti",
     "driver_version": "591.86",
     "nvml_available": true,
-    "nvrtc_version": "12.9",
-    "power_draw_watts": 35.65,
+    "nvrtc_version": "unknown",
+    "power_draw_watts": 19.78,
     "power_limit_watts": 300.0,
-    "temperature_c": 37.0,
+    "temperature_c": 36.0,
     "vram_bytes": 17094475776
   },
   "descriptor_coverage": {
@@ -65,8 +65,8 @@
     "bitnet_packed_qk256_cuda": false,
     "cpu_fallback_ops": 0,
     "cuda_bitnet_qk256_ops": 0,
-    "cuda_dense_regular_llm_ops": 10,
-    "cuda_ops": 10,
+    "cuda_dense_regular_llm_ops": 11,
+    "cuda_ops": 11,
     "dense_regular_llm_cuda": true,
     "fallback_used": false,
     "full_cuda_residency_claimed": false,
@@ -82,29 +82,34 @@
     "strict_cuda_ready": false,
     "strict_fallback_policy": "reject",
     "total_ops": 14,
-    "unsupported_ops": 4
+    "unsupported_ops": 3
   },
   "fallback_backend": null,
   "fallback_reason": null,
   "fallback_used": false,
   "gap_audit": {
+    "attention_score_cuda_parity_available": true,
+    "attention_scores_routable_roles": [
+      "attention_scores"
+    ],
     "bitnet_packed_i2s_qk256_proof": false,
     "candidate_order": [
-      "attention_scores",
       "attention_softmax",
       "attention_v_mix",
       "mlp_activation"
     ],
     "cpu_fallback_ops_total": 0,
+    "cuda_routable_attention_score_ops_total": 1,
     "cuda_routable_linear_ops_total": 7,
     "cuda_routable_norm_ops_total": 2,
-    "cuda_routable_ops_total": 10,
+    "cuda_routable_ops_total": 11,
     "cuda_routable_roles": [
       "attention_norm",
       "attention_q",
       "attention_k",
       "attention_v",
       "rope",
+      "attention_scores",
       "attention_output",
       "ffn_norm",
       "mlp_gate",
@@ -188,7 +193,7 @@
       "mlp_up",
       "mlp_down"
     ],
-    "next_candidate_gap": "attention_scores",
+    "next_candidate_gap": "attention_softmax",
     "norms_routable_roles": [
       "attention_norm",
       "ffn_norm"
@@ -208,30 +213,10 @@
     "strict_cuda_rejects_cpu_fallback": true,
     "unsupported_op_type_counts": {
       "activation": 1,
-      "attention": 2,
+      "attention": 1,
       "softmax": 1
     },
     "unsupported_ops": [
-      {
-        "blocks_strict_cuda_one_layer": true,
-        "cpu_fallback_allowed": false,
-        "cuda_kernel_status": "missing_cuda_kernel",
-        "input_dependencies": [
-          "rope_q",
-          "rope_k",
-          "causal_mask"
-        ],
-        "input_residency": "not_executed",
-        "name": "blk.0.attention_scores",
-        "op_type": "attention",
-        "output_residency": "not_executed",
-        "role": "attention_scores",
-        "size": 802816,
-        "source": "derived_transformer_op",
-        "source_shape": null,
-        "source_tensor": null,
-        "transfer_timing_status": "not_measured_no_kernel"
-      },
       {
         "blocks_strict_cuda_one_layer": true,
         "cpu_fallback_allowed": false,
@@ -290,7 +275,7 @@
       }
     ],
     "unsupported_ops_have_dependency_notes": true,
-    "unsupported_ops_total": 4
+    "unsupported_ops_total": 3
   },
   "hardware_lane": "nvidia-rtx-5070-ti-cuda",
   "machine_id": "windows-9950x3d-rtx5070ti",
@@ -302,9 +287,10 @@
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
   },
   "one_layer_plan": {
+    "attention_score_cuda_ops_total": 1,
     "bitnet_packed_i2s_qk256_proof": false,
     "cpu_fallback_ops_total": 0,
-    "cuda_routable_ops_total": 10,
+    "cuda_routable_ops_total": 11,
     "dense_gguf_inference_claimed": false,
     "dense_gguf_one_layer_execution_plan_claimed": true,
     "full_cuda_residency_claimed": false,
@@ -410,15 +396,15 @@
         "is_quantized": false,
         "name": "blk.0.attention_scores",
         "op_type": "attention",
-        "reason": "strict CUDA rejects CPU fallback for dense_regular_llm dense_fp16 attention op blk.0.attention_scores",
+        "reason": "cuda_dense_regular_llm route selected for blk.0.attention_scores",
         "role": "attention_scores",
-        "route": "unsupported",
+        "route": "dense_regular_llm_cuda",
         "size": 802816,
         "source": "derived_transformer_op",
         "source_shape": null,
         "source_tensor": null,
         "source_tensor_type": null,
-        "status": "unsupported_strict_cuda"
+        "status": "cuda_routable"
       },
       {
         "fallback_used": false,
@@ -572,12 +558,12 @@
     "strict_cuda_ready": false,
     "total_ops": 14,
     "unsupported_ops_explicitly_listed": true,
-    "unsupported_strict_cuda_ops_total": 4
+    "unsupported_strict_cuda_ops_total": 3
   },
   "requested_backend": "nvidia-rtx-5070-ti-cuda",
   "runtime_api": "cuda",
   "schema": 1,
   "selected_backend": "nvidia-rtx-5070-ti-cuda",
   "speedup_claim": false,
-  "timestamp_utc": "2026-05-09T09:04:15Z"
+  "timestamp_utc": "2026-05-09T11:04:40Z"
 }

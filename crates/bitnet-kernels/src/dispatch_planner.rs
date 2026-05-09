@@ -542,7 +542,7 @@ fn select_model_cuda_backend(
             Some(ModelDispatchBackend::CudaBitnetQk256)
         }
         (ModelFamily::DenseRegularLlm, quantization)
-            if matches!(op.op_type, OpType::MatMul | OpType::RmsNorm | OpType::RoPE)
+            if dense_regular_llm_op_has_cuda_route(op)
                 && quantization.is_dense_cuda()
                 && !op.is_quantized
                 && spec.cuda.dense_regular_llm_cuda =>
@@ -551,6 +551,15 @@ fn select_model_cuda_backend(
         }
         _ => None,
     }
+}
+
+fn dense_regular_llm_op_has_cuda_route(op: &DispatchOp) -> bool {
+    matches!(op.op_type, OpType::MatMul | OpType::RmsNorm | OpType::RoPE)
+        || (op.op_type == OpType::Attention && is_dense_attention_score_op(&op.name))
+}
+
+fn is_dense_attention_score_op(name: &str) -> bool {
+    normalized_metadata_label(name).ends_with("attention_scores")
 }
 
 fn normalized_metadata_label(label: &str) -> String {
@@ -610,6 +619,24 @@ mod tests {
 
     fn rope_op() -> DispatchOp {
         DispatchOp { name: "rope".into(), op_type: OpType::RoPE, size: 512, is_quantized: false }
+    }
+
+    fn attention_scores_op() -> DispatchOp {
+        DispatchOp {
+            name: "blk.0.attention_scores".into(),
+            op_type: OpType::Attention,
+            size: 4096,
+            is_quantized: false,
+        }
+    }
+
+    fn attention_v_mix_op() -> DispatchOp {
+        DispatchOp {
+            name: "blk.0.attention_v_mix".into(),
+            op_type: OpType::Attention,
+            size: 4096,
+            is_quantized: false,
+        }
     }
 
     #[test]
@@ -897,6 +924,41 @@ mod tests {
         assert!(!plan.decisions[0].fallback_used);
         assert_eq!(plan.cuda_ops(), 1);
         assert_eq!(plan.unsupported_ops(), 0);
+    }
+
+    #[test]
+    fn model_aware_dense_fp16_routes_attention_scores_to_dense_cuda() {
+        let spec = ModelDispatchSpec {
+            model_family: ModelFamily::DenseRegularLlm,
+            quantization: QuantizationKind::DenseFp16,
+            backend_policy: BackendPolicy::StrictCuda,
+            has_simd: true,
+            cuda: CudaPlannerCapabilities::dense_regular_llm(),
+        };
+
+        let plan = plan_model_dispatch(&[attention_scores_op()], spec);
+
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaDenseRegularLlm);
+        assert!(!plan.decisions[0].fallback_used);
+        assert_eq!(plan.cuda_ops(), 1);
+        assert_eq!(plan.unsupported_ops(), 0);
+    }
+
+    #[test]
+    fn model_aware_dense_fp16_keeps_attention_v_mix_unsupported_until_parity() {
+        let spec = ModelDispatchSpec {
+            model_family: ModelFamily::DenseRegularLlm,
+            quantization: QuantizationKind::DenseFp16,
+            backend_policy: BackendPolicy::StrictCuda,
+            has_simd: true,
+            cuda: CudaPlannerCapabilities::dense_regular_llm(),
+        };
+
+        let plan = plan_model_dispatch(&[attention_v_mix_op()], spec);
+
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::Unsupported);
+        assert_eq!(plan.cuda_ops(), 0);
+        assert_eq!(plan.unsupported_ops(), 1);
     }
 
     #[test]
