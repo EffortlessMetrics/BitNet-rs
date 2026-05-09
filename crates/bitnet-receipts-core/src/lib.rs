@@ -75,6 +75,15 @@ pub const DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND: &str = "dense_gguf_norm_cud
 /// fixture-level evidence, not dense GGUF inference.
 pub const DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND: &str = "dense_gguf_rope_cuda_parity";
 
+/// Artifact kind for dense GGUF attention-score fixture extraction.
+///
+/// This receipt records a CPU-reference attention score fixture derived from
+/// metadata-based RoPE Q/K outputs. It is below CUDA parity and dense GGUF
+/// inference; `attention_scores` must remain an unsupported strict CUDA gap
+/// until a CUDA attention-score kernel parity receipt exists.
+pub const DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND: &str =
+    "dense_gguf_attention_score_fixture_extraction";
+
 /// Artifact kind for dense GGUF single-linear CUDA parity.
 ///
 /// This receipt proves one descriptor-extracted dense GGUF linear fixture can
@@ -1511,6 +1520,222 @@ pub fn validate_dense_gguf_rope_cuda_parity_receipt_json(receipt: &Value) -> Res
     Ok(())
 }
 
+/// Validate a dense GGUF attention-score fixture extraction receipt.
+///
+/// This receipt is a CPU-reference bridge after RoPE parity. It records
+/// metadata-derived Q/K RoPE outputs, causal masking, and scaled QK scores for
+/// the next dense one-layer gap, but it must not claim CUDA parity, dense GGUF
+/// inference, speedup, full residency, or BitNet packed I2_S/QK256 proof.
+pub fn validate_dense_gguf_attention_score_fixture_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_attention_score_fixture_extracted")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_non_empty(receipt, "inspection_source")?;
+    require_null(receipt, "error")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(
+        execution_path,
+        "kernel_family",
+        "cpu_reference_attention_scores_after_rope",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    let plan = object_field(receipt, "execution_plan")?;
+    require_string_eq(plan, "model_family", required_string(model, "model_family")?)?;
+    require_string_eq(plan, "selected_route", "unsupported")?;
+    require_string_eq(plan, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "selected_backend", "unsupported_strict_cuda")?;
+    require_string_eq(plan, "runtime_api", "none")?;
+    require_string_eq(plan, "strict_fallback_policy", "reject")?;
+    require_bool_eq(plan, "dense_regular_llm_cuda", false)?;
+    require_bool_eq(plan, "bitnet_packed_qk256_cuda", false)?;
+    require_u64_eq(plan, "cuda_bitnet_qk256_ops", 0)?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 0)?;
+    require_u64_eq(plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(plan, "unsupported_ops", 1)?;
+    require_u64_eq(plan, "total_ops", 1)?;
+    require_u64_eq(plan, "cuda_ops", 0)?;
+    require_bool_eq(plan, "fallback_used", false)?;
+    require_bool_eq(plan, "strict_cuda_ready", false)?;
+    require_bool_eq(plan, "speedup_claim", false)?;
+    require_bool_eq(plan, "full_cuda_residency_claimed", false)?;
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+
+    let fixture = object_field(receipt, "attention_score_fixture")?;
+    require_u64_eq(fixture, "schema", 1)?;
+    require_string_eq(
+        fixture,
+        "source_artifact_kind",
+        DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND,
+    )?;
+    require_string_eq(
+        fixture,
+        "source_rope_artifact_kind",
+        DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
+    )?;
+    require_string_non_empty(fixture, "source_rope_fixture_id")?;
+    require_string_non_empty(fixture, "fixture_id")?;
+    require_string_eq(fixture, "model_family", required_string(model, "model_family")?)?;
+    require_string_eq(fixture, "architecture", required_string(model, "architecture")?)?;
+    require_positive_u64(fixture, "head_dim")?;
+    require_positive_u64(fixture, "q_heads")?;
+    require_positive_u64(fixture, "kv_heads")?;
+    require_positive_u64(fixture, "heads_per_kv_group")?;
+    require_positive_u64(fixture, "seq_len")?;
+    require_positive_number(fixture, "rope_base")?;
+    require_positive_number(fixture, "scaling_factor")?;
+    require_positive_number(fixture, "attention_scale")?;
+    require_bool_eq(fixture, "causal_mask_applied", true)?;
+    require_string_non_empty(fixture, "head_dim_source")?;
+    require_string_non_empty(fixture, "q_heads_source")?;
+    require_string_non_empty(fixture, "kv_heads_source")?;
+    require_string_non_empty(fixture, "rope_base_source")?;
+    require_sha256(fixture, "q_rope_output_sha256")?;
+    require_sha256(fixture, "k_rope_output_sha256")?;
+    require_sha256(fixture, "cpu_reference_scores_sha256")?;
+    let shape = array_field(fixture, "score_shape")?;
+    if shape.len() != 3 {
+        return Err(anyhow!(
+            "attention_score_fixture.score_shape must contain [q_heads, seq_len, seq_len]"
+        ));
+    }
+    let q_heads = object_field(fixture, "q_heads")?
+        .as_u64()
+        .ok_or_else(|| anyhow!("attention_score_fixture.q_heads must be an unsigned integer"))?;
+    let seq_len = object_field(fixture, "seq_len")?
+        .as_u64()
+        .ok_or_else(|| anyhow!("attention_score_fixture.seq_len must be an unsigned integer"))?;
+    let expected_score_count = q_heads * seq_len * seq_len;
+    require_u64_eq(fixture, "score_count", expected_score_count)?;
+    let finite_scores = object_field(fixture, "finite_scores")?.as_u64().ok_or_else(|| {
+        anyhow!("attention_score_fixture.finite_scores must be an unsigned integer")
+    })?;
+    let masked_scores =
+        object_field(fixture, "causal_masked_scores")?.as_u64().ok_or_else(|| {
+            anyhow!("attention_score_fixture.causal_masked_scores must be an unsigned integer")
+        })?;
+    if finite_scores == 0 || finite_scores + masked_scores != expected_score_count {
+        return Err(anyhow!(
+            "attention_score_fixture finite and causal-masked counts must sum to score_count"
+        ));
+    }
+    require_bool_eq(fixture, "cpu_reference_computed", true)?;
+    require_string_eq(fixture, "cuda_kernel_status", "missing_cuda_kernel")?;
+    require_bool_eq(fixture, "strict_cuda_ready", false)?;
+    require_bool_eq(fixture, "cpu_fallback_allowed", false)?;
+    require_string_eq(fixture, "transfer_timing_status", "not_measured_no_kernel")?;
+    require_bool_eq(fixture, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(fixture, "dense_regular_llm_cuda_claimed", false)?;
+    require_bool_eq(fixture, "cpu_cuda_parity_claimed", false)?;
+    require_bool_eq(fixture, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(fixture, "speedup_claim", false)?;
+    require_bool_eq(fixture, "full_cuda_residency_claimed", false)?;
+
+    let audit = object_field(receipt, "attention_score_gap_audit")?;
+    require_u64_eq(audit, "schema", 1)?;
+    require_string_eq(
+        audit,
+        "source_artifact_kind",
+        DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND,
+    )?;
+    require_string_eq(audit, "gap_role", "attention_scores")?;
+    require_bool_eq(audit, "source_rope_cuda_parity_required", true)?;
+    require_bool_eq(audit, "source_rope_cuda_parity_available", true)?;
+    require_bool_eq(audit, "cpu_reference_available", true)?;
+    require_string_eq(audit, "cuda_kernel_status", "missing_cuda_kernel")?;
+    require_bool_eq(audit, "strict_cuda_ready", false)?;
+    require_bool_eq(audit, "cpu_fallback_allowed", false)?;
+    require_bool_eq(audit, "blocks_strict_cuda_one_layer", true)?;
+    require_string_eq(audit, "next_required_proof", "cuda_attention_score_kernel_parity")?;
+    let deps = array_field(audit, "input_dependencies")?;
+    let deps = deps
+        .iter()
+        .map(|dep| {
+            dep.as_str().ok_or_else(|| {
+                anyhow!("attention_score_gap_audit.input_dependencies entries must be strings")
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if deps != ["rope_q", "rope_k", "causal_mask"] {
+        return Err(anyhow!(
+            "attention_score_gap_audit.input_dependencies must identify RoPE Q/K and causal mask"
+        ));
+    }
+    let candidate_order = array_field(audit, "candidate_order")?;
+    let candidate_order = candidate_order
+        .iter()
+        .map(|role| {
+            role.as_str().ok_or_else(|| {
+                anyhow!("attention_score_gap_audit.candidate_order entries must be strings")
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if candidate_order != DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER {
+        return Err(anyhow!(
+            "attention_score_gap_audit.candidate_order must preserve the governed gap order"
+        ));
+    }
+    require_bool_eq(audit, "dense_gguf_attention_score_fixture_extraction_claimed", true)?;
+    require_bool_eq(audit, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(audit, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(audit, "speedup_claim", false)?;
+    require_bool_eq(audit, "full_cuda_residency_claimed", false)?;
+
+    let timing = object_field(receipt, "timing")?;
+    require_null(timing, "kernel_time_ms")?;
+    require_u64_eq(timing, "host_to_device_bytes", 0)?;
+    require_u64_eq(timing, "device_to_host_bytes", 0)?;
+    require_string_eq(timing, "transfer_timing_status", "not_measured_no_kernel")?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_score_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_rope_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_norm_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "cpu_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
 /// Validate dense GGUF single-linear CUDA parity evidence.
 ///
 /// This is the first bridge from descriptor-extracted dense GGUF linear
@@ -2492,6 +2717,12 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         .get("claim_boundary")
         .and_then(|claim_boundary| claim_boundary.get("dense_gguf_norm_cuda_parity_claimed"))
         .and_then(Value::as_bool);
+    let attention_score_fixture_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| {
+            claim_boundary.get("dense_gguf_attention_score_fixture_extraction_claimed")
+        })
+        .and_then(Value::as_bool);
     let linear_cuda_parity_claim = receipt
         .get("claim_boundary")
         .and_then(|claim_boundary| claim_boundary.get("dense_gguf_linear_cuda_parity_claimed"))
@@ -2515,6 +2746,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || artifact_kind == Some(DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)
@@ -2524,6 +2756,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || linear_fixture_claim == Some(true)
         || norm_fixture_claim == Some(true)
         || norm_cuda_parity_claim == Some(true)
+        || attention_score_fixture_claim == Some(true)
         || linear_cuda_parity_claim == Some(true)
         || linear_role_sweep_claim == Some(true)
         || one_layer_plan_claim == Some(true)
