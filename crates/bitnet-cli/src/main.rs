@@ -128,8 +128,8 @@ use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
 use commands::{
     AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, DenseGgufLinearParityCommand,
-    DenseGgufLinearRoleSweepCommand, DenseGgufOneLayerPlanCommand, InferenceCommand,
-    InspectCommand, ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
+    DenseGgufLinearRoleSweepCommand, DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand,
+    InferenceCommand, InspectCommand, ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -592,6 +592,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Emit a dense GGUF one-layer strict CUDA planner gap receipt
     DenseGgufOneLayerPlan(Box<DenseGgufOneLayerPlanCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
+    DenseGgufNormFixture(Box<DenseGgufNormFixtureCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Explain BitNet-rs JSON receipts and claim boundaries
@@ -1365,6 +1369,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufLinearRoleSweep(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufOneLayerPlan(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufNormFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Receipts(cmd)) => cmd.execute().await,
         #[cfg(feature = "full-cli")]

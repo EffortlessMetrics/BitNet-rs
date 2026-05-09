@@ -9,6 +9,7 @@ use bitnet_receipts::{
     validate_cuda_smoke_receipt_json, validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_fixture_extraction_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
+    validate_dense_gguf_norm_fixture_extraction_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
@@ -102,6 +103,18 @@ fn committed_dense_gguf_one_layer_execution_plan_receipt_validates() {
     .unwrap();
 
     validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_gguf_norm_fixture_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-norm-fixture-qwen25-q8.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_norm_fixture_extraction_receipt_json(&receipt).unwrap();
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
@@ -636,6 +649,51 @@ fn dense_gguf_one_layer_gap_audit_rejects_cpu_fallback_allowed() {
         .to_string();
 
     assert!(err.contains("cpu_fallback_allowed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_norm_fixture_receipt_validates_missing_cuda_kernel() {
+    let receipt = valid_dense_gguf_norm_fixture_extraction_receipt();
+
+    validate_dense_gguf_norm_fixture_extraction_receipt_json(&receipt).unwrap();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_norm_fixture_rejects_inference_claim() {
+    let mut receipt = valid_dense_gguf_norm_fixture_extraction_receipt();
+    receipt["claim_boundary"]["dense_gguf_inference_claimed"] = json!(true);
+    receipt["norm_fixtures"][0]["dense_gguf_inference_claimed"] = json!(true);
+
+    let err =
+        validate_dense_gguf_norm_fixture_extraction_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("dense_gguf_inference_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_norm_fixture_requires_both_norm_roles() {
+    let mut receipt = valid_dense_gguf_norm_fixture_extraction_receipt();
+    receipt["norm_fixture_audit"]["covered_roles"] = json!(["attention_norm"]);
+    receipt["norm_fixture_audit"]["roles_total"] = json!(1);
+    receipt["norm_fixture_audit"]["roles_extracted"] = json!(1);
+    receipt["norm_fixtures"].as_array_mut().unwrap().truncate(1);
+
+    let err =
+        validate_dense_gguf_norm_fixture_extraction_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("roles_total"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_norm_fixture_rejects_cuda_kernel_claim() {
+    let mut receipt = valid_dense_gguf_norm_fixture_extraction_receipt();
+    receipt["norm_fixture_audit"]["cuda_kernel_status"] = json!("cuda_kernel_passed");
+
+    let err =
+        validate_dense_gguf_norm_fixture_extraction_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("cuda_kernel_status"), "unexpected error: {err}");
 }
 
 fn valid_smoke_receipt() -> Value {
@@ -1492,6 +1550,120 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "full_cuda_residency_claimed": false
         },
         "error": null
+    })
+}
+
+fn valid_dense_gguf_norm_fixture_extraction_receipt() -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_norm_fixture_extraction",
+        "artifact_path": "target/bitnet/receipts/dense-gguf-norm-fixture.json",
+        "claim": "dense_gguf_norm_fixture_extracted",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-09T00:00:00Z",
+        "inspection_source": "gguf_reader_norm_fixture",
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "quantization_families": ["f32", "q8_0"],
+            "file": "synthetic-qwen3-q8_0-norm-fixture.gguf",
+            "sha256": "0".repeat(64)
+        },
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": 11,
+            "metadata_count": 4,
+            "required_roles_present": true,
+            "strict_descriptor_complete": true,
+            "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+            "quantization_families": ["f32", "q8_0"],
+            "bitnet_packed_marker_found": false,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "norm_fixture_audit": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_norm_fixture_extraction",
+            "roles_total": 2,
+            "roles_extracted": 2,
+            "roles_failed": 0,
+            "covered_roles": ["attention_norm", "ffn_norm"],
+            "all_cpu_reference_computed": true,
+            "cuda_kernel_status": "missing_cuda_kernel",
+            "strict_cuda_ready": false,
+            "cpu_fallback_allowed": false,
+            "transfer_timing_status": "not_measured_no_kernel",
+            "candidate_order": ["attention_norm", "ffn_norm"],
+            "next_required_proof": "cuda_rmsnorm_kernel_parity",
+            "dense_gguf_norm_fixture_extraction_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "norm_fixtures": [
+            dense_norm_fixture("blk.0.attn_norm.weight", "attention_norm"),
+            dense_norm_fixture("blk.0.ffn_norm.weight", "ffn_norm")
+        ],
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": false,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_norm_fixture_extraction_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": false,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "notes": [
+            "Dense GGUF norm fixture extraction only; no CUDA norm kernel or dense GGUF inference was executed."
+        ],
+        "error": null
+    })
+}
+
+fn dense_norm_fixture(tensor_name: &str, role: &str) -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_norm_fixture_extraction",
+        "model_family": "qwen",
+        "architecture": "qwen3",
+        "tensor_name": tensor_name,
+        "role": role,
+        "tensor_type": "f32",
+        "source_shape": [16],
+        "source_offset": 1024,
+        "source_size_bytes": 64,
+        "hidden_dim": 16,
+        "value_count": 16,
+        "values_materialized_as_f32": true,
+        "weight_values_sha256": "1".repeat(64),
+        "rmsnorm_eps": 0.000001,
+        "epsilon_source": "qwen3.attention.layer_norm_rms_epsilon",
+        "cpu_reference_input_len": 16,
+        "cpu_reference_output_len": 16,
+        "cpu_reference_input_sha256": "2".repeat(64),
+        "cpu_reference_output_sha256": "3".repeat(64),
+        "cpu_reference_computed": true,
+        "cuda_kernel_status": "missing_cuda_kernel",
+        "dense_gguf_inference_claimed": false,
+        "dense_regular_llm_cuda_claimed": false,
+        "cpu_cuda_parity_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "speedup_claim": false,
+        "full_cuda_residency_claimed": false
     })
 }
 

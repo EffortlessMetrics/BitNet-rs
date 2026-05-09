@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T06:34:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-015"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-015-norm-fixture-audit"
+notes = [
+  "Started dense GGUF norm fixture extraction after CUDA-DENSE-014 recorded attention_norm and ffn_norm as the first unsupported one-layer gaps.",
+  "Scope is GGUF RMSNorm tensor extraction, CPU reference outputs, and missing_cuda_kernel receipt validation.",
+  "No CUDA norm kernel, dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, tokenizer, loader, transformer, server, or BitNet packed proof claim is in scope.",
+]

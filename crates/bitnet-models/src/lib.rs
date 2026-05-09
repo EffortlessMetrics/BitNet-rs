@@ -16,6 +16,7 @@ pub mod correction_policy;
 pub mod dense_crossval;
 pub mod dense_gguf_descriptors;
 pub mod dense_gguf_linear_fixture;
+pub mod dense_gguf_norm_fixture;
 pub mod download_manager;
 pub mod fingerprint;
 pub mod format_detect;
