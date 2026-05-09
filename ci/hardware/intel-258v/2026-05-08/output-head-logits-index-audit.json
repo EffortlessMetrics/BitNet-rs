@@ -16,9 +16,11 @@
     ]
   },
   "classification": {
-    "classification": "output_head_logits_index_boundary_recorded",
-    "first_mismatch_stage": null,
-    "notes": []
+    "classification": "output_head_logits_index_boundary_has_gaps",
+    "first_mismatch_stage": "logits_index_contract",
+    "notes": [
+      "observed_logits_vector_length_not_available"
+    ]
   },
   "fallback_used": false,
   "inputs": {
@@ -33,8 +35,8 @@
     "expected_logits_vector_length_source": "gguf_metadata_vocab_size",
     "metadata_vocab_matches_tokenizer": true,
     "metadata_vocab_size": 128256,
-    "observed_logits_vector_length": 128256,
-    "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+    "observed_logits_vector_length": null,
+    "observed_logits_vector_length_source": "not_available",
     "special_tokens": {
       "all_present_ids_within_vocab": true,
       "entries": [
@@ -75,7 +77,8 @@
         }
       ]
     },
-    "tokenizer_real_vocab_size": 128256
+    "tokenizer_real_vocab_size": 128256,
+    "model_vocab_size_proxy": 128256
   },
   "machine_id": "intel-258v",
   "model": {
@@ -280,12 +283,13 @@
           ],
           "id": "math_2_plus_2",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         },
         {
           "chosen_id": 12366,
@@ -328,12 +332,13 @@
           ],
           "id": "capital_france",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         },
         {
           "chosen_id": 2579,
@@ -376,12 +381,13 @@
           ],
           "id": "repeat_colors",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         },
         {
           "chosen_id": 10619,
@@ -424,12 +430,13 @@
           ],
           "id": "say_ok",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         },
         {
           "chosen_id": 2360,
@@ -472,12 +479,13 @@
           ],
           "id": "yes_no_water",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-avx2-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         }
       ],
       "label": "avx2",
@@ -486,13 +494,7 @@
       "summary": {
         "cases_total": 5,
         "cases_with_first_step_topk": 5,
-        "observed_logits_vector_lengths": [
-          128256,
-          128256,
-          128256,
-          128256,
-          128256
-        ]
+        "observed_logits_vector_lengths": []
       }
     },
     "scalar": {
@@ -545,12 +547,13 @@
           ],
           "id": "math_2_plus_2",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         },
         {
           "chosen_id": 12366,
@@ -593,12 +596,13 @@
           ],
           "id": "capital_france",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         },
         {
           "chosen_id": 2579,
@@ -641,12 +645,13 @@
           ],
           "id": "repeat_colors",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         },
         {
           "chosen_id": 10619,
@@ -689,12 +694,13 @@
           ],
           "id": "say_ok",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         },
         {
           "chosen_id": 2360,
@@ -737,12 +743,13 @@
           ],
           "id": "yes_no_water",
           "model_vocab_size": 128256,
-          "observed_logits_vector_length": 128256,
-          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "observed_logits_vector_length": null,
+          "observed_logits_vector_length_source": "not_available",
           "output_head_tensor": "tied_token_embeddings",
           "selected_kernel": "i2_s-scalar-reference",
           "status": "passed",
-          "tie_word_embeddings": true
+          "tie_word_embeddings": true,
+          "model_vocab_size_proxy": 128256
         }
       ],
       "label": "scalar",
@@ -751,13 +758,7 @@
       "summary": {
         "cases_total": 5,
         "cases_with_first_step_topk": 5,
-        "observed_logits_vector_lengths": [
-          128256,
-          128256,
-          128256,
-          128256,
-          128256
-        ]
+        "observed_logits_vector_lengths": []
       }
     },
     "scalar_avx2_comparison": {

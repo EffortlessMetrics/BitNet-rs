@@ -188,9 +188,17 @@ fn build_output_head_logits_audit_receipt(
     let topk_comparison = compare_topk_evidence(&scalar_evidence, &avx2_evidence);
     let validation_failures =
         validate_boundary(embedding_name, output_head_name, raw_qk256_name, tokenizer_vocab_size);
+    let observed_logits_vector_length =
+        observed_logits_vector_length(&scalar_evidence, &avx2_evidence);
+    let observed_logits_vector_length_source =
+        observed_logits_vector_length_source(&scalar_evidence, &avx2_evidence);
+    let model_vocab_size_proxy = model_vocab_size_proxy(&scalar_evidence, &avx2_evidence);
     let classification = classify_boundary(
         metadata_vocab_size,
         tokenizer_vocab_size,
+        expected_logits_vector_length,
+        observed_logits_vector_length,
+        &observed_logits_vector_length_source,
         &topk_comparison,
         &validation_failures,
     );
@@ -251,8 +259,9 @@ fn build_output_head_logits_audit_receipt(
             "tokenizer_real_vocab_size": tokenizer_vocab_size,
             "metadata_vocab_size": metadata_vocab_size,
             "metadata_vocab_matches_tokenizer": metadata_vocab_size.map(|value| value as usize == tokenizer_vocab_size),
-            "observed_logits_vector_length": observed_logits_vector_length(&scalar_evidence, &avx2_evidence),
-            "observed_logits_vector_length_source": observed_logits_vector_length_source(&scalar_evidence, &avx2_evidence),
+            "observed_logits_vector_length": observed_logits_vector_length,
+            "observed_logits_vector_length_source": observed_logits_vector_length_source,
+            "model_vocab_size_proxy": model_vocab_size_proxy,
             "special_tokens": special_tokens,
         },
         "topk_evidence": {
@@ -498,8 +507,8 @@ fn answer_case_evidence(case: &Value, tokenizer: &(dyn Tokenizer + Send + Sync))
         .unwrap_or_default();
     let observed_length = case["logits_index_boundary"]["first_step_logits_vector_length"]
         .as_u64()
-        .or_else(|| case["logits_index_boundary"]["observed_logits_vector_length"].as_u64())
-        .or_else(|| case["model"]["vocab_size"].as_u64());
+        .or_else(|| case["logits_index_boundary"]["observed_logits_vector_length"].as_u64());
+    let model_vocab_size_proxy = case["model"]["vocab_size"].as_u64();
 
     json!({
         "id": case["id"].clone(),
@@ -509,10 +518,9 @@ fn answer_case_evidence(case: &Value, tokenizer: &(dyn Tokenizer + Send + Sync))
         "output_head_tensor": case["model"]["output_head_tensor"].clone(),
         "tie_word_embeddings": case["model"]["tie_word_embeddings"].clone(),
         "observed_logits_vector_length": observed_length,
+        "model_vocab_size_proxy": model_vocab_size_proxy,
         "observed_logits_vector_length_source": if case["logits_index_boundary"].is_object() {
             "run_receipt_logits_index_boundary"
-        } else if case["model"]["vocab_size"].is_number() {
-            "answer_corpus_model_vocab_size"
         } else {
             "not_available"
         },
@@ -614,6 +622,15 @@ fn observed_logits_vector_length_source(scalar: &Value, avx2: &Value) -> String 
         .to_string()
 }
 
+fn model_vocab_size_proxy(scalar: &Value, avx2: &Value) -> Option<u64> {
+    [scalar, avx2].iter().find_map(|evidence| {
+        evidence["cases"]
+            .as_array()?
+            .iter()
+            .find_map(|case| case["model_vocab_size_proxy"].as_u64())
+    })
+}
+
 fn validate_boundary(
     embedding_name: Option<&str>,
     output_head_name: Option<&str>,
@@ -636,6 +653,9 @@ fn validate_boundary(
 fn classify_boundary(
     metadata_vocab_size: Option<u32>,
     tokenizer_vocab_size: usize,
+    expected_logits_vector_length: usize,
+    observed_logits_vector_length: Option<u64>,
+    observed_logits_vector_length_source: &str,
     topk_comparison: &Value,
     validation_failures: &[&str],
 ) -> Value {
@@ -646,6 +666,16 @@ fn classify_boundary(
         }
     } else {
         notes.push("gguf_metadata_vocab_size_missing");
+    }
+    match observed_logits_vector_length {
+        Some(observed) if observed as usize != expected_logits_vector_length => {
+            notes.push("observed_logits_vector_length_differs_from_expected");
+        }
+        Some(_) if observed_logits_vector_length_source != "run_receipt_logits_index_boundary" => {
+            notes.push("observed_logits_vector_length_not_from_run_receipt");
+        }
+        Some(_) => {}
+        None => notes.push("observed_logits_vector_length_not_available"),
     }
     if topk_comparison["available"].as_bool() == Some(true)
         && topk_comparison["topk_ids_all_match"].as_bool() != Some(true)
@@ -663,6 +693,11 @@ fn classify_boundary(
             "tensor_boundary"
         } else if notes.contains(&"metadata_vocab_size_differs_from_tokenizer_real_vocab_size") {
             "vocab_index_contract"
+        } else if notes.contains(&"observed_logits_vector_length_differs_from_expected")
+            || notes.contains(&"observed_logits_vector_length_not_from_run_receipt")
+            || notes.contains(&"observed_logits_vector_length_not_available")
+        {
+            "logits_index_contract"
         } else if notes.contains(&"scalar_avx2_first_step_topk_ids_differ") {
             "local_topk_contract"
         } else {
@@ -751,6 +786,44 @@ mod tests {
         let avx2 = answer_corpus_evidence("avx2", None, Some(&receipt), &tokenizer);
         assert_eq!(scalar["cases"][0]["first_step_top_logits"][0]["decoded"], "4");
         assert_eq!(scalar["cases"][0]["first_step_top_logits"][0]["piece"], "4");
+        assert_eq!(scalar["cases"][0]["observed_logits_vector_length"], Value::Null);
+        assert_eq!(scalar["cases"][0]["model_vocab_size_proxy"], 50257);
         assert_eq!(compare_topk_evidence(&scalar, &avx2)["topk_ids_all_match"], true);
+    }
+
+    #[test]
+    fn classification_flags_missing_or_mismatched_observed_logits_length() {
+        let topk = json!({
+            "available": true,
+            "topk_ids_all_match": true,
+        });
+        assert_eq!(
+            classify_boundary(Some(128256), 128256, 128256, None, "not_available", &topk, &[])["first_mismatch_stage"],
+            "logits_index_contract"
+        );
+        assert_eq!(
+            classify_boundary(
+                Some(128256),
+                128256,
+                128256,
+                Some(128000),
+                "run_receipt_logits_index_boundary",
+                &topk,
+                &[],
+            )["first_mismatch_stage"],
+            "logits_index_contract"
+        );
+        assert_eq!(
+            classify_boundary(
+                Some(128256),
+                128256,
+                128256,
+                Some(128256),
+                "run_receipt_logits_index_boundary",
+                &topk,
+                &[],
+            )["classification"],
+            "output_head_logits_index_boundary_recorded"
+        );
     }
 }

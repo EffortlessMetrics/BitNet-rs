@@ -969,10 +969,13 @@ tied_output_policy = tied_token_embeddings
 selected_embedding = token_embd.weight
 selected_output_head = null
 expected_logits_vector_length = 128256
-observed_logits_vector_length = 128256
+observed_logits_vector_length = not_available
+model_vocab_size_proxy = 128256
 metadata_vocab_matches_tokenizer = true
 scalar_avx2_first_step_topk_ids_all_match = true
-classification = output_head_logits_index_boundary_recorded
+classification = output_head_logits_index_boundary_has_gaps
+first_mismatch_stage = logits_index_contract
+note = observed_logits_vector_length_not_available
 ```
 
 Focused validation:
@@ -989,9 +992,11 @@ git diff --check
 Allowed claim:
 
 ```text
-The 258V CPU output-head/tied-head and logits-index boundary is recorded for
-the fixed post-mechanics BitNet CPU receipts, and existing scalar/AVX2 first
-step top-k token IDs decode and match locally.
+The 258V CPU output-head/tied-head boundary is recorded for the fixed
+post-mechanics BitNet CPU receipts, existing scalar/AVX2 first step top-k token
+IDs decode and match locally, and the logits-length boundary is classified as a
+gap because the answer-corpus receipts expose model vocab size but not a
+measured logits-vector length.
 ```
 
 Not allowed:
