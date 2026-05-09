@@ -1381,6 +1381,7 @@ id = "CPU258V-021"
 status = "pr_open"
 pr = 4315
 branch = "codex/lunar-lake/CPU258V-021-reference-instrumentation"
+head_sha = "2cf3983b73332fd97ae1467032988c778ec795bc"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

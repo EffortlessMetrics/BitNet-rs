@@ -7,6 +7,7 @@ to = "pr_open"
 pr = 4315
 actor = "codex"
 branch = "codex/lunar-lake/CPU258V-021-reference-instrumentation"
+head_sha = "2cf3983b73332fd97ae1467032988c778ec795bc"
 summary = "Opened CPU258V-021 to classify the external BitNet reference token/logit instrumentation boundary."
 notes = [
   "The live 258V artifact records four generated-text cases, zero direct reference generated-token ID cases, and zero first-token top-k/logit cases.",
