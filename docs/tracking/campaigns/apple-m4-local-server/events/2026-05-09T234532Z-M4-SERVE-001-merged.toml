@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T23:45:32Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-001"
+event = "merged"
+actor = "codex"
+pr = 4359
+merge_sha = "76d21f97f16685b02ce4d39ab0fee281f6bc14f9"
+
+notes = [
+  "Merged PR #4359 with the Apple M4 local server command/config contract.",
+  "The merged contract defines bitnet mac serve defaults, startup checks, unsupported-backend behavior, endpoint roadmap, and receipt requirements.",
+  "M4-SERVE-002 is ready for health and ready endpoint behavior; no endpoint implementation, OpenAI compatibility, production readiness, BitNet, Metal, QK256, Neural Engine, MPSGraph, or broad performance claim was introduced by M4-SERVE-001.",
+]

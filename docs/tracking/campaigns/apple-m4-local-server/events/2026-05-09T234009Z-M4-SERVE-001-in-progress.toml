@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T23:40:09Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started the docs-only Apple M4 local server command/config contract.",
+  "Scope is limited to command shape, config fields, startup checks, failure behavior, endpoint roadmap, and receipt requirements.",
+  "No server endpoint, OpenAI compatibility, production readiness, BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, model binary, or broad performance claim is introduced.",
+]

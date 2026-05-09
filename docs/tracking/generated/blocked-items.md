@@ -39,7 +39,6 @@
 | apple-m4-local-answer | M4-QA-003 | M4-QA-001 | proposed |
 | apple-m4-local-answer | M4-QA-004 | M4-QA-001 | proposed |
 | apple-m4-local-answer | M4-QA-005 | M4-QA-002, M4-QA-003 | proposed |
-| apple-m4-local-server | M4-SERVE-002 | M4-SERVE-001 | blocked |
 | apple-m4-local-server | M4-SERVE-003 | M4-SERVE-002 | blocked |
 | apple-m4-local-server | M4-SERVE-004 | M4-SERVE-003 | blocked |
 | apple-m4-local-server | M4-SERVE-005 | M4-SERVE-004 | blocked |
@@ -139,7 +138,8 @@
 | intel-258v-platform | CPU258V-022 | CPU258V-021 | merged |
 | intel-258v-platform | CPU258V-023 | CPU258V-022 | merged |
 | intel-258v-platform | CPU258V-024 | CPU258V-023 | merged |
-| intel-258v-platform | CPU258V-025 | CPU258V-024 | pr_open |
+| intel-258v-platform | CPU258V-025 | CPU258V-024 | merged |
+| intel-258v-platform | CPU258V-026 | CPU258V-025 | ready |
 | intel-258v-platform | LNL258V-004 | LNL258V-003, ARC140V-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |

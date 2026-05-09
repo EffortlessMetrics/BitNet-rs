@@ -54,9 +54,13 @@ Goal: expose the M4 dense SLM appliance as a local service while reusing the
 same model-cache, tokenizer authority, resident-session, streaming, and receipt
 discipline.
 
-The first server surface should target an OpenAI-compatible local endpoint,
-streaming responses, health and ready endpoints, receipt export, and no hidden
-fallback.
+The first server surface is a command/config contract for `bitnet mac serve`:
+loopback by default, `apple-m4-cpu-neon`, supported dense model IDs only,
+startup cache/tokenizer/backend verification, streaming by default, receipt
+export, and no hidden fallback. Health/ready endpoints, streaming completions,
+and receipt export are later implementation items. OpenAI-shaped endpoints must
+not be described as fully compatible until their request/response semantics are
+tested.
 
 ## Still Separate
 
