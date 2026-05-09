@@ -1,0 +1,331 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "bitnet_hf_prompt_token_reference_parity",
+  "machine_id": "intel-258v",
+  "proof_stage": "external_prompt_token_reference_compared",
+  "created_utc": "2026-05-08T00:00:00Z",
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T",
+    "gguf_path": "C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "gguf_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tokenizer_path": "C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json",
+    "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+  },
+  "reference": {
+    "source": "HF AutoTokenizer.apply_chat_template",
+    "transformers_version": "5.8.0",
+    "tokenizers_version": "0.22.2",
+    "jinja2_version": "3.1.6",
+    "python_version": "3.14.4",
+    "load_options": {
+      "trust_remote_code": true,
+      "fix_mistral_regex": "not_set"
+    },
+    "tokenizer_config_source": "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T/raw/main/tokenizer_config.json",
+    "tokenizer_config_sha256": "d27b698683435b0b0dd544a591a30196b2b63f5fd4c8c64b9060a84dc185386f",
+    "special_tokens_map_source": "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T/raw/main/special_tokens_map.json",
+    "special_tokens_map_sha256": "462d91939dbc37178aa5a3eae7068d1990ccc92e09f288cc71f42cdf139d69cc",
+    "tokenizer_bos_token": "<|begin_of_text|>",
+    "tokenizer_bos_token_id": 128000,
+    "tokenizer_eos_token": "<|eot_id|>",
+    "tokenizer_eos_token_id": 128009,
+    "base_vocab_size": 128000,
+    "total_token_count": 128256,
+    "chat_template_present": true
+  },
+  "summary": {
+    "cases_total": 4,
+    "cases_passed": 0,
+    "cases_failed": 4,
+    "all_rendered_prompts_match": false,
+    "all_prompt_token_ids_match": false,
+    "first_divergence_stage": "prompt",
+    "notes": [
+      "External HF apply_chat_template includes a trailing space in the generation prompt: Assistant: .",
+      "HF apply_chat_template(tokenize=True) did not prepend BOS for these prompts.",
+      "BitNet-rs metadata_authority currently prepends BOS and renders Assistant: without the trailing generation-prompt space."
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "math_2_plus_2",
+      "prompt": "What is 2+2? Answer with only the number.",
+      "reference": {
+        "source": "hf_autotokenizer_apply_chat_template",
+        "rendered_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 19
+      },
+      "bitnet_rs": {
+        "audit_path": "target/cpu258v-018/bitnet-rs-audit-math_2_plus_2.json",
+        "template_mode": "metadata_authority",
+        "rendered_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "token_count": 19,
+        "current_default_matches_metadata_authority": true
+      },
+      "comparison": {
+        "rendered_prompt_match": false,
+        "prompt_token_ids_match": false,
+        "first_rendered_prompt_mismatch": {
+          "index": 67,
+          "reference": " ",
+          "bitnet_rs": null
+        },
+        "first_prompt_token_id_mismatch": {
+          "index": 0,
+          "reference": 1502,
+          "bitnet_rs": 128000
+        },
+        "observed_delta": "hf_reference_has_trailing_generation_prompt_space_and_no_bos_while_bitnet_rs_has_bos_and_no_trailing_generation_space"
+      }
+    },
+    {
+      "case_id": "say_ok",
+      "prompt": "Say exactly: OK",
+      "reference": {
+        "source": "hf_autotokenizer_apply_chat_template",
+        "rendered_prompt": "User: Say exactly: OK<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 10
+      },
+      "bitnet_rs": {
+        "audit_path": "target/cpu258v-018/bitnet-rs-audit-say_ok.json",
+        "template_mode": "metadata_authority",
+        "rendered_prompt": "User: Say exactly: OK<|eot_id|>Assistant:",
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ],
+        "token_count": 10,
+        "current_default_matches_metadata_authority": true
+      },
+      "comparison": {
+        "rendered_prompt_match": false,
+        "prompt_token_ids_match": false,
+        "first_rendered_prompt_mismatch": {
+          "index": 41,
+          "reference": " ",
+          "bitnet_rs": null
+        },
+        "first_prompt_token_id_mismatch": {
+          "index": 0,
+          "reference": 1502,
+          "bitnet_rs": 128000
+        },
+        "observed_delta": "hf_reference_has_trailing_generation_prompt_space_and_no_bos_while_bitnet_rs_has_bos_and_no_trailing_generation_space"
+      }
+    },
+    {
+      "case_id": "capital_france",
+      "prompt": "What is the capital of France? Answer with one word.",
+      "reference": {
+        "source": "hf_autotokenizer_apply_chat_template",
+        "rendered_prompt": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 18
+      },
+      "bitnet_rs": {
+        "audit_path": "target/cpu258v-018/bitnet-rs-audit-capital_france.json",
+        "template_mode": "metadata_authority",
+        "rendered_prompt": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant:",
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "token_count": 18,
+        "current_default_matches_metadata_authority": true
+      },
+      "comparison": {
+        "rendered_prompt_match": false,
+        "prompt_token_ids_match": false,
+        "first_rendered_prompt_mismatch": {
+          "index": 78,
+          "reference": " ",
+          "bitnet_rs": null
+        },
+        "first_prompt_token_id_mismatch": {
+          "index": 0,
+          "reference": 1502,
+          "bitnet_rs": 128000
+        },
+        "observed_delta": "hf_reference_has_trailing_generation_prompt_space_and_no_bos_while_bitnet_rs_has_bos_and_no_trailing_generation_space"
+      }
+    },
+    {
+      "case_id": "yes_no_water",
+      "prompt": "Answer yes or no: is water wet?",
+      "reference": {
+        "source": "hf_autotokenizer_apply_chat_template",
+        "rendered_prompt": "User: Answer yes or no: is water wet?<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 15
+      },
+      "bitnet_rs": {
+        "audit_path": "target/cpu258v-018/bitnet-rs-audit-yes_no_water.json",
+        "template_mode": "metadata_authority",
+        "rendered_prompt": "User: Answer yes or no: is water wet?<|eot_id|>Assistant:",
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ],
+        "token_count": 15,
+        "current_default_matches_metadata_authority": true
+      },
+      "comparison": {
+        "rendered_prompt_match": false,
+        "prompt_token_ids_match": false,
+        "first_rendered_prompt_mismatch": {
+          "index": 57,
+          "reference": " ",
+          "bitnet_rs": null
+        },
+        "first_prompt_token_id_mismatch": {
+          "index": 0,
+          "reference": 1502,
+          "bitnet_rs": 128000
+        },
+        "observed_delta": "hf_reference_has_trailing_generation_prompt_space_and_no_bos_while_bitnet_rs_has_bos_and_no_trailing_generation_space"
+      }
+    }
+  ],
+  "fallback_used": false,
+  "claim_boundary": {
+    "may_claim": [
+      "HF AutoTokenizer.apply_chat_template rendered prompts were compared against BitNet-rs metadata-authoritative prompt rendering for fixed prompts.",
+      "HF AutoTokenizer prompt token IDs were compared against BitNet-rs metadata-authoritative prompt token IDs for fixed prompts.",
+      "The external HF prompt/token reference does not match the current BitNet-rs metadata-authoritative prompt/token sequence for the fixed prompts."
+    ],
+    "must_not_claim": [
+      "answer quality",
+      "model inference or logits parity",
+      "speed or throughput",
+      "Arc 140V execution or acceleration",
+      "Intel NPU execution or acceleration",
+      "QK256 decode correctness"
+    ]
+  }
+}
