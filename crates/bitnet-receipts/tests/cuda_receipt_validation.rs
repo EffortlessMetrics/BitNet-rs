@@ -614,6 +614,30 @@ fn dense_gguf_one_layer_plan_requires_unsupported_strict_ops() {
     assert!(err.contains("unsupported_ops"), "unexpected error: {err}");
 }
 
+#[test]
+fn dense_gguf_one_layer_plan_requires_gap_audit() {
+    let mut receipt = valid_dense_gguf_one_layer_execution_plan_receipt();
+    receipt.as_object_mut().expect("receipt object").remove("gap_audit");
+
+    let err = validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("gap_audit"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_one_layer_gap_audit_rejects_cpu_fallback_allowed() {
+    let mut receipt = valid_dense_gguf_one_layer_execution_plan_receipt();
+    receipt["gap_audit"]["unsupported_ops"][0]["cpu_fallback_allowed"] = json!(true);
+
+    let err = validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("cpu_fallback_allowed"), "unexpected error: {err}");
+}
+
 fn valid_smoke_receipt() -> Value {
     json!({
         "schema": 1,
@@ -1448,6 +1472,7 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "speedup_claim": false,
             "full_cuda_residency_claimed": false
         },
+        "gap_audit": dense_one_layer_gap_audit(),
         "claim_boundary": {
             "dense_regular_llm_cuda_claimed": true,
             "dense_tensor_residency_claimed": false,
@@ -1467,6 +1492,159 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "full_cuda_residency_claimed": false
         },
         "error": null
+    })
+}
+
+fn dense_one_layer_gap_audit() -> Value {
+    json!({
+        "schema": 1,
+        "source_artifact_kind": "dense_gguf_one_layer_execution_plan",
+        "layer_index": 0,
+        "cuda_routable_linear_ops_total": 7,
+        "unsupported_ops_total": 7,
+        "cpu_fallback_ops_total": 0,
+        "strict_cuda_ready": false,
+        "unsupported_ops_have_dependency_notes": true,
+        "strict_cuda_rejects_cpu_fallback": true,
+        "linears_routable_roles": [
+            "attention_q",
+            "attention_k",
+            "attention_v",
+            "attention_output",
+            "mlp_gate",
+            "mlp_up",
+            "mlp_down"
+        ],
+        "unsupported_op_type_counts": {
+            "activation": 1,
+            "attention": 2,
+            "rmsnorm": 2,
+            "rope": 1,
+            "softmax": 1
+        },
+        "candidate_order": [
+            "attention_norm",
+            "ffn_norm",
+            "rope",
+            "attention_scores",
+            "attention_softmax",
+            "attention_v_mix",
+            "mlp_activation"
+        ],
+        "dependency_edges": [
+            { "from": "attention_norm", "to": "attention_q" },
+            { "from": "attention_norm", "to": "attention_k" },
+            { "from": "attention_norm", "to": "attention_v" },
+            { "from": "attention_q", "to": "rope" },
+            { "from": "attention_k", "to": "rope" },
+            { "from": "rope", "to": "attention_scores" },
+            { "from": "attention_scores", "to": "attention_softmax" },
+            { "from": "attention_softmax", "to": "attention_v_mix" },
+            { "from": "attention_v", "to": "attention_v_mix" },
+            { "from": "attention_v_mix", "to": "attention_output" },
+            { "from": "ffn_norm", "to": "mlp_gate" },
+            { "from": "ffn_norm", "to": "mlp_up" },
+            { "from": "mlp_gate", "to": "mlp_activation" },
+            { "from": "mlp_up", "to": "mlp_activation" },
+            { "from": "mlp_activation", "to": "mlp_down" }
+        ],
+        "unsupported_ops": [
+            gap_unsupported_op(
+                "blk.0.attn_norm.weight",
+                "attention_norm",
+                "rmsnorm",
+                json!("blk.0.attn_norm.weight"),
+                json!([16]),
+                json!(["hidden_state"])
+            ),
+            gap_unsupported_op(
+                "blk.0.rope",
+                "rope",
+                "rope",
+                Value::Null,
+                Value::Null,
+                json!(["attention_q", "attention_k", "position_ids"])
+            ),
+            gap_unsupported_op(
+                "blk.0.attention_scores",
+                "attention_scores",
+                "attention",
+                Value::Null,
+                Value::Null,
+                json!(["rope_q", "rope_k", "causal_mask"])
+            ),
+            gap_unsupported_op(
+                "blk.0.attention_softmax",
+                "attention_softmax",
+                "softmax",
+                Value::Null,
+                Value::Null,
+                json!(["attention_scores"])
+            ),
+            gap_unsupported_op(
+                "blk.0.attention_v_mix",
+                "attention_v_mix",
+                "attention",
+                Value::Null,
+                Value::Null,
+                json!(["attention_softmax", "attention_v"])
+            ),
+            gap_unsupported_op(
+                "blk.0.ffn_norm.weight",
+                "ffn_norm",
+                "rmsnorm",
+                json!("blk.0.ffn_norm.weight"),
+                json!([16]),
+                json!(["attention_residual_state"])
+            ),
+            gap_unsupported_op(
+                "blk.0.mlp_activation",
+                "mlp_activation",
+                "activation",
+                Value::Null,
+                Value::Null,
+                json!(["mlp_gate", "mlp_up"])
+            )
+        ],
+        "dense_gguf_one_layer_execution_plan_claimed": true,
+        "dense_gguf_one_layer_inference_claimed": false,
+        "dense_gguf_inference_claimed": false,
+        "qwen_one_token_cuda_claimed": false,
+        "qwen_short_decode_cuda_claimed": false,
+        "qwen_chat_cuda_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "speedup_claim": false,
+        "full_cuda_residency_claimed": false
+    })
+}
+
+fn gap_unsupported_op(
+    name: &str,
+    role: &str,
+    op_type: &str,
+    source_tensor: Value,
+    source_shape: Value,
+    input_dependencies: Value,
+) -> Value {
+    json!({
+        "name": name,
+        "role": role,
+        "op_type": op_type,
+        "size": 16,
+        "source": if source_tensor.is_null() {
+            "derived_transformer_op"
+        } else {
+            "gguf_tensor_descriptor"
+        },
+        "source_tensor": source_tensor,
+        "source_shape": source_shape,
+        "input_dependencies": input_dependencies,
+        "cuda_kernel_status": "missing_cuda_kernel",
+        "cpu_fallback_allowed": false,
+        "blocks_strict_cuda_one_layer": true,
+        "input_residency": "not_executed",
+        "output_residency": "not_executed",
+        "transfer_timing_status": "not_measured_no_kernel"
     })
 }
 

@@ -26,7 +26,7 @@ use bitnet_models::formats::gguf::GgufReader;
 use bitnet_receipts_core::{
     DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
-    DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
+    DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
     validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
@@ -35,7 +35,7 @@ use clap::Args;
 use memmap2::Mmap;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -52,6 +52,15 @@ const DEFAULT_ROLE_SWEEP: &[DenseGgufTensorRole] = &[
     DenseGgufTensorRole::MlpUp,
     DenseGgufTensorRole::MlpDown,
     DenseGgufTensorRole::Output,
+];
+const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] = &[
+    "attention_norm",
+    "ffn_norm",
+    "rope",
+    "attention_scores",
+    "attention_softmax",
+    "attention_v_mix",
+    "mlp_activation",
 ];
 
 /// Run dense GGUF single-linear CUDA parity diagnostics.
@@ -916,6 +925,12 @@ fn dense_gguf_one_layer_execution_plan_receipt_json(
         })
         .collect::<Vec<_>>();
 
+    let gap_audit = dense_one_layer_gap_audit_json(
+        &operations,
+        layer_index,
+        summary.cuda_dense_regular_llm_ops as u64,
+        summary.unsupported_ops as u64,
+    )?;
     let cuda = cuda_identity_json(probe);
     Ok(json!({
         "schema": 1,
@@ -982,6 +997,7 @@ fn dense_gguf_one_layer_execution_plan_receipt_json(
             "speedup_claim": false,
             "full_cuda_residency_claimed": false
         },
+        "gap_audit": gap_audit,
         "claim_boundary": {
             "dense_regular_llm_cuda_claimed": true,
             "dense_tensor_residency_claimed": false,
@@ -1002,6 +1018,119 @@ fn dense_gguf_one_layer_execution_plan_receipt_json(
         },
         "error": null
     }))
+}
+
+fn dense_one_layer_gap_audit_json(
+    operations: &[Value],
+    layer_index: usize,
+    cuda_linear_ops: u64,
+    unsupported_ops: u64,
+) -> Result<Value> {
+    let mut unsupported = Vec::new();
+    let mut linear_roles = Vec::new();
+    let mut op_type_counts: BTreeMap<String, u64> = BTreeMap::new();
+
+    for op in operations {
+        let route = json_string_field(op, "route")?;
+        let role = json_string_field(op, "role")?;
+        match route {
+            DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND => linear_roles.push(role.to_string()),
+            "unsupported" => {
+                let op_type = json_string_field(op, "op_type")?;
+                *op_type_counts.entry(op_type.to_string()).or_insert(0) += 1;
+                unsupported.push(json!({
+                    "name": json_string_field(op, "name")?,
+                    "role": role,
+                    "op_type": op_type,
+                    "size": op.get("size").cloned().unwrap_or(Value::Null),
+                    "source": json_string_field(op, "source")?,
+                    "source_tensor": op.get("source_tensor").cloned().unwrap_or(Value::Null),
+                    "source_shape": op.get("source_shape").cloned().unwrap_or(Value::Null),
+                    "input_dependencies": dense_gap_dependencies(role),
+                    "cuda_kernel_status": "missing_cuda_kernel",
+                    "cpu_fallback_allowed": false,
+                    "blocks_strict_cuda_one_layer": true,
+                    "input_residency": "not_executed",
+                    "output_residency": "not_executed",
+                    "transfer_timing_status": "not_measured_no_kernel"
+                }));
+            }
+            _ => {}
+        }
+    }
+
+    if linear_roles.len() as u64 != cuda_linear_ops || unsupported.len() as u64 != unsupported_ops {
+        bail!("dense one-layer gap audit counts must match planner summary");
+    }
+
+    Ok(json!({
+        "schema": 1,
+        "source_artifact_kind": DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
+        "layer_index": layer_index as u64,
+        "cuda_routable_linear_ops_total": cuda_linear_ops,
+        "unsupported_ops_total": unsupported_ops,
+        "cpu_fallback_ops_total": 0,
+        "strict_cuda_ready": false,
+        "unsupported_ops_have_dependency_notes": true,
+        "strict_cuda_rejects_cpu_fallback": true,
+        "linears_routable_roles": linear_roles,
+        "unsupported_op_type_counts": op_type_counts,
+        "candidate_order": DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER,
+        "dependency_edges": dense_one_layer_dependency_edges_json(),
+        "unsupported_ops": unsupported,
+        "dense_gguf_one_layer_execution_plan_claimed": true,
+        "dense_gguf_one_layer_inference_claimed": false,
+        "dense_gguf_inference_claimed": false,
+        "qwen_one_token_cuda_claimed": false,
+        "qwen_short_decode_cuda_claimed": false,
+        "qwen_chat_cuda_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "speedup_claim": false,
+        "full_cuda_residency_claimed": false
+    }))
+}
+
+fn json_string_field<'a>(object: &'a Value, field: &str) -> Result<&'a str> {
+    object
+        .get(field)
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow!("field `{field}` must be a string"))
+}
+
+fn dense_gap_dependencies(role: &str) -> Vec<&'static str> {
+    match role {
+        "attention_norm" => vec!["hidden_state"],
+        "rope" => vec!["attention_q", "attention_k", "position_ids"],
+        "attention_scores" => vec!["rope_q", "rope_k", "causal_mask"],
+        "attention_softmax" => vec!["attention_scores"],
+        "attention_v_mix" => vec!["attention_softmax", "attention_v"],
+        "ffn_norm" => vec!["attention_residual_state"],
+        "mlp_activation" => vec!["mlp_gate", "mlp_up"],
+        _ => vec!["unknown"],
+    }
+}
+
+fn dense_one_layer_dependency_edges_json() -> Vec<Value> {
+    [
+        ("attention_norm", "attention_q"),
+        ("attention_norm", "attention_k"),
+        ("attention_norm", "attention_v"),
+        ("attention_q", "rope"),
+        ("attention_k", "rope"),
+        ("rope", "attention_scores"),
+        ("attention_scores", "attention_softmax"),
+        ("attention_softmax", "attention_v_mix"),
+        ("attention_v", "attention_v_mix"),
+        ("attention_v_mix", "attention_output"),
+        ("ffn_norm", "mlp_gate"),
+        ("ffn_norm", "mlp_up"),
+        ("mlp_gate", "mlp_activation"),
+        ("mlp_up", "mlp_activation"),
+        ("mlp_activation", "mlp_down"),
+    ]
+    .into_iter()
+    .map(|(from, to)| json!({ "from": from, "to": to }))
+    .collect()
 }
 
 fn dense_one_layer_plan_entries(
@@ -1359,6 +1488,13 @@ mod tests {
         assert_eq!(receipt["execution_plan"]["unsupported_ops"], 7);
         assert_eq!(receipt["execution_plan"]["strict_cuda_ready"], false);
         assert_eq!(receipt["one_layer_plan"]["operations"].as_array().unwrap().len(), 14);
+        assert_eq!(receipt["gap_audit"]["unsupported_ops_total"], 7);
+        assert_eq!(receipt["gap_audit"]["cpu_fallback_ops_total"], 0);
+        assert_eq!(receipt["gap_audit"]["strict_cuda_rejects_cpu_fallback"], true);
+        assert_eq!(
+            receipt["gap_audit"]["unsupported_ops"][0]["cuda_kernel_status"],
+            "missing_cuda_kernel"
+        );
         assert_eq!(receipt["claim_boundary"]["dense_gguf_one_layer_execution_plan_claimed"], true);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_one_layer_inference_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);

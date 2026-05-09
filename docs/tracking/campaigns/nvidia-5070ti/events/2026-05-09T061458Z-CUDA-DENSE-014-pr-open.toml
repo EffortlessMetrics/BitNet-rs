@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T06:14:58Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-014"
+event = "pr_open"
+previous_status = "proposed"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-014-gap-audit"
+pr = 4216
+head_sha = "d271eddb75d0aa2c132f3d67f07a3b0549932561"
+notes = [
+  "Opened PR #4216 for dense GGUF one-layer gap audit receipts.",
+  "The PR extends the one-layer planner receipt with unsupported op dependencies, candidate order, and not-executed residency/timing status.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, tokenizer, loader, transformer, CUDA math, and BitNet packed proof claims remain false.",
+]
