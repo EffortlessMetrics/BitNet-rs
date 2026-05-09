@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T13:52:59Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-005"
+event = "pr_open"
+actor = "codex"
+pr = 4288
+head_sha = "d2751401eca8be77a8825cae4835d46735c97f5a"
+
+notes = [
+  "Opened PR #4288 to add the Apple M4 dense SLM model support matrix.",
+  "The matrix keeps Qwen2.5 Q8_0 as the only default/supported M4 dense SLM model and separates candidate, diagnostic-only, and rejected states.",
+  "The PR is docs/control-plane only and does not accept, download, or execute another model.",
+]

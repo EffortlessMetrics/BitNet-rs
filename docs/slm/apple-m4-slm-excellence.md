@@ -166,6 +166,12 @@ should record:
 The default remains the currently verified dense Qwen M4 model. Candidate
 models are not accepted until reference and Rust M4 quality gates pass.
 
+The current matrix lives in
+[`apple-m4-dense-slm-model-support-matrix.md`](apple-m4-dense-slm-model-support-matrix.md).
+It keeps the Qwen2.5 Q8_0 default separate from the Qwen2.5 Q4_K_M
+storage-conscious candidate, Qwen3 diagnostic work, cross-family candidates,
+and rejected unpinned or unsupported artifact classes.
+
 ### M4-SLM-EX-006: Second Supported Dense Model
 
 Add a second storage-conscious dense instruct model only if it passes:
