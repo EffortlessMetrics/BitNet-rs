@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T05:14:37Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-011"
+event = "merged"
+actor = "codex"
+pr = 4209
+head_sha = "1fd8c499805edef444eba732100839401067dddd"
+merge_sha = "8516c04df9dc91e8db57eabc9de4452eb4ee2293"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4209 merged live RTX 5070 Ti dense GGUF linear role-sweep receipts for Qwen2.5 Q8_0.",
+  "The receipts cover attention, MLP, and output linear roles with dense_regular_llm_cuda route, fallback_used=false, parity.passed=true, and max_abs_error=0.0.",
+  "Dense GGUF inference, Qwen token/decode/chat, BitNet QK256 proof, speedup, and full-residency claims remain false.",
+]
