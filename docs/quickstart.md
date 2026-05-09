@@ -139,7 +139,7 @@ cargo run -p bitnet-cli --features cpu,full-cli -- run \
 RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
   cargo build --release --no-default-features --features cpu,full-cli
 RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
-  cargo run --no-default-features --release -p xtask -- benchmark \
+  cargo run --release --no-default-features -p xtask -- benchmark \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 16  # Reduced for QK256
 ```
 

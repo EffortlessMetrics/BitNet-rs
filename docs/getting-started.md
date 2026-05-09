@@ -55,7 +55,7 @@ cargo build --locked --no-default-features --features "cpu,gpu"
 1. **Download a real BitNet model with trained weights**:
 ```bash
 # Download official Microsoft BitNet model with I2_S quantization
-cargo run -p xtask -- download-model \
+cargo run --no-default-features -p xtask -- download-model \
     --id microsoft/bitnet-b1.58-2B-4T-gguf \
     --file ggml-model-i2_s.gguf
 ```
@@ -74,14 +74,14 @@ cargo run -p bitnet-cli -- inspect \
 3. **Run inference with real neural network weights**:
 ```bash
 # Production inference with strict mode (prevents mock fallbacks)
-BITNET_STRICT_MODE=1 cargo run -p xtask -- infer \
+BITNET_STRICT_MODE=1 cargo run --no-default-features -p xtask -- infer \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
     --prompt "Explain quantum computing in simple terms" \
     --deterministic
 
 # Stream generation with device-aware quantization
-BITNET_STRICT_MODE=1 cargo run -p xtask -- infer \
+BITNET_STRICT_MODE=1 cargo run --no-default-features -p xtask -- infer \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
     --prompt "Write a story about AI and humans working together" \
@@ -89,7 +89,7 @@ BITNET_STRICT_MODE=1 cargo run -p xtask -- infer \
 
 # Performance measurement with realistic expectations
 # Performance varies by model and hardware; QK256 uses scalar kernels (~0.1 tok/s for 2B models)
-BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo run -p xtask -- infer \
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo run --no-default-features -p xtask -- infer \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
     --prompt "Benchmark inference performance" \

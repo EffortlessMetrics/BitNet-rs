@@ -579,6 +579,13 @@ pub(crate) fn cmd_validate_fixtures(root: &Path) -> Result<()> {
             println!("::warning::Could not inspect {name} - skipping metadata validation");
             continue;
         };
+        if !inspect.status.success() {
+            println!(
+                "::warning::Inspect command failed for {name}; skipping metadata validation: {}",
+                String::from_utf8_lossy(&inspect.stderr).trim()
+            );
+            continue;
+        }
         let inspect_text = String::from_utf8_lossy(&inspect.stdout);
         let inspect_json: Value = match serde_json::from_str(&inspect_text) {
             Ok(value) => value,
