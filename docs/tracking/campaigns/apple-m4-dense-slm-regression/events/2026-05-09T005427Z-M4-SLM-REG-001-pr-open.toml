@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T00:54:27Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-001"
+event = "pr_open"
+pr = 4163
+head_sha = "988ec5713751cd0698e8349bbb6fc7fc601e46aa"
+actor = "codex"
+
+notes = [
+  "Opened the advisory Apple M4 dense SLM receipt comparison PR.",
+  "The CLI compares matching performance profile receipts against a baseline through mac receipts-check --regression-baseline.",
+  "Timing and memory drift are advisory warnings; model, tokenizer, backend, fallback, release-mode, and profile context mismatches remain hard failures.",
+  "No nightly infrastructure, performance CI enforcement, broad M4 performance claim, BitNet local-answer claim, full apple-m4-metal inference claim, QK256 support, or model artifact change is included.",
+]
