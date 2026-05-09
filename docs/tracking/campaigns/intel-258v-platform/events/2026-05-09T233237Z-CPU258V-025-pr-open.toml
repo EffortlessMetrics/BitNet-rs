@@ -5,6 +5,7 @@ event = "pr_open"
 from = "ready"
 to = "pr_open"
 pr = 4356
+head_sha = "e4ce52132ce51bce21d8fae084838845c17849a2"
 actor = "codex"
 branch = "codex/lunar-lake/CPU258V-025-transformer-layer-parity"
 summary = "Opened CPU258V-025 to add the 258V CPU transformer-layer parity ladder."

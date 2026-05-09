@@ -18,6 +18,7 @@ use bitnet_receipts::{
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
     validate_dense_gguf_mlp_activation_cuda_parity_receipt_json,
     validate_dense_gguf_mlp_activation_fixture_receipt_json,
+    validate_dense_gguf_model_boundary_fixtures_receipt_json,
     validate_dense_gguf_norm_cuda_parity_receipt_json,
     validate_dense_gguf_norm_fixture_extraction_receipt_json,
     validate_dense_gguf_one_layer_cpu_reference_receipt_json,
@@ -249,6 +250,18 @@ fn committed_dense_gguf_mlp_activation_cuda_parity_receipt_validates() {
     .unwrap();
 
     validate_dense_gguf_mlp_activation_cuda_parity_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_gguf_model_boundary_fixtures_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-model-boundary-fixtures-qwen25-q8.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap();
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
@@ -1018,6 +1031,83 @@ fn dense_gguf_all_layer_plan_rejects_wrong_operation_role_sequence() {
         .to_string();
 
     assert!(err.contains("role"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_model_boundary_fixtures_receipt_validates_without_inference_claims() {
+    let receipt = valid_dense_gguf_model_boundary_fixtures_receipt();
+
+    validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_model_boundary_fixtures_rejects_one_token_claim() {
+    let mut receipt = valid_dense_gguf_model_boundary_fixtures_receipt();
+    receipt["claim_boundary"]["qwen_one_token_cuda_claimed"] = json!(true);
+    receipt["model_boundary_fixtures"]["qwen_one_token_cuda_claimed"] = json!(true);
+
+    let err =
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("qwen_one_token_cuda_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_model_boundary_fixtures_rejects_missing_top_k() {
+    let mut receipt = valid_dense_gguf_model_boundary_fixtures_receipt();
+    receipt["model_boundary_fixtures"]["lm_head_logits"]["top_k_entries"] = json!([]);
+
+    let err =
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("top_k_entries"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_model_boundary_fixtures_rejects_dimension_mismatch() {
+    let mut receipt = valid_dense_gguf_model_boundary_fixtures_receipt();
+    receipt["model_boundary_fixtures"]["token_embedding"]["output_len"] = json!(15);
+
+    let err =
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("output_len"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_model_boundary_fixtures_rejects_logits_vocab_mismatch() {
+    let mut receipt = valid_dense_gguf_model_boundary_fixtures_receipt();
+    receipt["model_boundary_fixtures"]["lm_head_logits"]["logits_len"] = json!(5);
+
+    let err =
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("vocab_size"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_model_boundary_fixtures_rejects_kv_or_sampling_claim() {
+    let mut receipt = valid_dense_gguf_model_boundary_fixtures_receipt();
+    receipt["claim_boundary"]["kv_cache_policy_claimed"] = json!(true);
+
+    let err =
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("kv_cache_policy_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_model_boundary_fixtures_rejects_bitnet_proof_claim() {
+    let mut receipt = valid_dense_gguf_model_boundary_fixtures_receipt();
+    receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+    receipt["model_boundary_fixtures"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    let err =
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
 }
 
 #[test]
@@ -2264,6 +2354,232 @@ fn valid_dense_gguf_all_layer_execution_plan_receipt() -> Value {
             "full_cuda_residency_claimed": false
         },
         "error": null
+    })
+}
+
+fn valid_dense_gguf_model_boundary_fixtures_receipt() -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_model_boundary_fixtures",
+        "artifact_path": "target/bitnet/receipts/dense-gguf-model-boundary-fixtures.json",
+        "claim": "dense_gguf_model_boundary_fixtures_recorded",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-09T00:00:00Z",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity(),
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "file": "synthetic-dense-gguf-model-boundary-fixtures",
+            "sha256": "0".repeat(64)
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_cuda_model_boundary_fixture_route",
+            "quantization_family": "dense_gguf_q8_0_f16_boundary_fixture_contract",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": {
+            "planner_version": "cuda-planner-004",
+            "model_family": "qwen",
+            "quantization": "dense_fp16",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "cuda_bitnet_qk256_ops": 0,
+            "cuda_dense_regular_llm_ops": 3,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 3,
+            "cuda_ops": 3,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": 23,
+            "metadata_count": 4,
+            "required_roles_present": true,
+            "strict_descriptor_complete": true,
+            "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+            "quantization_families": ["f32", "q8_0"],
+            "bitnet_packed_marker_found": false,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "model_boundary_fixtures": {
+            "schema": 1,
+            "fixture_id": "dense_gguf_model_boundary_fixtures_qwen_s4_top4",
+            "seq_len": 4,
+            "hidden_size": 4,
+            "vocab_size": 4,
+            "token_ids": [0, 1, 2, 3],
+            "token_ids_sha256": format!("{:064x}", 41),
+            "fixtures_total": 3,
+            "token_embedding": dense_boundary_fixture(
+                "token_embedding_lookup",
+                "token_embedding",
+                "token_embd.weight",
+                "q8_0",
+                json!([4, 4]),
+                16,
+                16,
+                format!("{:064x}", 42)
+            ),
+            "final_norm": {
+                "rmsnorm_eps": 0.000001,
+                "epsilon_source": "default_1e-6",
+                "input_sha256": format!("{:064x}", 43),
+                "output_sha256": format!("{:064x}", 44),
+                "fixture": dense_boundary_fixture(
+                    "final_model_norm",
+                    "final_norm",
+                    "output_norm.weight",
+                    "f32",
+                    json!([4]),
+                    4,
+                    4,
+                    format!("{:064x}", 44)
+                )
+            },
+            "lm_head_logits": {
+                "logits_len": 4,
+                "logits_sha256": format!("{:064x}", 45),
+                "top_k": 4,
+                "top_k_entries": [
+                    { "rank": 0, "token_id": 3, "value": 0.4 },
+                    { "rank": 1, "token_id": 2, "value": 0.3 },
+                    { "rank": 2, "token_id": 1, "value": 0.2 },
+                    { "rank": 3, "token_id": 0, "value": 0.1 }
+                ],
+                "fixture": dense_boundary_fixture(
+                    "lm_head_logits",
+                    "lm_head_logits",
+                    "output.weight",
+                    "q8_0",
+                    json!([4, 4]),
+                    16,
+                    4,
+                    format!("{:064x}", 45)
+                )
+            },
+            "boundary_fixtures_claimed": true,
+            "token_embedding_fixture_claimed": true,
+            "final_norm_fixture_claimed": true,
+            "lm_head_logits_fixture_claimed": true,
+            "fixture_route_only": true,
+            "cuda_kernel_execution_claimed": false,
+            "kernel_invocations": 0,
+            "fallback_used": false,
+            "kv_cache_policy_claimed": false,
+            "sampling_integration_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "remaining_model_boundary_gaps": {
+            "schema": 1,
+            "gaps": [
+                {
+                    "gap": "kv_cache_policy",
+                    "status": "not_governed_by_model_boundary_fixtures",
+                    "required_next_proof": "dense_gguf_kv_cache_policy_receipt",
+                    "blocks_qwen_one_token": true,
+                    "blocks_qwen_short_decode": true,
+                    "blocks_qwen_chat": true
+                },
+                {
+                    "gap": "sampling",
+                    "status": "not_governed_by_model_boundary_fixtures",
+                    "required_next_proof": "dense_gguf_sampling_policy_receipt",
+                    "blocks_qwen_one_token": true,
+                    "blocks_qwen_short_decode": true,
+                    "blocks_qwen_chat": true
+                }
+            ],
+            "qwen_one_token_cuda_blocked": true,
+            "qwen_short_decode_cuda_blocked": true,
+            "qwen_chat_cuda_blocked": true,
+            "next_required_proof": "dense_gguf_kv_cache_policy_receipt",
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_cpu_reference_claimed": true,
+            "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+            "dense_gguf_all_layer_execution_plan_claimed": true,
+            "dense_gguf_model_boundary_fixtures_claimed": true,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "kv_cache_policy_claimed": false,
+            "sampling_integration_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    })
+}
+
+fn dense_boundary_fixture(
+    name: &str,
+    role: &str,
+    tensor_name: &str,
+    tensor_type: &str,
+    source_shape: Value,
+    value_count: u64,
+    output_len: u64,
+    output_sha256: String,
+) -> Value {
+    json!({
+        "name": name,
+        "role": role,
+        "tensor_name": tensor_name,
+        "tensor_type": tensor_type,
+        "source_shape": source_shape,
+        "source_offset": 0,
+        "source_size_bytes": 128,
+        "value_count": value_count,
+        "output_len": output_len,
+        "output_sha256": output_sha256,
+        "max_abs": 1.0,
+        "dense_gguf_inference_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false
     })
 }
 

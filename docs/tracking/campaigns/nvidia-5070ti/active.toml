@@ -2572,8 +2572,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-038"
-status = "ready"
+status = "merged"
 branch = "codex/cuda-dense-038-model-boundary-fixtures"
+pr = 4348
+head_sha = "8e34d1cf144988fe796aa4b9c2e27d5b1fde0e81"
+merge_sha = "74c621586cf430ca0b4686d3e972cc10310d2c2f"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
