@@ -1334,8 +1334,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-020"
-status = "pr_open"
+status = "merged"
 pr = 4295
+merge_sha = "929c337a9bb1d3484ddda0201a5633208f38d087"
 branch = "codex/lunar-lake/CPU258V-020-first-token-divergence-classifier"
 stackable = false
 review_mode = "codex_premerge"
@@ -1366,6 +1367,47 @@ forbidden_paths = [
 may_claim = [
   "The first-token divergence stage is classified from available external reference, prompt/token audit, and 258V scalar/AVX2 receipt evidence.",
   "Reference generated-token IDs or logits remain unavailable when the reference artifact does not expose them.",
+]
+must_not_claim = [
+  "BitNet answer quality is newly proven.",
+  "First-token logits parity is proven when reference logits are unavailable.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Packed QK256 decode semantics are fixed.",
+]
+
+[[work_item]]
+id = "CPU258V-021"
+status = "ready"
+branch = "codex/lunar-lake/CPU258V-021-reference-instrumentation"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-020"]
+acceptance = "Instrument or script the external BitNet reference runner boundary so the fixed 258V prompts expose prompt token IDs, first generated token IDs, decoded first tokens, and first-token logits/top-k when available; if the reference cannot expose logits or token IDs, record the blocker precisely without inferring parity."
+commands = [
+  "python3 -c \"import json; p='ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json'; a=json.load(open(p, encoding='utf-8')); assert a['summary']['classification']=='reference_generated_token_ids_and_logits_unavailable'\"",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+  "tools/**",
+  "scripts/**",
+]
+forbidden_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The external BitNet reference evidence boundary exposes generated-token IDs, first-token logits/top-k, or a precise blocker explaining why those fields remain unavailable.",
 ]
 must_not_claim = [
   "BitNet answer quality is newly proven.",
