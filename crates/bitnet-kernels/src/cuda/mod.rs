@@ -164,9 +164,12 @@ pub use rmsnorm::{
     launch_dense_rmsnorm_f32_cuda, launch_rmsnorm, run_dense_gguf_rmsnorm_cuda_parity,
 };
 pub use rope::{
-    RopeConfig, apply_rope, apply_rope_batched, build_rope_freqs, compute_sincos_table,
-    launch_rope, launch_rope_backward, rope_backward, rope_backward_cpu, rope_forward,
-    rope_forward_cpu,
+    CUDA_DENSE_ROPE_KERNEL_ID, CUDA_DENSE_ROPE_REFERENCE_BACKEND, CUDA_DENSE_ROPE_TARGET_BACKEND,
+    CUDA_DENSE_ROPE_TOLERANCE, CudaDenseRopeStats, DenseGgufRopeCudaFixture,
+    DenseGgufRopeCudaParity, RopeConfig, apply_rope, apply_rope_batched, build_rope_freqs,
+    compute_sincos_table, launch_dense_rope_f32_cuda, launch_rope, launch_rope_backward,
+    rope_backward, rope_backward_cpu, rope_forward, rope_forward_cpu,
+    run_dense_gguf_rope_cuda_parity,
 };
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]

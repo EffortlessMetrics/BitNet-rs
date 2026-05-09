@@ -742,13 +742,13 @@ fn prune_models(
                 "not cached"
             };
             println!("{action}: {} ({})", result.id, result.path.display());
-            if !result.existed {
-                if let Ok(model) = supported_model(&result.id) {
-                    println!(
-                        "next: fetch it with `{}`",
-                        model_command("fetch", model, Some(&cache_root))
-                    );
-                }
+            if !result.existed
+                && let Ok(model) = supported_model(&result.id)
+            {
+                println!(
+                    "next: fetch it with `{}`",
+                    model_command("fetch", model, Some(&cache_root))
+                );
             }
         }
     }

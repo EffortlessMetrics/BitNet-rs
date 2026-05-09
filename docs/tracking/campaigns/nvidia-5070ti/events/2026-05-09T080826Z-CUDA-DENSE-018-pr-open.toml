@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T08:08:26Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-018"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-018-rope-parity"
+pr = 4228
+head_sha = "d7d8d04055fcf05573dbd638d9add771a980f718"
+notes = [
+  "Opened PR #4228 for strict RTX 5070 Ti dense GGUF RoPE CUDA parity.",
+  "The PR commits a live Qwen2.5 0.5B Q8_0 metadata-derived RoPE receipt with dense_rope_f32_cuda kernel launches, transfer accounting, and fallback_used=false.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, QK256, and BitNet packed proof claims remain false.",
+]

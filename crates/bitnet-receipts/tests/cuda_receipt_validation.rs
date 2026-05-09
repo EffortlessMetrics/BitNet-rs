@@ -12,6 +12,7 @@ use bitnet_receipts::{
     validate_dense_gguf_norm_cuda_parity_receipt_json,
     validate_dense_gguf_norm_fixture_extraction_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
+    validate_dense_gguf_rope_cuda_parity_receipt_json,
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
     validate_dense_regular_llm_cuda_receipt_json,
@@ -128,6 +129,18 @@ fn committed_dense_gguf_norm_cuda_parity_receipt_validates() {
     .unwrap();
 
     validate_dense_gguf_norm_cuda_parity_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_gguf_rope_cuda_parity_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-rope-cuda-parity-qwen25-q8.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_rope_cuda_parity_receipt_json(&receipt).unwrap();
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
