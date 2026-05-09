@@ -51,6 +51,12 @@ runner = "ubuntu_22_04"
 default_pr = true
 blocking = false
 
+[lane.ci-actuals]
+base_lem = 3
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
+
 [lane.feature-matrix-full]
 base_lem = 70
 runner = "ubuntu_22_04"
