@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T17:24:30Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-032"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-032-reference-harness-tracker"
+
+notes = [
+  "Started the dense GGUF one-layer CPU reference harness control-plane item after CUDA-DENSE-031 made every one-layer op CUDA-routable.",
+  "Scope is a docs/tracker contract for deterministic Qwen2.5 0.5B Q8_0 one-layer CPU reference inputs, op ordering, numeric tolerances, receipt fields, and next CUDA comparison boundaries.",
+  "No CUDA execution, dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, QK256, tokenizer, loader, transformer, server, or CUDA kernel math change is in scope.",
+]
