@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T13:46:53Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-004"
+event = "pr_open"
+actor = "codex"
+pr = 4286
+head_sha = "e9b03244d1aa21715b2ae2c56789434cbe9e2b04"
+
+notes = [
+  "Opened PR #4286 to preallocate the resident dense SLM sampler logits scratch buffer before decode.",
+  "The before/after allocation-audit receipts keep generated token IDs unchanged while moving the sampler.sample scratch allocation out of the per-prompt decode path.",
+  "The PR keeps model logits tensor extraction outside the reuse claim and does not add BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, model download, or broad M4 performance claims.",
+]
