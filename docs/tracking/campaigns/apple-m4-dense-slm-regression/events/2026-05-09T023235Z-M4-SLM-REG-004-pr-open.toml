@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T02:32:35Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-004"
+event = "pr_open"
+pr = 4177
+head_sha = "2914f8e5c828ca35693ee6fff41aafbee582e390"
+actor = "codex"
+
+notes = [
+  "Opened PR #4177 for the compact Apple M4 dense SLM trend-history artifact.",
+  "The PR records the published 2026-05-08 dense Qwen Apple CPU/NEON release baseline as a compact per-profile trend summary and points back to authoritative receipts.",
+  "No model binaries, raw receipt bundle duplication, BitNet quality, QK256, Neural Engine, broad M4 performance, or full Metal inference claim is included.",
+]

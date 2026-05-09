@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T02:28:38Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-004"
+event = "in_progress"
+branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-004-trend-history"
+actor = "codex"
+
+notes = [
+  "Started compact Apple M4 dense SLM trend-history artifact work after M4-SLM-REG-003 closeout merged.",
+  "Scope is limited to a compact release receipt trend-history format, documentation, and campaign tracking.",
+  "No model binaries, raw receipt bundle duplication, BitNet quality, QK256, Neural Engine, broad M4 performance, or full Metal inference claim is in scope.",
+]
