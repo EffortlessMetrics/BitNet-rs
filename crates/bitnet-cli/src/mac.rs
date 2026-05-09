@@ -1,8 +1,9 @@
 //! Mac-oriented operator wrappers for the supported Apple M4 SLM path.
 
 use anyhow::{Context, Result, anyhow};
-use clap::{Args, Subcommand, ValueEnum};
+use clap::{ArgAction, Args, Subcommand, ValueEnum};
 use serde::Serialize;
+use std::io::{self, IsTerminal, Read};
 #[cfg(unix)]
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
@@ -12,6 +13,7 @@ use crate::model_cache::{self, VerifiedCachedModel};
 const APPLE_M4_CPU_NEON: &str = "apple-m4-cpu-neon";
 const APPLE_M4_METAL: &str = "apple-m4-metal";
 const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.json";
+const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
 const QWEN_PROMPT_TEMPLATE: &str = "qwen2.5";
@@ -109,6 +111,77 @@ enum MacAction {
 
         /// Output strict Mac answer receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_ASK_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
+    /// Run multiple prompts in one resident Apple M4 CPU/NEON SLM session.
+    Chat {
+        /// Prompt to answer. Repeat for each turn in the resident Mac session.
+        #[arg(long = "prompt", value_name = "TEXT")]
+        prompts: Vec<String>,
+
+        /// Read additional prompts from stdin, one non-empty line per turn.
+        #[arg(long, default_value_t = false)]
+        stdin: bool,
+
+        /// Supported model id. Defaults to the validated Apple M4 SLM runtime artifact.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Optional system prompt.
+        #[arg(long = "system", value_name = "TEXT")]
+        system_prompt: Option<String>,
+
+        /// Maximum new tokens to generate per prompt.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 64)]
+        max_new_tokens: usize,
+
+        /// Temperature for sampling. The Mac wrapper defaults to deterministic greedy.
+        #[arg(long, default_value_t = 0.0)]
+        temperature: f32,
+
+        /// Top-k sampling. The Mac wrapper defaults to greedy top-1 behavior.
+        #[arg(long, default_value_t = 1)]
+        top_k: usize,
+
+        /// Top-p sampling.
+        #[arg(long, default_value_t = 1.0)]
+        top_p: f32,
+
+        /// Repetition penalty.
+        #[arg(long, default_value_t = 1.1)]
+        repetition_penalty: f32,
+
+        /// Random seed for reproducibility.
+        #[arg(long)]
+        seed: Option<u64>,
+
+        /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Do not stream generated token text to stdout.
+        #[arg(long = "no-stream", action = ArgAction::SetFalse, default_value_t = true)]
+        stream: bool,
+
+        /// Emit operator progress lines to stderr while keeping token text on stdout.
+        #[arg(long, default_value_t = false)]
+        progress: bool,
+
+        /// Suppress warm-session status/progress lines; token streaming still uses stdout.
+        #[arg(long, default_value_t = false)]
+        quiet: bool,
+
+        /// Include scoped hot-loop allocation counter deltas in session receipts.
+        #[arg(long, default_value_t = false)]
+        allocation_audit: bool,
+
+        /// Output aggregate Mac chat session receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_CHAT_DEFAULT_RECEIPT)]
         json_out: PathBuf,
     },
 
@@ -247,6 +320,47 @@ impl MacCommand {
                 )
                 .await
             }
+            MacAction::Chat {
+                prompts,
+                stdin,
+                model_id,
+                cache_dir,
+                system_prompt,
+                max_new_tokens,
+                temperature,
+                top_k,
+                top_p,
+                repetition_penalty,
+                seed,
+                threads,
+                stream,
+                progress,
+                quiet,
+                allocation_audit,
+                json_out,
+            } => {
+                ensure_supported_mac_device(explicit_device_label, "mac chat")?;
+                let prompts = resolve_mac_chat_prompts(prompts, stdin)?;
+                run_chat_session(
+                    &model_id,
+                    cache_dir,
+                    prompts,
+                    system_prompt,
+                    max_new_tokens,
+                    temperature,
+                    top_k,
+                    top_p,
+                    repetition_penalty,
+                    seed,
+                    threads,
+                    stream,
+                    progress,
+                    quiet,
+                    allocation_audit,
+                    json_out,
+                )
+                .await
+            }
             MacAction::Validate {
                 model_id,
                 cache_dir,
@@ -295,6 +409,26 @@ fn resolve_mac_question(positional: Option<String>, flag: Option<String>) -> Res
             "missing Mac question; pass it positionally, e.g. `bitnet mac ask \"What is 2+2?\"`, or with --question"
         ),
     }
+}
+
+fn resolve_mac_chat_prompts(mut prompts: Vec<String>, read_stdin: bool) -> Result<Vec<String>> {
+    let should_read_stdin = read_stdin || (!io::stdin().is_terminal() && prompts.is_empty());
+    if should_read_stdin {
+        let mut input = String::new();
+        io::stdin()
+            .read_to_string(&mut input)
+            .context("failed to read Mac chat prompts from stdin")?;
+        prompts.extend(
+            input.lines().map(str::trim).filter(|line| !line.is_empty()).map(ToOwned::to_owned),
+        );
+    }
+    prompts.retain(|prompt| !prompt.trim().is_empty());
+    if prompts.len() < 2 {
+        anyhow::bail!(
+            "mac chat requires at least two prompts for a resident session; pass --prompt multiple times or pipe one prompt per line with --stdin. For one question use `bitnet mac ask \"What is 2+2?\"`."
+        );
+    }
+    Ok(prompts)
 }
 
 fn ensure_supported_mac_device(explicit_device_label: Option<&str>, command: &str) -> Result<()> {
@@ -386,6 +520,62 @@ async fn run_ask(
     )
     .await?;
     annotate_and_validate_mac_receipt(&json_out, &model, "mac ask")?;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_chat_session(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    prompts: Vec<String>,
+    system_prompt: Option<String>,
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    repetition_penalty: f32,
+    seed: Option<u64>,
+    threads: usize,
+    stream: bool,
+    progress: bool,
+    quiet: bool,
+    allocation_audit: bool,
+    json_out: PathBuf,
+) -> Result<()> {
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    crate::run_slm_warm_session(
+        APPLE_M4_CPU_NEON,
+        model.path.clone(),
+        "auto".to_string(),
+        None,
+        None,
+        1,
+        prompts,
+        max_new_tokens,
+        temperature,
+        top_k,
+        top_p,
+        repetition_penalty,
+        seed,
+        true,
+        true,
+        true,
+        true,
+        threads,
+        QWEN_PROMPT_TEMPLATE.to_string(),
+        system_prompt,
+        vec!["<|im_end|>".to_string()],
+        Vec::new(),
+        true,
+        false,
+        allocation_audit,
+        crate::SlmWarmSessionOutput::new(stream, progress, quiet),
+        1,
+        1,
+        json_out.clone(),
+    )
+    .await?;
+    annotate_and_validate_mac_receipt(&json_out, &model, "mac chat")?;
     Ok(())
 }
 

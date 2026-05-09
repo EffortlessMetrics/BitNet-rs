@@ -1,0 +1,53 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Run multiple prompts in one resident Apple M4 CPU/NEON SLM session
+
+Usage: bitnet mac chat [OPTIONS]
+
+Options:
+  -c, --config <PATH>
+          Configuration file path
+      --prompt <TEXT>
+          Prompt to answer. Repeat for each turn in the resident Mac session
+  -d, --device <DEVICE>
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+      --stdin
+          Read additional prompts from stdin, one non-empty line per turn
+      --log-level <LEVEL>
+          Log level (trace, debug, info, warn, error)
+      --model-id <MODEL_ID>
+          Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
+      --cache-dir <PATH>
+          Override model cache root. Defaults to ~/.cache/bitnet-rs/models
+      --batch-size <SIZE>
+          Batch size for processing
+      --system <TEXT>
+          Optional system prompt
+      --max-new-tokens <MAX_NEW_TOKENS>
+          Maximum new tokens to generate per prompt [default: 64] [aliases: --max-tokens, --n-predict]
+      --temperature <TEMPERATURE>
+          Temperature for sampling. The Mac wrapper defaults to deterministic greedy [default: 0]
+      --top-k <TOP_K>
+          Top-k sampling. The Mac wrapper defaults to greedy top-1 behavior [default: 1]
+      --top-p <TOP_P>
+          Top-p sampling [default: 1]
+      --repetition-penalty <REPETITION_PENALTY>
+          Repetition penalty [default: 1.1]
+      --seed <SEED>
+          Random seed for reproducibility
+      --threads <THREADS>
+          Number of CPU threads to use (0 = all cores; deterministic mode may override) [default: 0]
+      --no-stream
+          Do not stream generated token text to stdout
+      --progress
+          Emit operator progress lines to stderr while keeping token text on stdout
+      --quiet
+          Suppress warm-session status/progress lines; token streaming still uses stdout
+      --allocation-audit
+          Include scoped hot-loop allocation counter deltas in session receipts
+      --json-out <PATH>
+          Output aggregate Mac chat session receipt [default: target/apple-m4-continuity/mac-chat.json]
+  -h, --help
+          Print help

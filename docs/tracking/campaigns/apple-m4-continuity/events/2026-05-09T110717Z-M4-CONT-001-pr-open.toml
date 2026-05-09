@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T11:07:17Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-001"
+event = "pr_open"
+pr = 4253
+head_sha = "690db6c513c9499aa6419f6a089264f84980df1d"
+actor = "codex"
+
+notes = [
+  "Opened M4 resident Mac chat continuity PR.",
+  "The PR adds `bitnet mac chat` over the existing dense SLM warm-session runner and preserves apple-m4-cpu-neon routing, cache verification, fallback visibility, and dense-SLM-only claim boundaries.",
+]
