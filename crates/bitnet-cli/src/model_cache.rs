@@ -821,6 +821,7 @@ fn cache_status(cache_root: &Path, model: SupportedModel, verify: bool) -> Resul
     })
 }
 
+#[cfg(any(test, feature = "full-cli"))]
 fn cache_ready(status: &CacheStatus) -> bool {
     status.present
         && status.size_matches
@@ -842,6 +843,7 @@ fn cache_state_label(status: &CacheStatus) -> &'static str {
     }
 }
 
+#[cfg(any(test, feature = "full-cli"))]
 fn cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> String {
     let model = &status.model;
     let fetch = model_command("fetch", model, Some(cache_root));

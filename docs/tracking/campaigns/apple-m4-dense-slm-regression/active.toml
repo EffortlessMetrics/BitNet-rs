@@ -198,7 +198,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-REG-005"
-status = "proposed"
+status = "pr_open"
+pr = 4198
 branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-005-threshold-tightening"
 stackable = false
 review_mode = "codex_premerge"
@@ -214,6 +215,9 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**",
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-dense-slm-regression/**",
   "docs/tracking/generated/**",

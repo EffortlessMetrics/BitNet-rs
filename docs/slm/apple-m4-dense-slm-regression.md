@@ -65,17 +65,21 @@ bitnet mac receipts-check \
 
 The comparison first runs the normal Mac receipt validator. It then compares timing and memory only when both receipts are `apple_m4_slm_performance_profiles` with matching dense Qwen model identity, tokenizer metadata, Apple CPU/NEON backend routing, fallback status, release-mode evidence, profile set, and required profiles. Timing and memory drift are reported as advisory warnings rather than hard failures.
 
-Initial advisory timing bands for matching receipts:
+Tightened advisory timing bands for matching receipts:
 
 | Field | Advisory drift band |
 |---|---:|
-| `decode_tok_s` | more than 20% lower than baseline |
-| `warm_prompt_tok_s` | more than 25% lower than baseline |
-| `time_to_first_token_ms` / first-token mean | more than 25% higher than baseline |
-| `total_session_ms` | more than 25% higher than baseline |
-| `peak_memory_mb` | more than 15% higher than baseline |
+| `decode_tok_s` | more than 12.5% lower than baseline |
+| `warm_prompt_tok_s` | more than 15% lower than baseline |
+| `time_to_first_token_ms` / first-token mean | more than 15% higher than baseline |
+| `total_session_ms` | more than 15% higher than baseline |
+| `peak_memory_mb` | more than 10% higher than baseline |
 
-These thresholds are intentionally conservative. They should become stricter only after repeated matching release-mode receipts exist from the scheduled Apple hardware lane.
+These thresholds remain advisory. They were tightened after a second matching
+release-mode M4 Mac mini receipt on 2026-05-09 matched the published context,
+passed quality, and produced zero warnings against the original bands. They
+should become hard CI gates only after scheduled Apple hardware receipts
+accumulate enough history to distinguish noise from regression.
 
 ## Quality And Determinism Gate
 
@@ -194,7 +198,11 @@ total_session_ms
 peak_memory_mb
 ```
 
-Each run also carries a `drift_summary` that separates context drift, quality drift, timing drift, memory drift, and threshold maturity. The initial committed history contains only the published 2026-05-08 release baseline, so its timing and memory drift status is `not_applicable_for_baseline`. Threshold tightening remains blocked until multiple matching release-mode receipts exist.
+Each run also carries a `drift_summary` that separates context drift, quality
+drift, timing drift, memory drift, and threshold maturity. The committed history
+now contains the published 2026-05-08 release baseline and a 2026-05-09
+confirmation run. Thresholds are tighter, but still advisory until scheduled
+hardware receipts accumulate enough repeated evidence.
 
 ## Failure Classes
 

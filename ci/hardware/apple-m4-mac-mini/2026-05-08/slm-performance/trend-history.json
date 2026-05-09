@@ -2,7 +2,7 @@
   "artifact_kind": "apple_m4_dense_slm_trend_history",
   "schema_version": "1.0.0",
   "history_id": "apple-m4-dense-slm-release-trend-v1",
-  "generated_at": "2026-05-09T02:28:38Z",
+  "generated_at": "2026-05-09T04:10:01Z",
   "history_scope": "compact curated summaries for Apple M4 dense SLM release receipts",
   "claim_boundary": {
     "model_family": "dense_qwen_slm",
@@ -44,11 +44,11 @@
     ]
   },
   "advisory_bands": {
-    "decode_tok_s_lower_pct": 20.0,
-    "warm_prompt_tok_s_lower_pct": 25.0,
-    "time_to_first_token_mean_higher_pct": 25.0,
-    "total_session_ms_higher_pct": 25.0,
-    "peak_memory_mb_higher_pct": 15.0
+    "decode_tok_s_lower_pct": 12.5,
+    "warm_prompt_tok_s_lower_pct": 15.0,
+    "time_to_first_token_mean_higher_pct": 15.0,
+    "total_session_ms_higher_pct": 15.0,
+    "peak_memory_mb_higher_pct": 10.0
   },
   "runs": [
     {
@@ -186,6 +186,165 @@
           }
         }
       ]
+    },
+    {
+      "run_id": "2026-05-09-release-confirmation",
+      "role": "confirmation",
+      "timestamp": "2026-05-09T04:10:01Z",
+      "source_receipt": "target/apple-m4-dense-slm-regression/M4-SLM-REG-005/release-baseline-2026-05-09.json",
+      "source_receipt_retention": "local_verification_receipt_not_committed; compact trend summary retained",
+      "source_profile_receipts": {
+        "warm_16": "target/apple-m4-dense-slm-regression/M4-SLM-REG-005/release-baseline-2026-05-09-profiles/warm_16.json",
+        "warm_32": "target/apple-m4-dense-slm-regression/M4-SLM-REG-005/release-baseline-2026-05-09-profiles/warm_32.json",
+        "warm_64": "target/apple-m4-dense-slm-regression/M4-SLM-REG-005/release-baseline-2026-05-09-profiles/warm_64.json",
+        "warm_128": "target/apple-m4-dense-slm-regression/M4-SLM-REG-005/release-baseline-2026-05-09-profiles/warm_128.json"
+      },
+      "context_matches_baseline": true,
+      "quality_gate": {
+        "profile_quality_passed": true,
+        "quality_corpus_gate": "tracked separately by M4-SLM-REG-002"
+      },
+      "drift_summary": {
+        "baseline_run": false,
+        "compared_to_run_id": "2026-05-08-release-baseline",
+        "context_drift": false,
+        "quality_drift": false,
+        "timing_drift": "within_tightened_advisory_bands",
+        "memory_drift": "within_tightened_advisory_bands",
+        "threshold_maturity": "two_matching_release_runs_preliminary_tightening"
+      },
+      "profiles": [
+        {
+          "profile_id": "warm_16",
+          "requested_max_new_tokens": 16,
+          "prompt_count": 3,
+          "generated_tokens": 34,
+          "quality_passed": true,
+          "model_loaded_once": true,
+          "tokenizer_loaded_once": true,
+          "cold_load_separated": true,
+          "timing": {
+            "model_load_ms": 3129.611,
+            "tokenizer_load_ms": 50.636,
+            "tokenize_ms": 124.72,
+            "prefill_ms": 4994.244,
+            "time_to_first_token_mean_ms": 1922.667,
+            "decode_total_ms": 2219.667,
+            "decode_generated_tok_s": 15.318,
+            "sampling_ms": 2.34,
+            "warm_prompt_generated_tok_s": 4.384,
+            "warm_prompt_wall_ms": 7755.741,
+            "total_session_ms": 12615.465
+          },
+          "memory": {
+            "peak_memory_mb": 3915.109,
+            "peak_memory_source": "getrusage.ru_maxrss"
+          }
+        },
+        {
+          "profile_id": "warm_32",
+          "requested_max_new_tokens": 32,
+          "prompt_count": 3,
+          "generated_tokens": 50,
+          "quality_passed": true,
+          "model_loaded_once": true,
+          "tokenizer_loaded_once": true,
+          "cold_load_separated": true,
+          "timing": {
+            "model_load_ms": 3067.366,
+            "tokenizer_load_ms": 47.325,
+            "tokenize_ms": 109.228,
+            "prefill_ms": 4831.573,
+            "time_to_first_token_mean_ms": 1728.0,
+            "decode_total_ms": 3210.801,
+            "decode_generated_tok_s": 15.572,
+            "sampling_ms": 3.4,
+            "warm_prompt_generated_tok_s": 6.094,
+            "warm_prompt_wall_ms": 8205.06,
+            "total_session_ms": 12950.473
+          },
+          "memory": {
+            "peak_memory_mb": 4010.0,
+            "peak_memory_source": "getrusage.ru_maxrss"
+          }
+        },
+        {
+          "profile_id": "warm_64",
+          "requested_max_new_tokens": 64,
+          "prompt_count": 3,
+          "generated_tokens": 82,
+          "quality_passed": true,
+          "model_loaded_once": true,
+          "tokenizer_loaded_once": true,
+          "cold_load_separated": true,
+          "timing": {
+            "model_load_ms": 3052.166,
+            "tokenizer_load_ms": 46.927,
+            "tokenize_ms": 106.952,
+            "prefill_ms": 4833.336,
+            "time_to_first_token_mean_ms": 1727.333,
+            "decode_total_ms": 5262.156,
+            "decode_generated_tok_s": 15.583,
+            "sampling_ms": 5.372,
+            "warm_prompt_generated_tok_s": 7.997,
+            "warm_prompt_wall_ms": 10254.193,
+            "total_session_ms": 14918.52
+          },
+          "memory": {
+            "peak_memory_mb": 4027.344,
+            "peak_memory_source": "getrusage.ru_maxrss"
+          }
+        },
+        {
+          "profile_id": "warm_128",
+          "requested_max_new_tokens": 128,
+          "prompt_count": 3,
+          "generated_tokens": 123,
+          "quality_passed": true,
+          "model_loaded_once": true,
+          "tokenizer_loaded_once": true,
+          "cold_load_separated": true,
+          "timing": {
+            "model_load_ms": 3042.528,
+            "tokenizer_load_ms": 47.208,
+            "tokenize_ms": 109.511,
+            "prefill_ms": 4831.222,
+            "time_to_first_token_mean_ms": 1726.0,
+            "decode_total_ms": 7919.414,
+            "decode_generated_tok_s": 15.531,
+            "sampling_ms": 8.068,
+            "warm_prompt_generated_tok_s": 9.53,
+            "warm_prompt_wall_ms": 12906.838,
+            "total_session_ms": 17715.022
+          },
+          "memory": {
+            "peak_memory_mb": 4034.344,
+            "peak_memory_source": "getrusage.ru_maxrss"
+          }
+        }
+      ]
     }
-  ]
+  ],
+  "threshold_basis": {
+    "maturity": "two_matching_release_mode_receipts",
+    "previous_advisory_bands": {
+      "decode_tok_s_lower_pct": 20.0,
+      "warm_prompt_tok_s_lower_pct": 25.0,
+      "time_to_first_token_mean_higher_pct": 25.0,
+      "total_session_ms_higher_pct": 25.0,
+      "peak_memory_mb_higher_pct": 15.0
+    },
+    "tightened_advisory_bands": {
+      "decode_tok_s_lower_pct": 12.5,
+      "warm_prompt_tok_s_lower_pct": 15.0,
+      "time_to_first_token_mean_higher_pct": 15.0,
+      "total_session_ms_higher_pct": 15.0,
+      "peak_memory_mb_higher_pct": 10.0
+    },
+    "source_run_ids": [
+      "2026-05-08-release-baseline",
+      "2026-05-09-release-confirmation"
+    ],
+    "enforcement": "advisory_until_scheduled_hardware_receipts_accumulate"
+  }
 }

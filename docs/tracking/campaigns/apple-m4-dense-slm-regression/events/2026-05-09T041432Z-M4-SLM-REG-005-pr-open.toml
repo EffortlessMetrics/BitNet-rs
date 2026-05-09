@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T04:14:32Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-005"
+event = "pr_open"
+pr = 4198
+head_sha = "1079134a103618fbcd14da62d2ddab3bbd3fa347"
+actor = "codex"
+
+notes = [
+  "Opened PR #4198 to tighten Apple M4 dense SLM regression advisory bands after a second matching release-mode receipt.",
+  "The local 2026-05-09 release receipt matched the published Qwen Apple CPU/NEON context and reported zero warnings against the baseline.",
+  "The PR keeps thresholds advisory and does not claim hard performance gating, BitNet quality, QK256, Neural Engine, MPSGraph model inference, full Apple Metal inference, or broad Apple Silicon performance.",
+]

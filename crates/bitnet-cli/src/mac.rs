@@ -1042,6 +1042,12 @@ fn compare_dense_slm_regression(
     receipt: &serde_json::Value,
     baseline: &RegressionBaseline,
 ) -> Result<RegressionCheckSummary> {
+    const DECODE_TOK_S_LOWER_PCT: f64 = 12.5;
+    const WARM_PROMPT_TOK_S_LOWER_PCT: f64 = 15.0;
+    const TIME_TO_FIRST_TOKEN_HIGHER_PCT: f64 = 15.0;
+    const TOTAL_SESSION_MS_HIGHER_PCT: f64 = 15.0;
+    const PEAK_MEMORY_MB_HIGHER_PCT: f64 = 10.0;
+
     ensure_regression_context_matches(path, receipt, &baseline.path, &baseline.receipt)?;
 
     let profiles = receipt["profiles"].as_array().ok_or_else(|| {
@@ -1065,7 +1071,7 @@ fn compare_dense_slm_regression(
             "timing.decode_generated_tok_s",
             regression_metric(baseline_profile, &["timing", "decode_generated_tok_s"])?,
             regression_metric(profile, &["timing", "decode_generated_tok_s"])?,
-            20.0,
+            DECODE_TOK_S_LOWER_PCT,
         );
         compare_lower_is_worse(
             &mut warnings,
@@ -1073,7 +1079,7 @@ fn compare_dense_slm_regression(
             "timing.warm_prompt_generated_tok_s",
             regression_metric(baseline_profile, &["timing", "warm_prompt_generated_tok_s"])?,
             regression_metric(profile, &["timing", "warm_prompt_generated_tok_s"])?,
-            25.0,
+            WARM_PROMPT_TOK_S_LOWER_PCT,
         );
         compare_higher_is_worse(
             &mut warnings,
@@ -1081,7 +1087,7 @@ fn compare_dense_slm_regression(
             "timing.time_to_first_token_ms",
             regression_metric(baseline_profile, &["timing", "time_to_first_token_ms"])?,
             regression_metric(profile, &["timing", "time_to_first_token_ms"])?,
-            25.0,
+            TIME_TO_FIRST_TOKEN_HIGHER_PCT,
         );
         compare_higher_is_worse(
             &mut warnings,
@@ -1089,7 +1095,7 @@ fn compare_dense_slm_regression(
             "timing.total_session_ms",
             regression_metric(baseline_profile, &["timing", "total_session_ms"])?,
             regression_metric(profile, &["timing", "total_session_ms"])?,
-            25.0,
+            TOTAL_SESSION_MS_HIGHER_PCT,
         );
         compare_higher_is_worse(
             &mut warnings,
@@ -1097,7 +1103,7 @@ fn compare_dense_slm_regression(
             "memory.peak_memory_mb",
             regression_metric(baseline_profile, &["memory", "peak_memory_mb"])?,
             regression_metric(profile, &["memory", "peak_memory_mb"])?,
-            15.0,
+            PEAK_MEMORY_MB_HIGHER_PCT,
         );
     }
 
