@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T10:41:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-021"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-021-attention-score-parity"
+notes = [
+  "Started strict RTX 5070 Ti CUDA attention-score parity after CUDA-DENSE-020 recorded the CPU-reference attention-score fixture and missing CUDA kernel gap.",
+  "Scope is a dense_attention_scores_f32_cuda fixture kernel, CPU/CUDA parity receipt, transfer byte accounting, receipt validation, and governed report/tracker evidence.",
+  "No dense GGUF inference, Qwen token/decode/chat, speedup, persistent-session, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, or one-layer planner route promotion claim is in scope.",
+]

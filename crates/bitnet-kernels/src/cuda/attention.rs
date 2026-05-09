@@ -26,6 +26,30 @@
 //! for correctness testing and non-GPU environments.
 
 use bitnet_common::{KernelError, Result};
+#[cfg(feature = "cuda")]
+use std::any::Any;
+#[cfg(feature = "cuda")]
+use std::sync::Mutex;
+
+#[cfg(feature = "cuda")]
+use cudarc::driver::{CudaContext, CudaSlice, LaunchConfig, PushKernelArg};
+#[cfg(feature = "cuda")]
+use cudarc::nvrtc::{Ptx, compile_ptx};
+
+/// Kernel ID recorded by dense regular-LLM CUDA attention-score receipts.
+pub const CUDA_DENSE_ATTENTION_SCORE_KERNEL_ID: &str = "dense_attention_scores_f32_cuda";
+
+/// Tolerance for dense GGUF attention-score fixture parity against the CPU reference.
+pub const CUDA_DENSE_ATTENTION_SCORE_TOLERANCE: f32 = 0.000_25;
+
+/// CPU reference backend recorded by dense attention-score CUDA parity receipts.
+pub const CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+
+/// RTX 5070 Ti CUDA backend recorded by dense attention-score CUDA parity receipts.
+pub const CUDA_DENSE_ATTENTION_SCORE_TARGET_BACKEND: &str = "nvidia-rtx-5070-ti-cuda";
+
+#[cfg(feature = "cuda")]
+static DENSE_ATTENTION_SCORE_NVRTC_COMPILE_LOCK: Mutex<()> = Mutex::new(());
 
 /// Alias for [`AttentionKernelConfig`] — the CUDA-specific launch configuration.
 ///
@@ -151,6 +175,49 @@ extern "C" __global__ void sdp_attention_causal_f32(
 }
 "#;
 
+#[cfg(feature = "cuda")]
+const CUDA_DENSE_ATTENTION_SCORE_KERNEL_SRC: &str = r#"
+extern "C" __global__
+void dense_attention_scores_f32_cuda(
+    const float* __restrict__ q,
+    const float* __restrict__ k,
+    float* __restrict__ scores,
+    int q_heads,
+    int kv_heads,
+    int seq_len,
+    int head_dim,
+    float scale,
+    int causal
+) {
+    long long idx = (long long)blockIdx.x * blockDim.x + threadIdx.x;
+    long long total = (long long)q_heads * seq_len * seq_len;
+    if (idx >= total) {
+        return;
+    }
+
+    int k_pos = (int)(idx % seq_len);
+    int q_pos = (int)((idx / seq_len) % seq_len);
+    int q_head = (int)(idx / ((long long)seq_len * seq_len));
+
+    if (causal && k_pos > q_pos) {
+        scores[idx] = __int_as_float((int)0xff800000u);
+        return;
+    }
+
+    int heads_per_kv_group = q_heads / kv_heads;
+    int kv_head = q_head / heads_per_kv_group;
+    long long q_base = ((long long)q_head * seq_len + q_pos) * head_dim;
+    long long k_base = ((long long)kv_head * seq_len + k_pos) * head_dim;
+
+    float dot = 0.0f;
+    for (int dim = 0; dim < head_dim; ++dim) {
+        dot += q[q_base + dim] * k[k_base + dim];
+    }
+
+    scores[idx] = dot * scale;
+}
+"#;
+
 // ---------------------------------------------------------------------------
 // Launch configuration (CUDA)
 // ---------------------------------------------------------------------------
@@ -178,6 +245,130 @@ pub struct AttentionKernelConfig {
     pub causal: bool,
     /// Softmax temperature scale (`1.0 / sqrt(head_dim)` by default).
     pub scale: f32,
+}
+
+/// Launch configuration for dense attention-score fixture parity.
+#[derive(Debug, Clone)]
+pub struct AttentionScoresConfig {
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count.
+    pub kv_heads: usize,
+    /// Per-head dimension.
+    pub head_dim: usize,
+    /// Sequence length for query and key positions.
+    pub seq_len: usize,
+    /// Attention scaling factor.
+    pub scale: f32,
+    /// Whether to apply causal upper-triangular masking.
+    pub causal: bool,
+    /// Threads per CUDA block.
+    pub threads_per_block: u32,
+}
+
+/// CUDA execution counters for a dense attention-score fixture.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CudaDenseAttentionScoreStats {
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Number of CUDA kernel invocations.
+    pub invocations: u64,
+    /// CPU fallback invocations under strict CUDA.
+    pub fallback_invocations: u64,
+    /// Host-to-device bytes copied for Q/K input tensors.
+    pub host_to_device_bytes: u64,
+    /// Device-to-host bytes copied for score output tensor.
+    pub device_to_host_bytes: u64,
+    /// CUDA kernel launches.
+    pub kernel_launches: u64,
+    /// Optional measured kernel time.
+    pub kernel_time_ms: Option<f64>,
+}
+
+/// Dense GGUF attention-score fixture data prepared by the CLI/model layer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufAttentionScoreCudaFixture {
+    /// Fixture identifier recorded in parity receipts.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count.
+    pub kv_heads: usize,
+    /// Query heads per key/value head.
+    pub heads_per_kv_group: usize,
+    /// Per-head dimension.
+    pub head_dim: usize,
+    /// Sequence length.
+    pub seq_len: usize,
+    /// Attention scaling factor.
+    pub scale: f32,
+    /// SHA-256 of source RoPE Q output.
+    pub q_rope_output_sha256: String,
+    /// SHA-256 of source RoPE K output.
+    pub k_rope_output_sha256: String,
+    /// Source RoPE fixture identifier.
+    pub source_rope_fixture_id: String,
+    /// RoPE Q output `[q_heads, seq_len, head_dim]`.
+    pub q_rope_output_f32: Vec<f32>,
+    /// RoPE K output `[kv_heads, seq_len, head_dim]`.
+    pub k_rope_output_f32: Vec<f32>,
+    /// CPU reference scores `[q_heads, seq_len, seq_len]`.
+    pub expected_scores_f32: Vec<f32>,
+    /// Number of finite scores.
+    pub finite_scores: usize,
+    /// Number of causally masked scores.
+    pub causal_masked_scores: usize,
+}
+
+/// Dense GGUF attention-score CUDA parity result against the CPU reference.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufAttentionScoreCudaParity {
+    /// Fixture identifier.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count.
+    pub kv_heads: usize,
+    /// Per-head dimension.
+    pub head_dim: usize,
+    /// Sequence length.
+    pub seq_len: usize,
+    /// Attention scaling factor.
+    pub scale: f32,
+    /// CPU reference backend.
+    pub reference_backend: &'static str,
+    /// CUDA target backend.
+    pub target_backend: &'static str,
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Maximum absolute error against the CPU reference.
+    pub max_abs_error: f32,
+    /// Mean absolute error against the CPU reference.
+    pub mean_abs_error: f32,
+    /// Fixture tolerance.
+    pub tolerance: f32,
+    /// Whether the fixture passed tolerance.
+    pub passed: bool,
+    /// Number of compared scores.
+    pub compared_scores: usize,
+    /// Number of finite scores.
+    pub finite_scores: usize,
+    /// Number of causally masked scores.
+    pub causal_masked_scores: usize,
+    /// CUDA execution counters.
+    pub stats: CudaDenseAttentionScoreStats,
 }
 
 impl AttentionKernelConfig {
@@ -242,6 +433,81 @@ impl AttentionKernelConfig {
     }
 
     /// Compute the CUDA block dimensions.
+    pub fn block_dim(&self) -> (u32, u32, u32) {
+        (self.threads_per_block, 1, 1)
+    }
+}
+
+impl AttentionScoresConfig {
+    /// Create a dense attention-score configuration for `[q_heads, seq_len, seq_len]`.
+    pub fn for_shape(
+        q_heads: usize,
+        kv_heads: usize,
+        head_dim: usize,
+        seq_len: usize,
+    ) -> Result<Self> {
+        if q_heads == 0 || kv_heads == 0 || head_dim == 0 || seq_len == 0 {
+            return Err(KernelError::InvalidArguments {
+                reason: format!(
+                    "dense attention-score dimensions must be non-zero: q_heads={q_heads}, kv_heads={kv_heads}, head_dim={head_dim}, seq_len={seq_len}"
+                ),
+            }
+            .into());
+        }
+        if !q_heads.is_multiple_of(kv_heads) {
+            return Err(KernelError::InvalidArguments {
+                reason: format!(
+                    "dense attention-score q_heads must be divisible by kv_heads: q_heads={q_heads}, kv_heads={kv_heads}"
+                ),
+            }
+            .into());
+        }
+
+        Ok(Self {
+            q_heads,
+            kv_heads,
+            head_dim,
+            seq_len,
+            scale: 1.0 / (head_dim as f32).sqrt(),
+            causal: true,
+            threads_per_block: 128,
+        })
+    }
+
+    /// Override the attention scale.
+    #[must_use]
+    pub fn with_scale(mut self, scale: f32) -> Self {
+        self.scale = scale;
+        self
+    }
+
+    /// Override causal masking.
+    #[must_use]
+    pub fn with_causal(mut self, causal: bool) -> Self {
+        self.causal = causal;
+        self
+    }
+
+    /// Total number of output scores.
+    pub fn score_count(&self) -> Result<usize> {
+        checked_mul(
+            checked_mul(self.q_heads, self.seq_len, "attention-score q_heads*seq_len")?,
+            self.seq_len,
+            "attention-score output",
+        )
+    }
+
+    /// CUDA grid dimensions.
+    pub fn grid_dim(&self) -> Result<(u32, u32, u32)> {
+        let score_count = self.score_count()?;
+        let score_count =
+            u32::try_from(score_count).map_err(|_| KernelError::InvalidArguments {
+                reason: format!("dense attention-score output exceeds u32: {score_count}"),
+            })?;
+        Ok((score_count.div_ceil(self.threads_per_block), 1, 1))
+    }
+
+    /// CUDA block dimensions.
     pub fn block_dim(&self) -> (u32, u32, u32) {
         (self.threads_per_block, 1, 1)
     }
@@ -333,6 +599,461 @@ pub fn launch_attention(
         reason: "Attention CUDA kernel not yet compiled — scaffold only".into(),
     }
     .into())
+}
+
+/// Launch a strict dense attention-score F32 CUDA fixture and return execution counters.
+///
+/// This computes scaled QK scores with an optional causal mask. It does not
+/// compute softmax or attention-V mixing.
+///
+/// # Errors
+///
+/// Returns an error if CUDA/NVRTC is unavailable, buffers are invalid, or the
+/// kernel launch fails. This function never falls back to CPU.
+pub fn launch_dense_attention_scores_f32_cuda(
+    device_index: usize,
+    q: &[f32],
+    k: &[f32],
+    scores: &mut [f32],
+    config: &AttentionScoresConfig,
+) -> Result<CudaDenseAttentionScoreStats> {
+    validate_attention_score_buffers(q, k, scores, config)?;
+
+    #[cfg(feature = "cuda")]
+    {
+        return launch_dense_attention_scores_f32_cuda_impl(device_index, q, k, scores, config);
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = device_index;
+        Err(KernelError::DeviceUnavailable {
+            reason: "dense attention-score CUDA parity requires the cuda feature".to_string(),
+        }
+        .into())
+    }
+}
+
+/// Run a dense GGUF attention-score fixture on CUDA and compare it to CPU references.
+///
+/// # Errors
+///
+/// Returns an error if the fixture is invalid, CUDA is unavailable, or parity
+/// comparison cannot be computed.
+pub fn run_dense_gguf_attention_score_cuda_parity(
+    device_index: usize,
+    fixture: &DenseGgufAttentionScoreCudaFixture,
+) -> Result<DenseGgufAttentionScoreCudaParity> {
+    validate_dense_gguf_attention_score_fixture(fixture)?;
+    let config = AttentionScoresConfig::for_shape(
+        fixture.q_heads,
+        fixture.kv_heads,
+        fixture.head_dim,
+        fixture.seq_len,
+    )?
+    .with_scale(fixture.scale)
+    .with_causal(true);
+    let mut actual = vec![0.0f32; fixture.expected_scores_f32.len()];
+    let stats = launch_dense_attention_scores_f32_cuda(
+        device_index,
+        &fixture.q_rope_output_f32,
+        &fixture.k_rope_output_f32,
+        &mut actual,
+        &config,
+    )?;
+    let (max_abs_error, mean_abs_error, compared_scores) =
+        compare_attention_score_outputs(&fixture.expected_scores_f32, &actual)?;
+
+    Ok(DenseGgufAttentionScoreCudaParity {
+        fixture_id: fixture.fixture_id.clone(),
+        model_family: fixture.model_family.clone(),
+        architecture: fixture.architecture.clone(),
+        layer_index: fixture.layer_index,
+        q_heads: fixture.q_heads,
+        kv_heads: fixture.kv_heads,
+        head_dim: fixture.head_dim,
+        seq_len: fixture.seq_len,
+        scale: fixture.scale,
+        reference_backend: CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND,
+        target_backend: CUDA_DENSE_ATTENTION_SCORE_TARGET_BACKEND,
+        kernel_id: CUDA_DENSE_ATTENTION_SCORE_KERNEL_ID,
+        max_abs_error,
+        mean_abs_error,
+        tolerance: CUDA_DENSE_ATTENTION_SCORE_TOLERANCE,
+        passed: max_abs_error <= CUDA_DENSE_ATTENTION_SCORE_TOLERANCE,
+        compared_scores,
+        finite_scores: fixture.finite_scores,
+        causal_masked_scores: fixture.causal_masked_scores,
+        stats,
+    })
+}
+
+fn validate_attention_score_buffers(
+    q: &[f32],
+    k: &[f32],
+    scores: &[f32],
+    config: &AttentionScoresConfig,
+) -> Result<()> {
+    if config.q_heads == 0 || config.kv_heads == 0 || config.head_dim == 0 || config.seq_len == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention-score dimensions must be non-zero".into(),
+        }
+        .into());
+    }
+    if !config.q_heads.is_multiple_of(config.kv_heads) {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-score q_heads must be divisible by kv_heads: q_heads={}, kv_heads={}",
+                config.q_heads, config.kv_heads
+            ),
+        }
+        .into());
+    }
+    if !config.scale.is_finite() || config.scale <= 0.0 {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-score scale must be positive and finite, got {}",
+                config.scale
+            ),
+        }
+        .into());
+    }
+    if config.threads_per_block == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention-score threads_per_block must be non-zero".into(),
+        }
+        .into());
+    }
+    let q_expected = checked_mul(
+        checked_mul(config.q_heads, config.seq_len, "attention-score q_heads*seq_len")?,
+        config.head_dim,
+        "attention-score q",
+    )?;
+    let k_expected = checked_mul(
+        checked_mul(config.kv_heads, config.seq_len, "attention-score kv_heads*seq_len")?,
+        config.head_dim,
+        "attention-score k",
+    )?;
+    let scores_expected = config.score_count()?;
+    if q.len() != q_expected || k.len() != k_expected || scores.len() != scores_expected {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-score buffer length mismatch: expected q={q_expected}, k={k_expected}, scores={scores_expected}; got q={}, k={}, scores={}",
+                q.len(),
+                k.len(),
+                scores.len()
+            ),
+        }
+        .into());
+    }
+    validate_i32_arg(config.q_heads, "q_heads")?;
+    validate_i32_arg(config.kv_heads, "kv_heads")?;
+    validate_i32_arg(config.seq_len, "seq_len")?;
+    validate_i32_arg(config.head_dim, "head_dim")?;
+    for (idx, value) in q.iter().chain(k.iter()).enumerate() {
+        if !value.is_finite() {
+            return Err(KernelError::InvalidArguments {
+                reason: format!("dense attention-score input[{idx}] is not finite"),
+            }
+            .into());
+        }
+    }
+    Ok(())
+}
+
+fn validate_dense_gguf_attention_score_fixture(
+    fixture: &DenseGgufAttentionScoreCudaFixture,
+) -> Result<()> {
+    require_dense_label(&fixture.fixture_id, "fixture_id")?;
+    require_dense_label(&fixture.model_family, "model_family")?;
+    require_dense_label(&fixture.architecture, "architecture")?;
+    require_dense_label(&fixture.source_rope_fixture_id, "source_rope_fixture_id")?;
+    require_sha256_like(&fixture.q_rope_output_sha256, "q_rope_output_sha256")?;
+    require_sha256_like(&fixture.k_rope_output_sha256, "k_rope_output_sha256")?;
+    if fixture.q_heads == 0
+        || fixture.kv_heads == 0
+        || fixture.heads_per_kv_group == 0
+        || fixture.q_heads / fixture.kv_heads != fixture.heads_per_kv_group
+    {
+        return Err(KernelError::InvalidArguments {
+            reason:
+                "dense attention-score fixture heads_per_kv_group must match q_heads / kv_heads"
+                    .into(),
+        }
+        .into());
+    }
+    let config = AttentionScoresConfig::for_shape(
+        fixture.q_heads,
+        fixture.kv_heads,
+        fixture.head_dim,
+        fixture.seq_len,
+    )?
+    .with_scale(fixture.scale)
+    .with_causal(true);
+    validate_attention_score_buffers(
+        &fixture.q_rope_output_f32,
+        &fixture.k_rope_output_f32,
+        &fixture.expected_scores_f32,
+        &config,
+    )?;
+    let finite_scores =
+        fixture.expected_scores_f32.iter().filter(|score| score.is_finite()).count();
+    let masked_scores = fixture.expected_scores_f32.len().saturating_sub(finite_scores);
+    if finite_scores == 0
+        || finite_scores != fixture.finite_scores
+        || masked_scores != fixture.causal_masked_scores
+    {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention-score fixture finite/masked counts must match expected scores"
+                .into(),
+        }
+        .into());
+    }
+    Ok(())
+}
+
+#[cfg(feature = "cuda")]
+fn launch_dense_attention_scores_f32_cuda_impl(
+    device_index: usize,
+    q: &[f32],
+    k: &[f32],
+    scores: &mut [f32],
+    config: &AttentionScoresConfig,
+) -> Result<CudaDenseAttentionScoreStats> {
+    let q_len = checked_mul(
+        checked_mul(config.q_heads, config.seq_len, "attention-score q_heads*seq_len")?,
+        config.head_dim,
+        "attention-score q",
+    )?;
+    let k_len = checked_mul(
+        checked_mul(config.kv_heads, config.seq_len, "attention-score kv_heads*seq_len")?,
+        config.head_dim,
+        "attention-score k",
+    )?;
+    let score_count = config.score_count()?;
+
+    let ctx = CudaContext::new(device_index).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to create CUDA context for dense attention-score: {err:?}"),
+    })?;
+    let stream = ctx.default_stream();
+    let ptx = compile_dense_attention_score_ptx()?;
+    let module = ctx.load_module(ptx).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to load dense attention-score CUDA module: {err:?}"),
+    })?;
+    let function = module.load_function(CUDA_DENSE_ATTENTION_SCORE_KERNEL_ID).map_err(|err| {
+        KernelError::GpuError {
+            reason: format!("failed to load dense attention-score CUDA kernel: {err:?}"),
+        }
+    })?;
+
+    let q_dev = stream.memcpy_stod(&q[..q_len]).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to copy dense attention-score Q to device: {err:?}"),
+    })?;
+    let k_dev = stream.memcpy_stod(&k[..k_len]).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to copy dense attention-score K to device: {err:?}"),
+    })?;
+    let mut scores_dev: CudaSlice<f32> =
+        stream.alloc_zeros(score_count).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to allocate dense attention-score output on device: {err:?}"),
+        })?;
+
+    let launch_config = LaunchConfig {
+        grid_dim: config.grid_dim()?,
+        block_dim: config.block_dim(),
+        shared_mem_bytes: 0,
+    };
+    let mut builder = stream.launch_builder(&function);
+    builder.arg(&q_dev);
+    builder.arg(&k_dev);
+    builder.arg(&mut scores_dev);
+    let q_heads_arg = i32::try_from(config.q_heads).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense attention-score q_heads exceeds i32: {}", config.q_heads),
+    })?;
+    let kv_heads_arg =
+        i32::try_from(config.kv_heads).map_err(|_| KernelError::InvalidArguments {
+            reason: format!("dense attention-score kv_heads exceeds i32: {}", config.kv_heads),
+        })?;
+    let seq_len_arg = i32::try_from(config.seq_len).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense attention-score seq_len exceeds i32: {}", config.seq_len),
+    })?;
+    let head_dim_arg =
+        i32::try_from(config.head_dim).map_err(|_| KernelError::InvalidArguments {
+            reason: format!("dense attention-score head_dim exceeds i32: {}", config.head_dim),
+        })?;
+    let scale_arg = config.scale;
+    let causal_arg = i32::from(config.causal);
+    builder.arg(&q_heads_arg);
+    builder.arg(&kv_heads_arg);
+    builder.arg(&seq_len_arg);
+    builder.arg(&head_dim_arg);
+    builder.arg(&scale_arg);
+    builder.arg(&causal_arg);
+
+    unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
+        reason: format!("failed to launch dense attention-score CUDA kernel: {err:?}"),
+    })?;
+    stream.synchronize().map_err(|err| KernelError::GpuError {
+        reason: format!("failed to synchronize dense attention-score CUDA kernel: {err:?}"),
+    })?;
+
+    let scores_host: Vec<f32> =
+        stream.memcpy_dtov(&scores_dev).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to copy dense attention-score output from device: {err:?}"),
+        })?;
+    scores[..score_count].copy_from_slice(&scores_host[..score_count]);
+
+    Ok(CudaDenseAttentionScoreStats {
+        kernel_id: CUDA_DENSE_ATTENTION_SCORE_KERNEL_ID,
+        invocations: 1,
+        fallback_invocations: 0,
+        host_to_device_bytes: bytes_for::<f32>(q_len + k_len)?,
+        device_to_host_bytes: bytes_for::<f32>(score_count)?,
+        kernel_launches: 1,
+        kernel_time_ms: None,
+    })
+}
+
+#[cfg(feature = "cuda")]
+fn compile_dense_attention_score_ptx() -> Result<Ptx> {
+    let _hook_guard = DENSE_ATTENTION_SCORE_NVRTC_COMPILE_LOCK.lock().ok();
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let compile_result =
+        std::panic::catch_unwind(|| compile_ptx(CUDA_DENSE_ATTENTION_SCORE_KERNEL_SRC));
+    std::panic::set_hook(previous_hook);
+
+    match compile_result {
+        Ok(Ok(ptx)) => Ok(ptx),
+        Ok(Err(err)) => Err(KernelError::GpuError {
+            reason: format!("failed to compile dense attention-score CUDA PTX: {err:?}"),
+        }
+        .into()),
+        Err(payload) => Err(KernelError::GpuError {
+            reason: format!(
+                "failed to compile dense attention-score CUDA PTX because NVRTC was unavailable: {}",
+                panic_payload_message(&*payload)
+            ),
+        }
+        .into()),
+    }
+}
+
+#[cfg(feature = "cuda")]
+fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "unknown panic payload".to_string()
+    }
+}
+
+fn compare_attention_score_outputs(expected: &[f32], actual: &[f32]) -> Result<(f32, f32, usize)> {
+    if expected.len() != actual.len() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-score parity length mismatch: expected {}, got {}",
+                expected.len(),
+                actual.len()
+            ),
+        }
+        .into());
+    }
+    if expected.is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention-score parity comparison requires non-empty output".into(),
+        }
+        .into());
+    }
+
+    let mut max_abs = 0.0f32;
+    let mut sum_abs = 0.0f32;
+    let mut compared = 0usize;
+    for (idx, (&expected, &actual)) in expected.iter().zip(actual).enumerate() {
+        if expected.is_finite() && actual.is_finite() {
+            let abs = (expected - actual).abs();
+            max_abs = max_abs.max(abs);
+            sum_abs += abs;
+            compared += 1;
+            continue;
+        }
+        if expected.is_infinite()
+            && actual.is_infinite()
+            && expected.is_sign_negative() == actual.is_sign_negative()
+        {
+            compared += 1;
+            continue;
+        }
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-score parity non-finite mismatch at {idx}: expected={expected}, actual={actual}"
+            ),
+        }
+        .into());
+    }
+    if compared == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention-score parity comparison found no comparable scores".into(),
+        }
+        .into());
+    }
+    Ok((max_abs, sum_abs / compared as f32, compared))
+}
+
+fn checked_mul(lhs: usize, rhs: usize, label: &str) -> Result<usize> {
+    lhs.checked_mul(rhs).ok_or_else(|| {
+        KernelError::InvalidArguments { reason: format!("{label} size overflows usize") }.into()
+    })
+}
+
+#[cfg(feature = "cuda")]
+fn bytes_for<T>(items: usize) -> Result<u64> {
+    let bytes = checked_mul(items, std::mem::size_of::<T>(), "byte count")?;
+    u64::try_from(bytes).map_err(|_| {
+        KernelError::InvalidArguments { reason: "byte count exceeds u64".into() }.into()
+    })
+}
+
+fn validate_i32_arg(value: usize, label: &str) -> Result<()> {
+    if value > i32::MAX as usize {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("{label} exceeds i32: {value}"),
+        }
+        .into());
+    }
+    Ok(())
+}
+
+fn require_dense_label(value: &str, field: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("dense GGUF attention-score fixture {field} must not be empty"),
+        }
+        .into());
+    }
+    let lower = value.to_ascii_lowercase();
+    if lower.contains("bitnet") || lower.contains("qk256") || lower.contains("i2_s") {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense GGUF attention-score fixture {field} must not contain BitNet packed markers"
+            ),
+        }
+        .into());
+    }
+    Ok(())
+}
+
+fn require_sha256_like(value: &str, field: &str) -> Result<()> {
+    if value.len() != 64 || !value.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense GGUF attention-score fixture {field} must be a SHA-256 hex digest"
+            ),
+        }
+        .into());
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -865,6 +1586,41 @@ mod tests {
         let cfg = AttentionKernelConfig::for_shape(1, 64, 4, 4, false).unwrap();
         assert_eq!(cfg.tile_q, 4); // small seq → tile = seq
         assert_eq!(cfg.tile_kv, 4);
+    }
+
+    #[test]
+    fn test_attention_score_config_for_shape() {
+        let cfg = AttentionScoresConfig::for_shape(4, 2, 8, 3).unwrap();
+        assert_eq!(cfg.q_heads, 4);
+        assert_eq!(cfg.kv_heads, 2);
+        assert_eq!(cfg.head_dim, 8);
+        assert_eq!(cfg.seq_len, 3);
+        assert_eq!(cfg.score_count().unwrap(), 36);
+        assert_eq!(cfg.grid_dim().unwrap(), (1, 1, 1));
+        assert_eq!(cfg.block_dim(), (128, 1, 1));
+        assert!(cfg.causal);
+    }
+
+    #[test]
+    fn test_attention_score_config_rejects_mismatched_heads() {
+        assert!(AttentionScoresConfig::for_shape(3, 2, 8, 3).is_err());
+    }
+
+    #[test]
+    fn test_attention_score_compare_handles_causal_mask() {
+        let expected = vec![0.5, f32::NEG_INFINITY, -0.25, 0.75];
+        let actual = vec![0.50001, f32::NEG_INFINITY, -0.25002, 0.75003];
+        let (max_abs, _mean_abs, compared) =
+            compare_attention_score_outputs(&expected, &actual).unwrap();
+        assert_eq!(compared, 4);
+        assert!(max_abs < 0.000_1);
+    }
+
+    #[test]
+    fn test_attention_score_compare_rejects_nan_mismatch() {
+        let expected = vec![0.5, f32::NEG_INFINITY];
+        let actual = vec![0.5, f32::NAN];
+        assert!(compare_attention_score_outputs(&expected, &actual).is_err());
     }
 
     // ── AttentionConfig tests ─────────────────────────────────────────
