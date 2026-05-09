@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T22:29:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-024"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4342
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-024-observed-logits-length"
+head_sha = "d367f0d5355d1a8244a748a9bfe991bbd03ef38a"
+summary = "Opened CPU258V-024 to record observed runtime logits vector length evidence for the 258V CPU path."
+notes = [
+  "The PR records logits_vector_length in bitnet run logit dumps and propagates the run receipt logits_index_boundary through answer-corpus rows.",
+  "The live 258V scalar and AVX2 full-corpus observed-logits receipts record observed logits vector length 128256 for each fixed answer-corpus case.",
+  "The refreshed output-head/logits-index audit classifies the boundary as recorded with expected_logits_vector_length=128256 and observed_logits_vector_length=128256.",
+  "The PR does not claim external first-token logits parity, new answer quality, CPU speed, Arc 140V execution, Intel NPU execution, or full model correctness.",
+]

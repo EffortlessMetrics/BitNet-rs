@@ -1519,7 +1519,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-024"
-status = "ready"
+status = "pr_open"
+pr = 4342
 branch = "codex/lunar-lake/CPU258V-024-observed-logits-length"
 stackable = false
 review_mode = "codex_premerge"
@@ -1529,7 +1530,9 @@ blocked_by = ["CPU258V-023"]
 acceptance = "Capture observed runtime logits vector length evidence from the real 258V CPU generation/eval path, compare it with tokenizer/output-head expected vocab length and decoded top-k IDs, and preserve the no answer-quality, no speed, no Arc/NPU, and no full-model-correctness claim boundary."
 commands = [
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet output_head_logits_audit -- --nocapture",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- output-head-logits-audit --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --prompt-audit ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json --scalar-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json --avx2-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json --json-out ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
+  "target/release/bitnet.exe answer-corpus --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --threads 8 --cpu-kernel scalar --per-prompt-timeout-seconds 300 --dump-logit-steps 1 --logits-topk 5 --json-out ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-full-observed-logits.json",
+  "target/release/bitnet.exe answer-corpus --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --threads 8 --cpu-kernel avx2 --per-prompt-timeout-seconds 300 --dump-logit-steps 1 --logits-topk 5 --json-out ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-full-observed-logits.json",
+  "target/release/bitnet.exe output-head-logits-audit --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --prompt-audit ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json --scalar-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-full-observed-logits.json --avx2-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-full-observed-logits.json --json-out ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
   "python -m json.tool ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
   "git diff --check",
 ]

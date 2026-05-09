@@ -3794,6 +3794,7 @@ async fn run_simple_generation(
     #[derive(Debug, serde::Serialize)]
     struct LogitStep {
         step: usize,
+        logits_vector_length: usize,
         top_logits: Vec<serde_json::Value>,
         chosen_id: Option<u32>,
     }
@@ -4593,6 +4594,7 @@ async fn run_simple_generation(
             // Will capture chosen_id after sampling
             let step = LogitStep {
                 step: step_idx,
+                logits_vector_length: logits_vec.len(),
                 top_logits: top_logits
                     .iter()
                     .map(|&(token_id, logit)| {
@@ -4955,6 +4957,8 @@ async fn run_simple_generation(
         let steady_decode_step_ms = decode_step_ms.get(1..).unwrap_or(&[]);
         let steady_decode_step_allocs = decode_step_allocs.get(1..).unwrap_or(&[]);
         let decode_total_ms = decode_step_ms.iter().sum::<f64>();
+        let observed_logits_vector_length =
+            logits_dump.first().map(|step| step.logits_vector_length);
         let sampling_ms_per_token = if sample_step_ms.is_empty() {
             None
         } else {
@@ -5218,10 +5222,22 @@ async fn run_simple_generation(
             "tokenizer": tokenizer_info,
             "loader": loader_info,
             "gen_policy": gen_policy,
+            "logits_index_boundary": {
+                "expected_logits_vector_length": tokenizer.vocab_size(),
+                "expected_logits_vector_length_source": "tokenizer_vocab_size",
+                "first_step_logits_vector_length": observed_logits_vector_length,
+                "observed_logits_vector_length": observed_logits_vector_length,
+                "observed_logits_vector_length_source": if observed_logits_vector_length.is_some() {
+                    "run_receipt_logits_dump"
+                } else {
+                    "not_available"
+                },
+            },
             "logits_dump": if !logits_dump.is_empty() {
                 Some(logits_dump.iter().map(|step| {
                     serde_json::json!({
                         "step": step.step,
+                        "logits_vector_length": step.logits_vector_length,
                         "top_logits": step.top_logits,
                         "chosen_id": step.chosen_id
                     })

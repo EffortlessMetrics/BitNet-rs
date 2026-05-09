@@ -507,8 +507,16 @@ fn answer_case_evidence(case: &Value, tokenizer: &(dyn Tokenizer + Send + Sync))
         .unwrap_or_default();
     let observed_length = case["logits_index_boundary"]["first_step_logits_vector_length"]
         .as_u64()
-        .or_else(|| case["logits_index_boundary"]["observed_logits_vector_length"].as_u64());
+        .or_else(|| case["logits_index_boundary"]["observed_logits_vector_length"].as_u64())
+        .or_else(|| first_step.and_then(|step| step["logits_vector_length"].as_u64()));
     let model_vocab_size_proxy = case["model"]["vocab_size"].as_u64();
+    let observed_length_source = if case["logits_index_boundary"].is_object() {
+        "run_receipt_logits_index_boundary"
+    } else if first_step.and_then(|step| step["logits_vector_length"].as_u64()).is_some() {
+        "run_receipt_logits_dump"
+    } else {
+        "not_available"
+    };
 
     json!({
         "id": case["id"].clone(),
@@ -519,11 +527,7 @@ fn answer_case_evidence(case: &Value, tokenizer: &(dyn Tokenizer + Send + Sync))
         "tie_word_embeddings": case["model"]["tie_word_embeddings"].clone(),
         "observed_logits_vector_length": observed_length,
         "model_vocab_size_proxy": model_vocab_size_proxy,
-        "observed_logits_vector_length_source": if case["logits_index_boundary"].is_object() {
-            "run_receipt_logits_index_boundary"
-        } else {
-            "not_available"
-        },
+        "observed_logits_vector_length_source": observed_length_source,
         "chosen_id": first_step.and_then(|step| step["chosen_id"].as_u64()),
         "first_step_top_logits": top_logits,
     })
@@ -772,8 +776,13 @@ mod tests {
                 "kernel": {
                     "selected_kernel": "i2_s-scalar-reference"
                 },
+                "logits_index_boundary": {
+                    "first_step_logits_vector_length": 50257,
+                    "observed_logits_vector_length_source": "run_receipt_logits_dump"
+                },
                 "logits_dump": [{
                     "chosen_id": 52,
+                    "logits_vector_length": 50257,
                     "top_logits": [
                         {"token_id": 52, "logit": 1.0},
                         {"token_id": 53, "logit": 0.5}
@@ -786,7 +795,7 @@ mod tests {
         let avx2 = answer_corpus_evidence("avx2", None, Some(&receipt), &tokenizer);
         assert_eq!(scalar["cases"][0]["first_step_top_logits"][0]["decoded"], "4");
         assert_eq!(scalar["cases"][0]["first_step_top_logits"][0]["piece"], "4");
-        assert_eq!(scalar["cases"][0]["observed_logits_vector_length"], Value::Null);
+        assert_eq!(scalar["cases"][0]["observed_logits_vector_length"], 50257);
         assert_eq!(scalar["cases"][0]["model_vocab_size_proxy"], 50257);
         assert_eq!(compare_topk_evidence(&scalar, &avx2)["topk_ids_all_match"], true);
     }
