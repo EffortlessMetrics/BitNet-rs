@@ -202,6 +202,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-028 | merged | Promote verified dense GGUF `attention_v_mix` to the one-layer planner route while leaving `mlp_activation` as the remaining unsupported strict CUDA gap. |
 | CUDA-DENSE-029 | merged | Extract a CPU-reference dense GGUF `mlp_activation` fixture while leaving CUDA parity, dense GGUF inference, Qwen token/decode/chat, speedup, and full-residency claims false. |
 | CUDA-DENSE-030 | merged | Prove strict RTX 5070 Ti CUDA parity for the dense GGUF `mlp_activation` fixture while leaving route promotion, dense GGUF inference, Qwen token/decode/chat, speedup, and full-residency claims false. |
+| CUDA-DENSE-031 | in_progress | Promote verified dense GGUF `mlp_activation` to the one-layer planner route, yielding 14 dense CUDA-routable ops, zero unsupported strict CUDA ops, and `strict_cuda_ready=true` without claiming dense inference, Qwen token/decode/chat, speedup, or full residency. |
 
 ## Review Policy
 

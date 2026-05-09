@@ -31,7 +31,7 @@
     "driver_version": "591.86",
     "nvml_available": true,
     "nvrtc_version": "12.9",
-    "power_draw_watts": 35.97,
+    "power_draw_watts": 45.33,
     "power_limit_watts": 300.0,
     "temperature_c": 46.0,
     "vram_bytes": 17094475776
@@ -56,17 +56,17 @@
   "error": null,
   "execution_path": {
     "bitnet_packed_kernel_proof": false,
-    "kernel_family": "dense_fp16_gemm_plus_f32_rmsnorm_plus_f32_rope_plus_f32_attention_plus_unsupported_layer_ops",
+    "kernel_family": "dense_fp16_gemm_plus_f32_rmsnorm_plus_f32_rope_plus_f32_attention_plus_f32_mlp_activation",
     "model_class": "dense_regular_llm",
     "qk256_proof": false,
-    "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_f32_rmsnorm_rope_attention"
+    "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_f32_rmsnorm_rope_attention_mlp_activation"
   },
   "execution_plan": {
     "bitnet_packed_qk256_cuda": false,
     "cpu_fallback_ops": 0,
     "cuda_bitnet_qk256_ops": 0,
-    "cuda_dense_regular_llm_ops": 13,
-    "cuda_ops": 13,
+    "cuda_dense_regular_llm_ops": 14,
+    "cuda_ops": 14,
     "dense_regular_llm_cuda": true,
     "fallback_used": false,
     "full_cuda_residency_claimed": false,
@@ -79,10 +79,10 @@
     "selected_backend": "nvidia-rtx-5070-ti-cuda",
     "selected_route": "dense_regular_llm_cuda",
     "speedup_claim": false,
-    "strict_cuda_ready": false,
+    "strict_cuda_ready": true,
     "strict_fallback_policy": "reject",
     "total_ops": 14,
-    "unsupported_ops": 1
+    "unsupported_ops": 0
   },
   "fallback_backend": null,
   "fallback_reason": null,
@@ -101,16 +101,15 @@
       "attention_v_mix"
     ],
     "bitnet_packed_i2s_qk256_proof": false,
-    "candidate_order": [
-      "mlp_activation"
-    ],
+    "candidate_order": [],
     "cpu_fallback_ops_total": 0,
     "cuda_routable_attention_score_ops_total": 1,
     "cuda_routable_attention_softmax_ops_total": 1,
     "cuda_routable_attention_v_mix_ops_total": 1,
     "cuda_routable_linear_ops_total": 7,
+    "cuda_routable_mlp_activation_ops_total": 1,
     "cuda_routable_norm_ops_total": 2,
-    "cuda_routable_ops_total": 13,
+    "cuda_routable_ops_total": 14,
     "cuda_routable_roles": [
       "attention_norm",
       "attention_q",
@@ -124,6 +123,7 @@
       "ffn_norm",
       "mlp_gate",
       "mlp_up",
+      "mlp_activation",
       "mlp_down"
     ],
     "cuda_routable_rope_ops_total": 1,
@@ -203,7 +203,12 @@
       "mlp_up",
       "mlp_down"
     ],
-    "next_candidate_gap": "mlp_activation",
+    "mlp_activation_cuda_parity_available": true,
+    "mlp_activation_routable_roles": [
+      "mlp_activation"
+    ],
+    "next_candidate_gap": "none",
+    "next_required_proof": "one_layer_cpu_reference_harness",
     "norms_routable_roles": [
       "attention_norm",
       "ffn_norm"
@@ -219,34 +224,12 @@
     "schema": 1,
     "source_artifact_kind": "dense_gguf_one_layer_execution_plan",
     "speedup_claim": false,
-    "strict_cuda_ready": false,
+    "strict_cuda_ready": true,
     "strict_cuda_rejects_cpu_fallback": true,
-    "unsupported_op_type_counts": {
-      "activation": 1
-    },
-    "unsupported_ops": [
-      {
-        "blocks_strict_cuda_one_layer": true,
-        "cpu_fallback_allowed": false,
-        "cuda_kernel_status": "missing_cuda_kernel",
-        "input_dependencies": [
-          "mlp_gate",
-          "mlp_up"
-        ],
-        "input_residency": "not_executed",
-        "name": "blk.0.mlp_activation",
-        "op_type": "activation",
-        "output_residency": "not_executed",
-        "role": "mlp_activation",
-        "size": 896,
-        "source": "derived_transformer_op",
-        "source_shape": null,
-        "source_tensor": null,
-        "transfer_timing_status": "not_measured_no_kernel"
-      }
-    ],
+    "unsupported_op_type_counts": {},
+    "unsupported_ops": [],
     "unsupported_ops_have_dependency_notes": true,
-    "unsupported_ops_total": 1
+    "unsupported_ops_total": 0
   },
   "hardware_lane": "nvidia-rtx-5070-ti-cuda",
   "machine_id": "windows-9950x3d-rtx5070ti",
@@ -263,12 +246,13 @@
     "attention_v_mix_cuda_ops_total": 1,
     "bitnet_packed_i2s_qk256_proof": false,
     "cpu_fallback_ops_total": 0,
-    "cuda_routable_ops_total": 13,
+    "cuda_routable_ops_total": 14,
     "dense_gguf_inference_claimed": false,
     "dense_gguf_one_layer_execution_plan_claimed": true,
     "full_cuda_residency_claimed": false,
     "layer_index": 0,
     "linear_cuda_ops_total": 7,
+    "mlp_activation_cuda_ops_total": 1,
     "norm_cuda_ops_total": 2,
     "one_layer_inference_claimed": false,
     "operations": [
@@ -492,15 +476,15 @@
         "is_quantized": false,
         "name": "blk.0.mlp_activation",
         "op_type": "activation",
-        "reason": "strict CUDA rejects CPU fallback for dense_regular_llm dense_fp16 activation op blk.0.mlp_activation",
+        "reason": "cuda_dense_regular_llm route selected for blk.0.mlp_activation",
         "role": "mlp_activation",
-        "route": "unsupported",
+        "route": "dense_regular_llm_cuda",
         "size": 896,
         "source": "derived_transformer_op",
         "source_shape": null,
         "source_tensor": null,
         "source_tensor_type": null,
-        "status": "unsupported_strict_cuda"
+        "status": "cuda_routable"
       },
       {
         "fallback_used": false,
@@ -528,15 +512,15 @@
     "rope_cuda_ops_total": 1,
     "schema": 1,
     "speedup_claim": false,
-    "strict_cuda_ready": false,
+    "strict_cuda_ready": true,
     "total_ops": 14,
     "unsupported_ops_explicitly_listed": true,
-    "unsupported_strict_cuda_ops_total": 1
+    "unsupported_strict_cuda_ops_total": 0
   },
   "requested_backend": "nvidia-rtx-5070-ti-cuda",
   "runtime_api": "cuda",
   "schema": 1,
   "selected_backend": "nvidia-rtx-5070-ti-cuda",
   "speedup_claim": false,
-  "timestamp_utc": "2026-05-09T14:14:02Z"
+  "timestamp_utc": "2026-05-09T16:31:16Z"
 }

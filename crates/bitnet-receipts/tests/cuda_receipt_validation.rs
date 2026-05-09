@@ -882,16 +882,19 @@ fn dense_gguf_one_layer_plan_rejects_inference_claim() {
 }
 
 #[test]
-fn dense_gguf_one_layer_plan_requires_unsupported_strict_ops() {
+fn dense_gguf_one_layer_plan_rejects_unrouted_strict_ops_after_mlp_promotion() {
     let mut receipt = valid_dense_gguf_one_layer_execution_plan_receipt();
-    receipt["execution_plan"]["unsupported_ops"] = json!(0);
-    receipt["execution_plan"]["total_ops"] = json!(7);
+    receipt["execution_plan"]["unsupported_ops"] = json!(1);
+    receipt["execution_plan"]["strict_cuda_ready"] = json!(false);
 
     let err = validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt)
         .unwrap_err()
         .to_string();
 
-    assert!(err.contains("unsupported_ops"), "unexpected error: {err}");
+    assert!(
+        err.contains("unsupported_ops") || err.contains("strict_cuda_ready"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -907,15 +910,15 @@ fn dense_gguf_one_layer_plan_requires_gap_audit() {
 }
 
 #[test]
-fn dense_gguf_one_layer_gap_audit_rejects_cpu_fallback_allowed() {
+fn dense_gguf_one_layer_gap_audit_rejects_cpu_fallback_policy_change() {
     let mut receipt = valid_dense_gguf_one_layer_execution_plan_receipt();
-    receipt["gap_audit"]["unsupported_ops"][0]["cpu_fallback_allowed"] = json!(true);
+    receipt["gap_audit"]["strict_cuda_rejects_cpu_fallback"] = json!(false);
 
     let err = validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt)
         .unwrap_err()
         .to_string();
 
-    assert!(err.contains("cpu_fallback_allowed"), "unexpected error: {err}");
+    assert!(err.contains("strict_cuda_rejects_cpu_fallback"), "unexpected error: {err}");
 }
 
 #[test]
@@ -1785,8 +1788,8 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
         },
         "execution_path": {
             "model_class": "dense_regular_llm",
-            "kernel_family": "dense_fp16_gemm_plus_f32_rmsnorm_plus_f32_rope_plus_f32_attention_plus_unsupported_layer_ops",
-            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_f32_rmsnorm_rope_attention",
+            "kernel_family": "dense_fp16_gemm_plus_f32_rmsnorm_plus_f32_rope_plus_f32_attention_plus_f32_mlp_activation",
+            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_f32_rmsnorm_rope_attention_mlp_activation",
             "bitnet_packed_kernel_proof": false,
             "qk256_proof": false
         },
@@ -1802,14 +1805,14 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "dense_regular_llm_cuda": true,
             "bitnet_packed_qk256_cuda": false,
             "cuda_bitnet_qk256_ops": 0,
-            "cuda_dense_regular_llm_ops": 13,
+            "cuda_dense_regular_llm_ops": 14,
             "cpu_fallback_ops": 0,
-            "unsupported_ops": 1,
+            "unsupported_ops": 0,
             "total_ops": 14,
-            "cuda_ops": 13,
+            "cuda_ops": 14,
             "mixed_cuda_routes": false,
             "fallback_used": false,
-            "strict_cuda_ready": false,
+            "strict_cuda_ready": true,
             "speedup_claim": false,
             "full_cuda_residency_claimed": false
         },
@@ -1831,16 +1834,17 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "schema": 1,
             "layer_index": 0,
             "total_ops": 14,
-            "cuda_routable_ops_total": 13,
+            "cuda_routable_ops_total": 14,
             "linear_cuda_ops_total": 7,
             "norm_cuda_ops_total": 2,
             "rope_cuda_ops_total": 1,
             "attention_score_cuda_ops_total": 1,
             "attention_softmax_cuda_ops_total": 1,
             "attention_v_mix_cuda_ops_total": 1,
-            "unsupported_strict_cuda_ops_total": 1,
+            "mlp_activation_cuda_ops_total": 1,
+            "unsupported_strict_cuda_ops_total": 0,
             "cpu_fallback_ops_total": 0,
-            "strict_cuda_ready": false,
+            "strict_cuda_ready": true,
             "unsupported_ops_explicitly_listed": true,
             "operations": dense_one_layer_operations(),
             "dense_gguf_one_layer_execution_plan_claimed": true,
@@ -2212,16 +2216,17 @@ fn dense_one_layer_gap_audit() -> Value {
         "schema": 1,
         "source_artifact_kind": "dense_gguf_one_layer_execution_plan",
         "layer_index": 0,
-        "cuda_routable_ops_total": 13,
+        "cuda_routable_ops_total": 14,
         "cuda_routable_linear_ops_total": 7,
         "cuda_routable_norm_ops_total": 2,
         "cuda_routable_rope_ops_total": 1,
         "cuda_routable_attention_score_ops_total": 1,
         "cuda_routable_attention_softmax_ops_total": 1,
         "cuda_routable_attention_v_mix_ops_total": 1,
-        "unsupported_ops_total": 1,
+        "cuda_routable_mlp_activation_ops_total": 1,
+        "unsupported_ops_total": 0,
         "cpu_fallback_ops_total": 0,
-        "strict_cuda_ready": false,
+        "strict_cuda_ready": true,
         "unsupported_ops_have_dependency_notes": true,
         "strict_cuda_rejects_cpu_fallback": true,
         "cuda_routable_roles": [
@@ -2237,6 +2242,7 @@ fn dense_one_layer_gap_audit() -> Value {
             "ffn_norm",
             "mlp_gate",
             "mlp_up",
+            "mlp_activation",
             "mlp_down"
         ],
         "linears_routable_roles": [
@@ -2264,18 +2270,19 @@ fn dense_one_layer_gap_audit() -> Value {
         "attention_v_mix_routable_roles": [
             "attention_v_mix"
         ],
+        "mlp_activation_routable_roles": [
+            "mlp_activation"
+        ],
         "rmsnorm_cuda_parity_available": true,
         "rope_cuda_parity_available": true,
         "attention_score_cuda_parity_available": true,
         "attention_softmax_cuda_parity_available": true,
         "attention_v_mix_cuda_parity_available": true,
-        "next_candidate_gap": "mlp_activation",
-        "unsupported_op_type_counts": {
-            "activation": 1
-        },
-        "candidate_order": [
-            "mlp_activation"
-        ],
+        "mlp_activation_cuda_parity_available": true,
+        "next_candidate_gap": "none",
+        "next_required_proof": "one_layer_cpu_reference_harness",
+        "unsupported_op_type_counts": {},
+        "candidate_order": [],
         "dependency_edges": [
             { "from": "attention_norm", "to": "attention_q" },
             { "from": "attention_norm", "to": "attention_k" },
@@ -2293,16 +2300,7 @@ fn dense_one_layer_gap_audit() -> Value {
             { "from": "mlp_up", "to": "mlp_activation" },
             { "from": "mlp_activation", "to": "mlp_down" }
         ],
-        "unsupported_ops": [
-            gap_unsupported_op(
-                "blk.0.mlp_activation",
-                "mlp_activation",
-                "activation",
-                Value::Null,
-                Value::Null,
-                json!(["mlp_gate", "mlp_up"])
-            )
-        ],
+        "unsupported_ops": [],
         "dense_gguf_one_layer_execution_plan_claimed": true,
         "dense_gguf_one_layer_inference_claimed": false,
         "dense_gguf_inference_claimed": false,
@@ -2312,36 +2310,6 @@ fn dense_one_layer_gap_audit() -> Value {
         "bitnet_packed_i2s_qk256_proof": false,
         "speedup_claim": false,
         "full_cuda_residency_claimed": false
-    })
-}
-
-fn gap_unsupported_op(
-    name: &str,
-    role: &str,
-    op_type: &str,
-    source_tensor: Value,
-    source_shape: Value,
-    input_dependencies: Value,
-) -> Value {
-    json!({
-        "name": name,
-        "role": role,
-        "op_type": op_type,
-        "size": 16,
-        "source": if source_tensor.is_null() {
-            "derived_transformer_op"
-        } else {
-            "gguf_tensor_descriptor"
-        },
-        "source_tensor": source_tensor,
-        "source_shape": source_shape,
-        "input_dependencies": input_dependencies,
-        "cuda_kernel_status": "missing_cuda_kernel",
-        "cpu_fallback_allowed": false,
-        "blocks_strict_cuda_one_layer": true,
-        "input_residency": "not_executed",
-        "output_residency": "not_executed",
-        "transfer_timing_status": "not_measured_no_kernel"
     })
 }
 
@@ -2374,15 +2342,38 @@ fn dense_one_layer_operations() -> Value {
     push_one_layer_cuda_rmsnorm_op(&mut operations, 9, "blk.0.ffn_norm.weight", "ffn_norm");
     push_one_layer_cuda_op(&mut operations, 10, "blk.0.ffn_gate.weight", "mlp_gate");
     push_one_layer_cuda_op(&mut operations, 11, "blk.0.ffn_up.weight", "mlp_up");
-    push_one_layer_unsupported_op(
+    push_one_layer_cuda_mlp_activation_op(
         &mut operations,
         12,
         "blk.0.mlp_activation",
         "mlp_activation",
-        "activation",
     );
     push_one_layer_cuda_op(&mut operations, 13, "blk.0.ffn_down.weight", "mlp_down");
     Value::Array(operations)
+}
+
+fn push_one_layer_cuda_mlp_activation_op(
+    operations: &mut Vec<Value>,
+    index: u64,
+    name: &str,
+    role: &str,
+) {
+    operations.push(json!({
+        "index": index,
+        "name": name,
+        "role": role,
+        "op_type": "activation",
+        "size": 16,
+        "source": "derived_transformer_op",
+        "source_tensor": Value::Null,
+        "source_tensor_type": Value::Null,
+        "source_shape": Value::Null,
+        "is_quantized": false,
+        "route": "dense_regular_llm_cuda",
+        "status": "cuda_routable",
+        "fallback_used": false,
+        "reason": format!("cuda_dense_regular_llm route selected for {name}")
+    }));
 }
 
 fn push_one_layer_cuda_op(operations: &mut Vec<Value>, index: u64, name: &str, role: &str) {
@@ -2487,31 +2478,6 @@ fn push_one_layer_cuda_attention_softmax_op(
         "status": "cuda_routable",
         "fallback_used": false,
         "reason": format!("cuda_dense_regular_llm route selected for {name}")
-    }));
-}
-
-fn push_one_layer_unsupported_op(
-    operations: &mut Vec<Value>,
-    index: u64,
-    name: &str,
-    role: &str,
-    op_type: &str,
-) {
-    operations.push(json!({
-        "index": index,
-        "name": name,
-        "role": role,
-        "op_type": op_type,
-        "size": 16,
-        "source": if name.ends_with(".weight") { "gguf_tensor_descriptor" } else { "derived_transformer_op" },
-        "source_tensor": if name.ends_with(".weight") { json!(name) } else { Value::Null },
-        "source_tensor_type": if name.ends_with(".weight") { json!("f32") } else { Value::Null },
-        "source_shape": if name.ends_with(".weight") { json!([16]) } else { Value::Null },
-        "is_quantized": false,
-        "route": "unsupported",
-        "status": "unsupported_strict_cuda",
-        "fallback_used": false,
-        "reason": format!("strict CUDA rejects CPU fallback for dense_regular_llm dense_fp16 {op_type} op {name}")
     }));
 }
 
