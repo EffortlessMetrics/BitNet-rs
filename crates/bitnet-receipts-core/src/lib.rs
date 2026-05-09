@@ -130,6 +130,14 @@ pub const DENSE_GGUF_ATTENTION_V_MIX_CUDA_PARITY_ARTIFACT_KIND: &str =
 pub const DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND: &str =
     "dense_gguf_mlp_activation_fixture_extraction";
 
+/// Artifact kind for dense GGUF MLP activation CUDA parity.
+///
+/// This receipt proves the metadata-derived SiLU(gate) * up activation fixture
+/// can run through a strict CUDA F32 activation kernel. It is below dense GGUF
+/// inference and does not by itself promote one-layer planner routing.
+pub const DENSE_GGUF_MLP_ACTIVATION_CUDA_PARITY_ARTIFACT_KIND: &str =
+    "dense_gguf_mlp_activation_cuda_parity";
+
 /// Artifact kind for dense GGUF single-linear CUDA parity.
 ///
 /// This receipt proves one descriptor-extracted dense GGUF linear fixture can
@@ -2421,6 +2429,300 @@ pub fn validate_dense_gguf_mlp_activation_fixture_receipt_json(receipt: &Value) 
     Ok(())
 }
 
+/// Validate dense GGUF MLP activation CUDA parity evidence.
+///
+/// This receipt bridges the MLP activation fixture into a strict CUDA F32
+/// SiLU(gate) * up kernel. It remains fixture-level evidence and must not
+/// claim dense GGUF inference, Qwen token/decode/chat, speedup, full residency,
+/// or BitNet packed I2_S/QK256 proof.
+pub fn validate_dense_gguf_mlp_activation_cuda_parity_receipt_json(receipt: &Value) -> Result<()> {
+    let stats = validate_cuda_receipt_common(
+        receipt,
+        DENSE_GGUF_MLP_ACTIVATION_CUDA_PARITY_ARTIFACT_KIND,
+        "dense_gguf_mlp_activation_cuda_parity_tested",
+    )?;
+    require_string_eq(stats, "kernel_id", "dense_mlp_activation_f32_cuda")?;
+    require_u64_eq(stats, "invocations", 1)?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+    require_u64_eq(stats, "kernel_launches", 1)?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(execution_path, "kernel_family", "dense_f32_mlp_activation")?;
+    require_string_eq(
+        execution_path,
+        "quantization_family",
+        "metadata_derived_mlp_activation_fixture",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    validate_dense_regular_llm_execution_plan(receipt)?;
+    let plan = object_field(receipt, "execution_plan")?;
+    require_u64_eq(plan, "total_ops", 1)?;
+    require_u64_eq(plan, "cuda_ops", 1)?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 1)?;
+    require_u64_eq(plan, "cuda_bitnet_qk256_ops", 0)?;
+    require_u64_eq(plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(plan, "unsupported_ops", 0)?;
+    require_bool_eq(plan, "strict_cuda_ready", true)?;
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+
+    let fixture = object_field(receipt, "mlp_activation_fixture")?;
+    require_u64_eq(fixture, "schema", 1)?;
+    require_string_eq(
+        fixture,
+        "source_artifact_kind",
+        DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND,
+    )?;
+    require_string_eq(
+        fixture,
+        "source_mlp_gate_artifact_kind",
+        DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
+    )?;
+    require_string_eq(
+        fixture,
+        "source_mlp_up_artifact_kind",
+        DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
+    )?;
+    require_string_eq(fixture, "source_mlp_gate_role", "mlp_gate")?;
+    require_string_eq(fixture, "source_mlp_up_role", "mlp_up")?;
+    require_string_non_empty(fixture, "source_mlp_gate_fixture_id")?;
+    require_string_non_empty(fixture, "source_mlp_up_fixture_id")?;
+    require_string_non_empty(fixture, "source_mlp_gate_tensor")?;
+    require_string_non_empty(fixture, "source_mlp_up_tensor")?;
+    require_string_non_empty(fixture, "fixture_id")?;
+    require_string_eq(fixture, "model_family", required_string(model, "model_family")?)?;
+    require_string_eq(fixture, "architecture", required_string(model, "architecture")?)?;
+    require_string_eq(fixture, "activation_kind", "silu_gate_times_up")?;
+    require_positive_u64(fixture, "activation_count")?;
+    require_positive_u64(fixture, "gate_output_count")?;
+    require_positive_u64(fixture, "up_output_count")?;
+    let activation_count = required_u64(fixture, "activation_count")?;
+    require_u64_eq(fixture, "gate_output_count", activation_count)?;
+    require_u64_eq(fixture, "up_output_count", activation_count)?;
+    require_u64_eq(fixture, "compared_activations", activation_count)?;
+    require_sha256(fixture, "gate_output_sha256")?;
+    require_sha256(fixture, "up_output_sha256")?;
+    require_sha256(fixture, "cpu_reference_activation_sha256")?;
+    require_non_negative_number(fixture, "max_activation_abs")?;
+    require_string_eq(fixture, "cuda_input_dtype", "f32")?;
+    require_string_eq(fixture, "cuda_output_dtype", "f32")?;
+    require_string_eq(fixture, "cuda_kernel_status", "parity_passed")?;
+    require_bool_eq(fixture, "strict_cuda_ready", true)?;
+    require_bool_eq(fixture, "cpu_fallback_allowed", false)?;
+    require_string_eq(fixture, "transfer_timing_status", "bytes_measured_time_unmeasured")?;
+    require_bool_eq(fixture, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(fixture, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(fixture, "cpu_cuda_parity_claimed", true)?;
+    require_bool_eq(fixture, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(fixture, "speedup_claim", false)?;
+    require_bool_eq(fixture, "full_cuda_residency_claimed", false)?;
+
+    let audit = object_field(receipt, "mlp_activation_gap_audit")?;
+    require_u64_eq(audit, "schema", 1)?;
+    require_string_eq(
+        audit,
+        "source_artifact_kind",
+        DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND,
+    )?;
+    require_string_eq(audit, "gap_role", "mlp_activation")?;
+    require_bool_eq(audit, "source_mlp_gate_cuda_parity_required", true)?;
+    require_bool_eq(audit, "source_mlp_gate_cuda_parity_available", true)?;
+    require_bool_eq(audit, "source_mlp_up_cuda_parity_required", true)?;
+    require_bool_eq(audit, "source_mlp_up_cuda_parity_available", true)?;
+    require_bool_eq(audit, "cpu_reference_available", true)?;
+    require_string_eq(audit, "cuda_kernel_status", "parity_passed")?;
+    require_bool_eq(audit, "strict_cuda_ready", true)?;
+    require_bool_eq(audit, "cpu_fallback_allowed", false)?;
+    require_bool_eq(audit, "blocks_strict_cuda_one_layer", false)?;
+    require_string_eq(audit, "next_required_proof", "one_layer_route_promotion")?;
+    let deps = array_field(audit, "input_dependencies")?;
+    let deps = deps
+        .iter()
+        .map(|dep| {
+            dep.as_str().ok_or_else(|| {
+                anyhow!("mlp_activation_gap_audit.input_dependencies entries must be strings")
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if deps != ["mlp_gate", "mlp_up"] {
+        return Err(anyhow!(
+            "mlp_activation_gap_audit.input_dependencies must identify mlp_gate and mlp_up"
+        ));
+    }
+    let candidate_order = array_field(audit, "candidate_order")?;
+    let candidate_order = candidate_order
+        .iter()
+        .map(|role| {
+            role.as_str().ok_or_else(|| {
+                anyhow!("mlp_activation_gap_audit.candidate_order entries must be strings")
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if candidate_order != DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER {
+        return Err(anyhow!(
+            "mlp_activation_gap_audit.candidate_order must preserve the remaining gap order"
+        ));
+    }
+    require_bool_eq(audit, "dense_gguf_mlp_activation_fixture_extraction_claimed", true)?;
+    require_bool_eq(audit, "dense_gguf_mlp_activation_cuda_parity_claimed", true)?;
+    require_bool_eq(audit, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(audit, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(audit, "speedup_claim", false)?;
+    require_bool_eq(audit, "full_cuda_residency_claimed", false)?;
+
+    let parity = object_field(receipt, "parity")?;
+    require_string_eq(parity, "reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(parity, "target_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(parity, "kernel_id", "dense_mlp_activation_f32_cuda")?;
+    require_string_eq(parity, "fixture_id", required_string(fixture, "fixture_id")?)?;
+    require_bool_eq(parity, "passed", true)?;
+    require_non_negative_number(parity, "max_abs_error")?;
+    require_non_negative_number(parity, "mean_abs_error")?;
+    require_non_negative_number(parity, "tolerance")?;
+    require_string_non_empty(parity, "tolerance_source")?;
+    require_u64_eq(parity, "compared_activations", activation_count)?;
+    require_null(parity, "first_divergence")?;
+
+    let timing = object_field(receipt, "timing")?;
+    require_optional_non_negative_number(timing, "kernel_time_ms")?;
+    require_string_eq(timing, "transfer_timing_status", "bytes_measured_time_unmeasured")?;
+    require_u64_eq(
+        timing,
+        "host_to_device_bytes",
+        object_field(stats, "host_to_device_bytes")?
+            .as_u64()
+            .ok_or_else(|| anyhow!("kernel_stats.host_to_device_bytes must be an integer"))?,
+    )?;
+    require_u64_eq(
+        timing,
+        "device_to_host_bytes",
+        object_field(stats, "device_to_host_bytes")?
+            .as_u64()
+            .ok_or_else(|| anyhow!("kernel_stats.device_to_host_bytes must be an integer"))?,
+    )?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_score_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_softmax_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_v_mix_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_mlp_activation_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_mlp_activation_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_norm_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "cpu_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    let residency = object_field(receipt, "tensor_residency")?;
+    require_string_eq(residency, "scope", "single_dense_gguf_mlp_activation_fixture")?;
+    require_string_eq(residency, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(residency, "fixture_id", required_string(fixture, "fixture_id")?)?;
+    require_bool_eq(residency, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(residency, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(residency, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(residency, "input_tensors_uploaded_once", true)?;
+    require_bool_eq(residency, "output_tensor_cuda_resident_during_kernel", true)?;
+    require_bool_eq(residency, "host_device_transfer_accounting_matches_kernel_stats", true)?;
+
+    let inputs = array_field(residency, "inputs")?;
+    if inputs.len() != 2 {
+        return Err(anyhow!(
+            "MLP activation tensor_residency.inputs must contain gate and up outputs"
+        ));
+    }
+    let gate = &inputs[0];
+    require_string_eq(gate, "name", "dense_gguf_mlp_gate_output")?;
+    require_string_eq(gate, "dtype", "f32")?;
+    require_string_eq(gate, "device_residency", "cuda_device_buffer")?;
+    require_u64_eq(gate, "upload_count", 1)?;
+    require_string_eq(gate, "reuse_scope", "single_fixture_launch")?;
+    require_u64_eq(gate, "host_bytes", activation_count * 4)?;
+
+    let up = &inputs[1];
+    require_string_eq(up, "name", "dense_gguf_mlp_up_output")?;
+    require_string_eq(up, "dtype", "f32")?;
+    require_string_eq(up, "device_residency", "cuda_device_buffer")?;
+    require_u64_eq(up, "upload_count", 1)?;
+    require_string_eq(up, "reuse_scope", "single_fixture_launch")?;
+    require_u64_eq(up, "host_bytes", activation_count * 4)?;
+
+    let outputs = array_field(residency, "outputs")?;
+    if outputs.len() != 1 {
+        return Err(anyhow!("MLP activation tensor_residency.outputs must contain activation"));
+    }
+    let output = &outputs[0];
+    require_string_eq(output, "name", "dense_gguf_mlp_activation")?;
+    require_string_eq(output, "dtype", "f32")?;
+    require_string_eq(output, "device_residency", "cuda_device_buffer")?;
+    require_string_eq(output, "download_scope", "parity_check_only")?;
+    require_u64_eq(output, "device_to_host_bytes", activation_count * 4)?;
+
+    let allocation = object_field(residency, "allocation")?;
+    require_u64_eq(allocation, "device_buffer_count", 3)?;
+    require_u64_eq(allocation, "persistent_handle_count", 0)?;
+    require_bool_eq(allocation, "persistent_handles_claimed", false)?;
+
+    let transfer = object_field(residency, "transfer_accounting")?;
+    require_string_eq(transfer, "status", "measured")?;
+    require_u64_eq(transfer, "host_to_device_bytes", activation_count * 2 * 4)?;
+    require_u64_eq(transfer, "device_to_host_bytes", activation_count * 4)?;
+    require_u64_eq(transfer, "kernel_invocations", 1)?;
+    require_u64_eq(transfer, "kernel_launches", 1)?;
+    require_u64_eq(
+        stats,
+        "host_to_device_bytes",
+        object_field(transfer, "host_to_device_bytes")?
+            .as_u64()
+            .ok_or_else(|| anyhow!("transfer.host_to_device_bytes must be an integer"))?,
+    )?;
+    require_u64_eq(
+        stats,
+        "device_to_host_bytes",
+        object_field(transfer, "device_to_host_bytes")?
+            .as_u64()
+            .ok_or_else(|| anyhow!("transfer.device_to_host_bytes must be an integer"))?,
+    )?;
+
+    Ok(())
+}
+
 /// Validate dense GGUF attention V-mix CUDA parity evidence.
 ///
 /// This receipt bridges the attention V-mix fixture into a strict CUDA context
@@ -4338,6 +4640,12 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
             claim_boundary.get("dense_gguf_mlp_activation_fixture_extraction_claimed")
         })
         .and_then(Value::as_bool);
+    let mlp_activation_cuda_parity_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| {
+            claim_boundary.get("dense_gguf_mlp_activation_cuda_parity_claimed")
+        })
+        .and_then(Value::as_bool);
     let linear_cuda_parity_claim = receipt
         .get("claim_boundary")
         .and_then(|claim_boundary| claim_boundary.get("dense_gguf_linear_cuda_parity_claimed"))
@@ -4368,6 +4676,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || artifact_kind == Some(DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ATTENTION_V_MIX_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_MLP_ACTIVATION_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)
@@ -4384,6 +4693,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || attention_v_mix_fixture_claim == Some(true)
         || attention_v_mix_cuda_parity_claim == Some(true)
         || mlp_activation_fixture_claim == Some(true)
+        || mlp_activation_cuda_parity_claim == Some(true)
         || linear_cuda_parity_claim == Some(true)
         || linear_role_sweep_claim == Some(true)
         || one_layer_plan_claim == Some(true)

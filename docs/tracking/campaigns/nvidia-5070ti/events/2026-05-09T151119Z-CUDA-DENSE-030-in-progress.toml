@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T15:11:19Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-030"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+branch = "codex/cuda-dense-030-mlp-activation-parity"
+actor = "codex"
+
+notes = [
+  "Started dense GGUF MLP activation strict RTX 5070 Ti CUDA parity after CUDA-DENSE-029 extracted the CPU-reference fixture.",
+  "The receipt should record dense_mlp_activation_f32_cuda, transfer-byte accounting, tensor residency, and parity against CPU activation values while keeping route promotion, dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, and server claims false.",
+]

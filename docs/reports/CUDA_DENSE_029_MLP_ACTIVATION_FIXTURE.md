@@ -64,6 +64,7 @@ cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -
 
 ## Next Step
 
-The next dense CUDA slice should add strict RTX 5070 Ti CUDA parity for the
-MLP activation fixture. It should remain below dense GGUF token/decode/chat,
-speedup, server, and full-residency claims.
+The next dense CUDA slice is
+[`CUDA-DENSE-030`](CUDA_DENSE_030_MLP_ACTIVATION_PARITY.md), strict RTX 5070
+Ti CUDA parity for the MLP activation fixture. It remains below dense GGUF
+token/decode/chat, speedup, server, and full-residency claims.
