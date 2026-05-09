@@ -1,0 +1,200 @@
+id = "apple-m4-local-server"
+title = "Apple M4 local server"
+status = "active"
+
+objective = "Expose the working Apple M4 dense SLM appliance as a local service with command/config, health and ready endpoints, streaming completions, receipt export, model-cache verification, and no hidden fallback, while reusing the same Mac model/cache/tokenizer/backend discipline."
+
+end_state = [
+  "The M4 local server has a clear command shape and configuration contract.",
+  "Health and ready endpoints report cache/model/backend/fallback state without running expensive generation by default.",
+  "Streaming completion endpoint reuses the supported dense SLM model cache, tokenizer authority, resident-session behavior, and receipt discipline.",
+  "Receipt export records model, tokenizer, backend, fallback status, generated text, token IDs, timing, and server request context.",
+  "Doctor/smoke behavior integrates with server readiness without overclaiming production readiness.",
+]
+
+hard_constraints = [
+  "This is an M4 Mac mini dense SLM service campaign.",
+  "Do not claim production server readiness until endpoints and receipts are implemented.",
+  "Do not claim full OpenAI API compatibility until request/response semantics are tested.",
+  "Do not claim BitNet local-answer quality, full apple-m4-metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance.",
+  "Do not execute MacBook, x86, CUDA, A770, Lunar Lake, or NPU work.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M4-SERVE-001"
+status = "ready"
+branch = "codex/apple-m4-local-server/M4-SERVE-001-command-config"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Define the Apple M4 local server command and configuration contract, including model-id, cache-dir, device, host/port, streaming defaults, receipt path, cache verification, and unsupported-backend failure behavior without implementing serving endpoints."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-server",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-local-server/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-local-server/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The M4 local server command/config contract is defined.",
+]
+must_not_claim = [
+  "A server endpoint is implemented.",
+  "OpenAI compatibility is proven.",
+]
+
+[[work_item]]
+id = "M4-SERVE-002"
+status = "blocked"
+branch = "codex/apple-m4-local-server/M4-SERVE-002-health-ready"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SERVE-001"]
+acceptance = "Add health and ready endpoint behavior for model-cache, tokenizer, backend/fallback, disk/cache, and unsupported-backend state, with tests and no expensive generation by default."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-server",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-server/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-local-server/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "Health and ready endpoints report local M4 dense SLM readiness.",
+]
+must_not_claim = [
+  "Streaming completions work.",
+]
+
+[[work_item]]
+id = "M4-SERVE-003"
+status = "blocked"
+branch = "codex/apple-m4-local-server/M4-SERVE-003-streaming-completions"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SERVE-002"]
+acceptance = "Add a streaming local completion endpoint for the supported dense SLM path, preserving model/tokenizer authority, resident session reuse, generated text and token IDs, backend identity, fallback_used=false, and timing receipts."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-server",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-server/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-local-server/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The M4 local server can stream dense SLM completions if endpoint tests and receipts pass.",
+]
+must_not_claim = [
+  "Full OpenAI compatibility is proven.",
+]
+
+[[work_item]]
+id = "M4-SERVE-004"
+status = "blocked"
+branch = "codex/apple-m4-local-server/M4-SERVE-004-receipt-export"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SERVE-003"]
+acceptance = "Add receipt export for local server requests, including model, tokenizer, backend, fallback, generated text, token IDs, timing, request metadata, streaming status, and claim boundaries."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-server",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-server/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-local-server/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "M4 local server requests can export strict receipts.",
+]
+must_not_claim = [
+  "Server receipts prove BitNet quality or full Metal inference.",
+]
+
+[[work_item]]
+id = "M4-SERVE-005"
+status = "blocked"
+branch = "codex/apple-m4-local-server/M4-SERVE-005-doctor-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SERVE-004"]
+acceptance = "Integrate local server health with Mac doctor/smoke/regression workflows, documenting how operators verify server readiness and receipt export without making production uptime claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-server",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-server/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-local-server/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "Operators can verify local M4 server readiness through documented health/smoke flows.",
+]
+must_not_claim = [
+  "Production deployment readiness is proven.",
+]

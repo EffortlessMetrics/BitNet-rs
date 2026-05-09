@@ -1,0 +1,199 @@
+id = "apple-m4-slm-metal-phases"
+title = "Apple M4 SLM Metal phases"
+status = "active"
+
+objective = "Expand Apple M4 dense SLM acceleration through named, phase-scoped Metal prefill/projection contributions with CPU-only versus CPU-plus-Metal parity, Metal fallback_used=false receipts, explicit CPU/NEON routing for the rest of the pipeline, and timing deltas, without claiming full apple-m4-metal inference."
+
+end_state = [
+  "The next Metal phase is chosen from a bounded prefill/projection candidate list.",
+  "Each Metal phase has a CPU reference and CPU-plus-Metal parity fixture.",
+  "Metal phase receipts record selected_backend=apple-m4-metal, runtime_api=metal, fallback_used=false, execution phase, timing delta, and claim boundaries.",
+  "Resident-session routing remains explicit about CPU/NEON for non-Metal phases.",
+  "No full apple-m4-metal inference claim is made before a later full-route receipt proves it.",
+]
+
+hard_constraints = [
+  "This is an M4 Mac mini dense SLM campaign.",
+  "Do not claim full apple-m4-metal inference from a named phase.",
+  "Do not claim Apple Metal accelerates the full SLM answer path.",
+  "Do not claim BitNet local-answer quality, QK256 support, Neural Engine execution, MPSGraph model inference, or broad M4 performance.",
+  "Do not touch QK256, bitnet-qk256-dispatch, server inference, or MacBook work.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M4-METAL-001"
+status = "ready"
+branch = "codex/apple-m4-slm-metal-phases/M4-METAL-001-next-phase"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Choose the next Apple Metal dense SLM phase candidate, recording why it is safe, CPU reference scope, expected tensor shape, parity method, timing fields, fallback rules, and claim boundaries without adding kernels or routing."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-metal-phases",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-slm-metal-phases/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-metal-phases/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The next phase-scoped Metal target is selected for implementation.",
+]
+must_not_claim = [
+  "A new Metal phase is implemented.",
+  "Full apple-m4-metal inference works.",
+]
+
+[[work_item]]
+id = "M4-METAL-002"
+status = "blocked"
+branch = "codex/apple-m4-slm-metal-phases/M4-METAL-002-parity-fixture"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-METAL-001"]
+acceptance = "Add the CPU reference versus CPU-plus-Metal parity fixture for the selected phase, requiring same greedy-relevant outputs or a bounded documented tolerance, and no hidden fallback."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features metal",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-metal-phases",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-metal-phases/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The selected phase has CPU/Metal parity in the fixture if tests pass.",
+]
+must_not_claim = [
+  "The phase participates in resident generation.",
+]
+
+[[work_item]]
+id = "M4-METAL-003"
+status = "blocked"
+branch = "codex/apple-m4-slm-metal-phases/M4-METAL-003-phase-receipt"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-METAL-002"]
+acceptance = "Integrate a phase receipt for the selected Metal contribution with selected_backend=apple-m4-metal, runtime_api=metal, fallback_used=false, timing delta, CPU remainder routing, and mac receipts-check validation."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,metal,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-metal-phases",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-kernels/**",
+  "crates/**/tests/**",
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-metal-phases/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "A named Metal phase has a validated phase receipt.",
+]
+must_not_claim = [
+  "Full apple-m4-metal inference works.",
+]
+
+[[work_item]]
+id = "M4-METAL-004"
+status = "blocked"
+branch = "codex/apple-m4-slm-metal-phases/M4-METAL-004-resident-route"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-METAL-003"]
+acceptance = "Route the validated phase into resident-session flow only where parity holds, with CPU-only versus CPU-plus-Metal greedy comparison, quality corpus pass, explicit CPU fallback for non-Metal phases, and phase receipts per relevant turn."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,metal,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-metal-phases",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/**/tests/**",
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-metal-phases/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "A named Metal phase participates in resident dense SLM generation with parity receipts.",
+]
+must_not_claim = [
+  "Apple Metal accelerates the full SLM answer path.",
+]
+
+[[work_item]]
+id = "M4-METAL-005"
+status = "blocked"
+branch = "codex/apple-m4-slm-metal-phases/M4-METAL-005-measured-delta"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-METAL-004"]
+acceptance = "Record measured phase-local timing deltas for the resident-routed Metal phase, keeping speedup claims phase-local and updating docs without broad M4 or full Metal inference claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-metal-phases",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-metal-phases/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "Phase-local Metal timing deltas are recorded for the named phase.",
+]
+must_not_claim = [
+  "The measured phase proves full-pipeline speedup.",
+]

@@ -1,0 +1,35 @@
+# Apple M4 SLM Model Breadth
+
+Campaign ID: `apple-m4-slm-model-breadth`
+
+Status: active
+
+## Objective
+
+Add more storage-conscious dense instruct model families to the Apple M4 Mac
+mini path without weakening the completed Qwen appliance baseline.
+
+## End State
+
+- Candidate models are exact, pinned artifacts.
+- Reference output sanity passes before Rust M4 work.
+- Rust M4 quality, tokenizer authority, backend/fallback identity, generated
+  token IDs, timing, cache metadata, and receipt validation pass before support.
+- The model matrix distinguishes `default`, `supported`, `candidate`,
+  `diagnostic-only`, and `rejected`.
+- No model binaries are committed.
+
+## Work Items
+
+| Work item | Status | Notes |
+|---|---|---|
+| M4-MODEL-001 | ready | Select the next exact dense instruct GGUF candidate set. |
+| M4-MODEL-002 | pending | Run reference output sanity and record exact artifact metadata. |
+| M4-MODEL-003 | pending | Run Rust M4 quality, receipts, and deterministic gates. |
+| M4-MODEL-004 | pending | Register cache/model selection only after quality passes. |
+| M4-MODEL-005 | pending | Update model matrix and user envelope. |
+
+## Claim Boundary
+
+Dense model breadth does not prove BitNet, QK256, Neural Engine execution,
+MPSGraph model inference, full Apple Metal inference, or broad M4 performance.

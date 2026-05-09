@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-slm-excellence`
 
-Status: active
+Status: complete
 
 ## Objective
 
