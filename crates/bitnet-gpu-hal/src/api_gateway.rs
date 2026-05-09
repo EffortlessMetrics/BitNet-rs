@@ -9,6 +9,7 @@ use std::fmt;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use bitnet_http_auth_core::strip_bearer_prefix;
+use bitnet_minimal_json_core::MinimalJson;
 
 // ── Configuration ───────────────────────────────────────────────────────────
 
@@ -905,97 +906,6 @@ fn strip_bearer(val: &str) -> String {
     strip_bearer_prefix(val).to_string()
 }
 
-// ── Minimal JSON helper (no serde dependency) ───────────────────────────────
-
-/// Extremely basic JSON field extractor. Handles flat objects only — enough
-/// for OpenAI-compatible request bodies in this crate.
-#[derive(Debug)]
-struct MinimalJson {
-    fields: HashMap<String, String>,
-}
-
-impl MinimalJson {
-    fn parse(text: &str) -> Result<Self, String> {
-        let trimmed = text.trim();
-        if !trimmed.starts_with('{') || !trimmed.ends_with('}') {
-            return Err("expected JSON object".to_string());
-        }
-        let inner = &trimmed[1..trimmed.len() - 1];
-        let mut fields = HashMap::new();
-
-        for part in Self::split_top_level(inner) {
-            let part = part.trim();
-            if part.is_empty() {
-                continue;
-            }
-            if let Some((k, v)) = part.split_once(':') {
-                let key = k.trim().trim_matches('"').to_string();
-                let val = v.trim().to_string();
-                // Strip surrounding quotes from string values.
-                let val = if val.starts_with('"') && val.ends_with('"') && val.len() >= 2 {
-                    val[1..val.len() - 1].to_string()
-                } else {
-                    val
-                };
-                fields.insert(key, val);
-            }
-        }
-        Ok(Self { fields })
-    }
-
-    /// Split on commas that are not inside braces/brackets/quotes.
-    fn split_top_level(s: &str) -> Vec<String> {
-        let mut parts = Vec::new();
-        let mut current = String::new();
-        let mut depth = 0i32;
-        let mut in_string = false;
-        let mut prev = '\0';
-        for ch in s.chars() {
-            if ch == '"' && prev != '\\' {
-                in_string = !in_string;
-            }
-            if !in_string {
-                match ch {
-                    '{' | '[' => depth += 1,
-                    '}' | ']' => depth -= 1,
-                    ',' if depth == 0 => {
-                        parts.push(std::mem::take(&mut current));
-                        prev = ch;
-                        continue;
-                    }
-                    _ => {}
-                }
-            }
-            current.push(ch);
-            prev = ch;
-        }
-        if !current.trim().is_empty() {
-            parts.push(current);
-        }
-        parts
-    }
-
-    fn get_str(&self, key: &str) -> Option<String> {
-        self.fields.get(key).cloned()
-    }
-
-    fn get_u32(&self, key: &str) -> Option<u32> {
-        self.fields.get(key)?.parse().ok()
-    }
-
-    fn get_f32(&self, key: &str) -> Option<f32> {
-        self.fields.get(key)?.parse().ok()
-    }
-
-    fn get_bool(&self, key: &str) -> Option<bool> {
-        match self.fields.get(key)?.as_str() {
-            "true" => Some(true),
-            "false" => Some(false),
-            _ => None,
-        }
-    }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Tests
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1882,50 +1792,6 @@ mod tests {
         let body = gw.transform_response(&resp);
         let s = String::from_utf8(body).unwrap();
         assert!(s.contains("world"));
-    }
-
-    // ── MinimalJson tests ──────────────────────────────────────────────
-
-    #[test]
-    fn test_minimal_json_parse_string() {
-        let j = MinimalJson::parse(r#"{"key":"value"}"#).unwrap();
-        assert_eq!(j.get_str("key").unwrap(), "value");
-    }
-
-    #[test]
-    fn test_minimal_json_parse_number() {
-        let j = MinimalJson::parse(r#"{"n":42}"#).unwrap();
-        assert_eq!(j.get_u32("n").unwrap(), 42);
-    }
-
-    #[test]
-    fn test_minimal_json_parse_float() {
-        let j = MinimalJson::parse(r#"{"f":0.7}"#).unwrap();
-        assert!((j.get_f32("f").unwrap() - 0.7).abs() < 0.01);
-    }
-
-    #[test]
-    fn test_minimal_json_parse_bool() {
-        let j = MinimalJson::parse(r#"{"b":true}"#).unwrap();
-        assert_eq!(j.get_bool("b"), Some(true));
-    }
-
-    #[test]
-    fn test_minimal_json_missing_key() {
-        let j = MinimalJson::parse(r#"{"a":"b"}"#).unwrap();
-        assert!(j.get_str("missing").is_none());
-    }
-
-    #[test]
-    fn test_minimal_json_empty_object() {
-        let j = MinimalJson::parse("{}").unwrap();
-        assert!(j.get_str("anything").is_none());
-    }
-
-    #[test]
-    fn test_minimal_json_invalid() {
-        assert!(MinimalJson::parse("not json").is_err());
-        assert!(MinimalJson::parse("[1,2]").is_err());
     }
 
     // ── Helpers tests ──────────────────────────────────────────────────
