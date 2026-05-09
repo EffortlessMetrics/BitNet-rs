@@ -36,7 +36,8 @@ Arc 140V execution, NPU execution, or acceleration.
 `platform-probe-cli.json` is the CLI-emitted form of the same visibility-only
 platform probe. The 2026-05-08 refresh records OpenVINO 2026.1 visibility for
 CPU, GPU, and NPU on the 258V, identifies the Arc 140V OpenVINO GPU device, and
-keeps Level Zero absence explicit.
+records Arc 140V Level Zero loader visibility through `ze_loader.dll` device ID
+`0x64A0`.
 
 `cpu-phase-benchmark.json` converts strict CPU proof receipts into phase-aware
 CPU evidence. It may measure only the phases present in the supplied strict

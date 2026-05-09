@@ -283,7 +283,11 @@ impl BitNetCInferenceConfig {
         config.repetition_penalty = self.repetition_penalty;
 
         if self.seed != 0 {
-            config = config.with_seed(self.seed.into());
+            #[cfg(any(windows, target_pointer_width = "32"))]
+            let seed = u64::from(self.seed);
+            #[cfg(all(not(windows), target_pointer_width = "64"))]
+            let seed = self.seed;
+            config = config.with_seed(seed);
         }
 
         config

@@ -165,8 +165,9 @@ ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json
 
 It records OpenVINO 2026.1 visibility for `CPU`, `GPU`, and `NPU`, identifies
 the Arc 140V OpenVINO GPU device as `Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)`,
-and records Level Zero as unavailable in the current probe. Native OpenCL
-execution remains proven by the separate OpenCL smoke/parity receipts.
+and records Level Zero loader visibility for Arc 140V through `ze_loader.dll`
+device ID `0x64A0`. Native OpenCL execution remains proven by the separate
+OpenCL smoke/parity receipts.
 
 ### CLI Platform Probe
 

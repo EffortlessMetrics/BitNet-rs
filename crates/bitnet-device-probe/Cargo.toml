@@ -32,7 +32,7 @@ serde_json.workspace = true
 
 [features]
 default = []
-cpu = []
+cpu = ["level-zero-loader"]
 gpu = ["cuda"]
 cuda = ["dep:cudarc", "dep:libloading"]
 metal = []
@@ -41,6 +41,7 @@ vulkan = ["dep:ash"]
 npu = ["oneapi"]
 oneapi = ["dep:opencl3"]
 opencl = ["dep:opencl3", "dep:libloading"]
+level-zero-loader = ["dep:libloading"]
 wgpu-probe = ["dep:wgpu", "dep:pollster"]
 
 [[test]]
