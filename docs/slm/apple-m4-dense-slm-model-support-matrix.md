@@ -65,7 +65,7 @@ record all of the following:
 
 ### `qwen2.5-0.5b-instruct-q4_k_m`
 
-- State: `candidate`.
+- State: `supported`.
 - Source: `Qwen/Qwen2.5-0.5B-Instruct-GGUF`.
 - Revision: `9217f5db79a29953eb74d5343926648285ec7e67`.
 - File: `qwen2.5-0.5b-instruct-q4_k_m.gguf`.
@@ -76,14 +76,20 @@ record all of the following:
 - Tokenizer authority: `tokenizer.ggml.model = gpt2`,
   `tokenizer.ggml.pre = qwen2`.
 - Prompt template: `qwen2.5`.
-- Rust support status: `unsupported` for strict M4 answer execution.
-- M4 support status: reference-good storage candidate only.
+- Rust support status: `supported` through eager F32 dequantization for the
+  standard GGUF tensor types used by this artifact: `Q5_0`, `Q4_K`, and `Q6_K`.
+- M4 support status: supported non-default model for `apple-m4-cpu-neon` dense
+  SLM answers.
 - Cache policy: registered artifact may be fetched and verified for inspection,
-  but it is not the M4 default and must not be routed as a supported answer
-  model until Rust Q4_K_M execution passes the M4 quality gates.
-- Quality status: reference-runner prompt sanity passed in
-  `SLM-M4-002`; Rust M4 answer quality is not accepted.
-- Claim boundary: storage-conscious candidate; not a supported M4 answer path.
+  ask/chat/validate use through `--model-id qwen2.5-0.5b-instruct-q4_k_m`.
+  It is not the default model.
+- Quality status: reference-runner prompt sanity passed in `SLM-M4-002`; the
+  `M4-SLM-EX-006` Rust M4 quality corpus passes with `fallback_used = false`
+  and stable deterministic repeated prompt groups.
+- Claim boundary: storage-conscious dense Qwen Apple CPU/NEON answer path; it
+  does not prove BitNet, QK256, full Apple Metal inference, Neural Engine
+  execution, MPSGraph model inference, CUDA, x86, or broad Apple Silicon
+  performance.
 
 ### `qwen3-0.6b-q8_0`
 
@@ -187,13 +193,13 @@ record all of the following:
 
 ## Current Supported Set
 
-The supported M4 dense SLM set currently contains one model:
+The supported M4 dense SLM set currently contains two models:
 
 ```text
 qwen2.5-0.5b-instruct-q8_0
+qwen2.5-0.5b-instruct-q4_k_m
 ```
 
-There are no non-default supported dense SLMs yet. `M4-SLM-EX-006` is the first
-item allowed to add a second supported dense model, and only after the model
-passes the reference, Rust M4 quality, tokenizer, cache, and receipt gates in
-this matrix.
+`qwen2.5-0.5b-instruct-q8_0` remains the default. The Q4_K_M artifact is the
+first non-default supported dense SLM for the M4 lane because it passes the
+reference, Rust M4 quality, tokenizer, cache, and receipt gates in this matrix.

@@ -419,8 +419,8 @@ const SUPPORTED_MODELS: &[SupportedModel] = &[
         tokenizer_pre: "qwen2",
         chat_template: true,
         model_contract: None,
-        apple_m4_cpu_neon_supported: false,
-        support_note: "Reference-good and storage-preferred, but strict Rust execution remains unsupported.",
+        apple_m4_cpu_neon_supported: true,
+        support_note: "Rust-native Apple M4 CPU/NEON storage-conscious SLM artifact.",
     },
 ];
 
@@ -945,13 +945,19 @@ fn model_capability_summary(model: &SupportedModel) -> Option<VerifyModelCapabil
         .collect();
     capabilities.sort();
 
-    let supported_q8_cpu_neon =
-        model.quantization.eq_ignore_ascii_case("Q8_0") && model.apple_m4_cpu_neon_supported;
+    let supported_cpu_neon = model.apple_m4_cpu_neon_supported;
 
     let (id, cpu_oracle, accelerator_routes, permitted_claims, required_receipts, claim_boundary) =
-        if supported_q8_cpu_neon {
+        if supported_cpu_neon {
+            let capability_id = if model.quantization.eq_ignore_ascii_case("Q8_0") {
+                "qwen_dense_slm_q8_0"
+            } else if model.quantization.eq_ignore_ascii_case("Q4_K_M") {
+                "qwen_dense_slm_q4_k_m"
+            } else {
+                "qwen_dense_slm_supported"
+            };
             (
-                "qwen_dense_slm_q8_0",
+                capability_id,
                 "apple_m4_cpu_neon_slm_answer_lane",
                 vec![VerifyRouteSummary {
                     backend: "apple-m4-cpu-neon".to_string(),
@@ -1306,8 +1312,8 @@ mod tests {
     #[test]
     fn supported_manifest_keeps_q4_reference_boundary() {
         let model = supported_model("qwen2.5-0.5b-instruct-q4_k_m").unwrap();
-        assert!(!model.apple_m4_cpu_neon_supported);
-        assert!(model.support_note.contains("unsupported"));
+        assert!(model.apple_m4_cpu_neon_supported);
+        assert!(model.support_note.contains("storage-conscious"));
     }
 
     #[test]
@@ -1336,22 +1342,23 @@ mod tests {
     }
 
     #[test]
-    fn qwen_q4_capability_keeps_execution_unsupported() {
+    fn qwen_q4_capability_is_storage_conscious_answer_lane() {
         let model = supported_model("qwen2.5-0.5b-instruct-q4_k_m").unwrap();
         let result = verify_model(model, Path::new("/tmp/missing-qwen-q4.gguf")).unwrap();
         let capability = result.model_capability.expect("model capability summary");
 
         assert!(!result.passed);
-        assert_eq!(capability.id, "qwen_dense_slm_q4_k_m_storage_reference");
+        assert_eq!(capability.id, "qwen_dense_slm_q4_k_m");
         assert_eq!(capability.quantization, "Q4_K_M");
-        assert_eq!(capability.cpu_oracle, "none_strict_rust_execution_unsupported");
-        assert!(capability.accelerator_routes.is_empty());
-        assert!(capability.permitted_claims.contains(&"storage_reference".to_string()));
-        assert!(!capability.permitted_claims.contains(&"apple_m4_cpu_neon_slm_answer".to_string()));
-        assert!(
-            capability.required_receipts.contains(&"unsupported_execution_receipt".to_string())
-        );
-        assert!(capability.claim_boundary.contains("strict Rust execution remains unsupported"));
+        assert_eq!(capability.cpu_oracle, "apple_m4_cpu_neon_slm_answer_lane");
+        assert!(capability.accelerator_routes.iter().any(|route| {
+            route.backend == "apple-m4-cpu-neon"
+                && route.route == "dense_qwen_cpu_neon_slm"
+                && route.status == "answer_lane"
+        }));
+        assert!(capability.permitted_claims.contains(&"apple_m4_cpu_neon_slm_answer".to_string()));
+        assert!(capability.required_receipts.contains(&"slm_answer_receipt".to_string()));
+        assert!(capability.claim_boundary.contains("does not prove dense CUDA"));
     }
 
     #[test]

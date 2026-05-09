@@ -350,19 +350,19 @@ impl<'a> GgufReader<'a> {
         self.tensor_infos.iter().find_map(|info| match info.tensor_type {
             GgufTensorType::Q4_0
             | GgufTensorType::Q4_1
-            | GgufTensorType::Q5_0
             | GgufTensorType::Q5_1
             | GgufTensorType::Q8_1
             | GgufTensorType::Q2_K
             | GgufTensorType::Q3_K
-            | GgufTensorType::Q4_K
             | GgufTensorType::Q5_K
-            | GgufTensorType::Q6_K
             | GgufTensorType::Q8_K => Some((info.name.as_str(), info.tensor_type)),
             GgufTensorType::F32
             | GgufTensorType::F16
             | GgufTensorType::F64
+            | GgufTensorType::Q5_0
             | GgufTensorType::Q8_0
+            | GgufTensorType::Q4_K
+            | GgufTensorType::Q6_K
             | GgufTensorType::IQ2_S
             | GgufTensorType::I2_S => None,
         })
@@ -521,26 +521,27 @@ impl<'a> GgufReader<'a> {
                 GgufTensorType::I2_S | GgufTensorType::IQ2_S => has_i2s = true,
                 // F32, F16, and F64 are unquantized, so they don't set a quantization type
                 GgufTensorType::F32 | GgufTensorType::F16 | GgufTensorType::F64 => continue,
-                // Q8_0 is supported by the dense SLM loader as an eager F32
-                // dequantization path. It is not a BitNet quantization type,
-                // so keep the returned BitNet quantization as None.
-                GgufTensorType::Q8_0 => continue,
+                // These standard GGUF types are supported by the dense SLM
+                // loader as eager F32 dequantization paths. They are not
+                // BitNet quantization types, so keep the returned BitNet
+                // quantization as None.
+                GgufTensorType::Q8_0
+                | GgufTensorType::Q5_0
+                | GgufTensorType::Q4_K
+                | GgufTensorType::Q6_K => continue,
                 // All other GGUF quantization types are unsupported
                 GgufTensorType::Q4_0
                 | GgufTensorType::Q4_1
-                | GgufTensorType::Q5_0
                 | GgufTensorType::Q5_1
                 | GgufTensorType::Q8_1
                 | GgufTensorType::Q2_K
                 | GgufTensorType::Q3_K
-                | GgufTensorType::Q4_K
                 | GgufTensorType::Q5_K
-                | GgufTensorType::Q6_K
                 | GgufTensorType::Q8_K => {
                     tracing::warn!(
                         "Unsupported GGUF quantization type {:?} in tensor '{}'. \
-                        Only I2_S, IQ2_S, and FP32/FP16/FP64 are supported by BitNet-rs. \
-                        Standard GGUF quantized models are not compatible.",
+                        Only I2_S, IQ2_S, Q8_0, Q5_0, Q4_K, Q6_K, and FP32/FP16/FP64 are supported by BitNet-rs. \
+                        Other standard GGUF quantized models are not compatible.",
                         tensor_info.tensor_type,
                         tensor_info.name
                     );

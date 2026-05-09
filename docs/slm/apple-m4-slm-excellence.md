@@ -184,6 +184,13 @@ Add a second storage-conscious dense instruct model only if it passes:
 
 No model binaries may be committed.
 
+The second supported model is the registered Qwen2.5 0.5B Instruct Q4_K_M GGUF
+artifact. This keeps Qwen2.5 Q8_0 as the default while adding a smaller
+non-default model ID for storage-conscious M4 use. The support slice adds the
+standard GGUF dequantization needed by this artifact (`Q5_0`, `Q4_K`, and
+`Q6_K`), then requires both reference output sanity and Rust M4 quality receipts
+before marking the model supported.
+
 ### M4-SLM-EX-007: Quality Corpus 2.0
 
 Expand the local smoke surface without turning it into a benchmark suite:

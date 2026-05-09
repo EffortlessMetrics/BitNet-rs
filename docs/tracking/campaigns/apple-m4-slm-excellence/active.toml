@@ -238,7 +238,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EX-006"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-006-second-model"
 stackable = false
 review_mode = "codex_premerge"
@@ -255,9 +255,11 @@ commands = [
 ]
 allowed_paths = [
   "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
   "crates/**/tests/**",
   "ci/quality/**",
   "docs/slm/**",
+  "docs/reports/**",
   "docs/tracking/campaigns/apple-m4-slm-excellence/**",
   "docs/tracking/generated/**",
 ]

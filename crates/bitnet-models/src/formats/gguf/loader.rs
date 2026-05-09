@@ -1047,8 +1047,9 @@ impl FormatLoader for GgufLoader {
             {
                 return Err(BitNetError::Validation(format!(
                     "strict GGUF load rejects unsupported standard quantization {tensor_type:?} \
-                     in tensor '{tensor_name}'. Standard GGUF Q8_0/Q*_K support requires a \
-                     dedicated adapter/dequantization path; no compatibility fallback was used."
+                     in tensor '{tensor_name}'. Supported dense adapters currently cover Q8_0 \
+                     and the Qwen Q4_K_M tensor mix (Q5_0/Q4_K/Q6_K); no compatibility fallback \
+                     was used."
                 )));
             }
             self.validate_strict_tensor_authority(&reader, &model_config)?;
@@ -1289,6 +1290,225 @@ impl GgufLoader {
         }
 
         Ok(out)
+    }
+
+    fn checked_dense_quant_blocks(
+        bytes: &[u8],
+        dims: &[usize],
+        tensor_name: &str,
+        tensor_type: GgufTensorType,
+    ) -> Result<(usize, usize)> {
+        let elements = dims.iter().try_fold(1usize, |acc, dim| {
+            acc.checked_mul(*dim).ok_or_else(|| {
+                BitNetError::Validation(format!(
+                    "{tensor_type:?} tensor '{tensor_name}' shape {:?} overflows element count",
+                    dims
+                ))
+            })
+        })?;
+        let block_size = tensor_type.block_size();
+        let blocks = elements.div_ceil(block_size);
+        let expected = blocks.checked_mul(tensor_type.element_size()).ok_or_else(|| {
+            BitNetError::Validation(format!(
+                "{tensor_type:?} tensor '{tensor_name}' byte size overflows for {blocks} blocks"
+            ))
+        })?;
+
+        if bytes.len() < expected {
+            return Err(BitNetError::Validation(format!(
+                "{tensor_type:?} tensor '{tensor_name}' has {} bytes, expected at least {} for {} elements",
+                bytes.len(),
+                expected,
+                elements
+            )));
+        }
+
+        Ok((elements, blocks))
+    }
+
+    pub(super) fn dequantize_q5_0_to_f32(
+        bytes: &[u8],
+        dims: &[usize],
+        tensor_name: &str,
+    ) -> Result<Vec<f32>> {
+        let (elements, blocks) =
+            Self::checked_dense_quant_blocks(bytes, dims, tensor_name, GgufTensorType::Q5_0)?;
+
+        let mut out = Vec::with_capacity(elements);
+        for block_idx in 0..blocks {
+            let offset = block_idx * GgufTensorType::Q5_0.element_size();
+            let scale =
+                half::f16::from_bits(u16::from_le_bytes([bytes[offset], bytes[offset + 1]]))
+                    .to_f32();
+            let qh = u32::from_le_bytes([
+                bytes[offset + 2],
+                bytes[offset + 3],
+                bytes[offset + 4],
+                bytes[offset + 5],
+            ]);
+            let qs = &bytes[offset + 6..offset + 22];
+
+            let mut block = [0.0f32; 32];
+            for j in 0..16 {
+                let xh_0 = ((qh >> j) << 4) & 0x10;
+                let xh_1 = (qh >> (j + 12)) & 0x10;
+                let x0 = i32::from((qs[j] & 0x0f) | xh_0 as u8) - 16;
+                let x1 = i32::from((qs[j] >> 4) | xh_1 as u8) - 16;
+                block[j] = scale * x0 as f32;
+                block[j + 16] = scale * x1 as f32;
+            }
+
+            for value in block {
+                if out.len() == elements {
+                    break;
+                }
+                out.push(value);
+            }
+        }
+
+        Ok(out)
+    }
+
+    #[inline]
+    fn q4_k_scale_min(index: usize, scales: &[u8]) -> (u8, u8) {
+        if index < 4 {
+            (scales[index] & 63, scales[index + 4] & 63)
+        } else {
+            (
+                (scales[index + 4] & 0x0f) | ((scales[index - 4] >> 6) << 4),
+                (scales[index + 4] >> 4) | ((scales[index] >> 6) << 4),
+            )
+        }
+    }
+
+    pub(super) fn dequantize_q4_k_to_f32(
+        bytes: &[u8],
+        dims: &[usize],
+        tensor_name: &str,
+    ) -> Result<Vec<f32>> {
+        let (elements, blocks) =
+            Self::checked_dense_quant_blocks(bytes, dims, tensor_name, GgufTensorType::Q4_K)?;
+
+        let mut out = Vec::with_capacity(elements);
+        for block_idx in 0..blocks {
+            let offset = block_idx * GgufTensorType::Q4_K.element_size();
+            let d = half::f16::from_bits(u16::from_le_bytes([bytes[offset], bytes[offset + 1]]))
+                .to_f32();
+            let dmin =
+                half::f16::from_bits(u16::from_le_bytes([bytes[offset + 2], bytes[offset + 3]]))
+                    .to_f32();
+            let scales = &bytes[offset + 4..offset + 16];
+            let qs = &bytes[offset + 16..offset + 144];
+
+            let mut scale_index = 0usize;
+            let mut q_offset = 0usize;
+            for _ in (0..256).step_by(64) {
+                let (sc1, m1) = Self::q4_k_scale_min(scale_index, scales);
+                let d1 = d * f32::from(sc1);
+                let m1 = dmin * f32::from(m1);
+                let (sc2, m2) = Self::q4_k_scale_min(scale_index + 1, scales);
+                let d2 = d * f32::from(sc2);
+                let m2 = dmin * f32::from(m2);
+
+                let q = &qs[q_offset..q_offset + 32];
+                for code in q {
+                    if out.len() == elements {
+                        return Ok(out);
+                    }
+                    out.push(d1 * f32::from(code & 0x0f) - m1);
+                }
+                for code in q {
+                    if out.len() == elements {
+                        return Ok(out);
+                    }
+                    out.push(d2 * f32::from(code >> 4) - m2);
+                }
+
+                q_offset += 32;
+                scale_index += 2;
+            }
+        }
+
+        Ok(out)
+    }
+
+    pub(super) fn dequantize_q6_k_to_f32(
+        bytes: &[u8],
+        dims: &[usize],
+        tensor_name: &str,
+    ) -> Result<Vec<f32>> {
+        let (elements, blocks) =
+            Self::checked_dense_quant_blocks(bytes, dims, tensor_name, GgufTensorType::Q6_K)?;
+
+        let mut out = Vec::with_capacity(elements);
+        for block_idx in 0..blocks {
+            let offset = block_idx * GgufTensorType::Q6_K.element_size();
+            let ql = &bytes[offset..offset + 128];
+            let qh = &bytes[offset + 128..offset + 192];
+            let scales = &bytes[offset + 192..offset + 208];
+            let d = half::f16::from_bits(u16::from_le_bytes([
+                bytes[offset + 208],
+                bytes[offset + 209],
+            ]))
+            .to_f32();
+
+            let mut ql_offset = 0usize;
+            let mut qh_offset = 0usize;
+            let mut scale_offset = 0usize;
+            for _ in (0..256).step_by(128) {
+                let mut block = [0.0f32; 128];
+                for l in 0..32 {
+                    let is = l / 16;
+                    let qh_l = qh[qh_offset + l];
+                    let q1 = i32::from((ql[ql_offset + l] & 0x0f) | (((qh_l >> 0) & 3) << 4)) - 32;
+                    let q2 =
+                        i32::from((ql[ql_offset + l + 32] & 0x0f) | (((qh_l >> 2) & 3) << 4)) - 32;
+                    let q3 = i32::from((ql[ql_offset + l] >> 4) | (((qh_l >> 4) & 3) << 4)) - 32;
+                    let q4 =
+                        i32::from((ql[ql_offset + l + 32] >> 4) | (((qh_l >> 6) & 3) << 4)) - 32;
+
+                    let sc1 = scales[scale_offset + is] as i8 as f32;
+                    let sc2 = scales[scale_offset + is + 2] as i8 as f32;
+                    let sc3 = scales[scale_offset + is + 4] as i8 as f32;
+                    let sc4 = scales[scale_offset + is + 6] as i8 as f32;
+
+                    block[l] = d * sc1 * q1 as f32;
+                    block[l + 32] = d * sc2 * q2 as f32;
+                    block[l + 64] = d * sc3 * q3 as f32;
+                    block[l + 96] = d * sc4 * q4 as f32;
+                }
+
+                for value in block {
+                    if out.len() == elements {
+                        return Ok(out);
+                    }
+                    out.push(value);
+                }
+
+                ql_offset += 64;
+                qh_offset += 32;
+                scale_offset += 8;
+            }
+        }
+
+        Ok(out)
+    }
+
+    fn dequantize_supported_dense_standard_quant_to_f32(
+        bytes: &[u8],
+        dims: &[usize],
+        tensor_name: &str,
+        tensor_type: GgufTensorType,
+    ) -> Result<Vec<f32>> {
+        match tensor_type {
+            GgufTensorType::Q8_0 => Self::dequantize_q8_0_to_f32(bytes, dims, tensor_name),
+            GgufTensorType::Q5_0 => Self::dequantize_q5_0_to_f32(bytes, dims, tensor_name),
+            GgufTensorType::Q4_K => Self::dequantize_q4_k_to_f32(bytes, dims, tensor_name),
+            GgufTensorType::Q6_K => Self::dequantize_q6_k_to_f32(bytes, dims, tensor_name),
+            other => Err(BitNetError::Validation(format!(
+                "unsupported dense standard GGUF quantization {other:?} in tensor '{tensor_name}'"
+            ))),
+        }
     }
 
     fn f16_values_to_f32(bytes: &[u8], dims: &[usize], name: &str) -> Result<Vec<f32>> {
@@ -2092,16 +2312,39 @@ impl GgufLoader {
                 }
             }
 
-            if matches!(info.tensor_type, GgufTensorType::Q8_0) {
-                if is_layernorm_weight(&info.name) {
+            if matches!(
+                info.tensor_type,
+                GgufTensorType::Q8_0
+                    | GgufTensorType::Q5_0
+                    | GgufTensorType::Q4_K
+                    | GgufTensorType::Q6_K
+            ) {
+                if matches!(
+                    info.tensor_type,
+                    GgufTensorType::Q5_0 | GgufTensorType::Q4_K | GgufTensorType::Q6_K
+                ) && !dense_qwen_load
+                {
                     return Err(BitNetError::Validation(format!(
-                        "LayerNorm weight '{}' should not be quantized with Q8_0. \
-                        Dense GGUF adapters require normalization weights in FP16/FP32.",
-                        info.name
+                        "standard GGUF quantization {:?} in tensor '{}' is only enabled for \
+                         supported dense Qwen adapters; no compatibility fallback was used.",
+                        info.tensor_type, info.name
                     )));
                 }
 
-                let f32_data = Self::dequantize_q8_0_to_f32(data, &info.shape, &info.name)?;
+                if is_layernorm_weight(&info.name) {
+                    return Err(BitNetError::Validation(format!(
+                        "LayerNorm weight '{}' should not be quantized with {:?}. \
+                        Dense GGUF adapters require normalization weights in FP16/FP32.",
+                        info.name, info.tensor_type
+                    )));
+                }
+
+                let f32_data = Self::dequantize_supported_dense_standard_quant_to_f32(
+                    data,
+                    &info.shape,
+                    &info.name,
+                    info.tensor_type,
+                )?;
                 let mut want_shape = info.shape.clone();
 
                 if (Self::is_embedding_tensor(&info.name)
@@ -2115,8 +2358,8 @@ impl GgufLoader {
                     want_shape = vec![info.shape[1], info.shape[0]];
                 } else if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
                     debug!(
-                        "Q8_0 projection '{}' uses GGML [in, out] dims {:?} -> reshaping token-major data to [out, in]",
-                        info.name, info.shape
+                        "{:?} projection '{}' uses GGML [in, out] dims {:?} -> reshaping token-major data to [out, in]",
+                        info.tensor_type, info.name, info.shape
                     );
                     want_shape = vec![info.shape[1], info.shape[0]];
                 }
@@ -2128,8 +2371,9 @@ impl GgufLoader {
                     && let Ok(rms) = Self::rms_f32(&tensor)
                 {
                     debug!(
-                        "PROJ load: '{}' dtype=Q8_0->F32 shape={:?} rms={:.6}",
+                        "PROJ load: '{}' dtype={:?}->F32 shape={:?} rms={:.6}",
                         info.name,
+                        info.tensor_type,
                         tensor.dims(),
                         rms
                     );
