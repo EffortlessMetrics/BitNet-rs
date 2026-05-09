@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T20:57:42Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-036"
+event = "in_progress"
+previous_status = "planned"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-036-all-layer-plan"
+
+notes = [
+  "Started CUDA-DENSE-036 as the tracker contract for a dense GGUF all-layer execution-plan receipt after CUDA-DENSE-035 proved integrated layer-0 CUDA parity.",
+  "Scope is a governed receipt contract requiring future implementation to inspect every Qwen-family transformer layer, report per-layer route counts and graph differences, and list model-boundary gaps explicitly.",
+  "No all-layer implementation, hardware receipt evidence, dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, or CUDA kernel math claim is in scope.",
+]

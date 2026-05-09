@@ -2453,6 +2453,57 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-036"
+status = "pr_open"
+branch = "codex/cuda-dense-036-all-layer-plan"
+pr = 4331
+head_sha = "5a11b09b5f7cd754e232c61bbd5094af5b2b1073"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-035"]
+acceptance = "Define the governed dense GGUF all-layer execution-plan receipt contract after CUDA-DENSE-035 proved integrated layer-0 CUDA parity, requiring the future implementation to inspect every Qwen-family transformer layer, report per-layer routed op counts and any graph differences, preserve dense_regular_llm_cuda route separation, explicitly list model-boundary gaps such as token embeddings, final norm, LM head/logits, KV cache, and sampling, and keep dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer runtime, QK256, server, and CUDA kernel math claims false."
+commands = [
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "dense GGUF model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+  "new hardware receipt evidence",
+]
+may_claim = [
+  "CUDA-DENSE-036 defines the governed all-layer execution-plan receipt contract for dense GGUF Qwen-family artifacts after integrated layer-0 parity.",
+  "The future CUDA-DENSE-036 implementation must prove whether every transformer layer has the same CUDA-routable block plan or list layer-specific differences.",
+  "The contract requires model-boundary gaps to be explicit before any Qwen one-token proof can be claimed.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Qwen one-token, short decode, or chat works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+  "All-layer execution-plan receipt implementation or hardware evidence exists in this tracker-only PR.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-021"
 status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"
