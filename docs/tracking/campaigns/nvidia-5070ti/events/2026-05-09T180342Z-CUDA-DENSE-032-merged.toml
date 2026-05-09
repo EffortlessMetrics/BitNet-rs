@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T18:03:42Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-032"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-032-reference-harness-tracker"
+pr = 4316
+merge_sha = "4aadda0c74cc1fbc13b33ed79608dea2bb77c1a8"
+
+notes = [
+  "PR #4316 merged, defining the full dense GGUF one-layer CPU reference harness contract after CUDA-DENSE-031 made every one-layer op CUDA-routable.",
+  "CUDA-DENSE-032 remains docs/tracker control-plane only and keeps CUDA execution, dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, QK256, tokenizer, loader, transformer, server, and CUDA kernel math claims false.",
+]
