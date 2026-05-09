@@ -2373,10 +2373,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-026"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-026-attention-v-mix-fixture"
 pr = 4281
 head_sha = "b2ce397304f69a98b27b45cbf6b77f95600541b2"
+merge_sha = "2bcc96656dcc486a6851f00970a40038ecbab113"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

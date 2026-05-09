@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T13:28:49Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-026"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-026-attention-v-mix-fixture"
+pr = 4281
+head_sha = "b2ce397304f69a98b27b45cbf6b77f95600541b2"
+merge_sha = "2bcc96656dcc486a6851f00970a40038ecbab113"
+notes = [
+  "Merged dense GGUF attention V-mix CPU-reference fixture extraction.",
+  "The committed fixture records deterministic context-vector hashes and preserves the missing CUDA V-mix kernel gap for the next parity slice.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math remain out of scope.",
+]
