@@ -203,7 +203,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-029 | merged | Extract a CPU-reference dense GGUF `mlp_activation` fixture while leaving CUDA parity, dense GGUF inference, Qwen token/decode/chat, speedup, and full-residency claims false. |
 | CUDA-DENSE-030 | merged | Prove strict RTX 5070 Ti CUDA parity for the dense GGUF `mlp_activation` fixture while leaving route promotion, dense GGUF inference, Qwen token/decode/chat, speedup, and full-residency claims false. |
 | CUDA-DENSE-031 | merged | Promote verified dense GGUF `mlp_activation` to the one-layer planner route, yielding 14 dense CUDA-routable ops, zero unsupported strict CUDA ops, and `strict_cuda_ready=true` without claiming dense inference, Qwen token/decode/chat, speedup, or full residency. |
-| CUDA-DENSE-032 | in_progress | Implement the full layer-0 CPU reference harness so the next dense CUDA proof can compare the CUDA-routable one-layer plan against deterministic CPU-reference phase hashes and final output hash without claiming CUDA execution, dense inference, token/decode/chat, speedup, or full residency. |
+| CUDA-DENSE-032 | pr_open | Implement the full layer-0 CPU reference harness so the next dense CUDA proof can compare the CUDA-routable one-layer plan against deterministic CPU-reference phase hashes and final output hash without claiming CUDA execution, dense inference, token/decode/chat, speedup, or full residency. |
 
 ## Review Policy
 

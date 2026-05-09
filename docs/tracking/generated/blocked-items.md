@@ -123,7 +123,7 @@
 | intel-258v-platform | CPU258V-018 | CPU258V-017 | merged |
 | intel-258v-platform | CPU258V-019 | CPU258V-018 | merged |
 | intel-258v-platform | CPU258V-020 | CPU258V-019 | merged |
-| intel-258v-platform | CPU258V-021 | CPU258V-020 | ready |
+| intel-258v-platform | CPU258V-021 | CPU258V-020 | pr_open |
 | intel-258v-platform | LNL258V-004 | LNL258V-003, ARC140V-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
@@ -189,7 +189,7 @@
 | nvidia-5070ti | CUDA-DENSE-029 | CUDA-DENSE-028 | merged |
 | nvidia-5070ti | CUDA-DENSE-030 | CUDA-DENSE-029 | merged |
 | nvidia-5070ti | CUDA-DENSE-031 | CUDA-DENSE-030 | merged |
-| nvidia-5070ti | CUDA-DENSE-032 | CUDA-DENSE-031 | in_progress |
+| nvidia-5070ti | CUDA-DENSE-032 | CUDA-DENSE-031 | pr_open |
 | nvidia-5070ti | CUDA-DENSE-021 | CUDA-DENSE-020 | merged |
 | nvidia-5070ti | CUDA-DENSE-022 | CUDA-DENSE-021 | merged |
 | nvidia-5070ti | CUDA-DENSE-023 | CUDA-DENSE-022 | merged |
