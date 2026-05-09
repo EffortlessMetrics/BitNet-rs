@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T23:19:01Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-003"
+event = "pr_open"
+actor = "codex"
+pr = 4355
+head_sha = "9bbaa53af17bdbc7cdcc068db1df742b2680c718"
+
+notes = [
+  "Opened PR #4355 for M4-MODEL-003 Rust M4 quality-gate evidence.",
+  "The PR rejects smollm2-360m-instruct-q8_0 for Rust M4 support in this round and keeps M4-MODEL-004 blocked.",
+  "No runtime support, cache registration, model download, default-model change, BitNet claim, Metal claim, or broad performance claim is included.",
+]

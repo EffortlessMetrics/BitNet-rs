@@ -97,7 +97,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-003"
-status = "ready"
+status = "pr_open"
+pr = 4355
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-003-rust-m4-quality"
 stackable = false
 review_mode = "codex_premerge"
