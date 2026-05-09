@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T09:40:40Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-019"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-019-rope-route"
+pr = 4241
+head_sha = "a13164098a54007c381643ce91c037d5cf3ea99d"
+merge_sha = "77e9497324ce5a60cf4cdb8590f834204919bac4"
+notes = [
+  "PR #4241 merged CUDA-DENSE-019 into main.",
+  "The merged evidence routes dense GGUF RoPE ops through dense_regular_llm_cuda in the one-layer planner and receipt while preserving strict unsupported gaps for attention and MLP activation.",
+  "Dense GGUF inference, Qwen one-token/decode/chat, speedup, full-residency, server, QK256, tokenizer, loader, transformer, and BitNet packed proof claims remain false.",
+]
