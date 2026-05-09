@@ -42,7 +42,8 @@ GGUF that only proves structural validity or backend execution.
 | MODEL-ARTIFACT-006 | merged | PR #3979 audits official I2_S and `tdh111` tokenizer/pre-tokenizer authority, including GGUF metadata, external tokenizer assets, and why external authority does not itself promote an `answer_ready` artifact. |
 | MODEL-ARTIFACT-007 | merged | PR #3988 records Microsoft BitNet.cpp prompt-suite evidence for official I2_S with external `tokenizer.ggml.pre=llama-bpe`, promoting the artifact for backend gates only. |
 | BITNET-COMPAT-001 | merged | PR #4134 records upstream model/kernel compatibility constraints so `1bitLLM/bitnet_b1_58-3B` x86 `I2_S` cannot become answer, reference, parity, or speed authority. |
-| BITNET-CONTRACT-001 | in_progress | Add a model-contract matrix for BitNet-family artifacts so I2_S, TL1, TL2, unsupported 3B, and alternate-control evidence have separate claim boundaries. |
+| BITNET-CONTRACT-001 | merged | PR #4196 adds a model-contract matrix for BitNet-family artifacts so I2_S, TL1, TL2, unsupported 3B, and alternate-control evidence have separate claim boundaries. |
+| BITNET-CONTRACT-002 | in_progress | Wire the official Microsoft 2B I2_S contract into `bitnet model verify` so artifact verification exposes contract authority before backend routes run. |
 
 ## Review Policy
 

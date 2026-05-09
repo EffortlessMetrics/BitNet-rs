@@ -462,3 +462,56 @@ must_not_claim = [
   "Rust CPU or CUDA behavior changed.",
   "Any backend speedup is proven.",
 ]
+
+[[work_item]]
+id = "BITNET-CONTRACT-002"
+status = "in_progress"
+branch = "codex/bitnet-contract-002-model-verify"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["BITNET-CONTRACT-001"]
+acceptance = "Wire the official Microsoft BitNet 2B I2_S artifact into `bitnet model verify` and cache metadata so artifact verification exposes the model-contract summary, permitted claims, required receipts, and claim boundary without changing runtime inference, tokenizer, loader, transformer, QK256, CUDA, dense GGUF, server, or speed-claim behavior."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli model_cache -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model list --json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/model_cache.rs",
+  "docs/bitnet/BITNET_MODEL_CONTRACT.md",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "server inference",
+  "speed claims",
+]
+may_claim = [
+  "`bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s` can verify the official GGUF artifact identity.",
+  "The model verifier exposes the `microsoft_bitnet_b158_2b_4t_i2s` contract summary in JSON output and cache metadata.",
+  "Model verification distinguishes artifact identity and contract authority from backend execution, answer parity, benchmark, speedup, and full-residency claims.",
+]
+must_not_claim = [
+  "Model verification alone proves CPU or CUDA answer execution.",
+  "Model verification alone proves speedup or full CUDA residency.",
+  "Runtime tokenizer, prompt-template, loader, transformer, QK256, CUDA, dense GGUF, or server behavior changed.",
+  "Any backend speedup is proven.",
+]

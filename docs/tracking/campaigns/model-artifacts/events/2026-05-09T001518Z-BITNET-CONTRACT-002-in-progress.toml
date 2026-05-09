@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T00:15:18Z"
+campaign = "model-artifacts"
+item = "BITNET-CONTRACT-002"
+event = "in_progress"
+actor = "codex"
+branch = "codex/bitnet-contract-002-model-verify"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Start wiring the official Microsoft 2B I2_S contract into `bitnet model verify`.",
+  "The verifier should expose artifact identity, model-contract summary, permitted claims, required receipts, and claim boundary before backend routes run.",
+  "The work must not change runtime inference, tokenizer, loader, prompt-template, transformer, QK256, CUDA, dense GGUF, server, quality-gate, or speed-claim behavior.",
+]

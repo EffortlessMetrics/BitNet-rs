@@ -1,6 +1,7 @@
 //! User-facing model cache management.
 
 use anyhow::{Context, Result, anyhow};
+use bitnet_models::model_contracts::{BitnetModelContract, find_bitnet_model_contract};
 use clap::{Args, Subcommand};
 use futures::StreamExt;
 use humansize::{DECIMAL, format_size};
@@ -106,6 +107,7 @@ pub enum ModelAction {
 #[derive(Debug, Clone, Copy, Serialize)]
 struct SupportedModel {
     id: &'static str,
+    aliases: &'static [&'static str],
     display_name: &'static str,
     repo: &'static str,
     revision: &'static str,
@@ -118,6 +120,7 @@ struct SupportedModel {
     tokenizer_model: &'static str,
     tokenizer_pre: &'static str,
     chat_template: bool,
+    model_contract: Option<&'static str>,
     apple_m4_cpu_neon_supported: bool,
     support_note: &'static str,
 }
@@ -144,6 +147,32 @@ struct VerifyResult {
     actual_bytes: Option<u64>,
     passed: bool,
     model: SupportedModel,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    model_contract: Option<VerifyContractSummary>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct VerifyContractSummary {
+    id: String,
+    model_family: String,
+    artifact_format: String,
+    artifact_id: Option<String>,
+    kernel_family: String,
+    status: String,
+    tokenizer_authority: String,
+    prompt_authority: String,
+    cpu_oracle: String,
+    accelerator_routes: Vec<VerifyRouteSummary>,
+    permitted_claims: Vec<String>,
+    required_receipts: Vec<String>,
+    claim_boundary: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct VerifyRouteSummary {
+    backend: String,
+    route: String,
+    status: String,
 }
 
 #[cfg(feature = "full-cli")]
@@ -281,7 +310,32 @@ pub(crate) fn apple_m4_slm_cache_status_json(
 
 const SUPPORTED_MODELS: &[SupportedModel] = &[
     SupportedModel {
+        id: "microsoft-bitnet-b1.58-2B-4T-i2s",
+        aliases: &[
+            "microsoft-bitnet-b1.58-2b-4t-i2s",
+            "microsoft_bitnet_b158_2b_4t_gguf_i2s_current",
+            "microsoft/bitnet-b1.58-2B-4T-gguf",
+            "ggml-model-i2_s.gguf",
+        ],
+        display_name: "Microsoft BitNet-b1.58 2B 4T I2_S",
+        repo: "microsoft/bitnet-b1.58-2B-4T-gguf",
+        revision: "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+        filename: "ggml-model-i2_s.gguf",
+        url: "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/a1f2f1c765812aa8af3f6eda4a313707064bba15/ggml-model-i2_s.gguf",
+        sha256: "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        bytes: 1_187_801_280,
+        architecture: "bitnet_b1_58",
+        quantization: "I2_S/QK256",
+        tokenizer_model: "gpt2",
+        tokenizer_pre: "llama-bpe-external",
+        chat_template: true,
+        model_contract: Some("microsoft_bitnet_b158_2b_4t_i2s"),
+        apple_m4_cpu_neon_supported: false,
+        support_note: "Answer-ready BitNet artifact for backend gates when paired with external llama-bpe tokenizer authority and bitnetcpp-answer prompt authority. RTX 5070 Ti CUDA and x86 CPU routes require their own strict receipts; speedup_claim remains false unless profile-qualified.",
+    },
+    SupportedModel {
         id: "qwen2.5-0.5b-instruct-q8_0",
+        aliases: &[],
         display_name: "Qwen2.5 0.5B Instruct Q8_0",
         repo: "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
         revision: "9217f5db79a29953eb74d5343926648285ec7e67",
@@ -294,11 +348,13 @@ const SUPPORTED_MODELS: &[SupportedModel] = &[
         tokenizer_model: "gpt2",
         tokenizer_pre: "qwen2",
         chat_template: true,
+        model_contract: None,
         apple_m4_cpu_neon_supported: true,
         support_note: "Rust-native Apple M4 CPU/NEON SLM baseline artifact.",
     },
     SupportedModel {
         id: "qwen2.5-0.5b-instruct-q4_k_m",
+        aliases: &[],
         display_name: "Qwen2.5 0.5B Instruct Q4_K_M",
         repo: "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
         revision: "9217f5db79a29953eb74d5343926648285ec7e67",
@@ -311,6 +367,7 @@ const SUPPORTED_MODELS: &[SupportedModel] = &[
         tokenizer_model: "gpt2",
         tokenizer_pre: "qwen2",
         chat_template: true,
+        model_contract: None,
         apple_m4_cpu_neon_supported: false,
         support_note: "Reference-good and storage-preferred, but strict Rust execution remains unsupported.",
     },
@@ -422,6 +479,10 @@ fn verify_model_command(
         println!("{}", serde_json::to_string_pretty(&result)?);
     } else if result.passed {
         println!("verified {} at {}", model.id, path.display());
+        if let Some(contract) = &result.model_contract {
+            println!("contract: {} ({}, {})", contract.id, contract.kernel_family, contract.status);
+            println!("claim boundary: {}", contract.claim_boundary);
+        }
     } else {
         println!("verification failed for {} at {}", model.id, path.display());
         eprintln!("{}", verify_failure_guidance(&cache_root, model, &path, &result));
@@ -442,14 +503,15 @@ fn list_models(cache_dir: Option<PathBuf>, json: bool) -> Result<()> {
     }
 
     println!("Cache: {}", cache_root.display());
-    println!("{:<34} {:<13} {:<12} {:<11} Artifact", "ID", "Cache", "Quant", "M4 CPU");
-    println!("{}", "-".repeat(92));
+    println!("{:<40} {:<13} {:<12} {:<11} Contract", "ID", "Cache", "Quant", "M4 CPU");
+    println!("{}", "-".repeat(104));
     for status in statuses {
         let m4_cpu = if status.model.apple_m4_cpu_neon_supported { "supported" } else { "no" };
         let cache_state = cache_state_label(&status);
+        let contract = status.model.model_contract.unwrap_or("-");
         println!(
-            "{:<34} {:<13} {:<12} {:<11} {}",
-            status.model.id, cache_state, status.model.quantization, m4_cpu, status.model.filename,
+            "{:<40} {:<13} {:<12} {:<11} {}",
+            status.model.id, cache_state, status.model.quantization, m4_cpu, contract,
         );
     }
     Ok(())
@@ -518,10 +580,18 @@ fn prune_models(
 }
 
 fn supported_model(id: &str) -> Result<&'static SupportedModel> {
-    SUPPORTED_MODELS.iter().find(|model| model.id == id).ok_or_else(|| {
-        let known = SUPPORTED_MODELS.iter().map(|model| model.id).collect::<Vec<_>>().join(", ");
-        anyhow!("unsupported model `{id}`. Supported models: {known}")
-    })
+    let needle = id.to_ascii_lowercase();
+    SUPPORTED_MODELS
+        .iter()
+        .find(|model| {
+            model.id.eq_ignore_ascii_case(id)
+                || model.aliases.iter().any(|alias| alias.to_ascii_lowercase() == needle)
+        })
+        .ok_or_else(|| {
+            let known =
+                SUPPORTED_MODELS.iter().map(|model| model.id).collect::<Vec<_>>().join(", ");
+            anyhow!("unsupported model `{id}`. Supported models: {known}")
+        })
 }
 
 fn resolve_cache_root(cache_dir: Option<PathBuf>) -> Result<PathBuf> {
@@ -670,7 +740,51 @@ fn verify_model(model: &SupportedModel, path: &Path) -> Result<VerifyResult> {
         actual_bytes,
         passed,
         model: *model,
+        model_contract: model_contract_summary(model)?,
     })
+}
+
+fn model_contract_summary(model: &SupportedModel) -> Result<Option<VerifyContractSummary>> {
+    let Some(label) = model.model_contract else {
+        return Ok(None);
+    };
+    let contract = find_bitnet_model_contract(label)
+        .ok_or_else(|| anyhow!("model `{}` references unknown contract `{label}`", model.id))?;
+    Ok(Some(contract_summary(contract)))
+}
+
+fn contract_summary(contract: &BitnetModelContract) -> VerifyContractSummary {
+    VerifyContractSummary {
+        id: contract.id.to_string(),
+        model_family: contract.model_family.to_string(),
+        artifact_format: contract.artifact_format.as_str().to_string(),
+        artifact_id: contract.artifact_id.map(str::to_string),
+        kernel_family: contract.kernel_family.as_str().to_string(),
+        status: contract.status.as_str().to_string(),
+        tokenizer_authority: contract.tokenizer_authority.to_string(),
+        prompt_authority: contract.prompt_authority.to_string(),
+        cpu_oracle: contract.cpu_oracle.to_string(),
+        accelerator_routes: contract
+            .accelerator_routes
+            .iter()
+            .map(|route| VerifyRouteSummary {
+                backend: route.backend.to_string(),
+                route: route.route.to_string(),
+                status: route.status.to_string(),
+            })
+            .collect(),
+        permitted_claims: contract
+            .permitted_claims
+            .iter()
+            .map(|claim| claim.as_str().to_string())
+            .collect(),
+        required_receipts: contract
+            .required_receipts
+            .iter()
+            .map(|receipt| (*receipt).to_string())
+            .collect(),
+        claim_boundary: contract.claim_boundary.to_string(),
+    }
 }
 
 fn compute_sha256(path: &Path) -> Result<String> {
@@ -714,6 +828,7 @@ fn write_cache_metadata(
             "pre_tokenizer": model.tokenizer_pre,
             "chat_template_present": model.chat_template,
         },
+        "model_contract": &verify.model_contract,
         "runtime_support": {
             "apple_m4_cpu_neon": model.apple_m4_cpu_neon_supported,
             "note": model.support_note,
@@ -749,6 +864,7 @@ fn print_fetch_result(status: &str, verify: &VerifyResult, json: bool) -> Result
         "verified": verify.passed,
         "apple_m4_cpu_neon_supported": verify.model.apple_m4_cpu_neon_supported,
         "support_note": verify.model.support_note,
+        "model_contract": &verify.model_contract,
     });
     if json {
         println!("{}", serde_json::to_string_pretty(&payload)?);
@@ -827,6 +943,46 @@ mod tests {
         assert_eq!(model.sha256.len(), 64);
         assert_eq!(model.bytes, 675_710_816);
         assert_eq!(model.tokenizer_pre, "qwen2");
+    }
+
+    #[test]
+    fn supported_manifest_contains_official_bitnet_i2s_contract_artifact() {
+        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s").unwrap();
+        assert_eq!(model.repo, "microsoft/bitnet-b1.58-2B-4T-gguf");
+        assert_eq!(model.filename, "ggml-model-i2_s.gguf");
+        assert_eq!(
+            model.sha256,
+            "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+        );
+        assert_eq!(model.bytes, 1_187_801_280);
+        assert_eq!(model.model_contract, Some("microsoft_bitnet_b158_2b_4t_i2s"));
+        assert_eq!(model.tokenizer_pre, "llama-bpe-external");
+    }
+
+    #[test]
+    fn supported_model_lookup_accepts_official_bitnet_aliases() {
+        let by_alias = supported_model("microsoft_bitnet_b158_2b_4t_gguf_i2s_current").unwrap();
+        let by_case = supported_model("MICROSOFT-BITNET-B1.58-2B-4T-I2S").unwrap();
+
+        assert_eq!(by_alias.id, "microsoft-bitnet-b1.58-2B-4T-i2s");
+        assert_eq!(by_case.id, "microsoft-bitnet-b1.58-2B-4T-i2s");
+    }
+
+    #[test]
+    fn verify_model_includes_bitnet_contract_summary() {
+        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s").unwrap();
+        let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf")).unwrap();
+        let contract = result.model_contract.expect("model contract summary");
+
+        assert!(!result.passed);
+        assert_eq!(contract.id, "microsoft_bitnet_b158_2b_4t_i2s");
+        assert_eq!(contract.kernel_family, "i2_s_qk256");
+        assert_eq!(contract.status, "reference_ready");
+        assert_eq!(contract.tokenizer_authority, "external_llama_bpe");
+        assert_eq!(contract.prompt_authority, "bitnetcpp-answer");
+        assert!(contract.accelerator_routes.iter().any(|route| route.route == "bitnet_qk256_cuda"));
+        assert!(contract.permitted_claims.contains(&"answer_ready".to_string()));
+        assert!(contract.required_receipts.contains(&"execution_plan".to_string()));
     }
 
     #[test]
