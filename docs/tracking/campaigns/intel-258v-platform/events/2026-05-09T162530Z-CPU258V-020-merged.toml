@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T16:25:30Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-020"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4295
+merge_sha = "929c337a9bb1d3484ddda0201a5633208f38d087"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-020-first-token-divergence-classifier"
+summary = "Merged CPU258V-020 after classifying the current first-token divergence boundary for fixed 258V prompts."
+notes = [
+  "The live 258V classifier artifact records four inconclusive cases because external reference generated-token IDs and first-token logits remain unavailable.",
+  "Generated text matches after trimming for the fixed prompts, and the scalar-vs-AVX2 answer parity receipt remains green.",
+  "The merged PR does not claim generated-token-ID parity, first-token logits parity, answer quality, speed, Arc 140V execution, Intel NPU execution, or QK256 decode correctness.",
+  "CPU258V-021 is ready to instrument or script the external reference boundary so generated-token IDs and first-token logits/top-k can be captured or blocked with precise evidence.",
+]
