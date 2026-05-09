@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T03:22:03Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-001"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-ux-receipts-explain"
+pr = 4185
+head_sha = "22d4b631ffdafb0056481782b10bace2493c5b09"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4185 for the operator-facing `bitnet receipts explain` command.",
+  "The PR keeps receipt explanation separate from schema-specific validation and does not change inference, tokenizer, loader, transformer, kernel, benchmark, or server behavior.",
+  "Claim boundaries remain closed for dense GGUF inference, BitNet packed proof from dense CUDA receipts, speedup, and full CUDA residency.",
+]

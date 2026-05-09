@@ -128,7 +128,7 @@ use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
 use commands::{
     AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, DenseGgufLinearParityCommand,
-    InferenceCommand, InspectCommand, ReferenceCompareCommand, ServeCommand,
+    InferenceCommand, InspectCommand, ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -583,6 +583,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Extract one dense GGUF linear fixture and run strict CUDA parity diagnostics
     DenseGgufLinearParity(Box<DenseGgufLinearParityCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Explain BitNet-rs JSON receipts and claim boundaries
+    Receipts(ReceiptsCommand),
 
     #[cfg(feature = "full-cli")]
     /// Run multiple SLM prompts in one warm process with one model/tokenizer load
@@ -1348,6 +1352,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::ReferenceCompare(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufLinearParity(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Receipts(cmd)) => cmd.execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::SlmWarmSession {
             model,
