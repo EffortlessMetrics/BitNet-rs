@@ -13,6 +13,7 @@ use bitnet_receipts::{
     validate_dense_gguf_attention_softmax_fixture_receipt_json,
     validate_dense_gguf_attention_v_mix_cuda_parity_receipt_json,
     validate_dense_gguf_attention_v_mix_fixture_receipt_json,
+    validate_dense_gguf_kv_cache_policy_receipt_json,
     validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_fixture_extraction_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
@@ -262,6 +263,18 @@ fn committed_dense_gguf_model_boundary_fixtures_receipt_validates() {
     .unwrap();
 
     validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_gguf_kv_cache_policy_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-kv-cache-policy-qwen25-q8.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap();
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
@@ -1106,6 +1119,58 @@ fn dense_gguf_model_boundary_fixtures_rejects_bitnet_proof_claim() {
 
     let err =
         validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_kv_cache_policy_receipt_validates_without_inference_claims() {
+    let receipt = valid_dense_gguf_kv_cache_policy_receipt();
+
+    validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_kv_cache_policy_rejects_runtime_residency_claim() {
+    let mut receipt = valid_dense_gguf_kv_cache_policy_receipt();
+    receipt["claim_boundary"]["kv_cache_cuda_residency_claimed"] = json!(true);
+    receipt["kv_cache_policy"]["kv_cache_cuda_residency_claimed"] = json!(true);
+
+    let err = validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("kv_cache_cuda_residency_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_kv_cache_policy_rejects_sampling_claim() {
+    let mut receipt = valid_dense_gguf_kv_cache_policy_receipt();
+    receipt["claim_boundary"]["sampling_integration_claimed"] = json!(true);
+    receipt["kv_cache_policy"]["sampling_integration_claimed"] = json!(true);
+
+    let err = validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("sampling_integration_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_kv_cache_policy_rejects_bad_byte_math() {
+    let mut receipt = valid_dense_gguf_kv_cache_policy_receipt();
+    receipt["kv_cache_policy"]["kv_bytes_per_token_all_layers"] = json!(1234);
+
+    let err = validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("kv_bytes_per_token_all_layers"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_kv_cache_policy_rejects_bitnet_proof_claim() {
+    let mut receipt = valid_dense_gguf_kv_cache_policy_receipt();
+    receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+    receipt["kv_cache_policy"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    let err = validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap_err().to_string();
 
     assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
 }
@@ -2546,6 +2611,192 @@ fn valid_dense_gguf_model_boundary_fixtures_receipt() -> Value {
             "qwen_short_decode_cuda_claimed": false,
             "qwen_chat_cuda_claimed": false,
             "kv_cache_policy_claimed": false,
+            "sampling_integration_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    })
+}
+
+fn valid_dense_gguf_kv_cache_policy_receipt() -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_kv_cache_policy",
+        "artifact_path": "target/bitnet/receipts/dense-gguf-kv-cache-policy.json",
+        "claim": "dense_gguf_kv_cache_policy_recorded",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-09T00:00:00Z",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity(),
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "file": "synthetic-dense-gguf-kv-cache-policy",
+            "sha256": "0".repeat(64)
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_cuda_kv_cache_policy_route",
+            "quantization_family": "dense_gguf_q8_0_f16_kv_cache_policy_contract",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": {
+            "planner_version": "cuda-planner-004",
+            "model_family": "qwen",
+            "quantization": "dense_fp16",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "cuda_bitnet_qk256_ops": 0,
+            "cuda_dense_regular_llm_ops": 1,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 1,
+            "cuda_ops": 1,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": 23,
+            "metadata_count": 4,
+            "required_roles_present": true,
+            "strict_descriptor_complete": true,
+            "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+            "quantization_families": ["f32", "q8_0"],
+            "bitnet_packed_marker_found": false,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "kv_cache_policy": {
+            "schema": 1,
+            "policy_id": "dense_gguf_kv_cache_policy_qwen_layers1_ctx5_kv1_k2_v2",
+            "policy_scope": "dense_qwen_prefill_decode_boundary",
+            "planned_residency": "cuda_required_for_strict_dense_cuda",
+            "observed_residency": "not_allocated_policy_only",
+            "transformer_layers_total": 1,
+            "context_length": 5,
+            "seq_len": 4,
+            "decode_steps": 1,
+            "q_heads": 2,
+            "kv_heads": 1,
+            "heads_per_kv_group": 2,
+            "key_head_dim": 2,
+            "value_head_dim": 2,
+            "kv_element_dtype": "f16",
+            "kv_element_bytes": 2,
+            "kv_values_per_token_per_layer": 4,
+            "kv_bytes_per_token_per_layer": 8,
+            "kv_bytes_per_token_all_layers": 8,
+            "metadata_sources": {
+                "transformer_layers": "inferred_from_dense_layer_descriptors",
+                "context_length": "seq_len_plus_decode_steps",
+                "q_heads": "qwen3.attention.head_count",
+                "kv_heads": "qwen3.attention.head_count_kv",
+                "key_head_dim": "qwen3.attention.key_length",
+                "value_head_dim": "qwen3.attention.key_length_default_value_dim"
+            },
+            "prefill": {
+                "write_tokens": 4,
+                "writes_keys": true,
+                "writes_values": true,
+                "write_bytes_estimate": 32,
+                "write_path": "qkv_projection_to_cuda_kv_cache",
+                "measured": false
+            },
+            "decode": {
+                "decode_steps": 1,
+                "read_tokens_per_step": 4,
+                "read_bytes_per_step_estimate": 32,
+                "write_tokens_per_step": 1,
+                "write_bytes_per_step_estimate": 8,
+                "read_path": "cuda_kv_cache_to_attention",
+                "write_path": "qkv_projection_to_cuda_kv_cache",
+                "measured": false
+            },
+            "max_context": {
+                "tokens": 5,
+                "bytes_estimate": 40
+            },
+            "kv_cache_policy_claimed": true,
+            "runtime_kv_cache_allocated": false,
+            "kv_cache_cuda_residency_claimed": false,
+            "estimated_bytes_only": true,
+            "transfer_bytes_measured": false,
+            "transfer_timing_measured": false,
+            "fallback_used": false,
+            "sampling_integration_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "remaining_model_boundary_gaps": {
+            "schema": 1,
+            "gaps": [
+                {
+                    "gap": "sampling",
+                    "status": "not_governed_by_kv_cache_policy",
+                    "required_next_proof": "dense_gguf_sampling_policy_receipt",
+                    "blocks_qwen_one_token": true,
+                    "blocks_qwen_short_decode": true,
+                    "blocks_qwen_chat": true
+                }
+            ],
+            "kv_cache_policy_claimed": true,
+            "sampling_integration_claimed": false,
+            "qwen_one_token_cuda_blocked": true,
+            "qwen_short_decode_cuda_blocked": true,
+            "qwen_chat_cuda_blocked": true,
+            "next_required_proof": "dense_gguf_sampling_policy_receipt",
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_cpu_reference_claimed": true,
+            "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+            "dense_gguf_all_layer_execution_plan_claimed": true,
+            "dense_gguf_model_boundary_fixtures_claimed": true,
+            "kv_cache_policy_claimed": true,
+            "kv_cache_cuda_residency_claimed": false,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
             "sampling_integration_claimed": false,
             "bitnet_packed_i2s_qk256_proof": false,
             "speedup_claim": false,

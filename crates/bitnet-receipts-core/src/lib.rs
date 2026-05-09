@@ -195,6 +195,14 @@ pub const DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND: &str =
 /// CUDA residency, or BitNet packed I2_S/QK256 proof.
 pub const DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND: &str =
     "dense_gguf_model_boundary_fixtures";
+
+/// Artifact kind for dense GGUF KV-cache policy receipts.
+///
+/// This receipt records the governed KV-cache shape, planned residency, and
+/// byte estimates needed before Qwen one-token CUDA proof. It is not KV-cache
+/// allocation, token generation, speedup, full CUDA residency, or BitNet
+/// packed I2_S/QK256 proof.
+pub const DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND: &str = "dense_gguf_kv_cache_policy";
 const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
     &["attention_softmax", "attention_v_mix", "mlp_activation"];
 const DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER: &[&str] =
@@ -4851,6 +4859,281 @@ pub fn validate_dense_gguf_model_boundary_fixtures_receipt_json(receipt: &Value)
     Ok(())
 }
 
+/// Validate dense GGUF KV-cache policy evidence.
+///
+/// This artifact records model-derived KV-cache dimensions, the strict CUDA
+/// residency policy, and estimated prefill/decode bytes. It does not allocate a
+/// runtime KV cache, generate tokens, integrate sampling, claim speedup, claim
+/// full CUDA residency, or prove BitNet packed I2_S/QK256 execution.
+pub fn validate_dense_gguf_kv_cache_policy_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_kv_cache_policy_recorded")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_null(receipt, "error")?;
+
+    let cuda = object_field(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_positive_u64(cuda, "device_count")?;
+    require_cuda_device_index(cuda)?;
+    require_rtx_5070_ti_name(cuda, "device_name")?;
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_string_non_empty_not_tbd(cuda, "driver_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_runtime_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_toolkit_version")?;
+    require_string_non_empty_not_tbd(cuda, "nvrtc_version")?;
+    require_positive_u64(cuda, "vram_bytes")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(execution_path, "kernel_family", "dense_cuda_kv_cache_policy_route")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "kernel_family")?,
+        "execution_path.kernel_family",
+    )?;
+    require_string_non_empty(execution_path, "quantization_family")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "quantization_family")?,
+        "execution_path.quantization_family",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    validate_dense_one_layer_gap_execution_plan(receipt)?;
+    let plan = object_field(receipt, "execution_plan")?;
+    require_u64_eq(plan, "total_ops", 1)?;
+    require_u64_eq(plan, "cuda_ops", 1)?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 1)?;
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_positive_u64(descriptor, "tensor_count")?;
+    require_positive_u64(descriptor, "metadata_count")?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_string_non_empty(descriptor, "dense_cuda_route_status")?;
+    reject_bitnet_packed_marker(
+        required_string(descriptor, "dense_cuda_route_status")?,
+        "descriptor_coverage.dense_cuda_route_status",
+    )?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+
+    let policy = object_field(receipt, "kv_cache_policy")?;
+    require_u64_eq(policy, "schema", 1)?;
+    reject_bitnet_packed_marker(
+        required_string(policy, "policy_id")?,
+        "kv_cache_policy.policy_id",
+    )?;
+    require_string_eq(policy, "policy_scope", "dense_qwen_prefill_decode_boundary")?;
+    require_string_eq(policy, "planned_residency", "cuda_required_for_strict_dense_cuda")?;
+    require_string_eq(policy, "observed_residency", "not_allocated_policy_only")?;
+    require_string_eq(policy, "kv_element_dtype", "f16")?;
+    let bytes_per_element = required_u64(policy, "kv_element_bytes")?;
+    if bytes_per_element != 2 {
+        return Err(anyhow!("kv_cache_policy.kv_element_bytes must be 2 for f16 policy"));
+    }
+
+    let transformer_layers = required_u64(policy, "transformer_layers_total")?;
+    let context_length = required_u64(policy, "context_length")?;
+    let seq_len = required_u64(policy, "seq_len")?;
+    let decode_steps = required_u64(policy, "decode_steps")?;
+    let q_heads = required_u64(policy, "q_heads")?;
+    let kv_heads = required_u64(policy, "kv_heads")?;
+    let key_head_dim = required_u64(policy, "key_head_dim")?;
+    let value_head_dim = required_u64(policy, "value_head_dim")?;
+    let heads_per_kv_group = required_u64(policy, "heads_per_kv_group")?;
+    if transformer_layers == 0
+        || context_length == 0
+        || seq_len == 0
+        || decode_steps == 0
+        || q_heads == 0
+        || kv_heads == 0
+        || key_head_dim == 0
+        || value_head_dim == 0
+        || heads_per_kv_group == 0
+    {
+        return Err(anyhow!("kv_cache_policy dimensions must be positive"));
+    }
+    if q_heads % kv_heads != 0 || q_heads / kv_heads != heads_per_kv_group {
+        return Err(anyhow!(
+            "kv_cache_policy q_heads must be divisible by kv_heads and match heads_per_kv_group"
+        ));
+    }
+    if context_length < seq_len {
+        return Err(anyhow!("kv_cache_policy context_length must cover seq_len"));
+    }
+
+    let values_per_token_per_layer = required_u64(policy, "kv_values_per_token_per_layer")?;
+    let expected_values = kv_heads
+        .checked_mul(
+            key_head_dim
+                .checked_add(value_head_dim)
+                .ok_or_else(|| anyhow!("kv_cache_policy key/value dimension sum overflowed"))?,
+        )
+        .ok_or_else(|| anyhow!("kv_cache_policy values per token overflowed"))?;
+    if values_per_token_per_layer != expected_values {
+        return Err(anyhow!(
+            "kv_cache_policy kv_values_per_token_per_layer must equal kv_heads * (key_head_dim + value_head_dim)"
+        ));
+    }
+    let bytes_per_token_per_layer = required_u64(policy, "kv_bytes_per_token_per_layer")?;
+    let expected_bytes_per_token_per_layer = values_per_token_per_layer
+        .checked_mul(bytes_per_element)
+        .ok_or_else(|| anyhow!("kv_cache_policy bytes per token per layer overflowed"))?;
+    if bytes_per_token_per_layer != expected_bytes_per_token_per_layer {
+        return Err(anyhow!(
+            "kv_cache_policy kv_bytes_per_token_per_layer must equal kv_values_per_token_per_layer * kv_element_bytes"
+        ));
+    }
+    let bytes_per_token_all_layers = required_u64(policy, "kv_bytes_per_token_all_layers")?;
+    let expected_bytes_all_layers = bytes_per_token_per_layer
+        .checked_mul(transformer_layers)
+        .ok_or_else(|| anyhow!("kv_cache_policy bytes per token all layers overflowed"))?;
+    if bytes_per_token_all_layers != expected_bytes_all_layers {
+        return Err(anyhow!(
+            "kv_cache_policy kv_bytes_per_token_all_layers must equal per-layer bytes times layer count"
+        ));
+    }
+
+    let metadata = object_field(policy, "metadata_sources")?;
+    require_string_non_empty(metadata, "transformer_layers")?;
+    require_string_non_empty(metadata, "context_length")?;
+    require_string_non_empty(metadata, "q_heads")?;
+    require_string_non_empty(metadata, "kv_heads")?;
+    require_string_non_empty(metadata, "key_head_dim")?;
+    require_string_non_empty(metadata, "value_head_dim")?;
+
+    let prefill = object_field(policy, "prefill")?;
+    require_u64_eq(prefill, "write_tokens", seq_len)?;
+    require_bool_eq(prefill, "writes_keys", true)?;
+    require_bool_eq(prefill, "writes_values", true)?;
+    require_u64_eq(
+        prefill,
+        "write_bytes_estimate",
+        bytes_per_token_all_layers
+            .checked_mul(seq_len)
+            .ok_or_else(|| anyhow!("kv_cache_policy prefill bytes overflowed"))?,
+    )?;
+    require_string_eq(prefill, "write_path", "qkv_projection_to_cuda_kv_cache")?;
+    require_bool_eq(prefill, "measured", false)?;
+
+    let decode = object_field(policy, "decode")?;
+    require_u64_eq(decode, "decode_steps", decode_steps)?;
+    require_u64_eq(decode, "read_tokens_per_step", seq_len)?;
+    require_u64_eq(
+        decode,
+        "read_bytes_per_step_estimate",
+        bytes_per_token_all_layers
+            .checked_mul(seq_len)
+            .ok_or_else(|| anyhow!("kv_cache_policy decode read bytes overflowed"))?,
+    )?;
+    require_u64_eq(decode, "write_tokens_per_step", 1)?;
+    require_u64_eq(decode, "write_bytes_per_step_estimate", bytes_per_token_all_layers)?;
+    require_string_eq(decode, "read_path", "cuda_kv_cache_to_attention")?;
+    require_string_eq(decode, "write_path", "qkv_projection_to_cuda_kv_cache")?;
+    require_bool_eq(decode, "measured", false)?;
+
+    let max_context = object_field(policy, "max_context")?;
+    require_u64_eq(max_context, "tokens", context_length)?;
+    require_u64_eq(
+        max_context,
+        "bytes_estimate",
+        bytes_per_token_all_layers
+            .checked_mul(context_length)
+            .ok_or_else(|| anyhow!("kv_cache_policy max context bytes overflowed"))?,
+    )?;
+
+    require_bool_eq(policy, "kv_cache_policy_claimed", true)?;
+    require_bool_eq(policy, "runtime_kv_cache_allocated", false)?;
+    require_bool_eq(policy, "kv_cache_cuda_residency_claimed", false)?;
+    require_bool_eq(policy, "estimated_bytes_only", true)?;
+    require_bool_eq(policy, "transfer_bytes_measured", false)?;
+    require_bool_eq(policy, "transfer_timing_measured", false)?;
+    require_bool_eq(policy, "fallback_used", false)?;
+    require_bool_eq(policy, "sampling_integration_claimed", false)?;
+    require_bool_eq(policy, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(policy, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(policy, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(policy, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(policy, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(policy, "speedup_claim", false)?;
+    require_bool_eq(policy, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(policy, "full_cuda_residency_claimed", false)?;
+
+    let remaining = object_field(receipt, "remaining_model_boundary_gaps")?;
+    require_u64_eq(remaining, "schema", 1)?;
+    let gaps = array_field(remaining, "gaps")?;
+    if gaps.len() != 1 {
+        return Err(anyhow!("kv cache policy receipt must leave exactly the sampling gap"));
+    }
+    let sampling_gap = &gaps[0];
+    require_string_eq(sampling_gap, "gap", "sampling")?;
+    require_string_eq(sampling_gap, "status", "not_governed_by_kv_cache_policy")?;
+    require_string_eq(sampling_gap, "required_next_proof", "dense_gguf_sampling_policy_receipt")?;
+    require_bool_eq(sampling_gap, "blocks_qwen_one_token", true)?;
+    require_bool_eq(sampling_gap, "blocks_qwen_short_decode", true)?;
+    require_bool_eq(sampling_gap, "blocks_qwen_chat", true)?;
+    require_bool_eq(remaining, "kv_cache_policy_claimed", true)?;
+    require_bool_eq(remaining, "sampling_integration_claimed", false)?;
+    require_bool_eq(remaining, "qwen_one_token_cuda_blocked", true)?;
+    require_bool_eq(remaining, "qwen_short_decode_cuda_blocked", true)?;
+    require_bool_eq(remaining, "qwen_chat_cuda_blocked", true)?;
+    require_string_eq(remaining, "next_required_proof", "dense_gguf_sampling_policy_receipt")?;
+    require_bool_eq(remaining, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(remaining, "speedup_claim", false)?;
+    require_bool_eq(remaining, "full_cuda_residency_claimed", false)?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cpu_reference_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cuda_integrated_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_all_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_model_boundary_fixtures_claimed", true)?;
+    require_bool_eq(claim_boundary, "kv_cache_policy_claimed", true)?;
+    require_bool_eq(claim_boundary, "kv_cache_cuda_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "sampling_integration_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
 /// Validate dense GGUF one-layer CPU reference harness evidence.
 ///
 /// This artifact records a CPU-only full layer-0 reference output. It is the
@@ -5863,6 +6146,10 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         .get("claim_boundary")
         .and_then(|claim_boundary| claim_boundary.get("dense_gguf_model_boundary_fixtures_claimed"))
         .and_then(Value::as_bool);
+    let kv_cache_policy_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| claim_boundary.get("kv_cache_policy_claimed"))
+        .and_then(Value::as_bool);
 
     if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)
@@ -5885,6 +6172,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND)
         || model_class == Some(DENSE_REGULAR_LLM_MODEL_CLASS)
         || dense_claim == Some(true)
         || descriptor_claim == Some(true)
@@ -5906,6 +6194,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || one_layer_cuda_integrated_parity_claim == Some(true)
         || all_layer_execution_plan_claim == Some(true)
         || model_boundary_fixtures_claim == Some(true)
+        || kv_cache_policy_claim == Some(true)
     {
         return Err(anyhow!(
             "dense_regular_llm CUDA receipt cannot satisfy BitNet packed I2_S/QK256 proof"

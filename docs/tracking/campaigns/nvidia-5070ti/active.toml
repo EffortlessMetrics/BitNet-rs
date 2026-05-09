@@ -2639,6 +2639,72 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-039"
+status = "pr_open"
+branch = "codex/cuda-dense-039-kv-policy"
+pr = 4357
+head_sha = "0f0457e96e508d741ce4b021dddbf68c1c42a2f5"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-038"]
+acceptance = "Implement governed dense GGUF KV-cache policy receipts after CUDA-DENSE-038, recording prefill KV write policy, decode KV read/write policy, estimated bytes per token/layer/all layers, planned strict CUDA residency, remaining sampling gap, and claim-boundary rejection of runtime KV allocation, dense GGUF inference, Qwen one-token/short decode/chat, speedup, persistent/full residency, server readiness, BitNet packed proof, tokenizer behavior, loader behavior, transformer runtime behavior, QK256, BitNet CUDA, and CUDA kernel math claims."
+commands = [
+  "cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_kv_cache -- --nocapture",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_model_boundary -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features kv_cache -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-kv-cache-policy --model <verified-qwen2.5-q8-gguf> --device-index 0 --seq-len 4 --decode-steps 1 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-kv-cache-policy-qwen25-q8.json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "dense GGUF model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "runtime KV cache allocation or residency implementation",
+  "sampling implementation",
+  "tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+]
+may_claim = [
+  "CUDA-DENSE-039 records the governed dense GGUF KV-cache policy needed after model-boundary fixtures and before sampling policy.",
+  "The dense_gguf_kv_cache_policy receipt records estimated KV bytes for prefill, decode reads/writes, and max context from the SHA-verified Qwen2.5 0.5B Q8_0 artifact.",
+  "KV policy is now explicit, but runtime KV allocation, measured transfer timing, sampling integration, and Qwen one-token proof remain future gates.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Qwen one-token, short decode, or chat works on CUDA.",
+  "Runtime KV cache allocation or CUDA residency is implemented.",
+  "Sampling integration is implemented.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-021"
 status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"
