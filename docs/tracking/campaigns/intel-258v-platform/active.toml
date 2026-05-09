@@ -1378,10 +1378,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-021"
-status = "pr_open"
+status = "merged"
 pr = 4315
+merge_sha = "7244b1af7a8828b58133be5eab4befa7c72c8305"
 branch = "codex/lunar-lake/CPU258V-021-reference-instrumentation"
-head_sha = "2cf3983b73332fd97ae1467032988c778ec795bc"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -1423,6 +1423,53 @@ must_not_claim = [
   "CPU speed or sustained throughput is proven.",
   "Arc 140V or Intel NPU execution is proven.",
   "Packed QK256 decode semantics are fixed.",
+]
+
+[[work_item]]
+id = "CPU258V-022"
+status = "ready"
+pr = "TBD"
+branch = "TBD"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-021"]
+acceptance = "Audit 258V CPU scalar QK256/I2_S/I8_S semantics against the canonical BitNet.cpp/CUDA-aligned oracle, covering code mapping, packed bitplane layout, inline scale handling, activation scale use, and accumulator scaling order without claiming answer quality or accelerator execution."
+commands = [
+  "cargo test --locked -p bitnet-quantization --no-default-features qk256 -- --nocapture",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu qk256 -- --nocapture",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-cli/src/commands/**",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/lib.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The 258V CPU scalar QK256/I2_S/I8_S semantic boundary is audited against the canonical oracle or the first mismatch is classified.",
+]
+must_not_claim = [
+  "BitNet answer quality is newly proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Packed QK256 decode on an accelerator is proven.",
+  "Full model correctness is proven without prompt/token and logits evidence.",
 ]
 
 [[work_item]]
