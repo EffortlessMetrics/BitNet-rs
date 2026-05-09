@@ -74,7 +74,9 @@ panic. Use the helpers in `bitnet-test-support::assertions` (`ensure`,
 `ensure_eq`, `require_some`, `require_ok`) to make tests fallible
 where it makes sense. The current carveouts in `clippy.toml`
 (`allow-unwrap-in-tests`, `allow-expect-in-tests`) are temporary
-during PR 09–11 and removed in PR 12.
+during the 1.93 rollout PR 09–11 window and removed by that rollout's
+PR 12 plan. The Rust 1.95 follow-up ladder now tracks the remaining
+carveout removal as PR 6.
 
 ## When `panic` is genuinely acceptable
 
@@ -88,3 +90,63 @@ receipt must answer:
 * When does the receipt expire?
 
 Any "we panic so the upstream API is simpler" rationale is rejected.
+
+## Rust 1.95 rollout target state
+
+The following changes are planned as part of the Rust 1.95 / next minor wave.
+See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder and
+CI economics framing.
+
+### Identity hardening (PR 7)
+
+Current allowlist identity is `path + family + selector`. Before bulk baseline
+work begins, identity must expand to include `snippet` and `count`:
+
+```text
+path
+family
+selector_kind
+selector_callee
+snippet
+count
+```
+
+Matching becomes **counted and consumptive**:
+
+1. Consume exact allowlist count slots.
+2. Then consume baseline count slots, unless in blocking mode.
+3. Anything remaining is new debt.
+
+This prevents one allow entry from accidentally covering unrelated calls in the
+same file with the same callee.
+
+Required tests before PR 7 merges:
+
+```text
+allowlist_entry_requires_exact_snippet
+allowlist_count_is_consumed_per_occurrence
+allowlist_does_not_cover_same_file_same_callee_different_snippet
+duplicate_allowlist_keys_are_rejected
+blocking_mode_ignores_baseline_but_honors_counted_allowlist
+```
+
+### Baseline and no-new-debt mode (PR 8)
+
+After identity hardening, a generated baseline is created from current `main`
+and the policy mode is set to `no-new-debt`. The baseline file is marked
+generated in `.gitattributes` so it collapses in GitHub review:
+
+```gitattributes
+policy/no-panic-baseline.toml text eol=lf linguist-generated=true
+```
+
+Baseline refresh may only drop disappeared entries, never absorb new findings.
+Allowlist entries added after baseline generation must be exact-counted and
+explicitly reviewed.
+
+### Diagnostic improvements (PR 9)
+
+PR 9 adds:
+
+* Missing baseline setup error (clear message when baseline file absent).
+* Stale baseline entries in Markdown/JSON reports.
