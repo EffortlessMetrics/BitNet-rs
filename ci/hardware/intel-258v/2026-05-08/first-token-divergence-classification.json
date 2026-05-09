@@ -675,7 +675,9 @@
       "evidence_boundary": "external_reference_text_matches_after_trimming_but_generated_token_ids_and_logits_are_unavailable",
       "first_divergence_stage": "inconclusive"
     },
-    "generated_text_trimmed_matches": 4,
+    "generated_text_trimmed_avx2_matches": 4,
+    "generated_text_trimmed_scalar_avx2_matches": 4,
+    "generated_text_trimmed_scalar_matches": 4,
     "next_required_evidence": "instrument bitnet.cpp or another reference runner to emit generated token IDs and first-token logits/top-k before claiming logits parity",
     "prompt_token_exact_matches": 0,
     "prompt_token_local_bos_prefix_matches": 4,

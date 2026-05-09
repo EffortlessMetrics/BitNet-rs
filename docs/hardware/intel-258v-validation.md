@@ -419,7 +419,8 @@ ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-math_2_pl
 
 Both the scalar and AVX2 release-built receipts pass the exact answer gate for
 the selected `math_2_plus_2` BitNet.cpp-template case, producing decoded text
-` 4` with identical generated token IDs `[220, 19, 128009]`. The scalar run
+with a leading space followed by `4` and identical generated token IDs
+`[220, 19, 128009]`. The scalar run
 selects `i2_s-scalar-reference`, the AVX2 run selects `i2_s-avx2-reference`,
 and the parity receipt records `summary.failed=0` with no first divergence.
 This is selected-case answer recovery and scalar-vs-AVX2 parity evidence only:
@@ -822,8 +823,8 @@ first_divergence_stage = prompt
 cases_failed = 4
 ```
 
-The comparison records that HF keeps the trailing generation-prompt space in
-`Assistant: ` and does not prepend BOS for these `apply_chat_template` prompt
+The comparison records that HF keeps a trailing generation-prompt space after
+`Assistant:` and does not prepend BOS for these `apply_chat_template` prompt
 IDs, while the current BitNet-rs metadata-authority path prepends BOS and
 renders `Assistant:` without the trailing space.
 
@@ -914,7 +915,9 @@ cases_total = 4
 cases_inconclusive = 4
 prompt_token_exact_matches = 0
 prompt_token_local_bos_prefix_matches = 4
-generated_text_trimmed_matches = 4
+generated_text_trimmed_scalar_matches = 4
+generated_text_trimmed_avx2_matches = 4
+generated_text_trimmed_scalar_avx2_matches = 4
 scalar_avx2_parity_passed = true
 reference_generated_token_ids_available = false
 reference_logits_available = false

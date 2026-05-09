@@ -55,7 +55,7 @@ PERFORMANCE:
     - SIMD optimizations (>=3x faster) coming in v0.2.0
 
 
-Usage: bitnet.exe [OPTIONS] [COMMAND]
+Usage: bitnet [OPTIONS] [COMMAND]
 
 Commands:
   run
@@ -104,6 +104,8 @@ Commands:
           Extract a dense GGUF attention V-mix fixture and emit a CPU-reference receipt
   dense-gguf-mlp-activation-fixture
           Extract a dense GGUF MLP activation fixture and emit a CPU-reference receipt
+  dense-gguf-mlp-activation-cuda-parity
+          Run dense GGUF MLP activation strict CUDA parity diagnostics
   dense-gguf-attention-softmax-cuda-parity
           Run dense GGUF attention-softmax strict CUDA parity diagnostics
   dense-gguf-attention-v-mix-cuda-parity

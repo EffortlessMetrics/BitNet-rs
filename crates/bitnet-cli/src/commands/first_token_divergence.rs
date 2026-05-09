@@ -179,7 +179,9 @@ fn build_first_token_divergence_receipt(
             "cases_inconclusive": count_classification(&case_summaries, "inconclusive"),
             "prompt_token_exact_matches": count_bool(&cases, &["comparisons", "reference_vs_scalar_prompt_exact_match"]),
             "prompt_token_local_bos_prefix_matches": count_bool(&cases, &["comparisons", "reference_vs_scalar_prompt_local_bos_prefix_match"]),
-            "generated_text_trimmed_matches": count_bool(&cases, &["comparisons", "reference_scalar_generated_text_trimmed_match"]),
+            "generated_text_trimmed_scalar_matches": count_bool(&cases, &["comparisons", "reference_scalar_generated_text_trimmed_match"]),
+            "generated_text_trimmed_avx2_matches": count_bool(&cases, &["comparisons", "reference_avx2_generated_text_trimmed_match"]),
+            "generated_text_trimmed_scalar_avx2_matches": count_scalar_avx2_text_matches(&cases),
             "scalar_avx2_parity_passed": scalar_avx2_parity_passed,
             "reference_generated_token_ids_available": external_reference["summary"]["reference_generated_token_ids_available"].clone(),
             "reference_logits_available": external_reference["summary"]["reference_logits_available"].clone(),
@@ -465,6 +467,18 @@ fn count_bool(cases: &[Value], path: &[&str]) -> usize {
     cases.iter().filter(|case| bool_path(case, path) == Some(true)).count()
 }
 
+fn count_scalar_avx2_text_matches(cases: &[Value]) -> usize {
+    cases
+        .iter()
+        .filter(|case| {
+            let comparisons = &case["comparisons"];
+            comparisons["reference_scalar_generated_text_trimmed_match"].as_bool() == Some(true)
+                && comparisons["reference_avx2_generated_text_trimmed_match"].as_bool()
+                    == Some(true)
+        })
+        .count()
+}
+
 fn count_classification(classifications: &[&Value], stage: &str) -> usize {
     classifications
         .iter()
@@ -624,6 +638,9 @@ mod tests {
             receipt["cases"][0]["comparisons"]["reference_vs_scalar_prompt_local_bos_prefix_match"],
             true
         );
+        assert_eq!(receipt["summary"]["generated_text_trimmed_scalar_matches"], 1);
+        assert_eq!(receipt["summary"]["generated_text_trimmed_avx2_matches"], 1);
+        assert_eq!(receipt["summary"]["generated_text_trimmed_scalar_avx2_matches"], 1);
     }
 
     #[test]
@@ -674,5 +691,8 @@ mod tests {
             receipt["summary"]["first_divergence"]["classification"],
             "local_cpu_kernel_divergence"
         );
+        assert_eq!(receipt["summary"]["generated_text_trimmed_scalar_matches"], 1);
+        assert_eq!(receipt["summary"]["generated_text_trimmed_avx2_matches"], 1);
+        assert_eq!(receipt["summary"]["generated_text_trimmed_scalar_avx2_matches"], 1);
     }
 }

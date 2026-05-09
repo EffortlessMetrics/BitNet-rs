@@ -1344,7 +1344,8 @@ human_gate = "on_blocker_only"
 blocked_by = ["CPU258V-019"]
 acceptance = "Classify first-token divergence for the fixed 258V prompts from external reference artifacts, prompt-authority audit receipts, and 258V scalar/AVX2 answer receipts, marking prompt-token, generated-token, sampler-stop, logits-math, or inconclusive stages without claiming logits parity when reference logits are unavailable."
 commands = [
-  "python -c \"import json; p='ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json'; a=json.load(open(p, encoding='utf-8')); assert a['summary']['reference_generated_text_available'] is True; assert a['summary']['reference_logits_available'] is False\"",
+  "python3 -c \"import json; p='ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json'; a=json.load(open(p, encoding='utf-8')); assert a['summary']['reference_generated_text_available'] is True; assert a['summary']['reference_logits_available'] is False\"",
+  "python3 -c \"import json; p='ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json'; a=json.load(open(p, encoding='utf-8')); s=a['summary']; assert s['cases_total'] == 4; assert s['cases_inconclusive'] == 4; assert s['generated_text_trimmed_scalar_avx2_matches'] == 4; assert s['classification'] == 'reference_generated_token_ids_and_logits_unavailable'\"",
   "git diff --check",
 ]
 allowed_paths = [
