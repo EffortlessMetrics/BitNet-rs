@@ -7,9 +7,9 @@ new_status = "pr_open"
 actor = "codex"
 branch = "codex/cuda-dense-032-reference-harness-tracker"
 pr = 4316
-head_sha = "b54232f3d06713978c9f8d513c7ae90ef0934bc8"
+head_sha = "771c1409d8d414a27a9bb78fb8901cb68ac1e896"
 
 notes = [
-  "Opened PR #4316 to close out CUDA-DENSE-031 tracker state and define the CUDA-DENSE-032 one-layer CPU reference harness contract.",
+  "Opened PR #4316 to define the CUDA-DENSE-032 one-layer CPU reference harness contract after CUDA-DENSE-031 landed.",
   "Scope remains docs/tracker metadata and generated dashboards only; no runtime code, hardware receipt evidence, CUDA execution, dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, QK256, tokenizer, loader, transformer, server, or CUDA kernel math change is in scope.",
 ]
