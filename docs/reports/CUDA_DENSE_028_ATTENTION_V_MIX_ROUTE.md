@@ -67,4 +67,5 @@ cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -
 
 The next dense CUDA slice should create a bounded CPU-reference fixture for
 `mlp_activation` without claiming Qwen one-token/decode/chat or dense GGUF
-inference.
+inference. That follow-up is recorded as
+[`CUDA-DENSE-029`](CUDA_DENSE_029_MLP_ACTIVATION_FIXTURE.md).

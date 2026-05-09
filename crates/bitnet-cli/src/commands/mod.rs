@@ -25,7 +25,8 @@ pub use dense_gguf_linear_parity::{
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
     DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
     DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
-    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand,
+    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
+    DenseGgufMlpActivationFixtureCommand, DenseGgufNormCudaParityCommand,
     DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
 };
 pub use inference::InferenceCommand;

@@ -41,9 +41,9 @@ use bitnet_receipts_core::{
     DENSE_GGUF_ATTENTION_V_MIX_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
-    DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND,
-    DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
-    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
+    DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
+    DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND, DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
     validate_dense_gguf_attention_score_cuda_parity_receipt_json,
     validate_dense_gguf_attention_score_fixture_receipt_json,
     validate_dense_gguf_attention_softmax_cuda_parity_receipt_json,
@@ -52,6 +52,7 @@ use bitnet_receipts_core::{
     validate_dense_gguf_attention_v_mix_fixture_receipt_json,
     validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
+    validate_dense_gguf_mlp_activation_fixture_receipt_json,
     validate_dense_gguf_norm_cuda_parity_receipt_json,
     validate_dense_gguf_norm_fixture_extraction_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
@@ -784,6 +785,62 @@ impl DenseGgufAttentionVMixFixtureCommand {
     }
 }
 
+/// Extract a dense GGUF MLP activation fixture and emit a CPU-reference receipt.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufMlpActivationFixtureCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Dense transformer layer index represented by the deterministic MLP activation fixture.
+    #[arg(long, default_value_t = 0)]
+    pub layer_index: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufMlpActivationFixtureCommand {
+    pub async fn execute(&self) -> Result<()> {
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+        let fixture =
+            dense_gguf_mlp_activation_fixture_from_reader(&reader, &inspection, self.layer_index)?;
+
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_mlp_activation_fixture_receipt_json(
+            &inspection,
+            &fixture,
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        );
+        validate_dense_gguf_mlp_activation_fixture_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
 /// Run dense GGUF attention V-mix CUDA parity diagnostics.
 #[derive(Args, Debug, Clone)]
 pub struct DenseGgufAttentionVMixCudaParityCommand {
@@ -1157,6 +1214,24 @@ struct DenseGgufAttentionVMixFixture {
     context_count: usize,
     causal_zero_probabilities: usize,
     max_context_abs: f32,
+}
+
+#[derive(Debug, Clone)]
+struct DenseGgufMlpActivationFixture {
+    fixture_id: String,
+    model_family: String,
+    architecture: String,
+    layer_index: usize,
+    source_mlp_gate_fixture_id: String,
+    source_mlp_up_fixture_id: String,
+    source_mlp_gate_tensor: String,
+    source_mlp_up_tensor: String,
+    activation_kind: &'static str,
+    gate_output_f32: Vec<f32>,
+    up_output_f32: Vec<f32>,
+    expected_activation_f32: Vec<f32>,
+    activation_count: usize,
+    max_activation_abs: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -1620,6 +1695,81 @@ fn dense_gguf_attention_v_mix_fixture_from_reader(
     })
 }
 
+fn dense_gguf_mlp_activation_fixture_from_reader(
+    reader: &GgufReader<'_>,
+    inspection: &DenseGgufDescriptorInspection,
+    layer_index: usize,
+) -> Result<DenseGgufMlpActivationFixture> {
+    let gate = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::MlpGate)
+        .context("failed to extract dense GGUF MLP gate fixture")?;
+    let up = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::MlpUp)
+        .context("failed to extract dense GGUF MLP up fixture")?;
+    if gate.summary.model_family != inspection.model_family
+        || up.summary.model_family != inspection.model_family
+    {
+        bail!(
+            "dense GGUF MLP activation fixture mixed model families: inspection={} gate={} up={}",
+            inspection.model_family,
+            gate.summary.model_family,
+            up.summary.model_family
+        );
+    }
+    if gate.summary.architecture != inspection.architecture
+        || up.summary.architecture != inspection.architecture
+    {
+        bail!(
+            "dense GGUF MLP activation fixture mixed architectures: inspection={} gate={} up={}",
+            inspection.architecture,
+            gate.summary.architecture,
+            up.summary.architecture
+        );
+    }
+    if gate.cpu_reference_output.len() != up.cpu_reference_output.len() {
+        bail!(
+            "dense GGUF MLP activation fixture requires equal gate/up output lengths: gate={} up={}",
+            gate.cpu_reference_output.len(),
+            up.cpu_reference_output.len()
+        );
+    }
+
+    let expected_activation_f32 =
+        dense_mlp_activation_cpu_reference(&gate.cpu_reference_output, &up.cpu_reference_output)?;
+    let max_activation_abs =
+        expected_activation_f32.iter().copied().map(f32::abs).fold(0.0f32, f32::max);
+    let gate_role = dense_role_label(gate.summary.role);
+    let up_role = dense_role_label(up.summary.role);
+
+    Ok(DenseGgufMlpActivationFixture {
+        fixture_id: format!(
+            "dense_gguf_mlp_activation_{}_layer{}_n{}",
+            sanitize_label(&inspection.model_family),
+            layer_index,
+            expected_activation_f32.len()
+        ),
+        model_family: inspection.model_family.clone(),
+        architecture: inspection.architecture.clone(),
+        layer_index,
+        source_mlp_gate_fixture_id: dense_linear_fixture_id(
+            &gate.summary.model_family,
+            gate_role,
+            &gate.summary.tensor_type,
+        ),
+        source_mlp_up_fixture_id: dense_linear_fixture_id(
+            &up.summary.model_family,
+            up_role,
+            &up.summary.tensor_type,
+        ),
+        source_mlp_gate_tensor: gate.summary.tensor_name,
+        source_mlp_up_tensor: up.summary.tensor_name,
+        activation_kind: "silu_gate_times_up",
+        gate_output_f32: gate.cpu_reference_output,
+        up_output_f32: up.cpu_reference_output,
+        activation_count: expected_activation_f32.len(),
+        expected_activation_f32,
+        max_activation_abs,
+    })
+}
+
 fn kernel_attention_score_fixture_from_extracted(
     fixture: &DenseGgufAttentionScoreFixture,
 ) -> DenseGgufAttentionScoreCudaFixture {
@@ -1869,6 +2019,29 @@ fn dense_attention_v_mix_cpu_reference(
         }
     }
     Ok(context)
+}
+
+fn dense_mlp_activation_cpu_reference(gate: &[f32], up: &[f32]) -> Result<Vec<f32>> {
+    if gate.is_empty() || up.is_empty() {
+        bail!("dense MLP activation fixture requires non-empty gate and up vectors");
+    }
+    if gate.len() != up.len() {
+        bail!(
+            "dense MLP activation fixture gate/up length mismatch: gate={} up={}",
+            gate.len(),
+            up.len()
+        );
+    }
+
+    Ok(gate
+        .iter()
+        .copied()
+        .zip(up.iter().copied())
+        .map(|(gate_value, up_value)| {
+            let silu = gate_value / (1.0 + (-gate_value).exp());
+            silu * up_value
+        })
+        .collect())
 }
 
 fn head_dim_source_label(source: &str) -> String {
@@ -3419,6 +3592,168 @@ fn dense_gguf_attention_v_mix_fixture_receipt_json(
             "dense_gguf_attention_softmax_fixture_extraction_claimed": false,
             "dense_gguf_attention_softmax_cuda_parity_claimed": false,
             "dense_gguf_attention_v_mix_fixture_extraction_claimed": true,
+            "dense_gguf_rope_cuda_parity_claimed": false,
+            "dense_gguf_norm_cuda_parity_claimed": false,
+            "dense_gguf_linear_fixture_extraction_claimed": false,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        }
+    })
+}
+
+fn dense_gguf_mlp_activation_fixture_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    fixture: &DenseGgufMlpActivationFixture,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Value {
+    let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
+        model_family: &inspection.model_family,
+        quantization: "dense_f32_mlp_activation_fixture",
+        requested_backend: HARDWARE_LANE,
+        selected_backend: "unsupported_strict_cuda",
+        runtime_api: "none",
+        strict_fallback_policy: "reject",
+        summary: ModelDispatchSummary {
+            total_ops: 1,
+            cuda_bitnet_qk256_ops: 0,
+            cuda_dense_regular_llm_ops: 0,
+            cpu_fallback_ops: 0,
+            unsupported_ops: 1,
+            fallback_used: false,
+            selected_route: Some(ModelDispatchBackend::Unsupported),
+            strict_cuda_ready: false,
+        },
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    });
+
+    json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_mlp_activation_fixture_extracted",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "inspection_source": "gguf_reader_mlp_activation_fixture",
+        "error": null,
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "quantization_families": inspection.quantization_families,
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "cpu_reference_mlp_activation",
+            "quantization_family": "metadata_derived_mlp_activation_fixture",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": execution_plan,
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "mlp_activation_fixture": {
+            "schema": 1,
+            "source_artifact_kind": DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND,
+            "source_mlp_gate_artifact_kind": DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
+            "source_mlp_gate_role": "mlp_gate",
+            "source_mlp_gate_fixture_id": fixture.source_mlp_gate_fixture_id,
+            "source_mlp_gate_tensor": fixture.source_mlp_gate_tensor,
+            "source_mlp_up_artifact_kind": DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
+            "source_mlp_up_role": "mlp_up",
+            "source_mlp_up_fixture_id": fixture.source_mlp_up_fixture_id,
+            "source_mlp_up_tensor": fixture.source_mlp_up_tensor,
+            "fixture_id": fixture.fixture_id,
+            "model_family": fixture.model_family,
+            "architecture": fixture.architecture,
+            "layer_index": fixture.layer_index as u64,
+            "activation_kind": fixture.activation_kind,
+            "gate_output_count": fixture.gate_output_f32.len() as u64,
+            "up_output_count": fixture.up_output_f32.len() as u64,
+            "activation_count": fixture.activation_count as u64,
+            "gate_output_sha256": sha256_f32(&fixture.gate_output_f32),
+            "up_output_sha256": sha256_f32(&fixture.up_output_f32),
+            "cpu_reference_activation_sha256": sha256_f32(&fixture.expected_activation_f32),
+            "max_activation_abs": fixture.max_activation_abs,
+            "cpu_reference_computed": true,
+            "cuda_kernel_status": "missing_cuda_kernel",
+            "strict_cuda_ready": false,
+            "cpu_fallback_allowed": false,
+            "transfer_timing_status": "not_measured_no_kernel",
+            "dense_gguf_inference_claimed": false,
+            "dense_regular_llm_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "mlp_activation_gap_audit": {
+            "schema": 1,
+            "source_artifact_kind": DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND,
+            "gap_role": "mlp_activation",
+            "input_dependencies": ["mlp_gate", "mlp_up"],
+            "source_mlp_gate_cuda_parity_required": true,
+            "source_mlp_gate_cuda_parity_available": true,
+            "source_mlp_up_cuda_parity_required": true,
+            "source_mlp_up_cuda_parity_available": true,
+            "cpu_reference_available": true,
+            "cuda_kernel_status": "missing_cuda_kernel",
+            "strict_cuda_ready": false,
+            "cpu_fallback_allowed": false,
+            "blocks_strict_cuda_one_layer": true,
+            "next_required_proof": "cuda_mlp_activation_kernel_parity",
+            "candidate_order": DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER,
+            "dense_gguf_mlp_activation_fixture_extraction_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "timing": {
+            "kernel_time_ms": null,
+            "host_to_device_bytes": 0,
+            "device_to_host_bytes": 0,
+            "transfer_timing_status": "not_measured_no_kernel"
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": false,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_attention_score_fixture_extraction_claimed": false,
+            "dense_gguf_attention_score_cuda_parity_claimed": false,
+            "dense_gguf_attention_softmax_fixture_extraction_claimed": false,
+            "dense_gguf_attention_softmax_cuda_parity_claimed": false,
+            "dense_gguf_attention_v_mix_fixture_extraction_claimed": false,
+            "dense_gguf_attention_v_mix_cuda_parity_claimed": false,
+            "dense_gguf_mlp_activation_fixture_extraction_claimed": true,
             "dense_gguf_rope_cuda_parity_claimed": false,
             "dense_gguf_norm_cuda_parity_claimed": false,
             "dense_gguf_linear_fixture_extraction_claimed": false,
@@ -5228,6 +5563,57 @@ mod tests {
         );
         assert_eq!(
             receipt["claim_boundary"]["dense_gguf_attention_v_mix_fixture_extraction_claimed"],
+            true
+        );
+        assert_eq!(receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
+    fn dense_gguf_mlp_activation_fixture_receipt_records_cpu_reference_gap() {
+        let data = build_complete_qwen_layer_gguf();
+        let reader = GgufReader::new(&data).expect("parse qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let fixture = dense_gguf_mlp_activation_fixture_from_reader(&reader, &inspection, 0)
+            .expect("MLP activation fixture");
+
+        let receipt = dense_gguf_mlp_activation_fixture_receipt_json(
+            &inspection,
+            &fixture,
+            Path::new("synthetic-qwen3-q8_0-mlp-activation-fixture.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-mlp-activation-fixture.json",
+            "2026-05-09T00:00:00Z",
+        );
+
+        validate_dense_gguf_mlp_activation_fixture_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["execution_plan"]["selected_route"], "unsupported");
+        assert_eq!(receipt["execution_plan"]["unsupported_ops"], 1);
+        assert_eq!(
+            receipt["mlp_activation_fixture"]["source_mlp_gate_artifact_kind"],
+            DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND
+        );
+        assert_eq!(
+            receipt["mlp_activation_fixture"]["source_mlp_up_artifact_kind"],
+            DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND
+        );
+        assert_eq!(receipt["mlp_activation_fixture"]["activation_kind"], "silu_gate_times_up");
+        assert_eq!(
+            receipt["mlp_activation_fixture"]["activation_count"],
+            json!(fixture.expected_activation_f32.len())
+        );
+        assert!(receipt["mlp_activation_fixture"]["max_activation_abs"].as_f64().unwrap() > 0.0);
+        assert_eq!(
+            receipt["mlp_activation_gap_audit"]["cuda_kernel_status"],
+            "missing_cuda_kernel"
+        );
+        assert_eq!(
+            receipt["mlp_activation_gap_audit"]["next_required_proof"],
+            "cuda_mlp_activation_kernel_parity"
+        );
+        assert_eq!(
+            receipt["claim_boundary"]["dense_gguf_mlp_activation_fixture_extraction_claimed"],
             true
         );
         assert_eq!(receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"], false);
