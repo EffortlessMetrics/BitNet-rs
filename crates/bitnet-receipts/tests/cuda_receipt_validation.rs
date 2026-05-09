@@ -6,7 +6,8 @@
 
 use bitnet_receipts::{
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof, validate_cuda_parity_receipt_json,
-    validate_cuda_smoke_receipt_json, validate_dense_gguf_attention_score_cuda_parity_receipt_json,
+    validate_cuda_smoke_receipt_json, validate_dense_gguf_all_layer_execution_plan_receipt_json,
+    validate_dense_gguf_attention_score_cuda_parity_receipt_json,
     validate_dense_gguf_attention_score_fixture_receipt_json,
     validate_dense_gguf_attention_softmax_cuda_parity_receipt_json,
     validate_dense_gguf_attention_softmax_fixture_receipt_json,
@@ -29,6 +30,7 @@ use bitnet_receipts::{
     validate_dense_regular_llm_cuda_tensor_residency_receipt_json,
 };
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 #[test]
 fn committed_cuda_smoke_receipt_validates() {
@@ -921,6 +923,101 @@ fn dense_gguf_one_layer_gap_audit_rejects_cpu_fallback_policy_change() {
         .to_string();
 
     assert!(err.contains("strict_cuda_rejects_cpu_fallback"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_all_layer_execution_plan_receipt_validates_transformer_scope() {
+    let receipt = valid_dense_gguf_all_layer_execution_plan_receipt();
+
+    validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_all_layer_plan_rejects_inference_claim() {
+    let mut receipt = valid_dense_gguf_all_layer_execution_plan_receipt();
+    receipt["claim_boundary"]["dense_gguf_inference_claimed"] = json!(true);
+    receipt["all_layer_plan"]["dense_gguf_inference_claimed"] = json!(true);
+
+    let err = validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("dense_gguf_inference_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_all_layer_plan_rejects_missing_boundary_gap() {
+    let mut receipt = valid_dense_gguf_all_layer_execution_plan_receipt();
+    receipt["model_boundary_gaps"]["gaps"]
+        .as_array_mut()
+        .expect("gaps array")
+        .retain(|gap| gap["gap"] != "kv_cache_policy");
+
+    let err = validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("model_boundary_gaps missing required gaps"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_all_layer_plan_rejects_layer_difference() {
+    let mut receipt = valid_dense_gguf_all_layer_execution_plan_receipt();
+    receipt["all_layer_plan"]["layer_plan_matches_layer0"] = json!(false);
+    receipt["all_layer_plan"]["layer_differences"] =
+        json!([{ "layer_index": 1, "reason": "operation_signature_differs_from_layer0" }]);
+
+    let err = validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("layer_plan_matches_layer0"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_all_layer_plan_rejects_unsupported_ops() {
+    let mut receipt = valid_dense_gguf_all_layer_execution_plan_receipt();
+    receipt["execution_plan"]["unsupported_ops"] = json!(1);
+    receipt["execution_plan"]["strict_cuda_ready"] = json!(false);
+    receipt["all_layer_plan"]["unsupported_strict_cuda_ops_total"] = json!(1);
+
+    let err = validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("unsupported_ops"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_all_layer_plan_rejects_forged_operation_signature() {
+    let mut receipt = valid_dense_gguf_all_layer_execution_plan_receipt();
+    receipt["all_layer_plan"]["layers"][0]["operation_signature_sha256"] = json!("0".repeat(64));
+
+    let err = validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(
+        err.contains("operation_signature_sha256 must match operations"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn dense_gguf_all_layer_plan_rejects_wrong_operation_role_sequence() {
+    let mut receipt = valid_dense_gguf_all_layer_execution_plan_receipt();
+    receipt["all_layer_plan"]["layers"][0]["operations"][1]["role"] = json!("attention_q_dup");
+    let operations = receipt["all_layer_plan"]["layers"][0]["operations"].clone();
+    receipt["all_layer_plan"]["layers"][0]["operation_signature_sha256"] =
+        json!(dense_all_layer_operation_signature_sha256(&operations));
+
+    let err = validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("role"), "unexpected error: {err}");
 }
 
 #[test]
@@ -2040,6 +2137,136 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
     })
 }
 
+fn valid_dense_gguf_all_layer_execution_plan_receipt() -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_all_layer_execution_plan",
+        "artifact_path": "target/bitnet/receipts/dense-gguf-all-layer-plan.json",
+        "claim": "dense_gguf_all_layer_execution_plan_recorded",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-09T00:00:00Z",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity(),
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "file": "synthetic-dense-gguf-all-layer-plan",
+            "sha256": "0".repeat(64)
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_cuda_all_layer_execution_plan",
+            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_q8_0_fixture_contracts",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": {
+            "planner_version": "cuda-planner-004",
+            "model_family": "qwen",
+            "quantization": "dense_fp16",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "cuda_bitnet_qk256_ops": 0,
+            "cuda_dense_regular_llm_ops": 28,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 28,
+            "cuda_ops": 28,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": 20,
+            "metadata_count": 4,
+            "required_roles_present": true,
+            "strict_descriptor_complete": true,
+            "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+            "quantization_families": ["f32", "q8_0"],
+            "bitnet_packed_marker_found": false,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "all_layer_plan": {
+            "schema": 1,
+            "transformer_layers_total": 2,
+            "layers_with_complete_cuda_block_plan": 2,
+            "layer_plan_matches_layer0": true,
+            "layer_differences": [],
+            "missing_layer_indices": [],
+            "total_ops": 28,
+            "cuda_routable_ops_total": 28,
+            "linear_cuda_ops_total": 14,
+            "norm_cuda_ops_total": 4,
+            "rope_cuda_ops_total": 2,
+            "attention_score_cuda_ops_total": 2,
+            "attention_softmax_cuda_ops_total": 2,
+            "attention_v_mix_cuda_ops_total": 2,
+            "mlp_activation_cuda_ops_total": 2,
+            "unsupported_strict_cuda_ops_total": 0,
+            "cpu_fallback_ops_total": 0,
+            "strict_cuda_ready": true,
+            "strict_cuda_ready_scope": "transformer_blocks_only",
+            "all_layers_inspected": true,
+            "operations_per_layer": 14,
+            "layers": [
+                dense_all_layer_plan_layer(0),
+                dense_all_layer_plan_layer(1)
+            ],
+            "dense_gguf_all_layer_execution_plan_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "model_boundary_gaps": dense_all_layer_model_boundary_gaps(),
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": false,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_cpu_reference_claimed": true,
+            "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+            "dense_gguf_all_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    })
+}
+
 fn valid_dense_gguf_one_layer_cpu_reference_receipt() -> Value {
     json!({
         "schema": 1,
@@ -3075,6 +3302,109 @@ fn dense_one_layer_gap_audit() -> Value {
         "speedup_claim": false,
         "full_cuda_residency_claimed": false
     })
+}
+
+fn dense_all_layer_plan_layer(layer_index: u64) -> Value {
+    let operations = dense_all_layer_operations(layer_index);
+    let operation_signature_sha256 = dense_all_layer_operation_signature_sha256(&operations);
+    json!({
+        "layer_index": layer_index,
+        "total_ops": 14,
+        "cuda_routable_ops_total": 14,
+        "linear_cuda_ops_total": 7,
+        "norm_cuda_ops_total": 2,
+        "rope_cuda_ops_total": 1,
+        "attention_score_cuda_ops_total": 1,
+        "attention_softmax_cuda_ops_total": 1,
+        "attention_v_mix_cuda_ops_total": 1,
+        "mlp_activation_cuda_ops_total": 1,
+        "unsupported_strict_cuda_ops_total": 0,
+        "cpu_fallback_ops_total": 0,
+        "strict_cuda_ready": true,
+        "matches_layer0": true,
+        "operation_signature_sha256": operation_signature_sha256,
+        "operations": operations
+    })
+}
+
+fn dense_all_layer_operation_signature_sha256(operations: &Value) -> String {
+    let signature = operations
+        .as_array()
+        .expect("operations array")
+        .iter()
+        .map(|op| {
+            json!({
+                "role": op["role"].as_str().expect("role"),
+                "op_type": op["op_type"].as_str().expect("op_type"),
+                "source": op["source"].as_str().expect("source"),
+                "source_tensor_type": op.get("source_tensor_type").cloned().unwrap_or(Value::Null),
+                "source_shape": op.get("source_shape").cloned().unwrap_or(Value::Null),
+                "is_quantized": op.get("is_quantized").cloned().unwrap_or(Value::Bool(false)),
+                "route": op["route"].as_str().expect("route"),
+                "status": op["status"].as_str().expect("status"),
+            })
+        })
+        .collect::<Vec<_>>();
+    let bytes = serde_json::to_vec(&Value::Array(signature)).expect("signature json");
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+fn dense_all_layer_model_boundary_gaps() -> Value {
+    json!({
+        "schema": 1,
+        "gaps": [
+            dense_all_layer_boundary_gap("token_embedding", "embedding lookup fixture and route not yet governed", Some("token_embd.weight"), Some("q8_0"), "dense_gguf_embedding_fixture"),
+            dense_all_layer_boundary_gap("final_norm", "final model normalization fixture not yet governed", Option::<&str>::None, Option::<&str>::None, "dense_gguf_final_norm_fixture"),
+            dense_all_layer_boundary_gap("lm_head_logits", "LM head and logits fixture not yet governed", Some("output.weight"), Some("q8_0"), "dense_gguf_lm_head_logits_fixture"),
+            dense_all_layer_boundary_gap("kv_cache_policy", "KV cache residency and transfer policy not yet recorded", Option::<&str>::None, Option::<&str>::None, "dense_gguf_kv_cache_policy_receipt"),
+            dense_all_layer_boundary_gap("sampling", "sampler integration and logits transfer policy not yet governed", Option::<&str>::None, Option::<&str>::None, "dense_gguf_sampling_policy_receipt")
+        ],
+        "all_boundary_gaps_explicit": true,
+        "qwen_one_token_cuda_blocked": true,
+        "qwen_short_decode_cuda_blocked": true,
+        "qwen_chat_cuda_blocked": true,
+        "next_required_proof": "dense_gguf_model_boundary_fixtures",
+        "dense_gguf_inference_claimed": false,
+        "speedup_claim": false,
+        "full_cuda_residency_claimed": false
+    })
+}
+
+fn dense_all_layer_boundary_gap(
+    gap: &str,
+    disposition: &str,
+    source_tensor: Option<&str>,
+    source_tensor_type: Option<&str>,
+    next_proof: &str,
+) -> Value {
+    json!({
+        "gap": gap,
+        "status": "not_governed_by_all_layer_block_plan",
+        "disposition": disposition,
+        "source_tensor": source_tensor,
+        "source_tensor_type": source_tensor_type,
+        "blocks_qwen_one_token": true,
+        "blocks_qwen_short_decode": true,
+        "blocks_qwen_chat": true,
+        "required_next_proof": next_proof
+    })
+}
+
+fn dense_all_layer_operations(layer_index: u64) -> Value {
+    let mut operations = dense_one_layer_operations();
+    for op in operations.as_array_mut().expect("operations array") {
+        if let Some(name) = op.get("name").and_then(Value::as_str) {
+            let replaced = name.replace("blk.0", &format!("blk.{layer_index}"));
+            op["name"] = json!(replaced);
+        }
+        if let Some(source_tensor) = op.get("source_tensor").and_then(Value::as_str) {
+            let replaced = source_tensor.replace("blk.0", &format!("blk.{layer_index}"));
+            op["source_tensor"] = json!(replaced);
+        }
+    }
+    operations
 }
 
 fn dense_one_layer_operations() -> Value {
