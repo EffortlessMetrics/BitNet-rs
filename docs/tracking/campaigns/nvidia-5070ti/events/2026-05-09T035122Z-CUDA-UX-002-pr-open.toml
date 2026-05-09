@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T03:51:22Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-002"
+event = "pr_open"
+actor = "codex"
+branch = "codex/cuda-ux-002-ask-proof-summary"
+pr = 4191
+head_sha = "6960b2bf1005bec92b8a1e06005b63a28d46ef9b"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4191 for strict ask proof-summary reuse.",
+  "The PR reuses the receipt explanation object for user-facing strict ask proof output.",
+  "The PR does not change inference, tokenizer, loader, transformer, kernel, benchmark, dense GGUF inference, speedup, full residency, or server behavior.",
+]
