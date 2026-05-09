@@ -1241,3 +1241,57 @@ must_not_claim = [
   "Packed QK256 decode semantics are fixed.",
   "Prompt/token parity with official HF or bitnet.cpp token IDs is proven before CPU258V-020.",
 ]
+
+[[work_item]]
+id = "LNL258V-004"
+status = "merged"
+pr = 4148
+merge_sha = "e7d7a4bf0f269a1b259c24da848da3f1a98e8eb1"
+branch = "codex/lunar-lake/level-zero-loader-probe"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-003", "ARC140V-002"]
+acceptance = "Add a Windows Level Zero loader fallback for 258V platform probing when ze_info or sycl-ls are unavailable, refresh the live platform probe artifact so Arc 140V records Level Zero identity and PCI ID 0x64A0, and preserve visibility-only claim boundaries."
+commands = [
+  "cargo test --locked -p bitnet-device-probe --no-default-features level_zero -- --nocapture",
+  "cargo test --locked -p bitnet-device-probe --no-default-features --features cpu level_zero -- --nocapture",
+  "cargo test --locked -p bitnet-device-probe --no-default-features --features cpu lunar_lake_platform_probe -- --nocapture",
+  "cargo clippy --locked -p bitnet-device-probe --no-default-features -- -D warnings",
+  "cargo clippy --locked -p bitnet-device-probe --no-default-features --features cpu -- -D warnings",
+  "cargo check --locked --workspace --no-default-features --features cpu",
+  "cargo clippy --locked --workspace --no-default-features --features cpu -- -D warnings",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-cli/src/lib.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-ffi/src/config.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The 258V platform probe can record Arc 140V Level Zero runtime/device visibility through the Windows Level Zero loader when command-line tools are unavailable.",
+  "The refreshed live 258V platform probe records Arc 140V Level Zero identity evidence and PCI ID 0x64A0.",
+]
+must_not_claim = [
+  "Level Zero kernel execution is proven.",
+  "BitNet inference on Arc 140V is proven.",
+  "Packed QK256 decode on Arc 140V is proven.",
+  "Arc 140V acceleration or performance is proven.",
+  "CPU fallback satisfies Arc 140V proof.",
+]
