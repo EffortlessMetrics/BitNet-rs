@@ -1,0 +1,1906 @@
+{
+  "artifact_kind": "bitnet_transformer_layer_parity_ladder",
+  "boundaries": [
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "decode.input_embedding"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -2495.431366920471,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.8790686423062904,
+          "stage": "decode.input_embedding",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "decode.input_embedding"
+      ],
+      "id": "embedding",
+      "label": "embedding input",
+      "local_events": [
+        {
+          "checksum": -2495.431366920471,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.8790686423062904,
+          "stage": "decode.input_embedding",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "decode.input_embedding"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": false,
+      "required_stages": [
+        "decode.input_embedding",
+        "full_prompt.input_embedding"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "block.attention_norm"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -107.707978172,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.015970026,
+          "stage": "block.attention_norm",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "block.attention_norm"
+      ],
+      "id": "attention_norm",
+      "label": "attention RMSNorm/subln input boundary",
+      "local_events": [
+        {
+          "checksum": -107.707978172,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.015970026,
+          "stage": "block.attention_norm",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "block.attention_norm"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "block.attention_norm"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.q_proj"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 640,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 640,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.k_proj"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 640,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 640,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.v_proj"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -16756.497476215,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            640
+          ],
+          "finite": 640,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 640,
+          "nonfinite": 0,
+          "rms": 2.721811771,
+          "stage": "attention.k_proj",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -7387.693495518,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 1.196619924,
+          "stage": "attention.q_proj",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -37952.520999571,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            640
+          ],
+          "finite": 640,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 640,
+          "nonfinite": 0,
+          "rms": 4.310652151,
+          "stage": "attention.v_proj",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "attention.k_proj",
+        "attention.q_proj",
+        "attention.v_proj"
+      ],
+      "id": "qkv_projection",
+      "label": "Q/K/V projection boundary",
+      "local_events": [
+        {
+          "checksum": -16756.497476215,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            640
+          ],
+          "finite": 640,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 640,
+          "nonfinite": 0,
+          "rms": 2.721811771,
+          "stage": "attention.k_proj",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -7387.693495518,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 1.196619924,
+          "stage": "attention.q_proj",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -37952.520999571,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            640
+          ],
+          "finite": 640,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 640,
+          "nonfinite": 0,
+          "rms": 4.310652151,
+          "stage": "attention.v_proj",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "attention.k_proj",
+        "attention.q_proj",
+        "attention.v_proj"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "attention.q_proj",
+        "attention.k_proj",
+        "attention.v_proj"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": null,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": null,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": null,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.rope_metadata"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.q_rope"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 640,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 640,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.k_rope"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -20933.312092539,
+          "chosen_id": null,
+          "dims": [
+            1,
+            5,
+            1,
+            128
+          ],
+          "finite": 640,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 640,
+          "nonfinite": 0,
+          "rms": 2.721811766,
+          "stage": "attention.k_rope",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -3685.448187626,
+          "chosen_id": null,
+          "dims": [
+            1,
+            20,
+            1,
+            128
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 1.196619924,
+          "stage": "attention.q_rope",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": null,
+          "chosen_id": null,
+          "dims": null,
+          "finite": null,
+          "kind": "qwen_trace_event",
+          "layer": 0,
+          "len": null,
+          "nonfinite": null,
+          "rms": null,
+          "stage": "attention.rope_metadata",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "attention.k_rope",
+        "attention.q_rope",
+        "attention.rope_metadata"
+      ],
+      "id": "rope",
+      "label": "RoPE boundary",
+      "local_events": [
+        {
+          "checksum": -20933.312092539,
+          "chosen_id": null,
+          "dims": [
+            1,
+            5,
+            1,
+            128
+          ],
+          "finite": 640,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 640,
+          "nonfinite": 0,
+          "rms": 2.721811766,
+          "stage": "attention.k_rope",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -3685.448187626,
+          "chosen_id": null,
+          "dims": [
+            1,
+            20,
+            1,
+            128
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 1.196619924,
+          "stage": "attention.q_rope",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": null,
+          "chosen_id": null,
+          "dims": null,
+          "finite": null,
+          "kind": "qwen_trace_event",
+          "layer": 0,
+          "len": null,
+          "nonfinite": null,
+          "rms": null,
+          "stage": "attention.rope_metadata",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "attention.k_rope",
+        "attention.q_rope",
+        "attention.rope_metadata"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": false,
+      "required_stages": [
+        "attention.rope_metadata",
+        "attention.q_rope",
+        "attention.k_rope"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 380,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 380,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.scores_post_mask"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": 57806.174162464,
+          "chosen_id": null,
+          "dims": [
+            1,
+            20,
+            1,
+            19
+          ],
+          "finite": 380,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 380,
+          "nonfinite": 0,
+          "rms": 6.037972616,
+          "stage": "attention.scores_post_mask",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "attention.scores_post_mask"
+      ],
+      "id": "attention_scores",
+      "label": "attention score boundary",
+      "local_events": [
+        {
+          "checksum": 57806.174162464,
+          "chosen_id": null,
+          "dims": [
+            1,
+            20,
+            1,
+            19
+          ],
+          "finite": 380,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 380,
+          "nonfinite": 0,
+          "rms": 6.037972616,
+          "stage": "attention.scores_post_mask",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "attention.scores_post_mask"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "attention.scores_post_mask"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 380,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 380,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.weights"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": 2107.202324873,
+          "chosen_id": null,
+          "dims": [
+            1,
+            20,
+            1,
+            19
+          ],
+          "finite": 380,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 380,
+          "nonfinite": 0,
+          "rms": 0.185903246,
+          "stage": "attention.weights",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "attention.weights"
+      ],
+      "id": "attention_softmax",
+      "label": "attention softmax boundary",
+      "local_events": [
+        {
+          "checksum": 2107.202324873,
+          "chosen_id": null,
+          "dims": [
+            1,
+            20,
+            1,
+            19
+          ],
+          "finite": 380,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 380,
+          "nonfinite": 0,
+          "rms": 0.185903246,
+          "stage": "attention.weights",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "attention.weights"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "attention.weights"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.output_heads"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "attention.o_proj"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -11281.12502071,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.732115708,
+          "stage": "attention.o_proj",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -42341.939114707,
+          "chosen_id": null,
+          "dims": [
+            1,
+            20,
+            1,
+            128
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 3.891274829,
+          "stage": "attention.output_heads",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "attention.o_proj",
+        "attention.output_heads"
+      ],
+      "id": "attention_output",
+      "label": "attention output projection boundary",
+      "local_events": [
+        {
+          "checksum": -11281.12502071,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.732115708,
+          "stage": "attention.o_proj",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -42341.939114707,
+          "chosen_id": null,
+          "dims": [
+            1,
+            20,
+            1,
+            128
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 3.891274829,
+          "stage": "attention.output_heads",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "attention.o_proj",
+        "attention.output_heads"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "attention.output_heads",
+        "attention.o_proj"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "block.ffn_norm"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -21651.738368712,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 1.250436605,
+          "stage": "block.ffn_norm",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "block.ffn_norm"
+      ],
+      "id": "ffn_norm",
+      "label": "FFN RMSNorm/subln input boundary",
+      "local_events": [
+        {
+          "checksum": -21651.738368712,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 1.250436605,
+          "stage": "block.ffn_norm",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "block.ffn_norm"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "block.ffn_norm"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 6912,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 6912,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "mlp.gate_proj"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 6912,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 6912,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "mlp.gate_activation"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 6912,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 6912,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "mlp.up_proj"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 6912,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 6912,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "mlp.gated_product"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": 3940983794.0188284,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            6912
+          ],
+          "finite": 6912,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 6912,
+          "nonfinite": 0,
+          "rms": 69360.382372062,
+          "stage": "mlp.gate_activation",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -17599964.524398625,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            6912
+          ],
+          "finite": 6912,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 6912,
+          "nonfinite": 0,
+          "rms": 138.617378779,
+          "stage": "mlp.gate_proj",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -606657216662.755,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            6912
+          ],
+          "finite": 6912,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 6912,
+          "nonfinite": 0,
+          "rms": 116565424.32947007,
+          "stage": "mlp.gated_product",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -988458.66321034,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            6912
+          ],
+          "finite": 6912,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 6912,
+          "nonfinite": 0,
+          "rms": 123.433659367,
+          "stage": "mlp.up_proj",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "mlp.gate_activation",
+        "mlp.gate_proj",
+        "mlp.gated_product",
+        "mlp.up_proj"
+      ],
+      "id": "ffn_relu2",
+      "label": "FFN ReLU2/gated activation boundary",
+      "local_events": [
+        {
+          "checksum": 3940983794.0188284,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            6912
+          ],
+          "finite": 6912,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 6912,
+          "nonfinite": 0,
+          "rms": 69360.382372062,
+          "stage": "mlp.gate_activation",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -17599964.524398625,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            6912
+          ],
+          "finite": 6912,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 6912,
+          "nonfinite": 0,
+          "rms": 138.617378779,
+          "stage": "mlp.gate_proj",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -606657216662.755,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            6912
+          ],
+          "finite": 6912,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 6912,
+          "nonfinite": 0,
+          "rms": 116565424.32947007,
+          "stage": "mlp.gated_product",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -988458.66321034,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            6912
+          ],
+          "finite": 6912,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 6912,
+          "nonfinite": 0,
+          "rms": 123.433659367,
+          "stage": "mlp.up_proj",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "mlp.gate_activation",
+        "mlp.gate_proj",
+        "mlp.gated_product",
+        "mlp.up_proj"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "mlp.gate_proj",
+        "mlp.gate_activation",
+        "mlp.up_proj",
+        "mlp.gated_product"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "mlp.down_proj"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -126224.712491727,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 7.913847707,
+          "stage": "mlp.down_proj",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "mlp.down_proj"
+      ],
+      "id": "ffn_down_projection",
+      "label": "FFN down projection boundary",
+      "local_events": [
+        {
+          "checksum": -126224.712491727,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 7.913847707,
+          "stage": "mlp.down_proj",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "mlp.down_proj"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "mlp.down_proj"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "block.post_attention_residual"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "block.output"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -140001.269005209,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 8.282953759,
+          "stage": "block.output",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -13776.556388348,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.829693682,
+          "stage": "block.post_attention_residual",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "block.output",
+        "block.post_attention_residual"
+      ],
+      "id": "residual",
+      "label": "residual/block output boundary",
+      "local_events": [
+        {
+          "checksum": -140001.269005209,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 8.282953759,
+          "stage": "block.output",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -13776.556388348,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": 0,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.829693682,
+          "stage": "block.post_attention_residual",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "block.output",
+        "block.post_attention_residual"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "block.post_attention_residual",
+        "block.output"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "model.final_norm"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "decode.forward_output"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -395.33695239684766,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.09672253960297214,
+          "stage": "decode.forward_output",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -395.336952397,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.09672254,
+          "stage": "model.final_norm",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "comparison_stages_recorded": [
+        "decode.forward_output",
+        "model.final_norm"
+      ],
+      "id": "final_norm",
+      "label": "final norm boundary",
+      "local_events": [
+        {
+          "checksum": -395.33695239684766,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.09672253960297214,
+          "stage": "decode.forward_output",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -395.336952397,
+          "chosen_id": null,
+          "dims": [
+            1,
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.09672254,
+          "stage": "model.final_norm",
+          "step": 0,
+          "top_logits": null
+        }
+      ],
+      "local_stages_recorded": [
+        "decode.forward_output",
+        "model.final_norm"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": false,
+      "required_stages": [
+        "model.final_norm",
+        "decode.forward_output"
+      ],
+      "status": "recorded"
+    },
+    {
+      "comparison": {
+        "compared_stages": [
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 2560,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 2560,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "lm_head.input_hidden"
+          },
+          {
+            "checksum_delta": 0.0,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": 128256,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": 128256,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "lm_head.logits"
+          },
+          {
+            "checksum_delta": null,
+            "checksum_tolerance": 0.00001,
+            "comparison_len": null,
+            "comparison_nonfinite": 0,
+            "dims_match": true,
+            "local_len": null,
+            "local_nonfinite": 0,
+            "matched": true,
+            "stage": "lm_head.top_logits"
+          }
+        ],
+        "first_mismatch": null,
+        "first_mismatch_stage": null,
+        "missing_comparison_stages": [],
+        "status": "matched"
+      },
+      "comparison_events": [
+        {
+          "checksum": -395.336952397,
+          "chosen_id": null,
+          "dims": [
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.09672254,
+          "stage": "lm_head.input_hidden",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -12823279.398721218,
+          "chosen_id": null,
+          "dims": [
+            1,
+            128256
+          ],
+          "finite": 128256,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 128256,
+          "nonfinite": 0,
+          "rms": 24.63328134,
+          "stage": "lm_head.logits",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": null,
+          "chosen_id": 220,
+          "dims": null,
+          "finite": null,
+          "kind": "qwen_trace_logits",
+          "layer": null,
+          "len": null,
+          "nonfinite": null,
+          "rms": null,
+          "stage": "lm_head.top_logits",
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 6.6697001457214355,
+              "token_id": 220
+            },
+            {
+              "logit": -6.725193023681641,
+              "token_id": 256
+            },
+            {
+              "logit": -7.214357852935791,
+              "token_id": 482
+            },
+            {
+              "logit": -7.763550758361816,
+              "token_id": 666
+            },
+            {
+              "logit": -8.280210494995117,
+              "token_id": 2355
+            },
+            {
+              "logit": -8.36298656463623,
+              "token_id": 262
+            },
+            {
+              "logit": -8.56418228149414,
+              "token_id": 11410
+            },
+            {
+              "logit": -8.660755157470703,
+              "token_id": 720
+            },
+            {
+              "logit": -8.800400733947754,
+              "token_id": 86043
+            },
+            {
+              "logit": -8.810816764831543,
+              "token_id": 49617
+            },
+            {
+              "logit": -9.253315925598145,
+              "token_id": 29753
+            },
+            {
+              "logit": -9.453521728515623,
+              "token_id": 949
+            },
+            {
+              "logit": -9.71738052368164,
+              "token_id": 1144
+            },
+            {
+              "logit": -9.807024002075195,
+              "token_id": 674
+            },
+            {
+              "logit": -9.825096130371094,
+              "token_id": 55375
+            },
+            {
+              "logit": -9.866958618164062,
+              "token_id": 7860
+            },
+            {
+              "logit": -9.900510787963867,
+              "token_id": 20339
+            },
+            {
+              "logit": -9.939922332763672,
+              "token_id": 3146
+            },
+            {
+              "logit": -10.057714462280272,
+              "token_id": 415
+            },
+            {
+              "logit": -10.119361877441406,
+              "token_id": 257
+            }
+          ]
+        }
+      ],
+      "comparison_stages_recorded": [
+        "lm_head.input_hidden",
+        "lm_head.logits",
+        "lm_head.top_logits"
+      ],
+      "id": "lm_head",
+      "label": "lm_head logits boundary",
+      "local_events": [
+        {
+          "checksum": -395.336952397,
+          "chosen_id": null,
+          "dims": [
+            1,
+            2560
+          ],
+          "finite": 2560,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 2560,
+          "nonfinite": 0,
+          "rms": 0.09672254,
+          "stage": "lm_head.input_hidden",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": -12823279.398721218,
+          "chosen_id": null,
+          "dims": [
+            1,
+            128256
+          ],
+          "finite": 128256,
+          "kind": "qwen_trace_tensor",
+          "layer": null,
+          "len": 128256,
+          "nonfinite": 0,
+          "rms": 24.63328134,
+          "stage": "lm_head.logits",
+          "step": 0,
+          "top_logits": null
+        },
+        {
+          "checksum": null,
+          "chosen_id": 220,
+          "dims": null,
+          "finite": null,
+          "kind": "qwen_trace_logits",
+          "layer": null,
+          "len": null,
+          "nonfinite": null,
+          "rms": null,
+          "stage": "lm_head.top_logits",
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 6.6697001457214355,
+              "token_id": 220
+            },
+            {
+              "logit": -6.725193023681641,
+              "token_id": 256
+            },
+            {
+              "logit": -7.214357852935791,
+              "token_id": 482
+            },
+            {
+              "logit": -7.763550758361816,
+              "token_id": 666
+            },
+            {
+              "logit": -8.280210494995117,
+              "token_id": 2355
+            },
+            {
+              "logit": -8.36298656463623,
+              "token_id": 262
+            },
+            {
+              "logit": -8.56418228149414,
+              "token_id": 11410
+            },
+            {
+              "logit": -8.660755157470703,
+              "token_id": 720
+            },
+            {
+              "logit": -8.800400733947754,
+              "token_id": 86043
+            },
+            {
+              "logit": -8.810816764831543,
+              "token_id": 49617
+            },
+            {
+              "logit": -9.253315925598145,
+              "token_id": 29753
+            },
+            {
+              "logit": -9.453521728515623,
+              "token_id": 949
+            },
+            {
+              "logit": -9.71738052368164,
+              "token_id": 1144
+            },
+            {
+              "logit": -9.807024002075195,
+              "token_id": 674
+            },
+            {
+              "logit": -9.825096130371094,
+              "token_id": 55375
+            },
+            {
+              "logit": -9.866958618164062,
+              "token_id": 7860
+            },
+            {
+              "logit": -9.900510787963867,
+              "token_id": 20339
+            },
+            {
+              "logit": -9.939922332763672,
+              "token_id": 3146
+            },
+            {
+              "logit": -10.057714462280272,
+              "token_id": 415
+            },
+            {
+              "logit": -10.119361877441406,
+              "token_id": 257
+            }
+          ]
+        }
+      ],
+      "local_stages_recorded": [
+        "lm_head.input_hidden",
+        "lm_head.logits",
+        "lm_head.top_logits"
+      ],
+      "missing_local_stages": [],
+      "require_all_stages": true,
+      "required_stages": [
+        "lm_head.input_hidden",
+        "lm_head.logits",
+        "lm_head.top_logits"
+      ],
+      "status": "recorded"
+    }
+  ],
+  "claim": "cpu258v_transformer_layer_parity_ladder",
+  "claim_boundary": {
+    "may_claim": [
+      "The 258V CPU transformer-layer trace ladder records which internal boundaries have local BitNet-rs evidence.",
+      "When a comparison or reference trace is supplied, matching stages can be compared by dimensions, finite status, and checksum tolerance.",
+      "Missing comparison/reference layer traces are recorded as blockers instead of inferred parity."
+    ],
+    "must_not_claim": [
+      "BitNet answer quality is newly proven",
+      "First-token logits parity with the external reference is proven unless a reference trace/logit source is supplied and matched",
+      "CPU speed or sustained throughput",
+      "Arc 140V execution or acceleration",
+      "Intel NPU execution or acceleration",
+      "Full model correctness"
+    ]
+  },
+  "classification": {
+    "classification": "primary_and_comparison_transformer_layer_ladder_matched",
+    "first_divergence_stage": "none",
+    "first_internal_boundary": null,
+    "first_mismatch": null,
+    "next_required_evidence": "rerun answer corpus against the matched transformer-layer boundary evidence"
+  },
+  "fallback_used": false,
+  "inputs": {
+    "comparison_trace_jsonl": "ci/hardware/intel-258v/2026-05-08/transformer-layer-trace-avx2.jsonl",
+    "first_token_divergence": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json",
+    "output_head_logits_audit": "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
+    "prompt_audit": "ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json",
+    "qk256_semantic_audit": "ci/hardware/intel-258v/2026-05-08/cpu-qk256-i8s-semantic-audit.json",
+    "trace_jsonl": "ci/hardware/intel-258v/2026-05-08/transformer-layer-trace-scalar.jsonl"
+  },
+  "machine_id": "intel-258v",
+  "prior_boundaries": {
+    "first_token_divergence": {
+      "artifact_kind": "bitnet_first_token_divergence_classification",
+      "classification": null,
+      "proof_stage": "first_token_divergence_classified",
+      "provided": true,
+      "summary": {
+        "cases_inconclusive": 4,
+        "cases_total": 4,
+        "classification": "reference_generated_token_ids_and_logits_unavailable",
+        "first_divergence": {
+          "case_id": "math_2_plus_2",
+          "classification": "reference_generated_token_ids_and_logits_unavailable",
+          "evidence_boundary": "external_reference_text_matches_after_trimming_but_generated_token_ids_and_logits_are_unavailable",
+          "first_divergence_stage": "inconclusive"
+        },
+        "generated_text_trimmed_avx2_matches": 4,
+        "generated_text_trimmed_scalar_avx2_matches": 4,
+        "generated_text_trimmed_scalar_matches": 4,
+        "next_required_evidence": "instrument bitnet.cpp or another reference runner to emit generated token IDs and first-token logits/top-k before claiming logits parity",
+        "prompt_token_exact_matches": 0,
+        "prompt_token_local_bos_prefix_matches": 4,
+        "reference_generated_token_ids_available": false,
+        "reference_logits_available": false,
+        "scalar_avx2_parity_passed": true
+      },
+      "validation": {
+        "failed_rules": [],
+        "passed": true
+      }
+    },
+    "output_head_logits_index": {
+      "artifact_kind": "bitnet_output_head_logits_index_audit",
+      "classification": {
+        "classification": "output_head_logits_index_boundary_recorded",
+        "first_mismatch_stage": null,
+        "notes": []
+      },
+      "proof_stage": "output_head_logits_index_audited",
+      "provided": true,
+      "summary": null,
+      "validation": {
+        "failed_rules": [],
+        "passed": true
+      }
+    },
+    "prompt_authority": {
+      "artifact_kind": "bitnet_prompt_token_authority_audit",
+      "classification": {
+        "first_divergence_stage": "unknown",
+        "first_mismatch_index": null,
+        "notes": [
+          "current_default_and_metadata_authority_prompt_tokens_match",
+          "model_inference_not_run; first-token logits remain unclassified"
+        ]
+      },
+      "proof_stage": null,
+      "provided": true,
+      "summary": null,
+      "validation": null
+    },
+    "qk256_semantics": {
+      "artifact_kind": "bitnet_cpu_qk256_i8s_semantic_audit",
+      "classification": {
+        "accelerator_execution_classification": "not_evaluated",
+        "answer_quality_classification": "not_evaluated",
+        "audited_fixture_status": "matches_canonical_oracle_semantics",
+        "first_mismatch": null
+      },
+      "proof_stage": "semantic_audited",
+      "provided": true,
+      "summary": null,
+      "validation": null
+    }
+  },
+  "proof_stage": "transformer_layer_ladder_recorded",
+  "schema_version": "1.0.0",
+  "summary": {
+    "boundaries_missing": 0,
+    "boundaries_nonfinite": 0,
+    "boundaries_partial": 0,
+    "boundaries_recorded": 13,
+    "boundaries_total": 13,
+    "classification": "primary_and_comparison_transformer_layer_ladder_matched",
+    "comparison_boundaries_matched": 13,
+    "comparison_boundaries_mismatched": 0,
+    "first_divergence": {
+      "classification": "primary_and_comparison_transformer_layer_ladder_matched",
+      "first_divergence_stage": "none",
+      "first_internal_boundary": null,
+      "first_mismatch": null,
+      "next_required_evidence": "rerun answer corpus against the matched transformer-layer boundary evidence"
+    }
+  },
+  "timestamp": "2026-05-09T23:29:55.648889100+00:00",
+  "trace": {
+    "comparison_events": 34,
+    "comparison_trace_supplied": true,
+    "local_events": 34,
+    "local_stages": {
+      "attention.k_proj": 1,
+      "attention.k_rope": 1,
+      "attention.o_proj": 1,
+      "attention.output_heads": 1,
+      "attention.q_proj": 1,
+      "attention.q_rope": 1,
+      "attention.rope_metadata": 1,
+      "attention.scores_post_mask": 1,
+      "attention.sub_layernorm": 1,
+      "attention.v_proj": 1,
+      "attention.weights": 1,
+      "block.attention_norm": 1,
+      "block.ffn_norm": 1,
+      "block.output": 1,
+      "block.post_attention_residual": 1,
+      "decode.first_generated_token": 1,
+      "decode.forward_output": 1,
+      "decode.input_embedding": 1,
+      "decode.input_token": 1,
+      "decode.last_hidden": 1,
+      "lm_head.input_hidden": 1,
+      "lm_head.logits": 1,
+      "lm_head.metadata": 1,
+      "lm_head.top_logits": 1,
+      "mlp.down_proj": 1,
+      "mlp.gate_activation": 1,
+      "mlp.gate_proj": 1,
+      "mlp.gated_product": 1,
+      "mlp.sub_layernorm": 1,
+      "mlp.up_proj": 1,
+      "model.final_norm": 1,
+      "model_config": 1,
+      "prompt.ids": 1,
+      "trace_start": 1
+    }
+  },
+  "validation": {
+    "failed_rules": [],
+    "passed": true
+  }
+}
