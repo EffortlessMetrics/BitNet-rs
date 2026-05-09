@@ -357,7 +357,7 @@ pub struct DenseGgufOneLayerCpuReferenceCommand {
 impl DenseGgufOneLayerCpuReferenceCommand {
     pub async fn execute(&self) -> Result<()> {
         if self.layer_index != 0 {
-            bail!("CUDA-DENSE-032 currently records the first dense GGUF layer only");
+            bail!("CUDA-DENSE-033 currently records the first dense GGUF layer only");
         }
         if self.seq_len == 0 {
             bail!("dense GGUF one-layer CPU reference requires --seq-len > 0");

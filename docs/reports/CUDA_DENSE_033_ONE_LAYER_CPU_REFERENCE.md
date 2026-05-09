@@ -1,12 +1,12 @@
-# CUDA-DENSE-032 One-Layer CPU Reference Harness
+# CUDA-DENSE-033 One-Layer CPU Reference Harness
 
-`CUDA-DENSE-032` implements the dense GGUF layer-0 CPU reference harness that
-the route-complete one-layer planner from `CUDA-DENSE-031` needs before
-integrated CUDA layer parity can be claimed.
+`CUDA-DENSE-033` implements the dense GGUF layer-0 CPU reference harness
+defined by `CUDA-DENSE-032` after the route-complete one-layer planner from
+`CUDA-DENSE-031`.
 
 The harness is CPU-only. It composes the already governed dense layer phases
 against deterministic input and emits per-phase hashes plus a final layer output
-hash. This creates the comparison anchor for `CUDA-DENSE-033`; it does not run
+hash. This creates the comparison anchor for `CUDA-DENSE-034`; it does not run
 the layer through CUDA and does not claim dense GGUF inference.
 
 ## Command
@@ -107,5 +107,5 @@ coverage, not RTX 5070 Ti execution evidence.
 
 ## Next Step
 
-`CUDA-DENSE-033` should run the same layer through the integrated dense CUDA
+`CUDA-DENSE-034` should run the same layer through the integrated dense CUDA
 path and compare the full layer output against this CPU reference receipt.
