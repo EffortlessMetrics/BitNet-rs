@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T04:36:30Z"
+campaign = "model-artifacts"
+item = "BITNET-CONTRACT-003"
+event = "merged"
+actor = "codex"
+pr = 4201
+merge_sha = "8bcbdca3dfeb6806a07ec1b0994587c211d0f1f8"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4201 merged the CLI contract matrix inspection surface.",
+  "`bitnet model contracts` exposes every registered BitNet-family model contract.",
+  "`bitnet model verify` fails closed with contract metadata for known contracts without supported artifact identity and SHA256 metadata.",
+  "3B x86 I2_S remains upstream-unsupported and diagnostic/unsupported-path only.",
+  "No runtime, tokenizer, loader, prompt-template, transformer, QK256, CUDA, dense GGUF, server, full-residency, or speed-claim behavior changed.",
+]
