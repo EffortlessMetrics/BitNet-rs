@@ -2107,10 +2107,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-014"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-014-gap-audit"
 pr = 4216
 head_sha = "d271eddb75d0aa2c132f3d67f07a3b0549932561"
+merge_sha = "b9a05ef5bbc4f00462566fbce576d66e8917cc98"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

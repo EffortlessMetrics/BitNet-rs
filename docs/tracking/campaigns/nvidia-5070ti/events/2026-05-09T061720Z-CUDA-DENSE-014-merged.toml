@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T06:17:20Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-014"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-014-gap-audit"
+pr = 4216
+head_sha = "d271eddb75d0aa2c132f3d67f07a3b0549932561"
+merge_sha = "b9a05ef5bbc4f00462566fbce576d66e8917cc98"
+notes = [
+  "Merged PR #4216 with the dense GGUF one-layer gap audit receipt extension.",
+  "The merged receipt records unsupported strict CUDA op dependencies, governed candidate order, and not-executed residency/timing status.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, tokenizer, loader, transformer, CUDA math, and BitNet packed proof claims remain false.",
+]
