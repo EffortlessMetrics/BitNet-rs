@@ -121,7 +121,7 @@
 | intel-258v-platform | LNL258V-COMPARE-002 | CPU258V-016, ARC140V-005 | merged |
 | intel-258v-platform | CPU258V-017 | CPU258V-016, LNL258V-COMPARE-002 | merged |
 | intel-258v-platform | CPU258V-018 | CPU258V-017 | merged |
-| intel-258v-platform | CPU258V-019 | CPU258V-018 | ready |
+| intel-258v-platform | CPU258V-019 | CPU258V-018 | pr_open |
 | intel-258v-platform | LNL258V-004 | LNL258V-003, ARC140V-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |

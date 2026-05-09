@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T04:30:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-019"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4248
+head_sha = "81fee369cdda153b447108e77b5db0dbe13d6ec2"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-019-external-first-token-reference"
+summary = "Opened CPU258V-019 to record external first-token reference boundaries for fixed 258V prompts."
+notes = [
+  "The artifact records Microsoft BitNet.cpp generated text from MODEL-ARTIFACT-007 and prompt token IDs for the exact bitnet.cpp prompt string using HF AutoTokenizer with add_special_tokens=false.",
+  "Generated token IDs and first-token logits remain unavailable in this reference evidence and are recorded as missing rather than inferred.",
+  "The PR does not claim logits parity, generated-token-ID parity, speed, Arc 140V execution, Intel NPU execution, or QK256 decode correctness.",
+]

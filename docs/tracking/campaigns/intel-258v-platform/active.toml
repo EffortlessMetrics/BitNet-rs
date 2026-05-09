@@ -1290,7 +1290,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-019"
-status = "ready"
+status = "pr_open"
+pr = 4248
 branch = "codex/lunar-lake/CPU258V-019-external-first-token-reference"
 stackable = false
 review_mode = "codex_premerge"
@@ -1301,6 +1302,7 @@ acceptance = "Capture external bitnet.cpp or HF reference prompt policy, prompt 
 commands = [
   "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- prompt-authority-audit --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --prompt \"What is 2+2? Answer with only the number.\" --json-out target/cpu258v-019/prompt-authority-audit-math.json",
   "python -c \"import json; p='ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity.json'; a=json.load(open(p, encoding='utf-8')); assert a['summary']['first_divergence_stage']=='prompt'\"",
+  "python -c \"import json; p='ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json'; a=json.load(open(p, encoding='utf-8')); assert a['artifact_kind']=='bitnet_external_first_token_reference_capture'; assert a['summary']['reference_generated_text_available'] is True; assert a['summary']['reference_logits_available'] is False\"",
   "git diff --check",
 ]
 allowed_paths = [
