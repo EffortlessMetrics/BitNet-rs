@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T04:29:05Z"
+campaign = "model-artifacts"
+item = "BITNET-CONTRACT-003"
+event = "in_progress"
+actor = "codex"
+branch = "codex/bitnet-contract-003-verify-matrix"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Expose the BitNet-family model contract matrix through the CLI model command surface.",
+  "Make known BitNet contracts without supported artifact identity and SHA256 metadata fail closed in `bitnet model verify` with a contract summary.",
+  "Keep TL1/TL2, 3B, alternate-control, dense GGUF, CUDA, server, speedup, and full-residency claims unchanged.",
+]
