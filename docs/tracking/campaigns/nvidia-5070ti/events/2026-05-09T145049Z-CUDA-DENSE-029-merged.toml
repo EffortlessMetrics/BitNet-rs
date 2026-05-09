@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T14:50:49Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-029"
+event = "merged"
+previous_status = "in_progress"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-029-mlp-activation-fixture"
+pr = 4303
+merge_sha = "04a1bb3e8b7eaf532b2ac2f7f195b2f3e7fb6d2a"
+
+notes = [
+  "PR #4303 merged, adding the dense GGUF MLP activation CPU-reference fixture.",
+  "CUDA-DENSE-029 records SiLU(mlp_gate) times mlp_up activation hashes and leaves CUDA parity, dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, QK256, tokenizer, loader, transformer, server, and CUDA kernel math claims false.",
+]
