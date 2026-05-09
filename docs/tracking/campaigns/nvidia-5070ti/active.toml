@@ -2239,8 +2239,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-032"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-032-reference-harness-tracker"
+pr = 4316
+head_sha = "d62ac3672306b7b1887dd194d394b4b81afeb28b"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

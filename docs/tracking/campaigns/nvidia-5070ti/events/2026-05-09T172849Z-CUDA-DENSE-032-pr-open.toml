@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T17:28:49Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-032"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-032-reference-harness-tracker"
+pr = 4316
+head_sha = "d62ac3672306b7b1887dd194d394b4b81afeb28b"
+
+notes = [
+  "Opened PR #4316 to close out CUDA-DENSE-031 tracker state and define the CUDA-DENSE-032 one-layer CPU reference harness contract.",
+  "Scope remains docs/tracker metadata and generated dashboards only; no runtime code, hardware receipt evidence, CUDA execution, dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, QK256, tokenizer, loader, transformer, server, or CUDA kernel math change is in scope.",
+]
