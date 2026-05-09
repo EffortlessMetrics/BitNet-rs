@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T14:59:46Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-010"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-SLM-EX-010 after M4-SLM-EX-009 closed out.",
+  "Added an operator expectation envelope for the M4 Mac mini dense SLM path using existing committed receipts.",
+  "The envelope documents supported models, cache sizes, release-mode warm profiles, resident soak behavior, health/regression commands, and unsupported claim boundaries.",
+]

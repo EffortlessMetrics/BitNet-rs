@@ -274,6 +274,12 @@ Publish an operator expectation page for the M4 Mac mini:
 
 This is expectation-setting, not a broad performance claim.
 
+The measured envelope is published in
+`docs/slm/apple-m4-mini-user-expectation-envelope.md`. It records the supported
+models, cache sizes, release-mode warm 16/32/64/128 profile timings, long
+resident-session soak evidence, health/regression commands, and unsupported
+claim boundaries for the M4 Mac mini dense SLM path.
+
 ## Later Metal Work
 
 Dense SLM Metal work should remain phase-scoped until strict receipts justify a
