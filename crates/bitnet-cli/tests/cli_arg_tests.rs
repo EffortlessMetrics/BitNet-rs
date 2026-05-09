@@ -1272,6 +1272,24 @@ fn slm_warm_session_accepts_corpus_without_prompt_before_loading_model() {
 }
 
 #[test]
+fn apple_m4_slm_quality_corpus_tracks_five_bounded_cases() {
+    let corpus_path = workspace_path("ci/quality/apple-m4-slm-quality-corpus.yaml");
+    let corpus: serde_yaml::Value =
+        serde_yaml::from_slice(&std::fs::read(corpus_path).expect("read corpus"))
+            .expect("parse corpus");
+    let cases = corpus["cases"].as_sequence().expect("cases");
+    let ids: Vec<_> = cases.iter().filter_map(|case| case["id"].as_str()).collect();
+
+    assert_eq!(corpus["artifact_kind"].as_str(), Some("apple_m4_slm_quality_corpus"));
+    assert_eq!(cases.len(), 5);
+    assert!(ids.contains(&"math_2_plus_2"));
+    assert!(ids.contains(&"capital_france"));
+    assert!(ids.contains(&"rust_sentence"));
+    assert!(ids.contains(&"ready_instruction"));
+    assert!(ids.contains(&"answer_prefix_blue"));
+}
+
+#[test]
 fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     let Ok(model) = std::env::var("BITNET_M4_SLM_QWEN_GGUF") else {
         eprintln!("skipping real SLM warm-session receipt test; set BITNET_M4_SLM_QWEN_GGUF");
@@ -1321,7 +1339,7 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     assert_eq!(receipt["fallback_used"], false);
     assert_eq!(receipt["session"]["model_loaded_once"], true);
     assert_eq!(receipt["session"]["tokenizer_loaded_once"], true);
-    assert_eq!(receipt["session"]["prompt_count"], 6);
+    assert_eq!(receipt["session"]["prompt_count"], 10);
     assert_eq!(receipt["session"]["reuse_scope"], "resident_session");
     assert_eq!(receipt["session"]["session_owned_buffers"], true);
     assert_eq!(receipt["session"]["prompt_token_buffer_reused"], true);
@@ -1352,7 +1370,7 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     assert_eq!(receipt["claim_boundary"]["full_metal_inference_claimed"], false);
     assert_eq!(receipt["claim_boundary"]["bitnet_quality_claimed"], false);
     let prompts = receipt["prompts"].as_array().expect("prompt summaries");
-    assert_eq!(prompts.len(), 6);
+    assert_eq!(prompts.len(), 10);
     for prompt in prompts {
         assert_eq!(prompt["backend"]["fallback_used"], false);
         assert_eq!(prompt["quality"]["passed"], true);

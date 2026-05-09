@@ -39,7 +39,7 @@ This campaign owns the next user-facing polish layer. It should remove avoidable
 |---|---|---|
 | M4-SLM-HARDEN-001 | merged | Add positional `bitnet mac ask "question"` UX while preserving `--question`, default cache, and backend boundaries. |
 | M4-SLM-HARDEN-002 | merged | Improve first-run cache repair and low-disk guidance for Mac SLM operators. |
-| M4-SLM-HARDEN-003 | ready | Expand the small operator quality corpus without turning it into a broad eval. |
+| M4-SLM-HARDEN-003 | in_progress | Expand the small operator quality corpus without turning it into a broad eval. |
 | M4-SLM-HARDEN-004 | proposed | Seed regression guardrails from the measured performance envelope. |
 
 ## Review Policy
