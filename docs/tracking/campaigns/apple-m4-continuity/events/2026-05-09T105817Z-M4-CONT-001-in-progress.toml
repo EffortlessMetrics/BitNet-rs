@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T10:58:17Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/apple-m4-continuity/M4-CONT-001-mac-chat"
+
+notes = [
+  "Started the M4-local continuity lane with a resident `bitnet mac chat` wrapper over the supported dense SLM warm-session runner.",
+  "Scope is dense SLM Mac UX only; no MacBook artifact sweep, BitNet quality claim, QK256, server inference, Metal kernel, or model binary change.",
+]

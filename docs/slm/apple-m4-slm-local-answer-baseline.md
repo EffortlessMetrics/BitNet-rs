@@ -109,6 +109,22 @@ bitnet mac ask \
   --json-out target/apple-m4-productization/mac-ask.json
 ```
 
+Run multiple prompts through one resident Mac session:
+
+```bash
+bitnet mac chat \
+  --prompt "What is 2+2? Answer briefly." \
+  --prompt "Name the capital of France." \
+  --json-out target/apple-m4-continuity/mac-chat.json
+```
+
+`bitnet mac chat` is a non-interactive resident session wrapper over the same
+supported Apple M4 CPU/NEON dense-SLM warm-session path used by validation. It
+loads the verified Qwen2.5 model and tokenizer once, streams token text by
+default, writes an aggregate receipt plus per-prompt receipts, and keeps the
+same dense-SLM claim boundary as `bitnet mac ask`. For one question, continue to
+use `bitnet mac ask`.
+
 Run the deterministic warm-session validation corpus:
 
 ```bash

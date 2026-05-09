@@ -473,6 +473,81 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_chat_help_documents_resident_prompts() {
+    bitnet()
+        .args(["mac", "chat", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("resident Apple M4 CPU/NEON SLM session"))
+        .stdout(predicate::str::contains("--prompt <TEXT>"))
+        .stdout(predicate::str::contains("--stdin"))
+        .stdout(predicate::str::contains("--no-stream"));
+}
+
+#[test]
+fn mac_chat_requires_two_prompts_before_cache_lookup() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "chat",
+            "--prompt",
+            "What is 2+2? Answer briefly.",
+            "--cache-dir",
+            cache_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac chat requires at least two prompts"))
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+}
+
+#[test]
+fn mac_chat_accepts_two_prompts_before_cache_lookup() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "chat",
+            "--prompt",
+            "What is 2+2? Answer briefly.",
+            "--prompt",
+            "Name the capital of France.",
+            "--cache-dir",
+            cache_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"))
+        .stderr(predicate::str::contains("requires at least two prompts").not());
+}
+
+#[test]
+fn mac_chat_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args([
+            "--device",
+            "apple-m4-metal",
+            "mac",
+            "chat",
+            "--prompt",
+            "What is 2+2? Answer briefly.",
+            "--prompt",
+            "Name the capital of France.",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac chat routes the supported Mac local-answer path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
 fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("answer.json");

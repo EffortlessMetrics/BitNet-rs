@@ -1,0 +1,228 @@
+id = "apple-m4-continuity"
+title = "Apple M4 continuity"
+status = "active"
+
+objective = "Keep the M4 Mac mini useful as the local Apple Silicon dense-SLM appliance while BitNet artifact qualification happens elsewhere, by improving resident Mac UX, smoke validation, latency polish, and blocked BitNet proof preparation without widening hardware claims."
+
+end_state = [
+  "The supported dense Qwen2.5 Apple M4 CPU/NEON path has a resident Mac chat/session wrapper for multiple prompts with model/tokenizer reuse.",
+  "A compact Mac smoke command can verify cache health, a tiny answer surface, receipt validity, and backend/fallback identity.",
+  "Latency polish focuses on time-to-first-token, streaming behavior, and avoiding user-visible overhead without claiming broad M4 performance.",
+  "Longer resident dense-SLM runs record memory and timing stability without broadening the model or backend claim.",
+  "The M4 BitNet proof command and receipt schema are prepared but remain blocked until an accepted BitNet artifact is available.",
+]
+
+hard_constraints = [
+  "This is an M4 Mac mini local campaign; do not execute MacBook artifact sweeps or MacBook receipts here.",
+  "Do not reopen completed Apple M4 proof, operational, SLM answer, productization, performance, hardening, or dense regression campaigns.",
+  "Do not weaken blocked BitNet local-answer gates.",
+  "Do not claim BitNet local-answer quality from dense Qwen SLM evidence.",
+  "Do not claim full apple-m4-metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance.",
+  "Do not touch QK256, bitnet-qk256-dispatch, server inference, or Metal kernels.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M4-CONT-001"
+status = "in_progress"
+branch = "codex/apple-m4-continuity/M4-CONT-001-mac-chat"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add a resident `bitnet mac chat` wrapper for the supported dense Qwen Apple M4 CPU/NEON path, accepting repeated prompts or stdin, streaming by default, reusing the existing warm-session runner so the model/tokenizer load once, writing aggregate and per-prompt receipts, and preserving device-boundary errors before cache/model work."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests mac_chat -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests mac_ask -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-continuity",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-continuity/**",
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-continuity/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The Mac dense-SLM path has a resident multi-prompt wrapper that reuses the supported Apple M4 CPU/NEON warm-session runner.",
+  "`bitnet mac chat` preserves the verified Qwen2.5 cache flow, aggregate/per-prompt receipts, and apple-m4-cpu-neon boundary.",
+]
+must_not_claim = [
+  "BitNet local-answer quality is proven.",
+  "Full apple-m4-metal inference works.",
+  "MPSGraph or Neural Engine model inference works.",
+  "QK256 works on Apple Silicon.",
+  "Broad M4 performance is proven.",
+]
+
+[[work_item]]
+id = "M4-CONT-002"
+status = "proposed"
+branch = "codex/apple-m4-continuity/M4-CONT-002-golden-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-CONT-001"]
+acceptance = "Add a compact M4 dense-SLM golden smoke command that verifies cache health, asks a tiny prompt, checks receipt validity, records backend/fallback identity, and reports disk/cache health without creating new model or performance claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-continuity",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-continuity/**",
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-continuity/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The M4 dense-SLM path has a compact local health smoke when the command and receipts pass.",
+]
+must_not_claim = [
+  "BitNet local-answer quality is proven.",
+  "Broad M4 performance is proven.",
+]
+
+[[work_item]]
+id = "M4-CONT-003"
+status = "proposed"
+branch = "codex/apple-m4-continuity/M4-CONT-003-latency-polish"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-CONT-002"]
+acceptance = "Polish perceived latency for the dense Mac SLM path by improving streaming flush behavior, quiet default logs, prompt formatting overhead, sampling/logits scratch reuse, or receipt construction placement based on measured receipts while preserving greedy token IDs and quality corpus behavior."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-continuity",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-continuity/**",
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-continuity/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "A measured dense-SLM latency overhead was reduced for the recorded M4 context if before/after receipts support it.",
+]
+must_not_claim = [
+  "Broad M4 performance is proven.",
+  "Full apple-m4-metal inference works.",
+]
+
+[[work_item]]
+id = "M4-CONT-004"
+status = "proposed"
+branch = "codex/apple-m4-continuity/M4-CONT-004-resident-envelope"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-CONT-003"]
+acceptance = "Record a longer dense-SLM resident-session memory and timing envelope for repeated 64-token and 128-token prompts, proving model/tokenizer reuse and receipt stability without changing model support or broadening performance claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-continuity",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-continuity/**",
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-continuity/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The dense Mac SLM resident-session memory and timing envelope is recorded for the local M4 context.",
+]
+must_not_claim = [
+  "Apple Silicon fleet-wide performance is proven.",
+  "BitNet behavior is proven.",
+]
+
+[[work_item]]
+id = "M4-CONT-005"
+status = "blocked"
+branch = "codex/apple-m4-continuity/M4-CONT-005-bitnet-proof-prep"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-CONT-004"]
+acceptance = "Prepare the M4-side strict BitNet CPU/NEON proof command shape, required receipt schema, and accepted-artifact input contract so the M4 proof can run once an artifact is accepted, while failing clearly when the artifact is missing or not accepted."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-continuity",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-continuity/**",
+  "crates/bitnet-cli/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-continuity/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The M4 BitNet proof command and receipt contract are prepared for a future accepted artifact.",
+]
+must_not_claim = [
+  "BitNet local-answer quality is proven.",
+  "A BitNet artifact is accepted by this item.",
+  "Apple Metal BitNet inference works.",
+]
