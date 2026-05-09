@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:28:42Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-007"
+event = "merged"
+actor = "codex"
+pr = 4297
+merge_sha = "6d72f845b7c388ee0502b50e9354c748b52ec1dd"
+
+notes = [
+  "Merged PR #4297, expanding the M4 dense SLM quality corpus to seven deterministic cases.",
+  "The live M4 receipt passed with prompt_count=14, generated_tokens=152, fallback_used=false, quality_summary.passed=true, and determinism.passed=true.",
+  "M4-SLM-EX-008 is the next ready item for long resident-session soak behavior.",
+]
