@@ -383,6 +383,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bitnet-atomic-file-core",
+ "bitnet-build-info-core",
  "bitnet-common",
  "bitnet-cpu-activations",
  "bitnet-device-probe",
@@ -485,6 +486,13 @@ name = "bitnet-bench-regression-core"
 version = "0.1.0"
 dependencies = [
  "bitnet-bench-receipts",
+]
+
+[[package]]
+name = "bitnet-build-info-core"
+version = "0.2.1-dev"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -1443,6 +1451,7 @@ dependencies = [
  "base64 0.22.1",
  "bitnet-api-key-auth-core",
  "bitnet-api-versioning-core",
+ "bitnet-build-info-core",
  "bitnet-client-ip-core",
  "bitnet-common",
  "bitnet-device-config-core",

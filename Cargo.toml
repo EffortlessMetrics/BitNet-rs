@@ -68,6 +68,7 @@ members = [
   "crates/bitnet-cli-sampling-core", # SRP: reusable CLI sampling primitives
   "crates/bitnet-cli-config-core", # SRP: reusable CLI configuration contracts/validation
   "crates/bitnet-scoring-core", # SRP: reusable NLL/logit scoring primitives
+  "crates/bitnet-build-info-core", # SRP: reusable compile-time build metadata helpers
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-safetensors-ln", # SRP: shared SafeTensors LayerNorm utilities
@@ -251,6 +252,7 @@ bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
 bitnet-math = { path = "crates/bitnet-math", version = "0.2.1-dev" }
 bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 bitnet-atomic-file-core = { path = "crates/bitnet-atomic-file-core", version = "0.2.1-dev" }
+bitnet-build-info-core = { path = "crates/bitnet-build-info-core", version = "0.2.1-dev" }
 bitnet-tokenizer-text-core = { path = "crates/bitnet-tokenizer-text-core", version = "0.2.1-dev" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
@@ -439,6 +441,7 @@ bitnet-warn-once = { path = "crates/bitnet-warn-once", version = "0.2.1-dev" }
 bitnet-thread-config-core = { path = "crates/bitnet-thread-config-core", version = "0.2.1-dev" }
 bitnet-atomic-file-core = { path = "crates/bitnet-atomic-file-core", version = "0.2.1-dev" }
 bitnet-minimal-json-core = { path = "crates/bitnet-minimal-json-core", version = "0.2.1-dev" }
+bitnet-build-info-core = { path = "crates/bitnet-build-info-core", version = "0.2.1-dev" }
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"

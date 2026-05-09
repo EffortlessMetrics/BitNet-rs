@@ -1,0 +1,22 @@
+[package]
+name = "bitnet-build-info-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SRP core crate for compile-time build metadata helpers"
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true, features = ["derive"], optional = true }
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[lints]
+workspace = true

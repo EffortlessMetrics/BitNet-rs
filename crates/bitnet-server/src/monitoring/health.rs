@@ -8,6 +8,7 @@ use axum::{
     response::{IntoResponse, Json, Response},
     routing::get,
 };
+use bitnet_build_info_core::BuildMetadata;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -146,6 +147,15 @@ impl HealthChecker {
         // Collect metrics
         let metrics = self.collect_health_metrics().await;
 
+        const BUILD_METADATA: BuildMetadata = BuildMetadata::from_env(
+            option_env!("VERGEN_GIT_SHA"),
+            option_env!("VERGEN_GIT_BRANCH"),
+            option_env!("VERGEN_BUILD_TIMESTAMP"),
+            option_env!("VERGEN_RUSTC_SEMVER"),
+            option_env!("VERGEN_CARGO_TARGET_TRIPLE"),
+            option_env!("VERGEN_CARGO_OPT_LEVEL"),
+        );
+
         HealthResponse {
             status: overall_status,
             timestamp: chrono::Utc::now().to_rfc3339(),
@@ -153,18 +163,12 @@ impl HealthChecker {
             version: env!("CARGO_PKG_VERSION").to_string(),
             build: BuildInfo {
                 version: env!("CARGO_PKG_VERSION").to_string(),
-                git_sha: option_env!("VERGEN_GIT_SHA").unwrap_or("unknown").to_string(),
-                git_branch: option_env!("VERGEN_GIT_BRANCH").unwrap_or("unknown").to_string(),
-                build_timestamp: option_env!("VERGEN_BUILD_TIMESTAMP")
-                    .unwrap_or("unknown")
-                    .to_string(),
-                rustc_version: option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown").to_string(),
-                cargo_target: option_env!("VERGEN_CARGO_TARGET_TRIPLE")
-                    .unwrap_or("unknown")
-                    .to_string(),
-                cargo_profile: option_env!("VERGEN_CARGO_OPT_LEVEL")
-                    .unwrap_or("unknown")
-                    .to_string(),
+                git_sha: BUILD_METADATA.git_sha.to_string(),
+                git_branch: BUILD_METADATA.git_branch.to_string(),
+                build_timestamp: BUILD_METADATA.build_timestamp.to_string(),
+                rustc_version: BUILD_METADATA.rustc_semver.to_string(),
+                cargo_target: BUILD_METADATA.cargo_target_triple.to_string(),
+                cargo_profile: BUILD_METADATA.cargo_opt_level.to_string(),
                 #[cfg(any(feature = "gpu", feature = "cuda"))]
                 cuda_version: Some(self.get_cuda_version()),
                 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
