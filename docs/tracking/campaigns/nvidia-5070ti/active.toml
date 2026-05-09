@@ -2502,8 +2502,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-028"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-028-attention-v-mix-route"
+pr = 4296
+head_sha = "48aeb3e2949d4bb83e67bf8a8441264ed4cb193f"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

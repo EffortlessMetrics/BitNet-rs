@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T14:27:08Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-028"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-028-attention-v-mix-route"
+pr = 4296
+head_sha = "48aeb3e2949d4bb83e67bf8a8441264ed4cb193f"
+notes = [
+  "Opened PR #4296 to route verified attention_v_mix through the dense_regular_llm_cuda one-layer planner path.",
+  "The PR keeps mlp_activation as the remaining unsupported strict CUDA one-layer gap and preserves no dense GGUF inference, speedup, full-residency, BitNet packed proof, QK256, tokenizer, loader, transformer, server, or kernel-math claims.",
+]
