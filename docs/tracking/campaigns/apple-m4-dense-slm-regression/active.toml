@@ -157,8 +157,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-REG-004"
-status = "pr_open"
+status = "merged"
 pr = 4177
+merge_sha = "11ede723962f4b1dbf0eb2bf5b076c2ef7b3ef85"
 branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-004-trend-history"
 stackable = false
 review_mode = "codex_premerge"

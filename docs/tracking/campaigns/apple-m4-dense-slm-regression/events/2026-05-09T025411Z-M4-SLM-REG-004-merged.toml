@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T02:54:11Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-004"
+event = "merged"
+pr = 4177
+head_sha = "2316c09296b906e8d4e7a7186950b69e889bafae"
+merge_sha = "11ede723962f4b1dbf0eb2bf5b076c2ef7b3ef85"
+actor = "codex"
+
+notes = [
+  "Merged the compact Apple M4 dense SLM trend-history artifact PR.",
+  "The trend history stores per-run context and drift summaries while keeping source receipts authoritative and avoiding model binaries or large raw receipt bundles.",
+  "M4-SLM-REG-005 remains proposed because threshold tightening requires multiple matching release-mode receipts.",
+]
