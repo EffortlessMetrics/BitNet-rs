@@ -25,7 +25,7 @@ mini path without weakening the completed Qwen appliance baseline.
 |---|---|---|
 | M4-MODEL-001 | merged | Selected the next exact dense instruct GGUF candidate set. |
 | M4-MODEL-002 | merged | Ran reference output sanity and recorded exact artifact metadata. |
-| M4-MODEL-003 | in progress | Rust M4 quality evidence rejects SmolLM2 for this round. |
+| M4-MODEL-003 | pr_open | Rust M4 quality evidence rejects SmolLM2 for this round. |
 | M4-MODEL-004 | blocked | No new model can be registered until a candidate passes Rust M4 quality. |
 | M4-MODEL-005 | pending | Update model matrix and user envelope. |
 

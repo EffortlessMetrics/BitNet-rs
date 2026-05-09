@@ -4,7 +4,7 @@ item = "M4-MODEL-003"
 event = "pr_open"
 actor = "codex"
 pr = 4355
-head_sha = "9bbaa53af17bdbc7cdcc068db1df742b2680c718"
+head_sha = "e67c54f4b9c401bca9138e71805089c571633289"
 
 notes = [
   "Opened PR #4355 for M4-MODEL-003 Rust M4 quality-gate evidence.",
