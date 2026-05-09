@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T14:03:20Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-027"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-027-attention-v-mix-parity"
+pr = 4290
+head_sha = "11a71d798ba54000ff7ab7755e9900eaa29a6658"
+merge_sha = "c00a8873c862fa86b1fb2c870038353d98ede15a"
+notes = [
+  "Merged PR #4290 for dense GGUF attention V-mix CUDA parity.",
+  "The committed receipt proves strict RTX 5070 Ti CUDA F32 V-mix parity for the Qwen2.5 Q8_0 fixture and records kernel, transfer, and single-fixture residency fields.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and planner route promotion remain out of scope.",
+]

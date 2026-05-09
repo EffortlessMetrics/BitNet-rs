@@ -2437,10 +2437,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-027"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-027-attention-v-mix-parity"
 pr = 4290
-head_sha = "f4822a43fdabc838231e15087c342b04cdd6432b"
+head_sha = "11a71d798ba54000ff7ab7755e9900eaa29a6658"
+merge_sha = "c00a8873c862fa86b1fb2c870038353d98ede15a"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
