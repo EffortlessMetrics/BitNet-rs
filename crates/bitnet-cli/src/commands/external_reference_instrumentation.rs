@@ -214,9 +214,8 @@ fn summarize_cases(cases: &[Value]) -> CaseSummary {
 }
 
 fn case_boundary(case: &Value) -> Value {
-    let generated_token_ids_available = ids(case.get("generated_token_ids"))
-        .is_some_and(|ids| !ids.is_empty())
-        || case["generated_token_ids_available"].as_bool() == Some(true);
+    let generated_token_ids_available =
+        ids(case.get("generated_token_ids")).is_some_and(|ids| !ids.is_empty());
     let first_token_topk_logits_available = case
         .get("first_token_top_k_logits")
         .or_else(|| case.get("first_token_topk_logits"))
@@ -414,6 +413,35 @@ mod tests {
         assert_eq!(receipt["runner_capabilities"]["advertised_generated_token_dump"], true);
         assert_eq!(receipt["runner_capabilities"]["advertised_logits_dump"], true);
         assert_eq!(receipt["summary"]["generated_token_ids_available"], false);
+    }
+
+    #[test]
+    fn ignores_generated_token_ids_flag_without_direct_ids() {
+        let mut case = reference_case("math");
+        case["generated_token_ids_available"] = json!(true);
+        let artifact = external(vec![case]);
+        let receipt = build_external_reference_instrumentation_receipt(
+            Path::new("external.json"),
+            None,
+            None,
+            &artifact,
+        );
+
+        assert_eq!(receipt["summary"]["cases_with_generated_token_ids"], 0);
+        assert_eq!(receipt["summary"]["generated_token_ids_available"], false);
+        assert_eq!(
+            receipt["classification"]["evidence_boundary"],
+            "external_reference_generated_text_exists_but_direct_generated_token_ids_or_first_token_logits_are_missing"
+        );
+        assert_eq!(
+            receipt["cases"][0]["missing_reference_fields"],
+            json!([
+                "first_generated_token_id",
+                "decoded_first_token",
+                "generated_token_ids",
+                "first_token_top_k_logits"
+            ])
+        );
     }
 
     #[test]
