@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T12:10:51Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-004"
+event = "merged"
+actor = "codex"
+pr = 4267
+merge_sha = "08f6bb4c4d6aa43fb02507784956dea7c82abdde"
+
+notes = [
+  "Merged PR #4267, recording the M4 dense SLM resident-session memory and timing envelope.",
+  "The committed M4-local receipts cover 64-token and 128-token resident sessions with model/tokenizer reuse, fallback_used=false, quality pass status, scoped timing, and peak memory.",
+  "Promoted M4-CONT-005 to ready for blocked BitNet proof command and receipt-contract preparation; no BitNet success claim is made.",
+]
