@@ -69,6 +69,7 @@ cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -
 
 ## Next Step
 
-The next dense CUDA slice should promote verified `mlp_activation` into the
-one-layer planner route, leaving dense GGUF token/decode/chat, speedup, server,
-and full-residency claims false.
+The planner-route follow-up is
+[`CUDA-DENSE-031`](CUDA_DENSE_031_MLP_ACTIVATION_ROUTE.md), which promotes
+verified `mlp_activation` into the one-layer planner route while leaving dense
+GGUF token/decode/chat, speedup, server, and full-residency claims false.

@@ -87,6 +87,7 @@ const DEFAULT_ROLE_SWEEP: &[DenseGgufTensorRole] = &[
 const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
     &["attention_softmax", "attention_v_mix", "mlp_activation"];
 const DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER: &[&str] = &["mlp_activation"];
+const DENSE_ONE_LAYER_NO_REMAINING_GAP_CANDIDATE_ORDER: &[&str] = &[];
 
 /// Run dense GGUF single-linear CUDA parity diagnostics.
 #[derive(Args, Debug, Clone)]
@@ -4901,10 +4902,11 @@ fn dense_gguf_one_layer_execution_plan_receipt_json(
     };
     let plan = plan_model_dispatch(&ops, spec);
     let summary = plan.summary();
-    if summary.cuda_dense_regular_llm_ops == 0 || summary.unsupported_ops == 0 {
-        bail!(
-            "dense GGUF one-layer plan must include dense CUDA linears and unsupported strict ops"
-        );
+    if summary.cuda_dense_regular_llm_ops == 0
+        || summary.unsupported_ops != 0
+        || !summary.strict_cuda_ready
+    {
+        bail!("dense GGUF one-layer plan must route every governed op to dense CUDA");
     }
 
     let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
@@ -4993,16 +4995,24 @@ fn dense_gguf_one_layer_execution_plan_receipt_json(
                 && op.get("role").and_then(Value::as_str) == Some("attention_v_mix")
         })
         .count() as u64;
+    let cuda_mlp_activation_ops = operations
+        .iter()
+        .filter(|op| {
+            op.get("route").and_then(Value::as_str) == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
+                && op.get("role").and_then(Value::as_str) == Some("mlp_activation")
+        })
+        .count() as u64;
     if cuda_linear_ops
         + cuda_norm_ops
         + cuda_rope_ops
         + cuda_attention_score_ops
         + cuda_attention_softmax_ops
         + cuda_attention_v_mix_ops
+        + cuda_mlp_activation_ops
         != cuda_routable_ops
     {
         bail!(
-            "dense GGUF one-layer plan must account for CUDA-routable linears, RMSNorm, RoPE, attention-score, attention-softmax, and attention V-mix ops"
+            "dense GGUF one-layer plan must account for CUDA-routable linears, RMSNorm, RoPE, attention-score, attention-softmax, attention V-mix, and MLP activation ops"
         );
     }
 
@@ -5038,8 +5048,8 @@ fn dense_gguf_one_layer_execution_plan_receipt_json(
         },
         "execution_path": {
             "model_class": "dense_regular_llm",
-            "kernel_family": "dense_fp16_gemm_plus_f32_rmsnorm_plus_f32_rope_plus_f32_attention_plus_unsupported_layer_ops",
-            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_f32_rmsnorm_rope_attention",
+            "kernel_family": "dense_fp16_gemm_plus_f32_rmsnorm_plus_f32_rope_plus_f32_attention_plus_f32_mlp_activation",
+            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_f32_rmsnorm_rope_attention_mlp_activation",
             "bitnet_packed_kernel_proof": false,
             "qk256_proof": false
         },
@@ -5069,9 +5079,10 @@ fn dense_gguf_one_layer_execution_plan_receipt_json(
             "attention_score_cuda_ops_total": cuda_attention_score_ops,
             "attention_softmax_cuda_ops_total": cuda_attention_softmax_ops,
             "attention_v_mix_cuda_ops_total": cuda_attention_v_mix_ops,
+            "mlp_activation_cuda_ops_total": cuda_mlp_activation_ops,
             "unsupported_strict_cuda_ops_total": summary.unsupported_ops as u64,
             "cpu_fallback_ops_total": summary.cpu_fallback_ops as u64,
-            "strict_cuda_ready": false,
+            "strict_cuda_ready": summary.strict_cuda_ready,
             "unsupported_ops_explicitly_listed": true,
             "operations": operations,
             "dense_gguf_one_layer_execution_plan_claimed": true,
@@ -5121,6 +5132,7 @@ fn dense_one_layer_gap_audit_json(
     let mut attention_score_roles = Vec::new();
     let mut attention_softmax_roles = Vec::new();
     let mut attention_v_mix_roles = Vec::new();
+    let mut mlp_activation_roles = Vec::new();
     let mut op_type_counts: BTreeMap<String, u64> = BTreeMap::new();
 
     for op in operations {
@@ -5141,6 +5153,9 @@ fn dense_one_layer_gap_audit_json(
                     }
                     "softmax" if role == "attention_softmax" => {
                         attention_softmax_roles.push(role.to_string());
+                    }
+                    "activation" if role == "mlp_activation" => {
+                        mlp_activation_roles.push(role.to_string());
                     }
                     other => {
                         bail!("dense one-layer CUDA-routable op type `{other}` is not governed")
@@ -5186,9 +5201,10 @@ fn dense_one_layer_gap_audit_json(
         "cuda_routable_attention_score_ops_total": attention_score_roles.len() as u64,
         "cuda_routable_attention_softmax_ops_total": attention_softmax_roles.len() as u64,
         "cuda_routable_attention_v_mix_ops_total": attention_v_mix_roles.len() as u64,
+        "cuda_routable_mlp_activation_ops_total": mlp_activation_roles.len() as u64,
         "unsupported_ops_total": unsupported_ops,
         "cpu_fallback_ops_total": 0,
-        "strict_cuda_ready": false,
+        "strict_cuda_ready": unsupported_ops == 0,
         "unsupported_ops_have_dependency_notes": true,
         "strict_cuda_rejects_cpu_fallback": true,
         "cuda_routable_roles": cuda_roles,
@@ -5198,14 +5214,17 @@ fn dense_one_layer_gap_audit_json(
         "attention_scores_routable_roles": attention_score_roles,
         "attention_softmax_routable_roles": attention_softmax_roles,
         "attention_v_mix_routable_roles": attention_v_mix_roles,
+        "mlp_activation_routable_roles": mlp_activation_roles,
         "rmsnorm_cuda_parity_available": true,
         "rope_cuda_parity_available": true,
         "attention_score_cuda_parity_available": true,
         "attention_softmax_cuda_parity_available": true,
         "attention_v_mix_cuda_parity_available": true,
-        "next_candidate_gap": "mlp_activation",
+        "mlp_activation_cuda_parity_available": true,
+        "next_candidate_gap": "none",
+        "next_required_proof": "one_layer_cpu_reference_harness",
         "unsupported_op_type_counts": op_type_counts,
-        "candidate_order": DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER,
+        "candidate_order": DENSE_ONE_LAYER_NO_REMAINING_GAP_CANDIDATE_ORDER,
         "dependency_edges": dense_one_layer_dependency_edges_json(),
         "unsupported_ops": unsupported,
         "dense_gguf_one_layer_execution_plan_claimed": true,
@@ -5615,7 +5634,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_gguf_one_layer_plan_receipt_records_strict_cuda_gap() {
+    fn dense_gguf_one_layer_plan_receipt_records_strict_cuda_route_completion() {
         let data = build_complete_qwen_layer_gguf();
         let reader = GgufReader::new(&data).expect("parse qwen fixture");
         let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
@@ -5633,9 +5652,9 @@ mod tests {
 
         validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt).unwrap();
         assert_eq!(receipt["execution_plan"]["selected_route"], "dense_regular_llm_cuda");
-        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 13);
-        assert_eq!(receipt["execution_plan"]["unsupported_ops"], 1);
-        assert_eq!(receipt["execution_plan"]["strict_cuda_ready"], false);
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 14);
+        assert_eq!(receipt["execution_plan"]["unsupported_ops"], 0);
+        assert_eq!(receipt["execution_plan"]["strict_cuda_ready"], true);
         assert_eq!(receipt["one_layer_plan"]["operations"].as_array().unwrap().len(), 14);
         assert_eq!(receipt["one_layer_plan"]["linear_cuda_ops_total"], 7);
         assert_eq!(receipt["one_layer_plan"]["norm_cuda_ops_total"], 2);
@@ -5643,13 +5662,17 @@ mod tests {
         assert_eq!(receipt["one_layer_plan"]["attention_score_cuda_ops_total"], 1);
         assert_eq!(receipt["one_layer_plan"]["attention_softmax_cuda_ops_total"], 1);
         assert_eq!(receipt["one_layer_plan"]["attention_v_mix_cuda_ops_total"], 1);
-        assert_eq!(receipt["gap_audit"]["unsupported_ops_total"], 1);
+        assert_eq!(receipt["one_layer_plan"]["mlp_activation_cuda_ops_total"], 1);
+        assert_eq!(receipt["one_layer_plan"]["strict_cuda_ready"], true);
+        assert_eq!(receipt["gap_audit"]["unsupported_ops_total"], 0);
         assert_eq!(receipt["gap_audit"]["rmsnorm_cuda_parity_available"], true);
         assert_eq!(receipt["gap_audit"]["rope_cuda_parity_available"], true);
         assert_eq!(receipt["gap_audit"]["attention_score_cuda_parity_available"], true);
         assert_eq!(receipt["gap_audit"]["attention_softmax_cuda_parity_available"], true);
         assert_eq!(receipt["gap_audit"]["attention_v_mix_cuda_parity_available"], true);
-        assert_eq!(receipt["gap_audit"]["next_candidate_gap"], "mlp_activation");
+        assert_eq!(receipt["gap_audit"]["mlp_activation_cuda_parity_available"], true);
+        assert_eq!(receipt["gap_audit"]["next_candidate_gap"], "none");
+        assert_eq!(receipt["gap_audit"]["next_required_proof"], "one_layer_cpu_reference_harness");
         assert_eq!(receipt["gap_audit"]["cpu_fallback_ops_total"], 0);
         assert_eq!(receipt["gap_audit"]["strict_cuda_rejects_cpu_fallback"], true);
         let attention_score_op = receipt["one_layer_plan"]["operations"]
@@ -5676,10 +5699,15 @@ mod tests {
             .expect("attention_v_mix op");
         assert_eq!(attention_v_mix_op["route"], "dense_regular_llm_cuda");
         assert_eq!(attention_v_mix_op["status"], "cuda_routable");
-        assert_eq!(
-            receipt["gap_audit"]["unsupported_ops"][0]["cuda_kernel_status"],
-            "missing_cuda_kernel"
-        );
+        let mlp_activation_op = receipt["one_layer_plan"]["operations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|op| op["role"] == "mlp_activation")
+            .expect("mlp_activation op");
+        assert_eq!(mlp_activation_op["route"], "dense_regular_llm_cuda");
+        assert_eq!(mlp_activation_op["status"], "cuda_routable");
+        assert_eq!(receipt["gap_audit"]["unsupported_ops"].as_array().unwrap().len(), 0);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_one_layer_execution_plan_claimed"], true);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_one_layer_inference_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);

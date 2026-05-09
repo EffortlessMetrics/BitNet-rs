@@ -2174,6 +2174,69 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-031"
+status = "pr_open"
+branch = "codex/cuda-dense-031-mlp-activation-route"
+pr = 4314
+head_sha = "53fc73128c4bbf29eb52c84dcaa61511bde82faa"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-030"]
+acceptance = "Promote verified dense GGUF mlp_activation to the one-layer planner route after CUDA-DENSE-030, refresh the one-layer execution-plan receipt to 14 dense_regular_llm_cuda ops, unsupported_ops=0, strict_cuda_ready=true, and keep dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false."
+commands = [
+  "cargo test --locked -p bitnet-kernels --lib --no-default-features model_aware_dense_fp16_routes_mlp_activation_to_dense_cuda -- --nocapture",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_one_layer -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features one_layer -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-one-layer-plan --model <verified-qwen2.5-q8-gguf> --device-index 0 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-one-layer-plan-qwen25-q8.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-one-layer-plan-qwen25-q8.json",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo fmt -p bitnet-kernels -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/dispatch_planner.rs",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "server runtime behavior",
+]
+may_claim = [
+  "The dense GGUF one-layer planner routes verified mlp_activation to dense_regular_llm_cuda.",
+  "The one-layer execution-plan receipt records 14 dense CUDA-routable ops, zero unsupported strict CUDA ops, and strict_cuda_ready=true.",
+  "The next governed dense CUDA proof is a full one-layer CPU reference harness.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, or server behavior changed.",
+  "A full Qwen layer, token, short decode, or chat path works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "A CUDA kernel changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-021"
 status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"
