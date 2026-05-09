@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T11:52:00Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-002"
+event = "merged"
+pr = 4261
+head_sha = "5ff39724ab5dfe15b6d86836e720c6b8c446801f"
+merge_sha = "e257b799a678c5346a9f612fe06ca297da246bc7"
+actor = "codex"
+
+notes = [
+  "Merged compact Apple M4 dense-SLM golden smoke command.",
+  "`bitnet mac smoke` verifies the supported Qwen cache, runs a fixed tiny `2+2` prompt through apple-m4-cpu-neon, validates the answer receipt, and writes aggregate cache/disk/backend/fallback health.",
+  "The command preserves the dense-SLM-only claim boundary and does not claim BitNet quality, full Metal inference, Neural Engine, MPSGraph inference, QK256, or broad M4 performance.",
+  "M4-CONT-003 is ready for latency polish based on measured receipts.",
+]
