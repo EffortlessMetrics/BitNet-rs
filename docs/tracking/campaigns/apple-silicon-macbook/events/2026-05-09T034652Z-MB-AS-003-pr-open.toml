@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T03:46:52Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-003"
+event = "pr_open"
+pr = 4190
+head_sha = "8a667dc6f5099c76da5ea7ad89ab7e557c6bc567"
+actor = "codex"
+
+notes = [
+  "Opened PR #4190 for the MacBook Apple BitNet candidate matrix.",
+  "The PR documents candidate priorities, storage policy, compatibility routes, tokenizer-authority requirements, reference-runner requirements, and cleanup rules.",
+  "No model artifact is downloaded, accepted, or claimed answer-ready by this PR.",
+]
