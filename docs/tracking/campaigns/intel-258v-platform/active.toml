@@ -1567,8 +1567,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-025"
-status = "pr_open"
+status = "merged"
 pr = 4356
+merge_sha = "12c08579e4c3563f25536a6da7457ea56b2d22b8"
 branch = "codex/lunar-lake/CPU258V-025-transformer-layer-parity"
 stackable = false
 review_mode = "codex_premerge"
@@ -1607,6 +1608,49 @@ must_not_claim = [
   "First-token logits parity with the external reference is proven.",
   "CPU speed or sustained throughput is proven.",
   "Arc 140V or Intel NPU execution is proven.",
+  "Full model correctness is proven.",
+]
+
+[[work_item]]
+id = "CPU258V-026"
+status = "ready"
+branch = "codex/lunar-lake/CPU258V-026-reference-bundle-refresh"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-025"]
+acceptance = "Refresh the 258V CPU reference bundle after prompt/token parity, external first-token evidence, QK256 semantics, output-head/logits-index checks, observed logits length, and transformer-layer parity ladder evidence are recorded."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The 258V CPU reference bundle points to the current CPU semantic-debug evidence set.",
+  "Accelerator parity lanes can cite the refreshed CPU reference bundle as the current 258V CPU evidence index.",
+]
+must_not_claim = [
+  "New BitNet answer quality is proven.",
+  "New CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is newly proven.",
   "Full model correctness is proven.",
 ]
 
