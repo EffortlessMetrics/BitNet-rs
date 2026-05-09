@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T03:36:46Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-002"
+event = "blocked"
+actor = "codex"
+
+notes = [
+  "MB-AS-002 requires a real MacBook receipt, but the current host is Mac16,10 / Apple M4 Mac mini.",
+  "The item remains blocked until an actual Apple Silicon MacBook runner or manual receipt is available.",
+  "Do not mirror the dense Qwen baseline from the M4 Mac mini and label it as MacBook evidence.",
+]

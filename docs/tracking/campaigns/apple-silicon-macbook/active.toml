@@ -65,13 +65,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-002"
-status = "ready"
+status = "blocked"
 branch = "codex/apple-silicon-macbook/MB-AS-002-qwen-baseline"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["MB-AS-001"]
+blocked_by = []
 acceptance = "Mirror the supported dense Qwen2.5 SLM Mac baseline on MacBook with the same model hash, tokenizer metadata, quality corpus, deterministic greedy settings, backend/fallback receipt schema, and MacBook-specific timing context."
 commands = [
   "cargo fmt --all -- --check",
@@ -106,7 +106,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-003"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-silicon-macbook/MB-AS-003-bitnet-candidate-matrix"
 stackable = false
 review_mode = "codex_premerge"
