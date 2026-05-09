@@ -24,6 +24,30 @@
 //! pairs. Grid size equals `seq_len × n_heads`.
 
 use bitnet_common::{KernelError, Result};
+#[cfg(feature = "cuda")]
+use std::any::Any;
+#[cfg(feature = "cuda")]
+use std::sync::Mutex;
+
+#[cfg(feature = "cuda")]
+use cudarc::driver::{CudaContext, CudaSlice, LaunchConfig, PushKernelArg};
+#[cfg(feature = "cuda")]
+use cudarc::nvrtc::{Ptx, compile_ptx};
+
+/// Kernel ID recorded by dense regular-LLM CUDA RoPE receipts.
+pub const CUDA_DENSE_ROPE_KERNEL_ID: &str = "dense_rope_f32_cuda";
+
+/// Tolerance for dense GGUF RoPE fixture parity against the CPU reference.
+pub const CUDA_DENSE_ROPE_TOLERANCE: f32 = 0.000_1;
+
+/// CPU reference backend recorded by dense RoPE CUDA parity receipts.
+pub const CUDA_DENSE_ROPE_REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+
+/// RTX 5070 Ti CUDA backend recorded by dense RoPE CUDA parity receipts.
+pub const CUDA_DENSE_ROPE_TARGET_BACKEND: &str = "nvidia-rtx-5070-ti-cuda";
+
+#[cfg(feature = "cuda")]
+static NVRTC_COMPILE_LOCK: Mutex<()> = Mutex::new(());
 
 // ── CUDA kernel source strings ───────────────────────────────────────
 
@@ -153,6 +177,119 @@ pub struct RopeConfig {
     /// When `true`, use the GPT-NeoX interleaved layout where pairs are at
     /// `(i, i + head_dim/2)` instead of `(2*i, 2*i+1)`.
     pub interleaved: bool,
+}
+
+/// CUDA execution counters for a dense RoPE fixture.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CudaDenseRopeStats {
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Number of CUDA kernel invocations.
+    pub invocations: u64,
+    /// CPU fallback invocations under strict CUDA.
+    pub fallback_invocations: u64,
+    /// Host-to-device bytes copied for Q/K input tensors.
+    pub host_to_device_bytes: u64,
+    /// Device-to-host bytes copied for Q/K output tensors.
+    pub device_to_host_bytes: u64,
+    /// CUDA kernel launches.
+    pub kernel_launches: u64,
+    /// Optional measured kernel time.
+    pub kernel_time_ms: Option<f64>,
+}
+
+/// Dense GGUF RoPE fixture data prepared by the CLI/model layer.
+///
+/// This remains fixture-level evidence. The model layer owns metadata
+/// extraction and deterministic Q/K vector preparation; the CUDA kernel layer
+/// only sees plain F32 buffers plus RoPE launch metadata.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufRopeCudaFixture {
+    /// Fixture identifier recorded in parity receipts.
+    pub fixture_id: String,
+    /// Dense model family label, for example `qwen`.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count.
+    pub kv_heads: usize,
+    /// Per-head RoPE dimension.
+    pub head_dim: usize,
+    /// Sequence length covered by the deterministic fixture.
+    pub seq_len: usize,
+    /// Position offset used by the fixture.
+    pub position_offset: usize,
+    /// RoPE base frequency from model metadata or documented default.
+    pub rope_base: f32,
+    /// RoPE scaling factor from model metadata or documented default.
+    pub scaling_factor: f32,
+    /// Whether GPT-NeoX interleaved pairing is used.
+    pub interleaved: bool,
+    /// Metadata key or fallback source used for `head_dim`.
+    pub head_dim_source: String,
+    /// Metadata key or fallback source used for `q_heads`.
+    pub q_heads_source: String,
+    /// Metadata key or fallback source used for `kv_heads`.
+    pub kv_heads_source: String,
+    /// Metadata key or fallback source used for `rope_base`.
+    pub rope_base_source: String,
+    /// Deterministic query input `[q_heads, seq_len, head_dim]`.
+    pub q_input_f32: Vec<f32>,
+    /// Deterministic key input `[kv_heads, seq_len, head_dim]`.
+    pub k_input_f32: Vec<f32>,
+    /// CPU RoPE reference for query input.
+    pub expected_q_output_f32: Vec<f32>,
+    /// CPU RoPE reference for key input.
+    pub expected_k_output_f32: Vec<f32>,
+}
+
+/// Dense GGUF RoPE CUDA parity result against the CPU reference.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufRopeCudaParity {
+    /// Fixture identifier.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count.
+    pub kv_heads: usize,
+    /// Per-head RoPE dimension.
+    pub head_dim: usize,
+    /// Sequence length covered by the deterministic fixture.
+    pub seq_len: usize,
+    /// Position offset used by the fixture.
+    pub position_offset: usize,
+    /// RoPE base frequency.
+    pub rope_base: f32,
+    /// RoPE scaling factor.
+    pub scaling_factor: f32,
+    /// Whether GPT-NeoX interleaved pairing is used.
+    pub interleaved: bool,
+    /// CPU reference backend.
+    pub reference_backend: &'static str,
+    /// CUDA target backend.
+    pub target_backend: &'static str,
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Maximum absolute error across Q and K outputs.
+    pub max_abs_error: f32,
+    /// Mean absolute error across Q and K outputs.
+    pub mean_abs_error: f32,
+    /// Fixture tolerance.
+    pub tolerance: f32,
+    /// Whether the fixture passed tolerance.
+    pub passed: bool,
+    /// CUDA execution counters.
+    pub stats: CudaDenseRopeStats,
 }
 
 impl RopeConfig {
@@ -336,19 +473,410 @@ pub fn rope_forward_cpu(input: &[f32], output: &mut [f32], config: &RopeConfig) 
 ///
 /// Returns `KernelError::GpuError` until a real PTX kernel is compiled and
 /// loaded.
-pub fn launch_rope(_input: &[f32], _output: &mut [f32], config: &RopeConfig) -> Result<()> {
-    log::debug!(
-        "RoPE stub: head_dim={}, n_heads={}, seq_len={}, offset={}, grid={:?}",
-        config.head_dim,
-        config.n_heads,
-        config.seq_len,
-        config.position_offset,
-        config.grid_dim(),
-    );
-    Err(KernelError::GpuError {
-        reason: "RoPE CUDA kernel not yet compiled — scaffold only".into(),
+pub fn launch_rope(input: &[f32], output: &mut [f32], config: &RopeConfig) -> Result<()> {
+    validate_rope_buffers(input, output, config)?;
+
+    #[cfg(feature = "cuda")]
+    {
+        launch_rope_forward_f32_cuda_impl(0, input, output, config)?;
+        return Ok(());
     }
-    .into())
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        Err(KernelError::DeviceUnavailable {
+            reason: "RoPE CUDA launch requires the cuda feature".to_string(),
+        }
+        .into())
+    }
+}
+
+/// Launch a strict dense RoPE F32 CUDA fixture and return execution counters.
+///
+/// # Errors
+///
+/// Returns an error if CUDA/NVRTC is unavailable, buffers are invalid, or the
+/// kernel launch fails. This function never falls back to CPU.
+pub fn launch_dense_rope_f32_cuda(
+    device_index: usize,
+    input: &[f32],
+    output: &mut [f32],
+    config: &RopeConfig,
+) -> Result<CudaDenseRopeStats> {
+    validate_rope_buffers(input, output, config)?;
+
+    #[cfg(feature = "cuda")]
+    {
+        launch_rope_forward_f32_cuda_impl(device_index, input, output, config)
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = device_index;
+        Err(KernelError::DeviceUnavailable {
+            reason: "dense RoPE CUDA parity requires the cuda feature".to_string(),
+        }
+        .into())
+    }
+}
+
+/// Run a dense GGUF RoPE fixture on CUDA and compare it to CPU references.
+///
+/// # Errors
+///
+/// Returns an error if the fixture is invalid, CUDA is unavailable, or parity
+/// comparison cannot be computed.
+pub fn run_dense_gguf_rope_cuda_parity(
+    device_index: usize,
+    fixture: &DenseGgufRopeCudaFixture,
+) -> Result<DenseGgufRopeCudaParity> {
+    validate_dense_gguf_rope_fixture(fixture)?;
+
+    let q_config = RopeConfig::for_shape(fixture.head_dim, fixture.q_heads, fixture.seq_len)?
+        .with_position_offset(fixture.position_offset)
+        .with_base(fixture.rope_base)
+        .with_scaling_factor(fixture.scaling_factor)
+        .with_interleaved(fixture.interleaved);
+    let k_config = RopeConfig::for_shape(fixture.head_dim, fixture.kv_heads, fixture.seq_len)?
+        .with_position_offset(fixture.position_offset)
+        .with_base(fixture.rope_base)
+        .with_scaling_factor(fixture.scaling_factor)
+        .with_interleaved(fixture.interleaved);
+
+    let mut q_actual = vec![0.0f32; fixture.q_input_f32.len()];
+    let q_stats =
+        launch_dense_rope_f32_cuda(device_index, &fixture.q_input_f32, &mut q_actual, &q_config)?;
+    let mut k_actual = vec![0.0f32; fixture.k_input_f32.len()];
+    let k_stats =
+        launch_dense_rope_f32_cuda(device_index, &fixture.k_input_f32, &mut k_actual, &k_config)?;
+
+    let (q_max_abs_error, q_mean_abs_error) =
+        compare_outputs(&fixture.expected_q_output_f32, &q_actual, "dense RoPE Q")?;
+    let (k_max_abs_error, k_mean_abs_error) =
+        compare_outputs(&fixture.expected_k_output_f32, &k_actual, "dense RoPE K")?;
+    let q_len = fixture.expected_q_output_f32.len();
+    let k_len = fixture.expected_k_output_f32.len();
+    let total_len = q_len + k_len;
+    let max_abs_error = q_max_abs_error.max(k_max_abs_error);
+    let mean_abs_error =
+        ((q_mean_abs_error * q_len as f32) + (k_mean_abs_error * k_len as f32)) / total_len as f32;
+
+    Ok(DenseGgufRopeCudaParity {
+        fixture_id: fixture.fixture_id.clone(),
+        model_family: fixture.model_family.clone(),
+        architecture: fixture.architecture.clone(),
+        layer_index: fixture.layer_index,
+        q_heads: fixture.q_heads,
+        kv_heads: fixture.kv_heads,
+        head_dim: fixture.head_dim,
+        seq_len: fixture.seq_len,
+        position_offset: fixture.position_offset,
+        rope_base: fixture.rope_base,
+        scaling_factor: fixture.scaling_factor,
+        interleaved: fixture.interleaved,
+        reference_backend: CUDA_DENSE_ROPE_REFERENCE_BACKEND,
+        target_backend: CUDA_DENSE_ROPE_TARGET_BACKEND,
+        kernel_id: CUDA_DENSE_ROPE_KERNEL_ID,
+        max_abs_error,
+        mean_abs_error,
+        tolerance: CUDA_DENSE_ROPE_TOLERANCE,
+        passed: max_abs_error <= CUDA_DENSE_ROPE_TOLERANCE,
+        stats: CudaDenseRopeStats {
+            kernel_id: CUDA_DENSE_ROPE_KERNEL_ID,
+            invocations: q_stats.invocations + k_stats.invocations,
+            fallback_invocations: q_stats.fallback_invocations + k_stats.fallback_invocations,
+            host_to_device_bytes: q_stats.host_to_device_bytes + k_stats.host_to_device_bytes,
+            device_to_host_bytes: q_stats.device_to_host_bytes + k_stats.device_to_host_bytes,
+            kernel_launches: q_stats.kernel_launches + k_stats.kernel_launches,
+            kernel_time_ms: match (q_stats.kernel_time_ms, k_stats.kernel_time_ms) {
+                (Some(q), Some(k)) => Some(q + k),
+                _ => None,
+            },
+        },
+    })
+}
+
+fn validate_rope_buffers(input: &[f32], output: &[f32], config: &RopeConfig) -> Result<()> {
+    if config.head_dim == 0 || !config.head_dim.is_multiple_of(2) {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("RoPE head_dim must be even and non-zero, got {}", config.head_dim),
+        }
+        .into());
+    }
+    if config.n_heads == 0 || config.seq_len == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "RoPE n_heads and seq_len must be non-zero: n_heads={}, seq_len={}",
+                config.n_heads, config.seq_len
+            ),
+        }
+        .into());
+    }
+    if !config.base.is_finite() || config.base <= 0.0 {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("RoPE base must be positive and finite, got {}", config.base),
+        }
+        .into());
+    }
+    if !config.scaling_factor.is_finite() || config.scaling_factor <= 0.0 {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "RoPE scaling_factor must be positive and finite, got {}",
+                config.scaling_factor
+            ),
+        }
+        .into());
+    }
+    let expected_len = rope_len(config)?;
+    if input.len() != expected_len || output.len() != expected_len {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "RoPE buffer length mismatch: expected {expected_len}, got input={}, output={}",
+                input.len(),
+                output.len()
+            ),
+        }
+        .into());
+    }
+    validate_i32_arg(config.head_dim, "head_dim")?;
+    validate_i32_arg(config.seq_len, "seq_len")?;
+    validate_i32_arg(config.n_heads, "n_heads")?;
+    validate_i32_arg(config.position_offset, "position_offset")?;
+    for (idx, value) in input.iter().enumerate() {
+        if !value.is_finite() {
+            return Err(KernelError::InvalidArguments {
+                reason: format!("RoPE input[{idx}] is not finite"),
+            }
+            .into());
+        }
+    }
+    Ok(())
+}
+
+fn validate_dense_gguf_rope_fixture(fixture: &DenseGgufRopeCudaFixture) -> Result<()> {
+    require_dense_label(&fixture.fixture_id, "fixture_id")?;
+    require_dense_label(&fixture.model_family, "model_family")?;
+    require_dense_label(&fixture.architecture, "architecture")?;
+    require_dense_label(&fixture.head_dim_source, "head_dim_source")?;
+    require_dense_label(&fixture.q_heads_source, "q_heads_source")?;
+    require_dense_label(&fixture.kv_heads_source, "kv_heads_source")?;
+    require_dense_label(&fixture.rope_base_source, "rope_base_source")?;
+    if fixture.q_heads == 0 || fixture.kv_heads == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense GGUF RoPE fixture q_heads and kv_heads must be non-zero".into(),
+        }
+        .into());
+    }
+    let q_cfg = RopeConfig::for_shape(fixture.head_dim, fixture.q_heads, fixture.seq_len)?
+        .with_position_offset(fixture.position_offset)
+        .with_base(fixture.rope_base)
+        .with_scaling_factor(fixture.scaling_factor)
+        .with_interleaved(fixture.interleaved);
+    let k_cfg = RopeConfig::for_shape(fixture.head_dim, fixture.kv_heads, fixture.seq_len)?
+        .with_position_offset(fixture.position_offset)
+        .with_base(fixture.rope_base)
+        .with_scaling_factor(fixture.scaling_factor)
+        .with_interleaved(fixture.interleaved);
+    validate_rope_buffers(&fixture.q_input_f32, &fixture.expected_q_output_f32, &q_cfg)?;
+    validate_rope_buffers(&fixture.k_input_f32, &fixture.expected_k_output_f32, &k_cfg)?;
+    Ok(())
+}
+
+#[cfg(feature = "cuda")]
+fn launch_rope_forward_f32_cuda_impl(
+    device_index: usize,
+    input: &[f32],
+    output: &mut [f32],
+    config: &RopeConfig,
+) -> Result<CudaDenseRopeStats> {
+    let len = rope_len(config)?;
+
+    let ctx = CudaContext::new(device_index).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to create CUDA context for dense RoPE: {err:?}"),
+    })?;
+    let stream = ctx.default_stream();
+    let ptx = compile_rope_forward_ptx()?;
+    let module = ctx.load_module(ptx).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to load dense RoPE CUDA module: {err:?}"),
+    })?;
+    let function = module.load_function("rope_forward_f32").map_err(|err| {
+        KernelError::GpuError { reason: format!("failed to load dense RoPE CUDA kernel: {err:?}") }
+    })?;
+
+    let input_dev = stream.memcpy_stod(input).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to copy dense RoPE input to device: {err:?}"),
+    })?;
+    let mut output_dev: CudaSlice<f32> =
+        stream.alloc_zeros(len).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to allocate dense RoPE output on device: {err:?}"),
+        })?;
+
+    let launch_config = LaunchConfig {
+        grid_dim: config.grid_dim(),
+        block_dim: config.block_dim(),
+        shared_mem_bytes: 0,
+    };
+    let mut builder = stream.launch_builder(&function);
+    builder.arg(&input_dev);
+    builder.arg(&mut output_dev);
+    let head_dim_arg =
+        i32::try_from(config.head_dim).map_err(|_| KernelError::InvalidArguments {
+            reason: format!("dense RoPE head_dim exceeds i32: {}", config.head_dim),
+        })?;
+    let seq_len_arg = i32::try_from(config.seq_len).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense RoPE seq_len exceeds i32: {}", config.seq_len),
+    })?;
+    let n_heads_arg = i32::try_from(config.n_heads).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense RoPE n_heads exceeds i32: {}", config.n_heads),
+    })?;
+    let position_offset_arg =
+        i32::try_from(config.position_offset).map_err(|_| KernelError::InvalidArguments {
+            reason: format!("dense RoPE position_offset exceeds i32: {}", config.position_offset),
+        })?;
+    let base_arg = config.base;
+    let scaling_factor_arg = config.scaling_factor;
+    let interleaved_arg = i32::from(config.interleaved);
+    builder.arg(&head_dim_arg);
+    builder.arg(&seq_len_arg);
+    builder.arg(&n_heads_arg);
+    builder.arg(&position_offset_arg);
+    builder.arg(&base_arg);
+    builder.arg(&scaling_factor_arg);
+    builder.arg(&interleaved_arg);
+
+    unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
+        reason: format!("failed to launch dense RoPE CUDA kernel: {err:?}"),
+    })?;
+    stream.synchronize().map_err(|err| KernelError::GpuError {
+        reason: format!("failed to synchronize dense RoPE CUDA kernel: {err:?}"),
+    })?;
+
+    let output_host: Vec<f32> =
+        stream.memcpy_dtov(&output_dev).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to copy dense RoPE output from device: {err:?}"),
+        })?;
+    output.copy_from_slice(&output_host[..len]);
+
+    Ok(CudaDenseRopeStats {
+        kernel_id: CUDA_DENSE_ROPE_KERNEL_ID,
+        invocations: 1,
+        fallback_invocations: 0,
+        host_to_device_bytes: bytes_for::<f32>(len)?,
+        device_to_host_bytes: bytes_for::<f32>(len)?,
+        kernel_launches: 1,
+        kernel_time_ms: None,
+    })
+}
+
+#[cfg(feature = "cuda")]
+fn compile_rope_forward_ptx() -> Result<Ptx> {
+    let _hook_guard = NVRTC_COMPILE_LOCK.lock().ok();
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let compile_result = std::panic::catch_unwind(|| compile_ptx(ROPE_FORWARD_KERNEL_SRC));
+    std::panic::set_hook(previous_hook);
+
+    match compile_result {
+        Ok(Ok(ptx)) => Ok(ptx),
+        Ok(Err(err)) => Err(KernelError::GpuError {
+            reason: format!("failed to compile dense RoPE CUDA PTX: {err:?}"),
+        }
+        .into()),
+        Err(payload) => Err(KernelError::GpuError {
+            reason: format!(
+                "failed to compile dense RoPE CUDA PTX because NVRTC was unavailable: {}",
+                panic_payload_message(&*payload)
+            ),
+        }
+        .into()),
+    }
+}
+
+#[cfg(feature = "cuda")]
+fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "unknown panic payload".to_string()
+    }
+}
+
+fn compare_outputs(expected: &[f32], actual: &[f32], label: &str) -> Result<(f32, f32)> {
+    if expected.len() != actual.len() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "{label} parity length mismatch: expected {}, got {}",
+                expected.len(),
+                actual.len()
+            ),
+        }
+        .into());
+    }
+    if expected.is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("{label} parity comparison requires non-empty output"),
+        }
+        .into());
+    }
+    let mut max_abs = 0.0f32;
+    let mut sum_abs = 0.0f32;
+    for (expected, actual) in expected.iter().zip(actual) {
+        let abs = (expected - actual).abs();
+        max_abs = max_abs.max(abs);
+        sum_abs += abs;
+    }
+    Ok((max_abs, sum_abs / expected.len() as f32))
+}
+
+fn rope_len(config: &RopeConfig) -> Result<usize> {
+    checked_mul(
+        checked_mul(config.n_heads, config.seq_len, "RoPE n_heads*seq_len")?,
+        config.head_dim,
+        "RoPE tensor",
+    )
+}
+
+fn checked_mul(lhs: usize, rhs: usize, label: &str) -> Result<usize> {
+    lhs.checked_mul(rhs).ok_or_else(|| {
+        KernelError::InvalidArguments { reason: format!("{label} size overflows usize") }.into()
+    })
+}
+
+#[cfg(feature = "cuda")]
+fn bytes_for<T>(items: usize) -> Result<u64> {
+    let bytes = checked_mul(items, std::mem::size_of::<T>(), "byte count")?;
+    u64::try_from(bytes).map_err(|_| {
+        KernelError::InvalidArguments { reason: "byte count exceeds u64".into() }.into()
+    })
+}
+
+fn validate_i32_arg(value: usize, label: &str) -> Result<()> {
+    if value > i32::MAX as usize {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("{label} exceeds i32: {value}"),
+        }
+        .into());
+    }
+    Ok(())
+}
+
+fn require_dense_label(value: &str, field: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("dense GGUF RoPE fixture {field} must not be empty"),
+        }
+        .into());
+    }
+    let lower = value.to_ascii_lowercase();
+    if lower.contains("bitnet") || lower.contains("qk256") || lower.contains("i2_s") {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("dense GGUF RoPE fixture {field} must not contain BitNet markers"),
+        }
+        .into());
+    }
+    Ok(())
 }
 
 /// Apply RoPE with automatic dispatch: GPU if available, else CPU fallback.

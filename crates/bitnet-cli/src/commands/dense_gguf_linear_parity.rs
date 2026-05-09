@@ -9,8 +9,9 @@
 use anyhow::{Context, Result, anyhow, bail};
 use bitnet_kernels::cuda::{
     DenseGgufLinearCudaParity, DenseGgufLinearGemmFixture, DenseGgufRmsNormCudaFixture,
-    DenseGgufRmsNormCudaParity, run_dense_gguf_linear_f16_cuda_parity,
-    run_dense_gguf_rmsnorm_cuda_parity,
+    DenseGgufRmsNormCudaParity, DenseGgufRopeCudaFixture, DenseGgufRopeCudaParity, RopeConfig,
+    rope_forward_cpu, run_dense_gguf_linear_f16_cuda_parity, run_dense_gguf_rmsnorm_cuda_parity,
+    run_dense_gguf_rope_cuda_parity,
 };
 use bitnet_kernels::dispatch_planner::{
     BackendPolicy, CudaPlannerCapabilities, DispatchOp, ModelDispatchBackend, ModelDispatchSpec,
@@ -32,12 +33,13 @@ use bitnet_receipts_core::{
     DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND,
-    DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
-    validate_dense_gguf_linear_cuda_parity_receipt_json,
+    DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
     validate_dense_gguf_norm_cuda_parity_receipt_json,
     validate_dense_gguf_norm_fixture_extraction_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
+    validate_dense_gguf_rope_cuda_parity_receipt_json,
 };
 use clap::Args;
 use memmap2::Mmap;
@@ -449,6 +451,103 @@ impl DenseGgufNormCudaParityCommand {
     }
 }
 
+/// Run dense GGUF RoPE CUDA parity diagnostics.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufRopeCudaParityCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Dense transformer layer index represented by the deterministic fixture.
+    #[arg(long, default_value_t = 0)]
+    pub layer_index: usize,
+
+    /// Number of token positions in the deterministic RoPE fixture.
+    #[arg(long, default_value_t = 4)]
+    pub seq_len: usize,
+
+    /// Position offset used by the deterministic fixture.
+    #[arg(long, default_value_t = 1)]
+    pub position_offset: usize,
+
+    /// CUDA device index.
+    #[arg(long, default_value_t = 0)]
+    pub device_index: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufRopeCudaParityCommand {
+    pub async fn execute(&self) -> Result<()> {
+        if self.seq_len == 0 {
+            bail!("dense GGUF RoPE CUDA parity requires --seq-len > 0");
+        }
+
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
+        if !probe.available {
+            bail!("CUDA-DENSE-018 requires CUDA probe success: {:?}", probe.failure_reason);
+        }
+        let device_name = probe.selected_device_name.as_deref().unwrap_or("unknown");
+        if !is_rtx5070ti_device_name(device_name) {
+            bail!("CUDA-DENSE-018 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
+        }
+
+        let fixture = dense_gguf_rope_cuda_fixture_from_reader(
+            &reader,
+            &inspection,
+            self.layer_index,
+            self.seq_len,
+            self.position_offset,
+        )?;
+        let parity = run_dense_gguf_rope_cuda_parity(self.device_index, &fixture)?;
+        if !parity.passed {
+            bail!(
+                "dense GGUF RoPE CUDA parity failed: max_abs_error={} tolerance={}",
+                parity.max_abs_error,
+                parity.tolerance
+            );
+        }
+
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_rope_cuda_parity_receipt_json(
+            &inspection,
+            &fixture,
+            &parity,
+            Some(&probe),
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        );
+        validate_dense_gguf_rope_cuda_parity_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
 struct DenseLinearSweepResult {
     extracted: DenseGgufLinearFixture,
     parity: DenseGgufLinearCudaParity,
@@ -621,6 +720,137 @@ fn kernel_rmsnorm_fixture_from_extracted(
         expected_output_f32: fixture.cpu_reference_output.clone(),
         rmsnorm_eps: summary.rmsnorm_eps,
     })
+}
+
+fn dense_gguf_rope_cuda_fixture_from_reader(
+    reader: &GgufReader<'_>,
+    inspection: &DenseGgufDescriptorInspection,
+    layer_index: usize,
+    seq_len: usize,
+    position_offset: usize,
+) -> Result<DenseGgufRopeCudaFixture> {
+    let architecture = &inspection.architecture;
+    let head_dim = metadata_u32_with_source(
+        reader,
+        &[
+            format!("{architecture}.attention.key_length"),
+            format!("{architecture}.attention.head_dim"),
+            "attention.key_length".to_string(),
+        ],
+    )
+    .or_else(|| {
+        let heads = metadata_u32_with_source(
+            reader,
+            &[format!("{architecture}.attention.head_count"), "attention.head_count".to_string()],
+        )?;
+        let embedding = metadata_u32_with_source(
+            reader,
+            &[format!("{architecture}.embedding_length"), "embedding_length".to_string()],
+        )?;
+        if heads.0 == 0 || embedding.0 % heads.0 != 0 {
+            return None;
+        }
+        Some((embedding.0 / heads.0, "embedding_length_div_attention.head_count".to_string()))
+    })
+    .ok_or_else(|| {
+        anyhow!("dense GGUF RoPE fixture requires attention key/head dimension metadata")
+    })?;
+    let q_heads = metadata_u32_with_source(
+        reader,
+        &[format!("{architecture}.attention.head_count"), "attention.head_count".to_string()],
+    )
+    .ok_or_else(|| anyhow!("dense GGUF RoPE fixture requires attention.head_count metadata"))?;
+    let kv_heads = metadata_u32_with_source(
+        reader,
+        &[format!("{architecture}.attention.head_count_kv"), "attention.head_count_kv".to_string()],
+    )
+    .unwrap_or((q_heads.0, "attention.head_count_kv_missing_default_to_q_heads".to_string()));
+    let rope_base = metadata_f32_with_source(
+        reader,
+        &[format!("{architecture}.rope.freq_base"), "rope.freq_base".to_string()],
+    )
+    .unwrap_or((10_000.0, "rope.freq_base_missing_default_10000".to_string()));
+    let scaling_factor = metadata_f32_with_source(
+        reader,
+        &[format!("{architecture}.rope.scaling.factor"), "rope.scaling.factor".to_string()],
+    )
+    .unwrap_or((1.0, "rope.scaling.factor_missing_default_1".to_string()));
+
+    let (head_dim_value, head_dim_source) = head_dim;
+    let (q_heads_value, q_heads_source) = q_heads;
+    let (kv_heads_value, kv_heads_source) = kv_heads;
+    let (rope_base_value, rope_base_source) = rope_base;
+    let (scaling_factor_value, _scaling_factor_source) = scaling_factor;
+    let head_dim = head_dim_value as usize;
+    let q_heads = q_heads_value as usize;
+    let kv_heads = kv_heads_value as usize;
+    let q_input_f32 = deterministic_rope_input(q_heads * seq_len * head_dim, 17);
+    let k_input_f32 = deterministic_rope_input(kv_heads * seq_len * head_dim, 41);
+    let q_config = RopeConfig::for_shape(head_dim, q_heads, seq_len)?
+        .with_position_offset(position_offset)
+        .with_base(rope_base_value)
+        .with_scaling_factor(scaling_factor_value);
+    let k_config = RopeConfig::for_shape(head_dim, kv_heads, seq_len)?
+        .with_position_offset(position_offset)
+        .with_base(rope_base_value)
+        .with_scaling_factor(scaling_factor_value);
+    let mut expected_q_output_f32 = vec![0.0f32; q_input_f32.len()];
+    rope_forward_cpu(&q_input_f32, &mut expected_q_output_f32, &q_config)?;
+    let mut expected_k_output_f32 = vec![0.0f32; k_input_f32.len()];
+    rope_forward_cpu(&k_input_f32, &mut expected_k_output_f32, &k_config)?;
+
+    Ok(DenseGgufRopeCudaFixture {
+        fixture_id: format!(
+            "dense_gguf_rope_{}_layer{}_q{}_kv{}_d{}_s{}",
+            sanitize_label(&inspection.model_family),
+            layer_index,
+            q_heads,
+            kv_heads,
+            head_dim,
+            seq_len
+        ),
+        model_family: inspection.model_family.clone(),
+        architecture: inspection.architecture.clone(),
+        layer_index,
+        q_heads,
+        kv_heads,
+        head_dim,
+        seq_len,
+        position_offset,
+        rope_base: rope_base_value,
+        scaling_factor: scaling_factor_value,
+        interleaved: false,
+        head_dim_source: head_dim_source_label(&head_dim_source),
+        q_heads_source,
+        kv_heads_source,
+        rope_base_source,
+        q_input_f32,
+        k_input_f32,
+        expected_q_output_f32,
+        expected_k_output_f32,
+    })
+}
+
+fn head_dim_source_label(source: &str) -> String {
+    if source.is_empty() { "unknown".to_string() } else { source.to_string() }
+}
+
+fn metadata_u32_with_source(reader: &GgufReader<'_>, keys: &[String]) -> Option<(u32, String)> {
+    keys.iter().find_map(|key| reader.get_u32_metadata(key).map(|value| (value, key.clone())))
+}
+
+fn metadata_f32_with_source(reader: &GgufReader<'_>, keys: &[String]) -> Option<(f32, String)> {
+    keys.iter().find_map(|key| reader.get_f32_metadata(key).map(|value| (value, key.clone())))
+}
+
+fn deterministic_rope_input(len: usize, salt: usize) -> Vec<f32> {
+    (0..len)
+        .map(|idx| {
+            let phase = ((idx * 37 + salt * 13) as f32).sin();
+            let drift = ((idx + salt) % 11) as f32 * 0.003;
+            phase * 0.125 + drift
+        })
+        .collect()
 }
 
 fn dense_linear_fixture_id(model_family: &str, role: &str, tensor_type: &str) -> String {
@@ -1043,6 +1273,235 @@ fn dense_gguf_norm_cuda_parity_receipt_json(
         ],
         "error": null
     }))
+}
+
+fn dense_gguf_rope_cuda_parity_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    fixture: &DenseGgufRopeCudaFixture,
+    parity: &DenseGgufRopeCudaParity,
+    probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Value {
+    let cuda = cuda_identity_json(probe);
+    let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
+        model_family: &inspection.model_family,
+        quantization: "dense_f32_rope",
+        requested_backend: HARDWARE_LANE,
+        selected_backend: HARDWARE_LANE,
+        runtime_api: "cuda",
+        strict_fallback_policy: "reject",
+        summary: ModelDispatchSummary {
+            total_ops: 1,
+            cuda_bitnet_qk256_ops: 0,
+            cuda_dense_regular_llm_ops: 1,
+            cpu_fallback_ops: 0,
+            unsupported_ops: 0,
+            fallback_used: false,
+            selected_route: Some(ModelDispatchBackend::CudaDenseRegularLlm),
+            strict_cuda_ready: true,
+        },
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    });
+
+    json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_rope_cuda_parity_tested",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": HARDWARE_LANE,
+        "selected_backend": HARDWARE_LANE,
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda,
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "quantization_families": inspection.quantization_families,
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_f32_rope",
+            "quantization_family": "metadata_derived_rope_qk_f32_fixture",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": execution_plan,
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "rope_fixture": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "fixture_id": fixture.fixture_id,
+            "model_family": fixture.model_family,
+            "architecture": fixture.architecture,
+            "layer_index": fixture.layer_index as u64,
+            "head_dim": fixture.head_dim as u64,
+            "q_heads": fixture.q_heads as u64,
+            "kv_heads": fixture.kv_heads as u64,
+            "seq_len": fixture.seq_len as u64,
+            "position_offset": fixture.position_offset as u64,
+            "rope_base": fixture.rope_base,
+            "scaling_factor": fixture.scaling_factor,
+            "interleaved": fixture.interleaved,
+            "head_dim_source": fixture.head_dim_source,
+            "q_heads_source": fixture.q_heads_source,
+            "kv_heads_source": fixture.kv_heads_source,
+            "rope_base_source": fixture.rope_base_source,
+            "q_input_sha256": sha256_f32(&fixture.q_input_f32),
+            "k_input_sha256": sha256_f32(&fixture.k_input_f32),
+            "cpu_reference_q_output_sha256": sha256_f32(&fixture.expected_q_output_f32),
+            "cpu_reference_k_output_sha256": sha256_f32(&fixture.expected_k_output_f32),
+            "cuda_input_dtype": "f32",
+            "cuda_output_dtype": "f32",
+            "dense_gguf_inference_claimed": false,
+            "dense_regular_llm_cuda_claimed": true,
+            "cpu_cuda_parity_claimed": true,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "kernel_stats": [{
+            "kernel_id": parity.stats.kernel_id,
+            "fixture_id": parity.fixture_id,
+            "invocations": parity.stats.invocations,
+            "fallback_invocations": parity.stats.fallback_invocations,
+            "host_to_device_bytes": parity.stats.host_to_device_bytes,
+            "device_to_host_bytes": parity.stats.device_to_host_bytes,
+            "kernel_launches": parity.stats.kernel_launches,
+            "kernel_time_ms": parity.stats.kernel_time_ms
+        }],
+        "parity": {
+            "reference_backend": parity.reference_backend,
+            "target_backend": parity.target_backend,
+            "kernel_id": parity.kernel_id,
+            "fixture_id": parity.fixture_id,
+            "max_abs_error": parity.max_abs_error,
+            "mean_abs_error": parity.mean_abs_error,
+            "passed": parity.passed,
+            "tolerance": parity.tolerance,
+            "tolerance_source": "CUDA-DENSE-018 dense GGUF RoPE F32 CUDA fixture",
+            "first_divergence": null
+        },
+        "timing": {
+            "kernel_time_ms": parity.stats.kernel_time_ms,
+            "host_to_device_bytes": parity.stats.host_to_device_bytes,
+            "device_to_host_bytes": parity.stats.device_to_host_bytes
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_rope_cuda_parity_claimed": true,
+            "dense_gguf_norm_cuda_parity_claimed": false,
+            "dense_gguf_linear_fixture_extraction_claimed": false,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": true,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "tensor_residency": {
+            "schema_version": "1.0.0",
+            "scope": "single_dense_gguf_rope_fixture",
+            "model_class": "dense_regular_llm",
+            "fixture_id": parity.fixture_id,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false,
+            "input_tensors_uploaded_once": true,
+            "output_tensor_cuda_resident_during_kernel": true,
+            "host_device_transfer_accounting_matches_kernel_stats": true,
+            "inputs": [
+                {
+                    "name": "dense_gguf_rope_q_input",
+                    "dtype": "f32",
+                    "shape": [fixture.q_heads as u64, fixture.seq_len as u64, fixture.head_dim as u64],
+                    "host_bytes": (fixture.q_input_f32.len() * 4) as u64,
+                    "device_residency": "cuda_device_buffer",
+                    "upload_count": 1,
+                    "reuse_scope": "single_fixture_launch"
+                },
+                {
+                    "name": "dense_gguf_rope_k_input",
+                    "dtype": "f32",
+                    "shape": [fixture.kv_heads as u64, fixture.seq_len as u64, fixture.head_dim as u64],
+                    "host_bytes": (fixture.k_input_f32.len() * 4) as u64,
+                    "device_residency": "cuda_device_buffer",
+                    "upload_count": 1,
+                    "reuse_scope": "single_fixture_launch"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dense_gguf_rope_q_output",
+                    "dtype": "f32",
+                    "shape": [fixture.q_heads as u64, fixture.seq_len as u64, fixture.head_dim as u64],
+                    "device_residency": "cuda_device_buffer",
+                    "device_to_host_bytes": (fixture.expected_q_output_f32.len() * 4) as u64,
+                    "download_scope": "parity_check_only"
+                },
+                {
+                    "name": "dense_gguf_rope_k_output",
+                    "dtype": "f32",
+                    "shape": [fixture.kv_heads as u64, fixture.seq_len as u64, fixture.head_dim as u64],
+                    "device_residency": "cuda_device_buffer",
+                    "device_to_host_bytes": (fixture.expected_k_output_f32.len() * 4) as u64,
+                    "download_scope": "parity_check_only"
+                }
+            ],
+            "allocation": {
+                "device_buffer_count": 4,
+                "temporary_workspace_bytes": 0,
+                "persistent_handle_count": 0,
+                "persistent_handles_claimed": false
+            },
+            "transfer_accounting": {
+                "status": "measured",
+                "host_to_device_bytes": parity.stats.host_to_device_bytes,
+                "device_to_host_bytes": parity.stats.device_to_host_bytes,
+                "kernel_invocations": parity.stats.invocations,
+                "kernel_launches": parity.stats.kernel_launches
+            }
+        },
+        "notes": [
+            "Dense GGUF RoPE CUDA fixture parity only; no dense GGUF inference, Qwen token/decode/chat, server, speedup, or full-residency claim is made.",
+            "This proves deterministic Q/K RoPE vectors derived from dense GGUF metadata can run through a strict CUDA RoPE kernel against CPU references."
+        ],
+        "error": null
+    })
 }
 
 fn dense_gguf_linear_cuda_parity_receipt_json(
@@ -1994,6 +2453,14 @@ fn sha256_bytes(bytes: &[u8]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+fn sha256_f32(values: &[f32]) -> String {
+    let mut hasher = Sha256::new();
+    for value in values {
+        hasher.update(value.to_le_bytes());
+    }
+    format!("{:x}", hasher.finalize())
+}
+
 fn is_rtx5070ti_device_name(name: &str) -> bool {
     let compact = name
         .chars()
@@ -2011,8 +2478,9 @@ mod tests {
         CUDA_DENSE_F16_GEMM_KERNEL_ID, CUDA_DENSE_GEMM_REFERENCE_BACKEND,
         CUDA_DENSE_GEMM_TARGET_BACKEND, CUDA_DENSE_GGUF_LINEAR_F16_GEMM_TOLERANCE,
         CUDA_DENSE_RMSNORM_KERNEL_ID, CUDA_DENSE_RMSNORM_REFERENCE_BACKEND,
-        CUDA_DENSE_RMSNORM_TARGET_BACKEND, CUDA_DENSE_RMSNORM_TOLERANCE, CudaDenseGemmStats,
-        CudaDenseRmsNormStats,
+        CUDA_DENSE_RMSNORM_TARGET_BACKEND, CUDA_DENSE_RMSNORM_TOLERANCE, CUDA_DENSE_ROPE_KERNEL_ID,
+        CUDA_DENSE_ROPE_REFERENCE_BACKEND, CUDA_DENSE_ROPE_TARGET_BACKEND,
+        CUDA_DENSE_ROPE_TOLERANCE, CudaDenseGemmStats, CudaDenseRmsNormStats, CudaDenseRopeStats,
     };
     use bitnet_models::formats::gguf::GgufTensorType;
     use bitnet_models::formats::gguf::{GgufReader, GgufValue};
@@ -2230,6 +2698,39 @@ mod tests {
     }
 
     #[test]
+    fn dense_gguf_rope_cuda_parity_receipt_records_cuda_kernel() {
+        let data = build_complete_qwen_layer_gguf();
+        let reader = GgufReader::new(&data).expect("parse qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let fixture = dense_gguf_rope_cuda_fixture_from_reader(&reader, &inspection, 0, 4, 1)
+            .expect("rope fixture");
+        let parity = synthetic_rope_parity_from_fixture(&fixture);
+
+        let receipt = dense_gguf_rope_cuda_parity_receipt_json(
+            &inspection,
+            &fixture,
+            &parity,
+            None,
+            Path::new("synthetic-qwen3-q8_0-rope-cuda-parity.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-rope-cuda-parity.json",
+            "2026-05-09T00:00:00Z",
+        );
+
+        validate_dense_gguf_rope_cuda_parity_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["execution_plan"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 1);
+        assert_eq!(receipt["rope_fixture"]["head_dim"], 2);
+        assert_eq!(receipt["rope_fixture"]["q_heads"], 2);
+        assert_eq!(receipt["rope_fixture"]["kv_heads"], 1);
+        assert_eq!(receipt["kernel_stats"][0]["kernel_id"], "dense_rope_f32_cuda");
+        assert_eq!(receipt["kernel_stats"][0]["invocations"], 2);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_rope_cuda_parity_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
     fn parse_dense_linear_role_accepts_common_spellings() {
         assert_eq!(
             parse_dense_linear_role("attention_q").unwrap(),
@@ -2334,6 +2835,44 @@ mod tests {
         }
     }
 
+    fn synthetic_rope_parity_from_fixture(
+        fixture: &DenseGgufRopeCudaFixture,
+    ) -> DenseGgufRopeCudaParity {
+        DenseGgufRopeCudaParity {
+            fixture_id: fixture.fixture_id.clone(),
+            model_family: fixture.model_family.clone(),
+            architecture: fixture.architecture.clone(),
+            layer_index: fixture.layer_index,
+            q_heads: fixture.q_heads,
+            kv_heads: fixture.kv_heads,
+            head_dim: fixture.head_dim,
+            seq_len: fixture.seq_len,
+            position_offset: fixture.position_offset,
+            rope_base: fixture.rope_base,
+            scaling_factor: fixture.scaling_factor,
+            interleaved: fixture.interleaved,
+            reference_backend: CUDA_DENSE_ROPE_REFERENCE_BACKEND,
+            target_backend: CUDA_DENSE_ROPE_TARGET_BACKEND,
+            kernel_id: CUDA_DENSE_ROPE_KERNEL_ID,
+            max_abs_error: 0.0,
+            mean_abs_error: 0.0,
+            tolerance: CUDA_DENSE_ROPE_TOLERANCE,
+            passed: true,
+            stats: CudaDenseRopeStats {
+                kernel_id: CUDA_DENSE_ROPE_KERNEL_ID,
+                invocations: 2,
+                fallback_invocations: 0,
+                host_to_device_bytes: ((fixture.q_input_f32.len() + fixture.k_input_f32.len()) * 4)
+                    as u64,
+                device_to_host_bytes: ((fixture.expected_q_output_f32.len()
+                    + fixture.expected_k_output_f32.len())
+                    * 4) as u64,
+                kernel_launches: 2,
+                kernel_time_ms: None,
+            },
+        }
+    }
+
     fn build_qwen_gguf(
         tensors: Vec<(&'static str, Vec<usize>, GgufTensorType, Vec<u8>)>,
     ) -> Vec<u8> {
@@ -2343,6 +2882,10 @@ mod tests {
                 ("general.name", GgufValue::String("qwen3-linear-fixture".to_string())),
                 ("qwen3.embedding_length", GgufValue::U32(4)),
                 ("qwen3.feed_forward_length", GgufValue::U32(3)),
+                ("qwen3.attention.head_count", GgufValue::U32(2)),
+                ("qwen3.attention.head_count_kv", GgufValue::U32(1)),
+                ("qwen3.attention.key_length", GgufValue::U32(2)),
+                ("qwen3.rope.freq_base", GgufValue::F32(1_000_000.0)),
             ],
             tensors,
         )
@@ -2433,6 +2976,10 @@ mod tests {
         match value {
             GgufValue::U32(value) => {
                 data.extend_from_slice(&4u32.to_le_bytes());
+                data.extend_from_slice(&value.to_le_bytes());
+            }
+            GgufValue::F32(value) => {
+                data.extend_from_slice(&6u32.to_le_bytes());
                 data.extend_from_slice(&value.to_le_bytes());
             }
             GgufValue::String(value) => {

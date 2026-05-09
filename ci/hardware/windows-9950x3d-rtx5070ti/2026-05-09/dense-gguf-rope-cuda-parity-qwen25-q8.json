@@ -1,0 +1,256 @@
+{
+  "artifact_kind": "dense_gguf_rope_cuda_parity",
+  "artifact_path": "ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-rope-cuda-parity-qwen25-q8.json",
+  "claim": "dense_gguf_rope_cuda_parity_tested",
+  "claim_boundary": {
+    "bitnet_packed_i2s_qk256_proof": false,
+    "cpu_cuda_parity_claimed": true,
+    "dense_gguf_descriptor_inspection_claimed": true,
+    "dense_gguf_inference_claimed": false,
+    "dense_gguf_linear_cuda_parity_claimed": false,
+    "dense_gguf_linear_fixture_extraction_claimed": false,
+    "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+    "dense_gguf_norm_cuda_parity_claimed": false,
+    "dense_gguf_one_layer_execution_plan_claimed": false,
+    "dense_gguf_rope_cuda_parity_claimed": true,
+    "dense_regular_llm_cuda_claimed": true,
+    "dense_tensor_residency_claimed": true,
+    "full_cuda_residency_claimed": false,
+    "persistent_session_residency_claimed": false,
+    "qwen_chat_cuda_claimed": false,
+    "qwen_one_token_cuda_claimed": false,
+    "qwen_short_decode_cuda_claimed": false,
+    "speedup_claim": false
+  },
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "nvml_available": true,
+    "nvrtc_version": "12.9",
+    "power_draw_watts": 23.2,
+    "power_limit_watts": 300.0,
+    "temperature_c": 36.0,
+    "vram_bytes": 17094475776
+  },
+  "descriptor_coverage": {
+    "bitnet_packed_marker_found": false,
+    "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+    "dense_gguf_inference_claimed": false,
+    "full_cuda_residency_claimed": false,
+    "metadata_count": 26,
+    "quantization_families": [
+      "f32",
+      "q8_0"
+    ],
+    "required_roles_present": true,
+    "schema": 1,
+    "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+    "speedup_claim": false,
+    "strict_descriptor_complete": true,
+    "tensor_count": 291
+  },
+  "error": null,
+  "execution_path": {
+    "bitnet_packed_kernel_proof": false,
+    "kernel_family": "dense_f32_rope",
+    "model_class": "dense_regular_llm",
+    "qk256_proof": false,
+    "quantization_family": "metadata_derived_rope_qk_f32_fixture"
+  },
+  "execution_plan": {
+    "bitnet_packed_qk256_cuda": false,
+    "cpu_fallback_ops": 0,
+    "cuda_bitnet_qk256_ops": 0,
+    "cuda_dense_regular_llm_ops": 1,
+    "cuda_ops": 1,
+    "dense_regular_llm_cuda": true,
+    "fallback_used": false,
+    "full_cuda_residency_claimed": false,
+    "mixed_cuda_routes": false,
+    "model_family": "qwen",
+    "planner_version": "cuda-planner-004",
+    "quantization": "dense_f32_rope",
+    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+    "runtime_api": "cuda",
+    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+    "selected_route": "dense_regular_llm_cuda",
+    "speedup_claim": false,
+    "strict_cuda_ready": true,
+    "strict_fallback_policy": "reject",
+    "total_ops": 1,
+    "unsupported_ops": 0
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "kernel_stats": [
+    {
+      "device_to_host_bytes": 16384,
+      "fallback_invocations": 0,
+      "fixture_id": "dense_gguf_rope_qwen_layer0_q14_kv2_d64_s4",
+      "host_to_device_bytes": 16384,
+      "invocations": 2,
+      "kernel_id": "dense_rope_f32_cuda",
+      "kernel_launches": 2,
+      "kernel_time_ms": null
+    }
+  ],
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "architecture": "qwen2",
+    "artifact_kind": "dense_gguf",
+    "file": "C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "model_family": "qwen",
+    "quantization_families": [
+      "f32",
+      "q8_0"
+    ],
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+  },
+  "notes": [
+    "Dense GGUF RoPE CUDA fixture parity only; no dense GGUF inference, Qwen token/decode/chat, server, speedup, or full-residency claim is made.",
+    "This proves deterministic Q/K RoPE vectors derived from dense GGUF metadata can run through a strict CUDA RoPE kernel against CPU references."
+  ],
+  "parity": {
+    "first_divergence": null,
+    "fixture_id": "dense_gguf_rope_qwen_layer0_q14_kv2_d64_s4",
+    "kernel_id": "dense_rope_f32_cuda",
+    "max_abs_error": 5.960464477539063e-8,
+    "mean_abs_error": 8.384841265751675e-9,
+    "passed": true,
+    "reference_backend": "amd-9950x3d-cpu-avx512",
+    "target_backend": "nvidia-rtx-5070-ti-cuda",
+    "tolerance": 0.00009999999747378752,
+    "tolerance_source": "CUDA-DENSE-018 dense GGUF RoPE F32 CUDA fixture"
+  },
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "rope_fixture": {
+    "architecture": "qwen2",
+    "bitnet_packed_i2s_qk256_proof": false,
+    "cpu_cuda_parity_claimed": true,
+    "cpu_reference_k_output_sha256": "666da70033fe9d9b0034b533e4e635708ba104e3175165d63640c83db31aa201",
+    "cpu_reference_q_output_sha256": "a1e078cd4d929212a7e5f40cc587de94a7255c187382aa27eaad3948e0d6a984",
+    "cuda_input_dtype": "f32",
+    "cuda_output_dtype": "f32",
+    "dense_gguf_inference_claimed": false,
+    "dense_regular_llm_cuda_claimed": true,
+    "fixture_id": "dense_gguf_rope_qwen_layer0_q14_kv2_d64_s4",
+    "full_cuda_residency_claimed": false,
+    "head_dim": 64,
+    "head_dim_source": "embedding_length_div_attention.head_count",
+    "interleaved": false,
+    "k_input_sha256": "099e9bd3c57bf2e2c83dfafd5b20aa0f9400fd2d45fac70d05da7c8e8188583b",
+    "kv_heads": 2,
+    "kv_heads_source": "qwen2.attention.head_count_kv",
+    "layer_index": 0,
+    "model_family": "qwen",
+    "position_offset": 1,
+    "q_heads": 14,
+    "q_heads_source": "qwen2.attention.head_count",
+    "q_input_sha256": "b72dd1842fd266db3e808b6dccfaf382ada08c16de5c9480629d108d151fb105",
+    "rope_base": 1000000.0,
+    "rope_base_source": "qwen2.rope.freq_base",
+    "scaling_factor": 1.0,
+    "schema": 1,
+    "seq_len": 4,
+    "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+    "speedup_claim": false
+  },
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "speedup_claim": false,
+  "tensor_residency": {
+    "allocation": {
+      "device_buffer_count": 4,
+      "persistent_handle_count": 0,
+      "persistent_handles_claimed": false,
+      "temporary_workspace_bytes": 0
+    },
+    "dense_gguf_inference_claimed": false,
+    "dense_tensor_residency_claimed": true,
+    "fixture_id": "dense_gguf_rope_qwen_layer0_q14_kv2_d64_s4",
+    "full_cuda_residency_claimed": false,
+    "host_device_transfer_accounting_matches_kernel_stats": true,
+    "input_tensors_uploaded_once": true,
+    "inputs": [
+      {
+        "device_residency": "cuda_device_buffer",
+        "dtype": "f32",
+        "host_bytes": 14336,
+        "name": "dense_gguf_rope_q_input",
+        "reuse_scope": "single_fixture_launch",
+        "shape": [
+          14,
+          4,
+          64
+        ],
+        "upload_count": 1
+      },
+      {
+        "device_residency": "cuda_device_buffer",
+        "dtype": "f32",
+        "host_bytes": 2048,
+        "name": "dense_gguf_rope_k_input",
+        "reuse_scope": "single_fixture_launch",
+        "shape": [
+          2,
+          4,
+          64
+        ],
+        "upload_count": 1
+      }
+    ],
+    "model_class": "dense_regular_llm",
+    "output_tensor_cuda_resident_during_kernel": true,
+    "outputs": [
+      {
+        "device_residency": "cuda_device_buffer",
+        "device_to_host_bytes": 14336,
+        "download_scope": "parity_check_only",
+        "dtype": "f32",
+        "name": "dense_gguf_rope_q_output",
+        "shape": [
+          14,
+          4,
+          64
+        ]
+      },
+      {
+        "device_residency": "cuda_device_buffer",
+        "device_to_host_bytes": 2048,
+        "download_scope": "parity_check_only",
+        "dtype": "f32",
+        "name": "dense_gguf_rope_k_output",
+        "shape": [
+          2,
+          4,
+          64
+        ]
+      }
+    ],
+    "persistent_session_residency_claimed": false,
+    "schema_version": "1.0.0",
+    "scope": "single_dense_gguf_rope_fixture",
+    "transfer_accounting": {
+      "device_to_host_bytes": 16384,
+      "host_to_device_bytes": 16384,
+      "kernel_invocations": 2,
+      "kernel_launches": 2,
+      "status": "measured"
+    }
+  },
+  "timestamp_utc": "2026-05-09T07:59:05Z",
+  "timing": {
+    "device_to_host_bytes": 16384,
+    "host_to_device_bytes": 16384,
+    "kernel_time_ms": null
+  }
+}

@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T07:58:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-018"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-018-rope-parity"
+notes = [
+  "Started dense GGUF RoPE CUDA parity after CUDA-DENSE-017 recorded RoPE as the next governed one-layer gap.",
+  "Scope is a metadata-derived Q/K RoPE fixture, dense_rope_f32_cuda launch proof, receipt validator, live receipt, and report for the verified Qwen2.5 0.5B Q8_0 artifact.",
+  "No dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, QK256, tokenizer, loader, transformer, or BitNet packed proof claim is in scope.",
+]
