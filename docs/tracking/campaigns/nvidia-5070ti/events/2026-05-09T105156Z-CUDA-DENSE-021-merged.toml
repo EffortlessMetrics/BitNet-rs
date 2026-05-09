@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T10:51:56Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-021"
+event = "merged"
+previous_status = "in_progress"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-021-attention-score-parity"
+pr = 4251
+head_sha = "a1ed103a33877f52590ddc795361904aa6d985ad"
+merge_sha = "087a32e18a79a4f56a84cc05d6dc43e21a4444b8"
+notes = [
+  "Merged strict RTX 5070 Ti CUDA attention-score parity for the metadata-derived Qwen2.5 0.5B Q8_0 dense GGUF fixture.",
+  "The committed receipt records dense_attention_scores_f32_cuda, compared_scores=224, max_abs_error=7.450580596923828e-9, fallback_used=false, speedup_claim=false, dense_gguf_inference_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+  "Next dense CUDA work remains below dense GGUF token/decode/chat and should either promote planner routing for attention_scores or start the attention softmax/V-mix parity gap.",
+]

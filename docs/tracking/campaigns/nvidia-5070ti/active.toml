@@ -2050,8 +2050,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-021"
-status = "in_progress"
+status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"
+pr = 4251
+head_sha = "a1ed103a33877f52590ddc795361904aa6d985ad"
+merge_sha = "087a32e18a79a4f56a84cc05d6dc43e21a4444b8"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
