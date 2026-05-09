@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EffortlessMetrics/BitNet-rs/ci/hardware/apple-silicon-macbook/receipt-contracts/machine-profile.schema.json",
+  "title": "Apple Silicon MacBook machine profile receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_kind",
+    "schema_version",
+    "timestamp",
+    "machine",
+    "storage",
+    "model_cache",
+    "backend_availability",
+    "thermal",
+    "power",
+    "claim_boundary"
+  ],
+  "properties": {
+    "artifact_kind": {
+      "const": "apple_silicon_macbook_machine_profile"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "machine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "machine_id",
+        "hardware_model",
+        "chip",
+        "cpu_brand",
+        "cpu_arch",
+        "physical_cores",
+        "logical_cores",
+        "memory_bytes",
+        "macos_version",
+        "kernel_version"
+      ],
+      "properties": {
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hardware_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "chip": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cpu_brand": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cpu_arch": {
+          "enum": [
+            "arm64",
+            "aarch64"
+          ]
+        },
+        "physical_cores": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "logical_cores": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memory_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "macos_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kernel_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "volume",
+        "available_bytes",
+        "total_bytes",
+        "low_disk_threshold_bytes",
+        "large_artifact_sweep_allowed"
+      ],
+      "properties": {
+        "volume": {
+          "type": "string",
+          "minLength": 1
+        },
+        "available_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "low_disk_threshold_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "large_artifact_sweep_allowed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "model_cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cache_root",
+        "cache_root_exists",
+        "cache_available_bytes",
+        "model_binaries_committed"
+      ],
+      "properties": {
+        "cache_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cache_root_exists": {
+          "type": "boolean"
+        },
+        "cache_available_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "model_binaries_committed": {
+          "const": false
+        }
+      }
+    },
+    "backend_availability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_neon",
+        "metal",
+        "mpsgraph"
+      ],
+      "properties": {
+        "cpu_neon": {
+          "$ref": "#/$defs/backend_probe"
+        },
+        "metal": {
+          "$ref": "#/$defs/backend_probe"
+        },
+        "mpsgraph": {
+          "$ref": "#/$defs/backend_probe"
+        }
+      }
+    },
+    "thermal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "source"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "nominal",
+            "fair",
+            "serious",
+            "critical",
+            "unknown",
+            "not_available"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "power": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "low_power_mode"
+      ],
+      "properties": {
+        "source": {
+          "enum": [
+            "ac",
+            "battery",
+            "unknown"
+          ]
+        },
+        "low_power_mode": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "claim_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inference_run",
+        "dense_slm_quality_claim",
+        "bitnet_quality_claim",
+        "full_metal_inference_claim",
+        "neural_engine_claim",
+        "qk256_claim",
+        "broad_performance_claim"
+      ],
+      "properties": {
+        "inference_run": {
+          "const": false
+        },
+        "dense_slm_quality_claim": {
+          "const": false
+        },
+        "bitnet_quality_claim": {
+          "const": false
+        },
+        "full_metal_inference_claim": {
+          "const": false
+        },
+        "neural_engine_claim": {
+          "const": false
+        },
+        "qk256_claim": {
+          "const": false
+        },
+        "broad_performance_claim": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "backend_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "visible",
+        "probe_source",
+        "selected_device",
+        "notes"
+      ],
+      "properties": {
+        "visible": {
+          "type": "boolean"
+        },
+        "probe_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "selected_device": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

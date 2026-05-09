@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T03:20:17Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-001"
+event = "pr_open"
+pr = 4184
+head_sha = "279628db857dbb9ebaa7d747ef537072e462daa5"
+actor = "codex"
+
+notes = [
+  "Opened PR #4184 for the MacBook Apple Silicon machine/storage/profile receipt contract.",
+  "The PR adds a JSON schema, claim-safe example, docs, and campaign tracking only.",
+  "No model inference, dense SLM quality proof, BitNet artifact acceptance, QK256, Neural Engine, broad performance, or full Apple Metal inference claim is included.",
+]

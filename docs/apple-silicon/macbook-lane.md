@@ -51,6 +51,20 @@ mpsgraph_visible when available
 
 This profile decides whether the MacBook should attempt larger artifacts. It should not run model inference or claim answer quality.
 
+`MB-AS-001` defines the receipt contract at:
+
+```text
+ci/hardware/apple-silicon-macbook/receipt-contracts/machine-profile.schema.json
+```
+
+and a non-hardware example at:
+
+```text
+ci/hardware/apple-silicon-macbook/receipt-contracts/machine-profile.example.json
+```
+
+The example deliberately records `inference_run=false` and sets every model, BitNet, Metal, Neural Engine, QK256, and broad-performance claim flag to false. A real MacBook profile receipt should replace the placeholder machine and storage values, but it must keep the same claim boundary unless a later campaign item explicitly allows a broader proof.
+
 ## Dense SLM Cross-Check
 
 After the machine profile exists, mirror the known-good dense Qwen Mac path:

@@ -1,0 +1,73 @@
+{
+  "artifact_kind": "apple_silicon_macbook_machine_profile",
+  "schema_version": "1.0.0",
+  "timestamp": "2026-05-09T03:17:55Z",
+  "machine": {
+    "machine_id": "apple-silicon-macbook-unset",
+    "hardware_model": "MacBook placeholder",
+    "chip": "Apple Silicon placeholder",
+    "cpu_brand": "Apple placeholder",
+    "cpu_arch": "arm64",
+    "physical_cores": 1,
+    "logical_cores": 1,
+    "memory_bytes": 1,
+    "macos_version": "not captured",
+    "kernel_version": "not captured"
+  },
+  "storage": {
+    "volume": "/",
+    "available_bytes": 0,
+    "total_bytes": 1,
+    "low_disk_threshold_bytes": 8589934592,
+    "large_artifact_sweep_allowed": false
+  },
+  "model_cache": {
+    "cache_root": "~/.cache/bitnet-rs/models",
+    "cache_root_exists": false,
+    "cache_available_bytes": 0,
+    "model_binaries_committed": false
+  },
+  "backend_availability": {
+    "cpu_neon": {
+      "visible": false,
+      "probe_source": "contract-example",
+      "selected_device": null,
+      "notes": [
+        "Example only; MB-AS-001 does not run model inference."
+      ]
+    },
+    "metal": {
+      "visible": false,
+      "probe_source": "contract-example",
+      "selected_device": null,
+      "notes": [
+        "Visibility is not a full Metal inference claim."
+      ]
+    },
+    "mpsgraph": {
+      "visible": false,
+      "probe_source": "contract-example",
+      "selected_device": null,
+      "notes": [
+        "MPSGraph visibility is not Neural Engine proof."
+      ]
+    }
+  },
+  "thermal": {
+    "state": "not_available",
+    "source": "contract-example"
+  },
+  "power": {
+    "source": "unknown",
+    "low_power_mode": null
+  },
+  "claim_boundary": {
+    "inference_run": false,
+    "dense_slm_quality_claim": false,
+    "bitnet_quality_claim": false,
+    "full_metal_inference_claim": false,
+    "neural_engine_claim": false,
+    "qk256_claim": false,
+    "broad_performance_claim": false
+  }
+}
