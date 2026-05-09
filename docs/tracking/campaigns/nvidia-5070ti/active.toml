@@ -2175,10 +2175,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-031"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-031-mlp-activation-route"
 pr = 4314
-head_sha = "53fc73128c4bbf29eb52c84dcaa61511bde82faa"
+head_sha = "7330c50cceced8f20a95780cd8ad3b3f7730e813"
+merge_sha = "2c634308992ff901458bdb35c24069e8beaa5bc1"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

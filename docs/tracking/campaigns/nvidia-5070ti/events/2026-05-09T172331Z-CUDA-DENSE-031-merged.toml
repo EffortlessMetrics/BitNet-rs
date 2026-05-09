@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T17:23:31Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-031"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/cuda-dense-031-mlp-activation-route"
+pr = 4314
+head_sha = "7330c50cceced8f20a95780cd8ad3b3f7730e813"
+merge_sha = "2c634308992ff901458bdb35c24069e8beaa5bc1"
+actor = "codex"
+
+notes = [
+  "PR #4314 merged the dense GGUF MLP activation one-layer route promotion.",
+  "The merged receipt keeps dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, QK256, tokenizer, loader, transformer, server, and CUDA kernel math claims false.",
+]
