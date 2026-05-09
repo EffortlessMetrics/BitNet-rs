@@ -1,0 +1,396 @@
+id = "apple-m4-slm-excellence"
+title = "Apple M4 SLM excellence"
+status = "active"
+
+objective = "Turn the working Apple M4 dense SLM path into an appliance-grade local model runner experience with native-feeling CLI, reliable health checks, lower perceived latency, better allocation hygiene, stronger quality coverage, longer resident-session stability, leading dense SLM support, local regression reporting, a measured operator envelope, and efficient default CI."
+
+end_state = [
+  "bitnet mac doctor gives an operator a single health verdict for the M4 dense SLM path.",
+  "bitnet mac chat behaves like a quiet, streaming, resident local tool with clear receipt options.",
+  "Time-to-first-token and hot-loop overhead are measured and reduced without changing greedy output.",
+  "Dense model support is explicit, with default, supported, candidate, and rejected states kept separate.",
+  "A second dense model is supported only after reference and Rust M4 quality gates pass.",
+  "Leading dense SLM candidates can be evaluated through the same cache, tokenizer, quality, receipt, and M4 support matrix without committing model binaries.",
+  "Quality corpus 2.0 covers small but useful local-answer behavior without broad eval claims.",
+  "Long resident sessions record memory and timing drift without fleet-wide performance claims.",
+  "Local regression reports compare matching receipts against the stored M4 envelope while keeping ordinary CI lightweight.",
+  "The operator expectation doc says what the M4 mini should do and what remains unsupported.",
+]
+
+hard_constraints = [
+  "This is an M4 Mac mini local campaign.",
+  "Do not execute MacBook artifact sweeps or MacBook receipts here.",
+  "Do not reopen completed Apple M4 proof, operational, SLM answer, productization, performance, hardening, continuity, or dense regression campaigns.",
+  "Do not weaken blocked BitNet local-answer gates.",
+  "Do not claim BitNet local-answer quality from dense Qwen SLM evidence.",
+  "Do not claim full apple-m4-metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance.",
+  "Do not touch QK256, bitnet-qk256-dispatch, server inference, or Metal kernels unless a later phase-scoped Metal item explicitly allows it.",
+  "Do not add live model downloads, long resident soaks, or hardware performance runs to generic required CI; keep those as local, advisory, or scheduled Apple-hardware checks.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-001"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-001-mac-doctor"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add bitnet mac doctor as a one-command local health verdict for the supported dense Apple M4 SLM path, checking cache presence, model hash, disk headroom, tiny ask/smoke behavior, receipt validation, backend/fallback identity, and unsupported-backend rejection without downloading models by default."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests mac -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-slm-excellence/**",
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The M4 dense SLM path has a one-command local health verdict when doctor checks pass.",
+]
+must_not_claim = [
+  "A model was repaired or downloaded by default.",
+  "BitNet local-answer quality is proven.",
+  "Full apple-m4-metal inference works.",
+  "Broad M4 performance is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-002"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-002-chat-polish"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EX-001"]
+acceptance = "Polish bitnet mac chat as a resident local tool with clean prompt loop behavior, EOF/Ctrl-C handling, quiet default logs, streaming by default, optional per-turn receipts, aggregate session receipt at exit, and clear model/tokenizer loaded-once status."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests mac_chat -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The resident dense SLM chat UX is cleaner and keeps model/tokenizer reuse visible.",
+]
+must_not_claim = [
+  "Runtime speed improved unless receipts prove it.",
+  "BitNet local-answer quality is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-003"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-003-ttft"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EX-002"]
+acceptance = "Measure and reduce dense Mac SLM time-to-first-token overhead in prompt template construction, tokenization, first decode step, streaming flush behavior, cache verification placement, or receipt construction while preserving greedy token IDs and quality corpus behavior."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "A measured dense-SLM time-to-first-token overhead was reduced for the recorded M4 context if before/after receipts support it.",
+]
+must_not_claim = [
+  "Broad M4 performance is proven.",
+  "Full apple-m4-metal inference works.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-004"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-004-allocation-cleanup"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EX-003"]
+acceptance = "Clean resident decode hot-loop allocations for sampling scratch, logits buffers where supported, token vector growth, detokenization string churn, temporary tensors, and receipt JSON placement while preserving output quality, timing, and receipt schema."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "A scoped dense Mac SLM allocation budget or cleanup is recorded without changing output behavior.",
+]
+must_not_claim = [
+  "Broad performance is proven.",
+  "BitNet performance is improved.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-005"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-005-model-matrix"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EX-004"]
+acceptance = "Define an M4 dense SLM model support matrix for the default model and leading candidate SLMs, with default, supported, candidate, and rejected states, recording source, file, size, SHA256, tokenizer authority, prompt template, quantization, Rust support status, M4 support status, cache policy, and quality status without accepting unsupported models."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "Dense SLM default, supported, candidate, and rejected states are documented for the M4 lane, including leading candidates where evidence exists.",
+]
+must_not_claim = [
+  "A candidate model is accepted before reference and Rust M4 gates pass.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-006"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-006-second-model"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EX-005"]
+acceptance = "Add a second storage-conscious dense instruct model only if it passes reference output sanity, Rust M4 output quality, tokenizer authority checks, cache metadata verification, and receipt validation."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "A second dense SLM is supported on M4 only after the item receipts prove it.",
+]
+must_not_claim = [
+  "BitNet behavior is proven.",
+  "A downloaded model binary is committed.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-007"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-007-quality-corpus-v2"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EX-006"]
+acceptance = "Expand to a small quality corpus 2.0 covering factual answers, instruction following, format-constrained output, one-sentence generation, arithmetic, small summarization, and short rewrite while preserving fast local runtime and validated receipts."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/**",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The M4 dense SLM quality corpus covers a broader but still small local-answer surface.",
+]
+must_not_claim = [
+  "Broad chat quality is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-008"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-008-long-soak"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EX-007"]
+acceptance = "Record 25-prompt and 50-prompt resident dense SLM sessions with 64-token and 128-token response budgets, memory drift, time-to-first-token drift, decode throughput drift, quality failures, and model/tokenizer reuse."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "A scoped M4 Mac mini long-session dense SLM soak envelope is recorded.",
+]
+must_not_claim = [
+  "Apple Silicon fleet-wide performance is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-009"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-009-local-regression"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EX-008"]
+acceptance = "Add bitnet mac regression as a local advisory comparison command against matching stored M4 dense SLM envelope receipts, with optional hard-fail mode for model/tokenizer/backend/fallback/quality/timing/memory drift, while keeping live model and hardware performance checks out of generic required CI."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests mac -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "Local M4 dense SLM regression comparison is available for matching receipts without making live hardware performance mandatory in generic CI.",
+]
+must_not_claim = [
+  "Required CI performance enforcement is active by default.",
+]
+
+[[work_item]]
+id = "M4-SLM-EX-010"
+status = "ready"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-010-user-envelope"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EX-009"]
+acceptance = "Publish a measured M4 mini user expectation envelope covering cold load, warm ask timing, time-to-first-token, warm 16/32/64/128 timing, decode tokens per second, peak memory, cache size, and known unsupported models/backends."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "A measured M4 mini dense SLM user expectation envelope is published.",
+]
+must_not_claim = [
+  "Broad Apple Silicon performance is proven.",
+  "Full apple-m4-metal inference works.",
+]

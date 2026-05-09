@@ -1,0 +1,238 @@
+# Apple M4 SLM Excellence Roadmap
+
+The Apple M4 Mac mini now has a working Rust-native dense SLM path:
+
+```bash
+bitnet mac ask "What is 2+2?"
+bitnet mac chat --prompt "What is 2+2?" --prompt "Name the capital of France."
+bitnet mac smoke
+```
+
+The next target is not another proof that the path exists. The target is an
+appliance-grade local model runner experience: predictable cache behavior,
+fast warm interaction, quiet default logs, useful health checks, stable
+resident sessions, regression receipts, leading dense SLM support, and clear
+unsupported-path errors.
+
+## Scope
+
+This roadmap is M4 Mac mini local work.
+
+It owns:
+
+- dense Qwen-class local answer UX on `apple-m4-cpu-neon`;
+- Mac cache, first-run, health, smoke, chat, and receipt flows;
+- resident-session stability and memory/timing envelopes;
+- advisory local regression checks against the recorded M4 envelope;
+- support-matrix work for leading dense SLM candidates;
+- future phase-scoped Metal work only after CPU/NEON behavior remains boring.
+
+It does not own:
+
+- MacBook artifact sweeps;
+- x86, CUDA, A770, Lunar Lake, or NPU lanes;
+- BitNet artifact qualification;
+- QK256 work;
+- server inference;
+- full `apple-m4-metal` inference claims.
+
+## Model-Family Boundary
+
+The current Mac user-facing path is a dense regular SLM path. It uses the
+validated Qwen2.5 dense model artifact to exercise the real runner surface:
+model cache, tokenizer, prompt template, generation, warm sessions, receipts,
+quality checks, and Apple CPU/NEON routing.
+
+That evidence does not prove BitNet local-answer quality, 1-bit / 1.58-bit
+kernels, I2_S/TL1/TL2 layouts, QK256, Neural Engine execution, MPSGraph model
+inference, or full Apple Metal inference.
+
+BitNet remains a separate model family. The M4-side BitNet proof command and
+receipt contract are prepared, but the strict proof stays blocked until an
+accepted BitNet artifact exists.
+
+## WASM Relationship
+
+WASM is a first-class product target for the broader Rust-native model runner.
+It is not part of this M4 execution lane. The M4 roadmap should keep WASM
+visible as product architecture while leaving implementation to the WASM
+campaign.
+
+The shared invariant across native Mac, x86, GPU/NPU, and WASM lanes is the
+receipt contract: model identity, tokenizer authority, runtime API, requested
+and selected backend, fallback status, generated text, token IDs, timing,
+memory where available, and explicit claim boundaries.
+
+## CI Efficiency
+
+The excellent Mac experience should not make every PR slow. Ordinary CI should
+use fast checks: argument parsing, help snapshots, synthetic receipts, campaign
+validation, and unit tests that do not download models. Live model generation,
+long resident sessions, and hardware timing comparisons should remain local,
+advisory, or scheduled on Apple hardware until there is an explicit hardware
+runner policy.
+
+## PR Ladder
+
+### M4-SLM-EX-001: Mac Doctor
+
+Add:
+
+```bash
+bitnet mac doctor
+```
+
+It should answer whether the M4 dense SLM path is healthy by checking cache
+presence, model hash, disk space, smoke answer behavior, receipt validation,
+backend/fallback identity, and unsupported-backend rejection.
+
+The command must not download a model unless a later item explicitly adds an
+opt-in repair flag. It should tell the operator which existing command to run
+for repair, such as `bitnet model fetch`, `bitnet model verify`, or
+`bitnet model prune`.
+
+### M4-SLM-EX-002: Interactive Chat Polish
+
+Improve `bitnet mac chat` as a resident local tool:
+
+- clean prompt loop behavior;
+- Ctrl-C and EOF handling;
+- quiet default logs;
+- streaming by default;
+- optional per-turn receipt output;
+- aggregate session receipt at exit;
+- clear model/tokenizer loaded-once status.
+
+### M4-SLM-EX-003: Time-To-First-Token Pass
+
+Reduce perceived latency by measuring and tightening:
+
+- prompt template construction;
+- tokenization overhead;
+- first decode step timing;
+- streaming flush behavior;
+- cache verification placement;
+- receipt construction outside the hot path.
+
+Acceptance requires unchanged greedy token IDs and unchanged quality corpus
+behavior.
+
+### M4-SLM-EX-004: Hot-Loop Allocation Cleanup
+
+Tighten resident decode hygiene:
+
+- sampling scratch reuse;
+- logits buffer reuse where supported;
+- token vector growth control;
+- detokenization string churn;
+- temporary tensor creation;
+- JSON receipt construction outside generation.
+
+Acceptance requires quality unchanged, timing not worse, and receipt schema
+unchanged.
+
+### M4-SLM-EX-005: Dense Model Support Matrix
+
+Make supported and candidate dense SLMs explicit, including leading small
+instruct families that are plausible for local Apple Silicon use. Each entry
+should record:
+
+- source and file;
+- size and SHA256;
+- tokenizer authority;
+- prompt template;
+- quantization;
+- Rust support status;
+- M4 support status;
+- cache policy;
+- quality status.
+
+The default remains the currently verified dense Qwen M4 model. Candidate
+models are not accepted until reference and Rust M4 quality gates pass.
+
+### M4-SLM-EX-006: Second Supported Dense Model
+
+Add a second storage-conscious dense instruct model only if it passes:
+
+- reference output sanity;
+- Rust M4 output quality;
+- tokenizer authority checks;
+- cache metadata verification;
+- receipt validation.
+
+No model binaries may be committed.
+
+### M4-SLM-EX-007: Quality Corpus 2.0
+
+Expand the local smoke surface without turning it into a benchmark suite:
+
+- simple factual answers;
+- short instruction following;
+- format-constrained output;
+- one-sentence generation;
+- basic arithmetic;
+- small summarization;
+- short rewrite.
+
+Acceptance requires valid UTF-8, non-empty output, non-degenerate output,
+stable greedy IDs where expected, and validated receipts.
+
+### M4-SLM-EX-008: Long-Session Soak
+
+Record longer resident behavior:
+
+- 25-prompt sessions;
+- 50-prompt sessions;
+- 64-token and 128-token response budgets;
+- memory drift;
+- time-to-first-token drift;
+- decode throughput drift;
+- quality failures;
+- model/tokenizer reuse.
+
+The output is a scoped M4 Mac mini envelope, not a fleet-wide Apple Silicon
+performance claim.
+
+### M4-SLM-EX-009: Local Regression Command
+
+Add:
+
+```bash
+bitnet mac regression
+```
+
+It should compare current receipts with the stored M4 dense SLM envelope and
+report drift in model identity, tokenizer identity, backend routing, fallback
+status, quality, time-to-first-token, decode throughput, and peak memory.
+
+The default should be advisory. A hard-fail mode can be added for local
+operator use.
+
+### M4-SLM-EX-010: Measured User Envelope
+
+Publish an operator expectation page for the M4 Mac mini:
+
+- cold load time;
+- warm ask timing;
+- time-to-first-token;
+- warm 16/32/64/128 token timing;
+- decode tokens per second;
+- peak memory;
+- cache size;
+- known unsupported models and backends.
+
+This is expectation-setting, not a broad performance claim.
+
+## Later Metal Work
+
+Dense SLM Metal work should remain phase-scoped until strict receipts justify a
+backend-level claim. Candidate phases include Q/K/V prefill projection, MLP
+up/gate projection, and `lm_head` projection.
+
+Every phase must prove:
+
+- CPU-only greedy tokens match CPU-plus-Metal-phase greedy tokens;
+- `fallback_used=false` for the Metal phase;
+- the rest of the pipeline remains explicit CPU/NEON;
+- timing delta is recorded;
+- no full `apple-m4-metal` inference claim is made.
