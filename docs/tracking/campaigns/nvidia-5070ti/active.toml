@@ -2050,8 +2050,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-015"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-015-norm-fixture-audit"
+pr = 4218
+head_sha = "14c21e97bb099ebb6a5cf7a8f92918cf0b377a4e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
