@@ -4717,10 +4717,12 @@ pub fn validate_dense_gguf_model_boundary_fixtures_receipt_json(receipt: &Value)
     }
     require_sha256(fixtures, "token_ids_sha256")?;
     require_u64_eq(fixtures, "fixtures_total", 3)?;
-    validate_dense_boundary_tensor_fixture(
-        object_field(fixtures, "token_embedding")?,
-        "token_embedding",
-    )?;
+    let token_embedding_fixture = object_field(fixtures, "token_embedding")?;
+    validate_dense_boundary_tensor_fixture(token_embedding_fixture, "token_embedding")?;
+    let expected_embedding_len = seq_len
+        .checked_mul(hidden_size)
+        .ok_or_else(|| anyhow!("model_boundary_fixtures token_embedding output_len overflows"))?;
+    require_u64_eq(token_embedding_fixture, "output_len", expected_embedding_len)?;
 
     let final_norm = object_field(fixtures, "final_norm")?;
     require_positive_number(final_norm, "rmsnorm_eps")?;
@@ -4729,6 +4731,7 @@ pub fn validate_dense_gguf_model_boundary_fixtures_receipt_json(receipt: &Value)
     require_sha256(final_norm, "output_sha256")?;
     let final_norm_fixture = object_field(final_norm, "fixture")?;
     validate_dense_boundary_tensor_fixture(final_norm_fixture, "final_norm")?;
+    require_u64_eq(final_norm_fixture, "output_len", hidden_size)?;
     require_string_eq(
         final_norm_fixture,
         "output_sha256",
@@ -4739,6 +4742,11 @@ pub fn validate_dense_gguf_model_boundary_fixtures_receipt_json(receipt: &Value)
     let logits_len = required_u64(lm_head, "logits_len")?;
     if logits_len == 0 {
         return Err(anyhow!("model_boundary_fixtures.lm_head_logits.logits_len must be positive"));
+    }
+    if logits_len != vocab_size {
+        return Err(anyhow!(
+            "model_boundary_fixtures.lm_head_logits.logits_len must match vocab_size"
+        ));
     }
     require_sha256(lm_head, "logits_sha256")?;
     let top_k = required_u64(lm_head, "top_k")?;

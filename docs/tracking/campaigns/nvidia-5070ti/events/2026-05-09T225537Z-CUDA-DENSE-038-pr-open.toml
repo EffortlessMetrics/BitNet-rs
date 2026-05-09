@@ -7,7 +7,7 @@ new_status = "pr_open"
 actor = "codex"
 branch = "codex/cuda-dense-038-model-boundary-fixtures"
 pr = 4348
-head_sha = "cc3954b35943ad95f433f1a8cbe540b6373bf8f9"
+head_sha = "e6c6428d276c44b8a65edb526f80ee436c4cbdc1"
 
 notes = [
   "Opened PR #4348 for the CUDA-DENSE-038 dense GGUF model-boundary fixture receipt implementation.",

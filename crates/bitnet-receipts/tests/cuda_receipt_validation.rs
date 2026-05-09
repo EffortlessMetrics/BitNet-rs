@@ -255,6 +255,18 @@ fn committed_dense_gguf_mlp_activation_cuda_parity_receipt_validates() {
 }
 
 #[test]
+fn committed_dense_gguf_model_boundary_fixtures_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-model-boundary-fixtures-qwen25-q8.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
 fn dense_gguf_attention_score_fixture_rejects_cuda_parity_claim() {
     let mut receipt: Value = serde_json::from_str(include_str!(
         "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-attention-score-fixture-qwen25-q8.json"
@@ -1051,6 +1063,28 @@ fn dense_gguf_model_boundary_fixtures_rejects_missing_top_k() {
         validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
 
     assert!(err.contains("top_k_entries"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_model_boundary_fixtures_rejects_dimension_mismatch() {
+    let mut receipt = valid_dense_gguf_model_boundary_fixtures_receipt();
+    receipt["model_boundary_fixtures"]["token_embedding"]["output_len"] = json!(15);
+
+    let err =
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("output_len"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_model_boundary_fixtures_rejects_logits_vocab_mismatch() {
+    let mut receipt = valid_dense_gguf_model_boundary_fixtures_receipt();
+    receipt["model_boundary_fixtures"]["lm_head_logits"]["logits_len"] = json!(5);
+
+    let err =
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("vocab_size"), "unexpected error: {err}");
 }
 
 #[test]
