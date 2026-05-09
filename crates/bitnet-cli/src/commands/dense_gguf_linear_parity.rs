@@ -25,8 +25,9 @@ use bitnet_kernels::cuda::{
     run_dense_gguf_rope_cuda_parity,
 };
 use bitnet_kernels::dispatch_planner::{
-    BackendPolicy, CudaPlannerCapabilities, DispatchOp, ModelDispatchBackend, ModelDispatchSpec,
-    ModelDispatchSummary, ModelFamily, OpType, QuantizationKind, plan_model_dispatch,
+    BackendPolicy, CudaPlannerCapabilities, DispatchOp, ModelDispatchBackend,
+    ModelDispatchDecision, ModelDispatchSpec, ModelDispatchSummary, ModelFamily, OpType,
+    QuantizationKind, plan_model_dispatch,
 };
 use bitnet_models::dense_gguf_descriptors::{
     DenseGgufDescriptorInspection, DenseGgufTensorDescriptor, DenseGgufTensorRole,
@@ -40,7 +41,9 @@ use bitnet_models::dense_gguf_norm_fixture::{
     DenseGgufNormFixture, extract_dense_gguf_norm_fixture,
 };
 use bitnet_models::formats::gguf::GgufReader;
+use bitnet_models::layer_inspector::extract_layer_index;
 use bitnet_receipts_core::{
+    DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_SCORE_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND,
@@ -54,6 +57,7 @@ use bitnet_receipts_core::{
     DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
+    validate_dense_gguf_all_layer_execution_plan_receipt_json,
     validate_dense_gguf_attention_score_cuda_parity_receipt_json,
     validate_dense_gguf_attention_score_fixture_receipt_json,
     validate_dense_gguf_attention_softmax_cuda_parity_receipt_json,
@@ -323,6 +327,69 @@ impl DenseGgufOneLayerPlanCommand {
             self.layer_index,
         )?;
         validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
+/// Emit a strict CUDA all-layer dense GGUF execution-plan receipt.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufAllLayerPlanCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// CUDA device index.
+    #[arg(long, default_value_t = 0)]
+    pub device_index: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufAllLayerPlanCommand {
+    pub async fn execute(&self) -> Result<()> {
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
+        if !probe.available {
+            bail!("CUDA-DENSE-037 requires CUDA probe success: {:?}", probe.failure_reason);
+        }
+        let device_name = probe.selected_device_name.as_deref().unwrap_or("unknown");
+        if !is_rtx5070ti_device_name(device_name) {
+            bail!("CUDA-DENSE-037 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
+        }
+
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_all_layer_execution_plan_receipt_json(
+            &inspection,
+            Some(&probe),
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        )?;
+        validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)?;
 
         if let Some(path) = &self.json_out {
             if let Some(parent) = path.parent() {
@@ -6565,6 +6632,226 @@ fn dense_gguf_one_layer_execution_plan_receipt_json(
     }))
 }
 
+fn dense_gguf_all_layer_execution_plan_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Result<Value> {
+    if !inspection.required_roles_present || !inspection.strict_descriptor_complete {
+        bail!("dense GGUF all-layer plan requires complete dense descriptor coverage");
+    }
+
+    let layer_indices = dense_transformer_layer_indices(inspection)?;
+    if layer_indices.is_empty() {
+        bail!("dense GGUF all-layer plan requires at least one transformer layer");
+    }
+    if !layer_indices.contains(&0) {
+        bail!("dense GGUF all-layer plan requires a layer-0 reference graph");
+    }
+
+    let mut layers = Vec::new();
+    let mut layer_differences = Vec::new();
+    let mut reference_signature: Option<Vec<Value>> = None;
+    let mut reference_signature_sha256: Option<String> = None;
+    let mut aggregate = DenseAllLayerCounts::default();
+
+    for layer_index in &layer_indices {
+        let entries = dense_one_layer_plan_entries(inspection, *layer_index)?;
+        let ops = entries.iter().map(|entry| entry.op.clone()).collect::<Vec<_>>();
+        let spec = ModelDispatchSpec {
+            model_family: ModelFamily::DenseRegularLlm,
+            quantization: QuantizationKind::DenseFp16,
+            backend_policy: BackendPolicy::StrictCuda,
+            has_simd: true,
+            cuda: CudaPlannerCapabilities::dense_regular_llm(),
+        };
+        let plan = plan_model_dispatch(&ops, spec);
+        let summary = plan.summary();
+        let operations = dense_layer_plan_operations_json(&entries, &plan.decisions);
+        let counts = dense_layer_plan_counts(&operations)?;
+        aggregate.add(counts);
+
+        let signature = dense_layer_operation_signature(&operations)?;
+        let signature_sha256 = sha256_json(&Value::Array(signature.clone()))?;
+        let matches_layer0 = match &reference_signature {
+            Some(reference) => reference == &signature,
+            None => {
+                reference_signature = Some(signature.clone());
+                reference_signature_sha256 = Some(signature_sha256.clone());
+                true
+            }
+        };
+        if !matches_layer0 {
+            layer_differences.push(json!({
+                "layer_index": *layer_index as u64,
+                "reason": "operation_signature_differs_from_layer0",
+                "layer0_signature_sha256": reference_signature_sha256
+                    .clone()
+                    .unwrap_or_else(|| "unknown".to_string()),
+                "layer_signature_sha256": signature_sha256
+            }));
+        }
+
+        layers.push(json!({
+            "layer_index": *layer_index as u64,
+            "total_ops": counts.total_ops,
+            "cuda_routable_ops_total": counts.cuda_routable_ops,
+            "linear_cuda_ops_total": counts.linear_cuda_ops,
+            "norm_cuda_ops_total": counts.norm_cuda_ops,
+            "rope_cuda_ops_total": counts.rope_cuda_ops,
+            "attention_score_cuda_ops_total": counts.attention_score_cuda_ops,
+            "attention_softmax_cuda_ops_total": counts.attention_softmax_cuda_ops,
+            "attention_v_mix_cuda_ops_total": counts.attention_v_mix_cuda_ops,
+            "mlp_activation_cuda_ops_total": counts.mlp_activation_cuda_ops,
+            "unsupported_strict_cuda_ops_total": counts.unsupported_ops,
+            "cpu_fallback_ops_total": counts.cpu_fallback_ops,
+            "strict_cuda_ready": summary.strict_cuda_ready,
+            "matches_layer0": matches_layer0,
+            "operation_signature_sha256": signature_sha256,
+            "operations": operations
+        }));
+    }
+
+    let missing_layer_indices = dense_missing_layer_indices(&layer_indices);
+    let layer_plan_matches_layer0 =
+        layer_differences.is_empty() && missing_layer_indices.is_empty();
+    let strict_cuda_ready = aggregate.unsupported_ops == 0
+        && aggregate.cpu_fallback_ops == 0
+        && aggregate.cuda_routable_ops == aggregate.total_ops
+        && layer_plan_matches_layer0;
+    let aggregate_summary = ModelDispatchSummary {
+        total_ops: aggregate.total_ops as usize,
+        cuda_bitnet_qk256_ops: 0,
+        cuda_dense_regular_llm_ops: aggregate.cuda_routable_ops as usize,
+        cpu_fallback_ops: aggregate.cpu_fallback_ops as usize,
+        unsupported_ops: aggregate.unsupported_ops as usize,
+        fallback_used: false,
+        selected_route: Some(ModelDispatchBackend::CudaDenseRegularLlm),
+        strict_cuda_ready,
+    };
+    let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
+        model_family: &inspection.model_family,
+        quantization: "dense_fp16",
+        requested_backend: HARDWARE_LANE,
+        selected_backend: HARDWARE_LANE,
+        runtime_api: "cuda",
+        strict_fallback_policy: "reject",
+        summary: aggregate_summary,
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    });
+
+    let cuda = cuda_identity_json(probe);
+    Ok(json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_all_layer_execution_plan_recorded",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": HARDWARE_LANE,
+        "selected_backend": HARDWARE_LANE,
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda,
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_cuda_all_layer_execution_plan",
+            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_q8_0_fixture_contracts",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": execution_plan,
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "all_layer_plan": {
+            "schema": 1,
+            "transformer_layers_total": layer_indices.len() as u64,
+            "layers_with_complete_cuda_block_plan": layers
+                .iter()
+                .filter(|layer| layer["strict_cuda_ready"] == true && layer["matches_layer0"] == true)
+                .count() as u64,
+            "layer_plan_matches_layer0": layer_plan_matches_layer0,
+            "layer_differences": layer_differences,
+            "missing_layer_indices": missing_layer_indices,
+            "total_ops": aggregate.total_ops,
+            "cuda_routable_ops_total": aggregate.cuda_routable_ops,
+            "linear_cuda_ops_total": aggregate.linear_cuda_ops,
+            "norm_cuda_ops_total": aggregate.norm_cuda_ops,
+            "rope_cuda_ops_total": aggregate.rope_cuda_ops,
+            "attention_score_cuda_ops_total": aggregate.attention_score_cuda_ops,
+            "attention_softmax_cuda_ops_total": aggregate.attention_softmax_cuda_ops,
+            "attention_v_mix_cuda_ops_total": aggregate.attention_v_mix_cuda_ops,
+            "mlp_activation_cuda_ops_total": aggregate.mlp_activation_cuda_ops,
+            "unsupported_strict_cuda_ops_total": aggregate.unsupported_ops,
+            "cpu_fallback_ops_total": aggregate.cpu_fallback_ops,
+            "strict_cuda_ready": strict_cuda_ready,
+            "strict_cuda_ready_scope": "transformer_blocks_only",
+            "all_layers_inspected": true,
+            "operations_per_layer": 14,
+            "layers": layers,
+            "dense_gguf_all_layer_execution_plan_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "model_boundary_gaps": dense_model_boundary_gaps_json(inspection),
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": false,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_cpu_reference_claimed": true,
+            "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+            "dense_gguf_all_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    }))
+}
+
 fn dense_gguf_one_layer_cpu_reference_receipt_json(
     inspection: &DenseGgufDescriptorInspection,
     reference: &DenseGgufOneLayerCpuReference,
@@ -7127,11 +7414,203 @@ fn dense_one_layer_dependency_edges_json() -> Vec<Value> {
     .collect()
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct DenseAllLayerCounts {
+    total_ops: u64,
+    cuda_routable_ops: u64,
+    linear_cuda_ops: u64,
+    norm_cuda_ops: u64,
+    rope_cuda_ops: u64,
+    attention_score_cuda_ops: u64,
+    attention_softmax_cuda_ops: u64,
+    attention_v_mix_cuda_ops: u64,
+    mlp_activation_cuda_ops: u64,
+    unsupported_ops: u64,
+    cpu_fallback_ops: u64,
+}
+
+impl DenseAllLayerCounts {
+    fn add(&mut self, other: Self) {
+        self.total_ops += other.total_ops;
+        self.cuda_routable_ops += other.cuda_routable_ops;
+        self.linear_cuda_ops += other.linear_cuda_ops;
+        self.norm_cuda_ops += other.norm_cuda_ops;
+        self.rope_cuda_ops += other.rope_cuda_ops;
+        self.attention_score_cuda_ops += other.attention_score_cuda_ops;
+        self.attention_softmax_cuda_ops += other.attention_softmax_cuda_ops;
+        self.attention_v_mix_cuda_ops += other.attention_v_mix_cuda_ops;
+        self.mlp_activation_cuda_ops += other.mlp_activation_cuda_ops;
+        self.unsupported_ops += other.unsupported_ops;
+        self.cpu_fallback_ops += other.cpu_fallback_ops;
+    }
+}
+
+fn dense_transformer_layer_indices(
+    inspection: &DenseGgufDescriptorInspection,
+) -> Result<Vec<usize>> {
+    let mut indices = BTreeSet::new();
+    for descriptor in &inspection.descriptors {
+        if dense_block_descriptor_role(descriptor.role) {
+            if let Some(index) = extract_layer_index(&descriptor.name) {
+                indices.insert(index);
+            }
+        }
+    }
+    Ok(indices.into_iter().collect())
+}
+
+fn dense_missing_layer_indices(layer_indices: &[usize]) -> Vec<Value> {
+    let Some(max_index) = layer_indices.iter().copied().max() else {
+        return Vec::new();
+    };
+    let present = layer_indices.iter().copied().collect::<BTreeSet<_>>();
+    (0..=max_index)
+        .filter(|index| !present.contains(index))
+        .map(|index| json!(index as u64))
+        .collect()
+}
+
+fn dense_block_descriptor_role(role: DenseGgufTensorRole) -> bool {
+    matches!(
+        role,
+        DenseGgufTensorRole::AttentionQ
+            | DenseGgufTensorRole::AttentionK
+            | DenseGgufTensorRole::AttentionV
+            | DenseGgufTensorRole::AttentionOutput
+            | DenseGgufTensorRole::MlpGate
+            | DenseGgufTensorRole::MlpUp
+            | DenseGgufTensorRole::MlpDown
+            | DenseGgufTensorRole::AttentionNorm
+            | DenseGgufTensorRole::FfnNorm
+    )
+}
+
+fn dense_layer_plan_operations_json(
+    entries: &[DenseLayerPlanEntry],
+    decisions: &[ModelDispatchDecision],
+) -> Vec<Value> {
+    entries
+        .iter()
+        .zip(decisions.iter())
+        .enumerate()
+        .map(|(idx, (entry, decision))| {
+            let route = decision.backend.receipt_route_label();
+            let status = match decision.backend {
+                ModelDispatchBackend::CudaDenseRegularLlm => "cuda_routable",
+                ModelDispatchBackend::Unsupported => "unsupported_strict_cuda",
+                ModelDispatchBackend::CpuScalar | ModelDispatchBackend::CpuSimd => "cpu_fallback",
+                ModelDispatchBackend::CudaBitnetQk256 => "wrong_route",
+            };
+            json!({
+                "index": idx as u64,
+                "name": entry.op.name,
+                "role": entry.role,
+                "op_type": entry.op.op_type.as_str(),
+                "size": entry.op.size as u64,
+                "source": entry.source,
+                "source_tensor": entry.source_tensor,
+                "source_tensor_type": entry.source_tensor_type,
+                "source_shape": entry.source_shape,
+                "is_quantized": entry.op.is_quantized,
+                "route": route,
+                "status": status,
+                "fallback_used": decision.fallback_used,
+                "reason": decision.reason,
+            })
+        })
+        .collect()
+}
+
+fn dense_layer_plan_counts(operations: &[Value]) -> Result<DenseAllLayerCounts> {
+    let mut counts =
+        DenseAllLayerCounts { total_ops: operations.len() as u64, ..Default::default() };
+    for op in operations {
+        match json_string_field(op, "route")? {
+            DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND => {
+                counts.cuda_routable_ops += 1;
+                match json_string_field(op, "op_type")? {
+                    "matmul" => counts.linear_cuda_ops += 1,
+                    "rmsnorm" => counts.norm_cuda_ops += 1,
+                    "rope" => counts.rope_cuda_ops += 1,
+                    "softmax" => counts.attention_softmax_cuda_ops += 1,
+                    "activation" => counts.mlp_activation_cuda_ops += 1,
+                    "attention" => match json_string_field(op, "role")? {
+                        "attention_scores" => counts.attention_score_cuda_ops += 1,
+                        "attention_v_mix" => counts.attention_v_mix_cuda_ops += 1,
+                        other => bail!("unexpected dense attention op role `{other}`"),
+                    },
+                    other => bail!("unexpected dense CUDA op_type `{other}`"),
+                }
+            }
+            "unsupported" => counts.unsupported_ops += 1,
+            "cpu_scalar" | "cpu_simd" => counts.cpu_fallback_ops += 1,
+            other => bail!("unexpected dense route `{other}`"),
+        }
+    }
+    Ok(counts)
+}
+
+fn dense_layer_operation_signature(operations: &[Value]) -> Result<Vec<Value>> {
+    operations
+        .iter()
+        .map(|op| {
+            Ok(json!({
+                "role": json_string_field(op, "role")?,
+                "op_type": json_string_field(op, "op_type")?,
+                "source": json_string_field(op, "source")?,
+                "source_tensor_type": op.get("source_tensor_type").cloned().unwrap_or(Value::Null),
+                "source_shape": op.get("source_shape").cloned().unwrap_or(Value::Null),
+                "is_quantized": op.get("is_quantized").cloned().unwrap_or(Value::Bool(false)),
+                "route": json_string_field(op, "route")?,
+                "status": json_string_field(op, "status")?,
+            }))
+        })
+        .collect()
+}
+
+fn dense_model_boundary_gaps_json(inspection: &DenseGgufDescriptorInspection) -> Value {
+    let token_embedding = descriptor_for_role(inspection, DenseGgufTensorRole::TokenEmbedding).ok();
+    let lm_head = descriptor_for_role(inspection, DenseGgufTensorRole::Output).ok();
+    let gap =
+        |name: &str, disposition: &str, source: Option<&DenseGgufTensorDescriptor>, proof: &str| {
+            json!({
+                "gap": name,
+                "status": "not_governed_by_all_layer_block_plan",
+                "disposition": disposition,
+                "source_tensor": source.map(|descriptor| descriptor.name.clone()),
+                "source_tensor_type": source.map(|descriptor| descriptor.tensor_type.clone()),
+                "blocks_qwen_one_token": true,
+                "blocks_qwen_short_decode": true,
+                "blocks_qwen_chat": true,
+                "required_next_proof": proof,
+            })
+        };
+    json!({
+        "schema": 1,
+        "gaps": [
+            gap("token_embedding", "embedding lookup fixture and route not yet governed", token_embedding, "dense_gguf_embedding_fixture"),
+            gap("final_norm", "final model normalization fixture not yet governed", None, "dense_gguf_final_norm_fixture"),
+            gap("lm_head_logits", "LM head and logits fixture not yet governed", lm_head, "dense_gguf_lm_head_logits_fixture"),
+            gap("kv_cache_policy", "KV cache residency and transfer policy not yet recorded", None, "dense_gguf_kv_cache_policy_receipt"),
+            gap("sampling", "sampler integration and logits transfer policy not yet governed", None, "dense_gguf_sampling_policy_receipt")
+        ],
+        "all_boundary_gaps_explicit": true,
+        "qwen_one_token_cuda_blocked": true,
+        "qwen_short_decode_cuda_blocked": true,
+        "qwen_chat_cuda_blocked": true,
+        "next_required_proof": "dense_gguf_model_boundary_fixtures",
+        "dense_gguf_inference_claimed": false,
+        "speedup_claim": false,
+        "full_cuda_residency_claimed": false
+    })
+}
+
 fn dense_one_layer_plan_entries(
     inspection: &DenseGgufDescriptorInspection,
     layer_index: usize,
 ) -> Result<Vec<DenseLayerPlanEntry>> {
-    let attention_q = descriptor_for_role(inspection, DenseGgufTensorRole::AttentionQ)?;
+    let attention_q =
+        descriptor_for_layer_role(inspection, layer_index, DenseGgufTensorRole::AttentionQ)?;
     let hidden_size = attention_q.shape.first().copied().unwrap_or(1).max(1);
     let attention_size = descriptor_element_count(attention_q).max(hidden_size);
 
@@ -7139,6 +7618,7 @@ fn dense_one_layer_plan_entries(
     push_descriptor_op(
         &mut entries,
         inspection,
+        layer_index,
         DenseGgufTensorRole::AttentionNorm,
         OpType::RmsNorm,
         false,
@@ -7146,6 +7626,7 @@ fn dense_one_layer_plan_entries(
     push_descriptor_op(
         &mut entries,
         inspection,
+        layer_index,
         DenseGgufTensorRole::AttentionQ,
         OpType::MatMul,
         false,
@@ -7153,6 +7634,7 @@ fn dense_one_layer_plan_entries(
     push_descriptor_op(
         &mut entries,
         inspection,
+        layer_index,
         DenseGgufTensorRole::AttentionK,
         OpType::MatMul,
         false,
@@ -7160,6 +7642,7 @@ fn dense_one_layer_plan_entries(
     push_descriptor_op(
         &mut entries,
         inspection,
+        layer_index,
         DenseGgufTensorRole::AttentionV,
         OpType::MatMul,
         false,
@@ -7195,6 +7678,7 @@ fn dense_one_layer_plan_entries(
     push_descriptor_op(
         &mut entries,
         inspection,
+        layer_index,
         DenseGgufTensorRole::AttentionOutput,
         OpType::MatMul,
         false,
@@ -7202,6 +7686,7 @@ fn dense_one_layer_plan_entries(
     push_descriptor_op(
         &mut entries,
         inspection,
+        layer_index,
         DenseGgufTensorRole::FfnNorm,
         OpType::RmsNorm,
         false,
@@ -7209,6 +7694,7 @@ fn dense_one_layer_plan_entries(
     push_descriptor_op(
         &mut entries,
         inspection,
+        layer_index,
         DenseGgufTensorRole::MlpGate,
         OpType::MatMul,
         false,
@@ -7216,6 +7702,7 @@ fn dense_one_layer_plan_entries(
     push_descriptor_op(
         &mut entries,
         inspection,
+        layer_index,
         DenseGgufTensorRole::MlpUp,
         OpType::MatMul,
         false,
@@ -7230,6 +7717,7 @@ fn dense_one_layer_plan_entries(
     push_descriptor_op(
         &mut entries,
         inspection,
+        layer_index,
         DenseGgufTensorRole::MlpDown,
         OpType::MatMul,
         false,
@@ -7241,11 +7729,12 @@ fn dense_one_layer_plan_entries(
 fn push_descriptor_op(
     entries: &mut Vec<DenseLayerPlanEntry>,
     inspection: &DenseGgufDescriptorInspection,
+    layer_index: usize,
     role: DenseGgufTensorRole,
     op_type: OpType,
     is_quantized: bool,
 ) -> Result<()> {
-    let descriptor = descriptor_for_role(inspection, role)?;
+    let descriptor = descriptor_for_layer_role(inspection, layer_index, role)?;
     entries.push(DenseLayerPlanEntry {
         op: DispatchOp {
             name: descriptor.name.clone(),
@@ -7288,6 +7777,22 @@ fn descriptor_for_role(
         .iter()
         .find(|descriptor| descriptor.role == role)
         .ok_or_else(|| anyhow!("dense GGUF descriptor inspection missing role {role:?}"))
+}
+
+fn descriptor_for_layer_role(
+    inspection: &DenseGgufDescriptorInspection,
+    layer_index: usize,
+    role: DenseGgufTensorRole,
+) -> Result<&DenseGgufTensorDescriptor> {
+    inspection
+        .descriptors
+        .iter()
+        .find(|descriptor| {
+            descriptor.role == role && extract_layer_index(&descriptor.name) == Some(layer_index)
+        })
+        .ok_or_else(|| {
+            anyhow!("dense GGUF descriptor inspection missing layer {layer_index} role {role:?}")
+        })
 }
 
 fn descriptor_element_count(descriptor: &DenseGgufTensorDescriptor) -> usize {
@@ -7343,6 +7848,11 @@ fn sha256_f32(values: &[f32]) -> String {
         hasher.update(value.to_le_bytes());
     }
     format!("{:x}", hasher.finalize())
+}
+
+fn sha256_json(value: &Value) -> Result<String> {
+    let bytes = serde_json::to_vec(value)?;
+    Ok(sha256_bytes(&bytes))
 }
 
 fn is_rtx5070ti_device_name(name: &str) -> bool {
@@ -7555,6 +8065,52 @@ mod tests {
         assert_eq!(receipt["gap_audit"]["unsupported_ops"].as_array().unwrap().len(), 0);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_one_layer_execution_plan_claimed"], true);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_one_layer_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
+    fn dense_gguf_all_layer_plan_receipt_records_transformer_stack_gaps() {
+        let data = build_two_layer_qwen_gguf();
+        let reader = GgufReader::new(&data).expect("parse two-layer qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+
+        let receipt = dense_gguf_all_layer_execution_plan_receipt_json(
+            &inspection,
+            None,
+            Path::new("synthetic-qwen3-q8_0-all-layer-plan.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-all-layer-plan.json",
+            "2026-05-09T00:00:00Z",
+        )
+        .unwrap();
+
+        validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["artifact_kind"], "dense_gguf_all_layer_execution_plan");
+        assert_eq!(receipt["execution_plan"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 28);
+        assert_eq!(receipt["execution_plan"]["unsupported_ops"], 0);
+        assert_eq!(receipt["all_layer_plan"]["transformer_layers_total"], 2);
+        assert_eq!(receipt["all_layer_plan"]["layers_with_complete_cuda_block_plan"], 2);
+        assert_eq!(receipt["all_layer_plan"]["layer_plan_matches_layer0"], true);
+        assert_eq!(receipt["all_layer_plan"]["total_ops"], 28);
+        assert_eq!(receipt["all_layer_plan"]["cuda_routable_ops_total"], 28);
+        assert_eq!(receipt["all_layer_plan"]["linear_cuda_ops_total"], 14);
+        assert_eq!(receipt["all_layer_plan"]["norm_cuda_ops_total"], 4);
+        assert_eq!(receipt["all_layer_plan"]["rope_cuda_ops_total"], 2);
+        assert_eq!(receipt["all_layer_plan"]["attention_score_cuda_ops_total"], 2);
+        assert_eq!(receipt["all_layer_plan"]["attention_softmax_cuda_ops_total"], 2);
+        assert_eq!(receipt["all_layer_plan"]["attention_v_mix_cuda_ops_total"], 2);
+        assert_eq!(receipt["all_layer_plan"]["mlp_activation_cuda_ops_total"], 2);
+        assert!(receipt["all_layer_plan"]["layer_differences"].as_array().unwrap().is_empty());
+        assert!(receipt["all_layer_plan"]["missing_layer_indices"].as_array().unwrap().is_empty());
+        assert_eq!(receipt["all_layer_plan"]["strict_cuda_ready_scope"], "transformer_blocks_only");
+        assert_eq!(receipt["all_layer_plan"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["model_boundary_gaps"]["all_boundary_gaps_explicit"], true);
+        assert_eq!(receipt["model_boundary_gaps"]["gaps"].as_array().unwrap().len(), 5);
+        assert_eq!(receipt["model_boundary_gaps"]["qwen_one_token_cuda_blocked"], true);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_all_layer_execution_plan_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["qwen_one_token_cuda_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
     }
@@ -8558,6 +9114,42 @@ mod tests {
             ("blk.0.ffn_down.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
             ("blk.0.attn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
             ("blk.0.ffn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+        ])
+    }
+
+    fn build_two_layer_qwen_gguf() -> Vec<u8> {
+        let values = (1..=12).collect::<Vec<_>>();
+        build_qwen_gguf(vec![
+            ("token_embd.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("output.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.0.attn_q.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.0.attn_k.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
+            ("blk.0.attn_v.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
+            (
+                "blk.0.attn_output.weight",
+                vec![4, 3],
+                GgufTensorType::Q8_0,
+                q8_0_blob(0.0625, &values),
+            ),
+            ("blk.0.ffn_gate.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.0.ffn_up.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
+            ("blk.0.ffn_down.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
+            ("blk.0.attn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+            ("blk.0.ffn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+            ("blk.1.attn_q.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.1.attn_k.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
+            ("blk.1.attn_v.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
+            (
+                "blk.1.attn_output.weight",
+                vec![4, 3],
+                GgufTensorType::Q8_0,
+                q8_0_blob(0.0625, &values),
+            ),
+            ("blk.1.ffn_gate.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.1.ffn_up.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
+            ("blk.1.ffn_down.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
+            ("blk.1.attn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+            ("blk.1.ffn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
         ])
     }
 

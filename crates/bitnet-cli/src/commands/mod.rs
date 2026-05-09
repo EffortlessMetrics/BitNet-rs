@@ -24,14 +24,15 @@ pub use answer_parity::AnswerParityCommand;
 pub use benchmark::BenchmarkCommand;
 pub use convert::ConvertCommand;
 pub use dense_gguf_linear_parity::{
-    DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
-    DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
-    DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
-    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
-    DenseGgufMlpActivationCudaParityCommand, DenseGgufMlpActivationFixtureCommand,
-    DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
-    DenseGgufOneLayerCpuReferenceCommand, DenseGgufOneLayerCudaParityCommand,
-    DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
+    DenseGgufAllLayerPlanCommand, DenseGgufAttentionScoreCudaParityCommand,
+    DenseGgufAttentionScoreFixtureCommand, DenseGgufAttentionSoftmaxCudaParityCommand,
+    DenseGgufAttentionSoftmaxFixtureCommand, DenseGgufAttentionVMixCudaParityCommand,
+    DenseGgufAttentionVMixFixtureCommand, DenseGgufLinearParityCommand,
+    DenseGgufLinearRoleSweepCommand, DenseGgufMlpActivationCudaParityCommand,
+    DenseGgufMlpActivationFixtureCommand, DenseGgufNormCudaParityCommand,
+    DenseGgufNormFixtureCommand, DenseGgufOneLayerCpuReferenceCommand,
+    DenseGgufOneLayerCudaParityCommand, DenseGgufOneLayerPlanCommand,
+    DenseGgufRopeCudaParityCommand,
 };
 pub use external_reference_instrumentation::ExternalReferenceInstrumentationCommand;
 pub use first_token_divergence::FirstTokenDivergenceCommand;

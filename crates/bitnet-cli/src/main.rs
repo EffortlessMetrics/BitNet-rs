@@ -127,7 +127,7 @@ fn bitnet_version() -> &'static str {
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
 use commands::{
-    AnswerCorpusCommand, AnswerParityCommand, ConvertCommand,
+    AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, DenseGgufAllLayerPlanCommand,
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
     DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
     DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
@@ -608,6 +608,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Emit a dense GGUF one-layer strict CUDA planner gap receipt
     DenseGgufOneLayerPlan(Box<DenseGgufOneLayerPlanCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Emit a dense GGUF all-layer strict CUDA planner receipt
+    DenseGgufAllLayerPlan(Box<DenseGgufAllLayerPlanCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Emit a dense GGUF one-layer CPU reference harness receipt
@@ -1447,6 +1451,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufLinearRoleSweep(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufOneLayerPlan(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufAllLayerPlan(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufOneLayerCpuReference(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

@@ -176,6 +176,15 @@ pub const DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND: &str =
 /// residency, or BitNet packed I2_S/QK256 proof.
 pub const DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND: &str =
     "dense_gguf_one_layer_cuda_integrated_parity";
+
+/// Artifact kind for dense GGUF all-layer execution-plan receipts.
+///
+/// This receipt inspects the whole transformer-block stack and records whether
+/// each layer matches the governed dense CUDA layer plan. It is not dense GGUF
+/// inference, token generation, speedup, persistent residency, full CUDA
+/// residency, or BitNet packed I2_S/QK256 proof.
+pub const DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND: &str =
+    "dense_gguf_all_layer_execution_plan";
 const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
     &["attention_softmax", "attention_v_mix", "mlp_activation"];
 const DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER: &[&str] =
@@ -4297,6 +4306,275 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
     Ok(())
 }
 
+/// Validate dense GGUF all-layer execution-plan evidence.
+///
+/// This artifact proves that every inspected transformer block has a governed
+/// dense CUDA block plan. It keeps model-boundary, inference, speedup, full
+/// residency, server, and BitNet packed-kernel claims false.
+pub fn validate_dense_gguf_all_layer_execution_plan_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_all_layer_execution_plan_recorded")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_null(receipt, "error")?;
+
+    let cuda = object_field(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_positive_u64(cuda, "device_count")?;
+    require_cuda_device_index(cuda)?;
+    require_rtx_5070_ti_name(cuda, "device_name")?;
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_string_non_empty_not_tbd(cuda, "driver_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_runtime_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_toolkit_version")?;
+    require_string_non_empty_not_tbd(cuda, "nvrtc_version")?;
+    require_positive_u64(cuda, "vram_bytes")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_non_empty(execution_path, "kernel_family")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "kernel_family")?,
+        "execution_path.kernel_family",
+    )?;
+    require_string_non_empty(execution_path, "quantization_family")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "quantization_family")?,
+        "execution_path.quantization_family",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    validate_dense_one_layer_gap_execution_plan(receipt)?;
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_positive_u64(descriptor, "tensor_count")?;
+    require_positive_u64(descriptor, "metadata_count")?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_string_non_empty(descriptor, "dense_cuda_route_status")?;
+    reject_bitnet_packed_marker(
+        required_string(descriptor, "dense_cuda_route_status")?,
+        "descriptor_coverage.dense_cuda_route_status",
+    )?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+
+    let all_layer = object_field(receipt, "all_layer_plan")?;
+    require_u64_eq(all_layer, "schema", 1)?;
+    let layer_total =
+        object_field(all_layer, "transformer_layers_total")?.as_u64().ok_or_else(|| {
+            anyhow!("all_layer_plan.transformer_layers_total must be an unsigned integer")
+        })?;
+    if layer_total == 0 {
+        return Err(anyhow!("all_layer_plan.transformer_layers_total must be positive"));
+    }
+    require_u64_eq(all_layer, "layers_with_complete_cuda_block_plan", layer_total)?;
+    require_bool_eq(all_layer, "layer_plan_matches_layer0", true)?;
+    if !array_field(all_layer, "layer_differences")?.is_empty() {
+        return Err(anyhow!(
+            "all_layer_plan.layer_differences must be empty for strict CUDA ready receipts"
+        ));
+    }
+    if !array_field(all_layer, "missing_layer_indices")?.is_empty() {
+        return Err(anyhow!("all_layer_plan.missing_layer_indices must be empty"));
+    }
+
+    let total_ops = object_field(all_layer, "total_ops")?
+        .as_u64()
+        .ok_or_else(|| anyhow!("all_layer_plan.total_ops must be an unsigned integer"))?;
+    let cuda_ops =
+        object_field(all_layer, "cuda_routable_ops_total")?.as_u64().ok_or_else(|| {
+            anyhow!("all_layer_plan.cuda_routable_ops_total must be an unsigned integer")
+        })?;
+    let linear_ops =
+        object_field(all_layer, "linear_cuda_ops_total")?.as_u64().ok_or_else(|| {
+            anyhow!("all_layer_plan.linear_cuda_ops_total must be an unsigned integer")
+        })?;
+    let norm_ops = object_field(all_layer, "norm_cuda_ops_total")?
+        .as_u64()
+        .ok_or_else(|| anyhow!("all_layer_plan.norm_cuda_ops_total must be an unsigned integer"))?;
+    let rope_ops = object_field(all_layer, "rope_cuda_ops_total")?
+        .as_u64()
+        .ok_or_else(|| anyhow!("all_layer_plan.rope_cuda_ops_total must be an unsigned integer"))?;
+    let attention_score_ops =
+        object_field(all_layer, "attention_score_cuda_ops_total")?.as_u64().ok_or_else(|| {
+            anyhow!("all_layer_plan.attention_score_cuda_ops_total must be an unsigned integer")
+        })?;
+    let attention_softmax_ops =
+        object_field(all_layer, "attention_softmax_cuda_ops_total")?.as_u64().ok_or_else(|| {
+            anyhow!("all_layer_plan.attention_softmax_cuda_ops_total must be an unsigned integer")
+        })?;
+    let attention_v_mix_ops =
+        object_field(all_layer, "attention_v_mix_cuda_ops_total")?.as_u64().ok_or_else(|| {
+            anyhow!("all_layer_plan.attention_v_mix_cuda_ops_total must be an unsigned integer")
+        })?;
+    let mlp_activation_ops =
+        object_field(all_layer, "mlp_activation_cuda_ops_total")?.as_u64().ok_or_else(|| {
+            anyhow!("all_layer_plan.mlp_activation_cuda_ops_total must be an unsigned integer")
+        })?;
+    require_u64_eq(all_layer, "unsupported_strict_cuda_ops_total", 0)?;
+    require_u64_eq(all_layer, "cpu_fallback_ops_total", 0)?;
+    require_bool_eq(all_layer, "strict_cuda_ready", true)?;
+    require_string_eq(all_layer, "strict_cuda_ready_scope", "transformer_blocks_only")?;
+    require_bool_eq(all_layer, "all_layers_inspected", true)?;
+    require_u64_eq(all_layer, "operations_per_layer", 14)?;
+    if total_ops != layer_total * 14
+        || cuda_ops != total_ops
+        || linear_ops != layer_total * 7
+        || norm_ops != layer_total * 2
+        || rope_ops != layer_total
+        || attention_score_ops != layer_total
+        || attention_softmax_ops != layer_total
+        || attention_v_mix_ops != layer_total
+        || mlp_activation_ops != layer_total
+        || cuda_ops
+            != linear_ops
+                + norm_ops
+                + rope_ops
+                + attention_score_ops
+                + attention_softmax_ops
+                + attention_v_mix_ops
+                + mlp_activation_ops
+    {
+        return Err(anyhow!(
+            "all_layer_plan counts must equal 14 governed dense CUDA block ops per transformer layer"
+        ));
+    }
+    require_bool_eq(all_layer, "dense_gguf_all_layer_execution_plan_claimed", true)?;
+    require_bool_eq(all_layer, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(all_layer, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(all_layer, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(all_layer, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(all_layer, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(all_layer, "speedup_claim", false)?;
+    require_bool_eq(all_layer, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(all_layer, "full_cuda_residency_claimed", false)?;
+
+    let layers = array_field(all_layer, "layers")?;
+    if layers.len() != layer_total as usize {
+        return Err(anyhow!("all_layer_plan.layers length must match transformer_layers_total"));
+    }
+    for (expected_index, layer) in layers.iter().enumerate() {
+        require_u64_eq(layer, "layer_index", expected_index as u64)?;
+        require_u64_eq(layer, "total_ops", 14)?;
+        require_u64_eq(layer, "cuda_routable_ops_total", 14)?;
+        require_u64_eq(layer, "linear_cuda_ops_total", 7)?;
+        require_u64_eq(layer, "norm_cuda_ops_total", 2)?;
+        require_u64_eq(layer, "rope_cuda_ops_total", 1)?;
+        require_u64_eq(layer, "attention_score_cuda_ops_total", 1)?;
+        require_u64_eq(layer, "attention_softmax_cuda_ops_total", 1)?;
+        require_u64_eq(layer, "attention_v_mix_cuda_ops_total", 1)?;
+        require_u64_eq(layer, "mlp_activation_cuda_ops_total", 1)?;
+        require_u64_eq(layer, "unsupported_strict_cuda_ops_total", 0)?;
+        require_u64_eq(layer, "cpu_fallback_ops_total", 0)?;
+        require_bool_eq(layer, "strict_cuda_ready", true)?;
+        require_bool_eq(layer, "matches_layer0", true)?;
+        require_sha256(layer, "operation_signature_sha256")?;
+        let operations = array_field(layer, "operations")?;
+        if operations.len() != 14 {
+            return Err(anyhow!("all_layer_plan.layers.operations must contain 14 governed ops"));
+        }
+        for (op_index, op) in operations.iter().enumerate() {
+            require_u64_eq(op, "index", op_index as u64)?;
+            require_string_non_empty(op, "name")?;
+            reject_bitnet_packed_marker(
+                required_string(op, "name")?,
+                "all_layer_plan.layers.operations.name",
+            )?;
+            require_string_non_empty(op, "role")?;
+            reject_bitnet_packed_marker(
+                required_string(op, "role")?,
+                "all_layer_plan.layers.operations.role",
+            )?;
+            require_string_non_empty(op, "op_type")?;
+            require_positive_u64(op, "size")?;
+            require_string_eq(op, "route", DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)?;
+            require_string_eq(op, "status", "cuda_routable")?;
+            require_bool_eq(op, "fallback_used", false)?;
+            require_string_non_empty(op, "reason")?;
+        }
+    }
+
+    let gaps = object_field(receipt, "model_boundary_gaps")?;
+    require_u64_eq(gaps, "schema", 1)?;
+    require_bool_eq(gaps, "all_boundary_gaps_explicit", true)?;
+    require_bool_eq(gaps, "qwen_one_token_cuda_blocked", true)?;
+    require_bool_eq(gaps, "qwen_short_decode_cuda_blocked", true)?;
+    require_bool_eq(gaps, "qwen_chat_cuda_blocked", true)?;
+    require_string_eq(gaps, "next_required_proof", "dense_gguf_model_boundary_fixtures")?;
+    require_bool_eq(gaps, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(gaps, "speedup_claim", false)?;
+    require_bool_eq(gaps, "full_cuda_residency_claimed", false)?;
+    let gap_entries = array_field(gaps, "gaps")?;
+    let mut required_gaps = BTreeSet::from([
+        "token_embedding",
+        "final_norm",
+        "lm_head_logits",
+        "kv_cache_policy",
+        "sampling",
+    ]);
+    for gap in gap_entries {
+        let name = required_string(gap, "gap")?;
+        required_gaps.remove(name);
+        require_string_eq(gap, "status", "not_governed_by_all_layer_block_plan")?;
+        require_string_non_empty(gap, "disposition")?;
+        require_bool_eq(gap, "blocks_qwen_one_token", true)?;
+        require_bool_eq(gap, "blocks_qwen_short_decode", true)?;
+        require_bool_eq(gap, "blocks_qwen_chat", true)?;
+        require_string_non_empty(gap, "required_next_proof")?;
+    }
+    if !required_gaps.is_empty() {
+        return Err(anyhow!("model_boundary_gaps missing required gaps: {required_gaps:?}"));
+    }
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cpu_reference_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cuda_integrated_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_all_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
 /// Validate dense GGUF one-layer CPU reference harness evidence.
 ///
 /// This artifact records a CPU-only full layer-0 reference output. It is the
@@ -5299,6 +5577,12 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
             claim_boundary.get("dense_gguf_one_layer_cuda_integrated_parity_claimed")
         })
         .and_then(Value::as_bool);
+    let all_layer_execution_plan_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| {
+            claim_boundary.get("dense_gguf_all_layer_execution_plan_claimed")
+        })
+        .and_then(Value::as_bool);
 
     if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)
@@ -5319,6 +5603,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)
         || model_class == Some(DENSE_REGULAR_LLM_MODEL_CLASS)
         || dense_claim == Some(true)
         || descriptor_claim == Some(true)
@@ -5338,6 +5623,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || one_layer_plan_claim == Some(true)
         || one_layer_cpu_reference_claim == Some(true)
         || one_layer_cuda_integrated_parity_claim == Some(true)
+        || all_layer_execution_plan_claim == Some(true)
     {
         return Err(anyhow!(
             "dense_regular_llm CUDA receipt cannot satisfy BitNet packed I2_S/QK256 proof"
