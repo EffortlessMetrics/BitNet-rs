@@ -21,11 +21,19 @@ the same cache, tokenizer, backend, fallback, streaming, and receipt discipline.
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-SERVE-001 | ready | Define command and configuration contract. |
+| M4-SERVE-001 | pr_open | Define command and configuration contract. |
 | M4-SERVE-002 | pending | Add health and ready endpoint behavior. |
 | M4-SERVE-003 | pending | Add streaming completion endpoint. |
 | M4-SERVE-004 | pending | Add receipt export for server requests. |
 | M4-SERVE-005 | pending | Integrate doctor/smoke/regression readiness flow. |
+
+## Current Contract
+
+`M4-SERVE-001` defines the intended `bitnet mac serve` command/config contract
+in `docs/slm/apple-m4-local-server-command-config.md`. The contract keeps the
+first slice docs-only: no endpoint implementation, OpenAI compatibility,
+production-readiness, BitNet, Metal, QK256, Neural Engine, MPSGraph, or broad
+performance claim is introduced.
 
 ## Claim Boundary
 

@@ -23,7 +23,8 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-SERVE-001"
-status = "ready"
+status = "pr_open"
+pr = 4359
 branch = "codex/apple-m4-local-server/M4-SERVE-001-command-config"
 stackable = false
 review_mode = "codex_premerge"

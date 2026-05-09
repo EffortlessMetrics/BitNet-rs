@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T23:42:31Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-001"
+event = "pr_open"
+actor = "codex"
+pr = 4359
+head_sha = "d518163d0ec8c47fd8cf3cc85f437edddd285c76"
+
+notes = [
+  "Opened PR #4359 for the Apple M4 local server command/config contract.",
+  "The PR defines the intended bitnet mac serve command shape, config fields, startup checks, failure behavior, endpoint roadmap, and server receipt requirements.",
+  "No endpoint implementation, runtime behavior, model download, BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, OpenAI-compatibility, production-readiness, or broad performance claim is included.",
+]
