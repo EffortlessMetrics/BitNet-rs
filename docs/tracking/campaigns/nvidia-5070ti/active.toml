@@ -1813,3 +1813,59 @@ must_not_claim = [
   "A full Qwen token, layer, decode, or chat path works on CUDA.",
   "Full dense regular LLM CUDA residency exists.",
 ]
+
+[[work_item]]
+id = "CUDA-UX-002"
+status = "pr_open"
+branch = "codex/cuda-ux-002-ask-proof-summary"
+pr = 4191
+head_sha = "6960b2bf1005bec92b8a1e06005b63a28d46ef9b"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-UX-001", "CUDA-PROD-001"]
+acceptance = "Reuse the `bitnet receipts explain` normalization layer for strict `bitnet ask` proof summaries so the live ask path prints a compact proof covering model, planner route, backend, runtime, kernels, fallback, quality, upload-once weight status, measured kernel/transfer fields, full-residency claim, speed claim, and receipt path without changing generation, tokenizer, loader, transformer, kernel, benchmark, dense GGUF inference, or server behavior."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,full-cli receipts -- --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli receipts -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "server runtime behavior",
+]
+may_claim = [
+  "Strict `bitnet ask` proof summaries reuse the same normalized receipt explanation object as `bitnet receipts explain`.",
+  "Strict ask summaries expose route, backend, kernel, fallback, quality, measured timing/transfer fields, upload-once status, speed claim, and receipt path in the user-facing output.",
+]
+must_not_claim = [
+  "Inference behavior changed.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, or server behavior changed.",
+  "BitNet QK256 CUDA math changed.",
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "General dense GGUF CUDA inference is complete.",
+  "CUDA speedup is accepted.",
+  "Full CUDA residency is proven.",
+]

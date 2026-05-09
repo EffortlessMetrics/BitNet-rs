@@ -8832,15 +8832,8 @@ fn print_strict_ask_proof_summary(
     answer_receipt: &serde_json::Value,
     receipt_path: &std::path::Path,
 ) {
-    let backend = answer_receipt["backend"]["selected_backend"].as_str().unwrap_or("unknown");
-    let runtime = answer_receipt["backend"]["runtime_api"].as_str().unwrap_or("unknown");
-    let fallback = answer_receipt["backend"]["fallback_used"].as_bool().unwrap_or(true);
-    let kernel = answer_receipt["bitnet"]["kernel_id"].as_str().unwrap_or("unknown");
-    let quality = answer_receipt["quality"]["garbage_filter_passed"].as_bool().unwrap_or(false);
-    println!(
-        "Proof: backend={backend} runtime={runtime} kernel={kernel} fallback={fallback} quality={quality} speedup_claim=false receipt={}",
-        receipt_path.display()
-    );
+    let explanation = commands::receipts::explain_receipt(receipt_path, answer_receipt);
+    commands::receipts::print_compact_proof_summary(&explanation);
 }
 
 fn validate_strict_cuda_ask_receipt(run_receipt: &serde_json::Value) -> Result<()> {

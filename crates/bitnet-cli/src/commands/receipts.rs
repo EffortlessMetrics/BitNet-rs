@@ -243,6 +243,7 @@ fn quality_explanation(receipt: &Value) -> QualityExplanation {
     QualityExplanation {
         answer_quality_passed: bool_at(receipt, &["answer_quality", "passed"])
             .or_else(|| bool_at(receipt, &["quality", "passed"]))
+            .or_else(|| bool_at(receipt, &["quality", "garbage_filter_passed"]))
             .or_else(|| bool_at(receipt, &["benchmark", "quality_passed"])),
         benchmark_quality_passed: bool_at(receipt, &["benchmark", "quality_passed"]),
         parity_passed: bool_at(receipt, &["parity", "passed"]),
@@ -264,6 +265,7 @@ fn timing_explanation(receipt: &Value) -> TimingExplanation {
         steady_decode_tok_s: f64_at(receipt, &["timing", "steady_decode_tok_s"])
             .or_else(|| f64_at(receipt, &["benchmark", "cuda_median_generated_tokens_per_second"])),
         kernel_time_ms: f64_at(receipt, &["timing", "kernel_time_ms"])
+            .or_else(|| f64_at(receipt, &["timing", "cuda_kernel_time_ms"]))
             .or_else(|| f64_at(receipt, &["benchmark", "cuda_median_kernel_time_ms"]))
             .or_else(|| {
                 f64_at(
@@ -315,18 +317,34 @@ fn residency_explanation(receipt: &Value) -> ResidencyExplanation {
             receipt,
             &["cuda_execution_residency", "weights", "uploaded_once"],
         )
+        .or_else(|| {
+            bool_at(
+                receipt,
+                &["cuda_execution_residency", "weight_residency", "weights_uploaded_once"],
+            )
+        })
+        .or_else(|| bool_at(receipt, &["bitnet", "weights_uploaded_once"]))
         .or_else(|| bool_at(receipt, &["residency", "weights_uploaded_once"]))
         .or_else(|| bool_at(receipt, &["proof", "weights_uploaded_once"])),
         per_token_weight_upload: bool_at(
             receipt,
             &["cuda_execution_residency", "weights", "per_token_weight_upload"],
         )
+        .or_else(|| {
+            bool_at(
+                receipt,
+                &["cuda_execution_residency", "weight_residency", "per_token_weight_upload"],
+            )
+        })
+        .or_else(|| bool_at(receipt, &["bitnet", "per_token_weight_upload"]))
         .or_else(|| bool_at(receipt, &["residency", "per_token_weight_upload"]))
         .or_else(|| bool_at(receipt, &["proof", "per_token_weight_upload"])),
         kv_cache_residency: string_at(
             receipt,
             &["cuda_execution_residency", "kv_cache", "residency"],
-        ),
+        )
+        .or_else(|| string_at(receipt, &["cuda_execution_residency", "kv_cache", "device"]))
+        .or_else(|| string_at(receipt, &["kv_cache", "device"])),
         full_cuda_residency_claimed: bool_at(
             receipt,
             &["cuda_execution_residency", "full_cuda_residency_claimed"],
@@ -410,6 +428,78 @@ fn collect_kernel_ids_from_array(value: Option<&Value>, ids: &mut BTreeSet<Strin
         {
             ids.insert(id.to_string());
         }
+    }
+}
+
+pub fn compact_proof_lines(explanation: &ReceiptExplanation) -> Vec<String> {
+    let mut lines = Vec::new();
+    lines.push("Proof:".to_string());
+
+    if let Some(model) = &explanation.model {
+        lines.push(format!("  model: {model}"));
+    }
+    if let Some(route) = &explanation.execution_plan.selected_route {
+        lines.push(format!("  route: {route}"));
+    }
+    if let Some(backend) = &explanation.backend.selected_backend {
+        lines.push(format!("  backend: {backend}"));
+    }
+    if let Some(runtime) = &explanation.backend.runtime_api {
+        lines.push(format!("  runtime: {runtime}"));
+    }
+    if !explanation.kernels.is_empty() {
+        lines.push(format!("  kernel: {}", explanation.kernels.join(", ")));
+    }
+    if let Some(fallback) = explanation.backend.fallback_used {
+        lines.push(format!("  fallback: {fallback}"));
+    }
+    if let Some(quality) = explanation
+        .quality
+        .answer_quality_passed
+        .or(explanation.quality.benchmark_quality_passed)
+        .or(explanation.quality.parity_passed)
+    {
+        lines.push(format!("  quality: {quality}"));
+    }
+    if let Some(weights_uploaded_once) = explanation.residency.weights_uploaded_once {
+        let weight_text =
+            if weights_uploaded_once { "uploaded once" } else { "not upload-once proven" };
+        lines.push(format!("  weights: {weight_text}"));
+    }
+    if let Some(kernel_time_ms) = explanation.timing.kernel_time_ms {
+        lines.push(format!("  kernel time: {kernel_time_ms:.3} ms"));
+    }
+    if explanation.timing.host_to_device_bytes.is_some()
+        || explanation.timing.device_to_host_bytes.is_some()
+    {
+        let h2d = explanation
+            .timing
+            .host_to_device_bytes
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+        let d2h = explanation
+            .timing
+            .device_to_host_bytes
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+        lines.push(format!("  transfers: h2d={h2d} bytes d2h={d2h} bytes"));
+    }
+    if let Some(full_residency) = explanation.residency.full_cuda_residency_claimed {
+        lines.push(format!("  full cuda residency: {full_residency}"));
+    }
+    let speedup_claim =
+        explanation.claim_limits.speedup_claim.or(explanation.execution_plan.speedup_claim);
+    if let Some(speedup_claim) = speedup_claim {
+        lines.push(format!("  speed claim: {speedup_claim}"));
+    }
+    lines.push(format!("  receipt: {}", explanation.path));
+
+    lines
+}
+
+pub fn print_compact_proof_summary(explanation: &ReceiptExplanation) {
+    for line in compact_proof_lines(explanation) {
+        println!("{line}");
     }
 }
 
@@ -691,6 +781,70 @@ mod tests {
         assert_eq!(explanation.claim_limits.speedup_claim, Some(false));
         assert_eq!(explanation.claim_limits.dense_gguf_inference_claimed, Some(false));
         assert_eq!(explanation.claim_limits.bitnet_packed_i2s_qk256_proof, Some(false));
+    }
+
+    #[test]
+    fn compact_summary_extracts_strict_ask_receipt_shape() {
+        let receipt = json!({
+            "artifact_kind": "bitnet_cuda_answer",
+            "model": {
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "file": "ggml-model-i2_s.gguf"
+            },
+            "backend": {
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "fallback_used": false
+            },
+            "execution_plan": {
+                "selected_route": "bitnet_qk256_cuda",
+                "model_family": "bitnet_b1_58",
+                "quantization": "i2_s_qk256",
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            },
+            "kernel_stats": [
+                {
+                    "kernel_id": "qk256_gemv_cuda"
+                }
+            ],
+            "quality": {
+                "garbage_filter_passed": true
+            },
+            "timing": {
+                "cuda_kernel_time_ms": 2.5,
+                "host_to_device_bytes": 4096,
+                "device_to_host_bytes": 2048
+            },
+            "cuda_execution_residency": {
+                "weight_residency": {
+                    "weights_uploaded_once": true,
+                    "per_token_weight_upload": false
+                },
+                "kv_cache": {
+                    "device": "cpu"
+                },
+                "full_cuda_residency_claimed": false
+            },
+            "speedup_claim": false
+        });
+
+        let explanation = explain_receipt(
+            Path::new("target/bitnet/receipts/cuda-answer-readiness/strict-cuda-ask-latest.json"),
+            &receipt,
+        );
+        let lines = compact_proof_lines(&explanation);
+
+        assert_eq!(explanation.quality.answer_quality_passed, Some(true));
+        assert_eq!(explanation.residency.weights_uploaded_once, Some(true));
+        assert_eq!(explanation.timing.kernel_time_ms, Some(2.5));
+        assert!(lines.contains(&"  route: bitnet_qk256_cuda".to_string()));
+        assert!(lines.contains(&"  backend: nvidia-rtx-5070-ti-cuda".to_string()));
+        assert!(lines.contains(&"  kernel: qk256_gemv_cuda".to_string()));
+        assert!(lines.contains(&"  fallback: false".to_string()));
+        assert!(lines.contains(&"  quality: true".to_string()));
+        assert!(lines.contains(&"  weights: uploaded once".to_string()));
+        assert!(lines.contains(&"  speed claim: false".to_string()));
     }
 
     #[test]
