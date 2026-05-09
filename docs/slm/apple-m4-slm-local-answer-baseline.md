@@ -14,6 +14,10 @@ prompt in
 
 This is the current user-facing Mac path. It is separate from the blocked BitNet local-answer lane and from future Metal acceleration work.
 
+For the broader validation graph that separates dense SLM UX evidence from
+BitNet / 1-bit model evidence, see
+[Reference Topology](../architecture/reference-topology.md).
+
 ## Supported Baseline
 
 | Field | Current baseline |

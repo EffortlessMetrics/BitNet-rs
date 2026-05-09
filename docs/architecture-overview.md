@@ -2,6 +2,10 @@
 
 This document provides a high-level overview of BitNet-rs architecture, design patterns, and key components.
 
+For validation authority across scalar, AVX2, NEON, Apple Silicon, x86
+accelerators, CUDA, Intel GPU/NPU lanes, dense SLMs, and BitNet model families,
+see [Reference Topology](architecture/reference-topology.md).
+
 ## Workspace Structure
 
 BitNet-rs is organized as a Rust workspace with **110 crates** (as of this writing):

@@ -2,6 +2,10 @@
 
 The MacBook lane is the Apple Silicon cross-reference and larger-artifact lane. It is not a replacement for the M4 Mac mini dense SLM product lane and it is not a shortcut to Apple BitNet claims.
 
+See also [Reference Topology](../architecture/reference-topology.md) for the
+scalar -> AVX2/NEON -> accelerator validation chain and the dense SLM vs BitNet
+claim boundary.
+
 ## Roles
 
 M4 Mac mini:
