@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T09:18:13Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-019"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-019-rope-route"
+pr = 4241
+head_sha = "91d73241c07c01e21e950950c79c9c624a7c54ad"
+notes = [
+  "Opened PR #4241 for dense GGUF one-layer planner RoPE route integration.",
+  "The PR updates planner routing, one-layer receipts, validators, the live Qwen2.5 Q8 receipt, and the governed report so RoPE is dense_regular_llm_cuda routable.",
+  "Dense GGUF inference, Qwen one-token/decode/chat, speedup, full-residency, server, QK256, tokenizer, loader, transformer, and BitNet packed proof claims remain false.",
+]

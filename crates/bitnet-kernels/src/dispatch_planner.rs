@@ -542,7 +542,7 @@ fn select_model_cuda_backend(
             Some(ModelDispatchBackend::CudaBitnetQk256)
         }
         (ModelFamily::DenseRegularLlm, quantization)
-            if matches!(op.op_type, OpType::MatMul | OpType::RmsNorm)
+            if matches!(op.op_type, OpType::MatMul | OpType::RmsNorm | OpType::RoPE)
                 && quantization.is_dense_cuda()
                 && !op.is_quantized
                 && spec.cuda.dense_regular_llm_cuda =>
@@ -606,6 +606,10 @@ mod tests {
             size: 512,
             is_quantized: false,
         }
+    }
+
+    fn rope_op() -> DispatchOp {
+        DispatchOp { name: "rope".into(), op_type: OpType::RoPE, size: 512, is_quantized: false }
     }
 
     #[test]
@@ -870,6 +874,24 @@ mod tests {
         };
 
         let plan = plan_model_dispatch(&[rmsnorm_op()], spec);
+
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaDenseRegularLlm);
+        assert!(!plan.decisions[0].fallback_used);
+        assert_eq!(plan.cuda_ops(), 1);
+        assert_eq!(plan.unsupported_ops(), 0);
+    }
+
+    #[test]
+    fn model_aware_dense_fp16_routes_rope_to_dense_cuda() {
+        let spec = ModelDispatchSpec {
+            model_family: ModelFamily::DenseRegularLlm,
+            quantization: QuantizationKind::DenseFp16,
+            backend_policy: BackendPolicy::StrictCuda,
+            has_simd: true,
+            cuda: CudaPlannerCapabilities::dense_regular_llm(),
+        };
+
+        let plan = plan_model_dispatch(&[rope_op()], spec);
 
         assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaDenseRegularLlm);
         assert!(!plan.decisions[0].fallback_used);

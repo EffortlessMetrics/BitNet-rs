@@ -3,6 +3,7 @@
 use anyhow::{Context, Result, anyhow};
 use clap::{Args, Subcommand, ValueEnum};
 use serde::Serialize;
+#[cfg(unix)]
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
