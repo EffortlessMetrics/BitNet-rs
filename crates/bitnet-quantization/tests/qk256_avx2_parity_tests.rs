@@ -10,6 +10,7 @@ use bitnet_quantization::i2s_qk256::{
     code_to_f32, gemv_qk256, gemv_qk256_row, gemv_qk256_with_kernel_selection,
     select_qk256_gemv_kernel, unpack_qk256_block,
 };
+#[cfg(target_arch = "x86_64")]
 use bitnet_quantization::i2s_qk256_avx2::gemv_qk256_avx2;
 
 /// Pack 256 2-bit codes into BitNet.cpp I2_S grouped QK256 layout.
@@ -122,11 +123,9 @@ fn deterministic_prng_activation(cols: usize) -> Vec<f32> {
         .collect()
 }
 
+#[cfg(target_arch = "x86_64")]
 fn avx2_selection_available() -> bool {
-    cfg!(feature = "avx2")
-        && cfg!(target_arch = "x86_64")
-        && is_x86_feature_detected!("avx2")
-        && is_x86_feature_detected!("fma")
+    cfg!(feature = "avx2") && is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma")
 }
 
 fn assert_close_vectors(label: &str, expected: &[f32], actual: &[f32], tolerance: f32) {

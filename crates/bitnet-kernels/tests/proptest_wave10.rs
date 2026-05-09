@@ -506,12 +506,16 @@ proptest! {
     fn prop_qk256_unpack_roundtrip(
         codes in prop::collection::vec(0u8..=3u8, 256..=256)
     ) {
-        // Pack 256 codes into 64 bytes
+        // Pack 256 codes into the BitNet.cpp/GGML grouped I2_S layout:
+        // two 128-value chunks, each chunk storing four 32-value lanes.
         let mut packed = [0u8; 64];
         for (i, &code) in codes.iter().enumerate() {
-            let byte_idx = i / 4;
-            let bit_shift = (i % 4) * 2;
-            packed[byte_idx] |= code << bit_shift;
+            let chunk = i / 128;
+            let chunk_pos = i % 128;
+            let lane = chunk_pos / 32;
+            let group_pos = chunk_pos % 32;
+            let byte_idx = chunk * 32 + group_pos;
+            packed[byte_idx] |= code << (6 - lane * 2);
         }
 
         // Unpack using the same logic as QK256
