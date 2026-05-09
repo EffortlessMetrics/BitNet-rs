@@ -2280,10 +2280,64 @@ must_not_claim = [
   "Dense regular LLM CUDA proves QK256 inference.",
   "Dense regular LLM CUDA speedup exists.",
   "General dense GGUF CUDA inference is complete.",
-  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, or server behavior changed.",
+  "Runtime tokenizer behavior, prompt-template behavior, loader behavior, QK256 math, BitNet CUDA behavior, or server behavior changed.",
   "A full Qwen layer, token, short decode, or chat path works on CUDA.",
   "Persistent-session or full dense regular LLM CUDA residency exists.",
   "A CPU reference harness implementation or CUDA comparison receipt exists.",
+]
+
+[[work_item]]
+id = "CUDA-DENSE-033"
+status = "pr_open"
+branch = "codex/cuda-dense-032-cpu-reference-harness"
+pr = 4318
+head_sha = "9750ed811ae4800e805f7b40ab08902fe14beaf9"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-032"]
+acceptance = "Implement the full dense GGUF layer-0 CPU reference harness defined by CUDA-DENSE-032, composing the verified Qwen2.5 0.5B Q8_0 dense GGUF layer phases into a deterministic CPU-only pass with per-phase hashes, final layer output hash, and receipt validation while keeping CUDA execution, dense GGUF inference, Qwen token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false."
+commands = [
+  "cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,full-cli one_layer_cpu_reference -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features one_layer_cpu_reference -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/hardware/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "server runtime behavior",
+  "new hardware receipt evidence",
+]
+may_claim = [
+  "CUDA-DENSE-033 implements a governed full layer-0 CPU reference harness for dense GGUF Qwen-family artifacts.",
+  "The dense_gguf_one_layer_cpu_reference receipt records deterministic input, per-phase hashes, and final layer output hash for the CPU-only layer pass.",
+  "The next governed dense CUDA proof can compare the CUDA-routable one-layer plan against this CPU reference harness.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, or server behavior changed.",
+  "A full Qwen layer, token, short decode, or chat path works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "CUDA integrated one-layer execution or CUDA comparison receipt exists.",
 ]
 
 [[work_item]]

@@ -159,6 +159,14 @@ pub const DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND: &str =
 /// one dense transformer layer. It does not execute full dense GGUF inference.
 pub const DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND: &str =
     "dense_gguf_one_layer_execution_plan";
+
+/// Artifact kind for dense GGUF one-layer CPU reference harness receipts.
+///
+/// This receipt records a deterministic CPU-only layer-0 reference output for
+/// the dense regular-LLM lane. It is the comparison anchor for later integrated
+/// CUDA layer parity, not dense GGUF inference or CUDA execution.
+pub const DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND: &str =
+    "dense_gguf_one_layer_cpu_reference";
 const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
     &["attention_softmax", "attention_v_mix", "mlp_activation"];
 const DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER: &[&str] =
@@ -4280,6 +4288,234 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
     Ok(())
 }
 
+/// Validate dense GGUF one-layer CPU reference harness evidence.
+///
+/// This artifact records a CPU-only full layer-0 reference output. It is the
+/// anchor for later integrated CUDA parity, not CUDA execution or dense GGUF
+/// inference.
+pub fn validate_dense_gguf_one_layer_cpu_reference_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_one_layer_cpu_reference_recorded")?;
+    require_string_eq(receipt, "hardware_lane", "cpu-reference")?;
+    require_string_eq(receipt, "requested_backend", "cpu_reference")?;
+    require_string_eq(receipt, "selected_backend", "cpu_reference")?;
+    require_string_eq(receipt, "runtime_api", "cpu")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_null(receipt, "error")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(execution_path, "kernel_family", "cpu_reference_dense_one_layer")?;
+    require_string_eq(
+        execution_path,
+        "quantization_family",
+        "dense_gguf_materialized_f32_reference",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_positive_u64(descriptor, "tensor_count")?;
+    require_positive_u64(descriptor, "metadata_count")?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_string_non_empty(descriptor, "dense_cuda_route_status")?;
+    reject_bitnet_packed_marker(
+        required_string(descriptor, "dense_cuda_route_status")?,
+        "descriptor_coverage.dense_cuda_route_status",
+    )?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+    let quantization_families = array_field(descriptor, "quantization_families")?;
+    if quantization_families.is_empty() {
+        return Err(anyhow!("descriptor_coverage.quantization_families must not be empty"));
+    }
+    for family in quantization_families {
+        let family = family.as_str().ok_or_else(|| {
+            anyhow!("descriptor_coverage.quantization_families entries must be strings")
+        })?;
+        reject_bitnet_packed_marker(family, "descriptor_coverage.quantization_families")?;
+    }
+
+    let harness = object_field(receipt, "reference_harness")?;
+    require_u64_eq(harness, "schema", 1)?;
+    require_string_non_empty(harness, "fixture_id")?;
+    reject_bitnet_packed_marker(
+        required_string(harness, "fixture_id")?,
+        "reference_harness.fixture_id",
+    )?;
+    require_u64_eq(harness, "layer_index", 0)?;
+    require_positive_u64(harness, "seq_len")?;
+    required_u64(harness, "position_offset")?;
+    require_positive_u64(harness, "hidden_size")?;
+    require_positive_u64(harness, "q_heads")?;
+    require_positive_u64(harness, "kv_heads")?;
+    require_positive_u64(harness, "heads_per_kv_group")?;
+    require_positive_u64(harness, "head_dim")?;
+    require_positive_u64(harness, "intermediate_size")?;
+    require_positive_number(harness, "rmsnorm_eps")?;
+    require_string_non_empty(harness, "epsilon_source")?;
+    require_positive_number(harness, "rope_base")?;
+    require_string_non_empty(harness, "rope_base_source")?;
+    require_positive_number(harness, "rope_scaling_factor")?;
+    require_positive_u64(harness, "deterministic_input_len")?;
+    require_sha256(harness, "deterministic_input_sha256")?;
+    require_positive_u64(harness, "phases_total")?;
+    require_positive_u64(harness, "final_output_len")?;
+    require_sha256(harness, "final_output_sha256")?;
+    require_non_negative_number(harness, "final_output_max_abs")?;
+    require_bool_eq(harness, "cpu_reference_only", true)?;
+    require_bool_eq(harness, "cuda_execution_claimed", false)?;
+    require_bool_eq(harness, "one_layer_inference_claimed", false)?;
+    require_bool_eq(harness, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(harness, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(harness, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(harness, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(harness, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(harness, "speedup_claim", false)?;
+    require_bool_eq(harness, "full_cuda_residency_claimed", false)?;
+    require_string_eq(harness, "next_required_proof", "one_layer_cuda_integrated_parity")?;
+
+    let phases = array_field(harness, "phases")?;
+    let phases_total = required_u64(harness, "phases_total")?;
+    if phases.len() != phases_total as usize {
+        return Err(anyhow!("reference_harness.phases length must match phases_total"));
+    }
+    let mut names = BTreeSet::new();
+    for (idx, phase) in phases.iter().enumerate() {
+        require_u64_eq(phase, "index", idx as u64)?;
+        require_string_non_empty(phase, "name")?;
+        let name = required_string(phase, "name")?;
+        reject_bitnet_packed_marker(name, "reference_harness.phases.name")?;
+        names.insert(name.to_string());
+        require_string_non_empty(phase, "role")?;
+        reject_bitnet_packed_marker(
+            required_string(phase, "role")?,
+            "reference_harness.phases.role",
+        )?;
+        require_string_non_empty(phase, "op_type")?;
+        require_positive_u64(phase, "output_len")?;
+        require_sha256(phase, "output_sha256")?;
+        require_non_negative_number(phase, "max_abs")?;
+    }
+    const REQUIRED_PHASES: &[&str] = &[
+        "deterministic_input",
+        "attention_norm",
+        "attention_q",
+        "attention_k",
+        "attention_v",
+        "rope",
+        "attention_scores",
+        "attention_softmax",
+        "attention_v_mix",
+        "attention_output",
+        "first_residual",
+        "ffn_norm",
+        "mlp_gate",
+        "mlp_up",
+        "mlp_activation",
+        "mlp_down",
+        "second_residual",
+    ];
+    for required in REQUIRED_PHASES {
+        if !names.contains(*required) {
+            return Err(anyhow!("reference_harness.phases missing required phase `{required}`"));
+        }
+    }
+    if phases_total != REQUIRED_PHASES.len() as u64 {
+        return Err(anyhow!("reference_harness.phases_total must equal governed CPU phase count"));
+    }
+    let deterministic_input = phases
+        .iter()
+        .find(|phase| phase.get("name").and_then(Value::as_str) == Some("deterministic_input"))
+        .ok_or_else(|| anyhow!("reference_harness.phases missing deterministic_input phase"))?;
+    let deterministic_input_len = required_u64(harness, "deterministic_input_len")?;
+    let deterministic_input_sha256 = required_string(harness, "deterministic_input_sha256")?;
+    let deterministic_phase_len = required_u64(deterministic_input, "output_len")?;
+    let deterministic_phase_sha256 = required_string(deterministic_input, "output_sha256")?;
+    if deterministic_phase_len != deterministic_input_len {
+        return Err(anyhow!(
+            "reference_harness.deterministic_input_len must match deterministic_input phase output_len"
+        ));
+    }
+    if deterministic_phase_sha256 != deterministic_input_sha256 {
+        return Err(anyhow!(
+            "reference_harness.deterministic_input_sha256 must match deterministic_input phase output_sha256"
+        ));
+    }
+
+    let second_residual = phases
+        .iter()
+        .find(|phase| phase.get("name").and_then(Value::as_str) == Some("second_residual"))
+        .ok_or_else(|| anyhow!("reference_harness.phases missing second_residual phase"))?;
+    let final_output_len = required_u64(harness, "final_output_len")?;
+    let final_output_sha256 = required_string(harness, "final_output_sha256")?;
+    let final_output_max_abs = object_field(harness, "final_output_max_abs")?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `final_output_max_abs` must be a number"))?;
+    let second_residual_len = required_u64(second_residual, "output_len")?;
+    let second_residual_sha256 = required_string(second_residual, "output_sha256")?;
+    let second_residual_max_abs = object_field(second_residual, "max_abs")?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `max_abs` must be a number"))?;
+    if second_residual_len != final_output_len {
+        return Err(anyhow!(
+            "reference_harness.final_output_len must match second_residual phase output_len"
+        ));
+    }
+    if second_residual_sha256 != final_output_sha256 {
+        return Err(anyhow!(
+            "reference_harness.final_output_sha256 must match second_residual phase output_sha256"
+        ));
+    }
+    if second_residual_max_abs != final_output_max_abs {
+        return Err(anyhow!(
+            "reference_harness.final_output_max_abs must match second_residual phase max_abs"
+        ));
+    }
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cpu_reference_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
 struct DenseOneLayerGapCounts {
     cuda_routable_ops: u64,
     linear_cuda_ops: u64,
@@ -4704,6 +4940,10 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
             claim_boundary.get("dense_gguf_one_layer_execution_plan_claimed")
         })
         .and_then(Value::as_bool);
+    let one_layer_cpu_reference_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| claim_boundary.get("dense_gguf_one_layer_cpu_reference_claimed"))
+        .and_then(Value::as_bool);
 
     if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)
@@ -4722,6 +4962,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || artifact_kind == Some(DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND)
         || model_class == Some(DENSE_REGULAR_LLM_MODEL_CLASS)
         || dense_claim == Some(true)
         || descriptor_claim == Some(true)
@@ -4739,6 +4980,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || linear_cuda_parity_claim == Some(true)
         || linear_role_sweep_claim == Some(true)
         || one_layer_plan_claim == Some(true)
+        || one_layer_cpu_reference_claim == Some(true)
     {
         return Err(anyhow!(
             "dense_regular_llm CUDA receipt cannot satisfy BitNet packed I2_S/QK256 proof"

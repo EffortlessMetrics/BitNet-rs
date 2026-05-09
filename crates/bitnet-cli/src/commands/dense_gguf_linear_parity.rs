@@ -45,8 +45,9 @@ use bitnet_receipts_core::{
     DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_MLP_ACTIVATION_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND,
-    DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
-    DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND, DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
+    DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND,
+    DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
     validate_dense_gguf_attention_score_cuda_parity_receipt_json,
     validate_dense_gguf_attention_score_fixture_receipt_json,
     validate_dense_gguf_attention_softmax_cuda_parity_receipt_json,
@@ -59,6 +60,7 @@ use bitnet_receipts_core::{
     validate_dense_gguf_mlp_activation_fixture_receipt_json,
     validate_dense_gguf_norm_cuda_parity_receipt_json,
     validate_dense_gguf_norm_fixture_extraction_receipt_json,
+    validate_dense_gguf_one_layer_cpu_reference_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
     validate_dense_gguf_rope_cuda_parity_receipt_json,
 };
@@ -314,6 +316,82 @@ impl DenseGgufOneLayerPlanCommand {
             self.layer_index,
         )?;
         validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
+/// Emit a full dense GGUF layer-0 CPU reference harness receipt.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufOneLayerCpuReferenceCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Dense transformer layer index. This diagnostic currently records layer 0.
+    #[arg(long, default_value_t = 0)]
+    pub layer_index: usize,
+
+    /// Number of token positions in the deterministic CPU reference harness.
+    #[arg(long, default_value_t = 4)]
+    pub seq_len: usize,
+
+    /// Position offset used by metadata-derived RoPE.
+    #[arg(long, default_value_t = 1)]
+    pub position_offset: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufOneLayerCpuReferenceCommand {
+    pub async fn execute(&self) -> Result<()> {
+        if self.layer_index != 0 {
+            bail!("CUDA-DENSE-033 currently records the first dense GGUF layer only");
+        }
+        if self.seq_len == 0 {
+            bail!("dense GGUF one-layer CPU reference requires --seq-len > 0");
+        }
+
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+        let reference = dense_gguf_one_layer_cpu_reference_from_reader(
+            &reader,
+            &inspection,
+            self.layer_index,
+            self.seq_len,
+            self.position_offset,
+        )?;
+
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_one_layer_cpu_reference_receipt_json(
+            &inspection,
+            &reference,
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        )?;
+        validate_dense_gguf_one_layer_cpu_reference_receipt_json(&receipt)?;
 
         if let Some(path) = &self.json_out {
             if let Some(parent) = path.parent() {
@@ -1321,6 +1399,44 @@ struct DenseGgufMlpActivationFixture {
 }
 
 #[derive(Debug, Clone)]
+struct DenseOneLayerCpuReferencePhase {
+    index: usize,
+    name: &'static str,
+    role: &'static str,
+    op_type: &'static str,
+    output_len: usize,
+    output_sha256: String,
+    max_abs: f32,
+}
+
+#[derive(Debug, Clone)]
+struct DenseGgufOneLayerCpuReference {
+    fixture_id: String,
+    model_family: String,
+    architecture: String,
+    layer_index: usize,
+    seq_len: usize,
+    position_offset: usize,
+    hidden_size: usize,
+    q_heads: usize,
+    kv_heads: usize,
+    heads_per_kv_group: usize,
+    head_dim: usize,
+    intermediate_size: usize,
+    rmsnorm_eps: f32,
+    epsilon_source: String,
+    rope_base: f32,
+    rope_base_source: String,
+    scaling_factor: f32,
+    deterministic_input_len: usize,
+    deterministic_input_sha256: String,
+    phases: Vec<DenseOneLayerCpuReferencePhase>,
+    final_output_len: usize,
+    final_output_sha256: String,
+    final_output_max_abs: f32,
+}
+
+#[derive(Debug, Clone)]
 struct DenseLayerPlanEntry {
     op: DispatchOp,
     role: String,
@@ -1856,6 +1972,260 @@ fn dense_gguf_mlp_activation_fixture_from_reader(
     })
 }
 
+fn dense_gguf_one_layer_cpu_reference_from_reader(
+    reader: &GgufReader<'_>,
+    inspection: &DenseGgufDescriptorInspection,
+    layer_index: usize,
+    seq_len: usize,
+    position_offset: usize,
+) -> Result<DenseGgufOneLayerCpuReference> {
+    if layer_index != 0 {
+        bail!("dense GGUF one-layer CPU reference currently supports layer 0 only");
+    }
+    if seq_len == 0 {
+        bail!("dense GGUF one-layer CPU reference requires a non-zero sequence length");
+    }
+    if !inspection.required_roles_present || !inspection.strict_descriptor_complete {
+        bail!("dense GGUF one-layer CPU reference requires complete dense descriptor coverage");
+    }
+
+    let attention_norm =
+        extract_dense_gguf_norm_fixture(reader, DenseGgufTensorRole::AttentionNorm)
+            .context("failed to extract dense GGUF attention norm fixture")?;
+    let ffn_norm = extract_dense_gguf_norm_fixture(reader, DenseGgufTensorRole::FfnNorm)
+        .context("failed to extract dense GGUF FFN norm fixture")?;
+    let attention_q = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::AttentionQ)
+        .context("failed to extract dense GGUF attention Q fixture")?;
+    let attention_k = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::AttentionK)
+        .context("failed to extract dense GGUF attention K fixture")?;
+    let attention_v = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::AttentionV)
+        .context("failed to extract dense GGUF attention V fixture")?;
+    let attention_output =
+        extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::AttentionOutput)
+            .context("failed to extract dense GGUF attention output fixture")?;
+    let mlp_gate = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::MlpGate)
+        .context("failed to extract dense GGUF MLP gate fixture")?;
+    let mlp_up = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::MlpUp)
+        .context("failed to extract dense GGUF MLP up fixture")?;
+    let mlp_down = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::MlpDown)
+        .context("failed to extract dense GGUF MLP down fixture")?;
+
+    let hidden_size = attention_q.summary.matrix_cols;
+    ensure_norm_dim(&attention_norm, hidden_size, "attention_norm")?;
+    ensure_norm_dim(&ffn_norm, hidden_size, "ffn_norm")?;
+    ensure_linear_cols(&attention_k, hidden_size, "attention_k")?;
+    ensure_linear_cols(&attention_v, hidden_size, "attention_v")?;
+    ensure_linear_rows(&attention_output, hidden_size, "attention_output")?;
+    ensure_linear_cols(&mlp_gate, hidden_size, "mlp_gate")?;
+    ensure_linear_cols(&mlp_up, hidden_size, "mlp_up")?;
+
+    let rope_metadata = dense_gguf_rope_cuda_fixture_from_reader(
+        reader,
+        inspection,
+        layer_index,
+        seq_len,
+        position_offset,
+    )?;
+    let q_heads = rope_metadata.q_heads;
+    let kv_heads = rope_metadata.kv_heads;
+    let head_dim = rope_metadata.head_dim;
+    if q_heads == 0 || kv_heads == 0 || head_dim == 0 {
+        bail!("dense GGUF one-layer CPU reference requires non-zero attention metadata");
+    }
+    if q_heads % kv_heads != 0 {
+        bail!(
+            "dense GGUF one-layer CPU reference requires q_heads divisible by kv_heads: q_heads={q_heads} kv_heads={kv_heads}"
+        );
+    }
+    let q_projection = q_heads
+        .checked_mul(head_dim)
+        .ok_or_else(|| anyhow!("dense GGUF Q projection shape overflows"))?;
+    let kv_projection = kv_heads
+        .checked_mul(head_dim)
+        .ok_or_else(|| anyhow!("dense GGUF KV projection shape overflows"))?;
+    ensure_linear_rows(&attention_q, q_projection, "attention_q")?;
+    ensure_linear_rows(&attention_k, kv_projection, "attention_k")?;
+    ensure_linear_rows(&attention_v, kv_projection, "attention_v")?;
+    ensure_linear_cols(&attention_output, q_projection, "attention_output")?;
+
+    let intermediate_size = mlp_gate.summary.matrix_rows;
+    ensure_linear_rows(&mlp_up, intermediate_size, "mlp_up")?;
+    ensure_linear_rows(&mlp_down, hidden_size, "mlp_down")?;
+    ensure_linear_cols(&mlp_down, intermediate_size, "mlp_down")?;
+
+    if (attention_norm.summary.rmsnorm_eps - ffn_norm.summary.rmsnorm_eps).abs() > f32::EPSILON {
+        bail!(
+            "dense GGUF one-layer CPU reference requires matching RMSNorm epsilons: attention={} ffn={}",
+            attention_norm.summary.rmsnorm_eps,
+            ffn_norm.summary.rmsnorm_eps
+        );
+    }
+
+    let input = deterministic_layer_input(seq_len, hidden_size)?;
+    let mut phases = Vec::new();
+    push_reference_phase(&mut phases, "deterministic_input", "hidden_state", "input", &input);
+
+    let attention_norm_output = rmsnorm_sequence_cpu(
+        &input,
+        seq_len,
+        hidden_size,
+        &attention_norm.weight_values_f32,
+        attention_norm.summary.rmsnorm_eps,
+    )?;
+    push_reference_phase(
+        &mut phases,
+        "attention_norm",
+        "attention_norm",
+        "rmsnorm",
+        &attention_norm_output,
+    );
+
+    let q_linear = dense_linear_sequence_cpu(&attention_q, &attention_norm_output, seq_len)?;
+    push_reference_phase(&mut phases, "attention_q", "attention_q", "matmul", &q_linear);
+    let k_linear = dense_linear_sequence_cpu(&attention_k, &attention_norm_output, seq_len)?;
+    push_reference_phase(&mut phases, "attention_k", "attention_k", "matmul", &k_linear);
+    let v_linear = dense_linear_sequence_cpu(&attention_v, &attention_norm_output, seq_len)?;
+    push_reference_phase(&mut phases, "attention_v", "attention_v", "matmul", &v_linear);
+
+    let q_head_major = seq_major_to_head_major(&q_linear, seq_len, q_heads, head_dim)?;
+    let k_head_major = seq_major_to_head_major(&k_linear, seq_len, kv_heads, head_dim)?;
+    let q_config = RopeConfig::for_shape(head_dim, q_heads, seq_len)?
+        .with_position_offset(position_offset)
+        .with_base(rope_metadata.rope_base)
+        .with_scaling_factor(rope_metadata.scaling_factor);
+    let k_config = RopeConfig::for_shape(head_dim, kv_heads, seq_len)?
+        .with_position_offset(position_offset)
+        .with_base(rope_metadata.rope_base)
+        .with_scaling_factor(rope_metadata.scaling_factor);
+    let mut q_rope = vec![0.0f32; q_head_major.len()];
+    rope_forward_cpu(&q_head_major, &mut q_rope, &q_config)?;
+    let mut k_rope = vec![0.0f32; k_head_major.len()];
+    rope_forward_cpu(&k_head_major, &mut k_rope, &k_config)?;
+    let mut rope_phase_output = q_rope.clone();
+    rope_phase_output.extend_from_slice(&k_rope);
+    push_reference_phase(&mut phases, "rope", "rope", "rope", &rope_phase_output);
+
+    let scale = 1.0 / (head_dim as f32).sqrt();
+    let attention_scores = dense_attention_scores_cpu_reference(
+        &q_rope, &k_rope, q_heads, kv_heads, seq_len, head_dim, scale,
+    )?;
+    push_reference_phase(
+        &mut phases,
+        "attention_scores",
+        "attention_scores",
+        "attention",
+        &attention_scores,
+    );
+    let (attention_probabilities, _causal_zero_probabilities, _max_row_sum_abs_error) =
+        dense_attention_softmax_cpu_reference(&attention_scores, q_heads, seq_len)?;
+    push_reference_phase(
+        &mut phases,
+        "attention_softmax",
+        "attention_softmax",
+        "softmax",
+        &attention_probabilities,
+    );
+
+    let v_head_major = seq_major_to_head_major(&v_linear, seq_len, kv_heads, head_dim)?;
+    let attention_context = dense_attention_v_mix_cpu_reference(
+        &attention_probabilities,
+        &v_head_major,
+        q_heads,
+        kv_heads,
+        seq_len,
+        head_dim,
+    )?;
+    push_reference_phase(
+        &mut phases,
+        "attention_v_mix",
+        "attention_v_mix",
+        "attention",
+        &attention_context,
+    );
+
+    let attention_context_seq =
+        head_major_to_seq_major(&attention_context, seq_len, q_heads, head_dim)?;
+    let attention_output_values =
+        dense_linear_sequence_cpu(&attention_output, &attention_context_seq, seq_len)?;
+    push_reference_phase(
+        &mut phases,
+        "attention_output",
+        "attention_output",
+        "matmul",
+        &attention_output_values,
+    );
+    let first_residual = add_same_len(&input, &attention_output_values, "first_residual")?;
+    push_reference_phase(
+        &mut phases,
+        "first_residual",
+        "first_residual",
+        "residual_add",
+        &first_residual,
+    );
+
+    let ffn_norm_output = rmsnorm_sequence_cpu(
+        &first_residual,
+        seq_len,
+        hidden_size,
+        &ffn_norm.weight_values_f32,
+        ffn_norm.summary.rmsnorm_eps,
+    )?;
+    push_reference_phase(&mut phases, "ffn_norm", "ffn_norm", "rmsnorm", &ffn_norm_output);
+    let mlp_gate_output = dense_linear_sequence_cpu(&mlp_gate, &ffn_norm_output, seq_len)?;
+    push_reference_phase(&mut phases, "mlp_gate", "mlp_gate", "matmul", &mlp_gate_output);
+    let mlp_up_output = dense_linear_sequence_cpu(&mlp_up, &ffn_norm_output, seq_len)?;
+    push_reference_phase(&mut phases, "mlp_up", "mlp_up", "matmul", &mlp_up_output);
+    let mlp_activation = dense_mlp_activation_cpu_reference(&mlp_gate_output, &mlp_up_output)?;
+    push_reference_phase(
+        &mut phases,
+        "mlp_activation",
+        "mlp_activation",
+        "activation",
+        &mlp_activation,
+    );
+    let mlp_down_output = dense_linear_sequence_cpu(&mlp_down, &mlp_activation, seq_len)?;
+    push_reference_phase(&mut phases, "mlp_down", "mlp_down", "matmul", &mlp_down_output);
+    let final_output = add_same_len(&first_residual, &mlp_down_output, "second_residual")?;
+    push_reference_phase(
+        &mut phases,
+        "second_residual",
+        "second_residual",
+        "residual_add",
+        &final_output,
+    );
+
+    Ok(DenseGgufOneLayerCpuReference {
+        fixture_id: format!(
+            "dense_gguf_one_layer_cpu_reference_{}_layer{}_s{}",
+            sanitize_label(&inspection.model_family),
+            layer_index,
+            seq_len
+        ),
+        model_family: inspection.model_family.clone(),
+        architecture: inspection.architecture.clone(),
+        layer_index,
+        seq_len,
+        position_offset,
+        hidden_size,
+        q_heads,
+        kv_heads,
+        heads_per_kv_group: q_heads / kv_heads,
+        head_dim,
+        intermediate_size,
+        rmsnorm_eps: attention_norm.summary.rmsnorm_eps,
+        epsilon_source: attention_norm.summary.epsilon_source,
+        rope_base: rope_metadata.rope_base,
+        rope_base_source: rope_metadata.rope_base_source,
+        scaling_factor: rope_metadata.scaling_factor,
+        deterministic_input_len: input.len(),
+        deterministic_input_sha256: sha256_f32(&input),
+        phases,
+        final_output_len: final_output.len(),
+        final_output_sha256: sha256_f32(&final_output),
+        final_output_max_abs: max_abs_f32(&final_output),
+    })
+}
+
 fn kernel_attention_score_fixture_from_extracted(
     fixture: &DenseGgufAttentionScoreFixture,
 ) -> DenseGgufAttentionScoreCudaFixture {
@@ -2151,6 +2521,229 @@ fn dense_mlp_activation_cpu_reference(gate: &[f32], up: &[f32]) -> Result<Vec<f3
             silu * up_value
         })
         .collect())
+}
+
+fn deterministic_layer_input(seq_len: usize, hidden_size: usize) -> Result<Vec<f32>> {
+    let len = seq_len
+        .checked_mul(hidden_size)
+        .ok_or_else(|| anyhow!("dense one-layer deterministic input length overflows"))?;
+    if len == 0 {
+        bail!("dense one-layer deterministic input must not be empty");
+    }
+    Ok((0..len)
+        .map(|idx| {
+            let centered = (idx % 23) as f32 - 11.0;
+            let wave = ((idx * 31 + 7) as f32).sin() * 0.015;
+            centered / 22.0 + wave
+        })
+        .collect())
+}
+
+fn ensure_norm_dim(fixture: &DenseGgufNormFixture, expected: usize, label: &str) -> Result<()> {
+    if fixture.summary.hidden_dim != expected || fixture.weight_values_f32.len() != expected {
+        bail!(
+            "dense one-layer {label} hidden dim mismatch: hidden_dim={} weights={} expected={expected}",
+            fixture.summary.hidden_dim,
+            fixture.weight_values_f32.len()
+        );
+    }
+    Ok(())
+}
+
+fn ensure_linear_rows(
+    fixture: &DenseGgufLinearFixture,
+    expected: usize,
+    label: &str,
+) -> Result<()> {
+    if fixture.summary.matrix_rows != expected {
+        bail!(
+            "dense one-layer {label} matrix rows mismatch: rows={} expected={expected}",
+            fixture.summary.matrix_rows
+        );
+    }
+    Ok(())
+}
+
+fn ensure_linear_cols(
+    fixture: &DenseGgufLinearFixture,
+    expected: usize,
+    label: &str,
+) -> Result<()> {
+    if fixture.summary.matrix_cols != expected {
+        bail!(
+            "dense one-layer {label} matrix cols mismatch: cols={} expected={expected}",
+            fixture.summary.matrix_cols
+        );
+    }
+    Ok(())
+}
+
+fn rmsnorm_sequence_cpu(
+    input: &[f32],
+    seq_len: usize,
+    hidden_size: usize,
+    gamma: &[f32],
+    eps: f32,
+) -> Result<Vec<f32>> {
+    if gamma.len() != hidden_size {
+        bail!(
+            "dense one-layer RMSNorm gamma length {} does not match hidden size {hidden_size}",
+            gamma.len()
+        );
+    }
+    if input.len() != seq_len * hidden_size {
+        bail!(
+            "dense one-layer RMSNorm input length {} does not match seq_len*hidden_size {}",
+            input.len(),
+            seq_len * hidden_size
+        );
+    }
+    if eps <= 0.0 || !eps.is_finite() {
+        bail!("dense one-layer RMSNorm epsilon must be positive and finite, got {eps}");
+    }
+
+    let mut output = Vec::with_capacity(input.len());
+    for token in 0..seq_len {
+        let start = token * hidden_size;
+        let row = &input[start..start + hidden_size];
+        let mean_square = row.iter().map(|value| value * value).sum::<f32>() / hidden_size as f32;
+        let inv_rms = (mean_square + eps).sqrt().recip();
+        output.extend(row.iter().zip(gamma).map(|(value, weight)| value * inv_rms * weight));
+    }
+    Ok(output)
+}
+
+fn dense_linear_sequence_cpu(
+    fixture: &DenseGgufLinearFixture,
+    input: &[f32],
+    seq_len: usize,
+) -> Result<Vec<f32>> {
+    let rows = fixture.summary.matrix_rows;
+    let cols = fixture.summary.matrix_cols;
+    if input.len() != seq_len * cols {
+        bail!(
+            "dense one-layer linear input for {} has length {}, expected {}",
+            fixture.summary.tensor_name,
+            input.len(),
+            seq_len * cols
+        );
+    }
+    if fixture.weight_values_f32.len() != rows * cols {
+        bail!(
+            "dense one-layer linear weights for {} have length {}, expected {}",
+            fixture.summary.tensor_name,
+            fixture.weight_values_f32.len(),
+            rows * cols
+        );
+    }
+
+    let mut output = Vec::with_capacity(seq_len * rows);
+    for token in 0..seq_len {
+        let input_start = token * cols;
+        let token_input = &input[input_start..input_start + cols];
+        for row in 0..rows {
+            let weight_start = row * cols;
+            let mut sum = 0.0f32;
+            for col in 0..cols {
+                sum += fixture.weight_values_f32[weight_start + col] * token_input[col];
+            }
+            output.push(sum);
+        }
+    }
+    Ok(output)
+}
+
+fn seq_major_to_head_major(
+    input: &[f32],
+    seq_len: usize,
+    heads: usize,
+    head_dim: usize,
+) -> Result<Vec<f32>> {
+    if heads == 0 || head_dim == 0 || seq_len == 0 {
+        bail!("dense one-layer head reshape dimensions must be non-zero");
+    }
+    let expected = seq_len
+        .checked_mul(heads)
+        .and_then(|value| value.checked_mul(head_dim))
+        .ok_or_else(|| anyhow!("dense one-layer head reshape size overflows"))?;
+    if input.len() != expected {
+        bail!("dense one-layer seq-major input length {} != expected {expected}", input.len());
+    }
+
+    let mut output = vec![0.0f32; expected];
+    for pos in 0..seq_len {
+        for head in 0..heads {
+            for dim in 0..head_dim {
+                let src = (pos * heads + head) * head_dim + dim;
+                let dst = (head * seq_len + pos) * head_dim + dim;
+                output[dst] = input[src];
+            }
+        }
+    }
+    Ok(output)
+}
+
+fn head_major_to_seq_major(
+    input: &[f32],
+    seq_len: usize,
+    heads: usize,
+    head_dim: usize,
+) -> Result<Vec<f32>> {
+    if heads == 0 || head_dim == 0 || seq_len == 0 {
+        bail!("dense one-layer head reshape dimensions must be non-zero");
+    }
+    let expected = seq_len
+        .checked_mul(heads)
+        .and_then(|value| value.checked_mul(head_dim))
+        .ok_or_else(|| anyhow!("dense one-layer head reshape size overflows"))?;
+    if input.len() != expected {
+        bail!("dense one-layer head-major input length {} != expected {expected}", input.len());
+    }
+
+    let mut output = vec![0.0f32; expected];
+    for head in 0..heads {
+        for pos in 0..seq_len {
+            for dim in 0..head_dim {
+                let src = (head * seq_len + pos) * head_dim + dim;
+                let dst = (pos * heads + head) * head_dim + dim;
+                output[dst] = input[src];
+            }
+        }
+    }
+    Ok(output)
+}
+
+fn add_same_len(left: &[f32], right: &[f32], label: &str) -> Result<Vec<f32>> {
+    if left.len() != right.len() {
+        bail!(
+            "dense one-layer {label} add length mismatch: left={} right={}",
+            left.len(),
+            right.len()
+        );
+    }
+    Ok(left.iter().zip(right).map(|(left, right)| left + right).collect())
+}
+
+fn push_reference_phase(
+    phases: &mut Vec<DenseOneLayerCpuReferencePhase>,
+    name: &'static str,
+    role: &'static str,
+    op_type: &'static str,
+    output: &[f32],
+) {
+    phases.push(DenseOneLayerCpuReferencePhase {
+        index: phases.len(),
+        name,
+        role,
+        op_type,
+        output_len: output.len(),
+        output_sha256: sha256_f32(output),
+        max_abs: max_abs_f32(output),
+    });
+}
+
+fn max_abs_f32(values: &[f32]) -> f32 {
+    values.iter().copied().filter(|value| value.is_finite()).map(f32::abs).fold(0.0f32, f32::max)
 }
 
 fn head_dim_source_label(source: &str) -> String {
@@ -5118,6 +5711,147 @@ fn dense_gguf_one_layer_execution_plan_receipt_json(
     }))
 }
 
+fn dense_gguf_one_layer_cpu_reference_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    reference: &DenseGgufOneLayerCpuReference,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Result<Value> {
+    if reference.model_family != inspection.model_family
+        || reference.architecture != inspection.architecture
+    {
+        bail!(
+            "dense GGUF one-layer CPU reference mixed inspection identity: inspection={}/{} reference={}/{}",
+            inspection.model_family,
+            inspection.architecture,
+            reference.model_family,
+            reference.architecture
+        );
+    }
+    if reference.phases.is_empty() {
+        bail!("dense GGUF one-layer CPU reference requires phase hashes");
+    }
+
+    let phases = reference
+        .phases
+        .iter()
+        .map(|phase| {
+            json!({
+                "index": phase.index as u64,
+                "name": phase.name,
+                "role": phase.role,
+                "op_type": phase.op_type,
+                "output_len": phase.output_len as u64,
+                "output_sha256": phase.output_sha256,
+                "max_abs": phase.max_abs,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    Ok(json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_one_layer_cpu_reference_recorded",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": "cpu-reference",
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": "cpu_reference",
+        "selected_backend": "cpu_reference",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "cpu_reference_dense_one_layer",
+            "quantization_family": "dense_gguf_materialized_f32_reference",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "reference_harness": {
+            "schema": 1,
+            "fixture_id": reference.fixture_id,
+            "layer_index": reference.layer_index as u64,
+            "seq_len": reference.seq_len as u64,
+            "position_offset": reference.position_offset as u64,
+            "hidden_size": reference.hidden_size as u64,
+            "q_heads": reference.q_heads as u64,
+            "kv_heads": reference.kv_heads as u64,
+            "heads_per_kv_group": reference.heads_per_kv_group as u64,
+            "head_dim": reference.head_dim as u64,
+            "intermediate_size": reference.intermediate_size as u64,
+            "rmsnorm_eps": reference.rmsnorm_eps,
+            "epsilon_source": reference.epsilon_source,
+            "rope_base": reference.rope_base,
+            "rope_base_source": reference.rope_base_source,
+            "rope_scaling_factor": reference.scaling_factor,
+            "deterministic_input_len": reference.deterministic_input_len as u64,
+            "deterministic_input_sha256": reference.deterministic_input_sha256,
+            "phases_total": reference.phases.len() as u64,
+            "phases": phases,
+            "final_output_len": reference.final_output_len as u64,
+            "final_output_sha256": reference.final_output_sha256,
+            "final_output_max_abs": reference.final_output_max_abs,
+            "cpu_reference_only": true,
+            "cuda_execution_claimed": false,
+            "one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false,
+            "next_required_proof": "one_layer_cuda_integrated_parity"
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": false,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": false,
+            "dense_gguf_one_layer_cpu_reference_claimed": true,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    }))
+}
+
 fn dense_one_layer_gap_audit_json(
     operations: &[Value],
     layer_index: usize,
@@ -5711,6 +6445,48 @@ mod tests {
         assert_eq!(receipt["claim_boundary"]["dense_gguf_one_layer_execution_plan_claimed"], true);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_one_layer_inference_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
+    fn dense_gguf_one_layer_cpu_reference_records_phase_hashes() {
+        let data = build_integrated_qwen_layer_gguf();
+        let reader = GgufReader::new(&data).expect("parse integrated qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let reference =
+            dense_gguf_one_layer_cpu_reference_from_reader(&reader, &inspection, 0, 4, 1)
+                .expect("one-layer CPU reference");
+
+        assert_eq!(reference.layer_index, 0);
+        assert_eq!(reference.seq_len, 4);
+        assert_eq!(reference.hidden_size, 4);
+        assert_eq!(reference.q_heads, 2);
+        assert_eq!(reference.kv_heads, 1);
+        assert_eq!(reference.head_dim, 2);
+        assert_eq!(reference.intermediate_size, 6);
+        assert_eq!(reference.final_output_len, 16);
+        assert_eq!(reference.phases.len(), 17);
+        assert_eq!(reference.phases.first().unwrap().name, "deterministic_input");
+        assert_eq!(reference.phases.last().unwrap().name, "second_residual");
+
+        let receipt = dense_gguf_one_layer_cpu_reference_receipt_json(
+            &inspection,
+            &reference,
+            Path::new("synthetic-qwen3-q8_0-one-layer-cpu-reference.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-one-layer-cpu-reference.json",
+            "2026-05-09T00:00:00Z",
+        )
+        .unwrap();
+
+        validate_dense_gguf_one_layer_cpu_reference_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["artifact_kind"], "dense_gguf_one_layer_cpu_reference");
+        assert_eq!(receipt["runtime_api"], "cpu");
+        assert_eq!(receipt["reference_harness"]["cpu_reference_only"], true);
+        assert_eq!(receipt["reference_harness"]["cuda_execution_claimed"], false);
+        assert_eq!(receipt["reference_harness"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_one_layer_cpu_reference_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
     }
 
@@ -6492,6 +7268,65 @@ mod tests {
             ("blk.0.attn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
             ("blk.0.ffn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
         ])
+    }
+
+    fn build_integrated_qwen_layer_gguf() -> Vec<u8> {
+        let values = (1..=32).collect::<Vec<_>>();
+        build_gguf_for_test(
+            vec![
+                ("general.architecture", GgufValue::String("qwen3".to_string())),
+                ("general.name", GgufValue::String("qwen3-one-layer-reference".to_string())),
+                ("qwen3.embedding_length", GgufValue::U32(4)),
+                ("qwen3.feed_forward_length", GgufValue::U32(6)),
+                ("qwen3.attention.head_count", GgufValue::U32(2)),
+                ("qwen3.attention.head_count_kv", GgufValue::U32(1)),
+                ("qwen3.attention.key_length", GgufValue::U32(2)),
+                ("qwen3.rope.freq_base", GgufValue::F32(1_000_000.0)),
+            ],
+            vec![
+                ("token_embd.weight", vec![4, 4], GgufTensorType::Q8_0, q8_0_blob(0.01, &values)),
+                ("output.weight", vec![4, 4], GgufTensorType::Q8_0, q8_0_blob(0.01, &values)),
+                ("blk.0.attn_q.weight", vec![4, 4], GgufTensorType::Q8_0, q8_0_blob(0.01, &values)),
+                (
+                    "blk.0.attn_k.weight",
+                    vec![4, 2],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.008, &values),
+                ),
+                (
+                    "blk.0.attn_v.weight",
+                    vec![4, 2],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.006, &values),
+                ),
+                (
+                    "blk.0.attn_output.weight",
+                    vec![4, 4],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.004, &values),
+                ),
+                (
+                    "blk.0.ffn_gate.weight",
+                    vec![4, 6],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.01, &values),
+                ),
+                (
+                    "blk.0.ffn_up.weight",
+                    vec![4, 6],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.008, &values),
+                ),
+                (
+                    "blk.0.ffn_down.weight",
+                    vec![6, 4],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.006, &values),
+                ),
+                ("blk.0.attn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+                ("blk.0.ffn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+            ],
+        )
     }
 
     fn build_gguf_for_test(
