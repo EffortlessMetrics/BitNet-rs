@@ -125,6 +125,20 @@ default, writes an aggregate receipt plus per-prompt receipts, and keeps the
 same dense-SLM claim boundary as `bitnet mac ask`. For one question, continue to
 use `bitnet mac ask`.
 
+For terminal use, collect a resident batch interactively and finish with
+`/exit`, `/quit`, or EOF:
+
+```bash
+bitnet mac chat --interactive \
+  --json-out target/apple-m4-continuity/mac-chat.json
+```
+
+Interactive mode still writes the aggregate receipt when the collected prompts
+finish. Per-turn receipt files are enabled by default and can be disabled with
+`--no-turn-receipts` when the operator only wants the aggregate receipt. Use
+`--progress` to print stderr status lines such as model/tokenizer loaded-once
+state; quiet default output keeps stdout focused on streamed token text.
+
 Run the compact M4 health smoke:
 
 ```bash

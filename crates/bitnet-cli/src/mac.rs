@@ -1,9 +1,10 @@
 //! Mac-oriented operator wrappers for the supported Apple M4 SLM path.
 
 use anyhow::{Context, Result, anyhow};
+use bitnet_repl_core::{ReplInput, parse_repl_input};
 use clap::{ArgAction, Args, Subcommand, ValueEnum};
 use serde::Serialize;
-use std::io::{self, IsTerminal, Read};
+use std::io::{self, BufRead, IsTerminal, Read, Write};
 #[cfg(unix)]
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
@@ -179,6 +180,10 @@ enum MacAction {
         #[arg(long, default_value_t = false)]
         stdin: bool,
 
+        /// Collect prompts from an interactive line loop until /exit, /quit, or EOF.
+        #[arg(long, default_value_t = false)]
+        interactive: bool,
+
         /// Supported model id. Defaults to the validated Apple M4 SLM runtime artifact.
         #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
         model_id: String,
@@ -230,6 +235,10 @@ enum MacAction {
         /// Suppress warm-session status/progress lines; token streaming still uses stdout.
         #[arg(long, default_value_t = false)]
         quiet: bool,
+
+        /// Disable per-turn receipt files; the aggregate session receipt still records each turn.
+        #[arg(long = "no-turn-receipts", action = ArgAction::SetFalse, default_value_t = true)]
+        turn_receipts: bool,
 
         /// Include scoped hot-loop allocation counter deltas in session receipts.
         #[arg(long, default_value_t = false)]
@@ -367,6 +376,13 @@ struct RegressionWarning {
 }
 
 impl MacCommand {
+    pub(crate) fn default_log_level(&self) -> Option<&'static str> {
+        match self.action {
+            MacAction::Chat { .. } => Some("warn"),
+            _ => None,
+        }
+    }
+
     pub async fn execute(self, explicit_device_label: Option<&str>) -> Result<()> {
         match self.action {
             MacAction::Check { model_id, cache_dir, json } => {
@@ -417,6 +433,7 @@ impl MacCommand {
             MacAction::Chat {
                 prompts,
                 stdin,
+                interactive,
                 model_id,
                 cache_dir,
                 system_prompt,
@@ -430,15 +447,16 @@ impl MacCommand {
                 stream,
                 progress,
                 quiet,
+                turn_receipts,
                 allocation_audit,
                 json_out,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac chat")?;
-                let prompts = resolve_mac_chat_prompts(prompts, stdin)?;
-                run_chat_session(
+                let prompt_input = resolve_mac_chat_prompts(prompts, stdin, interactive, quiet)?;
+                let chat = run_chat_session(
                     &model_id,
                     cache_dir,
-                    prompts,
+                    prompt_input.prompts,
                     system_prompt,
                     max_new_tokens,
                     temperature,
@@ -450,10 +468,20 @@ impl MacCommand {
                     stream,
                     progress,
                     quiet,
+                    turn_receipts,
+                    prompt_input.interactive,
                     allocation_audit,
                     json_out,
-                )
-                .await
+                );
+                tokio::select! {
+                    result = chat => result,
+                    signal = tokio::signal::ctrl_c() => {
+                        signal.context("failed to listen for Ctrl-C while running mac chat")?;
+                        anyhow::bail!(
+                            "mac chat interrupted by Ctrl-C before the aggregate session receipt completed; use /exit or EOF between prompts for a clean aggregate receipt"
+                        );
+                    }
+                }
             }
             MacAction::Validate {
                 model_id,
@@ -525,8 +553,33 @@ fn resolve_mac_question(positional: Option<String>, flag: Option<String>) -> Res
     }
 }
 
-fn resolve_mac_chat_prompts(mut prompts: Vec<String>, read_stdin: bool) -> Result<Vec<String>> {
-    let should_read_stdin = read_stdin || (!io::stdin().is_terminal() && prompts.is_empty());
+struct MacChatPrompts {
+    prompts: Vec<String>,
+    interactive: bool,
+}
+
+fn resolve_mac_chat_prompts(
+    mut prompts: Vec<String>,
+    read_stdin: bool,
+    interactive: bool,
+    quiet: bool,
+) -> Result<MacChatPrompts> {
+    if read_stdin && interactive {
+        anyhow::bail!("mac chat --stdin and --interactive cannot be used together");
+    }
+    let stdin_is_terminal = io::stdin().is_terminal();
+    let should_collect_interactively =
+        interactive || (stdin_is_terminal && prompts.is_empty() && !read_stdin);
+    if should_collect_interactively {
+        let stdin = io::stdin();
+        let mut reader = stdin.lock();
+        prompts.extend(collect_mac_chat_interactive_prompts(
+            &mut reader,
+            stdin_is_terminal && !quiet,
+        )?);
+    }
+    let should_read_stdin =
+        !should_collect_interactively && (read_stdin || (!stdin_is_terminal && prompts.is_empty()));
     if should_read_stdin {
         let mut input = String::new();
         io::stdin()
@@ -539,8 +592,55 @@ fn resolve_mac_chat_prompts(mut prompts: Vec<String>, read_stdin: bool) -> Resul
     prompts.retain(|prompt| !prompt.trim().is_empty());
     if prompts.len() < 2 {
         anyhow::bail!(
-            "mac chat requires at least two prompts for a resident session; pass --prompt multiple times or pipe one prompt per line with --stdin. For one question use `bitnet mac ask \"What is 2+2?\"`."
+            "mac chat requires at least two prompts for a resident session; pass --prompt multiple times, pipe one prompt per line with --stdin, or use --interactive then finish with /exit or EOF. For one question use `bitnet mac ask \"What is 2+2?\"`."
         );
+    }
+    Ok(MacChatPrompts { prompts, interactive: should_collect_interactively })
+}
+
+fn collect_mac_chat_interactive_prompts<R: BufRead>(
+    reader: &mut R,
+    show_prompt: bool,
+) -> Result<Vec<String>> {
+    let mut prompts = Vec::new();
+    if show_prompt {
+        eprintln!(
+            "mac chat: enter prompts, then /exit, /quit, or EOF to run the resident session. Ctrl-C cancels."
+        );
+    }
+    loop {
+        if show_prompt {
+            eprint!("mac> ");
+            io::stderr().flush().context("failed to flush mac chat prompt")?;
+        }
+        let mut line = String::new();
+        let bytes = reader.read_line(&mut line).context("failed to read Mac chat prompt")?;
+        if bytes == 0 {
+            break;
+        }
+        match parse_repl_input(&line) {
+            None => {}
+            Some(ReplInput::Exit) => break,
+            Some(ReplInput::Help) => {
+                if show_prompt {
+                    eprintln!(
+                        "mac chat commands: /exit or /quit runs collected prompts; /clear clears prompts; /metrics shows prompt count."
+                    );
+                }
+            }
+            Some(ReplInput::Clear) => {
+                prompts.clear();
+                if show_prompt {
+                    eprintln!("mac chat: cleared collected prompts.");
+                }
+            }
+            Some(ReplInput::Metrics) => {
+                if show_prompt {
+                    eprintln!("mac chat: collected {} prompt(s).", prompts.len());
+                }
+            }
+            Some(ReplInput::Message(prompt)) => prompts.push(prompt),
+        }
     }
     Ok(prompts)
 }
@@ -1218,10 +1318,20 @@ async fn run_chat_session(
     stream: bool,
     progress: bool,
     quiet: bool,
+    turn_receipts: bool,
+    interactive_prompt_collection: bool,
     allocation_audit: bool,
     json_out: PathBuf,
 ) -> Result<()> {
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    if progress && !quiet {
+        eprintln!(
+            "mac chat: loading verified model/tokenizer once for {} prompt(s); streaming={}, turn_receipts={}",
+            prompts.len(),
+            stream,
+            turn_receipts
+        );
+    }
     crate::run_slm_warm_session(
         APPLE_M4_CPU_NEON,
         model.path.clone(),
@@ -1248,13 +1358,23 @@ async fn run_chat_session(
         true,
         false,
         allocation_audit,
-        crate::SlmWarmSessionOutput::new(stream, progress, quiet),
+        crate::SlmWarmSessionOutput::new(stream, progress, quiet)
+            .with_prompt_receipts(turn_receipts)
+            .with_interactive_prompt_collection(interactive_prompt_collection),
         1,
         1,
         json_out.clone(),
     )
     .await?;
-    annotate_and_validate_mac_receipt(&json_out, &model, "mac chat")?;
+    let summary = annotate_and_validate_mac_receipt_silent(&json_out, &model, "mac chat")?;
+    if progress && !quiet {
+        eprintln!(
+            "mac chat: aggregate receipt checked: {} ({}, generated_tokens={:?}, model/tokenizer loaded once)",
+            json_out.display(),
+            summary.artifact_kind,
+            summary.generated_tokens
+        );
+    }
     Ok(())
 }
 
@@ -1799,6 +1919,21 @@ fn annotate_and_validate_mac_receipt(
     model: &VerifiedCachedModel,
     operator_command: &str,
 ) -> Result<()> {
+    let summary = annotate_and_validate_mac_receipt_silent(path, model, operator_command)?;
+    println!(
+        "Mac receipt checked: {} ({}, generated_tokens={:?})",
+        path.display(),
+        summary.artifact_kind,
+        summary.generated_tokens
+    );
+    Ok(())
+}
+
+fn annotate_and_validate_mac_receipt_silent(
+    path: &Path,
+    model: &VerifiedCachedModel,
+    operator_command: &str,
+) -> Result<ReceiptCheckSummary> {
     let bytes = std::fs::read(path)
         .with_context(|| format!("failed to read Mac receipt {}", path.display()))?;
     let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
@@ -1841,13 +1976,7 @@ fn annotate_and_validate_mac_receipt(
     object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
     std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
         .with_context(|| format!("failed to update Mac receipt {}", path.display()))?;
-    println!(
-        "Mac receipt checked: {} ({}, generated_tokens={:?})",
-        path.display(),
-        summary.artifact_kind,
-        summary.generated_tokens
-    );
-    Ok(())
+    Ok(summary)
 }
 
 fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: bool) -> Result<()> {

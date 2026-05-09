@@ -95,13 +95,13 @@ for repair, such as `bitnet model fetch`, `bitnet model verify`, or
 
 Improve `bitnet mac chat` as a resident local tool:
 
-- clean prompt loop behavior;
-- Ctrl-C and EOF handling;
+- clean prompt loop behavior through `--interactive`;
+- EOF, `/exit`, and `/quit` handling before generation;
 - quiet default logs;
 - streaming by default;
-- optional per-turn receipt output;
+- optional per-turn receipt output through `--no-turn-receipts`;
 - aggregate session receipt at exit;
-- clear model/tokenizer loaded-once status.
+- clear model/tokenizer loaded-once status in receipts and `--progress` output.
 
 ### M4-SLM-EX-003: Time-To-First-Token Pass
 

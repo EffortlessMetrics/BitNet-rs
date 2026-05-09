@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T13:12:39Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-002"
+event = "pr_open"
+actor = "codex"
+pr = 4280
+head_sha = "d70e9ef320ff7636d1d5fe810aff800b31526b6f"
+
+notes = [
+  "Opened PR #4280 for M4-SLM-EX-002 chat polish.",
+  "The PR adds interactive prompt collection, quiet default Mac chat logs, explicit turn-receipt controls, aggregate-at-exit receipt fields, and model/tokenizer loaded-once UX metadata.",
+  "The PR also moves an unconditional model-loader debug stderr print behind tracing debug so `bitnet mac chat` can remain quiet by default.",
+  "No BitNet local-answer quality, full Apple Metal inference, QK256, Neural Engine, MPSGraph model inference, MacBook work, or broad M4 performance claim is made.",
+]
