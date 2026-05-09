@@ -6,6 +6,7 @@ from = "ready"
 to = "pr_open"
 pr = 4087
 actor = "codex"
+head_sha = "6782fde3e09d4162f2965cff4c504a394a9fa67a"
 branch = "codex/lunar-lake/post-baseline-next-items"
 summary = "Opened CPU258V-016 to record the post-mechanics 258V CPU reference bundle and queue the next CPU-referenced Lunar Lake items."
 

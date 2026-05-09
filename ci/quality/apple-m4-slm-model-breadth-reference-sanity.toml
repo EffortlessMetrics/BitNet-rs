@@ -1,0 +1,102 @@
+schema = 1
+artifact_kind = "apple_m4_slm_model_breadth_reference_sanity"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-002"
+created_utc = "2026-05-09T22:35:00Z"
+host = "apple-m4-mac-mini"
+claim_boundary = "Reference-runner artifact sanity only. This does not prove Rust M4 support, cache registration, default model support, BitNet behavior, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance."
+
+[runner]
+name = "llama-cli"
+path = "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli"
+version = "build 3962 (1f86f058), Apple clang version 21.0.0 (clang-2100.0.123.102), arm64-apple-darwin25.4.0"
+cpu_only_args = "-ngl 0 --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt"
+
+[[prompt]]
+id = "math"
+text = "What is 2+2? Answer briefly."
+
+[[prompt]]
+id = "capital"
+text = "Name the capital of France."
+
+[[prompt]]
+id = "rust"
+text = "Write one short sentence about Rust."
+
+[[candidate]]
+id = "qwen3-0.6b-q8_0"
+result = "rejected_reference_runner_unsupported_architecture"
+source = "Qwen/Qwen3-0.6B-GGUF"
+revision = "23749fefcc72300e3a2ad315e1317431b06b590a"
+file = "Qwen3-0.6B-Q8_0.gguf"
+source_url = "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/blob/23749fefcc72300e3a2ad315e1317431b06b590a/Qwen3-0.6B-Q8_0.gguf"
+size_bytes = 639446688
+sha256 = "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+license = "apache-2.0"
+local_path = "target/apple-m4-slm-model-breadth/M4-MODEL-002/candidates/qwen3_0_6b_q8_0/Qwen-Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf"
+gguf_architecture = "qwen3"
+gguf_file_type = "Q8_0"
+tokenizer_model = "gpt2"
+tokenizer_pre = "qwen2"
+chat_template_present = true
+eos_token_id = 151645
+bos_token_id = 151643
+padding_token_id = 151643
+reference_command = "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli -m target/apple-m4-slm-model-breadth/M4-MODEL-002/candidates/qwen3_0_6b_q8_0/Qwen-Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf -p '<qwen3 chatml prompt>' -n 1 -ngl 0 --no-display-prompt --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42"
+reference_exit_code = 1
+reference_error = "llama_model_load: error loading model: error loading model architecture: unknown model architecture: 'qwen3'"
+quality_status = "not_run_reference_runner_failed_before_generation"
+decision = "Do not promote to Rust M4 quality. Reconsider only after a reference runner with qwen3 architecture support is selected."
+
+[[candidate]]
+id = "smollm2-360m-instruct-q8_0"
+result = "accepted_reference_good"
+source = "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF"
+revision = "593b5a2e04c8f3e4ee880263f93e0bd2901ad47f"
+file = "smollm2-360m-instruct-q8_0.gguf"
+source_url = "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/blob/593b5a2e04c8f3e4ee880263f93e0bd2901ad47f/smollm2-360m-instruct-q8_0.gguf"
+size_bytes = 386404992
+sha256 = "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201"
+license = "apache-2.0"
+local_path = "target/apple-m4-slm-model-breadth/M4-MODEL-002/candidates/smollm2_360m_instruct_q8_0/HuggingFaceTB-SmolLM2-360M-Instruct-GGUF/smollm2-360m-instruct-q8_0.gguf"
+gguf_architecture = "llama"
+gguf_file_type = "Q8_0"
+tokenizer_model = "gpt2"
+tokenizer_pre = "smollm"
+chat_template_present = true
+eos_token_id = 2
+bos_token_id = 1
+padding_token_id = 2
+reference_command_shape = "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli -m <smollm2.gguf> -f <raw-smollm2-chatml-prompt> -n 24 -ngl 0 --no-display-prompt --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 -r '<|im_end|>'"
+prompt_template = "smollm2_chatml_with_explicit_system"
+quality_status = "pass_reference_output_sanity"
+decision = "Promote to M4-MODEL-003 Rust M4 quality gate as the only accepted candidate from this reference-sanity pass."
+
+[[reference_output]]
+candidate = "smollm2-360m-instruct-q8_0"
+prompt = "math"
+text = "2+2 equals 4. [end of text]"
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+semantically_plausible = true
+
+[[reference_output]]
+candidate = "smollm2-360m-instruct-q8_0"
+prompt = "capital"
+text = "The capital of France is Paris. [end of text]"
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+semantically_plausible = true
+
+[[reference_output]]
+candidate = "smollm2-360m-instruct-q8_0"
+prompt = "rust"
+text = "Rust is a programming language that is known for its safety features, memory safety, and performance, making it a popular"
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+semantically_plausible = true
+truncated_by_token_budget = true

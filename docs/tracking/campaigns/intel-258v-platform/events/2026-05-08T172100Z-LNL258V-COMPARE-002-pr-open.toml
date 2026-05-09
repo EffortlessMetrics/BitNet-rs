@@ -6,6 +6,7 @@ from = "ready"
 to = "pr_open"
 pr = 4110
 actor = "codex"
+head_sha = "fdb2ed23ec62a5976a7e4e07c245be2c354d1e71"
 branch = "codex/lunar-lake/LNL258V-COMPARE-002"
 summary = "Opened LNL258V-COMPARE-002 to refresh the Lunar Lake same-machine evidence index after CPU, NPU, and Arc parity receipts."
 

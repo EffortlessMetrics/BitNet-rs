@@ -1,0 +1,199 @@
+id = "apple-m4-slm-model-breadth"
+title = "Apple M4 SLM model breadth"
+status = "active"
+
+objective = "Add more storage-conscious dense instruct model families to the Apple M4 Mac mini path through exact artifact selection, reference output sanity, Rust M4 quality gates, tokenizer authority, cache metadata, receipt validation, and deterministic checks without weakening the completed Qwen appliance baseline."
+
+end_state = [
+  "The supported M4 dense SLM model matrix can grow beyond Qwen2.5 only through exact pinned artifacts.",
+  "Each accepted model records source, revision, file, size, SHA256, tokenizer authority, prompt template, quantization, Rust support status, M4 support status, cache policy, and quality status.",
+  "Reference output sanity passes before Rust M4 support is attempted.",
+  "Rust M4 output quality, receipt validation, backend identity, fallback status, and deterministic behavior pass before a model is selectable as supported.",
+  "Qwen2.5 Q8_0 remains the default unless a later explicit item changes that with receipts.",
+]
+
+hard_constraints = [
+  "This is an M4 Mac mini dense SLM campaign.",
+  "Do not execute MacBook artifact sweeps or MacBook receipts here.",
+  "Do not reopen completed Apple M4 dense SLM baseline, performance, excellence, continuity, or regression campaigns.",
+  "Never commit model binaries.",
+  "Do not accept unpinned or random community GGUFs.",
+  "Do not mark a model supported just because it loads.",
+  "Do not claim BitNet local-answer quality from dense SLM evidence.",
+  "Do not claim full apple-m4-metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance.",
+]
+
+[[work_item]]
+id = "M4-MODEL-001"
+status = "merged"
+pr = 4339
+merge_sha = "7f1e5d91bee56cd8ff03d62b670f506a23d03a07"
+branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-001-candidate-selection"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Select the next exact dense instruct GGUF candidate or candidates for M4 evaluation, recording source, license notes, revision, file, expected size, tokenizer expectations, prompt template, storage budget, and rejection criteria without downloading or accepting a model."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-model-breadth",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-slm-model-breadth/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-model-breadth/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The next M4 dense SLM candidate set is selected for evaluation.",
+]
+must_not_claim = [
+  "A new model is supported.",
+  "A model artifact was downloaded or accepted.",
+]
+
+[[work_item]]
+id = "M4-MODEL-002"
+status = "merged"
+pr = 4343
+merge_sha = "f7aa50ace085c5f698eb856edfe4b45d2e7b0d84"
+branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-002-reference-sanity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-MODEL-001"]
+acceptance = "Run reference output sanity for the selected candidate, recording exact artifact source, revision, file, size, SHA256, tokenizer authority, prompt template, reference command, prompt outputs, and reject/accept evidence."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-model-breadth",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-model-breadth/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "A candidate is reference-good for the bounded prompt suite if receipts prove it.",
+]
+must_not_claim = [
+  "Rust M4 support works.",
+  "A model is supported by the Mac wrapper.",
+]
+
+[[work_item]]
+id = "M4-MODEL-003"
+status = "ready"
+branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-003-rust-m4-quality"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-MODEL-002"]
+acceptance = "Run the candidate through Rust M4 apple-m4-cpu-neon quality gates with valid UTF-8, non-empty output, non-degenerate output, backend/fallback receipts, generated token IDs, timing, and deterministic behavior where required."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-model-breadth",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/**/tests/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-model-breadth/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The candidate passes Rust M4 quality only if receipts prove it.",
+]
+must_not_claim = [
+  "The candidate is registered as supported before cache metadata lands.",
+]
+
+[[work_item]]
+id = "M4-MODEL-004"
+status = "blocked"
+branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-004-cache-registration"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-MODEL-003"]
+acceptance = "Register the accepted candidate in model cache metadata and Mac model selection only after quality passes, with verify/fetch/list behavior, receipt validation, and no default-model change unless explicitly accepted."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests mac -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-model-breadth",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-model-breadth/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The candidate is selectable by model ID if cache and receipt gates pass.",
+]
+must_not_claim = [
+  "The default model changed unless explicitly recorded.",
+]
+
+[[work_item]]
+id = "M4-MODEL-005"
+status = "blocked"
+branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-005-docs-envelope"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-MODEL-004"]
+acceptance = "Update the dense model support matrix and M4 user expectation envelope with the accepted model, receipt evidence, cache size, supported/candidate/rejected state, and claim boundaries."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-model-breadth",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-model-breadth/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The M4 dense SLM model matrix reflects the newly accepted model.",
+]
+must_not_claim = [
+  "Broad model-family quality is proven.",
+]

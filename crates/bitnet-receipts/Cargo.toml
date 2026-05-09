@@ -24,6 +24,7 @@ insta = { workspace = true }
 tempfile = { workspace = true }
 serde_json = { workspace = true }
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+sha2 = "0.10.9"
 
 [lints]
 workspace = true

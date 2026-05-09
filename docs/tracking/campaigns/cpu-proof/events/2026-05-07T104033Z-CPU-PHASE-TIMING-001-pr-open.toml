@@ -4,6 +4,7 @@ item = "CPU-PHASE-TIMING-001"
 event = "pr_open"
 pr = 3872
 actor = "codex"
+head_sha = "0ba2e47e92315908c891192c8f83a5160ecb4d8a"
 
 notes = [
   "Opened #3872 to tighten CPU phase benchmark receipt timing extraction after the benchmark milestone was marked done.",

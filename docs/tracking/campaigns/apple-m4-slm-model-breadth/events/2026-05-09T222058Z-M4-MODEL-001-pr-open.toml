@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T22:20:58Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-001"
+event = "pr_open"
+actor = "codex"
+pr = 4339
+head_sha = "8f915ba1e5981d0240c0c55a749bdf6a96f54481"
+
+notes = [
+  "Opened PR #4339 to select exact Apple M4 dense SLM breadth candidates.",
+  "The PR selects Qwen3 0.6B Q8_0 and SmolLM2 360M Instruct Q8_0 as evaluation candidates only.",
+  "No model artifact is downloaded, accepted, registered, or claimed supported by this item.",
+]

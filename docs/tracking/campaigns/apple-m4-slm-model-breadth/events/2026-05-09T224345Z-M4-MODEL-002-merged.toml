@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T22:43:45Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-002"
+event = "merged"
+actor = "codex"
+pr = 4343
+merge_sha = "f7aa50ace085c5f698eb856edfe4b45d2e7b0d84"
+
+notes = [
+  "Merged PR #4343 with M4 dense SLM reference sanity evidence.",
+  "qwen3-0.6b-q8_0 is rejected for this round because the current reference runner cannot load qwen3 architecture.",
+  "smollm2-360m-instruct-q8_0 is the only reference-good candidate and M4-MODEL-003 is ready for Rust M4 quality gating.",
+]
