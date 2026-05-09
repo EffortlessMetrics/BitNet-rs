@@ -97,8 +97,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-003"
-status = "pr_open"
+status = "merged"
 pr = 4355
+merge_sha = "60af3577d3782826043a70e26d1fa2bc59f04ca3"
 branch = "codex/apple-m4-slm-model-breadth-M4-MODEL-003-rust-m4-quality"
 stackable = false
 review_mode = "codex_premerge"
@@ -140,7 +141,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-MODEL-003"]
+blocked_by = []
 acceptance = "Register the accepted candidate in model cache metadata and Mac model selection only after quality passes, with verify/fetch/list behavior, receipt validation, and no default-model change unless explicitly accepted."
 commands = [
   "cargo fmt --all -- --check",
