@@ -1873,8 +1873,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-011"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-011-layer0-linear-sweep"
+pr = 4209
+head_sha = "1d1551059f13d0a934b0645cde834f964d4f76dc"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
