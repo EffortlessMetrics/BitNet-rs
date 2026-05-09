@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T11:13:21Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-022"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-022-attention-score-route"
+pr = 4254
+head_sha = "0ac991b39c38bfb5facf979e0acb8f3fb56e4c38"
+merge_sha = "f1a932da0fc2b9012730837468b7f3c0ed6f1ae4"
+notes = [
+  "Merged dense GGUF one-layer planner routing for attention_scores after CUDA-DENSE-021 parity evidence.",
+  "The committed receipt records cuda_dense_regular_llm_ops=11, unsupported_ops=3, attention_score_cuda_ops_total=1, fallback_used=false, speedup_claim=false, dense_gguf_inference_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+  "The next dense CUDA gap remains attention_softmax and V-mix parity below dense GGUF token/decode/chat, speedup, server, and full-residency claims.",
+]
