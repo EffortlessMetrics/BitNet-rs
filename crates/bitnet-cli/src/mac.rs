@@ -17,6 +17,8 @@ const APPLE_M4_METAL: &str = "apple-m4-metal";
 const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.json";
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
+const MAC_BITNET_PROOF_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-continuity/mac-bitnet-proof-preflight.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
@@ -41,7 +43,7 @@ enum MacValidateProfileSet {
     Performance,
 }
 
-/// Run the supported Apple M4 local-answer flow with strict receipts.
+/// Run Apple M4 local operator flows with strict receipts.
 #[derive(Debug, Args)]
 pub struct MacCommand {
     #[command(subcommand)]
@@ -261,6 +263,37 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Validate the blocked M4 BitNet proof inputs and receipt contract.
+    BitnetProof {
+        /// Accepted BitNet GGUF path. This command never downloads model artifacts.
+        #[arg(long, value_name = "PATH")]
+        model: PathBuf,
+
+        /// Tokenizer/pre-tokenizer authority for the accepted BitNet artifact.
+        #[arg(long = "tokenizer-authority", value_name = "AUTHORITY")]
+        tokenizer_authority: Option<String>,
+
+        /// Receipt from the artifact sweep proving this BitNet artifact is accepted.
+        #[arg(long = "accepted-artifact", value_name = "PATH")]
+        accepted_artifact: Option<PathBuf>,
+
+        /// Deterministic proof prompt to be used by the later strict proof item.
+        #[arg(long, default_value = "What is 2+2? Answer briefly.")]
+        prompt: String,
+
+        /// Maximum new tokens for the later strict proof item.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 16)]
+        max_new_tokens: usize,
+
+        /// Require strict loader/tokenizer behavior for the later proof.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+
+        /// Output the M4 BitNet proof preflight receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_BITNET_PROOF_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
     /// Check Apple M4 SLM answer/warm-session receipts for hidden fallback or overclaims.
     ReceiptsCheck {
         /// Receipt file or directory containing JSON receipts.
@@ -423,6 +456,26 @@ impl MacCommand {
                 )
                 .await
             }
+            MacAction::BitnetProof {
+                model,
+                tokenizer_authority,
+                accepted_artifact,
+                prompt,
+                max_new_tokens,
+                strict,
+                json_out,
+            } => {
+                ensure_supported_mac_device(explicit_device_label, "mac bitnet-proof")?;
+                run_bitnet_proof_preflight(
+                    model,
+                    tokenizer_authority,
+                    accepted_artifact,
+                    prompt,
+                    max_new_tokens,
+                    strict,
+                    json_out,
+                )
+            }
             MacAction::ReceiptsCheck { path, regression_baseline, json } => {
                 run_receipts_check(&path, regression_baseline.as_deref(), json)
             }
@@ -474,6 +527,204 @@ fn ensure_supported_mac_device(explicit_device_label: Option<&str>, command: &st
     anyhow::bail!(
         "{command} routes the supported Mac local-answer path through --device {APPLE_M4_CPU_NEON}; requested --device {label}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
     )
+}
+
+fn run_bitnet_proof_preflight(
+    model: PathBuf,
+    tokenizer_authority: Option<String>,
+    accepted_artifact: Option<PathBuf>,
+    prompt: String,
+    max_new_tokens: usize,
+    strict: bool,
+    json_out: PathBuf,
+) -> Result<()> {
+    let tokenizer_authority = tokenizer_authority.map(|value| value.trim().to_string());
+    let tokenizer_authority = tokenizer_authority.filter(|value| !value.is_empty());
+    let artifact_summary = match accepted_artifact.as_deref() {
+        Some(path) if path.exists() => {
+            validate_bitnet_accepted_artifact_receipt(path, tokenizer_authority.as_deref())
+                .map(Some)
+                .unwrap_or_else(|error| {
+                    Some(serde_json::json!({
+                        "path": path,
+                        "valid": false,
+                        "error": error.to_string(),
+                    }))
+                })
+        }
+        Some(path) => Some(serde_json::json!({
+            "path": path,
+            "valid": false,
+            "error": "accepted artifact receipt is missing",
+        })),
+        None => None,
+    };
+
+    let mut blockers = Vec::new();
+    if !strict {
+        blockers.push(
+            "pass --strict so hidden loader/tokenizer fallback cannot count as proof".to_string(),
+        );
+    }
+    if tokenizer_authority.is_none() {
+        blockers.push(
+            "pass --tokenizer-authority from the accepted BitNet artifact sweep receipt"
+                .to_string(),
+        );
+    }
+    if !model.exists() {
+        blockers.push(format!(
+            "accepted BitNet GGUF is missing at {}; this M4 command never downloads artifacts",
+            model.display()
+        ));
+    }
+    match (&accepted_artifact, &artifact_summary) {
+        (None, _) => blockers.push(
+            "pass --accepted-artifact <receipt.json> from the MacBook/artifact sweep".to_string(),
+        ),
+        (Some(_), Some(summary))
+            if summary.get("valid").and_then(|value| value.as_bool()) != Some(true) =>
+        {
+            let reason = summary
+                .get("error")
+                .and_then(|value| value.as_str())
+                .unwrap_or("accepted artifact receipt did not validate");
+            blockers.push(format!("accepted artifact receipt is not usable: {reason}"));
+        }
+        _ => {}
+    }
+    if prompt.trim().is_empty() {
+        blockers.push("proof prompt must not be empty".to_string());
+    }
+    if max_new_tokens == 0 {
+        blockers.push("max-new-tokens must be greater than zero".to_string());
+    }
+
+    let result = if blockers.is_empty() { "ready" } else { "blocked" };
+    let receipt = serde_json::json!({
+        "artifact_kind": "apple_m4_bitnet_proof_preflight",
+        "schema_version": 1,
+        "result": result,
+        "proof_executed": false,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "model": {
+            "path": model,
+            "exists": model.exists(),
+            "required": "accepted BitNet GGUF from apple-bitnet-artifact-sweep",
+        },
+        "tokenizer": {
+            "authority": tokenizer_authority,
+            "required": true,
+        },
+        "accepted_artifact": {
+            "path": accepted_artifact,
+            "summary": artifact_summary,
+        },
+        "generation": {
+            "prompt": prompt,
+            "max_new_tokens": max_new_tokens,
+            "temperature": 0.0,
+            "greedy": true,
+            "deterministic": true,
+        },
+        "required_receipt_fields": [
+            "model.source",
+            "model.sha256",
+            "tokenizer.authority",
+            "kernel_family",
+            "requested_backend",
+            "selected_backend",
+            "runtime_api",
+            "fallback_used",
+            "generation.text",
+            "generation.generated_token_ids",
+            "timing",
+            "claim_boundary"
+        ],
+        "claim_boundary": {
+            "m4_bitnet_proof_prepared": true,
+            "bitnet_answer_quality_claimed": false,
+            "artifact_accepted_by_this_item": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "broad_performance_claim": false
+        },
+        "blockers": blockers,
+    });
+    write_json_receipt(&json_out, &receipt)?;
+
+    if result == "blocked" {
+        let blockers = receipt
+            .get("blockers")
+            .and_then(|value| value.as_array())
+            .map(|items| {
+                items.iter().filter_map(|item| item.as_str()).collect::<Vec<_>>().join("; ")
+            })
+            .unwrap_or_else(|| "unknown blocker".to_string());
+        anyhow::bail!("M4 BitNet proof is blocked: {blockers}");
+    }
+
+    println!(
+        "M4 BitNet proof preflight passed; proof execution remains in the future strict BitNet proof item. Receipt: {}",
+        json_out.display()
+    );
+    Ok(())
+}
+
+fn validate_bitnet_accepted_artifact_receipt(
+    path: &Path,
+    expected_tokenizer_authority: Option<&str>,
+) -> Result<serde_json::Value> {
+    let receipt = read_json_receipt(path)?;
+    let accepted = receipt.get("accepted").and_then(|value| value.as_bool()) == Some(true)
+        || receipt.pointer("/artifact/accepted").and_then(|value| value.as_bool()) == Some(true)
+        || receipt.get("result").and_then(|value| value.as_str()) == Some("accepted");
+    if !accepted {
+        anyhow::bail!("receipt must record accepted=true or result=accepted");
+    }
+    let tokenizer_authority = receipt
+        .pointer("/tokenizer/authority")
+        .or_else(|| receipt.get("tokenizer_authority"))
+        .and_then(|value| value.as_str())
+        .ok_or_else(|| anyhow!("receipt is missing tokenizer authority"))?;
+    if let Some(expected) = expected_tokenizer_authority
+        && tokenizer_authority != expected
+    {
+        anyhow::bail!(
+            "tokenizer authority mismatch: receipt has `{tokenizer_authority}`, command requested `{expected}`"
+        );
+    }
+    let model_sha256 = receipt
+        .pointer("/model/sha256")
+        .or_else(|| receipt.get("sha256"))
+        .and_then(|value| value.as_str())
+        .ok_or_else(|| anyhow!("receipt is missing model SHA256"))?;
+    let kernel_family = receipt
+        .get("kernel_family")
+        .or_else(|| receipt.pointer("/model/kernel_family"))
+        .and_then(|value| value.as_str())
+        .ok_or_else(|| anyhow!("receipt is missing kernel_family"))?;
+    Ok(serde_json::json!({
+        "path": path,
+        "valid": true,
+        "accepted": true,
+        "model_sha256": model_sha256,
+        "tokenizer_authority": tokenizer_authority,
+        "kernel_family": kernel_family,
+    }))
+}
+
+fn write_json_receipt(path: &Path, receipt: &serde_json::Value) -> Result<()> {
+    if let Some(parent) = path.parent().filter(|parent| !parent.as_os_str().is_empty()) {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    std::fs::write(path, serde_json::to_vec_pretty(receipt)?)
+        .with_context(|| format!("failed to write {}", path.display()))
 }
 
 fn run_check(model_id: &str, cache_dir: Option<PathBuf>, json: bool) -> Result<()> {

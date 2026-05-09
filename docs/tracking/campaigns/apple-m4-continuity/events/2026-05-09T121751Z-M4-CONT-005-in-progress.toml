@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T12:17:51Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-005"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4 BitNet proof-prep work after M4-CONT-004 closeout merged.",
+  "Scope is limited to the M4-side proof command shape, accepted-artifact input contract, and required receipt schema.",
+  "No BitNet local-answer success, accepted artifact, Metal inference, QK256, Neural Engine, MPSGraph, MacBook, or broad performance claim is being added.",
+]
