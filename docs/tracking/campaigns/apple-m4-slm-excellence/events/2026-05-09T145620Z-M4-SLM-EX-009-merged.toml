@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:56:20Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-009"
+event = "merged"
+actor = "codex"
+pr = 4305
+merge_sha = "600a31a3f53b6101e4f781972dc8d0cd9857d319"
+
+notes = [
+  "Merged PR #4305 for M4-SLM-EX-009.",
+  "bitnet mac regression is available as a receipt-only advisory comparison command with optional --fail-on-drift.",
+  "M4-SLM-EX-010 remains the next ready item for the measured M4 mini user expectation envelope.",
+]
