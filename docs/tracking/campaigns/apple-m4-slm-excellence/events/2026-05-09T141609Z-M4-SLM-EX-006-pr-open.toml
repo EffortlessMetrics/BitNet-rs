@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:16:09Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-006"
+event = "pr_open"
+actor = "codex"
+pr = 4293
+head_sha = "acddcfab19eb8d2d74d7401796b746e215997b7a"
+
+notes = [
+  "Opened PR #4293 to promote qwen2.5-0.5b-instruct-q4_k_m as the second supported non-default M4 dense SLM.",
+  "The PR records reference sanity, Rust M4 quality, cache verification, and receipt validation evidence.",
+  "No model binary is committed and the Qwen2.5 Q8_0 artifact remains the default.",
+]
