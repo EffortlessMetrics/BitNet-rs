@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T11:59:20Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-003"
+event = "merged"
+pr = 4263
+head_sha = "f1c53ccda0230c105dcd506fcb55d4662801ee9d"
+merge_sha = "815d5cf3659726f3dc5e713bef6035e263b5c4ca"
+actor = "codex"
+
+notes = [
+  "Merged dense Mac SLM smoke cache verification overhead polish.",
+  "`bitnet mac smoke` now avoids duplicate cache SHA verification, keeps one strict verification pass before generation, and records verification_passes=1 in the aggregate smoke receipt.",
+  "The live smoke preserved the expected fixed `2+2` answer, apple-m4-cpu-neon routing, fallback_used=false, and Mac receipt validation.",
+  "M4-CONT-004 is ready for the resident-session memory and timing envelope.",
+]
