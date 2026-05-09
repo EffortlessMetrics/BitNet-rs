@@ -110,6 +110,10 @@ For example, the upstream-unsupported 3B x86 `I2_S` contract may be inspected
 or recorded as an unsupported-path diagnostic, but it cannot become answer,
 reference, backend-parity, benchmark, or speed authority.
 
+Contract summaries include architecture support rows so callers can distinguish
+supported reference routes, proof-required routes, listed-but-unverified routes,
+and upstream-unsupported routes before choosing a CPU or accelerator path.
+
 ## Strict Proof Requirements
 
 Strict BitNet proof requires:

@@ -171,6 +171,7 @@ struct VerifyContractSummary {
     artifact_id: Option<String>,
     kernel_family: String,
     status: String,
+    architecture_support: Vec<VerifyArchitectureSupportSummary>,
     tokenizer_authority: String,
     prompt_authority: String,
     cpu_oracle: String,
@@ -178,6 +179,13 @@ struct VerifyContractSummary {
     permitted_claims: Vec<String>,
     required_receipts: Vec<String>,
     claim_boundary: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct VerifyArchitectureSupportSummary {
+    arch: String,
+    kernel: String,
+    status: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -611,6 +619,12 @@ fn print_contract_summary(summary: &VerifyContractSummary) {
     if let Some(artifact_id) = &summary.artifact_id {
         println!("artifact: {artifact_id}");
     }
+    if !summary.architecture_support.is_empty() {
+        println!("architecture support:");
+        for support in &summary.architecture_support {
+            println!("  {} / {} ({})", support.arch, support.kernel, support.status);
+        }
+    }
     println!("tokenizer authority: {}", summary.tokenizer_authority);
     println!("prompt authority: {}", summary.prompt_authority);
     println!("cpu oracle: {}", summary.cpu_oracle);
@@ -896,6 +910,15 @@ fn contract_summary(contract: &BitnetModelContract) -> VerifyContractSummary {
         artifact_id: contract.artifact_id.map(str::to_string),
         kernel_family: contract.kernel_family.as_str().to_string(),
         status: contract.status.as_str().to_string(),
+        architecture_support: contract
+            .architecture_support
+            .iter()
+            .map(|support| VerifyArchitectureSupportSummary {
+                arch: support.arch.to_string(),
+                kernel: support.kernel.to_string(),
+                status: support.status.to_string(),
+            })
+            .collect(),
         tokenizer_authority: contract.tokenizer_authority.to_string(),
         prompt_authority: contract.prompt_authority.to_string(),
         cpu_oracle: contract.cpu_oracle.to_string(),
@@ -1113,6 +1136,11 @@ mod tests {
         assert_eq!(contract.id, "microsoft_bitnet_b158_2b_4t_i2s");
         assert_eq!(contract.kernel_family, "i2_s_qk256");
         assert_eq!(contract.status, "reference_ready");
+        assert!(contract.architecture_support.iter().any(|support| {
+            support.arch == "x86"
+                && support.kernel == "i2_s"
+                && support.status == "supported_reference"
+        }));
         assert_eq!(contract.tokenizer_authority, "external_llama_bpe");
         assert_eq!(contract.prompt_authority, "bitnetcpp-answer");
         assert!(contract.accelerator_routes.iter().any(|route| route.route == "bitnet_qk256_cuda"));
@@ -1129,6 +1157,10 @@ mod tests {
         assert_eq!(summary.id, "onebitllm_bitnet_b158_3b_i2s_x86");
         assert_eq!(summary.kernel_family, "unsupported_i2_s");
         assert_eq!(summary.status, "upstream_unsupported");
+        assert_eq!(summary.architecture_support.len(), 1);
+        assert_eq!(summary.architecture_support[0].arch, "x86");
+        assert_eq!(summary.architecture_support[0].kernel, "i2_s");
+        assert_eq!(summary.architecture_support[0].status, "unsupported_upstream");
         assert!(summary.permitted_claims.contains(&"unsupported_path_receipt".to_string()));
         assert!(!summary.permitted_claims.contains(&"answer_ready".to_string()));
         assert!(summary.required_receipts.contains(&"unsupported_path_receipt".to_string()));
@@ -1162,6 +1194,10 @@ mod tests {
         assert!(summaries.iter().any(|summary| summary.id == "microsoft_bitnet_b158_2b_4t_tl2"));
         assert!(summaries.iter().any(|summary| summary.id == "onebitllm_bitnet_b158_3b_i2s_x86"));
         assert!(summaries.iter().all(|summary| !summary.claim_boundary.trim().is_empty()));
+        assert!(summaries.iter().all(|summary| {
+            summary.id == "tdh111_bitnet_b158_2b_4t_iq2_bn_r4"
+                || !summary.architecture_support.is_empty()
+        }));
     }
 
     #[test]
