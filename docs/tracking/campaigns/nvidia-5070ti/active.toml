@@ -1990,9 +1990,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-013"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-013-one-layer-plan"
 pr = 4214
+head_sha = "db0c0aebc5c94556c2ad56c06ad4a09b5466f631"
+merge_sha = "42636fc86ad26d96bf15bd4bcc0017c4c9851c72"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
