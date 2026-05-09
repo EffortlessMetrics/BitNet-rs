@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T11:40:54Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-001"
+event = "merged"
+pr = 4253
+head_sha = "45ea8742271dbe910c445c3aa02c60700b831d5b"
+merge_sha = "d1cddbf97da62663b48658d0e68b8d19a80d4fb3"
+actor = "codex"
+
+notes = [
+  "Merged resident Mac chat continuity for the supported dense Qwen Apple M4 CPU/NEON path.",
+  "`bitnet mac chat` reuses the existing warm-session runner, keeps the model/tokenizer resident for multiple prompts, streams by default, and writes aggregate and per-prompt receipts.",
+  "The PR preserved apple-m4-cpu-neon routing, cache verification, fallback visibility, and dense-SLM-only claim boundaries.",
+  "M4-CONT-002 is ready for a compact M4 dense-SLM golden smoke command.",
+]
