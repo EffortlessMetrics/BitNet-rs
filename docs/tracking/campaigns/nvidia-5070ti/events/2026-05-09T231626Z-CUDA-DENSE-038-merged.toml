@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T23:16:26Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-038"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4348
+merge_sha = "74c621586cf430ca0b4686d3e972cc10310d2c2f"
+actor = "codex"
+branch = "codex/cuda-dense-038-model-boundary-fixtures"
+summary = "Merged CUDA-DENSE-038 after adding dense GGUF model-boundary fixture receipts and tightened receipt validation."
+notes = [
+  "PR #4348 added the dense-gguf-model-boundary-fixtures CLI path for token embedding lookup, final norm, LM head/logits hashes, deterministic top-k diagnostics, and the selected dense_regular_llm_cuda route boundary.",
+  "The committed RTX 5070 Ti receipt validates from the Qwen2.5 0.5B Q8_0 artifact while keeping dense inference, Qwen one-token/decode/chat, speedup, KV/sampling, persistent/full residency, server readiness, BitNet packed proof, tokenizer, loader, transformer, QK256, BitNet CUDA, and CUDA kernel math claims false.",
+  "Pre-merge review tightened receipt validation so token embedding, final norm, and LM-head/logit dimensions are bound to seq_len, hidden_size, and vocab_size.",
+]
