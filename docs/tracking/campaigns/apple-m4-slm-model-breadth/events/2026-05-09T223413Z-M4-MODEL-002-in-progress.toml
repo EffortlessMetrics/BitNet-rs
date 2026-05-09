@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T22:34:13Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-MODEL-002 after M4-MODEL-001 closeout merged.",
+  "Downloaded only the two selected artifacts under target for reference sanity; no model binaries are committed.",
+  "The current result rejects qwen3-0.6b-q8_0 because the available reference runner cannot load qwen3, and accepts smollm2-360m-instruct-q8_0 as reference-good for bounded prompts.",
+]

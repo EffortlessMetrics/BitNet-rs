@@ -209,8 +209,8 @@ reference, Rust M4 quality, tokenizer, cache, and receipt gates in this matrix.
 `M4-MODEL-001` selected the next exact candidate set for evaluation:
 
 ```text
-qwen3-0.6b-q8_0
-smollm2-360m-instruct-q8_0
+qwen3-0.6b-q8_0                 rejected by current reference runner
+smollm2-360m-instruct-q8_0      reference-good, pending Rust M4 quality
 ```
 
 See [apple-m4-slm-model-breadth-candidates.md](apple-m4-slm-model-breadth-candidates.md)
@@ -218,3 +218,6 @@ for exact source, revision, file, expected size, tokenizer expectations, prompt
 template expectations, storage budget, and rejection criteria. These candidates
 are not supported models until reference output sanity, Rust M4 quality, cache,
 receipt, and deterministic gates pass.
+
+`M4-MODEL-002` records the reference sanity result in
+[apple-m4-slm-model-breadth-reference-sanity.md](apple-m4-slm-model-breadth-reference-sanity.md).
