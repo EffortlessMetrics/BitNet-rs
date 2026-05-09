@@ -2393,10 +2393,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-035"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-035-one-layer-cuda-parity"
 pr = 4328
-head_sha = "d4c033aa52fa726d8fd1b07781043062c4753264"
+head_sha = "1a13be90c4b88c5f3f67089f421427d7fcb9e6cd"
+merge_sha = "f49bd81e0e230746b783862c0d965bf98d0f569f"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
