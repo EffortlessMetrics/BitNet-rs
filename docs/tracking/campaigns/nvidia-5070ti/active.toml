@@ -2342,6 +2342,53 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-034"
+status = "in_progress"
+branch = "codex/cuda-dense-034-integrated-parity-tracker"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-033"]
+acceptance = "Define the governed integrated dense GGUF one-layer CUDA parity contract after CUDA-DENSE-033, requiring the future implementation to run the full layer-0 CUDA-routable plan against the same Qwen2.5 0.5B Q8_0 CPU reference harness, compare per-phase and final output parity, record per-op kernel stats and aggregate H2D/D2H transfer accounting, and keep dense GGUF inference, Qwen token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false."
+commands = [
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "server runtime behavior",
+  "new hardware receipt evidence",
+]
+may_claim = [
+  "CUDA-DENSE-034 defines the governed integrated one-layer CUDA parity contract for dense GGUF Qwen-family artifacts.",
+  "The future CUDA-DENSE-034 implementation must compare a full CUDA-routable layer pass against the CUDA-DENSE-033 CPU reference harness.",
+  "The next implementation is allowed to claim one-layer CUDA parity only after receipt validation proves fallback_used=false and layer output parity.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, or server behavior changed.",
+  "A full Qwen token, short decode, or chat path works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "CUDA integrated one-layer execution or CUDA comparison receipt exists in this tracker-only PR.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-021"
 status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"

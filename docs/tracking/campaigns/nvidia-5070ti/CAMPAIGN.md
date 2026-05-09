@@ -205,6 +205,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-031 | merged | Promote verified dense GGUF `mlp_activation` to the one-layer planner route, yielding 14 dense CUDA-routable ops, zero unsupported strict CUDA ops, and `strict_cuda_ready=true` without claiming dense inference, Qwen token/decode/chat, speedup, or full residency. |
 | CUDA-DENSE-032 | merged | Define the governed full one-layer CPU reference harness contract for the verified Qwen2.5 0.5B Q8_0 dense GGUF artifact. |
 | CUDA-DENSE-033 | merged | Implement the full layer-0 CPU reference harness so the next dense CUDA proof can compare the CUDA-routable one-layer plan against deterministic CPU-reference phase hashes and final output hash without claiming CUDA execution, dense inference, token/decode/chat, speedup, or full residency. |
+| CUDA-DENSE-034 | in_progress | Define the integrated layer-0 CUDA parity contract so the next implementation can run the full CUDA-routable layer plan against the CUDA-DENSE-033 CPU reference without claiming dense inference, Qwen token/decode/chat, speedup, persistent/full residency, or BitNet packed proof. |
 
 ## Review Policy
 
