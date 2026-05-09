@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:48:05Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-008"
+event = "pr_open"
+actor = "codex"
+pr = 4301
+head_sha = "aaf49da6bf3fe803100d10103f6aa4cd81cf9ded"
+
+notes = [
+  "Opened PR #4301 to record the M4 Mac mini long resident-session soak receipts.",
+  "The PR includes 25-prompt/64-token and 50-prompt/128-token resident sessions plus a compact summary.",
+  "The receipt evidence remains scoped to this M4 Mac mini dense SLM path and does not claim BitNet quality, full Metal inference, QK256, Neural Engine, or broad Apple Silicon performance.",
+]
