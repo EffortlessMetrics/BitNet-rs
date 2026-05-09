@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T23:32:32Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-039"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-039-kv-policy"
+
+notes = [
+  "Started CUDA-DENSE-039 implementation for governed dense GGUF KV-cache policy receipts after CUDA-DENSE-038.",
+  "Scope is prefill KV write policy, decode KV read/write policy, estimated bytes per token/layer/all layers, planned strict CUDA residency, remaining sampling gap, and validator rejection of inference/speed/full-residency/BitNet packed proof claims.",
+  "The implementation may commit a real verified Qwen KV-cache policy receipt; no tokenizer, loader, transformer runtime, QK256, BitNet CUDA, server, sampling, runtime KV allocation, CUDA kernel math, one-token, short-decode, chat, speedup, persistent-session, or full-residency claim is in scope.",
+]

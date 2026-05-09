@@ -49,7 +49,8 @@ use bitnet_receipts_core::{
     DENSE_GGUF_ATTENTION_SOFTMAX_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_SOFTMAX_FIXTURE_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_V_MIX_CUDA_PARITY_ARTIFACT_KIND,
-    DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND,
+    DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_MLP_ACTIVATION_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND,
@@ -65,6 +66,7 @@ use bitnet_receipts_core::{
     validate_dense_gguf_attention_softmax_fixture_receipt_json,
     validate_dense_gguf_attention_v_mix_cuda_parity_receipt_json,
     validate_dense_gguf_attention_v_mix_fixture_receipt_json,
+    validate_dense_gguf_kv_cache_policy_receipt_json,
     validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
     validate_dense_gguf_mlp_activation_cuda_parity_receipt_json,
@@ -478,6 +480,91 @@ impl DenseGgufModelBoundaryFixturesCommand {
             &timestamp_utc,
         )?;
         validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
+/// Emit a dense GGUF KV-cache policy receipt for the verified Qwen CUDA lane.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufKvCachePolicyCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Number of token positions represented by the prefill KV policy.
+    #[arg(long, default_value_t = 4)]
+    pub seq_len: usize,
+
+    /// Number of decode steps represented by the read/write policy.
+    #[arg(long, default_value_t = 1)]
+    pub decode_steps: usize,
+
+    /// CUDA device index used for route identity and claim-boundary receipts.
+    #[arg(long, default_value_t = 0)]
+    pub device_index: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufKvCachePolicyCommand {
+    pub async fn execute(&self) -> Result<()> {
+        if self.seq_len == 0 {
+            bail!("dense GGUF KV-cache policy requires --seq-len > 0");
+        }
+        if self.decode_steps == 0 {
+            bail!("dense GGUF KV-cache policy requires --decode-steps > 0");
+        }
+
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
+        if !probe.available {
+            bail!("CUDA-DENSE-039 requires CUDA probe success: {:?}", probe.failure_reason);
+        }
+        let device_name = probe.selected_device_name.as_deref().unwrap_or("unknown");
+        if !is_rtx5070ti_device_name(device_name) {
+            bail!("CUDA-DENSE-039 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
+        }
+
+        let policy = dense_gguf_kv_cache_policy_from_reader(
+            &reader,
+            &inspection,
+            self.seq_len,
+            self.decode_steps,
+        )?;
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_kv_cache_policy_receipt_json(
+            &inspection,
+            &policy,
+            Some(&probe),
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        )?;
+        validate_dense_gguf_kv_cache_policy_receipt_json(&receipt)?;
 
         if let Some(path) = &self.json_out {
             if let Some(parent) = path.parent() {
@@ -1830,6 +1917,37 @@ struct DenseGgufModelBoundaryFixtures {
 }
 
 #[derive(Debug, Clone)]
+struct DenseGgufKvCachePolicy {
+    policy_id: String,
+    model_family: String,
+    architecture: String,
+    transformer_layers_total: usize,
+    transformer_layers_source: String,
+    context_length: usize,
+    context_length_source: String,
+    seq_len: usize,
+    decode_steps: usize,
+    q_heads: usize,
+    q_heads_source: String,
+    kv_heads: usize,
+    kv_heads_source: String,
+    heads_per_kv_group: usize,
+    key_head_dim: usize,
+    key_head_dim_source: String,
+    value_head_dim: usize,
+    value_head_dim_source: String,
+    kv_element_dtype: &'static str,
+    kv_element_bytes: usize,
+    kv_values_per_token_per_layer: usize,
+    kv_bytes_per_token_per_layer: u64,
+    kv_bytes_per_token_all_layers: u64,
+    prefill_write_bytes_estimate: u64,
+    decode_read_bytes_per_step_estimate: u64,
+    decode_write_bytes_per_step_estimate: u64,
+    max_context_bytes_estimate: u64,
+}
+
+#[derive(Debug, Clone)]
 struct DenseLayerPlanEntry {
     op: DispatchOp,
     role: String,
@@ -2764,6 +2882,175 @@ fn dense_gguf_model_boundary_fixtures_from_reader(
         top_k: requested_top_k.min(logits.len()),
         rmsnorm_eps,
         epsilon_source,
+    })
+}
+
+fn dense_gguf_kv_cache_policy_from_reader(
+    reader: &GgufReader<'_>,
+    inspection: &DenseGgufDescriptorInspection,
+    seq_len: usize,
+    decode_steps: usize,
+) -> Result<DenseGgufKvCachePolicy> {
+    if seq_len == 0 {
+        bail!("dense GGUF KV-cache policy requires a non-zero sequence length");
+    }
+    if decode_steps == 0 {
+        bail!("dense GGUF KV-cache policy requires at least one decode step");
+    }
+    if !inspection.required_roles_present || !inspection.strict_descriptor_complete {
+        bail!("dense GGUF KV-cache policy requires complete dense descriptor coverage");
+    }
+
+    let architecture = &inspection.architecture;
+    let layer_indices = dense_transformer_layer_indices(inspection)?;
+    if layer_indices.is_empty() {
+        bail!("dense GGUF KV-cache policy requires at least one transformer layer");
+    }
+    let inferred_layers = layer_indices.len() as u32;
+    let (transformer_layers, transformer_layers_source) = metadata_u32_with_source(
+        reader,
+        &[format!("{architecture}.block_count"), "block_count".to_string()],
+    )
+    .unwrap_or((inferred_layers, "inferred_from_dense_layer_descriptors".to_string()));
+    let (context_length, context_length_source) = metadata_u32_with_source(
+        reader,
+        &[format!("{architecture}.context_length"), "context_length".to_string()],
+    )
+    .unwrap_or(((seq_len + decode_steps) as u32, "seq_len_plus_decode_steps".to_string()));
+    let (q_heads, q_heads_source) = metadata_u32_with_source(
+        reader,
+        &[format!("{architecture}.attention.head_count"), "attention.head_count".to_string()],
+    )
+    .ok_or_else(|| anyhow!("dense GGUF KV-cache policy requires attention.head_count metadata"))?;
+    let (kv_heads, kv_heads_source) = metadata_u32_with_source(
+        reader,
+        &[format!("{architecture}.attention.head_count_kv"), "attention.head_count_kv".to_string()],
+    )
+    .unwrap_or((q_heads, "attention.head_count_kv_missing_default_to_q_heads".to_string()));
+    let (key_head_dim, key_head_dim_source) = metadata_u32_with_source(
+        reader,
+        &[
+            format!("{architecture}.attention.key_length"),
+            format!("{architecture}.attention.head_dim"),
+            "attention.key_length".to_string(),
+        ],
+    )
+    .or_else(|| {
+        let (embedding, embedding_source) = metadata_u32_with_source(
+            reader,
+            &[format!("{architecture}.embedding_length"), "embedding_length".to_string()],
+        )?;
+        if q_heads == 0 || embedding % q_heads != 0 {
+            return None;
+        }
+        Some((embedding / q_heads, format!("{embedding_source}_div_{q_heads_source}")))
+    })
+    .ok_or_else(|| anyhow!("dense GGUF KV-cache policy requires key/head dimension metadata"))?;
+    let (value_head_dim, value_head_dim_source) = metadata_u32_with_source(
+        reader,
+        &[
+            format!("{architecture}.attention.value_length"),
+            format!("{architecture}.attention.head_dim"),
+            "attention.value_length".to_string(),
+        ],
+    )
+    .unwrap_or((key_head_dim, format!("{key_head_dim_source}_default_value_dim")));
+
+    let transformer_layers = transformer_layers as usize;
+    let context_length = context_length as usize;
+    let q_heads = q_heads as usize;
+    let kv_heads = kv_heads as usize;
+    let key_head_dim = key_head_dim as usize;
+    let value_head_dim = value_head_dim as usize;
+    if transformer_layers == 0
+        || context_length == 0
+        || q_heads == 0
+        || kv_heads == 0
+        || key_head_dim == 0
+        || value_head_dim == 0
+    {
+        bail!("dense GGUF KV-cache policy dimensions must be non-zero");
+    }
+    if !q_heads.is_multiple_of(kv_heads) {
+        bail!(
+            "dense GGUF KV-cache policy requires q_heads divisible by kv_heads: q_heads={q_heads} kv_heads={kv_heads}"
+        );
+    }
+    if context_length < seq_len {
+        bail!(
+            "dense GGUF KV-cache policy context_length {context_length} is smaller than seq_len {seq_len}"
+        );
+    }
+
+    let kv_element_bytes = 2usize;
+    let kv_values_per_token_per_layer = kv_heads
+        .checked_mul(key_head_dim.checked_add(value_head_dim).ok_or_else(|| {
+            anyhow!("dense GGUF KV-cache policy key/value dimension sum overflowed")
+        })?)
+        .ok_or_else(|| anyhow!("dense GGUF KV-cache policy value count overflowed"))?;
+    let kv_bytes_per_token_per_layer = checked_u64_mul(
+        kv_values_per_token_per_layer as u64,
+        kv_element_bytes as u64,
+        "kv_bytes_per_token_per_layer",
+    )?;
+    let kv_bytes_per_token_all_layers = checked_u64_mul(
+        kv_bytes_per_token_per_layer,
+        transformer_layers as u64,
+        "kv_bytes_per_token_all_layers",
+    )?;
+    let prefill_write_bytes_estimate = checked_u64_mul(
+        kv_bytes_per_token_all_layers,
+        seq_len as u64,
+        "prefill_write_bytes_estimate",
+    )?;
+    let decode_read_bytes_per_step_estimate = checked_u64_mul(
+        kv_bytes_per_token_all_layers,
+        seq_len as u64,
+        "decode_read_bytes_per_step_estimate",
+    )?;
+    let decode_write_bytes_per_step_estimate = kv_bytes_per_token_all_layers;
+    let max_context_bytes_estimate = checked_u64_mul(
+        kv_bytes_per_token_all_layers,
+        context_length as u64,
+        "max_context_bytes_estimate",
+    )?;
+
+    Ok(DenseGgufKvCachePolicy {
+        policy_id: format!(
+            "dense_gguf_kv_cache_policy_{}_layers{}_ctx{}_kv{}_k{}_v{}",
+            sanitize_label(&inspection.model_family),
+            transformer_layers,
+            context_length,
+            kv_heads,
+            key_head_dim,
+            value_head_dim
+        ),
+        model_family: inspection.model_family.clone(),
+        architecture: inspection.architecture.clone(),
+        transformer_layers_total: transformer_layers,
+        transformer_layers_source,
+        context_length,
+        context_length_source,
+        seq_len,
+        decode_steps,
+        q_heads,
+        q_heads_source,
+        kv_heads,
+        kv_heads_source,
+        heads_per_kv_group: q_heads / kv_heads,
+        key_head_dim,
+        key_head_dim_source,
+        value_head_dim,
+        value_head_dim_source,
+        kv_element_dtype: "f16",
+        kv_element_bytes,
+        kv_values_per_token_per_layer,
+        kv_bytes_per_token_per_layer,
+        kv_bytes_per_token_all_layers,
+        prefill_write_bytes_estimate,
+        decode_read_bytes_per_step_estimate,
+        decode_write_bytes_per_step_estimate,
+        max_context_bytes_estimate,
     })
 }
 
@@ -7541,6 +7828,212 @@ fn dense_boundary_tensor_fixture_json(fixture: &DenseGgufBoundaryTensorFixture) 
     })
 }
 
+fn dense_gguf_kv_cache_policy_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    policy: &DenseGgufKvCachePolicy,
+    probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Result<Value> {
+    if policy.model_family != inspection.model_family
+        || policy.architecture != inspection.architecture
+    {
+        bail!(
+            "dense GGUF KV-cache policy identity mismatch: inspection={}/{} policy={}/{}",
+            inspection.model_family,
+            inspection.architecture,
+            policy.model_family,
+            policy.architecture
+        );
+    }
+
+    let summary = ModelDispatchSummary {
+        total_ops: 1,
+        cuda_bitnet_qk256_ops: 0,
+        cuda_dense_regular_llm_ops: 1,
+        cpu_fallback_ops: 0,
+        unsupported_ops: 0,
+        fallback_used: false,
+        selected_route: Some(ModelDispatchBackend::CudaDenseRegularLlm),
+        strict_cuda_ready: true,
+    };
+    let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
+        model_family: &inspection.model_family,
+        quantization: "dense_fp16",
+        requested_backend: HARDWARE_LANE,
+        selected_backend: HARDWARE_LANE,
+        runtime_api: "cuda",
+        strict_fallback_policy: "reject",
+        summary,
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    });
+
+    Ok(json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_kv_cache_policy_recorded",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": HARDWARE_LANE,
+        "selected_backend": HARDWARE_LANE,
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity_json(probe),
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_cuda_kv_cache_policy_route",
+            "quantization_family": "dense_gguf_q8_0_f16_kv_cache_policy_contract",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": execution_plan,
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "kv_cache_policy": {
+            "schema": 1,
+            "policy_id": policy.policy_id,
+            "policy_scope": "dense_qwen_prefill_decode_boundary",
+            "planned_residency": "cuda_required_for_strict_dense_cuda",
+            "observed_residency": "not_allocated_policy_only",
+            "transformer_layers_total": policy.transformer_layers_total as u64,
+            "context_length": policy.context_length as u64,
+            "seq_len": policy.seq_len as u64,
+            "decode_steps": policy.decode_steps as u64,
+            "q_heads": policy.q_heads as u64,
+            "kv_heads": policy.kv_heads as u64,
+            "heads_per_kv_group": policy.heads_per_kv_group as u64,
+            "key_head_dim": policy.key_head_dim as u64,
+            "value_head_dim": policy.value_head_dim as u64,
+            "kv_element_dtype": policy.kv_element_dtype,
+            "kv_element_bytes": policy.kv_element_bytes as u64,
+            "kv_values_per_token_per_layer": policy.kv_values_per_token_per_layer as u64,
+            "kv_bytes_per_token_per_layer": policy.kv_bytes_per_token_per_layer,
+            "kv_bytes_per_token_all_layers": policy.kv_bytes_per_token_all_layers,
+            "metadata_sources": {
+                "transformer_layers": policy.transformer_layers_source,
+                "context_length": policy.context_length_source,
+                "q_heads": policy.q_heads_source,
+                "kv_heads": policy.kv_heads_source,
+                "key_head_dim": policy.key_head_dim_source,
+                "value_head_dim": policy.value_head_dim_source
+            },
+            "prefill": {
+                "write_tokens": policy.seq_len as u64,
+                "writes_keys": true,
+                "writes_values": true,
+                "write_bytes_estimate": policy.prefill_write_bytes_estimate,
+                "write_path": "qkv_projection_to_cuda_kv_cache",
+                "measured": false
+            },
+            "decode": {
+                "decode_steps": policy.decode_steps as u64,
+                "read_tokens_per_step": policy.seq_len as u64,
+                "read_bytes_per_step_estimate": policy.decode_read_bytes_per_step_estimate,
+                "write_tokens_per_step": 1_u64,
+                "write_bytes_per_step_estimate": policy.decode_write_bytes_per_step_estimate,
+                "read_path": "cuda_kv_cache_to_attention",
+                "write_path": "qkv_projection_to_cuda_kv_cache",
+                "measured": false
+            },
+            "max_context": {
+                "tokens": policy.context_length as u64,
+                "bytes_estimate": policy.max_context_bytes_estimate
+            },
+            "kv_cache_policy_claimed": true,
+            "runtime_kv_cache_allocated": false,
+            "kv_cache_cuda_residency_claimed": false,
+            "estimated_bytes_only": true,
+            "transfer_bytes_measured": false,
+            "transfer_timing_measured": false,
+            "fallback_used": false,
+            "sampling_integration_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "remaining_model_boundary_gaps": {
+            "schema": 1,
+            "gaps": [
+                {
+                    "gap": "sampling",
+                    "status": "not_governed_by_kv_cache_policy",
+                    "required_next_proof": "dense_gguf_sampling_policy_receipt",
+                    "blocks_qwen_one_token": true,
+                    "blocks_qwen_short_decode": true,
+                    "blocks_qwen_chat": true
+                }
+            ],
+            "kv_cache_policy_claimed": true,
+            "sampling_integration_claimed": false,
+            "qwen_one_token_cuda_blocked": true,
+            "qwen_short_decode_cuda_blocked": true,
+            "qwen_chat_cuda_blocked": true,
+            "next_required_proof": "dense_gguf_sampling_policy_receipt",
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_cpu_reference_claimed": true,
+            "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+            "dense_gguf_all_layer_execution_plan_claimed": true,
+            "dense_gguf_model_boundary_fixtures_claimed": true,
+            "kv_cache_policy_claimed": true,
+            "kv_cache_cuda_residency_claimed": false,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "sampling_integration_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    }))
+}
+
 fn dense_gguf_one_layer_cpu_reference_receipt_json(
     inspection: &DenseGgufDescriptorInspection,
     reference: &DenseGgufOneLayerCpuReference,
@@ -8552,6 +9045,10 @@ fn sha256_json(value: &Value) -> Result<String> {
     Ok(sha256_bytes(&bytes))
 }
 
+fn checked_u64_mul(left: u64, right: u64, label: &str) -> Result<u64> {
+    left.checked_mul(right).ok_or_else(|| anyhow!("{label} overflowed"))
+}
+
 fn is_rtx5070ti_device_name(name: &str) -> bool {
     let compact = name
         .chars()
@@ -8935,6 +9432,62 @@ mod tests {
         assert_eq!(receipt["claim_boundary"]["qwen_one_token_cuda_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
+    fn dense_gguf_kv_cache_policy_receipt_records_estimated_kv_bytes() {
+        let data = build_model_boundary_qwen_gguf();
+        let reader = GgufReader::new(&data).expect("parse KV policy qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let policy =
+            dense_gguf_kv_cache_policy_from_reader(&reader, &inspection, 4, 1).expect("kv policy");
+
+        assert_eq!(policy.transformer_layers_total, 1);
+        assert_eq!(policy.seq_len, 4);
+        assert_eq!(policy.decode_steps, 1);
+        assert_eq!(policy.q_heads, 2);
+        assert_eq!(policy.kv_heads, 1);
+        assert_eq!(policy.key_head_dim, 2);
+        assert_eq!(policy.value_head_dim, 2);
+        assert_eq!(policy.kv_values_per_token_per_layer, 4);
+        assert_eq!(policy.kv_bytes_per_token_per_layer, 8);
+        assert_eq!(policy.kv_bytes_per_token_all_layers, 8);
+        assert_eq!(policy.prefill_write_bytes_estimate, 32);
+        assert_eq!(policy.decode_read_bytes_per_step_estimate, 32);
+        assert_eq!(policy.decode_write_bytes_per_step_estimate, 8);
+
+        let receipt = dense_gguf_kv_cache_policy_receipt_json(
+            &inspection,
+            &policy,
+            None,
+            Path::new("synthetic-qwen3-q8_0-kv-cache-policy.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-kv-cache-policy.json",
+            "2026-05-09T00:00:00Z",
+        )
+        .unwrap();
+
+        validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["artifact_kind"], "dense_gguf_kv_cache_policy");
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 1);
+        assert_eq!(
+            receipt["kv_cache_policy"]["planned_residency"],
+            "cuda_required_for_strict_dense_cuda"
+        );
+        assert_eq!(receipt["kv_cache_policy"]["observed_residency"], "not_allocated_policy_only");
+        assert_eq!(receipt["kv_cache_policy"]["runtime_kv_cache_allocated"], false);
+        assert_eq!(receipt["kv_cache_policy"]["estimated_bytes_only"], true);
+        assert_eq!(receipt["claim_boundary"]["kv_cache_policy_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["kv_cache_cuda_residency_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["sampling_integration_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["qwen_one_token_cuda_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["speedup_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(
+            receipt["remaining_model_boundary_gaps"]["next_required_proof"],
+            "dense_gguf_sampling_policy_receipt"
+        );
     }
 
     #[test]

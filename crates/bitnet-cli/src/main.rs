@@ -131,7 +131,7 @@ use commands::{
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
     DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
     DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
-    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
+    DenseGgufKvCachePolicyCommand, DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
     DenseGgufMlpActivationCudaParityCommand, DenseGgufMlpActivationFixtureCommand,
     DenseGgufModelBoundaryFixturesCommand, DenseGgufNormCudaParityCommand,
     DenseGgufNormFixtureCommand, DenseGgufOneLayerCpuReferenceCommand,
@@ -629,6 +629,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Emit dense GGUF model-boundary fixture receipts for embedding/norm/logits
     DenseGgufModelBoundaryFixtures(Box<DenseGgufModelBoundaryFixturesCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Emit dense GGUF KV-cache policy receipts for the strict CUDA lane
+    DenseGgufKvCachePolicy(Box<DenseGgufKvCachePolicyCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
@@ -1470,6 +1474,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufOneLayerCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufModelBoundaryFixtures(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufKvCachePolicy(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufNormFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

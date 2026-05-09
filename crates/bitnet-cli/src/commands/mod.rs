@@ -28,12 +28,13 @@ pub use dense_gguf_linear_parity::{
     DenseGgufAllLayerPlanCommand, DenseGgufAttentionScoreCudaParityCommand,
     DenseGgufAttentionScoreFixtureCommand, DenseGgufAttentionSoftmaxCudaParityCommand,
     DenseGgufAttentionSoftmaxFixtureCommand, DenseGgufAttentionVMixCudaParityCommand,
-    DenseGgufAttentionVMixFixtureCommand, DenseGgufLinearParityCommand,
-    DenseGgufLinearRoleSweepCommand, DenseGgufMlpActivationCudaParityCommand,
-    DenseGgufMlpActivationFixtureCommand, DenseGgufModelBoundaryFixturesCommand,
-    DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
-    DenseGgufOneLayerCpuReferenceCommand, DenseGgufOneLayerCudaParityCommand,
-    DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
+    DenseGgufAttentionVMixFixtureCommand, DenseGgufKvCachePolicyCommand,
+    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
+    DenseGgufMlpActivationCudaParityCommand, DenseGgufMlpActivationFixtureCommand,
+    DenseGgufModelBoundaryFixturesCommand, DenseGgufNormCudaParityCommand,
+    DenseGgufNormFixtureCommand, DenseGgufOneLayerCpuReferenceCommand,
+    DenseGgufOneLayerCudaParityCommand, DenseGgufOneLayerPlanCommand,
+    DenseGgufRopeCudaParityCommand,
 };
 pub use external_reference_instrumentation::ExternalReferenceInstrumentationCommand;
 pub use first_token_divergence::FirstTokenDivergenceCommand;
