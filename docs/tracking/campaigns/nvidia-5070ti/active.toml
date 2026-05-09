@@ -2050,8 +2050,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-029"
-status = "in_progress"
+status = "merged"
 branch = "codex/cuda-dense-029-mlp-activation-fixture"
+pr = 4303
+head_sha = "c685c198160fbad853cf58ac20ba30311627bfce"
+merge_sha = "04a1bb3e8b7eaf532b2ac2f7f195b2f3e7fb6d2a"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
