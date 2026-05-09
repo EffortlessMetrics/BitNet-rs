@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T01:41:36Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started scheduled Apple hardware regression workflow shaping.",
+  "The workflow will be staged without an active schedule until Apple hardware runner availability is confirmed.",
+  "Scope is dense Qwen Apple M4 SLM receipts, artifact retention, branch/PR reporting, low-disk behavior, and required context fields.",
+]

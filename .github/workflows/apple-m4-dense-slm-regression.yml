@@ -1,0 +1,172 @@
+name: Apple M4 Dense SLM Regression (staged)
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_run:
+        description: "Run on a provisioned Apple M4 dense SLM hardware runner. Leave false until runner availability is confirmed."
+        required: true
+        type: boolean
+        default: false
+      model_id:
+        description: "Supported dense SLM model cache id."
+        required: true
+        type: string
+        default: "qwen2.5-0.5b-instruct-q8_0"
+      min_free_gb:
+        description: "Minimum free disk required before model fetch and receipt generation."
+        required: true
+        type: string
+        default: "8"
+      retention_days:
+        description: "Artifact retention days for receipt bundles."
+        required: true
+        type: string
+        default: "30"
+      report_pr:
+        description: "Optional PR number to mention in the run summary."
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: "1"
+  RUST_LOG: warn
+  BITNET_MODEL_CACHE_DIR: ${{ github.workspace }}/target/apple-m4-dense-slm-regression/model-cache
+  REGRESSION_ARTIFACT_ROOT: ${{ github.workspace }}/target/apple-m4-dense-slm-regression/${{ github.run_id }}
+  PUBLISHED_BASELINE: ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline.json
+
+jobs:
+  staged-message:
+    name: Staged hardware workflow is not active
+    if: ${{ inputs.enable_run != true }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Explain staged status
+        run: |
+          {
+            echo "## Apple M4 Dense SLM Regression"
+            echo
+            echo "This workflow is staged only. It does not run scheduled hardware regression until a provisioned Apple runner is confirmed."
+            echo
+            echo "To run manually on the Apple hardware lane, dispatch again with:"
+            echo
+            echo "- enable_run=true"
+            echo "- self-hosted runner labels: self-hosted, macOS, ARM64, apple-m4-dense-slm"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  apple-m4-dense-slm-regression:
+    name: Apple M4 Dense SLM Receipt Regression
+    if: ${{ inputs.enable_run == true }}
+    runs-on: [self-hosted, macOS, ARM64, apple-m4-dense-slm]
+    timeout-minutes: 90
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.93.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          shared-key: apple-m4-dense-slm-regression
+
+      - name: Prepare artifact directories and check disk
+        run: |
+          set -euo pipefail
+          mkdir -p "$REGRESSION_ARTIFACT_ROOT" "$BITNET_MODEL_CACHE_DIR"
+          FREE_KB="$(df -Pk "$BITNET_MODEL_CACHE_DIR" | awk 'NR == 2 { print $4 }')"
+          MIN_FREE_KB="$(( ${{ inputs.min_free_gb }} * 1024 * 1024 ))"
+          {
+            echo "{"
+            echo "  \"artifact_kind\": \"apple_m4_dense_slm_hardware_preflight\","
+            echo "  \"machine_id\": \"apple-m4-mac-mini\","
+            echo "  \"model_cache_root\": \"$BITNET_MODEL_CACHE_DIR\","
+            echo "  \"available_kb\": $FREE_KB,"
+            echo "  \"min_required_kb\": $MIN_FREE_KB,"
+            echo "  \"branch\": \"${GITHUB_REF_NAME}\","
+            echo "  \"commit\": \"${GITHUB_SHA}\","
+            echo "  \"report_pr\": \"${{ inputs.report_pr }}\""
+            echo "}"
+          } > "$REGRESSION_ARTIFACT_ROOT/preflight.json"
+          if [ "$FREE_KB" -lt "$MIN_FREE_KB" ]; then
+            echo "Apple M4 dense SLM regression skipped: low disk. Free KB=$FREE_KB required KB=$MIN_FREE_KB" >&2
+            exit 1
+          fi
+
+      - name: Fetch and verify supported dense SLM model
+        run: |
+          set -euo pipefail
+          cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+            model fetch "${{ inputs.model_id }}"
+          cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+            model verify "${{ inputs.model_id }}"
+
+      - name: Run dense SLM quality corpus receipt
+        run: |
+          set -euo pipefail
+          cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+            mac validate \
+            --profile-set smoke \
+            --model-id "${{ inputs.model_id }}" \
+            --json-out "$REGRESSION_ARTIFACT_ROOT/slm-quality-corpus.json" \
+            --quiet
+          cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+            mac receipts-check "$REGRESSION_ARTIFACT_ROOT/slm-quality-corpus.json" \
+            --json > "$REGRESSION_ARTIFACT_ROOT/slm-quality-corpus.receipts-check.json"
+
+      - name: Run release performance receipt and advisory comparison
+        run: |
+          set -euo pipefail
+          cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+            mac validate \
+            --profile-set performance \
+            --allocation-audit \
+            --model-id "${{ inputs.model_id }}" \
+            --json-out "$REGRESSION_ARTIFACT_ROOT/release-baseline.json" \
+            --quiet
+          cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+            mac receipts-check "$REGRESSION_ARTIFACT_ROOT/release-baseline.json" \
+            --regression-baseline "$PUBLISHED_BASELINE" \
+            --json > "$REGRESSION_ARTIFACT_ROOT/performance-regression.receipts-check.json"
+
+      - name: Write run summary
+        if: always()
+        run: |
+          {
+            echo "## Apple M4 Dense SLM Regression"
+            echo
+            echo "- Branch: \`${GITHUB_REF_NAME}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Optional PR: \`${{ inputs.report_pr }}\`"
+            echo "- Artifact root: \`$REGRESSION_ARTIFACT_ROOT\`"
+            echo "- Model id: \`${{ inputs.model_id }}\`"
+            echo "- Baseline: \`$PUBLISHED_BASELINE\`"
+            echo
+            echo "The run checks dense Qwen Apple CPU/NEON receipts only. It does not claim BitNet quality, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad Apple Silicon performance."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload dense SLM regression receipts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: apple-m4-dense-slm-regression-${{ github.run_id }}
+          path: ${{ env.REGRESSION_ARTIFACT_ROOT }}
+          if-no-files-found: warn
+          retention-days: ${{ inputs.retention_days }}

@@ -45,13 +45,19 @@ Initial advisory timing drift bands for matching receipts:
 
 These bands are intentionally conservative and advisory until repeated scheduled Apple hardware receipts exist. They are not a broad M4 performance claim.
 
+## Staged Hardware Workflow
+
+`M4-SLM-REG-003` defines the Apple hardware workflow shape without enabling scheduled execution. The staged workflow is manual-dispatch only, defaults to `enable_run=false`, and requires a provisioned self-hosted runner with `self-hosted`, `macOS`, `ARM64`, and `apple-m4-dense-slm` labels before it can generate receipts.
+
+The workflow shape covers model-cache verification, low-disk preflight, five-prompt quality and determinism receipts, release-mode performance receipts, advisory baseline comparison, artifact retention, and branch/commit/optional PR reporting. A future item may add a real `schedule:` trigger only after runner availability and artifact retention are confirmed.
+
 ## Work Items
 
 | Work item | Status | Notes |
 |---|---|---|
 | M4-SLM-REG-001 | merged | Add advisory receipt comparison for the published performance envelope. |
-| M4-SLM-REG-002 | ready | Gate quality and deterministic greedy drift for the five-prompt corpus. |
-| M4-SLM-REG-003 | proposed | Define or stage scheduled Apple hardware regression reporting. |
+| M4-SLM-REG-002 | merged | Gate quality and deterministic greedy drift for the five-prompt corpus. |
+| M4-SLM-REG-003 | in_progress | Define or stage scheduled Apple hardware regression reporting. |
 | M4-SLM-REG-004 | proposed | Add compact trend-history artifacts for release receipts. |
 | M4-SLM-REG-005 | proposed | Tighten thresholds only after repeated matching receipts exist. |
 

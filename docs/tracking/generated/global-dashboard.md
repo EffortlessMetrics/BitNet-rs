@@ -5,7 +5,7 @@
 |---|---|---:|---|---|---|
 | amd-cpu-baselines | AMD5700X-003 | TBD | ready | AMD9950X3D-003 | These lanes are CPU proof lanes, not accelerator lanes. |
 | apple-m4 | M4-018 | #3826 | merged | none | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
-| apple-m4-dense-slm-regression | M4-SLM-REG-003 | TBD | ready | M4-SLM-REG-004 | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
+| apple-m4-dense-slm-regression | M4-SLM-REG-003 | TBD | in_progress | M4-SLM-REG-004 | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
 | apple-m4-local-answer | M4-QA-001 | #3904 | blocked | M4-QA-MODEL-002 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-operational | M4-OP-006 | #3882 | merged | none | Do not reopen the completed apple-m4 proof campaign. |
 | apple-m4-productization | M4-PROD-005 | #4034 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
