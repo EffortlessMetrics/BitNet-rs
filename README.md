@@ -6,16 +6,28 @@
 [![Rust 2024](https://img.shields.io/badge/edition-2024-orange.svg)](./rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](./LICENSE)
 
-Pre-alpha Rust inference engine and validation workspace for 1-bit BitNet LLMs.
+Pre-alpha Rust-native local model runtime and validation workspace for small and
+efficient language models, including dense SLMs and BitNet / 1-bit model
+families.
 
 > [!WARNING]
 > **Pre-alpha. Do not use in production.**
 >
-> BitNet-rs is not yet a general-purpose local chat engine. The project currently focuses on loader, tokenizer, kernel, receipt, and hardware validation. Coherent BitNet answer quality is still under validation, so generated BitNet text should be treated as diagnostic output.
+> BitNet-rs is still pre-alpha. The project currently focuses on loader,
+> tokenizer, kernel, receipt, runtime-target, and hardware validation. Dense SLM
+> paths can be supported model families in their own right; coherent BitNet
+> answer quality is still under validation, so generated BitNet text should be
+> treated as diagnostic output until a strict proof lane accepts it.
 
 ## What This Repo Is For
 
-BitNet-rs is moving toward Rust-native BitNet inference, but the current repo is best understood as an inference-systems validation workspace. It is useful for contributors working on model loading, tokenization, quantization, kernel parity, hardware bring-up, receipts, and reproducible inference validation. It is not yet a polished end-user inference server.
+BitNet-rs is moving toward a Rust-native local model runner with strict proof
+surfaces. BitNet / 1-bit models are an important specialized model family inside
+that runner; dense SLMs such as Qwen are also useful supported model families
+when their artifact, tokenizer, backend, and receipt contracts pass. The repo is
+useful for contributors working on model loading, tokenization, quantization,
+kernel parity, runtime targets, hardware bring-up, receipts, and reproducible
+inference validation. It is not yet a polished end-user inference server.
 
 What exists today:
 
@@ -24,7 +36,7 @@ What exists today:
 - scalar, AVX2, AVX-512, NEON, CUDA, OpenCL, OpenVINO, Metal, and NPU validation work
 - diagnostic answer-corpus and answer-parity receipts
 - receipts that record hardware identity, runtime identity, fallback behavior, and kernel coverage
-- dense SLM companion work used to validate the generation pipeline while BitNet model-artifact work continues
+- dense SLM work used as a first-class local-answer model family and to validate shared generation surfaces while BitNet model-artifact work continues
 
 ## Current Status
 
@@ -41,9 +53,10 @@ Backend receipts remain useful for selected-device execution, tokenizer and prom
 | I2_S BitNet32 CPU path | Diagnostic | CPU execution exists; coherent BitNet answer quality is still under validation. |
 | I2_S QK256 CPU path | Diagnostic | Scalar, AVX2, and AVX-512 diagnostics have receipts; generated text quality is still under validation. |
 | Scalar / SIMD parity | Diagnostic | Used for backend agreement checks and first-divergence debugging. |
-| Dense SLM path | Early working | Companion/control path for generation-pipeline validation; not a BitNet quality result. |
+| Dense SLM path | Early working | First-class supported model-family path where artifact, tokenizer, backend, and receipt gates pass; not a BitNet quality result. |
 | RTX 5070 Ti CUDA | Execution path validated / diagnostic | Packed BitNet CUDA has receipts through `CUDA-BITNET-009`; coherent CUDA answers and speed are not established. |
 | Metal / OpenCL / OpenVINO / NPU | Probe / smoke | Hardware identity and narrow execution receipts exist; full BitNet answer quality is not established. |
+| WASM runtime target | First-class proof lane / scaffolded | [`bitnet-wasm`](docs/wasm/WASM_INFERENCE_LANE.md) is treated as a Rust-native runtime target for browser, Node, WASI, and embedded hosts; real inference claims require strict WASM receipts and do not displace native M4 Mac mini validation. |
 | Cross-validation | Supported / hardening | Reference comparison infrastructure exists; model selection remains active work. |
 | Honest-compute receipts | Supported | Receipts preserve backend, runtime, fallback, kernel, and timing metadata. |
 | CLI run/chat | Diagnostic | Useful for exercising the pipeline; generated text is not yet a supported answer-quality surface. |
