@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T01:40:02Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-008"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-008-real-linear-parity"
+pr = 4168
+head_sha = "c4dcb9a6e332f0b369416e541d1ecd9323929791"
+merge_sha = "d03c107ecb5fdfda4fce5682ab2737517399cfba"
+previous_status = "in_progress"
+new_status = "merged"
+
+notes = [
+  "Merged PR #4168 to add the dense GGUF single-linear CPU/CUDA parity bridge.",
+  "The bridge converts descriptor-extracted row-major dense linear fixture data into the existing strict FP16 GEMM CUDA layout and validates a dense_gguf_linear_cuda_parity receipt contract.",
+  "No dense GGUF inference, Qwen one-token/decode/chat, speedup, server, tokenizer, transformer, QK256, or full-residency claim was added.",
+]
