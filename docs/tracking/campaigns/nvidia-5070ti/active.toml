@@ -2243,8 +2243,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-024"
-status = "in_progress"
+status = "merged"
 branch = "codex/cuda-dense-024-attention-softmax-parity"
+pr = 4264
+head_sha = "2993babab551b5054e088d1228fb2e1ce0f70714"
+merge_sha = "16abe9af023f444920b983659a5e05db2fceeea3"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
