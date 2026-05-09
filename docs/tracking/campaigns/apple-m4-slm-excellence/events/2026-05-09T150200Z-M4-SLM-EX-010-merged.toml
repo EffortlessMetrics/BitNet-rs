@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T15:02:00Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-010"
+event = "merged"
+actor = "codex"
+pr = 4307
+merge_sha = "6cb32caf2b63e6274b94a0fe0944555139f82e98"
+
+notes = [
+  "Merged PR #4307 for M4-SLM-EX-010.",
+  "The M4 mini dense SLM user expectation envelope is published from existing committed release and soak receipts.",
+  "All apple-m4-slm-excellence work items are now merged and the campaign is marked complete.",
+]

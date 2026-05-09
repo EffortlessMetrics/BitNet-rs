@@ -1,6 +1,6 @@
 id = "apple-m4-slm-excellence"
 title = "Apple M4 SLM excellence"
-status = "active"
+status = "complete"
 
 objective = "Turn the working Apple M4 dense SLM path into an appliance-grade local model runner experience with native-feeling CLI, reliable health checks, lower perceived latency, better allocation hygiene, stronger quality coverage, longer resident-session stability, leading dense SLM support, local regression reporting, a measured operator envelope, and efficient default CI."
 
@@ -379,7 +379,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EX-010"
-status = "in_progress"
+status = "merged"
+pr = 4307
+merge_sha = "6cb32caf2b63e6274b94a0fe0944555139f82e98"
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-010-user-envelope"
 stackable = false
 review_mode = "codex_premerge"

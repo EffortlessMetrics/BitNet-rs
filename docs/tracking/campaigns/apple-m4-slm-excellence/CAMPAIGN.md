@@ -73,7 +73,7 @@ but blocked until an accepted BitNet artifact exists.
 | M4-SLM-EX-007 | merged | Expand to quality corpus 2.0 for small local-answer behavior. |
 | M4-SLM-EX-008 | merged | Record long resident-session soak behavior for memory and timing drift. |
 | M4-SLM-EX-009 | merged | Add local advisory `bitnet mac regression` comparison against matching M4 envelope receipts. |
-| M4-SLM-EX-010 | in_progress | Publish the measured M4 mini user expectation envelope. |
+| M4-SLM-EX-010 | merged | Publish the measured M4 mini user expectation envelope. |
 
 ## Review Policy
 
