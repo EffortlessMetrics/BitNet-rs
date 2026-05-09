@@ -23,8 +23,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "MB-AS-001"
-status = "pr_open"
+status = "merged"
 pr = 4184
+merge_sha = "bfd652d9c6548230d3f9abb39883b8ff757c3ecf"
 branch = "codex/apple-silicon-macbook/MB-AS-001-machine-profile"
 stackable = false
 review_mode = "codex_premerge"
@@ -64,7 +65,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-002"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-silicon-macbook/MB-AS-002-qwen-baseline"
 stackable = false
 review_mode = "codex_premerge"

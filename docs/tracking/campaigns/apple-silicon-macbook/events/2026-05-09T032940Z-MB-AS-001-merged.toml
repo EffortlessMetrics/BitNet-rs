@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T03:29:40Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-001"
+event = "merged"
+pr = 4184
+head_sha = "dd9b59ee2dd026c7a790846a0b253c7ab1c69e35"
+merge_sha = "bfd652d9c6548230d3f9abb39883b8ff757c3ecf"
+actor = "codex"
+
+notes = [
+  "Merged the MacBook Apple Silicon machine/storage/profile receipt contract.",
+  "The merged contract defines machine, storage, model-cache, backend visibility, thermal, power, and claim-boundary fields without running model inference.",
+  "MB-AS-002 is ready to mirror the dense Qwen Apple CPU/NEON baseline on MacBook.",
+]
