@@ -2308,10 +2308,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-025"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-025-attention-softmax-route"
 pr = 4269
 head_sha = "d5903340908b46e1ec4c1648bf285c4cdea1c123"
+merge_sha = "7dbffde9ac54cf61eccd4435356b2303eb64bd49"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
