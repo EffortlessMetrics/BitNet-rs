@@ -54,8 +54,18 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
         return;
     }
 
-    let mut indexed: Vec<(usize, f32)> =
-        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
+    let positive_count = probs.iter().filter(|&&p| p > 0.0).count();
+    if positive_count <= 1 {
+        return;
+    }
+
+    let mut indexed = Vec::with_capacity(positive_count);
+    for (idx, &probability) in probs.iter().enumerate() {
+        if probability > 0.0 {
+            indexed.push((idx, probability));
+        }
+    }
+
     indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
 
     let mut cumsum = 0.0f32;
@@ -199,6 +209,13 @@ mod tests {
         {
             assert_eq!(probs[2], 0.0);
         }
+    }
+
+    #[test]
+    fn top_p_single_positive_probability_is_noop() {
+        let mut probs = vec![0.0f32, 1.0, 0.0];
+        apply_top_p(&mut probs, 0.5);
+        assert_eq!(probs, vec![0.0, 1.0, 0.0]);
     }
 
     #[test]
