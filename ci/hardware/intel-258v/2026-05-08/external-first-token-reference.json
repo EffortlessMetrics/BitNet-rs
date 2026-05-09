@@ -1,0 +1,223 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "bitnet_external_first_token_reference_capture",
+  "machine_id": "intel-258v",
+  "proof_stage": "external_reference_boundary_recorded",
+  "created_utc": "2026-05-09T00:00:00Z",
+  "reference": {
+    "runner": "Microsoft BitNet.cpp / llama-cli",
+    "evidence_source": "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md",
+    "source_pr": "MODEL-ARTIFACT-007 / #3988",
+    "bitnet_cpp_commit": "01eb415772c342d9f20dc42772f1583ae1e5b102",
+    "llama_cpp_submodule_commit": "1f86f058de0c3f4098dedae2ae8653c335c868a1",
+    "llama_cli_version": "3962 (1f86f058)",
+    "command_shape": "llama-cli.exe -m <ggml-model-i2_s.gguf> --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -ngl 0 -t 8 -c 4096 -n <max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt --no-warmup -p \"User: <question><|eot_id|>Assistant:\"",
+    "generated_token_ids_available": false,
+    "logits_available": false,
+    "missing_logits_status": "reference report does not expose logits or top-k; do not infer logits parity"
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "local_path": "C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "local_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "tokenizer": {
+    "source_repo": "microsoft/bitnet-b1.58-2B-4T",
+    "source_revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+    "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "local_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "pretokenizer_authority": "externally_supplied_llama_bpe",
+    "override_kv": "tokenizer.ggml.pre=str:llama-bpe",
+    "hf_transformers_version": "5.8.0",
+    "hf_tokenizers_version": "0.22.2",
+    "hf_base_vocab_size": 128000,
+    "hf_total_token_count": 128256,
+    "bos_token": "<|begin_of_text|>",
+    "bos_token_id": 128000,
+    "eos_token": "<|eot_id|>",
+    "eos_token_id": 128009
+  },
+  "summary": {
+    "cases_total": 4,
+    "reference_generated_text_available": true,
+    "reference_generated_token_ids_available": false,
+    "reference_logits_available": false,
+    "first_token_boundary_classification": "generated_text_available_token_id_unavailable",
+    "next_required_evidence": "instrument bitnet.cpp or another reference runner to emit generated token IDs and first-token logits/top-k before claiming logits parity"
+  },
+  "cases": [
+    {
+      "case_id": "math_2_plus_2",
+      "question": "What is 2+2? Answer with only the number.",
+      "reference_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+      "reference_prompt_mode": "bitnet_cpp_answer_ready_prompt_argument",
+      "prompt_token_ids": [
+        1502,
+        25,
+        3639,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        22559,
+        449,
+        1193,
+        279,
+        1396,
+        13,
+        128009,
+        72803,
+        25
+      ],
+      "prompt_token_ids_source": "HF AutoTokenizer encode(reference_prompt, add_special_tokens=False)",
+      "max_new_tokens": 4,
+      "reference_generated_text": "4",
+      "first_generated_token_id": null,
+      "decoded_first_token": null,
+      "generated_token_ids_available": false,
+      "logits_available": false,
+      "missing_reference_fields": [
+        "first_generated_token_id",
+        "decoded_first_token",
+        "generated_token_ids",
+        "first_token_top_k_logits"
+      ],
+      "notes": [
+        "MODEL-ARTIFACT-007 report records generated text from Microsoft BitNet.cpp but not generated token IDs or logits."
+      ]
+    },
+    {
+      "case_id": "say_ok",
+      "question": "Say exactly: OK",
+      "reference_prompt": "User: Say exactly: OK<|eot_id|>Assistant:",
+      "reference_prompt_mode": "bitnet_cpp_answer_ready_prompt_argument",
+      "prompt_token_ids": [
+        1502,
+        25,
+        25961,
+        7041,
+        25,
+        10619,
+        128009,
+        72803,
+        25
+      ],
+      "prompt_token_ids_source": "HF AutoTokenizer encode(reference_prompt, add_special_tokens=False)",
+      "max_new_tokens": 4,
+      "reference_generated_text": "OK",
+      "first_generated_token_id": null,
+      "decoded_first_token": null,
+      "generated_token_ids_available": false,
+      "logits_available": false,
+      "missing_reference_fields": [
+        "first_generated_token_id",
+        "decoded_first_token",
+        "generated_token_ids",
+        "first_token_top_k_logits"
+      ],
+      "notes": [
+        "MODEL-ARTIFACT-007 report records generated text from Microsoft BitNet.cpp but not generated token IDs or logits."
+      ]
+    },
+    {
+      "case_id": "capital_france",
+      "question": "What is the capital of France? Answer with one word.",
+      "reference_prompt": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant:",
+      "reference_prompt_mode": "bitnet_cpp_answer_ready_prompt_argument",
+      "prompt_token_ids": [
+        1502,
+        25,
+        3639,
+        374,
+        279,
+        6864,
+        315,
+        9822,
+        30,
+        22559,
+        449,
+        832,
+        3492,
+        13,
+        128009,
+        72803,
+        25
+      ],
+      "prompt_token_ids_source": "HF AutoTokenizer encode(reference_prompt, add_special_tokens=False)",
+      "max_new_tokens": 8,
+      "reference_generated_text": "Paris",
+      "first_generated_token_id": null,
+      "decoded_first_token": null,
+      "generated_token_ids_available": false,
+      "logits_available": false,
+      "missing_reference_fields": [
+        "first_generated_token_id",
+        "decoded_first_token",
+        "generated_token_ids",
+        "first_token_top_k_logits"
+      ],
+      "notes": [
+        "MODEL-ARTIFACT-007 report records generated text from Microsoft BitNet.cpp but not generated token IDs or logits."
+      ]
+    },
+    {
+      "case_id": "yes_no_water",
+      "question": "Answer yes or no: is water wet?",
+      "reference_prompt": "User: Answer yes or no: is water wet?<|eot_id|>Assistant:",
+      "reference_prompt_mode": "bitnet_cpp_answer_ready_prompt_argument",
+      "prompt_token_ids": [
+        1502,
+        25,
+        22559,
+        10035,
+        477,
+        912,
+        25,
+        374,
+        3090,
+        14739,
+        30,
+        128009,
+        72803,
+        25
+      ],
+      "prompt_token_ids_source": "HF AutoTokenizer encode(reference_prompt, add_special_tokens=False)",
+      "max_new_tokens": 4,
+      "reference_generated_text": "No. Water is",
+      "first_generated_token_id": null,
+      "decoded_first_token": null,
+      "generated_token_ids_available": false,
+      "logits_available": false,
+      "missing_reference_fields": [
+        "first_generated_token_id",
+        "decoded_first_token",
+        "generated_token_ids",
+        "first_token_top_k_logits"
+      ],
+      "notes": [
+        "MODEL-ARTIFACT-007 report records generated text from Microsoft BitNet.cpp but not generated token IDs or logits."
+      ]
+    }
+  ],
+  "fallback_used": false,
+  "claim_boundary": {
+    "may_claim": [
+      "External BitNet.cpp generated text boundaries are recorded from MODEL-ARTIFACT-007 for fixed 258V prompts.",
+      "Prompt token IDs for the exact BitNet.cpp prompt string are recorded using HF AutoTokenizer with add_special_tokens=false.",
+      "Reference logits and generated token IDs are explicitly unavailable in this evidence."
+    ],
+    "must_not_claim": [
+      "first-token logits parity",
+      "generated-token-ID parity",
+      "answer quality beyond the cited MODEL-ARTIFACT-007 reference-runner gate",
+      "CPU speed",
+      "Arc 140V execution or acceleration",
+      "Intel NPU execution or acceleration",
+      "QK256 decode correctness"
+    ]
+  }
+}

@@ -843,3 +843,53 @@ CPU speed is proven.
 Arc 140V or Intel NPU execution is proven.
 Packed QK256 decode semantics are fixed.
 ```
+
+## CPU258V-019 External First-Token Reference Boundary
+
+Artifact:
+
+```text
+ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json
+```
+
+The CPU258V-019 artifact records the external reference boundary available from
+`MODEL-ARTIFACT-007`: Microsoft BitNet.cpp generated text for the fixed prompts
+and the exact reference command shape using:
+
+```text
+--override-kv tokenizer.ggml.pre=str:llama-bpe
+-p "User: <question><|eot_id|>Assistant:"
+```
+
+The artifact also records prompt token IDs for that exact prompt string using
+HF `AutoTokenizer` with `add_special_tokens=false`. It explicitly marks
+generated token IDs and first-token logits as unavailable in the current
+reference evidence.
+
+Current result:
+
+```text
+reference_generated_text_available = true
+reference_generated_token_ids_available = false
+reference_logits_available = false
+first_token_boundary_classification = generated_text_available_token_id_unavailable
+```
+
+Allowed claim:
+
+```text
+External BitNet.cpp generated-text boundaries and exact prompt-token policy are
+recorded for the fixed CPU258V prompts.
+```
+
+Not allowed:
+
+```text
+First-token logits parity is proven.
+Generated-token-ID parity is proven.
+Answer quality beyond the cited MODEL-ARTIFACT-007 reference-runner gate is
+proven.
+CPU speed is proven.
+Arc 140V or Intel NPU execution is proven.
+Packed QK256 decode semantics are fixed.
+```
