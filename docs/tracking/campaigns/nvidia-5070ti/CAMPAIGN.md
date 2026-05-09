@@ -199,6 +199,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-PLANNER-004 | merged | Real strict ask, answer-corpus, warm-session, and benchmark receipts emit model-aware `execution_plan` fields. |
 | CUDA-UX-001 | merged | User-facing `bitnet receipts explain` command summarizes existing receipt proof fields, planner routes, kernels, timing, residency, and claim limits. |
 | CUDA-UX-002 | merged | Strict `bitnet ask` proof summaries reuse the receipt explainer compact summary instead of a one-line bespoke formatter. |
+| CUDA-DENSE-028 | in_progress | Promote verified dense GGUF `attention_v_mix` to the one-layer planner route while leaving `mlp_activation` as the remaining unsupported strict CUDA gap. |
 
 ## Review Policy
 

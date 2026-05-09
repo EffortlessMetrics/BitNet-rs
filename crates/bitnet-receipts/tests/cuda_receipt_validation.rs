@@ -1718,8 +1718,8 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
         },
         "execution_path": {
             "model_class": "dense_regular_llm",
-            "kernel_family": "dense_fp16_gemm_plus_f32_rmsnorm_plus_f32_rope_plus_unsupported_layer_ops",
-            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_f32_rmsnorm_and_f32_rope",
+            "kernel_family": "dense_fp16_gemm_plus_f32_rmsnorm_plus_f32_rope_plus_f32_attention_plus_unsupported_layer_ops",
+            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_f32_rmsnorm_rope_attention",
             "bitnet_packed_kernel_proof": false,
             "qk256_proof": false
         },
@@ -1735,11 +1735,11 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "dense_regular_llm_cuda": true,
             "bitnet_packed_qk256_cuda": false,
             "cuda_bitnet_qk256_ops": 0,
-            "cuda_dense_regular_llm_ops": 12,
+            "cuda_dense_regular_llm_ops": 13,
             "cpu_fallback_ops": 0,
-            "unsupported_ops": 2,
+            "unsupported_ops": 1,
             "total_ops": 14,
-            "cuda_ops": 12,
+            "cuda_ops": 13,
             "mixed_cuda_routes": false,
             "fallback_used": false,
             "strict_cuda_ready": false,
@@ -1764,13 +1764,14 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "schema": 1,
             "layer_index": 0,
             "total_ops": 14,
-            "cuda_routable_ops_total": 12,
+            "cuda_routable_ops_total": 13,
             "linear_cuda_ops_total": 7,
             "norm_cuda_ops_total": 2,
             "rope_cuda_ops_total": 1,
             "attention_score_cuda_ops_total": 1,
             "attention_softmax_cuda_ops_total": 1,
-            "unsupported_strict_cuda_ops_total": 2,
+            "attention_v_mix_cuda_ops_total": 1,
+            "unsupported_strict_cuda_ops_total": 1,
             "cpu_fallback_ops_total": 0,
             "strict_cuda_ready": false,
             "unsupported_ops_explicitly_listed": true,
@@ -2144,13 +2145,14 @@ fn dense_one_layer_gap_audit() -> Value {
         "schema": 1,
         "source_artifact_kind": "dense_gguf_one_layer_execution_plan",
         "layer_index": 0,
-        "cuda_routable_ops_total": 12,
+        "cuda_routable_ops_total": 13,
         "cuda_routable_linear_ops_total": 7,
         "cuda_routable_norm_ops_total": 2,
         "cuda_routable_rope_ops_total": 1,
         "cuda_routable_attention_score_ops_total": 1,
         "cuda_routable_attention_softmax_ops_total": 1,
-        "unsupported_ops_total": 2,
+        "cuda_routable_attention_v_mix_ops_total": 1,
+        "unsupported_ops_total": 1,
         "cpu_fallback_ops_total": 0,
         "strict_cuda_ready": false,
         "unsupported_ops_have_dependency_notes": true,
@@ -2163,6 +2165,7 @@ fn dense_one_layer_gap_audit() -> Value {
             "rope",
             "attention_scores",
             "attention_softmax",
+            "attention_v_mix",
             "attention_output",
             "ffn_norm",
             "mlp_gate",
@@ -2191,17 +2194,19 @@ fn dense_one_layer_gap_audit() -> Value {
         "attention_softmax_routable_roles": [
             "attention_softmax"
         ],
+        "attention_v_mix_routable_roles": [
+            "attention_v_mix"
+        ],
         "rmsnorm_cuda_parity_available": true,
         "rope_cuda_parity_available": true,
         "attention_score_cuda_parity_available": true,
         "attention_softmax_cuda_parity_available": true,
-        "next_candidate_gap": "attention_v_mix",
+        "attention_v_mix_cuda_parity_available": true,
+        "next_candidate_gap": "mlp_activation",
         "unsupported_op_type_counts": {
-            "activation": 1,
-            "attention": 1
+            "activation": 1
         },
         "candidate_order": [
-            "attention_v_mix",
             "mlp_activation"
         ],
         "dependency_edges": [
@@ -2222,14 +2227,6 @@ fn dense_one_layer_gap_audit() -> Value {
             { "from": "mlp_activation", "to": "mlp_down" }
         ],
         "unsupported_ops": [
-            gap_unsupported_op(
-                "blk.0.attention_v_mix",
-                "attention_v_mix",
-                "attention",
-                Value::Null,
-                Value::Null,
-                json!(["attention_softmax", "attention_v"])
-            ),
             gap_unsupported_op(
                 "blk.0.mlp_activation",
                 "mlp_activation",
@@ -2300,12 +2297,11 @@ fn dense_one_layer_operations() -> Value {
         "blk.0.attention_softmax",
         "attention_softmax",
     );
-    push_one_layer_unsupported_op(
+    push_one_layer_cuda_attention_score_op(
         &mut operations,
         7,
         "blk.0.attention_v_mix",
         "attention_v_mix",
-        "attention",
     );
     push_one_layer_cuda_op(&mut operations, 8, "blk.0.attn_output.weight", "attention_output");
     push_one_layer_cuda_rmsnorm_op(&mut operations, 9, "blk.0.ffn_norm.weight", "ffn_norm");
