@@ -954,6 +954,35 @@ fn dense_gguf_one_layer_cpu_reference_requires_final_output_hash() {
 }
 
 #[test]
+fn dense_gguf_one_layer_cpu_reference_rejects_unbound_final_output_hash() {
+    let mut receipt = valid_dense_gguf_one_layer_cpu_reference_receipt();
+    receipt["reference_harness"]["final_output_sha256"] = json!("2".repeat(64));
+
+    let err =
+        validate_dense_gguf_one_layer_cpu_reference_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(
+        err.contains("final_output_sha256") && err.contains("second_residual phase output_sha256"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn dense_gguf_one_layer_cpu_reference_rejects_unbound_deterministic_input_hash() {
+    let mut receipt = valid_dense_gguf_one_layer_cpu_reference_receipt();
+    receipt["reference_harness"]["deterministic_input_sha256"] = json!("1".repeat(64));
+
+    let err =
+        validate_dense_gguf_one_layer_cpu_reference_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(
+        err.contains("deterministic_input_sha256")
+            && err.contains("deterministic_input phase output_sha256"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
 fn dense_gguf_norm_fixture_receipt_validates_missing_cuda_kernel() {
     let receipt = valid_dense_gguf_norm_fixture_extraction_receipt();
 
@@ -1974,11 +2003,11 @@ fn valid_dense_gguf_one_layer_cpu_reference_receipt() -> Value {
             "rope_base_source": "qwen3.rope.freq_base",
             "rope_scaling_factor": 1.0,
             "deterministic_input_len": 16,
-            "deterministic_input_sha256": "1".repeat(64),
+            "deterministic_input_sha256": format!("{:064x}", 3),
             "phases_total": 17,
             "phases": dense_one_layer_cpu_reference_phases(),
             "final_output_len": 16,
-            "final_output_sha256": "2".repeat(64),
+            "final_output_sha256": format!("{:064x}", 19),
             "final_output_max_abs": 1.0,
             "cpu_reference_only": true,
             "cuda_execution_claimed": false,

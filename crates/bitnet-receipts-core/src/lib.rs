@@ -4445,6 +4445,54 @@ pub fn validate_dense_gguf_one_layer_cpu_reference_receipt_json(receipt: &Value)
     if phases_total != REQUIRED_PHASES.len() as u64 {
         return Err(anyhow!("reference_harness.phases_total must equal governed CPU phase count"));
     }
+    let deterministic_input = phases
+        .iter()
+        .find(|phase| phase.get("name").and_then(Value::as_str) == Some("deterministic_input"))
+        .ok_or_else(|| anyhow!("reference_harness.phases missing deterministic_input phase"))?;
+    let deterministic_input_len = required_u64(harness, "deterministic_input_len")?;
+    let deterministic_input_sha256 = required_string(harness, "deterministic_input_sha256")?;
+    let deterministic_phase_len = required_u64(deterministic_input, "output_len")?;
+    let deterministic_phase_sha256 = required_string(deterministic_input, "output_sha256")?;
+    if deterministic_phase_len != deterministic_input_len {
+        return Err(anyhow!(
+            "reference_harness.deterministic_input_len must match deterministic_input phase output_len"
+        ));
+    }
+    if deterministic_phase_sha256 != deterministic_input_sha256 {
+        return Err(anyhow!(
+            "reference_harness.deterministic_input_sha256 must match deterministic_input phase output_sha256"
+        ));
+    }
+
+    let second_residual = phases
+        .iter()
+        .find(|phase| phase.get("name").and_then(Value::as_str) == Some("second_residual"))
+        .ok_or_else(|| anyhow!("reference_harness.phases missing second_residual phase"))?;
+    let final_output_len = required_u64(harness, "final_output_len")?;
+    let final_output_sha256 = required_string(harness, "final_output_sha256")?;
+    let final_output_max_abs = object_field(harness, "final_output_max_abs")?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `final_output_max_abs` must be a number"))?;
+    let second_residual_len = required_u64(second_residual, "output_len")?;
+    let second_residual_sha256 = required_string(second_residual, "output_sha256")?;
+    let second_residual_max_abs = object_field(second_residual, "max_abs")?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `max_abs` must be a number"))?;
+    if second_residual_len != final_output_len {
+        return Err(anyhow!(
+            "reference_harness.final_output_len must match second_residual phase output_len"
+        ));
+    }
+    if second_residual_sha256 != final_output_sha256 {
+        return Err(anyhow!(
+            "reference_harness.final_output_sha256 must match second_residual phase output_sha256"
+        ));
+    }
+    if second_residual_max_abs != final_output_max_abs {
+        return Err(anyhow!(
+            "reference_harness.final_output_max_abs must match second_residual phase max_abs"
+        ));
+    }
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", false)?;
