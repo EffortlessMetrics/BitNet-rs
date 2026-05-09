@@ -114,6 +114,26 @@ Contract summaries include architecture support rows so callers can distinguish
 supported reference routes, proof-required routes, listed-but-unverified routes,
 and upstream-unsupported routes before choosing a CPU or accelerator path.
 
+## Dense Model Capability Summaries
+
+Dense SLM artifacts use a separate `model_capability` verifier surface rather
+than the BitNet-family `model_contract` surface. This keeps dense Qwen cache
+metadata useful without letting dense regular-LLM evidence satisfy BitNet
+packed QK256 proof.
+
+The current Qwen2.5 0.5B cached artifacts are classified as dense SLM GGUF
+artifacts:
+
+| Artifact | Capability boundary |
+|---|---|
+| Qwen2.5 0.5B Instruct Q8_0 | Apple M4 CPU/NEON SLM answer lane metadata. Does not prove dense CUDA, BitNet QK256, server, speedup, or full-residency claims. |
+| Qwen2.5 0.5B Instruct Q4_K_M | Storage/reference artifact only. Strict Rust execution remains unsupported. |
+
+`bitnet model verify <qwen-id> --json` includes `model_capability` when the
+artifact is recognized. The verifier still checks bytes and SHA256; the
+capability summary only records the model family, artifact class, tokenizer and
+prompt authority, known route boundary, permitted claims, and required receipts.
+
 ## Strict Proof Requirements
 
 Strict BitNet proof requires:

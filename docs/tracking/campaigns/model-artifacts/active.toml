@@ -577,6 +577,60 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "MODEL-CAPS-001"
+status = "in_progress"
+branch = "codex/model-caps-001-dense-verify"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["BITNET-CONTRACT-004"]
+acceptance = "Expose dense Qwen SLM capability summaries through `bitnet model verify` and cache/fetch metadata so Qwen Q8_0 and Q4_K_M artifacts have explicit model family, artifact class, tokenizer/prompt authority, route boundary, permitted claims, and required receipts without changing runtime inference, tokenizer, loader, transformer, QK256, CUDA, dense GGUF, server, residency, or speed-claim behavior."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli model_cache -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/model_cache.rs",
+  "docs/bitnet/BITNET_MODEL_CONTRACT.md",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "dense GGUF inference",
+  "server inference",
+  "speed claims",
+  "full CUDA residency claims",
+]
+may_claim = [
+  "`bitnet model verify` emits dense Qwen SLM capability metadata for supported Qwen cache artifacts.",
+  "Qwen Q8_0 is scoped to the Apple M4 CPU/NEON SLM answer lane.",
+  "Qwen Q4_K_M remains storage/reference only with strict Rust execution unsupported.",
+]
+must_not_claim = [
+  "Dense CUDA inference is proven.",
+  "Dense Qwen evidence satisfies BitNet packed QK256 proof.",
+  "Runtime tokenizer, prompt-template, loader, transformer, QK256, CUDA, dense GGUF, or server behavior changed.",
+  "Any backend speedup or full CUDA residency is proven.",
+]
+
+[[work_item]]
 id = "BITNET-CONTRACT-004"
 status = "merged"
 branch = "codex/bitnet-contract-004-architecture-summary"

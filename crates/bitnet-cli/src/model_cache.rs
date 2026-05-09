@@ -1,8 +1,9 @@
 //! User-facing model cache management.
 
 use anyhow::{Context, Result, anyhow};
-use bitnet_models::model_contracts::{
-    BitnetModelContract, bitnet_model_contracts, find_bitnet_model_contract,
+use bitnet_models::{
+    capability_check::detect_capabilities,
+    model_contracts::{BitnetModelContract, bitnet_model_contracts, find_bitnet_model_contract},
 };
 use clap::{Args, Subcommand};
 use futures::StreamExt;
@@ -161,6 +162,8 @@ struct VerifyResult {
     model: SupportedModel,
     #[serde(skip_serializing_if = "Option::is_none")]
     model_contract: Option<VerifyContractSummary>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    model_capability: Option<VerifyModelCapabilitySummary>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -203,6 +206,23 @@ struct ContractOnlyVerifyResult {
     supported_artifact: bool,
     reason: String,
     model_contract: VerifyContractSummary,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct VerifyModelCapabilitySummary {
+    id: String,
+    model_family: String,
+    model_class: String,
+    artifact_format: String,
+    quantization: String,
+    tokenizer_authority: String,
+    prompt_authority: String,
+    cpu_oracle: String,
+    accelerator_routes: Vec<VerifyRouteSummary>,
+    capabilities: Vec<String>,
+    permitted_claims: Vec<String>,
+    required_receipts: Vec<String>,
+    claim_boundary: String,
 }
 
 #[cfg(feature = "full-cli")]
@@ -515,6 +535,13 @@ fn verify_model_command(
         if let Some(contract) = &result.model_contract {
             println!("contract: {} ({}, {})", contract.id, contract.kernel_family, contract.status);
             println!("claim boundary: {}", contract.claim_boundary);
+        }
+        if let Some(capability) = &result.model_capability {
+            println!(
+                "capability: {} ({}, {})",
+                capability.id, capability.model_family, capability.model_class
+            );
+            println!("claim boundary: {}", capability.claim_boundary);
         }
     } else {
         println!("verification failed for {} at {}", model.id, path.display());
@@ -890,6 +917,7 @@ fn verify_model(model: &SupportedModel, path: &Path) -> Result<VerifyResult> {
         passed,
         model: *model,
         model_contract: model_contract_summary(model)?,
+        model_capability: model_capability_summary(model),
     })
 }
 
@@ -900,6 +928,77 @@ fn model_contract_summary(model: &SupportedModel) -> Result<Option<VerifyContrac
     let contract = find_bitnet_model_contract(label)
         .ok_or_else(|| anyhow!("model `{}` references unknown contract `{label}`", model.id))?;
     Ok(Some(contract_summary(contract)))
+}
+
+fn model_capability_summary(model: &SupportedModel) -> Option<VerifyModelCapabilitySummary> {
+    if model.model_contract.is_some() || !is_qwen_dense_model(model) {
+        return None;
+    }
+
+    let capability_report = detect_capabilities(model.architecture);
+    let mut capabilities: Vec<_> = capability_report
+        .capabilities
+        .iter()
+        .map(|capability| capability.name().to_string())
+        .collect();
+    capabilities.sort();
+
+    let supported_q8_cpu_neon =
+        model.quantization.eq_ignore_ascii_case("Q8_0") && model.apple_m4_cpu_neon_supported;
+
+    let (id, cpu_oracle, accelerator_routes, permitted_claims, required_receipts, claim_boundary) =
+        if supported_q8_cpu_neon {
+            (
+                "qwen_dense_slm_q8_0",
+                "apple_m4_cpu_neon_slm_answer_lane",
+                vec![VerifyRouteSummary {
+                    backend: "apple-m4-cpu-neon".to_string(),
+                    route: "dense_qwen_cpu_neon_slm".to_string(),
+                    status: "answer_lane".to_string(),
+                }],
+                vec![
+                    "artifact_inspection".to_string(),
+                    "model_verify".to_string(),
+                    "apple_m4_cpu_neon_slm_answer".to_string(),
+                ],
+                vec![
+                    "model_verify".to_string(),
+                    "slm_answer_receipt".to_string(),
+                    "fallback_free_backend_receipt".to_string(),
+                ],
+                "Dense Qwen SLM artifact for the Apple M4 CPU/NEON answer lane; does not prove dense CUDA, BitNet packed QK256, server, speedup, or full-residency claims.",
+            )
+        } else {
+            (
+                "qwen_dense_slm_q4_k_m_storage_reference",
+                "none_strict_rust_execution_unsupported",
+                Vec::new(),
+                vec!["artifact_inspection".to_string(), "storage_reference".to_string()],
+                vec!["model_verify".to_string(), "unsupported_execution_receipt".to_string()],
+                "Storage/reference dense Qwen artifact; strict Rust execution remains unsupported and does not prove CPU, CUDA, server, speedup, or full-residency claims.",
+            )
+        };
+
+    Some(VerifyModelCapabilitySummary {
+        id: id.to_string(),
+        model_family: "qwen".to_string(),
+        model_class: "dense_slm_gguf".to_string(),
+        artifact_format: "gguf".to_string(),
+        quantization: model.quantization.to_string(),
+        tokenizer_authority: model.tokenizer_pre.to_string(),
+        prompt_authority: "qwen2.5".to_string(),
+        cpu_oracle: cpu_oracle.to_string(),
+        accelerator_routes,
+        capabilities,
+        permitted_claims,
+        required_receipts,
+        claim_boundary: claim_boundary.to_string(),
+    })
+}
+
+fn is_qwen_dense_model(model: &SupportedModel) -> bool {
+    model.architecture.to_ascii_lowercase().contains("qwen")
+        || model.tokenizer_pre.eq_ignore_ascii_case("qwen2")
 }
 
 fn contract_summary(contract: &BitnetModelContract) -> VerifyContractSummary {
@@ -987,6 +1086,7 @@ fn write_cache_metadata(
             "chat_template_present": model.chat_template,
         },
         "model_contract": &verify.model_contract,
+        "model_capability": &verify.model_capability,
         "runtime_support": {
             "apple_m4_cpu_neon": model.apple_m4_cpu_neon_supported,
             "note": model.support_note,
@@ -1023,6 +1123,7 @@ fn print_fetch_result(status: &str, verify: &VerifyResult, json: bool) -> Result
         "apple_m4_cpu_neon_supported": verify.model.apple_m4_cpu_neon_supported,
         "support_note": verify.model.support_note,
         "model_contract": &verify.model_contract,
+        "model_capability": &verify.model_capability,
     });
     if json {
         println!("{}", serde_json::to_string_pretty(&payload)?);
@@ -1205,6 +1306,59 @@ mod tests {
         let model = supported_model("qwen2.5-0.5b-instruct-q4_k_m").unwrap();
         assert!(!model.apple_m4_cpu_neon_supported);
         assert!(model.support_note.contains("unsupported"));
+    }
+
+    #[test]
+    fn verify_model_includes_qwen_dense_capability_summary() {
+        let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
+        let result = verify_model(model, Path::new("/tmp/missing-qwen-q8.gguf")).unwrap();
+        let capability = result.model_capability.expect("model capability summary");
+
+        assert!(!result.passed);
+        assert!(result.model_contract.is_none());
+        assert_eq!(capability.id, "qwen_dense_slm_q8_0");
+        assert_eq!(capability.model_family, "qwen");
+        assert_eq!(capability.model_class, "dense_slm_gguf");
+        assert_eq!(capability.quantization, "Q8_0");
+        assert_eq!(capability.tokenizer_authority, "qwen2");
+        assert_eq!(capability.prompt_authority, "qwen2.5");
+        assert!(capability.capabilities.contains(&"chat_completion".to_string()));
+        assert!(capability.capabilities.contains(&"text_generation".to_string()));
+        assert!(capability.accelerator_routes.iter().any(|route| {
+            route.backend == "apple-m4-cpu-neon"
+                && route.route == "dense_qwen_cpu_neon_slm"
+                && route.status == "answer_lane"
+        }));
+        assert!(capability.permitted_claims.contains(&"apple_m4_cpu_neon_slm_answer".to_string()));
+        assert!(capability.claim_boundary.contains("does not prove dense CUDA"));
+    }
+
+    #[test]
+    fn qwen_q4_capability_keeps_execution_unsupported() {
+        let model = supported_model("qwen2.5-0.5b-instruct-q4_k_m").unwrap();
+        let result = verify_model(model, Path::new("/tmp/missing-qwen-q4.gguf")).unwrap();
+        let capability = result.model_capability.expect("model capability summary");
+
+        assert!(!result.passed);
+        assert_eq!(capability.id, "qwen_dense_slm_q4_k_m_storage_reference");
+        assert_eq!(capability.quantization, "Q4_K_M");
+        assert_eq!(capability.cpu_oracle, "none_strict_rust_execution_unsupported");
+        assert!(capability.accelerator_routes.is_empty());
+        assert!(capability.permitted_claims.contains(&"storage_reference".to_string()));
+        assert!(!capability.permitted_claims.contains(&"apple_m4_cpu_neon_slm_answer".to_string()));
+        assert!(
+            capability.required_receipts.contains(&"unsupported_execution_receipt".to_string())
+        );
+        assert!(capability.claim_boundary.contains("strict Rust execution remains unsupported"));
+    }
+
+    #[test]
+    fn bitnet_contract_artifact_does_not_emit_dense_capability_summary() {
+        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s").unwrap();
+        let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf")).unwrap();
+
+        assert!(result.model_contract.is_some());
+        assert!(result.model_capability.is_none());
     }
 
     #[test]

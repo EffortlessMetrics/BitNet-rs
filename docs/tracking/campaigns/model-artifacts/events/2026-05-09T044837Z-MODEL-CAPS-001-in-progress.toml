@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T04:48:37Z"
+campaign = "model-artifacts"
+item = "MODEL-CAPS-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/model-caps-001-dense-verify"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Expose dense Qwen SLM capability metadata through `bitnet model verify`.",
+  "Keep Qwen Q8_0 scoped to the Apple M4 CPU/NEON SLM answer lane and Q4_K_M scoped to storage/reference use.",
+  "No runtime, tokenizer, loader, prompt-template, transformer, QK256, CUDA, dense GGUF inference, server, speedup, or full-residency behavior changes.",
+]
