@@ -2115,8 +2115,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-022"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-022-attention-score-route"
+pr = 4254
+head_sha = "0ac991b39c38bfb5facf979e0acb8f3fb56e4c38"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

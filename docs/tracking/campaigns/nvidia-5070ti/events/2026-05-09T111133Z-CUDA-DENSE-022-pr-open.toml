@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T11:11:33Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-022"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-022-attention-score-route"
+pr = 4254
+head_sha = "0ac991b39c38bfb5facf979e0acb8f3fb56e4c38"
+notes = [
+  "Opened PR #4254 for dense GGUF one-layer attention_scores planner routing after CUDA-DENSE-021 parity evidence.",
+  "The PR keeps attention_softmax, attention_v_mix, and mlp_activation as unsupported strict CUDA gaps.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math changes remain out of scope.",
+]
