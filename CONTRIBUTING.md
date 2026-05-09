@@ -168,13 +168,13 @@ See [ROADMAP.md](ROADMAP.md) for the project's current direction and priorities.
 3. **Use xtask Commands**
    ```bash
    # Download test models
-   cargo run --locked -p xtask -- download-model
+   cargo run --locked --no-default-features -p xtask -- download-model
 
    # Verify implementation
-   cargo run --locked -p xtask -- verify --model models/test.gguf
+   cargo run --locked --no-default-features -p xtask -- verify --model models/test.gguf
 
    # Cross-validate against C++ reference
-   cargo run --locked -p xtask -- crossval
+   cargo run --locked --no-default-features -p xtask -- crossval
    ```
 
 ### Workflow Boundary
@@ -622,10 +622,10 @@ Before submitting a PR, ensure:
 6. **Verify Inference Receipt** (if you have ci/inference.json)
    ```bash
    # Verify CPU receipt
-   cargo run --locked -p xtask -- verify-receipt --path ci/inference.json
+   cargo run --locked --no-default-features -p xtask -- verify-receipt --path ci/inference.json
 
    # Verify GPU receipt (requires GPU kernels)
-   cargo run --locked -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
+   cargo run --locked --no-default-features -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
    ```
 
 7. **Update Documentation**
@@ -635,7 +635,7 @@ Before submitting a PR, ensure:
 
 8. **Cross-validate Changes** (optional, for inference changes)
    ```bash
-   cargo run --locked -p xtask -- full-crossval
+   cargo run --locked --no-default-features -p xtask -- full-crossval
    ```
 
 ### PR Requirements

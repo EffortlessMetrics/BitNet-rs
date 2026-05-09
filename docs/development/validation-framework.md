@@ -95,7 +95,7 @@ scripts/nll-parity.sh
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
 export BITNET_DETERMINISTIC=1 BITNET_SEED=42
-cargo run -p xtask -- full-crossval
+cargo run --no-default-features -p xtask -- full-crossval
 
 # Model compatibility validation with weight mapper
 cargo test --no-default-features --features cpu -p crossval --no-default-features test_validate_model_compatibility

@@ -40,8 +40,8 @@ cargo test --workspace --no-default-features --features gpu
 BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
 
 # BDD compile-coverage check (feature-matrix grid)
-cargo run -p xtask -- grid-check
-cargo run -p xtask -- grid-check --dry-run   # show what would be checked
+cargo run --no-default-features -p xtask -- grid-check
+cargo run --no-default-features -p xtask -- grid-check --dry-run   # show what would be checked
 
 # Run including ignored tests (will encounter blocked tests)
 cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored
@@ -222,7 +222,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 cargo test --no-default-features --workspace --no-default-features --features "cpu,ffi,crossval"
 
 # Full cross-validation workflow
-cargo run -p xtask -- full-crossval
+cargo run --no-default-features -p xtask -- full-crossval
 
 # Cross-validation with concurrency caps
 scripts/preflight.sh && cargo crossval-capped

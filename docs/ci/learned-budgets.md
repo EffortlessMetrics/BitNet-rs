@@ -64,7 +64,7 @@ Records without a `lane` field are skipped.
 ## CLI
 
 ```bash
-cargo run -p xtask -- ci estimate \
+cargo run --no-default-features -p xtask -- ci estimate \
   --history .ci/metrics/ci-lane-history.jsonl \
   --lanes-toml policy/ci-lanes.toml \
   --json-out target/ci/ci-lane-estimates.json \

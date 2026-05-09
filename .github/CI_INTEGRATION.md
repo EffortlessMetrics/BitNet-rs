@@ -13,7 +13,7 @@ Add this step to your main CI workflow (after benchmark writes `ci/inference.jso
   # Only run if receipt exists (until microbench is implemented)
   if: hashFiles('ci/inference.json') != ''
   run: |
-    cargo run -p xtask -- verify-receipt --path ci/inference.json
+    cargo run --no-default-features -p xtask -- verify-receipt --path ci/inference.json
 ```
 
 **Location:** Add after your inference benchmark step, before any artifact uploads.
@@ -30,7 +30,7 @@ For GPU CI lanes, add GPU-specific verification:
 - name: Verify GPU receipt (requires GPU kernels)
   if: matrix.backend == 'cuda' || matrix.backend == 'gpu'
   run: |
-    cargo run -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
+    cargo run --no-default-features -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
 ```
 
 **Important:** This step will fail if:
@@ -61,11 +61,11 @@ jobs:
 
       # TODO: Add microbench step here
       # - name: Run CPU microbench
-      #   run: cargo run -p xtask -- benchmark --tokens 128 --deterministic
+      #   run: cargo run --no-default-features -p xtask -- benchmark --tokens 128 --deterministic
 
       - name: Verify CPU receipt (strict)
         if: hashFiles('ci/inference.json') != ''
-        run: cargo run -p xtask -- verify-receipt --path ci/inference.json
+        run: cargo run --no-default-features -p xtask -- verify-receipt --path ci/inference.json
 
   test-gpu:
     runs-on: [self-hosted, cuda]
@@ -83,11 +83,11 @@ jobs:
 
       # TODO: Add GPU microbench step here
       # - name: Run GPU microbench
-      #   run: cargo run -p xtask -- benchmark --backend gpu --tokens 128 --deterministic
+      #   run: cargo run --no-default-features -p xtask --features gpu -- benchmark --backend gpu --tokens 128 --deterministic
 
       - name: Verify GPU receipt (requires GPU kernels)
         if: hashFiles('ci/inference.json') != ''
-        run: cargo run -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
+        run: cargo run --no-default-features -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
 ```
 
 ## Branch Protection
@@ -119,7 +119,7 @@ cat > ci/inference.json << 'EOF'
 EOF
 
 # Verify it passes
-cargo run -p xtask -- verify-receipt --path ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --path ci/inference.json
 
 # Should output:
 # ✅ Receipt verification passed

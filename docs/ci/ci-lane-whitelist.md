@@ -85,7 +85,7 @@ When adding or modifying a CI workflow:
    `policy/ci-whitelist-exceptions.toml` with a real expiry.
 3. If the lane duplicates an existing proof obligation, set
    `duplicate_of` to the other lane's `id`.
-4. Confirm `cargo run -p xtask -- ci-lane-whitelist check` passes
+4. Confirm `cargo run --no-default-features -p xtask -- ci-lane-whitelist check` passes
    (added in PR 02 of the rollout).
 
 ## Status
