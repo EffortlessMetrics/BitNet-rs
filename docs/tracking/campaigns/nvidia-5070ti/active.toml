@@ -2296,10 +2296,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-019"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-019-rope-route"
 pr = 4241
-head_sha = "91d73241c07c01e21e950950c79c9c624a7c54ad"
+head_sha = "a13164098a54007c381643ce91c037d5cf3ea99d"
+merge_sha = "77e9497324ce5a60cf4cdb8590f834204919bac4"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
