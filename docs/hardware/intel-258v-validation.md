@@ -895,6 +895,58 @@ Arc 140V or Intel NPU execution is proven.
 Packed QK256 decode semantics are fixed.
 ```
 
+## CPU258V-022 CPU QK256/I2_S/I8_S Semantic Audit
+
+Artifact:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-qk256-i8s-semantic-audit.json
+```
+
+The CPU258V-022 audit adds CPU scalar fixtures for the QK256/I2_S and BitNet
+I8_S semantic boundary that the 258V CPU answer path depends on. It checks the
+byte-exact grouped I2_S layout fixture, the canonical code map, the I8_S
+activation absmax scale and activation sum, the scaled output formula, and
+non-finite inline weight-scale rejection.
+
+Current audited semantics:
+
+```text
+I2_S code map = {0: -1.0, 1: 0.0, 2: 1.0, 3: 0.0}
+QK256 packed layout = two 128-value chunks, 32 grouped bytes per chunk
+byte encoding = lane0<<6 | lane1<<4 | lane2<<2 | lane3
+I8_S activation scale = 127.0 / max(1e-5, max(abs(x)))
+scaled output = ((int_dot - activation_sum) / activation_scale) * inline_weight_scale
+```
+
+Focused validation:
+
+```text
+rustfmt --check --config skip_children=true --edition 2024 crates/bitnet-quantization/src/i2s_qk256.rs
+cargo test --locked -p bitnet-quantization --no-default-features bitnet_i8s -- --nocapture
+cargo test --locked -p bitnet-quantization --no-default-features qk256_bitnet_i2s_grouped_layout_byte_exact_fixture -- --nocapture
+cargo test --locked -p bitnet-quantization --no-default-features qk256 -- --nocapture
+```
+
+Allowed claim:
+
+```text
+The 258V CPU scalar QK256/I2_S/I8_S semantic boundary has focused fixtures for
+grouped layout, activation scaling, activation-sum subtraction, inline weight
+scale handling, and non-finite scale rejection.
+```
+
+Not allowed:
+
+```text
+BitNet answer quality is proven.
+First-token logits parity is proven.
+CPU speed or sustained throughput is proven.
+Arc 140V or Intel NPU execution is proven.
+QK256 decode on an accelerator is proven.
+Full model correctness is proven.
+```
+
 ## CPU258V-019 External First-Token Reference Boundary
 
 Artifact:

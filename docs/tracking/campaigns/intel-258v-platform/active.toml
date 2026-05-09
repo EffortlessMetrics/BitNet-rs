@@ -1427,9 +1427,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-022"
-status = "ready"
-pr = "TBD"
-branch = "TBD"
+status = "pr_open"
+pr = 4321
+branch = "codex/lunar-lake/CPU258V-022-qk256-semantic-audit"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
