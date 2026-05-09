@@ -138,7 +138,7 @@ use commands::{
     DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
     ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
     InspectCommand, OutputHeadLogitsAuditCommand, ReceiptsCommand, ReferenceCompareCommand,
-    ServeCommand,
+    ServeCommand, TransformerLayerParityCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -601,6 +601,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Audit output-head/tied-head and logits-index boundaries for 258V CPU proof
     OutputHeadLogitsAudit(Box<OutputHeadLogitsAuditCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Classify 258V CPU transformer-layer trace boundaries
+    TransformerLayerParity(Box<TransformerLayerParityCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Extract one dense GGUF linear fixture and run strict CUDA parity diagnostics
@@ -1452,6 +1456,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::ExternalReferenceInstrumentation(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::OutputHeadLogitsAudit(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::TransformerLayerParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufLinearParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
