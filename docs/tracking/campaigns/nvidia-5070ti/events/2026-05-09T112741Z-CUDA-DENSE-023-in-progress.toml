@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T11:27:41Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-023"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-023-attention-softmax-fixture"
+notes = [
+  "Started dense GGUF attention-softmax CPU-reference fixture extraction after CUDA-DENSE-022 made attention_scores routable.",
+  "The receipt should record probability hashes, causal zero-probability counts, row-sum error, and the missing CUDA attention-softmax kernel gap.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, CUDA kernel math, and planner route promotion remain out of scope.",
+]
