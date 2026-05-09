@@ -1702,9 +1702,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-ux-receipts-explain"
 pr = 4185
+head_sha = "804ffb6df4728ec3e90196f92129e3f6a07942d0"
+merge_sha = "3a421ec7d58e60acf6f08d4020ffacfc42f8edc5"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

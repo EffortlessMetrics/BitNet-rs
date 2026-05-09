@@ -194,7 +194,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-PLANNER-002 | merged | Conservative model-family and quantization metadata mapping into the model-aware planner spec. |
 | CUDA-PLANNER-003 | merged | Receipt-ready planner summary fields for BitNet QK256 CUDA, dense regular-LLM CUDA, CPU fallback, unsupported ops, selected route labeling, and strict CUDA readiness. |
 | CUDA-PLANNER-004 | merged | Real strict ask, answer-corpus, warm-session, and benchmark receipts emit model-aware `execution_plan` fields. |
-| CUDA-UX-001 | pr_open | User-facing `bitnet receipts explain` command summarizes existing receipt proof fields, planner routes, kernels, timing, residency, and claim limits. |
+| CUDA-UX-001 | merged | User-facing `bitnet receipts explain` command summarizes existing receipt proof fields, planner routes, kernels, timing, residency, and claim limits. |
 
 ## Review Policy
 
