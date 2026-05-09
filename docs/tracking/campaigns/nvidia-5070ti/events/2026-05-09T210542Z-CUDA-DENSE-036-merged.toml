@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T21:05:42Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-036"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-036-all-layer-plan"
+pr = 4331
+head_sha = "0c909b4b02e7da417258875ffd143859b54a1e6b"
+merge_sha = "515502b87ccb47f98011470dc68304c8c874f940"
+
+notes = [
+  "PR #4331 merged, defining the CUDA-DENSE-036 all-layer dense GGUF execution-plan receipt contract.",
+  "The merged tracker/report contract requires the future implementation to inspect every Qwen-family transformer layer, report per-layer route counts and graph differences, and keep token embedding, final norm, LM head/logits, KV cache, and sampling gaps explicit.",
+  "CUDA-DENSE-036 keeps all-layer implementation, hardware receipt evidence, dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false.",
+]

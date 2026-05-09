@@ -207,7 +207,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-033 | merged | Implement the full layer-0 CPU reference harness so the next dense CUDA proof can compare the CUDA-routable one-layer plan against deterministic CPU-reference phase hashes and final output hash without claiming CUDA execution, dense inference, token/decode/chat, speedup, or full residency. |
 | CUDA-DENSE-034 | merged | Define the integrated layer-0 CUDA parity contract so the next implementation can run the full CUDA-routable layer plan against the CUDA-DENSE-033 CPU reference without claiming dense inference, Qwen token/decode/chat, speedup, persistent/full residency, or BitNet packed proof. |
 | CUDA-DENSE-035 | merged | Implement the integrated dense GGUF one-layer CUDA parity harness and receipt validator for the CUDA-DENSE-034 contract without claiming dense inference, Qwen token/decode/chat, speedup, persistent/full residency, or BitNet packed proof. |
-| CUDA-DENSE-036 | pr_open | Define the governed dense GGUF all-layer execution-plan receipt contract so the next implementation must inspect every Qwen-family transformer layer, report route counts and graph differences, and keep model-boundary gaps explicit before any Qwen token/decode/chat claim. |
+| CUDA-DENSE-036 | merged | Define the governed dense GGUF all-layer execution-plan receipt contract so the next implementation must inspect every Qwen-family transformer layer, report route counts and graph differences, and keep model-boundary gaps explicit before any Qwen token/decode/chat claim. |
 
 ## Review Policy
 
