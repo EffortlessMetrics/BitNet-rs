@@ -24,7 +24,7 @@
 | apple-m4 | M4-016 | M4-015 | merged |
 | apple-m4 | M4-017 | M4-016 | merged |
 | apple-m4 | M4-018 | M4-017 | merged |
-| apple-m4-continuity | M4-CONT-002 | M4-CONT-001 | in_progress |
+| apple-m4-continuity | M4-CONT-002 | M4-CONT-001 | pr_open |
 | apple-m4-continuity | M4-CONT-003 | M4-CONT-002 | proposed |
 | apple-m4-continuity | M4-CONT-004 | M4-CONT-003 | proposed |
 | apple-m4-continuity | M4-CONT-005 | M4-CONT-004 | blocked |

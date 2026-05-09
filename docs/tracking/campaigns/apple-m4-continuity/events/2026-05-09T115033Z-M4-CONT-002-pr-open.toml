@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T11:50:33Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-002"
+event = "pr_open"
+pr = 4261
+head_sha = "108035c51152fb09ca7d85fccf343e6bf472f6dc"
+actor = "codex"
+
+notes = [
+  "Opened M4 dense-SLM golden smoke PR.",
+  "The PR adds `bitnet mac smoke`, which verifies the supported Qwen cache, runs a fixed tiny `2+2` prompt through apple-m4-cpu-neon, validates the answer receipt, and writes aggregate cache/disk/backend/fallback health.",
+  "The claim boundary remains dense Qwen SLM local health only; no BitNet, full Metal, Neural Engine, MPSGraph inference, QK256, or broad performance claim is made.",
+]
