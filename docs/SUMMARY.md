@@ -10,6 +10,8 @@
 - [Development](development.md)
 - [Codegen](codegen.md)
 - [Testing](testing.md)
+- [Crate Boundary Policy](development/CRATE_BOUNDARY_POLICY.md)
+- [Repository Surfaces](development/REPO_SURFACES.md)
 
 ## Performance
 - [Benchmarking Setup](benchmarking-setup.md)
