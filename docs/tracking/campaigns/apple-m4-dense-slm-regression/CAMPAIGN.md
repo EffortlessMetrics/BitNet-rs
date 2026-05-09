@@ -49,8 +49,8 @@ These bands are intentionally conservative and advisory until repeated scheduled
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-SLM-REG-001 | in_progress | Add advisory receipt comparison for the published performance envelope. |
-| M4-SLM-REG-002 | proposed | Gate quality and deterministic greedy drift for the five-prompt corpus. |
+| M4-SLM-REG-001 | merged | Add advisory receipt comparison for the published performance envelope. |
+| M4-SLM-REG-002 | ready | Gate quality and deterministic greedy drift for the five-prompt corpus. |
 | M4-SLM-REG-003 | proposed | Define or stage scheduled Apple hardware regression reporting. |
 | M4-SLM-REG-004 | proposed | Add compact trend-history artifacts for release receipts. |
 | M4-SLM-REG-005 | proposed | Tighten thresholds only after repeated matching receipts exist. |
