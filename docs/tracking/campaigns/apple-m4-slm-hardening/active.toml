@@ -1,6 +1,6 @@
 id = "apple-m4-slm-hardening"
 title = "Apple M4 SLM hardening"
-status = "active"
+status = "complete"
 
 objective = "Make the completed Apple M4 SLM path boring for local users through simple Mac commands, default verified model-cache behavior, clear first-run guidance, stable receipts, and conservative hardware claim boundaries."
 
@@ -161,8 +161,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-004"
-status = "pr_open"
+status = "merged"
 pr = 4161
+merge_sha = "9dd5c48608ba7be078507a16f3ca9fb3ade23661"
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-004-regression-seed"
 stackable = false
 review_mode = "codex_premerge"

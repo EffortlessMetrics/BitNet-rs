@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T00:43:21Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-004"
+event = "merged"
+pr = 4161
+head_sha = "bcdf0e50007a1edb70f5e6bb983bbbb7b4f4b5e7"
+merge_sha = "9dd5c48608ba7be078507a16f3ca9fb3ade23661"
+actor = "codex"
+
+notes = [
+  "Merged the dense Apple M4 SLM regression guardrail seed.",
+  "The apple-m4-dense-slm-regression campaign is active with M4-SLM-REG-001 ready for advisory receipt comparison work.",
+  "This closes the Apple M4 SLM hardening campaign as complete.",
+  "No nightly infrastructure, performance CI enforcement, broad M4 performance claim, BitNet local-answer claim, full apple-m4-metal inference claim, QK256 support, or runtime change was made.",
+]
