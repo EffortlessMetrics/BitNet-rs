@@ -598,7 +598,7 @@ async fn run_smoke(
     json_out: PathBuf,
 ) -> Result<()> {
     let cache_status =
-        model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), true)?;
+        model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), false)?;
     if !cache_status["ready"].as_bool().unwrap_or(false) {
         let next_step = cache_status["next_step"]
             .as_str()
@@ -607,6 +607,7 @@ async fn run_smoke(
     }
 
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    let cache_status = verified_cache_status_json(&model);
     if let Some(parent) = json_out.parent().filter(|parent| !parent.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent)
             .with_context(|| format!("failed to create {}", parent.display()))?;
@@ -673,6 +674,7 @@ async fn run_smoke(
             "size_matches": cache_status["size_matches"].clone(),
             "metadata_present": cache_status["metadata_present"].clone(),
             "verified": cache_status["verified"].clone(),
+            "verification_passes": cache_status["verification_passes"].clone(),
             "disk": disk_health_json(&model.cache_root, model.bytes),
         },
         "model_cache": {
@@ -713,6 +715,27 @@ async fn run_smoke(
         answer_receipt_path.display()
     );
     Ok(())
+}
+
+fn verified_cache_status_json(model: &VerifiedCachedModel) -> serde_json::Value {
+    let metadata_path = model
+        .path
+        .parent()
+        .map(|parent| parent.join("bitnet-model-cache.json"))
+        .unwrap_or_else(|| PathBuf::from("bitnet-model-cache.json"));
+    serde_json::json!({
+        "state": "ready",
+        "ready": true,
+        "cache_root": model.cache_root.clone(),
+        "cache_path": model.path.clone(),
+        "metadata_path": metadata_path,
+        "present": true,
+        "size_matches": true,
+        "metadata_present": true,
+        "verified": true,
+        "verification_passes": 1,
+        "note": "mac smoke performs one strict model-cache verification pass before generation and records the resulting ready state",
+    })
 }
 
 #[allow(clippy::too_many_arguments)]

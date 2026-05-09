@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T11:56:38Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started dense Mac SLM latency polish after M4-CONT-002 closeout merged.",
+  "Initial scope removes redundant cache SHA verification from `bitnet mac smoke` while keeping one strict verification pass before generation and recording verification_passes=1 in the aggregate smoke receipt.",
+  "The live smoke still generated the expected fixed `2+2` answer, recorded apple-m4-cpu-neon with fallback_used=false, and passed Mac receipt validation.",
+]

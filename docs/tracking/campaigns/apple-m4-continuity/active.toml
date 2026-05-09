@@ -114,7 +114,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CONT-003"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-continuity/M4-CONT-003-latency-polish"
 stackable = false
 review_mode = "codex_premerge"
