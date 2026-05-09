@@ -2,7 +2,7 @@
 # Apple M4 dense SLM regression guardrails Campaign Status
 
 - Campaign: `apple-m4-dense-slm-regression`
-- State: `active`
+- State: `complete`
 - Objective: Turn the measured Apple M4 dense SLM local-answer envelope into repeatable regression guardrails for quality, determinism, receipt schema, model-cache identity, warm-session timing, and memory drift without broadening the claim beyond the recorded Qwen2.5 dense SLM Apple CPU/NEON path.
 
 ## Work Items

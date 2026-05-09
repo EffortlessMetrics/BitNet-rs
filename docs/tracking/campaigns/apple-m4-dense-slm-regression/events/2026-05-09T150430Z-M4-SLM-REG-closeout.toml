@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T15:04:30Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-005"
+event = "merged"
+actor = "codex"
+pr = 4198
+merge_sha = "1043143cc8de25dff666adc32a351bc76579f351"
+
+notes = [
+  "Closed apple-m4-dense-slm-regression after M4-SLM-REG-001 through M4-SLM-REG-005 merged and campaign next reported no remaining item.",
+  "The completed campaign leaves advisory dense SLM receipt comparison, quality/determinism drift checks, staged hardware workflow shape, compact trend history, and tightened thresholds in place.",
+  "The closeout preserves the claim boundary: no BitNet quality, full Apple Metal inference, QK256, Neural Engine, MPSGraph model inference, or broad Apple Silicon performance claim.",
+]
