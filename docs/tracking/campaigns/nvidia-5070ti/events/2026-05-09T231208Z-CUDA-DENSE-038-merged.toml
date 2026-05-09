@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T23:12:08Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-038"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-038-model-boundary-fixtures"
+pr = 4348
+head_sha = "8e34d1cf144988fe796aa4b9c2e27d5b1fde0e81"
+merge_sha = "74c621586cf430ca0b4686d3e972cc10310d2c2f"
+
+notes = [
+  "PR #4348 merged, implementing CUDA-DENSE-038 dense GGUF model-boundary fixture receipts.",
+  "The merged slice records token embedding lookup, final model norm, LM head/logits hashes, deterministic top-k diagnostics, and the dense_regular_llm_cuda route boundary from the SHA-verified Qwen2.5 0.5B Q8_0 artifact.",
+  "CUDA-DENSE-038 keeps dense GGUF inference, Qwen one-token/decode/chat, speedup, KV cache policy, sampling integration, persistent/full residency, server readiness, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, and CUDA kernel math claims false.",
+]
