@@ -143,42 +143,42 @@ cargo llvm-cov --workspace --features cpu --html
 ### Model Management
 ```bash
 # Download BitNet model from Hugging Face
-cargo run -p xtask -- download-model
+cargo run --no-default-features -p xtask -- download-model
 
 # Vendor GGML quantization files for IQ2_S support
-cargo run -p xtask -- vendor-ggml --commit <llama.cpp-commit>
+cargo run --no-default-features -p xtask -- vendor-ggml --commit <llama.cpp-commit>
 
 # Fetch and build Microsoft BitNet C++ for cross-validation
-cargo run -p xtask -- fetch-cpp
+cargo run --no-default-features -p xtask -- fetch-cpp
 ```
 
 ### Cross-Validation Workflow
 ```bash
 # Run cross-validation tests
-cargo run -p xtask -- crossval
+cargo run --no-default-features -p xtask -- crossval
 # Full workflow (download + fetch + test)
-cargo run -p xtask -- full-crossval
+cargo run --no-default-features -p xtask -- full-crossval
 
 # Check feature flag consistency
-cargo run -p xtask -- check-features
+cargo run --no-default-features -p xtask -- check-features
 ```
 
 ### Model Verification
 ```bash
 # Verify model configuration and tokenizer compatibility
-cargo run -p xtask -- verify --model models/bitnet/model.gguf
-cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json
-cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.model  # SPM tokenizer
-cargo run -p xtask -- verify --model models/bitnet/model.gguf --format json
+cargo run --no-default-features -p xtask -- verify --model models/bitnet/model.gguf
+cargo run --no-default-features -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json
+cargo run --no-default-features -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.model  # SPM tokenizer
+cargo run --no-default-features -p xtask -- verify --model models/bitnet/model.gguf --format json
 ```
 
 ### Inference Testing
 ```bash
 # Run simple inference for smoke testing (requires --features inference for real inference)
-cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "The capital of France is" --tokenizer models/bitnet/tokenizer.json
-cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "The capital of France is" --tokenizer models/bitnet/tokenizer.model  # SPM tokenizer
-cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Hello world" --allow-mock --format json
-cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "Test prompt" --max-new-tokens 64 --temperature 0.7 --gpu
+cargo run --no-default-features -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "The capital of France is" --tokenizer models/bitnet/tokenizer.json
+cargo run --no-default-features -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "The capital of France is" --tokenizer models/bitnet/tokenizer.model  # SPM tokenizer
+cargo run --no-default-features -p xtask -- infer --model models/bitnet/model.gguf --prompt "Hello world" --allow-mock --format json
+cargo run --no-default-features -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "Test prompt" --max-new-tokens 64 --temperature 0.7 --gpu
 ```
 
 ### Model Validation
