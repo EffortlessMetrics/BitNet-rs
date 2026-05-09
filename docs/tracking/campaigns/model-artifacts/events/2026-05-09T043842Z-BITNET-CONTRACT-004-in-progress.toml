@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T04:38:42Z"
+campaign = "model-artifacts"
+item = "BITNET-CONTRACT-004"
+event = "in_progress"
+actor = "codex"
+branch = "codex/bitnet-contract-004-architecture-summary"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Expose architecture support rows in CLI contract summaries.",
+  "Keep the unsupported 3B x86 I2_S route visible as upstream-unsupported and diagnostic-only.",
+  "No runtime, tokenizer, loader, prompt-template, transformer, QK256, CUDA, dense GGUF, server, speedup, or full-residency behavior changes.",
+]
