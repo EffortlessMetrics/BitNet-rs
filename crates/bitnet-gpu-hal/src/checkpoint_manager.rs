@@ -5,6 +5,7 @@
 //! compression modes, and automatic checkpoint scheduling.
 
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
 use std::io;
@@ -278,6 +279,10 @@ pub trait CheckpointStorage {
     fn get_metadata(&self, id: &str) -> Result<CheckpointMetadata, CheckpointError>;
 }
 
+fn compare_checkpoint_newest_first(a: &CheckpointMetadata, b: &CheckpointMetadata) -> Ordering {
+    b.timestamp.cmp(&a.timestamp).then_with(|| b.id.cmp(&a.id))
+}
+
 // ── File-based storage ───────────────────────────────────────────────────────
 
 /// File-system-backed checkpoint storage.
@@ -337,7 +342,7 @@ impl CheckpointStorage for FileCheckpointStorage {
                 metas.push(meta);
             }
         }
-        metas.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        metas.sort_by(compare_checkpoint_newest_first);
         Ok(metas)
     }
 
@@ -389,7 +394,7 @@ impl CheckpointStorage for MemoryCheckpointStorage {
 
     fn list(&self) -> Result<Vec<CheckpointMetadata>, CheckpointError> {
         let mut metas: Vec<_> = self.metas.values().cloned().collect();
-        metas.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        metas.sort_by(compare_checkpoint_newest_first);
         Ok(metas)
     }
 
@@ -1164,7 +1169,7 @@ mod tests {
     #[test]
     fn test_memory_storage_list_sorted() {
         let mut store = MemoryCheckpointStorage::default();
-        for (id, ts) in [("a", 100u64), ("b", 300), ("c", 200)] {
+        for (id, ts) in [("a", 100u64), ("b", 300), ("c", 200), ("d", 300)] {
             let meta = CheckpointMetadata {
                 id: id.into(),
                 timestamp: ts,
@@ -1180,9 +1185,10 @@ mod tests {
             store.save(&meta, b"x").unwrap();
         }
         let list = store.list().unwrap();
-        assert_eq!(list[0].id, "b"); // newest
-        assert_eq!(list[1].id, "c");
-        assert_eq!(list[2].id, "a"); // oldest
+        assert_eq!(list[0].id, "d"); // newest, with deterministic tie-break
+        assert_eq!(list[1].id, "b");
+        assert_eq!(list[2].id, "c");
+        assert_eq!(list[3].id, "a"); // oldest
     }
 
     #[test]
@@ -1270,7 +1276,7 @@ mod tests {
     fn test_file_storage_list() {
         let dir = tempfile::tempdir().unwrap();
         let mut store = FileCheckpointStorage::new(dir.path()).unwrap();
-        for (id, ts) in [("x", 10u64), ("y", 20)] {
+        for (id, ts) in [("x", 10u64), ("y", 20), ("z", 20)] {
             let meta = CheckpointMetadata {
                 id: id.into(),
                 timestamp: ts,
@@ -1286,8 +1292,9 @@ mod tests {
             store.save(&meta, b"d").unwrap();
         }
         let list = store.list().unwrap();
-        assert_eq!(list.len(), 2);
-        assert_eq!(list[0].id, "y"); // newest first
+        assert_eq!(list.len(), 3);
+        assert_eq!(list[0].id, "z"); // newest first, with deterministic tie-break
+        assert_eq!(list[1].id, "y");
     }
 
     #[test]
