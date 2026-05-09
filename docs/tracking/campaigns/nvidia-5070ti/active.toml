@@ -2178,10 +2178,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-023"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-023-attention-softmax-fixture"
 pr = 4257
 head_sha = "7a73a0bc85de90d1acc3758ff82fbdcdd453e8da"
+merge_sha = "306ce613955415ee4e731ba6e17f7243658550c4"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
