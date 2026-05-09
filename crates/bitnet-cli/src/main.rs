@@ -129,9 +129,10 @@ use commands::BenchmarkCommand;
 use commands::{
     AnswerCorpusCommand, AnswerParityCommand, ConvertCommand,
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
-    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand,
-    DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
-    InferenceCommand, InspectCommand, ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
+    DenseGgufAttentionSoftmaxFixtureCommand, DenseGgufLinearParityCommand,
+    DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
+    DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand, InferenceCommand, InspectCommand,
+    ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -610,6 +611,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Extract a dense GGUF attention-score fixture and emit a CPU-reference receipt
     DenseGgufAttentionScoreFixture(Box<DenseGgufAttentionScoreFixtureCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Extract a dense GGUF attention-softmax fixture and emit a CPU-reference receipt
+    DenseGgufAttentionSoftmaxFixture(Box<DenseGgufAttentionSoftmaxFixtureCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Run dense GGUF attention-score strict CUDA parity diagnostics
@@ -1395,6 +1400,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufRopeCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufAttentionScoreFixture(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufAttentionSoftmaxFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufAttentionScoreCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

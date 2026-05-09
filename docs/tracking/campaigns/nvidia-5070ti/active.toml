@@ -2177,6 +2177,68 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-023"
+status = "in_progress"
+branch = "codex/cuda-dense-023-attention-softmax-fixture"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-022"]
+acceptance = "Extract a dense GGUF attention-softmax CPU-reference fixture after CUDA-DENSE-022 made attention_scores routable, record probability hashes, causal zero-probability counts, row-sum error, and the missing CUDA softmax kernel gap, while keeping dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false."
+commands = [
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli attention_softmax -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features attention_softmax -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-attention-softmax-fixture --model <verified-qwen2.5-q8-gguf> --layer-index 0 --seq-len 4 --position-offset 1 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-attention-softmax-fixture-qwen25-q8.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-attention-softmax-fixture-qwen25-q8.json",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "server runtime behavior",
+  "speedup or full CUDA residency claim upgrades",
+  "dense planner one-layer route promotion",
+]
+may_claim = [
+  "A metadata-derived Qwen2.5 0.5B Q8_0 dense GGUF attention-softmax CPU-reference fixture exists after attention-score CUDA parity and planner routing.",
+  "The dense_gguf_attention_softmax_fixture receipt records attention-score dependency, probability count, causal zero-probability count, row-sum error, probability SHA256, and the missing CUDA attention-softmax kernel gap.",
+  "The next dense CUDA proof can implement CUDA attention-softmax kernel parity for this fixture.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, or server behavior changed.",
+  "A full Qwen layer, token, short decode, or chat path works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Attention softmax CUDA parity exists.",
+  "The one-layer planner route has been promoted for attention_softmax.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-015"
 status = "merged"
 branch = "codex/cuda-dense-015-norm-fixture-audit"
