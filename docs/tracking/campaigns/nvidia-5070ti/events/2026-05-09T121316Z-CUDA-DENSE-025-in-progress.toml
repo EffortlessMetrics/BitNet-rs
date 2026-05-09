@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T12:13:16Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-025"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-025-attention-softmax-route"
+notes = [
+  "Started dense GGUF one-layer planner promotion for attention_softmax after CUDA-DENSE-024 proved strict CUDA softmax parity.",
+  "The receipt should record 12 CUDA-routable dense ops and leave attention_v_mix plus mlp_activation as unsupported strict CUDA gaps.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math remain out of scope.",
+]

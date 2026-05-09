@@ -556,10 +556,15 @@ fn select_model_cuda_backend(
 fn dense_regular_llm_op_has_cuda_route(op: &DispatchOp) -> bool {
     matches!(op.op_type, OpType::MatMul | OpType::RmsNorm | OpType::RoPE)
         || (op.op_type == OpType::Attention && is_dense_attention_score_op(&op.name))
+        || (op.op_type == OpType::Softmax && is_dense_attention_softmax_op(&op.name))
 }
 
 fn is_dense_attention_score_op(name: &str) -> bool {
     normalized_metadata_label(name).ends_with("attention_scores")
+}
+
+fn is_dense_attention_softmax_op(name: &str) -> bool {
+    normalized_metadata_label(name).ends_with("attention_softmax")
 }
 
 fn normalized_metadata_label(label: &str) -> String {
@@ -625,6 +630,15 @@ mod tests {
         DispatchOp {
             name: "blk.0.attention_scores".into(),
             op_type: OpType::Attention,
+            size: 4096,
+            is_quantized: false,
+        }
+    }
+
+    fn attention_softmax_op() -> DispatchOp {
+        DispatchOp {
+            name: "blk.0.attention_softmax".into(),
+            op_type: OpType::Softmax,
             size: 4096,
             is_quantized: false,
         }
@@ -937,6 +951,24 @@ mod tests {
         };
 
         let plan = plan_model_dispatch(&[attention_scores_op()], spec);
+
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaDenseRegularLlm);
+        assert!(!plan.decisions[0].fallback_used);
+        assert_eq!(plan.cuda_ops(), 1);
+        assert_eq!(plan.unsupported_ops(), 0);
+    }
+
+    #[test]
+    fn model_aware_dense_fp16_routes_attention_softmax_to_dense_cuda() {
+        let spec = ModelDispatchSpec {
+            model_family: ModelFamily::DenseRegularLlm,
+            quantization: QuantizationKind::DenseFp16,
+            backend_policy: BackendPolicy::StrictCuda,
+            has_simd: true,
+            cuda: CudaPlannerCapabilities::dense_regular_llm(),
+        };
+
+        let plan = plan_model_dispatch(&[attention_softmax_op()], spec);
 
         assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaDenseRegularLlm);
         assert!(!plan.decisions[0].fallback_used);

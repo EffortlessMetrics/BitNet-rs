@@ -31,9 +31,9 @@
     "driver_version": "591.86",
     "nvml_available": true,
     "nvrtc_version": "unknown",
-    "power_draw_watts": 19.78,
+    "power_draw_watts": 35.05,
     "power_limit_watts": 300.0,
-    "temperature_c": 36.0,
+    "temperature_c": 42.0,
     "vram_bytes": 17094475776
   },
   "descriptor_coverage": {
@@ -65,8 +65,8 @@
     "bitnet_packed_qk256_cuda": false,
     "cpu_fallback_ops": 0,
     "cuda_bitnet_qk256_ops": 0,
-    "cuda_dense_regular_llm_ops": 11,
-    "cuda_ops": 11,
+    "cuda_dense_regular_llm_ops": 12,
+    "cuda_ops": 12,
     "dense_regular_llm_cuda": true,
     "fallback_used": false,
     "full_cuda_residency_claimed": false,
@@ -82,7 +82,7 @@
     "strict_cuda_ready": false,
     "strict_fallback_policy": "reject",
     "total_ops": 14,
-    "unsupported_ops": 3
+    "unsupported_ops": 2
   },
   "fallback_backend": null,
   "fallback_reason": null,
@@ -92,17 +92,21 @@
     "attention_scores_routable_roles": [
       "attention_scores"
     ],
+    "attention_softmax_cuda_parity_available": true,
+    "attention_softmax_routable_roles": [
+      "attention_softmax"
+    ],
     "bitnet_packed_i2s_qk256_proof": false,
     "candidate_order": [
-      "attention_softmax",
       "attention_v_mix",
       "mlp_activation"
     ],
     "cpu_fallback_ops_total": 0,
     "cuda_routable_attention_score_ops_total": 1,
+    "cuda_routable_attention_softmax_ops_total": 1,
     "cuda_routable_linear_ops_total": 7,
     "cuda_routable_norm_ops_total": 2,
-    "cuda_routable_ops_total": 11,
+    "cuda_routable_ops_total": 12,
     "cuda_routable_roles": [
       "attention_norm",
       "attention_q",
@@ -110,6 +114,7 @@
       "attention_v",
       "rope",
       "attention_scores",
+      "attention_softmax",
       "attention_output",
       "ffn_norm",
       "mlp_gate",
@@ -193,7 +198,7 @@
       "mlp_up",
       "mlp_down"
     ],
-    "next_candidate_gap": "attention_softmax",
+    "next_candidate_gap": "attention_v_mix",
     "norms_routable_roles": [
       "attention_norm",
       "ffn_norm"
@@ -213,28 +218,9 @@
     "strict_cuda_rejects_cpu_fallback": true,
     "unsupported_op_type_counts": {
       "activation": 1,
-      "attention": 1,
-      "softmax": 1
+      "attention": 1
     },
     "unsupported_ops": [
-      {
-        "blocks_strict_cuda_one_layer": true,
-        "cpu_fallback_allowed": false,
-        "cuda_kernel_status": "missing_cuda_kernel",
-        "input_dependencies": [
-          "attention_scores"
-        ],
-        "input_residency": "not_executed",
-        "name": "blk.0.attention_softmax",
-        "op_type": "softmax",
-        "output_residency": "not_executed",
-        "role": "attention_softmax",
-        "size": 896,
-        "source": "derived_transformer_op",
-        "source_shape": null,
-        "source_tensor": null,
-        "transfer_timing_status": "not_measured_no_kernel"
-      },
       {
         "blocks_strict_cuda_one_layer": true,
         "cpu_fallback_allowed": false,
@@ -275,7 +261,7 @@
       }
     ],
     "unsupported_ops_have_dependency_notes": true,
-    "unsupported_ops_total": 3
+    "unsupported_ops_total": 2
   },
   "hardware_lane": "nvidia-rtx-5070-ti-cuda",
   "machine_id": "windows-9950x3d-rtx5070ti",
@@ -288,9 +274,10 @@
   },
   "one_layer_plan": {
     "attention_score_cuda_ops_total": 1,
+    "attention_softmax_cuda_ops_total": 1,
     "bitnet_packed_i2s_qk256_proof": false,
     "cpu_fallback_ops_total": 0,
-    "cuda_routable_ops_total": 11,
+    "cuda_routable_ops_total": 12,
     "dense_gguf_inference_claimed": false,
     "dense_gguf_one_layer_execution_plan_claimed": true,
     "full_cuda_residency_claimed": false,
@@ -412,15 +399,15 @@
         "is_quantized": false,
         "name": "blk.0.attention_softmax",
         "op_type": "softmax",
-        "reason": "strict CUDA rejects CPU fallback for dense_regular_llm dense_fp16 softmax op blk.0.attention_softmax",
+        "reason": "cuda_dense_regular_llm route selected for blk.0.attention_softmax",
         "role": "attention_softmax",
-        "route": "unsupported",
+        "route": "dense_regular_llm_cuda",
         "size": 896,
         "source": "derived_transformer_op",
         "source_shape": null,
         "source_tensor": null,
         "source_tensor_type": null,
-        "status": "unsupported_strict_cuda"
+        "status": "cuda_routable"
       },
       {
         "fallback_used": false,
@@ -558,12 +545,12 @@
     "strict_cuda_ready": false,
     "total_ops": 14,
     "unsupported_ops_explicitly_listed": true,
-    "unsupported_strict_cuda_ops_total": 3
+    "unsupported_strict_cuda_ops_total": 2
   },
   "requested_backend": "nvidia-rtx-5070-ti-cuda",
   "runtime_api": "cuda",
   "schema": 1,
   "selected_backend": "nvidia-rtx-5070-ti-cuda",
   "speedup_claim": false,
-  "timestamp_utc": "2026-05-09T11:04:40Z"
+  "timestamp_utc": "2026-05-09T12:11:48Z"
 }
