@@ -2343,8 +2343,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-034"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-034-integrated-parity-tracker"
+pr = 4324
+head_sha = "f84067ce994e2816e461a963f69309ee01bd7d35"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
