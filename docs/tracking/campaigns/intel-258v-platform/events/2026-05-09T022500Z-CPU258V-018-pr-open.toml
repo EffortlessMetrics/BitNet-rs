@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T02:25:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-018"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4178
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-018-hf-prompt-token-parity"
+summary = "Opened CPU258V-018 to compare HF AutoTokenizer prompt rendering and token IDs against BitNet-rs prompt-authority audit output."
+notes = [
+  "The receipt compares math_2_plus_2, say_ok, capital_france, and yes_no_water against metadata-authoritative BitNet-rs prompt tokens.",
+  "The current evidence classifies the first divergence as prompt: HF keeps the trailing Assistant generation-prompt space and does not prepend BOS, while BitNet-rs prepends BOS and omits that trailing space.",
+  "The PR does not claim answer quality, model inference, logits parity, speed, Arc 140V execution, Intel NPU execution, or QK256 decode correctness.",
+]

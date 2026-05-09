@@ -1244,7 +1244,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-018"
-status = "ready"
+status = "pr_open"
+pr = 4178
 branch = "codex/lunar-lake/CPU258V-018-hf-prompt-token-parity"
 stackable = false
 review_mode = "codex_premerge"
