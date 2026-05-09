@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T12:02:49Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-004"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started dense Mac SLM resident-session memory and timing envelope work.",
+  "Scope is limited to local M4 dense Qwen SLM resident-session receipts for 64-token and 128-token prompt budgets.",
+  "No model support, BitNet, Metal, QK256, Neural Engine, MPSGraph inference, broad Apple Silicon performance, or speedup claim is being added.",
+]

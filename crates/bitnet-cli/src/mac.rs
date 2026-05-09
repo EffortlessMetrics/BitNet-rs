@@ -1227,6 +1227,13 @@ fn profile_set_allocation_audit_json(
     })
 }
 
+fn memory_receipt_json() -> serde_json::Value {
+    serde_json::json!({
+        "peak_memory_mb": peak_memory_mb(),
+        "peak_memory_source": "getrusage.ru_maxrss",
+    })
+}
+
 fn profile_ids_json(tokens: &[usize]) -> serde_json::Value {
     serde_json::Value::Array(
         tokens.iter().map(|tokens| serde_json::Value::String(format!("warm_{tokens}"))).collect(),
@@ -1367,6 +1374,7 @@ fn annotate_and_validate_mac_receipt(
             "broad_performance_claim": false,
         }),
     );
+    object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
     std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
         .with_context(|| format!("failed to update Mac receipt {}", path.display()))?;
     println!(
