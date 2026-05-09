@@ -305,6 +305,7 @@ fn mac_help_documents_operator_wrappers() {
         .success()
         .stdout(predicate::str::contains("check"))
         .stdout(predicate::str::contains("ask"))
+        .stdout(predicate::str::contains("smoke"))
         .stdout(predicate::str::contains("validate"))
         .stdout(predicate::str::contains("receipts-check"));
 }
@@ -473,6 +474,41 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_smoke_help_documents_golden_smoke() {
+    bitnet()
+        .args(["mac", "smoke", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("golden smoke"))
+        .stdout(predicate::str::contains("--json-out <PATH>"))
+        .stdout(predicate::str::contains("--max-new-tokens"));
+}
+
+#[test]
+fn mac_smoke_missing_cache_points_to_model_fetch() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "smoke", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("golden smoke cannot run"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_smoke_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "smoke"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac smoke routes the supported Mac local-answer path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
 fn mac_chat_help_documents_resident_prompts() {
     bitnet()
         .args(["mac", "chat", "--help"])
@@ -588,6 +624,64 @@ fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt() {
         .success()
         .stdout(predicate::str::contains("\"passed\": true"))
         .stdout(predicate::str::contains("apple-m4-cpu-neon"));
+}
+
+#[test]
+fn mac_receipts_check_accepts_golden_smoke_receipt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("mac-smoke.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "apple_m4_slm_golden_smoke",
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "prompt": "Answer with a single digit: 2+2=",
+            "expected_text_fragment": "4",
+            "expected_text_fragment_found": true,
+            "text": "4",
+            "tokens": {
+                "generated": 1,
+                "generated_ids": [19]
+            },
+            "model": {
+                "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+            },
+            "tokenizer": {
+                "source": "gguf_metadata"
+            },
+            "cache_health": {
+                "checked": true,
+                "ready": true,
+                "state": "ready",
+                "disk": {
+                    "checked": true,
+                    "low_disk": false
+                }
+            },
+            "mac_claim_boundary": {
+                "golden_smoke": true,
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "bitnet_quality_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_slm_golden_smoke"))
+        .stdout(predicate::str::contains("\"passed\": true"));
 }
 
 #[test]

@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T11:47:22Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started compact M4 dense-SLM golden smoke command work after M4-CONT-001 closeout merged.",
+  "Scope is limited to cache health, one tiny supported dense Qwen SLM answer, receipt validation, backend/fallback identity, and disk/cache health.",
+  "No BitNet local-answer quality, full apple-m4-metal inference, QK256, Neural Engine, MPSGraph inference, or broad M4 performance claim will be made.",
+]

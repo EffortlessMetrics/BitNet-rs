@@ -125,6 +125,20 @@ default, writes an aggregate receipt plus per-prompt receipts, and keeps the
 same dense-SLM claim boundary as `bitnet mac ask`. For one question, continue to
 use `bitnet mac ask`.
 
+Run the compact M4 health smoke:
+
+```bash
+bitnet mac smoke \
+  --json-out target/apple-m4-continuity/mac-smoke.json
+```
+
+`bitnet mac smoke` verifies the supported dense-SLM cache, runs a fixed tiny
+`2+2` prompt through `apple-m4-cpu-neon`, validates the generated answer
+receipt, writes an aggregate golden-smoke receipt with backend/fallback identity
+and disk/cache health, and keeps the same dense-SLM-only claim boundary. It is a
+local appliance check, not a BitNet, Metal, Neural Engine, QK256, or broad
+performance proof.
+
 Run the deterministic warm-session validation corpus:
 
 ```bash

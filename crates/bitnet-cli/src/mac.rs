@@ -7,6 +7,8 @@ use std::io::{self, IsTerminal, Read};
 #[cfg(unix)]
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::process::Command;
 
 use crate::model_cache::{self, VerifiedCachedModel};
 
@@ -14,9 +16,13 @@ const APPLE_M4_CPU_NEON: &str = "apple-m4-cpu-neon";
 const APPLE_M4_METAL: &str = "apple-m4-metal";
 const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.json";
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
+const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
+const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
+const MAC_SMOKE_EXPECTED_FRAGMENT: &str = "4";
 const QWEN_PROMPT_TEMPLATE: &str = "qwen2.5";
+const LOW_DISK_HEADROOM_BYTES: u64 = 1_073_741_824;
 const OPERATOR_PROFILE_TOKENS: &[usize] = &[16, 32, 64];
 const PERFORMANCE_PROFILE_TOKENS: &[usize] = &[16, 32, 64, 128];
 const OPERATOR_PROFILE_PROMPTS: &[&str] = &[
@@ -111,6 +117,29 @@ enum MacAction {
 
         /// Output strict Mac answer receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_ASK_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
+    /// Run a compact Apple M4 dense-SLM health smoke with cache and receipt checks.
+    Smoke {
+        /// Supported model id. Defaults to the validated Apple M4 SLM runtime artifact.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Maximum new tokens for the fixed smoke prompt.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 4)]
+        max_new_tokens: usize,
+
+        /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Output aggregate golden smoke receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_SMOKE_DEFAULT_RECEIPT)]
         json_out: PathBuf,
     },
 
@@ -320,6 +349,10 @@ impl MacCommand {
                 )
                 .await
             }
+            MacAction::Smoke { model_id, cache_dir, max_new_tokens, threads, json_out } => {
+                ensure_supported_mac_device(explicit_device_label, "mac smoke")?;
+                run_smoke(&model_id, cache_dir, max_new_tokens, threads, json_out).await
+            }
             MacAction::Chat {
                 prompts,
                 stdin,
@@ -480,6 +513,39 @@ async fn run_ask(
     json_out: PathBuf,
 ) -> Result<()> {
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    run_one_shot_mac_answer(
+        &model,
+        question,
+        system_prompt,
+        max_new_tokens,
+        temperature,
+        top_k,
+        top_p,
+        repetition_penalty,
+        seed,
+        threads,
+        json_out,
+        "mac ask",
+    )
+    .await?;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_one_shot_mac_answer(
+    model: &VerifiedCachedModel,
+    question: String,
+    system_prompt: Option<String>,
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    repetition_penalty: f32,
+    seed: Option<u64>,
+    threads: usize,
+    json_out: PathBuf,
+    operator_command: &str,
+) -> Result<ReceiptCheckSummary> {
     crate::run_simple_generation(
         APPLE_M4_CPU_NEON,
         model.path.clone(),
@@ -519,7 +585,133 @@ async fn run_ask(
         false,
     )
     .await?;
-    annotate_and_validate_mac_receipt(&json_out, &model, "mac ask")?;
+    annotate_and_validate_mac_receipt(&json_out, model, operator_command)?;
+    let receipt = read_json_receipt(&json_out)?;
+    validate_mac_receipt_value(&json_out, &receipt)
+}
+
+async fn run_smoke(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    max_new_tokens: usize,
+    threads: usize,
+    json_out: PathBuf,
+) -> Result<()> {
+    let cache_status =
+        model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), true)?;
+    if !cache_status["ready"].as_bool().unwrap_or(false) {
+        let next_step = cache_status["next_step"]
+            .as_str()
+            .unwrap_or("run `bitnet model fetch qwen2.5-0.5b-instruct-q8_0`");
+        anyhow::bail!("Apple M4 dense-SLM golden smoke cannot run: {next_step}");
+    }
+
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    if let Some(parent) = json_out.parent().filter(|parent| !parent.as_os_str().is_empty()) {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    let answer_receipt_path = sibling_receipt_path(&json_out, "answer");
+    let answer_summary = run_one_shot_mac_answer(
+        &model,
+        MAC_SMOKE_PROMPT.to_string(),
+        None,
+        max_new_tokens,
+        0.0,
+        1,
+        1.0,
+        1.1,
+        None,
+        threads,
+        answer_receipt_path.clone(),
+        "mac smoke",
+    )
+    .await?;
+    let answer_receipt = read_json_receipt(&answer_receipt_path)?;
+    let text = answer_receipt["text"].as_str().unwrap_or_default().trim().to_string();
+    let answer_contains_expected = text.contains(MAC_SMOKE_EXPECTED_FRAGMENT);
+    if !answer_contains_expected {
+        anyhow::bail!(
+            "Apple M4 dense-SLM golden smoke expected the fixed prompt to contain `{MAC_SMOKE_EXPECTED_FRAGMENT}`, got {text:?}"
+        );
+    }
+
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_golden_smoke",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "prompt": MAC_SMOKE_PROMPT,
+        "expected_text_fragment": MAC_SMOKE_EXPECTED_FRAGMENT,
+        "expected_text_fragment_found": answer_contains_expected,
+        "text": text,
+        "tokens": answer_receipt["tokens"].clone(),
+        "model": answer_receipt["model"].clone(),
+        "tokenizer": answer_receipt["tokenizer"].clone(),
+        "quality": answer_receipt["quality"].clone(),
+        "timing": answer_receipt["timing"].clone(),
+        "answer_receipt": {
+            "path": answer_receipt_path.display().to_string(),
+            "artifact_kind": answer_summary.artifact_kind,
+            "prompt_count": answer_summary.prompt_count,
+            "generated_tokens": answer_summary.generated_tokens,
+            "validated": answer_summary.passed,
+        },
+        "cache_health": {
+            "checked": true,
+            "ready": true,
+            "state": cache_status["state"].clone(),
+            "cache_root": cache_status["cache_root"].clone(),
+            "cache_path": cache_status["cache_path"].clone(),
+            "metadata_path": cache_status["metadata_path"].clone(),
+            "present": cache_status["present"].clone(),
+            "size_matches": cache_status["size_matches"].clone(),
+            "metadata_present": cache_status["metadata_present"].clone(),
+            "verified": cache_status["verified"].clone(),
+            "disk": disk_health_json(&model.cache_root, model.bytes),
+        },
+        "model_cache": {
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        },
+        "mac_claim_boundary": {
+            "slm_local_answer": true,
+            "golden_smoke": true,
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        },
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+    });
+    validate_mac_receipt_value(&json_out, &aggregate)?;
+    std::fs::write(&json_out, serde_json::to_vec_pretty(&aggregate)?)
+        .with_context(|| format!("failed to write {}", json_out.display()))?;
+    println!(
+        "Mac golden smoke passed: {} (answer receipt: {})",
+        json_out.display(),
+        answer_receipt_path.display()
+    );
     Ok(())
 }
 
@@ -1035,6 +1227,53 @@ fn initial_targets_json(tokens: &[usize]) -> serde_json::Value {
         targets.insert(format!("warm_{tokens}"), serde_json::Value::String(target.to_string()));
     }
     serde_json::Value::Object(targets)
+}
+
+fn read_json_receipt(path: &Path) -> Result<serde_json::Value> {
+    serde_json::from_slice(
+        &std::fs::read(path).with_context(|| format!("failed to read {}", path.display()))?,
+    )
+    .with_context(|| format!("invalid JSON receipt {}", path.display()))
+}
+
+fn sibling_receipt_path(path: &Path, suffix: &str) -> PathBuf {
+    let parent = path.parent().filter(|parent| !parent.as_os_str().is_empty());
+    let stem = path.file_stem().and_then(|stem| stem.to_str()).unwrap_or("mac-smoke");
+    let filename = format!("{stem}-{suffix}.json");
+    parent.map(|parent| parent.join(&filename)).unwrap_or_else(|| PathBuf::from(filename))
+}
+
+fn disk_health_json(cache_root: &Path, expected_bytes: u64) -> serde_json::Value {
+    let probe_path =
+        cache_root.ancestors().find(|path| path.exists()).unwrap_or_else(|| Path::new("."));
+    let available_bytes = available_bytes(probe_path);
+    let recommended_bytes =
+        expected_bytes.saturating_mul(2).saturating_add(LOW_DISK_HEADROOM_BYTES);
+    serde_json::json!({
+        "checked": true,
+        "probe_path": probe_path,
+        "available_bytes": available_bytes,
+        "recommended_headroom_bytes": recommended_bytes,
+        "low_disk": available_bytes.is_some_and(|available| available < recommended_bytes),
+        "guidance": "run `bitnet model prune --all` or set BITNET_MODEL_CACHE_DIR / --cache-dir when low_disk=true"
+    })
+}
+
+#[cfg(unix)]
+fn available_bytes(path: &Path) -> Option<u64> {
+    let output = Command::new("df").arg("-k").arg(path).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let line = stdout.lines().nth(1)?;
+    let available_kib = line.split_whitespace().nth(3)?.parse::<u64>().ok()?;
+    Some(available_kib.saturating_mul(1024))
+}
+
+#[cfg(not(unix))]
+fn available_bytes(_path: &Path) -> Option<u64> {
+    None
 }
 
 #[cfg(unix)]
