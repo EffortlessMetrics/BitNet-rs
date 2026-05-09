@@ -145,8 +145,7 @@ pub const DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND: &str =
     "dense_gguf_one_layer_execution_plan";
 const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
     &["attention_softmax", "attention_v_mix", "mlp_activation"];
-const DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER: &[&str] =
-    &["attention_v_mix", "mlp_activation"];
+const DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER: &[&str] = &["mlp_activation"];
 
 /// Model class label for CUDA receipts that exercise dense regular LLM kernels.
 pub const DENSE_REGULAR_LLM_MODEL_CLASS: &str = "dense_regular_llm";
@@ -3529,6 +3528,10 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
         object_field(one_layer, "attention_softmax_cuda_ops_total")?.as_u64().ok_or_else(|| {
             anyhow!("one_layer_plan.attention_softmax_cuda_ops_total must be an unsigned integer")
         })?;
+    let attention_v_mix_cuda_ops =
+        object_field(one_layer, "attention_v_mix_cuda_ops_total")?.as_u64().ok_or_else(|| {
+            anyhow!("one_layer_plan.attention_v_mix_cuda_ops_total must be an unsigned integer")
+        })?;
     let unsupported_ops = object_field(one_layer, "unsupported_strict_cuda_ops_total")?
         .as_u64()
         .ok_or_else(|| {
@@ -3540,17 +3543,19 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
         || rope_cuda_ops == 0
         || attention_score_cuda_ops == 0
         || attention_softmax_cuda_ops == 0
+        || attention_v_mix_cuda_ops == 0
         || cuda_routable_ops
             != linear_cuda_ops
                 + norm_cuda_ops
                 + rope_cuda_ops
                 + attention_score_cuda_ops
                 + attention_softmax_cuda_ops
+                + attention_v_mix_cuda_ops
         || unsupported_ops == 0
         || total_ops != cuda_routable_ops + unsupported_ops
     {
         return Err(anyhow!(
-            "one_layer_plan must include dense CUDA linears, RMSNorm, RoPE, attention scores, attention softmax, and explicit unsupported strict CUDA ops"
+            "one_layer_plan must include dense CUDA linears, RMSNorm, RoPE, attention scores, attention softmax, attention V-mix, and explicit unsupported strict CUDA ops"
         ));
     }
     require_u64_eq(one_layer, "cpu_fallback_ops_total", 0)?;
@@ -3576,6 +3581,7 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
     let mut seen_rope_cuda_ops = 0_u64;
     let mut seen_attention_score_cuda_ops = 0_u64;
     let mut seen_attention_softmax_cuda_ops = 0_u64;
+    let mut seen_attention_v_mix_cuda_ops = 0_u64;
     let mut seen_unsupported_ops = 0_u64;
     let mut seen_unsupported_roles = BTreeSet::new();
     for (idx, op) in operations.iter().enumerate() {
@@ -3651,12 +3657,20 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
                         seen_rope_cuda_ops += 1;
                     }
                     "attention" => {
-                        require_string_eq(op, "role", "attention_scores")?;
+                        let role = required_string(op, "role")?;
                         require_string_eq(op, "source", "derived_transformer_op")?;
                         require_null(op, "source_tensor")?;
                         require_null(op, "source_tensor_type")?;
                         require_null(op, "source_shape")?;
-                        seen_attention_score_cuda_ops += 1;
+                        match role {
+                            "attention_scores" => seen_attention_score_cuda_ops += 1,
+                            "attention_v_mix" => seen_attention_v_mix_cuda_ops += 1,
+                            other => {
+                                return Err(anyhow!(
+                                    "CUDA-routable dense attention op role must be attention_scores or attention_v_mix, got `{other}`"
+                                ));
+                            }
+                        }
                     }
                     "softmax" => {
                         require_string_eq(op, "role", "attention_softmax")?;
@@ -3693,6 +3707,7 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
         || seen_rope_cuda_ops != rope_cuda_ops
         || seen_attention_score_cuda_ops != attention_score_cuda_ops
         || seen_attention_softmax_cuda_ops != attention_softmax_cuda_ops
+        || seen_attention_v_mix_cuda_ops != attention_v_mix_cuda_ops
         || seen_unsupported_ops != unsupported_ops
     {
         return Err(anyhow!("one_layer_plan operation route counts do not match summary"));
@@ -3704,6 +3719,7 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
         rope_cuda_ops,
         attention_score_cuda_ops,
         attention_softmax_cuda_ops,
+        attention_v_mix_cuda_ops,
         unsupported_ops,
     };
     validate_dense_one_layer_gap_audit(receipt, &counts, &seen_unsupported_roles)?;
@@ -3736,6 +3752,7 @@ struct DenseOneLayerGapCounts {
     rope_cuda_ops: u64,
     attention_score_cuda_ops: u64,
     attention_softmax_cuda_ops: u64,
+    attention_v_mix_cuda_ops: u64,
     unsupported_ops: u64,
 }
 
@@ -3764,6 +3781,11 @@ fn validate_dense_one_layer_gap_audit(
         audit,
         "cuda_routable_attention_softmax_ops_total",
         counts.attention_softmax_cuda_ops,
+    )?;
+    require_u64_eq(
+        audit,
+        "cuda_routable_attention_v_mix_ops_total",
+        counts.attention_v_mix_cuda_ops,
     )?;
     require_u64_eq(audit, "unsupported_ops_total", counts.unsupported_ops)?;
     require_u64_eq(audit, "cpu_fallback_ops_total", 0)?;
@@ -3856,7 +3878,20 @@ fn validate_dense_one_layer_gap_audit(
         reject_bitnet_packed_marker(role, "gap_audit.attention_softmax_routable_roles")?;
     }
     require_bool_eq(audit, "attention_softmax_cuda_parity_available", true)?;
-    require_string_eq(audit, "next_candidate_gap", "attention_v_mix")?;
+    let attention_v_mix_roles = array_field(audit, "attention_v_mix_routable_roles")?;
+    if attention_v_mix_roles.len() != counts.attention_v_mix_cuda_ops as usize {
+        return Err(anyhow!(
+            "gap_audit.attention_v_mix_routable_roles length must match CUDA attention V-mix op count"
+        ));
+    }
+    for role in attention_v_mix_roles {
+        let role = role.as_str().ok_or_else(|| {
+            anyhow!("gap_audit.attention_v_mix_routable_roles entries must be strings")
+        })?;
+        reject_bitnet_packed_marker(role, "gap_audit.attention_v_mix_routable_roles")?;
+    }
+    require_bool_eq(audit, "attention_v_mix_cuda_parity_available", true)?;
+    require_string_eq(audit, "next_candidate_gap", "mlp_activation")?;
 
     let unsupported_entries = array_field(audit, "unsupported_ops")?;
     if unsupported_entries.len() != counts.unsupported_ops as usize {

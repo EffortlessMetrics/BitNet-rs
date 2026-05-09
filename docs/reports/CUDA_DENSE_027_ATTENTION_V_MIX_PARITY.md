@@ -72,7 +72,7 @@ cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -
 
 ## Next Step
 
-The next dense CUDA slice should promote the one-layer planner route for
-verified `attention_v_mix`, leaving `mlp_activation` as the remaining strict
-CUDA one-layer gap. That follow-up should remain below dense GGUF
-token/decode/chat, speedup, server, and full-residency claims.
+`CUDA-DENSE-028` is the planner-route follow-up for verified `attention_v_mix`.
+After that route promotion, `mlp_activation` remains the next strict CUDA
+one-layer gap. That follow-up should remain below dense GGUF token/decode/chat,
+speedup, server, and full-residency claims.

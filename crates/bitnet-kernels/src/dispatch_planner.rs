@@ -556,6 +556,7 @@ fn select_model_cuda_backend(
 fn dense_regular_llm_op_has_cuda_route(op: &DispatchOp) -> bool {
     matches!(op.op_type, OpType::MatMul | OpType::RmsNorm | OpType::RoPE)
         || (op.op_type == OpType::Attention && is_dense_attention_score_op(&op.name))
+        || (op.op_type == OpType::Attention && is_dense_attention_v_mix_op(&op.name))
         || (op.op_type == OpType::Softmax && is_dense_attention_softmax_op(&op.name))
 }
 
@@ -565,6 +566,10 @@ fn is_dense_attention_score_op(name: &str) -> bool {
 
 fn is_dense_attention_softmax_op(name: &str) -> bool {
     normalized_metadata_label(name).ends_with("attention_softmax")
+}
+
+fn is_dense_attention_v_mix_op(name: &str) -> bool {
+    normalized_metadata_label(name).ends_with("attention_v_mix")
 }
 
 fn normalized_metadata_label(label: &str) -> String {
@@ -977,7 +982,7 @@ mod tests {
     }
 
     #[test]
-    fn model_aware_dense_fp16_keeps_attention_v_mix_unsupported_until_parity() {
+    fn model_aware_dense_fp16_routes_attention_v_mix_to_dense_cuda() {
         let spec = ModelDispatchSpec {
             model_family: ModelFamily::DenseRegularLlm,
             quantization: QuantizationKind::DenseFp16,
@@ -988,9 +993,10 @@ mod tests {
 
         let plan = plan_model_dispatch(&[attention_v_mix_op()], spec);
 
-        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::Unsupported);
-        assert_eq!(plan.cuda_ops(), 0);
-        assert_eq!(plan.unsupported_ops(), 1);
+        assert_eq!(plan.decisions[0].backend, ModelDispatchBackend::CudaDenseRegularLlm);
+        assert!(!plan.decisions[0].fallback_used);
+        assert_eq!(plan.cuda_ops(), 1);
+        assert_eq!(plan.unsupported_ops(), 0);
     }
 
     #[test]
