@@ -3856,7 +3856,6 @@ fn crossval_per_token_cmd_impl(
     metrics: &str,
 ) -> Result<()> {
     use crate::crossval::preflight_backend_libs;
-    use bitnet_crossval::logits_compare::compare_per_position_logits;
     use bitnet_inference::parity::eval_logits_all_positions;
     use std::collections::HashSet;
 
@@ -4157,99 +4156,24 @@ fn crossval_per_token_cmd_impl(
     );
     println!();
 
-    // Step 7: Ladder mode dispatch
-    // Currently only "positions" mode is implemented - other modes are scaffolded for future work
-    match ladder {
-        "positions" => {
-            // Limit comparison to specified number of positions
-            let effective_positions = positions.min(rust_logits.len()).min(cpp_logits.len());
-
-            if effective_positions < rust_logits.len() || effective_positions < cpp_logits.len() {
-                if verbose {
-                    eprintln!(
-                        "Limiting comparison to first {} positions (Rust: {}, C++: {})",
-                        effective_positions,
-                        rust_logits.len(),
-                        cpp_logits.len()
-                    );
-                }
-                println!("📊 Comparing first {} positions...", effective_positions);
-            } else {
-                println!("📊 Comparing logits per position...");
-            }
-
-            // Slice logits to effective positions
-            let rust_logits_slice = &rust_logits[..effective_positions];
-            let cpp_logits_slice = &cpp_logits[..effective_positions];
-
-            // Validate positions parameter doesn't exceed token count
-            if positions > effective_positions {
-                eprintln!(
-                    "Warning: --positions {} exceeds available positions {}",
-                    positions, effective_positions
-                );
-            }
-
-            let divergence = compare_per_position_logits(rust_logits_slice, cpp_logits_slice);
-
-            // Note: metrics flags are validated but not yet used in comparison
-            // Future work will integrate compute_mse, compute_kl, compute_topk
-            if verbose && (!compute_mse || !compute_kl || !compute_topk) {
-                eprintln!("Note: Selective metrics not yet implemented, using all metrics");
-            }
-
-            // Generate receipt if requested
-            if let Some(receipt_file) = receipt_path {
-                if verbose {
-                    eprintln!("📝 Generating parity receipt...");
-                }
-                generate_parity_receipt(
-                    model_path,
-                    &backend,
-                    &formatted_prompt,
-                    rust_logits_slice,
-                    cpp_logits_slice,
-                    &divergence,
-                    cos_tol,
-                    compute_mse,
-                    compute_kl,
-                    compute_topk,
-                    receipt_file,
-                )?;
-                println!("✓ Receipt written to: {}", receipt_file.display());
-            }
-
-            // Output results based on format
-            output_comparison_results(
-                &divergence,
-                format,
-                cos_tol,
-                model_path,
-                tokenizer_path,
-                prompt,
-            )?;
-        }
-        "tokens" => {
-            // TODO: Implement tokens ladder mode (compare token-by-token generation)
-            anyhow::bail!("Ladder mode 'tokens' not yet implemented");
-        }
-        "masks" => {
-            // TODO: Implement masks ladder mode (compare attention masks)
-            anyhow::bail!("Ladder mode 'masks' not yet implemented");
-        }
-        "first-logit" => {
-            // TODO: Implement first-logit ladder mode (compare only first logit position)
-            anyhow::bail!("Ladder mode 'first-logit' not yet implemented");
-        }
-        "decode" => {
-            // TODO: Implement decode ladder mode (compare decoded text outputs)
-            anyhow::bail!("Ladder mode 'decode' not yet implemented");
-        }
-        _ => {
-            // This should be unreachable due to earlier validation
-            anyhow::bail!("Unknown ladder mode: {}", ladder);
-        }
-    }
+    crossval::per_token::run_ladder(crossval::per_token::LadderRun {
+        ladder,
+        positions,
+        rust_logits: &rust_logits,
+        cpp_logits: &cpp_logits,
+        receipt_path,
+        model_path,
+        tokenizer_path,
+        backend: &backend,
+        formatted_prompt: &formatted_prompt,
+        prompt,
+        format,
+        cos_tol,
+        compute_mse,
+        compute_kl,
+        compute_topk,
+        verbose,
+    })?;
 
     Ok(())
 }
@@ -4298,167 +4222,6 @@ fn parity_both_cmd(
         dump_cpp_ids,
         metrics: metrics.to_string(),
     })?;
-
-    Ok(())
-}
-
-/// Generate parity receipt from logits comparison
-#[cfg(feature = "inference")]
-#[allow(clippy::too_many_arguments)] // Helper function with context parameters
-fn generate_parity_receipt(
-    model_path: &Path,
-    backend: &crossval::CppBackend,
-    formatted_prompt: &str,
-    rust_logits: &[Vec<f32>],
-    cpp_logits: &[Vec<f32>],
-    divergence: &bitnet_crossval::logits_compare::LogitsDivergence,
-    cos_tol: f32,
-    compute_mse: bool,
-    compute_kl: bool,
-    compute_topk: bool,
-    receipt_path: &Path,
-) -> Result<()> {
-    use bitnet_crossval::metrics::{kl_divergence, max_abs, mse_row, topk_agree, topk_indices};
-    use bitnet_crossval::receipt::{ParityReceipt, PositionMetrics, Thresholds};
-
-    // Create receipt with metadata
-    let mut receipt =
-        ParityReceipt::new(&model_path.display().to_string(), backend.name(), formatted_prompt);
-
-    // Set custom thresholds based on cosine tolerance
-    // Convert cosine similarity threshold to MSE-like threshold
-    let mse_threshold = (1.0 - cos_tol) * (1.0 - cos_tol); // Approximate conversion
-    receipt.set_thresholds(Thresholds { mse: mse_threshold, kl: 0.1, topk: 0.8 });
-
-    // Add position metrics
-    let n_positions = rust_logits.len().min(cpp_logits.len());
-    for pos in 0..n_positions {
-        let rust_row = &rust_logits[pos];
-        let cpp_row = &cpp_logits[pos];
-
-        // Compute per-position metrics
-        let mse = if compute_mse && rust_row.len() == cpp_row.len() {
-            mse_row(rust_row, cpp_row)
-        } else {
-            divergence.per_token_l2_dist[pos] * divergence.per_token_l2_dist[pos]
-                / rust_row.len() as f32 // Approximate MSE from L2
-        };
-
-        let max_abs_diff = if rust_row.len() == cpp_row.len() {
-            max_abs(rust_row, cpp_row)
-        } else {
-            divergence.max_absolute_diff
-        };
-
-        let kl = if compute_kl && rust_row.len() == cpp_row.len() {
-            Some(kl_divergence(rust_row, cpp_row))
-        } else {
-            None
-        };
-
-        let topk_agreement = if compute_topk && rust_row.len() == cpp_row.len() {
-            let k = 5.min(rust_row.len());
-            Some(topk_agree(rust_row, cpp_row, k))
-        } else {
-            None
-        };
-
-        // Get top-5 token IDs
-        let k = 5.min(rust_row.len());
-        let top5_rust = topk_indices(rust_row, k);
-        let top5_cpp = topk_indices(cpp_row, k);
-
-        receipt.add_position(PositionMetrics {
-            pos,
-            mse,
-            max_abs: max_abs_diff,
-            kl,
-            topk_agree: topk_agreement,
-            top5_rust,
-            top5_cpp,
-        });
-    }
-
-    // Finalize and write
-    receipt.finalize();
-    receipt.write_to_file(receipt_path)?;
-
-    Ok(())
-}
-
-/// Output comparison results in either text or JSON format
-#[cfg(feature = "inference")]
-fn output_comparison_results(
-    divergence: &bitnet_crossval::logits_compare::LogitsDivergence,
-    format: &str,
-    cos_tol: f32,
-    model_path: &Path,
-    tokenizer_path: &Path,
-    prompt: &str,
-) -> Result<()> {
-    // Output results
-    match format {
-        "json" => {
-            // JSON output
-            let output = serde_json::json!({
-                "first_divergence_token": divergence.first_divergence_token,
-                "per_token_cosine_sim": divergence.per_token_cosine_sim,
-                "per_token_l2_dist": divergence.per_token_l2_dist,
-                "max_absolute_diff": divergence.max_absolute_diff,
-                "threshold": cos_tol,
-                "status": if divergence.first_divergence_token.is_none() { "ok" } else { "diverged" }
-            });
-            println!("{}", serde_json::to_string_pretty(&output)?);
-        }
-        _ => {
-            // Text output
-            for (t, (&cosine, &l2)) in divergence
-                .per_token_cosine_sim
-                .iter()
-                .zip(divergence.per_token_l2_dist.iter())
-                .enumerate()
-            {
-                let ok = cosine >= cos_tol;
-                let symbol = if ok { "✓" } else { "✗" };
-                println!("{} t={} cosine={:.6} l2={:.2e}", symbol, t, cosine, l2);
-
-                if !ok && divergence.first_divergence_token == Some(t) {
-                    println!("   ↑ First divergence detected at token {}", t);
-                }
-            }
-
-            println!();
-            println!("Max absolute diff: {:.2e}", divergence.max_absolute_diff);
-
-            if let Some(first_div) = divergence.first_divergence_token {
-                println!("❌ First divergence at token {}", first_div);
-                println!();
-                println!("Next steps:");
-                println!("  # 1. Capture Rust trace (seq={})", first_div);
-                println!(
-                    "  BITNET_TRACE_DIR=/tmp/rs RUST_LOG=warn BITNET_DETERMINISTIC=1 BITNET_SEED=42 \\"
-                );
-                println!("    cargo run -p bitnet-cli --features cpu,trace -- run \\");
-                println!("    --model {} \\", model_path.display());
-                println!("    --tokenizer {} \\", tokenizer_path.display());
-                println!("    --prompt \"{}\" \\", prompt);
-                println!("    --max-tokens {} --greedy", first_div + 1);
-                println!();
-                println!(
-                    "  # 2. Capture C++ trace (seq={}) - see docs/howto/cpp-setup.md if not instrumented",
-                    first_div
-                );
-                println!("  BITNET_TRACE_DIR_CPP=/tmp/cpp <cpp-command-here>");
-                println!();
-                println!("  # 3. Compare traces");
-                println!("  cargo run -p xtask -- trace-diff /tmp/rs /tmp/cpp");
-                println!();
-                std::process::exit(1);
-            } else {
-                println!("✅ All positions match within tolerance");
-            }
-        }
-    }
 
     Ok(())
 }
