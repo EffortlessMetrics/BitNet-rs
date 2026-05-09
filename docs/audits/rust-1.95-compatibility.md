@@ -99,6 +99,21 @@ match os.as_str() {
 
 Both fixes were verified clean under both 1.93.0 and 1.95.0.
 
+**`crates/bitnet-ffi/src/config.rs:286`** — `clippy::useless_conversion` (pre-existing in main, exposed by this PR's intel-gpu workflow trigger)
+
+This was a pre-existing issue in `origin/main` introduced in commit `4d4b922`. On Linux x86_64, `c_ulong` is a type alias for `u64`, making `.into()` a useless identity conversion. On Windows, `c_ulong` is `u32` and the conversion is a meaningful widening. Fixed by applying `#[expect(clippy::useless_conversion)]` to the `to_generation_config` function, which satisfies the attribute on all CI platforms (Linux, macOS) where `c_ulong == u64`.
+
+```rust
+// before
+config = config.with_seed(self.seed.into());
+
+// after  
+#[expect(clippy::useless_conversion)]  // c_ulong is u64 on POSIX-64 but u32 on Windows
+pub fn to_generation_config(&self) -> bitnet_inference::GenerationConfig {
+    ...
+    config = config.with_seed(self.seed.into());
+```
+
 ### GPU-crate lint debt (deferred to PR 5 / PR 13)
 
 The following files have new 1.95 lint hits. They are GPU-only paths (bitnet-gpu-hal, bitnet-kernels CUDA/OpenCL, bitnet-opencl). These paths are:

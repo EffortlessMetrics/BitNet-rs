@@ -273,6 +273,7 @@ impl BitNetCInferenceConfig {
     }
 
     /// Convert to Rust GenerationConfig
+    #[expect(clippy::useless_conversion)]
     pub fn to_generation_config(&self) -> bitnet_inference::GenerationConfig {
         let mut config = bitnet_inference::GenerationConfig::default()
             .with_max_tokens(self.max_new_tokens)
