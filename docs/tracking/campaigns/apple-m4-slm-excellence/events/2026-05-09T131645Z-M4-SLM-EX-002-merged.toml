@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T13:16:45Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-002"
+event = "merged"
+actor = "codex"
+pr = 4280
+merge_sha = "7ab26c1b5d3a9c614991e9b6f463609febef8fb4"
+
+notes = [
+  "Merged PR #4280, polishing `bitnet mac chat` for the supported dense Apple M4 SLM path.",
+  "The merged work adds interactive prompt collection, quiet default logs, optional turn-receipt files, aggregate-at-exit receipt fields, and clearer model/tokenizer loaded-once UX metadata.",
+  "No BitNet local-answer quality, full Apple Metal inference, QK256, Neural Engine, MPSGraph model inference, MacBook work, or broad M4 performance claim is made.",
+]

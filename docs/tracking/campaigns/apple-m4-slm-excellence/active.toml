@@ -76,8 +76,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EX-002"
-status = "pr_open"
+status = "merged"
 pr = 4280
+merge_sha = "7ab26c1b5d3a9c614991e9b6f463609febef8fb4"
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-002-chat-polish"
 stackable = false
 review_mode = "codex_premerge"
