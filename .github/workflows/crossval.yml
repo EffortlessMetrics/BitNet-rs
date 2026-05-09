@@ -303,7 +303,7 @@ jobs:
             echo "🔨 Building llama.cpp from source..."
             # TODO: Implement llama.cpp build script
             # For now, use xtask fetch-cpp with llama backend
-            cargo run --locked -p xtask  -- fetch-cpp --tag "${CPP_TAG}" --backend llama
+            cargo run --locked -p xtask --no-default-features -- fetch-cpp --tag "${CPP_TAG}" --backend llama
           fi
 
           # Export library paths
@@ -326,7 +326,7 @@ jobs:
         run: |
           echo "📦 Downloading test model for Lane B..."
           # Use xtask download-model or a lightweight test model
-          cargo run --locked -p xtask  -- download-model
+          cargo run --locked -p xtask --no-default-features -- download-model
 
           # Verify model
           if [[ ! -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]]; then
@@ -365,7 +365,7 @@ jobs:
         run: |
           echo "🔍 Running per-token parity check..."
 
-          cargo run --locked -p xtask --features crossval-all  -- crossval-per-token \
+          cargo run --locked -p xtask --no-default-features --features crossval-all -- crossval-per-token \
             --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
             --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
             --prompt "What is 2+2?" \
@@ -462,7 +462,7 @@ jobs:
             echo "⚡ Using cached BitNet.cpp libraries"
           else
             echo "🔨 Building BitNet.cpp from source..."
-            cargo run --locked -p xtask  -- fetch-cpp --tag "${CPP_TAG}"
+            cargo run --locked -p xtask --no-default-features -- fetch-cpp --tag "${CPP_TAG}"
           fi
 
           # Export library paths
@@ -472,7 +472,7 @@ jobs:
       - name: Download test model
         run: |
           echo "📦 Downloading BitNet test model..."
-          cargo run --locked -p xtask  -- download-model
+          cargo run --locked -p xtask --no-default-features -- download-model
 
       - name: Build Rust implementation
         run: |
