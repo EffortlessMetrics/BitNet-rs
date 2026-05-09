@@ -1,7 +1,7 @@
 schema: 1
 artifact_kind: apple_m4_slm_quality_corpus
-name: apple-m4-slm-quality-determinism-v1
-description: Deterministic Apple M4 dense SLM warm-session quality corpus.
+name: apple-m4-slm-quality-determinism-v2
+description: Deterministic Apple M4 dense SLM warm-session quality corpus 2.0.
 model:
   repo: Qwen/Qwen2.5-0.5B-Instruct-GGUF
   file: qwen2.5-0.5b-instruct-q8_0.gguf
@@ -63,3 +63,23 @@ cases:
       starts_with_any:
         - "Answer:"
         - "answer:"
+
+  - id: summarize_rust_traits
+    question: "Summarize in three words: Rust is fast, safe, and reliable."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "fast"
+        - "safe"
+        - "reliable"
+        - "Rust"
+
+  - id: rewrite_cache_sentence
+    question: "Rewrite as a short plain sentence: The model cache is healthy."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "cache"
+        - "healthy"
+        - "good"
+        - "working"

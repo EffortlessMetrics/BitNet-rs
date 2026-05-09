@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:27:19Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-007"
+event = "pr_open"
+actor = "codex"
+pr = 4297
+head_sha = "c0725670e2bd00ae59c69844004f9e0e0810c9be"
+
+notes = [
+  "Opened PR #4297 to expand the M4 dense SLM quality corpus to apple-m4-slm-quality-determinism-v2.",
+  "The v2 corpus contains seven bounded deterministic cases repeated twice: factual, instruction following, format-constrained output, one-sentence generation, arithmetic, summarization, and rewrite.",
+  "Local M4 validation passed with prompt_count=14, generated_tokens=152, fallback_used=false, and determinism.passed=true.",
+]

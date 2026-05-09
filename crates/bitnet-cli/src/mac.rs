@@ -2887,13 +2887,14 @@ fn validate_dense_slm_quality_corpus_header(
     prompt_count: usize,
 ) -> Result<()> {
     let corpus = &receipt["corpus"];
-    if corpus["name"].as_str() != Some("apple-m4-slm-quality-determinism-v1") {
-        anyhow::bail!("{} dense SLM corpus receipt has unexpected corpus name", path.display());
-    }
+    let expected_case_count = expected_dense_slm_quality_corpus_cases(path, receipt)?;
     let case_count = corpus["case_count"].as_u64().unwrap_or_default() as usize;
     let repeat_runs = corpus["repeat_runs"].as_u64().unwrap_or_default() as usize;
-    if case_count != 5 {
-        anyhow::bail!("{} dense SLM corpus must contain five prompt cases", path.display());
+    if case_count != expected_case_count {
+        anyhow::bail!(
+            "{} dense SLM corpus must contain {expected_case_count} prompt cases",
+            path.display()
+        );
     }
     if repeat_runs < 2 {
         anyhow::bail!("{} dense SLM corpus must repeat prompts for determinism", path.display());
@@ -2923,6 +2924,19 @@ fn validate_dense_slm_quality_corpus_header(
         anyhow::bail!("{} dense SLM corpus receipt is missing tokenizer authority", path.display());
     }
     Ok(())
+}
+
+fn expected_dense_slm_quality_corpus_cases(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<usize> {
+    match receipt["corpus"]["name"].as_str() {
+        Some("apple-m4-slm-quality-determinism-v1") => Ok(5),
+        Some("apple-m4-slm-quality-determinism-v2") => Ok(7),
+        _ => {
+            anyhow::bail!("{} dense SLM corpus receipt has unexpected corpus name", path.display())
+        }
+    }
 }
 
 fn validate_warm_session_prompt_quality(path: &Path, prompt: &serde_json::Value) -> Result<()> {
@@ -2955,25 +2969,26 @@ fn validate_dense_slm_quality_corpus_determinism(
     receipt: &serde_json::Value,
     prompts: &[serde_json::Value],
 ) -> Result<()> {
+    let expected_case_count = expected_dense_slm_quality_corpus_cases(path, receipt)?;
     let determinism = &receipt["determinism"];
     if determinism["checked"].as_bool() != Some(true)
         || determinism["passed"].as_bool() != Some(true)
     {
         anyhow::bail!("{} dense SLM corpus determinism failed", path.display());
     }
-    if determinism["repeated_prompt_groups"].as_u64() != Some(5) {
+    if determinism["repeated_prompt_groups"].as_u64() != Some(expected_case_count as u64) {
         anyhow::bail!(
-            "{} dense SLM corpus must record five repeated prompt groups",
-            path.display()
+            "{} dense SLM corpus must record {expected_case_count} repeated prompt groups",
+            path.display(),
         );
     }
     let groups = determinism["groups"].as_array().ok_or_else(|| {
         anyhow!("{} dense SLM corpus determinism is missing groups", path.display())
     })?;
-    if groups.len() != 5 {
+    if groups.len() != expected_case_count {
         anyhow::bail!(
-            "{} dense SLM corpus determinism groups must have length five",
-            path.display()
+            "{} dense SLM corpus determinism groups must have length {expected_case_count}",
+            path.display(),
         );
     }
     for group in groups {
@@ -3005,8 +3020,11 @@ fn validate_dense_slm_quality_corpus_determinism(
         }
         by_case.entry(case_id.to_string()).or_default().push(prompt);
     }
-    if by_case.len() != 5 {
-        anyhow::bail!("{} dense SLM corpus must cover five case IDs", path.display());
+    if by_case.len() != expected_case_count {
+        anyhow::bail!(
+            "{} dense SLM corpus must cover {expected_case_count} case IDs",
+            path.display()
+        );
     }
     for (case_id, prompts) in by_case {
         if prompts.len() < 2 {
