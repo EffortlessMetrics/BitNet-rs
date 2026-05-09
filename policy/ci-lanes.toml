@@ -45,6 +45,12 @@ runner = "ubuntu_22_04"
 default_pr = true
 blocking = true
 
+[lane.test-telemetry]
+base_lem = 18
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
 [lane.feature-matrix-full]
 base_lem = 70
 runner = "ubuntu_22_04"
