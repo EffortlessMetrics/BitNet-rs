@@ -38,7 +38,7 @@ That evidence does not prove BitNet, 1-bit / 1.58-bit kernels, QK256, Neural Eng
 |---|---|---|
 | M4-CONT-001 | merged | Added resident `bitnet mac chat` wrapper over the supported dense SLM warm-session runner. |
 | M4-CONT-002 | merged | Added compact M4 dense-SLM golden smoke command. |
-| M4-CONT-003 | in_progress | Polish perceived dense-SLM latency from measured overhead. |
+| M4-CONT-003 | pr_open | Polish perceived dense-SLM latency from measured overhead. |
 | M4-CONT-004 | proposed | Record longer resident-session memory and timing envelope. |
 | M4-CONT-005 | blocked | Prepare M4 BitNet proof command and receipt contract after an accepted BitNet artifact exists. |
 
