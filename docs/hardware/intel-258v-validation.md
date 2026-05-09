@@ -947,6 +947,63 @@ QK256 decode on an accelerator is proven.
 Full model correctness is proven.
 ```
 
+## CPU258V-023 Output-Head / Logits-Index Audit
+
+Artifact:
+
+```text
+ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json
+```
+
+CPU258V-023 records the 258V CPU output-head and logits-index boundary after
+the prompt/token, external-reference, and QK256/I2_S/I8_S semantic audits. It
+does not run a new answer-quality gate. It inspects the GGUF tensor table,
+resolves the strict tokenizer, records tied-output-head policy, records the
+expected logits vector length, and decodes existing scalar/AVX2 first-step
+top-k token IDs from the full post-mechanics answer-corpus receipts.
+
+Current result:
+
+```text
+tied_output_policy = tied_token_embeddings
+selected_embedding = token_embd.weight
+selected_output_head = null
+expected_logits_vector_length = 128256
+observed_logits_vector_length = 128256
+metadata_vocab_matches_tokenizer = true
+scalar_avx2_first_step_topk_ids_all_match = true
+classification = output_head_logits_index_boundary_recorded
+```
+
+Focused validation:
+
+```text
+rustfmt --check --config skip_children=true --edition 2024 crates/bitnet-cli/src/commands/output_head_logits_audit.rs crates/bitnet-cli/src/commands/mod.rs crates/bitnet-cli/src/main.rs crates/bitnet-cli/tests/cli_arg_tests.rs
+cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet output_head_logits_audit -- --nocapture
+cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests output_head_logits_audit_help_lists_boundary_inputs -- --exact --nocapture
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- output-head-logits-audit --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --prompt-audit ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json --scalar-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json --avx2-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json --json-out ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json
+python -m json.tool ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json
+git diff --check
+```
+
+Allowed claim:
+
+```text
+The 258V CPU output-head/tied-head and logits-index boundary is recorded for
+the fixed post-mechanics BitNet CPU receipts, and existing scalar/AVX2 first
+step top-k token IDs decode and match locally.
+```
+
+Not allowed:
+
+```text
+BitNet answer quality is newly proven.
+First-token logits parity with the external reference is proven.
+CPU speed or sustained throughput is proven.
+Arc 140V or Intel NPU execution is proven.
+Full model correctness is proven.
+```
+
 ## CPU258V-019 External First-Token Reference Boundary
 
 Artifact:

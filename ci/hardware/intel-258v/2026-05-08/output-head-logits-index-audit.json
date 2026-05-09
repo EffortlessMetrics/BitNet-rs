@@ -1,0 +1,866 @@
+{
+  "artifact_kind": "bitnet_output_head_logits_index_audit",
+  "claim": "cpu258v_output_head_logits_index_boundary",
+  "claim_boundary": {
+    "may_claim": [
+      "The 258V CPU output-head or tied-head tensor boundary is recorded from GGUF metadata.",
+      "The tokenizer/logits index contract is audited against vocab and special-token IDs.",
+      "Existing scalar and AVX2 first-step top-k token IDs can be decoded and compared when supplied."
+    ],
+    "must_not_claim": [
+      "BitNet answer quality is newly proven.",
+      "First-token logits parity with the external reference is proven.",
+      "CPU speed or sustained throughput is proven.",
+      "Arc 140V or Intel NPU execution is proven.",
+      "Full model correctness is proven."
+    ]
+  },
+  "classification": {
+    "classification": "output_head_logits_index_boundary_recorded",
+    "first_mismatch_stage": null,
+    "notes": []
+  },
+  "fallback_used": false,
+  "inputs": {
+    "avx2_answer_corpus": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
+    "model": "C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "prompt_audit": "ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json",
+    "scalar_answer_corpus": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json",
+    "tokenizer": "C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json"
+  },
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 128256,
+    "expected_logits_vector_length_source": "gguf_metadata_vocab_size",
+    "metadata_vocab_matches_tokenizer": true,
+    "metadata_vocab_size": 128256,
+    "observed_logits_vector_length": 128256,
+    "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+    "special_tokens": {
+      "all_present_ids_within_vocab": true,
+      "entries": [
+        {
+          "decoded": null,
+          "name": "bos",
+          "piece": null,
+          "token_id": null,
+          "within_vocab": null
+        },
+        {
+          "decoded": null,
+          "name": "eos",
+          "piece": null,
+          "token_id": null,
+          "within_vocab": null
+        },
+        {
+          "decoded": null,
+          "name": "pad",
+          "piece": null,
+          "token_id": null,
+          "within_vocab": null
+        },
+        {
+          "decoded": "",
+          "name": "eot",
+          "piece": "<|eot_id|>",
+          "token_id": 128009,
+          "within_vocab": true
+        },
+        {
+          "decoded": "",
+          "name": "end_of_text",
+          "piece": "<|end_of_text|>",
+          "token_id": 128001,
+          "within_vocab": true
+        }
+      ]
+    },
+    "tokenizer_real_vocab_size": 128256
+  },
+  "machine_id": "intel-258v",
+  "model": {
+    "gguf_architecture": "bitnet-b1.58",
+    "gguf_name": "bitnet2b",
+    "metadata_hidden_size": 2560,
+    "metadata_vocab_size": 128256,
+    "n_kv": 24,
+    "n_tensors": 332,
+    "path": "C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "prompt_authority": {
+    "artifact_kind": "bitnet_prompt_token_authority_audit",
+    "classification": {
+      "first_divergence_stage": "unknown",
+      "first_mismatch_index": null,
+      "notes": [
+        "current_default_and_metadata_authority_prompt_tokens_match",
+        "model_inference_not_run; first-token logits remain unclassified"
+      ]
+    },
+    "model": {
+      "gguf_architecture": "bitnet-b1.58",
+      "gguf_name": "bitnet2b",
+      "gguf_vocab_size": 128256,
+      "n_kv": 24,
+      "n_tensors": 332,
+      "path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+      "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+    },
+    "provided": true,
+    "reference_parity": null,
+    "tokenizer": {
+      "bos_token_id": null,
+      "chat_template_present": true,
+      "chat_template_source": "gguf",
+      "eos_token_id": null,
+      "family": "llama3",
+      "gguf_model": "gpt2",
+      "path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\tokenizer.json",
+      "source": "explicit",
+      "type": "llama3",
+      "vocab_size": 128256
+    }
+  },
+  "proof_stage": "output_head_logits_index_audited",
+  "schema_version": "1.0.0",
+  "tensor_boundary": {
+    "embedding_candidates": [
+      {
+        "name": "token_embd.weight",
+        "offset": 0,
+        "present": true,
+        "shape": [
+          2560,
+          128256
+        ],
+        "size_bytes": 656670720,
+        "tensor_type": "F16"
+      },
+      {
+        "name": "tok_embeddings.weight",
+        "present": false
+      },
+      {
+        "name": "model.tok_embeddings.weight",
+        "present": false
+      },
+      {
+        "name": "model.embed_tokens.weight",
+        "present": false
+      },
+      {
+        "name": "embed_tokens.weight",
+        "present": false
+      },
+      {
+        "name": "transformer.wte.weight",
+        "present": false
+      }
+    ],
+    "output_head_candidates": [
+      {
+        "name": "output.weight",
+        "present": false
+      },
+      {
+        "name": "lm_head.weight",
+        "present": false
+      },
+      {
+        "name": "model.lm_head.weight",
+        "present": false
+      },
+      {
+        "name": "transformer.lm_head.weight",
+        "present": false
+      },
+      {
+        "name": "language_model_head.weight",
+        "present": false
+      },
+      {
+        "name": "head.weight",
+        "present": false
+      },
+      {
+        "name": "generator.weight",
+        "present": false
+      }
+    ],
+    "output_orientation": null,
+    "raw_qk256_tied_candidate": null,
+    "raw_qk256_tied_candidates": [
+      {
+        "name": "embed_tokens.weight.qk256_qs",
+        "present": false
+      },
+      {
+        "name": "token_embd.weight.qk256_qs",
+        "present": false
+      },
+      {
+        "name": "tok_embeddings.weight.qk256_qs",
+        "present": false
+      }
+    ],
+    "selected_embedding": {
+      "name": "token_embd.weight",
+      "offset": 0,
+      "shape": [
+        2560,
+        128256
+      ],
+      "size_bytes": 656670720,
+      "tensor_type": "F16"
+    },
+    "selected_output_head": null,
+    "tied_output_policy": "tied_token_embeddings"
+  },
+  "timestamp": "2026-05-09T20:45:22.647073600+00:00",
+  "tokenizer": {
+    "bos_token_id": null,
+    "end_of_text_token_id": 128001,
+    "eos_token_id": null,
+    "eot_token_id": 128009,
+    "pad_token_id": null,
+    "path": "C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json",
+    "real_vocab_size": 128256,
+    "source": "explicit",
+    "vocab_size": 128256
+  },
+  "topk_evidence": {
+    "avx2": {
+      "artifact_kind": "bitnet_cpu_answer_corpus",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu"
+      },
+      "cases": [
+        {
+          "chosen_id": 220,
+          "first_step_top_logits": [
+            {
+              "decoded": " ",
+              "is_special": false,
+              "logit": 6.6697001457214355,
+              "piece": "Ġ",
+              "token_id": 220
+            },
+            {
+              "decoded": "  ",
+              "is_special": false,
+              "logit": -6.725193023681641,
+              "piece": "ĠĠ",
+              "token_id": 256
+            },
+            {
+              "decoded": " -",
+              "is_special": false,
+              "logit": -7.214357852935791,
+              "piece": "Ġ-",
+              "token_id": 482
+            },
+            {
+              "decoded": " Th",
+              "is_special": false,
+              "logit": -7.763550758361816,
+              "piece": "ĠTh",
+              "token_id": 666
+            },
+            {
+              "decoded": "  \n",
+              "is_special": false,
+              "logit": -8.280210494995117,
+              "piece": "ĠĠĊ",
+              "token_id": 2355
+            }
+          ],
+          "id": "math_2_plus_2",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-avx2-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        },
+        {
+          "chosen_id": 12366,
+          "first_step_top_logits": [
+            {
+              "decoded": " Paris",
+              "is_special": false,
+              "logit": 12.9736328125,
+              "piece": "ĠParis",
+              "token_id": 12366
+            },
+            {
+              "decoded": "Paris",
+              "is_special": false,
+              "logit": 11.337346076965332,
+              "piece": "Paris",
+              "token_id": 60704
+            },
+            {
+              "decoded": " Berlin",
+              "is_special": false,
+              "logit": 7.589106559753418,
+              "piece": "ĠBerlin",
+              "token_id": 20437
+            },
+            {
+              "decoded": "Berlin",
+              "is_special": false,
+              "logit": 6.074317455291748,
+              "piece": "Berlin",
+              "token_id": 95509
+            },
+            {
+              "decoded": " London",
+              "is_special": false,
+              "logit": 5.049978733062744,
+              "piece": "ĠLondon",
+              "token_id": 7295
+            }
+          ],
+          "id": "capital_france",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-avx2-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        },
+        {
+          "chosen_id": 2579,
+          "first_step_top_logits": [
+            {
+              "decoded": " red",
+              "is_special": false,
+              "logit": 13.539472579956056,
+              "piece": "Ġred",
+              "token_id": 2579
+            },
+            {
+              "decoded": " I",
+              "is_special": false,
+              "logit": 12.851278305053713,
+              "piece": "ĠI",
+              "token_id": 358
+            },
+            {
+              "decoded": " Sure",
+              "is_special": false,
+              "logit": 12.048626899719238,
+              "piece": "ĠSure",
+              "token_id": 23371
+            },
+            {
+              "decoded": " Red",
+              "is_special": false,
+              "logit": 10.597929000854492,
+              "piece": "ĠRed",
+              "token_id": 3816
+            },
+            {
+              "decoded": " Sorry",
+              "is_special": false,
+              "logit": 10.586831092834473,
+              "piece": "ĠSorry",
+              "token_id": 33386
+            }
+          ],
+          "id": "repeat_colors",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-avx2-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        },
+        {
+          "chosen_id": 10619,
+          "first_step_top_logits": [
+            {
+              "decoded": " OK",
+              "is_special": false,
+              "logit": 15.580217361450195,
+              "piece": "ĠOK",
+              "token_id": 10619
+            },
+            {
+              "decoded": "OK",
+              "is_special": false,
+              "logit": 11.900142669677734,
+              "piece": "OK",
+              "token_id": 4012
+            },
+            {
+              "decoded": " Okay",
+              "is_special": false,
+              "logit": 8.971776008605957,
+              "piece": "ĠOkay",
+              "token_id": 36539
+            },
+            {
+              "decoded": " Oh",
+              "is_special": false,
+              "logit": 8.304010391235352,
+              "piece": "ĠOh",
+              "token_id": 8840
+            },
+            {
+              "decoded": " Alright",
+              "is_special": false,
+              "logit": 8.298528671264648,
+              "piece": "ĠAlright",
+              "token_id": 98693
+            }
+          ],
+          "id": "say_ok",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-avx2-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        },
+        {
+          "chosen_id": 2360,
+          "first_step_top_logits": [
+            {
+              "decoded": " No",
+              "is_special": false,
+              "logit": 18.681175231933594,
+              "piece": "ĠNo",
+              "token_id": 2360
+            },
+            {
+              "decoded": " Yes",
+              "is_special": false,
+              "logit": 18.514739990234375,
+              "piece": "ĠYes",
+              "token_id": 7566
+            },
+            {
+              "decoded": "Yes",
+              "is_special": false,
+              "logit": 10.178853034973145,
+              "piece": "Yes",
+              "token_id": 9642
+            },
+            {
+              "decoded": " Is",
+              "is_special": false,
+              "logit": 10.076376914978027,
+              "piece": "ĠIs",
+              "token_id": 2209
+            },
+            {
+              "decoded": " Nope",
+              "is_special": false,
+              "logit": 9.761270523071287,
+              "piece": "ĠNope",
+              "token_id": 86819
+            }
+          ],
+          "id": "yes_no_water",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-avx2-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        }
+      ],
+      "label": "avx2",
+      "path": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
+      "provided": true,
+      "summary": {
+        "cases_total": 5,
+        "cases_with_first_step_topk": 5,
+        "observed_logits_vector_lengths": [
+          128256,
+          128256,
+          128256,
+          128256,
+          128256
+        ]
+      }
+    },
+    "scalar": {
+      "artifact_kind": "bitnet_cpu_answer_corpus",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu"
+      },
+      "cases": [
+        {
+          "chosen_id": 220,
+          "first_step_top_logits": [
+            {
+              "decoded": " ",
+              "is_special": false,
+              "logit": 6.6697001457214355,
+              "piece": "Ġ",
+              "token_id": 220
+            },
+            {
+              "decoded": "  ",
+              "is_special": false,
+              "logit": -6.725193023681641,
+              "piece": "ĠĠ",
+              "token_id": 256
+            },
+            {
+              "decoded": " -",
+              "is_special": false,
+              "logit": -7.214357852935791,
+              "piece": "Ġ-",
+              "token_id": 482
+            },
+            {
+              "decoded": " Th",
+              "is_special": false,
+              "logit": -7.763550758361816,
+              "piece": "ĠTh",
+              "token_id": 666
+            },
+            {
+              "decoded": "  \n",
+              "is_special": false,
+              "logit": -8.280210494995117,
+              "piece": "ĠĠĊ",
+              "token_id": 2355
+            }
+          ],
+          "id": "math_2_plus_2",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-scalar-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        },
+        {
+          "chosen_id": 12366,
+          "first_step_top_logits": [
+            {
+              "decoded": " Paris",
+              "is_special": false,
+              "logit": 12.9736328125,
+              "piece": "ĠParis",
+              "token_id": 12366
+            },
+            {
+              "decoded": "Paris",
+              "is_special": false,
+              "logit": 11.337346076965332,
+              "piece": "Paris",
+              "token_id": 60704
+            },
+            {
+              "decoded": " Berlin",
+              "is_special": false,
+              "logit": 7.589106559753418,
+              "piece": "ĠBerlin",
+              "token_id": 20437
+            },
+            {
+              "decoded": "Berlin",
+              "is_special": false,
+              "logit": 6.074317455291748,
+              "piece": "Berlin",
+              "token_id": 95509
+            },
+            {
+              "decoded": " London",
+              "is_special": false,
+              "logit": 5.049978733062744,
+              "piece": "ĠLondon",
+              "token_id": 7295
+            }
+          ],
+          "id": "capital_france",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-scalar-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        },
+        {
+          "chosen_id": 2579,
+          "first_step_top_logits": [
+            {
+              "decoded": " red",
+              "is_special": false,
+              "logit": 13.539472579956056,
+              "piece": "Ġred",
+              "token_id": 2579
+            },
+            {
+              "decoded": " I",
+              "is_special": false,
+              "logit": 12.851278305053713,
+              "piece": "ĠI",
+              "token_id": 358
+            },
+            {
+              "decoded": " Sure",
+              "is_special": false,
+              "logit": 12.048626899719238,
+              "piece": "ĠSure",
+              "token_id": 23371
+            },
+            {
+              "decoded": " Red",
+              "is_special": false,
+              "logit": 10.597929000854492,
+              "piece": "ĠRed",
+              "token_id": 3816
+            },
+            {
+              "decoded": " Sorry",
+              "is_special": false,
+              "logit": 10.586831092834473,
+              "piece": "ĠSorry",
+              "token_id": 33386
+            }
+          ],
+          "id": "repeat_colors",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-scalar-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        },
+        {
+          "chosen_id": 10619,
+          "first_step_top_logits": [
+            {
+              "decoded": " OK",
+              "is_special": false,
+              "logit": 15.580217361450195,
+              "piece": "ĠOK",
+              "token_id": 10619
+            },
+            {
+              "decoded": "OK",
+              "is_special": false,
+              "logit": 11.900142669677734,
+              "piece": "OK",
+              "token_id": 4012
+            },
+            {
+              "decoded": " Okay",
+              "is_special": false,
+              "logit": 8.971776008605957,
+              "piece": "ĠOkay",
+              "token_id": 36539
+            },
+            {
+              "decoded": " Oh",
+              "is_special": false,
+              "logit": 8.304010391235352,
+              "piece": "ĠOh",
+              "token_id": 8840
+            },
+            {
+              "decoded": " Alright",
+              "is_special": false,
+              "logit": 8.298528671264648,
+              "piece": "ĠAlright",
+              "token_id": 98693
+            }
+          ],
+          "id": "say_ok",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-scalar-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        },
+        {
+          "chosen_id": 2360,
+          "first_step_top_logits": [
+            {
+              "decoded": " No",
+              "is_special": false,
+              "logit": 18.681175231933594,
+              "piece": "ĠNo",
+              "token_id": 2360
+            },
+            {
+              "decoded": " Yes",
+              "is_special": false,
+              "logit": 18.514739990234375,
+              "piece": "ĠYes",
+              "token_id": 7566
+            },
+            {
+              "decoded": "Yes",
+              "is_special": false,
+              "logit": 10.178853034973145,
+              "piece": "Yes",
+              "token_id": 9642
+            },
+            {
+              "decoded": " Is",
+              "is_special": false,
+              "logit": 10.076376914978027,
+              "piece": "ĠIs",
+              "token_id": 2209
+            },
+            {
+              "decoded": " Nope",
+              "is_special": false,
+              "logit": 9.761270523071287,
+              "piece": "ĠNope",
+              "token_id": 86819
+            }
+          ],
+          "id": "yes_no_water",
+          "model_vocab_size": 128256,
+          "observed_logits_vector_length": 128256,
+          "observed_logits_vector_length_source": "answer_corpus_model_vocab_size",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "i2_s-scalar-reference",
+          "status": "passed",
+          "tie_word_embeddings": true
+        }
+      ],
+      "label": "scalar",
+      "path": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json",
+      "provided": true,
+      "summary": {
+        "cases_total": 5,
+        "cases_with_first_step_topk": 5,
+        "observed_logits_vector_lengths": [
+          128256,
+          128256,
+          128256,
+          128256,
+          128256
+        ]
+      }
+    },
+    "scalar_avx2_comparison": {
+      "available": true,
+      "cases": [
+        {
+          "avx2_topk_ids": [
+            12366,
+            60704,
+            20437,
+            95509,
+            7295
+          ],
+          "id": "capital_france",
+          "scalar_topk_ids": [
+            12366,
+            60704,
+            20437,
+            95509,
+            7295
+          ],
+          "topk_ids_match": true
+        },
+        {
+          "avx2_topk_ids": [
+            220,
+            256,
+            482,
+            666,
+            2355
+          ],
+          "id": "math_2_plus_2",
+          "scalar_topk_ids": [
+            220,
+            256,
+            482,
+            666,
+            2355
+          ],
+          "topk_ids_match": true
+        },
+        {
+          "avx2_topk_ids": [
+            2579,
+            358,
+            23371,
+            3816,
+            33386
+          ],
+          "id": "repeat_colors",
+          "scalar_topk_ids": [
+            2579,
+            358,
+            23371,
+            3816,
+            33386
+          ],
+          "topk_ids_match": true
+        },
+        {
+          "avx2_topk_ids": [
+            10619,
+            4012,
+            36539,
+            8840,
+            98693
+          ],
+          "id": "say_ok",
+          "scalar_topk_ids": [
+            10619,
+            4012,
+            36539,
+            8840,
+            98693
+          ],
+          "topk_ids_match": true
+        },
+        {
+          "avx2_topk_ids": [
+            2360,
+            7566,
+            9642,
+            2209,
+            86819
+          ],
+          "id": "yes_no_water",
+          "scalar_topk_ids": [
+            2360,
+            7566,
+            9642,
+            2209,
+            86819
+          ],
+          "topk_ids_match": true
+        }
+      ],
+      "cases_compared": 5,
+      "mismatches": 0,
+      "topk_ids_all_match": true
+    }
+  },
+  "validation": {
+    "failed_rules": [],
+    "passed": true
+  }
+}
