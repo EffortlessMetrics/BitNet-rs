@@ -22,7 +22,8 @@ use bitnet_honest_compute::{
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
+use sha2::{Digest, Sha256};
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
@@ -4478,6 +4479,7 @@ pub fn validate_dense_gguf_all_layer_execution_plan_receipt_json(receipt: &Value
     if layers.len() != layer_total as usize {
         return Err(anyhow!("all_layer_plan.layers length must match transformer_layers_total"));
     }
+    let mut layer0_operation_signature_sha256: Option<String> = None;
     for (expected_index, layer) in layers.iter().enumerate() {
         require_u64_eq(layer, "layer_index", expected_index as u64)?;
         require_u64_eq(layer, "total_ops", 14)?;
@@ -4498,6 +4500,26 @@ pub fn validate_dense_gguf_all_layer_execution_plan_receipt_json(receipt: &Value
         if operations.len() != 14 {
             return Err(anyhow!("all_layer_plan.layers.operations must contain 14 governed ops"));
         }
+        let computed_signature =
+            dense_all_layer_operation_signature_sha256(operations).map_err(|err| {
+                anyhow!(
+                    "all_layer_plan.layers[{expected_index}].operation_signature_sha256 could not be recomputed: {err}"
+                )
+            })?;
+        if required_string(layer, "operation_signature_sha256")? != computed_signature {
+            return Err(anyhow!(
+                "all_layer_plan.layers[{expected_index}].operation_signature_sha256 must match operations"
+            ));
+        }
+        match &layer0_operation_signature_sha256 {
+            Some(layer0_signature) if layer0_signature != &computed_signature => {
+                return Err(anyhow!(
+                    "all_layer_plan.layers[{expected_index}].operation_signature_sha256 must match layer 0"
+                ));
+            }
+            Some(_) => {}
+            None => layer0_operation_signature_sha256 = Some(computed_signature),
+        }
         for (op_index, op) in operations.iter().enumerate() {
             require_u64_eq(op, "index", op_index as u64)?;
             require_string_non_empty(op, "name")?;
@@ -4506,11 +4528,14 @@ pub fn validate_dense_gguf_all_layer_execution_plan_receipt_json(receipt: &Value
                 "all_layer_plan.layers.operations.name",
             )?;
             require_string_non_empty(op, "role")?;
+            let (expected_role, expected_op_type) = DENSE_ALL_LAYER_OPERATION_SEQUENCE[op_index];
+            require_string_eq(op, "role", expected_role)?;
             reject_bitnet_packed_marker(
                 required_string(op, "role")?,
                 "all_layer_plan.layers.operations.role",
             )?;
             require_string_non_empty(op, "op_type")?;
+            require_string_eq(op, "op_type", expected_op_type)?;
             require_positive_u64(op, "size")?;
             require_string_eq(op, "route", DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)?;
             require_string_eq(op, "status", "cuda_routable")?;
@@ -5740,6 +5765,54 @@ fn require_string_non_empty_not_tbd(object: &Value, field: &str) -> Result<()> {
         return Err(anyhow!("field `{field}` must record a concrete value"));
     }
     Ok(())
+}
+
+const DENSE_ALL_LAYER_OPERATION_SEQUENCE: [(&str, &str); 14] = [
+    ("attention_norm", "rmsnorm"),
+    ("attention_q", "matmul"),
+    ("attention_k", "matmul"),
+    ("attention_v", "matmul"),
+    ("rope", "rope"),
+    ("attention_scores", "attention"),
+    ("attention_softmax", "softmax"),
+    ("attention_v_mix", "attention"),
+    ("attention_output", "matmul"),
+    ("ffn_norm", "rmsnorm"),
+    ("mlp_gate", "matmul"),
+    ("mlp_up", "matmul"),
+    ("mlp_activation", "activation"),
+    ("mlp_down", "matmul"),
+];
+
+fn dense_all_layer_operation_signature_sha256(operations: &[Value]) -> Result<String> {
+    let signature = operations
+        .iter()
+        .map(dense_all_layer_operation_signature_entry)
+        .collect::<Result<Vec<_>>>()?;
+    let bytes = serde_json::to_vec(&Value::Array(signature))?;
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn dense_all_layer_operation_signature_entry(op: &Value) -> Result<Value> {
+    let mut entry = Map::new();
+    entry.insert("role".to_string(), Value::String(required_string(op, "role")?.to_string()));
+    entry.insert("op_type".to_string(), Value::String(required_string(op, "op_type")?.to_string()));
+    entry.insert("source".to_string(), Value::String(required_string(op, "source")?.to_string()));
+    entry.insert(
+        "source_tensor_type".to_string(),
+        op.get("source_tensor_type").cloned().unwrap_or(Value::Null),
+    );
+    entry
+        .insert("source_shape".to_string(), op.get("source_shape").cloned().unwrap_or(Value::Null));
+    entry.insert(
+        "is_quantized".to_string(),
+        op.get("is_quantized").cloned().unwrap_or(Value::Bool(false)),
+    );
+    entry.insert("route".to_string(), Value::String(required_string(op, "route")?.to_string()));
+    entry.insert("status".to_string(), Value::String(required_string(op, "status")?.to_string()));
+    Ok(Value::Object(entry))
 }
 
 fn require_sha256(object: &Value, field: &str) -> Result<()> {

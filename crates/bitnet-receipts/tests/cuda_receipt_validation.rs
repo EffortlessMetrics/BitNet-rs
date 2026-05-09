@@ -30,6 +30,7 @@ use bitnet_receipts::{
     validate_dense_regular_llm_cuda_tensor_residency_receipt_json,
 };
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 #[test]
 fn committed_cuda_smoke_receipt_validates() {
@@ -987,6 +988,36 @@ fn dense_gguf_all_layer_plan_rejects_unsupported_ops() {
         .to_string();
 
     assert!(err.contains("unsupported_ops"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_all_layer_plan_rejects_forged_operation_signature() {
+    let mut receipt = valid_dense_gguf_all_layer_execution_plan_receipt();
+    receipt["all_layer_plan"]["layers"][0]["operation_signature_sha256"] = json!("0".repeat(64));
+
+    let err = validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(
+        err.contains("operation_signature_sha256 must match operations"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn dense_gguf_all_layer_plan_rejects_wrong_operation_role_sequence() {
+    let mut receipt = valid_dense_gguf_all_layer_execution_plan_receipt();
+    receipt["all_layer_plan"]["layers"][0]["operations"][1]["role"] = json!("attention_q_dup");
+    let operations = receipt["all_layer_plan"]["layers"][0]["operations"].clone();
+    receipt["all_layer_plan"]["layers"][0]["operation_signature_sha256"] =
+        json!(dense_all_layer_operation_signature_sha256(&operations));
+
+    let err = validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("role"), "unexpected error: {err}");
 }
 
 #[test]
@@ -3274,6 +3305,8 @@ fn dense_one_layer_gap_audit() -> Value {
 }
 
 fn dense_all_layer_plan_layer(layer_index: u64) -> Value {
+    let operations = dense_all_layer_operations(layer_index);
+    let operation_signature_sha256 = dense_all_layer_operation_signature_sha256(&operations);
     json!({
         "layer_index": layer_index,
         "total_ops": 14,
@@ -3289,9 +3322,33 @@ fn dense_all_layer_plan_layer(layer_index: u64) -> Value {
         "cpu_fallback_ops_total": 0,
         "strict_cuda_ready": true,
         "matches_layer0": true,
-        "operation_signature_sha256": "0".repeat(64),
-        "operations": dense_all_layer_operations(layer_index)
+        "operation_signature_sha256": operation_signature_sha256,
+        "operations": operations
     })
+}
+
+fn dense_all_layer_operation_signature_sha256(operations: &Value) -> String {
+    let signature = operations
+        .as_array()
+        .expect("operations array")
+        .iter()
+        .map(|op| {
+            json!({
+                "role": op["role"].as_str().expect("role"),
+                "op_type": op["op_type"].as_str().expect("op_type"),
+                "source": op["source"].as_str().expect("source"),
+                "source_tensor_type": op.get("source_tensor_type").cloned().unwrap_or(Value::Null),
+                "source_shape": op.get("source_shape").cloned().unwrap_or(Value::Null),
+                "is_quantized": op.get("is_quantized").cloned().unwrap_or(Value::Bool(false)),
+                "route": op["route"].as_str().expect("route"),
+                "status": op["status"].as_str().expect("status"),
+            })
+        })
+        .collect::<Vec<_>>();
+    let bytes = serde_json::to_vec(&Value::Array(signature)).expect("signature json");
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
 }
 
 fn dense_all_layer_model_boundary_gaps() -> Value {

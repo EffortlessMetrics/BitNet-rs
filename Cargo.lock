@@ -1272,6 +1272,7 @@ dependencies = [
  "insta",
  "proptest",
  "serde_json",
+ "sha2",
  "tempfile",
 ]
 
@@ -1290,6 +1291,7 @@ dependencies = [
  "rustc_version_runtime",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
 ]
 
