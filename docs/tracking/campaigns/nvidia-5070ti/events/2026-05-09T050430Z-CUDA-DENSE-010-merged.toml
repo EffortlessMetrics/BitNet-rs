@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T05:04:30Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-010"
+event = "merged"
+actor = "codex"
+pr = 4207
+head_sha = "87c006e483e0b17e6e4d8187b7827933d4d402c9"
+merge_sha = "fc38faecfe5ba637da09decfe472160efb51e95b"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4207 merged a live RTX 5070 Ti dense GGUF single-linear CUDA parity receipt for Qwen2.5 Q8_0.",
+  "The receipt records dense_regular_llm_cuda route, fallback_used=false, parity.passed=true, and max_abs_error=0.0.",
+  "Dense GGUF inference, Qwen token/decode/chat, BitNet QK256 proof, speedup, and full-residency claims remain false.",
+]
