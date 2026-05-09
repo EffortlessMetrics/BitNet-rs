@@ -19,12 +19,15 @@ use bitnet_models::dense_gguf_linear_fixture::{
 use bitnet_models::formats::gguf::GgufReader;
 use bitnet_receipts_core::{
     DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
     validate_dense_gguf_linear_cuda_parity_receipt_json,
+    validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
 };
 use clap::Args;
 use memmap2::Mmap;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+use std::collections::BTreeSet;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -32,6 +35,16 @@ use crate::planner_receipts::{ExecutionPlanReceiptInput, execution_plan_receipt}
 
 const HARDWARE_LANE: &str = "nvidia-rtx-5070-ti-cuda";
 const MACHINE_ID: &str = "windows-9950x3d-rtx5070ti";
+const DEFAULT_ROLE_SWEEP: &[DenseGgufTensorRole] = &[
+    DenseGgufTensorRole::AttentionQ,
+    DenseGgufTensorRole::AttentionK,
+    DenseGgufTensorRole::AttentionV,
+    DenseGgufTensorRole::AttentionOutput,
+    DenseGgufTensorRole::MlpGate,
+    DenseGgufTensorRole::MlpUp,
+    DenseGgufTensorRole::MlpDown,
+    DenseGgufTensorRole::Output,
+];
 
 /// Run dense GGUF single-linear CUDA parity diagnostics.
 #[derive(Args, Debug, Clone)]
@@ -112,6 +125,99 @@ impl DenseGgufLinearParityCommand {
     }
 }
 
+/// Run a dense GGUF multi-linear CUDA parity role sweep.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufLinearRoleSweepCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Dense linear tensor roles to extract. Defaults to first-layer Q/K/V/O,
+    /// MLP gate/up/down, and output projection.
+    #[arg(long, value_delimiter = ',', value_name = "ROLE")]
+    pub roles: Vec<String>,
+
+    /// CUDA device index.
+    #[arg(long, default_value_t = 0)]
+    pub device_index: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufLinearRoleSweepCommand {
+    pub async fn execute(&self) -> Result<()> {
+        let roles = parse_role_sweep(&self.roles)?;
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
+        if !probe.available {
+            bail!("CUDA-DENSE-012 requires CUDA probe success: {:?}", probe.failure_reason);
+        }
+        let device_name = probe.selected_device_name.as_deref().unwrap_or("unknown");
+        if !is_rtx5070ti_device_name(device_name) {
+            bail!("CUDA-DENSE-012 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
+        }
+
+        let mut results = Vec::with_capacity(roles.len());
+        for role in roles {
+            let extracted = extract_dense_gguf_linear_fixture(&reader, role)?;
+            let kernel_fixture = kernel_fixture_from_extracted(&extracted)?;
+            let parity = run_dense_gguf_linear_f16_cuda_parity(self.device_index, &kernel_fixture)?;
+            results.push(DenseLinearSweepResult { extracted, parity });
+        }
+
+        if results.is_empty() {
+            bail!("dense GGUF linear role sweep requires at least one role");
+        }
+        if let Some(failed) = results.iter().find(|result| !result.parity.passed) {
+            bail!(
+                "dense GGUF linear role sweep parity failed for {}: max_abs_error={} tolerance={}",
+                failed.parity.tensor_role,
+                failed.parity.max_abs_error,
+                failed.parity.tolerance
+            );
+        }
+
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_linear_role_sweep_cuda_parity_receipt_json(
+            &results,
+            Some(&probe),
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        )?;
+        validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
+struct DenseLinearSweepResult {
+    extracted: DenseGgufLinearFixture,
+    parity: DenseGgufLinearCudaParity,
+}
+
 fn map_model(path: &Path) -> Result<Mmap> {
     let file = File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
     // SAFETY: The mapped file is only read while the file handle and mmap are
@@ -138,6 +244,28 @@ fn parse_dense_linear_role(value: &str) -> Result<DenseGgufTensorRole> {
             "unsupported dense linear role `{value}`; expected output, attention_q, attention_k, attention_v, attention_output, mlp_gate, mlp_up, or mlp_down"
         )),
     }
+}
+
+fn parse_role_sweep(values: &[String]) -> Result<Vec<DenseGgufTensorRole>> {
+    let roles = if values.is_empty() {
+        DEFAULT_ROLE_SWEEP.to_vec()
+    } else {
+        values.iter().map(|value| parse_dense_linear_role(value)).collect::<Result<Vec<_>>>()?
+    };
+
+    if roles.len() < 2 {
+        bail!("dense GGUF linear role sweep requires at least two roles");
+    }
+
+    let mut seen = BTreeSet::new();
+    for role in &roles {
+        let label = dense_role_label(*role);
+        if !seen.insert(label) {
+            bail!("dense GGUF linear role sweep role `{label}` was requested more than once");
+        }
+    }
+
+    Ok(roles)
 }
 
 fn kernel_fixture_from_extracted(
@@ -383,6 +511,248 @@ fn dense_gguf_linear_cuda_parity_receipt_json(
     })
 }
 
+fn dense_gguf_linear_role_sweep_cuda_parity_receipt_json(
+    results: &[DenseLinearSweepResult],
+    probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Result<Value> {
+    let first = results.first().ok_or_else(|| anyhow!("role sweep has no results"))?;
+    let first_summary = &first.extracted.summary;
+    let model_family = first_summary.model_family.as_str();
+    let architecture = first_summary.architecture.as_str();
+    let role_count = results.len();
+    let role_count_u64 = role_count as u64;
+
+    let mut tensor_types = BTreeSet::new();
+    for result in results {
+        let summary = &result.extracted.summary;
+        if summary.model_family != model_family {
+            bail!(
+                "dense GGUF role sweep mixed model families: expected {model_family}, got {}",
+                summary.model_family
+            );
+        }
+        if summary.architecture != architecture {
+            bail!(
+                "dense GGUF role sweep mixed architectures: expected {architecture}, got {}",
+                summary.architecture
+            );
+        }
+        tensor_types.insert(result.parity.tensor_type.clone());
+    }
+
+    let quantization_family = if tensor_types.len() == 1 {
+        format!(
+            "{}_materialized_to_f16_bridge",
+            tensor_types.iter().next().expect("one tensor type")
+        )
+    } else {
+        "mixed_dense_materialized_to_f16_bridge".to_string()
+    };
+
+    let max_abs_error =
+        results.iter().map(|result| result.parity.max_abs_error).fold(0.0_f32, f32::max);
+    let max_mean_abs_error =
+        results.iter().map(|result| result.parity.mean_abs_error).fold(0.0_f32, f32::max);
+    let tolerance = results.iter().map(|result| result.parity.tolerance).fold(0.0_f32, f32::max);
+    let h2d_bytes =
+        results.iter().map(|result| result.parity.stats.host_to_device_bytes).sum::<u64>();
+    let d2h_bytes =
+        results.iter().map(|result| result.parity.stats.device_to_host_bytes).sum::<u64>();
+    let kernel_invocations =
+        results.iter().map(|result| result.parity.stats.invocations).sum::<u64>();
+    let kernel_launches =
+        results.iter().map(|result| result.parity.stats.kernel_launches).sum::<u64>();
+    let aggregate_kernel_time_ms = results
+        .iter()
+        .try_fold(0.0_f64, |acc, result| result.parity.stats.kernel_time_ms.map(|time| acc + time));
+
+    let cuda = cuda_identity_json(probe);
+    let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
+        model_family,
+        quantization: "dense_fp16",
+        requested_backend: HARDWARE_LANE,
+        selected_backend: HARDWARE_LANE,
+        runtime_api: "cuda",
+        strict_fallback_policy: "reject",
+        summary: ModelDispatchSummary {
+            total_ops: role_count,
+            cuda_bitnet_qk256_ops: 0,
+            cuda_dense_regular_llm_ops: role_count,
+            cpu_fallback_ops: 0,
+            unsupported_ops: 0,
+            fallback_used: false,
+            selected_route: Some(ModelDispatchBackend::CudaDenseRegularLlm),
+            strict_cuda_ready: true,
+        },
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    });
+
+    let covered_roles =
+        results.iter().map(|result| result.parity.tensor_role.clone()).collect::<Vec<_>>();
+    let linear_fixtures = results
+        .iter()
+        .map(|result| {
+            let summary = &result.extracted.summary;
+            let parity = &result.parity;
+            json!({
+                "schema": 1,
+                "source_artifact_kind": DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND,
+                "fixture_id": parity.fixture_id,
+                "model_family": parity.model_family,
+                "architecture": summary.architecture,
+                "tensor_name": parity.tensor_name,
+                "role": parity.tensor_role,
+                "tensor_type": parity.tensor_type,
+                "matrix_rows": parity.matrix_rows,
+                "matrix_cols": parity.matrix_cols,
+                "logical_layout": "gguf_in_out_reinterpreted_as_out_in",
+                "gemm_layout": "input_1_by_in_times_weight_in_by_out",
+                "values_materialized_as_f32": true,
+                "gemm_input_dtype": "f16",
+                "gemm_weight_dtype": "f16",
+                "gemm_output_dtype": "f32",
+                "weight_values_sha256": parity.source_weight_sha256,
+                "dense_gguf_inference_claimed": false,
+                "dense_regular_llm_cuda_claimed": true,
+                "cpu_cuda_parity_claimed": true,
+                "bitnet_packed_i2s_qk256_proof": false,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            })
+        })
+        .collect::<Vec<_>>();
+    let kernel_stats = results
+        .iter()
+        .map(|result| {
+            let parity = &result.parity;
+            json!({
+                "role": parity.tensor_role,
+                "tensor_name": parity.tensor_name,
+                "fixture_id": parity.fixture_id,
+                "kernel_id": parity.stats.kernel_id,
+                "invocations": parity.stats.invocations,
+                "fallback_invocations": parity.stats.fallback_invocations,
+                "host_to_device_bytes": parity.stats.host_to_device_bytes,
+                "device_to_host_bytes": parity.stats.device_to_host_bytes,
+                "kernel_launches": parity.stats.kernel_launches,
+                "kernel_time_ms": parity.stats.kernel_time_ms
+            })
+        })
+        .collect::<Vec<_>>();
+
+    Ok(json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_linear_role_sweep_cuda_parity_tested",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": HARDWARE_LANE,
+        "selected_backend": HARDWARE_LANE,
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda,
+        "model": {
+            "model_family": model_family,
+            "architecture": architecture,
+            "artifact_kind": "dense_gguf",
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_fp16_gemm",
+            "quantization_family": quantization_family,
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": execution_plan,
+        "linear_role_sweep": {
+            "schema": 1,
+            "roles_total": role_count_u64,
+            "roles_passed": role_count_u64,
+            "roles_failed": 0,
+            "covered_roles": covered_roles,
+            "all_parity_passed": true,
+            "max_abs_error": max_abs_error,
+            "max_mean_abs_error": max_mean_abs_error,
+            "aggregate_kernel_time_ms": aggregate_kernel_time_ms,
+            "host_to_device_bytes": h2d_bytes,
+            "device_to_host_bytes": d2h_bytes,
+            "kernel_invocations": kernel_invocations,
+            "kernel_launches": kernel_launches,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "linear_fixtures": linear_fixtures,
+        "kernel_stats": kernel_stats,
+        "parity": {
+            "reference_backend": first.parity.reference_backend,
+            "target_backend": first.parity.target_backend,
+            "kernel_id": first.parity.kernel_id,
+            "roles_total": role_count_u64,
+            "roles_passed": role_count_u64,
+            "roles_failed": 0,
+            "max_abs_error": max_abs_error,
+            "max_mean_abs_error": max_mean_abs_error,
+            "passed": true,
+            "tolerance": tolerance,
+            "tolerance_source": "CUDA-DENSE-012 extracted dense GGUF linear role-sweep FP16 bridge"
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": true,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "tensor_residency": {
+            "schema_version": "1.0.0",
+            "scope": "dense_gguf_linear_role_sweep_fixture",
+            "model_class": "dense_regular_llm",
+            "roles_total": role_count_u64,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false,
+            "input_tensors_uploaded_once_per_role": true,
+            "output_tensor_cuda_resident_during_kernel": true,
+            "host_device_transfer_accounting_matches_kernel_stats": true,
+            "allocation": {
+                "device_buffer_count": role_count_u64 * 3,
+                "temporary_workspace_bytes": 0,
+                "persistent_handle_count": 0,
+                "persistent_handles_claimed": false
+            },
+            "transfer_accounting": {
+                "status": "measured",
+                "host_to_device_bytes": h2d_bytes,
+                "device_to_host_bytes": d2h_bytes,
+                "kernel_invocations": kernel_invocations,
+                "kernel_launches": kernel_launches
+            }
+        },
+        "error": null
+    }))
+}
+
 fn cuda_identity_json(probe: Option<&bitnet_device_probe::NvidiaCudaProbe>) -> Value {
     match probe {
         Some(probe) => json!({
@@ -505,6 +875,50 @@ mod tests {
     }
 
     #[test]
+    fn extracted_dense_linear_role_sweep_receipt_validates() {
+        let values = (1..=12).collect::<Vec<_>>();
+        let data = build_qwen_gguf(vec![
+            ("blk.0.attn_q.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.5, &values)),
+            ("blk.0.attn_k.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.25, &values)),
+            ("blk.0.ffn_down.weight", vec![4, 3], GgufTensorType::Q8_0, q8_0_blob(0.125, &values)),
+        ]);
+        let reader = GgufReader::new(&data).expect("parse qwen fixture");
+        let roles = [
+            DenseGgufTensorRole::AttentionQ,
+            DenseGgufTensorRole::AttentionK,
+            DenseGgufTensorRole::MlpDown,
+        ];
+        let results = roles
+            .iter()
+            .map(|role| {
+                let extracted =
+                    extract_dense_gguf_linear_fixture(&reader, *role).expect("extract fixture");
+                let kernel_fixture =
+                    kernel_fixture_from_extracted(&extracted).expect("kernel fixture conversion");
+                let parity = synthetic_parity_from_kernel_fixture(&kernel_fixture);
+                DenseLinearSweepResult { extracted, parity }
+            })
+            .collect::<Vec<_>>();
+
+        let receipt = dense_gguf_linear_role_sweep_cuda_parity_receipt_json(
+            &results,
+            None,
+            Path::new("synthetic-qwen3-q8_0-linear-sweep.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-linear-role-sweep-cuda-parity.json",
+            "2026-05-09T00:00:00Z",
+        )
+        .unwrap();
+
+        validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["execution_plan"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 3);
+        assert_eq!(receipt["linear_role_sweep"]["roles_total"], 3);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
     fn parse_dense_linear_role_accepts_common_spellings() {
         assert_eq!(
             parse_dense_linear_role("attention_q").unwrap(),
@@ -513,6 +927,18 @@ mod tests {
         assert_eq!(parse_dense_linear_role("attn-q").unwrap(), DenseGgufTensorRole::AttentionQ);
         assert_eq!(parse_dense_linear_role("mlp_down").unwrap(), DenseGgufTensorRole::MlpDown);
         assert!(parse_dense_linear_role("attention_norm").is_err());
+    }
+
+    #[test]
+    fn parse_role_sweep_rejects_duplicates_and_singletons() {
+        let duplicate = vec!["attention_q".to_string(), "attn-q".to_string()];
+        assert!(parse_role_sweep(&duplicate).is_err());
+
+        let singleton = vec!["attention_q".to_string()];
+        assert!(parse_role_sweep(&singleton).is_err());
+
+        let defaults = parse_role_sweep(&[]).expect("default role sweep");
+        assert_eq!(defaults.len(), DEFAULT_ROLE_SWEEP.len());
     }
 
     fn synthetic_parity_from_kernel_fixture(

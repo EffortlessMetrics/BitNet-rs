@@ -8,6 +8,7 @@ use bitnet_receipts::{
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof, validate_cuda_parity_receipt_json,
     validate_cuda_smoke_receipt_json, validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_fixture_extraction_receipt_json,
+    validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
     validate_dense_regular_llm_cuda_receipt_json,
@@ -517,6 +518,52 @@ fn dense_gguf_linear_cuda_parity_rejects_transfer_mismatch() {
         validate_dense_gguf_linear_cuda_parity_receipt_json(&receipt).unwrap_err().to_string();
 
     assert!(err.contains("device_to_host_bytes"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_role_sweep_cuda_parity_receipt_validates() {
+    let receipt = valid_dense_gguf_linear_role_sweep_cuda_parity_receipt();
+
+    validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_linear_role_sweep_rejects_bitnet_proof_claim() {
+    let mut receipt = valid_dense_gguf_linear_role_sweep_cuda_parity_receipt();
+    receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+    receipt["linear_role_sweep"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    let err = validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_role_sweep_rejects_count_mismatch() {
+    let mut receipt = valid_dense_gguf_linear_role_sweep_cuda_parity_receipt();
+    receipt["execution_plan"]["cuda_dense_regular_llm_ops"] = json!(1);
+
+    let err = validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("cuda_dense_regular_llm_ops"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_role_sweep_rejects_duplicate_roles() {
+    let mut receipt = valid_dense_gguf_linear_role_sweep_cuda_parity_receipt();
+    receipt["linear_role_sweep"]["covered_roles"] = json!(["attention_q", "attention_q"]);
+
+    let err = validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("duplicate"), "unexpected error: {err}");
 }
 
 fn valid_smoke_receipt() -> Value {
@@ -1095,6 +1142,170 @@ fn valid_dense_gguf_linear_cuda_parity_receipt() -> Value {
                 "status": "measured",
                 "host_to_device_bytes": 32,
                 "device_to_host_bytes": 12
+            }
+        },
+        "error": null
+    })
+}
+
+fn valid_dense_gguf_linear_role_sweep_cuda_parity_receipt() -> Value {
+    let mut attention_q = valid_dense_gguf_linear_cuda_parity_receipt();
+    let fixture_q = attention_q["linear_fixture"].take();
+    let stat_q = json!({
+        "role": "attention_q",
+        "tensor_name": "blk.0.attn_q.weight",
+        "fixture_id": "dense_gguf_linear_qwen_attention_q_f16_bridge",
+        "kernel_id": "dense_f16_gemm_cuda",
+        "invocations": 1,
+        "fallback_invocations": 0,
+        "host_to_device_bytes": 32,
+        "device_to_host_bytes": 12,
+        "kernel_launches": 1,
+        "kernel_time_ms": null
+    });
+
+    let mut fixture_k = fixture_q.clone();
+    fixture_k["fixture_id"] = json!("dense_gguf_linear_qwen_attention_k_f16_bridge");
+    fixture_k["tensor_name"] = json!("blk.0.attn_k.weight");
+    fixture_k["role"] = json!("attention_k");
+    fixture_k["weight_values_sha256"] = json!("2".repeat(64));
+    let stat_k = json!({
+        "role": "attention_k",
+        "tensor_name": "blk.0.attn_k.weight",
+        "fixture_id": "dense_gguf_linear_qwen_attention_k_f16_bridge",
+        "kernel_id": "dense_f16_gemm_cuda",
+        "invocations": 1,
+        "fallback_invocations": 0,
+        "host_to_device_bytes": 32,
+        "device_to_host_bytes": 12,
+        "kernel_launches": 1,
+        "kernel_time_ms": null
+    });
+
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_linear_role_sweep_cuda_parity",
+        "artifact_path": "target/bitnet/receipts/dense-gguf-linear-role-sweep-cuda-parity.json",
+        "claim": "dense_gguf_linear_role_sweep_cuda_parity_tested",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-09T00:00:00Z",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity(),
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "file": "synthetic-dense-gguf-linear-role-sweep-fixture",
+            "sha256": "0".repeat(64)
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_fp16_gemm",
+            "quantization_family": "q8_0_materialized_to_f16_bridge",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": {
+            "planner_version": "cuda-planner-004",
+            "model_family": "qwen",
+            "quantization": "dense_fp16",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "cuda_bitnet_qk256_ops": 0,
+            "cuda_dense_regular_llm_ops": 2,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 2,
+            "cuda_ops": 2,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "linear_role_sweep": {
+            "schema": 1,
+            "roles_total": 2,
+            "roles_passed": 2,
+            "roles_failed": 0,
+            "covered_roles": ["attention_q", "attention_k"],
+            "all_parity_passed": true,
+            "max_abs_error": 0.0,
+            "max_mean_abs_error": 0.0,
+            "aggregate_kernel_time_ms": null,
+            "host_to_device_bytes": 64,
+            "device_to_host_bytes": 24,
+            "kernel_invocations": 2,
+            "kernel_launches": 2,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "linear_fixtures": [fixture_q, fixture_k],
+        "kernel_stats": [stat_q, stat_k],
+        "parity": {
+            "reference_backend": "amd-9950x3d-cpu-avx512",
+            "target_backend": "nvidia-rtx-5070-ti-cuda",
+            "kernel_id": "dense_f16_gemm_cuda",
+            "roles_total": 2,
+            "roles_passed": 2,
+            "roles_failed": 0,
+            "max_abs_error": 0.0,
+            "max_mean_abs_error": 0.0,
+            "passed": true,
+            "tolerance": 0.002,
+            "tolerance_source": "CUDA-DENSE-012 extracted dense GGUF linear role-sweep FP16 bridge"
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": true,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "tensor_residency": {
+            "schema_version": "1.0.0",
+            "scope": "dense_gguf_linear_role_sweep_fixture",
+            "model_class": "dense_regular_llm",
+            "roles_total": 2,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false,
+            "input_tensors_uploaded_once_per_role": true,
+            "output_tensor_cuda_resident_during_kernel": true,
+            "host_device_transfer_accounting_matches_kernel_stats": true,
+            "allocation": {
+                "device_buffer_count": 6,
+                "temporary_workspace_bytes": 0,
+                "persistent_handle_count": 0,
+                "persistent_handles_claimed": false
+            },
+            "transfer_accounting": {
+                "status": "measured",
+                "host_to_device_bytes": 64,
+                "device_to_host_bytes": 24,
+                "kernel_invocations": 2,
+                "kernel_launches": 2
             }
         },
         "error": null
