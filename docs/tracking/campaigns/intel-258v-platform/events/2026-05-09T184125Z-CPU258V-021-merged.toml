@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T18:41:25Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-021"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4315
+merge_sha = "7244b1af7a8828b58133be5eab4befa7c72c8305"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-021-reference-instrumentation"
+summary = "Merged CPU258V-021 after classifying the external reference instrumentation boundary for fixed 258V prompts."
+notes = [
+  "The merged PR adds the external-reference-instrumentation command and records that generated text is available for the four fixed prompts while direct generated-token IDs and first-token logits/top-k remain unavailable.",
+  "The command treats missing generated-token and logits fields as explicit blockers and does not infer token or logit parity from generated text or capability flags alone.",
+  "The merged PR does not claim generated-token-ID parity, first-token logits parity, answer quality, speed, Arc 140V execution, Intel NPU execution, or QK256 decode correctness.",
+  "CPU258V-022 is ready to audit CPU scalar QK256/I2_S/I8_S semantics against the canonical BitNet.cpp/CUDA-aligned oracle.",
+]
