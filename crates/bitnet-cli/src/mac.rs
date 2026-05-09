@@ -515,8 +515,8 @@ impl MacCommand {
                 json_out,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac validate")?;
-                run_validate(
-                    &model_id,
+                run_validate(MacValidateRun {
+                    model_id: &model_id,
                     cache_dir,
                     corpus,
                     corpus_repeat_runs,
@@ -527,7 +527,7 @@ impl MacCommand {
                     progress,
                     quiet,
                     json_out,
-                )
+                })
                 .await
             }
             MacAction::BitnetProof {
@@ -1400,8 +1400,8 @@ async fn run_chat_session(
     Ok(())
 }
 
-async fn run_validate(
-    model_id: &str,
+struct MacValidateRun<'a> {
+    model_id: &'a str,
     cache_dir: Option<PathBuf>,
     corpus: PathBuf,
     corpus_repeat_runs: usize,
@@ -1412,7 +1412,23 @@ async fn run_validate(
     progress: bool,
     quiet: bool,
     json_out: PathBuf,
-) -> Result<()> {
+}
+
+async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
+    let MacValidateRun {
+        model_id,
+        cache_dir,
+        corpus,
+        corpus_repeat_runs,
+        profile_set,
+        max_new_tokens,
+        threads,
+        allocation_audit,
+        progress,
+        quiet,
+        json_out,
+    } = request;
+
     if profile_set == MacValidateProfileSet::Performance && cfg!(debug_assertions) {
         anyhow::bail!(
             "mac validate --profile-set performance must be run from a release build; use `cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set performance ...`"

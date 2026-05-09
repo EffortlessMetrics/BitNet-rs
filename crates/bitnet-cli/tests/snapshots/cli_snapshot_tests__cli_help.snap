@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 57
 expression: help
 ---
 BitNet-rs CLI - one-shot generation and chat with strict receipts
@@ -57,43 +58,112 @@ PERFORMANCE:
 Usage: bitnet [OPTIONS] [COMMAND]
 
 Commands:
-  run                                Run simple text generation
-  ask                                Ask one question using the answer-readiness generation path
-  model                              Fetch, verify, list, and prune supported local model artifacts
-  mac                                Mac-oriented SLM check, ask, validate, and receipt-check wrappers
-  tokenize                           Tokenize text and output token IDs as JSON
-  prompt-authority-audit             Emit a BitNet prompt/token authority audit receipt without running inference
-  score                              Calculate perplexity score for a model
-  inference                          Run inference on a model
-  chat                               Interactive chat mode (streaming)
-  answer-corpus                      Run the fixed CPU answer-readiness corpus through the `run` surface
-  answer-parity                      Compare answer-corpus receipts for backend parity diagnostics
-  reference-compare                  Validate an external-reference divergence artifact
-  slm-warm-session                   Run multiple SLM prompts in one warm process with one model/tokenizer load
-  cuda-warm-session                  Run strict RTX 5070 Ti CUDA prompts in one warm BitNet process
-  cpu-phase-warm-session             Run 258V CPU phase prompts in one warm strict BitNet process
-  convert                            Convert between model formats
-  benchmark                          Benchmark model performance
-  serve                              Start inference server
-  config                             Manage configuration
-  info                               Show system information
-  device-smoke                       Probe selected device identity without launching kernels
-  lunar-lake-probe                   Probe Lunar Lake 258V platform visibility without launching kernels
-  intel-npu-probe                    Probe Intel NPU OpenVINO runtime visibility without compiling graphs
-  intel-npu-smoke                    Run a tiny static OpenVINO NPU graph smoke without BitNet inference
-  intel-npu-bitnet-subgraph          Run selected static BitNet subgraph parity on OpenVINO NPU
-  intel-npu-bitnet-linear-subgraph   Run static BitNet linear-projection subgraph parity on OpenVINO NPU
-  intel-npu-bitnet-ffn-subgraph      Run static BitNet FFN/ReLU2 subgraph parity on OpenVINO NPU
-  intel-arc-140v-openvino-gpu-smoke  Run a tiny static OpenVINO GPU.0 graph smoke for Arc 140V
-  intel-arc-140v-opencl-smoke        Run a tiny native OpenCL kernel smoke for Arc 140V
-  intel-arc-140v-opencl-parity       Run a native OpenCL CPU-reference parity kernel for Arc 140V
-  validate                           Run validation-only preflight checks
-  cuda-smoke                         Compile and launch a tiny CUDA vector-add kernel
-  inspect                            Inspect model metadata and diagnostics
-  compat-check                       Check GGUF file compatibility using header validation
-  list-architectures                 List all supported model architectures
-  list-templates                     List all available prompt templates
-  help                               Print this message or the help of the given subcommand(s)
+  run
+          Run simple text generation
+  ask
+          Ask one question using the answer-readiness generation path
+  model
+          Fetch, verify, list, and prune supported local model artifacts
+  mac
+          Mac-oriented SLM check, ask, validate, and receipt-check wrappers
+  tokenize
+          Tokenize text and output token IDs as JSON
+  prompt-authority-audit
+          Emit a BitNet prompt/token authority audit receipt without running inference
+  score
+          Calculate perplexity score for a model
+  inference
+          Run inference on a model
+  chat
+          Interactive chat mode (streaming)
+  answer-corpus
+          Run the fixed CPU answer-readiness corpus through the `run` surface
+  answer-parity
+          Compare answer-corpus receipts for backend parity diagnostics
+  reference-compare
+          Validate an external-reference divergence artifact
+  first-token-divergence
+          Classify first-token divergence from external reference and 258V CPU receipts
+  dense-gguf-linear-parity
+          Extract one dense GGUF linear fixture and run strict CUDA parity diagnostics
+  dense-gguf-linear-role-sweep
+          Extract several dense GGUF linear fixtures and run strict CUDA parity diagnostics
+  dense-gguf-one-layer-plan
+          Emit a dense GGUF one-layer strict CUDA planner gap receipt
+  dense-gguf-norm-fixture
+          Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
+  dense-gguf-norm-cuda-parity
+          Extract dense GGUF RMSNorm fixtures and run strict CUDA parity diagnostics
+  dense-gguf-rope-cuda-parity
+          Run dense GGUF RoPE strict CUDA parity diagnostics
+  dense-gguf-attention-score-fixture
+          Extract a dense GGUF attention-score fixture and emit a CPU-reference receipt
+  dense-gguf-attention-softmax-fixture
+          Extract a dense GGUF attention-softmax fixture and emit a CPU-reference receipt
+  dense-gguf-attention-v-mix-fixture
+          Extract a dense GGUF attention V-mix fixture and emit a CPU-reference receipt
+  dense-gguf-mlp-activation-fixture
+          Extract a dense GGUF MLP activation fixture and emit a CPU-reference receipt
+  dense-gguf-mlp-activation-cuda-parity
+          Run dense GGUF MLP activation strict CUDA parity diagnostics
+  dense-gguf-attention-softmax-cuda-parity
+          Run dense GGUF attention-softmax strict CUDA parity diagnostics
+  dense-gguf-attention-v-mix-cuda-parity
+          Run dense GGUF attention V-mix strict CUDA parity diagnostics
+  dense-gguf-attention-score-cuda-parity
+          Run dense GGUF attention-score strict CUDA parity diagnostics
+  receipts
+          Explain BitNet-rs JSON receipts and claim boundaries
+  slm-warm-session
+          Run multiple SLM prompts in one warm process with one model/tokenizer load
+  cuda-warm-session
+          Run strict RTX 5070 Ti CUDA prompts in one warm BitNet process
+  cpu-phase-warm-session
+          Run 258V CPU phase prompts in one warm strict BitNet process
+  convert
+          Convert between model formats
+  benchmark
+          Benchmark model performance
+  serve
+          Start inference server
+  config
+          Manage configuration
+  info
+          Show system information
+  device-smoke
+          Probe selected device identity without launching kernels
+  lunar-lake-probe
+          Probe Lunar Lake 258V platform visibility without launching kernels
+  intel-npu-probe
+          Probe Intel NPU OpenVINO runtime visibility without compiling graphs
+  intel-npu-smoke
+          Run a tiny static OpenVINO NPU graph smoke without BitNet inference
+  intel-npu-bitnet-subgraph
+          Run selected static BitNet subgraph parity on OpenVINO NPU
+  intel-npu-bitnet-linear-subgraph
+          Run static BitNet linear-projection subgraph parity on OpenVINO NPU
+  intel-npu-bitnet-ffn-subgraph
+          Run static BitNet FFN/ReLU2 subgraph parity on OpenVINO NPU
+  intel-arc-140v-openvino-gpu-smoke
+          Run a tiny static OpenVINO GPU.0 graph smoke for Arc 140V
+  intel-arc-140v-opencl-smoke
+          Run a tiny native OpenCL kernel smoke for Arc 140V
+  intel-arc-140v-opencl-parity
+          Run a native OpenCL CPU-reference parity kernel for Arc 140V
+  validate
+          Run validation-only preflight checks
+  cuda-smoke
+          Compile and launch a tiny CUDA vector-add kernel
+  inspect
+          Inspect model metadata and diagnostics
+  compat-check
+          Check GGUF file compatibility using header validation
+  list-architectures
+          List all supported model architectures
+  list-templates
+          List all available prompt templates
+  help
+          Print this message or the help of the given subcommand(s)
 
 Options:
   -c, --config <PATH>

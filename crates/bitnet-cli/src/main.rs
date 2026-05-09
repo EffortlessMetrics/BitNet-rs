@@ -134,8 +134,8 @@ use commands::{
     DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
     DenseGgufMlpActivationCudaParityCommand, DenseGgufMlpActivationFixtureCommand,
     DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand,
-    DenseGgufRopeCudaParityCommand, InferenceCommand, InspectCommand, ReceiptsCommand,
-    ReferenceCompareCommand, ServeCommand,
+    DenseGgufRopeCudaParityCommand, FirstTokenDivergenceCommand, InferenceCommand, InspectCommand,
+    ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -586,6 +586,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Validate an external-reference divergence artifact
     ReferenceCompare(Box<ReferenceCompareCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Classify first-token divergence from external reference and 258V CPU receipts
+    FirstTokenDivergence(Box<FirstTokenDivergenceCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Extract one dense GGUF linear fixture and run strict CUDA parity diagnostics
@@ -1419,6 +1423,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::AnswerParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::ReferenceCompare(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::FirstTokenDivergence(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufLinearParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
@@ -5738,7 +5744,7 @@ async fn run_cpu_phase_warm_session(
     let thread_count = effective_thread_count(threads);
     let cpu_features = detected_cpu_feature_labels();
     let cpu_model = detected_cpu_model_label();
-    let (machine_id, hardware_lane) = cpu_phase_machine_labels(&cpu_kernel, &kernel_implementation);
+    let (machine_id, hardware_lane) = cpu_phase_machine_labels(&cpu_kernel, kernel_implementation);
 
     let receipt_dir = json_out
         .parent()
@@ -7748,7 +7754,7 @@ async fn run_slm_warm_session(
 
             let sample_start = std::time::Instant::now();
             let sample_alloc_start = AllocationAuditSnapshot::current();
-            let next_token = sampler.sample(&logits_vec, &generated_tokens)?;
+            let next_token = sampler.sample(&logits_vec, generated_tokens)?;
             if allocation_audit_enabled {
                 sample_step_allocs.push(AllocationAuditSnapshot::delta_since(sample_alloc_start));
             }
@@ -7818,13 +7824,13 @@ async fn run_slm_warm_session(
             }
         }
 
-        let generated_text = tokenizer.decode(&generated_tokens)?;
+        let generated_text = tokenizer.decode(generated_tokens)?;
         if output.stream_tokens {
             println!();
         }
         let quality = slm_warm_session_quality_receipt(
             &generated_text,
-            &generated_tokens,
+            generated_tokens,
             prompt_input.min_generated_tokens,
             prompt_input.min_distinct_generated_tokens,
             prompt_input.gate.as_ref(),
@@ -7849,7 +7855,7 @@ async fn run_slm_warm_session(
             Some(sampling_total_ms / sample_step_ms.len() as f64)
         };
         let decode_steady_state_tok_s =
-            steady_decode_tps_ms(&decode_step_ms).map(|value| (value * 1000.0).round() / 1000.0);
+            steady_decode_tps_ms(decode_step_ms).map(|value| (value * 1000.0).round() / 1000.0);
         speed_accumulator.record(WarmSessionPromptSpeed {
             prompt_tokens: prompt_token_count,
             generated_tokens: generated_tokens.len(),
@@ -7910,11 +7916,11 @@ async fn run_slm_warm_session(
                 "decode_steady_state_tok_s": decode_steady_state_tok_s,
                 "sampling_ms_per_token": sampling_ms_per_token.map(rounded_ms),
                 "total_ms": rounded_ms(prompt_total_ms),
-                "embed_ms": timing_samples_json(&embed_step_ms),
-                "forward_ms": timing_samples_json(&forward_step_ms),
-                "logits_ms": timing_samples_json(&logits_step_ms),
-                "sample_ms": timing_samples_json(&sample_step_ms),
-                "token_decode_ms": timing_samples_json(&token_decode_step_ms),
+                "embed_ms": timing_samples_json(embed_step_ms),
+                "forward_ms": timing_samples_json(forward_step_ms),
+                "logits_ms": timing_samples_json(logits_step_ms),
+                "sample_ms": timing_samples_json(sample_step_ms),
+                "token_decode_ms": timing_samples_json(token_decode_step_ms),
             },
             "model": {
                 "repo": model_repo.as_str(),
@@ -8002,15 +8008,15 @@ async fn run_slm_warm_session(
                 enabled: allocation_audit_enabled,
                 prompt_tokenize: prompt_tokenize_alloc,
                 prompt_setup: prompt_setup_alloc,
-                prompt_prefill: &prefill_step_allocs,
-                decode_total: &decode_step_allocs,
-                embed: &embed_step_allocs,
-                forward: &forward_step_allocs,
-                logits: &logits_step_allocs,
-                sample: &sample_step_allocs,
-                token_vector_update: &token_vector_update_allocs,
-                token_decode: &token_decode_step_allocs,
-                stop_tail_update: &stop_tail_update_allocs,
+                prompt_prefill: prefill_step_allocs,
+                decode_total: decode_step_allocs,
+                embed: embed_step_allocs,
+                forward: forward_step_allocs,
+                logits: logits_step_allocs,
+                sample: sample_step_allocs,
+                token_vector_update: token_vector_update_allocs,
+                token_decode: token_decode_step_allocs,
+                stop_tail_update: stop_tail_update_allocs,
                 receipt_construction: prompt_receipt_construct_alloc,
             });
         if let Some(object) = prompt_receipt.as_object_mut() {

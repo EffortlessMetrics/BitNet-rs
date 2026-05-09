@@ -2748,6 +2748,21 @@ fn reference_compare_validates_slm_external_reference_artifact() {
     assert_eq!(receipt["speedup_claim"], false);
 }
 
+/// `first-token-divergence --help` documents the external reference and local CPU inputs.
+#[cfg(feature = "full-cli")]
+#[test]
+fn first_token_divergence_subcommand_help_lists_evidence_inputs() {
+    bitnet()
+        .args(["first-token-divergence", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--external-reference"))
+        .stdout(predicate::str::contains("--prompt-audit"))
+        .stdout(predicate::str::contains("--scalar-answer-corpus"))
+        .stdout(predicate::str::contains("--avx2-answer-corpus"))
+        .stdout(predicate::str::contains("--answer-parity"));
+}
+
 /// `answer-corpus` can target the Apple M4 CPU/NEON local-answer lane.
 #[cfg(feature = "full-cli")]
 #[test]

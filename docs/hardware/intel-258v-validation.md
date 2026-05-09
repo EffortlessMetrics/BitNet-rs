@@ -419,7 +419,8 @@ ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-math_2_pl
 
 Both the scalar and AVX2 release-built receipts pass the exact answer gate for
 the selected `math_2_plus_2` BitNet.cpp-template case, producing decoded text
-` 4` with identical generated token IDs `[220, 19, 128009]`. The scalar run
+with a leading space followed by `4` and identical generated token IDs
+`[220, 19, 128009]`. The scalar run
 selects `i2_s-scalar-reference`, the AVX2 run selects `i2_s-avx2-reference`,
 and the parity receipt records `summary.failed=0` with no first divergence.
 This is selected-case answer recovery and scalar-vs-AVX2 parity evidence only:
@@ -822,8 +823,8 @@ first_divergence_stage = prompt
 cases_failed = 4
 ```
 
-The comparison records that HF keeps the trailing generation-prompt space in
-`Assistant: ` and does not prepend BOS for these `apply_chat_template` prompt
+The comparison records that HF keeps a trailing generation-prompt space after
+`Assistant:` and does not prepend BOS for these `apply_chat_template` prompt
 IDs, while the current BitNet-rs metadata-authority path prepends BOS and
 renders `Assistant:` without the trailing space.
 
@@ -889,6 +890,60 @@ First-token logits parity is proven.
 Generated-token-ID parity is proven.
 Answer quality beyond the cited MODEL-ARTIFACT-007 reference-runner gate is
 proven.
+CPU speed is proven.
+Arc 140V or Intel NPU execution is proven.
+Packed QK256 decode semantics are fixed.
+```
+
+## CPU258V-020 First-Token Divergence Classification
+
+Artifact:
+
+```text
+ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json
+```
+
+The CPU258V-020 classifier combines the external BitNet.cpp generated-text
+boundary, the prompt-authority audit, scalar and AVX2 answer-corpus receipts,
+and the scalar-vs-AVX2 answer-parity receipt. It keeps local CPU parity
+separate from the external reference evidence boundary.
+
+Current result:
+
+```text
+cases_total = 4
+cases_inconclusive = 4
+prompt_token_exact_matches = 0
+prompt_token_local_bos_prefix_matches = 4
+generated_text_trimmed_scalar_matches = 4
+generated_text_trimmed_avx2_matches = 4
+generated_text_trimmed_scalar_avx2_matches = 4
+scalar_avx2_parity_passed = true
+reference_generated_token_ids_available = false
+reference_logits_available = false
+classification = reference_generated_token_ids_and_logits_unavailable
+```
+
+The result means the fixed external prompts match the local CPU prompt IDs
+after accounting for the local BOS prefix, and the external generated text
+matches the local scalar/AVX2 text after trimming. The classifier intentionally
+does not claim generated-token-ID parity or first-token logits parity because
+the external reference artifact does not expose generated token IDs or logits.
+
+Allowed claim:
+
+```text
+The first available CPU258V external-reference boundary is classified, and the
+next required evidence is reference generated token IDs plus first-token
+logits/top-k.
+```
+
+Not allowed:
+
+```text
+First-token logits parity is proven.
+Generated-token-ID parity against the external reference is proven.
+General answer quality is proven.
 CPU speed is proven.
 Arc 140V or Intel NPU execution is proven.
 Packed QK256 decode semantics are fixed.

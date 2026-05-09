@@ -1,0 +1,709 @@
+{
+  "artifact_kind": "bitnet_first_token_divergence_classification",
+  "cases": [
+    {
+      "avx2": {
+        "answer": " 4",
+        "fallback_used": false,
+        "first_generated_token_id": 220,
+        "generated_token_ids": [
+          220,
+          19,
+          128009
+        ],
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "selected_kernel": "i2_s-avx2-reference",
+        "topk_step0": [
+          {
+            "logit": 6.6697001457214355,
+            "token_id": 220
+          },
+          {
+            "logit": -6.725193023681641,
+            "token_id": 256
+          },
+          {
+            "logit": -7.214357852935791,
+            "token_id": 482
+          },
+          {
+            "logit": -7.763550758361816,
+            "token_id": 666
+          },
+          {
+            "logit": -8.280210494995117,
+            "token_id": 2355
+          }
+        ]
+      },
+      "case_id": "math_2_plus_2",
+      "classification": {
+        "case_id": "math_2_plus_2",
+        "classification": "reference_generated_token_ids_and_logits_unavailable",
+        "evidence_boundary": "external_reference_text_matches_after_trimming_but_generated_token_ids_and_logits_are_unavailable",
+        "first_divergence_stage": "inconclusive"
+      },
+      "comparisons": {
+        "reference_avx2_generated_text_trimmed_match": true,
+        "reference_scalar_generated_text_trimmed_match": true,
+        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_local_bos_prefix_match": true,
+        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_local_bos_prefix_match": true,
+        "scalar_avx2_generated_match": true,
+        "scalar_avx2_prompt_match": true
+      },
+      "question": "What is 2+2? Answer with only the number.",
+      "reference": {
+        "decoded_first_token": null,
+        "first_generated_token_id": null,
+        "generated_text": "4",
+        "generated_token_ids_available": false,
+        "logits_available": false,
+        "missing_reference_fields": [
+          "first_generated_token_id",
+          "decoded_first_token",
+          "generated_token_ids",
+          "first_token_top_k_logits"
+        ],
+        "prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "scalar": {
+        "answer": " 4",
+        "fallback_used": false,
+        "first_generated_token_id": 220,
+        "generated_token_ids": [
+          220,
+          19,
+          128009
+        ],
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "selected_kernel": "i2_s-scalar-reference",
+        "topk_step0": [
+          {
+            "logit": 6.6697001457214355,
+            "token_id": 220
+          },
+          {
+            "logit": -6.725193023681641,
+            "token_id": 256
+          },
+          {
+            "logit": -7.214357852935791,
+            "token_id": 482
+          },
+          {
+            "logit": -7.763550758361816,
+            "token_id": 666
+          },
+          {
+            "logit": -8.280210494995117,
+            "token_id": 2355
+          }
+        ]
+      }
+    },
+    {
+      "avx2": {
+        "answer": " OK",
+        "fallback_used": false,
+        "first_generated_token_id": 10619,
+        "generated_token_ids": [
+          10619,
+          128009
+        ],
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ],
+        "selected_kernel": "i2_s-avx2-reference",
+        "topk_step0": [
+          {
+            "logit": 15.580217361450195,
+            "token_id": 10619
+          },
+          {
+            "logit": 11.900142669677734,
+            "token_id": 4012
+          },
+          {
+            "logit": 8.971776008605957,
+            "token_id": 36539
+          },
+          {
+            "logit": 8.304010391235352,
+            "token_id": 8840
+          },
+          {
+            "logit": 8.298528671264648,
+            "token_id": 98693
+          }
+        ]
+      },
+      "case_id": "say_ok",
+      "classification": {
+        "case_id": "say_ok",
+        "classification": "reference_generated_token_ids_and_logits_unavailable",
+        "evidence_boundary": "external_reference_text_matches_after_trimming_but_generated_token_ids_and_logits_are_unavailable",
+        "first_divergence_stage": "inconclusive"
+      },
+      "comparisons": {
+        "reference_avx2_generated_text_trimmed_match": true,
+        "reference_scalar_generated_text_trimmed_match": true,
+        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_local_bos_prefix_match": true,
+        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_local_bos_prefix_match": true,
+        "scalar_avx2_generated_match": true,
+        "scalar_avx2_prompt_match": true
+      },
+      "question": "Say exactly: OK",
+      "reference": {
+        "decoded_first_token": null,
+        "first_generated_token_id": null,
+        "generated_text": "OK",
+        "generated_token_ids_available": false,
+        "logits_available": false,
+        "missing_reference_fields": [
+          "first_generated_token_id",
+          "decoded_first_token",
+          "generated_token_ids",
+          "first_token_top_k_logits"
+        ],
+        "prompt": "User: Say exactly: OK<|eot_id|>Assistant:",
+        "prompt_token_ids": [
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "scalar": {
+        "answer": " OK",
+        "fallback_used": false,
+        "first_generated_token_id": 10619,
+        "generated_token_ids": [
+          10619,
+          128009
+        ],
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ],
+        "selected_kernel": "i2_s-scalar-reference",
+        "topk_step0": [
+          {
+            "logit": 15.580217361450195,
+            "token_id": 10619
+          },
+          {
+            "logit": 11.900142669677734,
+            "token_id": 4012
+          },
+          {
+            "logit": 8.971776008605957,
+            "token_id": 36539
+          },
+          {
+            "logit": 8.304010391235352,
+            "token_id": 8840
+          },
+          {
+            "logit": 8.298528671264648,
+            "token_id": 98693
+          }
+        ]
+      }
+    },
+    {
+      "avx2": {
+        "answer": " Paris",
+        "fallback_used": false,
+        "first_generated_token_id": 12366,
+        "generated_token_ids": [
+          12366,
+          128009
+        ],
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "selected_kernel": "i2_s-avx2-reference",
+        "topk_step0": [
+          {
+            "logit": 12.9736328125,
+            "token_id": 12366
+          },
+          {
+            "logit": 11.337346076965332,
+            "token_id": 60704
+          },
+          {
+            "logit": 7.589106559753418,
+            "token_id": 20437
+          },
+          {
+            "logit": 6.074317455291748,
+            "token_id": 95509
+          },
+          {
+            "logit": 5.049978733062744,
+            "token_id": 7295
+          }
+        ]
+      },
+      "case_id": "capital_france",
+      "classification": {
+        "case_id": "capital_france",
+        "classification": "reference_generated_token_ids_and_logits_unavailable",
+        "evidence_boundary": "external_reference_text_matches_after_trimming_but_generated_token_ids_and_logits_are_unavailable",
+        "first_divergence_stage": "inconclusive"
+      },
+      "comparisons": {
+        "reference_avx2_generated_text_trimmed_match": true,
+        "reference_scalar_generated_text_trimmed_match": true,
+        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_local_bos_prefix_match": true,
+        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_local_bos_prefix_match": true,
+        "scalar_avx2_generated_match": true,
+        "scalar_avx2_prompt_match": true
+      },
+      "question": "What is the capital of France? Answer with one word.",
+      "reference": {
+        "decoded_first_token": null,
+        "first_generated_token_id": null,
+        "generated_text": "Paris",
+        "generated_token_ids_available": false,
+        "logits_available": false,
+        "missing_reference_fields": [
+          "first_generated_token_id",
+          "decoded_first_token",
+          "generated_token_ids",
+          "first_token_top_k_logits"
+        ],
+        "prompt": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant:",
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "scalar": {
+        "answer": " Paris",
+        "fallback_used": false,
+        "first_generated_token_id": 12366,
+        "generated_token_ids": [
+          12366,
+          128009
+        ],
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "selected_kernel": "i2_s-scalar-reference",
+        "topk_step0": [
+          {
+            "logit": 12.9736328125,
+            "token_id": 12366
+          },
+          {
+            "logit": 11.337346076965332,
+            "token_id": 60704
+          },
+          {
+            "logit": 7.589106559753418,
+            "token_id": 20437
+          },
+          {
+            "logit": 6.074317455291748,
+            "token_id": 95509
+          },
+          {
+            "logit": 5.049978733062744,
+            "token_id": 7295
+          }
+        ]
+      }
+    },
+    {
+      "avx2": {
+        "answer": " No. Water is",
+        "fallback_used": false,
+        "first_generated_token_id": 2360,
+        "generated_token_ids": [
+          2360,
+          13,
+          10164,
+          374
+        ],
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ],
+        "selected_kernel": "i2_s-avx2-reference",
+        "topk_step0": [
+          {
+            "logit": 18.681175231933594,
+            "token_id": 2360
+          },
+          {
+            "logit": 18.514739990234375,
+            "token_id": 7566
+          },
+          {
+            "logit": 10.178853034973145,
+            "token_id": 9642
+          },
+          {
+            "logit": 10.076376914978027,
+            "token_id": 2209
+          },
+          {
+            "logit": 9.761270523071287,
+            "token_id": 86819
+          }
+        ]
+      },
+      "case_id": "yes_no_water",
+      "classification": {
+        "case_id": "yes_no_water",
+        "classification": "reference_generated_token_ids_and_logits_unavailable",
+        "evidence_boundary": "external_reference_text_matches_after_trimming_but_generated_token_ids_and_logits_are_unavailable",
+        "first_divergence_stage": "inconclusive"
+      },
+      "comparisons": {
+        "reference_avx2_generated_text_trimmed_match": true,
+        "reference_scalar_generated_text_trimmed_match": true,
+        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_local_bos_prefix_match": true,
+        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_local_bos_prefix_match": true,
+        "scalar_avx2_generated_match": true,
+        "scalar_avx2_prompt_match": true
+      },
+      "question": "Answer yes or no: is water wet?",
+      "reference": {
+        "decoded_first_token": null,
+        "first_generated_token_id": null,
+        "generated_text": "No. Water is",
+        "generated_token_ids_available": false,
+        "logits_available": false,
+        "missing_reference_fields": [
+          "first_generated_token_id",
+          "decoded_first_token",
+          "generated_token_ids",
+          "first_token_top_k_logits"
+        ],
+        "prompt": "User: Answer yes or no: is water wet?<|eot_id|>Assistant:",
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ]
+      },
+      "scalar": {
+        "answer": " No. Water is",
+        "fallback_used": false,
+        "first_generated_token_id": 2360,
+        "generated_token_ids": [
+          2360,
+          13,
+          10164,
+          374
+        ],
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ],
+        "selected_kernel": "i2_s-scalar-reference",
+        "topk_step0": [
+          {
+            "logit": 18.681175231933594,
+            "token_id": 2360
+          },
+          {
+            "logit": 18.514739990234375,
+            "token_id": 7566
+          },
+          {
+            "logit": 10.178853034973145,
+            "token_id": 9642
+          },
+          {
+            "logit": 10.076376914978027,
+            "token_id": 2209
+          },
+          {
+            "logit": 9.761270523071287,
+            "token_id": 86819
+          }
+        ]
+      }
+    }
+  ],
+  "claim": "cpu258v_external_reference_divergence_classifier",
+  "claim_boundary": {
+    "may_claim": [
+      "The receipt classifies the first available evidence boundary between external BitNet reference text and 258V scalar/AVX2 CPU receipts.",
+      "Scalar-vs-AVX2 agreement can be kept separate from missing external generated-token/logit evidence.",
+      "Prompt-token comparisons distinguish exact matches from local BOS-prefix policy deltas."
+    ],
+    "must_not_claim": [
+      "first-token logits parity",
+      "generated-token-ID parity against the external reference when reference IDs are unavailable",
+      "general answer quality",
+      "CPU speed or sustained throughput",
+      "Arc 140V execution or acceleration",
+      "Intel NPU execution or acceleration",
+      "QK256 decode correctness"
+    ]
+  },
+  "external_reference": {
+    "command_shape": "llama-cli.exe -m <ggml-model-i2_s.gguf> --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -ngl 0 -t 8 -c 4096 -n <max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt --no-warmup -p \"User: <question><|eot_id|>Assistant:\"",
+    "generated_token_ids_available": false,
+    "logits_available": false,
+    "missing_logits_status": "reference report does not expose logits or top-k; do not infer logits parity",
+    "runner": "Microsoft BitNet.cpp / llama-cli"
+  },
+  "fallback_used": false,
+  "inputs": {
+    "answer_parity": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
+    "avx2_answer_corpus": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
+    "external_reference": "ci\\hardware\\intel-258v\\2026-05-08\\external-first-token-reference.json",
+    "prompt_audit": "ci\\hardware\\intel-258v\\2026-05-08\\prompt-authority-audit-math.json",
+    "scalar_answer_corpus": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json"
+  },
+  "machine_id": "intel-258v",
+  "model": {
+    "file": "ggml-model-i2_s.gguf",
+    "local_path": "C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "local_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "prompt_authority_audit": {
+    "first_divergence_stage": "unknown",
+    "first_mismatch_index": null,
+    "notes": [
+      "current_default_and_metadata_authority_prompt_tokens_match",
+      "model_inference_not_run; first-token logits remain unclassified"
+    ]
+  },
+  "proof_stage": "first_token_divergence_classified",
+  "scalar_avx2_parity": {
+    "passed": true,
+    "summary": {
+      "failed": 0,
+      "first_divergence": null,
+      "passed": 5,
+      "total": 5
+    }
+  },
+  "schema_version": "1.0.0",
+  "summary": {
+    "cases_inconclusive": 4,
+    "cases_total": 4,
+    "classification": "reference_generated_token_ids_and_logits_unavailable",
+    "first_divergence": {
+      "case_id": "math_2_plus_2",
+      "classification": "reference_generated_token_ids_and_logits_unavailable",
+      "evidence_boundary": "external_reference_text_matches_after_trimming_but_generated_token_ids_and_logits_are_unavailable",
+      "first_divergence_stage": "inconclusive"
+    },
+    "generated_text_trimmed_avx2_matches": 4,
+    "generated_text_trimmed_scalar_avx2_matches": 4,
+    "generated_text_trimmed_scalar_matches": 4,
+    "next_required_evidence": "instrument bitnet.cpp or another reference runner to emit generated token IDs and first-token logits/top-k before claiming logits parity",
+    "prompt_token_exact_matches": 0,
+    "prompt_token_local_bos_prefix_matches": 4,
+    "reference_generated_token_ids_available": false,
+    "reference_logits_available": false,
+    "scalar_avx2_parity_passed": true
+  },
+  "timestamp": "2026-05-09T15:33:28.691464300+00:00",
+  "tokenizer": {
+    "bos_token": "<|begin_of_text|>",
+    "bos_token_id": 128000,
+    "eos_token": "<|eot_id|>",
+    "eos_token_id": 128009,
+    "hf_base_vocab_size": 128000,
+    "hf_tokenizers_version": "0.22.2",
+    "hf_total_token_count": 128256,
+    "hf_transformers_version": "5.8.0",
+    "local_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "override_kv": "tokenizer.ggml.pre=str:llama-bpe",
+    "pretokenizer_authority": "externally_supplied_llama_bpe",
+    "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "source_repo": "microsoft/bitnet-b1.58-2B-4T",
+    "source_revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127"
+  },
+  "validation": {
+    "failed_rules": [],
+    "passed": true
+  }
+}
