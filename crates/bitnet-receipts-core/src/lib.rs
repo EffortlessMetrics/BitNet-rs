@@ -55,6 +55,13 @@ pub const DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND: &str =
 /// speedup, full residency, or BitNet packed-kernel proof.
 pub const DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND: &str = "dense_gguf_linear_fixture_extraction";
 
+/// Artifact kind for dense GGUF single-linear CUDA parity.
+///
+/// This receipt proves one descriptor-extracted dense GGUF linear fixture can
+/// be routed through the dense FP16 CUDA GEMM path and compared against the
+/// bridge CPU reference. It is not full dense GGUF inference.
+pub const DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND: &str = "dense_gguf_linear_cuda_parity";
+
 /// Model class label for CUDA receipts that exercise dense regular LLM kernels.
 pub const DENSE_REGULAR_LLM_MODEL_CLASS: &str = "dense_regular_llm";
 
@@ -846,6 +853,194 @@ pub fn validate_dense_gguf_linear_fixture_extraction_receipt_json(receipt: &Valu
     Ok(())
 }
 
+/// Validate dense GGUF single-linear CUDA parity evidence.
+///
+/// This is the first bridge from descriptor-extracted dense GGUF linear
+/// fixtures into the dense CUDA GEMM lane. It must still reject dense GGUF
+/// inference, speedup, full CUDA residency, and BitNet packed I2_S/QK256 proof
+/// claims.
+pub fn validate_dense_gguf_linear_cuda_parity_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_linear_cuda_parity_tested")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_null(receipt, "error")?;
+
+    let cuda = object_field(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_positive_u64(cuda, "device_count")?;
+    require_cuda_device_index(cuda)?;
+    require_rtx_5070_ti_name(cuda, "device_name")?;
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_string_non_empty_not_tbd(cuda, "driver_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_runtime_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_toolkit_version")?;
+    require_string_non_empty_not_tbd(cuda, "nvrtc_version")?;
+    require_positive_u64(cuda, "vram_bytes")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(execution_path, "kernel_family", "dense_fp16_gemm")?;
+    require_string_non_empty(execution_path, "quantization_family")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "quantization_family")?,
+        "execution_path.quantization_family",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    validate_dense_regular_llm_execution_plan(receipt)?;
+
+    let fixture = object_field(receipt, "linear_fixture")?;
+    require_u64_eq(fixture, "schema", 1)?;
+    require_string_eq(fixture, "source_artifact_kind", DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND)?;
+    require_string_non_empty(fixture, "fixture_id")?;
+    reject_bitnet_packed_marker(
+        required_string(fixture, "fixture_id")?,
+        "linear_fixture.fixture_id",
+    )?;
+    require_string_eq(fixture, "model_family", required_string(model, "model_family")?)?;
+    require_string_eq(fixture, "architecture", required_string(model, "architecture")?)?;
+    require_string_non_empty(fixture, "tensor_name")?;
+    reject_bitnet_packed_marker(
+        required_string(fixture, "tensor_name")?,
+        "linear_fixture.tensor_name",
+    )?;
+    require_extractable_dense_linear_role(required_string(fixture, "role")?)?;
+    require_string_non_empty(fixture, "tensor_type")?;
+    reject_bitnet_packed_marker(
+        required_string(fixture, "tensor_type")?,
+        "linear_fixture.tensor_type",
+    )?;
+    require_positive_u64(fixture, "matrix_rows")?;
+    require_positive_u64(fixture, "matrix_cols")?;
+    require_string_eq(fixture, "logical_layout", "gguf_in_out_reinterpreted_as_out_in")?;
+    require_string_eq(fixture, "gemm_layout", "input_1_by_in_times_weight_in_by_out")?;
+    require_bool_eq(fixture, "values_materialized_as_f32", true)?;
+    require_string_eq(fixture, "gemm_input_dtype", "f16")?;
+    require_string_eq(fixture, "gemm_weight_dtype", "f16")?;
+    require_string_eq(fixture, "gemm_output_dtype", "f32")?;
+    require_sha256(fixture, "weight_values_sha256")?;
+    require_bool_eq(fixture, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(fixture, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(fixture, "cpu_cuda_parity_claimed", true)?;
+    require_bool_eq(fixture, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(fixture, "speedup_claim", false)?;
+    require_bool_eq(fixture, "full_cuda_residency_claimed", false)?;
+
+    let stats = first_kernel_stats(receipt)?;
+    require_string_eq(stats, "kernel_id", "dense_f16_gemm_cuda")?;
+    require_positive_u64(stats, "invocations")?;
+    require_u64_eq(stats, "fallback_invocations", 0)?;
+    require_optional_positive_u64(stats, "host_to_device_bytes")?;
+    require_optional_positive_u64(stats, "device_to_host_bytes")?;
+    require_optional_non_negative_number(stats, "kernel_time_ms")?;
+
+    let parity = object_field(receipt, "parity")?;
+    require_string_non_empty(parity, "reference_backend")?;
+    require_string_eq(parity, "target_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(parity, "kernel_id", "dense_f16_gemm_cuda")?;
+    require_string_eq(parity, "fixture_id", required_string(fixture, "fixture_id")?)?;
+    require_bool_eq(parity, "passed", true)?;
+    require_non_negative_number(parity, "max_abs_error")?;
+    require_non_negative_number(parity, "mean_abs_error")?;
+    require_non_negative_number(parity, "tolerance")?;
+    require_string_non_empty(parity, "tolerance_source")?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    let residency = object_field(receipt, "tensor_residency")?;
+    require_string_eq(residency, "scope", "single_dense_gguf_linear_fixture")?;
+    require_string_eq(residency, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(residency, "fixture_id", required_string(fixture, "fixture_id")?)?;
+    require_bool_eq(residency, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(residency, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(residency, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(residency, "input_tensors_uploaded_once", true)?;
+    require_bool_eq(residency, "output_tensor_cuda_resident_during_kernel", true)?;
+    require_bool_eq(residency, "host_device_transfer_accounting_matches_kernel_stats", true)?;
+
+    let inputs = array_field(residency, "inputs")?;
+    if inputs.len() < 2 {
+        return Err(anyhow!("tensor_residency.inputs must contain input and weight tensors"));
+    }
+    for input in inputs {
+        require_string_non_empty(input, "name")?;
+        require_string_eq(input, "device_residency", "cuda_device_buffer")?;
+        require_string_eq(input, "reuse_scope", "single_fixture_launch")?;
+        require_u64_eq(input, "upload_count", 1)?;
+        require_positive_u64(input, "host_bytes")?;
+        reject_bitnet_packed_marker(
+            required_string(input, "dtype")?,
+            "tensor_residency.inputs.dtype",
+        )?;
+    }
+
+    let outputs = array_field(residency, "outputs")?;
+    if outputs.is_empty() {
+        return Err(anyhow!("tensor_residency.outputs must contain an output tensor"));
+    }
+    for output in outputs {
+        require_string_non_empty(output, "name")?;
+        require_string_eq(output, "device_residency", "cuda_device_buffer")?;
+        require_string_eq(output, "download_scope", "parity_check_only")?;
+        require_positive_u64(output, "device_to_host_bytes")?;
+        reject_bitnet_packed_marker(
+            required_string(output, "dtype")?,
+            "tensor_residency.outputs.dtype",
+        )?;
+    }
+
+    let allocation = object_field(residency, "allocation")?;
+    require_positive_u64(allocation, "device_buffer_count")?;
+    require_u64_eq(allocation, "persistent_handle_count", 0)?;
+    require_bool_eq(allocation, "persistent_handles_claimed", false)?;
+
+    let transfer = object_field(residency, "transfer_accounting")?;
+    require_string_eq(transfer, "status", "measured")?;
+    require_u64_eq(
+        transfer,
+        "host_to_device_bytes",
+        object_field(stats, "host_to_device_bytes")?.as_u64().ok_or_else(|| {
+            anyhow!("kernel_stats[0].host_to_device_bytes must be an unsigned integer")
+        })?,
+    )?;
+    require_u64_eq(
+        transfer,
+        "device_to_host_bytes",
+        object_field(stats, "device_to_host_bytes")?.as_u64().ok_or_else(|| {
+            anyhow!("kernel_stats[0].device_to_host_bytes must be an unsigned integer")
+        })?,
+    )?;
+
+    Ok(())
+}
+
 const REQUIRED_DENSE_DESCRIPTOR_ROLES: &[&str] = &[
     "token_embedding",
     "output",
@@ -885,14 +1080,20 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
             claim_boundary.get("dense_gguf_linear_fixture_extraction_claimed")
         })
         .and_then(Value::as_bool);
+    let linear_cuda_parity_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| claim_boundary.get("dense_gguf_linear_cuda_parity_claimed"))
+        .and_then(Value::as_bool);
 
     if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND)
         || model_class == Some(DENSE_REGULAR_LLM_MODEL_CLASS)
         || dense_claim == Some(true)
         || descriptor_claim == Some(true)
         || linear_fixture_claim == Some(true)
+        || linear_cuda_parity_claim == Some(true)
     {
         return Err(anyhow!(
             "dense_regular_llm CUDA receipt cannot satisfy BitNet packed I2_S/QK256 proof"

@@ -34,6 +34,9 @@ pub const CUDA_DENSE_GEMM_TARGET_BACKEND: &str = "nvidia-rtx-5070-ti-cuda";
 /// Tolerance for the deterministic FP16 smoke fixture.
 pub const CUDA_DENSE_F16_GEMM_TOLERANCE: f32 = 0.002;
 
+/// Tolerance for dense GGUF linear fixtures routed through the FP16 GEMM bridge.
+pub const CUDA_DENSE_GGUF_LINEAR_F16_GEMM_TOLERANCE: f32 = 0.002;
+
 #[cfg(feature = "cuda")]
 const CUDA_DENSE_F16_GEMM_PTX: &str = r#"
 .version 8.0
@@ -202,6 +205,85 @@ pub struct CudaDenseGemmPersistentParity {
     pub stats: CudaDenseGemmPersistentStats,
 }
 
+/// Dense GGUF linear fixture data prepared by the model layer.
+///
+/// The model layer owns GGUF parsing and dense tensor materialization. This
+/// bridge deliberately accepts plain F32 buffers so the CUDA kernel layer does
+/// not need a dependency on `bitnet-models`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufLinearGemmFixture {
+    /// Fixture identifier recorded in parity receipts.
+    pub fixture_id: String,
+    /// Dense model family label, for example `qwen`.
+    pub model_family: String,
+    /// Source GGUF tensor name.
+    pub tensor_name: String,
+    /// Logical source tensor role, for example `attention_q`.
+    pub tensor_role: String,
+    /// Source GGUF tensor type after descriptor inspection, for example `q8_0`.
+    pub tensor_type: String,
+    /// SHA-256 of the source materialized F32 weight values.
+    pub source_weight_sha256: String,
+    /// Matrix row count for the logical `[out, in]` dense linear.
+    pub matrix_rows: usize,
+    /// Matrix column count for the logical `[out, in]` dense linear.
+    pub matrix_cols: usize,
+    /// Source weights in row-major `[out, in]` order.
+    pub weights_row_major_f32: Vec<f32>,
+    /// Deterministic CPU-reference input vector.
+    pub input_f32: Vec<f32>,
+}
+
+/// Prepared FP16 GEMM buffers for a dense GGUF linear fixture.
+#[derive(Debug, Clone)]
+pub struct DenseGgufLinearF16GemmPrepared {
+    /// GEMM left operand `A`, shaped `[1, matrix_cols]`.
+    pub a_f16: Vec<u16>,
+    /// GEMM right operand `B`, shaped `[matrix_cols, matrix_rows]`.
+    pub b_f16: Vec<u16>,
+    /// Non-transposed FP16 GEMM config.
+    pub config: MatmulConfig,
+    /// CPU reference output from the FP16 GEMM bridge.
+    pub expected_output: Vec<f32>,
+}
+
+/// Dense GGUF linear CUDA parity result against the FP16 CPU reference bridge.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufLinearCudaParity {
+    /// Fixture identifier.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Source GGUF tensor name.
+    pub tensor_name: String,
+    /// Logical source tensor role.
+    pub tensor_role: String,
+    /// Source GGUF tensor type.
+    pub tensor_type: String,
+    /// SHA-256 of the source materialized F32 weight values.
+    pub source_weight_sha256: String,
+    /// Matrix row count for the logical `[out, in]` dense linear.
+    pub matrix_rows: usize,
+    /// Matrix column count for the logical `[out, in]` dense linear.
+    pub matrix_cols: usize,
+    /// CPU reference backend.
+    pub reference_backend: &'static str,
+    /// CUDA target backend.
+    pub target_backend: &'static str,
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Maximum absolute error against the FP16 CPU reference.
+    pub max_abs_error: f32,
+    /// Mean absolute error against the FP16 CPU reference.
+    pub mean_abs_error: f32,
+    /// Fixture tolerance.
+    pub tolerance: f32,
+    /// Whether the fixture passed tolerance.
+    pub passed: bool,
+    /// CUDA execution counters.
+    pub stats: CudaDenseGemmStats,
+}
+
 /// Deterministic dense FP16 GEMM smoke fixture.
 pub fn dense_f16_gemm_fixture() -> Result<(Vec<u16>, Vec<u16>, MatmulConfig)> {
     let a_f32 = [1.0, -2.0, 0.5, 3.0, 0.0, 4.0, -1.0, 2.0];
@@ -242,6 +324,98 @@ pub fn run_dense_f16_gemm_cuda_parity(device_index: usize) -> Result<CudaDenseGe
         mean_abs_error,
         tolerance: CUDA_DENSE_F16_GEMM_TOLERANCE,
         passed: max_abs_error <= CUDA_DENSE_F16_GEMM_TOLERANCE,
+        stats,
+    })
+}
+
+/// Prepare an extracted dense GGUF linear fixture for the existing FP16 GEMM
+/// CUDA path.
+///
+/// The source fixture uses GGUF projection layout interpreted as row-major
+/// `[out, in]`. The GEMM kernel consumes non-transposed `A[M,K] * B[K,N]`, so
+/// this bridge uses `A = input[1, in]` and transposes weights into
+/// `B = weights[in, out]`.
+///
+/// # Errors
+///
+/// Returns an error if the fixture metadata is not dense, dimensions overflow,
+/// or buffers do not match the declared matrix shape.
+pub fn prepare_dense_gguf_linear_f16_gemm(
+    fixture: &DenseGgufLinearGemmFixture,
+) -> Result<DenseGgufLinearF16GemmPrepared> {
+    validate_dense_gguf_linear_gemm_fixture(fixture)?;
+
+    let a_f16 = fixture.input_f32.iter().map(|value| f32_to_f16_bits(*value)).collect::<Vec<_>>();
+    let mut b_f16 = vec![0u16; fixture.matrix_cols * fixture.matrix_rows];
+    for row in 0..fixture.matrix_rows {
+        for col in 0..fixture.matrix_cols {
+            let src = row * fixture.matrix_cols + col;
+            let dst = col * fixture.matrix_rows + row;
+            b_f16[dst] = f32_to_f16_bits(fixture.weights_row_major_f32[src]);
+        }
+    }
+
+    let config = MatmulConfig::for_shape(1, fixture.matrix_rows, fixture.matrix_cols)?
+        .with_dtype(MatmulDtype::F16);
+    let mut expected_output = vec![0.0f32; fixture.matrix_rows];
+    matmul_f16_cpu(&a_f16, &b_f16, &mut expected_output, &config)?;
+
+    Ok(DenseGgufLinearF16GemmPrepared { a_f16, b_f16, config, expected_output })
+}
+
+/// CPU reference output for an extracted dense GGUF linear fixture after FP16
+/// bridge conversion.
+///
+/// # Errors
+///
+/// Returns an error if the fixture cannot be represented as the bridge GEMM.
+pub fn dense_gguf_linear_f16_gemm_cpu_reference(
+    fixture: &DenseGgufLinearGemmFixture,
+) -> Result<Vec<f32>> {
+    Ok(prepare_dense_gguf_linear_f16_gemm(fixture)?.expected_output)
+}
+
+/// Run an extracted dense GGUF linear fixture through the existing CUDA FP16
+/// GEMM path and compare against the bridge CPU reference.
+///
+/// This is still a single-linear fixture proof. It is not dense GGUF inference,
+/// not a BitNet packed QK256 proof, and not a speedup claim.
+///
+/// # Errors
+///
+/// Returns an error if CUDA/NVRTC is unavailable, the fixture is invalid, or the
+/// CUDA launch fails.
+pub fn run_dense_gguf_linear_f16_cuda_parity(
+    device_index: usize,
+    fixture: &DenseGgufLinearGemmFixture,
+) -> Result<DenseGgufLinearCudaParity> {
+    let prepared = prepare_dense_gguf_linear_f16_gemm(fixture)?;
+    let mut actual = vec![0.0f32; fixture.matrix_rows];
+    let stats = launch_dense_f16_gemm_cuda(
+        device_index,
+        &prepared.a_f16,
+        &prepared.b_f16,
+        &mut actual,
+        &prepared.config,
+    )?;
+    let (max_abs_error, mean_abs_error) = compare_outputs(&prepared.expected_output, &actual)?;
+
+    Ok(DenseGgufLinearCudaParity {
+        fixture_id: fixture.fixture_id.clone(),
+        model_family: fixture.model_family.clone(),
+        tensor_name: fixture.tensor_name.clone(),
+        tensor_role: fixture.tensor_role.clone(),
+        tensor_type: fixture.tensor_type.clone(),
+        source_weight_sha256: fixture.source_weight_sha256.clone(),
+        matrix_rows: fixture.matrix_rows,
+        matrix_cols: fixture.matrix_cols,
+        reference_backend: CUDA_DENSE_GEMM_REFERENCE_BACKEND,
+        target_backend: CUDA_DENSE_GEMM_TARGET_BACKEND,
+        kernel_id: CUDA_DENSE_F16_GEMM_KERNEL_ID,
+        max_abs_error,
+        mean_abs_error,
+        tolerance: CUDA_DENSE_GGUF_LINEAR_F16_GEMM_TOLERANCE,
+        passed: max_abs_error <= CUDA_DENSE_GGUF_LINEAR_F16_GEMM_TOLERANCE,
         stats,
     })
 }
@@ -653,6 +827,100 @@ fn compare_outputs(expected: &[f32], actual: &[f32]) -> Result<(f32, f32)> {
     Ok((max_abs, sum_abs / expected.len() as f32))
 }
 
+fn validate_dense_gguf_linear_gemm_fixture(fixture: &DenseGgufLinearGemmFixture) -> Result<()> {
+    require_dense_label(&fixture.fixture_id, "fixture_id")?;
+    require_dense_label(&fixture.model_family, "model_family")?;
+    require_dense_label(&fixture.tensor_name, "tensor_name")?;
+    require_dense_label(&fixture.tensor_role, "tensor_role")?;
+    require_dense_label(&fixture.tensor_type, "tensor_type")?;
+    if fixture.source_weight_sha256.len() != 64
+        || !fixture.source_weight_sha256.chars().all(|ch| ch.is_ascii_hexdigit())
+    {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense GGUF linear fixture source_weight_sha256 must be a SHA-256 hex digest"
+                .into(),
+        }
+        .into());
+    }
+    if fixture.matrix_rows == 0 || fixture.matrix_cols == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense GGUF linear fixture requires non-zero matrix shape, got {}x{}",
+                fixture.matrix_rows, fixture.matrix_cols
+            ),
+        }
+        .into());
+    }
+    let expected_weights =
+        checked_mul(fixture.matrix_rows, fixture.matrix_cols, "dense GGUF linear weights")?;
+    if fixture.weights_row_major_f32.len() != expected_weights {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense GGUF linear fixture weight count mismatch: expected {expected_weights}, got {}",
+                fixture.weights_row_major_f32.len()
+            ),
+        }
+        .into());
+    }
+    if fixture.input_f32.len() != fixture.matrix_cols {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense GGUF linear fixture input length mismatch: expected {}, got {}",
+                fixture.matrix_cols,
+                fixture.input_f32.len()
+            ),
+        }
+        .into());
+    }
+    for (idx, value) in fixture.weights_row_major_f32.iter().enumerate() {
+        if !value.is_finite() {
+            return Err(KernelError::InvalidArguments {
+                reason: format!("dense GGUF linear fixture weight[{idx}] is not finite"),
+            }
+            .into());
+        }
+    }
+    for (idx, value) in fixture.input_f32.iter().enumerate() {
+        if !value.is_finite() {
+            return Err(KernelError::InvalidArguments {
+                reason: format!("dense GGUF linear fixture input[{idx}] is not finite"),
+            }
+            .into());
+        }
+    }
+    validate_i32_arg(fixture.matrix_rows, "dense GGUF linear matrix_rows")?;
+    validate_i32_arg(fixture.matrix_cols, "dense GGUF linear matrix_cols")?;
+    Ok(())
+}
+
+fn require_dense_label(value: &str, label: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!("dense GGUF linear fixture {label} must not be empty"),
+        }
+        .into());
+    }
+    reject_dense_bitnet_marker(value, label)
+}
+
+fn reject_dense_bitnet_marker(value: &str, label: &str) -> Result<()> {
+    let normalized = value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_ascii_lowercase();
+    if ["bitnet", "i2s", "iq2s", "qk256", "w158a8"].iter().any(|marker| normalized.contains(marker))
+    {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense GGUF linear fixture {label} contains BitNet packed marker `{value}`"
+            ),
+        }
+        .into());
+    }
+    Ok(())
+}
+
 fn checked_mul(lhs: usize, rhs: usize, label: &str) -> Result<usize> {
     lhs.checked_mul(rhs).ok_or_else(|| {
         KernelError::InvalidArguments {
@@ -696,9 +964,13 @@ mod tests {
     const PERSISTENT_RUN_ENV: &str = "BITNET_RUN_RTX5070TI_DENSE_CUDA_GEMM_SESSION";
     const RECEIPT_ENV: &str = "BITNET_RTX5070TI_DENSE_CUDA_GEMM_RECEIPT";
     const PERSISTENT_RECEIPT_ENV: &str = "BITNET_RTX5070TI_DENSE_CUDA_GEMM_SESSION_RECEIPT";
+    const GGUF_LINEAR_RUN_ENV: &str = "BITNET_RUN_RTX5070TI_DENSE_GGUF_LINEAR_CUDA_PARITY";
+    const GGUF_LINEAR_RECEIPT_ENV: &str = "BITNET_RTX5070TI_DENSE_GGUF_LINEAR_CUDA_PARITY_RECEIPT";
     const ARTIFACT_PATH_ENV: &str = "BITNET_RTX5070TI_DENSE_CUDA_GEMM_ARTIFACT_PATH";
     const PERSISTENT_ARTIFACT_PATH_ENV: &str =
         "BITNET_RTX5070TI_DENSE_CUDA_GEMM_SESSION_ARTIFACT_PATH";
+    const GGUF_LINEAR_ARTIFACT_PATH_ENV: &str =
+        "BITNET_RTX5070TI_DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_PATH";
     const TIMESTAMP_ENV: &str = "BITNET_RTX5070TI_DENSE_CUDA_GEMM_TIMESTAMP_UTC";
     const PERSISTENT_RUNS_ENV: &str = "BITNET_RTX5070TI_DENSE_CUDA_GEMM_SESSION_RUNS";
     const DEVICE_INDEX_ENV: &str = "BITNET_RTX5070TI_CUDA_DEVICE_INDEX";
@@ -711,6 +983,50 @@ mod tests {
         let reference = dense_f16_gemm_cpu_reference().unwrap();
         assert_eq!(reference.len(), 6);
         assert_eq!(reference, vec![5.75, 5.75, -3.0, 14.5, -8.5, -4.0]);
+    }
+
+    #[test]
+    fn dense_gguf_linear_bridge_transposes_out_in_weights_for_gemm() {
+        let fixture = synthetic_dense_gguf_linear_fixture();
+        let prepared = prepare_dense_gguf_linear_f16_gemm(&fixture).unwrap();
+
+        assert_eq!(prepared.config.m, 1);
+        assert_eq!(prepared.config.n, 3);
+        assert_eq!(prepared.config.k, 4);
+        assert_eq!(prepared.a_f16, f16_bits(&[0.5, -1.0, 2.0, -0.25]));
+        assert_eq!(
+            prepared.b_f16,
+            f16_bits(&[1.0, 5.0, 9.0, 2.0, 6.0, 10.0, 3.0, 7.0, 11.0, 4.0, 8.0, 12.0])
+        );
+        assert_eq!(prepared.expected_output, vec![3.5, 8.5, 13.5]);
+    }
+
+    #[test]
+    fn dense_gguf_linear_cpu_reference_uses_f16_bridge() {
+        let fixture = synthetic_dense_gguf_linear_fixture();
+        let reference = dense_gguf_linear_f16_gemm_cpu_reference(&fixture).unwrap();
+
+        assert_eq!(reference, vec![3.5, 8.5, 13.5]);
+    }
+
+    #[test]
+    fn dense_gguf_linear_bridge_rejects_shape_mismatch_before_cuda() {
+        let mut fixture = synthetic_dense_gguf_linear_fixture();
+        fixture.weights_row_major_f32.pop();
+
+        let err = prepare_dense_gguf_linear_f16_gemm(&fixture).unwrap_err();
+
+        assert!(err.to_string().contains("weight count mismatch"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_gguf_linear_bridge_rejects_bitnet_markers_before_cuda() {
+        let mut fixture = synthetic_dense_gguf_linear_fixture();
+        fixture.tensor_type = "i2_s".to_string();
+
+        let err = prepare_dense_gguf_linear_f16_gemm(&fixture).unwrap_err();
+
+        assert!(err.to_string().contains("BitNet packed marker"), "unexpected error: {err}");
     }
 
     #[test]
@@ -856,6 +1172,46 @@ mod tests {
     }
 
     #[test]
+    fn dense_gguf_linear_cuda_parity_receipt_contract_preserves_dense_boundary() {
+        let parity = synthetic_passed_dense_gguf_linear_parity();
+        let receipt = dense_gguf_linear_cuda_parity_receipt_json(
+            &parity,
+            None,
+            "target/bitnet/receipts/dense-gguf-linear-cuda-parity.json",
+            "2026-05-09T00:00:00Z",
+        );
+
+        assert_eq!(receipt["artifact_kind"], "dense_gguf_linear_cuda_parity");
+        assert_eq!(receipt["claim"], "dense_gguf_linear_cuda_parity_tested");
+        assert_eq!(receipt["requested_backend"], HARDWARE_LANE);
+        assert_eq!(receipt["selected_backend"], HARDWARE_LANE);
+        assert_eq!(receipt["runtime_api"], "cuda");
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["execution_path"]["model_class"], "dense_regular_llm");
+        assert_eq!(receipt["execution_plan"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 1);
+        assert_eq!(
+            receipt["linear_fixture"]["source_artifact_kind"],
+            "dense_gguf_linear_fixture_extraction"
+        );
+        assert_eq!(receipt["linear_fixture"]["tensor_name"], "blk.0.attn_q.weight");
+        assert_eq!(receipt["linear_fixture"]["matrix_rows"], 3);
+        assert_eq!(receipt["linear_fixture"]["matrix_cols"], 4);
+        assert_eq!(receipt["kernel_stats"][0]["kernel_id"], CUDA_DENSE_F16_GEMM_KERNEL_ID);
+        assert_eq!(receipt["parity"]["passed"], true);
+        assert_eq!(
+            receipt["parity"]["fixture_id"],
+            "dense_gguf_linear_qwen_attention_q_f16_bridge"
+        );
+        assert_eq!(receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_linear_cuda_parity_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(receipt["claim_boundary"]["speedup_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["full_cuda_residency_claimed"], false);
+    }
+
+    #[test]
     fn live_rtx5070ti_dense_f16_cuda_gemm_matches_cpu_reference_when_enabled()
     -> std::result::Result<(), Box<dyn Error>> {
         if std::env::var(RUN_ENV).as_deref() != Ok("1") {
@@ -897,6 +1253,61 @@ mod tests {
         if !parity.passed {
             return Err(io_error(format!(
                 "CUDA-DENSE-002 dense FP16 GEMM parity failed: max_abs_error={} tolerance={}",
+                parity.max_abs_error, parity.tolerance
+            )));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn live_rtx5070ti_dense_gguf_linear_cuda_parity_when_enabled()
+    -> std::result::Result<(), Box<dyn Error>> {
+        if std::env::var(GGUF_LINEAR_RUN_ENV).as_deref() != Ok("1") {
+            eprintln!(
+                "skipping live dense GGUF linear CUDA parity; set {GGUF_LINEAR_RUN_ENV}=1 to run it"
+            );
+            return Ok(());
+        }
+
+        let device_index = selected_device_index()?;
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(device_index));
+        if !probe.available {
+            return Err(io_error(format!(
+                "CUDA-DENSE-008 requires CUDA probe success: {:?}",
+                probe.failure_reason
+            )));
+        }
+
+        let fixture = synthetic_dense_gguf_linear_fixture();
+        let parity = run_dense_gguf_linear_f16_cuda_parity(device_index, &fixture)?;
+        if !is_rtx5070ti_device_name(probe.selected_device_name.as_deref().unwrap_or_default()) {
+            return Err(io_error(format!(
+                "CUDA-DENSE-008 requires NVIDIA GeForce RTX 5070 Ti; found '{}'",
+                probe.selected_device_name.as_deref().unwrap_or("unknown")
+            )));
+        }
+
+        let artifact_path = std::env::var(GGUF_LINEAR_ARTIFACT_PATH_ENV).unwrap_or_else(|_| {
+            "target/bitnet/receipts/dense-gguf-linear-cuda-parity.json".to_string()
+        });
+        let timestamp_utc =
+            std::env::var(TIMESTAMP_ENV).unwrap_or_else(|_| "2026-05-09T00:00:00Z".to_string());
+        let receipt_json = dense_gguf_linear_cuda_parity_receipt_json(
+            &parity,
+            Some(&probe),
+            &artifact_path,
+            &timestamp_utc,
+        );
+
+        if let Ok(path) = std::env::var(GGUF_LINEAR_RECEIPT_ENV) {
+            write_json_file(&path, &receipt_json)?;
+        }
+        println!("{}", serde_json::to_string_pretty(&receipt_json)?);
+
+        if !parity.passed {
+            return Err(io_error(format!(
+                "CUDA-DENSE-008 dense GGUF linear CUDA parity failed: max_abs_error={} tolerance={}",
                 parity.max_abs_error, parity.tolerance
             )));
         }
@@ -1010,6 +1421,55 @@ mod tests {
                 kernel_time_ms: None,
             },
         }
+    }
+
+    fn synthetic_dense_gguf_linear_fixture() -> DenseGgufLinearGemmFixture {
+        DenseGgufLinearGemmFixture {
+            fixture_id: "dense_gguf_linear_qwen_attention_q_f16_bridge".to_string(),
+            model_family: "qwen".to_string(),
+            tensor_name: "blk.0.attn_q.weight".to_string(),
+            tensor_role: "attention_q".to_string(),
+            tensor_type: "q8_0".to_string(),
+            source_weight_sha256: "1".repeat(64),
+            matrix_rows: 3,
+            matrix_cols: 4,
+            weights_row_major_f32: (1..=12).map(|value| value as f32).collect(),
+            input_f32: vec![0.5, -1.0, 2.0, -0.25],
+        }
+    }
+
+    fn synthetic_passed_dense_gguf_linear_parity() -> DenseGgufLinearCudaParity {
+        let fixture = synthetic_dense_gguf_linear_fixture();
+        DenseGgufLinearCudaParity {
+            fixture_id: fixture.fixture_id,
+            model_family: fixture.model_family,
+            tensor_name: fixture.tensor_name,
+            tensor_role: fixture.tensor_role,
+            tensor_type: fixture.tensor_type,
+            source_weight_sha256: fixture.source_weight_sha256,
+            matrix_rows: fixture.matrix_rows,
+            matrix_cols: fixture.matrix_cols,
+            reference_backend: CUDA_DENSE_GEMM_REFERENCE_BACKEND,
+            target_backend: CUDA_DENSE_GEMM_TARGET_BACKEND,
+            kernel_id: CUDA_DENSE_F16_GEMM_KERNEL_ID,
+            max_abs_error: 0.0,
+            mean_abs_error: 0.0,
+            tolerance: CUDA_DENSE_GGUF_LINEAR_F16_GEMM_TOLERANCE,
+            passed: true,
+            stats: CudaDenseGemmStats {
+                kernel_id: CUDA_DENSE_F16_GEMM_KERNEL_ID,
+                invocations: 1,
+                fallback_invocations: 0,
+                host_to_device_bytes: 32,
+                device_to_host_bytes: 12,
+                kernel_launches: 1,
+                kernel_time_ms: None,
+            },
+        }
+    }
+
+    fn f16_bits(values: &[f32]) -> Vec<u16> {
+        values.iter().map(|value| f32_to_f16_bits(*value)).collect()
     }
 
     fn selected_device_index() -> std::result::Result<usize, Box<dyn Error>> {
@@ -1368,6 +1828,193 @@ mod tests {
                     "temporary_workspace_bytes": 0,
                     "persistent_handle_count": parity.stats.persistent_handle_count,
                     "persistent_handles_claimed": true
+                },
+                "transfer_accounting": {
+                    "status": "measured",
+                    "host_to_device_bytes": parity.stats.host_to_device_bytes,
+                    "device_to_host_bytes": parity.stats.device_to_host_bytes
+                }
+            },
+            "error": null
+        })
+    }
+
+    fn dense_gguf_linear_cuda_parity_receipt_json(
+        parity: &DenseGgufLinearCudaParity,
+        probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
+        artifact_path: &str,
+        timestamp_utc: &str,
+    ) -> Value {
+        let cuda = match probe {
+            Some(probe) => json!({
+                "available": probe.available,
+                "device_count": probe.device_count,
+                "device_index": probe.selected_device_index.unwrap_or(0),
+                "device_name": probe.selected_device_name.clone().unwrap_or_else(|| "unknown".into()),
+                "compute_capability": probe.compute_capability.clone().unwrap_or_else(|| "12.0".into()),
+                "driver_version": probe.driver_version.clone().unwrap_or_else(|| "unknown".into()),
+                "cuda_runtime_version": probe.cuda_runtime_version.clone().unwrap_or_else(|| "unknown".into()),
+                "cuda_toolkit_version": probe.cuda_toolkit_version.clone().unwrap_or_else(|| "unknown".into()),
+                "nvrtc_version": probe.nvrtc_version.clone().unwrap_or_else(|| "unknown".into()),
+                "nvml_available": probe.nvml_available,
+                "vram_bytes": probe.vram_bytes.unwrap_or(1),
+                "power_limit_watts": probe.power_limit_watts,
+                "power_draw_watts": probe.power_draw_watts,
+                "temperature_c": probe.temperature_c,
+            }),
+            None => json!({
+                "available": true,
+                "device_count": 1,
+                "device_index": 0,
+                "device_name": "NVIDIA GeForce RTX 5070 Ti",
+                "compute_capability": "12.0",
+                "driver_version": "591.86",
+                "cuda_runtime_version": "12.9",
+                "cuda_toolkit_version": "12.9",
+                "nvrtc_version": "12.9",
+                "nvml_available": true,
+                "vram_bytes": 17094475776_u64,
+                "power_limit_watts": 300.0,
+                "power_draw_watts": 34.97,
+                "temperature_c": 38.0,
+            }),
+        };
+
+        json!({
+            "schema": 1,
+            "artifact_kind": "dense_gguf_linear_cuda_parity",
+            "artifact_path": artifact_path,
+            "claim": "dense_gguf_linear_cuda_parity_tested",
+            "machine_id": MACHINE_ID,
+            "hardware_lane": HARDWARE_LANE,
+            "timestamp_utc": timestamp_utc,
+            "requested_backend": HARDWARE_LANE,
+            "selected_backend": HARDWARE_LANE,
+            "runtime_api": "cuda",
+            "fallback_used": false,
+            "fallback_backend": null,
+            "fallback_reason": null,
+            "speedup_claim": false,
+            "cuda": cuda,
+            "model": {
+                "model_family": parity.model_family,
+                "architecture": "qwen3",
+                "artifact_kind": "dense_gguf",
+                "file": "synthetic-dense-gguf-linear-fixture",
+                "sha256": "0".repeat(64)
+            },
+            "execution_path": {
+                "model_class": "dense_regular_llm",
+                "kernel_family": "dense_fp16_gemm",
+                "quantization_family": "q8_0_materialized_to_f16_bridge",
+                "bitnet_packed_kernel_proof": false,
+                "qk256_proof": false
+            },
+            "execution_plan": dense_regular_llm_execution_plan(1),
+            "linear_fixture": {
+                "schema": 1,
+                "source_artifact_kind": "dense_gguf_linear_fixture_extraction",
+                "fixture_id": parity.fixture_id,
+                "model_family": parity.model_family,
+                "architecture": "qwen3",
+                "tensor_name": parity.tensor_name,
+                "role": parity.tensor_role,
+                "tensor_type": parity.tensor_type,
+                "matrix_rows": parity.matrix_rows,
+                "matrix_cols": parity.matrix_cols,
+                "logical_layout": "gguf_in_out_reinterpreted_as_out_in",
+                "gemm_layout": "input_1_by_in_times_weight_in_by_out",
+                "values_materialized_as_f32": true,
+                "gemm_input_dtype": "f16",
+                "gemm_weight_dtype": "f16",
+                "gemm_output_dtype": "f32",
+                "weight_values_sha256": parity.source_weight_sha256,
+                "dense_gguf_inference_claimed": false,
+                "dense_regular_llm_cuda_claimed": true,
+                "cpu_cuda_parity_claimed": true,
+                "bitnet_packed_i2s_qk256_proof": false,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            },
+            "kernel_stats": [{
+                "kernel_id": parity.stats.kernel_id,
+                "invocations": parity.stats.invocations,
+                "fallback_invocations": parity.stats.fallback_invocations,
+                "host_to_device_bytes": parity.stats.host_to_device_bytes,
+                "device_to_host_bytes": parity.stats.device_to_host_bytes,
+                "kernel_launches": parity.stats.kernel_launches,
+                "kernel_time_ms": parity.stats.kernel_time_ms
+            }],
+            "parity": {
+                "reference_backend": parity.reference_backend,
+                "target_backend": parity.target_backend,
+                "kernel_id": parity.kernel_id,
+                "fixture_id": parity.fixture_id,
+                "max_abs_error": parity.max_abs_error,
+                "mean_abs_error": parity.mean_abs_error,
+                "passed": parity.passed,
+                "tolerance": parity.tolerance,
+                "tolerance_source": "CUDA-DENSE-008 dense GGUF linear FP16 bridge fixture"
+            },
+            "claim_boundary": {
+                "dense_regular_llm_cuda_claimed": true,
+                "dense_tensor_residency_claimed": true,
+                "dense_gguf_descriptor_inspection_claimed": true,
+                "dense_gguf_linear_fixture_extraction_claimed": true,
+                "dense_gguf_linear_cuda_parity_claimed": true,
+                "dense_gguf_inference_claimed": false,
+                "bitnet_packed_i2s_qk256_proof": false,
+                "speedup_claim": false,
+                "persistent_session_residency_claimed": false,
+                "full_cuda_residency_claimed": false
+            },
+            "tensor_residency": {
+                "schema_version": "1.0.0",
+                "scope": "single_dense_gguf_linear_fixture",
+                "model_class": "dense_regular_llm",
+                "fixture_id": parity.fixture_id,
+                "dense_tensor_residency_claimed": true,
+                "dense_gguf_inference_claimed": false,
+                "persistent_session_residency_claimed": false,
+                "full_cuda_residency_claimed": false,
+                "input_tensors_uploaded_once": true,
+                "output_tensor_cuda_resident_during_kernel": true,
+                "host_device_transfer_accounting_matches_kernel_stats": true,
+                "inputs": [
+                    {
+                        "name": "dense_gguf_linear_input",
+                        "dtype": "f16",
+                        "shape": [1, parity.matrix_cols],
+                        "host_bytes": (parity.matrix_cols * 2) as u64,
+                        "device_residency": "cuda_device_buffer",
+                        "upload_count": 1,
+                        "reuse_scope": "single_fixture_launch"
+                    },
+                    {
+                        "name": "dense_gguf_linear_weight_transposed",
+                        "dtype": "f16",
+                        "shape": [parity.matrix_cols, parity.matrix_rows],
+                        "host_bytes": (parity.matrix_rows * parity.matrix_cols * 2) as u64,
+                        "device_residency": "cuda_device_buffer",
+                        "upload_count": 1,
+                        "reuse_scope": "single_fixture_launch"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "name": "dense_gguf_linear_output",
+                        "dtype": "f32",
+                        "shape": [1, parity.matrix_rows],
+                        "device_residency": "cuda_device_buffer",
+                        "device_to_host_bytes": parity.stats.device_to_host_bytes,
+                        "download_scope": "parity_check_only"
+                    }
+                ],
+                "allocation": {
+                    "device_buffer_count": 3,
+                    "temporary_workspace_bytes": 0,
+                    "persistent_handle_count": 0,
+                    "persistent_handles_claimed": false
                 },
                 "transfer_accounting": {
                     "status": "measured",
