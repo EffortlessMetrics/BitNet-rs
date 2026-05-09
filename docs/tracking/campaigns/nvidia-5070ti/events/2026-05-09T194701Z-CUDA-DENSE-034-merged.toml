@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T19:47:01Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-034"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-034-integrated-parity-tracker"
+pr = 4324
+head_sha = "7e8178f75ebc88f645105a8ce078907d40af6dbe"
+merge_sha = "bcc57cd0d44d6a65afffd4b1b16afa8dd79beca6"
+
+notes = [
+  "PR #4324 merged, defining the CUDA-DENSE-034 integrated one-layer CUDA parity contract after CUDA-DENSE-033.",
+  "The contract requires the future implementation to compare a full CUDA-routable Qwen2.5 0.5B Q8_0 layer pass against the CUDA-DENSE-033 CPU reference harness with per-phase parity, per-op kernel stats, transfer accounting, and receipt validation.",
+  "CUDA-DENSE-034 remains tracker/report-only and keeps CUDA integrated layer execution, dense GGUF inference, Qwen token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false.",
+]
