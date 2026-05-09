@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T04:40:23Z"
+campaign = "model-artifacts"
+item = "BITNET-CONTRACT-004"
+event = "pr_open"
+actor = "codex"
+pr = 4203
+head_sha = "edfaf20bdb30eff564b5424dc2c353b6fb67e9d6"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "PR #4203 exposes architecture support rows in BitNet-family contract summaries.",
+  "`bitnet model contracts` and contract-aware `bitnet model verify` now include x86/ARM kernel support statuses.",
+  "3B x86 I2_S remains upstream-unsupported and diagnostic/unsupported-path only.",
+  "No runtime, tokenizer, loader, prompt-template, transformer, QK256, CUDA, dense GGUF, server, full-residency, or speed-claim behavior changes are introduced.",
+]

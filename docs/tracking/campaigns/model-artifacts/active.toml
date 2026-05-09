@@ -578,8 +578,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "BITNET-CONTRACT-004"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/bitnet-contract-004-architecture-summary"
+pr = 4203
+head_sha = "edfaf20bdb30eff564b5424dc2c353b6fb67e9d6"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

@@ -129,7 +129,7 @@
 | model-artifacts | BITNET-CONTRACT-001 | BITNET-COMPAT-001 | merged |
 | model-artifacts | BITNET-CONTRACT-002 | BITNET-CONTRACT-001 | merged |
 | model-artifacts | BITNET-CONTRACT-003 | BITNET-CONTRACT-002 | merged |
-| model-artifacts | BITNET-CONTRACT-004 | BITNET-CONTRACT-003 | in_progress |
+| model-artifacts | BITNET-CONTRACT-004 | BITNET-CONTRACT-003 | pr_open |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
 | nvidia-5070ti | RTX5070TI-006 | RTX5070TI-005 | merged |
