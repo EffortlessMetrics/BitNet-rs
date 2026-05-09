@@ -25,7 +25,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-MODEL-001"
-status = "in_progress"
+status = "merged"
+pr = 4339
+merge_sha = "7f1e5d91bee56cd8ff03d62b670f506a23d03a07"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-001-candidate-selection"
 stackable = false
 review_mode = "codex_premerge"
@@ -59,7 +61,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-002"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-002-reference-sanity"
 stackable = false
 review_mode = "codex_premerge"
