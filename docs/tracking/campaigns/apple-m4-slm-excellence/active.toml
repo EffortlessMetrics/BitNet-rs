@@ -311,7 +311,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EX-008"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-008-long-soak"
 stackable = false
 review_mode = "codex_premerge"
