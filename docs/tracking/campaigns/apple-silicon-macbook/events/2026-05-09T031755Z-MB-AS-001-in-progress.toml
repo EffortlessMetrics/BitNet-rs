@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T03:17:55Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-001"
+event = "in_progress"
+branch = "codex/apple-silicon-macbook/MB-AS-001-machine-profile"
+actor = "codex"
+
+notes = [
+  "Started the MacBook Apple Silicon machine/storage/profile receipt contract.",
+  "Scope is limited to schema, example contract, docs, and campaign tracking; no model inference or artifact download is included.",
+  "No dense SLM quality, BitNet quality, QK256, Neural Engine, broad performance, or full Apple Metal inference claim is in scope.",
+]
