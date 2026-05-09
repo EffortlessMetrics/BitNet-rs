@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T04:53:14Z"
+campaign = "model-artifacts"
+item = "MODEL-CAPS-001"
+event = "merged"
+actor = "codex"
+pr = 4205
+head_sha = "24b279482d99d85100d64727eea0215eb8b990e3"
+merge_sha = "edae960115b8233192e88e8d0b4a0241ecf8fe05"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4205 merged the dense Qwen SLM model capability verifier summary.",
+  "The feature remains metadata-only and keeps dense Qwen evidence separate from BitNet packed QK256 proof.",
+  "Qwen Q8_0 is scoped to Apple M4 CPU/NEON SLM answer metadata; Q4_K_M remains storage/reference only.",
+]
