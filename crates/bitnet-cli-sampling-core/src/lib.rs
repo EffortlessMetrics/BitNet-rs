@@ -17,6 +17,7 @@ pub struct Sampler {
     top_k: usize,
     top_p: f32,
     repetition_penalty: f32,
+    logits_buffer: Vec<f32>,
 }
 
 impl Sampler {
@@ -34,16 +35,20 @@ impl Sampler {
             ChaCha20Rng::from_rng(&mut rand::rng())
         };
 
-        Self { rng, temperature, top_k, top_p, repetition_penalty }
+        Self { rng, temperature, top_k, top_p, repetition_penalty, logits_buffer: Vec::new() }
     }
 
     /// Sample next token from logits
     pub fn sample(&mut self, logits: &[f32], generated_tokens: &[u32]) -> u32 {
+        let mut logits_buffer = std::mem::take(&mut self.logits_buffer);
+        logits_buffer.clear();
+        logits_buffer.extend_from_slice(logits);
+
         // Apply repetition penalty
-        let mut logits = self.apply_repetition_penalty(logits, generated_tokens);
+        self.apply_repetition_penalty(&mut logits_buffer, generated_tokens);
 
         // Replace NaN logits with -inf so they are ignored by later steps
-        for logit in &mut logits {
+        for logit in &mut logits_buffer {
             if logit.is_nan() {
                 *logit = f32::NEG_INFINITY;
             }
@@ -53,46 +58,49 @@ impl Sampler {
         if self.temperature == 0.0
             || (self.temperature == 1.0 && self.top_k == 0 && self.top_p == 1.0)
         {
-            return argmax(&logits);
+            let token = argmax(&logits_buffer);
+            self.logits_buffer = logits_buffer;
+            return token;
         }
 
         // Apply temperature
         if self.temperature != 1.0 {
-            for logit in &mut logits {
+            for logit in &mut logits_buffer {
                 *logit /= self.temperature;
             }
         }
 
         // Apply top-k filtering
         if self.top_k > 0 {
-            logits = self.top_k_filter(logits);
+            self.top_k_filter(&mut logits_buffer);
         }
 
         // Apply top-p (nucleus) filtering
         if self.top_p < 1.0 {
-            logits = self.top_p_filter(logits);
+            self.top_p_filter(&mut logits_buffer);
         }
 
         // Convert to probabilities
-        let probs = softmax(&logits);
+        let probs = softmax(&logits_buffer);
 
         // Sample from distribution
-        self.sample_from_probs(&probs)
+        let token = self.sample_from_probs(&probs);
+        self.logits_buffer = logits_buffer;
+        token
     }
 
     /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(&self, logits: &[f32], generated_tokens: &[u32]) -> Vec<f32> {
+    fn apply_repetition_penalty(&self, logits: &mut [f32], generated_tokens: &[u32]) {
         if self.repetition_penalty == 1.0 || generated_tokens.is_empty() {
-            return logits.to_vec();
+            return;
         }
 
-        let mut penalized = logits.to_vec();
         let penalty = self.repetition_penalty;
         let inv_penalty = 1.0 / penalty;
 
         for &token_id in generated_tokens {
             let idx = token_id as usize;
-            if let Some(logit) = penalized.get_mut(idx) {
+            if let Some(logit) = logits.get_mut(idx) {
                 if *logit > 0.0 {
                     *logit *= inv_penalty;
                 } else {
@@ -100,30 +108,35 @@ impl Sampler {
                 }
             }
         }
-        penalized
     }
 
     /// Apply top-k filtering
-    fn top_k_filter(&self, logits: Vec<f32>) -> Vec<f32> {
+    fn top_k_filter(&self, logits: &mut [f32]) {
         if self.top_k == 0 || self.top_k >= logits.len() {
-            return logits;
+            return;
         }
 
         let mut indexed: Vec<(usize, f32)> =
             logits.iter().copied().enumerate().filter(|&(_, v)| !v.is_nan()).collect();
         indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-        let mut filtered = vec![f32::NEG_INFINITY; logits.len()];
+        let mut keep = vec![false; logits.len()];
         for (idx, val) in indexed.iter().take(self.top_k.min(indexed.len())) {
-            filtered[*idx] = *val;
+            keep[*idx] = true;
+            logits[*idx] = *val;
         }
-        filtered
+
+        for (idx, logit) in logits.iter_mut().enumerate() {
+            if !keep[idx] {
+                *logit = f32::NEG_INFINITY;
+            }
+        }
     }
 
     /// Apply top-p (nucleus) filtering
-    fn top_p_filter(&self, logits: Vec<f32>) -> Vec<f32> {
+    fn top_p_filter(&self, logits: &mut [f32]) {
         if self.top_p >= 1.0 {
-            return logits;
+            return;
         }
 
         let sanitized: Vec<f32> =
@@ -145,11 +158,17 @@ impl Sampler {
             }
         }
 
-        let mut filtered = vec![f32::NEG_INFINITY; logits.len()];
+        let mut keep = vec![false; logits.len()];
         for (idx, val) in indexed.iter().take(cutoff_idx) {
-            filtered[*idx] = *val;
+            keep[*idx] = true;
+            logits[*idx] = *val;
         }
-        filtered
+
+        for (idx, logit) in logits.iter_mut().enumerate() {
+            if !keep[idx] {
+                *logit = f32::NEG_INFINITY;
+            }
+        }
     }
 
     /// Sample from probability distribution
@@ -265,7 +284,8 @@ mod tests {
     fn test_top_k_filter() {
         let sampler = Sampler::new(1.0, 2, 1.0, 1.0, Some(42));
         let logits = vec![1.0, 3.0, 2.0, 0.5];
-        let filtered = sampler.top_k_filter(logits);
+        let mut filtered = logits;
+        sampler.top_k_filter(&mut filtered);
         assert_eq!(filtered[3], f32::NEG_INFINITY);
         assert_eq!(filtered[1], 3.0);
         assert_eq!(filtered[2], 2.0);
@@ -275,7 +295,8 @@ mod tests {
     fn test_top_k_filter_with_nan() {
         let sampler = Sampler::new(1.0, 2, 1.0, 1.0, Some(42));
         let logits = vec![1.0, f32::NAN, 3.0];
-        let filtered = sampler.top_k_filter(logits);
+        let mut filtered = logits;
+        sampler.top_k_filter(&mut filtered);
         assert_eq!(filtered, vec![1.0, f32::NEG_INFINITY, 3.0]);
     }
 
@@ -283,7 +304,8 @@ mod tests {
     fn test_top_p_filter_with_nan() {
         let sampler = Sampler::new(1.0, 0, 0.9, 1.0, Some(42));
         let logits = vec![1.0, f32::NAN, 3.0];
-        let filtered = sampler.top_p_filter(logits);
+        let mut filtered = logits;
+        sampler.top_p_filter(&mut filtered);
         assert_eq!(filtered, vec![1.0, f32::NEG_INFINITY, 3.0]);
     }
 
