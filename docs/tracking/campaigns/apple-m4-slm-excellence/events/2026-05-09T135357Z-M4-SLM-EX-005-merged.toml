@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T13:53:57Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-005"
+event = "merged"
+actor = "codex"
+pr = 4288
+merge_sha = "8a6633ed22af12ccd64c05cfc0bf07fa22e04508"
+
+notes = [
+  "PR #4288 merged the Apple M4 dense SLM model support matrix.",
+  "The matrix keeps Qwen2.5 Q8_0 as the only default/supported M4 dense SLM model and records Qwen2.5 Q4_K_M as candidate, Qwen3 as diagnostic-only, and unpinned or unsupported artifact classes as rejected.",
+  "No new model was accepted, downloaded, or executed; M4-SLM-EX-006 remains ready for adding a second supported dense model only after the matrix gates pass.",
+]
