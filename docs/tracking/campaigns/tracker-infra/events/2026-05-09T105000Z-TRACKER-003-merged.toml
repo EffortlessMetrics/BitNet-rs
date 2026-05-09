@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T10:50:00Z"
+campaign = "tracker-infra"
+item = "TRACKER-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 3724
+merge_sha = "6f44b77538492182e1a33484ff6683fa2debd8ee"
+actor = "codex"
+branch = "codex/tracker-infra/TRACKER-003-current-pr-reconciliation"
+summary = "Closed TRACKER-003 after GitHub reported PR #3724 merged."
+notes = [
+  "Campaign doctor reported TRACKER-003 as stale pr_open because GitHub PR #3724 had already merged.",
+  "This tracker-only closeout unblocks generated dashboard checks for unrelated campaign branches.",
+]
