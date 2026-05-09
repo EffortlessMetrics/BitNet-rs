@@ -14,4 +14,5 @@ notes = [
   "The 258V scalar and AVX2 full-corpus observed-logits receipts record observed logits vector length 128256 for each fixed answer-corpus case.",
   "The refreshed output-head/logits-index audit classifies the boundary as recorded with expected_logits_vector_length=128256 and observed_logits_vector_length=128256.",
   "The merged PR does not claim external first-token logits parity, new answer quality, CPU speed, Arc 140V execution, Intel NPU execution, or full model correctness.",
+  "CPU258V-025 is ready to add the transformer-layer parity ladder.",
 ]
