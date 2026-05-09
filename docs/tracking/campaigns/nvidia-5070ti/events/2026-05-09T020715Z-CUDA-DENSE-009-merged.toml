@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T02:07:15Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-009"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-009-extracted-linear-parity"
+pr = 4174
+head_sha = "07199a18d3d09c884e2443e5b7dfb67ae154e7b8"
+merge_sha = "d061e6004ec741abb89b9aa2ff078e4e6f8fb8f7"
+previous_status = "in_progress"
+new_status = "merged"
+
+notes = [
+  "Merged PR #4174 to add the extracted dense GGUF linear CUDA parity CLI harness.",
+  "The command extracts one dense GGUF linear fixture through bitnet-models, routes it through the CUDA-DENSE-008 FP16 GEMM bridge, and validates a dense_gguf_linear_cuda_parity receipt.",
+  "No dense GGUF inference, Qwen one-token/decode/chat, speedup, server, tokenizer, transformer, QK256, or full-residency claim was added.",
+]
