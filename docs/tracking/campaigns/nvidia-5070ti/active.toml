@@ -2640,10 +2640,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-039"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-039-kv-policy"
-pr = 0
-head_sha = ""
+pr = 4357
+head_sha = "38728abe00f4ae45355d37ce7c652809dd5d1bb8"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

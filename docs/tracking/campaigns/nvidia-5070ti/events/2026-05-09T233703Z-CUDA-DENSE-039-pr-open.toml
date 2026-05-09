@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T23:37:03Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-039"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-039-kv-policy"
+pr = 4357
+head_sha = "38728abe00f4ae45355d37ce7c652809dd5d1bb8"
+
+notes = [
+  "Opened PR #4357 for the CUDA-DENSE-039 dense GGUF KV-cache policy receipt implementation.",
+  "The PR adds a receipt-backed command for model-derived KV shape, prefill write policy, decode read/write policy, estimated byte accounting, and planned strict CUDA residency.",
+  "The committed RTX 5070 Ti receipt was emitted from the SHA-verified Qwen2.5 0.5B Q8_0 artifact and keeps dense inference, one-token/decode/chat, speedup, runtime KV allocation/residency, sampling, full residency, server readiness, BitNet packed proof, tokenizer, loader, transformer, QK256, BitNet CUDA, and CUDA kernel math claims false.",
+]
