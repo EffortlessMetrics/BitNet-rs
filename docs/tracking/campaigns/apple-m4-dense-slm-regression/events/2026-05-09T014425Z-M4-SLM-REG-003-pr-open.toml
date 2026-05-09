@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T01:44:25Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-003"
+event = "pr_open"
+pr = 4170
+head_sha = "e4f182dfbb84825e0fe80c4e2c79562d389c300c"
+actor = "codex"
+
+notes = [
+  "Opened PR #4170 to stage the Apple M4 dense SLM hardware regression workflow shape.",
+  "The workflow is manual-dispatch only with enable_run=false by default and no active schedule.",
+  "The PR defines runner labels, low-disk preflight, receipt bundle retention, branch/PR summary reporting, and required dense SLM receipt checks.",
+]
