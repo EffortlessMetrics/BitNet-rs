@@ -28,6 +28,30 @@
 //! implementations for correctness testing and non-GPU environments.
 
 use bitnet_common::{KernelError, Result};
+#[cfg(feature = "cuda")]
+use std::any::Any;
+#[cfg(feature = "cuda")]
+use std::sync::Mutex;
+
+#[cfg(feature = "cuda")]
+use cudarc::driver::{CudaContext, CudaSlice, LaunchConfig, PushKernelArg};
+#[cfg(feature = "cuda")]
+use cudarc::nvrtc::{Ptx, compile_ptx};
+
+/// Kernel ID recorded by dense GGUF MLP activation CUDA parity receipts.
+pub const CUDA_DENSE_MLP_ACTIVATION_KERNEL_ID: &str = "dense_mlp_activation_f32_cuda";
+
+/// Tolerance for dense GGUF MLP activation fixture parity against the CPU reference.
+pub const CUDA_DENSE_MLP_ACTIVATION_TOLERANCE: f32 = 0.000_25;
+
+/// CPU reference backend recorded by dense GGUF MLP activation CUDA parity receipts.
+pub const CUDA_DENSE_MLP_ACTIVATION_REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
+
+/// RTX 5070 Ti CUDA backend recorded by dense GGUF MLP activation CUDA parity receipts.
+pub const CUDA_DENSE_MLP_ACTIVATION_TARGET_BACKEND: &str = "nvidia-rtx-5070-ti-cuda";
+
+#[cfg(feature = "cuda")]
+static DENSE_MLP_ACTIVATION_NVRTC_COMPILE_LOCK: Mutex<()> = Mutex::new(());
 
 // ---------------------------------------------------------------------------
 // PTX source (compiled at runtime via NVRTC when `gpu`/`cuda` is active)
@@ -89,6 +113,20 @@ extern "C" __global__ void silu_gate_f32(
         float x = input[i];
         float silu_x = x / (1.0f + expf(-x));
         output[i] = silu_x * gate[i];
+    }
+}
+
+extern "C" __global__ void dense_mlp_activation_f32_cuda(
+    const float* __restrict__ gate,
+    const float* __restrict__ up,
+    float* __restrict__ output,
+    int n)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    for (int i = idx; i < n; i += blockDim.x * gridDim.x) {
+        float gate_value = gate[i];
+        float silu_gate = gate_value / (1.0f + expf(-gate_value));
+        output[i] = silu_gate * up[i];
     }
 }
 "#;
@@ -203,6 +241,93 @@ impl SiluGateConfig {
     pub fn block_dim(&self) -> (u32, u32, u32) {
         (self.threads_per_block, 1, 1)
     }
+}
+
+/// CUDA execution counters for dense GGUF MLP activation fixture parity.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CudaDenseMlpActivationStats {
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Number of strict CUDA invocations.
+    pub invocations: u64,
+    /// CPU fallback invocation count. Always zero for strict parity fixtures.
+    pub fallback_invocations: u64,
+    /// Host-to-device bytes copied for gate and up inputs.
+    pub host_to_device_bytes: u64,
+    /// Device-to-host bytes copied for activation outputs.
+    pub device_to_host_bytes: u64,
+    /// CUDA kernel launch count.
+    pub kernel_launches: u64,
+    /// Optional CUDA event timing in milliseconds.
+    pub kernel_time_ms: Option<f64>,
+}
+
+/// Dense GGUF MLP activation fixture data prepared by the CLI/model layer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufMlpActivationCudaFixture {
+    /// Fixture identifier recorded in parity receipts.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// Source MLP gate fixture identifier.
+    pub source_mlp_gate_fixture_id: String,
+    /// Source MLP up fixture identifier.
+    pub source_mlp_up_fixture_id: String,
+    /// Source MLP gate tensor name.
+    pub source_mlp_gate_tensor: String,
+    /// Source MLP up tensor name.
+    pub source_mlp_up_tensor: String,
+    /// Activation kind.
+    pub activation_kind: String,
+    /// SHA-256 of gate fixture values.
+    pub gate_output_sha256: String,
+    /// SHA-256 of up fixture values.
+    pub up_output_sha256: String,
+    /// Gate projection output values.
+    pub gate_output_f32: Vec<f32>,
+    /// Up projection output values.
+    pub up_output_f32: Vec<f32>,
+    /// CPU reference activation values.
+    pub expected_activation_f32: Vec<f32>,
+    /// Number of activation values.
+    pub activation_count: usize,
+    /// Maximum absolute CPU reference activation value.
+    pub max_activation_abs: f32,
+}
+
+/// Dense GGUF MLP activation CUDA parity result against the CPU reference.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufMlpActivationCudaParity {
+    /// Fixture identifier.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// CPU reference backend.
+    pub reference_backend: &'static str,
+    /// CUDA target backend.
+    pub target_backend: &'static str,
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Maximum absolute error against the CPU reference.
+    pub max_abs_error: f32,
+    /// Mean absolute error against the CPU reference.
+    pub mean_abs_error: f32,
+    /// Fixture tolerance.
+    pub tolerance: f32,
+    /// Whether the fixture passed tolerance.
+    pub passed: bool,
+    /// Number of compared activation values.
+    pub compared_activations: usize,
+    /// CUDA execution counters.
+    pub stats: CudaDenseMlpActivationStats,
 }
 
 // ---------------------------------------------------------------------------
@@ -546,6 +671,280 @@ pub fn launch_silu_gate(
     silu_gate_cpu(input, gate, output, config)
 }
 
+/// Launch a strict dense GGUF MLP activation F32 CUDA fixture and return counters.
+///
+/// This computes `SiLU(gate) * up` for one extracted dense GGUF fixture. The
+/// function never falls back to CPU.
+pub fn launch_dense_mlp_activation_f32_cuda(
+    device_index: usize,
+    gate: &[f32],
+    up: &[f32],
+    output: &mut [f32],
+    config: &SiluGateConfig,
+) -> Result<CudaDenseMlpActivationStats> {
+    validate_silu_gate_buffers(gate, up, output, config.n)?;
+
+    #[cfg(feature = "cuda")]
+    {
+        return launch_dense_mlp_activation_f32_cuda_impl(device_index, gate, up, output, config);
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = device_index;
+        Err(KernelError::DeviceUnavailable {
+            reason: "dense MLP activation CUDA parity requires the cuda feature".to_string(),
+        }
+        .into())
+    }
+}
+
+/// Run a dense GGUF MLP activation fixture on CUDA and compare it to CPU references.
+///
+/// # Errors
+///
+/// Returns an error if the fixture is invalid, CUDA is unavailable, or parity
+/// comparison cannot be computed.
+pub fn run_dense_gguf_mlp_activation_cuda_parity(
+    device_index: usize,
+    fixture: &DenseGgufMlpActivationCudaFixture,
+) -> Result<DenseGgufMlpActivationCudaParity> {
+    validate_dense_gguf_mlp_activation_fixture(fixture)?;
+    let config = SiluGateConfig::new(fixture.activation_count)?;
+    let mut actual = vec![0.0f32; fixture.activation_count];
+    let stats = launch_dense_mlp_activation_f32_cuda(
+        device_index,
+        &fixture.gate_output_f32,
+        &fixture.up_output_f32,
+        &mut actual,
+        &config,
+    )?;
+    let (max_abs_error, mean_abs_error, compared_activations) =
+        compare_mlp_activation_outputs(&fixture.expected_activation_f32, &actual)?;
+
+    Ok(DenseGgufMlpActivationCudaParity {
+        fixture_id: fixture.fixture_id.clone(),
+        model_family: fixture.model_family.clone(),
+        architecture: fixture.architecture.clone(),
+        layer_index: fixture.layer_index,
+        reference_backend: CUDA_DENSE_MLP_ACTIVATION_REFERENCE_BACKEND,
+        target_backend: CUDA_DENSE_MLP_ACTIVATION_TARGET_BACKEND,
+        kernel_id: CUDA_DENSE_MLP_ACTIVATION_KERNEL_ID,
+        max_abs_error,
+        mean_abs_error,
+        tolerance: CUDA_DENSE_MLP_ACTIVATION_TOLERANCE,
+        passed: max_abs_error <= CUDA_DENSE_MLP_ACTIVATION_TOLERANCE,
+        compared_activations,
+        stats,
+    })
+}
+
+#[cfg(feature = "cuda")]
+fn launch_dense_mlp_activation_f32_cuda_impl(
+    device_index: usize,
+    gate: &[f32],
+    up: &[f32],
+    output: &mut [f32],
+    config: &SiluGateConfig,
+) -> Result<CudaDenseMlpActivationStats> {
+    let ctx = CudaContext::new(device_index).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to create CUDA context for dense MLP activation: {err:?}"),
+    })?;
+    let stream = ctx.default_stream();
+    let ptx = compile_dense_mlp_activation_ptx()?;
+    let module = ctx.load_module(ptx).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to load dense MLP activation CUDA module: {err:?}"),
+    })?;
+    let function = module.load_function(CUDA_DENSE_MLP_ACTIVATION_KERNEL_ID).map_err(|err| {
+        KernelError::GpuError {
+            reason: format!("failed to load dense MLP activation CUDA kernel: {err:?}"),
+        }
+    })?;
+
+    let gate_dev = stream.memcpy_stod(&gate[..config.n]).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to copy dense MLP gate values to device: {err:?}"),
+    })?;
+    let up_dev = stream.memcpy_stod(&up[..config.n]).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to copy dense MLP up values to device: {err:?}"),
+    })?;
+    let mut output_dev: CudaSlice<f32> =
+        stream.alloc_zeros(config.n).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to allocate dense MLP activation output on device: {err:?}"),
+        })?;
+
+    let launch_config = LaunchConfig {
+        grid_dim: config.grid_dim(),
+        block_dim: config.block_dim(),
+        shared_mem_bytes: 0,
+    };
+    let n_arg = i32::try_from(config.n).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense MLP activation element count exceeds i32: {}", config.n),
+    })?;
+    let mut builder = stream.launch_builder(&function);
+    builder.arg(&gate_dev);
+    builder.arg(&up_dev);
+    builder.arg(&mut output_dev);
+    builder.arg(&n_arg);
+
+    unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
+        reason: format!("failed to launch dense MLP activation CUDA kernel: {err:?}"),
+    })?;
+    stream.synchronize().map_err(|err| KernelError::GpuError {
+        reason: format!("failed to synchronize dense MLP activation CUDA kernel: {err:?}"),
+    })?;
+
+    let output_host: Vec<f32> =
+        stream.memcpy_dtov(&output_dev).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to copy dense MLP activation output from device: {err:?}"),
+        })?;
+    output[..config.n].copy_from_slice(&output_host[..config.n]);
+
+    Ok(CudaDenseMlpActivationStats {
+        kernel_id: CUDA_DENSE_MLP_ACTIVATION_KERNEL_ID,
+        invocations: 1,
+        fallback_invocations: 0,
+        host_to_device_bytes: bytes_for::<f32>(config.n * 2)?,
+        device_to_host_bytes: bytes_for::<f32>(config.n)?,
+        kernel_launches: 1,
+        kernel_time_ms: None,
+    })
+}
+
+#[cfg(feature = "cuda")]
+fn compile_dense_mlp_activation_ptx() -> Result<Ptx> {
+    let _hook_guard = DENSE_MLP_ACTIVATION_NVRTC_COMPILE_LOCK.lock().ok();
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let compile_result = std::panic::catch_unwind(|| compile_ptx(ACTIVATION_KERNEL_SRC));
+    std::panic::set_hook(previous_hook);
+
+    match compile_result {
+        Ok(Ok(ptx)) => Ok(ptx),
+        Ok(Err(err)) => Err(KernelError::GpuError {
+            reason: format!("failed to compile dense MLP activation CUDA PTX: {err:?}"),
+        }
+        .into()),
+        Err(payload) => Err(KernelError::GpuError {
+            reason: format!(
+                "failed to compile dense MLP activation CUDA PTX because NVRTC was unavailable: {}",
+                panic_payload_message(&*payload)
+            ),
+        }
+        .into()),
+    }
+}
+
+#[cfg(feature = "cuda")]
+fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "unknown panic payload".to_string()
+    }
+}
+
+fn validate_dense_gguf_mlp_activation_fixture(
+    fixture: &DenseGgufMlpActivationCudaFixture,
+) -> Result<()> {
+    if fixture.fixture_id.trim().is_empty()
+        || fixture.model_family.trim().is_empty()
+        || fixture.architecture.trim().is_empty()
+    {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense MLP activation fixture labels must not be empty".into(),
+        }
+        .into());
+    }
+    if fixture.activation_kind != "silu_gate_times_up" {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense MLP activation fixture activation_kind must be silu_gate_times_up, got {}",
+                fixture.activation_kind
+            ),
+        }
+        .into());
+    }
+    if fixture.activation_count == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense MLP activation fixture activation_count must be non-zero".into(),
+        }
+        .into());
+    }
+    if fixture.gate_output_f32.len() != fixture.activation_count
+        || fixture.up_output_f32.len() != fixture.activation_count
+        || fixture.expected_activation_f32.len() != fixture.activation_count
+    {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense MLP activation fixture length mismatch: count={} gate={} up={} expected={}",
+                fixture.activation_count,
+                fixture.gate_output_f32.len(),
+                fixture.up_output_f32.len(),
+                fixture.expected_activation_f32.len()
+            ),
+        }
+        .into());
+    }
+    if fixture.max_activation_abs < 0.0 || !fixture.max_activation_abs.is_finite() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense MLP activation fixture max_activation_abs must be finite and non-negative, got {}",
+                fixture.max_activation_abs
+            ),
+        }
+        .into());
+    }
+    Ok(())
+}
+
+fn compare_mlp_activation_outputs(expected: &[f32], actual: &[f32]) -> Result<(f32, f32, usize)> {
+    if expected.len() != actual.len() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense MLP activation parity length mismatch: expected {}, got {}",
+                expected.len(),
+                actual.len()
+            ),
+        }
+        .into());
+    }
+    if expected.is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense MLP activation parity comparison requires non-empty output".into(),
+        }
+        .into());
+    }
+
+    let mut max_abs = 0.0f32;
+    let mut sum_abs = 0.0f32;
+    for (idx, (&expected, &actual)) in expected.iter().zip(actual).enumerate() {
+        if !expected.is_finite() || !actual.is_finite() {
+            return Err(KernelError::InvalidArguments {
+                reason: format!(
+                    "dense MLP activation parity requires finite values at {idx}: expected={expected}, actual={actual}"
+                ),
+            }
+            .into());
+        }
+        let abs = (expected - actual).abs();
+        max_abs = max_abs.max(abs);
+        sum_abs += abs;
+    }
+    Ok((max_abs, sum_abs / expected.len() as f32, expected.len()))
+}
+
+#[cfg(feature = "cuda")]
+fn bytes_for<T>(items: usize) -> Result<u64> {
+    let bytes = items.checked_mul(std::mem::size_of::<T>()).ok_or_else(|| {
+        KernelError::InvalidArguments { reason: "byte count overflows usize".into() }
+    })?;
+    u64::try_from(bytes).map_err(|_| {
+        KernelError::InvalidArguments { reason: "byte count exceeds u64".into() }.into()
+    })
+}
+
 // ===========================================================================
 // Tests
 // ===========================================================================
@@ -853,6 +1252,42 @@ mod tests {
         let gate = [1.0f32; 2]; // too short
         let mut output = [0.0f32; 4];
         assert!(silu_gate_cpu(&input, &gate, &mut output, &cfg).is_err());
+    }
+
+    #[test]
+    fn test_dense_mlp_activation_parity_rejects_mismatched_fixture_lengths() {
+        let fixture = DenseGgufMlpActivationCudaFixture {
+            fixture_id: "fixture".into(),
+            model_family: "qwen2".into(),
+            architecture: "qwen2".into(),
+            layer_index: 0,
+            source_mlp_gate_fixture_id: "gate".into(),
+            source_mlp_up_fixture_id: "up".into(),
+            source_mlp_gate_tensor: "blk.0.ffn_gate.weight".into(),
+            source_mlp_up_tensor: "blk.0.ffn_up.weight".into(),
+            activation_kind: "silu_gate_times_up".into(),
+            gate_output_sha256: "0".repeat(64),
+            up_output_sha256: "0".repeat(64),
+            gate_output_f32: vec![1.0, 2.0],
+            up_output_f32: vec![1.0],
+            expected_activation_f32: vec![0.731_058_6, 1.761_594],
+            activation_count: 2,
+            max_activation_abs: 1.761_594,
+        };
+
+        assert!(validate_dense_gguf_mlp_activation_fixture(&fixture).is_err());
+    }
+
+    #[test]
+    fn test_dense_mlp_activation_compare_handles_reference_values() {
+        let expected = [0.0, 0.731_058_6, -0.268_941_43];
+        let actual = [0.0, 0.731_058_6, -0.268_941_43];
+        let (max_abs, mean_abs, compared) =
+            compare_mlp_activation_outputs(&expected, &actual).unwrap();
+
+        assert_eq!(max_abs, 0.0);
+        assert_eq!(mean_abs, 0.0);
+        assert_eq!(compared, 3);
     }
 
     // -- Unified dispatch (CPU path on non-GPU builds) ----------------------

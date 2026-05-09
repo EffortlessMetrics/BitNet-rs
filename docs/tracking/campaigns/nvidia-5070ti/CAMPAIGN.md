@@ -201,6 +201,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-UX-002 | merged | Strict `bitnet ask` proof summaries reuse the receipt explainer compact summary instead of a one-line bespoke formatter. |
 | CUDA-DENSE-028 | merged | Promote verified dense GGUF `attention_v_mix` to the one-layer planner route while leaving `mlp_activation` as the remaining unsupported strict CUDA gap. |
 | CUDA-DENSE-029 | merged | Extract a CPU-reference dense GGUF `mlp_activation` fixture while leaving CUDA parity, dense GGUF inference, Qwen token/decode/chat, speedup, and full-residency claims false. |
+| CUDA-DENSE-030 | in_progress | Prove strict RTX 5070 Ti CUDA parity for the dense GGUF `mlp_activation` fixture while leaving route promotion, dense GGUF inference, Qwen token/decode/chat, speedup, and full-residency claims false. |
 
 ## Review Policy
 

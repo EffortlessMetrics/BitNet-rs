@@ -132,9 +132,10 @@ use commands::{
     DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
     DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
     DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
-    DenseGgufMlpActivationFixtureCommand, DenseGgufNormCudaParityCommand,
-    DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
-    InferenceCommand, InspectCommand, ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
+    DenseGgufMlpActivationCudaParityCommand, DenseGgufMlpActivationFixtureCommand,
+    DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand,
+    DenseGgufRopeCudaParityCommand, InferenceCommand, InspectCommand, ReceiptsCommand,
+    ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -625,6 +626,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Extract a dense GGUF MLP activation fixture and emit a CPU-reference receipt
     DenseGgufMlpActivationFixture(Box<DenseGgufMlpActivationFixtureCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Run dense GGUF MLP activation strict CUDA parity diagnostics
+    DenseGgufMlpActivationCudaParity(Box<DenseGgufMlpActivationCudaParityCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Run dense GGUF attention-softmax strict CUDA parity diagnostics
@@ -1434,6 +1439,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufAttentionVMixFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufMlpActivationFixture(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufMlpActivationCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufAttentionSoftmaxCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

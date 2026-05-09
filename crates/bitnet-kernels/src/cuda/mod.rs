@@ -105,8 +105,12 @@ pub mod warp_primitives;
 pub mod warp_shuffle_ops;
 
 pub use activations::{
-    ActivationConfig, ActivationType, SiluGateConfig, activation_cpu, launch_activation,
-    launch_silu_gate, silu_gate_cpu,
+    ActivationConfig, ActivationType, CUDA_DENSE_MLP_ACTIVATION_KERNEL_ID,
+    CUDA_DENSE_MLP_ACTIVATION_REFERENCE_BACKEND, CUDA_DENSE_MLP_ACTIVATION_TARGET_BACKEND,
+    CUDA_DENSE_MLP_ACTIVATION_TOLERANCE, CudaDenseMlpActivationStats,
+    DenseGgufMlpActivationCudaFixture, DenseGgufMlpActivationCudaParity, SiluGateConfig,
+    activation_cpu, launch_activation, launch_dense_mlp_activation_f32_cuda, launch_silu_gate,
+    run_dense_gguf_mlp_activation_cuda_parity, silu_gate_cpu,
 };
 pub use attention::{
     AttentionConfig, AttentionKernelConfig, AttentionScoresConfig, AttentionSoftmaxConfig,
