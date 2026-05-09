@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T12:20:39Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-005"
+event = "pr_open"
+actor = "codex"
+pr = 4270
+head_sha = "d9be2d1f7bc5163644ab8196b7bfc84d5b9db86c"
+
+notes = [
+  "Opened PR #4270 for M4 BitNet proof-prep.",
+  "The PR adds a `bitnet mac bitnet-proof` preflight/contract checker and documents the accepted-artifact input and future strict proof receipt schema.",
+  "The PR does not accept an artifact, run BitNet generation, claim BitNet quality, claim full Apple Metal inference, claim QK256, or touch MacBook artifact sweeps.",
+]

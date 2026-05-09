@@ -197,7 +197,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CONT-005"
-status = "in_progress"
+status = "pr_open"
+pr = 4270
 branch = "codex/apple-m4-continuity/M4-CONT-005-bitnet-proof-prep"
 stackable = false
 review_mode = "codex_premerge"

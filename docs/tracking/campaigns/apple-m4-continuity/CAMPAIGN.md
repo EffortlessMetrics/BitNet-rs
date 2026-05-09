@@ -40,7 +40,7 @@ That evidence does not prove BitNet, 1-bit / 1.58-bit kernels, QK256, Neural Eng
 | M4-CONT-002 | merged | Added compact M4 dense-SLM golden smoke command. |
 | M4-CONT-003 | merged | Polished dense-SLM smoke cache verification overhead. |
 | M4-CONT-004 | merged | Recorded longer resident-session memory and timing envelope. |
-| M4-CONT-005 | in_progress | Prepare M4 BitNet proof command and receipt contract after an accepted BitNet artifact exists. |
+| M4-CONT-005 | pr_open | Prepare M4 BitNet proof command and receipt contract after an accepted BitNet artifact exists. |
 
 ## Review Policy
 
