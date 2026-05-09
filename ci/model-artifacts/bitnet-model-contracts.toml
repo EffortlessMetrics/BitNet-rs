@@ -1,0 +1,253 @@
+schema = 1
+artifact_kind = "bitnet_model_contract_matrix"
+updated = "2026-05-09"
+work_item = "BITNET-CONTRACT-001"
+claim_boundary = "BitNet-family artifacts must declare model family, artifact format, kernel family, architecture support, tokenizer and prompt authority, CPU oracle, accelerator routes, allowed claims, and required receipts before they can be used as proof authority."
+
+claim_rules = [
+  "The official Microsoft 2B I2_S GGUF is the current x86 CPU and RTX 5070 Ti CUDA reference lane when paired with external llama-bpe tokenizer authority and bitnetcpp-answer prompt authority.",
+  "Official 2B TL1 and TL2 routes are upstream-supported lanes but need their own parser, fixture, prompt authority, answer corpus, and backend receipts before proof claims.",
+  "1bitLLM 3B x86 I2_S is upstream-unsupported and remains diagnostic-only.",
+  "1bitLLM 3B x86 TL2 and ARM TL1 are listed upstream but require runner-path verification before proof claims.",
+  "Alternate-quant control evidence cannot unblock official Microsoft I2_S CUDA readiness.",
+  "speedup_claim and full_cuda_residency claims remain false unless profile-specific benchmark and residency receipts explicitly upgrade them.",
+]
+
+[[contract]]
+id = "microsoft_bitnet_b158_2b_4t_i2s"
+model_family = "bitnet_b1_58"
+artifact_format = "gguf"
+artifact_id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
+kernel_family = "i2_s_qk256"
+status = "reference_ready"
+tokenizer_authority = "external_llama_bpe"
+prompt_authority = "bitnetcpp-answer"
+cpu_oracle = "x86_cpu_scalar_then_avx512_parity"
+permitted_claims = [
+  "diagnostic_run",
+  "artifact_inspection",
+  "answer_ready",
+  "reference_authority",
+  "backend_parity",
+  "benchmark_baseline",
+]
+forbidden_claims = [
+  "speedup_qualified_without_profile_receipt",
+  "full_cuda_residency_without_residency_receipt",
+]
+required_receipts = [
+  "answer_artifact_gate",
+  "prompt_authority_audit",
+  "strict_answer_corpus",
+  "cpu_cuda_answer_parity",
+  "execution_plan",
+  "fallback_free_backend_receipt",
+  "benchmark_profile_receipt",
+]
+claim_boundary = "Reference lane for x86 CPU and RTX 5070 Ti CUDA, but speedup and full-residency claims still require profile-specific receipts."
+
+  [[contract.architecture_support]]
+  arch = "x86"
+  kernel = "i2_s"
+  status = "supported_reference"
+
+  [[contract.architecture_support]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "supported"
+
+  [[contract.accelerator_route]]
+  backend = "cpu-scalar"
+  route = "bitnet_i2s_qk256_cpu_scalar"
+  status = "oracle"
+
+  [[contract.accelerator_route]]
+  backend = "cpu-avx2"
+  route = "bitnet_i2s_qk256_cpu_avx2"
+  status = "parity_lane"
+
+  [[contract.accelerator_route]]
+  backend = "cpu-avx512"
+  route = "bitnet_i2s_qk256_cpu_avx512"
+  status = "parity_lane"
+
+  [[contract.accelerator_route]]
+  backend = "nvidia-rtx-5070-ti-cuda"
+  route = "bitnet_qk256_cuda"
+  status = "strict_receipt_lane"
+
+[[contract]]
+id = "microsoft_bitnet_b158_2b_4t_tl1"
+model_family = "bitnet_b1_58"
+artifact_format = "gguf"
+kernel_family = "tl1_lut"
+status = "planned_proof_required"
+tokenizer_authority = "pending_lane_audit"
+prompt_authority = "pending_lane_audit"
+cpu_oracle = "arm_neon_or_reference_runner_required"
+permitted_claims = [
+  "diagnostic_run",
+  "artifact_inspection",
+  "unsupported_path_receipt",
+]
+required_receipts = [
+  "runner_path_verification",
+  "prompt_authority_audit",
+  "strict_answer_corpus",
+  "backend_parity_receipt",
+]
+claim_boundary = "ARM TL1 is upstream-supported for the official 2B family, but BitNet-rs needs parser, fixture, prompt authority, answer corpus, and backend receipts before proof claims."
+
+  [[contract.architecture_support]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "supported_proof_required"
+
+  [[contract.architecture_support]]
+  arch = "x86"
+  kernel = "tl1"
+  status = "unsupported_upstream"
+
+[[contract]]
+id = "microsoft_bitnet_b158_2b_4t_tl2"
+model_family = "bitnet_b1_58"
+artifact_format = "gguf"
+kernel_family = "tl2_lut"
+status = "planned_proof_required"
+tokenizer_authority = "pending_lane_audit"
+prompt_authority = "pending_lane_audit"
+cpu_oracle = "x86_scalar_then_avx_parity_required"
+permitted_claims = [
+  "diagnostic_run",
+  "artifact_inspection",
+  "unsupported_path_receipt",
+]
+required_receipts = [
+  "runner_path_verification",
+  "prompt_authority_audit",
+  "strict_answer_corpus",
+  "backend_parity_receipt",
+]
+claim_boundary = "x86 TL2 is upstream-supported for the official 2B family, but it is not the current I2_S/QK256 CUDA target and needs its own proof lane."
+
+  [[contract.architecture_support]]
+  arch = "x86"
+  kernel = "tl2"
+  status = "supported_proof_required"
+
+  [[contract.architecture_support]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "unsupported_upstream"
+
+[[contract]]
+id = "onebitllm_bitnet_b158_3b_i2s_x86"
+model_family = "bitnet_b1_58"
+artifact_format = "gguf"
+kernel_family = "unsupported_i2_s"
+status = "upstream_unsupported"
+tokenizer_authority = "not_authoritative_for_claims"
+prompt_authority = "not_authoritative_for_claims"
+cpu_oracle = "none"
+permitted_claims = [
+  "diagnostic_run",
+  "artifact_inspection",
+  "unsupported_path_receipt",
+]
+forbidden_claims = [
+  "answer_ready",
+  "reference_authority",
+  "backend_parity",
+  "speedup",
+]
+required_receipts = [
+  "unsupported_path_receipt",
+]
+claim_boundary = "3B x86 I2_S is upstream-unsupported and cannot be answer, reference, backend-parity, or speed authority."
+
+  [[contract.architecture_support]]
+  arch = "x86"
+  kernel = "i2_s"
+  status = "unsupported_upstream"
+
+[[contract]]
+id = "onebitllm_bitnet_b158_3b_tl2_x86"
+model_family = "bitnet_b1_58"
+artifact_format = "gguf"
+kernel_family = "tl2_lut"
+status = "listed_verify_runner"
+tokenizer_authority = "pending_runner_verification"
+prompt_authority = "pending_runner_verification"
+cpu_oracle = "x86_tl2_runner_verification_required"
+permitted_claims = [
+  "diagnostic_run",
+  "artifact_inspection",
+  "unsupported_path_receipt",
+]
+required_receipts = [
+  "runner_path_verification",
+  "prompt_authority_audit",
+  "strict_answer_corpus",
+  "backend_parity_receipt",
+]
+claim_boundary = "3B x86 TL2 is listed upstream but must verify the runner path before proof claims."
+
+  [[contract.architecture_support]]
+  arch = "x86"
+  kernel = "tl2"
+  status = "listed_supported_verify_runner"
+
+[[contract]]
+id = "onebitllm_bitnet_b158_3b_tl1_arm"
+model_family = "bitnet_b1_58"
+artifact_format = "gguf"
+kernel_family = "tl1_lut"
+status = "listed_verify_runner"
+tokenizer_authority = "pending_runner_verification"
+prompt_authority = "pending_runner_verification"
+cpu_oracle = "arm_tl1_runner_verification_required"
+permitted_claims = [
+  "diagnostic_run",
+  "artifact_inspection",
+  "unsupported_path_receipt",
+]
+required_receipts = [
+  "runner_path_verification",
+  "prompt_authority_audit",
+  "strict_answer_corpus",
+  "backend_parity_receipt",
+]
+claim_boundary = "3B ARM TL1 is listed upstream but must verify the runner path before proof claims."
+
+  [[contract.architecture_support]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+
+[[contract]]
+id = "tdh111_bitnet_b158_2b_4t_iq2_bn_r4"
+model_family = "bitnet_b1_58"
+artifact_format = "gguf"
+artifact_id = "tdh111_bitnet_b158_2b_4t_iq2_bn_r4"
+kernel_family = "i2_s_qk256"
+status = "alternate_control"
+tokenizer_authority = "missing_pretokenizer_authority"
+prompt_authority = "ik_llama_intended_runner"
+cpu_oracle = "alternate_quant_control_only"
+permitted_claims = [
+  "diagnostic_run",
+  "artifact_inspection",
+  "backend_parity",
+]
+forbidden_claims = [
+  "answer_ready",
+  "official_i2s_cuda_unblock",
+  "speedup",
+]
+required_receipts = [
+  "runner_path_verification",
+  "prompt_authority_audit",
+  "strict_answer_corpus",
+  "backend_parity_receipt",
+]
+claim_boundary = "tdh111 IQ2_BN_R4 is useful alternate-quant control evidence but cannot unblock official Microsoft I2_S CUDA readiness."

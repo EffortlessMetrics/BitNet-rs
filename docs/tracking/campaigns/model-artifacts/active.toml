@@ -405,3 +405,57 @@ must_not_claim = [
   "Rust CPU or CUDA behavior changed.",
   "Any backend speedup is proven.",
 ]
+
+[[work_item]]
+id = "BITNET-CONTRACT-001"
+status = "in_progress"
+branch = "codex/bitnet-contract-001-model-contracts"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["BITNET-COMPAT-001"]
+acceptance = "Add a machine-readable BitNet-family model contract matrix and typed registry that separates official 2B I2_S, official 2B TL1/TL2, unsupported 3B I2_S, listed-but-unverified 3B TL routes, and alternate-quant control evidence without changing runtime behavior or claim gates."
+commands = [
+  "Parse ci/model-artifacts/*.toml",
+  "cargo test --locked -p bitnet-models --lib --no-default-features model_contracts -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/**",
+  "crates/bitnet-models/src/lib.rs",
+  "crates/bitnet-models/src/model_contracts.rs",
+  "docs/bitnet/BITNET_MODEL_CONTRACT.md",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "server inference",
+  "speed claims",
+]
+may_claim = [
+  "BitNet-family model contracts are recorded for official 2B I2_S, official 2B TL1/TL2, 3B x86 I2_S, 3B listed TL routes, and tdh111 alternate-control evidence.",
+  "The official Microsoft 2B I2_S route remains the current x86 CPU and RTX 5070 Ti CUDA reference lane.",
+  "Official TL1/TL2 and 3B listed routes require their own proof lanes before answer, reference, parity, or benchmark claims.",
+]
+must_not_claim = [
+  "Official TL1 or TL2 answer readiness is proven.",
+  "3B x86 I2_S is a local CPU, AVX-512, or CUDA regression.",
+  "tdh111 alternate-control evidence unblocks the official Microsoft I2_S CUDA target.",
+  "Rust CPU or CUDA behavior changed.",
+  "Any backend speedup is proven.",
+]
