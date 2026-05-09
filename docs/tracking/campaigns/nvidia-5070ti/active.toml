@@ -1816,8 +1816,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-010"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-010-live-linear-receipt"
+pr = 4207
+head_sha = "48177506048dcf7a95c9b818e8f46aa4bad4983a"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
