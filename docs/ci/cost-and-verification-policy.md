@@ -72,6 +72,12 @@ verification:
 - high-cost validation should require explicit labels, main-branch execution,
   nightly execution, release gates, or campaign gates.
 
+PR-time fuzz target builds follow that routing rule: they run for changes to
+the fuzz harness, Rust crates, lockfiles, toolchain, Cargo configuration, or
+the fuzz workflow itself. Docs / tracking-only PRs use the docs and campaign
+tracker lanes instead of spending CI minutes compiling fuzz targets that
+cannot be affected by the diff.
+
 The goal is not to spend less by testing less. **The goal is to spend less on
 unrelated work so we can afford more verification where the change actually
 creates risk.**
@@ -170,7 +176,7 @@ surface**, not test adequacy or model quality.
 
 ### What coverage answers
 
-Coverage tells us: _Did tests exercise this Rust code?_
+Coverage tells us: *Did tests exercise this Rust code?*
 
 It does **not** tell us:
 
