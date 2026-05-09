@@ -161,7 +161,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EX-004"
-status = "in_progress"
+status = "merged"
+pr = 4286
+merge_sha = "e391c89e79aa680c2a5ccae24d8a852460bdf9ab"
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-004-allocation-cleanup"
 stackable = false
 review_mode = "codex_premerge"
