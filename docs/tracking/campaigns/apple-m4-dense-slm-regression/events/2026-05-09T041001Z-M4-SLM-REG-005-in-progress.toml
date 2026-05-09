@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T04:10:01Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-005"
+event = "in_progress"
+branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-005-threshold-tightening"
+actor = "codex"
+
+notes = [
+  "Started threshold tightening after a second local release-mode M4 Mac mini performance receipt matched the published dense Qwen context and produced zero advisory warnings against the baseline.",
+  "Scope is limited to Apple M4 dense SLM regression bands, compact trend history, receipt-checker thresholds, tests, and campaign tracking.",
+  "No BitNet quality, QK256, Neural Engine, MPSGraph model inference, full Apple Metal inference, or broad Apple Silicon performance claim is in scope.",
+]

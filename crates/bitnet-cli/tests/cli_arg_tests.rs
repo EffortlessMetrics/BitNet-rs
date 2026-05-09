@@ -814,6 +814,38 @@ fn mac_receipts_check_reports_dense_slm_regression_advisory_warning() {
 }
 
 #[test]
+fn mac_receipts_check_uses_tightened_dense_slm_regression_thresholds() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let baseline_path = dir.path().join("baseline.json");
+    let current_path = dir.path().join("current.json");
+    let baseline = performance_summary_receipt("same-sha");
+    let mut current = performance_summary_receipt("same-sha");
+    // Baseline fixture decode tok/s is 3.2. A 14% regression is above the
+    // tightened 12.5% advisory band but below the original 20% band.
+    current["profiles"][0]["timing"]["decode_generated_tok_s"] = serde_json::json!(2.752);
+    std::fs::write(&baseline_path, serde_json::to_vec_pretty(&baseline).expect("json"))
+        .expect("write baseline");
+    std::fs::write(&current_path, serde_json::to_vec_pretty(&current).expect("json"))
+        .expect("write current");
+    let baseline_str = baseline_path.to_string_lossy().into_owned();
+    let current_str = current_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            current_str.as_str(),
+            "--regression-baseline",
+            baseline_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"warning_count\": 1"))
+        .stdout(predicate::str::contains("\"threshold_percent\": 12.5"));
+}
+
+#[test]
 fn mac_receipts_check_rejects_dense_slm_regression_context_mismatch() {
     let dir = tempfile::tempdir().expect("tempdir");
     let baseline_path = dir.path().join("baseline.json");
