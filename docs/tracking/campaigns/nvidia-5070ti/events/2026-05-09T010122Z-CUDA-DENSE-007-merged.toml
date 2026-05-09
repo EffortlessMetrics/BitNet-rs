@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T01:01:22Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-007"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-007-linear-fixture"
+pr = 4156
+head_sha = "5e5d21f254682a85ef7db1cb8f6e72229d3143e3"
+merge_sha = "3462965c543b27fd517daf32c6b65b6ed5a23cf6"
+previous_status = "in_progress"
+new_status = "merged"
+
+notes = [
+  "Merged PR #4156 to add descriptor-driven dense GGUF linear fixture extraction.",
+  "The merged fixture receipt records a synthetic Qwen-family Q8_0 dense linear tensor materialized as F32 with deterministic CPU-reference matvec hashes.",
+  "No dense GGUF inference, CUDA kernel execution, CPU/CUDA dense parity, BitNet QK256 proof, tokenizer, transformer, server, speedup, or full-residency claim was added.",
+]
