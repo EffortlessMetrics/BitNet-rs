@@ -2357,8 +2357,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-020"
-status = "in_progress"
+status = "merged"
 branch = "codex/cuda-dense-020-attention-score-fixture"
+pr = 4246
+head_sha = "c9aeb2715847365abc8fe5cf88f05dfd8bc9d14d"
+merge_sha = "939ee1aa2712c47f1dc38d1d144905b1643f15f5"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

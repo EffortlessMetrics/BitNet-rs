@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T10:22:56Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-020"
+event = "merged"
+previous_status = "in_progress"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-020-attention-score-fixture"
+pr = 4246
+head_sha = "c9aeb2715847365abc8fe5cf88f05dfd8bc9d14d"
+merge_sha = "939ee1aa2712c47f1dc38d1d144905b1643f15f5"
+notes = [
+  "Merged dense GGUF attention-score CPU-reference fixture extraction for the verified Qwen2.5 0.5B Q8_0 artifact.",
+  "The committed receipt records q14/kv2/d64/s4 attention-score fixture evidence, causal mask counts, score hash, unsupported strict CUDA routing, and missing CUDA attention-score kernel status.",
+  "Dense GGUF inference, CUDA attention-score parity, Qwen token/decode/chat, speedup, full-residency, server, QK256, tokenizer, loader, transformer, and dense CUDA math implementation claims remain false.",
+]
