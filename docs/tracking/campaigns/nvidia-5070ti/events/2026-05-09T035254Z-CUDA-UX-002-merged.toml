@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T03:52:54Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-002"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-ux-002-ask-proof-summary"
+pr = 4191
+head_sha = "6960b2bf1005bec92b8a1e06005b63a28d46ef9b"
+merge_sha = "99b938bfd06cf06fb0bcca98ee1b2f601ee58749"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4191 merged strict ask proof-summary reuse of the receipt explanation object.",
+  "The merged change improves operator-facing proof output without changing inference, tokenizer, loader, transformer, kernel, benchmark, dense GGUF inference, speedup, full residency, or server behavior.",
+  "Strict ask and `bitnet receipts explain` now share the same compact proof-summary extraction for route, backend, kernel, fallback, quality, timing, residency, speed claim, and receipt path fields.",
+]

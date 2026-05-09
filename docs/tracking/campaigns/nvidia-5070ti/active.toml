@@ -1816,10 +1816,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-ux-002-ask-proof-summary"
 pr = 4191
 head_sha = "6960b2bf1005bec92b8a1e06005b63a28d46ef9b"
+merge_sha = "99b938bfd06cf06fb0bcca98ee1b2f601ee58749"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
