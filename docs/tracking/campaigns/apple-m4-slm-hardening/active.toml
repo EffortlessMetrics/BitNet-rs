@@ -74,8 +74,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-002"
-status = "pr_open"
+status = "merged"
 pr = 4155
+merge_sha = "1570890a46aca5f12b6ab3c8a9c0b1d9c2c26468"
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-002-cache-repair"
 stackable = false
 review_mode = "codex_premerge"
@@ -118,7 +119,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-003"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-003-quality-corpus"
 stackable = false
 review_mode = "codex_premerge"

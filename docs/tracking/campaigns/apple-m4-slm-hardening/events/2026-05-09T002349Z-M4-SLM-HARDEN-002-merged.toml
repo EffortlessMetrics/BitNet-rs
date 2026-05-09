@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T00:23:49Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-002"
+event = "merged"
+pr = 4155
+head_sha = "341982d4b03c809442faef76c42ceed35598810d"
+merge_sha = "1570890a46aca5f12b6ab3c8a9c0b1d9c2c26468"
+actor = "codex"
+
+notes = [
+  "Merged Mac SLM cache repair and first-run UX improvements.",
+  "Missing, wrong-size, wrong-hash, metadata-missing, offline, low-disk, verify, fetch, and prune states now give targeted operator guidance.",
+  "Dense Qwen SLM and BitNet claim boundaries remain explicit.",
+  "M4-SLM-HARDEN-003 is ready for the small deterministic quality corpus expansion.",
+]
