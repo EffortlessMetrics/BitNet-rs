@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T18:41:25Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-021"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 4315
+branch = "codex/lunar-lake/CPU258V-021-reference-instrumentation"
+head_sha = "2cf3983b73332fd97ae1467032988c778ec795bc"
+merge_sha = "7244b1af7a8828b58133be5eab4befa7c72c8305"
+
+notes = [
+  "PR #4315 landed the external reference instrumentation classifier for CPU258V-021.",
+  "The item records the available generated-token/logit boundary without claiming first-token logits parity, answer quality, throughput, Arc 140V execution, NPU execution, or packed QK256 decode fixes.",
+]
