@@ -204,7 +204,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EX-005"
-status = "in_progress"
+status = "merged"
+pr = 4288
+merge_sha = "8a6633ed22af12ccd64c05cfc0bf07fa22e04508"
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-005-model-matrix"
 stackable = false
 review_mode = "codex_premerge"
