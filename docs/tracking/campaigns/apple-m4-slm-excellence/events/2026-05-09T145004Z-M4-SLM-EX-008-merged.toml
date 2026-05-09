@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:50:04Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-008"
+event = "merged"
+actor = "codex"
+pr = 4301
+merge_sha = "4197275cc645e1f627cf34b8e74ed3ffa093ad26"
+
+notes = [
+  "Merged PR #4301 for M4-SLM-EX-008.",
+  "The merged receipts record 25-prompt/64-token and 50-prompt/128-token resident dense SLM soaks on this M4 Mac mini.",
+  "M4-SLM-EX-009 remains the next ready item for local advisory regression comparison.",
+]
