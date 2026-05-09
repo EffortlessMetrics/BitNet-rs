@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T05:51:04Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-013"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-013-one-layer-plan"
+notes = [
+  "Started dense GGUF one-layer execution-plan gap receipts after CUDA-DENSE-012 merged.",
+  "Scope is planner/receipt evidence only: dense linears route to dense_regular_llm_cuda while strict CUDA rejects unsupported non-linear layer ops.",
+  "No dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, tokenizer, loader, transformer, CUDA math, or BitNet packed proof claim is allowed.",
+]

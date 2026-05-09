@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T05:54:38Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-013"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-013-one-layer-plan"
+pr = 4214
+head_sha = "eba90549af2133c7b968d4d1ce9cb692596fb43c"
+notes = [
+  "Opened PR #4214 for dense GGUF one-layer execution-plan gap receipts.",
+  "The PR records linears as dense_regular_llm_cuda-routable while strict CUDA rejects non-linear layer ops with no CPU fallback.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, tokenizer, loader, transformer, CUDA math, and BitNet packed proof claims remain false.",
+]
