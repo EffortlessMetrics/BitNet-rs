@@ -1930,8 +1930,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-012"
-status = "pr_open"
+status = "merged"
 pr = 4212
+head_sha = "2c1ae45e00d3d3eb966e94d02dd806af901e6ce0"
+merge_sha = "27f387608ce983a902a24ee99f1ed6306e281c9a"
 branch = "codex/cuda-dense-012-linear-sweep-command"
 stackable = false
 review_mode = "codex_premerge"
