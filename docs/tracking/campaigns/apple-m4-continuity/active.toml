@@ -114,8 +114,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CONT-003"
-status = "pr_open"
+status = "merged"
 pr = 4263
+merge_sha = "815d5cf3659726f3dc5e713bef6035e263b5c4ca"
 branch = "codex/apple-m4-continuity/M4-CONT-003-latency-polish"
 stackable = false
 review_mode = "codex_premerge"
@@ -155,7 +156,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CONT-004"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-continuity/M4-CONT-004-resident-envelope"
 stackable = false
 review_mode = "codex_premerge"
