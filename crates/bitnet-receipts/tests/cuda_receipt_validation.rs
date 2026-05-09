@@ -1031,6 +1031,45 @@ fn dense_gguf_one_layer_cuda_integrated_parity_rejects_bitnet_proof_claim() {
 }
 
 #[test]
+fn dense_gguf_one_layer_cuda_integrated_parity_rejects_phase_error_over_tolerance() {
+    let mut receipt = valid_dense_gguf_one_layer_cuda_integrated_parity_receipt();
+    receipt["cuda_layer"]["phases"][1]["max_abs_error"] = json!(0.25);
+    receipt["cuda_layer"]["phases"][1]["tolerance"] = json!(0.125);
+
+    let err = validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("attention_norm"), "unexpected error: {err}");
+    assert!(err.contains("max_abs_error exceeds tolerance"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_one_layer_cuda_integrated_parity_binds_final_hash_to_terminal_phase() {
+    let mut receipt = valid_dense_gguf_one_layer_cuda_integrated_parity_receipt();
+    receipt["cuda_layer"]["final_output_sha256"] = json!("f".repeat(64));
+
+    let err = validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("final_output_sha256"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_one_layer_cuda_integrated_parity_binds_kernel_stats_to_phase_rows() {
+    let mut receipt = valid_dense_gguf_one_layer_cuda_integrated_parity_receipt();
+    receipt["kernel_stats"][0]["phase"] = json!("attention_q");
+
+    let err = validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("phase"), "unexpected error: {err}");
+    assert!(err.contains("attention_norm"), "unexpected error: {err}");
+}
+
+#[test]
 fn dense_gguf_one_layer_cuda_integrated_parity_requires_transfer_accounting() {
     let mut receipt = valid_dense_gguf_one_layer_cuda_integrated_parity_receipt();
     receipt["timing"]["host_to_device_bytes"] = json!(1);

@@ -4693,8 +4693,18 @@ pub fn validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(
     if phases.len() != REQUIRED_PHASES.len() {
         return Err(anyhow!("cuda_layer.phases_total must equal integrated layer phase count"));
     }
+    let final_phase =
+        phases.last().ok_or_else(|| anyhow!("cuda_layer.phases must contain a terminal phase"))?;
+    require_string_eq(final_phase, "name", "second_residual")?;
+    require_u64_eq(layer, "final_output_len", required_u64(final_phase, "output_len")?)?;
+    require_string_eq(
+        layer,
+        "final_output_sha256",
+        required_string(final_phase, "output_sha256")?,
+    )?;
     let mut cuda_phase_count = 0_u64;
     let mut host_residual_count = 0_u64;
+    let mut cuda_phase_rows = Vec::new();
     for (idx, phase) in phases.iter().enumerate() {
         require_u64_eq(phase, "index", idx as u64)?;
         require_string_eq(phase, "name", REQUIRED_PHASES[idx])?;
@@ -4707,6 +4717,18 @@ pub fn validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(
         require_non_negative_number(phase, "max_abs_error")?;
         require_non_negative_number(phase, "mean_abs_error")?;
         require_non_negative_number(phase, "tolerance")?;
+        let phase_max_abs_error = object_field(phase, "max_abs_error")?
+            .as_f64()
+            .ok_or_else(|| anyhow!("cuda_layer phase max_abs_error must be a number"))?;
+        let phase_tolerance = object_field(phase, "tolerance")?
+            .as_f64()
+            .ok_or_else(|| anyhow!("cuda_layer phase tolerance must be a number"))?;
+        if phase_max_abs_error > phase_tolerance {
+            return Err(anyhow!(
+                "cuda_layer phase `{}` max_abs_error exceeds tolerance",
+                required_string(phase, "name")?
+            ));
+        }
         require_bool_eq(phase, "passed", true)?;
         require_bool_eq(phase, "fallback_used", false)?;
         match required_string(phase, "route")? {
@@ -4719,9 +4741,11 @@ pub fn validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(
                 )?;
                 require_positive_u64(phase, "kernel_launches")?;
                 require_positive_u64(phase, "invocations")?;
+                require_u64_eq(phase, "fallback_invocations", 0)?;
                 required_u64(phase, "host_to_device_bytes")?;
                 required_u64(phase, "device_to_host_bytes")?;
                 cuda_phase_count += 1;
+                cuda_phase_rows.push(phase);
             }
             "host_measured_glue" => {
                 let name = required_string(phase, "name")?;
@@ -4761,16 +4785,24 @@ pub fn validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(
     let mut stats_d2h = 0_u64;
     let mut stats_invocations = 0_u64;
     let mut stats_launches = 0_u64;
-    for stat in stats {
+    for (stat, phase) in stats.iter().zip(cuda_phase_rows.iter()) {
         require_string_non_empty(stat, "phase")?;
+        require_string_eq(stat, "phase", required_string(phase, "name")?)?;
         require_string_non_empty(stat, "kernel_id")?;
+        require_string_eq(stat, "kernel_id", required_string(phase, "kernel_id")?)?;
         reject_bitnet_packed_marker(required_string(stat, "kernel_id")?, "kernel_stats.kernel_id")?;
-        require_positive_u64(stat, "invocations")?;
-        require_u64_eq(stat, "fallback_invocations", 0)?;
-        required_u64(stat, "host_to_device_bytes")?;
-        required_u64(stat, "device_to_host_bytes")?;
-        require_positive_u64(stat, "kernel_launches")?;
+        require_u64_eq(stat, "invocations", required_u64(phase, "invocations")?)?;
+        require_u64_eq(stat, "fallback_invocations", required_u64(phase, "fallback_invocations")?)?;
+        require_u64_eq(stat, "host_to_device_bytes", required_u64(phase, "host_to_device_bytes")?)?;
+        require_u64_eq(stat, "device_to_host_bytes", required_u64(phase, "device_to_host_bytes")?)?;
+        require_u64_eq(stat, "kernel_launches", required_u64(phase, "kernel_launches")?)?;
         require_optional_non_negative_number(stat, "kernel_time_ms")?;
+        if object_field(stat, "kernel_time_ms")? != object_field(phase, "kernel_time_ms")? {
+            return Err(anyhow!(
+                "kernel_stats phase `{}` kernel_time_ms must match cuda_layer phase",
+                required_string(stat, "phase")?
+            ));
+        }
         stats_h2d += required_u64(stat, "host_to_device_bytes")?;
         stats_d2h += required_u64(stat, "device_to_host_bytes")?;
         stats_invocations += required_u64(stat, "invocations")?;
