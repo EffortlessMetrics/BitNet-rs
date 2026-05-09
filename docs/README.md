@@ -79,6 +79,8 @@ Information-oriented. Look up exact behaviors, formats, and APIs.
 | Document | Purpose |
 |----------|---------|
 | [development/build-commands.md](development/build-commands.md) | Build matrix and cargo commands |
+| [development/CRATE_BOUNDARY_POLICY.md](development/CRATE_BOUNDARY_POLICY.md) | Rules for deciding when a design seam deserves a Cargo package boundary |
+| [development/REPO_SURFACES.md](development/REPO_SURFACES.md) | Target public crate surface, internal module-family map, and collapse waves |
 | [development/test-suite.md](development/test-suite.md) | Test organization and CI lanes |
 | [development/gpu-development.md](development/gpu-development.md) | CUDA development guide |
 | [development/validation-framework.md](development/validation-framework.md) | Quality assurance pipeline |
