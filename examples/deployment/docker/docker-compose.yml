@@ -13,7 +13,7 @@ services:
       - RUST_LOG=info
       - BITNET_CONFIG_PATH=/app/config/bitnet.toml
       - BITNET_MODEL_PATH=/app/models/bitnet-1.58b.gguf
-      - BITNET_API_KEYS=demo-key-123,prod-key-456
+      - BITNET_API_KEYS=${BITNET_API_KEYS:?Set BITNET_API_KEYS before running docker compose}
     volumes:
       - ./models:/app/models:ro
       - ./config:/app/config:ro

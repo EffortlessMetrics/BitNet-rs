@@ -885,16 +885,19 @@ impl ApiGateway {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-/// Generate a short pseudo-random request id.
+/// Generate a request id from a v4 UUID. Uses cryptographic randomness so the
+/// id cannot be predicted from request timing.
 fn generate_request_id() -> String {
-    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
-    format!("req-{ts:x}")
+    let uuid = uuid::Uuid::new_v4().simple().to_string();
+    format!("req-{uuid}")
 }
 
-/// Generate a pseudo-random API key.
+/// Generate an API key from a v4 UUID. Time-based generation was previously
+/// vulnerable to brute-force prediction by an attacker who knew the
+/// approximate creation time.
 fn generate_api_key() -> String {
-    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
-    format!("sk-bitnet-{ts:x}")
+    let uuid = uuid::Uuid::new_v4().simple().to_string();
+    format!("sk-bitnet-{uuid}")
 }
 
 /// Strip `"Bearer "` prefix from a header value.
@@ -1938,13 +1941,29 @@ mod tests {
     fn test_generate_request_id_format() {
         let id = generate_request_id();
         assert!(id.starts_with("req-"));
-        assert!(id.len() > 4);
+        // 32 hex chars (UUID v4 simple form) + "req-" prefix
+        assert_eq!(id.len(), 4 + 32);
+        assert!(id.chars().skip(4).all(|c| c.is_ascii_hexdigit()));
     }
 
     #[test]
     fn test_generate_api_key_format() {
         let key = generate_api_key();
         assert!(key.starts_with("sk-bitnet-"));
+        assert_eq!(key.len(), "sk-bitnet-".len() + 32);
+        assert!(key.chars().skip("sk-bitnet-".len()).all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_generate_ids_are_unique() {
+        // Two ids generated back-to-back must not collide. Under the previous
+        // timestamp-based implementation this was technically possible if both
+        // calls landed in the same nanosecond.
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..256 {
+            assert!(seen.insert(generate_request_id()));
+            assert!(seen.insert(generate_api_key()));
+        }
     }
 
     // ── Debug impls ────────────────────────────────────────────────────
