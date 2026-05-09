@@ -28,7 +28,6 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  CARGO_PROFILE_TEST_DEBUG: "0"
   RUST_BACKTRACE: 1
   RUST_LOG: warn
 
@@ -132,11 +131,6 @@ jobs:
         with:
           key: gpu-ci-cpu-test
 
-
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
-          sudo docker image prune --all --force
       - name: Run CPU tests
         run: |
           cargo test --workspace --locked --no-default-features --features cpu \
