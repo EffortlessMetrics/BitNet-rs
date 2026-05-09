@@ -1,0 +1,191 @@
+{
+  "artifact_kind": "apple_m4_dense_slm_trend_history",
+  "schema_version": "1.0.0",
+  "history_id": "apple-m4-dense-slm-release-trend-v1",
+  "generated_at": "2026-05-09T02:28:38Z",
+  "history_scope": "compact curated summaries for Apple M4 dense SLM release receipts",
+  "claim_boundary": {
+    "model_family": "dense_qwen_slm",
+    "machine_scope": "apple-m4-mac-mini only",
+    "backend_scope": "apple-m4-cpu-neon",
+    "bitnet_claim": false,
+    "full_metal_inference_claim": false,
+    "qk256_claim": false,
+    "broad_performance_claim": false
+  },
+  "retention_policy": {
+    "commit_model_binaries": false,
+    "commit_raw_receipt_bundles": false,
+    "store_compact_context_and_drift_only": true,
+    "source_receipts_remain_authoritative": true
+  },
+  "baseline_context": {
+    "machine_id": "apple-m4-mac-mini",
+    "model_id": "qwen2.5-0.5b-instruct-q8_0",
+    "model_display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "model_bytes": 675710816,
+    "model_architecture": "qwen2",
+    "model_quantization": "Q8_0",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2",
+    "requested_backend": "apple-m4-cpu-neon",
+    "selected_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "build_profile": "release",
+    "release_mode_observed": true,
+    "profile_set": "performance",
+    "required_profiles": [
+      "warm_16",
+      "warm_32",
+      "warm_64",
+      "warm_128"
+    ]
+  },
+  "advisory_bands": {
+    "decode_tok_s_lower_pct": 20.0,
+    "warm_prompt_tok_s_lower_pct": 25.0,
+    "time_to_first_token_mean_higher_pct": 25.0,
+    "total_session_ms_higher_pct": 25.0,
+    "peak_memory_mb_higher_pct": 15.0
+  },
+  "runs": [
+    {
+      "run_id": "2026-05-08-release-baseline",
+      "role": "baseline",
+      "timestamp": "2026-05-08T14:11:17.747394+00:00",
+      "source_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline.json",
+      "source_profile_receipts": {
+        "warm_16": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_16.json",
+        "warm_32": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_32.json",
+        "warm_64": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_64.json",
+        "warm_128": "ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline-profiles/warm_128.json"
+      },
+      "context_matches_baseline": true,
+      "quality_gate": {
+        "profile_quality_passed": true,
+        "quality_corpus_gate": "tracked separately by M4-SLM-REG-002"
+      },
+      "drift_summary": {
+        "baseline_run": true,
+        "compared_to_run_id": null,
+        "context_drift": false,
+        "quality_drift": false,
+        "timing_drift": "not_applicable_for_baseline",
+        "memory_drift": "not_applicable_for_baseline",
+        "threshold_maturity": "single_baseline_run_only"
+      },
+      "profiles": [
+        {
+          "profile_id": "warm_16",
+          "requested_max_new_tokens": 16,
+          "prompt_count": 3,
+          "generated_tokens": 34,
+          "quality_passed": true,
+          "model_loaded_once": true,
+          "tokenizer_loaded_once": true,
+          "cold_load_separated": true,
+          "timing": {
+            "model_load_ms": 3254.63,
+            "tokenizer_load_ms": 72.183,
+            "tokenize_ms": 111.201,
+            "prefill_ms": 5075.616,
+            "time_to_first_token_mean_ms": 1885.0,
+            "decode_total_ms": 2272.354,
+            "decode_generated_tok_s": 14.962,
+            "sampling_ms": 2.257,
+            "warm_prompt_generated_tok_s": 4.435,
+            "warm_prompt_wall_ms": 7666.475,
+            "total_session_ms": 12576.726
+          },
+          "memory": {
+            "peak_memory_mb": 3772.469,
+            "peak_memory_source": "getrusage.ru_maxrss"
+          }
+        },
+        {
+          "profile_id": "warm_32",
+          "requested_max_new_tokens": 32,
+          "prompt_count": 3,
+          "generated_tokens": 50,
+          "quality_passed": true,
+          "model_loaded_once": true,
+          "tokenizer_loaded_once": true,
+          "cold_load_separated": true,
+          "timing": {
+            "model_load_ms": 3118.775,
+            "tokenizer_load_ms": 49.173,
+            "tokenize_ms": 112.379,
+            "prefill_ms": 4935.186,
+            "time_to_first_token_mean_ms": 1779.333,
+            "decode_total_ms": 3264.305,
+            "decode_generated_tok_s": 15.317,
+            "sampling_ms": 3.395,
+            "warm_prompt_generated_tok_s": 5.947,
+            "warm_prompt_wall_ms": 8407.277,
+            "total_session_ms": 13117.047
+          },
+          "memory": {
+            "peak_memory_mb": 4009.078,
+            "peak_memory_source": "getrusage.ru_maxrss"
+          }
+        },
+        {
+          "profile_id": "warm_64",
+          "requested_max_new_tokens": 64,
+          "prompt_count": 3,
+          "generated_tokens": 82,
+          "quality_passed": true,
+          "model_loaded_once": true,
+          "tokenizer_loaded_once": true,
+          "cold_load_separated": true,
+          "timing": {
+            "model_load_ms": 3105.861,
+            "tokenizer_load_ms": 49.333,
+            "tokenize_ms": 114.555,
+            "prefill_ms": 4902.51,
+            "time_to_first_token_mean_ms": 1763.0,
+            "decode_total_ms": 5370.421,
+            "decode_generated_tok_s": 15.269,
+            "sampling_ms": 5.512,
+            "warm_prompt_generated_tok_s": 7.84,
+            "warm_prompt_wall_ms": 10459.755,
+            "total_session_ms": 15228.741
+          },
+          "memory": {
+            "peak_memory_mb": 4026.438,
+            "peak_memory_source": "getrusage.ru_maxrss"
+          }
+        },
+        {
+          "profile_id": "warm_128",
+          "requested_max_new_tokens": 128,
+          "prompt_count": 3,
+          "generated_tokens": 123,
+          "quality_passed": true,
+          "model_loaded_once": true,
+          "tokenizer_loaded_once": true,
+          "cold_load_separated": true,
+          "timing": {
+            "model_load_ms": 3174.666,
+            "tokenizer_load_ms": 54.097,
+            "tokenize_ms": 115.256,
+            "prefill_ms": 4932.381,
+            "time_to_first_token_mean_ms": 1775.333,
+            "decode_total_ms": 8032.375,
+            "decode_generated_tok_s": 15.313,
+            "sampling_ms": 8.202,
+            "warm_prompt_generated_tok_s": 9.347,
+            "warm_prompt_wall_ms": 13158.941,
+            "total_session_ms": 17896.347
+          },
+          "memory": {
+            "peak_memory_mb": 4033.422,
+            "peak_memory_source": "getrusage.ru_maxrss"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -141,6 +141,61 @@ Low disk is a hard preflight failure. The job writes a `preflight.json` receipt 
 
 The staged workflow is a shape, not an active guarantee. Until scheduled runner availability is confirmed, it proves only that the hardware regression command path and artifact contract are defined.
 
+## Compact Trend History
+
+`M4-SLM-REG-004` adds a compact trend-history artifact at:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/trend-history.json
+```
+
+The trend artifact is intentionally smaller than a receipt bundle. It records the baseline context, advisory drift bands, source receipt paths, per-profile timing and memory summaries, and drift status for each retained run. The source receipts remain authoritative; the trend file is only the compact review surface that lets future scheduled hardware runs append comparable summaries without committing model binaries or large raw artifact directories.
+
+Required context fields for every run:
+
+```text
+machine_id
+model_id
+model_sha256
+tokenizer_model
+tokenizer_pre
+requested_backend
+selected_backend
+runtime_api
+fallback_used
+build_profile
+release_mode_observed
+profile_set
+required_profiles
+```
+
+Required per-profile summary fields:
+
+```text
+profile_id
+requested_max_new_tokens
+prompt_count
+generated_tokens
+quality_passed
+model_loaded_once
+tokenizer_loaded_once
+cold_load_separated
+model_load_ms
+tokenizer_load_ms
+tokenize_ms
+prefill_ms
+time_to_first_token_mean_ms
+decode_total_ms
+decode_generated_tok_s
+sampling_ms
+warm_prompt_generated_tok_s
+warm_prompt_wall_ms
+total_session_ms
+peak_memory_mb
+```
+
+Each run also carries a `drift_summary` that separates context drift, quality drift, timing drift, memory drift, and threshold maturity. The initial committed history contains only the published 2026-05-08 release baseline, so its timing and memory drift status is `not_applicable_for_baseline`. Threshold tightening remains blocked until multiple matching release-mode receipts exist.
+
 ## Failure Classes
 
 Hard regression classes:

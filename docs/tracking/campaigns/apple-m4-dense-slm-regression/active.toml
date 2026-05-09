@@ -157,7 +157,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-REG-004"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-004-trend-history"
 stackable = false
 review_mode = "codex_premerge"
