@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T12:58:52Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-SLM-EX-002 after M4-SLM-EX-001 closeout merged.",
+  "Scope is limited to polishing the existing dense Apple M4 `bitnet mac chat` wrapper: prompt loop behavior, EOF handling, quiet default logs, streaming defaults, receipt controls, and clear model/tokenizer loaded-once status.",
+  "No BitNet local-answer quality, full Apple Metal inference, QK256, Neural Engine, MPSGraph model inference, MacBook work, or broad M4 performance claim is being added.",
+]

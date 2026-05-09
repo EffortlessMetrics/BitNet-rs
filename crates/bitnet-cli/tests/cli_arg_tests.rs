@@ -571,7 +571,10 @@ fn mac_chat_help_documents_resident_prompts() {
         .stdout(predicate::str::contains("resident Apple M4 CPU/NEON SLM session"))
         .stdout(predicate::str::contains("--prompt <TEXT>"))
         .stdout(predicate::str::contains("--stdin"))
-        .stdout(predicate::str::contains("--no-stream"));
+        .stdout(predicate::str::contains("--interactive"))
+        .stdout(predicate::str::contains("/exit"))
+        .stdout(predicate::str::contains("--no-stream"))
+        .stdout(predicate::str::contains("--no-turn-receipts"));
 }
 
 #[test]
@@ -589,6 +592,47 @@ fn mac_chat_requires_two_prompts_before_cache_lookup() {
             "--cache-dir",
             cache_str.as_str(),
         ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac chat requires at least two prompts"))
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+}
+
+#[test]
+fn mac_chat_rejects_stdin_interactive_conflict_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "chat", "--stdin", "--interactive"])
+        .write_stdin("What is 2+2? Answer briefly.\nName the capital of France.\n/exit\n")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--stdin and --interactive cannot be used together"))
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+}
+
+#[test]
+fn mac_chat_interactive_collects_two_prompts_before_cache_lookup() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "chat", "--interactive", "--cache-dir", cache_str.as_str()])
+        .write_stdin("What is 2+2? Answer briefly.\nName the capital of France.\n/exit\n")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"))
+        .stderr(predicate::str::contains("requires at least two prompts").not());
+}
+
+#[test]
+fn mac_chat_interactive_exit_with_one_prompt_fails_before_cache_lookup() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "chat", "--interactive", "--cache-dir", cache_str.as_str()])
+        .write_stdin("What is 2+2? Answer briefly.\n/exit\n")
         .assert()
         .failure()
         .stderr(predicate::str::contains("mac chat requires at least two prompts"))

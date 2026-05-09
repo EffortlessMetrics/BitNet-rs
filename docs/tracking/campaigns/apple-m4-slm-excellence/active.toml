@@ -76,7 +76,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EX-002"
-status = "ready"
+status = "pr_open"
+pr = 4280
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-002-chat-polish"
 stackable = false
 review_mode = "codex_premerge"
@@ -94,6 +95,7 @@ commands = [
 ]
 allowed_paths = [
   "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-models/src/bitnet.rs",
   "crates/bitnet-cli/tests/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-slm-excellence/**",

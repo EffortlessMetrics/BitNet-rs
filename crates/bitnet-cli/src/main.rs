@@ -1227,7 +1227,17 @@ async fn async_main() -> Result<()> {
     }
 
     // Setup logging
-    setup_logging(&config, cli.log_level.as_deref())?;
+    let command_default_log_level =
+        if cli.log_level.is_none() && std::env::var_os("BITNET_LOG_LEVEL").is_none() {
+            match &cli.command {
+                #[cfg(feature = "full-cli")]
+                Some(Commands::Mac(cmd)) => cmd.default_log_level(),
+                _ => None,
+            }
+        } else {
+            None
+        };
+    setup_logging(&config, cli.log_level.as_deref().or(command_default_log_level))?;
 
     let startup_contract_report =
         evaluate_and_emit(RuntimeComponent::Cli, ContractPolicy::Observe)?;
@@ -7305,12 +7315,33 @@ pub(crate) struct SlmWarmSessionOutput {
     pub(crate) stream_tokens: bool,
     pub(crate) progress: bool,
     pub(crate) quiet: bool,
+    pub(crate) write_prompt_receipts: bool,
+    pub(crate) interactive_prompt_collection: bool,
 }
 
 #[cfg(feature = "full-cli")]
 impl SlmWarmSessionOutput {
     pub(crate) const fn new(stream_tokens: bool, progress: bool, quiet: bool) -> Self {
-        Self { stream_tokens, progress, quiet }
+        Self {
+            stream_tokens,
+            progress,
+            quiet,
+            write_prompt_receipts: true,
+            interactive_prompt_collection: false,
+        }
+    }
+
+    pub(crate) const fn with_prompt_receipts(mut self, write_prompt_receipts: bool) -> Self {
+        self.write_prompt_receipts = write_prompt_receipts;
+        self
+    }
+
+    pub(crate) const fn with_interactive_prompt_collection(
+        mut self,
+        interactive_prompt_collection: bool,
+    ) -> Self {
+        self.interactive_prompt_collection = interactive_prompt_collection;
+        self
     }
 
     fn progress_enabled(self) -> bool {
@@ -7529,12 +7560,16 @@ async fn run_slm_warm_session(
             "{}-prompts",
             json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("slm-warm-session")
         ));
-    std::fs::create_dir_all(&receipt_dir)
-        .with_context(|| format!("Failed to create {}", receipt_dir.display()))?;
-    output.status(format!(
-        "warm-session: writing per-prompt receipts under {}",
-        receipt_dir.display()
-    ));
+    if output.write_prompt_receipts {
+        std::fs::create_dir_all(&receipt_dir)
+            .with_context(|| format!("Failed to create {}", receipt_dir.display()))?;
+        output.status(format!(
+            "warm-session: writing per-prompt receipts under {}",
+            receipt_dir.display()
+        ));
+    } else {
+        output.status("warm-session: per-prompt receipt files disabled; aggregate receipt only");
+    }
 
     let mut prompt_receipts = Vec::with_capacity(prompt_inputs.len());
     let mut prompt_summaries = Vec::with_capacity(prompt_inputs.len());
@@ -7782,6 +7817,8 @@ async fn run_slm_warm_session(
             index + 1,
             sanitize_warm_session_prompt_stem(prompt)
         ));
+        let prompt_receipt_path_json =
+            output.write_prompt_receipts.then(|| prompt_receipt_path.display().to_string());
         let prompt_total_alloc = AllocationAuditSnapshot::delta_since(prompt_alloc_start);
         let prompt_receipt_construct_alloc_start = AllocationAuditSnapshot::current();
         let mut prompt_receipt = serde_json::json!({
@@ -7789,7 +7826,7 @@ async fn run_slm_warm_session(
             "artifact_kind": "slm_apple_m4_warm_session_prompt",
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "session_artifact_path": json_out.display().to_string(),
-            "artifact_path": prompt_receipt_path.display().to_string(),
+            "artifact_path": prompt_receipt_path_json,
             "prompt_index": index,
             "case_id": prompt_input.case_id.as_str(),
             "repeat_index": prompt_input.repeat_index,
@@ -7895,9 +7932,13 @@ async fn run_slm_warm_session(
                 "progress_enabled": output.progress_enabled(),
                 "quiet_default_logs": !output.progress,
                 "quiet_requested": output.quiet,
+                "interactive_prompt_collection": output.interactive_prompt_collection,
+                "per_turn_receipts_enabled": output.write_prompt_receipts,
+                "aggregate_receipt_at_exit": true,
                 "status_stream": "stderr",
                 "token_stream": if output.stream_tokens { "stdout" } else { "disabled" },
                 "time_to_first_token_receipt": first_token_ms.is_some(),
+                "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
                 "clear_failure_messages": true,
             },
             "speedup_claim": false,
@@ -7937,14 +7978,20 @@ async fn run_slm_warm_session(
                 },
             );
         }
-        write_json_output_silent(&prompt_receipt_path, &prompt_receipt)?;
+        if output.write_prompt_receipts {
+            write_json_output_silent(&prompt_receipt_path, &prompt_receipt)?;
+        }
         prompt_summaries.push(serde_json::json!({
             "prompt_index": index,
             "case_id": prompt_input.case_id.as_str(),
             "repeat_index": prompt_input.repeat_index,
             "prompt": prompt,
             "text": prompt_receipt["text"].clone(),
-            "receipt_path": prompt_receipt_path.display().to_string(),
+            "receipt_path": if output.write_prompt_receipts {
+                serde_json::Value::String(prompt_receipt_path.display().to_string())
+            } else {
+                serde_json::Value::Null
+            },
             "generated_tokens": generated_tokens.len(),
             "generated_token_ids": generated_tokens.clone(),
             "quality": prompt_receipt["quality"].clone(),
@@ -7959,7 +8006,9 @@ async fn run_slm_warm_session(
             "operator_ux": prompt_receipt["operator_ux"].clone(),
             "allocation_audit": prompt_receipt["allocation_audit"].clone(),
         }));
-        prompt_receipts.push(prompt_receipt_path.display().to_string());
+        if output.write_prompt_receipts {
+            prompt_receipts.push(prompt_receipt_path.display().to_string());
+        }
         output.status(format!(
             "warm-session: prompt {}/{} completed; first_token_ms={:?}, generated_tokens={}",
             index + 1,
@@ -8004,8 +8053,13 @@ async fn run_slm_warm_session(
             "model_loaded_once": true,
             "tokenizer_loaded_once": true,
             "prompt_count": prompt_inputs.len(),
-            "per_prompt_receipt_dir": receipt_dir.display().to_string(),
+            "per_prompt_receipt_dir": if output.write_prompt_receipts {
+                serde_json::Value::String(receipt_dir.display().to_string())
+            } else {
+                serde_json::Value::Null
+            },
             "per_prompt_receipts": prompt_receipts,
+            "per_prompt_receipts_enabled": output.write_prompt_receipts,
             "reuse_scope": "resident_session",
             "session_owned_buffers": true,
             "prompt_token_buffer_reused": true,
@@ -8062,9 +8116,13 @@ async fn run_slm_warm_session(
             "progress_enabled": output.progress_enabled(),
             "quiet_default_logs": !output.progress,
             "quiet_requested": output.quiet,
+            "interactive_prompt_collection": output.interactive_prompt_collection,
+            "per_turn_receipts_enabled": output.write_prompt_receipts,
+            "aggregate_receipt_at_exit": true,
             "status_stream": "stderr",
             "token_stream": if output.stream_tokens { "stdout" } else { "disabled" },
             "time_to_first_token_receipts": true,
+            "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
             "clear_failure_messages": true,
         },
         "backend": {

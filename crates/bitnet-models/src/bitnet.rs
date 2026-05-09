@@ -40,12 +40,14 @@ impl BitNetModel {
         raw_tensors: HashMap<String, CandleTensor>,
         device: Device,
     ) -> Result<Self> {
-        eprintln!(
-            "DEBUG from_gguf: Received config: hidden={}, n_heads={}, n_kv_heads={}",
-            config.model.hidden_size, config.model.num_heads, config.model.num_key_value_heads
+        tracing::debug!(
+            "from_gguf: received config: hidden={}, n_heads={}, n_kv_heads={}",
+            config.model.hidden_size,
+            config.model.num_heads,
+            config.model.num_key_value_heads
         );
-        eprintln!(
-            "DEBUG from_gguf: Received {} tensors, {} raw QK256 tensors",
+        tracing::debug!(
+            "from_gguf: received {} tensors, {} raw QK256 tensors",
             tensors.len(),
             raw_tensors.len()
         );
