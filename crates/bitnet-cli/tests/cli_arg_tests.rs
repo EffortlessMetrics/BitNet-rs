@@ -1241,7 +1241,7 @@ fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate() {
         .assert()
         .success()
         .stdout(predicate::str::contains("slm_apple_m4_warm_session"))
-        .stdout(predicate::str::contains("\"prompt_count\": 10"));
+        .stdout(predicate::str::contains("\"prompt_count\": 14"));
 }
 
 #[test]
@@ -1643,6 +1643,16 @@ fn dense_quality_warm_session_receipt() -> serde_json::Value {
             "Return the answer as 'Answer: blue' for this question: What color is a clear daytime sky?",
             vec![16141, 25, 6303, 151645],
         ),
+        (
+            "summarize_rust_traits",
+            "Summarize in three words: Rust is fast, safe, and reliable.",
+            vec![14238, 510, 8545, 11, 6827],
+        ),
+        (
+            "rewrite_cache_sentence",
+            "Rewrite as a short plain sentence: The model cache is healthy.",
+            vec![785, 1614, 6639, 374, 9811],
+        ),
     ];
     let mut prompts = Vec::new();
     let mut groups = Vec::new();
@@ -1701,12 +1711,12 @@ fn dense_quality_warm_session_receipt() -> serde_json::Value {
         "session": {
             "model_loaded_once": true,
             "tokenizer_loaded_once": true,
-            "prompt_count": 10
+            "prompt_count": 14
         },
         "corpus": {
             "artifact_kind": "apple_m4_slm_quality_corpus",
-            "name": "apple-m4-slm-quality-determinism-v1",
-            "case_count": 5,
+            "name": "apple-m4-slm-quality-determinism-v2",
+            "case_count": 7,
             "repeat_runs": 2
         },
         "generation": {
@@ -1728,7 +1738,7 @@ fn dense_quality_warm_session_receipt() -> serde_json::Value {
         "determinism": {
             "checked": true,
             "passed": true,
-            "repeated_prompt_groups": 5,
+            "repeated_prompt_groups": 7,
             "groups": groups
         },
         "prompts": prompts,
@@ -1967,7 +1977,7 @@ fn slm_warm_session_accepts_corpus_without_prompt_before_loading_model() {
 }
 
 #[test]
-fn apple_m4_slm_quality_corpus_tracks_five_bounded_cases() {
+fn apple_m4_slm_quality_corpus_tracks_seven_bounded_cases() {
     let corpus_path = workspace_path("ci/quality/apple-m4-slm-quality-corpus.yaml");
     let corpus: serde_yaml::Value =
         serde_yaml::from_slice(&std::fs::read(corpus_path).expect("read corpus"))
@@ -1976,12 +1986,15 @@ fn apple_m4_slm_quality_corpus_tracks_five_bounded_cases() {
     let ids: Vec<_> = cases.iter().filter_map(|case| case["id"].as_str()).collect();
 
     assert_eq!(corpus["artifact_kind"].as_str(), Some("apple_m4_slm_quality_corpus"));
-    assert_eq!(cases.len(), 5);
+    assert_eq!(corpus["name"].as_str(), Some("apple-m4-slm-quality-determinism-v2"));
+    assert_eq!(cases.len(), 7);
     assert!(ids.contains(&"math_2_plus_2"));
     assert!(ids.contains(&"capital_france"));
     assert!(ids.contains(&"rust_sentence"));
     assert!(ids.contains(&"ready_instruction"));
     assert!(ids.contains(&"answer_prefix_blue"));
+    assert!(ids.contains(&"summarize_rust_traits"));
+    assert!(ids.contains(&"rewrite_cache_sentence"));
 }
 
 #[test]

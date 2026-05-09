@@ -92,8 +92,8 @@ bitnet mac receipts-check target/apple-m4-slm-regression/slm-quality-corpus.json
 For `slm_apple_m4_warm_session` receipts that identify `corpus.artifact_kind = "apple_m4_slm_quality_corpus"`, the checker treats quality and determinism as correctness gates before any timing drift is meaningful. It requires:
 
 ```text
-corpus.name = apple-m4-slm-quality-determinism-v1
-case_count = 5
+corpus.name = apple-m4-slm-quality-determinism-v2
+case_count = 7
 repeat_runs >= 2
 deterministic greedy top-1 generation
 model sha256 present
@@ -134,7 +134,7 @@ When explicitly dispatched with `enable_run=true`, the staged job:
 ```text
 checks free disk before fetching or validating the model
 fetches and verifies the supported dense Qwen model cache artifact
-runs the five-prompt quality/determinism corpus
+runs the seven-prompt quality/determinism corpus
 runs release-mode warm_16 / warm_32 / warm_64 / warm_128 performance receipts
 runs receipts-check with the published baseline as an advisory comparison
 uploads the receipt bundle as a workflow artifact
@@ -209,7 +209,7 @@ hardware receipts accumulate enough repeated evidence.
 Hard regression classes:
 
 - Model, tokenizer, cache verification, profile, backend, fallback, or release-mode context does not match.
-- The five-prompt dense SLM quality corpus fails valid UTF-8, non-empty text, non-degenerate output, or deterministic greedy token identity.
+- The seven-prompt dense SLM quality corpus fails valid UTF-8, non-empty text, non-degenerate output, or deterministic greedy token identity.
 - Required receipt fields for timing, token counts, backend routing, fallback, model identity, or tokenizer authority are missing.
 - A receipt claims BitNet quality, full Apple Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance from dense SLM evidence.
 

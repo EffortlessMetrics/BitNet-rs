@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T14:25:07Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-007"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-SLM-EX-007 after the M4-SLM-EX-006 closeout merged.",
+  "The corpus is expanded from five to seven deterministic prompt groups by adding bounded summarization and rewrite cases.",
+  "Live M4 validation wrote target/apple-m4-slm-excellence/M4-SLM-EX-007/quality-corpus-v2.json with prompt_count=14, generated_tokens=152, fallback_used=false, quality_summary.passed=true, and determinism.passed=true.",
+  "The receipt remains local under target/ and no model binary is committed.",
+]

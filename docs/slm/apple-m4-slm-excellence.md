@@ -206,6 +206,10 @@ Expand the local smoke surface without turning it into a benchmark suite:
 Acceptance requires valid UTF-8, non-empty output, non-degenerate output,
 stable greedy IDs where expected, and validated receipts.
 
+The v2 corpus is `apple-m4-slm-quality-determinism-v2`. It keeps the original
+five deterministic groups and adds bounded summarization and rewrite prompts,
+for seven cases repeated twice in one warm session.
+
 ### M4-SLM-EX-008: Long-Session Soak
 
 Record longer resident behavior:
