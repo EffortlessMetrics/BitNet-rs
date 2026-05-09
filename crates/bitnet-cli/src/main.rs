@@ -134,7 +134,8 @@ use commands::{
     DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
     DenseGgufMlpActivationCudaParityCommand, DenseGgufMlpActivationFixtureCommand,
     DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand,
-    DenseGgufRopeCudaParityCommand, InferenceCommand, InspectCommand, ReceiptsCommand,
+    DenseGgufRopeCudaParityCommand, FirstTokenDivergenceCommand, InferenceCommand, InspectCommand,
+    ReceiptsCommand,
     ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
@@ -586,6 +587,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Validate an external-reference divergence artifact
     ReferenceCompare(Box<ReferenceCompareCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Classify first-token divergence from external reference and 258V CPU receipts
+    FirstTokenDivergence(Box<FirstTokenDivergenceCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Extract one dense GGUF linear fixture and run strict CUDA parity diagnostics
@@ -1419,6 +1424,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::AnswerParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::ReferenceCompare(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::FirstTokenDivergence(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufLinearParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

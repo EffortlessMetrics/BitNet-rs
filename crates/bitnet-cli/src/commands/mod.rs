@@ -9,6 +9,7 @@ pub mod convert;
 pub mod dense_gguf_linear_parity;
 #[allow(dead_code)]
 pub mod eval;
+pub mod first_token_divergence;
 pub mod inference;
 pub mod inspect;
 pub mod receipts;
@@ -30,6 +31,7 @@ pub use dense_gguf_linear_parity::{
     DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand,
     DenseGgufRopeCudaParityCommand,
 };
+pub use first_token_divergence::FirstTokenDivergenceCommand;
 pub use inference::InferenceCommand;
 pub use inspect::InspectCommand;
 pub use receipts::ReceiptsCommand;
