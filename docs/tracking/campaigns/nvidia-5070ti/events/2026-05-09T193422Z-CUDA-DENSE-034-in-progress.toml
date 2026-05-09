@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T19:34:22Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-034"
+event = "in_progress"
+previous_status = "proposed"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-034-integrated-parity-tracker"
+
+notes = [
+  "Started CUDA-DENSE-034 as a tracker/report contract for integrated dense GGUF one-layer CUDA parity after CUDA-DENSE-033 merged the CPU reference harness.",
+  "This tracker-only slice defines the future implementation boundary: compare the full CUDA-routable layer pass against the CPU reference, record per-op kernel and transfer evidence, and keep dense GGUF inference, Qwen token/decode/chat, speedup, persistent/full residency, BitNet packed proof, and server claims false.",
+]

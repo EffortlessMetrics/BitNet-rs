@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T19:36:33Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-034"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-034-integrated-parity-tracker"
+pr = 4324
+head_sha = "f84067ce994e2816e461a963f69309ee01bd7d35"
+
+notes = [
+  "Opened PR #4324 to define the CUDA-DENSE-034 integrated one-layer CUDA parity contract.",
+  "The PR is docs/tracker-only and does not implement CUDA integrated layer execution, dense GGUF inference, Qwen token/decode/chat, speedup, persistent/full residency, BitNet packed proof, server behavior, or CUDA kernel math changes.",
+]
