@@ -66,9 +66,9 @@ but blocked until an accepted BitNet artifact exists.
 |---|---|---|
 | M4-SLM-EX-001 | merged | Add `bitnet mac doctor` as a one-command health verdict for cache, disk, smoke, receipt, backend, fallback, and unsupported-backend behavior. |
 | M4-SLM-EX-002 | merged | Polish `bitnet mac chat` interactive behavior, streaming defaults, EOF/Ctrl-C handling, and receipt options. |
-| M4-SLM-EX-003 | ready | Reduce time-to-first-token while preserving greedy token IDs and quality corpus behavior. |
-| M4-SLM-EX-004 | pending | Clean hot-loop allocations and document allocation budget without changing receipt schema. |
-| M4-SLM-EX-005 | pending | Document dense model support matrix for default and leading candidate SLMs: default, supported, candidate, and rejected model states. |
+| M4-SLM-EX-003 | merged | Reduce time-to-first-token while preserving greedy token IDs and quality corpus behavior. |
+| M4-SLM-EX-004 | merged | Clean hot-loop allocations and document allocation budget without changing receipt schema. |
+| M4-SLM-EX-005 | in_progress | Document dense model support matrix for default and leading candidate SLMs: default, supported, candidate, diagnostic-only, and rejected model states. |
 | M4-SLM-EX-006 | pending | Add a second supported dense model only after reference and Rust M4 quality gates pass. |
 | M4-SLM-EX-007 | pending | Expand to quality corpus 2.0 for small local-answer behavior. |
 | M4-SLM-EX-008 | pending | Record long resident-session soak behavior for memory and timing drift. |

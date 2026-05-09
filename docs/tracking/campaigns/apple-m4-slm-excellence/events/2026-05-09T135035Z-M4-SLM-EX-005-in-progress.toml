@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T13:50:35Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-005"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-SLM-EX-005 after the M4-SLM-EX-004 closeout merged.",
+  "The model matrix is docs/control-plane work only: it keeps the current Qwen2.5 Q8_0 default separate from reference, candidate, diagnostic-only, and rejected dense SLM states.",
+  "No new model is accepted, downloaded, or executed; BitNet, full Apple Metal inference, QK256, Neural Engine, MPSGraph, MacBook work, and broad M4 performance claims remain out of scope.",
+]
