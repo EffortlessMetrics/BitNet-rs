@@ -24,8 +24,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-CONT-001"
-status = "pr_open"
+status = "merged"
 pr = 4253
+merge_sha = "d1cddbf97da62663b48658d0e68b8d19a80d4fb3"
 branch = "codex/apple-m4-continuity/M4-CONT-001-mac-chat"
 stackable = false
 review_mode = "codex_premerge"
@@ -71,7 +72,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CONT-002"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-continuity/M4-CONT-002-golden-smoke"
 stackable = false
 review_mode = "codex_premerge"
