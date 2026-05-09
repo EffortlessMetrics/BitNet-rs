@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T17:08:48Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-021"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4315
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-021-reference-instrumentation"
+head_sha = "2cf3983b73332fd97ae1467032988c778ec795bc"
+summary = "Opened CPU258V-021 to classify the external BitNet reference token/logit instrumentation boundary."
+notes = [
+  "The live 258V artifact records four generated-text cases, zero direct reference generated-token ID cases, and zero first-token top-k/logit cases.",
+  "The PR adds an offline CLI receipt so missing external token/logit fields are explicit blockers rather than inferred parity.",
+  "The PR does not claim generated-token-ID parity, first-token logits parity, answer quality, speed, Arc 140V execution, Intel NPU execution, or QK256 decode correctness.",
+]

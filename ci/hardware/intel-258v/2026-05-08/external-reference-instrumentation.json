@@ -1,0 +1,150 @@
+{
+  "artifact_kind": "bitnet_external_reference_instrumentation_probe",
+  "cases": [
+    {
+      "case_id": "math_2_plus_2",
+      "decoded_first_token_available": false,
+      "first_generated_token_id_available": false,
+      "first_token_topk_logits_available": false,
+      "generated_token_ids_available": false,
+      "missing_reference_fields": [
+        "first_generated_token_id",
+        "decoded_first_token",
+        "generated_token_ids",
+        "first_token_top_k_logits"
+      ],
+      "reference_generated_text_available": true
+    },
+    {
+      "case_id": "say_ok",
+      "decoded_first_token_available": false,
+      "first_generated_token_id_available": false,
+      "first_token_topk_logits_available": false,
+      "generated_token_ids_available": false,
+      "missing_reference_fields": [
+        "first_generated_token_id",
+        "decoded_first_token",
+        "generated_token_ids",
+        "first_token_top_k_logits"
+      ],
+      "reference_generated_text_available": true
+    },
+    {
+      "case_id": "capital_france",
+      "decoded_first_token_available": false,
+      "first_generated_token_id_available": false,
+      "first_token_topk_logits_available": false,
+      "generated_token_ids_available": false,
+      "missing_reference_fields": [
+        "first_generated_token_id",
+        "decoded_first_token",
+        "generated_token_ids",
+        "first_token_top_k_logits"
+      ],
+      "reference_generated_text_available": true
+    },
+    {
+      "case_id": "yes_no_water",
+      "decoded_first_token_available": false,
+      "first_generated_token_id_available": false,
+      "first_token_topk_logits_available": false,
+      "generated_token_ids_available": false,
+      "missing_reference_fields": [
+        "first_generated_token_id",
+        "decoded_first_token",
+        "generated_token_ids",
+        "first_token_top_k_logits"
+      ],
+      "reference_generated_text_available": true
+    }
+  ],
+  "claim": "cpu258v_external_reference_evidence_boundary",
+  "claim_boundary": {
+    "may_claim": [
+      "The external reference evidence boundary was classified for generated-token ID and first-token logits/top-k availability.",
+      "Missing reference token/logit fields are explicit blockers rather than inferred parity.",
+      "Runner help text can be recorded as capability evidence when supplied."
+    ],
+    "must_not_claim": [
+      "generated-token-ID parity when direct reference generated IDs are unavailable",
+      "first-token logits parity when reference logits are unavailable",
+      "BitNet answer quality is newly proven",
+      "CPU speed or sustained throughput",
+      "Arc 140V execution or acceleration",
+      "Intel NPU execution or acceleration",
+      "QK256 decode correctness"
+    ]
+  },
+  "classification": {
+    "classification": "reference_runner_requires_instrumentation",
+    "evidence_boundary": "external_reference_generated_text_exists_but_direct_generated_token_ids_or_first_token_logits_are_missing",
+    "first_divergence_stage": "reference_instrumentation",
+    "next_required_evidence": "capture direct reference generated-token IDs and first-token logits/top-k, or patch/script the reference runner to expose them without text re-tokenization"
+  },
+  "fallback_used": false,
+  "inputs": {
+    "external_reference": "ci\\hardware\\intel-258v\\2026-05-08\\external-first-token-reference.json",
+    "runner_help": null
+  },
+  "machine_id": "intel-258v",
+  "model": {
+    "file": "ggml-model-i2_s.gguf",
+    "local_path": "C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "local_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "proof_stage": "external_reference_instrumentation_classified",
+  "reference": {
+    "bitnet_cpp_commit": "01eb415772c342d9f20dc42772f1583ae1e5b102",
+    "command_shape": "llama-cli.exe -m <ggml-model-i2_s.gguf> --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -ngl 0 -t 8 -c 4096 -n <max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt --no-warmup -p \"User: <question><|eot_id|>Assistant:\"",
+    "generated_token_ids_available": false,
+    "llama_cpp_submodule_commit": "1f86f058de0c3f4098dedae2ae8653c335c868a1",
+    "logits_available": false,
+    "missing_logits_status": "reference report does not expose logits or top-k; do not infer logits parity",
+    "runner": "Microsoft BitNet.cpp / llama-cli"
+  },
+  "runner_capabilities": {
+    "advertised_generated_token_dump": false,
+    "advertised_logits_dump": false,
+    "advertised_prompt_token_dump": false,
+    "notes": [
+      "No runner help text was supplied, so direct runner capability support is unverified."
+    ],
+    "runner_help_provided": false
+  },
+  "schema_version": "1.0.0",
+  "summary": {
+    "cases_total": 4,
+    "cases_with_decoded_first_token": 0,
+    "cases_with_first_generated_token_id": 0,
+    "cases_with_first_token_topk_logits": 0,
+    "cases_with_generated_text": 4,
+    "cases_with_generated_token_ids": 0,
+    "classification": "reference_runner_requires_instrumentation",
+    "first_token_logits_available": false,
+    "generated_token_ids_available": false,
+    "next_required_evidence": "capture direct reference generated-token IDs and first-token logits/top-k, or patch/script the reference runner to expose them without text re-tokenization"
+  },
+  "timestamp": "2026-05-09T17:04:52.685479900+00:00",
+  "tokenizer": {
+    "bos_token": "<|begin_of_text|>",
+    "bos_token_id": 128000,
+    "eos_token": "<|eot_id|>",
+    "eos_token_id": 128009,
+    "hf_base_vocab_size": 128000,
+    "hf_tokenizers_version": "0.22.2",
+    "hf_total_token_count": 128256,
+    "hf_transformers_version": "5.8.0",
+    "local_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "override_kv": "tokenizer.ggml.pre=str:llama-bpe",
+    "pretokenizer_authority": "externally_supplied_llama_bpe",
+    "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "source_repo": "microsoft/bitnet-b1.58-2B-4T",
+    "source_revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127"
+  },
+  "validation": {
+    "failed_rules": [],
+    "passed": true
+  }
+}
