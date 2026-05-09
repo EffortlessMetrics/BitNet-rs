@@ -71,7 +71,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-REG-002"
-status = "in_progress"
+status = "pr_open"
+pr = 4166
 branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-002-quality-drift"
 stackable = false
 review_mode = "codex_premerge"

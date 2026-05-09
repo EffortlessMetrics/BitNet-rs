@@ -20,7 +20,7 @@
 | apple-m4 | M4-016 | M4-015 | merged |
 | apple-m4 | M4-017 | M4-016 | merged |
 | apple-m4 | M4-018 | M4-017 | merged |
-| apple-m4-dense-slm-regression | M4-SLM-REG-002 | M4-SLM-REG-001 | in_progress |
+| apple-m4-dense-slm-regression | M4-SLM-REG-002 | M4-SLM-REG-001 | pr_open |
 | apple-m4-dense-slm-regression | M4-SLM-REG-003 | M4-SLM-REG-002 | proposed |
 | apple-m4-dense-slm-regression | M4-SLM-REG-004 | M4-SLM-REG-003 | proposed |
 | apple-m4-dense-slm-regression | M4-SLM-REG-005 | M4-SLM-REG-004 | proposed |

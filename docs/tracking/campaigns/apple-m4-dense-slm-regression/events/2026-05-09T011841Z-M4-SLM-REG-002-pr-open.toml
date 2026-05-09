@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T01:18:41Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-002"
+event = "pr_open"
+pr = 4166
+head_sha = "eed6f7bd7d3f8ce1a14157e12952d49141a08835"
+actor = "codex"
+
+notes = [
+  "Opened PR #4166 for the dense SLM quality and deterministic greedy drift gate.",
+  "The checker now treats the five-prompt Apple M4 dense SLM warm-session corpus as a correctness gate before timing drift is meaningful.",
+  "No BitNet, QK256, full Metal inference, Neural Engine, MPSGraph model inference, or broad performance claim is made.",
+]
