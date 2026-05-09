@@ -1816,10 +1816,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-010"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-010-live-linear-receipt"
 pr = 4207
-head_sha = "48177506048dcf7a95c9b818e8f46aa4bad4983a"
+head_sha = "87c006e483e0b17e6e4d8187b7827933d4d402c9"
+merge_sha = "fc38faecfe5ba637da09decfe472160efb51e95b"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
