@@ -1239,7 +1239,52 @@ must_not_claim = [
   "CPU speed or sustained throughput is proven.",
   "Arc 140V or Intel NPU execution is proven.",
   "Packed QK256 decode semantics are fixed.",
-  "Prompt/token parity with official HF or bitnet.cpp token IDs is proven before CPU258V-020.",
+  "Prompt/token parity with official HF or bitnet.cpp token IDs is proven before CPU258V-018.",
+]
+
+[[work_item]]
+id = "CPU258V-018"
+status = "pr_open"
+pr = 4178
+branch = "codex/lunar-lake/CPU258V-018-hf-prompt-token-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-017"]
+acceptance = "Compare official HF AutoTokenizer.apply_chat_template rendered prompts and token IDs against BitNet-rs metadata-authoritative prompt-authority-audit output for math_2_plus_2, say_ok, capital_france, and yes_no_water, recording mismatch indices and preserving no inference, logits, answer-quality, speed, Arc/NPU, or QK256 claims."
+commands = [
+  "rustfmt --check --edition 2024 --config skip_children=true crates/bitnet-cli/src/main.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet prompt_authority_reference_parity -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- prompt-authority-audit --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --prompt \"What is 2+2? Answer with only the number.\" --reference-source hf_apply_chat_template --reference-rendered-prompt \"User: What is 2+2? Answer with only the number.<|eot_id|>Assistant: \" --reference-prompt-ids 1502,25,3639,374,220,17,10,17,30,22559,449,1193,279,1396,13,128009,72803,25,220 --json-out target/cpu258v-018/prompt-authority-audit-hf-math.json",
+  "python -c \"import json; p='ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity.json'; a=json.load(open(p, encoding='utf-8')); assert a['artifact_kind']=='bitnet_hf_prompt_token_reference_parity'; assert a['summary']['first_divergence_stage']=='prompt'\"",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "HF AutoTokenizer.apply_chat_template rendered prompts and token IDs were compared against BitNet-rs metadata-authoritative prompt authority output for fixed 258V prompts.",
+  "The current external HF reference comparison identifies a prompt-stage mismatch: HF keeps the trailing generation-prompt space and does not prepend BOS, while BitNet-rs metadata authority prepends BOS and omits that trailing space.",
+]
+must_not_claim = [
+  "BitNet answer quality is proven.",
+  "First-token logits or model inference parity is proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Packed QK256 decode semantics are fixed.",
 ]
 
 [[work_item]]

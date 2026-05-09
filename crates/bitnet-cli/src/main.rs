@@ -509,6 +509,18 @@ enum Commands {
         #[arg(long = "system", value_name = "TEXT")]
         system_prompt: Option<String>,
 
+        /// External reference label for prompt/token parity, such as hf_apply_chat_template
+        #[arg(long)]
+        reference_source: Option<String>,
+
+        /// External reference rendered prompt to compare against metadata-authority rendering
+        #[arg(long)]
+        reference_rendered_prompt: Option<String>,
+
+        /// External reference prompt token IDs, comma-separated
+        #[arg(long, value_delimiter = ',', value_name = "IDS")]
+        reference_prompt_ids: Vec<u32>,
+
         /// Output JSON receipt path
         #[arg(long)]
         json_out: Option<std::path::PathBuf>,
@@ -1510,10 +1522,22 @@ async fn async_main() -> Result<()> {
             tokenizer,
             prompt,
             system_prompt,
+            reference_source,
+            reference_rendered_prompt,
+            reference_prompt_ids,
             json_out,
         }) => {
-            handle_prompt_authority_audit_command(model, tokenizer, prompt, system_prompt, json_out)
-                .await
+            handle_prompt_authority_audit_command(
+                model,
+                tokenizer,
+                prompt,
+                system_prompt,
+                reference_source,
+                reference_rendered_prompt,
+                reference_prompt_ids,
+                json_out,
+            )
+            .await
         }
         Some(Commands::Score(args)) => score::run_score(&args).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
@@ -1798,6 +1822,9 @@ async fn handle_prompt_authority_audit_command(
     tokenizer_path: Option<std::path::PathBuf>,
     prompt: String,
     system_prompt: Option<String>,
+    reference_source: Option<String>,
+    reference_rendered_prompt: Option<String>,
+    reference_prompt_ids: Vec<u32>,
     json_out: Option<std::path::PathBuf>,
 ) -> Result<()> {
     use bitnet_models::GgufReader;
@@ -1900,6 +1927,13 @@ async fn handle_prompt_authority_audit_command(
         &current_ids,
         &metadata_ids,
     );
+    let reference_parity = prompt_audit_reference_parity_json(
+        reference_source,
+        reference_rendered_prompt,
+        &reference_prompt_ids,
+        &metadata_rendered,
+        metadata_ids.as_deref(),
+    );
 
     let chat_template_source = if gguf_chat_template.is_some() {
         "gguf"
@@ -1961,6 +1995,7 @@ async fn handle_prompt_authority_audit_command(
             "first_mismatch_index": first_mismatch_index,
             "notes": notes,
         },
+        "reference_parity": reference_parity,
         "fallback_used": false,
         "claim_boundary": {
             "prompt_token_authority_only": true,
@@ -1973,6 +2008,47 @@ async fn handle_prompt_authority_audit_command(
 
     write_json_output(json_out.as_ref(), &receipt)?;
     Ok(())
+}
+
+fn prompt_audit_reference_parity_json(
+    reference_source: Option<String>,
+    reference_rendered_prompt: Option<String>,
+    reference_prompt_ids: &[u32],
+    bitnet_rendered_prompt: &str,
+    bitnet_prompt_ids: Option<&[u32]>,
+) -> serde_json::Value {
+    let rendered_prompt_available = reference_rendered_prompt.is_some();
+    let prompt_token_ids_available = !reference_prompt_ids.is_empty();
+    let rendered_prompt_match =
+        reference_rendered_prompt.as_deref().map(|reference| reference == bitnet_rendered_prompt);
+    let prompt_token_ids_match = if prompt_token_ids_available {
+        bitnet_prompt_ids.map(|bitnet_ids| reference_prompt_ids == bitnet_ids)
+    } else {
+        None
+    };
+    let first_rendered_prompt_mismatch = reference_rendered_prompt
+        .as_deref()
+        .and_then(|reference| first_string_mismatch(reference, bitnet_rendered_prompt));
+    let first_prompt_token_id_mismatch = if prompt_token_ids_available {
+        bitnet_prompt_ids
+            .and_then(|bitnet_ids| first_token_mismatch(reference_prompt_ids, bitnet_ids))
+    } else {
+        None
+    };
+    let passed = rendered_prompt_match == Some(true) && prompt_token_ids_match == Some(true);
+
+    serde_json::json!({
+        "available": rendered_prompt_available || prompt_token_ids_available,
+        "source": reference_source.unwrap_or_else(|| "unspecified_external_reference".to_string()),
+        "compared_against": "metadata_authority",
+        "reference_rendered_prompt_available": rendered_prompt_available,
+        "reference_prompt_token_ids_available": prompt_token_ids_available,
+        "rendered_prompt_match": rendered_prompt_match,
+        "prompt_token_ids_match": prompt_token_ids_match,
+        "first_rendered_prompt_mismatch_index": first_rendered_prompt_mismatch,
+        "first_prompt_token_id_mismatch_index": first_prompt_token_id_mismatch,
+        "passed": passed,
+    })
 }
 
 #[derive(Debug)]
@@ -10803,6 +10879,44 @@ mod tests {
         );
 
         assert!(metadata.is_none());
+    }
+
+    #[test]
+    fn prompt_authority_reference_parity_records_external_mismatch() {
+        let parity = prompt_audit_reference_parity_json(
+            Some("hf_apply_chat_template".to_string()),
+            Some("User: Say OK<|eot_id|>Assistant: ".to_string()),
+            &[1502, 25, 25961, 10619, 128009, 72803, 25, 220],
+            "User: Say OK<|eot_id|>Assistant:",
+            Some(&[128000, 1502, 25, 25961, 10619, 128009, 72803, 25]),
+        );
+
+        assert_eq!(parity["available"], true);
+        assert_eq!(parity["source"], "hf_apply_chat_template");
+        assert_eq!(parity["rendered_prompt_match"], false);
+        assert_eq!(parity["prompt_token_ids_match"], false);
+        assert_eq!(parity["first_rendered_prompt_mismatch_index"], 32);
+        assert_eq!(parity["first_prompt_token_id_mismatch_index"], 0);
+        assert_eq!(parity["passed"], false);
+    }
+
+    #[test]
+    fn prompt_authority_reference_parity_passes_exact_external_match() {
+        let rendered = "User: Say OK<|eot_id|>Assistant: ";
+        let ids = [1502, 25, 25961, 10619, 128009, 72803, 25, 220];
+        let parity = prompt_audit_reference_parity_json(
+            Some("hf_apply_chat_template".to_string()),
+            Some(rendered.to_string()),
+            &ids,
+            rendered,
+            Some(&ids),
+        );
+
+        assert_eq!(parity["rendered_prompt_match"], true);
+        assert_eq!(parity["prompt_token_ids_match"], true);
+        assert_eq!(parity["first_rendered_prompt_mismatch_index"], serde_json::Value::Null);
+        assert_eq!(parity["first_prompt_token_id_mismatch_index"], serde_json::Value::Null);
+        assert_eq!(parity["passed"], true);
     }
 
     #[test]
