@@ -2049,6 +2049,68 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-021"
+status = "in_progress"
+branch = "codex/cuda-dense-021-attention-score-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-020"]
+acceptance = "Run metadata-derived Qwen2.5 0.5B Q8_0 dense GGUF attention scores through a strict RTX 5070 Ti CUDA F32 kernel, compare against the CPU-reference fixture, record transfer accounting and parity receipt evidence, and keep dense GGUF inference, Qwen token/decode/chat, speedup, persistent-session, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, and server claims false."
+commands = [
+  "cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda attention_score -- --nocapture",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli attention_score -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features attention_score -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-attention-score-cuda-parity --model <verified-qwen2.5-q8-gguf> --layer-index 0 --seq-len 4 --position-offset 1 --device-index 0 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-attention-score-cuda-parity-qwen25-q8.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-attention-score-cuda-parity-qwen25-q8.json",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo fmt -p bitnet-kernels -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/attention.rs",
+  "crates/bitnet-kernels/src/cuda/mod.rs",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "server runtime behavior",
+  "speedup or full CUDA residency claim upgrades",
+  "dense planner one-layer route promotion",
+]
+may_claim = [
+  "A metadata-derived Qwen2.5 0.5B Q8_0 dense GGUF attention-score fixture runs through dense_attention_scores_f32_cuda on the RTX 5070 Ti.",
+  "The dense_gguf_attention_score_cuda_parity receipt records CPU/CUDA parity, compared score counts, causal mask counts, transfer bytes, selected_backend=nvidia-rtx-5070-ti-cuda, runtime_api=cuda, and fallback_used=false.",
+  "The next dense CUDA proof can consider planner routing or the attention softmax/V-mix gap.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, or server behavior changed.",
+  "A full Qwen layer, token, short decode, or chat path works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "The one-layer planner route has been promoted for attention_scores.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-015"
 status = "merged"
 branch = "codex/cuda-dense-015-norm-fixture-audit"

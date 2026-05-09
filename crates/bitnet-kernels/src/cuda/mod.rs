@@ -109,9 +109,14 @@ pub use activations::{
     launch_silu_gate, silu_gate_cpu,
 };
 pub use attention::{
-    AttentionConfig, AttentionKernelConfig, CudaAttentionConfig, attention_cpu_fallback,
-    attention_forward, attention_forward_cpu, batch_attention_cpu, chunked_attention_cpu,
-    launch_attention, masked_attention_cpu_fallback, multi_head_attention_cpu_fallback,
+    AttentionConfig, AttentionKernelConfig, AttentionScoresConfig,
+    CUDA_DENSE_ATTENTION_SCORE_KERNEL_ID, CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND,
+    CUDA_DENSE_ATTENTION_SCORE_TARGET_BACKEND, CUDA_DENSE_ATTENTION_SCORE_TOLERANCE,
+    CudaAttentionConfig, CudaDenseAttentionScoreStats, DenseGgufAttentionScoreCudaFixture,
+    DenseGgufAttentionScoreCudaParity, attention_cpu_fallback, attention_forward,
+    attention_forward_cpu, batch_attention_cpu, chunked_attention_cpu, launch_attention,
+    launch_dense_attention_scores_f32_cuda, masked_attention_cpu_fallback,
+    multi_head_attention_cpu_fallback, run_dense_gguf_attention_score_cuda_parity,
 };
 
 pub use attention_mask::{
