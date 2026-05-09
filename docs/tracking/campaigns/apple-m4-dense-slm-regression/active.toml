@@ -26,8 +26,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-SLM-REG-001"
-status = "pr_open"
+status = "merged"
 pr = 4163
+merge_sha = "cc1c59d6ecbc0d12d6433d8b04a04345881d6a76"
 branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-001-receipt-diff"
 stackable = false
 review_mode = "codex_premerge"
@@ -70,7 +71,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-REG-002"
-status = "proposed"
+status = "ready"
 branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-002-quality-drift"
 stackable = false
 review_mode = "codex_premerge"
