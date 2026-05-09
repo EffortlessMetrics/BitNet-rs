@@ -801,3 +801,45 @@ The 2026-05-08 `ARC140V-003` live OpenVINO GPU smoke artifact records
 the tiny `tiny_matmul_add_f16_1x16` graph. It is OpenVINO GPU smoke only and
 does not prove native OpenCL, BitNet inference, packed QK256 decode, Arc
 acceleration, or CPU fallback proof.
+
+## CPU258V-018 External Prompt/Token Reference Parity
+
+Artifact:
+
+```text
+ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity.json
+```
+
+The CPU258V-018 evidence compares official HF
+`AutoTokenizer.apply_chat_template` output against BitNet-rs
+metadata-authoritative `prompt-authority-audit` output for fixed prompts:
+`math_2_plus_2`, `say_ok`, `capital_france`, and `yes_no_water`.
+
+Current result:
+
+```text
+first_divergence_stage = prompt
+cases_failed = 4
+```
+
+The comparison records that HF keeps the trailing generation-prompt space in
+`Assistant: ` and does not prepend BOS for these `apply_chat_template` prompt
+IDs, while the current BitNet-rs metadata-authority path prepends BOS and
+renders `Assistant:` without the trailing space.
+
+Allowed claim:
+
+```text
+HF rendered prompts and prompt token IDs were compared against BitNet-rs
+metadata-authoritative prompt-authority audit output for fixed prompts.
+```
+
+Not allowed:
+
+```text
+Answer quality is proven.
+First-token logits or model inference parity is proven.
+CPU speed is proven.
+Arc 140V or Intel NPU execution is proven.
+Packed QK256 decode semantics are fixed.
+```

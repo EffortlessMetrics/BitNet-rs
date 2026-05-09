@@ -53,6 +53,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | ARC140V-005 | merged | Add native OpenCL CPU/iGPU parity for one isolated Arc 140V kernel against the 258V CPU reference bundle; merged in #4103. |
 | LNL258V-COMPARE-002 | merged | Refresh the same-machine evidence index after the post-mechanics CPU reference bundle, NPU selected subgraph receipts, and Arc 140V native OpenCL parity; merged in #4110. |
 | CPU258V-017 | merged | Add a BitNet prompt/token authority audit receipt for the shared 258V bad-answer/input-contract investigation; merged in #4123. |
+| CPU258V-018 | pr_open | Compare official HF `AutoTokenizer.apply_chat_template` rendered prompts and token IDs against BitNet-rs metadata-authoritative prompt-authority audit output for fixed 258V prompts; opened in #4178. |
 | LNL258V-004 | merged | Add Windows Level Zero loader fallback and refresh the 258V platform probe so Arc 140V records Level Zero identity and PCI ID `0x64A0`; merged in #4148. |
 
 ## Review Policy
