@@ -24,7 +24,8 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-CONT-001"
-status = "in_progress"
+status = "pr_open"
+pr = 4253
 branch = "codex/apple-m4-continuity/M4-CONT-001-mac-chat"
 stackable = false
 review_mode = "codex_premerge"
