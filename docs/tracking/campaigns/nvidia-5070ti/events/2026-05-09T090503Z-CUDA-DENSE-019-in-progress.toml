@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T09:05:03Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-019"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-019-rope-route"
+notes = [
+  "Started dense GGUF one-layer planner update after CUDA-DENSE-018 proved strict RTX 5070 Ti CUDA RoPE parity.",
+  "Scope is planner, one-layer gap receipt, validator, live receipt, and report updates that mark RoPE CUDA-routable while keeping dense GGUF inference and speed claims false.",
+  "No dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, QK256, tokenizer, loader, transformer, or dense CUDA math implementation claim is in scope.",
+]
