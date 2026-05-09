@@ -66,7 +66,7 @@ If a new file legitimately belongs in the repository:
 2. If it is a genuinely new surface (e.g. a new GPU backend with its
    own shader directory), add a new `[[allow]]` block with a real
    `owner`, `surface`, `classification`, and `covered_by`.
-3. Run `cargo run -p xtask -- check-file-policy` locally; the file
+3. Run `cargo run --no-default-features -p xtask -- check-file-policy` locally; the file
    should disappear from the findings.
 4. Open the PR with the new entry. Policy review is part of normal
    PR review.

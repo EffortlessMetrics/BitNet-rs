@@ -108,7 +108,7 @@ warn_once!("unique_key", "message shown only once at WARN, then at DEBUG");
 ```
 
 ### Receipts
-Benchmarks write a receipt to `ci/inference.json` (schema v1.0.0). `compute_path` must be `"real"` — never `"mock"`. Verify with `cargo run -p xtask -- verify-receipt`.
+Benchmarks write a receipt to `ci/inference.json` (schema v1.0.0). `compute_path` must be `"real"` — never `"mock"`. Verify with `cargo run --no-default-features -p xtask -- verify-receipt`.
 
 ### BITNET_STRICT_MODE
 When `BITNET_STRICT_MODE=1`: validation fails with exit code 8 on suspicious LayerNorm weights, `BITNET_GPU_FAKE` is ignored, and mock inference paths are rejected.

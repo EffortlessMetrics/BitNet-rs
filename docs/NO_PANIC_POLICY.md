@@ -36,10 +36,10 @@ identity, so the receipt keeps matching across small edits.
 
 ## Workflow
 
-1. Run `cargo run -p xtask -- check-no-panic-family` locally; this
+1. Run `cargo run --no-default-features -p xtask -- check-no-panic-family` locally; this
    reports unallowlisted findings without changing the allowlist.
 2. If a finding is real debt that cannot yet be removed, run
-   `cargo run -p xtask -- no-panic propose` (later PR) — it writes a
+   `cargo run --no-default-features -p xtask -- no-panic propose` (later PR) — it writes a
    draft receipt to `target/bitnet/reports/no-panic-proposed-allowlist.toml`
    for the human to edit and copy in.
 3. The real allowlist is `policy/no-panic-allowlist.toml`. Auto-tools

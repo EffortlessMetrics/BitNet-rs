@@ -47,7 +47,7 @@ match preflight_check() {
 cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_gpu_info_summary
 
 # Run xtask commands with GPU detection
-cargo run -p xtask -- download-model  # Uses GPU detection for optimizations
+cargo run --no-default-features -p xtask -- download-model  # Uses GPU detection for optimizations
 
 # Mock GPU scenarios for testing (see Testing section)
 BITNET_GPU_FAKE="cuda,rocm" cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_gpu_info_mocked_scenarios
@@ -1341,7 +1341,7 @@ BitNet-rs now provides comprehensive memory debugging capabilities with stack tr
    which nvidia-smi rocm-smi
 
    # Test with mock environment
-   BITNET_GPU_FAKE="cuda" cargo run -p xtask -- download-model --dry-run
+   BITNET_GPU_FAKE="cuda" cargo run --no-default-features -p xtask -- download-model --dry-run
    ```
 
 2. **Incorrect Backend Detection**:

@@ -14,7 +14,7 @@ body:
       description: |
         Provide clear steps to reproduce the bug, including commands, environment details, and expected vs actual behavior.
       placeholder: |
-        1. Download model: `cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf`
+        1. Download model: `cargo run --no-default-features -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf`
         2. Run inference: `cargo run -p bitnet-cli --features cpu -- run --model model.gguf --prompt "Test"`
         3. See error: ...
 

@@ -5,7 +5,7 @@ BitNet-rs. It is enforced by:
 
 * `[workspace.lints.clippy]` in the root `Cargo.toml` (lands staged in
   PR 08 and is promoted in PR 12).
-* `cargo run -p xtask -- check-clippy-exceptions` (added in PR 06),
+* `cargo run --no-default-features -p xtask -- check-clippy-exceptions` (added in PR 06),
   which validates every receipt in `policy/clippy-exceptions.toml`
   and rejects bare `#[allow(clippy::...)]` shapes.
 

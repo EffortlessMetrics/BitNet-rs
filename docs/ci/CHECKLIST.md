@@ -136,12 +136,12 @@ Use this checklist to ensure successful deployment of the cross-validation CI wo
 
 - [ ] Run auto-setup:
   ```bash
-  eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+  eval "$(cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=sh)"
   ```
 
 - [ ] Verify preflight:
   ```bash
-  cargo run -p xtask --features crossval-all -- preflight --verbose
+  cargo run --no-default-features -p xtask --features crossval-all -- preflight --verbose
   ```
 
 - [ ] Expected output: "✓ llama.cpp: AVAILABLE"
@@ -150,7 +150,7 @@ Use this checklist to ensure successful deployment of the cross-validation CI wo
 
 - [ ] Download test model:
   ```bash
-  cargo run -p xtask -- download-model
+  cargo run --no-default-features -p xtask -- download-model
   ```
 
 - [ ] Run cross-validation tests:
@@ -167,7 +167,7 @@ Use this checklist to ensure successful deployment of the cross-validation CI wo
 
 - [ ] Run per-token check:
   ```bash
-  cargo run -p xtask --features crossval-all -- crossval-per-token \
+  cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
     --prompt "What is 2+2?" \

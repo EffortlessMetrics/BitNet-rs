@@ -187,7 +187,7 @@ Ensure local xtask supports cross-validation:
 
 ```bash
 # Check xtask features
-cargo run -p xtask -- --help | grep crossval
+cargo run --no-default-features -p xtask -- --help | grep crossval
 
 # Expected output:
 #   crossval-per-token  Per-token parity comparison
@@ -199,10 +199,10 @@ cargo run -p xtask -- --help | grep crossval
 
 ```bash
 # Auto-setup (recommended)
-eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+eval "$(cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=sh)"
 
 # Verify setup
-cargo run -p xtask --features crossval-all -- preflight --verbose
+cargo run --no-default-features -p xtask --features crossval-all -- preflight --verbose
 
 # Expected output:
 # ✓ llama.cpp: AVAILABLE
@@ -213,7 +213,7 @@ cargo run -p xtask --features crossval-all -- preflight --verbose
 
 ```bash
 # Download test model
-cargo run -p xtask -- download-model
+cargo run --no-default-features -p xtask -- download-model
 
 # Run local cross-validation
 cargo test -p bitnet-crossval \
@@ -222,7 +222,7 @@ cargo test -p bitnet-crossval \
   -- --nocapture
 
 # Per-token parity check
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -271,7 +271,7 @@ Placeholder for performance baseline tracking:
 
 ```bash
 # TODO: Implement baseline comparison
-# cargo run -p xtask -- compare-baselines \
+# cargo run --no-default-features -p xtask -- compare-baselines \
 #   --current crossval/results/latest.json \
 #   --baseline baselines/crossval-baseline.json
 ```
@@ -304,7 +304,7 @@ The cross-validation commands are already documented in `CLAUDE.md`:
 ./scripts/run_crossval_sweep.sh model.gguf tokenizer.json /tmp/crossval
 
 # Per-token logits divergence detection
-cargo run -p xtask --features crossval-all -- crossval-per-token \
+cargo run --no-default-features -p xtask --features crossval-all -- crossval-per-token \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "What is 2+2?" \
@@ -377,7 +377,7 @@ ls -la ~/.cache/bitnet_cpp/build
 ```bash
 # Clean and rebuild
 rm -rf ~/.cache/llama_cpp ~/.cache/bitnet_cpp
-eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+eval "$(cargo run --no-default-features -p xtask -- setup-cpp-auto --emit=sh)"
 ```
 
 ## Validation Checklist

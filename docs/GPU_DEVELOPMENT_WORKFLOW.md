@@ -107,7 +107,7 @@ Brief description of what this PR does.
 ### Performance (if applicable)
 - [ ] Benchmark results included in PR description
 - [ ] No regression on existing benchmarks
-- [ ] Receipt verification passes: `cargo run -p xtask -- verify-receipt`
+- [ ] Receipt verification passes: `cargo run --no-default-features -p xtask -- verify-receipt`
 
 ## Hardware Tested On
 
@@ -240,7 +240,7 @@ system tracks inference performance with schema v1.0.0.
 cargo bench --bench srp_ops
 
 # Full inference benchmark (requires model file)
-BITNET_GGUF=models/model.gguf cargo run -p xtask -- verify-receipt
+BITNET_GGUF=models/model.gguf cargo run --no-default-features -p xtask -- verify-receipt
 
 # With native SIMD optimisation
 RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
@@ -253,10 +253,10 @@ After any inference-affecting change, verify the receipt:
 
 ```bash
 # CPU receipt
-cargo run -p xtask -- verify-receipt --path ci/inference.json
+cargo run --no-default-features -p xtask -- verify-receipt --path ci/inference.json
 
 # GPU receipt (requires GPU kernels)
-cargo run -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
+cargo run --no-default-features -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
 ```
 
 The receipt enforces 8 validation gates including `compute_path = "real"` (never `"mock"`).
@@ -275,7 +275,7 @@ The receipt enforces 8 validation gates including `compute_path = "real"` (never
 | Format | `cargo fmt --all` |
 | Benchmark | `cargo bench --bench srp_ops` |
 | Guards | `make guards` |
-| Verify receipt | `cargo run -p xtask -- verify-receipt --path ci/inference.json` |
+| Verify receipt | `cargo run --no-default-features -p xtask -- verify-receipt --path ci/inference.json` |
 
 ---
 
