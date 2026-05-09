@@ -102,6 +102,8 @@ Commands:
           Extract a dense GGUF attention-softmax fixture and emit a CPU-reference receipt
   dense-gguf-attention-v-mix-fixture
           Extract a dense GGUF attention V-mix fixture and emit a CPU-reference receipt
+  dense-gguf-mlp-activation-fixture
+          Extract a dense GGUF MLP activation fixture and emit a CPU-reference receipt
   dense-gguf-attention-softmax-cuda-parity
           Run dense GGUF attention-softmax strict CUDA parity diagnostics
   dense-gguf-attention-v-mix-cuda-parity

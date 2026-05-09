@@ -683,7 +683,7 @@
     "reference_logits_available": false,
     "scalar_avx2_parity_passed": true
   },
-  "timestamp": "2026-05-09T14:14:13.971501600+00:00",
+  "timestamp": "2026-05-09T15:33:28.691464300+00:00",
   "tokenizer": {
     "bos_token": "<|begin_of_text|>",
     "bos_token_id": 128000,
