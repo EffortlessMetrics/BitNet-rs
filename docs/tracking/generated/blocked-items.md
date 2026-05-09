@@ -62,7 +62,7 @@
 | apple-m4-slm-excellence | M4-SLM-EX-007 | M4-SLM-EX-006 | merged |
 | apple-m4-slm-excellence | M4-SLM-EX-008 | M4-SLM-EX-007 | merged |
 | apple-m4-slm-excellence | M4-SLM-EX-009 | M4-SLM-EX-008 | merged |
-| apple-m4-slm-excellence | M4-SLM-EX-010 | M4-SLM-EX-009 | ready |
+| apple-m4-slm-excellence | M4-SLM-EX-010 | M4-SLM-EX-009 | in_progress |
 | apple-m4-slm-hardening | M4-SLM-HARDEN-002 | M4-SLM-HARDEN-001 | merged |
 | apple-m4-slm-hardening | M4-SLM-HARDEN-003 | M4-SLM-HARDEN-002 | merged |
 | apple-m4-slm-hardening | M4-SLM-HARDEN-004 | M4-SLM-HARDEN-003 | merged |
