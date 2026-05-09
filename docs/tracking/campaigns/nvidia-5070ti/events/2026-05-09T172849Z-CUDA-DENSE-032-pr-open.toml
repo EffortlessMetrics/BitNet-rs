@@ -7,7 +7,7 @@ new_status = "pr_open"
 actor = "codex"
 branch = "codex/cuda-dense-032-reference-harness-tracker"
 pr = 4316
-head_sha = "d62ac3672306b7b1887dd194d394b4b81afeb28b"
+head_sha = "b54232f3d06713978c9f8d513c7ae90ef0934bc8"
 
 notes = [
   "Opened PR #4316 to close out CUDA-DENSE-031 tracker state and define the CUDA-DENSE-032 one-layer CPU reference harness contract.",
