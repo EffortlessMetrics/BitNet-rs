@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T06:01:56Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-013"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-013-one-layer-plan"
+pr = 4214
+head_sha = "db0c0aebc5c94556c2ad56c06ad4a09b5466f631"
+merge_sha = "42636fc86ad26d96bf15bd4bcc0017c4c9851c72"
+notes = [
+  "Merged PR #4214 with the dense GGUF one-layer execution-plan gap receipt.",
+  "The merged receipt records 7 dense_regular_llm_cuda-routable layer-0 linears and 7 unsupported strict CUDA non-linear ops with fallback_used=false.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, tokenizer, loader, transformer, CUDA math, and BitNet packed proof claims remain false.",
+]
