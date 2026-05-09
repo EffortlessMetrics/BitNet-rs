@@ -74,7 +74,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-002"
-status = "in_progress"
+status = "pr_open"
+pr = 4155
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-002-cache-repair"
 stackable = false
 review_mode = "codex_premerge"
