@@ -1,0 +1,258 @@
+id = "apple-silicon-macbook"
+title = "Apple Silicon MacBook cross-reference"
+status = "active"
+
+objective = "Use a MacBook as the Apple Silicon cross-reference and larger-artifact validation lane for dense SLM behavior and Apple BitNet candidate sweeps, while keeping M4 Mac mini product/performance claims and BitNet artifact claims separate."
+
+end_state = [
+  "MacBook receipts identify chip, memory, macOS, storage, thermal/mobile context, model cache root, CPU/NEON, Metal, and MPSGraph availability.",
+  "The known-good Qwen2.5 dense SLM Mac path is mirrored on MacBook with the same model hash, tokenizer metadata, quality corpus, deterministic greedy checks, and receipt schema used by the M4 Mac mini lane.",
+  "Larger Apple BitNet / 1-bit candidate artifact sweeps run on MacBook first when storage allows, with source, size, SHA256, tokenizer authority, reference-runner output, and cleanup status recorded.",
+  "Accepted BitNet candidates remain artifact-qualified only until a strict Apple CPU/NEON local-answer receipt passes on the target backend.",
+  "MacBook evidence cross-checks Apple Silicon behavior but does not turn one mobile run into a fleet-wide Apple performance guarantee.",
+]
+
+hard_constraints = [
+  "Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns.",
+  "Do not claim BitNet local-answer quality from dense Qwen SLM evidence.",
+  "Do not claim full apple-m4-metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad Apple Silicon performance.",
+  "Do not claim a BitNet candidate is answer-ready unless the reference runner produces coherent short answers with recorded tokenizer authority.",
+  "Do not claim MacBook evidence validates the M4 Mac mini performance envelope without matching model, tokenizer, backend, fallback, profile, and receipt context.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "MB-AS-001"
+status = "ready"
+branch = "codex/apple-silicon-macbook/MB-AS-001-machine-profile"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add a MacBook Apple Silicon machine/storage/profile receipt contract that records chip, memory, macOS, free disk, cache root, thermal/mobile context when available, and CPU/NEON, Metal, and MPSGraph visibility without running model inference."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-silicon-macbook/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The MacBook lane has a machine/profile receipt contract for Apple Silicon cross-reference work.",
+]
+must_not_claim = [
+  "MacBook model inference works.",
+  "MacBook dense SLM quality or performance is proven.",
+  "BitNet local-answer quality is proven.",
+  "Full Apple Metal inference works.",
+]
+
+[[work_item]]
+id = "MB-AS-002"
+status = "proposed"
+branch = "codex/apple-silicon-macbook/MB-AS-002-qwen-baseline"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MB-AS-001"]
+acceptance = "Mirror the supported dense Qwen2.5 SLM Mac baseline on MacBook with the same model hash, tokenizer metadata, quality corpus, deterministic greedy settings, backend/fallback receipt schema, and MacBook-specific timing context."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "ci/quality/**",
+  "docs/apple-silicon/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-silicon-macbook/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The supported dense Qwen Apple CPU/NEON path has MacBook cross-reference receipts.",
+]
+must_not_claim = [
+  "BitNet local-answer quality is proven.",
+  "MacBook timing replaces the M4 Mac mini envelope.",
+  "Full Apple Metal inference works.",
+]
+
+[[work_item]]
+id = "MB-AS-003"
+status = "proposed"
+branch = "codex/apple-silicon-macbook/MB-AS-003-bitnet-candidate-matrix"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MB-AS-001"]
+acceptance = "Add a MacBook-oriented Apple BitNet candidate matrix covering official Microsoft 2B I2_S, 1bitLLM 0.7B, 1bitLLM 3B TL1/TL2 diagnostic routes, and Falcon-E candidates with storage estimates, supported kernel routes, tokenizer authority requirements, reference-runner commands, and cleanup rules."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-silicon-macbook/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "MacBook BitNet candidate artifact priorities and proof requirements are documented.",
+]
+must_not_claim = [
+  "Any candidate is answer-ready before reference output passes.",
+  "Rust Apple BitNet local answers work.",
+  "QK256 works on Apple Silicon.",
+]
+
+[[work_item]]
+id = "MB-AS-004"
+status = "proposed"
+branch = "codex/apple-silicon-macbook/MB-AS-004-microsoft-2b-i2s"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MB-AS-003"]
+acceptance = "Validate the official Microsoft BitNet b1.58 2B / 2B4T I2_S GGUF on MacBook under the required external tokenizer pre-tokenizer authority, recording source, SHA256, tokenizer authority, reference-runner prompt outputs, bad/no-authority rejection evidence, and storage cleanup status."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-silicon-macbook/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The official Microsoft 2B I2_S artifact is accepted or rejected for Apple artifact-readiness under recorded tokenizer authority.",
+]
+must_not_claim = [
+  "Rust M4 BitNet answers work.",
+  "Apple Metal BitNet inference works.",
+  "QK256 works on Apple Silicon.",
+]
+
+[[work_item]]
+id = "MB-AS-005"
+status = "proposed"
+branch = "codex/apple-silicon-macbook/MB-AS-005-1bitllm-07b"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MB-AS-003"]
+acceptance = "Evaluate 1bitLLM/bitnet_b1_58-large as the smaller Apple BitNet candidate, recording source, size, SHA256, I2_S/TL1 route evidence, tokenizer authority, reference-runner prompt outputs, acceptance or rejection, and storage cleanup status."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-silicon-macbook/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The 0.7B 1bitLLM candidate is accepted or rejected as an Apple BitNet artifact target with evidence.",
+]
+must_not_claim = [
+  "The 0.7B candidate proves Microsoft 2B behavior.",
+  "Rust M4 BitNet answers work.",
+  "Full Apple Metal BitNet inference works.",
+]
+
+[[work_item]]
+id = "MB-AS-006"
+status = "proposed"
+branch = "codex/apple-silicon-macbook/MB-AS-006-3b-tl-diagnostic"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MB-AS-003"]
+acceptance = "Evaluate 1bitLLM/bitnet_b1_58-3B only on supported TL1/TL2 diagnostic routes, documenting why 3B I2_S is not an Apple proof target unless compatibility evidence changes."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-silicon-macbook/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "The 3B candidate has documented TL1/TL2 diagnostic evidence on Apple Silicon.",
+]
+must_not_claim = [
+  "3B I2_S is supported without new compatibility evidence.",
+  "3B diagnostic evidence proves M4 BitNet local-answer quality.",
+  "QK256 works on Apple Silicon.",
+]
