@@ -5,7 +5,7 @@
 
 use bitnet_receipts::{
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof, validate_cuda_parity_receipt_json,
-    validate_cuda_smoke_receipt_json,
+    validate_cuda_smoke_receipt_json, validate_dense_gguf_linear_fixture_extraction_receipt_json,
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
     validate_dense_regular_llm_cuda_receipt_json,
@@ -74,6 +74,18 @@ fn committed_dense_gguf_descriptor_inspection_receipt_validates() {
     .unwrap();
 
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_gguf_linear_fixture_extraction_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/dense-gguf-linear-fixture-extraction.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_linear_fixture_extraction_receipt_json(&receipt).unwrap();
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
@@ -377,6 +389,74 @@ fn dense_gguf_descriptor_inspection_rejects_bitnet_tensor_marker() {
     receipt["descriptor_inspection"]["quantization_families"] = json!(["q8_0", "i2_s"]);
 
     let err = validate_dense_gguf_tensor_descriptor_inspection_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("BitNet packed I2_S/QK256"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_fixture_extraction_receipt_validates() {
+    let receipt = valid_dense_gguf_linear_fixture_extraction_receipt();
+
+    validate_dense_gguf_linear_fixture_extraction_receipt_json(&receipt).unwrap();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_linear_fixture_rejects_non_linear_role() {
+    let mut receipt = valid_dense_gguf_linear_fixture_extraction_receipt();
+    receipt["linear_fixture"]["role"] = json!("attention_norm");
+
+    let err = validate_dense_gguf_linear_fixture_extraction_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("extractable dense linear role"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_fixture_rejects_cuda_parity_claim_leakage() {
+    let mut receipt = valid_dense_gguf_linear_fixture_extraction_receipt();
+    receipt["claim_boundary"]["cpu_cuda_parity_claimed"] = json!(true);
+
+    let err = validate_dense_gguf_linear_fixture_extraction_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("cpu_cuda_parity_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_fixture_rejects_bad_matrix_count() {
+    let mut receipt = valid_dense_gguf_linear_fixture_extraction_receipt();
+    receipt["linear_fixture"]["value_count"] = json!(11);
+
+    let err = validate_dense_gguf_linear_fixture_extraction_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("value_count"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_fixture_rejects_source_shape_mismatch() {
+    let mut receipt = valid_dense_gguf_linear_fixture_extraction_receipt();
+    receipt["linear_fixture"]["source_shape"] = json!([3, 4]);
+
+    let err = validate_dense_gguf_linear_fixture_extraction_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("source_shape"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_fixture_rejects_iq2s_tensor_type() {
+    let mut receipt = valid_dense_gguf_linear_fixture_extraction_receipt();
+    receipt["linear_fixture"]["tensor_type"] = json!("iq2_s");
+
+    let err = validate_dense_gguf_linear_fixture_extraction_receipt_json(&receipt)
         .unwrap_err()
         .to_string();
 
@@ -727,6 +807,70 @@ fn valid_dense_gguf_descriptor_inspection_receipt() -> Value {
         "notes": [
             "Descriptor-only GGUF reader fixture; no CUDA kernel or dense GGUF inference was executed.",
             "Q8_0 tensors require a future quant bridge before strict dense CUDA routing can be claimed."
+        ],
+        "error": null
+    })
+}
+
+fn valid_dense_gguf_linear_fixture_extraction_receipt() -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_linear_fixture_extraction",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-08T23:55:00Z",
+        "claim": "dense_gguf_linear_fixture_extracted",
+        "inspection_source": "synthetic_gguf_reader_fixture",
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "quantization_family": "q8_0_dense_gguf",
+            "file": "synthetic-qwen3-q8_0-linear-fixture.gguf",
+            "fixture": true
+        },
+        "linear_fixture": {
+            "schema": 1,
+            "artifact_kind": "dense_gguf_linear_fixture_extraction",
+            "architecture": "qwen3",
+            "model_family": "qwen",
+            "tensor_name": "blk.0.attn_q.weight",
+            "role": "attention_q",
+            "tensor_type": "q8_0",
+            "source_shape": [4, 3],
+            "source_offset": 0,
+            "source_size_bytes": 34,
+            "matrix_rows": 3,
+            "matrix_cols": 4,
+            "value_count": 12,
+            "logical_layout": "gguf_in_out_reinterpreted_as_out_in",
+            "values_materialized_as_f32": true,
+            "weight_values_sha256": "f54b6160287bd214bbd21d91fdd4e8d0853f2d1d171dd44c62bf4a6387ef78d9",
+            "cpu_reference_input_len": 4,
+            "cpu_reference_output_len": 3,
+            "cpu_reference_input_sha256": "ca10b81731aaa2cfc8af6f8331f18aee7ee9a8c656a52557dfaacd00eefd72c5",
+            "cpu_reference_output_sha256": "d6ce8d6984e070a14053339ea7955453127c771e958c66de5e4a6d1d79423bef",
+            "cpu_reference_computed": true,
+            "dense_gguf_inference_claimed": false,
+            "dense_regular_llm_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "claim_boundary": {
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_regular_llm_cuda_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "cpu_cuda_parity_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "notes": [
+            "Synthetic GGUF reader fixture; one Q8_0 dense linear tensor was materialized as F32 for CPU reference matvec extraction.",
+            "No CUDA kernel, dense GGUF inference, speedup, full residency, or BitNet packed-kernel proof is claimed."
         ],
         "error": null
     })
