@@ -1,0 +1,230 @@
+id = "apple-m4-dense-slm-regression"
+title = "Apple M4 dense SLM regression guardrails"
+status = "active"
+
+objective = "Turn the measured Apple M4 dense SLM local-answer envelope into repeatable regression guardrails for quality, determinism, receipt schema, model-cache identity, warm-session timing, and memory drift without broadening the claim beyond the recorded Qwen2.5 dense SLM Apple CPU/NEON path."
+
+end_state = [
+  "Regression checks compare release-mode Apple M4 dense SLM receipts against the published envelope only when the model, tokenizer, profile, backend, machine context, and fallback status match.",
+  "Quality and determinism drift are treated as correctness failures before timing drift is interpreted.",
+  "Warm_16, warm_32, warm_64, and warm_128 profiles track time-to-first-token, warm prompt throughput, decode throughput, total session time, and peak memory.",
+  "Receipt schema, model hash, tokenizer metadata, cache verification, backend routing, and fallback status are validated before performance fields are compared.",
+  "Metal phase receipts remain phase-scoped and cannot promote full apple-m4-metal inference without a later strict full-inference campaign.",
+  "Dense Qwen SLM evidence remains separate from BitNet, 1-bit / 1.58-bit model quality, QK256, and Apple BitNet claims.",
+]
+
+hard_constraints = [
+  "Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns.",
+  "Do not weaken the blocked BitNet apple-m4-local-answer gates.",
+  "Do not claim BitNet local-answer quality from dense SLM evidence.",
+  "Do not claim full apple-m4-metal inference from a named Metal phase.",
+  "Do not claim Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance.",
+  "Do not turn a single M4 Mac mini envelope into a fleet-wide Apple Silicon performance guarantee.",
+  "Do not make performance drift a hard CI failure until a scheduled Apple hardware lane produces repeatable receipts.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M4-SLM-REG-001"
+status = "merged"
+pr = 4163
+merge_sha = "cc1c59d6ecbc0d12d6433d8b04a04345881d6a76"
+branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-001-receipt-diff"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add an advisory Apple M4 dense SLM receipt comparison surface for the published performance envelope, validating context identity and reporting quality, timing, and memory drift without installing nightly infrastructure or failing broad CI on performance."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-dense-slm-regression",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".codex/campaigns/apple-m4-dense-slm-regression/**",
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-dense-slm-regression/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Apple M4 dense SLM receipt drift can be reported advisory-style for matching envelope context.",
+]
+must_not_claim = [
+  "Nightly regression infrastructure is running.",
+  "Performance drift fails required CI.",
+  "Broad M4 performance is proven.",
+  "BitNet local-answer quality or performance is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-REG-002"
+status = "pr_open"
+pr = 4166
+branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-002-quality-drift"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-REG-001"]
+acceptance = "Turn the five-prompt dense SLM quality and determinism corpus into a regression receipt gate that checks valid UTF-8, non-empty output, non-degenerate output, stable greedy token IDs, backend identity, and fallback status."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-dense-slm-regression",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/**",
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-dense-slm-regression/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Dense SLM quality and determinism drift is checked for the committed Apple M4 corpus.",
+]
+must_not_claim = [
+  "Broad chat quality is proven.",
+  "BitNet local-answer quality is proven.",
+  "Performance has improved.",
+]
+
+[[work_item]]
+id = "M4-SLM-REG-003"
+status = "proposed"
+branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-003-scheduled-hardware"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-REG-002"]
+acceptance = "Define the scheduled Apple hardware regression workflow shape for dense SLM receipts, including artifact retention, branch/PR reporting, low-disk behavior, and required context fields, without requiring the workflow to be active until runner availability is confirmed."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-dense-slm-regression",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/workflows/**",
+  ".codex/campaigns/apple-m4-dense-slm-regression/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-dense-slm-regression/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "A scheduled Apple hardware regression workflow is specified or staged for dense SLM receipts.",
+]
+must_not_claim = [
+  "Scheduled hardware regression is active before runner availability is confirmed.",
+  "Performance drift is enforced as a required check.",
+  "Apple Silicon fleet-wide performance is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-REG-004"
+status = "proposed"
+branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-004-trend-history"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-REG-003"]
+acceptance = "Add a compact dense SLM trend-history artifact format for Apple M4 release receipts, preserving per-run context and drift summaries without committing model binaries or large raw receipt bundles."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-dense-slm-regression",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-dense-slm-regression/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Apple M4 dense SLM receipt history can be summarized compactly for trend review.",
+]
+must_not_claim = [
+  "Regression thresholds are statistically mature.",
+  "Broad M4 performance is proven.",
+  "BitNet local-answer quality or performance is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-REG-005"
+status = "proposed"
+branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-005-threshold-tightening"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-REG-004"]
+acceptance = "Tighten Apple M4 dense SLM performance thresholds only after multiple matching release-mode receipts exist, with separate bands for timing noise, quality failures, memory drift, and backend/fallback mismatches."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-dense-slm-regression",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-dense-slm-regression/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Apple M4 dense SLM regression thresholds are tightened from repeated matching release receipts.",
+]
+must_not_claim = [
+  "Thresholds apply to other Apple Silicon machines without cross-reference receipts.",
+  "Broad M4 performance is proven.",
+  "Full apple-m4-metal inference works.",
+]

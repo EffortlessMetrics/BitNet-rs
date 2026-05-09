@@ -80,11 +80,12 @@
       "primary_artifact": "ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json",
       "supporting_artifacts": [
         "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json",
+        "ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json",
         "ci/hardware/intel-258v/2026-05-08/arc-140v-openvino-gpu-smoke.json",
         "ci/hardware/intel-258v/2026-05-07/arc-140v-opencl-smoke.json",
         "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json"
       ],
-      "claim_allowed": "Arc 140V OpenVINO GPU executed the recorded tiny static graph, and native OpenCL executed the recorded tiny vector-add parity kernel against the selected 258V CPU reference with fallback_used=false.",
+      "claim_allowed": "Arc 140V Level Zero loader visibility, OpenVINO GPU tiny static graph execution, and native OpenCL vector-add CPU-reference parity are recorded independently with fallback_used=false.",
       "claims_not_allowed": [
         "BitNet inference works on Arc 140V.",
         "Arc 140V accelerates BitNet.",
@@ -138,13 +139,13 @@
       "This index links independently scoped receipts from the same Lunar Lake laptop.",
       "It does not normalize timings across CPU, Arc 140V, and NPU lanes.",
       "A lane claim is allowed only when the cited lane artifact independently proves it.",
-      "The 2026-05-08 CLI platform probe records OpenVINO CPU/GPU/NPU visibility and keeps Level Zero absence explicit."
+      "The 2026-05-08 CLI platform probe records OpenVINO CPU/GPU/NPU visibility and Level Zero loader visibility for Arc 140V through ze_loader.dll device ID 0x64A0."
     ]
   },
   "fallback_used": false,
   "may_claim": [
     "The repository has a same-machine 258V comparison index linking CPU, Arc 140V, and Intel NPU artifacts by path, backend identity, proof stage, and fallback status.",
-    "The refreshed 2026-05-08 CLI platform probe records OpenVINO CPU/GPU/NPU visibility on the same Lunar Lake laptop while preserving Level Zero as unavailable.",
+    "The refreshed 2026-05-08 CLI platform probe records OpenVINO CPU/GPU/NPU visibility and Level Zero loader visibility for Arc 140V on the same Lunar Lake laptop.",
     "The 258V CPU reference plate is available for later accelerator comparisons.",
     "Arc 140V and Intel NPU evidence remain separately scoped and do not inherit CPU proof.",
     "Arc 140V native OpenCL evidence includes isolated vector-add CPU-reference parity.",

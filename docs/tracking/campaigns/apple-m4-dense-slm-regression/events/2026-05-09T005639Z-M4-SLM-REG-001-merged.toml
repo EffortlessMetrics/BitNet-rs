@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T00:56:39Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-001"
+event = "merged"
+pr = 4163
+head_sha = "7127e5af23fba1160a2a3429f7afeeaaa606be53"
+merge_sha = "cc1c59d6ecbc0d12d6433d8b04a04345881d6a76"
+actor = "codex"
+
+notes = [
+  "Merged advisory Apple M4 dense SLM receipt comparison.",
+  "mac receipts-check can now compare matching dense SLM performance profile receipts against a baseline through --regression-baseline.",
+  "Timing and memory drift are advisory warnings while context mismatches remain hard failures.",
+  "M4-SLM-REG-002 is ready for dense SLM quality and deterministic greedy drift checks.",
+]

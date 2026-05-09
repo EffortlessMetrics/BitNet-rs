@@ -8,7 +8,7 @@ Status: `in_progress`
 
 ## Summary
 
-`SLM-M4-005` adds a committed warm-session quality corpus for the Apple M4 SLM lane. The corpus is intentionally small: three short prompts, each repeated twice under deterministic greedy decoding, using the Rust-supported Qwen2.5 0.5B Q8_0 companion artifact.
+`SLM-M4-005` adds a committed warm-session quality corpus for the Apple M4 SLM lane. The corpus is intentionally small: five short prompts, each repeated twice under deterministic greedy decoding, using the Rust-supported Qwen2.5 0.5B Q8_0 companion artifact.
 
 This proves only bounded Apple M4 CPU/NEON dense-SLM answer quality and deterministic repeatability for the recorded prompts. It does not claim BitNet local-answer quality, full `apple-m4-metal` inference, QK256 support, Neural Engine execution, MPSGraph execution, or broad performance.
 
@@ -55,7 +55,7 @@ The command writes a local aggregate receipt and per-prompt receipts under `targ
 
 ## Observed Local Output
 
-The local proof produced `quality_summary.passed=true`, `determinism.checked=true`, `determinism.passed=true`, and three repeated-prompt determinism groups.
+The original local proof produced `quality_summary.passed=true`, `determinism.checked=true`, `determinism.passed=true`, and three repeated-prompt determinism groups. The hardening corpus expands that surface to five groups by adding a short instruction-following prompt and a format-constrained `Answer:` prompt.
 
 Representative normalized answers:
 
@@ -63,6 +63,8 @@ Representative normalized answers:
 2+2 equals 4.
 The capital of France is Paris.
 Rust is a powerful, versatile programming language that has gained popularity in recent years for
+The system is ready.
+Answer: blue
 ```
 
 The Rust sentence is truncated by the 16-token smoke cap. That is acceptable for this item because the corpus gate checks valid, non-empty, non-degenerate text and deterministic token IDs, not broad chat quality or long-form completion quality.

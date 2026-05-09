@@ -140,6 +140,18 @@ Options:
       --assert-greedy
           Assert greedy argmax invariant when dumping logits
 
+      --qwen-trace-jsonl <PATH>
+          Emit bounded Qwen first-token checkpoint summaries as JSONL
+
+      --qwen-trace-layer <N>
+          Qwen transformer layer index to trace when --qwen-trace-jsonl is set
+
+      --qwen-trace-full-prompt
+          Also trace the full prompt forward path before incremental decode
+
+      --qwen-trace-prompt-ids <IDS>
+          Comma-separated prompt token IDs to force for reference-aligned tracing
+
       --no-warnings
           Suppress performance warnings
 

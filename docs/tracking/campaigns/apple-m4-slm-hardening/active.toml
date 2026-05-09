@@ -1,6 +1,6 @@
 id = "apple-m4-slm-hardening"
 title = "Apple M4 SLM hardening"
-status = "active"
+status = "complete"
 
 objective = "Make the completed Apple M4 SLM path boring for local users through simple Mac commands, default verified model-cache behavior, clear first-run guidance, stable receipts, and conservative hardware claim boundaries."
 
@@ -74,7 +74,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-002"
-status = "ready"
+status = "merged"
+pr = 4155
+merge_sha = "1570890a46aca5f12b6ab3c8a9c0b1d9c2c26468"
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-002-cache-repair"
 stackable = false
 review_mode = "codex_premerge"
@@ -84,7 +86,8 @@ blocked_by = ["M4-SLM-HARDEN-001"]
 acceptance = "Improve first-run, corrupted-cache, low-disk, offline, verify, and prune guidance for Mac SLM operators without changing model artifacts or backend claims."
 commands = [
   "cargo fmt --all -- --check",
-  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests model mac -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests model -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests mac -- --nocapture",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-hardening",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
@@ -116,7 +119,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-003"
-status = "proposed"
+status = "merged"
+pr = 4158
+merge_sha = "a032ba0e3f5664abbf3aed143a88186518cf5103"
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-003-quality-corpus"
 stackable = false
 review_mode = "codex_premerge"
@@ -156,7 +161,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-004"
-status = "proposed"
+status = "merged"
+pr = 4161
+merge_sha = "9dd5c48608ba7be078507a16f3ca9fb3ade23661"
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-004-regression-seed"
 stackable = false
 review_mode = "codex_premerge"

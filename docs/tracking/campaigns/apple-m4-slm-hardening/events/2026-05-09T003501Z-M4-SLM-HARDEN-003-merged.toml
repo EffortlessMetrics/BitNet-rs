@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T00:35:01Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-003"
+event = "merged"
+pr = 4158
+head_sha = "31a62faae4fd624516b491529d2332488fa6508a"
+merge_sha = "a032ba0e3f5664abbf3aed143a88186518cf5103"
+actor = "codex"
+
+notes = [
+  "Merged the dense Apple M4 SLM quality corpus expansion.",
+  "The corpus now covers arithmetic, factual, one-sentence generation, short instruction following, and a simple Answer-prefix format gate.",
+  "No broad chat quality, BitNet local-answer quality, full apple-m4-metal inference, QK256 support, or performance claim was made.",
+  "M4-SLM-HARDEN-004 is ready for regression guardrail campaign seeding.",
+]

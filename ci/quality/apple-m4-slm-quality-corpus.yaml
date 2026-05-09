@@ -47,3 +47,19 @@ cases:
         - "language"
         - "safety"
         - "efficiency"
+
+  - id: ready_instruction
+    question: "In one short sentence, say that the system is ready."
+    gate:
+      kind: contains_any
+      contains_any:
+        - "ready"
+        - "Ready"
+
+  - id: answer_prefix_blue
+    question: "Return the answer as 'Answer: blue' for this question: What color is a clear daytime sky?"
+    gate:
+      kind: starts_with_any
+      starts_with_any:
+        - "Answer:"
+        - "answer:"

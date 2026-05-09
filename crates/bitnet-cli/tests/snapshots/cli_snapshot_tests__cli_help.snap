@@ -62,6 +62,7 @@ Commands:
   model                              Fetch, verify, list, and prune supported local model artifacts
   mac                                Mac-oriented SLM check, ask, validate, and receipt-check wrappers
   tokenize                           Tokenize text and output token IDs as JSON
+  prompt-authority-audit             Emit a BitNet prompt/token authority audit receipt without running inference
   score                              Calculate perplexity score for a model
   inference                          Run inference on a model
   chat                               Interactive chat mode (streaming)

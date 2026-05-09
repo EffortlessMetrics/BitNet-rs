@@ -20,6 +20,10 @@
 | apple-m4 | M4-016 | M4-015 | merged |
 | apple-m4 | M4-017 | M4-016 | merged |
 | apple-m4 | M4-018 | M4-017 | merged |
+| apple-m4-dense-slm-regression | M4-SLM-REG-002 | M4-SLM-REG-001 | pr_open |
+| apple-m4-dense-slm-regression | M4-SLM-REG-003 | M4-SLM-REG-002 | proposed |
+| apple-m4-dense-slm-regression | M4-SLM-REG-004 | M4-SLM-REG-003 | proposed |
+| apple-m4-dense-slm-regression | M4-SLM-REG-005 | M4-SLM-REG-004 | proposed |
 | apple-m4-local-answer | M4-QA-001 | M4-QA-MODEL-002 | blocked |
 | apple-m4-local-answer | M4-QA-MODEL-001 | M4-QA-ROOT-001 | merged |
 | apple-m4-local-answer | M4-QA-MODEL-002 | M4-QA-MODEL-001 | blocked |
@@ -42,9 +46,9 @@
 | apple-m4-slm-answer | SLM-M4-005 | SLM-M4-004 | merged |
 | apple-m4-slm-answer | SLM-M4-006 | SLM-M4-004, SLM-M4-005 | merged |
 | apple-m4-slm-answer | SLM-M4-007 | SLM-M4-005, SLM-M4-006 | merged |
-| apple-m4-slm-hardening | M4-SLM-HARDEN-002 | M4-SLM-HARDEN-001 | ready |
-| apple-m4-slm-hardening | M4-SLM-HARDEN-003 | M4-SLM-HARDEN-002 | proposed |
-| apple-m4-slm-hardening | M4-SLM-HARDEN-004 | M4-SLM-HARDEN-003 | proposed |
+| apple-m4-slm-hardening | M4-SLM-HARDEN-002 | M4-SLM-HARDEN-001 | merged |
+| apple-m4-slm-hardening | M4-SLM-HARDEN-003 | M4-SLM-HARDEN-002 | merged |
+| apple-m4-slm-hardening | M4-SLM-HARDEN-004 | M4-SLM-HARDEN-003 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-002 | M4-SLM-PERF-001 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-003 | M4-SLM-PERF-002 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-004 | M4-SLM-PERF-003 | merged |
@@ -94,6 +98,7 @@
 | intel-258v-platform | ARC140V-005 | ARC140V-004, CPU258V-016 | merged |
 | intel-258v-platform | LNL258V-COMPARE-002 | CPU258V-016, ARC140V-005 | merged |
 | intel-258v-platform | CPU258V-017 | CPU258V-016, LNL258V-COMPARE-002 | merged |
+| intel-258v-platform | LNL258V-004 | LNL258V-003, ARC140V-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
@@ -142,6 +147,7 @@
 | nvidia-5070ti | CUDA-PLANNER-004 | CUDA-PLANNER-003 | merged |
 | nvidia-5070ti | CUDA-DENSE-005 | CUDA-DENSE-004, CUDA-PLANNER-004 | merged |
 | nvidia-5070ti | CUDA-DENSE-006 | CUDA-DENSE-005 | merged |
+| nvidia-5070ti | CUDA-DENSE-007 | CUDA-DENSE-006 | merged |
 | slm-cpu | SLM-CPU-001 | SLM-CPU-000 | merged |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | merged |
 | slm-cpu | SLM-CPU-002A | SLM-CPU-002 | merged |

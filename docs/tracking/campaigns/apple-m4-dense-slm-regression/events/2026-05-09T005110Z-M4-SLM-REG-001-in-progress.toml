@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T00:51:10Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started advisory dense SLM receipt comparison against the published Apple M4 performance envelope.",
+  "The comparison is scoped to matching Qwen2.5 dense SLM performance profile receipts and reports timing or memory drift as advisory warnings.",
+  "Context mismatches for model, tokenizer, backend, fallback status, release mode, or profile set remain hard failures.",
+  "No nightly infrastructure, performance CI enforcement, broad M4 performance claim, BitNet local-answer claim, full apple-m4-metal inference claim, QK256 support, or model artifact change is included.",
+]

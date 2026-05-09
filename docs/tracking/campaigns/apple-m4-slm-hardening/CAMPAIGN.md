@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-slm-hardening`
 
-Status: active
+Status: complete
 
 ## Objective
 
@@ -10,7 +10,9 @@ Make the completed Apple M4 SLM path boring for local users: simple Mac commands
 
 ## Why This Exists
 
-The `apple-m4-slm-answer`, `apple-m4-productization`, and `apple-m4-slm-performance` campaigns proved the practical path: the M4 can run a small dense instruct GGUF through Rust-native `apple-m4-cpu-neon`, keep the model resident for warm prompts, produce measured receipts, and exercise a named Metal phase without claiming full Metal inference.
+The `apple-m4-slm-answer`, `apple-m4-productization`, and `apple-m4-slm-performance` campaigns proved the practical dense-SLM path: the M4 can run Qwen2.5 0.5B Instruct, a regular dense instruct GGUF, through Rust-native `apple-m4-cpu-neon`, keep the model resident for warm prompts, produce measured receipts, and exercise a named Metal phase without claiming full Metal inference.
+
+Qwen2.5 dense-SLM success validates the Mac user experience, model-cache flow, receipts, warm sessions, and Apple CPU/NEON routing. It does not validate BitNet, 1-bit / 1.58-bit kernels, I2_S/TL1/TL2 layouts, QK256, or Apple BitNet local-answer quality.
 
 This campaign owns the next user-facing polish layer. It should remove avoidable command friction and make failure modes clearer without reopening proof, performance, BitNet, QK256, Metal-kernel, or server-inference work.
 
@@ -35,10 +37,10 @@ This campaign owns the next user-facing polish layer. It should remove avoidable
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-SLM-HARDEN-001 | in_progress | Add positional `bitnet mac ask "question"` UX while preserving `--question`, default cache, and backend boundaries. |
-| M4-SLM-HARDEN-002 | proposed | Improve first-run cache repair and low-disk guidance for Mac SLM operators. |
-| M4-SLM-HARDEN-003 | proposed | Expand the small operator quality corpus without turning it into a broad eval. |
-| M4-SLM-HARDEN-004 | proposed | Seed regression guardrails from the measured performance envelope. |
+| M4-SLM-HARDEN-001 | merged | Add positional `bitnet mac ask "question"` UX while preserving `--question`, default cache, and backend boundaries. |
+| M4-SLM-HARDEN-002 | merged | Improve first-run cache repair and low-disk guidance for Mac SLM operators. |
+| M4-SLM-HARDEN-003 | merged | Expand the small operator quality corpus without turning it into a broad eval. |
+| M4-SLM-HARDEN-004 | merged | Seed regression guardrails from the measured performance envelope. |
 
 ## Review Policy
 

@@ -36,6 +36,8 @@ Do not commit model binaries. Productized model cache commands are tracked as `M
 
 ## Model Cache
 
+This Mac path uses Qwen2.5 0.5B Instruct as a dense regular SLM. It is the Apple Silicon user-facing local-answer baseline for CLI, cache, receipt, warm-session, and quality harness behavior. It is not a BitNet substitute and does not prove 1-bit / 1.58-bit model quality, I2_S/TL1/TL2 kernel paths, QK256, or Apple BitNet inference.
+
 `M4-PROD-002` adds a user cache for supported SLM artifacts. By default it uses:
 
 ```text
@@ -61,6 +63,23 @@ bitnet model prune qwen2.5-0.5b-instruct-q8_0
 ```
 
 Cache metadata records source repository, revision, filename, SHA256, size, quantization, tokenizer metadata, chat-template presence, and Apple M4 CPU/NEON support status. Fetch warns on low disk headroom and honors `--offline` / `BITNET_OFFLINE`.
+`bitnet model list` is a quick cache inventory; use `bitnet model verify <id>` or `bitnet mac check` when SHA integrity matters.
+
+First-run and repair guidance is intentionally explicit:
+
+```bash
+# Missing cache
+bitnet model fetch qwen2.5-0.5b-instruct-q8_0
+
+# Present artifact without cache metadata
+bitnet model verify qwen2.5-0.5b-instruct-q8_0
+
+# Partial, wrong-size, or wrong-hash artifact
+bitnet model prune qwen2.5-0.5b-instruct-q8_0
+bitnet model fetch qwen2.5-0.5b-instruct-q8_0
+```
+
+Offline mode cannot repair a missing or corrupt cache. Pre-seed the GGUF file and run `bitnet model verify qwen2.5-0.5b-instruct-q8_0`, or disable offline mode and fetch the supported artifact. On low-disk systems, prune unused cached models or set `BITNET_MODEL_CACHE_DIR` / `--cache-dir` to a larger volume before fetching.
 
 ## Working Commands
 

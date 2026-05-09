@@ -334,6 +334,69 @@ fn mac_check_missing_cache_points_to_model_fetch() {
         .args(["mac", "check", "--cache-dir", cache_str.as_str()])
         .assert()
         .failure()
+        .stderr(predicate::str::contains("First run"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_check_corrupt_cache_points_to_prune_and_fetch() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let model_dir = cache.join("qwen2.5-0.5b-instruct-q8_0");
+    std::fs::create_dir_all(&model_dir).expect("model dir");
+    std::fs::write(model_dir.join("qwen2.5-0.5b-instruct-q8_0.gguf"), b"partial")
+        .expect("partial model");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "check", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Cache repair"))
+        .stderr(predicate::str::contains("bitnet model prune qwen2.5-0.5b-instruct-q8_0"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn model_fetch_offline_missing_cache_explains_repair_options() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "model",
+            "fetch",
+            "qwen2.5-0.5b-instruct-q8_0",
+            "--offline",
+            "--cache-dir",
+            cache_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("offline mode"))
+        .stderr(predicate::str::contains("pre-seed"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn model_verify_corrupt_cache_explains_prune_and_fetch() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let model_dir = cache.join("qwen2.5-0.5b-instruct-q8_0");
+    std::fs::create_dir_all(&model_dir).expect("model dir");
+    std::fs::write(model_dir.join("qwen2.5-0.5b-instruct-q8_0.gguf"), b"partial")
+        .expect("partial model");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["model", "verify", "qwen2.5-0.5b-instruct-q8_0", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("repair:"))
+        .stderr(predicate::str::contains("expected bytes=675710816"))
+        .stderr(predicate::str::contains("got bytes=7"))
+        .stderr(predicate::str::contains("bitnet model prune qwen2.5-0.5b-instruct-q8_0"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
 }
 
@@ -692,6 +755,149 @@ fn mac_receipts_check_rejects_performance_profile_missing_warm_128() {
 }
 
 #[test]
+fn mac_receipts_check_reports_dense_slm_regression_no_warnings() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let baseline_path = dir.path().join("baseline.json");
+    let current_path = dir.path().join("current.json");
+    let baseline = performance_summary_receipt("same-sha");
+    let current = performance_summary_receipt("same-sha");
+    std::fs::write(&baseline_path, serde_json::to_vec_pretty(&baseline).expect("json"))
+        .expect("write baseline");
+    std::fs::write(&current_path, serde_json::to_vec_pretty(&current).expect("json"))
+        .expect("write current");
+    let baseline_str = baseline_path.to_string_lossy().into_owned();
+    let current_str = current_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            current_str.as_str(),
+            "--regression-baseline",
+            baseline_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"advisory\": true"));
+}
+
+#[test]
+fn mac_receipts_check_reports_dense_slm_regression_advisory_warning() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let baseline_path = dir.path().join("baseline.json");
+    let current_path = dir.path().join("current.json");
+    let baseline = performance_summary_receipt("same-sha");
+    let mut current = performance_summary_receipt("same-sha");
+    current["profiles"][0]["timing"]["decode_generated_tok_s"] = serde_json::json!(1.0);
+    std::fs::write(&baseline_path, serde_json::to_vec_pretty(&baseline).expect("json"))
+        .expect("write baseline");
+    std::fs::write(&current_path, serde_json::to_vec_pretty(&current).expect("json"))
+        .expect("write current");
+    let baseline_str = baseline_path.to_string_lossy().into_owned();
+    let current_str = current_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            current_str.as_str(),
+            "--regression-baseline",
+            baseline_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"warning_count\": 1"))
+        .stdout(predicate::str::contains("timing.decode_generated_tok_s"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_dense_slm_regression_context_mismatch() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let baseline_path = dir.path().join("baseline.json");
+    let current_path = dir.path().join("current.json");
+    let baseline = performance_summary_receipt("baseline-sha");
+    let current = performance_summary_receipt("different-sha");
+    std::fs::write(&baseline_path, serde_json::to_vec_pretty(&baseline).expect("json"))
+        .expect("write baseline");
+    std::fs::write(&current_path, serde_json::to_vec_pretty(&current).expect("json"))
+        .expect("write current");
+    let baseline_str = baseline_path.to_string_lossy().into_owned();
+    let current_str = current_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            current_str.as_str(),
+            "--regression-baseline",
+            baseline_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("model_cache.sha256 mismatch"));
+}
+
+#[test]
+fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("warm-quality.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&dense_quality_warm_session_receipt()).expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("slm_apple_m4_warm_session"))
+        .stdout(predicate::str::contains("\"prompt_count\": 10"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_dense_slm_quality_corpus_determinism_drift() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("warm-quality-drift.json");
+    let mut receipt = dense_quality_warm_session_receipt();
+    receipt["prompts"][1]["generated_token_ids"] = serde_json::json!([198, 999]);
+    receipt["prompts"][1]["generated_tokens"] = serde_json::json!(2);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("changed deterministic greedy output"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_dense_slm_quality_corpus_degenerate_prompt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("warm-quality-degenerate.json");
+    let mut receipt = dense_quality_warm_session_receipt();
+    receipt["prompts"][0]["quality"]["passed"] = serde_json::json!(false);
+    receipt["prompts"][0]["quality"]["non_degenerate"] = serde_json::json!(false);
+    receipt["prompts"][0]["quality"]["failed_rules"] =
+        serde_json::json!(["generated_token_variation"]);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("warm-session prompt quality failed"));
+}
+
+#[test]
 fn mac_receipts_check_accepts_split_metal_phase_receipt() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("metal-phase.json");
@@ -964,6 +1170,7 @@ fn performance_profile_json(
             "prefill_ms": 100.0,
             "warm_prompt_wall_ms": warm_prompt_wall_ms,
             "first_token_ms": [100.0],
+            "time_to_first_token_ms": [100.0],
             "decode_total_ms": decode_total_ms,
             "sampling_ms": 12.0,
             "warm_prompt_generated_tok_s": 2.0,
@@ -978,6 +1185,172 @@ fn performance_profile_json(
             "ranked_hotspots": [
                 {"component": "model.forward", "alloc_count": 10, "alloc_bytes": 1024}
             ]
+        }
+    })
+}
+
+fn performance_summary_receipt(model_sha: &str) -> serde_json::Value {
+    serde_json::json!({
+        "artifact_kind": "apple_m4_slm_performance_profiles",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "profile_set": "performance",
+        "build": {
+            "profile": "release",
+            "release_mode": true
+        },
+        "operator_thresholds": {
+            "cold_load_separated": true,
+            "model_tokenizer_reuse_visible": true,
+            "model_tokenizer_reuse_visible_per_profile": true,
+            "profiles_loaded_independently": true,
+            "profile_set_model_loads": 4,
+            "reuse_scope": "within_each_profile",
+            "profiles_required": ["warm_16", "warm_32", "warm_64", "warm_128"],
+            "thresholds_are_claim_bounds_not_speed_guarantees": true
+        },
+        "performance_baseline": {
+            "release_mode_required": true,
+            "release_mode_observed": true,
+            "warm_128_included": true,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        },
+        "model_cache": {
+            "id": "qwen2.5-0.5b-instruct-q8_0",
+            "sha256": model_sha,
+            "architecture": "qwen2",
+            "quantization": "Q8_0",
+            "tokenizer_model": "gpt2",
+            "tokenizer_pre": "qwen2"
+        },
+        "profiles": [
+            performance_profile_json("warm_16", 16, 8000.0, 5000.0),
+            performance_profile_json("warm_32", 32, 16000.0, 10000.0),
+            performance_profile_json("warm_64", 64, 32000.0, 20000.0),
+            performance_profile_json("warm_128", 128, 64000.0, 40000.0)
+        ],
+        "mac_claim_boundary": {
+            "full_metal_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        }
+    })
+}
+
+fn dense_quality_warm_session_receipt() -> serde_json::Value {
+    let cases = [
+        ("math_2_plus_2", "What is 2+2? Answer briefly.", vec![198, 17, 10, 17]),
+        ("capital_france", "Name the capital of France.", vec![785, 6722, 374, 12095]),
+        ("rust_sentence", "Write one short sentence about Rust.", vec![58047, 374, 264, 4221]),
+        (
+            "ready_instruction",
+            "In one short sentence, say that the system is ready.",
+            vec![785, 1849, 374, 5527],
+        ),
+        (
+            "answer_prefix_blue",
+            "Return the answer as 'Answer: blue' for this question: What color is a clear daytime sky?",
+            vec![16141, 25, 6303, 151645],
+        ),
+    ];
+    let mut prompts = Vec::new();
+    let mut groups = Vec::new();
+    for (case_id, prompt, ids) in cases {
+        groups.push(serde_json::json!({
+            "prompt": prompt,
+            "attempt_count": 2,
+            "case_id": case_id,
+            "prompt_indices": [prompts.len(), prompts.len() + 1],
+            "stable_generated_token_ids": true,
+            "stable_text": true,
+            "reference_generated_ids": ids,
+            "reference_text": "stable answer"
+        }));
+        for repeat_index in 0..2 {
+            prompts.push(serde_json::json!({
+                "prompt_index": prompts.len(),
+                "case_id": case_id,
+                "repeat_index": repeat_index,
+                "prompt": prompt,
+                "text": "stable answer",
+                "generated_tokens": ids.len(),
+                "generated_token_ids": ids,
+                "quality": {
+                    "passed": true,
+                    "valid_utf8": true,
+                    "printable_utf8": true,
+                    "non_empty": true,
+                    "no_replacement_chars": true,
+                    "mostly_text": true,
+                    "non_degenerate": true,
+                    "generated_tokens": ids.len(),
+                    "distinct_generated_tokens": ids.iter().collect::<std::collections::BTreeSet<_>>().len(),
+                    "failed_rules": []
+                },
+                "timing": {
+                    "model_load_ms": 0.0,
+                    "tokenizer_load_ms": 0.0,
+                    "total_ms": 100.0
+                },
+                "backend": {
+                    "requested_backend": "apple-m4-cpu-neon",
+                    "selected_backend": "apple-m4-cpu-neon",
+                    "runtime_api": "cpu",
+                    "fallback_used": false
+                }
+            }));
+        }
+    }
+    serde_json::json!({
+        "artifact_kind": "slm_apple_m4_warm_session",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "session": {
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "prompt_count": 10
+        },
+        "corpus": {
+            "artifact_kind": "apple_m4_slm_quality_corpus",
+            "name": "apple-m4-slm-quality-determinism-v1",
+            "case_count": 5,
+            "repeat_runs": 2
+        },
+        "generation": {
+            "mode": "greedy",
+            "temperature": 0.0,
+            "top_k": 1,
+            "deterministic": true
+        },
+        "model": {
+            "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+        },
+        "tokenizer": {
+            "source": "gguf_metadata",
+            "pretokenizer_authority": "present"
+        },
+        "quality_summary": {
+            "passed": true
+        },
+        "determinism": {
+            "checked": true,
+            "passed": true,
+            "repeated_prompt_groups": 5,
+            "groups": groups
+        },
+        "prompts": prompts,
+        "claim_boundary": {
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "broad_performance_claim": false
         }
     })
 }
@@ -1209,6 +1582,24 @@ fn slm_warm_session_accepts_corpus_without_prompt_before_loading_model() {
 }
 
 #[test]
+fn apple_m4_slm_quality_corpus_tracks_five_bounded_cases() {
+    let corpus_path = workspace_path("ci/quality/apple-m4-slm-quality-corpus.yaml");
+    let corpus: serde_yaml::Value =
+        serde_yaml::from_slice(&std::fs::read(corpus_path).expect("read corpus"))
+            .expect("parse corpus");
+    let cases = corpus["cases"].as_sequence().expect("cases");
+    let ids: Vec<_> = cases.iter().filter_map(|case| case["id"].as_str()).collect();
+
+    assert_eq!(corpus["artifact_kind"].as_str(), Some("apple_m4_slm_quality_corpus"));
+    assert_eq!(cases.len(), 5);
+    assert!(ids.contains(&"math_2_plus_2"));
+    assert!(ids.contains(&"capital_france"));
+    assert!(ids.contains(&"rust_sentence"));
+    assert!(ids.contains(&"ready_instruction"));
+    assert!(ids.contains(&"answer_prefix_blue"));
+}
+
+#[test]
 fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     let Ok(model) = std::env::var("BITNET_M4_SLM_QWEN_GGUF") else {
         eprintln!("skipping real SLM warm-session receipt test; set BITNET_M4_SLM_QWEN_GGUF");
@@ -1258,7 +1649,7 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     assert_eq!(receipt["fallback_used"], false);
     assert_eq!(receipt["session"]["model_loaded_once"], true);
     assert_eq!(receipt["session"]["tokenizer_loaded_once"], true);
-    assert_eq!(receipt["session"]["prompt_count"], 6);
+    assert_eq!(receipt["session"]["prompt_count"], 10);
     assert_eq!(receipt["session"]["reuse_scope"], "resident_session");
     assert_eq!(receipt["session"]["session_owned_buffers"], true);
     assert_eq!(receipt["session"]["prompt_token_buffer_reused"], true);
@@ -1289,7 +1680,7 @@ fn slm_warm_session_real_model_receipt_fields_when_enabled() {
     assert_eq!(receipt["claim_boundary"]["full_metal_inference_claimed"], false);
     assert_eq!(receipt["claim_boundary"]["bitnet_quality_claimed"], false);
     let prompts = receipt["prompts"].as_array().expect("prompt summaries");
-    assert_eq!(prompts.len(), 6);
+    assert_eq!(prompts.len(), 10);
     for prompt in prompts {
         assert_eq!(prompt["backend"]["fallback_used"], false);
         assert_eq!(prompt["quality"]["passed"], true);

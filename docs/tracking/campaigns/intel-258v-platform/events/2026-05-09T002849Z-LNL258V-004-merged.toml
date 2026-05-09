@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T00:28:49Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4148
+merge_sha = "e7d7a4bf0f269a1b259c24da848da3f1a98e8eb1"
+actor = "codex"
+branch = "codex/lunar-lake/level-zero-loader-probe"
+summary = "Merged LNL258V-004, adding Windows Level Zero loader visibility for the Lunar Lake platform probe."
+
+notes = [
+  "The live platform probe now records Arc 140V Level Zero identity evidence and PCI ID 0x64A0 through the Windows Level Zero loader when ze_info or sycl-ls are unavailable.",
+  "The PR refreshed the 2026-05-08 258V platform probe and same-machine comparison index without changing CPU, tokenizer, QK256, or transformer inference surfaces.",
+  "This closeout permits only runtime/device visibility claims and does not claim Level Zero kernel execution, BitNet inference on Arc 140V, packed QK256 decode, Arc acceleration, or CPU fallback as GPU proof.",
+]

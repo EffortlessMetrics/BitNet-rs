@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T01:12:33Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-002"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started dense SLM quality and deterministic greedy drift gate.",
+  "Scope is the existing Apple M4 dense SLM warm-session corpus and receipt checker.",
+  "No BitNet, QK256, Metal kernel, server, or broad performance claims are in scope.",
+]
