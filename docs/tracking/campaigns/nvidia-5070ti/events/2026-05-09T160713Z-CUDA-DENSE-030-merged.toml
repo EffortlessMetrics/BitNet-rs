@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T16:07:13Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-030"
+event = "merged"
+previous_status = "in_progress"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-030-mlp-activation-parity"
+pr = 4310
+merge_sha = "6b8a13cddd47afa844cb7c11ebd3df00fb0263f4"
+
+notes = [
+  "PR #4310 merged, adding strict RTX 5070 Ti CUDA parity for the dense GGUF MLP activation fixture.",
+  "CUDA-DENSE-030 records dense_mlp_activation_f32_cuda parity against CPU-reference SiLU(gate) times up values with transfer bytes and tensor residency, while keeping route promotion, dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, QK256, tokenizer, loader, transformer, and server claims false.",
+]

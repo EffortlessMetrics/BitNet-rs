@@ -2112,8 +2112,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-030"
-status = "in_progress"
+status = "merged"
 branch = "codex/cuda-dense-030-mlp-activation-parity"
+pr = 4310
+head_sha = "f845485f394b222a9f183cf3b10138ea172677a6"
+merge_sha = "6b8a13cddd47afa844cb7c11ebd3df00fb0263f4"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
