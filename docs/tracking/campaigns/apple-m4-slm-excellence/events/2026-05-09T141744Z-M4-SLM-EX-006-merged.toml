@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:17:44Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-006"
+event = "merged"
+actor = "codex"
+pr = 4293
+merge_sha = "2375cec3ed7a907c42afd5b6681bf98d820f9e9d"
+
+notes = [
+  "Merged PR #4293, promoting qwen2.5-0.5b-instruct-q4_k_m as the second supported non-default Apple M4 dense SLM.",
+  "The Qwen2.5 Q8_0 artifact remains the default model.",
+  "M4-SLM-EX-007 is the next ready item for the small quality corpus 2.0.",
+]
