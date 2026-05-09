@@ -52,7 +52,7 @@ observed_residency: not_allocated_policy_only
 ## Validation
 
 ```text
-cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts
+cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check
 cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_kv_cache -- --nocapture
 cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features kv_cache -- --nocapture
 ```

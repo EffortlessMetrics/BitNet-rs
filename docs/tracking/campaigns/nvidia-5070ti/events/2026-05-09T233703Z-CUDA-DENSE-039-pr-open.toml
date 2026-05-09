@@ -7,7 +7,7 @@ new_status = "pr_open"
 actor = "codex"
 branch = "codex/cuda-dense-039-kv-policy"
 pr = 4357
-head_sha = "38728abe00f4ae45355d37ce7c652809dd5d1bb8"
+head_sha = "0f0457e96e508d741ce4b021dddbf68c1c42a2f5"
 
 notes = [
   "Opened PR #4357 for the CUDA-DENSE-039 dense GGUF KV-cache policy receipt implementation.",
