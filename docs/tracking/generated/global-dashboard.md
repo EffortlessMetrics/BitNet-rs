@@ -20,7 +20,7 @@
 | intel-a770 | A770-003 | TBD | ready | none | OpenCL-first for native A770 proof. |
 | intel-npu | NPU-011 | #4097 | merged | none | Device-node detection is not inference. |
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
-| nvidia-5070ti | CUDA-UX-001 | TBD | in_progress | none | CUDA visibility is not kernel execution. |
+| nvidia-5070ti | CUDA-UX-001 | #4185 | pr_open | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
 | slm-cpu | SLM-CPU-008 | TBD | ready | none | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | pr_open | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
