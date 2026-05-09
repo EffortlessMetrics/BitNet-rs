@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T13:52:10Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-027"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-027-attention-v-mix-parity"
+notes = [
+  "Started dense GGUF attention V-mix CUDA parity from the CUDA-DENSE-026 CPU-reference fixture.",
+  "The receipt should prove strict RTX 5070 Ti CUDA F32 V-mix parity and record kernel, transfer, and single-fixture residency fields.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and planner route promotion remain out of scope.",
+]

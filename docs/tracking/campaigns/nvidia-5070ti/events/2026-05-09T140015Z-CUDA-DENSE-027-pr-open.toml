@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T14:00:15Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-027"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-027-attention-v-mix-parity"
+pr = 4290
+head_sha = "f4822a43fdabc838231e15087c342b04cdd6432b"
+notes = [
+  "Opened PR #4290 for dense GGUF attention V-mix CUDA parity.",
+  "The committed RTX 5070 Ti receipt records strict F32 V-mix parity, kernel stats, transfer bytes, and single-fixture tensor residency.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and planner route promotion remain out of scope.",
+]

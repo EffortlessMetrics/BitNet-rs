@@ -24,9 +24,9 @@ pub use convert::ConvertCommand;
 pub use dense_gguf_linear_parity::{
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
     DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
-    DenseGgufAttentionVMixFixtureCommand, DenseGgufLinearParityCommand,
-    DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
-    DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
+    DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
+    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand,
+    DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
 };
 pub use inference::InferenceCommand;
 pub use inspect::InspectCommand;

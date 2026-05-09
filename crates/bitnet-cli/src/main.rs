@@ -130,10 +130,10 @@ use commands::{
     AnswerCorpusCommand, AnswerParityCommand, ConvertCommand,
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
     DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
-    DenseGgufAttentionVMixFixtureCommand, DenseGgufLinearParityCommand,
-    DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
-    DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand, InferenceCommand, InspectCommand,
-    ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
+    DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
+    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand,
+    DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
+    InferenceCommand, InspectCommand, ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -624,6 +624,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Run dense GGUF attention-softmax strict CUDA parity diagnostics
     DenseGgufAttentionSoftmaxCudaParity(Box<DenseGgufAttentionSoftmaxCudaParityCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Run dense GGUF attention V-mix strict CUDA parity diagnostics
+    DenseGgufAttentionVMixCudaParity(Box<DenseGgufAttentionVMixCudaParityCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Run dense GGUF attention-score strict CUDA parity diagnostics
@@ -1425,6 +1429,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufAttentionVMixFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufAttentionSoftmaxCudaParity(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufAttentionVMixCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufAttentionScoreCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
