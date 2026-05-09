@@ -6,6 +6,7 @@ from = "ready"
 to = "pr_open"
 pr = 4178
 actor = "codex"
+head_sha = "b7164fef75329072f1cb5c425586dfff14c7f418"
 branch = "codex/lunar-lake/CPU258V-018-hf-prompt-token-parity"
 summary = "Opened CPU258V-018 to compare HF AutoTokenizer prompt rendering and token IDs against BitNet-rs prompt-authority audit output."
 notes = [

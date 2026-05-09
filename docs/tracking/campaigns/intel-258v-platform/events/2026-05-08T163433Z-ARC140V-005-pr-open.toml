@@ -6,6 +6,7 @@ from = "ready"
 to = "pr_open"
 pr = 4103
 actor = "codex"
+head_sha = "8371e1f69bef5a6f2f11f56687aea76557aa8423"
 branch = "codex/intel-258v-platform/ARC140V-005-opencl-cpu-parity"
 summary = "Opened ARC140V-005 to record native Arc 140V OpenCL CPU-reference parity against the post-mechanics 258V CPU bundle."
 
