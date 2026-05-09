@@ -11,3 +11,7 @@
 ## 2024-05-22 - Keyboard Navigation in Custom Tabs
 **Learning:** Custom tab implementations using ARIA roles (`tablist`, `tab`) often miss the expected keyboard interaction pattern (arrow keys to navigate), making them inaccessible to keyboard users despite having semantic roles.
 **Action:** Always implement a `keydown` handler for custom tab components to support ArrowRight/ArrowLeft/Home/End navigation and automatic activation.
+
+## 2024-05-22 - Focus Visibility and Box Sizing
+**Learning:** Adding `box-sizing: border-box` to inputs prevents them from overflowing containers when padding is applied and `width: 100%` is used. Furthermore, relying on default browser focus rings is insufficient for accessibility; explicit `:focus-visible` styles with custom outlines ensure clear visual feedback for keyboard users across different platforms.
+**Action:** Always include `box-sizing: border-box` for standard form inputs and define clear `:focus-visible` styles for better keyboard navigation.
