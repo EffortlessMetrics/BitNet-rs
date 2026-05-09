@@ -2172,10 +2172,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-017"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-017-one-layer-rmsnorm-route"
 pr = 4222
-head_sha = "712128cac289bc2394d7f0ceaa0e369f58d20614"
+head_sha = "b4404b75db4299b8140477ee9689c926f90956c1"
+merge_sha = "7f25a615d8f696cf34bcf13da772126af1a024ef"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

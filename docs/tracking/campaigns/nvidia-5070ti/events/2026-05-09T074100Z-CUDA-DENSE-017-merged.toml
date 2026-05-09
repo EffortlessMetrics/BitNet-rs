@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T07:41:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-017"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-017-one-layer-rmsnorm-route"
+pr = 4222
+head_sha = "b4404b75db4299b8140477ee9689c926f90956c1"
+merge_sha = "7f25a615d8f696cf34bcf13da772126af1a024ef"
+notes = [
+  "PR #4222 merged the dense one-layer RMSNorm planner route update.",
+  "The committed receipt records 9 dense_regular_llm_cuda ops, including 7 dense linears and 2 RMSNorm ops, with 5 unsupported strict CUDA gaps remaining.",
+  "RoPE is now the next governed dense one-layer gap; dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, QK256, and BitNet packed proof claims remain false.",
+]
