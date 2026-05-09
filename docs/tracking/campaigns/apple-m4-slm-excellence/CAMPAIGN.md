@@ -64,8 +64,8 @@ but blocked until an accepted BitNet artifact exists.
 
 | Work item | Status | Notes |
 |---|---|---|
-| M4-SLM-EX-001 | ready | Add `bitnet mac doctor` as a one-command health verdict for cache, disk, smoke, receipt, backend, fallback, and unsupported-backend behavior. |
-| M4-SLM-EX-002 | pending | Polish `bitnet mac chat` interactive behavior, streaming defaults, EOF/Ctrl-C handling, and receipt options. |
+| M4-SLM-EX-001 | merged | Add `bitnet mac doctor` as a one-command health verdict for cache, disk, smoke, receipt, backend, fallback, and unsupported-backend behavior. |
+| M4-SLM-EX-002 | ready | Polish `bitnet mac chat` interactive behavior, streaming defaults, EOF/Ctrl-C handling, and receipt options. |
 | M4-SLM-EX-003 | pending | Reduce time-to-first-token while preserving greedy token IDs and quality corpus behavior. |
 | M4-SLM-EX-004 | pending | Clean hot-loop allocations and document allocation budget without changing receipt schema. |
 | M4-SLM-EX-005 | pending | Document dense model support matrix for default and leading candidate SLMs: default, supported, candidate, and rejected model states. |

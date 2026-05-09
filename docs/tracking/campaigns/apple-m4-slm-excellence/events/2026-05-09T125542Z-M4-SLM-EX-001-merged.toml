@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T12:55:42Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-001"
+event = "merged"
+actor = "codex"
+pr = 4276
+merge_sha = "1b6bd513bc23d85fc1b92787778704e09d0d9cd1"
+
+notes = [
+  "Merged PR #4276, adding `bitnet mac doctor` as the one-command local health verdict for the supported dense Apple M4 SLM path.",
+  "The doctor path checks verified cache state, disk/cache health, tiny smoke behavior, receipt validation, apple-m4-cpu-neon backend/fallback identity, and unsupported full-Metal backend rejection without downloading models by default.",
+  "No BitNet local-answer quality, full Apple Metal inference, QK256, Neural Engine, MPSGraph model inference, or broad M4 performance claim is made.",
+]
