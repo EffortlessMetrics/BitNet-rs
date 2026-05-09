@@ -25,7 +25,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-MODEL-001"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-001-candidate-selection"
 stackable = false
 review_mode = "codex_premerge"
