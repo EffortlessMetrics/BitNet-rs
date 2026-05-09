@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-dense-slm-regression`
 
-Status: active
+Status: complete
 
 ## Objective
 
