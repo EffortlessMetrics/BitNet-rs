@@ -56,7 +56,7 @@
 | apple-m4-slm-performance | M4-SLM-PERF-006 | M4-SLM-PERF-005 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-007 | M4-SLM-PERF-006 | merged |
 | apple-silicon-macbook | MB-AS-002 |  | blocked |
-| apple-silicon-macbook | MB-AS-003 | MB-AS-001 | pr_open |
+| apple-silicon-macbook | MB-AS-003 | MB-AS-001 | merged |
 | apple-silicon-macbook | MB-AS-004 | MB-AS-003 | proposed |
 | apple-silicon-macbook | MB-AS-005 | MB-AS-003 | proposed |
 | apple-silicon-macbook | MB-AS-006 | MB-AS-003 | proposed |
