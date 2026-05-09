@@ -77,6 +77,37 @@ Initial advisory timing bands for matching receipts:
 
 These thresholds are intentionally conservative. They should become stricter only after repeated matching release-mode receipts exist from the scheduled Apple hardware lane.
 
+## Quality And Determinism Gate
+
+`M4-SLM-REG-002` hardens `bitnet mac receipts-check` for the committed Apple M4 dense SLM warm-session quality corpus:
+
+```bash
+bitnet mac receipts-check target/apple-m4-slm-regression/slm-quality-corpus.json
+```
+
+For `slm_apple_m4_warm_session` receipts that identify `corpus.artifact_kind = "apple_m4_slm_quality_corpus"`, the checker treats quality and determinism as correctness gates before any timing drift is meaningful. It requires:
+
+```text
+corpus.name = apple-m4-slm-quality-determinism-v1
+case_count = 5
+repeat_runs >= 2
+deterministic greedy top-1 generation
+model sha256 present
+tokenizer source and pre-tokenizer authority present
+requested_backend = apple-m4-cpu-neon
+selected_backend = apple-m4-cpu-neon
+runtime_api = cpu
+fallback_used = false
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+failed_rules = []
+stable generated token IDs for each repeated prompt
+stable text for each repeated prompt
+```
+
+This gate is deliberately narrow. It checks the supported dense Qwen Apple CPU/NEON corpus for drift; it does not prove broad chat quality, BitNet quality, Metal inference, or a fleet-wide Apple Silicon performance envelope.
+
 ## Failure Classes
 
 Hard regression classes:

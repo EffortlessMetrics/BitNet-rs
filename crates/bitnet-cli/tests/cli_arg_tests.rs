@@ -841,6 +841,63 @@ fn mac_receipts_check_rejects_dense_slm_regression_context_mismatch() {
 }
 
 #[test]
+fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("warm-quality.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&dense_quality_warm_session_receipt()).expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("slm_apple_m4_warm_session"))
+        .stdout(predicate::str::contains("\"prompt_count\": 10"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_dense_slm_quality_corpus_determinism_drift() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("warm-quality-drift.json");
+    let mut receipt = dense_quality_warm_session_receipt();
+    receipt["prompts"][1]["generated_token_ids"] = serde_json::json!([198, 999]);
+    receipt["prompts"][1]["generated_tokens"] = serde_json::json!(2);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("changed deterministic greedy output"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_dense_slm_quality_corpus_degenerate_prompt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("warm-quality-degenerate.json");
+    let mut receipt = dense_quality_warm_session_receipt();
+    receipt["prompts"][0]["quality"]["passed"] = serde_json::json!(false);
+    receipt["prompts"][0]["quality"]["non_degenerate"] = serde_json::json!(false);
+    receipt["prompts"][0]["quality"]["failed_rules"] =
+        serde_json::json!(["generated_token_variation"]);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("warm-session prompt quality failed"));
+}
+
+#[test]
 fn mac_receipts_check_accepts_split_metal_phase_receipt() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("metal-phase.json");
@@ -1182,6 +1239,118 @@ fn performance_summary_receipt(model_sha: &str) -> serde_json::Value {
             "bitnet_quality_claimed": false,
             "broad_performance_claim": false,
             "speedup_claim": false
+        }
+    })
+}
+
+fn dense_quality_warm_session_receipt() -> serde_json::Value {
+    let cases = [
+        ("math_2_plus_2", "What is 2+2? Answer briefly.", vec![198, 17, 10, 17]),
+        ("capital_france", "Name the capital of France.", vec![785, 6722, 374, 12095]),
+        ("rust_sentence", "Write one short sentence about Rust.", vec![58047, 374, 264, 4221]),
+        (
+            "ready_instruction",
+            "In one short sentence, say that the system is ready.",
+            vec![785, 1849, 374, 5527],
+        ),
+        (
+            "answer_prefix_blue",
+            "Return the answer as 'Answer: blue' for this question: What color is a clear daytime sky?",
+            vec![16141, 25, 6303, 151645],
+        ),
+    ];
+    let mut prompts = Vec::new();
+    let mut groups = Vec::new();
+    for (case_id, prompt, ids) in cases {
+        groups.push(serde_json::json!({
+            "prompt": prompt,
+            "attempt_count": 2,
+            "case_id": case_id,
+            "prompt_indices": [prompts.len(), prompts.len() + 1],
+            "stable_generated_token_ids": true,
+            "stable_text": true,
+            "reference_generated_ids": ids,
+            "reference_text": "stable answer"
+        }));
+        for repeat_index in 0..2 {
+            prompts.push(serde_json::json!({
+                "prompt_index": prompts.len(),
+                "case_id": case_id,
+                "repeat_index": repeat_index,
+                "prompt": prompt,
+                "text": "stable answer",
+                "generated_tokens": ids.len(),
+                "generated_token_ids": ids,
+                "quality": {
+                    "passed": true,
+                    "valid_utf8": true,
+                    "printable_utf8": true,
+                    "non_empty": true,
+                    "no_replacement_chars": true,
+                    "mostly_text": true,
+                    "non_degenerate": true,
+                    "generated_tokens": ids.len(),
+                    "distinct_generated_tokens": ids.iter().collect::<std::collections::BTreeSet<_>>().len(),
+                    "failed_rules": []
+                },
+                "timing": {
+                    "model_load_ms": 0.0,
+                    "tokenizer_load_ms": 0.0,
+                    "total_ms": 100.0
+                },
+                "backend": {
+                    "requested_backend": "apple-m4-cpu-neon",
+                    "selected_backend": "apple-m4-cpu-neon",
+                    "runtime_api": "cpu",
+                    "fallback_used": false
+                }
+            }));
+        }
+    }
+    serde_json::json!({
+        "artifact_kind": "slm_apple_m4_warm_session",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "session": {
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "prompt_count": 10
+        },
+        "corpus": {
+            "artifact_kind": "apple_m4_slm_quality_corpus",
+            "name": "apple-m4-slm-quality-determinism-v1",
+            "case_count": 5,
+            "repeat_runs": 2
+        },
+        "generation": {
+            "mode": "greedy",
+            "temperature": 0.0,
+            "top_k": 1,
+            "deterministic": true
+        },
+        "model": {
+            "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+        },
+        "tokenizer": {
+            "source": "gguf_metadata",
+            "pretokenizer_authority": "present"
+        },
+        "quality_summary": {
+            "passed": true
+        },
+        "determinism": {
+            "checked": true,
+            "passed": true,
+            "repeated_prompt_groups": 5,
+            "groups": groups
+        },
+        "prompts": prompts,
+        "claim_boundary": {
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "broad_performance_claim": false
         }
     })
 }

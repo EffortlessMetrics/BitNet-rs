@@ -1753,10 +1753,21 @@ fn validate_warm_session_receipt(
     if prompts.is_empty() {
         anyhow::bail!("{} warm-session receipt has no prompts", path.display());
     }
+    let dense_quality_corpus =
+        receipt["corpus"]["artifact_kind"].as_str() == Some("apple_m4_slm_quality_corpus");
+    if dense_quality_corpus {
+        validate_dense_slm_quality_corpus_header(path, receipt, prompts.len())?;
+    }
     let mut generated_total = 0usize;
     for prompt in prompts {
+        if prompt["backend"]["requested_backend"].as_str() != Some(APPLE_M4_CPU_NEON) {
+            anyhow::bail!("{} warm-session prompt requested a non-Mac CPU backend", path.display());
+        }
         if prompt["backend"]["selected_backend"] != APPLE_M4_CPU_NEON {
             anyhow::bail!("{} warm-session prompt selected a non-Mac CPU backend", path.display());
+        }
+        if prompt["backend"]["runtime_api"].as_str() != Some("cpu") {
+            anyhow::bail!("{} warm-session prompt runtime_api must be cpu", path.display());
         }
         if prompt["backend"]["fallback_used"].as_bool().unwrap_or(true) {
             anyhow::bail!("{} warm-session prompt records fallback_used=true", path.display());
@@ -1768,6 +1779,22 @@ fn validate_warm_session_receipt(
         if generated == 0 {
             anyhow::bail!("{} warm-session prompt generated zero tokens", path.display());
         }
+        let generated_ids = prompt["generated_token_ids"]
+            .as_array()
+            .or_else(|| prompt["tokens"]["generated_ids"].as_array())
+            .ok_or_else(|| {
+                anyhow!("{} warm-session prompt is missing generated token IDs", path.display())
+            })?;
+        if generated_ids.is_empty() {
+            anyhow::bail!("{} warm-session prompt generated token IDs are empty", path.display());
+        }
+        if generated_ids.len() != generated {
+            anyhow::bail!(
+                "{} warm-session prompt generated token ID count does not match generated_tokens",
+                path.display()
+            );
+        }
+        validate_warm_session_prompt_quality(path, prompt)?;
         if prompt["operator_ux"].is_object()
             && prompt["operator_ux"]["time_to_first_token_receipt"].as_bool() != Some(true)
         {
@@ -1785,7 +1812,166 @@ fn validate_warm_session_receipt(
         }
         generated_total += generated;
     }
+    if dense_quality_corpus {
+        validate_dense_slm_quality_corpus_determinism(path, receipt, prompts)?;
+    }
     Ok((Some(prompts.len()), Some(generated_total)))
+}
+
+fn validate_dense_slm_quality_corpus_header(
+    path: &Path,
+    receipt: &serde_json::Value,
+    prompt_count: usize,
+) -> Result<()> {
+    let corpus = &receipt["corpus"];
+    if corpus["name"].as_str() != Some("apple-m4-slm-quality-determinism-v1") {
+        anyhow::bail!("{} dense SLM corpus receipt has unexpected corpus name", path.display());
+    }
+    let case_count = corpus["case_count"].as_u64().unwrap_or_default() as usize;
+    let repeat_runs = corpus["repeat_runs"].as_u64().unwrap_or_default() as usize;
+    if case_count != 5 {
+        anyhow::bail!("{} dense SLM corpus must contain five prompt cases", path.display());
+    }
+    if repeat_runs < 2 {
+        anyhow::bail!("{} dense SLM corpus must repeat prompts for determinism", path.display());
+    }
+    if prompt_count != case_count.saturating_mul(repeat_runs) {
+        anyhow::bail!(
+            "{} dense SLM corpus prompt count must equal case_count * repeat_runs",
+            path.display()
+        );
+    }
+    if receipt["generation"]["mode"].as_str() != Some("greedy")
+        || receipt["generation"]["deterministic"].as_bool() != Some(true)
+        || receipt["generation"]["temperature"].as_f64() != Some(0.0)
+        || receipt["generation"]["top_k"].as_u64() != Some(1)
+    {
+        anyhow::bail!(
+            "{} dense SLM corpus must be deterministic greedy top-1 generation",
+            path.display()
+        );
+    }
+    if receipt["model"]["sha256"].as_str().is_none() {
+        anyhow::bail!("{} dense SLM corpus receipt is missing model sha256", path.display());
+    }
+    if receipt["tokenizer"]["source"].as_str().is_none()
+        || receipt["tokenizer"]["pretokenizer_authority"].as_str().is_none()
+    {
+        anyhow::bail!("{} dense SLM corpus receipt is missing tokenizer authority", path.display());
+    }
+    Ok(())
+}
+
+fn validate_warm_session_prompt_quality(path: &Path, prompt: &serde_json::Value) -> Result<()> {
+    let quality = &prompt["quality"];
+    if quality["passed"].as_bool() != Some(true) {
+        anyhow::bail!("{} warm-session prompt quality failed", path.display());
+    }
+    for field in ["valid_utf8", "non_empty", "non_degenerate"] {
+        if quality[field].as_bool() != Some(true) {
+            anyhow::bail!(
+                "{} warm-session prompt quality must record {field}=true",
+                path.display()
+            );
+        }
+    }
+    if quality["failed_rules"].as_array().is_none_or(|rules| !rules.is_empty()) {
+        anyhow::bail!("{} warm-session prompt quality failed_rules must be empty", path.display());
+    }
+    if quality["distinct_generated_tokens"].as_u64().unwrap_or_default() == 0 {
+        anyhow::bail!(
+            "{} warm-session prompt quality must record distinct generated tokens",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_dense_slm_quality_corpus_determinism(
+    path: &Path,
+    receipt: &serde_json::Value,
+    prompts: &[serde_json::Value],
+) -> Result<()> {
+    let determinism = &receipt["determinism"];
+    if determinism["checked"].as_bool() != Some(true)
+        || determinism["passed"].as_bool() != Some(true)
+    {
+        anyhow::bail!("{} dense SLM corpus determinism failed", path.display());
+    }
+    if determinism["repeated_prompt_groups"].as_u64() != Some(5) {
+        anyhow::bail!(
+            "{} dense SLM corpus must record five repeated prompt groups",
+            path.display()
+        );
+    }
+    let groups = determinism["groups"].as_array().ok_or_else(|| {
+        anyhow!("{} dense SLM corpus determinism is missing groups", path.display())
+    })?;
+    if groups.len() != 5 {
+        anyhow::bail!(
+            "{} dense SLM corpus determinism groups must have length five",
+            path.display()
+        );
+    }
+    for group in groups {
+        if group["attempt_count"].as_u64().unwrap_or_default() < 2
+            || group["stable_generated_token_ids"].as_bool() != Some(true)
+            || group["stable_text"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} dense SLM corpus has unstable deterministic greedy output",
+                path.display()
+            );
+        }
+        if group["reference_generated_ids"].as_array().is_none_or(|ids| ids.is_empty()) {
+            anyhow::bail!(
+                "{} dense SLM corpus determinism group is missing reference generated token IDs",
+                path.display()
+            );
+        }
+    }
+
+    let mut by_case: std::collections::BTreeMap<String, Vec<&serde_json::Value>> =
+        std::collections::BTreeMap::new();
+    for prompt in prompts {
+        let case_id = prompt["case_id"].as_str().ok_or_else(|| {
+            anyhow!("{} dense SLM corpus prompt is missing case_id", path.display())
+        })?;
+        if prompt["repeat_index"].as_u64().is_none() {
+            anyhow::bail!("{} dense SLM corpus prompt is missing repeat_index", path.display());
+        }
+        by_case.entry(case_id.to_string()).or_default().push(prompt);
+    }
+    if by_case.len() != 5 {
+        anyhow::bail!("{} dense SLM corpus must cover five case IDs", path.display());
+    }
+    for (case_id, prompts) in by_case {
+        if prompts.len() < 2 {
+            anyhow::bail!(
+                "{} dense SLM corpus case {case_id} must have repeated prompts",
+                path.display()
+            );
+        }
+        let first_ids = &prompts[0]["generated_token_ids"];
+        let first_text = prompts[0]["text"].as_str().unwrap_or_default();
+        if first_ids.as_array().is_none_or(|ids| ids.is_empty()) || first_text.trim().is_empty() {
+            anyhow::bail!(
+                "{} dense SLM corpus case {case_id} is missing reference text or token IDs",
+                path.display()
+            );
+        }
+        for prompt in prompts.iter().skip(1) {
+            if &prompt["generated_token_ids"] != first_ids
+                || prompt["text"].as_str().unwrap_or_default() != first_text
+            {
+                anyhow::bail!(
+                    "{} dense SLM corpus case {case_id} changed deterministic greedy output",
+                    path.display()
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 fn receipt_string(receipt: &serde_json::Value, key: &str) -> Option<String> {
