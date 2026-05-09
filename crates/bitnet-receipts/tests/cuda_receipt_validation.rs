@@ -2,10 +2,12 @@
 //!
 //! These tests validate strict smoke/parity proof artifacts without claiming
 //! benchmark or full BitNet inference readiness.
+#![recursion_limit = "256"]
 
 use bitnet_receipts::{
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof, validate_cuda_parity_receipt_json,
-    validate_cuda_smoke_receipt_json, validate_dense_gguf_linear_fixture_extraction_receipt_json,
+    validate_cuda_smoke_receipt_json, validate_dense_gguf_linear_cuda_parity_receipt_json,
+    validate_dense_gguf_linear_fixture_extraction_receipt_json,
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
     validate_dense_regular_llm_cuda_receipt_json,
@@ -463,6 +465,60 @@ fn dense_gguf_linear_fixture_rejects_iq2s_tensor_type() {
     assert!(err.contains("BitNet packed I2_S/QK256"), "unexpected error: {err}");
 }
 
+#[test]
+fn dense_gguf_linear_cuda_parity_receipt_validates() {
+    let receipt = valid_dense_gguf_linear_cuda_parity_receipt();
+
+    validate_dense_gguf_linear_cuda_parity_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_linear_cuda_parity_rejects_failed_parity() {
+    let mut receipt = valid_dense_gguf_linear_cuda_parity_receipt();
+    receipt["parity"]["passed"] = json!(false);
+
+    let err =
+        validate_dense_gguf_linear_cuda_parity_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("`passed`"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_cuda_parity_rejects_dense_inference_claim() {
+    let mut receipt = valid_dense_gguf_linear_cuda_parity_receipt();
+    receipt["claim_boundary"]["dense_gguf_inference_claimed"] = json!(true);
+    receipt["linear_fixture"]["dense_gguf_inference_claimed"] = json!(true);
+
+    let err =
+        validate_dense_gguf_linear_cuda_parity_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("dense_gguf_inference_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_cuda_parity_rejects_bitnet_source_marker() {
+    let mut receipt = valid_dense_gguf_linear_cuda_parity_receipt();
+    receipt["linear_fixture"]["tensor_type"] = json!("i2_s");
+
+    let err =
+        validate_dense_gguf_linear_cuda_parity_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("BitNet packed I2_S/QK256"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_linear_cuda_parity_rejects_transfer_mismatch() {
+    let mut receipt = valid_dense_gguf_linear_cuda_parity_receipt();
+    receipt["tensor_residency"]["transfer_accounting"]["device_to_host_bytes"] = json!(4);
+
+    let err =
+        validate_dense_gguf_linear_cuda_parity_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("device_to_host_bytes"), "unexpected error: {err}");
+}
+
 fn valid_smoke_receipt() -> Value {
     json!({
         "schema": 1,
@@ -872,6 +928,175 @@ fn valid_dense_gguf_linear_fixture_extraction_receipt() -> Value {
             "Synthetic GGUF reader fixture; one Q8_0 dense linear tensor was materialized as F32 for CPU reference matvec extraction.",
             "No CUDA kernel, dense GGUF inference, speedup, full residency, or BitNet packed-kernel proof is claimed."
         ],
+        "error": null
+    })
+}
+
+fn valid_dense_gguf_linear_cuda_parity_receipt() -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_linear_cuda_parity",
+        "artifact_path": "target/bitnet/receipts/dense-gguf-linear-cuda-parity.json",
+        "claim": "dense_gguf_linear_cuda_parity_tested",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-09T00:00:00Z",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity(),
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "file": "synthetic-dense-gguf-linear-fixture",
+            "sha256": "0".repeat(64)
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_fp16_gemm",
+            "quantization_family": "q8_0_materialized_to_f16_bridge",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": {
+            "planner_version": "cuda-planner-004",
+            "model_family": "qwen",
+            "quantization": "dense_fp16",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "cuda_bitnet_qk256_ops": 0,
+            "cuda_dense_regular_llm_ops": 1,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 1,
+            "cuda_ops": 1,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "linear_fixture": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_linear_fixture_extraction",
+            "fixture_id": "dense_gguf_linear_qwen_attention_q_f16_bridge",
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "tensor_name": "blk.0.attn_q.weight",
+            "role": "attention_q",
+            "tensor_type": "q8_0",
+            "matrix_rows": 3,
+            "matrix_cols": 4,
+            "logical_layout": "gguf_in_out_reinterpreted_as_out_in",
+            "gemm_layout": "input_1_by_in_times_weight_in_by_out",
+            "values_materialized_as_f32": true,
+            "gemm_input_dtype": "f16",
+            "gemm_weight_dtype": "f16",
+            "gemm_output_dtype": "f32",
+            "weight_values_sha256": "1".repeat(64),
+            "dense_gguf_inference_claimed": false,
+            "dense_regular_llm_cuda_claimed": true,
+            "cpu_cuda_parity_claimed": true,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "kernel_stats": [{
+            "kernel_id": "dense_f16_gemm_cuda",
+            "invocations": 1,
+            "fallback_invocations": 0,
+            "host_to_device_bytes": 32,
+            "device_to_host_bytes": 12,
+            "kernel_launches": 1,
+            "kernel_time_ms": null
+        }],
+        "parity": {
+            "reference_backend": "amd-9950x3d-cpu-avx512",
+            "target_backend": "nvidia-rtx-5070-ti-cuda",
+            "kernel_id": "dense_f16_gemm_cuda",
+            "fixture_id": "dense_gguf_linear_qwen_attention_q_f16_bridge",
+            "max_abs_error": 0.0,
+            "mean_abs_error": 0.0,
+            "passed": true,
+            "tolerance": 0.002,
+            "tolerance_source": "CUDA-DENSE-008 dense GGUF linear FP16 bridge fixture"
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "tensor_residency": {
+            "schema_version": "1.0.0",
+            "scope": "single_dense_gguf_linear_fixture",
+            "model_class": "dense_regular_llm",
+            "fixture_id": "dense_gguf_linear_qwen_attention_q_f16_bridge",
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false,
+            "input_tensors_uploaded_once": true,
+            "output_tensor_cuda_resident_during_kernel": true,
+            "host_device_transfer_accounting_matches_kernel_stats": true,
+            "inputs": [
+                {
+                    "name": "dense_gguf_linear_input",
+                    "dtype": "f16",
+                    "shape": [1, 4],
+                    "host_bytes": 8,
+                    "device_residency": "cuda_device_buffer",
+                    "upload_count": 1,
+                    "reuse_scope": "single_fixture_launch"
+                },
+                {
+                    "name": "dense_gguf_linear_weight_transposed",
+                    "dtype": "f16",
+                    "shape": [4, 3],
+                    "host_bytes": 24,
+                    "device_residency": "cuda_device_buffer",
+                    "upload_count": 1,
+                    "reuse_scope": "single_fixture_launch"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dense_gguf_linear_output",
+                    "dtype": "f32",
+                    "shape": [1, 3],
+                    "device_residency": "cuda_device_buffer",
+                    "device_to_host_bytes": 12,
+                    "download_scope": "parity_check_only"
+                }
+            ],
+            "allocation": {
+                "device_buffer_count": 3,
+                "temporary_workspace_bytes": 0,
+                "persistent_handle_count": 0,
+                "persistent_handles_claimed": false
+            },
+            "transfer_accounting": {
+                "status": "measured",
+                "host_to_device_bytes": 32,
+                "device_to_host_bytes": 12
+            }
+        },
         "error": null
     })
 }

@@ -214,9 +214,12 @@ pub use softmax::SOFTMAX_KERNEL_SRC;
 
 pub use dense_gemm::{
     CUDA_DENSE_F16_GEMM_FIXTURE_ID, CUDA_DENSE_F16_GEMM_KERNEL_ID, CUDA_DENSE_F16_GEMM_TOLERANCE,
-    CUDA_DENSE_GEMM_REFERENCE_BACKEND, CUDA_DENSE_GEMM_TARGET_BACKEND, CudaDenseGemmParity,
-    CudaDenseGemmStats, dense_f16_gemm_cpu_reference, dense_f16_gemm_fixture,
-    launch_dense_f16_gemm_cuda, run_dense_f16_gemm_cuda_parity,
+    CUDA_DENSE_GEMM_REFERENCE_BACKEND, CUDA_DENSE_GEMM_TARGET_BACKEND,
+    CUDA_DENSE_GGUF_LINEAR_F16_GEMM_TOLERANCE, CudaDenseGemmParity, CudaDenseGemmStats,
+    DenseGgufLinearCudaParity, DenseGgufLinearF16GemmPrepared, DenseGgufLinearGemmFixture,
+    dense_f16_gemm_cpu_reference, dense_f16_gemm_fixture, dense_gguf_linear_f16_gemm_cpu_reference,
+    launch_dense_f16_gemm_cuda, prepare_dense_gguf_linear_f16_gemm, run_dense_f16_gemm_cuda_parity,
+    run_dense_gguf_linear_f16_cuda_parity,
 };
 pub use dequant::{
     DequantConfig, DequantPrecision, QK256_BLOCK_SIZE, QuantBitWidth, ScaleMode,

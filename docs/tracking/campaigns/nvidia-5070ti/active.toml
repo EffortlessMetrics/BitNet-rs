@@ -1643,3 +1643,56 @@ must_not_claim = [
   "CPU/CUDA dense GGUF parity is proven.",
   "Full dense regular LLM CUDA residency exists.",
 ]
+
+[[work_item]]
+id = "CUDA-DENSE-008"
+status = "in_progress"
+branch = "codex/cuda-dense-008-real-linear-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-007"]
+acceptance = "Add a dense GGUF single-linear CPU/CUDA parity bridge that converts descriptor-extracted row-major dense linear fixture data into the existing strict FP16 GEMM CUDA layout, validates a dense GGUF linear CUDA parity receipt contract, and keeps dense GGUF inference, speedup, server, tokenizer, transformer, and BitNet packed-kernel proof claims false."
+commands = [
+  "cargo fmt -p bitnet-kernels -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda dense_gguf_linear -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation dense_gguf_linear_cuda -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation -- --nocapture",
+  "cargo test --locked -p bitnet-receipts-core --lib --no-default-features dense_gguf_linear -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-models/src/formats/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense GGUF full-model inference implementation",
+  "server runtime behavior",
+]
+may_claim = [
+  "Descriptor-extracted dense GGUF single-linear fixture data can be converted into the existing FP16 GEMM CUDA layout.",
+  "A dense GGUF linear CUDA parity receipt contract can validate fallback-free single-linear dense CUDA execution against the FP16 CPU bridge.",
+  "Dense GGUF linear CUDA parity receipts remain rejected as BitNet packed I2S/QK256 proof.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, or server behavior changed.",
+  "A full Qwen token, layer, decode, or chat path works on CUDA.",
+  "Full dense regular LLM CUDA residency exists.",
+]
