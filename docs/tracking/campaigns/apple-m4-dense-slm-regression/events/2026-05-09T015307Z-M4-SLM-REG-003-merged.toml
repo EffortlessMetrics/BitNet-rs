@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T01:53:07Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-003"
+event = "merged"
+pr = 4170
+head_sha = "c19a76c175431bc1cc2efc92d0fc0a2c374a6fc2"
+merge_sha = "adc87739138a2e09362a1e44c1547253611e3476"
+actor = "codex"
+
+notes = [
+  "Merged the staged Apple M4 dense SLM hardware regression workflow shape.",
+  "The workflow is manual-dispatch only, defaults to enable_run=false, and does not activate scheduled hardware regression.",
+  "M4-SLM-REG-004 is ready for compact trend-history artifact format work.",
+]
