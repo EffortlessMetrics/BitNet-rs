@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T01:31:46Z"
+campaign = "apple-m4-dense-slm-regression"
+item = "M4-SLM-REG-002"
+event = "merged"
+pr = 4166
+head_sha = "c93f374a94a65d6bbc414cffa56e71e19ff6bfca"
+merge_sha = "7166ebdf943bb64d455fdebdd7779f9a028e075d"
+actor = "codex"
+
+notes = [
+  "Merged the dense SLM quality and deterministic greedy drift gate.",
+  "mac receipts-check now hardens the five-prompt Apple M4 dense SLM warm-session corpus before timing drift is interpreted.",
+  "M4-SLM-REG-003 is ready for scheduled Apple hardware regression workflow shaping.",
+]
