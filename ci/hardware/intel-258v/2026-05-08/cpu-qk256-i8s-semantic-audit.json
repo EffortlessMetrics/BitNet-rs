@@ -2,7 +2,7 @@
   "artifact_kind": "bitnet_cpu_qk256_i8s_semantic_audit",
   "machine_id": "intel-258v",
   "proof_stage": "semantic_audited",
-  "source_commit": "e069cd22ffa7406dded0934b8ad566933f2bebe6",
+  "source_commit": "e390b35262b42613bad7cd65900e77b25319a2eb",
   "claim": "cpu258v_qk256_i2s_i8s_semantic_boundary",
   "implementation": {
     "primary_file": "crates/bitnet-quantization/src/i2s_qk256.rs",
