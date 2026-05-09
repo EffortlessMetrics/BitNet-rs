@@ -1519,8 +1519,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-024"
-status = "pr_open"
+status = "merged"
 pr = 4342
+merge_sha = "614b3bc97fd12c3a01dfc36efc9f66949b2f7d85"
 branch = "codex/lunar-lake/CPU258V-024-observed-logits-length"
 stackable = false
 review_mode = "codex_premerge"
