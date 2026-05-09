@@ -7674,6 +7674,7 @@ async fn run_slm_warm_session(
             repetition_penalty,
             seed,
         });
+        sampler.reserve_logits_capacity(config.model.vocab_size.max(tokenizer.vocab_size()));
         let mut first_token_ms = None;
         let mut first_token_decode_ms = None;
         let prompt_setup_alloc = AllocationAuditSnapshot::delta_since(prompt_setup_alloc_start);
@@ -7955,7 +7956,7 @@ async fn run_slm_warm_session(
                 "stop_tail_buffer_reused": max_stop_len > 0,
                 "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
                 "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
-                "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+                "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
             },
             "operator_ux": {
                 "stream_tokens_requested": output.stream_tokens,
@@ -8100,7 +8101,7 @@ async fn run_slm_warm_session(
             "stop_tail_buffer_reused": true,
             "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
             "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
-            "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+            "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
         },
         "corpus": slm_warm_session_corpus_receipt(corpus_path.as_deref(), corpus.as_ref(), corpus_repeat_runs),
         "generation": {
@@ -8408,7 +8409,7 @@ impl WarmSessionSpeedAccumulator {
                 "sampler_recreated_per_prompt": true,
                 "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
                 "logits_buffer_reuse_claimed": false,
-                "logits_buffer_reuse_policy": "not_claimed_until_logits_extraction_uses_reusable_storage",
+                "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
             },
             "counts": {
                 "prompt_count": self.prompt_count,
@@ -9889,15 +9890,15 @@ fn warm_session_prompt_allocation_audit_json(
         "enabled": true,
         "method": "process_global_allocator_counter_delta",
         "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
-        "claim_scope": "allocation counter deltas for this prompt/profile only; no optimization or performance improvement claimed",
-        "optimization_deferred": true,
+        "claim_scope": "allocation counter deltas for this prompt/profile only; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
+        "optimization_deferred": false,
         "unavoidable_candidates_named_before_optimization": true,
         "ranked_hotspots": hotspots.iter().map(AllocationHotspot::to_json).collect::<Vec<_>>(),
         "unavoidable_candidates": [
             "model.embed/model.forward/model.logits tensor outputs from the current dense Qwen CPU execution path",
             "tokenizer.decode allocation for per-token text and stop-tail checks",
             "receipt construction outside the decode hot loop",
-            "prompt token vector growth until a reusable session buffer is introduced"
+            "prompt token vector growth is controlled by reusable session buffers; model tensor outputs remain the dominant allocation source"
         ],
         "instrumentation_included": [
             "prompt_tokenize",
@@ -9997,10 +9998,10 @@ fn warm_session_aggregate_allocation_audit_json(
         "enabled": true,
         "method": "process_global_allocator_counter_delta",
         "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
-        "claim_scope": "aggregate of prompt-level allocation counter deltas; no optimization or performance improvement claimed",
+        "claim_scope": "aggregate of prompt-level allocation counter deltas; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
         "prompt_count": prompt_summaries.len(),
         "ranked_hotspots": ranked,
-        "optimization_deferred": true,
+        "optimization_deferred": false,
     })
 }
 

@@ -137,6 +137,13 @@ Tighten resident decode hygiene:
 - temporary tensor creation;
 - JSON receipt construction outside generation.
 
+The first cleanup preallocates the sampler logits scratch buffer before the
+resident decode loop. Local allocation-audit receipts showed `sampler.sample`
+performed one `vocab_size * sizeof(f32)` allocation per prompt; after this pass
+that allocation is moved into prompt setup and the sampler reuses the buffer for
+each decode step. This does not claim reusable storage for model logits tensor
+extraction, which remains a separate and larger allocation source.
+
 Acceptance requires quality unchanged, timing not worse, and receipt schema
 unchanged.
 

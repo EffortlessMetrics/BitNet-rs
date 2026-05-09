@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T13:38:13Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-004"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-SLM-EX-004 after M4-SLM-EX-003 closeout merged.",
+  "The initial local allocation-audit receipt shows resident decode allocations are dominated by model forward/logits tensors, while `sampler.sample` performs a one-time logits scratch allocation per prompt.",
+  "The first cleanup targets sampling scratch reuse by preallocating the sampler logits buffer before the decode loop while preserving greedy token IDs and quality corpus behavior.",
+  "No BitNet local-answer quality, full Apple Metal inference, QK256, Neural Engine, MPSGraph model inference, MacBook work, model download, or broad M4 performance claim is being added.",
+]
