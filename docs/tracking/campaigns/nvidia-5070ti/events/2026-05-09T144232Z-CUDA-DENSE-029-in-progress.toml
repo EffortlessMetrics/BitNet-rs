@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:42:32Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-029"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+branch = "codex/cuda-dense-029-mlp-activation-fixture"
+actor = "codex"
+
+notes = [
+  "Started dense GGUF MLP activation CPU-reference fixture extraction after CUDA-DENSE-028 made attention_v_mix CUDA-routable.",
+  "The fixture records SiLU(mlp_gate) times mlp_up activation hashes and keeps CUDA parity, dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false.",
+]

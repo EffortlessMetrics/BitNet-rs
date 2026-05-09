@@ -131,7 +131,8 @@ use commands::{
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
     DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
     DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
-    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand,
+    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
+    DenseGgufMlpActivationFixtureCommand, DenseGgufNormCudaParityCommand,
     DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
     InferenceCommand, InspectCommand, ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
 };
@@ -620,6 +621,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Extract a dense GGUF attention V-mix fixture and emit a CPU-reference receipt
     DenseGgufAttentionVMixFixture(Box<DenseGgufAttentionVMixFixtureCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Extract a dense GGUF MLP activation fixture and emit a CPU-reference receipt
+    DenseGgufMlpActivationFixture(Box<DenseGgufMlpActivationFixtureCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Run dense GGUF attention-softmax strict CUDA parity diagnostics
@@ -1427,6 +1432,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufAttentionSoftmaxFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufAttentionVMixFixture(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufMlpActivationFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufAttentionSoftmaxCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
