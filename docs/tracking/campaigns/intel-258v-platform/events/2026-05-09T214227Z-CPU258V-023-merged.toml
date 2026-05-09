@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T21:42:27Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-023"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4329
+merge_sha = "bed8306bbc4e5983f358bb08158c39afae816e6d"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-023-output-head-logits-audit"
+summary = "Merged CPU258V-023 after adding the 258V output-head and logits-index audit boundary."
+notes = [
+  "The merged PR adds bitnet output-head-logits-audit and records GGUF embedding/output-head candidates, tied-head policy, tokenizer vocab and special-token IDs, expected logits vector length, observed logits vector length availability, and decoded scalar/AVX2 first-step top-k evidence.",
+  "The live 258V artifact classifies the logits-index boundary as having an explicit gap because observed runtime logits vector length evidence is not yet available.",
+  "The merged PR does not claim new BitNet answer quality, external first-token logits parity, CPU speed, Arc 140V execution, Intel NPU execution, or full model correctness.",
+  "CPU258V-024 is ready to capture observed runtime logits vector length evidence before deeper transformer layer parity.",
+]
