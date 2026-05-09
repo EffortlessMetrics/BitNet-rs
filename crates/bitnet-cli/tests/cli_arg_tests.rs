@@ -306,6 +306,7 @@ fn mac_help_documents_operator_wrappers() {
         .stdout(predicate::str::contains("check"))
         .stdout(predicate::str::contains("ask"))
         .stdout(predicate::str::contains("smoke"))
+        .stdout(predicate::str::contains("doctor"))
         .stdout(predicate::str::contains("validate"))
         .stdout(predicate::str::contains("bitnet-proof"))
         .stdout(predicate::str::contains("receipts-check"));
@@ -506,6 +507,58 @@ fn mac_smoke_rejects_full_metal_request_before_cache_lookup() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("mac smoke routes the supported Mac local-answer path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn mac_doctor_help_documents_health_verdict() {
+    bitnet()
+        .args(["mac", "doctor", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("health verdict"))
+        .stdout(predicate::str::contains("--json-out <PATH>"))
+        .stdout(predicate::str::contains("--max-new-tokens"));
+}
+
+#[test]
+fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let receipt = dir.path().join("doctor.json");
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "doctor",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Mac doctor cannot pass"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+
+    let receipt_json: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&receipt).expect("receipt")).expect("receipt json");
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_slm_doctor");
+    assert_eq!(receipt_json["result"], "fail");
+    assert_eq!(receipt_json["checks"]["cache"]["ready"], false);
+    assert_eq!(receipt_json["checks"]["unsupported_backend"]["rejected"], true);
+    assert_eq!(receipt_json["mac_claim_boundary"]["bitnet_quality_claimed"], false);
+}
+
+#[test]
+fn mac_doctor_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "doctor"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac doctor routes the supported Mac local-answer path"))
         .stderr(predicate::str::contains("Full apple-m4-metal inference"));
 }
 
