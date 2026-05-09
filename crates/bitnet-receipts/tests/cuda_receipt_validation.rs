@@ -10,6 +10,7 @@ use bitnet_receipts::{
     validate_dense_gguf_attention_score_fixture_receipt_json,
     validate_dense_gguf_attention_softmax_cuda_parity_receipt_json,
     validate_dense_gguf_attention_softmax_fixture_receipt_json,
+    validate_dense_gguf_attention_v_mix_fixture_receipt_json,
     validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_fixture_extraction_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
@@ -198,6 +199,18 @@ fn committed_dense_gguf_attention_softmax_cuda_parity_receipt_validates() {
 }
 
 #[test]
+fn committed_dense_gguf_attention_v_mix_fixture_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-attention-v-mix-fixture-qwen25-q8.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_attention_v_mix_fixture_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
 fn dense_gguf_attention_score_fixture_rejects_cuda_parity_claim() {
     let mut receipt: Value = serde_json::from_str(include_str!(
         "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-attention-score-fixture-qwen25-q8.json"
@@ -221,6 +234,19 @@ fn dense_gguf_attention_softmax_fixture_rejects_cuda_claim() {
     let err = validate_dense_gguf_attention_softmax_fixture_receipt_json(&receipt)
         .unwrap_err()
         .to_string();
+    assert!(err.contains("dense_regular_llm_cuda_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_attention_v_mix_fixture_rejects_cuda_claim() {
+    let mut receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-attention-v-mix-fixture-qwen25-q8.json"
+    ))
+    .unwrap();
+    receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"] = json!(true);
+
+    let err =
+        validate_dense_gguf_attention_v_mix_fixture_receipt_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("dense_regular_llm_cuda_claimed"), "unexpected error: {err}");
 }
 

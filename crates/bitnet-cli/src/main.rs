@@ -130,9 +130,10 @@ use commands::{
     AnswerCorpusCommand, AnswerParityCommand, ConvertCommand,
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
     DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
-    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand,
-    DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
-    InferenceCommand, InspectCommand, ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
+    DenseGgufAttentionVMixFixtureCommand, DenseGgufLinearParityCommand,
+    DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
+    DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand, InferenceCommand, InspectCommand,
+    ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -615,6 +616,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Extract a dense GGUF attention-softmax fixture and emit a CPU-reference receipt
     DenseGgufAttentionSoftmaxFixture(Box<DenseGgufAttentionSoftmaxFixtureCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Extract a dense GGUF attention V-mix fixture and emit a CPU-reference receipt
+    DenseGgufAttentionVMixFixture(Box<DenseGgufAttentionVMixFixtureCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Run dense GGUF attention-softmax strict CUDA parity diagnostics
@@ -1416,6 +1421,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufAttentionScoreFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufAttentionSoftmaxFixture(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufAttentionVMixFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufAttentionSoftmaxCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
