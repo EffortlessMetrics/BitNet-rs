@@ -2288,10 +2288,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-033"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-032-cpu-reference-harness"
 pr = 4318
-head_sha = "9750ed811ae4800e805f7b40ab08902fe14beaf9"
+head_sha = "1f720d90abd7222108929fba3828a4e43a48d626"
+merge_sha = "2744cc9b201ca2817a8ba2757b92b95381167064"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T19:21:44Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-033"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-032-cpu-reference-harness"
+pr = 4318
+merge_sha = "2744cc9b201ca2817a8ba2757b92b95381167064"
+
+notes = [
+  "PR #4318 merged, implementing the dense GGUF one-layer CPU reference harness defined by CUDA-DENSE-032.",
+  "The merged harness emits dense_gguf_one_layer_cpu_reference receipts with deterministic CPU-only input, per-phase hashes, final layer output hash, and validator coverage.",
+  "CUDA-DENSE-033 keeps CUDA integrated layer execution, dense GGUF inference, Qwen token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math claims false.",
+]
