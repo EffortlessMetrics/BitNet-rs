@@ -2234,10 +2234,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-018"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-018-rope-parity"
 pr = 4228
-head_sha = "712116c41c2ab46cbdf55b2b56d1ff06d7014a09"
+head_sha = "67e3ea577ac8408bfc1507b7614957866f07c62e"
+merge_sha = "210a338c0257eb656fadf3a2c4df352e1ab3fde5"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
