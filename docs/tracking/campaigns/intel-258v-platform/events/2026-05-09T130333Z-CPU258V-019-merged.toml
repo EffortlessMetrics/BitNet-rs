@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T13:03:33Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-019"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4248
+merge_sha = "2708a5ce85f1d341de609edabfac28a8a7315afb"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-019-external-first-token-reference"
+summary = "Merged CPU258V-019 after recording the external first-token reference boundary for fixed 258V prompts."
+notes = [
+  "The artifact records Microsoft BitNet.cpp generated text from MODEL-ARTIFACT-007 and prompt token IDs for the exact bitnet.cpp prompt string using HF AutoTokenizer with add_special_tokens=false.",
+  "Generated token IDs and first-token logits remain unavailable in this reference evidence and are recorded as missing rather than inferred.",
+  "CPU258V-020 is ready to classify first-token divergence from the available prompt/token audit, external reference, and 258V scalar/AVX2 evidence.",
+  "The merged PR does not claim logits parity, generated-token-ID parity, answer quality, speed, Arc 140V execution, Intel NPU execution, or QK256 decode correctness.",
+]
