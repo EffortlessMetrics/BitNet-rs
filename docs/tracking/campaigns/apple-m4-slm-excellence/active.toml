@@ -119,7 +119,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EX-003"
-status = "in_progress"
+status = "merged"
+pr = 4284
+merge_sha = "11b7fa54db5a397290781c15bc73b95f7474bb77"
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-003-ttft"
 stackable = false
 review_mode = "codex_premerge"

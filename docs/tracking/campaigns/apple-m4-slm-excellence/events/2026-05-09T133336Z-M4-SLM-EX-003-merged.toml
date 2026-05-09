@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T13:33:36Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-003"
+event = "merged"
+actor = "codex"
+pr = 4284
+merge_sha = "11b7fa54db5a397290781c15bc73b95f7474bb77"
+
+notes = [
+  "Merged PR #4284, reducing a measured dense Apple M4 SLM warm-session overhead by reusing the already verified model-cache SHA instead of rehashing the large GGUF before generation.",
+  "The merged receipts expose `model.sha256_source`, `model.sha256_rehash_skipped`, and `timing.model_sha256_ms` for auditability.",
+  "The live M4 receipts recorded `sha256_rehash_skipped=true`, near-zero model SHA timing, preserved quick-prompt token IDs, and passed the deterministic quality corpus.",
+  "M4-SLM-EX-004 remains ready for the next resident decode hot-loop allocation cleanup item.",
+  "No BitNet local-answer quality, full Apple Metal inference, QK256, Neural Engine, MPSGraph model inference, MacBook work, or broad M4 performance claim is made.",
+]
