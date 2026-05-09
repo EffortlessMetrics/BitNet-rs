@@ -9,6 +9,7 @@ use bitnet_receipts::{
     validate_cuda_smoke_receipt_json, validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_fixture_extraction_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
+    validate_dense_gguf_one_layer_execution_plan_receipt_json,
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
     validate_dense_regular_llm_cuda_receipt_json,
@@ -89,6 +90,18 @@ fn committed_dense_gguf_linear_fixture_extraction_receipt_validates() {
     .unwrap();
 
     validate_dense_gguf_linear_fixture_extraction_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_gguf_one_layer_execution_plan_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-one-layer-plan-qwen25-q8.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt).unwrap();
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
@@ -564,6 +577,41 @@ fn dense_gguf_linear_role_sweep_rejects_duplicate_roles() {
         .to_string();
 
     assert!(err.contains("duplicate"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_one_layer_execution_plan_receipt_validates_gap() {
+    let receipt = valid_dense_gguf_one_layer_execution_plan_receipt();
+
+    validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_one_layer_plan_rejects_inference_claim() {
+    let mut receipt = valid_dense_gguf_one_layer_execution_plan_receipt();
+    receipt["claim_boundary"]["dense_gguf_one_layer_inference_claimed"] = json!(true);
+    receipt["one_layer_plan"]["one_layer_inference_claimed"] = json!(true);
+
+    let err = validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("one_layer_inference_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_one_layer_plan_requires_unsupported_strict_ops() {
+    let mut receipt = valid_dense_gguf_one_layer_execution_plan_receipt();
+    receipt["execution_plan"]["unsupported_ops"] = json!(0);
+    receipt["execution_plan"]["total_ops"] = json!(7);
+
+    let err = validate_dense_gguf_one_layer_execution_plan_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("unsupported_ops"), "unexpected error: {err}");
 }
 
 fn valid_smoke_receipt() -> Value {
@@ -1310,6 +1358,215 @@ fn valid_dense_gguf_linear_role_sweep_cuda_parity_receipt() -> Value {
         },
         "error": null
     })
+}
+
+fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_one_layer_execution_plan",
+        "artifact_path": "target/bitnet/receipts/dense-gguf-one-layer-plan.json",
+        "claim": "dense_gguf_one_layer_execution_plan_gap_recorded",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-09T00:00:00Z",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity(),
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "file": "synthetic-dense-gguf-one-layer-plan",
+            "sha256": "0".repeat(64)
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_fp16_gemm_plus_unsupported_layer_ops",
+            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": {
+            "planner_version": "cuda-planner-004",
+            "model_family": "qwen",
+            "quantization": "dense_fp16",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "cuda_bitnet_qk256_ops": 0,
+            "cuda_dense_regular_llm_ops": 7,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 7,
+            "total_ops": 14,
+            "cuda_ops": 7,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": 11,
+            "metadata_count": 4,
+            "required_roles_present": true,
+            "strict_descriptor_complete": true,
+            "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+            "quantization_families": ["f32", "q8_0"],
+            "bitnet_packed_marker_found": false,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "one_layer_plan": {
+            "schema": 1,
+            "layer_index": 0,
+            "total_ops": 14,
+            "linear_cuda_ops_total": 7,
+            "unsupported_strict_cuda_ops_total": 7,
+            "cpu_fallback_ops_total": 0,
+            "strict_cuda_ready": false,
+            "unsupported_ops_explicitly_listed": true,
+            "operations": dense_one_layer_operations(),
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": false,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    })
+}
+
+fn dense_one_layer_operations() -> Value {
+    let mut operations = Vec::new();
+    push_one_layer_unsupported_op(
+        &mut operations,
+        0,
+        "blk.0.attn_norm.weight",
+        "attention_norm",
+        "rmsnorm",
+    );
+    push_one_layer_cuda_op(&mut operations, 1, "blk.0.attn_q.weight", "attention_q");
+    push_one_layer_cuda_op(&mut operations, 2, "blk.0.attn_k.weight", "attention_k");
+    push_one_layer_cuda_op(&mut operations, 3, "blk.0.attn_v.weight", "attention_v");
+    push_one_layer_unsupported_op(&mut operations, 4, "blk.0.rope", "rope", "rope");
+    push_one_layer_unsupported_op(
+        &mut operations,
+        5,
+        "blk.0.attention_scores",
+        "attention_scores",
+        "attention",
+    );
+    push_one_layer_unsupported_op(
+        &mut operations,
+        6,
+        "blk.0.attention_softmax",
+        "attention_softmax",
+        "softmax",
+    );
+    push_one_layer_unsupported_op(
+        &mut operations,
+        7,
+        "blk.0.attention_v_mix",
+        "attention_v_mix",
+        "attention",
+    );
+    push_one_layer_cuda_op(&mut operations, 8, "blk.0.attn_output.weight", "attention_output");
+    push_one_layer_unsupported_op(
+        &mut operations,
+        9,
+        "blk.0.ffn_norm.weight",
+        "ffn_norm",
+        "rmsnorm",
+    );
+    push_one_layer_cuda_op(&mut operations, 10, "blk.0.ffn_gate.weight", "mlp_gate");
+    push_one_layer_cuda_op(&mut operations, 11, "blk.0.ffn_up.weight", "mlp_up");
+    push_one_layer_unsupported_op(
+        &mut operations,
+        12,
+        "blk.0.mlp_activation",
+        "mlp_activation",
+        "activation",
+    );
+    push_one_layer_cuda_op(&mut operations, 13, "blk.0.ffn_down.weight", "mlp_down");
+    Value::Array(operations)
+}
+
+fn push_one_layer_cuda_op(operations: &mut Vec<Value>, index: u64, name: &str, role: &str) {
+    operations.push(json!({
+        "index": index,
+        "name": name,
+        "role": role,
+        "op_type": "matmul",
+        "size": 256,
+        "source": "gguf_tensor_descriptor",
+        "source_tensor": name,
+        "source_tensor_type": "q8_0",
+        "source_shape": [16, 16],
+        "is_quantized": false,
+        "route": "dense_regular_llm_cuda",
+        "status": "cuda_routable",
+        "fallback_used": false,
+        "reason": format!("cuda_dense_regular_llm route selected for {name}")
+    }));
+}
+
+fn push_one_layer_unsupported_op(
+    operations: &mut Vec<Value>,
+    index: u64,
+    name: &str,
+    role: &str,
+    op_type: &str,
+) {
+    operations.push(json!({
+        "index": index,
+        "name": name,
+        "role": role,
+        "op_type": op_type,
+        "size": 16,
+        "source": if name.ends_with(".weight") { "gguf_tensor_descriptor" } else { "derived_transformer_op" },
+        "source_tensor": if name.ends_with(".weight") { json!(name) } else { Value::Null },
+        "source_tensor_type": if name.ends_with(".weight") { json!("f32") } else { Value::Null },
+        "source_shape": if name.ends_with(".weight") { json!([16]) } else { Value::Null },
+        "is_quantized": false,
+        "route": "unsupported",
+        "status": "unsupported_strict_cuda",
+        "fallback_used": false,
+        "reason": format!("strict CUDA rejects CPU fallback for dense_regular_llm dense_fp16 {op_type} op {name}")
+    }));
 }
 
 fn dense_gguf_descriptor_entries() -> Value {

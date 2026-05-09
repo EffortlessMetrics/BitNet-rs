@@ -21,7 +21,9 @@ pub use answer_parity::AnswerParityCommand;
 #[cfg(feature = "cli-bench")]
 pub use benchmark::BenchmarkCommand;
 pub use convert::ConvertCommand;
-pub use dense_gguf_linear_parity::{DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand};
+pub use dense_gguf_linear_parity::{
+    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufOneLayerPlanCommand,
+};
 pub use inference::InferenceCommand;
 pub use inspect::InspectCommand;
 pub use receipts::ReceiptsCommand;
