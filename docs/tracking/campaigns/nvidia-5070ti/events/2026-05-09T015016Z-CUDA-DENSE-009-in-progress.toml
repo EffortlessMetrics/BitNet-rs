@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T01:50:16Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-009"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-009-extracted-linear-parity"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started the extracted dense GGUF linear parity CLI harness after CUDA-DENSE-008 merged.",
+  "Scope is an operator command that extracts one dense GGUF linear fixture, converts it to the existing FP16 GEMM CUDA bridge, and validates a dense_gguf_linear_cuda_parity receipt.",
+  "No dense GGUF inference, Qwen one-token/decode/chat, speedup, server, tokenizer, transformer, QK256, or full-residency claim is in scope.",
+]

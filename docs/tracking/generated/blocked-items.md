@@ -149,6 +149,7 @@
 | nvidia-5070ti | CUDA-DENSE-006 | CUDA-DENSE-005 | merged |
 | nvidia-5070ti | CUDA-DENSE-007 | CUDA-DENSE-006 | merged |
 | nvidia-5070ti | CUDA-DENSE-008 | CUDA-DENSE-007 | merged |
+| nvidia-5070ti | CUDA-DENSE-009 | CUDA-DENSE-008 | in_progress |
 | slm-cpu | SLM-CPU-001 | SLM-CPU-000 | merged |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | merged |
 | slm-cpu | SLM-CPU-002A | SLM-CPU-002 | merged |

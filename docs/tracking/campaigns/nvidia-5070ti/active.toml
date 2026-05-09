@@ -1699,3 +1699,55 @@ must_not_claim = [
   "A full Qwen token, layer, decode, or chat path works on CUDA.",
   "Full dense regular LLM CUDA residency exists.",
 ]
+
+[[work_item]]
+id = "CUDA-DENSE-009"
+status = "in_progress"
+branch = "codex/cuda-dense-009-extracted-linear-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-008"]
+acceptance = "Add a CLI/operator harness that extracts one dense GGUF single-linear fixture through bitnet-models, converts it to the CUDA-DENSE-008 FP16 GEMM CUDA bridge, emits and validates a dense_gguf_linear_cuda_parity receipt, and keeps dense GGUF inference, Qwen one-token/decode/chat, speedup, server, tokenizer, transformer, BitNet packed proof, and full-residency claims false."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_linear_parity -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/Cargo.toml",
+  "crates/bitnet-cli/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "server runtime behavior",
+]
+may_claim = [
+  "The CLI can extract a dense GGUF single-linear fixture and route it through the existing dense FP16 GEMM CUDA parity bridge.",
+  "The emitted dense_gguf_linear_cuda_parity receipt validates fallback-free single-linear dense CUDA parity while preserving the dense route execution_plan.",
+  "Dense GGUF linear CUDA parity receipts remain rejected as BitNet packed I2S/QK256 proof.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, or server behavior changed.",
+  "A full Qwen token, layer, decode, or chat path works on CUDA.",
+  "Full dense regular LLM CUDA residency exists.",
+]

@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 //! BitNet CLI library
 //!
 //! This library exposes internal modules for testing purposes.
