@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:43:44Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-008"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-SLM-EX-008 after the M4-SLM-EX-007 closeout merged.",
+  "Recorded resident 25-prompt/64-budget and 50-prompt/128-budget dense SLM soak receipts under ci/hardware/apple-m4-mac-mini/2026-05-09/M4-SLM-EX-008/.",
+  "The 25-prompt receipt passed with generated_tokens=482, peak_memory_mb=4013.234, decode_generated_tok_s=6.327, and fallback_used=false.",
+  "The 50-prompt receipt passed with generated_tokens=1185, peak_memory_mb=4020.25, decode_generated_tok_s=6.313, and fallback_used=false.",
+  "No broad Apple Silicon performance claim is made.",
+]

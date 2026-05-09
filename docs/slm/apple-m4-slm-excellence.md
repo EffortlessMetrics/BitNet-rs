@@ -226,6 +226,19 @@ Record longer resident behavior:
 The output is a scoped M4 Mac mini envelope, not a fleet-wide Apple Silicon
 performance claim.
 
+The scoped M4 Mac mini soak receipts live under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-09/M4-SLM-EX-008/
+```
+
+The recorded profiles are `resident-25-64.json` and `resident-50-128.json`,
+with a compact `summary.json`. Both profiles keep `fallback_used = false`,
+`model_loaded_once = true`, `tokenizer_loaded_once = true`, and
+`quality_summary.passed = true`. The 50-prompt profile records 1185 generated
+tokens, `peak_memory_mb = 4020.25`, and `decode_generated_tok_s = 6.313` for
+this M4 Mac mini receipt only.
+
 ### M4-SLM-EX-009: Local Regression Command
 
 Add:

@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_dense_slm_long_session_soak_summary",
+  "timestamp": "2026-05-09T14:42:20Z",
+  "campaign": "apple-m4-slm-excellence",
+  "work_item": "M4-SLM-EX-008",
+  "machine": "apple-m4-mac-mini",
+  "model_id": "qwen2.5-0.5b-instruct-q8_0",
+  "backend": {
+    "requested_backend": "apple-m4-cpu-neon",
+    "selected_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "fallback_used": false
+  },
+  "profiles": [
+    {
+      "name": "resident_25_prompt_64_budget",
+      "receipt": "ci/hardware/apple-m4-mac-mini/2026-05-09/M4-SLM-EX-008/resident-25-64.json",
+      "prompt_count": 25,
+      "max_new_tokens": 64,
+      "generated_tokens": 482,
+      "quality_passed": true,
+      "model_loaded_once": true,
+      "tokenizer_loaded_once": true,
+      "peak_memory_mb": 4013.234,
+      "time_to_first_token_mean_ms": 4630.36,
+      "time_to_first_token_p95_ms": 5667.0,
+      "decode_generated_tok_s": 6.327,
+      "steady_decode_tok_s_mean": 6.338,
+      "total_session_ms": 198130.965
+    },
+    {
+      "name": "resident_50_prompt_128_budget",
+      "receipt": "ci/hardware/apple-m4-mac-mini/2026-05-09/M4-SLM-EX-008/resident-50-128.json",
+      "prompt_count": 50,
+      "max_new_tokens": 128,
+      "generated_tokens": 1185,
+      "quality_passed": true,
+      "model_loaded_once": true,
+      "tokenizer_loaded_once": true,
+      "peak_memory_mb": 4020.25,
+      "time_to_first_token_mean_ms": 4682.9,
+      "time_to_first_token_p95_ms": 5671.0,
+      "decode_generated_tok_s": 6.313,
+      "steady_decode_tok_s_mean": 6.334,
+      "total_session_ms": 424606.24
+    }
+  ],
+  "drift": {
+    "peak_memory_mb_delta_50_minus_25": 7.016,
+    "time_to_first_token_mean_ms_delta_50_minus_25": 52.54,
+    "time_to_first_token_p95_ms_delta_50_minus_25": 4.0,
+    "decode_generated_tok_s_delta_50_minus_25": -0.014,
+    "steady_decode_tok_s_mean_delta_50_minus_25": -0.004
+  },
+  "claim_boundary": {
+    "scoped_m4_mac_mini_soak": true,
+    "broad_performance_claim": false,
+    "speedup_claim": false,
+    "bitnet_quality_claimed": false,
+    "full_apple_metal_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false
+  }
+}

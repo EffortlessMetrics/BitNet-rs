@@ -71,7 +71,7 @@ but blocked until an accepted BitNet artifact exists.
 | M4-SLM-EX-005 | merged | Document dense model support matrix for default and leading candidate SLMs: default, supported, candidate, diagnostic-only, and rejected model states. |
 | M4-SLM-EX-006 | merged | Add a second supported dense model only after reference and Rust M4 quality gates pass. |
 | M4-SLM-EX-007 | merged | Expand to quality corpus 2.0 for small local-answer behavior. |
-| M4-SLM-EX-008 | pending | Record long resident-session soak behavior for memory and timing drift. |
+| M4-SLM-EX-008 | in_progress | Record long resident-session soak behavior for memory and timing drift. |
 | M4-SLM-EX-009 | pending | Add local advisory `bitnet mac regression` comparison against matching M4 envelope receipts. |
 | M4-SLM-EX-010 | pending | Publish the measured M4 mini user expectation envelope. |
 
