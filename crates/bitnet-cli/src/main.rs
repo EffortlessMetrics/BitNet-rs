@@ -127,8 +127,8 @@ fn bitnet_version() -> &'static str {
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
 use commands::{
-    AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, InferenceCommand, InspectCommand,
-    ReferenceCompareCommand, ServeCommand,
+    AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, DenseGgufLinearParityCommand,
+    InferenceCommand, InspectCommand, ReferenceCompareCommand, ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -567,6 +567,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Validate an external-reference divergence artifact
     ReferenceCompare(Box<ReferenceCompareCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Extract one dense GGUF linear fixture and run strict CUDA parity diagnostics
+    DenseGgufLinearParity(Box<DenseGgufLinearParityCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Run multiple SLM prompts in one warm process with one model/tokenizer load
@@ -1330,6 +1334,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::AnswerParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::ReferenceCompare(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufLinearParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::SlmWarmSession {
             model,

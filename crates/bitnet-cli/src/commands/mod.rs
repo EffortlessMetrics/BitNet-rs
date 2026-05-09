@@ -6,6 +6,7 @@ pub mod answer_parity;
 pub mod benchmark;
 pub mod chat;
 pub mod convert;
+pub mod dense_gguf_linear_parity;
 #[allow(dead_code)]
 pub mod eval;
 pub mod inference;
@@ -19,6 +20,7 @@ pub use answer_parity::AnswerParityCommand;
 #[cfg(feature = "cli-bench")]
 pub use benchmark::BenchmarkCommand;
 pub use convert::ConvertCommand;
+pub use dense_gguf_linear_parity::DenseGgufLinearParityCommand;
 pub use inference::InferenceCommand;
 pub use inspect::InspectCommand;
 pub use reference_compare::ReferenceCompareCommand;

@@ -506,6 +506,7 @@ dependencies = [
  "bitnet-prompt-templates",
  "bitnet-qk256-dispatch",
  "bitnet-quantization",
+ "bitnet-receipts-core",
  "bitnet-repl-core",
  "bitnet-runtime-bootstrap",
  "bitnet-sampling",

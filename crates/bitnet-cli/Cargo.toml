@@ -41,6 +41,7 @@ bitnet-eval-core = { path = "../bitnet-eval-core", version = "0.2.1-dev" }
 bitnet-cli-sampling-core = { path = "../bitnet-cli-sampling-core", version = "0.2.1-dev" }
 bitnet-cli-config-core = { path = "../bitnet-cli-config-core", version = "0.2.1-dev" }
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev", default-features = false }
+bitnet-receipts-core = { path = "../bitnet-receipts-core", version = "0.2.1-dev" }
 bitnet-scoring-core = { path = "../bitnet-scoring-core", version = "0.2.1-dev" }
 bitnet-download = { path = "../bitnet-download", version = "0.2.1-dev" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
