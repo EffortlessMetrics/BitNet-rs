@@ -504,13 +504,13 @@ fn prune_models(
                 "not cached"
             };
             println!("{action}: {} ({})", result.id, result.path.display());
-            if !result.existed {
-                if let Ok(model) = supported_model(&result.id) {
-                    println!(
-                        "next: fetch it with `{}`",
-                        model_command("fetch", model, Some(&cache_root))
-                    );
-                }
+            if !result.existed
+                && let Ok(model) = supported_model(&result.id)
+            {
+                println!(
+                    "next: fetch it with `{}`",
+                    model_command("fetch", model, Some(&cache_root))
+                );
             }
         }
     }
@@ -575,6 +575,7 @@ fn cache_status(cache_root: &Path, model: SupportedModel, verify: bool) -> Resul
     })
 }
 
+#[cfg(feature = "full-cli")]
 fn cache_ready(status: &CacheStatus) -> bool {
     status.present
         && status.size_matches
@@ -596,6 +597,7 @@ fn cache_state_label(status: &CacheStatus) -> &'static str {
     }
 }
 
+#[cfg(feature = "full-cli")]
 fn cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> String {
     let model = &status.model;
     let fetch = model_command("fetch", model, Some(cache_root));
