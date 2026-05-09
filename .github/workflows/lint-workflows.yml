@@ -1,0 +1,26 @@
+name: Lint Workflows
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/*.yml'
+      - 'xtask/src/lint_workflows.rs'
+      - 'xtask/src/main.rs'
+      - 'xtask/Cargo.toml'
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/*.yml'
+      - 'xtask/src/lint_workflows.rs'
+      - 'xtask/src/main.rs'
+      - 'xtask/Cargo.toml'
+
+jobs:
+  check-yaml:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Check for duplicate YAML keys
+        run: cargo run --locked -p xtask --no-default-features -- lint-workflows
