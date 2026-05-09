@@ -51,7 +51,6 @@
     "bitnet_packed_i2s_qk256_proof": false,
     "blocks_strict_cuda_one_layer": true,
     "candidate_order": [
-      "attention_scores",
       "attention_softmax",
       "attention_v_mix",
       "mlp_activation"
