@@ -40,7 +40,7 @@ use bitnet_models::dense_gguf_linear_fixture::{
 use bitnet_models::dense_gguf_norm_fixture::{
     DenseGgufNormFixture, extract_dense_gguf_norm_fixture,
 };
-use bitnet_models::formats::gguf::GgufReader;
+use bitnet_models::formats::gguf::{GgufReader, GgufTensorType};
 use bitnet_models::layer_inspector::extract_layer_index;
 use bitnet_receipts_core::{
     DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
@@ -52,7 +52,8 @@ use bitnet_receipts_core::{
     DENSE_GGUF_ATTENTION_V_MIX_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_MLP_ACTIVATION_CUDA_PARITY_ARTIFACT_KIND,
-    DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_MLP_ACTIVATION_FIXTURE_ARTIFACT_KIND,
+    DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND, DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
@@ -68,6 +69,7 @@ use bitnet_receipts_core::{
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
     validate_dense_gguf_mlp_activation_cuda_parity_receipt_json,
     validate_dense_gguf_mlp_activation_fixture_receipt_json,
+    validate_dense_gguf_model_boundary_fixtures_receipt_json,
     validate_dense_gguf_norm_cuda_parity_receipt_json,
     validate_dense_gguf_norm_fixture_extraction_receipt_json,
     validate_dense_gguf_one_layer_cpu_reference_receipt_json,
@@ -390,6 +392,92 @@ impl DenseGgufAllLayerPlanCommand {
             &timestamp_utc,
         )?;
         validate_dense_gguf_all_layer_execution_plan_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
+/// Emit dense GGUF model-boundary fixture receipts for token embedding, final
+/// norm, and LM head/logit diagnostics.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufModelBoundaryFixturesCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Number of deterministic token ids used by the embedding fixture.
+    #[arg(long, default_value_t = 4)]
+    pub seq_len: usize,
+
+    /// Number of logits retained in the deterministic top-k diagnostics.
+    #[arg(long, default_value_t = 5)]
+    pub top_k: usize,
+
+    /// CUDA device index used for route identity and claim-boundary receipts.
+    #[arg(long, default_value_t = 0)]
+    pub device_index: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufModelBoundaryFixturesCommand {
+    pub async fn execute(&self) -> Result<()> {
+        if self.seq_len == 0 {
+            bail!("dense GGUF model-boundary fixtures require --seq-len > 0");
+        }
+        if self.top_k == 0 {
+            bail!("dense GGUF model-boundary fixtures require --top-k > 0");
+        }
+
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
+        if !probe.available {
+            bail!("CUDA-DENSE-038 requires CUDA probe success: {:?}", probe.failure_reason);
+        }
+        let device_name = probe.selected_device_name.as_deref().unwrap_or("unknown");
+        if !is_rtx5070ti_device_name(device_name) {
+            bail!("CUDA-DENSE-038 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
+        }
+
+        let fixtures = dense_gguf_model_boundary_fixtures_from_reader(
+            &reader,
+            &inspection,
+            self.seq_len,
+            self.top_k,
+        )?;
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_model_boundary_fixtures_receipt_json(
+            &inspection,
+            &fixtures,
+            Some(&probe),
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        )?;
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt)?;
 
         if let Some(path) = &self.json_out {
             if let Some(parent) = path.parent() {
@@ -1697,6 +1785,51 @@ struct DenseGgufOneLayerCudaIntegratedParity {
 }
 
 #[derive(Debug, Clone)]
+struct DenseGgufBoundaryTensorFixture {
+    name: &'static str,
+    role: &'static str,
+    tensor_name: String,
+    tensor_type: String,
+    source_shape: Vec<usize>,
+    source_offset: u64,
+    source_size_bytes: u64,
+    value_count: usize,
+    output_len: usize,
+    output_sha256: String,
+    max_abs: f32,
+}
+
+#[derive(Debug, Clone)]
+struct DenseGgufLogitTopKEntry {
+    rank: usize,
+    token_id: usize,
+    value: f32,
+}
+
+#[derive(Debug, Clone)]
+struct DenseGgufModelBoundaryFixtures {
+    fixture_id: String,
+    model_family: String,
+    architecture: String,
+    seq_len: usize,
+    hidden_size: usize,
+    vocab_size: usize,
+    token_ids: Vec<usize>,
+    token_ids_sha256: String,
+    token_embedding: DenseGgufBoundaryTensorFixture,
+    final_norm: DenseGgufBoundaryTensorFixture,
+    lm_head_logits: DenseGgufBoundaryTensorFixture,
+    final_norm_input_sha256: String,
+    final_norm_output_sha256: String,
+    logits_len: usize,
+    logits_sha256: String,
+    logits_top_k: Vec<DenseGgufLogitTopKEntry>,
+    top_k: usize,
+    rmsnorm_eps: f32,
+    epsilon_source: String,
+}
+
+#[derive(Debug, Clone)]
 struct DenseLayerPlanEntry {
     op: DispatchOp,
     role: String,
@@ -2484,6 +2617,153 @@ fn dense_gguf_one_layer_cpu_reference_from_reader(
         final_output_sha256: sha256_f32(&final_output),
         final_output_max_abs: max_abs_f32(&final_output),
         final_output_f32: final_output,
+    })
+}
+
+fn dense_gguf_model_boundary_fixtures_from_reader(
+    reader: &GgufReader<'_>,
+    inspection: &DenseGgufDescriptorInspection,
+    seq_len: usize,
+    requested_top_k: usize,
+) -> Result<DenseGgufModelBoundaryFixtures> {
+    if seq_len == 0 {
+        bail!("dense GGUF model-boundary fixtures require a non-zero sequence length");
+    }
+    if requested_top_k == 0 {
+        bail!("dense GGUF model-boundary fixtures require a non-zero top-k");
+    }
+    if !inspection.required_roles_present || !inspection.strict_descriptor_complete {
+        bail!("dense GGUF model-boundary fixtures require complete dense descriptor coverage");
+    }
+
+    let token_descriptor = descriptor_for_role(inspection, DenseGgufTensorRole::TokenEmbedding)?;
+    let final_norm_descriptor = dense_final_norm_descriptor(inspection)?;
+    let lm_head = extract_dense_gguf_linear_fixture(reader, DenseGgufTensorRole::Output)
+        .context("failed to extract dense GGUF LM head/output fixture")?;
+
+    if token_descriptor.shape.len() != 2 {
+        bail!(
+            "dense GGUF token embedding fixture requires a 2D tensor, got {:?}",
+            token_descriptor.shape
+        );
+    }
+    let hidden_size = token_descriptor.shape[0];
+    let vocab_size = token_descriptor.shape[1];
+    if hidden_size == 0 || vocab_size == 0 {
+        bail!("dense GGUF token embedding fixture requires non-zero hidden/vocab dimensions");
+    }
+    if seq_len > vocab_size {
+        bail!(
+            "dense GGUF token embedding fixture seq_len {seq_len} exceeds vocab fixture rows {vocab_size}"
+        );
+    }
+    if lm_head.summary.matrix_cols != hidden_size || lm_head.summary.matrix_rows != vocab_size {
+        bail!(
+            "dense GGUF LM head fixture shape mismatch: rows={} cols={} expected vocab={} hidden={}",
+            lm_head.summary.matrix_rows,
+            lm_head.summary.matrix_cols,
+            vocab_size,
+            hidden_size
+        );
+    }
+    if final_norm_descriptor.shape.len() != 1 || final_norm_descriptor.shape[0] != hidden_size {
+        bail!(
+            "dense GGUF final norm fixture shape mismatch: {:?} expected [{hidden_size}]",
+            final_norm_descriptor.shape
+        );
+    }
+
+    let token_embedding_values =
+        dense_boundary_tensor_values_as_f32(reader, token_descriptor, "token embedding")?;
+    let final_norm_values =
+        dense_boundary_tensor_values_as_f32(reader, final_norm_descriptor, "final norm")?;
+    if token_embedding_values.len() != hidden_size * vocab_size {
+        bail!(
+            "dense GGUF token embedding materialized {} values, expected {}",
+            token_embedding_values.len(),
+            hidden_size * vocab_size
+        );
+    }
+    if final_norm_values.len() != hidden_size {
+        bail!(
+            "dense GGUF final norm materialized {} values, expected {hidden_size}",
+            final_norm_values.len()
+        );
+    }
+
+    let token_ids = (0..seq_len).collect::<Vec<_>>();
+    let token_embedding_output =
+        dense_token_embedding_lookup(&token_embedding_values, hidden_size, vocab_size, &token_ids)?;
+    let final_norm_input =
+        token_embedding_output[(seq_len - 1) * hidden_size..seq_len * hidden_size].to_vec();
+    let (rmsnorm_eps, epsilon_source) =
+        dense_boundary_rmsnorm_epsilon(reader, &inspection.architecture);
+    let final_norm_output =
+        rmsnorm_sequence_cpu(&final_norm_input, 1, hidden_size, &final_norm_values, rmsnorm_eps)?;
+    let logits = dense_linear_sequence_cpu(&lm_head, &final_norm_output, 1)?;
+    let logits_top_k = dense_logits_top_k(&logits, requested_top_k.min(logits.len()))?;
+
+    Ok(DenseGgufModelBoundaryFixtures {
+        fixture_id: format!(
+            "dense_gguf_model_boundary_fixtures_{}_s{}_top{}",
+            sanitize_label(&inspection.model_family),
+            seq_len,
+            logits_top_k.len()
+        ),
+        model_family: inspection.model_family.clone(),
+        architecture: inspection.architecture.clone(),
+        seq_len,
+        hidden_size,
+        vocab_size,
+        token_ids_sha256: sha256_usize(&token_ids),
+        token_ids,
+        token_embedding: DenseGgufBoundaryTensorFixture {
+            name: "token_embedding_lookup",
+            role: "token_embedding",
+            tensor_name: token_descriptor.name.clone(),
+            tensor_type: token_descriptor.tensor_type.clone(),
+            source_shape: token_descriptor.shape.clone(),
+            source_offset: token_descriptor.offset,
+            source_size_bytes: token_descriptor.size_bytes,
+            value_count: token_embedding_values.len(),
+            output_len: token_embedding_output.len(),
+            output_sha256: sha256_f32(&token_embedding_output),
+            max_abs: max_abs_f32(&token_embedding_output),
+        },
+        final_norm: DenseGgufBoundaryTensorFixture {
+            name: "final_model_norm",
+            role: "final_norm",
+            tensor_name: final_norm_descriptor.name.clone(),
+            tensor_type: final_norm_descriptor.tensor_type.clone(),
+            source_shape: final_norm_descriptor.shape.clone(),
+            source_offset: final_norm_descriptor.offset,
+            source_size_bytes: final_norm_descriptor.size_bytes,
+            value_count: final_norm_values.len(),
+            output_len: final_norm_output.len(),
+            output_sha256: sha256_f32(&final_norm_output),
+            max_abs: max_abs_f32(&final_norm_output),
+        },
+        lm_head_logits: DenseGgufBoundaryTensorFixture {
+            name: "lm_head_logits",
+            role: "lm_head_logits",
+            tensor_name: lm_head.summary.tensor_name,
+            tensor_type: lm_head.summary.tensor_type,
+            source_shape: lm_head.summary.source_shape,
+            source_offset: lm_head.summary.source_offset,
+            source_size_bytes: lm_head.summary.source_size_bytes,
+            value_count: lm_head.summary.value_count,
+            output_len: logits.len(),
+            output_sha256: sha256_f32(&logits),
+            max_abs: max_abs_f32(&logits),
+        },
+        final_norm_input_sha256: sha256_f32(&final_norm_input),
+        final_norm_output_sha256: sha256_f32(&final_norm_output),
+        logits_len: logits.len(),
+        logits_sha256: sha256_f32(&logits),
+        logits_top_k,
+        top_k: requested_top_k.min(logits.len()),
+        rmsnorm_eps,
+        epsilon_source,
     })
 }
 
@@ -3381,6 +3661,195 @@ fn dense_linear_sequence_cpu(
         }
     }
     Ok(output)
+}
+
+fn dense_token_embedding_lookup(
+    token_embedding_values: &[f32],
+    hidden_size: usize,
+    vocab_size: usize,
+    token_ids: &[usize],
+) -> Result<Vec<f32>> {
+    if token_embedding_values.len() != hidden_size * vocab_size {
+        bail!(
+            "dense token embedding values length {} != hidden_size*vocab_size {}",
+            token_embedding_values.len(),
+            hidden_size * vocab_size
+        );
+    }
+    if token_ids.is_empty() {
+        bail!("dense token embedding lookup requires at least one token id");
+    }
+
+    let mut output = Vec::with_capacity(token_ids.len() * hidden_size);
+    for token_id in token_ids {
+        if *token_id >= vocab_size {
+            bail!("dense token embedding token id {token_id} is outside vocab size {vocab_size}");
+        }
+        let start = token_id * hidden_size;
+        output.extend_from_slice(&token_embedding_values[start..start + hidden_size]);
+    }
+    Ok(output)
+}
+
+fn dense_logits_top_k(logits: &[f32], top_k: usize) -> Result<Vec<DenseGgufLogitTopKEntry>> {
+    if logits.is_empty() {
+        bail!("dense logits top-k requires a non-empty logits vector");
+    }
+    if top_k == 0 {
+        bail!("dense logits top-k requires top_k > 0");
+    }
+    let mut ranked = logits
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|(token_id, value)| {
+            let sortable = if value.is_finite() { value } else { f32::NEG_INFINITY };
+            (token_id, value, sortable)
+        })
+        .collect::<Vec<_>>();
+    ranked.sort_by(|(left_id, _, left_value), (right_id, _, right_value)| {
+        right_value.total_cmp(left_value).then_with(|| left_id.cmp(right_id))
+    });
+    Ok(ranked
+        .into_iter()
+        .take(top_k.min(logits.len()))
+        .enumerate()
+        .map(|(rank, (token_id, value, _))| DenseGgufLogitTopKEntry { rank, token_id, value })
+        .collect())
+}
+
+fn dense_final_norm_descriptor(
+    inspection: &DenseGgufDescriptorInspection,
+) -> Result<&DenseGgufTensorDescriptor> {
+    inspection
+        .descriptors
+        .iter()
+        .find(|descriptor| dense_final_norm_tensor_name(&descriptor.name))
+        .ok_or_else(|| anyhow!("dense GGUF model-boundary fixtures require final norm tensor"))
+}
+
+fn dense_final_norm_tensor_name(name: &str) -> bool {
+    let normalized = name.to_ascii_lowercase();
+    matches!(
+        normalized.as_str(),
+        "output_norm.weight"
+            | "norm.weight"
+            | "model.norm.weight"
+            | "final_norm.weight"
+            | "final_layernorm.weight"
+            | "final_rmsnorm.weight"
+            | "transformer.ln_f.weight"
+    )
+}
+
+fn dense_boundary_tensor_values_as_f32(
+    reader: &GgufReader<'_>,
+    descriptor: &DenseGgufTensorDescriptor,
+    label: &str,
+) -> Result<Vec<f32>> {
+    let info = reader.get_tensor_info_by_name(&descriptor.name).ok_or_else(|| {
+        anyhow!("dense GGUF {label} descriptor '{}' is missing tensor info", descriptor.name)
+    })?;
+    let data = reader.get_tensor_data_by_info(info)?;
+    match info.tensor_type {
+        GgufTensorType::F32 => dense_boundary_f32_values(data, &info.shape, &info.name),
+        GgufTensorType::F16 => dense_boundary_f16_values(data, &info.shape, &info.name),
+        GgufTensorType::Q8_0 => dense_boundary_q8_0_values(data, &info.shape, &info.name),
+        other => bail!(
+            "dense GGUF {label} fixture does not support tensor type {:?} for '{}'",
+            other,
+            info.name
+        ),
+    }
+}
+
+fn dense_boundary_f32_values(bytes: &[u8], shape: &[usize], tensor_name: &str) -> Result<Vec<f32>> {
+    let elements = dense_boundary_element_count(shape, tensor_name, "F32")?;
+    let expected_bytes =
+        elements.checked_mul(4).ok_or_else(|| anyhow!("F32 tensor '{tensor_name}' overflows"))?;
+    if bytes.len() < expected_bytes {
+        bail!(
+            "F32 tensor '{tensor_name}' has {} bytes, expected at least {expected_bytes}",
+            bytes.len()
+        );
+    }
+    Ok(bytes[..expected_bytes]
+        .chunks_exact(4)
+        .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+        .collect())
+}
+
+fn dense_boundary_f16_values(bytes: &[u8], shape: &[usize], tensor_name: &str) -> Result<Vec<f32>> {
+    let elements = dense_boundary_element_count(shape, tensor_name, "F16")?;
+    let expected_bytes =
+        elements.checked_mul(2).ok_or_else(|| anyhow!("F16 tensor '{tensor_name}' overflows"))?;
+    if bytes.len() < expected_bytes {
+        bail!(
+            "F16 tensor '{tensor_name}' has {} bytes, expected at least {expected_bytes}",
+            bytes.len()
+        );
+    }
+    Ok(bytes[..expected_bytes]
+        .chunks_exact(2)
+        .map(|chunk| half::f16::from_bits(u16::from_le_bytes([chunk[0], chunk[1]])).to_f32())
+        .collect())
+}
+
+fn dense_boundary_q8_0_values(
+    bytes: &[u8],
+    shape: &[usize],
+    tensor_name: &str,
+) -> Result<Vec<f32>> {
+    let elements = dense_boundary_element_count(shape, tensor_name, "Q8_0")?;
+    let blocks = elements.div_ceil(32);
+    let expected_bytes = blocks
+        .checked_mul(GgufTensorType::Q8_0.element_size())
+        .ok_or_else(|| anyhow!("Q8_0 tensor '{tensor_name}' byte count overflows"))?;
+    if bytes.len() < expected_bytes {
+        bail!(
+            "Q8_0 tensor '{tensor_name}' has {} bytes, expected at least {expected_bytes}",
+            bytes.len()
+        );
+    }
+
+    let mut values = Vec::with_capacity(elements);
+    for block_idx in 0..blocks {
+        let offset = block_idx * GgufTensorType::Q8_0.element_size();
+        let scale_bits = u16::from_le_bytes([bytes[offset], bytes[offset + 1]]);
+        let scale = half::f16::from_bits(scale_bits).to_f32();
+        for code_idx in 0..32 {
+            if values.len() == elements {
+                break;
+            }
+            values.push(scale * f32::from(bytes[offset + 2 + code_idx] as i8));
+        }
+    }
+    Ok(values)
+}
+
+fn dense_boundary_element_count(shape: &[usize], tensor_name: &str, dtype: &str) -> Result<usize> {
+    shape.iter().try_fold(1usize, |acc, dim| {
+        acc.checked_mul(*dim)
+            .ok_or_else(|| anyhow!("{dtype} tensor '{tensor_name}' shape {shape:?} overflows"))
+    })
+}
+
+fn dense_boundary_rmsnorm_epsilon(reader: &GgufReader<'_>, architecture: &str) -> (f32, String) {
+    let keys = [
+        format!("{architecture}.attention.layer_norm_rms_epsilon"),
+        format!("{architecture}.attention.layer_norm_epsilon"),
+        format!("{architecture}.rms_norm_eps"),
+        "llama.attention.layer_norm_rms_epsilon".to_string(),
+        "llama.attention.layer_norm_epsilon".to_string(),
+    ];
+
+    for key in keys {
+        if let Some(value) = reader.get_f32_metadata(&key) {
+            return (value, key);
+        }
+    }
+
+    (1e-6, "default_1e-6".to_string())
 }
 
 fn seq_major_to_head_major(
@@ -6852,6 +7321,226 @@ fn dense_gguf_all_layer_execution_plan_receipt_json(
     }))
 }
 
+fn dense_gguf_model_boundary_fixtures_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    fixtures: &DenseGgufModelBoundaryFixtures,
+    probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Result<Value> {
+    if fixtures.model_family != inspection.model_family
+        || fixtures.architecture != inspection.architecture
+    {
+        bail!(
+            "dense GGUF model-boundary fixture identity mismatch: inspection={}/{} fixtures={}/{}",
+            inspection.model_family,
+            inspection.architecture,
+            fixtures.model_family,
+            fixtures.architecture
+        );
+    }
+    if fixtures.logits_top_k.is_empty() {
+        bail!("dense GGUF model-boundary fixtures require logits top-k diagnostics");
+    }
+
+    let summary = ModelDispatchSummary {
+        total_ops: 3,
+        cuda_bitnet_qk256_ops: 0,
+        cuda_dense_regular_llm_ops: 3,
+        cpu_fallback_ops: 0,
+        unsupported_ops: 0,
+        fallback_used: false,
+        selected_route: Some(ModelDispatchBackend::CudaDenseRegularLlm),
+        strict_cuda_ready: true,
+    };
+    let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
+        model_family: &inspection.model_family,
+        quantization: "dense_fp16",
+        requested_backend: HARDWARE_LANE,
+        selected_backend: HARDWARE_LANE,
+        runtime_api: "cuda",
+        strict_fallback_policy: "reject",
+        summary,
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    });
+
+    let top_k = fixtures
+        .logits_top_k
+        .iter()
+        .map(|entry| {
+            json!({
+                "rank": entry.rank as u64,
+                "token_id": entry.token_id as u64,
+                "value": entry.value
+            })
+        })
+        .collect::<Vec<_>>();
+
+    Ok(json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_model_boundary_fixtures_recorded",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": HARDWARE_LANE,
+        "selected_backend": HARDWARE_LANE,
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity_json(probe),
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_cuda_model_boundary_fixture_route",
+            "quantization_family": "dense_gguf_q8_0_f16_boundary_fixture_contract",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": execution_plan,
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "model_boundary_fixtures": {
+            "schema": 1,
+            "fixture_id": fixtures.fixture_id,
+            "seq_len": fixtures.seq_len as u64,
+            "hidden_size": fixtures.hidden_size as u64,
+            "vocab_size": fixtures.vocab_size as u64,
+            "token_ids": fixtures.token_ids.iter().map(|id| json!(*id as u64)).collect::<Vec<_>>(),
+            "token_ids_sha256": fixtures.token_ids_sha256,
+            "fixtures_total": 3_u64,
+            "token_embedding": dense_boundary_tensor_fixture_json(&fixtures.token_embedding),
+            "final_norm": {
+                "rmsnorm_eps": fixtures.rmsnorm_eps,
+                "epsilon_source": fixtures.epsilon_source,
+                "input_sha256": fixtures.final_norm_input_sha256,
+                "output_sha256": fixtures.final_norm_output_sha256,
+                "fixture": dense_boundary_tensor_fixture_json(&fixtures.final_norm)
+            },
+            "lm_head_logits": {
+                "logits_len": fixtures.logits_len as u64,
+                "logits_sha256": fixtures.logits_sha256,
+                "top_k": fixtures.top_k as u64,
+                "top_k_entries": top_k,
+                "fixture": dense_boundary_tensor_fixture_json(&fixtures.lm_head_logits)
+            },
+            "boundary_fixtures_claimed": true,
+            "token_embedding_fixture_claimed": true,
+            "final_norm_fixture_claimed": true,
+            "lm_head_logits_fixture_claimed": true,
+            "fixture_route_only": true,
+            "cuda_kernel_execution_claimed": false,
+            "kernel_invocations": 0_u64,
+            "fallback_used": false,
+            "kv_cache_policy_claimed": false,
+            "sampling_integration_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "remaining_model_boundary_gaps": {
+            "schema": 1,
+            "gaps": [
+                {
+                    "gap": "kv_cache_policy",
+                    "status": "not_governed_by_model_boundary_fixtures",
+                    "required_next_proof": "dense_gguf_kv_cache_policy_receipt",
+                    "blocks_qwen_one_token": true,
+                    "blocks_qwen_short_decode": true,
+                    "blocks_qwen_chat": true
+                },
+                {
+                    "gap": "sampling",
+                    "status": "not_governed_by_model_boundary_fixtures",
+                    "required_next_proof": "dense_gguf_sampling_policy_receipt",
+                    "blocks_qwen_one_token": true,
+                    "blocks_qwen_short_decode": true,
+                    "blocks_qwen_chat": true
+                }
+            ],
+            "qwen_one_token_cuda_blocked": true,
+            "qwen_short_decode_cuda_blocked": true,
+            "qwen_chat_cuda_blocked": true,
+            "next_required_proof": "dense_gguf_kv_cache_policy_receipt",
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_cpu_reference_claimed": true,
+            "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+            "dense_gguf_all_layer_execution_plan_claimed": true,
+            "dense_gguf_model_boundary_fixtures_claimed": true,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "kv_cache_policy_claimed": false,
+            "sampling_integration_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    }))
+}
+
+fn dense_boundary_tensor_fixture_json(fixture: &DenseGgufBoundaryTensorFixture) -> Value {
+    json!({
+        "name": fixture.name,
+        "role": fixture.role,
+        "tensor_name": fixture.tensor_name,
+        "tensor_type": fixture.tensor_type,
+        "source_shape": fixture.source_shape,
+        "source_offset": fixture.source_offset,
+        "source_size_bytes": fixture.source_size_bytes,
+        "value_count": fixture.value_count as u64,
+        "output_len": fixture.output_len as u64,
+        "output_sha256": fixture.output_sha256,
+        "max_abs": fixture.max_abs,
+        "dense_gguf_inference_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false
+    })
+}
+
 fn dense_gguf_one_layer_cpu_reference_receipt_json(
     inspection: &DenseGgufDescriptorInspection,
     reference: &DenseGgufOneLayerCpuReference,
@@ -7850,6 +8539,14 @@ fn sha256_f32(values: &[f32]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+fn sha256_usize(values: &[usize]) -> String {
+    let mut hasher = Sha256::new();
+    for value in values {
+        hasher.update((*value as u64).to_le_bytes());
+    }
+    format!("{:x}", hasher.finalize())
+}
+
 fn sha256_json(value: &Value) -> Result<String> {
     let bytes = serde_json::to_vec(value)?;
     Ok(sha256_bytes(&bytes))
@@ -8193,6 +8890,50 @@ mod tests {
         assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["qwen_one_token_cuda_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["speedup_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
+    fn dense_gguf_model_boundary_fixture_receipt_records_embedding_norm_logits() {
+        let data = build_model_boundary_qwen_gguf();
+        let reader = GgufReader::new(&data).expect("parse model-boundary qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let fixtures = dense_gguf_model_boundary_fixtures_from_reader(&reader, &inspection, 4, 4)
+            .expect("model-boundary fixtures");
+
+        assert_eq!(fixtures.seq_len, 4);
+        assert_eq!(fixtures.hidden_size, 4);
+        assert_eq!(fixtures.vocab_size, 4);
+        assert_eq!(fixtures.token_ids, vec![0, 1, 2, 3]);
+        assert_eq!(fixtures.token_embedding.role, "token_embedding");
+        assert_eq!(fixtures.final_norm.role, "final_norm");
+        assert_eq!(fixtures.lm_head_logits.role, "lm_head_logits");
+        assert_eq!(fixtures.logits_len, 4);
+        assert_eq!(fixtures.logits_top_k.len(), 4);
+
+        let receipt = dense_gguf_model_boundary_fixtures_receipt_json(
+            &inspection,
+            &fixtures,
+            None,
+            Path::new("synthetic-qwen3-q8_0-model-boundary-fixtures.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-model-boundary-fixtures.json",
+            "2026-05-09T00:00:00Z",
+        )
+        .unwrap();
+
+        validate_dense_gguf_model_boundary_fixtures_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["artifact_kind"], "dense_gguf_model_boundary_fixtures");
+        assert_eq!(receipt["runtime_api"], "cuda");
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 3);
+        assert_eq!(receipt["model_boundary_fixtures"]["fixtures_total"], 3);
+        assert_eq!(receipt["model_boundary_fixtures"]["fixture_route_only"], true);
+        assert_eq!(receipt["model_boundary_fixtures"]["cuda_kernel_execution_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_model_boundary_fixtures_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["kv_cache_policy_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["sampling_integration_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["qwen_one_token_cuda_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
     }
 
@@ -9169,6 +9910,66 @@ mod tests {
             vec![
                 ("token_embd.weight", vec![4, 4], GgufTensorType::Q8_0, q8_0_blob(0.01, &values)),
                 ("output.weight", vec![4, 4], GgufTensorType::Q8_0, q8_0_blob(0.01, &values)),
+                ("blk.0.attn_q.weight", vec![4, 4], GgufTensorType::Q8_0, q8_0_blob(0.01, &values)),
+                (
+                    "blk.0.attn_k.weight",
+                    vec![4, 2],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.008, &values),
+                ),
+                (
+                    "blk.0.attn_v.weight",
+                    vec![4, 2],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.006, &values),
+                ),
+                (
+                    "blk.0.attn_output.weight",
+                    vec![4, 4],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.004, &values),
+                ),
+                (
+                    "blk.0.ffn_gate.weight",
+                    vec![4, 6],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.01, &values),
+                ),
+                (
+                    "blk.0.ffn_up.weight",
+                    vec![4, 6],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.008, &values),
+                ),
+                (
+                    "blk.0.ffn_down.weight",
+                    vec![6, 4],
+                    GgufTensorType::Q8_0,
+                    q8_0_blob(0.006, &values),
+                ),
+                ("blk.0.attn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+                ("blk.0.ffn_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
+            ],
+        )
+    }
+
+    fn build_model_boundary_qwen_gguf() -> Vec<u8> {
+        let values = (1..=32).collect::<Vec<_>>();
+        build_gguf_for_test(
+            vec![
+                ("general.architecture", GgufValue::String("qwen3".to_string())),
+                ("general.name", GgufValue::String("qwen3-model-boundary-fixtures".to_string())),
+                ("qwen3.embedding_length", GgufValue::U32(4)),
+                ("qwen3.feed_forward_length", GgufValue::U32(6)),
+                ("qwen3.attention.head_count", GgufValue::U32(2)),
+                ("qwen3.attention.head_count_kv", GgufValue::U32(1)),
+                ("qwen3.attention.key_length", GgufValue::U32(2)),
+                ("qwen3.rope.freq_base", GgufValue::F32(1_000_000.0)),
+            ],
+            vec![
+                ("token_embd.weight", vec![4, 4], GgufTensorType::Q8_0, q8_0_blob(0.01, &values)),
+                ("output.weight", vec![4, 4], GgufTensorType::Q8_0, q8_0_blob(0.01, &values)),
+                ("output_norm.weight", vec![4], GgufTensorType::F32, f32_blob(&[1.0; 4])),
                 ("blk.0.attn_q.weight", vec![4, 4], GgufTensorType::Q8_0, q8_0_blob(0.01, &values)),
                 (
                     "blk.0.attn_k.weight",

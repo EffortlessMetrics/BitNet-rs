@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T22:55:37Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-038"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-038-model-boundary-fixtures"
+pr = 4348
+head_sha = "e6c6428d276c44b8a65edb526f80ee436c4cbdc1"
+
+notes = [
+  "Opened PR #4348 for the CUDA-DENSE-038 dense GGUF model-boundary fixture receipt implementation.",
+  "The PR adds a receipt-backed command for token embedding lookup, final model norm, LM head/logits hashes, deterministic top-k diagnostics, and the selected dense_regular_llm_cuda route boundary.",
+  "The committed RTX 5070 Ti receipt was emitted from the SHA-verified Qwen2.5 0.5B Q8_0 artifact and keeps dense inference, one-token/decode/chat, speedup, KV/sampling, full residency, server readiness, BitNet packed proof, tokenizer, loader, transformer, QK256, BitNet CUDA, and CUDA kernel math claims false.",
+]

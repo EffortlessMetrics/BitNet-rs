@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T22:40:05Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-038"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-038-model-boundary-fixtures"
+
+notes = [
+  "Started CUDA-DENSE-038 implementation for governed dense GGUF model-boundary fixture receipts after CUDA-DENSE-037.",
+  "Scope is token embedding lookup, final model norm, LM head/logits fixture hashing and top-k diagnostics, selected dense_regular_llm_cuda route boundary, and validator rejection of inference/speed/full-residency/BitNet packed proof claims.",
+  "The implementation may commit a real verified Qwen model-boundary fixture receipt if the tracker command is run; no tokenizer, loader, transformer runtime, QK256, BitNet CUDA, server, KV cache policy, sampling, CUDA kernel math, one-token, short-decode, chat, speedup, persistent-session, or full-residency claim is in scope.",
+]

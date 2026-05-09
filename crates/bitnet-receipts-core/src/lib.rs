@@ -186,6 +186,15 @@ pub const DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND: &str =
 /// residency, or BitNet packed I2_S/QK256 proof.
 pub const DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND: &str =
     "dense_gguf_all_layer_execution_plan";
+
+/// Artifact kind for dense GGUF model-boundary fixture receipts.
+///
+/// This receipt records token embedding lookup, final model norm, LM head, and
+/// logits diagnostics after the transformer-block plan is route-complete. It
+/// is not Qwen one-token inference, sampling, KV cache policy, speedup, full
+/// CUDA residency, or BitNet packed I2_S/QK256 proof.
+pub const DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND: &str =
+    "dense_gguf_model_boundary_fixtures";
 const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
     &["attention_softmax", "attention_v_mix", "mlp_activation"];
 const DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER: &[&str] =
@@ -4600,6 +4609,248 @@ pub fn validate_dense_gguf_all_layer_execution_plan_receipt_json(receipt: &Value
     Ok(())
 }
 
+/// Validate dense GGUF model-boundary fixture evidence.
+///
+/// This artifact records token embedding lookup, final norm, and LM-head/logit
+/// diagnostics under the dense CUDA route boundary. It keeps KV cache,
+/// sampling, one-token/decode/chat, speedup, full residency, and BitNet packed
+/// proof claims false.
+pub fn validate_dense_gguf_model_boundary_fixtures_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_model_boundary_fixtures_recorded")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_null(receipt, "error")?;
+
+    let cuda = object_field(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_positive_u64(cuda, "device_count")?;
+    require_cuda_device_index(cuda)?;
+    require_rtx_5070_ti_name(cuda, "device_name")?;
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_string_non_empty_not_tbd(cuda, "driver_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_runtime_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_toolkit_version")?;
+    require_string_non_empty_not_tbd(cuda, "nvrtc_version")?;
+    require_positive_u64(cuda, "vram_bytes")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(execution_path, "kernel_family", "dense_cuda_model_boundary_fixture_route")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "kernel_family")?,
+        "execution_path.kernel_family",
+    )?;
+    require_string_non_empty(execution_path, "quantization_family")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "quantization_family")?,
+        "execution_path.quantization_family",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    validate_dense_one_layer_gap_execution_plan(receipt)?;
+    let plan = object_field(receipt, "execution_plan")?;
+    require_u64_eq(plan, "total_ops", 3)?;
+    require_u64_eq(plan, "cuda_ops", 3)?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 3)?;
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_positive_u64(descriptor, "tensor_count")?;
+    require_positive_u64(descriptor, "metadata_count")?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_string_non_empty(descriptor, "dense_cuda_route_status")?;
+    reject_bitnet_packed_marker(
+        required_string(descriptor, "dense_cuda_route_status")?,
+        "descriptor_coverage.dense_cuda_route_status",
+    )?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+
+    let fixtures = object_field(receipt, "model_boundary_fixtures")?;
+    require_u64_eq(fixtures, "schema", 1)?;
+    reject_bitnet_packed_marker(
+        required_string(fixtures, "fixture_id")?,
+        "model_boundary_fixtures.fixture_id",
+    )?;
+    let seq_len = required_u64(fixtures, "seq_len")?;
+    let hidden_size = required_u64(fixtures, "hidden_size")?;
+    let vocab_size = required_u64(fixtures, "vocab_size")?;
+    if seq_len == 0 || hidden_size == 0 || vocab_size == 0 {
+        return Err(anyhow!("model_boundary_fixtures dimensions must be positive"));
+    }
+    let token_ids = array_field(fixtures, "token_ids")?;
+    if token_ids.len() != seq_len as usize {
+        return Err(anyhow!("model_boundary_fixtures.token_ids length must match seq_len"));
+    }
+    for token_id in token_ids {
+        let token_id = token_id
+            .as_u64()
+            .ok_or_else(|| anyhow!("model_boundary_fixtures.token_ids entries must be integers"))?;
+        if token_id >= vocab_size {
+            return Err(anyhow!("model_boundary_fixtures token id must be inside vocab_size"));
+        }
+    }
+    require_sha256(fixtures, "token_ids_sha256")?;
+    require_u64_eq(fixtures, "fixtures_total", 3)?;
+    let token_embedding_fixture = object_field(fixtures, "token_embedding")?;
+    validate_dense_boundary_tensor_fixture(token_embedding_fixture, "token_embedding")?;
+    let expected_embedding_len = seq_len
+        .checked_mul(hidden_size)
+        .ok_or_else(|| anyhow!("model_boundary_fixtures token_embedding output_len overflows"))?;
+    require_u64_eq(token_embedding_fixture, "output_len", expected_embedding_len)?;
+
+    let final_norm = object_field(fixtures, "final_norm")?;
+    require_positive_number(final_norm, "rmsnorm_eps")?;
+    require_string_non_empty(final_norm, "epsilon_source")?;
+    require_sha256(final_norm, "input_sha256")?;
+    require_sha256(final_norm, "output_sha256")?;
+    let final_norm_fixture = object_field(final_norm, "fixture")?;
+    validate_dense_boundary_tensor_fixture(final_norm_fixture, "final_norm")?;
+    require_u64_eq(final_norm_fixture, "output_len", hidden_size)?;
+    require_string_eq(
+        final_norm_fixture,
+        "output_sha256",
+        required_string(final_norm, "output_sha256")?,
+    )?;
+
+    let lm_head = object_field(fixtures, "lm_head_logits")?;
+    let logits_len = required_u64(lm_head, "logits_len")?;
+    if logits_len == 0 {
+        return Err(anyhow!("model_boundary_fixtures.lm_head_logits.logits_len must be positive"));
+    }
+    if logits_len != vocab_size {
+        return Err(anyhow!(
+            "model_boundary_fixtures.lm_head_logits.logits_len must match vocab_size"
+        ));
+    }
+    require_sha256(lm_head, "logits_sha256")?;
+    let top_k = required_u64(lm_head, "top_k")?;
+    if top_k == 0 || top_k > logits_len {
+        return Err(anyhow!(
+            "model_boundary_fixtures.lm_head_logits.top_k must be in 1..=logits_len"
+        ));
+    }
+    let top_k_entries = array_field(lm_head, "top_k_entries")?;
+    if top_k_entries.len() != top_k as usize {
+        return Err(anyhow!(
+            "model_boundary_fixtures.lm_head_logits.top_k_entries length must match top_k"
+        ));
+    }
+    for (idx, entry) in top_k_entries.iter().enumerate() {
+        require_u64_eq(entry, "rank", idx as u64)?;
+        let token_id = required_u64(entry, "token_id")?;
+        if token_id >= logits_len {
+            return Err(anyhow!(
+                "model_boundary_fixtures top-k token_id must be inside logits_len"
+            ));
+        }
+        require_number(entry, "value")?;
+    }
+    let lm_head_fixture = object_field(lm_head, "fixture")?;
+    validate_dense_boundary_tensor_fixture(lm_head_fixture, "lm_head_logits")?;
+    require_u64_eq(lm_head_fixture, "output_len", logits_len)?;
+    require_string_eq(
+        lm_head_fixture,
+        "output_sha256",
+        required_string(lm_head, "logits_sha256")?,
+    )?;
+
+    require_bool_eq(fixtures, "boundary_fixtures_claimed", true)?;
+    require_bool_eq(fixtures, "token_embedding_fixture_claimed", true)?;
+    require_bool_eq(fixtures, "final_norm_fixture_claimed", true)?;
+    require_bool_eq(fixtures, "lm_head_logits_fixture_claimed", true)?;
+    require_bool_eq(fixtures, "fixture_route_only", true)?;
+    require_bool_eq(fixtures, "cuda_kernel_execution_claimed", false)?;
+    require_u64_eq(fixtures, "kernel_invocations", 0)?;
+    require_bool_eq(fixtures, "fallback_used", false)?;
+    require_bool_eq(fixtures, "kv_cache_policy_claimed", false)?;
+    require_bool_eq(fixtures, "sampling_integration_claimed", false)?;
+    require_bool_eq(fixtures, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(fixtures, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(fixtures, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(fixtures, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(fixtures, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(fixtures, "speedup_claim", false)?;
+    require_bool_eq(fixtures, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(fixtures, "full_cuda_residency_claimed", false)?;
+
+    let remaining = object_field(receipt, "remaining_model_boundary_gaps")?;
+    require_u64_eq(remaining, "schema", 1)?;
+    let mut required_gaps = BTreeSet::from(["kv_cache_policy", "sampling"]);
+    for gap in array_field(remaining, "gaps")? {
+        let name = required_string(gap, "gap")?;
+        required_gaps.remove(name);
+        require_string_eq(gap, "status", "not_governed_by_model_boundary_fixtures")?;
+        require_string_non_empty(gap, "required_next_proof")?;
+        require_bool_eq(gap, "blocks_qwen_one_token", true)?;
+        require_bool_eq(gap, "blocks_qwen_short_decode", true)?;
+        require_bool_eq(gap, "blocks_qwen_chat", true)?;
+    }
+    if !required_gaps.is_empty() {
+        return Err(anyhow!(
+            "remaining_model_boundary_gaps missing required gaps: {required_gaps:?}"
+        ));
+    }
+    require_bool_eq(remaining, "qwen_one_token_cuda_blocked", true)?;
+    require_bool_eq(remaining, "qwen_short_decode_cuda_blocked", true)?;
+    require_bool_eq(remaining, "qwen_chat_cuda_blocked", true)?;
+    require_string_eq(remaining, "next_required_proof", "dense_gguf_kv_cache_policy_receipt")?;
+    require_bool_eq(remaining, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(remaining, "speedup_claim", false)?;
+    require_bool_eq(remaining, "full_cuda_residency_claimed", false)?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cpu_reference_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cuda_integrated_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_all_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_model_boundary_fixtures_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "kv_cache_policy_claimed", false)?;
+    require_bool_eq(claim_boundary, "sampling_integration_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
 /// Validate dense GGUF one-layer CPU reference harness evidence.
 ///
 /// This artifact records a CPU-only full layer-0 reference output. It is the
@@ -5608,6 +5859,10 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
             claim_boundary.get("dense_gguf_all_layer_execution_plan_claimed")
         })
         .and_then(Value::as_bool);
+    let model_boundary_fixtures_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| claim_boundary.get("dense_gguf_model_boundary_fixtures_claimed"))
+        .and_then(Value::as_bool);
 
     if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)
@@ -5629,6 +5884,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND)
         || model_class == Some(DENSE_REGULAR_LLM_MODEL_CLASS)
         || dense_claim == Some(true)
         || descriptor_claim == Some(true)
@@ -5649,6 +5905,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || one_layer_cpu_reference_claim == Some(true)
         || one_layer_cuda_integrated_parity_claim == Some(true)
         || all_layer_execution_plan_claim == Some(true)
+        || model_boundary_fixtures_claim == Some(true)
     {
         return Err(anyhow!(
             "dense_regular_llm CUDA receipt cannot satisfy BitNet packed I2_S/QK256 proof"
@@ -5970,6 +6227,44 @@ fn require_positive_number(object: &Value, field: &str) -> Result<()> {
     if actual <= 0.0 {
         return Err(anyhow!("field `{field}` must be positive"));
     }
+    Ok(())
+}
+
+fn require_number(object: &Value, field: &str) -> Result<()> {
+    object_field(object, field)?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `{field}` must be a number"))?;
+    Ok(())
+}
+
+fn validate_dense_boundary_tensor_fixture(fixture: &Value, expected_role: &str) -> Result<()> {
+    require_string_non_empty(fixture, "name")?;
+    reject_bitnet_packed_marker(
+        required_string(fixture, "name")?,
+        "model_boundary_fixtures.fixture.name",
+    )?;
+    require_string_eq(fixture, "role", expected_role)?;
+    require_string_non_empty(fixture, "tensor_name")?;
+    reject_bitnet_packed_marker(
+        required_string(fixture, "tensor_name")?,
+        "model_boundary_fixtures.fixture.tensor_name",
+    )?;
+    require_string_non_empty(fixture, "tensor_type")?;
+    reject_bitnet_packed_marker(
+        required_string(fixture, "tensor_type")?,
+        "model_boundary_fixtures.fixture.tensor_type",
+    )?;
+    if array_field(fixture, "source_shape")?.is_empty() {
+        return Err(anyhow!("model_boundary_fixtures.fixture.source_shape must not be empty"));
+    }
+    required_u64(fixture, "source_offset")?;
+    require_positive_u64(fixture, "source_size_bytes")?;
+    require_positive_u64(fixture, "value_count")?;
+    require_positive_u64(fixture, "output_len")?;
+    require_sha256(fixture, "output_sha256")?;
+    require_non_negative_number(fixture, "max_abs")?;
+    require_bool_eq(fixture, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(fixture, "bitnet_packed_i2s_qk256_proof", false)?;
     Ok(())
 }
 
