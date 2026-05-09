@@ -334,6 +334,69 @@ fn mac_check_missing_cache_points_to_model_fetch() {
         .args(["mac", "check", "--cache-dir", cache_str.as_str()])
         .assert()
         .failure()
+        .stderr(predicate::str::contains("First run"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_check_corrupt_cache_points_to_prune_and_fetch() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let model_dir = cache.join("qwen2.5-0.5b-instruct-q8_0");
+    std::fs::create_dir_all(&model_dir).expect("model dir");
+    std::fs::write(model_dir.join("qwen2.5-0.5b-instruct-q8_0.gguf"), b"partial")
+        .expect("partial model");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "check", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Cache repair"))
+        .stderr(predicate::str::contains("bitnet model prune qwen2.5-0.5b-instruct-q8_0"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn model_fetch_offline_missing_cache_explains_repair_options() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "model",
+            "fetch",
+            "qwen2.5-0.5b-instruct-q8_0",
+            "--offline",
+            "--cache-dir",
+            cache_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("offline mode"))
+        .stderr(predicate::str::contains("pre-seed"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn model_verify_corrupt_cache_explains_prune_and_fetch() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let model_dir = cache.join("qwen2.5-0.5b-instruct-q8_0");
+    std::fs::create_dir_all(&model_dir).expect("model dir");
+    std::fs::write(model_dir.join("qwen2.5-0.5b-instruct-q8_0.gguf"), b"partial")
+        .expect("partial model");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["model", "verify", "qwen2.5-0.5b-instruct-q8_0", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("repair:"))
+        .stderr(predicate::str::contains("expected bytes=675710816"))
+        .stderr(predicate::str::contains("got bytes=7"))
+        .stderr(predicate::str::contains("bitnet model prune qwen2.5-0.5b-instruct-q8_0"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
 }
 

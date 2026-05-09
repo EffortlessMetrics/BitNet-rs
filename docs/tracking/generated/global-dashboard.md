@@ -9,7 +9,7 @@
 | apple-m4-operational | M4-OP-006 | #3882 | merged | none | Do not reopen the completed apple-m4 proof campaign. |
 | apple-m4-productization | M4-PROD-005 | #4034 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
 | apple-m4-slm-answer | SLM-M4-007 | #3991 | merged | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
-| apple-m4-slm-hardening | M4-SLM-HARDEN-002 | TBD | ready | M4-SLM-HARDEN-003 | Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns. |
+| apple-m4-slm-hardening | M4-SLM-HARDEN-002 | #4155 | pr_open | M4-SLM-HARDEN-003 | Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns. |
 | apple-m4-slm-performance | M4-SLM-PERF-007 | #4081 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, apple-m4-slm-answer, or apple-m4-productization campaigns. |
 | ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | CPU-ANSWER-007 | #4019 | merged | none | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |

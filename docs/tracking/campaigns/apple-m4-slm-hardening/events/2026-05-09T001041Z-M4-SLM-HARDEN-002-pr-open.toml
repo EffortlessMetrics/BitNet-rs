@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T00:10:41Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-002"
+event = "pr_open"
+pr = 4155
+head_sha = "26394dac20c0c0ebfc314629fd885ad250b5d759"
+actor = "codex"
+
+notes = [
+  "Opened Mac SLM cache repair and first-run UX PR.",
+  "Adds targeted repair guidance for missing, wrong-size, wrong-hash, metadata-missing, offline, low-disk, verify, fetch, and prune states.",
+  "Keeps the work scoped to dense Qwen SLM operator UX and does not claim BitNet local-answer quality, full apple-m4-metal inference, QK256 support, or performance.",
+]

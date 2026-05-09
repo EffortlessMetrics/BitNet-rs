@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T00:01:56Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-002"
+event = "in_progress"
+branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-002-cache-repair"
+actor = "codex"
+
+notes = [
+  "Started cache repair and first-run UX work for the Apple M4 SLM operator path.",
+  "Scope is limited to model cache guidance, Mac wrapper messages, docs, tests, and campaign tracking.",
+  "No model artifacts, backend behavior changes, Metal work, QK256, server inference, or performance claims are in scope.",
+]
