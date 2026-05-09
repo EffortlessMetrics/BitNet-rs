@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T03:50:25Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-003"
+event = "merged"
+pr = 4190
+head_sha = "bc5df510db8e7ff94814afce9c6e3fb21f9909bf"
+merge_sha = "fc1b34466347b8e9f179b0380cd242070aabbd5d"
+actor = "codex"
+
+notes = [
+  "Merged the MacBook Apple BitNet candidate matrix.",
+  "The matrix covers official Microsoft 2B I2_S, 1bitLLM 0.7B, 1bitLLM 3B TL diagnostics, and Falcon-E secondary candidates with storage, compatibility, tokenizer-authority, reference-runner, and cleanup requirements.",
+  "The follow-up proof items remain proposed until MacBook hardware is available for actual reference-runner receipts.",
+]

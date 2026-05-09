@@ -106,8 +106,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-003"
-status = "pr_open"
+status = "merged"
 pr = 4190
+merge_sha = "fc1b34466347b8e9f179b0380cd242070aabbd5d"
 branch = "codex/apple-silicon-macbook/MB-AS-003-bitnet-candidate-matrix"
 stackable = false
 review_mode = "codex_premerge"
