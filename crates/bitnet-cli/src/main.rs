@@ -8828,12 +8828,20 @@ fn strict_ask_default_receipt_path(
     }
 }
 
+#[cfg(feature = "full-cli")]
 fn print_strict_ask_proof_summary(
     answer_receipt: &serde_json::Value,
     receipt_path: &std::path::Path,
 ) {
     let explanation = commands::receipts::explain_receipt(receipt_path, answer_receipt);
     commands::receipts::print_compact_proof_summary(&explanation);
+}
+
+#[cfg(not(feature = "full-cli"))]
+fn print_strict_ask_proof_summary(
+    _answer_receipt: &serde_json::Value,
+    _receipt_path: &std::path::Path,
+) {
 }
 
 fn validate_strict_cuda_ask_receipt(run_receipt: &serde_json::Value) -> Result<()> {
