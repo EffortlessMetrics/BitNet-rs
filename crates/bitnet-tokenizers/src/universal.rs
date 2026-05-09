@@ -50,12 +50,7 @@ impl UniversalTokenizer {
         let mmap = MmapFile::open(path)?;
         let reader = GgufReader::new(mmap.as_slice())?;
 
-        let model_type = reader.get_string_metadata("tokenizer.ggml.model").ok_or_else(|| {
-            BitNetError::Inference(InferenceError::TokenizationFailed {
-                reason: "GGUF missing tokenizer.ggml.model; refusing GPT-2 compatibility guess"
-                    .to_string(),
-            })
-        })?;
+        let model_type = Self::resolve_model_type(&reader)?;
 
         let tokens = reader.get_string_array_metadata("tokenizer.ggml.tokens").unwrap_or_default();
         let vocab_size = tokens.len();
@@ -91,6 +86,51 @@ impl UniversalTokenizer {
             bpe_merges: merges,
         };
         Self::new(config)
+    }
+
+    /// Resolve the GGUF tokenizer model type, falling back to architecture
+    /// inference when `tokenizer.ggml.model` metadata is absent or blank.
+    ///
+    /// Returns an error rather than silently guessing `gpt2` when the GGUF
+    /// neither declares a tokenizer model nor a recognised
+    /// `general.architecture`. This keeps the strict-mode contract: callers
+    /// that get a tokenizer back can trust that its type is grounded in
+    /// metadata present in the GGUF file.
+    fn resolve_model_type(reader: &bitnet_models::GgufReader) -> Result<String> {
+        if let Some(model_type) = reader.get_string_metadata("tokenizer.ggml.model")
+            && !model_type.trim().is_empty()
+        {
+            return Ok(model_type);
+        }
+
+        let architecture = reader.get_string_metadata("general.architecture");
+        let normalized_arch = architecture.as_deref().unwrap_or_default().trim().to_lowercase();
+        let inferred = Self::infer_model_type_from_architecture(&normalized_arch);
+
+        if inferred == "unknown" {
+            return Err(BitNetError::Inference(InferenceError::TokenizationFailed {
+                reason: format!(
+                    "GGUF missing tokenizer.ggml.model and general.architecture={architecture:?} \
+                     does not map to a known tokenizer; refusing GPT-2 compatibility guess"
+                ),
+            }));
+        }
+
+        warn!(
+            "Missing tokenizer.ggml.model; inferring tokenizer type {:?} from general.architecture={:?}",
+            inferred, architecture
+        );
+        Ok(inferred.to_string())
+    }
+
+    fn infer_model_type_from_architecture(architecture: &str) -> &'static str {
+        match architecture {
+            "llama" | "mistral" | "gemma" | "qwen" | "qwen2" | "qwen3" | "phi" | "phi2"
+            | "phi3" => "llama",
+            "gpt2" | "gpt-2" => "gpt2",
+            "bloom" | "falcon" | "gptj" | "gpt-j" | "gpt_neox" | "gpt-neox" => "gpt2",
+            _ => "unknown",
+        }
     }
 
     /// Create from model with auto-detection
@@ -279,5 +319,41 @@ impl Tokenizer for UniversalTokenizer {
             InternalTokenizerBackend::SentencePiece(t) => t.token_to_piece(token),
             InternalTokenizerBackend::Mock(t) => t.token_to_piece(token),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UniversalTokenizer;
+
+    #[test]
+    fn infer_model_type_maps_sentencepiece_architectures_to_llama() {
+        for arch in ["llama", "mistral", "gemma", "qwen", "qwen2", "qwen3", "phi", "phi2", "phi3"] {
+            assert_eq!(
+                UniversalTokenizer::infer_model_type_from_architecture(arch),
+                "llama",
+                "{arch}"
+            );
+        }
+    }
+
+    #[test]
+    fn infer_model_type_maps_bpe_architectures_to_gpt2() {
+        for arch in ["gpt2", "gpt-2", "bloom", "falcon", "gpt-j", "gptj", "gpt-neox", "gpt_neox"] {
+            assert_eq!(
+                UniversalTokenizer::infer_model_type_from_architecture(arch),
+                "gpt2",
+                "{arch}"
+            );
+        }
+    }
+
+    #[test]
+    fn infer_model_type_unknown_when_no_arch_mapping_exists() {
+        assert_eq!(
+            UniversalTokenizer::infer_model_type_from_architecture("totally-new-arch"),
+            "unknown"
+        );
+        assert_eq!(UniversalTokenizer::infer_model_type_from_architecture(""), "unknown");
     }
 }
