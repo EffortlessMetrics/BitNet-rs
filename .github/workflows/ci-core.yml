@@ -65,6 +65,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   RUSTFLAGS: "-Dwarnings"
@@ -73,6 +74,85 @@ env:
   BITNET_SKIP_SLOW_TESTS: "1"
 
 jobs:
+  classify-changes:
+    name: Classify Changes
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      tracker_only: ${{ steps.classify.outputs.tracker_only }}
+    steps:
+      - name: Detect tracker-only PR
+        id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          tracker_only=false
+
+          if [ "${EVENT_NAME}" = "pull_request" ] && [ -n "${PR_NUMBER:-}" ]; then
+            changed_files=$(gh api --paginate \
+              "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/files" \
+              --jq '.[].filename')
+            echo "Changed files considered by CI Core:"
+            printf '%s\n' "$changed_files"
+
+            tracker_only=true
+            while IFS= read -r path; do
+              [ -n "$path" ] || continue
+              case "$path" in
+                docs/tracking/*|.codex/campaigns/*)
+                  ;;
+                *)
+                  tracker_only=false
+                  ;;
+              esac
+            done <<< "$changed_files"
+
+            if [ -z "$changed_files" ]; then
+              tracker_only=false
+            fi
+          fi
+
+          echo "tracker_only=${tracker_only}" >> "$GITHUB_OUTPUT"
+          echo "tracker_only=${tracker_only}"
+
+  tracker-fast-path:
+    name: Tracker Fast Path
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    needs: [classify-changes]
+    if: needs.classify-changes.outputs.tracker_only == 'true'
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.93.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: ci-core-tracker-fast-path
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Campaign doctor
+        run: cargo run --locked -p xtask --no-default-features -- campaign doctor
+
+      - name: Generated dashboard freshness
+        run: cargo run --locked -p xtask --no-default-features -- campaign generate --check
+
   # Job 1: Build and test on Linux
   # Note: Job name kept as 'ubuntu-latest' for branch protection rule compatibility,
   # but runner is pinned to ubuntu-22.04 for CI reproducibility.
@@ -80,31 +160,42 @@ jobs:
     name: Build & Test (ubuntu-latest)
     runs-on: ubuntu-22.04
     timeout-minutes: 30
+    needs: [classify-changes]
     env:
       RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
       INSTA_UPDATE: unseen
     steps:
+      - name: Tracker-only fast path
+        if: needs.classify-changes.outputs.tracker_only == 'true'
+        run: |
+          echo "Tracker-only PR: Rust build and test steps are covered by Tracker Fast Path."
+
       - name: Checkout code
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.93.0"
           components: clippy,rustfmt
 
       - name: Cache Rust dependencies
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-ubuntu
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check formatting
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         run: cargo fmt --all -- --check
 
       - name: Build core libs (CPU features)
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         run: |
           cargo build --locked \
             -p bitnet-common \
@@ -115,6 +206,7 @@ jobs:
             --no-default-features --features cpu
 
       - name: Build SRP microcrates
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         run: |
           cargo build --locked \
             -p bitnet-prompt-templates \
@@ -122,6 +214,7 @@ jobs:
             -p bitnet-sampling
 
       - name: "Run unit tests: core libs"
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         run: |
           cargo test --locked \
             -p bitnet-common \
@@ -134,6 +227,7 @@ jobs:
             -- --nocapture
 
       - name: "Run unit tests: SRP microcrates"
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         run: |
           cargo test --locked \
             -p bitnet-prompt-templates \
@@ -148,12 +242,14 @@ jobs:
             --no-default-features
 
       - name: "Run tests: inference golden path"
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         run: |
           cargo test --locked \
             -p bitnet-inference --test cpu_golden_path \
             --no-default-features --features cpu
 
       - name: "Run unit tests: policy / BDD crates"
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         run: |
           cargo test --locked \
             -p bitnet-bdd-grid-core \
@@ -178,7 +274,7 @@ jobs:
             --no-default-features --features cpu
 
       - name: "Run unit tests: AVX2 (x86_64 static +avx2)"
-        if: runner.os == 'Linux' && runner.arch == 'X64'
+        if: needs.classify-changes.outputs.tracker_only != 'true' && runner.os == 'Linux' && runner.arch == 'X64'
         env:
           RUSTFLAGS: "-D warnings -C target-feature=+avx2"
         run: |
@@ -203,12 +299,14 @@ jobs:
     name: BDD Grid Check
     runs-on: ubuntu-22.04
     timeout-minutes: 20
+    needs: [classify-changes]
     if: >-
-      github.ref == 'refs/heads/main' ||
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'bdd') ||
-      contains(github.event.pull_request.labels.*.name, 'grid') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
+      needs.classify-changes.outputs.tracker_only != 'true' &&
+      (github.ref == 'refs/heads/main' ||
+       github.event_name == 'workflow_dispatch' ||
+       contains(github.event.pull_request.labels.*.name, 'bdd') ||
+       contains(github.event.pull_request.labels.*.name, 'grid') ||
+       contains(github.event.pull_request.labels.*.name, 'full-ci'))
     env:
       RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
@@ -236,27 +334,37 @@ jobs:
     name: Clippy
     runs-on: ubuntu-22.04
     timeout-minutes: 10
+    needs: [classify-changes]
     env:
       RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
     steps:
+      - name: Tracker-only fast path
+        if: needs.classify-changes.outputs.tracker_only == 'true'
+        run: |
+          echo "Tracker-only PR: clippy is covered by Tracker Fast Path."
+
       - name: Checkout code
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.93.0"
           components: clippy
 
       - name: Cache Rust dependencies
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-clippy
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run clippy (core crates, libs only)
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         run: |
           cargo clippy --locked \
             -p bitnet-common \
@@ -339,22 +447,32 @@ jobs:
     name: Documentation
     runs-on: ubuntu-22.04
     timeout-minutes: 15
+    needs: [classify-changes]
     steps:
+      - name: Tracker-only fast path
+        if: needs.classify-changes.outputs.tracker_only == 'true'
+        run: |
+          echo "Tracker-only PR: rustdoc is covered by Tracker Fast Path."
+
       - name: Checkout code
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.93.0"
 
       - name: Cache Rust dependencies
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-docs
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build documentation
+        if: needs.classify-changes.outputs.tracker_only != 'true'
         env:
           RUSTDOCFLAGS: -A warnings
         run: cargo doc --locked --no-deps --workspace --no-default-features --features cpu
@@ -364,13 +482,15 @@ jobs:
     name: CI Core Success
     runs-on: ubuntu-22.04
     timeout-minutes: 5
-    needs: [build-test-linux, grid-check, clippy, docs]
+    needs: [classify-changes, tracker-fast-path, build-test-linux, grid-check, clippy, docs]
     if: always()
     steps:
       - name: Summarize core results
         if: always()
         run: |
           echo "Core results:"
+          echo "  Tracker only: ${{ needs.classify-changes.outputs.tracker_only }}"
+          echo "  Tracker Fast Path: ${{ needs.tracker-fast-path.result }}"
           echo "  Build & Test: ${{ needs.build-test-linux.result }}"
           echo "  Grid Check:   ${{ needs.grid-check.result }}"
           echo "  Clippy:       ${{ needs.clippy.result }}"
@@ -380,12 +500,25 @@ jobs:
         if: always()
         run: |
           bad=0
-          # Required jobs (must succeed)
-          for r in "${{ needs.build-test-linux.result }}" \
-                   "${{ needs.clippy.result }}" \
-                   "${{ needs.docs.result }}"; do
-            [ "$r" = "success" ] || bad=1
-          done
+          if [ "${{ needs.classify-changes.result }}" != "success" ]; then
+            bad=1
+          fi
+          if [ "${{ needs.classify-changes.outputs.tracker_only }}" = "true" ]; then
+            [ "${{ needs.tracker-fast-path.result }}" = "success" ] || bad=1
+            for r in "${{ needs.build-test-linux.result }}" \
+                     "${{ needs.clippy.result }}" \
+                     "${{ needs.docs.result }}"; do
+              [ "$r" = "success" ] || bad=1
+            done
+          else
+            # Required jobs (must succeed)
+            for r in "${{ needs.build-test-linux.result }}" \
+                     "${{ needs.clippy.result }}" \
+                     "${{ needs.docs.result }}"; do
+              [ "$r" = "success" ] || bad=1
+            done
+            [ "${{ needs.tracker-fast-path.result }}" = "skipped" ] || bad=1
+          fi
           # grid-check is conditionally skipped on PRs that do not touch
           # BDD / policy crates (gated by label / main / dispatch). Treat
           # skipped as acceptable, but do not allow failures or cancellations.

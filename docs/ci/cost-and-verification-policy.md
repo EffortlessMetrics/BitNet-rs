@@ -337,6 +337,11 @@ Python stacks or fetch external models unless explicitly requested.
 A docs-only PR should run docs and tracking checks. It should not compile the
 Rust workspace.
 
+Tracker-only PRs are the strict version of that rule. When the diff is limited
+to `docs/tracking/**` or `.codex/campaigns/**`, CI Core keeps emitting the
+required `CI Core Success` check but routes it through campaign doctor and
+generated-dashboard freshness instead of Rust build, clippy, and rustdoc jobs.
+
 ## Operating metric
 
 We optimize for:
