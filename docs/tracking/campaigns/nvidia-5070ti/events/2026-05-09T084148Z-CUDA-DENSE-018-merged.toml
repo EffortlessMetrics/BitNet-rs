@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T08:41:48Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-018"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-018-rope-parity"
+pr = 4228
+head_sha = "67e3ea577ac8408bfc1507b7614957866f07c62e"
+merge_sha = "210a338c0257eb656fadf3a2c4df352e1ab3fde5"
+notes = [
+  "PR #4228 merged the strict RTX 5070 Ti dense GGUF RoPE CUDA parity proof.",
+  "The committed receipt records metadata-derived Q/K RoPE fixture parity for Qwen2.5 0.5B Q8_0 with dense_rope_f32_cuda, transfer accounting, and fallback_used=false.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, QK256, and BitNet packed proof claims remain false.",
+]
