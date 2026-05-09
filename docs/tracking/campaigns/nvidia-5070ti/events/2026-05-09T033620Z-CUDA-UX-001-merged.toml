@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T03:36:20Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-001"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-ux-receipts-explain"
+pr = 4185
+head_sha = "804ffb6df4728ec3e90196f92129e3f6a07942d0"
+merge_sha = "3a421ec7d58e60acf6f08d4020ffacfc42f8edc5"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4185 merged the operator-facing `bitnet receipts explain` command.",
+  "The merged command summarizes existing receipt proof fields and preserves schema-specific validation as the authority.",
+  "No inference, tokenizer, loader, transformer, kernel, benchmark, server, speedup, dense GGUF inference, BitNet packed proof, or full CUDA residency claim changed.",
+]
