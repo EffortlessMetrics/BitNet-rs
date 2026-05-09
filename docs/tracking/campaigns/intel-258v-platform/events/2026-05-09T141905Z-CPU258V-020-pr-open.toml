@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T14:19:05Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-020"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4295
+head_sha = "ea1bd5b3197e3a3e764fcbc102c09e3cf43a581e"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-020-first-token-divergence-classifier"
+summary = "Opened CPU258V-020 to classify the first available external-reference boundary for the 258V BitNet CPU lane."
+notes = [
+  "The committed classifier combines the external BitNet.cpp generated-text boundary, prompt-authority audit, scalar/AVX2 answer-corpus receipts, and answer-parity receipt.",
+  "The live 258V artifact records four inconclusive cases because reference generated token IDs and first-token logits remain unavailable, while generated text matches after trimming and scalar/AVX2 parity passes.",
+  "The PR does not claim generated-token-ID parity, first-token logits parity, answer quality, speed, Arc 140V execution, Intel NPU execution, or QK256 decode correctness.",
+]

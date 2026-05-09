@@ -1334,7 +1334,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-020"
-status = "ready"
+status = "pr_open"
+pr = 4295
 branch = "codex/lunar-lake/CPU258V-020-first-token-divergence-classifier"
 stackable = false
 review_mode = "codex_premerge"
