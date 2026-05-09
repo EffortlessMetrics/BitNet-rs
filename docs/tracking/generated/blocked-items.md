@@ -20,6 +20,10 @@
 | apple-m4 | M4-016 | M4-015 | merged |
 | apple-m4 | M4-017 | M4-016 | merged |
 | apple-m4 | M4-018 | M4-017 | merged |
+| apple-m4-dense-slm-regression | M4-SLM-REG-002 | M4-SLM-REG-001 | proposed |
+| apple-m4-dense-slm-regression | M4-SLM-REG-003 | M4-SLM-REG-002 | proposed |
+| apple-m4-dense-slm-regression | M4-SLM-REG-004 | M4-SLM-REG-003 | proposed |
+| apple-m4-dense-slm-regression | M4-SLM-REG-005 | M4-SLM-REG-004 | proposed |
 | apple-m4-local-answer | M4-QA-001 | M4-QA-MODEL-002 | blocked |
 | apple-m4-local-answer | M4-QA-MODEL-001 | M4-QA-ROOT-001 | merged |
 | apple-m4-local-answer | M4-QA-MODEL-002 | M4-QA-MODEL-001 | blocked |
@@ -44,7 +48,7 @@
 | apple-m4-slm-answer | SLM-M4-007 | SLM-M4-005, SLM-M4-006 | merged |
 | apple-m4-slm-hardening | M4-SLM-HARDEN-002 | M4-SLM-HARDEN-001 | merged |
 | apple-m4-slm-hardening | M4-SLM-HARDEN-003 | M4-SLM-HARDEN-002 | merged |
-| apple-m4-slm-hardening | M4-SLM-HARDEN-004 | M4-SLM-HARDEN-003 | ready |
+| apple-m4-slm-hardening | M4-SLM-HARDEN-004 | M4-SLM-HARDEN-003 | pr_open |
 | apple-m4-slm-performance | M4-SLM-PERF-002 | M4-SLM-PERF-001 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-003 | M4-SLM-PERF-002 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-004 | M4-SLM-PERF-003 | merged |

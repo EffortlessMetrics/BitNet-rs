@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T00:41:31Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-004"
+event = "pr_open"
+pr = 4161
+head_sha = "9b192bba5498c949f6bf7988e870cba04de632d2"
+actor = "codex"
+
+notes = [
+  "Opened the Apple M4 dense SLM regression guardrail seed PR.",
+  "The PR defines an advisory dense-SLM regression campaign, conservative receipt drift bands, and hard claim-boundary gates.",
+  "No nightly infrastructure, performance CI enforcement, broad M4 performance claim, BitNet local-answer claim, full apple-m4-metal inference claim, QK256 support, or runtime change is included.",
+]
