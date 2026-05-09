@@ -25,8 +25,8 @@ mini path without weakening the completed Qwen appliance baseline.
 |---|---|---|
 | M4-MODEL-001 | merged | Selected the next exact dense instruct GGUF candidate set. |
 | M4-MODEL-002 | merged | Ran reference output sanity and recorded exact artifact metadata. |
-| M4-MODEL-003 | pr_open | Rust M4 quality evidence rejects SmolLM2 for this round. |
-| M4-MODEL-004 | blocked | No new model can be registered until a candidate passes Rust M4 quality. |
+| M4-MODEL-003 | merged | Rust M4 quality evidence rejects SmolLM2 for this round. |
+| M4-MODEL-004 | blocked | No accepted candidate is available to register. |
 | M4-MODEL-005 | pending | Update model matrix and user envelope. |
 
 ## Current Selection
@@ -46,6 +46,9 @@ Rust M4 quality gate for this round. The current strict Rust loader rejects the
 artifact before generation, and diagnostic compatibility probes still produce
 incoherent output. `M4-MODEL-004` remains blocked because there is no accepted
 new model to register.
+
+The model-breadth lane must not promote cache/model registration until a later
+candidate passes both reference output sanity and Rust M4 quality gates.
 
 ## Claim Boundary
 

@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T23:36:43Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-003"
+event = "merged"
+actor = "codex"
+pr = 4355
+merge_sha = "60af3577d3782826043a70e26d1fa2bc59f04ca3"
+
+notes = [
+  "Merged PR #4355 with Rust M4 quality-gate evidence for smollm2-360m-instruct-q8_0.",
+  "SmolLM2 remains reference-good but is rejected for Rust M4 support in this round because the strict loader rejects the artifact and diagnostic probes produce incoherent output.",
+  "M4-MODEL-004 remains blocked because no accepted new dense SLM candidate is available to register.",
+]
