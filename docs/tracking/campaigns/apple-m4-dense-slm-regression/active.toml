@@ -199,6 +199,7 @@ must_not_claim = [
 [[work_item]]
 id = "M4-SLM-REG-005"
 status = "in_progress"
+pr = 4198
 branch = "codex/apple-m4-dense-slm-regression/M4-SLM-REG-005-threshold-tightening"
 stackable = false
 review_mode = "codex_premerge"
