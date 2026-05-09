@@ -89,15 +89,8 @@ pub const DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND: &str =
 /// one dense transformer layer. It does not execute full dense GGUF inference.
 pub const DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND: &str =
     "dense_gguf_one_layer_execution_plan";
-const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] = &[
-    "attention_norm",
-    "ffn_norm",
-    "rope",
-    "attention_scores",
-    "attention_softmax",
-    "attention_v_mix",
-    "mlp_activation",
-];
+const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
+    &["rope", "attention_scores", "attention_softmax", "attention_v_mix", "mlp_activation"];
 
 /// Model class label for CUDA receipts that exercise dense regular LLM kernels.
 pub const DENSE_REGULAR_LLM_MODEL_CLASS: &str = "dense_regular_llm";
@@ -1803,21 +1796,31 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
     let total_ops = object_field(one_layer, "total_ops")?
         .as_u64()
         .ok_or_else(|| anyhow!("one_layer_plan.total_ops must be an unsigned integer"))?;
+    let cuda_routable_ops =
+        object_field(one_layer, "cuda_routable_ops_total")?.as_u64().ok_or_else(|| {
+            anyhow!("one_layer_plan.cuda_routable_ops_total must be an unsigned integer")
+        })?;
     let linear_cuda_ops =
         object_field(one_layer, "linear_cuda_ops_total")?.as_u64().ok_or_else(|| {
             anyhow!("one_layer_plan.linear_cuda_ops_total must be an unsigned integer")
         })?;
+    let norm_cuda_ops = object_field(one_layer, "norm_cuda_ops_total")?
+        .as_u64()
+        .ok_or_else(|| anyhow!("one_layer_plan.norm_cuda_ops_total must be an unsigned integer"))?;
     let unsupported_ops = object_field(one_layer, "unsupported_strict_cuda_ops_total")?
         .as_u64()
         .ok_or_else(|| {
             anyhow!("one_layer_plan.unsupported_strict_cuda_ops_total must be an unsigned integer")
         })?;
-    if linear_cuda_ops == 0
+    if cuda_routable_ops == 0
+        || linear_cuda_ops == 0
+        || norm_cuda_ops == 0
+        || cuda_routable_ops != linear_cuda_ops + norm_cuda_ops
         || unsupported_ops == 0
-        || total_ops != linear_cuda_ops + unsupported_ops
+        || total_ops != cuda_routable_ops + unsupported_ops
     {
         return Err(anyhow!(
-            "one_layer_plan must include dense CUDA linears and explicit unsupported strict CUDA ops"
+            "one_layer_plan must include dense CUDA linears, RMSNorm ops, and explicit unsupported strict CUDA ops"
         ));
     }
     require_u64_eq(one_layer, "cpu_fallback_ops_total", 0)?;
@@ -1838,6 +1841,8 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
         return Err(anyhow!("one_layer_plan.operations length must match total_ops"));
     }
     let mut seen_cuda_ops = 0_u64;
+    let mut seen_linear_cuda_ops = 0_u64;
+    let mut seen_norm_cuda_ops = 0_u64;
     let mut seen_unsupported_ops = 0_u64;
     let mut seen_unsupported_roles = BTreeSet::new();
     for (idx, op) in operations.iter().enumerate() {
@@ -1861,7 +1866,12 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
         match required_string(op, "route")? {
             DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND => {
                 require_string_eq(op, "status", "cuda_routable")?;
-                require_string_eq(op, "op_type", "matmul")?;
+                let op_type = required_string(op, "op_type")?;
+                if !matches!(op_type, "matmul" | "rmsnorm") {
+                    return Err(anyhow!(
+                        "CUDA-routable dense op_type must be matmul or rmsnorm, got `{op_type}`"
+                    ));
+                }
                 require_bool_eq(op, "is_quantized", false)?;
                 let tensor = op
                     .get("source_tensor")
@@ -1876,6 +1886,25 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
                     tensor_type,
                     "one_layer_plan.operations.source_tensor_type",
                 )?;
+                match op_type {
+                    "matmul" => {
+                        if tensor_type == "f32" {
+                            return Err(anyhow!(
+                                "CUDA-routable dense matmul op must not use f32 norm tensor type"
+                            ));
+                        }
+                        seen_linear_cuda_ops += 1;
+                    }
+                    "rmsnorm" => {
+                        if tensor_type != "f32" {
+                            return Err(anyhow!(
+                                "CUDA-routable dense rmsnorm op must use f32 source_tensor_type"
+                            ));
+                        }
+                        seen_norm_cuda_ops += 1;
+                    }
+                    _ => unreachable!("op_type checked above"),
+                }
                 seen_cuda_ops += 1;
             }
             "unsupported" => {
@@ -1895,12 +1924,18 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
             }
         }
     }
-    if seen_cuda_ops != linear_cuda_ops || seen_unsupported_ops != unsupported_ops {
+    if seen_cuda_ops != cuda_routable_ops
+        || seen_linear_cuda_ops != linear_cuda_ops
+        || seen_norm_cuda_ops != norm_cuda_ops
+        || seen_unsupported_ops != unsupported_ops
+    {
         return Err(anyhow!("one_layer_plan operation route counts do not match summary"));
     }
     validate_dense_one_layer_gap_audit(
         receipt,
+        cuda_routable_ops,
         linear_cuda_ops,
+        norm_cuda_ops,
         unsupported_ops,
         &seen_unsupported_roles,
     )?;
@@ -1928,7 +1963,9 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
 
 fn validate_dense_one_layer_gap_audit(
     receipt: &Value,
+    cuda_routable_ops: u64,
     linear_cuda_ops: u64,
+    norm_cuda_ops: u64,
     unsupported_ops: u64,
     expected_unsupported_roles: &BTreeSet<String>,
 ) -> Result<()> {
@@ -1939,7 +1976,9 @@ fn validate_dense_one_layer_gap_audit(
         "source_artifact_kind",
         DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
     )?;
+    require_u64_eq(audit, "cuda_routable_ops_total", cuda_routable_ops)?;
     require_u64_eq(audit, "cuda_routable_linear_ops_total", linear_cuda_ops)?;
+    require_u64_eq(audit, "cuda_routable_norm_ops_total", norm_cuda_ops)?;
     require_u64_eq(audit, "unsupported_ops_total", unsupported_ops)?;
     require_u64_eq(audit, "cpu_fallback_ops_total", 0)?;
     require_bool_eq(audit, "strict_cuda_ready", false)?;
@@ -1955,9 +1994,22 @@ fn validate_dense_one_layer_gap_audit(
     require_bool_eq(audit, "speedup_claim", false)?;
     require_bool_eq(audit, "full_cuda_residency_claimed", false)?;
 
+    let cuda_roles = array_field(audit, "cuda_routable_roles")?;
+    if cuda_roles.len() != cuda_routable_ops as usize {
+        return Err(anyhow!("gap_audit.cuda_routable_roles length must match CUDA op count"));
+    }
+    for role in cuda_roles {
+        let role = role
+            .as_str()
+            .ok_or_else(|| anyhow!("gap_audit.cuda_routable_roles entries must be strings"))?;
+        reject_bitnet_packed_marker(role, "gap_audit.cuda_routable_roles")?;
+    }
+
     let linear_roles = array_field(audit, "linears_routable_roles")?;
     if linear_roles.len() != linear_cuda_ops as usize {
-        return Err(anyhow!("gap_audit.linears_routable_roles length must match CUDA op count"));
+        return Err(anyhow!(
+            "gap_audit.linears_routable_roles length must match CUDA linear op count"
+        ));
     }
     for role in linear_roles {
         let role = role
@@ -1965,6 +2017,21 @@ fn validate_dense_one_layer_gap_audit(
             .ok_or_else(|| anyhow!("gap_audit.linears_routable_roles entries must be strings"))?;
         reject_bitnet_packed_marker(role, "gap_audit.linears_routable_roles")?;
     }
+
+    let norm_roles = array_field(audit, "norms_routable_roles")?;
+    if norm_roles.len() != norm_cuda_ops as usize {
+        return Err(anyhow!(
+            "gap_audit.norms_routable_roles length must match CUDA RMSNorm op count"
+        ));
+    }
+    for role in norm_roles {
+        let role = role
+            .as_str()
+            .ok_or_else(|| anyhow!("gap_audit.norms_routable_roles entries must be strings"))?;
+        reject_bitnet_packed_marker(role, "gap_audit.norms_routable_roles")?;
+    }
+    require_bool_eq(audit, "rmsnorm_cuda_parity_available", true)?;
+    require_string_eq(audit, "next_candidate_gap", "rope")?;
 
     let unsupported_entries = array_field(audit, "unsupported_ops")?;
     if unsupported_entries.len() != unsupported_ops as usize {

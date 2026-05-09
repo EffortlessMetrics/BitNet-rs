@@ -1531,8 +1531,8 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
         },
         "execution_path": {
             "model_class": "dense_regular_llm",
-            "kernel_family": "dense_fp16_gemm_plus_unsupported_layer_ops",
-            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors",
+            "kernel_family": "dense_fp16_gemm_plus_f32_rmsnorm_plus_unsupported_layer_ops",
+            "quantization_family": "dense_fp16_bridge_from_gguf_descriptors_with_f32_rmsnorm",
             "bitnet_packed_kernel_proof": false,
             "qk256_proof": false
         },
@@ -1548,11 +1548,11 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "dense_regular_llm_cuda": true,
             "bitnet_packed_qk256_cuda": false,
             "cuda_bitnet_qk256_ops": 0,
-            "cuda_dense_regular_llm_ops": 7,
+            "cuda_dense_regular_llm_ops": 9,
             "cpu_fallback_ops": 0,
-            "unsupported_ops": 7,
+            "unsupported_ops": 5,
             "total_ops": 14,
-            "cuda_ops": 7,
+            "cuda_ops": 9,
             "mixed_cuda_routes": false,
             "fallback_used": false,
             "strict_cuda_ready": false,
@@ -1577,8 +1577,10 @@ fn valid_dense_gguf_one_layer_execution_plan_receipt() -> Value {
             "schema": 1,
             "layer_index": 0,
             "total_ops": 14,
+            "cuda_routable_ops_total": 9,
             "linear_cuda_ops_total": 7,
-            "unsupported_strict_cuda_ops_total": 7,
+            "norm_cuda_ops_total": 2,
+            "unsupported_strict_cuda_ops_total": 5,
             "cpu_fallback_ops_total": 0,
             "strict_cuda_ready": false,
             "unsupported_ops_explicitly_listed": true,
@@ -1952,12 +1954,25 @@ fn dense_one_layer_gap_audit() -> Value {
         "schema": 1,
         "source_artifact_kind": "dense_gguf_one_layer_execution_plan",
         "layer_index": 0,
+        "cuda_routable_ops_total": 9,
         "cuda_routable_linear_ops_total": 7,
-        "unsupported_ops_total": 7,
+        "cuda_routable_norm_ops_total": 2,
+        "unsupported_ops_total": 5,
         "cpu_fallback_ops_total": 0,
         "strict_cuda_ready": false,
         "unsupported_ops_have_dependency_notes": true,
         "strict_cuda_rejects_cpu_fallback": true,
+        "cuda_routable_roles": [
+            "attention_norm",
+            "attention_q",
+            "attention_k",
+            "attention_v",
+            "attention_output",
+            "ffn_norm",
+            "mlp_gate",
+            "mlp_up",
+            "mlp_down"
+        ],
         "linears_routable_roles": [
             "attention_q",
             "attention_k",
@@ -1967,16 +1982,19 @@ fn dense_one_layer_gap_audit() -> Value {
             "mlp_up",
             "mlp_down"
         ],
+        "norms_routable_roles": [
+            "attention_norm",
+            "ffn_norm"
+        ],
+        "rmsnorm_cuda_parity_available": true,
+        "next_candidate_gap": "rope",
         "unsupported_op_type_counts": {
             "activation": 1,
             "attention": 2,
-            "rmsnorm": 2,
             "rope": 1,
             "softmax": 1
         },
         "candidate_order": [
-            "attention_norm",
-            "ffn_norm",
             "rope",
             "attention_scores",
             "attention_softmax",
@@ -2001,14 +2019,6 @@ fn dense_one_layer_gap_audit() -> Value {
             { "from": "mlp_activation", "to": "mlp_down" }
         ],
         "unsupported_ops": [
-            gap_unsupported_op(
-                "blk.0.attn_norm.weight",
-                "attention_norm",
-                "rmsnorm",
-                json!("blk.0.attn_norm.weight"),
-                json!([16]),
-                json!(["hidden_state"])
-            ),
             gap_unsupported_op(
                 "blk.0.rope",
                 "rope",
@@ -2040,14 +2050,6 @@ fn dense_one_layer_gap_audit() -> Value {
                 Value::Null,
                 Value::Null,
                 json!(["attention_softmax", "attention_v"])
-            ),
-            gap_unsupported_op(
-                "blk.0.ffn_norm.weight",
-                "ffn_norm",
-                "rmsnorm",
-                json!("blk.0.ffn_norm.weight"),
-                json!([16]),
-                json!(["attention_residual_state"])
             ),
             gap_unsupported_op(
                 "blk.0.mlp_activation",
@@ -2102,13 +2104,7 @@ fn gap_unsupported_op(
 
 fn dense_one_layer_operations() -> Value {
     let mut operations = Vec::new();
-    push_one_layer_unsupported_op(
-        &mut operations,
-        0,
-        "blk.0.attn_norm.weight",
-        "attention_norm",
-        "rmsnorm",
-    );
+    push_one_layer_cuda_rmsnorm_op(&mut operations, 0, "blk.0.attn_norm.weight", "attention_norm");
     push_one_layer_cuda_op(&mut operations, 1, "blk.0.attn_q.weight", "attention_q");
     push_one_layer_cuda_op(&mut operations, 2, "blk.0.attn_k.weight", "attention_k");
     push_one_layer_cuda_op(&mut operations, 3, "blk.0.attn_v.weight", "attention_v");
@@ -2135,13 +2131,7 @@ fn dense_one_layer_operations() -> Value {
         "attention",
     );
     push_one_layer_cuda_op(&mut operations, 8, "blk.0.attn_output.weight", "attention_output");
-    push_one_layer_unsupported_op(
-        &mut operations,
-        9,
-        "blk.0.ffn_norm.weight",
-        "ffn_norm",
-        "rmsnorm",
-    );
+    push_one_layer_cuda_rmsnorm_op(&mut operations, 9, "blk.0.ffn_norm.weight", "ffn_norm");
     push_one_layer_cuda_op(&mut operations, 10, "blk.0.ffn_gate.weight", "mlp_gate");
     push_one_layer_cuda_op(&mut operations, 11, "blk.0.ffn_up.weight", "mlp_up");
     push_one_layer_unsupported_op(
@@ -2166,6 +2156,25 @@ fn push_one_layer_cuda_op(operations: &mut Vec<Value>, index: u64, name: &str, r
         "source_tensor": name,
         "source_tensor_type": "q8_0",
         "source_shape": [16, 16],
+        "is_quantized": false,
+        "route": "dense_regular_llm_cuda",
+        "status": "cuda_routable",
+        "fallback_used": false,
+        "reason": format!("cuda_dense_regular_llm route selected for {name}")
+    }));
+}
+
+fn push_one_layer_cuda_rmsnorm_op(operations: &mut Vec<Value>, index: u64, name: &str, role: &str) {
+    operations.push(json!({
+        "index": index,
+        "name": name,
+        "role": role,
+        "op_type": "rmsnorm",
+        "size": 16,
+        "source": "gguf_tensor_descriptor",
+        "source_tensor": name,
+        "source_tensor_type": "f32",
+        "source_shape": [16],
         "is_quantized": false,
         "route": "dense_regular_llm_cuda",
         "status": "cuda_routable",
