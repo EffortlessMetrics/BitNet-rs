@@ -30,11 +30,12 @@ use bitnet_models::dense_gguf_norm_fixture::{
 };
 use bitnet_models::formats::gguf::GgufReader;
 use bitnet_receipts_core::{
-    DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_NORM_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
-    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, validate_dense_gguf_linear_cuda_parity_receipt_json,
+    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, validate_dense_gguf_attention_score_fixture_receipt_json,
+    validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
     validate_dense_gguf_norm_cuda_parity_receipt_json,
     validate_dense_gguf_norm_fixture_extraction_receipt_json,
@@ -548,6 +549,79 @@ impl DenseGgufRopeCudaParityCommand {
     }
 }
 
+/// Extract a dense GGUF attention-score fixture and emit a CPU-reference receipt.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufAttentionScoreFixtureCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Dense transformer layer index represented by the deterministic fixture.
+    #[arg(long, default_value_t = 0)]
+    pub layer_index: usize,
+
+    /// Number of token positions in the deterministic attention-score fixture.
+    #[arg(long, default_value_t = 4)]
+    pub seq_len: usize,
+
+    /// Position offset used by the metadata-derived RoPE fixture.
+    #[arg(long, default_value_t = 1)]
+    pub position_offset: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufAttentionScoreFixtureCommand {
+    pub async fn execute(&self) -> Result<()> {
+        if self.seq_len == 0 {
+            bail!("dense GGUF attention-score fixture requires --seq-len > 0");
+        }
+
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+        let fixture = dense_gguf_attention_score_fixture_from_reader(
+            &reader,
+            &inspection,
+            self.layer_index,
+            self.seq_len,
+            self.position_offset,
+        )?;
+
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_attention_score_fixture_receipt_json(
+            &inspection,
+            &fixture,
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        );
+        validate_dense_gguf_attention_score_fixture_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
 struct DenseLinearSweepResult {
     extracted: DenseGgufLinearFixture,
     parity: DenseGgufLinearCudaParity,
@@ -556,6 +630,33 @@ struct DenseLinearSweepResult {
 struct DenseNormParityResult {
     extracted: DenseGgufNormFixture,
     parity: DenseGgufRmsNormCudaParity,
+}
+
+#[derive(Debug, Clone)]
+struct DenseGgufAttentionScoreFixture {
+    fixture_id: String,
+    model_family: String,
+    architecture: String,
+    layer_index: usize,
+    q_heads: usize,
+    kv_heads: usize,
+    heads_per_kv_group: usize,
+    head_dim: usize,
+    seq_len: usize,
+    position_offset: usize,
+    rope_base: f32,
+    scaling_factor: f32,
+    scale: f32,
+    head_dim_source: String,
+    q_heads_source: String,
+    kv_heads_source: String,
+    rope_base_source: String,
+    source_rope_fixture_id: String,
+    q_rope_output_f32: Vec<f32>,
+    k_rope_output_f32: Vec<f32>,
+    expected_scores_f32: Vec<f32>,
+    finite_scores: usize,
+    causal_masked_scores: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -829,6 +930,132 @@ fn dense_gguf_rope_cuda_fixture_from_reader(
         expected_q_output_f32,
         expected_k_output_f32,
     })
+}
+
+fn dense_gguf_attention_score_fixture_from_reader(
+    reader: &GgufReader<'_>,
+    inspection: &DenseGgufDescriptorInspection,
+    layer_index: usize,
+    seq_len: usize,
+    position_offset: usize,
+) -> Result<DenseGgufAttentionScoreFixture> {
+    let rope = dense_gguf_rope_cuda_fixture_from_reader(
+        reader,
+        inspection,
+        layer_index,
+        seq_len,
+        position_offset,
+    )?;
+    if rope.kv_heads == 0 || rope.q_heads == 0 {
+        bail!("dense GGUF attention-score fixture requires non-zero Q and KV heads");
+    }
+    if rope.q_heads % rope.kv_heads != 0 {
+        bail!(
+            "dense GGUF attention-score fixture requires q_heads divisible by kv_heads: q_heads={} kv_heads={}",
+            rope.q_heads,
+            rope.kv_heads
+        );
+    }
+    let heads_per_kv_group = rope.q_heads / rope.kv_heads;
+    let scale = 1.0 / (rope.head_dim as f32).sqrt();
+    let expected_scores_f32 = dense_attention_scores_cpu_reference(
+        &rope.expected_q_output_f32,
+        &rope.expected_k_output_f32,
+        rope.q_heads,
+        rope.kv_heads,
+        rope.seq_len,
+        rope.head_dim,
+        scale,
+    )?;
+    let finite_scores = expected_scores_f32.iter().filter(|score| score.is_finite()).count();
+    let causal_masked_scores = expected_scores_f32.len().saturating_sub(finite_scores);
+
+    Ok(DenseGgufAttentionScoreFixture {
+        fixture_id: format!(
+            "dense_gguf_attention_scores_{}_layer{}_q{}_kv{}_d{}_s{}",
+            sanitize_label(&inspection.model_family),
+            layer_index,
+            rope.q_heads,
+            rope.kv_heads,
+            rope.head_dim,
+            rope.seq_len
+        ),
+        model_family: rope.model_family.clone(),
+        architecture: rope.architecture.clone(),
+        layer_index,
+        q_heads: rope.q_heads,
+        kv_heads: rope.kv_heads,
+        heads_per_kv_group,
+        head_dim: rope.head_dim,
+        seq_len: rope.seq_len,
+        position_offset: rope.position_offset,
+        rope_base: rope.rope_base,
+        scaling_factor: rope.scaling_factor,
+        scale,
+        head_dim_source: rope.head_dim_source.clone(),
+        q_heads_source: rope.q_heads_source.clone(),
+        kv_heads_source: rope.kv_heads_source.clone(),
+        rope_base_source: rope.rope_base_source.clone(),
+        source_rope_fixture_id: rope.fixture_id.clone(),
+        q_rope_output_f32: rope.expected_q_output_f32,
+        k_rope_output_f32: rope.expected_k_output_f32,
+        expected_scores_f32,
+        finite_scores,
+        causal_masked_scores,
+    })
+}
+
+fn dense_attention_scores_cpu_reference(
+    q_rope: &[f32],
+    k_rope: &[f32],
+    q_heads: usize,
+    kv_heads: usize,
+    seq_len: usize,
+    head_dim: usize,
+    scale: f32,
+) -> Result<Vec<f32>> {
+    if q_heads == 0 || kv_heads == 0 || seq_len == 0 || head_dim == 0 {
+        bail!("dense attention-score fixture dimensions must be non-zero");
+    }
+    if q_heads % kv_heads != 0 {
+        bail!("dense attention-score fixture q_heads must be divisible by kv_heads");
+    }
+    let q_expected = q_heads * seq_len * head_dim;
+    let k_expected = kv_heads * seq_len * head_dim;
+    if q_rope.len() != q_expected {
+        bail!(
+            "dense attention-score fixture q_rope length {} != expected {q_expected}",
+            q_rope.len()
+        );
+    }
+    if k_rope.len() != k_expected {
+        bail!(
+            "dense attention-score fixture k_rope length {} != expected {k_expected}",
+            k_rope.len()
+        );
+    }
+
+    let heads_per_kv_group = q_heads / kv_heads;
+    let mut scores = Vec::with_capacity(q_heads * seq_len * seq_len);
+    for q_head in 0..q_heads {
+        let kv_head = q_head / heads_per_kv_group;
+        for q_pos in 0..seq_len {
+            for k_pos in 0..seq_len {
+                if k_pos > q_pos {
+                    scores.push(f32::NEG_INFINITY);
+                    continue;
+                }
+                let q_offset = ((q_head * seq_len + q_pos) * head_dim) as usize;
+                let k_offset = ((kv_head * seq_len + k_pos) * head_dim) as usize;
+                let mut dot = 0.0f32;
+                for dim in 0..head_dim {
+                    dot += q_rope[q_offset + dim] * k_rope[k_offset + dim];
+                }
+                scores.push(dot * scale);
+            }
+        }
+    }
+    Ok(scores)
 }
 
 fn head_dim_source_label(source: &str) -> String {
@@ -1924,6 +2151,167 @@ fn dense_gguf_linear_role_sweep_cuda_parity_receipt_json(
     }))
 }
 
+fn dense_gguf_attention_score_fixture_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    fixture: &DenseGgufAttentionScoreFixture,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Value {
+    let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
+        model_family: &inspection.model_family,
+        quantization: "dense_f32_attention_scores_fixture",
+        requested_backend: HARDWARE_LANE,
+        selected_backend: "unsupported_strict_cuda",
+        runtime_api: "none",
+        strict_fallback_policy: "reject",
+        summary: ModelDispatchSummary {
+            total_ops: 1,
+            cuda_bitnet_qk256_ops: 0,
+            cuda_dense_regular_llm_ops: 0,
+            cpu_fallback_ops: 0,
+            unsupported_ops: 1,
+            fallback_used: false,
+            selected_route: Some(ModelDispatchBackend::Unsupported),
+            strict_cuda_ready: false,
+        },
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    });
+
+    json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_attention_score_fixture_extracted",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "inspection_source": "gguf_reader_attention_score_fixture",
+        "error": null,
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "quantization_families": inspection.quantization_families,
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "cpu_reference_attention_scores_after_rope",
+            "quantization_family": "metadata_derived_rope_qk_attention_scores_fixture",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": execution_plan,
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "attention_score_fixture": {
+            "schema": 1,
+            "source_artifact_kind": DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND,
+            "source_rope_artifact_kind": DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
+            "source_rope_fixture_id": fixture.source_rope_fixture_id,
+            "fixture_id": fixture.fixture_id,
+            "model_family": fixture.model_family,
+            "architecture": fixture.architecture,
+            "layer_index": fixture.layer_index as u64,
+            "head_dim": fixture.head_dim as u64,
+            "q_heads": fixture.q_heads as u64,
+            "kv_heads": fixture.kv_heads as u64,
+            "heads_per_kv_group": fixture.heads_per_kv_group as u64,
+            "seq_len": fixture.seq_len as u64,
+            "position_offset": fixture.position_offset as u64,
+            "rope_base": fixture.rope_base,
+            "scaling_factor": fixture.scaling_factor,
+            "attention_scale": fixture.scale,
+            "causal_mask_applied": true,
+            "head_dim_source": fixture.head_dim_source,
+            "q_heads_source": fixture.q_heads_source,
+            "kv_heads_source": fixture.kv_heads_source,
+            "rope_base_source": fixture.rope_base_source,
+            "q_rope_output_sha256": sha256_f32(&fixture.q_rope_output_f32),
+            "k_rope_output_sha256": sha256_f32(&fixture.k_rope_output_f32),
+            "cpu_reference_scores_sha256": sha256_f32(&fixture.expected_scores_f32),
+            "score_shape": [fixture.q_heads as u64, fixture.seq_len as u64, fixture.seq_len as u64],
+            "score_count": fixture.expected_scores_f32.len() as u64,
+            "finite_scores": fixture.finite_scores as u64,
+            "causal_masked_scores": fixture.causal_masked_scores as u64,
+            "cpu_reference_computed": true,
+            "cuda_kernel_status": "missing_cuda_kernel",
+            "strict_cuda_ready": false,
+            "cpu_fallback_allowed": false,
+            "transfer_timing_status": "not_measured_no_kernel",
+            "dense_gguf_inference_claimed": false,
+            "dense_regular_llm_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "attention_score_gap_audit": {
+            "schema": 1,
+            "source_artifact_kind": DENSE_GGUF_ATTENTION_SCORE_FIXTURE_ARTIFACT_KIND,
+            "gap_role": "attention_scores",
+            "input_dependencies": ["rope_q", "rope_k", "causal_mask"],
+            "source_rope_cuda_parity_required": true,
+            "source_rope_cuda_parity_available": true,
+            "cpu_reference_available": true,
+            "cuda_kernel_status": "missing_cuda_kernel",
+            "strict_cuda_ready": false,
+            "cpu_fallback_allowed": false,
+            "blocks_strict_cuda_one_layer": true,
+            "next_required_proof": "cuda_attention_score_kernel_parity",
+            "candidate_order": DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER,
+            "dense_gguf_attention_score_fixture_extraction_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "timing": {
+            "kernel_time_ms": null,
+            "host_to_device_bytes": 0,
+            "device_to_host_bytes": 0,
+            "transfer_timing_status": "not_measured_no_kernel"
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": false,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_attention_score_fixture_extraction_claimed": true,
+            "dense_gguf_rope_cuda_parity_claimed": false,
+            "dense_gguf_norm_cuda_parity_claimed": false,
+            "dense_gguf_linear_fixture_extraction_claimed": false,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        }
+    })
+}
+
 fn dense_gguf_one_layer_execution_plan_receipt_json(
     inspection: &DenseGgufDescriptorInspection,
     probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
@@ -2743,6 +3131,53 @@ mod tests {
         assert_eq!(receipt["kernel_stats"][0]["kernel_id"], "dense_rope_f32_cuda");
         assert_eq!(receipt["kernel_stats"][0]["invocations"], 2);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_rope_cuda_parity_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
+    fn dense_gguf_attention_score_fixture_receipt_records_cpu_reference_gap() {
+        let data = build_complete_qwen_layer_gguf();
+        let reader = GgufReader::new(&data).expect("parse qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let fixture = dense_gguf_attention_score_fixture_from_reader(&reader, &inspection, 0, 4, 1)
+            .expect("attention score fixture");
+
+        let receipt = dense_gguf_attention_score_fixture_receipt_json(
+            &inspection,
+            &fixture,
+            Path::new("synthetic-qwen3-q8_0-attention-score-fixture.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-attention-score-fixture.json",
+            "2026-05-09T00:00:00Z",
+        );
+
+        validate_dense_gguf_attention_score_fixture_receipt_json(&receipt).unwrap();
+        let score_count = receipt["attention_score_fixture"]["score_count"].as_u64().unwrap();
+        let finite_scores = receipt["attention_score_fixture"]["finite_scores"].as_u64().unwrap();
+        let masked_scores =
+            receipt["attention_score_fixture"]["causal_masked_scores"].as_u64().unwrap();
+
+        assert_eq!(receipt["execution_plan"]["selected_route"], "unsupported");
+        assert_eq!(receipt["execution_plan"]["unsupported_ops"], 1);
+        assert_eq!(
+            receipt["attention_score_fixture"]["score_shape"],
+            json!([fixture.q_heads, fixture.seq_len, fixture.seq_len])
+        );
+        assert_eq!(finite_scores + masked_scores, score_count);
+        assert_eq!(
+            receipt["attention_score_gap_audit"]["cuda_kernel_status"],
+            "missing_cuda_kernel"
+        );
+        assert_eq!(
+            receipt["attention_score_gap_audit"]["next_required_proof"],
+            "cuda_attention_score_kernel_parity"
+        );
+        assert_eq!(
+            receipt["claim_boundary"]["dense_gguf_attention_score_fixture_extraction_claimed"],
+            true
+        );
+        assert_eq!(receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
         assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
     }

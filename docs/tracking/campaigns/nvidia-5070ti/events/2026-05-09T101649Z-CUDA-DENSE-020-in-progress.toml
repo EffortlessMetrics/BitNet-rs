@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T10:16:49Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-020"
+event = "in_progress"
+previous_status = "none"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-020-attention-score-fixture"
+notes = [
+  "Started dense GGUF attention-score fixture extraction after CUDA-DENSE-019 made RoPE planner-routable and left attention_scores as the next governed unsupported strict CUDA gap.",
+  "Scope is a CPU-reference attention-score fixture and receipt validator that records metadata-derived Q/K RoPE dependencies, causal mask counts, score hash, and missing CUDA kernel status.",
+  "No dense GGUF inference, CUDA attention-score parity, Qwen token/decode/chat, speedup, full-residency, server, QK256, tokenizer, loader, transformer, or dense CUDA math implementation claim is in scope.",
+]

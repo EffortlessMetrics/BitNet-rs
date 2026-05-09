@@ -127,7 +127,8 @@ fn bitnet_version() -> &'static str {
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
 use commands::{
-    AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, DenseGgufLinearParityCommand,
+    AnswerCorpusCommand, AnswerParityCommand, ConvertCommand,
+    DenseGgufAttentionScoreFixtureCommand, DenseGgufLinearParityCommand,
     DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
     DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand, InferenceCommand, InspectCommand,
     ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
@@ -605,6 +606,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Run dense GGUF RoPE strict CUDA parity diagnostics
     DenseGgufRopeCudaParity(Box<DenseGgufRopeCudaParityCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Extract a dense GGUF attention-score fixture and emit a CPU-reference receipt
+    DenseGgufAttentionScoreFixture(Box<DenseGgufAttentionScoreFixtureCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Explain BitNet-rs JSON receipts and claim boundaries
@@ -1384,6 +1389,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufNormCudaParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufRopeCudaParity(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufAttentionScoreFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Receipts(cmd)) => cmd.execute().await,
         #[cfg(feature = "full-cli")]
