@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T21:01:49Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-036"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-036-all-layer-plan"
+pr = 4331
+head_sha = "5a11b09b5f7cd754e232c61bbd5094af5b2b1073"
+
+notes = [
+  "Opened PR #4331 for the CUDA-DENSE-036 all-layer dense GGUF execution-plan contract.",
+  "The PR is docs/tracker only and defines the future receipt boundary for all Qwen-family transformer layers plus explicit model-boundary gaps.",
+  "No all-layer implementation, hardware receipt evidence, dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, or CUDA kernel math claim is in scope.",
+]
