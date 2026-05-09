@@ -29,7 +29,8 @@ pub use dense_gguf_linear_parity::{
     DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
     DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
     DenseGgufMlpActivationCudaParityCommand, DenseGgufMlpActivationFixtureCommand,
-    DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand,
+    DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
+    DenseGgufOneLayerCpuReferenceCommand, DenseGgufOneLayerPlanCommand,
     DenseGgufRopeCudaParityCommand,
 };
 pub use external_reference_instrumentation::ExternalReferenceInstrumentationCommand;

@@ -133,7 +133,8 @@ use commands::{
     DenseGgufAttentionVMixCudaParityCommand, DenseGgufAttentionVMixFixtureCommand,
     DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand,
     DenseGgufMlpActivationCudaParityCommand, DenseGgufMlpActivationFixtureCommand,
-    DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand,
+    DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
+    DenseGgufOneLayerCpuReferenceCommand, DenseGgufOneLayerPlanCommand,
     DenseGgufRopeCudaParityCommand, ExternalReferenceInstrumentationCommand,
     FirstTokenDivergenceCommand, InferenceCommand, InspectCommand, ReceiptsCommand,
     ReferenceCompareCommand, ServeCommand,
@@ -607,6 +608,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Emit a dense GGUF one-layer strict CUDA planner gap receipt
     DenseGgufOneLayerPlan(Box<DenseGgufOneLayerPlanCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Emit a dense GGUF one-layer CPU reference harness receipt
+    DenseGgufOneLayerCpuReference(Box<DenseGgufOneLayerCpuReferenceCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
@@ -1438,6 +1443,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufLinearRoleSweep(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufOneLayerPlan(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufOneLayerCpuReference(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufNormFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T18:23:29Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-032"
+event = "in_progress"
+previous_status = "pr_open"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-032-cpu-reference-harness"
+
+notes = [
+  "Converted CUDA-DENSE-032 from the merged tracker-only contract into the implementation slice for the dense GGUF layer-0 CPU reference harness.",
+  "Scope is a CPU-only deterministic layer pass, per-phase hashes, final layer output hash, receipt validator coverage, and tracker/report/dashboard updates.",
+  "No CUDA integrated layer execution, dense GGUF inference, Qwen token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, or CUDA kernel math claim is in scope.",
+]
