@@ -86,6 +86,17 @@ The machine-readable copy of this matrix lives in
 `ci/model-artifacts/bitnet-model-contracts.toml`, with a Rust registry in
 `crates/bitnet-models/src/model_contracts.rs`.
 
+The user-facing cache verifier exposes the current reference contract:
+
+```powershell
+bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --json
+```
+
+That command verifies the exact official GGUF bytes and includes the
+`microsoft_bitnet_b158_2b_4t_i2s` contract summary in its JSON output. It does
+not by itself prove CPU, CUDA, speedup, or full-residency claims; those still
+require the strict backend receipts listed by the contract.
+
 ## Strict Proof Requirements
 
 Strict BitNet proof requires:
