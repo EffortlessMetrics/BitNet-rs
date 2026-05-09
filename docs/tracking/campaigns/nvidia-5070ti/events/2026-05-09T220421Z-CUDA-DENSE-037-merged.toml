@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T22:04:21Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-037"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-037-all-layer-plan-impl"
+pr = 4333
+head_sha = "98bb29445b465631b7a461a1a1291b0cd1fd6b2f"
+merge_sha = "c01c82517f32c15a01674d3e453d54d99fe34273"
+
+notes = [
+  "PR #4333 merged, implementing the CUDA-DENSE-037 dense GGUF all-layer execution-plan receipt command.",
+  "The merged command inspects Qwen-family transformer layers from descriptors, records 14 governed dense_regular_llm_cuda ops per layer, verifies graph signatures, and keeps model-boundary gaps explicit.",
+  "CUDA-DENSE-037 keeps dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, server readiness, BitNet packed proof, tokenizer, loader, transformer runtime, QK256, BitNet CUDA, and CUDA kernel math claims false.",
+]

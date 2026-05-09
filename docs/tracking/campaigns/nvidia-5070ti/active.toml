@@ -2506,10 +2506,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-037"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-037-all-layer-plan-impl"
 pr = 4333
-head_sha = "33f1339f92f0bafe2ede95d3f2629290ba584eb2"
+head_sha = "98bb29445b465631b7a461a1a1291b0cd1fd6b2f"
+merge_sha = "c01c82517f32c15a01674d3e453d54d99fe34273"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -2564,6 +2565,71 @@ must_not_claim = [
   "Dense regular LLM CUDA speedup exists.",
   "General dense GGUF CUDA inference is complete.",
   "Qwen one-token, short decode, or chat works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+  "A hardware receipt exists unless the real verified Qwen artifact command has been run and committed.",
+]
+
+[[work_item]]
+id = "CUDA-DENSE-038"
+status = "ready"
+branch = "codex/cuda-dense-038-model-boundary-fixtures"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-037"]
+acceptance = "Implement governed dense GGUF model-boundary fixture receipts after CUDA-DENSE-037, covering token embedding lookup, final model norm, LM head/output projection, logits shape/hash/top-k diagnostics, and the selected dense_regular_llm_cuda route boundary, while keeping KV cache policy, sampling integration, Qwen one-token/short decode/chat, speedup, persistent/full residency, server readiness, BitNet packed proof, tokenizer behavior, loader behavior, transformer runtime behavior, QK256, BitNet CUDA, and CUDA kernel math claims false."
+commands = [
+  "cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_model_boundary -- --nocapture",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_all_layer -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features model_boundary -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-model-boundary-fixtures --model <verified-qwen2.5-q8-gguf> --device-index 0 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-model-boundary-fixtures-qwen25-q8.json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "dense GGUF model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "KV cache policy implementation",
+  "sampling implementation",
+  "tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+  "new hardware receipt evidence unless the real verified Qwen artifact command has been run and committed",
+]
+may_claim = [
+  "CUDA-DENSE-038 defines the next governed dense GGUF model-boundary fixture implementation after all transformer blocks have a strict CUDA route plan.",
+  "The future dense_gguf_model_boundary_fixtures receipt must cover token embedding lookup, final norm, LM head/output projection, logits shape/hash/top-k diagnostics, and explicit remaining KV/sampling gaps.",
+  "The CUDA-DENSE-038 implementation may unblock a later Qwen one-token proof only after receipt validation keeps fallback, inference, speedup, full residency, and BitNet packed proof claims false.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Qwen one-token, short decode, or chat works on CUDA.",
+  "KV cache policy or sampling integration is implemented.",
   "Persistent-session or full dense regular LLM CUDA residency exists.",
   "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
   "A hardware receipt exists unless the real verified Qwen artifact command has been run and committed.",
