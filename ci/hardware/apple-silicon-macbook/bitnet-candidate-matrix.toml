@@ -1,0 +1,190 @@
+schema = 1
+artifact_kind = "apple_silicon_macbook_bitnet_candidate_matrix"
+updated = "2026-05-09"
+work_item = "MB-AS-003"
+machine_lane = "apple-silicon-macbook"
+claim_boundary = "Candidate planning only. No candidate is accepted for Apple local-answer claims until the MacBook lane records source, size, SHA256, tokenizer authority, coherent reference-runner output, and cleanup status. Dense Qwen evidence does not prove BitNet quality."
+
+storage_policy = [
+  "Prefer candidates that fit comfortably in the model cache with at least 8 GiB free after download.",
+  "Download candidates under cache or target during proof runs; never commit model binaries.",
+  "Record exact byte size and SHA256 before accepting or rejecting a candidate.",
+  "Delete rejected candidates unless a later item explicitly keeps them for a bounded diagnostic reason.",
+]
+
+required_reference_prompt_suite = "ci/quality/bitnet-answer-corpus.yaml"
+shared_answer_gate = "docs/model-artifacts/ANSWER_ARTIFACT_GATE.md"
+compatibility_ledger = "ci/model-artifacts/model-kernel-compatibility.toml"
+
+[[candidate]]
+id = "microsoft_bitnet_b158_2b_4t_i2s"
+priority = 1
+model_family = "bitnet_b1_58"
+role = "official_model"
+source_repo = "microsoft/bitnet-b1.58-2B-4T-gguf"
+source_url = "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf"
+file = "ggml-model-i2_s.gguf"
+known_sha256 = "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+known_size_bytes = 1187801280
+storage_estimate = "about_1_1_gib"
+format = "gguf"
+quantization = "i2_s"
+tokenizer_authority = "external_microsoft_tokenizer"
+pretokenizer_authority = "externally_supplied_tokenizer.ggml.pre=llama-bpe"
+prompt_template = "User: <question><|eot_id|>Assistant:"
+reference_runner = "microsoft_bitnet_cpp"
+reference_status = "answer_ready_shared_gate; MacBook rerun required before Apple claim"
+cleanup_required = true
+next_item = "MB-AS-004"
+notes = [
+  "Shared gate records coherent Microsoft BitNet.cpp output when external tokenizer authority is supplied.",
+  "MacBook must rerun the reference prompt suite and record local storage/cache context before this becomes Apple artifact-ready evidence.",
+]
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "supported"
+  proof_use = "first Apple CPU/NEON BitNet candidate if MacBook reference run passes"
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "supported"
+  proof_use = "follow-up ARM layout route after I2_S authority is clear"
+
+[[candidate]]
+id = "onebitllm_bitnet_b158_large_07b"
+priority = 2
+model_family = "bitnet_b1_58"
+role = "smaller_control_candidate"
+source_repo = "1bitLLM/bitnet_b1_58-large"
+source_url = "https://huggingface.co/1bitLLM/bitnet_b1_58-large"
+file = "pending"
+known_sha256 = "pending"
+known_size_bytes = 0
+storage_estimate = "sub_1b_model; exact GGUF bytes pending candidate probe"
+format = "pending"
+quantization = "i2_s_or_tl1_pending"
+tokenizer_authority = "pending"
+pretokenizer_authority = "pending"
+prompt_template = "pending_reference_runner_decision"
+reference_runner = "microsoft_bitnet_cpp_candidate"
+reference_status = "not_run_on_macbook"
+cleanup_required = true
+next_item = "MB-AS-005"
+notes = [
+  "Upstream lists this 0.7B model with ARM I2_S and TL1 support.",
+  "Use as a smaller Apple BitNet control only if a GGUF/reference-runner path produces coherent output and records tokenizer authority.",
+]
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+  proof_use = "possible smaller first Apple BitNet local-answer target after reference output passes"
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+  proof_use = "possible ARM layout diagnostic after reference output passes"
+
+[[candidate]]
+id = "onebitllm_bitnet_b158_3b_tl_diagnostic"
+priority = 3
+model_family = "bitnet_b1_58"
+role = "larger_diagnostic_candidate"
+source_repo = "1bitLLM/bitnet_b1_58-3B"
+source_url = "https://huggingface.co/1bitLLM/bitnet_b1_58-3B"
+file = "pending"
+known_sha256 = "pending"
+known_size_bytes = 0
+storage_estimate = "3b_model; exact GGUF bytes pending candidate probe"
+format = "pending"
+quantization = "tl1_or_tl2_only_until_compatibility_changes"
+tokenizer_authority = "pending"
+pretokenizer_authority = "pending"
+prompt_template = "pending_reference_runner_decision"
+reference_runner = "microsoft_bitnet_cpp_candidate"
+reference_status = "diagnostic_only_until_runner_path_verified"
+cleanup_required = true
+next_item = "MB-AS-006"
+notes = [
+  "Compatibility ledger marks 3B I2_S unsupported upstream for ARM and x86.",
+  "Use only TL1/TL2 diagnostic routes until a verified runner path and coherent reference output exist.",
+]
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "unsupported_upstream"
+  proof_use = "diagnostic_rejection_only"
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+  proof_use = "diagnostic_route_until_runner_path_verified"
+
+[[candidate]]
+id = "falcon_e_1b_instruct_i2s_secondary"
+priority = 4
+model_family = "falcon_e_1_58bit"
+role = "secondary_bitnet_like_family"
+source_repo = "tiiuae/Falcon-E-1B-Instruct-GGUF"
+source_url = "https://huggingface.co/tiiuae/Falcon-E-1B-Instruct-GGUF"
+file = "ggml-model-i2_s.gguf"
+known_sha256 = "pending"
+known_size_bytes = 0
+storage_estimate = "1b_class; exact bytes pending candidate probe"
+format = "gguf"
+quantization = "i2_s"
+tokenizer_authority = "pending"
+pretokenizer_authority = "pending"
+prompt_template = "pending_reference_runner_decision"
+reference_runner = "microsoft_bitnet_cpp_or_intended_falcon_e_runner"
+reference_status = "secondary_family_not_first_proof_target"
+cleanup_required = true
+next_item = "future_after_microsoft_and_1bitllm"
+notes = [
+  "Use after Microsoft and 1bitLLM behavior is understood.",
+  "Different family and architecture assumptions mean it cannot replace Microsoft BitNet artifact authority.",
+]
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "candidate_verify_runner"
+  proof_use = "secondary_family_diagnostic"
+
+[[candidate]]
+id = "falcon_e_3b_instruct_i2s_secondary"
+priority = 5
+model_family = "falcon_e_1_58bit"
+role = "secondary_larger_bitnet_like_family"
+source_repo = "tiiuae/Falcon-E-3B-Instruct-GGUF"
+source_url = "https://huggingface.co/tiiuae/Falcon-E-3B-Instruct-GGUF"
+file = "ggml-model-i2_s.gguf"
+known_sha256 = "pending"
+known_size_bytes = 0
+storage_estimate = "3b_class; exact bytes pending candidate probe"
+format = "gguf"
+quantization = "i2_s"
+tokenizer_authority = "pending"
+pretokenizer_authority = "pending"
+prompt_template = "pending_reference_runner_decision"
+reference_runner = "microsoft_bitnet_cpp_or_intended_falcon_e_runner"
+reference_status = "secondary_family_not_first_proof_target"
+cleanup_required = true
+next_item = "future_after_microsoft_and_1bitllm"
+notes = [
+  "Use only after smaller/official candidate behavior is clear and MacBook storage is sufficient.",
+  "Different family and architecture assumptions mean it cannot replace Microsoft BitNet artifact authority.",
+]
+
+  [[candidate.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "candidate_verify_runner"
+  proof_use = "secondary_family_diagnostic"

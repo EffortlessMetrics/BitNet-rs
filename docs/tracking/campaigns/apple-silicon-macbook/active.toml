@@ -106,7 +106,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-003"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-silicon-macbook/MB-AS-003-bitnet-candidate-matrix"
 stackable = false
 review_mode = "codex_premerge"

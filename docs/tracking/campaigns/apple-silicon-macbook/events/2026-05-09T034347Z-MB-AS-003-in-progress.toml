@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T03:43:47Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-003"
+event = "in_progress"
+branch = "codex/apple-silicon-macbook/MB-AS-003-bitnet-candidate-matrix"
+actor = "codex"
+
+notes = [
+  "Started the MacBook-oriented Apple BitNet candidate matrix after MB-AS-002 was blocked on real MacBook hardware.",
+  "Scope is limited to candidate priorities, storage estimates, compatibility routes, tokenizer-authority requirements, reference-runner commands, cleanup rules, docs, and campaign tracking.",
+  "No candidate artifact is downloaded, accepted, or claimed answer-ready by this item.",
+]

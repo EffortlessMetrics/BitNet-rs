@@ -108,6 +108,18 @@ official Microsoft BitNet b1.58 2B / 2B4T I2_S with external tokenizer authority
 Falcon-E candidates after Microsoft / 1bitLLM behavior is understood
 ```
 
+`MB-AS-003` records the first machine-readable candidate matrix at:
+
+```text
+ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml
+```
+
+with the companion guide:
+
+```text
+docs/apple-silicon/bitnet-candidate-matrix.md
+```
+
 No artifact becomes an Apple local-answer claim until a strict backend receipt produces coherent output with real model, tokenizer authority, selected backend, fallback status, generated text, token IDs, and timing.
 
 ## Claim Boundaries
