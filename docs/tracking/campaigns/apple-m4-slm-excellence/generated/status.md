@@ -2,7 +2,7 @@
 # Apple M4 SLM excellence Campaign Status
 
 - Campaign: `apple-m4-slm-excellence`
-- State: `active`
+- State: `complete`
 - Objective: Turn the working Apple M4 dense SLM path into an appliance-grade local model runner experience with native-feeling CLI, reliable health checks, lower perceived latency, better allocation hygiene, stronger quality coverage, longer resident-session stability, leading dense SLM support, local regression reporting, a measured operator envelope, and efficient default CI.
 
 ## Work Items
@@ -18,7 +18,7 @@
 | M4-SLM-EX-007 | merged | #4297 | `codex/apple-m4-slm-excellence/M4-SLM-EX-007-quality-corpus-v2` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Expand to a small quality corpus 2.0 covering factual answers, instruction following, format-constrained output, one-sentence generation, arithmetic, small summarization, and short rewrite while preserving fast local runtime and validated receipts. |
 | M4-SLM-EX-008 | merged | #4301 | `codex/apple-m4-slm-excellence/M4-SLM-EX-008-long-soak` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record 25-prompt and 50-prompt resident dense SLM sessions with 64-token and 128-token response budgets, memory drift, time-to-first-token drift, decode throughput drift, quality failures, and model/tokenizer reuse. |
 | M4-SLM-EX-009 | merged | #4305 | `codex/apple-m4-slm-excellence/M4-SLM-EX-009-local-regression` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add bitnet mac regression as a local advisory comparison command against matching stored M4 dense SLM envelope receipts, with optional hard-fail mode for model/tokenizer/backend/fallback/quality/timing/memory drift, while keeping live model and hardware performance checks out of generic required CI. |
-| M4-SLM-EX-010 | in_progress | #4307 | `codex/apple-m4-slm-excellence/M4-SLM-EX-010-user-envelope` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Publish a measured M4 mini user expectation envelope covering cold load, warm ask timing, time-to-first-token, warm 16/32/64/128 timing, decode tokens per second, peak memory, cache size, and known unsupported models/backends. |
+| M4-SLM-EX-010 | merged | #4307 | `codex/apple-m4-slm-excellence/M4-SLM-EX-010-user-envelope` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Publish a measured M4 mini user expectation envelope covering cold load, warm ask timing, time-to-first-token, warm 16/32/64/128 timing, decode tokens per second, peak memory, cache size, and known unsupported models/backends. |
 
 ## Hard Constraints
 
