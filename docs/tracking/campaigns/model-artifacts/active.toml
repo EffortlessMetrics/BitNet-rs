@@ -578,8 +578,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-CAPS-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/model-caps-001-dense-verify"
+pr = 4205
+head_sha = "0010f57c1de0be4069086012d54d0929e05396fa"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
