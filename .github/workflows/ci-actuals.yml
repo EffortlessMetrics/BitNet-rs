@@ -1,0 +1,97 @@
+name: CI Actuals
+
+on:
+  workflow_run:
+    workflows:
+      - "CI (Core)"
+      - "Feature Matrix"
+      - "Compatibility Tests"
+      - "Property-Based Tests"
+      - "Test Telemetry"
+      - "Fuzz CI"
+      - "PR Plan"
+      - "Policy"
+      - "PR Gate"
+      - "ripr"
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "GitHub Actions run id to collect"
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ci-actuals-${{ github.event.workflow_run.id || github.event.inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  record:
+    name: Record CI actuals
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'cancelled' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.93.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: ci-actuals
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Fetch job timing data
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id || github.event.inputs.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/ci
+          gh api --paginate -H "Accept: application/vnd.github+json" \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs?per_page=100" \
+            | jq -s '{ jobs: map(.jobs // []) | add }' \
+            > target/ci/jobs-raw.json
+
+      - name: Emit ci-actuals
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id || github.event.inputs.run_id }}
+          WF_NAME: ${{ github.event.workflow_run.name || 'manual' }}
+          WF_HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          WF_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+          WF_EVENT: ${{ github.event.workflow_run.event || 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+          args=(
+            --repo "${GITHUB_REPOSITORY}"
+            --sha "${WF_HEAD_SHA}"
+            --workflow "${WF_NAME}"
+            --workflow-run-id "${RUN_ID}"
+            --event "${WF_EVENT}"
+            --head-branch "${WF_HEAD_BRANCH}"
+            --github-jobs-json target/ci/jobs-raw.json
+            --json-out target/ci/ci-actuals.json
+            --summary-out "${GITHUB_STEP_SUMMARY}"
+          )
+          pr_number="$(jq -r '.workflow_run.pull_requests[0].number // empty' "$GITHUB_EVENT_PATH")"
+          if [ -n "$pr_number" ]; then
+            args+=(--pr "$pr_number")
+          fi
+          cargo run --locked -p xtask --no-default-features -- ci actuals "${args[@]}"
+
+      - name: Upload ci-actuals
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: ci-actuals-${{ github.event.workflow_run.id || github.event.inputs.run_id }}
+          path: target/ci/ci-actuals.json
+          retention-days: 90
+          if-no-files-found: warn

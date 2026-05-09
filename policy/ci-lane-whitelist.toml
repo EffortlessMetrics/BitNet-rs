@@ -149,6 +149,26 @@ duplicate_of = ["ci-core-build-test for pass/fail semantics"]
 review_after = "2026-06-07"
 expires = "2026-11-07"
 
+[[lane]]
+id = "ci-actuals"
+workflow = ".github/workflows/ci-actuals.yml"
+job = "Record CI actuals"
+kind = "observability"
+tier = "backoffice-advisory"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 3
+owner = "release/ci"
+intent = "Capture completed workflow job timing as normalized LEM actuals for future estimate calibration."
+failure_mode = "Planner estimates cannot be compared to observed CI cost by workflow run."
+proof_obligation = "Fetch GitHub Actions job timing data, normalize it through xtask ci actuals, and upload ci-actuals.json."
+evidence = ["target/ci/ci-actuals.json", "GitHub step summary"]
+allowed_triggers = ["workflow_run:completed", "workflow_dispatch"]
+duplicate_of = []
+review_after = "2026-06-07"
+expires = "2026-11-07"
+
 # ---------------------------------------------------------------------------
 # Risk-gated and expensive lanes
 # ---------------------------------------------------------------------------

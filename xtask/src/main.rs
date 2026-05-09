@@ -1130,8 +1130,18 @@ enum CiCmd {
         conclusion: Option<String>,
         #[arg(long, default_value_t = false)]
         cache_hit: bool,
+        #[arg(long)]
+        workflow_run_id: Option<u64>,
+        #[arg(long)]
+        event: Option<String>,
+        #[arg(long)]
+        head_branch: Option<String>,
+        #[arg(long)]
+        github_jobs_json: Option<PathBuf>,
         #[arg(long, default_value = "target/ci/ci-actuals.json")]
         json_out: PathBuf,
+        #[arg(long)]
+        summary_out: Option<PathBuf>,
     },
 
     /// Compute the per-PR plan (touched areas, expected lanes, estimated LEM).
@@ -1586,20 +1596,30 @@ fn real_main() -> Result<()> {
                 estimated_lem,
                 conclusion,
                 cache_hit,
+                workflow_run_id,
+                event,
+                head_branch,
+                github_jobs_json,
                 json_out,
-            } => ci::actuals::run(
+                summary_out,
+            } => ci::actuals::run(ci::actuals::ActualsOptions {
                 repo,
                 sha,
                 pr,
                 workflow,
-                job,
+                workflow_run_id,
+                event,
+                head_branch,
+                job_name: job,
                 runner,
-                seconds,
+                actual_seconds: seconds,
                 estimated_lem,
                 conclusion,
                 cache_hit,
+                github_jobs_json,
                 json_out,
-            ),
+                summary_out,
+            }),
             CiCmd::Plan {
                 base,
                 head,
