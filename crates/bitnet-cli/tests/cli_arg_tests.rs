@@ -755,6 +755,92 @@ fn mac_receipts_check_rejects_performance_profile_missing_warm_128() {
 }
 
 #[test]
+fn mac_receipts_check_reports_dense_slm_regression_no_warnings() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let baseline_path = dir.path().join("baseline.json");
+    let current_path = dir.path().join("current.json");
+    let baseline = performance_summary_receipt("same-sha");
+    let current = performance_summary_receipt("same-sha");
+    std::fs::write(&baseline_path, serde_json::to_vec_pretty(&baseline).expect("json"))
+        .expect("write baseline");
+    std::fs::write(&current_path, serde_json::to_vec_pretty(&current).expect("json"))
+        .expect("write current");
+    let baseline_str = baseline_path.to_string_lossy().into_owned();
+    let current_str = current_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            current_str.as_str(),
+            "--regression-baseline",
+            baseline_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"advisory\": true"));
+}
+
+#[test]
+fn mac_receipts_check_reports_dense_slm_regression_advisory_warning() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let baseline_path = dir.path().join("baseline.json");
+    let current_path = dir.path().join("current.json");
+    let baseline = performance_summary_receipt("same-sha");
+    let mut current = performance_summary_receipt("same-sha");
+    current["profiles"][0]["timing"]["decode_generated_tok_s"] = serde_json::json!(1.0);
+    std::fs::write(&baseline_path, serde_json::to_vec_pretty(&baseline).expect("json"))
+        .expect("write baseline");
+    std::fs::write(&current_path, serde_json::to_vec_pretty(&current).expect("json"))
+        .expect("write current");
+    let baseline_str = baseline_path.to_string_lossy().into_owned();
+    let current_str = current_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            current_str.as_str(),
+            "--regression-baseline",
+            baseline_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"warning_count\": 1"))
+        .stdout(predicate::str::contains("timing.decode_generated_tok_s"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_dense_slm_regression_context_mismatch() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let baseline_path = dir.path().join("baseline.json");
+    let current_path = dir.path().join("current.json");
+    let baseline = performance_summary_receipt("baseline-sha");
+    let current = performance_summary_receipt("different-sha");
+    std::fs::write(&baseline_path, serde_json::to_vec_pretty(&baseline).expect("json"))
+        .expect("write baseline");
+    std::fs::write(&current_path, serde_json::to_vec_pretty(&current).expect("json"))
+        .expect("write current");
+    let baseline_str = baseline_path.to_string_lossy().into_owned();
+    let current_str = current_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            current_str.as_str(),
+            "--regression-baseline",
+            baseline_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("model_cache.sha256 mismatch"));
+}
+
+#[test]
 fn mac_receipts_check_accepts_split_metal_phase_receipt() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("metal-phase.json");
@@ -1027,6 +1113,7 @@ fn performance_profile_json(
             "prefill_ms": 100.0,
             "warm_prompt_wall_ms": warm_prompt_wall_ms,
             "first_token_ms": [100.0],
+            "time_to_first_token_ms": [100.0],
             "decode_total_ms": decode_total_ms,
             "sampling_ms": 12.0,
             "warm_prompt_generated_tok_s": 2.0,
@@ -1041,6 +1128,60 @@ fn performance_profile_json(
             "ranked_hotspots": [
                 {"component": "model.forward", "alloc_count": 10, "alloc_bytes": 1024}
             ]
+        }
+    })
+}
+
+fn performance_summary_receipt(model_sha: &str) -> serde_json::Value {
+    serde_json::json!({
+        "artifact_kind": "apple_m4_slm_performance_profiles",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "profile_set": "performance",
+        "build": {
+            "profile": "release",
+            "release_mode": true
+        },
+        "operator_thresholds": {
+            "cold_load_separated": true,
+            "model_tokenizer_reuse_visible": true,
+            "model_tokenizer_reuse_visible_per_profile": true,
+            "profiles_loaded_independently": true,
+            "profile_set_model_loads": 4,
+            "reuse_scope": "within_each_profile",
+            "profiles_required": ["warm_16", "warm_32", "warm_64", "warm_128"],
+            "thresholds_are_claim_bounds_not_speed_guarantees": true
+        },
+        "performance_baseline": {
+            "release_mode_required": true,
+            "release_mode_observed": true,
+            "warm_128_included": true,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        },
+        "model_cache": {
+            "id": "qwen2.5-0.5b-instruct-q8_0",
+            "sha256": model_sha,
+            "architecture": "qwen2",
+            "quantization": "Q8_0",
+            "tokenizer_model": "gpt2",
+            "tokenizer_pre": "qwen2"
+        },
+        "profiles": [
+            performance_profile_json("warm_16", 16, 8000.0, 5000.0),
+            performance_profile_json("warm_32", 32, 16000.0, 10000.0),
+            performance_profile_json("warm_64", 64, 32000.0, 20000.0),
+            performance_profile_json("warm_128", 128, 64000.0, 40000.0)
+        ],
+        "mac_claim_boundary": {
+            "full_metal_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
         }
     })
 }

@@ -163,6 +163,10 @@ enum MacAction {
         /// Receipt file or directory containing JSON receipts.
         path: PathBuf,
 
+        /// Compare Apple M4 dense SLM performance receipts against a published baseline receipt.
+        #[arg(long = "regression-baseline", value_name = "PATH")]
+        regression_baseline: Option<PathBuf>,
+
         /// Emit JSON instead of text.
         #[arg(long, default_value_t = false)]
         json: bool,
@@ -180,6 +184,26 @@ struct ReceiptCheckSummary {
     prompt_count: Option<usize>,
     generated_tokens: Option<usize>,
     passed: bool,
+    regression: Option<RegressionCheckSummary>,
+}
+
+#[derive(Debug, Serialize)]
+struct RegressionCheckSummary {
+    baseline_path: PathBuf,
+    advisory: bool,
+    matched_context: bool,
+    warning_count: usize,
+    warnings: Vec<RegressionWarning>,
+}
+
+#[derive(Debug, Serialize)]
+struct RegressionWarning {
+    profile_id: String,
+    field: String,
+    baseline: f64,
+    observed: f64,
+    threshold_percent: f64,
+    direction: String,
 }
 
 impl MacCommand {
@@ -251,7 +275,9 @@ impl MacCommand {
                 )
                 .await
             }
-            MacAction::ReceiptsCheck { path, json } => run_receipts_check(&path, json),
+            MacAction::ReceiptsCheck { path, regression_baseline, json } => {
+                run_receipts_check(&path, regression_baseline.as_deref(), json)
+            }
         }
     }
 }
@@ -899,19 +925,35 @@ fn annotate_and_validate_mac_receipt(
     Ok(())
 }
 
-fn run_receipts_check(path: &Path, json: bool) -> Result<()> {
+fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: bool) -> Result<()> {
     let receipt_paths = collect_receipt_paths(path)?;
     if receipt_paths.is_empty() {
         anyhow::bail!("no JSON receipts found under {}", path.display());
     }
+    let baseline = regression_baseline.map(load_regression_baseline).transpose()?;
     let mut summaries = Vec::with_capacity(receipt_paths.len());
+    let mut regression_compared = 0usize;
     for receipt_path in receipt_paths {
         let receipt: serde_json::Value = serde_json::from_slice(
             &std::fs::read(&receipt_path)
                 .with_context(|| format!("failed to read {}", receipt_path.display()))?,
         )
         .with_context(|| format!("invalid JSON receipt {}", receipt_path.display()))?;
-        summaries.push(validate_mac_receipt_value(&receipt_path, &receipt)?);
+        let mut summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+        if let Some(baseline) = &baseline
+            && receipt["artifact_kind"].as_str() == Some("apple_m4_slm_performance_profiles")
+        {
+            summary.regression =
+                Some(compare_dense_slm_regression(&receipt_path, &receipt, baseline)?);
+            regression_compared += 1;
+        }
+        summaries.push(summary);
+    }
+    if baseline.is_some() && regression_compared == 0 {
+        anyhow::bail!(
+            "regression baseline was provided, but no apple_m4_slm_performance_profiles receipts were found under {}",
+            path.display()
+        );
     }
     if json {
         println!("{}", serde_json::to_string_pretty(&summaries)?);
@@ -924,6 +966,23 @@ fn run_receipts_check(path: &Path, json: bool) -> Result<()> {
                 summary.prompt_count,
                 summary.generated_tokens
             );
+            if let Some(regression) = &summary.regression {
+                println!(
+                    "regression: baseline={}, advisory=true, warnings={}",
+                    regression.baseline_path.display(),
+                    regression.warning_count
+                );
+                for warning in &regression.warnings {
+                    println!(
+                        "warning: {} {} baseline={} observed={} threshold={}%",
+                        warning.profile_id,
+                        warning.field,
+                        warning.baseline,
+                        warning.observed,
+                        warning.threshold_percent
+                    );
+                }
+            }
         }
     }
     Ok(())
@@ -955,6 +1014,242 @@ fn collect_receipt_paths_recursive(path: &Path, out: &mut Vec<PathBuf>) -> Resul
         }
     }
     Ok(())
+}
+
+struct RegressionBaseline {
+    path: PathBuf,
+    receipt: serde_json::Value,
+}
+
+fn load_regression_baseline(path: &Path) -> Result<RegressionBaseline> {
+    let receipt: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(path)
+            .with_context(|| format!("failed to read regression baseline {}", path.display()))?,
+    )
+    .with_context(|| format!("invalid JSON regression baseline {}", path.display()))?;
+    validate_mac_receipt_value(path, &receipt)?;
+    if receipt["artifact_kind"].as_str() != Some("apple_m4_slm_performance_profiles") {
+        anyhow::bail!(
+            "regression baseline {} must be an apple_m4_slm_performance_profiles receipt",
+            path.display()
+        );
+    }
+    Ok(RegressionBaseline { path: path.to_path_buf(), receipt })
+}
+
+fn compare_dense_slm_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    ensure_regression_context_matches(path, receipt, &baseline.path, &baseline.receipt)?;
+
+    let profiles = receipt["profiles"].as_array().ok_or_else(|| {
+        anyhow!("{} performance regression receipt is missing profiles", path.display())
+    })?;
+    let mut warnings = Vec::new();
+    for profile in profiles {
+        let Some(profile_id) = profile["profile_id"].as_str() else {
+            anyhow::bail!("{} performance profile is missing profile_id", path.display());
+        };
+        let baseline_profile = find_profile(&baseline.receipt, profile_id).ok_or_else(|| {
+            anyhow!(
+                "regression baseline {} is missing profile {profile_id}",
+                baseline.path.display()
+            )
+        })?;
+
+        compare_lower_is_worse(
+            &mut warnings,
+            profile_id,
+            "timing.decode_generated_tok_s",
+            regression_metric(baseline_profile, &["timing", "decode_generated_tok_s"])?,
+            regression_metric(profile, &["timing", "decode_generated_tok_s"])?,
+            20.0,
+        );
+        compare_lower_is_worse(
+            &mut warnings,
+            profile_id,
+            "timing.warm_prompt_generated_tok_s",
+            regression_metric(baseline_profile, &["timing", "warm_prompt_generated_tok_s"])?,
+            regression_metric(profile, &["timing", "warm_prompt_generated_tok_s"])?,
+            25.0,
+        );
+        compare_higher_is_worse(
+            &mut warnings,
+            profile_id,
+            "timing.time_to_first_token_ms",
+            regression_metric(baseline_profile, &["timing", "time_to_first_token_ms"])?,
+            regression_metric(profile, &["timing", "time_to_first_token_ms"])?,
+            25.0,
+        );
+        compare_higher_is_worse(
+            &mut warnings,
+            profile_id,
+            "timing.total_session_ms",
+            regression_metric(baseline_profile, &["timing", "total_session_ms"])?,
+            regression_metric(profile, &["timing", "total_session_ms"])?,
+            25.0,
+        );
+        compare_higher_is_worse(
+            &mut warnings,
+            profile_id,
+            "memory.peak_memory_mb",
+            regression_metric(baseline_profile, &["memory", "peak_memory_mb"])?,
+            regression_metric(profile, &["memory", "peak_memory_mb"])?,
+            15.0,
+        );
+    }
+
+    Ok(RegressionCheckSummary {
+        baseline_path: baseline.path.clone(),
+        advisory: true,
+        matched_context: true,
+        warning_count: warnings.len(),
+        warnings,
+    })
+}
+
+fn ensure_regression_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    for (label, observed, expected) in [
+        ("artifact_kind", receipt["artifact_kind"].as_str(), baseline["artifact_kind"].as_str()),
+        ("profile_set", receipt["profile_set"].as_str(), baseline["profile_set"].as_str()),
+        (
+            "requested_backend",
+            receipt["requested_backend"].as_str(),
+            baseline["requested_backend"].as_str(),
+        ),
+        (
+            "selected_backend",
+            receipt["selected_backend"].as_str(),
+            baseline["selected_backend"].as_str(),
+        ),
+        ("runtime_api", receipt["runtime_api"].as_str(), baseline["runtime_api"].as_str()),
+        (
+            "model_cache.id",
+            receipt["model_cache"]["id"].as_str(),
+            baseline["model_cache"]["id"].as_str(),
+        ),
+        (
+            "model_cache.sha256",
+            receipt["model_cache"]["sha256"].as_str(),
+            baseline["model_cache"]["sha256"].as_str(),
+        ),
+        (
+            "model_cache.quantization",
+            receipt["model_cache"]["quantization"].as_str(),
+            baseline["model_cache"]["quantization"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_model",
+            receipt["model_cache"]["tokenizer_model"].as_str(),
+            baseline["model_cache"]["tokenizer_model"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_pre",
+            receipt["model_cache"]["tokenizer_pre"].as_str(),
+            baseline["model_cache"]["tokenizer_pre"].as_str(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    if receipt["fallback_used"].as_bool() != baseline["fallback_used"].as_bool() {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: fallback_used mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    Ok(())
+}
+
+fn find_profile<'a>(
+    receipt: &'a serde_json::Value,
+    profile_id: &str,
+) -> Option<&'a serde_json::Value> {
+    receipt["profiles"]
+        .as_array()?
+        .iter()
+        .find(|profile| profile["profile_id"].as_str() == Some(profile_id))
+}
+
+fn regression_metric(value: &serde_json::Value, path: &[&str]) -> Result<f64> {
+    let mut current = value;
+    for segment in path {
+        current = &current[*segment];
+    }
+    metric_value(current)
+        .ok_or_else(|| anyhow!("missing numeric regression metric {}", path.join(".")))
+}
+
+fn metric_value(value: &serde_json::Value) -> Option<f64> {
+    if let Some(number) = value.as_f64() {
+        return Some(number);
+    }
+    if let Some(mean) = value["mean_ms"].as_f64() {
+        return Some(mean);
+    }
+    let values = value.as_array()?;
+    let mut total = 0.0;
+    let mut count = 0usize;
+    for value in values {
+        if let Some(number) = value.as_f64() {
+            total += number;
+            count += 1;
+        }
+    }
+    (count > 0).then_some(total / count as f64)
+}
+
+fn compare_lower_is_worse(
+    warnings: &mut Vec<RegressionWarning>,
+    profile_id: &str,
+    field: &str,
+    baseline: f64,
+    observed: f64,
+    threshold_percent: f64,
+) {
+    if baseline > 0.0 && observed < baseline * (1.0 - threshold_percent / 100.0) {
+        warnings.push(RegressionWarning {
+            profile_id: profile_id.to_string(),
+            field: field.to_string(),
+            baseline: round3(baseline),
+            observed: round3(observed),
+            threshold_percent,
+            direction: "lower_is_worse".to_string(),
+        });
+    }
+}
+
+fn compare_higher_is_worse(
+    warnings: &mut Vec<RegressionWarning>,
+    profile_id: &str,
+    field: &str,
+    baseline: f64,
+    observed: f64,
+    threshold_percent: f64,
+) {
+    if observed > baseline * (1.0 + threshold_percent / 100.0) {
+        warnings.push(RegressionWarning {
+            profile_id: profile_id.to_string(),
+            field: field.to_string(),
+            baseline: round3(baseline),
+            observed: round3(observed),
+            threshold_percent,
+            direction: "higher_is_worse".to_string(),
+        });
+    }
 }
 
 fn validate_mac_receipt_value(
@@ -1033,6 +1328,7 @@ fn validate_mac_receipt_value(
         prompt_count,
         generated_tokens,
         passed: true,
+        regression: None,
     })
 }
 
@@ -1396,6 +1692,7 @@ fn validate_metal_phase_receipt(
         prompt_count: None,
         generated_tokens: None,
         passed: true,
+        regression: None,
     })
 }
 

@@ -54,6 +54,17 @@ ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/
 
 Quality, determinism, receipt schema, model identity, backend routing, and fallback status are correctness gates. Performance drift should be interpreted only after those pass.
 
+`M4-SLM-REG-001` adds advisory comparison through the existing receipt checker:
+
+```bash
+bitnet mac receipts-check \
+  target/apple-m4-slm-regression/current-release-baseline.json \
+  --regression-baseline ci/hardware/apple-m4-mac-mini/2026-05-08/slm-performance/release-baseline.json \
+  --json
+```
+
+The comparison first runs the normal Mac receipt validator. It then compares timing and memory only when both receipts are `apple_m4_slm_performance_profiles` with matching dense Qwen model identity, tokenizer metadata, Apple CPU/NEON backend routing, fallback status, release-mode evidence, profile set, and required profiles. Timing and memory drift are reported as advisory warnings rather than hard failures.
+
 Initial advisory timing bands for matching receipts:
 
 | Field | Advisory drift band |
