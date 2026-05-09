@@ -55,6 +55,12 @@ pub const DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND: &str =
 /// speedup, full residency, or BitNet packed-kernel proof.
 pub const DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND: &str = "dense_gguf_linear_fixture_extraction";
 
+/// Artifact kind for dense GGUF norm fixture extraction.
+///
+/// This is a CPU-reference fixture for RMSNorm weights extracted from a dense
+/// GGUF artifact. It is below CUDA parity and dense GGUF inference.
+pub const DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND: &str = "dense_gguf_norm_fixture_extraction";
+
 /// Artifact kind for dense GGUF single-linear CUDA parity.
 ///
 /// This receipt proves one descriptor-extracted dense GGUF linear fixture can
@@ -869,6 +875,164 @@ pub fn validate_dense_gguf_linear_fixture_extraction_receipt_json(receipt: &Valu
     require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", false)?;
     require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "cpu_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
+/// Validate a dense GGUF norm fixture extraction receipt.
+///
+/// This receipt records that dense GGUF RMSNorm weight tensors can be selected,
+/// materialized as F32, and run through a deterministic CPU RMSNorm reference.
+/// It deliberately records the CUDA norm kernel as missing and must keep dense
+/// CUDA parity, dense GGUF inference, speedup, full residency, and BitNet packed
+/// proof claims false.
+pub fn validate_dense_gguf_norm_fixture_extraction_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_norm_fixture_extracted")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_non_empty(receipt, "inspection_source")?;
+    require_null(receipt, "error")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    if model.get("sha256").is_some() {
+        require_sha256(model, "sha256")?;
+    }
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+
+    let audit = object_field(receipt, "norm_fixture_audit")?;
+    require_u64_eq(audit, "schema", 1)?;
+    require_string_eq(audit, "source_artifact_kind", DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND)?;
+    let roles_total = object_field(audit, "roles_total")?
+        .as_u64()
+        .ok_or_else(|| anyhow!("norm_fixture_audit.roles_total must be an unsigned integer"))?;
+    if roles_total < 2 {
+        return Err(anyhow!(
+            "norm_fixture_audit.roles_total must cover attention_norm and ffn_norm"
+        ));
+    }
+    require_u64_eq(audit, "roles_extracted", roles_total)?;
+    require_u64_eq(audit, "roles_failed", 0)?;
+    require_bool_eq(audit, "all_cpu_reference_computed", true)?;
+    require_string_eq(audit, "cuda_kernel_status", "missing_cuda_kernel")?;
+    require_bool_eq(audit, "strict_cuda_ready", false)?;
+    require_bool_eq(audit, "cpu_fallback_allowed", false)?;
+    require_string_eq(audit, "transfer_timing_status", "not_measured_no_kernel")?;
+    require_bool_eq(audit, "dense_gguf_norm_fixture_extraction_claimed", true)?;
+    require_bool_eq(audit, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(audit, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(audit, "speedup_claim", false)?;
+    require_bool_eq(audit, "full_cuda_residency_claimed", false)?;
+
+    let covered_roles = array_field(audit, "covered_roles")?;
+    if covered_roles.len() != roles_total as usize {
+        return Err(anyhow!("norm_fixture_audit.covered_roles length must match roles_total"));
+    }
+    let mut role_set = BTreeSet::new();
+    for role in covered_roles {
+        let role = role
+            .as_str()
+            .ok_or_else(|| anyhow!("norm_fixture_audit.covered_roles entries must be strings"))?;
+        require_extractable_dense_norm_role(role)?;
+        role_set.insert(role.to_string());
+    }
+    for role in ["attention_norm", "ffn_norm"] {
+        if !role_set.contains(role) {
+            return Err(anyhow!("norm_fixture_audit missing required norm role `{role}`"));
+        }
+    }
+
+    let fixtures = array_field(receipt, "norm_fixtures")?;
+    if fixtures.len() != roles_total as usize {
+        return Err(anyhow!("norm_fixtures length must match roles_total"));
+    }
+    for fixture in fixtures {
+        require_u64_eq(fixture, "schema", 1)?;
+        require_string_eq(fixture, "artifact_kind", DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND)?;
+        require_string_eq(fixture, "model_family", required_string(model, "model_family")?)?;
+        require_string_eq(fixture, "architecture", required_string(model, "architecture")?)?;
+        require_string_non_empty(fixture, "tensor_name")?;
+        reject_bitnet_packed_marker(
+            required_string(fixture, "tensor_name")?,
+            "norm_fixtures.tensor_name",
+        )?;
+        let role = required_string(fixture, "role")?;
+        require_extractable_dense_norm_role(role)?;
+        if !role_set.contains(role) {
+            return Err(anyhow!("norm_fixtures role `{role}` is not listed in covered_roles"));
+        }
+        let tensor_type = required_string(fixture, "tensor_type")?;
+        match tensor_type {
+            "f32" | "f16" => {}
+            other => {
+                return Err(anyhow!("norm_fixtures.tensor_type must be f32 or f16, got `{other}`"));
+            }
+        }
+        let source_shape = array_field(fixture, "source_shape")?;
+        if source_shape.len() != 1 {
+            return Err(anyhow!("norm_fixtures.source_shape must contain [hidden_dim]"));
+        }
+        let source_hidden = source_shape[0]
+            .as_u64()
+            .ok_or_else(|| anyhow!("norm_fixtures.source_shape[0] must be an unsigned integer"))?;
+        require_positive_u64(fixture, "source_size_bytes")?;
+        require_positive_u64(fixture, "hidden_dim")?;
+        require_positive_u64(fixture, "value_count")?;
+        require_u64_eq(fixture, "hidden_dim", source_hidden)?;
+        require_u64_eq(fixture, "value_count", source_hidden)?;
+        require_bool_eq(fixture, "values_materialized_as_f32", true)?;
+        require_sha256(fixture, "weight_values_sha256")?;
+        require_positive_number(fixture, "rmsnorm_eps")?;
+        require_string_non_empty(fixture, "epsilon_source")?;
+        require_u64_eq(fixture, "cpu_reference_input_len", source_hidden)?;
+        require_u64_eq(fixture, "cpu_reference_output_len", source_hidden)?;
+        require_sha256(fixture, "cpu_reference_input_sha256")?;
+        require_sha256(fixture, "cpu_reference_output_sha256")?;
+        require_bool_eq(fixture, "cpu_reference_computed", true)?;
+        require_string_eq(fixture, "cuda_kernel_status", "missing_cuda_kernel")?;
+        require_bool_eq(fixture, "dense_gguf_inference_claimed", false)?;
+        require_bool_eq(fixture, "dense_regular_llm_cuda_claimed", false)?;
+        require_bool_eq(fixture, "cpu_cuda_parity_claimed", false)?;
+        require_bool_eq(fixture, "bitnet_packed_i2s_qk256_proof", false)?;
+        require_bool_eq(fixture, "speedup_claim", false)?;
+        require_bool_eq(fixture, "full_cuda_residency_claimed", false)?;
+    }
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_norm_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
     require_bool_eq(claim_boundary, "cpu_cuda_parity_claimed", false)?;
     require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
     require_bool_eq(claim_boundary, "speedup_claim", false)?;
@@ -1741,6 +1905,10 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
             claim_boundary.get("dense_gguf_linear_fixture_extraction_claimed")
         })
         .and_then(Value::as_bool);
+    let norm_fixture_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| claim_boundary.get("dense_gguf_norm_fixture_extraction_claimed"))
+        .and_then(Value::as_bool);
     let linear_cuda_parity_claim = receipt
         .get("claim_boundary")
         .and_then(|claim_boundary| claim_boundary.get("dense_gguf_linear_cuda_parity_claimed"))
@@ -1761,6 +1929,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
     if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)
@@ -1768,6 +1937,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || dense_claim == Some(true)
         || descriptor_claim == Some(true)
         || linear_fixture_claim == Some(true)
+        || norm_fixture_claim == Some(true)
         || linear_cuda_parity_claim == Some(true)
         || linear_role_sweep_claim == Some(true)
         || one_layer_plan_claim == Some(true)
@@ -1910,6 +2080,16 @@ fn require_extractable_dense_linear_role(role: &str) -> Result<()> {
     Ok(())
 }
 
+fn require_extractable_dense_norm_role(role: &str) -> Result<()> {
+    const EXTRACTABLE_ROLES: &[&str] = &["attention_norm", "ffn_norm"];
+    if !EXTRACTABLE_ROLES.contains(&role) {
+        return Err(anyhow!(
+            "norm_fixtures.role must be an extractable dense norm role, got `{role}`"
+        ));
+    }
+    Ok(())
+}
+
 fn require_rtx_5070_ti_name(object: &Value, field: &str) -> Result<()> {
     let value = required_string(object, field)?;
     let compact = value
@@ -2017,6 +2197,16 @@ fn require_non_negative_number(object: &Value, field: &str) -> Result<()> {
         .ok_or_else(|| anyhow!("field `{field}` must be a number"))?;
     if actual < 0.0 {
         return Err(anyhow!("field `{field}` must be non-negative"));
+    }
+    Ok(())
+}
+
+fn require_positive_number(object: &Value, field: &str) -> Result<()> {
+    let actual = object_field(object, field)?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `{field}` must be a number"))?;
+    if actual <= 0.0 {
+        return Err(anyhow!("field `{field}` must be positive"));
     }
     Ok(())
 }

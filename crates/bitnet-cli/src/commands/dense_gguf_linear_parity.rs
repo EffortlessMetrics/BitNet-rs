@@ -22,13 +22,17 @@ use bitnet_models::dense_gguf_linear_fixture::{
     DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND, DenseGgufLinearFixture,
     extract_dense_gguf_linear_fixture,
 };
+use bitnet_models::dense_gguf_norm_fixture::{
+    DenseGgufNormFixture, extract_dense_gguf_norm_fixture,
+};
 use bitnet_models::formats::gguf::GgufReader;
 use bitnet_receipts_core::{
     DENSE_GGUF_LINEAR_CUDA_PARITY_ARTIFACT_KIND,
-    DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND,
+    DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
     validate_dense_gguf_linear_cuda_parity_receipt_json,
     validate_dense_gguf_linear_role_sweep_cuda_parity_receipt_json,
+    validate_dense_gguf_norm_fixture_extraction_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
 };
 use clap::Args;
@@ -302,6 +306,66 @@ impl DenseGgufOneLayerPlanCommand {
     }
 }
 
+/// Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufNormFixtureCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Dense norm tensor roles to extract. Defaults to attention_norm and ffn_norm.
+    #[arg(long, value_delimiter = ',', value_name = "ROLE")]
+    pub roles: Vec<String>,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufNormFixtureCommand {
+    pub async fn execute(&self) -> Result<()> {
+        let roles = parse_norm_roles(&self.roles)?;
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+
+        let mut fixtures = Vec::with_capacity(roles.len());
+        for role in roles {
+            fixtures.push(extract_dense_gguf_norm_fixture(&reader, role)?);
+        }
+
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_norm_fixture_receipt_json(
+            &inspection,
+            &fixtures,
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        )?;
+        validate_dense_gguf_norm_fixture_extraction_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
 struct DenseLinearSweepResult {
     extracted: DenseGgufLinearFixture,
     parity: DenseGgufLinearCudaParity,
@@ -367,6 +431,51 @@ fn parse_role_sweep(values: &[String]) -> Result<Vec<DenseGgufTensorRole>> {
     Ok(roles)
 }
 
+fn parse_norm_roles(values: &[String]) -> Result<Vec<DenseGgufTensorRole>> {
+    let roles = if values.is_empty() {
+        vec![DenseGgufTensorRole::AttentionNorm, DenseGgufTensorRole::FfnNorm]
+    } else {
+        values.iter().map(|value| parse_dense_norm_role(value)).collect::<Result<Vec<_>>>()?
+    };
+
+    if roles.len() < 2 {
+        bail!("dense GGUF norm fixture extraction requires attention_norm and ffn_norm roles");
+    }
+
+    let mut seen = BTreeSet::new();
+    for role in &roles {
+        let label = dense_role_label(*role);
+        if !seen.insert(label) {
+            bail!("dense GGUF norm fixture role `{label}` was requested more than once");
+        }
+    }
+    for required in [DenseGgufTensorRole::AttentionNorm, DenseGgufTensorRole::FfnNorm] {
+        if !roles.contains(&required) {
+            bail!(
+                "dense GGUF norm fixture extraction requires role `{}`",
+                dense_role_label(required)
+            );
+        }
+    }
+
+    Ok(roles)
+}
+
+fn parse_dense_norm_role(value: &str) -> Result<DenseGgufTensorRole> {
+    let normalized = value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_ascii_lowercase();
+    match normalized.as_str() {
+        "attentionnorm" | "attnnorm" | "inputlayernorm" => Ok(DenseGgufTensorRole::AttentionNorm),
+        "ffnnorm" | "postattentionlayernorm" | "postattnnorm" => Ok(DenseGgufTensorRole::FfnNorm),
+        _ => Err(anyhow!(
+            "unsupported dense norm role `{value}`; expected attention_norm or ffn_norm"
+        )),
+    }
+}
+
 fn kernel_fixture_from_extracted(
     fixture: &DenseGgufLinearFixture,
 ) -> Result<DenseGgufLinearGemmFixture> {
@@ -430,6 +539,149 @@ fn dense_role_label(role: DenseGgufTensorRole) -> &'static str {
         DenseGgufTensorRole::FfnNorm => "ffn_norm",
         DenseGgufTensorRole::Other => "other",
     }
+}
+
+fn dense_gguf_norm_fixture_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    fixtures: &[DenseGgufNormFixture],
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Result<Value> {
+    if fixtures.len() < 2 {
+        bail!("dense GGUF norm fixture receipt requires attention_norm and ffn_norm fixtures");
+    }
+
+    let mut covered_roles = Vec::with_capacity(fixtures.len());
+    let mut fixture_entries = Vec::with_capacity(fixtures.len());
+    for fixture in fixtures {
+        let summary = &fixture.summary;
+        if summary.model_family != inspection.model_family {
+            bail!(
+                "dense GGUF norm fixture mixed model families: expected {}, got {}",
+                inspection.model_family,
+                summary.model_family
+            );
+        }
+        if summary.architecture != inspection.architecture {
+            bail!(
+                "dense GGUF norm fixture mixed architectures: expected {}, got {}",
+                inspection.architecture,
+                summary.architecture
+            );
+        }
+        let role = dense_role_label(summary.role);
+        covered_roles.push(role.to_string());
+        fixture_entries.push(json!({
+            "schema": summary.schema,
+            "artifact_kind": DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND,
+            "model_family": summary.model_family,
+            "architecture": summary.architecture,
+            "tensor_name": summary.tensor_name,
+            "role": role,
+            "tensor_type": summary.tensor_type,
+            "source_shape": summary.source_shape,
+            "source_offset": summary.source_offset,
+            "source_size_bytes": summary.source_size_bytes,
+            "hidden_dim": summary.hidden_dim as u64,
+            "value_count": summary.value_count as u64,
+            "values_materialized_as_f32": summary.values_materialized_as_f32,
+            "weight_values_sha256": summary.weight_values_sha256,
+            "rmsnorm_eps": summary.rmsnorm_eps,
+            "epsilon_source": summary.epsilon_source,
+            "cpu_reference_input_len": summary.cpu_reference_input_len as u64,
+            "cpu_reference_output_len": summary.cpu_reference_output_len as u64,
+            "cpu_reference_input_sha256": summary.cpu_reference_input_sha256,
+            "cpu_reference_output_sha256": summary.cpu_reference_output_sha256,
+            "cpu_reference_computed": summary.cpu_reference_computed,
+            "cuda_kernel_status": summary.cuda_kernel_status,
+            "dense_gguf_inference_claimed": false,
+            "dense_regular_llm_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        }));
+    }
+
+    let roles_total = covered_roles.len() as u64;
+    Ok(json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_norm_fixture_extracted",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "inspection_source": "gguf_reader_norm_fixture",
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "quantization_families": inspection.quantization_families,
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "norm_fixture_audit": {
+            "schema": 1,
+            "source_artifact_kind": DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND,
+            "roles_total": roles_total,
+            "roles_extracted": roles_total,
+            "roles_failed": 0,
+            "covered_roles": covered_roles,
+            "all_cpu_reference_computed": true,
+            "cuda_kernel_status": "missing_cuda_kernel",
+            "strict_cuda_ready": false,
+            "cpu_fallback_allowed": false,
+            "transfer_timing_status": "not_measured_no_kernel",
+            "candidate_order": ["attention_norm", "ffn_norm"],
+            "next_required_proof": "cuda_rmsnorm_kernel_parity",
+            "dense_gguf_norm_fixture_extraction_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "norm_fixtures": fixture_entries,
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": false,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_norm_fixture_extraction_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": false,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "cpu_cuda_parity_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "notes": [
+            "Dense GGUF norm fixture extraction only; no CUDA norm kernel or dense GGUF inference was executed.",
+            "The CUDA RMSNorm launch path is scaffold-only, so this receipt records missing_cuda_kernel before parity work."
+        ],
+        "error": null
+    }))
 }
 
 fn dense_gguf_linear_cuda_parity_receipt_json(
@@ -1502,6 +1754,38 @@ mod tests {
     }
 
     #[test]
+    fn dense_gguf_norm_fixture_receipt_records_missing_cuda_kernel() {
+        let data = build_complete_qwen_layer_gguf();
+        let reader = GgufReader::new(&data).expect("parse qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let fixtures = [DenseGgufTensorRole::AttentionNorm, DenseGgufTensorRole::FfnNorm]
+            .iter()
+            .map(|role| {
+                extract_dense_gguf_norm_fixture(&reader, *role).expect("extract norm fixture")
+            })
+            .collect::<Vec<_>>();
+
+        let receipt = dense_gguf_norm_fixture_receipt_json(
+            &inspection,
+            &fixtures,
+            Path::new("synthetic-qwen3-q8_0-norm-fixture.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-norm-fixture.json",
+            "2026-05-09T00:00:00Z",
+        )
+        .unwrap();
+
+        validate_dense_gguf_norm_fixture_extraction_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["norm_fixture_audit"]["roles_total"], 2);
+        assert_eq!(receipt["norm_fixture_audit"]["cuda_kernel_status"], "missing_cuda_kernel");
+        assert_eq!(receipt["norm_fixture_audit"]["strict_cuda_ready"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_norm_fixture_extraction_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["dense_regular_llm_cuda_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+    }
+
+    #[test]
     fn parse_dense_linear_role_accepts_common_spellings() {
         assert_eq!(
             parse_dense_linear_role("attention_q").unwrap(),
@@ -1510,6 +1794,24 @@ mod tests {
         assert_eq!(parse_dense_linear_role("attn-q").unwrap(), DenseGgufTensorRole::AttentionQ);
         assert_eq!(parse_dense_linear_role("mlp_down").unwrap(), DenseGgufTensorRole::MlpDown);
         assert!(parse_dense_linear_role("attention_norm").is_err());
+    }
+
+    #[test]
+    fn parse_dense_norm_roles_requires_attention_and_ffn_norms() {
+        assert_eq!(
+            parse_norm_roles(&[]).unwrap(),
+            vec![DenseGgufTensorRole::AttentionNorm, DenseGgufTensorRole::FfnNorm]
+        );
+        assert!(parse_norm_roles(&["attention_norm".to_string()]).is_err());
+        assert!(
+            parse_norm_roles(&["attention_norm".to_string(), "attention_norm".to_string()])
+                .is_err()
+        );
+        assert_eq!(
+            parse_norm_roles(&["input-layernorm".to_string(), "post-attn-norm".to_string()])
+                .unwrap(),
+            vec![DenseGgufTensorRole::AttentionNorm, DenseGgufTensorRole::FfnNorm]
+        );
     }
 
     #[test]

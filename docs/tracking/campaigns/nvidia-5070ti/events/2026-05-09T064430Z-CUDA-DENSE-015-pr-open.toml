@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T06:44:30Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-015"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-015-norm-fixture-audit"
+pr = 4218
+head_sha = "14c21e97bb099ebb6a5cf7a8f92918cf0b377a4e"
+notes = [
+  "Opened PR #4218 for dense GGUF norm fixture extraction and missing CUDA RMSNorm kernel audit.",
+  "The PR adds a committed Qwen2.5 0.5B Q8_0 attention_norm/ffn_norm receipt and validates that dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, and BitNet packed proof claims remain false.",
+]
