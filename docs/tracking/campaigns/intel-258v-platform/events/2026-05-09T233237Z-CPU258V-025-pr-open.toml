@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T23:32:37Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-025"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4356
+head_sha = "ea0b2e24f17d16f16b9101c4c3f5669129d9c99e"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-025-transformer-layer-parity"
+summary = "Opened CPU258V-025 to add the 258V CPU transformer-layer parity ladder."
+notes = [
+  "The PR adds a transformer-layer-parity command over run --qwen-trace-jsonl traces.",
+  "The committed 258V scalar and AVX2 layer-0 traces record 13 transformer boundaries.",
+  "The transformer-layer parity receipt reports primary_and_comparison_transformer_layer_ladder_matched with 13 comparison boundaries matched and zero mismatches.",
+  "The PR does not claim new answer quality, external first-token logits parity, CPU speed, Arc 140V execution, Intel NPU execution, or full model correctness.",
+]

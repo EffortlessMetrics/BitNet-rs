@@ -75,8 +75,8 @@
 | apple-m4-slm-metal-phases | M4-METAL-004 | M4-METAL-003 | blocked |
 | apple-m4-slm-metal-phases | M4-METAL-005 | M4-METAL-004 | blocked |
 | apple-m4-slm-model-breadth | M4-MODEL-002 | M4-MODEL-001 | merged |
-| apple-m4-slm-model-breadth | M4-MODEL-003 | M4-MODEL-002 | pr_open |
-| apple-m4-slm-model-breadth | M4-MODEL-004 | M4-MODEL-003 | blocked |
+| apple-m4-slm-model-breadth | M4-MODEL-003 | M4-MODEL-002 | merged |
+| apple-m4-slm-model-breadth | M4-MODEL-004 |  | blocked |
 | apple-m4-slm-model-breadth | M4-MODEL-005 | M4-MODEL-004 | blocked |
 | apple-m4-slm-performance | M4-SLM-PERF-002 | M4-SLM-PERF-001 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-003 | M4-SLM-PERF-002 | merged |
@@ -139,7 +139,7 @@
 | intel-258v-platform | CPU258V-022 | CPU258V-021 | merged |
 | intel-258v-platform | CPU258V-023 | CPU258V-022 | merged |
 | intel-258v-platform | CPU258V-024 | CPU258V-023 | merged |
-| intel-258v-platform | CPU258V-025 | CPU258V-024 | ready |
+| intel-258v-platform | CPU258V-025 | CPU258V-024 | pr_open |
 | intel-258v-platform | LNL258V-004 | LNL258V-003, ARC140V-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |

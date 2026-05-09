@@ -86,12 +86,22 @@ Commands:
           Classify first-token divergence from external reference and 258V CPU receipts
   external-reference-instrumentation
           Classify external reference token/logit instrumentation coverage
+  output-head-logits-audit
+          Audit output-head/tied-head and logits-index boundaries for 258V CPU proof
+  transformer-layer-parity
+          Classify 258V CPU transformer-layer trace boundaries
   dense-gguf-linear-parity
           Extract one dense GGUF linear fixture and run strict CUDA parity diagnostics
   dense-gguf-linear-role-sweep
           Extract several dense GGUF linear fixtures and run strict CUDA parity diagnostics
   dense-gguf-one-layer-plan
           Emit a dense GGUF one-layer strict CUDA planner gap receipt
+  dense-gguf-all-layer-plan
+          Emit a dense GGUF all-layer strict CUDA planner receipt
+  dense-gguf-one-layer-cpu-reference
+          Emit a dense GGUF one-layer CPU reference harness receipt
+  dense-gguf-one-layer-cuda-parity
+          Run integrated dense GGUF one-layer strict CUDA parity diagnostics
   dense-gguf-norm-fixture
           Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
   dense-gguf-norm-cuda-parity
