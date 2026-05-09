@@ -2572,7 +2572,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-038"
-status = "ready"
+status = "in_progress"
 branch = "codex/cuda-dense-038-model-boundary-fixtures"
 stackable = false
 review_mode = "codex_premerge"
