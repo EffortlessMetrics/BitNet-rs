@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T03:11:00Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-018"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4178
+merge_sha = "b34482efc7b71cb5ea976822e67cdc2069a6603f"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-018-hf-prompt-token-parity"
+summary = "Merged CPU258V-018 after recording HF prompt/token reference parity for the fixed 258V prompts."
+notes = [
+  "The artifact records a prompt-stage mismatch: HF apply_chat_template keeps the trailing Assistant generation-prompt space and does not prepend BOS, while BitNet-rs metadata authority prepends BOS and omits that trailing space.",
+  "The merged PR does not claim answer quality, model inference, logits parity, speed, Arc 140V execution, Intel NPU execution, or QK256 decode correctness.",
+  "CPU258V-019 is ready to capture the external first-token reference boundary and explicit missing-logits status.",
+]
