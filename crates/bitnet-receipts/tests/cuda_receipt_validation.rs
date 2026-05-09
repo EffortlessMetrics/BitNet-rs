@@ -20,6 +20,7 @@ use bitnet_receipts::{
     validate_dense_gguf_norm_cuda_parity_receipt_json,
     validate_dense_gguf_norm_fixture_extraction_receipt_json,
     validate_dense_gguf_one_layer_cpu_reference_receipt_json,
+    validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
     validate_dense_gguf_rope_cuda_parity_receipt_json,
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
@@ -980,6 +981,65 @@ fn dense_gguf_one_layer_cpu_reference_rejects_unbound_deterministic_input_hash()
             && err.contains("deterministic_input phase output_sha256"),
         "unexpected error: {err}"
     );
+}
+
+#[test]
+fn dense_gguf_one_layer_cuda_integrated_parity_receipt_validates() {
+    let receipt = valid_dense_gguf_one_layer_cuda_integrated_parity_receipt();
+
+    validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_one_layer_cuda_integrated_parity_rejects_inference_claim() {
+    let mut receipt = valid_dense_gguf_one_layer_cuda_integrated_parity_receipt();
+    receipt["cuda_layer"]["dense_gguf_inference_claimed"] = json!(true);
+    receipt["claim_boundary"]["dense_gguf_inference_claimed"] = json!(true);
+
+    let err = validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("dense_gguf_inference_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_one_layer_cuda_integrated_parity_rejects_speedup_claim() {
+    let mut receipt = valid_dense_gguf_one_layer_cuda_integrated_parity_receipt();
+    receipt["speedup_claim"] = json!(true);
+    receipt["claim_boundary"]["speedup_claim"] = json!(true);
+
+    let err = validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_one_layer_cuda_integrated_parity_rejects_bitnet_proof_claim() {
+    let mut receipt = valid_dense_gguf_one_layer_cuda_integrated_parity_receipt();
+    receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    let err = validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_one_layer_cuda_integrated_parity_requires_transfer_accounting() {
+    let mut receipt = valid_dense_gguf_one_layer_cuda_integrated_parity_receipt();
+    receipt["timing"]["host_to_device_bytes"] = json!(1);
+
+    let err = validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("host_to_device_bytes"), "unexpected error: {err}");
 }
 
 #[test]
@@ -2044,6 +2104,211 @@ fn valid_dense_gguf_one_layer_cpu_reference_receipt() -> Value {
     })
 }
 
+fn valid_dense_gguf_one_layer_cuda_integrated_parity_receipt() -> Value {
+    let phases = dense_one_layer_cuda_integrated_phases();
+    let kernel_stats = dense_one_layer_cuda_kernel_stats();
+    let h2d: u64 =
+        kernel_stats.iter().map(|stat| stat["host_to_device_bytes"].as_u64().unwrap()).sum();
+    let d2h: u64 =
+        kernel_stats.iter().map(|stat| stat["device_to_host_bytes"].as_u64().unwrap()).sum();
+    let invocations: u64 =
+        kernel_stats.iter().map(|stat| stat["invocations"].as_u64().unwrap()).sum();
+    let launches: u64 =
+        kernel_stats.iter().map(|stat| stat["kernel_launches"].as_u64().unwrap()).sum();
+
+    json!({
+        "schema": 1,
+        "artifact_kind": "dense_gguf_one_layer_cuda_integrated_parity",
+        "artifact_path": "target/bitnet/receipts/dense-gguf-one-layer-cuda-parity.json",
+        "claim": "dense_gguf_one_layer_cuda_integrated_parity_recorded",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+        "timestamp_utc": "2026-05-09T00:00:00Z",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": {
+            "available": true,
+            "device_count": 1,
+            "device_index": 0,
+            "device_name": "NVIDIA GeForce RTX 5070 Ti",
+            "compute_capability": "12.0",
+            "driver_version": "591.86",
+            "cuda_runtime_version": "12.9",
+            "cuda_toolkit_version": "12.9",
+            "nvrtc_version": "12.9",
+            "nvml_available": true,
+            "vram_bytes": 17094475776_u64
+        },
+        "model": {
+            "model_family": "qwen",
+            "architecture": "qwen3",
+            "artifact_kind": "dense_gguf",
+            "file": "synthetic-dense-gguf-one-layer-cuda-parity",
+            "sha256": "0".repeat(64)
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_cuda_integrated_one_layer",
+            "quantization_family": "dense_gguf_q8_0_f16_cuda_bridge",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": {
+            "planner_version": "cuda-planner-004",
+            "model_family": "qwen",
+            "quantization": "dense_fp16",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "cuda_bitnet_qk256_ops": 0,
+            "cuda_dense_regular_llm_ops": 14,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 14,
+            "cuda_ops": 14,
+            "mixed_cuda_routes": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": 11,
+            "metadata_count": 4,
+            "required_roles_present": true,
+            "strict_descriptor_complete": true,
+            "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+            "quantization_families": ["f32", "q8_0"],
+            "bitnet_packed_marker_found": false,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "cpu_reference": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_one_layer_cpu_reference",
+            "fixture_id": "dense_gguf_one_layer_cpu_reference_qwen_layer0_s4",
+            "layer_index": 0,
+            "seq_len": 4,
+            "position_offset": 1,
+            "final_output_len": 16,
+            "final_output_sha256": format!("{:064x}", 19),
+            "final_output_max_abs": 1.0,
+            "cpu_reference_only": true,
+            "cuda_execution_claimed": false,
+            "dense_gguf_inference_claimed": false
+        },
+        "cuda_layer": {
+            "schema": 1,
+            "fixture_id": "dense_gguf_one_layer_cuda_integrated_parity_qwen_layer0_s4",
+            "source_cpu_reference_fixture_id": "dense_gguf_one_layer_cpu_reference_qwen_layer0_s4",
+            "layer_index": 0,
+            "seq_len": 4,
+            "position_offset": 1,
+            "hidden_size": 4,
+            "q_heads": 2,
+            "kv_heads": 1,
+            "heads_per_kv_group": 2,
+            "head_dim": 2,
+            "intermediate_size": 6,
+            "governed_cuda_ops_total": 14,
+            "residual_host_ops_total": 2,
+            "host_deterministic_input_ops_total": 1,
+            "unsupported_ops_total": 0,
+            "cpu_fallback_ops_total": 0,
+            "strict_cuda_ready": true,
+            "fallback_used": false,
+            "phases_total": 17,
+            "phases": phases,
+            "final_output_len": 16,
+            "final_output_sha256": format!("{:064x}", 19),
+            "final_output_max_abs": 1.0,
+            "final_output_max_abs_error": 0.0,
+            "final_output_mean_abs_error": 0.0,
+            "tolerance": 0.5,
+            "passed": true,
+            "one_layer_cuda_integrated_parity_claimed": true,
+            "one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "kernel_stats": kernel_stats,
+        "timing": {
+            "kernel_time_ms": null,
+            "host_to_device_bytes": h2d,
+            "device_to_host_bytes": d2h,
+            "kernel_invocations": invocations,
+            "kernel_launches": launches
+        },
+        "tensor_residency": {
+            "scope": "integrated_dense_gguf_one_layer",
+            "model_class": "dense_regular_llm",
+            "fixture_id": "dense_gguf_one_layer_cuda_integrated_parity_qwen_layer0_s4",
+            "dense_tensor_residency_claimed": true,
+            "integrated_one_layer_cuda_parity_claimed": true,
+            "dense_gguf_inference_claimed": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false,
+            "weights_uploaded_per_kernel": true,
+            "weights_uploaded_once": false,
+            "intermediate_downloads_for_phase_parity": true,
+            "host_device_transfer_accounting_matches_kernel_stats": true,
+            "transfer_accounting": {
+                "status": "measured",
+                "host_to_device_bytes": h2d,
+                "device_to_host_bytes": d2h,
+                "kernel_invocations": invocations,
+                "kernel_launches": launches
+            }
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": true,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": true,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": true,
+            "dense_gguf_norm_cuda_parity_claimed": true,
+            "dense_gguf_rope_cuda_parity_claimed": true,
+            "dense_gguf_attention_score_cuda_parity_claimed": true,
+            "dense_gguf_attention_softmax_cuda_parity_claimed": true,
+            "dense_gguf_attention_v_mix_cuda_parity_claimed": true,
+            "dense_gguf_mlp_activation_cuda_parity_claimed": true,
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_cpu_reference_claimed": true,
+            "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "server_ready_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    })
+}
+
 fn dense_one_layer_cpu_reference_phases() -> Vec<Value> {
     [
         ("deterministic_input", "hidden_state", "input"),
@@ -2078,6 +2343,266 @@ fn dense_one_layer_cpu_reference_phases() -> Vec<Value> {
         })
     })
     .collect()
+}
+
+fn dense_one_layer_cuda_integrated_phases() -> Vec<Value> {
+    let phase_defs = [
+        (
+            "deterministic_input",
+            "hidden_state",
+            "input",
+            "host_deterministic_input",
+            "host_deterministic_input",
+            None,
+            1_u64,
+            0_u64,
+            0_u64,
+            0_u64,
+        ),
+        (
+            "attention_norm",
+            "attention_norm",
+            "rmsnorm",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_rmsnorm_f32_cuda"),
+            1,
+            64,
+            64,
+            1,
+        ),
+        (
+            "attention_q",
+            "attention_q",
+            "matmul",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_f16_gemm_cuda"),
+            4,
+            384,
+            64,
+            4,
+        ),
+        (
+            "attention_k",
+            "attention_k",
+            "matmul",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_f16_gemm_cuda"),
+            4,
+            384,
+            32,
+            4,
+        ),
+        (
+            "attention_v",
+            "attention_v",
+            "matmul",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_f16_gemm_cuda"),
+            4,
+            384,
+            32,
+            4,
+        ),
+        (
+            "rope",
+            "rope",
+            "rope",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_rope_f32_cuda"),
+            2,
+            96,
+            96,
+            2,
+        ),
+        (
+            "attention_scores",
+            "attention_scores",
+            "attention",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_attention_scores_f32_cuda"),
+            1,
+            96,
+            128,
+            1,
+        ),
+        (
+            "attention_softmax",
+            "attention_softmax",
+            "softmax",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_attention_softmax_f32_cuda"),
+            1,
+            128,
+            128,
+            1,
+        ),
+        (
+            "attention_v_mix",
+            "attention_v_mix",
+            "attention",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_attention_v_mix_f32_cuda"),
+            1,
+            160,
+            64,
+            1,
+        ),
+        (
+            "attention_output",
+            "attention_output",
+            "matmul",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_f16_gemm_cuda"),
+            4,
+            384,
+            64,
+            4,
+        ),
+        (
+            "first_residual",
+            "first_residual",
+            "residual_add",
+            "host_measured_glue",
+            "host_measured_glue",
+            None,
+            1,
+            0,
+            0,
+            0,
+        ),
+        (
+            "ffn_norm",
+            "ffn_norm",
+            "rmsnorm",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_rmsnorm_f32_cuda"),
+            1,
+            64,
+            64,
+            1,
+        ),
+        (
+            "mlp_gate",
+            "mlp_gate",
+            "matmul",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_f16_gemm_cuda"),
+            4,
+            512,
+            96,
+            4,
+        ),
+        (
+            "mlp_up",
+            "mlp_up",
+            "matmul",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_f16_gemm_cuda"),
+            4,
+            512,
+            96,
+            4,
+        ),
+        (
+            "mlp_activation",
+            "mlp_activation",
+            "activation",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_mlp_activation_f32_cuda"),
+            1,
+            192,
+            96,
+            1,
+        ),
+        (
+            "mlp_down",
+            "mlp_down",
+            "matmul",
+            "dense_regular_llm_cuda",
+            "cuda_executed",
+            Some("dense_f16_gemm_cuda"),
+            4,
+            432,
+            64,
+            4,
+        ),
+        (
+            "second_residual",
+            "second_residual",
+            "residual_add",
+            "host_measured_glue",
+            "host_measured_glue",
+            None,
+            1,
+            0,
+            0,
+            0,
+        ),
+    ];
+
+    phase_defs
+        .into_iter()
+        .enumerate()
+        .map(
+            |(index, (name, role, op_type, route, status, kernel_id, invocations, h2d, d2h, launches))| {
+                json!({
+                    "index": index as u64,
+                    "name": name,
+                    "role": role,
+                    "op_type": op_type,
+                    "route": route,
+                    "status": status,
+                    "output_len": if name == "attention_scores" || name == "attention_softmax" { 32 } else if name == "mlp_gate" || name == "mlp_up" || name == "mlp_activation" { 24 } else { 16 },
+                    "output_sha256": format!("{:064x}", index + 3),
+                    "max_abs": 1.0,
+                    "max_abs_error": 0.0,
+                    "mean_abs_error": 0.0,
+                    "tolerance": 0.5,
+                    "passed": true,
+                    "fallback_used": false,
+                    "kernel_id": kernel_id,
+                    "invocations": invocations,
+                    "fallback_invocations": 0,
+                    "host_to_device_bytes": h2d,
+                    "device_to_host_bytes": d2h,
+                    "kernel_launches": launches,
+                    "kernel_time_ms": null,
+                })
+            },
+        )
+        .collect()
+}
+
+fn dense_one_layer_cuda_kernel_stats() -> Vec<Value> {
+    dense_one_layer_cuda_integrated_phases()
+        .into_iter()
+        .filter(|phase| phase["kernel_id"].is_string())
+        .map(|phase| {
+            json!({
+                "phase": phase["name"],
+                "kernel_id": phase["kernel_id"],
+                "invocations": phase["invocations"],
+                "fallback_invocations": phase["fallback_invocations"],
+                "host_to_device_bytes": phase["host_to_device_bytes"],
+                "device_to_host_bytes": phase["device_to_host_bytes"],
+                "kernel_launches": phase["kernel_launches"],
+                "kernel_time_ms": null
+            })
+        })
+        .collect()
 }
 
 fn valid_dense_gguf_norm_fixture_extraction_receipt() -> Value {
