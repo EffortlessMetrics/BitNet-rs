@@ -2112,8 +2112,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-016"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-016-rmsnorm-parity"
+pr = 4220
+head_sha = "1bc2499d5fc2943f69ee6293ec54be25158ca6cb"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
