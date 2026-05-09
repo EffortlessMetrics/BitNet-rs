@@ -124,6 +124,12 @@ with the companion guide:
 docs/apple-silicon/bitnet-candidate-matrix.md
 ```
 
+The dedicated Apple BitNet sweep control plane is documented at:
+
+```text
+docs/apple-silicon/apple-bitnet-artifact-sweep.md
+```
+
 No artifact becomes an Apple local-answer claim until a strict backend receipt produces coherent output with real model, tokenizer authority, selected backend, fallback status, generated text, token IDs, and timing.
 
 ## Claim Boundaries

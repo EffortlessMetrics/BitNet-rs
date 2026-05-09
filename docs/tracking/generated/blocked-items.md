@@ -3,6 +3,10 @@
 
 | Campaign | Item | Blocked by | State |
 |---|---|---|---|
+| apple-bitnet-artifact-sweep | ABAS-002 | ABAS-001 | proposed |
+| apple-bitnet-artifact-sweep | ABAS-003 | ABAS-001 | proposed |
+| apple-bitnet-artifact-sweep | ABAS-004 | ABAS-001, ABAS-002 | proposed |
+| apple-bitnet-artifact-sweep | ABAS-005 | ABAS-001 | proposed |
 | apple-m4 | M4-002 | M4-001 | merged |
 | apple-m4 | M4-003 | M4-002 | merged |
 | apple-m4 | M4-004 | M4-003 | merged |
