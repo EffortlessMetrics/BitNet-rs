@@ -1100,6 +1100,10 @@ enum Cmd {
         #[command(subcommand)]
         command: CiCmd,
     },
+
+    /// Lint GitHub workflow files for YAML syntax issues (duplicate keys, etc).
+    #[command(name = "lint-workflows")]
+    LintWorkflows,
 }
 
 #[derive(Subcommand)]
@@ -1569,6 +1573,7 @@ fn real_main() -> Result<()> {
             policy::clippy::run(exceptions, report_dir, fail_on_error)
         }
         Cmd::PolicyReport { report_dir } => run_policy_report(report_dir),
+        Cmd::LintWorkflows => xtask::lint_workflows::lint_workflows(),
         Cmd::Ci { command } => match command {
             CiCmd::Actuals {
                 repo,

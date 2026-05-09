@@ -7,6 +7,7 @@ pub mod build_helpers;
 pub mod cpp_setup_auto;
 pub mod crossval;
 pub mod ffi;
+pub mod lint_workflows;
 
 // Prompt template argument type for cross-validation
 // This mirrors the PromptTemplateArg in main.rs but is available to the library
