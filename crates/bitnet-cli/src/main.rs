@@ -7310,13 +7310,14 @@ fn cuda_execution_residency_receipt(
 }
 
 #[cfg(feature = "full-cli")]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct SlmWarmSessionOutput {
     pub(crate) stream_tokens: bool,
     pub(crate) progress: bool,
     pub(crate) quiet: bool,
     pub(crate) write_prompt_receipts: bool,
     pub(crate) interactive_prompt_collection: bool,
+    pub(crate) model_sha256_override: Option<String>,
 }
 
 #[cfg(feature = "full-cli")]
@@ -7328,6 +7329,7 @@ impl SlmWarmSessionOutput {
             quiet,
             write_prompt_receipts: true,
             interactive_prompt_collection: false,
+            model_sha256_override: None,
         }
     }
 
@@ -7344,11 +7346,19 @@ impl SlmWarmSessionOutput {
         self
     }
 
-    fn progress_enabled(self) -> bool {
+    pub(crate) fn with_model_sha256_override(
+        mut self,
+        model_sha256_override: Option<String>,
+    ) -> Self {
+        self.model_sha256_override = model_sha256_override;
+        self
+    }
+
+    fn progress_enabled(&self) -> bool {
         self.progress && !self.quiet
     }
 
-    fn status(self, message: impl AsRef<str>) {
+    fn status(&self, message: impl AsRef<str>) {
         if self.progress_enabled() {
             eprintln!("{}", message.as_ref());
         }
@@ -7534,7 +7544,18 @@ async fn run_slm_warm_session(
     let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_label, tokenizer_source);
     let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
     let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
-    let model_sha256 = compute_model_sha256(&model_path)?;
+    let model_sha256_start = std::time::Instant::now();
+    let model_sha256_rehash_skipped = output.model_sha256_override.is_some();
+    let model_sha256 = match output.model_sha256_override.as_ref() {
+        Some(sha256) => sha256.clone(),
+        None => compute_model_sha256(&model_path)?,
+    };
+    let model_sha256_ms = elapsed_ms(model_sha256_start);
+    let model_sha256_source = if model_sha256_rehash_skipped {
+        "verified_mac_model_cache"
+    } else {
+        "computed_from_model_file"
+    };
     let model_repo = infer_model_repo(&model_path);
     let model_architecture = infer_model_architecture(&model_path);
     let model_family = receipt_model_family(&model_architecture);
@@ -7851,6 +7872,7 @@ async fn run_slm_warm_session(
                 "tokenizer_load_ms": 0.0,
                 "session_model_load_ms": rounded_ms(model_load_ms),
                 "session_tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+                "session_model_sha256_ms": rounded_ms(model_sha256_ms),
                 "tokenize_ms": rounded_ms(prompt_tokenize_ms),
                 "prefill_ms": rounded_ms(prefill_ms),
                 "first_token_ms": first_token_ms,
@@ -7871,6 +7893,8 @@ async fn run_slm_warm_session(
                 "file": model_file.as_str(),
                 "path": model_path.display().to_string(),
                 "sha256": model_sha256.as_str(),
+                "sha256_source": model_sha256_source,
+                "sha256_rehash_skipped": model_sha256_rehash_skipped,
                 "format": model_format_label.as_str(),
                 "family": model_family,
                 "architecture": model_architecture,
@@ -8087,6 +8111,8 @@ async fn run_slm_warm_session(
             "file": model_file.as_str(),
             "path": model_path.display().to_string(),
             "sha256": model_sha256.as_str(),
+            "sha256_source": model_sha256_source,
+            "sha256_rehash_skipped": model_sha256_rehash_skipped,
             "format": model_format_label.as_str(),
             "family": model_family,
             "architecture": model_architecture,
@@ -8107,6 +8133,7 @@ async fn run_slm_warm_session(
         "timing": {
             "model_load_ms": rounded_ms(model_load_ms),
             "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
+            "model_sha256_ms": rounded_ms(model_sha256_ms),
             "total_session_ms": rounded_ms(total_session_ms),
         },
         "speed": speed_summary,
@@ -8599,7 +8626,7 @@ fn slm_warm_session_quality_receipt(
     min_distinct_generated_tokens: usize,
     gate: Option<&SlmWarmSessionGate>,
 ) -> serde_json::Value {
-    let normalized = strip_slm_special_markers(answer).trim().to_string();
+    let normalized = normalize_slm_quality_text(answer);
     let valid_utf8 = true;
     let printable_utf8 = normalized.chars().all(|ch| ch == '\n' || ch == '\t' || !ch.is_control());
     let non_empty = !normalized.is_empty();
@@ -8691,6 +8718,17 @@ fn strip_slm_special_markers(answer: &str) -> String {
         .replace("<|begin_of_text|>", "")
         .replace("<|end_of_text|>", "")
         .replace("<|eot_id|>", "")
+}
+
+#[cfg(feature = "full-cli")]
+fn normalize_slm_quality_text(answer: &str) -> String {
+    let trimmed = strip_slm_special_markers(answer).trim().to_string();
+    if let Some(after_colon) = trimmed.strip_prefix(':')
+        && after_colon.starts_with(char::is_whitespace)
+    {
+        return after_colon.trim_start().to_string();
+    }
+    trimmed
 }
 
 #[cfg(feature = "full-cli")]
@@ -10368,6 +10406,30 @@ mod tests {
         assert_eq!(quality["non_degenerate"], true);
         assert_eq!(quality["gate_passed"], true);
         assert_eq!(quality["normalized_text"], "2+2 equals 4.");
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn slm_warm_session_quality_accepts_qwen_answer_prefix_separator() {
+        let gate = SlmWarmSessionGate {
+            kind: "starts_with_any".to_string(),
+            expected: None,
+            contains_any: None,
+            starts_with_any: Some(vec!["Answer:".to_string()]),
+            min_words: None,
+        };
+
+        let quality = slm_warm_session_quality_receipt(
+            ": Answer: blue<|im_end|>",
+            &[25, 21806, 25, 6303, 151645],
+            1,
+            2,
+            Some(&gate),
+        );
+
+        assert_eq!(quality["passed"], true);
+        assert_eq!(quality["gate_passed"], true);
+        assert_eq!(quality["normalized_text"], "Answer: blue");
     }
 
     #[test]

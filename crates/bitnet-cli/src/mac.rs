@@ -1360,7 +1360,8 @@ async fn run_chat_session(
         allocation_audit,
         crate::SlmWarmSessionOutput::new(stream, progress, quiet)
             .with_prompt_receipts(turn_receipts)
-            .with_interactive_prompt_collection(interactive_prompt_collection),
+            .with_interactive_prompt_collection(interactive_prompt_collection)
+            .with_model_sha256_override(Some(model.sha256.clone())),
         1,
         1,
         json_out.clone(),
@@ -1438,7 +1439,8 @@ async fn run_validate(
         true,
         true,
         allocation_audit,
-        crate::SlmWarmSessionOutput::new(false, progress, quiet),
+        crate::SlmWarmSessionOutput::new(false, progress, quiet)
+            .with_model_sha256_override(Some(model.sha256.clone())),
         1,
         1,
         json_out.clone(),
@@ -1562,7 +1564,8 @@ async fn run_warm_profile_set(
             true,
             false,
             spec.allocation_audit,
-            crate::SlmWarmSessionOutput::new(false, spec.progress, spec.quiet),
+            crate::SlmWarmSessionOutput::new(false, spec.progress, spec.quiet)
+                .with_model_sha256_override(Some(model.sha256.clone())),
             1,
             1,
             receipt_path.clone(),

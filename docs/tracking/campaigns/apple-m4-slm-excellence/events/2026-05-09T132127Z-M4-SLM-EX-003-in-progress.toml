@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T13:21:27Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-003"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-SLM-EX-003 after M4-SLM-EX-002 closeout merged.",
+  "Scope is limited to a dense Apple M4 SLM time-to-first-token pass that preserves greedy output and receipt quality.",
+  "The first patch targets cache verification placement by reusing the already verified Mac model SHA in resident warm-session receipts instead of rehashing the large GGUF again.",
+  "No BitNet local-answer quality, full Apple Metal inference, QK256, Neural Engine, MPSGraph model inference, MacBook work, or broad M4 performance claim is being added.",
+]

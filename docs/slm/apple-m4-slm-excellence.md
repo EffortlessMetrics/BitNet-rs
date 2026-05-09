@@ -114,6 +114,15 @@ Reduce perceived latency by measuring and tightening:
 - cache verification placement;
 - receipt construction outside the hot path.
 
+The first concrete pass reuses the SHA256 already produced by the Mac model
+cache verifier when `bitnet mac chat` and `bitnet mac validate` launch resident
+warm sessions. That avoids a second full-file GGUF hash before generation and
+records `model.sha256_source`, `model.sha256_rehash_skipped`, and
+`timing.model_sha256_ms` in the warm-session receipt so the optimization is
+auditable. The same pass keeps the existing deterministic quality corpus usable
+by normalizing the observed leading Qwen assistant separator before applying
+format-prefix gates; generated text and token IDs remain unchanged in receipts.
+
 Acceptance requires unchanged greedy token IDs and unchanged quality corpus
 behavior.
 
