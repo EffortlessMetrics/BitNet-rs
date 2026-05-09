@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T12:21:14Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-025"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-025-attention-softmax-route"
+pr = 4269
+head_sha = "d5903340908b46e1ec4c1648bf285c4cdea1c123"
+merge_sha = "7dbffde9ac54cf61eccd4435356b2303eb64bd49"
+notes = [
+  "Merged dense GGUF one-layer attention-softmax planner route promotion.",
+  "The committed one-layer plan receipt records 12 CUDA-routable dense ops and leaves attention_v_mix plus mlp_activation as unsupported strict CUDA gaps.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and CUDA kernel math remain out of scope.",
+]
