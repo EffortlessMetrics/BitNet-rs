@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T07:36:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-017"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-017-one-layer-rmsnorm-route"
+pr = 4222
+head_sha = "712128cac289bc2394d7f0ceaa0e369f58d20614"
+notes = [
+  "Opened PR #4222 to route dense one-layer attention_norm and ffn_norm RMSNorm ops to dense_regular_llm_cuda in planner receipts.",
+  "The PR refreshes the live one-layer receipt to record 9 CUDA-routable ops, including 7 linears and 2 RMSNorm ops, with 5 unsupported strict CUDA gaps remaining.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, QK256, and BitNet packed proof claims remain false.",
+]
