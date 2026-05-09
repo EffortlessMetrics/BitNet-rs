@@ -394,6 +394,7 @@ impl AnswerCorpusCommand {
                 "generated": run_receipt["tokens"]["generated_ids"].clone(),
             },
             "logits_dump": run_receipt.get("logits_dump").cloned().unwrap_or(Value::Null),
+            "logits_index_boundary": run_receipt.get("logits_index_boundary").cloned().unwrap_or(Value::Null),
             "prompt": {
                 "rendered_text": run_receipt["prompt_render"]["rendered_text"]
                     .as_str()
