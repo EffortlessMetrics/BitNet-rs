@@ -31,7 +31,7 @@
     "driver_version": "591.86",
     "nvml_available": true,
     "nvrtc_version": "unknown",
-    "power_draw_watts": 22.0,
+    "power_draw_watts": 23.12,
     "power_limit_watts": 300.0,
     "temperature_c": 36.0,
     "vram_bytes": 17094475776
@@ -87,6 +87,251 @@
   "fallback_backend": null,
   "fallback_reason": null,
   "fallback_used": false,
+  "gap_audit": {
+    "bitnet_packed_i2s_qk256_proof": false,
+    "candidate_order": [
+      "attention_norm",
+      "ffn_norm",
+      "rope",
+      "attention_scores",
+      "attention_softmax",
+      "attention_v_mix",
+      "mlp_activation"
+    ],
+    "cpu_fallback_ops_total": 0,
+    "cuda_routable_linear_ops_total": 7,
+    "dense_gguf_inference_claimed": false,
+    "dense_gguf_one_layer_execution_plan_claimed": true,
+    "dense_gguf_one_layer_inference_claimed": false,
+    "dependency_edges": [
+      {
+        "from": "attention_norm",
+        "to": "attention_q"
+      },
+      {
+        "from": "attention_norm",
+        "to": "attention_k"
+      },
+      {
+        "from": "attention_norm",
+        "to": "attention_v"
+      },
+      {
+        "from": "attention_q",
+        "to": "rope"
+      },
+      {
+        "from": "attention_k",
+        "to": "rope"
+      },
+      {
+        "from": "rope",
+        "to": "attention_scores"
+      },
+      {
+        "from": "attention_scores",
+        "to": "attention_softmax"
+      },
+      {
+        "from": "attention_softmax",
+        "to": "attention_v_mix"
+      },
+      {
+        "from": "attention_v",
+        "to": "attention_v_mix"
+      },
+      {
+        "from": "attention_v_mix",
+        "to": "attention_output"
+      },
+      {
+        "from": "ffn_norm",
+        "to": "mlp_gate"
+      },
+      {
+        "from": "ffn_norm",
+        "to": "mlp_up"
+      },
+      {
+        "from": "mlp_gate",
+        "to": "mlp_activation"
+      },
+      {
+        "from": "mlp_up",
+        "to": "mlp_activation"
+      },
+      {
+        "from": "mlp_activation",
+        "to": "mlp_down"
+      }
+    ],
+    "full_cuda_residency_claimed": false,
+    "layer_index": 0,
+    "linears_routable_roles": [
+      "attention_q",
+      "attention_k",
+      "attention_v",
+      "attention_output",
+      "mlp_gate",
+      "mlp_up",
+      "mlp_down"
+    ],
+    "qwen_chat_cuda_claimed": false,
+    "qwen_one_token_cuda_claimed": false,
+    "qwen_short_decode_cuda_claimed": false,
+    "schema": 1,
+    "source_artifact_kind": "dense_gguf_one_layer_execution_plan",
+    "speedup_claim": false,
+    "strict_cuda_ready": false,
+    "strict_cuda_rejects_cpu_fallback": true,
+    "unsupported_op_type_counts": {
+      "activation": 1,
+      "attention": 2,
+      "rmsnorm": 2,
+      "rope": 1,
+      "softmax": 1
+    },
+    "unsupported_ops": [
+      {
+        "blocks_strict_cuda_one_layer": true,
+        "cpu_fallback_allowed": false,
+        "cuda_kernel_status": "missing_cuda_kernel",
+        "input_dependencies": [
+          "hidden_state"
+        ],
+        "input_residency": "not_executed",
+        "name": "blk.0.attn_norm.weight",
+        "op_type": "rmsnorm",
+        "output_residency": "not_executed",
+        "role": "attention_norm",
+        "size": 896,
+        "source": "gguf_tensor_descriptor",
+        "source_shape": [
+          896
+        ],
+        "source_tensor": "blk.0.attn_norm.weight",
+        "transfer_timing_status": "not_measured_no_kernel"
+      },
+      {
+        "blocks_strict_cuda_one_layer": true,
+        "cpu_fallback_allowed": false,
+        "cuda_kernel_status": "missing_cuda_kernel",
+        "input_dependencies": [
+          "attention_q",
+          "attention_k",
+          "position_ids"
+        ],
+        "input_residency": "not_executed",
+        "name": "blk.0.rope",
+        "op_type": "rope",
+        "output_residency": "not_executed",
+        "role": "rope",
+        "size": 896,
+        "source": "derived_transformer_op",
+        "source_shape": null,
+        "source_tensor": null,
+        "transfer_timing_status": "not_measured_no_kernel"
+      },
+      {
+        "blocks_strict_cuda_one_layer": true,
+        "cpu_fallback_allowed": false,
+        "cuda_kernel_status": "missing_cuda_kernel",
+        "input_dependencies": [
+          "rope_q",
+          "rope_k",
+          "causal_mask"
+        ],
+        "input_residency": "not_executed",
+        "name": "blk.0.attention_scores",
+        "op_type": "attention",
+        "output_residency": "not_executed",
+        "role": "attention_scores",
+        "size": 802816,
+        "source": "derived_transformer_op",
+        "source_shape": null,
+        "source_tensor": null,
+        "transfer_timing_status": "not_measured_no_kernel"
+      },
+      {
+        "blocks_strict_cuda_one_layer": true,
+        "cpu_fallback_allowed": false,
+        "cuda_kernel_status": "missing_cuda_kernel",
+        "input_dependencies": [
+          "attention_scores"
+        ],
+        "input_residency": "not_executed",
+        "name": "blk.0.attention_softmax",
+        "op_type": "softmax",
+        "output_residency": "not_executed",
+        "role": "attention_softmax",
+        "size": 896,
+        "source": "derived_transformer_op",
+        "source_shape": null,
+        "source_tensor": null,
+        "transfer_timing_status": "not_measured_no_kernel"
+      },
+      {
+        "blocks_strict_cuda_one_layer": true,
+        "cpu_fallback_allowed": false,
+        "cuda_kernel_status": "missing_cuda_kernel",
+        "input_dependencies": [
+          "attention_softmax",
+          "attention_v"
+        ],
+        "input_residency": "not_executed",
+        "name": "blk.0.attention_v_mix",
+        "op_type": "attention",
+        "output_residency": "not_executed",
+        "role": "attention_v_mix",
+        "size": 802816,
+        "source": "derived_transformer_op",
+        "source_shape": null,
+        "source_tensor": null,
+        "transfer_timing_status": "not_measured_no_kernel"
+      },
+      {
+        "blocks_strict_cuda_one_layer": true,
+        "cpu_fallback_allowed": false,
+        "cuda_kernel_status": "missing_cuda_kernel",
+        "input_dependencies": [
+          "attention_residual_state"
+        ],
+        "input_residency": "not_executed",
+        "name": "blk.0.ffn_norm.weight",
+        "op_type": "rmsnorm",
+        "output_residency": "not_executed",
+        "role": "ffn_norm",
+        "size": 896,
+        "source": "gguf_tensor_descriptor",
+        "source_shape": [
+          896
+        ],
+        "source_tensor": "blk.0.ffn_norm.weight",
+        "transfer_timing_status": "not_measured_no_kernel"
+      },
+      {
+        "blocks_strict_cuda_one_layer": true,
+        "cpu_fallback_allowed": false,
+        "cuda_kernel_status": "missing_cuda_kernel",
+        "input_dependencies": [
+          "mlp_gate",
+          "mlp_up"
+        ],
+        "input_residency": "not_executed",
+        "name": "blk.0.mlp_activation",
+        "op_type": "activation",
+        "output_residency": "not_executed",
+        "role": "mlp_activation",
+        "size": 896,
+        "source": "derived_transformer_op",
+        "source_shape": null,
+        "source_tensor": null,
+        "transfer_timing_status": "not_measured_no_kernel"
+      }
+    ],
+    "unsupported_ops_have_dependency_notes": true,
+    "unsupported_ops_total": 7
+  },
   "hardware_lane": "nvidia-rtx-5070-ti-cuda",
   "machine_id": "windows-9950x3d-rtx5070ti",
   "model": {
@@ -371,5 +616,5 @@
   "schema": 1,
   "selected_backend": "nvidia-rtx-5070-ti-cuda",
   "speedup_claim": false,
-  "timestamp_utc": "2026-05-09T05:50:10Z"
+  "timestamp_utc": "2026-05-09T06:11:00Z"
 }

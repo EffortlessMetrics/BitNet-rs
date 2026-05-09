@@ -76,6 +76,15 @@ pub const DENSE_GGUF_LINEAR_ROLE_SWEEP_CUDA_PARITY_ARTIFACT_KIND: &str =
 /// one dense transformer layer. It does not execute full dense GGUF inference.
 pub const DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND: &str =
     "dense_gguf_one_layer_execution_plan";
+const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] = &[
+    "attention_norm",
+    "ffn_norm",
+    "rope",
+    "attention_scores",
+    "attention_softmax",
+    "attention_v_mix",
+    "mlp_activation",
+];
 
 /// Model class label for CUDA receipts that exercise dense regular LLM kernels.
 pub const DENSE_REGULAR_LLM_MODEL_CLASS: &str = "dense_regular_llm";
@@ -1423,6 +1432,7 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
     }
     let mut seen_cuda_ops = 0_u64;
     let mut seen_unsupported_ops = 0_u64;
+    let mut seen_unsupported_roles = BTreeSet::new();
     for (idx, op) in operations.iter().enumerate() {
         require_u64_eq(op, "index", idx as u64)?;
         require_string_non_empty(op, "name")?;
@@ -1468,6 +1478,7 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
                         "dense one-layer plan must not mark dense matmul ops unsupported"
                     ));
                 }
+                seen_unsupported_roles.insert(required_string(op, "role")?.to_string());
                 seen_unsupported_ops += 1;
             }
             other => {
@@ -1480,6 +1491,12 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
     if seen_cuda_ops != linear_cuda_ops || seen_unsupported_ops != unsupported_ops {
         return Err(anyhow!("one_layer_plan operation route counts do not match summary"));
     }
+    validate_dense_one_layer_gap_audit(
+        receipt,
+        linear_cuda_ops,
+        unsupported_ops,
+        &seen_unsupported_roles,
+    )?;
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
@@ -1498,6 +1515,138 @@ pub fn validate_dense_gguf_one_layer_execution_plan_receipt_json(receipt: &Value
     require_bool_eq(claim_boundary, "speedup_claim", false)?;
     require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
     require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
+fn validate_dense_one_layer_gap_audit(
+    receipt: &Value,
+    linear_cuda_ops: u64,
+    unsupported_ops: u64,
+    expected_unsupported_roles: &BTreeSet<String>,
+) -> Result<()> {
+    let audit = object_field(receipt, "gap_audit")?;
+    require_u64_eq(audit, "schema", 1)?;
+    require_string_eq(
+        audit,
+        "source_artifact_kind",
+        DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
+    )?;
+    require_u64_eq(audit, "cuda_routable_linear_ops_total", linear_cuda_ops)?;
+    require_u64_eq(audit, "unsupported_ops_total", unsupported_ops)?;
+    require_u64_eq(audit, "cpu_fallback_ops_total", 0)?;
+    require_bool_eq(audit, "strict_cuda_ready", false)?;
+    require_bool_eq(audit, "unsupported_ops_have_dependency_notes", true)?;
+    require_bool_eq(audit, "strict_cuda_rejects_cpu_fallback", true)?;
+    require_bool_eq(audit, "dense_gguf_one_layer_execution_plan_claimed", true)?;
+    require_bool_eq(audit, "dense_gguf_one_layer_inference_claimed", false)?;
+    require_bool_eq(audit, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(audit, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(audit, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(audit, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(audit, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(audit, "speedup_claim", false)?;
+    require_bool_eq(audit, "full_cuda_residency_claimed", false)?;
+
+    let linear_roles = array_field(audit, "linears_routable_roles")?;
+    if linear_roles.len() != linear_cuda_ops as usize {
+        return Err(anyhow!("gap_audit.linears_routable_roles length must match CUDA op count"));
+    }
+    for role in linear_roles {
+        let role = role
+            .as_str()
+            .ok_or_else(|| anyhow!("gap_audit.linears_routable_roles entries must be strings"))?;
+        reject_bitnet_packed_marker(role, "gap_audit.linears_routable_roles")?;
+    }
+
+    let unsupported_entries = array_field(audit, "unsupported_ops")?;
+    if unsupported_entries.len() != unsupported_ops as usize {
+        return Err(anyhow!("gap_audit.unsupported_ops length must match unsupported op count"));
+    }
+    let mut audit_roles = BTreeSet::new();
+    for op in unsupported_entries {
+        require_string_non_empty(op, "name")?;
+        reject_bitnet_packed_marker(
+            required_string(op, "name")?,
+            "gap_audit.unsupported_ops.name",
+        )?;
+        require_string_non_empty(op, "role")?;
+        let role = required_string(op, "role")?;
+        reject_bitnet_packed_marker(role, "gap_audit.unsupported_ops.role")?;
+        audit_roles.insert(role.to_string());
+        require_string_non_empty(op, "op_type")?;
+        require_positive_u64(op, "size")?;
+        require_string_eq(op, "cuda_kernel_status", "missing_cuda_kernel")?;
+        require_bool_eq(op, "cpu_fallback_allowed", false)?;
+        require_bool_eq(op, "blocks_strict_cuda_one_layer", true)?;
+        require_string_eq(op, "input_residency", "not_executed")?;
+        require_string_eq(op, "output_residency", "not_executed")?;
+        require_string_eq(op, "transfer_timing_status", "not_measured_no_kernel")?;
+        let deps = array_field(op, "input_dependencies")?;
+        if deps.is_empty() {
+            return Err(anyhow!("gap_audit unsupported ops must include input dependencies"));
+        }
+        for dep in deps {
+            let dep = dep
+                .as_str()
+                .ok_or_else(|| anyhow!("gap_audit input_dependencies entries must be strings"))?;
+            reject_bitnet_packed_marker(dep, "gap_audit.unsupported_ops.input_dependencies")?;
+        }
+    }
+    if &audit_roles != expected_unsupported_roles {
+        return Err(anyhow!("gap_audit unsupported roles must match one_layer_plan"));
+    }
+
+    let candidate_order = array_field(audit, "candidate_order")?;
+    let candidate_order = candidate_order
+        .iter()
+        .map(|entry| {
+            entry
+                .as_str()
+                .ok_or_else(|| anyhow!("gap_audit.candidate_order entries must be strings"))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if candidate_order != DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER {
+        return Err(anyhow!("gap_audit.candidate_order must preserve the governed gap order"));
+    }
+    let candidate_set: BTreeSet<String> =
+        candidate_order.iter().map(|role| (*role).to_string()).collect();
+    if &candidate_set != expected_unsupported_roles {
+        return Err(anyhow!("gap_audit.candidate_order roles must match unsupported roles"));
+    }
+
+    let op_type_counts = object_field(audit, "unsupported_op_type_counts")?
+        .as_object()
+        .ok_or_else(|| anyhow!("gap_audit.unsupported_op_type_counts must be an object"))?;
+    let mut op_type_sum = 0_u64;
+    for (op_type, count) in op_type_counts {
+        if op_type.trim().is_empty() {
+            return Err(anyhow!("gap_audit unsupported op type key must not be empty"));
+        }
+        reject_bitnet_packed_marker(op_type, "gap_audit.unsupported_op_type_counts")?;
+        op_type_sum += count.as_u64().ok_or_else(|| {
+            anyhow!("gap_audit.unsupported_op_type_counts values must be unsigned integers")
+        })?;
+    }
+    if op_type_sum != unsupported_ops {
+        return Err(anyhow!("gap_audit.unsupported_op_type_counts must sum to unsupported_ops"));
+    }
+
+    let dependency_edges = array_field(audit, "dependency_edges")?;
+    if dependency_edges.len() < unsupported_ops as usize {
+        return Err(anyhow!(
+            "gap_audit.dependency_edges must describe unsupported op dependencies"
+        ));
+    }
+    for edge in dependency_edges {
+        require_string_non_empty(edge, "from")?;
+        require_string_non_empty(edge, "to")?;
+        reject_bitnet_packed_marker(
+            required_string(edge, "from")?,
+            "gap_audit.dependency_edges.from",
+        )?;
+        reject_bitnet_packed_marker(required_string(edge, "to")?, "gap_audit.dependency_edges.to")?;
+    }
 
     Ok(())
 }
