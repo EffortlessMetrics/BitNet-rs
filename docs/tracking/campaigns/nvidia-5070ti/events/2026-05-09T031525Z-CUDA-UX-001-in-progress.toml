@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T03:15:25Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-ux-receipts-explain"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started the operator-facing receipt explanation surface after CUDA-PLANNER-004 and CUDA-DENSE-009 merged.",
+  "Scope is CLI UX and docs: summarize existing receipt proof fields without changing inference, tokenizer, loader, transformer, kernels, benchmarks, or server behavior.",
+  "The command must preserve claim boundaries for BitNet packed proof, dense GGUF inference, speedup, and full CUDA residency.",
+]

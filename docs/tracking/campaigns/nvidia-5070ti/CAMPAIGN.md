@@ -140,6 +140,9 @@ stays unsupported under strict CUDA.
 into route-specific op counts, CPU fallback counts, unsupported counts, selected
 route labels, and strict CUDA readiness without emitting those summaries from
 real ask/session/benchmark receipts yet.
+`CUDA-UX-001` starts the operator-facing proof cockpit: `bitnet receipts explain`
+summarizes existing BitNet CUDA and dense regular-LLM CUDA receipts without
+changing inference behavior or accepting new claims.
 
 Answer receipts must keep the completed proof invariants intact:
 
@@ -191,6 +194,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-PLANNER-002 | merged | Conservative model-family and quantization metadata mapping into the model-aware planner spec. |
 | CUDA-PLANNER-003 | merged | Receipt-ready planner summary fields for BitNet QK256 CUDA, dense regular-LLM CUDA, CPU fallback, unsupported ops, selected route labeling, and strict CUDA readiness. |
 | CUDA-PLANNER-004 | merged | Real strict ask, answer-corpus, warm-session, and benchmark receipts emit model-aware `execution_plan` fields. |
+| CUDA-UX-001 | in_progress | User-facing `bitnet receipts explain` command summarizes existing receipt proof fields, planner routes, kernels, timing, residency, and claim limits. |
 
 ## Review Policy
 
