@@ -137,7 +137,8 @@ use commands::{
     DenseGgufOneLayerCpuReferenceCommand, DenseGgufOneLayerCudaParityCommand,
     DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
     ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
-    InspectCommand, ReceiptsCommand, ReferenceCompareCommand, ServeCommand,
+    InspectCommand, OutputHeadLogitsAuditCommand, ReceiptsCommand, ReferenceCompareCommand,
+    ServeCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -596,6 +597,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Classify external reference token/logit instrumentation coverage
     ExternalReferenceInstrumentation(Box<ExternalReferenceInstrumentationCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Audit output-head/tied-head and logits-index boundaries for 258V CPU proof
+    OutputHeadLogitsAudit(Box<OutputHeadLogitsAuditCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Extract one dense GGUF linear fixture and run strict CUDA parity diagnostics
@@ -1445,6 +1450,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::FirstTokenDivergence(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::ExternalReferenceInstrumentation(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::OutputHeadLogitsAudit(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufLinearParity(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

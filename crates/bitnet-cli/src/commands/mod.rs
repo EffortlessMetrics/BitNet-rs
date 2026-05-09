@@ -13,6 +13,7 @@ pub mod external_reference_instrumentation;
 pub mod first_token_divergence;
 pub mod inference;
 pub mod inspect;
+pub mod output_head_logits_audit;
 pub mod receipts;
 pub mod reference_compare;
 pub mod serve;
@@ -38,6 +39,7 @@ pub use external_reference_instrumentation::ExternalReferenceInstrumentationComm
 pub use first_token_divergence::FirstTokenDivergenceCommand;
 pub use inference::InferenceCommand;
 pub use inspect::InspectCommand;
+pub use output_head_logits_audit::OutputHeadLogitsAuditCommand;
 pub use receipts::ReceiptsCommand;
 pub use reference_compare::ReferenceCompareCommand;
 pub use serve::ServeCommand;
