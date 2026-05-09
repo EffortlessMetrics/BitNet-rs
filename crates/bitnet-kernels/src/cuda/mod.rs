@@ -157,7 +157,12 @@ pub use layernorm::{
 };
 pub use linear::{LINEAR_KERNEL_SRC, launch_linear};
 pub use qk256_gemv::{CUDA_QK256_GEMV_KERNEL_ID, Qk256GemvConfig, launch_qk256_gemv};
-pub use rmsnorm::{RmsNormConfig, launch_rmsnorm};
+pub use rmsnorm::{
+    CUDA_DENSE_RMSNORM_KERNEL_ID, CUDA_DENSE_RMSNORM_REFERENCE_BACKEND,
+    CUDA_DENSE_RMSNORM_TARGET_BACKEND, CUDA_DENSE_RMSNORM_TOLERANCE, CudaDenseRmsNormStats,
+    DenseGgufRmsNormCudaFixture, DenseGgufRmsNormCudaParity, RmsNormConfig,
+    launch_dense_rmsnorm_f32_cuda, launch_rmsnorm, run_dense_gguf_rmsnorm_cuda_parity,
+};
 pub use rope::{
     RopeConfig, apply_rope, apply_rope_batched, build_rope_freqs, compute_sincos_table,
     launch_rope, launch_rope_backward, rope_backward, rope_backward_cpu, rope_forward,

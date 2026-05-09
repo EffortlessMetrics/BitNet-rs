@@ -22,8 +22,8 @@ pub use answer_parity::AnswerParityCommand;
 pub use benchmark::BenchmarkCommand;
 pub use convert::ConvertCommand;
 pub use dense_gguf_linear_parity::{
-    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufNormFixtureCommand,
-    DenseGgufOneLayerPlanCommand,
+    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand,
+    DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand,
 };
 pub use inference::InferenceCommand;
 pub use inspect::InspectCommand;

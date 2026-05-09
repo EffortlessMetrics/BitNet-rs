@@ -2111,6 +2111,65 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-016"
+status = "pr_open"
+branch = "codex/cuda-dense-016-rmsnorm-parity"
+pr = 4220
+head_sha = "1bc2499d5fc2943f69ee6293ec54be25158ca6cb"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-015"]
+acceptance = "Add strict RTX 5070 Ti CUDA parity for dense GGUF RMSNorm fixtures by routing the verified Qwen2.5 0.5B Q8_0 attention_norm and ffn_norm CPU reference fixtures through a dense_rmsnorm_f32_cuda kernel, validating a dense_gguf_norm_cuda_parity receipt, and keeping dense GGUF inference, Qwen one-token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, and server claims false."
+commands = [
+  "cargo test --locked -p bitnet-kernels --lib --no-default-features --features cuda rmsnorm -- --nocapture",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_norm -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features dense_gguf_norm -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-norm-cuda-parity --model <verified-qwen2.5-q8-gguf> --device-index 0 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-rmsnorm-cuda-parity-qwen25-q8.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-rmsnorm-cuda-parity-qwen25-q8.json",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "server runtime behavior",
+]
+may_claim = [
+  "Verified Qwen2.5 0.5B Q8_0 dense GGUF attention_norm and ffn_norm fixtures pass strict RTX 5070 Ti CUDA RMSNorm parity against CPU references.",
+  "The dense_gguf_norm_cuda_parity receipt records dense_regular_llm_cuda routing, dense_rmsnorm_f32_cuda kernel use, transfer byte accounting, and fallback_used=false.",
+  "The dense RMSNorm CUDA parity receipt remains rejected as BitNet packed I2S/QK256 proof.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, or server behavior changed.",
+  "A full Qwen layer, token, short decode, or chat path works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+]
+
+[[work_item]]
 id = "CUDA-UX-002"
 status = "merged"
 branch = "codex/cuda-ux-002-ask-proof-summary"

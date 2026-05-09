@@ -1,0 +1,15 @@
+timestamp = "2026-05-09T07:15:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-016"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-016-rmsnorm-parity"
+pr = 4220
+head_sha = "1bc2499d5fc2943f69ee6293ec54be25158ca6cb"
+notes = [
+  "Opened PR #4220 for strict dense GGUF RMSNorm CUDA parity on the verified Qwen2.5 0.5B Q8_0 norm fixtures.",
+  "The PR records a live dense_gguf_norm_cuda_parity receipt with dense_rmsnorm_f32_cuda, dense_regular_llm_cuda routing, fallback_used=false, and transfer byte accounting.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, QK256, and BitNet packed proof claims remain false.",
+]
