@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T12:51:13Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-001"
+event = "pr_open"
+actor = "codex"
+pr = 4276
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-001-mac-doctor"
+head_sha = "68cff47d63fb7fae2631c262c8fa2a129f9eec8f"
+notes = [
+  "Opened PR #4276 for `bitnet mac doctor`.",
+  "The PR adds one-command M4 dense SLM health checks for verified cache, disk headroom, tiny golden smoke, receipt validation, backend/fallback identity, and unsupported apple-m4-metal rejection.",
+  "The live local doctor receipt passed with the cached Qwen dense SLM on apple-m4-cpu-neon and fallback_used=false.",
+]

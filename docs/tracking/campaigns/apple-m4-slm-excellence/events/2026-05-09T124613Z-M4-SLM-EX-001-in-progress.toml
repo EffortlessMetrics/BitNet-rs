@@ -1,0 +1,11 @@
+timestamp = "2026-05-09T12:46:13Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-001-mac-doctor"
+notes = [
+  "Started the M4-local Apple Silicon dense SLM excellence item for `bitnet mac doctor`.",
+  "Scope is one-command local health verdict over existing cache verification, golden smoke, receipt validation, backend/fallback checks, and unsupported-backend rejection.",
+  "No model downloads, BitNet quality claim, full Apple Metal inference claim, QK256, server inference, or MacBook work is being added.",
+]

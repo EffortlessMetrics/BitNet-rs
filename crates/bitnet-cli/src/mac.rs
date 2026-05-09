@@ -17,6 +17,7 @@ const APPLE_M4_METAL: &str = "apple-m4-metal";
 const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.json";
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
+const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
 const MAC_BITNET_PROOF_DEFAULT_RECEIPT: &str =
     "target/apple-m4-continuity/mac-bitnet-proof-preflight.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
@@ -142,6 +143,29 @@ enum MacAction {
 
         /// Output aggregate golden smoke receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_SMOKE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
+    /// Run one local health verdict for the supported Apple M4 dense-SLM path.
+    Doctor {
+        /// Supported model id. Defaults to the validated Apple M4 SLM runtime artifact.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Maximum new tokens for the fixed smoke prompt.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 4)]
+        max_new_tokens: usize,
+
+        /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Output aggregate Mac doctor receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_DOCTOR_DEFAULT_RECEIPT)]
         json_out: PathBuf,
     },
 
@@ -385,6 +409,10 @@ impl MacCommand {
             MacAction::Smoke { model_id, cache_dir, max_new_tokens, threads, json_out } => {
                 ensure_supported_mac_device(explicit_device_label, "mac smoke")?;
                 run_smoke(&model_id, cache_dir, max_new_tokens, threads, json_out).await
+            }
+            MacAction::Doctor { model_id, cache_dir, max_new_tokens, threads, json_out } => {
+                ensure_supported_mac_device(explicit_device_label, "mac doctor")?;
+                run_doctor(&model_id, cache_dir, max_new_tokens, threads, json_out).await
             }
             MacAction::Chat {
                 prompts,
@@ -966,6 +994,191 @@ async fn run_smoke(
         answer_receipt_path.display()
     );
     Ok(())
+}
+
+async fn run_doctor(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    max_new_tokens: usize,
+    threads: usize,
+    json_out: PathBuf,
+) -> Result<()> {
+    let cache_status =
+        model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), true)?;
+    let unsupported_backend_rejected =
+        ensure_supported_mac_device(Some(APPLE_M4_METAL), "mac doctor unsupported-backend probe")
+            .is_err();
+    if !cache_status["ready"].as_bool().unwrap_or(false) {
+        let next_step = cache_status["next_step"]
+            .as_str()
+            .unwrap_or("run `bitnet model fetch qwen2.5-0.5b-instruct-q8_0`");
+        let failed = mac_doctor_base_receipt(
+            &json_out,
+            "fail",
+            cache_status.clone(),
+            unsupported_backend_rejected,
+            max_new_tokens,
+        );
+        write_json_receipt(&json_out, &failed)?;
+        anyhow::bail!("Mac doctor cannot pass because the model cache is not ready: {next_step}");
+    }
+
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    let smoke_receipt_path = sibling_receipt_path(&json_out, "smoke");
+    run_smoke(
+        &model.id,
+        Some(model.cache_root.clone()),
+        max_new_tokens,
+        threads,
+        smoke_receipt_path.clone(),
+    )
+    .await?;
+    let smoke_receipt = read_json_receipt(&smoke_receipt_path)?;
+    let smoke_summary = validate_mac_receipt_value(&smoke_receipt_path, &smoke_receipt)?;
+    let expected_fragment_found =
+        smoke_receipt["expected_text_fragment_found"].as_bool().unwrap_or(false);
+    if !expected_fragment_found {
+        anyhow::bail!(
+            "Mac doctor smoke check did not find expected fragment `{MAC_SMOKE_EXPECTED_FRAGMENT}`"
+        );
+    }
+    if !unsupported_backend_rejected {
+        anyhow::bail!("Mac doctor failed: unsupported apple-m4-metal request was not rejected");
+    }
+
+    let cache_status = verified_cache_status_json(&model);
+    let mut receipt = mac_doctor_base_receipt(
+        &json_out,
+        "pass",
+        cache_status,
+        unsupported_backend_rejected,
+        max_new_tokens,
+    );
+    let Some(object) = receipt.as_object_mut() else {
+        anyhow::bail!("Mac doctor receipt is not an object");
+    };
+    object.insert("text".to_string(), smoke_receipt["text"].clone());
+    object.insert("tokens".to_string(), smoke_receipt["tokens"].clone());
+    object.insert("model".to_string(), smoke_receipt["model"].clone());
+    object.insert("tokenizer".to_string(), smoke_receipt["tokenizer"].clone());
+    object.insert("quality".to_string(), smoke_receipt["quality"].clone());
+    object.insert("timing".to_string(), smoke_receipt["timing"].clone());
+    object.insert("memory".to_string(), memory_receipt_json());
+    object.insert(
+        "smoke_receipt".to_string(),
+        serde_json::json!({
+            "path": smoke_receipt_path,
+            "artifact_kind": smoke_summary.artifact_kind,
+            "prompt_count": smoke_summary.prompt_count,
+            "generated_tokens": smoke_summary.generated_tokens,
+            "validated": smoke_summary.passed,
+            "expected_text_fragment_found": expected_fragment_found,
+        }),
+    );
+    object.insert(
+        "model_cache".to_string(),
+        serde_json::json!({
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        }),
+    );
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    println!(
+        "Mac doctor passed: {} (smoke receipt: {})",
+        json_out.display(),
+        smoke_receipt_path.display()
+    );
+    Ok(())
+}
+
+fn mac_doctor_base_receipt(
+    json_out: &Path,
+    result: &str,
+    cache_status: serde_json::Value,
+    unsupported_backend_rejected: bool,
+    max_new_tokens: usize,
+) -> serde_json::Value {
+    let expected_bytes = cache_status["expected"]["bytes"].as_u64().unwrap_or_default();
+    let cache_root = cache_status["cache_root"]
+        .as_str()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_doctor",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "result": result,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "prompt": MAC_SMOKE_PROMPT,
+        "expected_text_fragment": MAC_SMOKE_EXPECTED_FRAGMENT,
+        "checks": {
+            "cache": {
+                "checked": true,
+                "ready": cache_status["ready"].clone(),
+                "state": cache_status["state"].clone(),
+                "cache_root": cache_status["cache_root"].clone(),
+                "cache_path": cache_status["cache_path"].clone(),
+                "metadata_path": cache_status["metadata_path"].clone(),
+                "present": cache_status["present"].clone(),
+                "size_matches": cache_status["size_matches"].clone(),
+                "metadata_present": cache_status["metadata_present"].clone(),
+                "verified": cache_status["verified"].clone(),
+                "next_step": cache_status["next_step"].clone(),
+            },
+            "disk": disk_health_json(&cache_root, expected_bytes),
+            "smoke": {
+                "checked": result == "pass",
+                "prompt": MAC_SMOKE_PROMPT,
+                "max_new_tokens": max_new_tokens,
+            },
+            "receipt_validation": {
+                "checked": result == "pass",
+            },
+            "backend": {
+                "checked": true,
+                "requested_backend": APPLE_M4_CPU_NEON,
+                "selected_backend": APPLE_M4_CPU_NEON,
+                "runtime_api": "cpu",
+                "fallback_used": false,
+            },
+            "unsupported_backend": {
+                "checked": true,
+                "requested_backend": APPLE_M4_METAL,
+                "rejected": unsupported_backend_rejected,
+                "note": "mac doctor verifies that full apple-m4-metal inference remains blocked for the dense SLM wrapper",
+            },
+        },
+        "mac_claim_boundary": {
+            "slm_local_answer": true,
+            "doctor": true,
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        },
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+    })
 }
 
 fn verified_cache_status_json(model: &VerifiedCachedModel) -> serde_json::Value {

@@ -140,6 +140,21 @@ local appliance check, not a BitNet, Metal, Neural Engine, QK256, or broad
 performance proof. The cache health receipt records `verification_passes=1` so
 the smoke avoids hashing the same cached model twice before the tiny generation.
 
+Run the one-command M4 health verdict:
+
+```bash
+bitnet mac doctor \
+  --json-out target/apple-m4-slm-excellence/mac-doctor.json
+```
+
+`bitnet mac doctor` wraps the supported dense-SLM health checks into one local
+operator verdict. It verifies the model cache and hash, checks disk headroom,
+runs the compact smoke path when the cache is ready, validates the generated
+receipts, confirms `apple-m4-cpu-neon` with `fallback_used=false`, and verifies
+that full `apple-m4-metal` inference remains rejected for the dense Mac wrapper.
+It does not download models by default and does not make a BitNet, full Metal,
+Neural Engine, QK256, or broad performance claim.
+
 Run the deterministic warm-session validation corpus:
 
 ```bash

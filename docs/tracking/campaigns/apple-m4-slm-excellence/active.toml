@@ -31,7 +31,8 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-SLM-EX-001"
-status = "ready"
+status = "pr_open"
+pr = 4276
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-001-mac-doctor"
 stackable = false
 review_mode = "codex_premerge"
