@@ -2776,6 +2776,22 @@ fn external_reference_instrumentation_help_lists_boundary_inputs() {
         .stdout(predicate::str::contains("--json-out"));
 }
 
+/// `output-head-logits-audit --help` documents tensor and top-k evidence inputs.
+#[cfg(feature = "full-cli")]
+#[test]
+fn output_head_logits_audit_help_lists_boundary_inputs() {
+    bitnet()
+        .args(["output-head-logits-audit", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--model"))
+        .stdout(predicate::str::contains("--tokenizer"))
+        .stdout(predicate::str::contains("--prompt-audit"))
+        .stdout(predicate::str::contains("--scalar-answer-corpus"))
+        .stdout(predicate::str::contains("--avx2-answer-corpus"))
+        .stdout(predicate::str::contains("--json-out"));
+}
+
 /// `answer-corpus` can target the Apple M4 CPU/NEON local-answer lane.
 #[cfg(feature = "full-cli")]
 #[test]
