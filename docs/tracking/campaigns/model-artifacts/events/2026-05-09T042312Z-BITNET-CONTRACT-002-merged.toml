@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T04:23:12Z"
+campaign = "model-artifacts"
+item = "BITNET-CONTRACT-002"
+event = "merged"
+actor = "codex"
+pr = 4199
+merge_sha = "13f832c679dd0e465ae6742c79c1b6ad526fffbf"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4199 merged the official Microsoft BitNet 2B I2_S model verifier and cache contract wiring.",
+  "`bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s` can now report the official I2_S contract summary and claim boundary metadata.",
+  "Verifier output and cache/fetch metadata distinguish artifact identity from CPU/CUDA answer execution, benchmark, speedup, and full-residency claims.",
+  "No runtime, tokenizer, prompt-template, loader, transformer, QK256, CUDA, dense GGUF, server, full-residency, or speed-claim behavior changed.",
+]
