@@ -244,15 +244,20 @@ this M4 Mac mini receipt only.
 Add:
 
 ```bash
-bitnet mac regression
+bitnet mac regression \
+  ci/hardware/apple-m4-mac-mini/2026-05-09/M4-SLM-EX-008/resident-25-64.json \
+  --baseline ci/hardware/apple-m4-mac-mini/2026-05-09/M4-SLM-EX-008/resident-25-64.json
 ```
 
 It should compare current receipts with the stored M4 dense SLM envelope and
 report drift in model identity, tokenizer identity, backend routing, fallback
 status, quality, time-to-first-token, decode throughput, and peak memory.
 
-The default should be advisory. A hard-fail mode can be added for local
-operator use.
+`bitnet mac regression` is receipt-only: it does not download models and does
+not run live generation. It validates receipts first, compares only matching M4
+dense SLM performance or warm-session envelopes, and reports timing/memory drift
+as advisory warnings by default. Use `--fail-on-drift` when an operator wants a
+local hard failure for threshold drift.
 
 ### M4-SLM-EX-010: Measured User Envelope
 

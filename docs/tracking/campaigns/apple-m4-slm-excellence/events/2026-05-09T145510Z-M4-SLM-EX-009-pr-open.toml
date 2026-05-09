@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T14:55:10Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-009"
+event = "pr_open"
+actor = "codex"
+pr = 4305
+head_sha = "5e56056fe87002dbc80f6148c9ceaca6d610c19c"
+
+notes = [
+  "Opened PR #4305 to add bitnet mac regression.",
+  "The command validates receipts and compares matching M4 dense SLM performance or warm-session envelopes without running live generation.",
+  "Default mode is advisory; --fail-on-drift converts drift warnings into a local operator failure.",
+]

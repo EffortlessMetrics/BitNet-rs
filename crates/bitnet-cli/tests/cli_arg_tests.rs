@@ -682,6 +682,67 @@ fn mac_chat_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_regression_help_documents_advisory_mode() {
+    bitnet()
+        .args(["mac", "regression", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("stored local envelope"))
+        .stdout(predicate::str::contains("--baseline <PATH>"))
+        .stdout(predicate::str::contains("--fail-on-drift"));
+}
+
+#[test]
+fn mac_regression_accepts_matching_warm_session_receipt() {
+    let receipt = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-09/M4-SLM-EX-008/resident-25-64.json",
+    );
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            receipt_str.as_str(),
+            "--baseline",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+}
+
+#[test]
+fn mac_regression_fail_on_drift_turns_warning_into_error() {
+    let baseline = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-09/M4-SLM-EX-008/resident-25-64.json",
+    );
+    let dir = tempfile::tempdir().expect("tempdir");
+    let observed = dir.path().join("observed.json");
+    let mut receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&baseline).expect("baseline")).expect("json");
+    receipt["speed"]["throughput"]["decode_generated_tok_s"] = serde_json::json!(1.0);
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt).expect("json")).expect("write");
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--fail-on-drift",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Mac regression drift exceeded advisory thresholds"));
+}
+
+#[test]
 fn mac_bitnet_proof_help_documents_blocked_contract() {
     bitnet()
         .args(["mac", "bitnet-proof", "--help"])
