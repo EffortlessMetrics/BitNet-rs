@@ -1702,8 +1702,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-009"
-status = "in_progress"
+status = "merged"
 branch = "codex/cuda-dense-009-extracted-linear-parity"
+pr = 4174
+head_sha = "07199a18d3d09c884e2443e5b7dfb67ae154e7b8"
+merge_sha = "d061e6004ec741abb89b9aa2ff078e4e6f8fb8f7"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
