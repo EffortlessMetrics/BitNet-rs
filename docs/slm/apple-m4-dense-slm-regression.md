@@ -108,6 +108,39 @@ stable text for each repeated prompt
 
 This gate is deliberately narrow. It checks the supported dense Qwen Apple CPU/NEON corpus for drift; it does not prove broad chat quality, BitNet quality, Metal inference, or a fleet-wide Apple Silicon performance envelope.
 
+## Staged Apple Hardware Workflow
+
+`M4-SLM-REG-003` stages the hardware regression workflow at:
+
+```text
+.github/workflows/apple-m4-dense-slm-regression.yml
+```
+
+The workflow is manual-dispatch only and defaults to `enable_run=false`. There is intentionally no `schedule:` trigger yet. Scheduled execution should be added only after a provisioned Apple runner is confirmed with these labels:
+
+```text
+self-hosted
+macOS
+ARM64
+apple-m4-dense-slm
+```
+
+When explicitly dispatched with `enable_run=true`, the staged job:
+
+```text
+checks free disk before fetching or validating the model
+fetches and verifies the supported dense Qwen model cache artifact
+runs the five-prompt quality/determinism corpus
+runs release-mode warm_16 / warm_32 / warm_64 / warm_128 performance receipts
+runs receipts-check with the published baseline as an advisory comparison
+uploads the receipt bundle as a workflow artifact
+records branch, commit, optional PR, model id, baseline path, and claim boundary in the run summary
+```
+
+Low disk is a hard preflight failure. The job writes a `preflight.json` receipt before exiting so the operator can see the cache root, available disk, required disk, branch, commit, and optional PR context. Receipt bundles are retained by the workflow artifact retention setting; raw model binaries remain in the runner cache and must never be uploaded or committed.
+
+The staged workflow is a shape, not an active guarantee. Until scheduled runner availability is confirmed, it proves only that the hardware regression command path and artifact contract are defined.
+
 ## Failure Classes
 
 Hard regression classes:
