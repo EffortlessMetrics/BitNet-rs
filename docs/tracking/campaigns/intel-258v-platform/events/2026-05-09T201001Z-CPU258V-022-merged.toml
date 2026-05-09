@@ -1,0 +1,17 @@
+timestamp = "2026-05-09T20:10:01Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-022"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4321
+merge_sha = "086cdfaeecb0496cf140baf7fc0b24f34ae7201e"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-022-qk256-semantic-audit"
+summary = "Merged CPU258V-022 after adding CPU scalar QK256/I2_S/I8_S semantic fixtures and the 258V audit artifact."
+notes = [
+  "The merged PR audits the CPU scalar code map, grouped packed bitplane byte layout, inline weight scale handling, I8_S activation scale use, and accumulator scaling order.",
+  "The committed 258V artifact records proof_stage=semantic_audited and keeps the claim boundary limited to CPU scalar QK256/I2_S/I8_S semantics.",
+  "The merged PR does not claim BitNet answer quality, CPU speed or sustained throughput, Arc 140V execution, Intel NPU execution, accelerator QK256 decode, or full model correctness.",
+  "CPU258V-023 is ready to audit the output-head and logits-index boundary before deeper transformer parity work.",
+]
