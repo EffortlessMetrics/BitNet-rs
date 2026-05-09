@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T00:26:52Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-003"
+event = "in_progress"
+branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-003-quality-corpus"
+actor = "codex"
+
+notes = [
+  "Started the small deterministic dense-SLM quality corpus expansion.",
+  "Scope is limited to the committed Apple M4 Qwen quality corpus, related tests, docs, and campaign tracking.",
+  "No BitNet local-answer quality, broad chat quality, full apple-m4-metal inference, QK256 support, or performance claim is in scope.",
+]

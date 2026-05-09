@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T00:29:49Z"
+campaign = "apple-m4-slm-hardening"
+item = "M4-SLM-HARDEN-003"
+event = "pr_open"
+pr = 4158
+head_sha = "a718763456bcc0543793a16c0e688bfcdcb78ad3"
+actor = "codex"
+
+notes = [
+  "Opened the Mac dense-SLM quality corpus expansion PR.",
+  "The corpus now covers arithmetic, factual, one-sentence generation, short instruction following, and a simple Answer-prefix format gate.",
+  "This remains a bounded operator smoke corpus and does not claim broad chat quality, BitNet local-answer quality, full apple-m4-metal inference, QK256 support, or performance.",
+]
