@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T12:23:59Z"
+campaign = "apple-m4-continuity"
+item = "M4-CONT-005"
+event = "merged"
+actor = "codex"
+pr = 4270
+merge_sha = "e485aa1a09a99fc83eb1b93a548422f12aead962"
+
+notes = [
+  "Merged PR #4270, preparing the M4-side BitNet proof preflight command, accepted-artifact input contract, and future strict proof receipt schema.",
+  "The continuity campaign is complete; M4 dense SLM continuity is covered by chat, smoke, latency polish, resident memory/timing envelope, and blocked BitNet proof preparation.",
+  "No BitNet local-answer success, accepted artifact, full Apple Metal inference, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon performance claim is made.",
+]

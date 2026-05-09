@@ -1,6 +1,6 @@
 id = "apple-m4-continuity"
 title = "Apple M4 continuity"
-status = "active"
+status = "complete"
 
 objective = "Keep the M4 Mac mini useful as the local Apple Silicon dense-SLM appliance while BitNet artifact qualification happens elsewhere, by improving resident Mac UX, smoke validation, latency polish, and blocked BitNet proof preparation without widening hardware claims."
 
@@ -197,8 +197,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CONT-005"
-status = "pr_open"
+status = "merged"
 pr = 4270
+merge_sha = "e485aa1a09a99fc83eb1b93a548422f12aead962"
 branch = "codex/apple-m4-continuity/M4-CONT-005-bitnet-proof-prep"
 stackable = false
 review_mode = "codex_premerge"

@@ -27,7 +27,7 @@
 | apple-m4-continuity | M4-CONT-002 | M4-CONT-001 | merged |
 | apple-m4-continuity | M4-CONT-003 | M4-CONT-002 | merged |
 | apple-m4-continuity | M4-CONT-004 | M4-CONT-003 | merged |
-| apple-m4-continuity | M4-CONT-005 | M4-CONT-004 | pr_open |
+| apple-m4-continuity | M4-CONT-005 | M4-CONT-004 | merged |
 | apple-m4-dense-slm-regression | M4-SLM-REG-002 | M4-SLM-REG-001 | merged |
 | apple-m4-dense-slm-regression | M4-SLM-REG-003 | M4-SLM-REG-002 | merged |
 | apple-m4-dense-slm-regression | M4-SLM-REG-004 | M4-SLM-REG-003 | merged |
