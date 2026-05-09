@@ -1582,3 +1582,61 @@ must_not_claim = [
   "Dense GGUF CUDA execution ran.",
   "Full dense regular LLM CUDA residency exists.",
 ]
+
+[[work_item]]
+id = "CUDA-DENSE-007"
+status = "in_progress"
+branch = "codex/cuda-dense-007-linear-fixture"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-006"]
+acceptance = "Add descriptor-driven dense GGUF linear fixture extraction for Qwen-family dense tensors, materializing one F32/F16/Q8_0 linear tensor as F32, computing a deterministic CPU reference matvec, and validating a fixture-extraction receipt without dense GGUF inference, CUDA execution, speedup, server, tokenizer, transformer, or BitNet packed-kernel proof claims."
+commands = [
+  "cargo fmt -p bitnet-models -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-models --lib --no-default-features dense_gguf_linear -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation dense_gguf_linear -- --nocapture",
+  "cargo test --locked -p bitnet-receipts-core --lib --no-default-features dense_gguf_linear -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "crates/bitnet-models/src/dense_gguf_descriptors.rs",
+  "crates/bitnet-models/src/dense_gguf_linear_fixture.rs",
+  "crates/bitnet-models/src/lib.rs",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/cuda/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF inference implementation",
+  "server runtime behavior",
+]
+may_claim = [
+  "Dense GGUF linear fixture extraction can select a Qwen-family dense linear tensor from GGUF reader data.",
+  "F32, F16, and Q8_0 dense linear tensors can be materialized as F32 for deterministic CPU-reference fixture work.",
+  "Linear fixture receipts remain rejected as BitNet packed I2S/QK256 proof and as dense CUDA execution proof.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Any new CUDA kernel exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, or server behavior changed.",
+  "Dense GGUF CUDA execution ran.",
+  "CPU/CUDA dense GGUF parity is proven.",
+  "Full dense regular LLM CUDA residency exists.",
+]
