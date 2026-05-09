@@ -1290,8 +1290,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-019"
-status = "pr_open"
+status = "merged"
 pr = 4248
+merge_sha = "2708a5ce85f1d341de609edabfac28a8a7315afb"
 branch = "codex/lunar-lake/CPU258V-019-external-first-token-reference"
 stackable = false
 review_mode = "codex_premerge"
@@ -1326,6 +1327,47 @@ may_claim = [
 must_not_claim = [
   "BitNet answer quality is proven.",
   "First-token logits parity is proven when logits are not exposed by the reference.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Packed QK256 decode semantics are fixed.",
+]
+
+[[work_item]]
+id = "CPU258V-020"
+status = "ready"
+branch = "codex/lunar-lake/CPU258V-020-first-token-divergence-classifier"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-019"]
+acceptance = "Classify first-token divergence for the fixed 258V prompts from external reference artifacts, prompt-authority audit receipts, and 258V scalar/AVX2 answer receipts, marking prompt-token, generated-token, sampler-stop, logits-math, or inconclusive stages without claiming logits parity when reference logits are unavailable."
+commands = [
+  "python -c \"import json; p='ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json'; a=json.load(open(p, encoding='utf-8')); assert a['summary']['reference_generated_text_available'] is True; assert a['summary']['reference_logits_available'] is False\"",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "crates/bitnet-cli/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The first-token divergence stage is classified from available external reference, prompt/token audit, and 258V scalar/AVX2 receipt evidence.",
+  "Reference generated-token IDs or logits remain unavailable when the reference artifact does not expose them.",
+]
+must_not_claim = [
+  "BitNet answer quality is newly proven.",
+  "First-token logits parity is proven when reference logits are unavailable.",
   "CPU speed or sustained throughput is proven.",
   "Arc 140V or Intel NPU execution is proven.",
   "Packed QK256 decode semantics are fixed.",
