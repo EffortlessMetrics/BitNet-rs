@@ -3,3 +3,4 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
+| nvidia-5070ti | CUDA-DENSE-037 | #4333 | `codex/cuda-dense-037-all-layer-plan-impl` | Implement the governed dense GGUF all-layer execution-plan receipt command after CUDA-DENSE-036, inspecting every Qwen-family transformer layer from descriptors, reporting per-layer routed op counts and graph differences, preserving dense_regular_llm_cuda route separation, explicitly listing token embedding, final norm, LM head/logits, KV cache, and sampling model-boundary gaps, and keeping dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, BitNet packed proof, tokenizer, loader, transformer runtime, QK256, server, and CUDA kernel math claims false. |

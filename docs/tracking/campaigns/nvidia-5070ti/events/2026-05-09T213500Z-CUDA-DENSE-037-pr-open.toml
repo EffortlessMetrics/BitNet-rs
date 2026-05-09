@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T21:35:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-037"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-037-all-layer-plan-impl"
+pr = 4333
+head_sha = "33f1339f92f0bafe2ede95d3f2629290ba584eb2"
+
+notes = [
+  "Opened PR #4333 for the CUDA-DENSE-037 dense GGUF all-layer execution-plan receipt implementation.",
+  "The PR adds a descriptor/planner-only command and validator for all Qwen-family transformer layers, with explicit model-boundary gaps for token embedding, final norm, LM head/logits, KV cache, and sampling.",
+  "The PR does not claim dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, server readiness, BitNet packed proof, tokenizer, loader, transformer runtime, QK256, BitNet CUDA, or CUDA kernel math changes.",
+]
