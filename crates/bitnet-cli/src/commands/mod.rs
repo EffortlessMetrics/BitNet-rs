@@ -23,9 +23,9 @@ pub use benchmark::BenchmarkCommand;
 pub use convert::ConvertCommand;
 pub use dense_gguf_linear_parity::{
     DenseGgufAttentionScoreCudaParityCommand, DenseGgufAttentionScoreFixtureCommand,
-    DenseGgufAttentionSoftmaxFixtureCommand, DenseGgufLinearParityCommand,
-    DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand, DenseGgufNormFixtureCommand,
-    DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
+    DenseGgufAttentionSoftmaxCudaParityCommand, DenseGgufAttentionSoftmaxFixtureCommand,
+    DenseGgufLinearParityCommand, DenseGgufLinearRoleSweepCommand, DenseGgufNormCudaParityCommand,
+    DenseGgufNormFixtureCommand, DenseGgufOneLayerPlanCommand, DenseGgufRopeCudaParityCommand,
 };
 pub use inference::InferenceCommand;
 pub use inspect::InspectCommand;

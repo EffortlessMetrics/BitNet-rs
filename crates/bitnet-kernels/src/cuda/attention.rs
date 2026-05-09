@@ -39,8 +39,14 @@ use cudarc::nvrtc::{Ptx, compile_ptx};
 /// Kernel ID recorded by dense regular-LLM CUDA attention-score receipts.
 pub const CUDA_DENSE_ATTENTION_SCORE_KERNEL_ID: &str = "dense_attention_scores_f32_cuda";
 
+/// Kernel ID recorded by dense regular-LLM CUDA attention-softmax receipts.
+pub const CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_ID: &str = "dense_attention_softmax_f32_cuda";
+
 /// Tolerance for dense GGUF attention-score fixture parity against the CPU reference.
 pub const CUDA_DENSE_ATTENTION_SCORE_TOLERANCE: f32 = 0.000_25;
+
+/// Tolerance for dense GGUF attention-softmax fixture parity against the CPU reference.
+pub const CUDA_DENSE_ATTENTION_SOFTMAX_TOLERANCE: f32 = 0.000_25;
 
 /// CPU reference backend recorded by dense attention-score CUDA parity receipts.
 pub const CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND: &str = "amd-9950x3d-cpu-avx512";
@@ -50,6 +56,9 @@ pub const CUDA_DENSE_ATTENTION_SCORE_TARGET_BACKEND: &str = "nvidia-rtx-5070-ti-
 
 #[cfg(feature = "cuda")]
 static DENSE_ATTENTION_SCORE_NVRTC_COMPILE_LOCK: Mutex<()> = Mutex::new(());
+
+#[cfg(feature = "cuda")]
+static DENSE_ATTENTION_SOFTMAX_NVRTC_COMPILE_LOCK: Mutex<()> = Mutex::new(());
 
 /// Alias for [`AttentionKernelConfig`] — the CUDA-specific launch configuration.
 ///
@@ -218,6 +227,51 @@ void dense_attention_scores_f32_cuda(
 }
 "#;
 
+#[cfg(feature = "cuda")]
+const CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_SRC: &str = r#"
+extern "C" __global__
+void dense_attention_softmax_f32_cuda(
+    const float* __restrict__ scores,
+    float* __restrict__ probabilities,
+    int q_heads,
+    int seq_len
+) {
+    int row = (int)blockIdx.x;
+    int total_rows = q_heads * seq_len;
+    if (row >= total_rows || threadIdx.x != 0) {
+        return;
+    }
+
+    long long row_base = (long long)row * seq_len;
+    float row_max = -3.4028234663852886e38f;
+    for (int col = 0; col < seq_len; ++col) {
+        float value = scores[row_base + col];
+        if (value > row_max) {
+            row_max = value;
+        }
+    }
+
+    float sum = 0.0f;
+    for (int col = 0; col < seq_len; ++col) {
+        float value = scores[row_base + col];
+        float probability = expf(value - row_max);
+        probabilities[row_base + col] = probability;
+        sum += probability;
+    }
+
+    if (sum > 0.0f) {
+        float inv_sum = 1.0f / sum;
+        for (int col = 0; col < seq_len; ++col) {
+            probabilities[row_base + col] *= inv_sum;
+        }
+    } else {
+        for (int col = 0; col < seq_len; ++col) {
+            probabilities[row_base + col] = 0.0f;
+        }
+    }
+}
+"#;
+
 // ---------------------------------------------------------------------------
 // Launch configuration (CUDA)
 // ---------------------------------------------------------------------------
@@ -266,6 +320,17 @@ pub struct AttentionScoresConfig {
     pub threads_per_block: u32,
 }
 
+/// Launch configuration for dense attention-softmax fixture parity.
+#[derive(Debug, Clone)]
+pub struct AttentionSoftmaxConfig {
+    /// Query head count.
+    pub q_heads: usize,
+    /// Sequence length for query/key positions.
+    pub seq_len: usize,
+    /// Threads per CUDA block.
+    pub threads_per_block: u32,
+}
+
 /// CUDA execution counters for a dense attention-score fixture.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CudaDenseAttentionScoreStats {
@@ -278,6 +343,25 @@ pub struct CudaDenseAttentionScoreStats {
     /// Host-to-device bytes copied for Q/K input tensors.
     pub host_to_device_bytes: u64,
     /// Device-to-host bytes copied for score output tensor.
+    pub device_to_host_bytes: u64,
+    /// CUDA kernel launches.
+    pub kernel_launches: u64,
+    /// Optional measured kernel time.
+    pub kernel_time_ms: Option<f64>,
+}
+
+/// CUDA execution counters for a dense attention-softmax fixture.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CudaDenseAttentionSoftmaxStats {
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Number of CUDA kernel invocations.
+    pub invocations: u64,
+    /// CPU fallback invocations under strict CUDA.
+    pub fallback_invocations: u64,
+    /// Host-to-device bytes copied for the attention-score tensor.
+    pub host_to_device_bytes: u64,
+    /// Device-to-host bytes copied for probability outputs.
     pub device_to_host_bytes: u64,
     /// CUDA kernel launches.
     pub kernel_launches: u64,
@@ -326,6 +410,41 @@ pub struct DenseGgufAttentionScoreCudaFixture {
     pub causal_masked_scores: usize,
 }
 
+/// Dense GGUF attention-softmax fixture data prepared by the CLI/model layer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufAttentionSoftmaxCudaFixture {
+    /// Fixture identifier recorded in parity receipts.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count from the source attention-score fixture.
+    pub kv_heads: usize,
+    /// Sequence length.
+    pub seq_len: usize,
+    /// Source attention-score fixture identifier.
+    pub source_attention_score_fixture_id: String,
+    /// SHA-256 of source attention scores.
+    pub attention_scores_sha256: String,
+    /// Attention scores `[q_heads, seq_len, seq_len]`.
+    pub attention_scores_f32: Vec<f32>,
+    /// CPU reference probabilities `[q_heads, seq_len, seq_len]`.
+    pub expected_probabilities_f32: Vec<f32>,
+    /// Number of softmax rows.
+    pub row_count: usize,
+    /// Number of probabilities.
+    pub probability_count: usize,
+    /// Number of probabilities expected to be zero from causal masking.
+    pub causal_zero_probabilities: usize,
+    /// Maximum absolute row-sum error in the CPU reference.
+    pub max_row_sum_abs_error: f32,
+}
+
 /// Dense GGUF attention-score CUDA parity result against the CPU reference.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DenseGgufAttentionScoreCudaParity {
@@ -369,6 +488,45 @@ pub struct DenseGgufAttentionScoreCudaParity {
     pub causal_masked_scores: usize,
     /// CUDA execution counters.
     pub stats: CudaDenseAttentionScoreStats,
+}
+
+/// Dense GGUF attention-softmax CUDA parity result against the CPU reference.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufAttentionSoftmaxCudaParity {
+    /// Fixture identifier.
+    pub fixture_id: String,
+    /// Dense model family label.
+    pub model_family: String,
+    /// Dense GGUF architecture label.
+    pub architecture: String,
+    /// Transformer layer index represented by the fixture.
+    pub layer_index: usize,
+    /// Query head count.
+    pub q_heads: usize,
+    /// Key/value head count from the source attention-score fixture.
+    pub kv_heads: usize,
+    /// Sequence length.
+    pub seq_len: usize,
+    /// CPU reference backend.
+    pub reference_backend: &'static str,
+    /// CUDA target backend.
+    pub target_backend: &'static str,
+    /// CUDA kernel identifier.
+    pub kernel_id: &'static str,
+    /// Maximum absolute error against the CPU reference.
+    pub max_abs_error: f32,
+    /// Mean absolute error against the CPU reference.
+    pub mean_abs_error: f32,
+    /// Fixture tolerance.
+    pub tolerance: f32,
+    /// Whether the fixture passed tolerance.
+    pub passed: bool,
+    /// Number of compared probabilities.
+    pub compared_probabilities: usize,
+    /// Number of causally masked zero probabilities.
+    pub causal_zero_probabilities: usize,
+    /// CUDA execution counters.
+    pub stats: CudaDenseAttentionSoftmaxStats,
 }
 
 impl AttentionKernelConfig {
@@ -505,6 +663,49 @@ impl AttentionScoresConfig {
                 reason: format!("dense attention-score output exceeds u32: {score_count}"),
             })?;
         Ok((score_count.div_ceil(self.threads_per_block), 1, 1))
+    }
+
+    /// CUDA block dimensions.
+    pub fn block_dim(&self) -> (u32, u32, u32) {
+        (self.threads_per_block, 1, 1)
+    }
+}
+
+impl AttentionSoftmaxConfig {
+    /// Create a dense attention-softmax configuration for `[q_heads, seq_len, seq_len]`.
+    pub fn for_shape(q_heads: usize, seq_len: usize) -> Result<Self> {
+        if q_heads == 0 || seq_len == 0 {
+            return Err(KernelError::InvalidArguments {
+                reason: format!(
+                    "dense attention-softmax dimensions must be non-zero: q_heads={q_heads}, seq_len={seq_len}"
+                ),
+            }
+            .into());
+        }
+        Ok(Self { q_heads, seq_len, threads_per_block: 1 })
+    }
+
+    /// Total number of probability outputs.
+    pub fn probability_count(&self) -> Result<usize> {
+        checked_mul(
+            checked_mul(self.q_heads, self.seq_len, "attention-softmax q_heads*seq_len")?,
+            self.seq_len,
+            "attention-softmax output",
+        )
+    }
+
+    /// Number of independent softmax rows.
+    pub fn row_count(&self) -> Result<usize> {
+        checked_mul(self.q_heads, self.seq_len, "attention-softmax q_heads*seq_len")
+    }
+
+    /// CUDA grid dimensions.
+    pub fn grid_dim(&self) -> Result<(u32, u32, u32)> {
+        let rows = self.row_count()?;
+        let rows = u32::try_from(rows).map_err(|_| KernelError::InvalidArguments {
+            reason: format!("dense attention-softmax row count exceeds u32: {rows}"),
+        })?;
+        Ok((rows, 1, 1))
     }
 
     /// CUDA block dimensions.
@@ -688,6 +889,83 @@ pub fn run_dense_gguf_attention_score_cuda_parity(
     })
 }
 
+/// Launch a strict dense attention-softmax F32 CUDA fixture and return execution counters.
+///
+/// This computes row-wise probabilities from a `[q_heads, seq_len, seq_len]`
+/// attention-score tensor. Masked scores are expected to be encoded as
+/// negative infinity by the upstream attention-score fixture. This function
+/// never falls back to CPU.
+pub fn launch_dense_attention_softmax_f32_cuda(
+    device_index: usize,
+    scores: &[f32],
+    probabilities: &mut [f32],
+    config: &AttentionSoftmaxConfig,
+) -> Result<CudaDenseAttentionSoftmaxStats> {
+    validate_attention_softmax_buffers(scores, probabilities, config)?;
+
+    #[cfg(feature = "cuda")]
+    {
+        return launch_dense_attention_softmax_f32_cuda_impl(
+            device_index,
+            scores,
+            probabilities,
+            config,
+        );
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = device_index;
+        Err(KernelError::DeviceUnavailable {
+            reason: "dense attention-softmax CUDA parity requires the cuda feature".to_string(),
+        }
+        .into())
+    }
+}
+
+/// Run a dense GGUF attention-softmax fixture on CUDA and compare it to CPU references.
+///
+/// # Errors
+///
+/// Returns an error if the fixture is invalid, CUDA is unavailable, or parity
+/// comparison cannot be computed.
+pub fn run_dense_gguf_attention_softmax_cuda_parity(
+    device_index: usize,
+    fixture: &DenseGgufAttentionSoftmaxCudaFixture,
+) -> Result<DenseGgufAttentionSoftmaxCudaParity> {
+    validate_dense_gguf_attention_softmax_fixture(fixture)?;
+    let config = AttentionSoftmaxConfig::for_shape(fixture.q_heads, fixture.seq_len)?;
+    let mut actual = vec![0.0f32; fixture.expected_probabilities_f32.len()];
+    let stats = launch_dense_attention_softmax_f32_cuda(
+        device_index,
+        &fixture.attention_scores_f32,
+        &mut actual,
+        &config,
+    )?;
+    let (max_abs_error, mean_abs_error, compared_probabilities) =
+        compare_attention_softmax_outputs(&fixture.expected_probabilities_f32, &actual)?;
+
+    Ok(DenseGgufAttentionSoftmaxCudaParity {
+        fixture_id: fixture.fixture_id.clone(),
+        model_family: fixture.model_family.clone(),
+        architecture: fixture.architecture.clone(),
+        layer_index: fixture.layer_index,
+        q_heads: fixture.q_heads,
+        kv_heads: fixture.kv_heads,
+        seq_len: fixture.seq_len,
+        reference_backend: CUDA_DENSE_ATTENTION_SCORE_REFERENCE_BACKEND,
+        target_backend: CUDA_DENSE_ATTENTION_SCORE_TARGET_BACKEND,
+        kernel_id: CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_ID,
+        max_abs_error,
+        mean_abs_error,
+        tolerance: CUDA_DENSE_ATTENTION_SOFTMAX_TOLERANCE,
+        passed: max_abs_error <= CUDA_DENSE_ATTENTION_SOFTMAX_TOLERANCE,
+        compared_probabilities,
+        causal_zero_probabilities: fixture.causal_zero_probabilities,
+        stats,
+    })
+}
+
 fn validate_attention_score_buffers(
     q: &[f32],
     k: &[f32],
@@ -761,6 +1039,50 @@ fn validate_attention_score_buffers(
     Ok(())
 }
 
+fn validate_attention_softmax_buffers(
+    scores: &[f32],
+    probabilities: &[f32],
+    config: &AttentionSoftmaxConfig,
+) -> Result<()> {
+    if config.q_heads == 0 || config.seq_len == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention-softmax dimensions must be non-zero".into(),
+        }
+        .into());
+    }
+    if config.threads_per_block == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention-softmax threads_per_block must be non-zero".into(),
+        }
+        .into());
+    }
+    let expected = config.probability_count()?;
+    if scores.len() != expected || probabilities.len() != expected {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-softmax buffer length mismatch: expected scores/probabilities={expected}; got scores={}, probabilities={}",
+                scores.len(),
+                probabilities.len()
+            ),
+        }
+        .into());
+    }
+    validate_i32_arg(config.q_heads, "q_heads")?;
+    validate_i32_arg(config.seq_len, "seq_len")?;
+    for (idx, value) in scores.iter().enumerate() {
+        if value.is_finite() || (value.is_infinite() && value.is_sign_negative()) {
+            continue;
+        }
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-softmax score[{idx}] must be finite or negative infinity"
+            ),
+        }
+        .into());
+    }
+    Ok(())
+}
+
 fn validate_dense_gguf_attention_score_fixture(
     fixture: &DenseGgufAttentionScoreCudaFixture,
 ) -> Result<()> {
@@ -808,6 +1130,83 @@ fn validate_dense_gguf_attention_score_fixture(
                 .into(),
         }
         .into());
+    }
+    Ok(())
+}
+
+fn validate_dense_gguf_attention_softmax_fixture(
+    fixture: &DenseGgufAttentionSoftmaxCudaFixture,
+) -> Result<()> {
+    require_dense_label(&fixture.fixture_id, "fixture_id")?;
+    require_dense_label(&fixture.model_family, "model_family")?;
+    require_dense_label(&fixture.architecture, "architecture")?;
+    require_dense_label(
+        &fixture.source_attention_score_fixture_id,
+        "source_attention_score_fixture_id",
+    )?;
+    require_sha256_like(&fixture.attention_scores_sha256, "attention_scores_sha256")?;
+    if fixture.q_heads == 0 || fixture.kv_heads == 0 || fixture.seq_len == 0 {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention-softmax fixture dimensions must be non-zero".into(),
+        }
+        .into());
+    }
+    let config = AttentionSoftmaxConfig::for_shape(fixture.q_heads, fixture.seq_len)?;
+    let expected_probability_count = config.probability_count()?;
+    let expected_row_count = config.row_count()?;
+    if fixture.row_count != expected_row_count
+        || fixture.probability_count != expected_probability_count
+        || fixture.attention_scores_f32.len() != expected_probability_count
+        || fixture.expected_probabilities_f32.len() != expected_probability_count
+    {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-softmax fixture shape mismatch: expected rows={expected_row_count}, probabilities={expected_probability_count}; got rows={}, probabilities={}, scores_len={}, expected_len={}",
+                fixture.row_count,
+                fixture.probability_count,
+                fixture.attention_scores_f32.len(),
+                fixture.expected_probabilities_f32.len()
+            ),
+        }
+        .into());
+    }
+    validate_attention_softmax_buffers(
+        &fixture.attention_scores_f32,
+        &fixture.expected_probabilities_f32,
+        &config,
+    )?;
+    if !fixture.max_row_sum_abs_error.is_finite() || fixture.max_row_sum_abs_error > 0.000_01 {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-softmax fixture row-sum error too large: {}",
+                fixture.max_row_sum_abs_error
+            ),
+        }
+        .into());
+    }
+    let zero_probs = fixture
+        .expected_probabilities_f32
+        .iter()
+        .filter(|probability| probability.abs() <= f32::EPSILON)
+        .count();
+    if zero_probs != fixture.causal_zero_probabilities {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-softmax fixture causal zero count mismatch: expected {}, got {zero_probs}",
+                fixture.causal_zero_probabilities
+            ),
+        }
+        .into());
+    }
+    for (idx, probability) in fixture.expected_probabilities_f32.iter().enumerate() {
+        if !probability.is_finite() || *probability < 0.0 {
+            return Err(KernelError::InvalidArguments {
+                reason: format!(
+                    "dense attention-softmax expected probability[{idx}] must be finite and non-negative"
+                ),
+            }
+            .into());
+        }
     }
     Ok(())
 }
@@ -914,6 +1313,81 @@ fn launch_dense_attention_scores_f32_cuda_impl(
 }
 
 #[cfg(feature = "cuda")]
+fn launch_dense_attention_softmax_f32_cuda_impl(
+    device_index: usize,
+    scores: &[f32],
+    probabilities: &mut [f32],
+    config: &AttentionSoftmaxConfig,
+) -> Result<CudaDenseAttentionSoftmaxStats> {
+    let probability_count = config.probability_count()?;
+
+    let ctx = CudaContext::new(device_index).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to create CUDA context for dense attention-softmax: {err:?}"),
+    })?;
+    let stream = ctx.default_stream();
+    let ptx = compile_dense_attention_softmax_ptx()?;
+    let module = ctx.load_module(ptx).map_err(|err| KernelError::GpuError {
+        reason: format!("failed to load dense attention-softmax CUDA module: {err:?}"),
+    })?;
+    let function = module.load_function(CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_ID).map_err(|err| {
+        KernelError::GpuError {
+            reason: format!("failed to load dense attention-softmax CUDA kernel: {err:?}"),
+        }
+    })?;
+
+    let scores_dev =
+        stream.memcpy_stod(&scores[..probability_count]).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to copy dense attention-softmax scores to device: {err:?}"),
+        })?;
+    let mut probabilities_dev: CudaSlice<f32> =
+        stream.alloc_zeros(probability_count).map_err(|err| KernelError::GpuError {
+            reason: format!(
+                "failed to allocate dense attention-softmax probabilities on device: {err:?}"
+            ),
+        })?;
+
+    let launch_config = LaunchConfig {
+        grid_dim: config.grid_dim()?,
+        block_dim: config.block_dim(),
+        shared_mem_bytes: 0,
+    };
+    let mut builder = stream.launch_builder(&function);
+    builder.arg(&scores_dev);
+    builder.arg(&mut probabilities_dev);
+    let q_heads_arg = i32::try_from(config.q_heads).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense attention-softmax q_heads exceeds i32: {}", config.q_heads),
+    })?;
+    let seq_len_arg = i32::try_from(config.seq_len).map_err(|_| KernelError::InvalidArguments {
+        reason: format!("dense attention-softmax seq_len exceeds i32: {}", config.seq_len),
+    })?;
+    builder.arg(&q_heads_arg);
+    builder.arg(&seq_len_arg);
+
+    unsafe { builder.launch(launch_config) }.map_err(|err| KernelError::GpuError {
+        reason: format!("failed to launch dense attention-softmax CUDA kernel: {err:?}"),
+    })?;
+    stream.synchronize().map_err(|err| KernelError::GpuError {
+        reason: format!("failed to synchronize dense attention-softmax CUDA kernel: {err:?}"),
+    })?;
+
+    let probabilities_host: Vec<f32> =
+        stream.memcpy_dtov(&probabilities_dev).map_err(|err| KernelError::GpuError {
+            reason: format!("failed to copy dense attention-softmax output from device: {err:?}"),
+        })?;
+    probabilities[..probability_count].copy_from_slice(&probabilities_host[..probability_count]);
+
+    Ok(CudaDenseAttentionSoftmaxStats {
+        kernel_id: CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_ID,
+        invocations: 1,
+        fallback_invocations: 0,
+        host_to_device_bytes: bytes_for::<f32>(probability_count)?,
+        device_to_host_bytes: bytes_for::<f32>(probability_count)?,
+        kernel_launches: 1,
+        kernel_time_ms: None,
+    })
+}
+
+#[cfg(feature = "cuda")]
 fn compile_dense_attention_score_ptx() -> Result<Ptx> {
     let _hook_guard = DENSE_ATTENTION_SCORE_NVRTC_COMPILE_LOCK.lock().ok();
     let previous_hook = std::panic::take_hook();
@@ -931,6 +1405,31 @@ fn compile_dense_attention_score_ptx() -> Result<Ptx> {
         Err(payload) => Err(KernelError::GpuError {
             reason: format!(
                 "failed to compile dense attention-score CUDA PTX because NVRTC was unavailable: {}",
+                panic_payload_message(&*payload)
+            ),
+        }
+        .into()),
+    }
+}
+
+#[cfg(feature = "cuda")]
+fn compile_dense_attention_softmax_ptx() -> Result<Ptx> {
+    let _hook_guard = DENSE_ATTENTION_SOFTMAX_NVRTC_COMPILE_LOCK.lock().ok();
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let compile_result =
+        std::panic::catch_unwind(|| compile_ptx(CUDA_DENSE_ATTENTION_SOFTMAX_KERNEL_SRC));
+    std::panic::set_hook(previous_hook);
+
+    match compile_result {
+        Ok(Ok(ptx)) => Ok(ptx),
+        Ok(Err(err)) => Err(KernelError::GpuError {
+            reason: format!("failed to compile dense attention-softmax CUDA PTX: {err:?}"),
+        }
+        .into()),
+        Err(payload) => Err(KernelError::GpuError {
+            reason: format!(
+                "failed to compile dense attention-softmax CUDA PTX because NVRTC was unavailable: {}",
                 panic_payload_message(&*payload)
             ),
         }
@@ -999,6 +1498,45 @@ fn compare_attention_score_outputs(expected: &[f32], actual: &[f32]) -> Result<(
         .into());
     }
     Ok((max_abs, sum_abs / compared as f32, compared))
+}
+
+fn compare_attention_softmax_outputs(
+    expected: &[f32],
+    actual: &[f32],
+) -> Result<(f32, f32, usize)> {
+    if expected.len() != actual.len() {
+        return Err(KernelError::InvalidArguments {
+            reason: format!(
+                "dense attention-softmax parity length mismatch: expected {}, got {}",
+                expected.len(),
+                actual.len()
+            ),
+        }
+        .into());
+    }
+    if expected.is_empty() {
+        return Err(KernelError::InvalidArguments {
+            reason: "dense attention-softmax parity comparison requires non-empty output".into(),
+        }
+        .into());
+    }
+
+    let mut max_abs = 0.0f32;
+    let mut sum_abs = 0.0f32;
+    for (idx, (&expected, &actual)) in expected.iter().zip(actual).enumerate() {
+        if !expected.is_finite() || !actual.is_finite() {
+            return Err(KernelError::InvalidArguments {
+                reason: format!(
+                    "dense attention-softmax parity requires finite probabilities at {idx}: expected={expected}, actual={actual}"
+                ),
+            }
+            .into());
+        }
+        let abs = (expected - actual).abs();
+        max_abs = max_abs.max(abs);
+        sum_abs += abs;
+    }
+    Ok((max_abs, sum_abs / expected.len() as f32, expected.len()))
 }
 
 fn checked_mul(lhs: usize, rhs: usize, label: &str) -> Result<usize> {
@@ -1607,6 +2145,23 @@ mod tests {
     }
 
     #[test]
+    fn test_attention_softmax_config_for_shape() {
+        let cfg = AttentionSoftmaxConfig::for_shape(4, 3).unwrap();
+        assert_eq!(cfg.q_heads, 4);
+        assert_eq!(cfg.seq_len, 3);
+        assert_eq!(cfg.row_count().unwrap(), 12);
+        assert_eq!(cfg.probability_count().unwrap(), 36);
+        assert_eq!(cfg.grid_dim().unwrap(), (12, 1, 1));
+        assert_eq!(cfg.block_dim(), (1, 1, 1));
+    }
+
+    #[test]
+    fn test_attention_softmax_config_rejects_zero() {
+        assert!(AttentionSoftmaxConfig::for_shape(0, 3).is_err());
+        assert!(AttentionSoftmaxConfig::for_shape(4, 0).is_err());
+    }
+
+    #[test]
     fn test_attention_score_compare_handles_causal_mask() {
         let expected = vec![0.5, f32::NEG_INFINITY, -0.25, 0.75];
         let actual = vec![0.50001, f32::NEG_INFINITY, -0.25002, 0.75003];
@@ -1621,6 +2176,23 @@ mod tests {
         let expected = vec![0.5, f32::NEG_INFINITY];
         let actual = vec![0.5, f32::NAN];
         assert!(compare_attention_score_outputs(&expected, &actual).is_err());
+    }
+
+    #[test]
+    fn test_attention_softmax_compare_handles_masked_zero_probabilities() {
+        let expected = vec![1.0, 0.0, 0.25, 0.75];
+        let actual = vec![0.99999, 0.0, 0.25002, 0.74998];
+        let (max_abs, _mean_abs, compared) =
+            compare_attention_softmax_outputs(&expected, &actual).unwrap();
+        assert_eq!(compared, 4);
+        assert!(max_abs < 0.000_1);
+    }
+
+    #[test]
+    fn test_attention_softmax_compare_rejects_non_finite() {
+        let expected = vec![1.0, 0.0];
+        let actual = vec![1.0, f32::NAN];
+        assert!(compare_attention_softmax_outputs(&expected, &actual).is_err());
     }
 
     // ── AttentionConfig tests ─────────────────────────────────────────
