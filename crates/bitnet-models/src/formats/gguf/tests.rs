@@ -1152,8 +1152,11 @@ fn build_gguf_for_validation(
             GgufTensorType::F32 => 0,
             GgufTensorType::F16 => 1,
             GgufTensorType::I2_S => 36,
+            GgufTensorType::Q2_K => 10,
             GgufTensorType::Q8_0 => 8,
+            GgufTensorType::Q5_0 => 6,
             GgufTensorType::Q4_K => 12,
+            GgufTensorType::Q6_K => 14,
             _ => 0,
         };
         data.extend_from_slice(&type_id.to_le_bytes());
@@ -1183,6 +1186,34 @@ fn q8_0_block(scale: f32, codes: &[i8]) -> Vec<u8> {
     data
 }
 
+fn q5_0_block(scale: f32, low_nibbles: &[u8], high_bits: u32) -> Vec<u8> {
+    let mut data = Vec::with_capacity(22);
+    data.extend_from_slice(&half::f16::from_f32(scale).to_bits().to_le_bytes());
+    data.extend_from_slice(&high_bits.to_le_bytes());
+    for idx in 0..16 {
+        data.push(low_nibbles.get(idx).copied().unwrap_or(0));
+    }
+    data
+}
+
+fn q4_k_block(scale: f32, min: f32, code: u8) -> Vec<u8> {
+    let mut data = Vec::with_capacity(144);
+    data.extend_from_slice(&half::f16::from_f32(scale).to_bits().to_le_bytes());
+    data.extend_from_slice(&half::f16::from_f32(min).to_bits().to_le_bytes());
+    data.extend_from_slice(&[1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    data.extend(std::iter::repeat(code).take(128));
+    data
+}
+
+fn q6_k_block(scale: f32, super_scale: i8, qh_byte: u8, ql_byte: u8) -> Vec<u8> {
+    let mut data = Vec::with_capacity(210);
+    data.extend(std::iter::repeat(ql_byte).take(128));
+    data.extend(std::iter::repeat(qh_byte).take(64));
+    data.extend(std::iter::repeat(super_scale as u8).take(16));
+    data.extend_from_slice(&half::f16::from_f32(scale).to_bits().to_le_bytes());
+    data
+}
+
 #[test]
 fn dense_qwen_q8_0_is_not_strict_unsupported_standard_quant() {
     let q8 = q8_0_block(0.5, &[1; 32]);
@@ -1199,21 +1230,40 @@ fn dense_qwen_q8_0_is_not_strict_unsupported_standard_quant() {
 }
 
 #[test]
-fn dense_qwen_unsupported_k_quant_still_fails_strict_gate() {
+fn dense_qwen_supported_q4_k_mix_is_not_strict_unsupported_standard_quant() {
+    let tensors = vec![
+        ("blk.0.attn_q.weight", vec![32], GgufTensorType::Q5_0, q5_0_block(1.0, &[0; 16], 0)),
+        ("blk.0.ffn_down.weight", vec![256], GgufTensorType::Q4_K, q4_k_block(1.0, 0.0, 0x21)),
+        ("blk.1.ffn_down.weight", vec![256], GgufTensorType::Q6_K, q6_k_block(1.0, 1, 0, 0)),
+    ];
+    let gguf = build_gguf_for_validation(
+        vec![
+            ("general.architecture", GgufValue::String("qwen2".to_string())),
+            ("general.name", GgufValue::String("qwen2-q4km-fixture".to_string())),
+        ],
+        tensors,
+    );
+
+    let reader = GgufReader::new(&gguf).expect("should parse");
+    assert_eq!(reader.first_unsupported_standard_quantized_tensor(), None);
+}
+
+#[test]
+fn dense_qwen_unsupported_standard_quant_still_fails_strict_gate() {
     let gguf = build_gguf_for_validation(
         vec![
             ("general.architecture", GgufValue::String("qwen3".to_string())),
-            ("general.name", GgufValue::String("qwen3-q4k-fixture".to_string())),
+            ("general.name", GgufValue::String("qwen3-q2k-fixture".to_string())),
         ],
-        vec![("blk.0.attn_q.weight", vec![256], GgufTensorType::Q4_K, vec![0u8; 144])],
+        vec![("blk.0.attn_q.weight", vec![256], GgufTensorType::Q2_K, vec![0u8; 82])],
     );
 
     let reader = GgufReader::new(&gguf).expect("should parse");
     let unsupported = reader
         .first_unsupported_standard_quantized_tensor()
-        .expect("Q4_K should remain unsupported");
+        .expect("Q2_K should remain unsupported");
     assert_eq!(unsupported.0, "blk.0.attn_q.weight");
-    assert_eq!(unsupported.1, GgufTensorType::Q4_K);
+    assert_eq!(unsupported.1, GgufTensorType::Q2_K);
 }
 
 #[test]
@@ -1226,6 +1276,45 @@ fn dense_qwen_q8_0_dequantizes_with_alignment_padding() {
     let dequantized =
         GgufLoader::dequantize_q8_0_to_f32(&q8, &[5], "fixture.q8").expect("q8 dequant");
     assert_eq!(dequantized, vec![-1.0, -0.5, 0.0, 0.5, 1.0]);
+}
+
+#[test]
+fn dense_qwen_q5_0_dequantizes_with_alignment_padding() {
+    use super::loader::GgufLoader;
+
+    let mut q5 = q5_0_block(1.0, &[0x21], 0);
+    q5.extend_from_slice(&[0u8; 30]);
+
+    let dequantized =
+        GgufLoader::dequantize_q5_0_to_f32(&q5, &[32], "fixture.q5").expect("q5 dequant");
+    assert_eq!(dequantized[0], -15.0);
+    assert_eq!(dequantized[16], -14.0);
+}
+
+#[test]
+fn dense_qwen_q4_k_dequantizes_with_alignment_padding() {
+    use super::loader::GgufLoader;
+
+    let mut q4k = q4_k_block(1.0, 0.0, 0x21);
+    q4k.extend_from_slice(&[0u8; 30]);
+
+    let dequantized =
+        GgufLoader::dequantize_q4_k_to_f32(&q4k, &[256], "fixture.q4k").expect("q4k dequant");
+    assert_eq!(dequantized[0], 1.0);
+    assert_eq!(dequantized[32], 2.0);
+}
+
+#[test]
+fn dense_qwen_q6_k_dequantizes_with_alignment_padding() {
+    use super::loader::GgufLoader;
+
+    let mut q6k = q6_k_block(1.0, 1, 0, 0);
+    q6k.extend_from_slice(&[0u8; 30]);
+
+    let dequantized =
+        GgufLoader::dequantize_q6_k_to_f32(&q6k, &[256], "fixture.q6k").expect("q6k dequant");
+    assert_eq!(dequantized[0], -32.0);
+    assert_eq!(dequantized[127], -32.0);
 }
 
 #[test]

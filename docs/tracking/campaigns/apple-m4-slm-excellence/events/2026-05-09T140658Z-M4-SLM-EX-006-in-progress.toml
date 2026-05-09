@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T14:06:58Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-006"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started M4-SLM-EX-006 after the M4-SLM-EX-005 closeout merged.",
+  "The highest-priority candidate is the Qwen2.5 0.5B Instruct Q4_K_M artifact from the EX-005 matrix because it is reference-good, storage-conscious, and already registered in the model cache.",
+  "Initial probing confirmed the cache artifact verifies against SHA256 but strict Rust execution needed standard GGUF Q5_0/Q4_K/Q6_K dequantization support before the candidate could be promoted.",
+  "No model binary is committed; the fetched candidate remains in the local user cache.",
+]
