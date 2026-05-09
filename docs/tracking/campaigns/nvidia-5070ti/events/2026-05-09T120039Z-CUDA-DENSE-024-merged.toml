@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T12:00:39Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-024"
+event = "merged"
+previous_status = "in_progress"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-024-attention-softmax-parity"
+pr = 4264
+head_sha = "2993babab551b5054e088d1228fb2e1ce0f70714"
+merge_sha = "16abe9af023f444920b983659a5e05db2fceeea3"
+notes = [
+  "Merged dense GGUF attention-softmax strict CUDA fixture parity.",
+  "The committed receipt records dense_attention_softmax_f32_cuda, transfer byte accounting, tensor residency, no CPU fallback, and CPU/CUDA probability parity for the Qwen2.5 Q8 fixture.",
+  "Dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, BitNet packed proof, tokenizer, loader, transformer, QK256, server, and planner route promotion remain out of scope.",
+]
