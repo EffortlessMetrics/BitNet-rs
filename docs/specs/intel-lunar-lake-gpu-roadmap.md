@@ -221,10 +221,21 @@ cargo run --locked -p bitnet-cli \
 
 The receipt must keep `requested_backend=intel-arc-140v`,
 `selected_backend=intel-arc-140v-openvino-gpu`, `runtime_api=openvino`,
-`runtime_device=GPU.0`, `fallback_used=false`, `bitnet_inference=false`, and
-`qk256_decode=false`. It may claim tiny OpenVINO GPU graph smoke only when the
-selected `GPU.0` full device name identifies Arc 140V and the graph output
-matches the CPU expected output.
+`runtime_device` equal to the selected OpenVINO GPU token, `fallback_used=false`,
+`bitnet_inference=false`, and `qk256_decode=false`. It may claim tiny OpenVINO
+GPU graph smoke only when the selected GPU full device name identifies Arc 140V
+and the graph output matches the CPU expected output.
+
+The first live 258V artifact is:
+
+```text
+ci/hardware/intel-258v/2026-05-08/arc-140v-openvino-gpu-smoke.json
+```
+
+On that Windows/OpenVINO 2026.1 run, OpenVINO reports the selected runtime
+device as `GPU` and the full name as `Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)`.
+That artifact is OpenVINO GPU graph smoke only; it is not native OpenCL proof,
+BitNet inference, packed QK256 decode, or an acceleration claim.
 
 This is not native OpenCL execution. Native OpenCL starts at `ARC140V-004`.
 

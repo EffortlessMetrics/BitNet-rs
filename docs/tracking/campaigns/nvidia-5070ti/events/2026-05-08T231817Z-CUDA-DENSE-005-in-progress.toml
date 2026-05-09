@@ -1,0 +1,14 @@
+timestamp = "2026-05-08T23:18:17Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-005"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-005-model-family-planner-bridge"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started dense model-family execution-plan bridge after CUDA-DENSE-004 and CUDA-PLANNER-004 merged.",
+  "Scope is receipt and validator plumbing: Qwen-family dense FP16 fixture receipts must carry a dense_regular_llm_cuda execution_plan while remaining rejected as BitNet packed I2S/QK256 proof.",
+  "No dense GGUF inference, dense CUDA math implementation, BitNet QK256 math, tokenizer, loader, transformer, server, speedup, or full-residency claim is in scope.",
+]

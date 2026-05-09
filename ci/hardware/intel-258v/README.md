@@ -7,6 +7,7 @@ Expected path pattern:
 
 ```text
 ci/hardware/intel-258v/<date>/platform-probe.json
+ci/hardware/intel-258v/<date>/platform-probe-cli.json
 ci/hardware/intel-258v/<date>/cpu-bitnet-validation.json
 ci/hardware/intel-258v/<date>/cpu-phase-benchmark.json
 ci/hardware/intel-258v/<date>/cpu-phase-evidence-attempts.json
@@ -22,6 +23,7 @@ ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
 ci/hardware/intel-258v/<date>/npu-bitnet-linear-projection-subgraph-parity.json
 ci/hardware/intel-258v/<date>/npu-bitnet-ffn-subgraph-parity.json
+ci/hardware/intel-258v/<date>/arc-140v-openvino-gpu-smoke.json
 ci/hardware/intel-258v/<date>/arc-140v-opencl-parity.json
 ci/hardware/intel-258v/<date>/platform-comparison-index.json
 ```
@@ -30,6 +32,11 @@ ci/hardware/intel-258v/<date>/platform-comparison-index.json
 140V OpenCL/Level Zero/OpenVINO GPU visibility, Intel NPU OS/OpenVINO
 visibility, memory, power, and OS context. It must not claim BitNet inference,
 Arc 140V execution, NPU execution, or acceleration.
+
+`platform-probe-cli.json` is the CLI-emitted form of the same visibility-only
+platform probe. The 2026-05-08 refresh records OpenVINO 2026.1 visibility for
+CPU, GPU, and NPU on the 258V, identifies the Arc 140V OpenVINO GPU device, and
+keeps Level Zero absence explicit.
 
 `cpu-phase-benchmark.json` converts strict CPU proof receipts into phase-aware
 CPU evidence. It may measure only the phases present in the supplied strict
@@ -82,6 +89,12 @@ parity run on Arc 140V against the selected 258V CPU reference bundle. It may
 claim only native OpenCL CPU/iGPU parity for that kernel. It must not claim
 BitNet inference, Arc acceleration, packed QK256 decode, OpenVINO GPU proof as
 native OpenCL proof, or CPU fallback as Arc proof.
+
+`arc-140v-openvino-gpu-smoke.json` records one tiny static OpenVINO GPU graph
+smoke on Arc 140V. It may claim only OpenVINO GPU graph execution with
+`fallback_used=false` and CPU expected-output agreement. It must not claim
+native OpenCL execution, BitNet inference, Arc acceleration, packed QK256
+decode, or CPU fallback proof.
 
 `npu-openvino-runtime-probe.json` records live OpenVINO NPU visibility on the
 258V. It may claim that OpenVINO selected `intel-npu-openvino` with runtime

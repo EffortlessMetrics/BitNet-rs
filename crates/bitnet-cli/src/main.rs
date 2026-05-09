@@ -89,6 +89,7 @@ mod ln_rules;
 #[cfg(feature = "full-cli")]
 mod mac;
 mod model_cache;
+mod planner_receipts;
 mod score;
 pub mod tokenizer_discovery;
 
@@ -231,6 +232,7 @@ struct Cli {
     command: Option<Commands>,
 }
 
+#[allow(clippy::large_enum_variant)] // Clap command shape keeps argument definitions local and readable.
 #[derive(Subcommand)]
 enum Commands {
     /// Run simple text generation
@@ -1806,8 +1808,15 @@ async fn handle_prompt_authority_audit_command(
         })
         .or_else(|| gguf.get_u32_metadata("llama.vocab_size"));
 
-    let tokenizer_json_metadata =
-        tokenizer_path.as_deref().and_then(read_tokenizer_json_prompt_metadata);
+    let tokenizer_resolution =
+        bitnet_tokenizers::auto::resolve_tokenizer(&model_path, tokenizer_path.as_deref(), true)?;
+    let tokenizer_source = tokenizer_resolution.source;
+    let tokenizer_path_resolved = tokenizer_resolution.path.clone();
+    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
+    let tokenizer_json_metadata = read_resolved_tokenizer_json_prompt_metadata(
+        tokenizer_source,
+        tokenizer_path_resolved.as_deref(),
+    );
     let external_chat_template =
         tokenizer_json_metadata.as_ref().and_then(|metadata| metadata.chat_template.clone());
     let chat_template_for_detection =
@@ -1815,12 +1824,6 @@ async fn handle_prompt_authority_audit_command(
     let tokenizer_name_hint = gguf_tokenizer_model.as_deref().or_else(|| {
         tokenizer_json_metadata.as_ref().and_then(|metadata| metadata.family.as_deref())
     });
-
-    let tokenizer_resolution =
-        bitnet_tokenizers::auto::resolve_tokenizer(&model_path, tokenizer_path.as_deref(), true)?;
-    let tokenizer_source = tokenizer_resolution.source;
-    let tokenizer_path_resolved = tokenizer_resolution.path.clone();
-    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
     let tokenizer_family = infer_tokenizer_label(tokenizer.as_ref(), tokenizer_source);
     let tokenizer_type = tokenizer_type_for_receipt(&tokenizer_family, tokenizer_source);
     let tokenizer_vocab_size = tokenizer.real_vocab_size();
@@ -1964,6 +1967,20 @@ async fn handle_prompt_authority_audit_command(
 struct TokenizerJsonPromptMetadata {
     family: Option<String>,
     chat_template: Option<String>,
+}
+
+fn read_resolved_tokenizer_json_prompt_metadata(
+    source: bitnet_tokenizers::auto::TokenizerSource,
+    path: Option<&std::path::Path>,
+) -> Option<TokenizerJsonPromptMetadata> {
+    match source {
+        bitnet_tokenizers::auto::TokenizerSource::Explicit
+        | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
+            path.and_then(read_tokenizer_json_prompt_metadata)
+        }
+        bitnet_tokenizers::auto::TokenizerSource::GgufMetadata
+        | bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => None,
+    }
 }
 
 fn read_tokenizer_json_prompt_metadata(
@@ -4664,6 +4681,15 @@ async fn run_simple_generation(
                 coverage_scope: "strict_cuda_ask_or_run",
             })
         });
+        let execution_plan = strict_cuda_selected_artifact.then(|| {
+            planner_receipts::bitnet_qk256_execution_plan_receipt(
+                &bitnet_linear_coverage,
+                requested_backend,
+                selected_backend,
+                runtime_api,
+                "reject",
+            )
+        });
         let expected_reference_path =
             strict_cuda_proof_artifact.then(|| strict_reference_receipt_path(&json_path));
         let strict_reference_receipt = match expected_reference_path.as_deref() {
@@ -4988,6 +5014,9 @@ async fn run_simple_generation(
             if let Some(residency) = &cuda_execution_residency {
                 object.insert("cuda_execution_residency".to_string(), residency.clone());
             }
+            if let Some(execution_plan) = &execution_plan {
+                object.insert("execution_plan".to_string(), execution_plan.clone());
+            }
             object.insert(
                 "reference_backend".to_string(),
                 serde_json::json!("amd-9950x3d-cpu-avx512"),
@@ -5069,6 +5098,9 @@ async fn run_simple_generation(
             object.insert("speedup_claim".to_string(), serde_json::json!(false));
             if let Some(residency) = &cuda_execution_residency {
                 object.insert("cuda_execution_residency".to_string(), residency.clone());
+            }
+            if let Some(execution_plan) = &execution_plan {
+                object.insert("execution_plan".to_string(), execution_plan.clone());
             }
             object.insert(
                 "reference_backend".to_string(),
@@ -6439,6 +6471,13 @@ async fn run_cuda_warm_session(
                 execution_phase: "warm_session_turn",
                 coverage_scope: "strict_cuda_warm_session_turn",
             });
+        let execution_plan = planner_receipts::bitnet_qk256_execution_plan_receipt(
+            &coverage_delta,
+            backend_identity.requested_backend.as_str(),
+            backend_identity.selected_backend.as_str(),
+            backend_identity.runtime_api.as_str(),
+            "reject",
+        );
         let turn_receipt_path = receipt_dir.join(format!(
             "{:02}-{}.json",
             index + 1,
@@ -6530,6 +6569,7 @@ async fn run_cuda_warm_session(
             },
             "kernel_stats": qk256_kernel_stats_receipt(&coverage_delta, Some(&runtime_stats_delta)),
             "execution_coverage": qk256_dispatch_coverage_receipt(&coverage_delta),
+            "execution_plan": execution_plan,
             "cuda_execution_residency": cuda_execution_residency,
             "bitnet": {
                 "weight_quantization": if canonical_bitnet_model { "W1.58" } else { "unknown" },
@@ -6597,6 +6637,7 @@ async fn run_cuda_warm_session(
                 "runtime_api": backend_identity.runtime_api.as_str(),
                 "fallback_used": backend_identity.fallback_used,
             },
+            "execution_plan": turn_receipt["execution_plan"].clone(),
             "execution_coverage": turn_receipt["execution_coverage"].clone(),
             "cuda_execution_residency": turn_receipt["cuda_execution_residency"].clone(),
             "bitnet": turn_receipt["bitnet"].clone(),
@@ -6645,6 +6686,13 @@ async fn run_cuda_warm_session(
             execution_phase: "warm_session",
             coverage_scope: "strict_cuda_warm_session",
         });
+    let execution_plan = planner_receipts::bitnet_qk256_execution_plan_receipt(
+        &total_coverage,
+        backend_identity.requested_backend.as_str(),
+        backend_identity.selected_backend.as_str(),
+        backend_identity.runtime_api.as_str(),
+        "reject",
+    );
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "bitnet_cuda_warm_session",
@@ -6758,6 +6806,7 @@ async fn run_cuda_warm_session(
         },
         "kernel_stats": qk256_kernel_stats_receipt(&total_coverage, Some(&total_runtime_stats)),
         "execution_coverage": qk256_dispatch_coverage_receipt(&total_coverage),
+        "execution_plan": execution_plan,
         "cuda_execution_residency": cuda_execution_residency,
         "bitnet": {
             "weight_quantization": if canonical_bitnet_model { "W1.58" } else { "unknown" },
@@ -8642,6 +8691,7 @@ async fn run_ask_generation(
             "per_token_weight_upload": run_receipt["bitnet"]["per_token_weight_upload"].clone(),
         },
         "execution_coverage": run_receipt["execution_coverage"].clone(),
+        "execution_plan": run_receipt["execution_plan"].clone(),
         "kernel_stats": run_receipt["kernel_stats"].clone(),
         "cuda_execution_residency": run_receipt["cuda_execution_residency"].clone(),
         "timing": run_receipt["timing"].clone(),
@@ -8746,6 +8796,15 @@ fn validate_strict_cuda_ask_receipt(run_receipt: &serde_json::Value) -> Result<(
         anyhow::bail!(
             "strict CUDA ask receipt is missing measured QK256 residency accounting: {}",
             transfer_accounting
+        );
+    }
+    let execution_plan_failed = planner_receipts::strict_bitnet_qk256_execution_plan_failed_rules(
+        &run_receipt["execution_plan"],
+    );
+    if !execution_plan_failed.is_empty() {
+        anyhow::bail!(
+            "strict CUDA ask receipt has invalid BitNet QK256 execution_plan: {}",
+            execution_plan_failed.join(",")
         );
     }
     Ok(())
@@ -10215,10 +10274,92 @@ mod tests {
                     "kernel_time_ms": 1.25,
                     "kernel_time_samples": 4
                 }
+            },
+            "execution_plan": {
+                "planner_version": "cuda-planner-004",
+                "model_family": "bitnet_b1_58",
+                "quantization": "i2_s_qk256",
+                "selected_route": "bitnet_qk256_cuda",
+                "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "strict_fallback_policy": "reject",
+                "dense_regular_llm_cuda": false,
+                "bitnet_packed_qk256_cuda": true,
+                "cuda_bitnet_qk256_ops": 4,
+                "cuda_dense_regular_llm_ops": 0,
+                "cpu_fallback_ops": 0,
+                "unsupported_ops": 0,
+                "total_ops": 4,
+                "cuda_ops": 4,
+                "mixed_cuda_routes": false,
+                "fallback_used": false,
+                "strict_cuda_ready": true,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
             }
         });
 
         validate_strict_cuda_ask_receipt(&run_receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cuda_ask_receipt_rejects_dense_cuda_execution_plan() {
+        let run_receipt = serde_json::json!({
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "fallback_used": false,
+            "execution_coverage": {
+                "bitnet_linear_layers_cpu_fallback": 0
+            },
+            "kernel_stats": [{
+                "kernel_id": bitnet_kernels::cuda::CUDA_QK256_GEMV_KERNEL_ID,
+                "invocations": 4,
+                "fallback_invocations": 0,
+                "host_to_device_bytes": 4096,
+                "device_to_host_bytes": 2048,
+                "kernel_launches": 4,
+                "kernel_time_ms": 1.25,
+                "kernel_time_samples": 4
+            }],
+            "cuda_execution_residency": {
+                "host_device_transfer_accounting": {
+                    "status": "qk256_measured",
+                    "host_to_device_bytes": 4096,
+                    "device_to_host_bytes": 2048,
+                    "kernel_time_ms": 1.25,
+                    "kernel_time_samples": 4
+                }
+            },
+            "execution_plan": {
+                "planner_version": "cuda-planner-004",
+                "model_family": "qwen",
+                "quantization": "bf16",
+                "selected_route": "dense_regular_llm_cuda",
+                "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "strict_fallback_policy": "reject",
+                "dense_regular_llm_cuda": true,
+                "bitnet_packed_qk256_cuda": false,
+                "cuda_bitnet_qk256_ops": 0,
+                "cuda_dense_regular_llm_ops": 4,
+                "cpu_fallback_ops": 0,
+                "unsupported_ops": 0,
+                "total_ops": 4,
+                "cuda_ops": 4,
+                "mixed_cuda_routes": false,
+                "fallback_used": false,
+                "strict_cuda_ready": true,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            }
+        });
+
+        let err = validate_strict_cuda_ask_receipt(&run_receipt).unwrap_err().to_string();
+
+        assert!(err.contains("invalid BitNet QK256 execution_plan"), "got: {err}");
+        assert!(err.contains("execution_plan_selected_route_bitnet_qk256_cuda"), "got: {err}");
     }
 
     #[test]
@@ -10615,6 +10756,41 @@ mod tests {
             ),
             "external_tokenizer_file"
         );
+    }
+
+    #[test]
+    fn prompt_authority_reads_sibling_tokenizer_json_metadata_after_resolution() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let tokenizer_path = temp_dir.path().join("tokenizer.json");
+        std::fs::write(
+            &tokenizer_path,
+            r#"{"tokenizer_class":"LlamaTokenizerFast","chat_template":"{{ messages[0]['content'] }}"}"#,
+        )
+        .expect("write tokenizer fixture");
+
+        let metadata = read_resolved_tokenizer_json_prompt_metadata(
+            bitnet_tokenizers::auto::TokenizerSource::Sibling,
+            Some(&tokenizer_path),
+        )
+        .expect("sibling tokenizer metadata");
+
+        assert_eq!(metadata.family.as_deref(), Some("LlamaTokenizerFast"));
+        assert_eq!(metadata.chat_template.as_deref(), Some("{{ messages[0]['content'] }}"));
+    }
+
+    #[test]
+    fn prompt_authority_does_not_parse_gguf_path_as_tokenizer_json_metadata() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let model_path = temp_dir.path().join("model.gguf");
+        std::fs::write(&model_path, br#"{"chat_template":"not-tokenizer-json"}"#)
+            .expect("write gguf-like fixture");
+
+        let metadata = read_resolved_tokenizer_json_prompt_metadata(
+            bitnet_tokenizers::auto::TokenizerSource::GgufMetadata,
+            Some(&model_path),
+        );
+
+        assert!(metadata.is_none());
     }
 
     #[test]

@@ -690,13 +690,14 @@ pub(crate) fn cmd_ci_acceptance_gate(root: &Path) -> Result<()> {
         }
         std::process::exit(AcceptanceExit::MissingModel as i32);
     }
-    if let Some(tokenizer) = &mode.tokenizer_path {
-        if !root.join(tokenizer).is_file() && !Path::new(tokenizer).is_file() {
-            acceptance_fail(
-                AcceptanceExit::Tokenizer,
-                format!("❌ Missing tokenizer: {tokenizer} (required for nightly)"),
-            );
-        }
+    if let Some(tokenizer) = &mode.tokenizer_path
+        && !root.join(tokenizer).is_file()
+        && !Path::new(tokenizer).is_file()
+    {
+        acceptance_fail(
+            AcceptanceExit::Tokenizer,
+            format!("❌ Missing tokenizer: {tokenizer} (required for nightly)"),
+        );
     }
 
     let mut temps = AcceptanceTemps::new();
@@ -913,12 +914,10 @@ fn discover_release_bitnet(
                 .pointer("/target/kind")
                 .and_then(Value::as_array)
                 .is_some_and(|kinds| kinds.iter().any(|kind| kind.as_str() == Some("bin")));
-        if is_bitnet_bin {
-            if let Some(exe) = value.get("executable").and_then(Value::as_str) {
-                let path = PathBuf::from(exe);
-                if is_executable_file(&path) {
-                    return Ok(path);
-                }
+        if is_bitnet_bin && let Some(exe) = value.get("executable").and_then(Value::as_str) {
+            let path = PathBuf::from(exe);
+            if is_executable_file(&path) {
+                return Ok(path);
             }
         }
     }

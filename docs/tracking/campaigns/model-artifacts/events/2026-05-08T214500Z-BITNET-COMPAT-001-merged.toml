@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T21:45:00Z"
+campaign = "model-artifacts"
+item = "BITNET-COMPAT-001"
+event = "merged"
+actor = "codex"
+pr = 4134
+merge_sha = "31452081c805e6dc8710aad8924dd43b99824f2d"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4134 merged the upstream model/kernel compatibility ledger and guard for BitNet model authority.",
+  "The official Microsoft 2B I2_S artifact remains the x86 reference authority for answer and backend gates.",
+  "1bitLLM/bitnet_b1_58-3B on x86 I2_S is recorded as unsupported_upstream and cannot be used for answer_ready, reference_authority, backend_parity, or speedup evidence.",
+  "Diagnostic runs, artifact inspection, and unsupported-path receipts remain allowed for unsupported combinations.",
+]

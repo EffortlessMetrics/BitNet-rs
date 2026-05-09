@@ -1,0 +1,16 @@
+timestamp = "2026-05-08T22:58:47Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PLANNER-004"
+event = "merged"
+actor = "codex"
+pr = 4146
+head_sha = "75215f07536b2cb0af390469cda735a2666cfa29"
+merge_sha = "52165f2dbd67ab7dcc5caf4e7f496b57290253a7"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4146 merged model-aware execution_plan receipt emission for strict ask/run, answer-corpus, warm-session, and benchmark receipts.",
+  "The merged validators reject dense regular-LLM CUDA execution plans as BitNet QK256 proof.",
+  "The merged PR preserved speedup_claim=false, full_cuda_residency_claimed=false, and did not change QK256 math, tokenizer, loader, prompt-template, transformer, or server behavior.",
+]

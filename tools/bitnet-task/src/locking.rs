@@ -23,7 +23,7 @@ pub(crate) fn cmd_fix_locked(_root: &Path, mode: FixLockedMode, files: Vec<Strin
             continue;
         }
 
-        let original = fs::read_to_string(&path).with_context(|| format!("reading {file}"))?;
+        let original = fs::read_to_string(path).with_context(|| format!("reading {file}"))?;
         let updated = add_locked_flags(&original);
         if original == updated {
             if mode == FixLockedMode::DryRun {
@@ -35,13 +35,13 @@ pub(crate) fn cmd_fix_locked(_root: &Path, mode: FixLockedMode, files: Vec<Strin
         changes_detected = true;
         match mode {
             FixLockedMode::Apply => {
-                fs::write(&path, updated).with_context(|| format!("writing {file}"))?;
+                fs::write(path, updated).with_context(|| format!("writing {file}"))?;
                 println!("✓ Updated: {file}");
             }
             FixLockedMode::DryRun => {
                 println!("Would update: {file}");
                 println!("--- Diff ---");
-                print_unified_diff(&path, &updated)?;
+                print_unified_diff(path, &updated)?;
                 println!();
             }
             FixLockedMode::Check => {
@@ -158,7 +158,7 @@ fn is_target_command_line(line: &str) -> bool {
 
 fn is_cargo_or_cross_invocation(command: &str) -> bool {
     let mut words = command.split_whitespace();
-    while words.clone().next().is_some_and(|word| is_shell_assignment(word)) {
+    while words.clone().next().is_some_and(is_shell_assignment) {
         words.next();
     }
     matches!(words.next(), Some("cargo" | "cross"))

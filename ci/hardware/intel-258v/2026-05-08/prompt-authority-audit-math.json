@@ -1,0 +1,331 @@
+{
+  "artifact_kind": "bitnet_prompt_token_authority_audit",
+  "claim_boundary": {
+    "answer_quality_claimed": false,
+    "arc_or_npu_claimed": false,
+    "prompt_token_authority_only": true,
+    "qk256_kernel_claimed": false,
+    "speed_claimed": false
+  },
+  "classification": {
+    "first_divergence_stage": "unknown",
+    "first_mismatch_index": null,
+    "notes": [
+      "current_default_and_metadata_authority_prompt_tokens_match",
+      "model_inference_not_run; first-token logits remain unclassified"
+    ]
+  },
+  "fallback_used": false,
+  "logits": {
+    "available": false,
+    "first_token_top_k": [],
+    "reason": "prompt_token_authority_audit_does_not_run_model_inference"
+  },
+  "machine_id": "intel-258v",
+  "model": {
+    "gguf_architecture": "bitnet-b1.58",
+    "gguf_name": "bitnet2b",
+    "gguf_vocab_size": 128256,
+    "n_kv": 24,
+    "n_tensors": 332,
+    "path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "prompt_variants": [
+    {
+      "mode": "current_default",
+      "prompt_policy": {
+        "add_bos": true,
+        "add_eos": false,
+        "add_generation_prompt": true,
+        "parse_special": true,
+        "rendered_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+        "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+        "template_source": "current_cli_default_heuristic",
+        "template_type": "bitnetcpp-answer"
+      },
+      "tokens": {
+        "encode_error": null,
+        "prompt_token_count": 19,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      }
+    },
+    {
+      "mode": "metadata_authority",
+      "prompt_policy": {
+        "add_bos": true,
+        "add_eos": false,
+        "add_generation_prompt": true,
+        "parse_special": true,
+        "rendered_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+        "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+        "template_source": "gguf_or_tokenizer_metadata",
+        "template_type": "bitnetcpp-answer"
+      },
+      "tokens": {
+        "encode_error": null,
+        "prompt_token_count": 19,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      }
+    },
+    {
+      "mode": "raw",
+      "prompt_policy": {
+        "add_bos": true,
+        "add_eos": false,
+        "add_generation_prompt": false,
+        "parse_special": false,
+        "rendered_prompt": "What is 2+2? Answer with only the number.",
+        "rendered_sha256": "c6ab9cb7f04471f4caa93fdc8e264f6e42272346cf1b104d6a7a71d24484fbaf",
+        "template_source": "explicit_template",
+        "template_type": "raw"
+      },
+      "tokens": {
+        "encode_error": null,
+        "prompt_token_count": 13,
+        "prompt_token_ids": [
+          3923,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13
+        ]
+      }
+    },
+    {
+      "mode": "llama3_chat",
+      "prompt_policy": {
+        "add_bos": false,
+        "add_eos": false,
+        "add_generation_prompt": true,
+        "parse_special": true,
+        "rendered_prompt": "<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nWhat is 2+2? Answer with only the number.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+        "rendered_sha256": "687dd411a471d36aefa832860c8053bdb9b463413805d7c85d6b3c38d89fc563",
+        "template_source": "explicit_template",
+        "template_type": "llama3-chat"
+      },
+      "tokens": {
+        "encode_error": null,
+        "prompt_token_count": 24,
+        "prompt_token_ids": [
+          128000,
+          128000,
+          128006,
+          882,
+          128007,
+          271,
+          3923,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          128006,
+          78191,
+          128007,
+          271
+        ]
+      }
+    },
+    {
+      "mode": "bitnetcpp_answer",
+      "prompt_policy": {
+        "add_bos": true,
+        "add_eos": false,
+        "add_generation_prompt": true,
+        "parse_special": true,
+        "rendered_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+        "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+        "template_source": "explicit_template",
+        "template_type": "bitnetcpp-answer"
+      },
+      "tokens": {
+        "encode_error": null,
+        "prompt_token_count": 19,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      }
+    },
+    {
+      "mode": "hf_apply_chat_template_equivalent",
+      "prompt_policy": {
+        "add_bos": true,
+        "add_eos": false,
+        "add_generation_prompt": true,
+        "parse_special": true,
+        "rendered_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+        "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+        "template_source": "local_shape_only_reference_token_ids_not_embedded",
+        "template_type": "bitnetcpp-answer"
+      },
+      "tokens": {
+        "encode_error": null,
+        "prompt_token_count": 19,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      }
+    },
+    {
+      "mode": "bitnet_cpp_conversation_equivalent",
+      "prompt_policy": {
+        "add_bos": true,
+        "add_eos": false,
+        "add_generation_prompt": true,
+        "parse_special": true,
+        "rendered_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:",
+        "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3",
+        "template_source": "local_shape_only_reference_token_ids_not_embedded",
+        "template_type": "bitnetcpp-answer"
+      },
+      "tokens": {
+        "encode_error": null,
+        "prompt_token_count": 19,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ]
+      }
+    }
+  ],
+  "reference_inputs": {
+    "bitnet_cpp_conversation_mode": {
+      "rendered_prompt_available": true,
+      "source": "local BitnetCppAnswer envelope; CPU258V-020 will compare bitnet.cpp/reference IDs",
+      "token_ids_available": false
+    },
+    "hf_apply_chat_template": {
+      "rendered_prompt_available": true,
+      "source": "local BitnetCppAnswer envelope; CPU258V-020 will compare official HF token IDs",
+      "token_ids_available": false
+    }
+  },
+  "schema_version": "1.0.0",
+  "timestamp": "2026-05-08T21:25:42.308413800+00:00",
+  "tokenizer": {
+    "bos_token_id": null,
+    "chat_template_present": true,
+    "chat_template_source": "gguf",
+    "eos_token_id": null,
+    "family": "llama3",
+    "gguf_model": "gpt2",
+    "path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\tokenizer.json",
+    "source": "explicit",
+    "type": "llama3",
+    "vocab_size": 128256
+  },
+  "tokens": {
+    "eos_token_id": null,
+    "generated_token_ids": []
+  }
+}

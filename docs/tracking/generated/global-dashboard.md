@@ -9,17 +9,18 @@
 | apple-m4-operational | M4-OP-006 | #3882 | merged | none | Do not reopen the completed apple-m4 proof campaign. |
 | apple-m4-productization | M4-PROD-005 | #4034 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
 | apple-m4-slm-answer | SLM-M4-007 | #3991 | merged | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
+| apple-m4-slm-hardening | M4-SLM-HARDEN-002 | TBD | ready | M4-SLM-HARDEN-003 | Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns. |
 | apple-m4-slm-performance | M4-SLM-PERF-007 | #4081 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, apple-m4-slm-answer, or apple-m4-productization campaigns. |
 | ci-coverage | CI-COVERAGE-001 | #3620 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | CPU-ANSWER-007 | #4019 | merged | none | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
-| intel-258v-platform | CPU258V-017 | #4123 | pr_open | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
+| intel-258v-platform | CPU258V-017 | #4123 | merged | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
 | intel-a770 | A770-003 | TBD | ready | none | OpenCL-first for native A770 proof. |
 | intel-npu | NPU-011 | #4097 | merged | none | Device-node detection is not inference. |
-| model-artifacts | BITNET-COMPAT-001 | #4134 | pr_open | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
-| nvidia-5070ti | CUDA-PLANNER-002 | #4129 | merged | none | CUDA visibility is not kernel execution. |
+| model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
+| nvidia-5070ti | CUDA-DENSE-006 | #4152 | merged | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
-| slm-cpu | SLM-CPU-007 | #4132 | pr_open | none | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | SLM-CPU-008 | TBD | ready | none | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | pr_open | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM-001 | TBD | ready | WASM-002 | WASM detection is not inference. |

@@ -1,0 +1,10 @@
+timestamp = "2026-05-08T21:15:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-007B"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "After #4132 landed the trace controls, the remaining SLM-CPU-007 work is actual Qwen3 first-drift checkpoint capture.",
+  "The artifact slice must classify the first divergent checkpoint without claiming answer quality, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]

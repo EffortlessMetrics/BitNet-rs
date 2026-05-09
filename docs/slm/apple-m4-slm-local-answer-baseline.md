@@ -74,6 +74,13 @@ bitnet mac check
 Ask one question through the supported Mac wrapper:
 
 ```bash
+bitnet mac ask "What is 2+2? Answer briefly." \
+  --json-out target/apple-m4-productization/mac-ask.json
+```
+
+The older flag form is kept for scripts:
+
+```bash
 bitnet mac ask \
   --question "What is 2+2? Answer briefly." \
   --json-out target/apple-m4-productization/mac-ask.json

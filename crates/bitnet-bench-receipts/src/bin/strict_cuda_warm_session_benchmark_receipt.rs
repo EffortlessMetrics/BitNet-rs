@@ -95,6 +95,7 @@ fn build_receipt(args: &Args, receipts: &[Value]) -> Result<Value, Box<dyn Error
     let runs = build_runs(&args.cuda_warm_session_receipts, receipts)?;
     let kernel_stats = aggregate_kernel_stats(&runs)?;
     let cuda_execution_residency = aggregate_cuda_residency(first, &kernel_stats);
+    let execution_plan = execution_plan_from_source(first)?;
     let first_run_generated_tokens = u64_at(&runs[0], "/generated_tokens_total")?;
     let first_run_prompt_tokens = u64_at(&runs[0], "/prompt_tokens_total")?;
 
@@ -114,6 +115,7 @@ fn build_receipt(args: &Args, receipts: &[Value]) -> Result<Value, Box<dyn Error
         "speedup_claim": false,
         "benchmark_qualified_speedup": false,
         "full_cuda_residency_claimed": false,
+        "execution_plan": execution_plan,
         "proof_inputs": {
             "cuda_warm_session_receipts": path_labels(&args.cuda_warm_session_receipts),
             "strict_ask_reference_receipt": path_label(&args.strict_ask_reference_receipt)
@@ -278,6 +280,7 @@ fn run_record(repeat_index: usize, path: &Path, receipt: &Value) -> Result<Value
         "host_to_device_bytes": u64_at(receipt, "/timing/host_to_device_bytes")?,
         "device_to_host_bytes": u64_at(receipt, "/timing/device_to_host_bytes")?,
         "memory_hwm_bytes": u64_at(receipt, "/cuda/memory_hwm_bytes")?,
+        "execution_plan": execution_plan_from_source(receipt)?,
         "turns": turn_records(receipt)?
     }))
 }
@@ -297,12 +300,21 @@ fn turn_records(receipt: &Value) -> Result<Vec<Value>, Box<dyn Error>> {
                 "prompt_tokens": u64_at(turn, "/prompt_tokens")?,
                 "quality_passed": bool_at(turn, "/quality/garbage_filter_passed")?,
                 "fallback_used": bool_at(turn, "/backend/fallback_used")?,
+                "execution_plan": turn.pointer("/execution_plan").cloned().unwrap_or(Value::Null),
                 "kernel_time_ms": number_at(turn, "/cuda_execution_residency/host_device_transfer_accounting/kernel_time_ms")?,
                 "host_to_device_bytes": u64_at(turn, "/cuda_execution_residency/host_device_transfer_accounting/host_to_device_bytes")?,
                 "device_to_host_bytes": u64_at(turn, "/cuda_execution_residency/host_device_transfer_accounting/device_to_host_bytes")?
             }))
         })
         .collect()
+}
+
+fn execution_plan_from_source(source: &Value) -> Result<Value, Box<dyn Error>> {
+    source
+        .pointer("/execution_plan")
+        .filter(|plan| plan.is_object())
+        .cloned()
+        .ok_or_else(|| "CUDA warm-session source receipt must include execution_plan".into())
 }
 
 fn workload_prompts(receipt: &Value) -> Result<Vec<Value>, Box<dyn Error>> {

@@ -2,7 +2,7 @@
   "schema": 1,
   "artifact_kind": "lunar_lake_platform_comparison_index",
   "machine_id": "intel-258v",
-  "captured_at_utc": "2026-05-08T17:15:00Z",
+  "captured_at_utc": "2026-05-08T22:21:06Z",
   "proof_stage": "comparison_indexed",
   "comparison_scope": "same_machine_artifact_index",
   "artifact_dates": [
@@ -12,7 +12,7 @@
   ],
   "source_artifacts": {
     "platform_probe": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
-    "platform_probe_cli": "ci/hardware/intel-258v/2026-05-06/platform-probe-cli.json",
+    "platform_probe_cli": "ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json",
     "cpu_strict_decode_smoke": "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
     "cpu_phase_warm_session": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
     "cpu_phase_prefill_512": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json",
@@ -22,6 +22,7 @@
     "cpu_answer_parity": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
     "cpu_reference_bundle": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json",
     "arc140v_runtime_probe": "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json",
+    "arc140v_openvino_gpu_smoke": "ci/hardware/intel-258v/2026-05-08/arc-140v-openvino-gpu-smoke.json",
     "arc140v_opencl_smoke": "ci/hardware/intel-258v/2026-05-07/arc-140v-opencl-smoke.json",
     "arc140v_opencl_cpu_parity": "ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json",
     "npu_runtime_probe": "ci/hardware/intel-258v/2026-05-08/npu-openvino-runtime-probe.json",
@@ -29,7 +30,8 @@
     "npu_bitnet_rmsnorm_subgraph_parity": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
     "npu_bitnet_linear_projection_subgraph_parity": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
     "npu_bitnet_ffn_subgraph_parity": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-ffn-subgraph-parity.json",
-    "npu_openvino_llamacpp_gguf_reference": "ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json"
+    "npu_openvino_llamacpp_gguf_reference": "ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json",
+    "platform_probe_2026_05_06": "ci/hardware/intel-258v/2026-05-06/platform-probe.json"
   },
   "lanes": {
     "cpu": {
@@ -70,6 +72,7 @@
       "selected_backend": "intel-arc-140v-opencl",
       "proof_stages": [
         "runtime_detected",
+        "openvino_gpu_smoke_tested",
         "kernel_smoke_tested",
         "parity_tested"
       ],
@@ -77,14 +80,16 @@
       "primary_artifact": "ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json",
       "supporting_artifacts": [
         "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json",
+        "ci/hardware/intel-258v/2026-05-08/arc-140v-openvino-gpu-smoke.json",
         "ci/hardware/intel-258v/2026-05-07/arc-140v-opencl-smoke.json",
         "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json"
       ],
-      "claim_allowed": "Arc 140V native OpenCL executed the recorded tiny vector-add parity kernel and matched the selected 258V CPU reference with fallback_used=false.",
+      "claim_allowed": "Arc 140V OpenVINO GPU executed the recorded tiny static graph, and native OpenCL executed the recorded tiny vector-add parity kernel against the selected 258V CPU reference with fallback_used=false.",
       "claims_not_allowed": [
         "BitNet inference works on Arc 140V.",
         "Arc 140V accelerates BitNet.",
         "Packed BitNet QK256 decode works on Arc 140V.",
+        "OpenVINO GPU.0 smoke proves native OpenCL BitNet kernels.",
         "OpenVINO GPU smoke proves native OpenCL BitNet kernels.",
         "CPU fallback satisfies Arc 140V proof."
       ]
@@ -132,15 +137,18 @@
     "notes": [
       "This index links independently scoped receipts from the same Lunar Lake laptop.",
       "It does not normalize timings across CPU, Arc 140V, and NPU lanes.",
-      "A lane claim is allowed only when the cited lane artifact independently proves it."
+      "A lane claim is allowed only when the cited lane artifact independently proves it.",
+      "The 2026-05-08 CLI platform probe records OpenVINO CPU/GPU/NPU visibility and keeps Level Zero absence explicit."
     ]
   },
   "fallback_used": false,
   "may_claim": [
     "The repository has a same-machine 258V comparison index linking CPU, Arc 140V, and Intel NPU artifacts by path, backend identity, proof stage, and fallback status.",
+    "The refreshed 2026-05-08 CLI platform probe records OpenVINO CPU/GPU/NPU visibility on the same Lunar Lake laptop while preserving Level Zero as unavailable.",
     "The 258V CPU reference plate is available for later accelerator comparisons.",
     "Arc 140V and Intel NPU evidence remain separately scoped and do not inherit CPU proof.",
     "Arc 140V native OpenCL evidence includes isolated vector-add CPU-reference parity.",
+    "Arc 140V OpenVINO GPU evidence includes a tiny static GPU graph smoke receipt with Arc 140V identity and fallback_used=false.",
     "Intel NPU live OpenVINO evidence includes runtime visibility, tiny static graph smoke, and selected static BitNet-shaped RMSNorm, linear-projection, and FFN/ReLU2 subgraph parity receipts."
   ],
   "must_not_claim": [

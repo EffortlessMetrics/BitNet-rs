@@ -42,6 +42,9 @@
 | apple-m4-slm-answer | SLM-M4-005 | SLM-M4-004 | merged |
 | apple-m4-slm-answer | SLM-M4-006 | SLM-M4-004, SLM-M4-005 | merged |
 | apple-m4-slm-answer | SLM-M4-007 | SLM-M4-005, SLM-M4-006 | merged |
+| apple-m4-slm-hardening | M4-SLM-HARDEN-002 | M4-SLM-HARDEN-001 | ready |
+| apple-m4-slm-hardening | M4-SLM-HARDEN-003 | M4-SLM-HARDEN-002 | proposed |
+| apple-m4-slm-hardening | M4-SLM-HARDEN-004 | M4-SLM-HARDEN-003 | proposed |
 | apple-m4-slm-performance | M4-SLM-PERF-002 | M4-SLM-PERF-001 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-003 | M4-SLM-PERF-002 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-004 | M4-SLM-PERF-003 | merged |
@@ -90,7 +93,7 @@
 | intel-258v-platform | CPU258V-016 | CPU258V-015, CPU258V-013, LNL258V-COMPARE-001 | merged |
 | intel-258v-platform | ARC140V-005 | ARC140V-004, CPU258V-016 | merged |
 | intel-258v-platform | LNL258V-COMPARE-002 | CPU258V-016, ARC140V-005 | merged |
-| intel-258v-platform | CPU258V-017 | CPU258V-016, LNL258V-COMPARE-002 | pr_open |
+| intel-258v-platform | CPU258V-017 | CPU258V-016, LNL258V-COMPARE-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
@@ -106,7 +109,7 @@
 | model-artifacts | MODEL-ARTIFACT-005 | MODEL-ARTIFACT-004 | merged |
 | model-artifacts | MODEL-ARTIFACT-006 | MODEL-ARTIFACT-005 | merged |
 | model-artifacts | MODEL-ARTIFACT-007 | MODEL-ARTIFACT-006 | merged |
-| model-artifacts | BITNET-COMPAT-001 | MODEL-ARTIFACT-007 | pr_open |
+| model-artifacts | BITNET-COMPAT-001 | MODEL-ARTIFACT-007 | merged |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
 | nvidia-5070ti | RTX5070TI-005 | RTX5070TI-004 | merged |
 | nvidia-5070ti | RTX5070TI-006 | RTX5070TI-005 | merged |
@@ -135,6 +138,10 @@
 | nvidia-5070ti | CUDA-DENSE-002 | CUDA-DENSE-001 | merged |
 | nvidia-5070ti | CUDA-DENSE-003 | CUDA-DENSE-002 | merged |
 | nvidia-5070ti | CUDA-DENSE-004 | CUDA-DENSE-003 | merged |
+| nvidia-5070ti | CUDA-PLANNER-003 | CUDA-PLANNER-002 | merged |
+| nvidia-5070ti | CUDA-PLANNER-004 | CUDA-PLANNER-003 | merged |
+| nvidia-5070ti | CUDA-DENSE-005 | CUDA-DENSE-004, CUDA-PLANNER-004 | merged |
+| nvidia-5070ti | CUDA-DENSE-006 | CUDA-DENSE-005 | merged |
 | slm-cpu | SLM-CPU-001 | SLM-CPU-000 | merged |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | merged |
 | slm-cpu | SLM-CPU-002A | SLM-CPU-002 | merged |
@@ -144,7 +151,9 @@
 | slm-cpu | SLM-CPU-005 | SLM-CPU-004 | merged |
 | slm-cpu | SLM-CPU-006A | SLM-CPU-005 | merged |
 | slm-cpu | SLM-CPU-006B | SLM-CPU-006A | merged |
-| slm-cpu | SLM-CPU-007 | SLM-CPU-006B | pr_open |
+| slm-cpu | SLM-CPU-007A | SLM-CPU-006B | merged |
+| slm-cpu | SLM-CPU-007B | SLM-CPU-007A | merged |
+| slm-cpu | SLM-CPU-008 | SLM-CPU-007B | ready |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | pr_open |
 | wasm-inference | WASM-002 | WASM-001 | ready |

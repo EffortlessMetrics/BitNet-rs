@@ -1,0 +1,17 @@
+timestamp = "2026-05-08T23:27:21Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-005"
+event = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-005-model-family-planner-bridge"
+pr = 4150
+head_sha = "0b805c9931aba0d80eef03c5fc3da8aa85a07e26"
+merge_sha = "bacc3d753bd6ac385f08b160cf3f253f5deb43ce"
+previous_status = "in_progress"
+new_status = "merged"
+
+notes = [
+  "Merged PR #4150 to bridge dense regular-LLM CUDA fixture receipts to the model-aware execution_plan contract.",
+  "The merged dense receipts identify Qwen-family dense FP16 metadata as dense_regular_llm_cuda with CPU fallback, unsupported, speedup, full-residency, and BitNet packed QK256 proof claims false.",
+  "No dense GGUF inference, dense CUDA math implementation, BitNet QK256 math, tokenizer, loader, transformer, server, speedup, or full-residency claim was added.",
+]
