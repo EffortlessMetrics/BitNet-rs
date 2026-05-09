@@ -1,0 +1,13 @@
+timestamp = "2026-05-09T15:00:09Z"
+campaign = "apple-m4-slm-excellence"
+item = "M4-SLM-EX-010"
+event = "pr_open"
+actor = "codex"
+pr = 4307
+head_sha = "279951313556fbef8cab849cd1d01e3ed95aeac4"
+
+notes = [
+  "Opened PR #4307 to publish the M4 mini dense SLM user expectation envelope.",
+  "The envelope uses existing committed M4 receipts for release-mode warm profiles and long resident-session soak evidence.",
+  "No live model run, model download, broad Apple Silicon performance claim, or BitNet/Metal/QK256 claim is included.",
+]
