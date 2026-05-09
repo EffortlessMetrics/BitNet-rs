@@ -1,0 +1,16 @@
+timestamp = "2026-05-09T04:22:05Z"
+campaign = "model-artifacts"
+item = "BITNET-CONTRACT-002"
+event = "pr_open"
+actor = "codex"
+pr = 4199
+head_sha = "2cf515bbab243fbf17584be8c480bb05e9810dff"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "PR #4199 wires the official Microsoft BitNet 2B I2_S artifact into `bitnet model verify` and model cache metadata.",
+  "Verifier JSON and cache/fetch metadata expose the `microsoft_bitnet_b158_2b_4t_i2s` contract summary and route claim boundaries.",
+  "Stable aliases resolve to the official I2_S artifact ID without changing runtime inference behavior.",
+  "No tokenizer, loader, prompt-template, transformer, QK256, CUDA, dense GGUF, server, full-residency, or speed-claim behavior changes are introduced.",
+]
