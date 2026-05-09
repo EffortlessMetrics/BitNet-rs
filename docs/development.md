@@ -61,6 +61,8 @@ cargo run --no-default-features -p xtask -- benchmark --model models/test.gguf -
 ### Core Development
 - **[Build Commands](development/build-commands.md)** - Comprehensive build and test commands
 - **[Development Standards](development/development-standards.md)** - Coding standards and best practices
+- **[Crate Boundary Policy](development/CRATE_BOUNDARY_POLICY.md)** - Rules for deciding when a design seam is a crate versus a module family
+- **[Repository Surfaces](development/REPO_SURFACES.md)** - Target public crate surface, owner map, and migration roadmap
 - **[CI Integration](development/ci-integration.md)** - Continuous integration setup
 - **[Test Suite](development/test-suite.md)** - Testing framework and practices
 
