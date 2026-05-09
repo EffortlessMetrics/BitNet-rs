@@ -74,7 +74,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-HARDEN-002"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-hardening/M4-SLM-HARDEN-002-cache-repair"
 stackable = false
 review_mode = "codex_premerge"
@@ -84,7 +84,8 @@ blocked_by = ["M4-SLM-HARDEN-001"]
 acceptance = "Improve first-run, corrupted-cache, low-disk, offline, verify, and prune guidance for Mac SLM operators without changing model artifacts or backend claims."
 commands = [
   "cargo fmt --all -- --check",
-  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests model mac -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests model -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --test cli_arg_tests mac -- --nocapture",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-hardening",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",

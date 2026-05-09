@@ -204,20 +204,17 @@ pub(crate) fn verified_apple_m4_slm_model(
     }
     let cache_root = resolve_cache_root(cache_dir)?;
     let path = model_path(&cache_root, model);
-    let result = verify_model(model, &path)?;
-    if !result.passed {
-        let actual = match (result.actual_bytes, result.actual_sha256.as_deref()) {
-            (Some(bytes), Some(sha)) => format!("bytes={bytes}, sha256={sha}"),
-            (Some(bytes), None) => format!("bytes={bytes}, sha256=<unavailable>"),
-            _ => "missing".to_string(),
-        };
+    let status = cache_status(&cache_root, *model, true)?;
+    if !cache_ready(&status) {
         anyhow::bail!(
-            "cached Apple M4 SLM model `{}` is not verified at {} ({actual}); run `bitnet model fetch {}` first",
+            "cached Apple M4 SLM model `{}` is not ready at {}.\nState: {}\n{}",
             model.id,
             path.display(),
-            model.id
+            cache_state_label(&status),
+            cache_repair_guidance(&cache_root, &status)
         );
     }
+    let result = verify_model(model, &path)?;
     write_cache_metadata(&cache_root, model, &path, &result)?;
     Ok(VerifiedCachedModel {
         id: model.id.to_string(),
@@ -244,10 +241,7 @@ pub(crate) fn apple_m4_slm_cache_status_json(
     let model = supported_model(id)?;
     let cache_root = resolve_cache_root(cache_dir)?;
     let status = cache_status(&cache_root, *model, verify)?;
-    let ready = status.present
-        && status.size_matches
-        && status.metadata_present
-        && status.verified.unwrap_or(true);
+    let ready = cache_ready(&status);
     Ok(serde_json::json!({
         "artifact_kind": "apple_m4_slm_model_cache_check",
         "id": model.id,
@@ -280,7 +274,7 @@ pub(crate) fn apple_m4_slm_cache_status_json(
         "next_step": if ready {
             serde_json::Value::Null
         } else {
-            serde_json::json!(format!("run `bitnet model fetch {}`", model.id))
+            serde_json::json!(cache_repair_guidance(&cache_root, &status))
         },
     }))
 }
@@ -342,7 +336,12 @@ async fn fetch_model(
     }
 
     if bitnet_download::offline_enabled(offline) {
-        anyhow::bail!("model `{}` is not verified in cache and offline mode is enabled", model.id);
+        let status = cache_status(&cache_root, *model, true)?;
+        anyhow::bail!(
+            "model `{}` is not verified in cache and offline mode is enabled.\n{}",
+            model.id,
+            offline_repair_guidance(&cache_root, &status)
+        );
     }
 
     warn_if_low_disk(&cache_root, model.bytes);
@@ -425,6 +424,7 @@ fn verify_model_command(
         println!("verified {} at {}", model.id, path.display());
     } else {
         println!("verification failed for {} at {}", model.id, path.display());
+        eprintln!("{}", verify_failure_guidance(&cache_root, model, &path, &result));
     }
     if result.passed { Ok(()) } else { anyhow::bail!("model `{}` failed verification", model.id) }
 }
@@ -504,6 +504,14 @@ fn prune_models(
                 "not cached"
             };
             println!("{action}: {} ({})", result.id, result.path.display());
+            if !result.existed {
+                if let Ok(model) = supported_model(&result.id) {
+                    println!(
+                        "next: fetch it with `{}`",
+                        model_command("fetch", model, Some(&cache_root))
+                    );
+                }
+            }
         }
     }
     Ok(())
@@ -567,16 +575,84 @@ fn cache_status(cache_root: &Path, model: SupportedModel, verify: bool) -> Resul
     })
 }
 
+fn cache_ready(status: &CacheStatus) -> bool {
+    status.present
+        && status.size_matches
+        && status.metadata_present
+        && status.verified.unwrap_or(true)
+}
+
 fn cache_state_label(status: &CacheStatus) -> &'static str {
     if !status.present {
         "missing"
     } else if !status.size_matches {
         "invalid-size"
+    } else if status.verified == Some(false) {
+        "invalid-sha"
     } else if !status.metadata_present {
         "unverified"
     } else {
         "ready"
     }
+}
+
+fn cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> String {
+    let model = &status.model;
+    let fetch = model_command("fetch", model, Some(cache_root));
+    let verify = model_command("verify", model, Some(cache_root));
+    let prune = model_command("prune", model, Some(cache_root));
+    match cache_state_label(status) {
+        "missing" => format!(
+            "First run: the supported model is missing from {}. Run `{fetch}`.",
+            status.cache_path.display()
+        ),
+        "invalid-size" => format!(
+            "Cache repair: {} has the wrong size or is incomplete. Run `{prune}`, then `{fetch}`.",
+            status.cache_path.display()
+        ),
+        "invalid-sha" => format!(
+            "Cache repair: {} failed SHA256 verification. Run `{prune}`, then `{fetch}`.",
+            status.cache_path.display()
+        ),
+        "unverified" => format!(
+            "Cache repair: {} is present but missing BitNet-rs model-cache metadata. Run `{verify}`; if verification fails, run `{prune}` then `{fetch}`.",
+            status.cache_path.display()
+        ),
+        _ => format!("Cache is ready. Optional check: `{verify}`."),
+    }
+}
+
+fn offline_repair_guidance(cache_root: &Path, status: &CacheStatus) -> String {
+    let model = &status.model;
+    let fetch = model_command("fetch", model, Some(cache_root));
+    let verify = model_command("verify", model, Some(cache_root));
+    let prune = model_command("prune", model, Some(cache_root));
+    format!(
+        "Offline mode cannot repair the {} cache state. Disable offline mode and run `{fetch}`, or pre-seed the GGUF at {} and run `{verify}`. If a partial artifact is present, run `{prune}` before fetching.",
+        cache_state_label(status),
+        status.cache_path.display()
+    )
+}
+
+fn verify_failure_guidance(
+    cache_root: &Path,
+    model: &SupportedModel,
+    path: &Path,
+    result: &VerifyResult,
+) -> String {
+    let actual_bytes =
+        result.actual_bytes.map(|bytes| bytes.to_string()).unwrap_or_else(|| "missing".to_string());
+    let actual_sha = result.actual_sha256.as_deref().unwrap_or("missing");
+    let fetch = model_command("fetch", model, Some(cache_root));
+    let prune = model_command("prune", model, Some(cache_root));
+    format!(
+        "repair: {} is not the supported artifact (expected bytes={}, sha256={}; got bytes={}, sha256={}). If this is the cached file, run `{prune}` then `{fetch}`. If this is an explicit --path, replace it with a verified artifact.",
+        path.display(),
+        model.bytes,
+        model.sha256,
+        actual_bytes,
+        actual_sha
+    )
 }
 
 fn verify_model(model: &SupportedModel, path: &Path) -> Result<VerifyResult> {
@@ -691,6 +767,17 @@ fn print_fetch_result(status: &str, verify: &VerifyResult, json: bool) -> Result
     Ok(())
 }
 
+fn model_command(action: &str, model: &SupportedModel, cache_root: Option<&Path>) -> String {
+    let cache_arg =
+        cache_root.map(|path| format!(" --cache-dir {}", shellish_path(path))).unwrap_or_default();
+    format!("bitnet model {action} {}{cache_arg}", model.id)
+}
+
+fn shellish_path(path: &Path) -> String {
+    let value = path.display().to_string();
+    if value.chars().any(char::is_whitespace) { format!("{value:?}") } else { value }
+}
+
 fn warn_if_low_disk(cache_root: &Path, expected_bytes: u64) {
     let parent =
         cache_root.ancestors().find(|path| path.exists()).unwrap_or_else(|| Path::new("."));
@@ -703,6 +790,9 @@ fn warn_if_low_disk(cache_root: &Path, expected_bytes: u64) {
             "warning: low disk headroom for model fetch: available={}, recommended>={}",
             format_size(available, DECIMAL),
             format_size(recommended, DECIMAL)
+        );
+        eprintln!(
+            "warning: free space before fetching with `bitnet model prune --all` or choose a larger cache with `--cache-dir <PATH>` / BITNET_MODEL_CACHE_DIR."
         );
     }
 }
@@ -752,5 +842,50 @@ mod tests {
         let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
         let path = model_path(&root, model);
         assert!(path.ends_with("qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf"));
+    }
+
+    #[test]
+    fn cache_state_distinguishes_bad_hash_from_ready() {
+        let root = PathBuf::from("/tmp/bitnet-cache");
+        let model = *supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
+        let status = CacheStatus {
+            model,
+            cache_path: model_path(&root, &model),
+            metadata_path: metadata_path(&root, &model),
+            present: true,
+            cached: true,
+            size_matches: true,
+            metadata_present: true,
+            verified: Some(false),
+        };
+
+        assert!(!cache_ready(&status));
+        assert_eq!(cache_state_label(&status), "invalid-sha");
+        let guidance = cache_repair_guidance(&root, &status);
+        assert!(guidance.contains("bitnet model prune qwen2.5-0.5b-instruct-q8_0"));
+        assert!(guidance.contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+    }
+
+    #[test]
+    fn cache_repair_guidance_handles_metadata_missing() {
+        let root = PathBuf::from("/tmp/bitnet-cache");
+        let model = *supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
+        let status = CacheStatus {
+            model,
+            cache_path: model_path(&root, &model),
+            metadata_path: metadata_path(&root, &model),
+            present: true,
+            cached: false,
+            size_matches: true,
+            metadata_present: false,
+            verified: Some(true),
+        };
+
+        assert!(!cache_ready(&status));
+        assert_eq!(cache_state_label(&status), "unverified");
+        assert!(
+            cache_repair_guidance(&root, &status)
+                .contains("bitnet model verify qwen2.5-0.5b-instruct-q8_0")
+        );
     }
 }
