@@ -161,7 +161,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EX-004"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-excellence/M4-SLM-EX-004-allocation-cleanup"
 stackable = false
 review_mode = "codex_premerge"
@@ -178,6 +178,7 @@ commands = [
 ]
 allowed_paths = [
   "crates/bitnet-cli/**",
+  "crates/bitnet-sampling/**",
   "crates/**/tests/**",
   "ci/hardware/apple-m4-mac-mini/**",
   "docs/slm/**",

@@ -97,6 +97,18 @@ impl SamplingStrategy {
         Self { config, rng, logits_buffer: Vec::new() }
     }
 
+    /// Reserve reusable logits scratch capacity before entering a decode loop.
+    ///
+    /// This keeps sampling deterministic while letting callers move the first
+    /// `vocab_size * sizeof(f32)` scratch allocation out of the token sampling
+    /// hot path.
+    pub fn reserve_logits_capacity(&mut self, capacity: usize) {
+        let current = self.logits_buffer.capacity();
+        if current < capacity {
+            self.logits_buffer.reserve(capacity - current);
+        }
+    }
+
     /// Sample the next token from logits.
     ///
     /// Pipeline (all in-place via `bitnet-logits`):
@@ -289,6 +301,11 @@ impl SamplingStrategy {
         }
 
         self.config = config;
+    }
+
+    #[cfg(test)]
+    fn logits_buffer_capacity(&self) -> usize {
+        self.logits_buffer.capacity()
     }
 }
 
@@ -549,11 +566,11 @@ mod property_tests {
     // SamplingStrategy with temperature=0 behaves like greedy.
     proptest! {
         #[test]
-        fn strategy_temp_zero_is_greedy(
-            logits in prop::collection::vec(-10f32..=10f32, 2..=32),
-            seed in 0u64..=u64::MAX,
-        ) {
-            let config = SamplingConfig {
+    fn strategy_temp_zero_is_greedy(
+        logits in prop::collection::vec(-10f32..=10f32, 2..=32),
+        seed in 0u64..=u64::MAX,
+    ) {
+        let config = SamplingConfig {
                 temperature: 0.0,
                 seed: Some(seed),
                 ..Default::default()
@@ -563,5 +580,20 @@ mod property_tests {
             let greedy = greedy_sample(&logits).unwrap();
             prop_assert_eq!(result, greedy, "temperature=0 should be greedy");
         }
+    }
+
+    #[test]
+    fn strategy_can_preallocate_logits_scratch() {
+        let mut strategy = SamplingStrategy::new(SamplingConfig {
+            temperature: 0.0,
+            seed: Some(7),
+            ..Default::default()
+        });
+
+        strategy.reserve_logits_capacity(128);
+        assert!(strategy.logits_buffer_capacity() >= 128);
+        let token = strategy.sample(&[0.1, 0.4, 0.2], &[]).unwrap();
+        assert_eq!(token, 1);
+        assert!(strategy.logits_buffer_capacity() >= 128);
     }
 }
