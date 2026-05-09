@@ -83,6 +83,8 @@ Information-oriented. Look up exact behaviors, formats, and APIs.
 | [development/gpu-development.md](development/gpu-development.md) | CUDA development guide |
 | [development/validation-framework.md](development/validation-framework.md) | Quality assurance pipeline |
 | [development/xtask.md](development/xtask.md) | Developer tooling reference |
+| [development/CRATE_BOUNDARY_POLICY.md](development/CRATE_BOUNDARY_POLICY.md) | Policy for public crates, internal module families, dev-only crates, and new package boundaries |
+| [development/REPO_SURFACES.md](development/REPO_SURFACES.md) | Target public surface map, collapse lanes, and crate owner migration plan |
 | [performance-benchmarking.md](performance-benchmarking.md) | Benchmarking setup and baselines |
 
 ---
