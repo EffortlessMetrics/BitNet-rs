@@ -1872,6 +1872,60 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-011"
+status = "in_progress"
+branch = "codex/cuda-dense-011-layer0-linear-sweep"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-010"]
+acceptance = "Record live RTX 5070 Ti dense GGUF linear role-sweep receipts for the verified Qwen2.5 0.5B Q8_0 artifact using the existing dense-gguf-linear-parity harness, covering attention_q, attention_k, attention_v, attention_output, mlp_gate, mlp_up, mlp_down, and output while preserving dense_regular_llm_cuda routing, fallback_used=false, BitNet packed QK256 proof false, dense GGUF inference false, speedup_claim=false, and full_cuda_residency_claimed=false."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-linear-parity --model <verified-qwen2.5-q8-gguf> --role <role> --device-index 0 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-linear-role-sweep-qwen25-q8\\<role>.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-linear-role-sweep-qwen25-q8\\attention_q.json",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_linear_parity -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/commands/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "dense GGUF full-model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "server runtime behavior",
+]
+may_claim = [
+  "Verified Qwen2.5 0.5B Q8_0 dense GGUF attention, MLP, and output linear tensors were extracted and run through the existing dense FP16 CUDA bridge on the RTX 5070 Ti.",
+  "The role-sweep receipts record dense_regular_llm_cuda routing, fallback_used=false, transfer accounting, and parity pass for every covered role.",
+  "The live dense GGUF role-sweep CUDA parity receipts remain rejected as BitNet packed I2S/QK256 proof.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, or server behavior changed.",
+  "A full Qwen token, layer, decode, or chat path works on CUDA.",
+  "Full dense regular LLM CUDA residency exists.",
+]
+
+[[work_item]]
 id = "CUDA-UX-002"
 status = "merged"
 branch = "codex/cuda-ux-002-ask-proof-summary"

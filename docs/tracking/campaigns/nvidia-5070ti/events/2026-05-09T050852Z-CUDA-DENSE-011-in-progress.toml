@@ -1,0 +1,14 @@
+timestamp = "2026-05-09T05:08:52Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-011"
+event = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-011-layer0-linear-sweep"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Record a live dense GGUF linear role sweep for Qwen2.5 0.5B Q8_0 on the RTX 5070 Ti.",
+  "Use the existing dense-gguf-linear-parity harness for attention, MLP, and output linear roles.",
+  "No dense GGUF inference, Qwen token/decode/chat, speedup, full-residency, server, tokenizer, transformer, or BitNet QK256 claim is allowed.",
+]
