@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T01:48:49Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-042"
+event = "in_progress"
+from = "pending"
+to = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-042-one-token-impl"
+summary = "Started CUDA-DENSE-042 one-token proof receipt validator work."
+notes = [
+  "CUDA-DENSE-042 implements the fail-closed receipt validator and synthetic rejection tests for the governed dense Qwen one-token strict CUDA proof contract.",
+  "This slice deliberately does not add a runtime one-token command, hardware receipt, short-decode, chat, speedup, full-residency, server, BitNet packed proof, QK256, tokenizer, loader, transformer, or CUDA kernel math claim.",
+]
