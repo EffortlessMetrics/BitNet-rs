@@ -113,6 +113,26 @@ human_gate = "on_blocker_only"
 `stackable = false` means dependent work waits for this item to land. It does
 not mean Codex should stop before review, CI repair, auto-merge, or closeout.
 
+For work items with `review_mode = "codex_premerge"`,
+`merge_policy = "automerge_when_green"`, and
+`human_gate = "on_blocker_only"`, the agent is authorized and expected to:
+
+1. edit files within the item scope,
+2. run scoped validation,
+3. commit,
+4. push,
+5. open or update the PR,
+6. address CI, bot, and reviewer feedback,
+7. merge the PR when required checks are green and GitHub reports it mergeable,
+8. create and merge closeout tracker PRs when required.
+
+The commit, push, PR creation, and merge boundaries are not human gates for
+those items. Human involvement is required only for true blockers: GitHub
+permissions or branch protection preventing merge, destructive data loss or
+secret/model-binary exposure risk, unresolved kernel/math/tokenizer/loader
+semantic conflict, acceptance criteria that conflict with repo policy, or a
+cost/exposure/release decision genuinely outside the ticket scope.
+
 Allowed `review_mode` values are:
 
 - `codex_premerge`
