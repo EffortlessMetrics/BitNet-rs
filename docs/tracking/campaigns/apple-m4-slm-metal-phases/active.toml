@@ -135,9 +135,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-004"
-status = "pr_open"
+status = "merged"
 pr = 4385
 head_sha = "898ce4dc48f99c904519d126dfa98f14d94630a8"
+merge_sha = "94732719be1d62273b77795d8d583abd5307128a"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-004-runtime-boundary"
 stackable = false
 review_mode = "codex_premerge"
@@ -170,7 +171,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-005"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-005-runtime-api"
 stackable = false
 review_mode = "codex_premerge"

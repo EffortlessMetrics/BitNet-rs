@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T01:28:45Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-004"
+event = "merged"
+actor = "codex"
+pr = 4385
+merge_sha = "94732719be1d62273b77795d8d583abd5307128a"
+previous_status = "pr_open"
+next_item = "M4-METAL-005"
+
+notes = [
+  "Merged the resident-routing runtime boundary record for the validated Apple M4 dense prefill Q/K/V Metal phase.",
+  "The merged docs record that the live dispatch helper remains test-local and resident routing is blocked until a non-dev Metal runtime API exists.",
+  "Promoted M4-METAL-005 to ready for runtime API extraction without resident generation routing.",
+  "No resident Metal generation, full apple-m4-metal inference claim, BitNet claim, QK256, Neural Engine, MPSGraph, MacBook work, model binary, or broad performance claim is introduced.",
+]
