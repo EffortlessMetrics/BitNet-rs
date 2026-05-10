@@ -26,14 +26,14 @@ mini path without weakening the completed Qwen appliance baseline.
 | M4-MODEL-001 | merged | Selected the next exact dense instruct GGUF candidate set. |
 | M4-MODEL-002 | merged | Ran reference output sanity and recorded exact artifact metadata. |
 | M4-MODEL-003 | merged | Rust M4 quality evidence rejects SmolLM2 for this round. |
-| M4-MODEL-004 | blocked | No accepted candidate is available to register. |
+| M4-MODEL-004 | ready | Register the accepted larger Qwen2.5 candidate in cache/model selection. |
 | M4-MODEL-005 | blocked | Update model matrix and user envelope after registration. |
 | M4-MODEL-006 | merged | Select the next exact candidate after the failed Qwen3/SmolLM2 round. |
 | M4-MODEL-007 | merged | Gemma is rejected by the current reference runner. |
 | M4-MODEL-008 | blocked | No reference-good candidate is available for Rust M4 quality. |
 | M4-MODEL-009 | merged | Select a larger Qwen2.5 candidate for M4 evaluation. |
 | M4-MODEL-010 | merged | The larger Qwen2.5 candidate is reference-good for the bounded prompt suite. |
-| M4-MODEL-011 | in progress | The larger Qwen2.5 candidate passes bounded Rust M4 quality; cache registration is still pending. |
+| M4-MODEL-011 | merged | The larger Qwen2.5 candidate passes bounded Rust M4 quality; cache registration is still pending. |
 
 ## Current Selection
 
@@ -50,8 +50,7 @@ M4 quality gate.
 `M4-MODEL-003` records that `smollm2-360m-instruct-q8_0` does not pass the
 Rust M4 quality gate for this round. The current strict Rust loader rejects the
 artifact before generation, and diagnostic compatibility probes still produce
-incoherent output. `M4-MODEL-004` remains blocked because there is no accepted
-new model to register.
+incoherent output.
 
 The model-breadth lane must not promote cache/model registration until a later
 candidate passes both reference output sanity and Rust M4 quality gates.

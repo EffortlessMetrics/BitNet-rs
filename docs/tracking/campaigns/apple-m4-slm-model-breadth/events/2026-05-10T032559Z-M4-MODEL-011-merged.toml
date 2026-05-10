@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T03:25:59Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-011"
+event = "merged"
+actor = "codex"
+pr = 4411
+merge_sha = "386cfaee4ec286e1e1a46bf706a7b4f0eeb6cfb0"
+previous_status = "in_progress"
+next_item = "M4-MODEL-004"
+
+notes = [
+  "Merged Rust M4 apple-m4-cpu-neon quality evidence for the larger Qwen2.5 1.5B Q4_K_M candidate.",
+  "The candidate produced coherent bounded outputs, generated token IDs, strict GGUF/tokenizer receipts, fallback_used=false, timing, and stable duplicate-prompt greedy determinism.",
+  "Promoted M4-MODEL-004 to ready for cache/model-registration review.",
+  "The candidate remains unregistered and unsupported until M4-MODEL-004 lands.",
+  "No model binary, BitNet claim, full Metal claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, or broad performance claim was introduced.",
+]
