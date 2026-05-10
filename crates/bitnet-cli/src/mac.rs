@@ -1318,6 +1318,7 @@ async fn run_mac_serve(
     }
     std::fs::create_dir_all(&receipt_dir)
         .with_context(|| format!("failed to create receipt directory {}", receipt_dir.display()))?;
+    ensure_mac_serve_receipt_dir_ready(&receipt_dir)?;
     let model = model_cache::verified_apple_m4_slm_model(&model_id, cache_dir)?;
     let state = Arc::new(MacServeState::new(model, host.clone(), port, stream, receipt_dir));
     let address = format!("{host}:{port}");
@@ -1472,7 +1473,7 @@ fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
     let cache_ready = state.cache_status["ready"].as_bool().unwrap_or(false);
     let backend_ready = true;
     let tokenizer_ready = true;
-    let receipt_ready = state.receipt_dir.exists();
+    let receipt_ready = mac_serve_receipt_dir_ready(&state.receipt_dir);
     let ready = cache_ready && backend_ready && tokenizer_ready && receipt_ready;
     serde_json::json!({
         "artifact_kind": "bitnet_apple_m4_local_server_ready",
@@ -1554,6 +1555,47 @@ fn mac_serve_claim_boundary_json() -> serde_json::Value {
         "qk256_apple_claimed": false,
         "broad_performance_claim": false,
     })
+}
+
+fn ensure_mac_serve_receipt_dir_ready(receipt_dir: &Path) -> Result<()> {
+    if !receipt_dir.is_dir() {
+        anyhow::bail!("mac serve receipt path is not a directory: {}", receipt_dir.display());
+    }
+    mac_serve_write_receipt_probe(receipt_dir).with_context(|| {
+        format!("mac serve receipt directory is not writable: {}", receipt_dir.display())
+    })
+}
+
+fn mac_serve_receipt_dir_ready(receipt_dir: &Path) -> bool {
+    receipt_dir.is_dir() && mac_serve_write_receipt_probe(receipt_dir).is_ok()
+}
+
+fn mac_serve_write_receipt_probe(receipt_dir: &Path) -> Result<()> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    for attempt in 0..8 {
+        let probe = receipt_dir.join(format!(
+            ".bitnet-mac-serve-receipt-probe-{}-{now}-{attempt}",
+            std::process::id()
+        ));
+        match std::fs::OpenOptions::new().write(true).create_new(true).open(&probe) {
+            Ok(_) => {
+                std::fs::remove_file(&probe).with_context(|| {
+                    format!("failed to remove receipt probe {}", probe.display())
+                })?;
+                return Ok(());
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!("failed to create receipt probe {}", probe.display())
+                });
+            }
+        }
+    }
+    anyhow::bail!("failed to choose a unique receipt probe path in {}", receipt_dir.display())
 }
 
 fn mac_serve_host_is_loopback(host: &str) -> bool {
@@ -3808,6 +3850,36 @@ mod tests {
         assert_eq!(ready["artifact_kind"], "bitnet_apple_m4_local_server_ready");
         assert_eq!(ready["ready"], true);
         assert_eq!(ready["checks"]["generation"]["checked"], false);
+    }
+
+    #[test]
+    fn mac_serve_ready_json_requires_receipt_directory() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let receipt_path = temp.path().join("receipt-file");
+        std::fs::write(&receipt_path, b"not a directory").expect("receipt file");
+        let state = MacServeState::new(
+            test_verified_model(temp.path()),
+            "127.0.0.1".to_string(),
+            8080,
+            true,
+            receipt_path,
+        );
+
+        let ready = mac_serve_ready_json(&state);
+
+        assert_eq!(ready["ready"], false);
+        assert_eq!(ready["status"], "not_ready");
+        assert_eq!(ready["checks"]["receipts"]["ready"], false);
+    }
+
+    #[test]
+    fn mac_serve_receipt_dir_probe_rejects_non_directory() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let receipt_path = temp.path().join("receipt-file");
+        std::fs::write(&receipt_path, b"not a directory").expect("receipt file");
+
+        assert!(!mac_serve_receipt_dir_ready(&receipt_path));
+        assert!(ensure_mac_serve_receipt_dir_ready(&receipt_path).is_err());
     }
 
     #[test]
