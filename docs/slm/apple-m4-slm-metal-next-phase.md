@@ -206,6 +206,11 @@ the `prefill_qkv_projection` execution phase, CPU/NEON routing for the rest of
 the SLM pipeline, Q/K/V parity against CPU, and phase-local timing. It remains
 outside resident generation.
 
+`M4-METAL-004` records the resident-routing boundary in
+`docs/slm/apple-m4-slm-metal-resident-routing.md`: resident generation cannot
+honestly use this phase until the live Metal dispatch helper is promoted out of
+test-only code into a non-dev runtime API.
+
 ## Explicit Deferrals
 
 The following remain out of scope for this item:
