@@ -1,6 +1,6 @@
 id = "apple-m4-slm-metal-phases"
 title = "Apple M4 SLM Metal phases"
-status = "active"
+status = "complete"
 
 objective = "Expand Apple M4 dense SLM acceleration through named, phase-scoped Metal prefill/projection contributions with CPU-only versus CPU-plus-Metal parity, Metal fallback_used=false receipts, explicit CPU/NEON routing for the rest of the pipeline, and timing deltas, without claiming full apple-m4-metal inference."
 
@@ -251,7 +251,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-007"
-status = "in_progress"
+status = "merged"
+pr = 4397
+merge_sha = "5254d4a125770796588fa567946344b4267849c9"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-007-measured-delta"
 stackable = false
 review_mode = "codex_premerge"
