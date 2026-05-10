@@ -1,0 +1,339 @@
+schema = 1
+artifact_kind = "model_coverage_matrix"
+updated = "2026-05-10"
+work_item = "MODEL-COVERAGE-001"
+claim_boundary = "Model coverage is a claim-control surface. Registered or structurally valid models cannot imply CPU answer-readiness, CUDA execution, speedup, server readiness, BitNet packed QK256 proof, or dense regular-LLM proof unless the corresponding receipts are listed and the claim booleans are explicitly true."
+
+[[tier]]
+id = "registered"
+rank = 0
+requires = []
+meaning = "The repo knows the model family and artifact class."
+
+[[tier]]
+id = "structurally_valid"
+rank = 1
+requires = ["registered"]
+meaning = "The artifact parses and tensor roles are classified."
+
+[[tier]]
+id = "reference_good"
+rank = 2
+requires = ["structurally_valid"]
+meaning = "A reference runner or accepted external evidence produced bounded coherent output."
+
+[[tier]]
+id = "cpu_answer_ready"
+rank = 3
+requires = ["reference_good"]
+meaning = "The Rust CPU path has strict answer receipts."
+
+[[tier]]
+id = "accelerator_answer_ready"
+rank = 4
+requires = ["cpu_answer_ready"]
+meaning = "A strict accelerator path has fallback-free one-token, short-decode, or warm-session receipts."
+
+[[tier]]
+id = "benchmark_qualified"
+rank = 5
+requires = ["accelerator_answer_ready"]
+meaning = "Exact profiles have governed same-artifact benchmark qualification receipts."
+
+[[tier]]
+id = "product_cli_ready"
+rank = 6
+requires = ["accelerator_answer_ready"]
+meaning = "Normal user CLI paths exist for verified ask/chat/bench receipt surfaces, with server readiness still separate."
+
+[[entry]]
+id = "bitnet_official_2b_i2s_qk256"
+model_class = "bitnet"
+family = "bitnet_b1_58"
+artifact_kind = "gguf_i2_s"
+contract_id = "microsoft_bitnet_b158_2b_4t_i2s"
+status = "cuda_answer_ready_cli_ready"
+current_tier = "product_cli_ready"
+verifier_surface = "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s"
+tokenizer_authority = "external_llama_bpe"
+prompt_authority = "bitnetcpp-answer"
+cpu_reference = "x86_cpu_scalar_then_avx512_parity"
+accelerator_routes = ["bitnet_qk256_cuda"]
+required_receipts = [
+  "answer_artifact_gate",
+  "prompt_authority_audit",
+  "strict_answer_corpus",
+  "cpu_cuda_answer_parity",
+  "execution_plan",
+  "strict_cuda_ask",
+  "warm_session",
+  "benchmark_profile_receipt",
+]
+forbidden_claims = [
+  "global_speedup",
+  "full_cuda_residency_without_phase_receipts",
+  "dense_regular_llm_cuda_proof",
+]
+next_proof = "profile-specific speedup qualification and deeper residency/transfer timing."
+claim_boundary = "Official Microsoft 2B I2_S is the current BitNet QK256 x86/CUDA answer lane. It is not globally speed-qualified and does not prove dense regular-LLM CUDA."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = true
+  reference_good = true
+  cpu_answer_ready = true
+  accelerator_answer_ready = true
+  benchmark_qualified = false
+  product_cli_ready = true
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = true
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "dense_qwen25_05b_q8_cuda"
+model_class = "dense_slm"
+family = "qwen2"
+artifact_kind = "gguf_q8_0"
+capability_id = "qwen2.5-0.5b-instruct-q8_0"
+status = "cuda_answer_ready_cli_ready"
+current_tier = "product_cli_ready"
+verifier_surface = "bitnet model verify qwen2.5-0.5b-instruct-q8_0"
+tokenizer_authority = "contract_authoritative_qwen2"
+prompt_authority = "contract_authoritative_chat_template"
+cpu_reference = "dense_qwen_cpu_reference_receipts"
+accelerator_routes = ["dense_regular_llm_cuda"]
+required_receipts = [
+  "dense_gguf_all_layer_execution_plan",
+  "dense_gguf_model_boundary_fixtures",
+  "dense_gguf_kv_cache_policy",
+  "dense_gguf_sampling_policy",
+  "dense_gguf_qwen_one_token_strict_cuda_proof",
+  "dense_gguf_qwen_short_decode_strict_cuda_proof",
+  "dense_gguf_qwen_warm_session_strict_cuda",
+  "dense_gguf_benchmark_baseline",
+]
+forbidden_claims = [
+  "bitnet_packed_i2s_qk256_proof",
+  "global_dense_gguf_inference",
+  "global_speedup",
+  "server_ready",
+]
+next_proof = "profile-specific dense benchmark qualification and shared server reuse."
+claim_boundary = "Qwen2.5 0.5B Q8_0 is the first dense CUDA SLM answer lane. Its receipts do not satisfy BitNet packed I2_S/QK256 proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = true
+  reference_good = true
+  cpu_answer_ready = true
+  accelerator_answer_ready = true
+  benchmark_qualified = false
+  product_cli_ready = true
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = true
+
+[[entry]]
+id = "dense_qwen25_05b_q4km_storage"
+model_class = "dense_slm"
+family = "qwen2"
+artifact_kind = "gguf_q4_k_m"
+capability_id = "qwen2.5-0.5b-instruct-q4_k_m"
+status = "storage_reference"
+current_tier = "reference_good"
+verifier_surface = "bitnet model verify qwen2.5-0.5b-instruct-q4_k_m"
+tokenizer_authority = "contract_authoritative_qwen2"
+prompt_authority = "contract_authoritative_chat_template"
+cpu_reference = "apple_m4_cpu_neon_reference_lane"
+accelerator_routes = []
+required_receipts = [
+  "artifact_verify",
+  "reference_runner_quality",
+]
+forbidden_claims = [
+  "dense_regular_llm_cuda_proof",
+  "bitnet_packed_i2s_qk256_proof",
+  "speedup",
+]
+next_proof = "separate CPU and accelerator receipts before CUDA claims."
+claim_boundary = "Q4_K_M is useful storage/reference coverage and Apple M4 metadata, but it is not the bounded RTX 5070 Ti dense CUDA ask/chat artifact."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = true
+  reference_good = true
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "bitnet_3b_x86_i2s_unsupported"
+model_class = "bitnet"
+family = "bitnet_b1_58"
+artifact_kind = "gguf_i2_s"
+contract_id = "onebitllm_bitnet_b158_3b_i2s_x86"
+status = "unsupported_upstream"
+current_tier = "registered"
+verifier_surface = "bitnet model contracts onebitllm_bitnet_b158_3b_i2s_x86"
+tokenizer_authority = "not_authoritative_for_claims"
+prompt_authority = "not_authoritative_for_claims"
+cpu_reference = "none"
+accelerator_routes = []
+required_receipts = ["unsupported_path_receipt"]
+forbidden_claims = [
+  "answer_ready",
+  "reference_authority",
+  "backend_parity",
+  "speedup",
+  "bitnet_packed_i2s_qk256_proof",
+]
+next_proof = "none for x86 I2_S; use the separate 3B TL2 runner-verification lane."
+claim_boundary = "1bitLLM 3B x86 I2_S is upstream-unsupported and may only produce diagnostic or unsupported-path receipts."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "bitnet_3b_x86_tl2_candidate"
+model_class = "bitnet"
+family = "bitnet_b1_58"
+artifact_kind = "gguf_tl2"
+contract_id = "onebitllm_bitnet_b158_3b_tl2_x86"
+status = "listed_verify_runner"
+current_tier = "registered"
+verifier_surface = "bitnet model contracts onebitllm_bitnet_b158_3b_tl2_x86"
+tokenizer_authority = "pending_runner_verification"
+prompt_authority = "pending_runner_verification"
+cpu_reference = "x86_tl2_runner_verification_required"
+accelerator_routes = []
+required_receipts = [
+  "runner_path_verification",
+  "prompt_authority_audit",
+  "strict_answer_corpus",
+  "backend_parity_receipt",
+]
+forbidden_claims = [
+  "answer_ready_before_runner_verification",
+  "i2_s_qk256_proof",
+  "speedup",
+]
+next_proof = "BITNET-TL2 runner verification, scalar fixture, AVX parity, and answer diagnostic."
+claim_boundary = "3B x86 TL2 is listed upstream but is not answer authority until runner verification and Rust TL2 proofs land."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "small_llm_qwen25_15b_q4km_candidate"
+model_class = "small_llm"
+family = "qwen2"
+artifact_kind = "gguf_q4_k_m"
+capability_id = "qwen2.5-1.5b-instruct-q4_k_m"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen2.5-1.5b-instruct-q4_k_m"
+tokenizer_authority = "contract_authoritative_qwen2"
+prompt_authority = "contract_authoritative_chat_template"
+cpu_reference = "candidate_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_verify",
+  "memory_envelope",
+  "cpu_reference_sanity",
+  "all_layer_plan",
+]
+forbidden_claims = [
+  "cuda_answer_ready",
+  "server_ready",
+  "speedup",
+  "bitnet_packed_i2s_qk256_proof",
+]
+next_proof = "artifact verify, memory envelope, CPU reference sanity, and dense CUDA all-layer plan."
+claim_boundary = "The larger Qwen candidate is registered for future small-LLM pressure testing; it is not CUDA answer-ready."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "modern_llm_placeholder_contract"
+model_class = "modern_llm_docs_only"
+family = "placeholder"
+artifact_kind = "docs_only"
+status = "docs_only_placeholder"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "artifact_required"
+prompt_authority = "artifact_required"
+cpu_reference = "not_available"
+accelerator_routes = []
+required_receipts = [
+  "artifact_contract",
+  "memory_envelope",
+  "unsupported_on_current_hardware_receipt",
+]
+forbidden_claims = [
+  "runtime_support",
+  "answer_ready",
+  "cuda_support",
+  "speedup",
+  "server_ready",
+]
+next_proof = "supply a concrete artifact contract and hardware envelope before runtime work."
+claim_boundary = "Docs-only modern LLM slots document future proof ladders and current hardware limits; they do not imply runtime support."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false

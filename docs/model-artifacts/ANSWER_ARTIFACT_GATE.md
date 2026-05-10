@@ -151,6 +151,7 @@ Shared manifests:
 - `ci/model-artifacts/rejected-artifacts.toml`
 - `ci/model-artifacts/tokenizer-authority.toml`
 - `ci/model-artifacts/model-kernel-compatibility.toml`
+- `ci/model-artifacts/model-coverage-matrix.toml`
 
 The shared search and promotion reports are:
 
@@ -175,3 +176,10 @@ speedup_claim = false
 Once an artifact becomes `answer_ready`, hardware lanes may use it for their own
 strict answer-readiness gates while preserving lane-specific backend, runtime,
 fallback, kernel, and timing proof requirements.
+
+The cross-family coverage matrix in
+`ci/model-artifacts/model-coverage-matrix.toml` records the current proof tier
+for BitNet, dense SLM, selected small-LLM, unsupported, and docs-only lanes.
+Use it as the first stop for claim boundaries before treating a verified model
+as CPU answer-ready, CUDA answer-ready, benchmark-qualified, CLI-ready, or
+server-ready.
