@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T01:22:44Z"
+campaign = "wasm-inference"
+item = "WASM-001"
+event = "merged"
+actor = "codex"
+pr = 4090
+merge_sha = "cac5dea998d2ac75a5c40b579856598dec136888"
+previous_status = "ready"
+next_item = "WASM-002"
+
+notes = [
+  "Closed out the WASM inference proof contract docs merged in PR #4090.",
+  "The merged docs define the conservative WASM claim boundary, explicit backend identities, receipt requirements, model/tokenizer strategy, memory plan, milestones, and PR ladder.",
+  "This is a tracker-only closeout and does not claim that WASM inference works, browser BitNet 2B inference is feasible at usable speed, WASM SIMD kernels are proven, or byte-backed GGUF/tokenizer loaders exist.",
+]

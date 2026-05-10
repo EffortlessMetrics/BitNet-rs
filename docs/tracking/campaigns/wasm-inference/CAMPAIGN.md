@@ -38,7 +38,7 @@ placeholder generation, model parsing, or scalar fallback with real inference.
 
 | Work item | Status | Notes |
 |---|---|---|
-| WASM-001 | ready | Document the proof contract, claim boundary, backend identities, receipt fields, memory plan, and PR ladder. |
+| WASM-001 | merged | Documented the proof contract, claim boundary, backend identities, receipt fields, memory plan, and PR ladder. |
 | WASM-002 | ready | Make the opt-in inference feature compile honestly for `wasm32-unknown-unknown` without claiming runtime inference. |
 | WASM-003 | ready | Add byte-backed GGUF and tokenizer loading so browser paths do not rely on virtual filesystem placeholders. |
 | WASM-004 | ready | Expose a worker-safe JS API for load/generate/stream/unload/memory stats with no fake generation. |
