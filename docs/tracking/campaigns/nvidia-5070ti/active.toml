@@ -2109,10 +2109,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-PERF-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-perf-002-repeated-comparator"
 pr = 4440
-head_sha = "04e1dc341275c3bfcbd0e2a0a51734798ef86646"
+head_sha = "8d783813b4649eca84794601c62b5534d2848bb2"
+merge_sha = "2779dad4468c60451fe03c048f5172992f981994"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -2151,7 +2152,7 @@ forbidden_paths = [
   "speedup or full CUDA residency claim upgrades",
 ]
 may_claim = [
-  "Repeated dense Qwen CPU/CUDA comparator evidence exists for the exact profiles recorded by CUDA-DENSE-PERF-001 after the future implementation merges.",
+  "Repeated dense Qwen CPU/CUDA comparator evidence exists for the exact profiles recorded by CUDA-DENSE-PERF-001.",
   "The comparator preserves same-artifact, same-tokenizer, same-prompt, deterministic generation, fallback-free CPU and CUDA route evidence.",
   "The comparator keeps dense Qwen speedup qualification blocked for a later profile-specific review.",
 ]
