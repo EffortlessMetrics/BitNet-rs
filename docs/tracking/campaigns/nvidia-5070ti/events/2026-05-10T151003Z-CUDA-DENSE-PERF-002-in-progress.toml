@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T15:10:03Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-002"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-perf-002-repeated-comparator"
+
+notes = [
+  "Started CUDA-DENSE-PERF-002 to add repeated same-artifact dense Qwen CPU/CUDA comparator receipts after the CUDA-DENSE-PERF-001 baseline.",
+  "The scoped implementation will normalize repeated one-token, short-decode, and warm-session proof receipts into a comparator receipt with CPU/CUDA timing splits, transfer evidence, fallback-free claims, and speedup_claim=false.",
+  "The slice does not change tokenizer behavior, loader behavior, transformer runtime behavior, CUDA kernel math, QK256, BitNet CUDA behavior, dense ask/chat/server behavior, speedup qualification, or full-residency claims.",
+]

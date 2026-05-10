@@ -2109,8 +2109,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-PERF-002"
-status = "ready"
-branch = "TBD"
+status = "in_progress"
+branch = "codex/cuda-dense-perf-002-repeated-comparator"
 pr = 0
 stackable = false
 review_mode = "codex_premerge"
