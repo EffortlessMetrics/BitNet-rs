@@ -18,6 +18,14 @@ ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_p
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-bitnetcpp-template-math_2_plus_2-release.json
 ci/hardware/intel-258v/<date>/cpu-answer-corpus-scalar-bitnetcpp-template-math_2_plus_2-release.json
 ci/hardware/intel-258v/<date>/cpu-answer-parity-bitnetcpp-template-math_2_plus_2-release.json
+ci/hardware/intel-258v/<date>/prompt-authority-audit-math.json
+ci/hardware/intel-258v/<date>/hf-prompt-token-reference-parity.json
+ci/hardware/intel-258v/<date>/external-first-token-reference.json
+ci/hardware/intel-258v/<date>/first-token-divergence-classification.json
+ci/hardware/intel-258v/<date>/cpu-qk256-i8s-semantic-audit.json
+ci/hardware/intel-258v/<date>/output-head-logits-index-audit.json
+ci/hardware/intel-258v/<date>/transformer-layer-parity.json
+ci/hardware/intel-258v/<date>/cpu-reference-bundle.json
 ci/hardware/intel-258v/<date>/npu-openvino-runtime-probe.json
 ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
@@ -84,6 +92,15 @@ Intel NPU artifacts from the same Lunar Lake laptop. It is an index only: it may
 record artifact paths, backend identity, runtime API, proof stage, and fallback
 status, but it must not merge CPU, GPU, or NPU claims or introduce performance,
 BitNet inference, QK256 decode, or acceleration claims.
+
+`cpu-reference-bundle.json` is the current 258V CPU evidence index for
+accelerator comparison. It supersedes the post-mechanics bundle by linking the
+prompt/token authority audit, external prompt/token parity, external
+first-token boundary, first-token divergence classifier, QK256/I8_S semantic
+audit, output-head/logits-index audit, observed logits evidence, and
+transformer-layer parity ladder. It is a CPU reference index only and must not
+claim new answer quality, CPU speed, Arc 140V execution, Intel NPU execution,
+external first-token logits parity, or full model correctness.
 
 `arc-140v-opencl-parity.json` records one isolated native OpenCL vector-add
 parity run on Arc 140V against the selected 258V CPU reference bundle. It may

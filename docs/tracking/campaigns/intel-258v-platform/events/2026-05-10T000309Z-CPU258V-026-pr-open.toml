@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T00:03:09Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-026"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4365
+head_sha = "0508e57f1fdc3d21beb4b164e6eebfddf3e81ef1"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-026-reference-bundle-refresh"
+summary = "Opened CPU258V-026 to refresh the 258V CPU reference bundle."
+notes = [
+  "The PR adds ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json as the current 258V CPU reference index.",
+  "The refreshed bundle links prompt/token parity, external reference boundaries, QK256 semantics, output-head/logits-index, observed logits length, and transformer-layer parity evidence.",
+  "The platform comparison index now points accelerator lanes at the current CPU reference bundle.",
+  "The PR does not claim new answer quality, CPU speed, Arc 140V execution, Intel NPU execution, acceleration, external first-token logits parity, or full model correctness.",
+]

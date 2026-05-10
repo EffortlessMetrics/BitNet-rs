@@ -1,0 +1,12 @@
+timestamp = "2026-05-10T00:08:20Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started the streaming local dense SLM completion endpoint slice.",
+  "Scope is limited to POST /v1/chat/completions on bitnet mac serve using verified supported dense SLM cache, tokenizer authority, apple-m4-cpu-neon routing, no hidden fallback, resident startup model/tokenizer load, and per-request receipts.",
+  "No full OpenAI compatibility, production readiness, BitNet, full Metal, QK256, Neural Engine, MPSGraph, MacBook, model binary, or broad performance claim is introduced.",
+]

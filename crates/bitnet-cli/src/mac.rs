@@ -3,7 +3,7 @@
 use anyhow::{Context, Result, anyhow};
 use bitnet_repl_core::{ReplInput, parse_repl_input};
 use clap::{ArgAction, Args, Subcommand, ValueEnum};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::io::{self, BufRead, IsTerminal, Read, Write};
 #[cfg(unix)]
 use std::mem::MaybeUninit;
@@ -25,6 +25,7 @@ const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doc
 const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
+const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
 const MAC_BITNET_PROOF_DEFAULT_RECEIPT: &str =
     "target/apple-m4-continuity/mac-bitnet-proof-preflight.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
@@ -205,6 +206,30 @@ enum MacAction {
         /// Stream by default for later completion endpoints; health/ready do not generate.
         #[arg(long, default_value_t = true)]
         stream: bool,
+
+        /// Default maximum new tokens for completion requests that omit max_tokens.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = MAC_SERVE_DEFAULT_MAX_NEW_TOKENS)]
+        max_new_tokens: usize,
+
+        /// Default completion temperature.
+        #[arg(long, default_value_t = 0.0)]
+        temperature: f32,
+
+        /// Default top-k setting.
+        #[arg(long, default_value_t = 1)]
+        top_k: usize,
+
+        /// Default nucleus sampling top-p setting.
+        #[arg(long, default_value_t = 1.0)]
+        top_p: f32,
+
+        /// Default repetition penalty.
+        #[arg(long, default_value_t = 1.1)]
+        repetition_penalty: f32,
+
+        /// Optional deterministic sampling seed.
+        #[arg(long)]
+        seed: Option<u64>,
 
         /// Directory where later request receipts will be exported.
         #[arg(long, value_name = "PATH", default_value = MAC_SERVE_DEFAULT_RECEIPT_DIR)]
@@ -497,11 +522,35 @@ impl MacCommand {
                 port,
                 strict,
                 stream,
+                max_new_tokens,
+                temperature,
+                top_k,
+                top_p,
+                repetition_penalty,
+                seed,
                 receipt_dir,
             } => {
                 ensure_supported_mac_serve_device(explicit_device_label)?;
-                run_mac_serve(model_id, cache_dir, device, host, port, strict, stream, receipt_dir)
-                    .await
+                let defaults = MacServeGenerationDefaults {
+                    max_new_tokens,
+                    temperature,
+                    top_k,
+                    top_p,
+                    repetition_penalty,
+                    seed,
+                };
+                run_mac_serve(
+                    model_id,
+                    cache_dir,
+                    device,
+                    host,
+                    port,
+                    strict,
+                    stream,
+                    defaults,
+                    receipt_dir,
+                )
+                .await
             }
             MacAction::Chat {
                 prompts,
@@ -1290,6 +1339,16 @@ async fn run_doctor(
     Ok(())
 }
 
+#[derive(Clone, Debug)]
+struct MacServeGenerationDefaults {
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    repetition_penalty: f32,
+    seed: Option<u64>,
+}
+
 async fn run_mac_serve(
     model_id: String,
     cache_dir: Option<PathBuf>,
@@ -1298,6 +1357,7 @@ async fn run_mac_serve(
     port: u16,
     strict: bool,
     stream: bool,
+    defaults: MacServeGenerationDefaults,
     receipt_dir: PathBuf,
 ) -> Result<()> {
     if !strict {
@@ -1318,8 +1378,18 @@ async fn run_mac_serve(
     }
     std::fs::create_dir_all(&receipt_dir)
         .with_context(|| format!("failed to create receipt directory {}", receipt_dir.display()))?;
+    ensure_mac_serve_receipt_dir_ready(&receipt_dir)?;
     let model = model_cache::verified_apple_m4_slm_model(&model_id, cache_dir)?;
-    let state = Arc::new(MacServeState::new(model, host.clone(), port, stream, receipt_dir));
+    let generator = MacServeGenerator::load(&model)?;
+    let state = Arc::new(MacServeState::new(
+        model,
+        host.clone(),
+        port,
+        stream,
+        defaults,
+        receipt_dir,
+        Some(generator),
+    ));
     let address = format!("{host}:{port}");
     if !mac_serve_host_is_loopback(&host) {
         eprintln!(
@@ -1352,7 +1422,6 @@ async fn run_mac_serve(
     }
 }
 
-#[derive(Debug)]
 struct MacServeState {
     started_at: std::time::Instant,
     started_at_utc: String,
@@ -1362,7 +1431,9 @@ struct MacServeState {
     host: String,
     port: u16,
     stream: bool,
+    defaults: MacServeGenerationDefaults,
     receipt_dir: PathBuf,
+    generator: Option<tokio::sync::Mutex<MacServeGenerator>>,
 }
 
 impl MacServeState {
@@ -1371,7 +1442,9 @@ impl MacServeState {
         host: String,
         port: u16,
         stream: bool,
+        defaults: MacServeGenerationDefaults,
         receipt_dir: PathBuf,
+        generator: Option<MacServeGenerator>,
     ) -> Self {
         let cache_status = verified_cache_status_json(&model);
         let disk = disk_health_json(&model.cache_root, model.bytes);
@@ -1384,7 +1457,9 @@ impl MacServeState {
             host,
             port,
             stream,
+            defaults,
             receipt_dir,
+            generator: generator.map(tokio::sync::Mutex::new),
         }
     }
 
@@ -1393,35 +1468,490 @@ impl MacServeState {
     }
 }
 
+struct MacServeGenerator {
+    model: Arc<dyn bitnet_models::Model>,
+    config: bitnet_common::BitNetConfig,
+    tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
+    prompt_template: bitnet_inference::TemplateType,
+    tokenizer_source: String,
+    tokenizer_type: String,
+    pretokenizer_authority: String,
+    tokenizer_strict: bool,
+}
+
+impl MacServeGenerator {
+    fn load(model: &VerifiedCachedModel) -> Result<Self> {
+        use bitnet_common::Device;
+        use bitnet_models::loader::{LoadConfig, ModelLoader};
+
+        let loader = ModelLoader::new(Device::Cpu);
+        let load_config =
+            LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
+        let loaded_model =
+            loader.load_with_config(&model.path, &load_config).with_context(|| {
+                format!("failed to load supported M4 dense SLM model {}", model.path.display())
+            })?;
+        let config = loaded_model.config().clone();
+        let model_impl: Arc<dyn bitnet_models::Model> = Arc::from(loaded_model);
+        let tokenizer_resolution =
+            bitnet_tokenizers::auto::resolve_tokenizer(&model.path, None, true).with_context(
+                || format!("failed to resolve strict tokenizer for {}", model.path.display()),
+            )?;
+        let tokenizer_source = tokenizer_resolution.source.as_str().to_string();
+        let tokenizer_strict = tokenizer_resolution.strict;
+        let tokenizer = tokenizer_resolution.tokenizer;
+        let tokenizer_label =
+            crate::infer_tokenizer_label(tokenizer.as_ref(), tokenizer_resolution.source);
+        let pretokenizer_authority =
+            crate::tokenizer_pretokenizer_authority(tokenizer_resolution.source, &tokenizer_label);
+        let tokenizer_type =
+            crate::tokenizer_type_for_receipt(&tokenizer_label, tokenizer_resolution.source);
+        let prompt_template: bitnet_inference::TemplateType = QWEN_PROMPT_TEMPLATE
+            .parse()
+            .with_context(|| format!("invalid M4 server prompt template {QWEN_PROMPT_TEMPLATE}"))?;
+        Ok(Self {
+            model: model_impl,
+            config,
+            tokenizer,
+            prompt_template,
+            tokenizer_source,
+            tokenizer_type,
+            pretokenizer_authority: pretokenizer_authority.to_string(),
+            tokenizer_strict,
+        })
+    }
+
+    fn complete(
+        &self,
+        state: &MacServeState,
+        request: MacServeCompletionRequest,
+    ) -> Result<MacServeCompletion> {
+        use bitnet_models::transformer::KVCache;
+        use bitnet_sampling::{SamplingConfig, SamplingStrategy};
+
+        let request_id = mac_serve_request_id();
+        let prompt = request.prompt_text()?;
+        let system_prompt = request.system_prompt();
+        let max_new_tokens =
+            request.max_new_tokens.or(request.max_tokens).unwrap_or(state.defaults.max_new_tokens);
+        if max_new_tokens == 0 {
+            anyhow::bail!("completion max_tokens/max_new_tokens must be greater than zero");
+        }
+        if max_new_tokens > 512 {
+            anyhow::bail!(
+                "completion max_tokens/max_new_tokens is capped at 512 for the M4 local server; got {max_new_tokens}"
+            );
+        }
+        let temperature = request.temperature.unwrap_or(state.defaults.temperature);
+        let top_k = request.top_k.unwrap_or(state.defaults.top_k);
+        let top_p = request.top_p.unwrap_or(state.defaults.top_p);
+        let repetition_penalty =
+            request.repetition_penalty.unwrap_or(state.defaults.repetition_penalty);
+        let seed = request.seed.or(state.defaults.seed);
+        let stream = request.stream.unwrap_or(state.stream);
+        let request_started = std::time::Instant::now();
+        let formatted_prompt = self.prompt_template.apply(&prompt, system_prompt.as_deref());
+
+        let mut all_stop_sequences = vec!["<|im_end|>".to_string()];
+        for template_stop in self.prompt_template.default_stop_sequences() {
+            if !all_stop_sequences.contains(&template_stop) {
+                all_stop_sequences.push(template_stop);
+            }
+        }
+        let mut all_stop_ids = Vec::new();
+        for template_id in self.prompt_template.resolve_stop_token_ids(self.tokenizer.as_ref()) {
+            if !all_stop_ids.contains(&template_id) {
+                all_stop_ids.push(template_id);
+            }
+        }
+        let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
+
+        let tokenize_start = std::time::Instant::now();
+        let mut tokens = self.tokenizer.encode(
+            &formatted_prompt,
+            self.prompt_template.should_add_bos(),
+            self.prompt_template.parse_special(),
+        )?;
+        let tokenize_ms = crate::elapsed_ms(tokenize_start);
+        crate::ensure_non_empty_generation_context(&mut tokens, self.tokenizer.as_ref())?;
+        let prompt_token_count = tokens.len();
+        let prompt_token_ids = tokens.clone();
+        let cache = KVCache::new(&self.config, 1, &candle_core::Device::Cpu)?;
+        let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
+        let mut sampler = SamplingStrategy::new(SamplingConfig {
+            temperature,
+            top_k: top_k as u32,
+            top_p,
+            repetition_penalty,
+            seed,
+        });
+        sampler
+            .reserve_logits_capacity(self.config.model.vocab_size.max(self.tokenizer.vocab_size()));
+
+        let prefill_start = std::time::Instant::now();
+        let mut prefill_token_count = 0usize;
+        if tokens.len() > 1 {
+            for token in &tokens[..tokens.len() - 1] {
+                let x = self.model.embed(&[*token])?;
+                let _ = self.model.forward(&x, any_cache.as_mut())?;
+                prefill_token_count += 1;
+            }
+        }
+        let prefill_ms =
+            if prefill_token_count > 0 { crate::elapsed_ms(prefill_start) } else { 0.0 };
+
+        let mut generated_token_ids = Vec::with_capacity(max_new_tokens);
+        let mut token_texts = Vec::with_capacity(max_new_tokens);
+        let mut decode_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut sample_step_ms = Vec::with_capacity(max_new_tokens);
+        let mut stop_tail = String::with_capacity(max_stop_len);
+        let mut first_token_ms = None;
+        let mut finish_reason = "length";
+        for _ in 0..max_new_tokens {
+            let decode_step_start = std::time::Instant::now();
+            let last_token = tokens.last().copied().expect("tokens must be non-empty");
+            let x = self.model.embed(&[last_token])?;
+            let h = self.model.forward(&x, any_cache.as_mut())?;
+            let last_hidden = crate::extract_last_token_hidden(&h)?;
+            let logits = self.model.logits(&last_hidden)?;
+            let logits_vec = crate::extract_logits_2d(&logits)?;
+            let sample_start = std::time::Instant::now();
+            let next_token = sampler.sample(&logits_vec, &generated_token_ids)?;
+            sample_step_ms.push(crate::elapsed_ms(sample_start));
+            tokens.push(next_token);
+            generated_token_ids.push(next_token);
+            if first_token_ms.is_none() {
+                first_token_ms = Some(request_started.elapsed().as_millis() as u64);
+            }
+            let token_text = self.tokenizer.decode(&[next_token])?;
+            if max_stop_len > 0 {
+                stop_tail.push_str(&token_text);
+                if stop_tail.len() > max_stop_len {
+                    let cut = stop_tail.len() - max_stop_len;
+                    let mut safe_cut = cut;
+                    while safe_cut > 0 && !stop_tail.is_char_boundary(safe_cut) {
+                        safe_cut -= 1;
+                    }
+                    stop_tail.drain(..safe_cut);
+                }
+            }
+            token_texts.push(token_text);
+            decode_step_ms.push(crate::elapsed_ms(decode_step_start));
+
+            if all_stop_ids.contains(&next_token) {
+                finish_reason = "stop";
+                break;
+            }
+            if let Some(eos) = self.tokenizer.eos_token_id()
+                && next_token == eos
+            {
+                finish_reason = "stop";
+                break;
+            }
+            if max_stop_len > 0
+                && !all_stop_sequences.is_empty()
+                && all_stop_sequences.iter().any(|pat| stop_tail.ends_with(pat))
+            {
+                finish_reason = "stop";
+                break;
+            }
+        }
+
+        let text = self.tokenizer.decode(&generated_token_ids)?;
+        let decode_ms = decode_step_ms.iter().sum::<f64>();
+        let sampling_ms = sample_step_ms.iter().sum::<f64>();
+        let total_ms = crate::elapsed_ms(request_started);
+        let receipt_path = state.receipt_dir.join(format!("{request_id}.json"));
+        let receipt = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "bitnet_apple_m4_local_server_completion",
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "request_id": request_id,
+            "artifact_path": receipt_path.display().to_string(),
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "fallback_reason": serde_json::Value::Null,
+            "server": mac_serve_server_json(state),
+            "model": {
+                "id": &state.model.id,
+                "display_name": &state.model.display_name,
+                "path": &state.model.path,
+                "sha256": &state.model.sha256,
+                "sha256_source": "verified_cache_metadata_and_startup_check",
+                "bytes": state.model.bytes,
+                "architecture": &state.model.architecture,
+                "quantization": &state.model.quantization,
+            },
+            "tokenizer": {
+                "type": self.tokenizer_type,
+                "source": self.tokenizer_source,
+                "strict": self.tokenizer_strict,
+                "pretokenizer_authority": self.pretokenizer_authority,
+                "prompt_template": QWEN_PROMPT_TEMPLATE,
+                "bos": self.tokenizer.bos_token_id().unwrap_or(1),
+                "eos": self.tokenizer.eos_token_id().unwrap_or(2),
+            },
+            "request": {
+                "model": request.model,
+                "prompt": prompt,
+                "system_prompt": system_prompt,
+                "stream": stream,
+                "max_new_tokens": max_new_tokens,
+                "temperature": temperature,
+                "top_k": top_k,
+                "top_p": top_p,
+                "repetition_penalty": repetition_penalty,
+                "seed": seed,
+            },
+            "generation": {
+                "mode": if temperature == 0.0 && top_k == 1 { "greedy" } else { "sampling" },
+                "text": text,
+                "finish_reason": finish_reason,
+                "prompt_tokens": prompt_token_count,
+                "generated_tokens": generated_token_ids.len(),
+                "prompt_token_ids": prompt_token_ids,
+                "generated_token_ids": generated_token_ids,
+                "token_texts": token_texts,
+            },
+            "timing": {
+                "model_load_ms": 0.0,
+                "tokenizer_load_ms": 0.0,
+                "tokenize_ms": crate::rounded_ms(tokenize_ms),
+                "prefill_ms": crate::rounded_ms(prefill_ms),
+                "first_token_ms": first_token_ms,
+                "time_to_first_token_ms": first_token_ms,
+                "decode_ms": crate::rounded_ms(decode_ms),
+                "sampling_ms": crate::rounded_ms(sampling_ms),
+                "total_ms": crate::rounded_ms(total_ms),
+                "decode_step_ms": crate::timing_samples_json(&decode_step_ms),
+                "sample_step_ms": crate::timing_samples_json(&sample_step_ms),
+            },
+            "session_reuse": {
+                "reuse_scope": "resident_server",
+                "model_loaded_at_startup": true,
+                "tokenizer_loaded_at_startup": true,
+                "request_serialized": true,
+                "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+            },
+            "claim_boundary": {
+                "local_server_completion_endpoint": true,
+                "streaming_transport": stream,
+                "openai_compatibility_claimed": false,
+                "production_readiness_claimed": false,
+                "bitnet_quality_claimed": false,
+                "full_metal_inference_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "broad_performance_claim": false,
+            },
+        });
+        write_json_receipt(&receipt_path, &receipt)?;
+        Ok(MacServeCompletion {
+            request_id,
+            model_id: state.model.id.clone(),
+            text: receipt["generation"]["text"].as_str().unwrap_or_default().to_string(),
+            token_texts: receipt["generation"]["token_texts"]
+                .as_array()
+                .map(|items| {
+                    items.iter().filter_map(|item| item.as_str().map(ToOwned::to_owned)).collect()
+                })
+                .unwrap_or_default(),
+            generated_token_ids: receipt["generation"]["generated_token_ids"]
+                .as_array()
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(|item| item.as_u64().map(|value| value as u32))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            finish_reason: receipt["generation"]["finish_reason"]
+                .as_str()
+                .unwrap_or("length")
+                .to_string(),
+            stream,
+            receipt_path,
+            receipt,
+        })
+    }
+}
+
+#[derive(Debug)]
+struct MacServeCompletion {
+    request_id: String,
+    model_id: String,
+    text: String,
+    token_texts: Vec<String>,
+    generated_token_ids: Vec<u32>,
+    finish_reason: String,
+    stream: bool,
+    receipt_path: PathBuf,
+    receipt: serde_json::Value,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MacServeCompletionRequest {
+    model: Option<String>,
+    prompt: Option<String>,
+    messages: Option<Vec<MacServeChatMessage>>,
+    max_tokens: Option<usize>,
+    max_new_tokens: Option<usize>,
+    temperature: Option<f32>,
+    top_k: Option<usize>,
+    top_p: Option<f32>,
+    repetition_penalty: Option<f32>,
+    seed: Option<u64>,
+    stream: Option<bool>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MacServeChatMessage {
+    role: String,
+    content: String,
+}
+
+impl MacServeCompletionRequest {
+    fn prompt_text(&self) -> Result<String> {
+        if let Some(prompt) = self.prompt.as_deref().map(str::trim)
+            && !prompt.is_empty()
+        {
+            return Ok(prompt.to_string());
+        }
+        let messages = self
+            .messages
+            .as_ref()
+            .ok_or_else(|| anyhow!("completion request requires `prompt` or `messages`"))?;
+        messages
+            .iter()
+            .rev()
+            .find(|message| message.role.eq_ignore_ascii_case("user"))
+            .map(|message| message.content.trim().to_string())
+            .filter(|content| !content.is_empty())
+            .ok_or_else(|| {
+                anyhow!("completion request messages must include a non-empty user message")
+            })
+    }
+
+    fn system_prompt(&self) -> Option<String> {
+        self.messages.as_ref().and_then(|messages| {
+            let text = messages
+                .iter()
+                .filter(|message| message.role.eq_ignore_ascii_case("system"))
+                .map(|message| message.content.trim())
+                .filter(|content| !content.is_empty())
+                .collect::<Vec<_>>()
+                .join("\n\n");
+            (!text.is_empty()).then_some(text)
+        })
+    }
+}
+
 async fn handle_mac_serve_connection(
     mut stream: TcpStream,
     state: Arc<MacServeState>,
 ) -> Result<()> {
-    let mut buffer = [0u8; 4096];
-    let read = stream.read(&mut buffer).await.context("failed to read HTTP request")?;
-    if read == 0 {
+    let request = read_mac_serve_http_request(&mut stream).await?;
+    if request.is_empty() {
         return Ok(());
     }
-    let request = String::from_utf8_lossy(&buffer[..read]);
-    let (status, reason, body) = mac_serve_http_response(&request, &state);
-    let body = serde_json::to_vec_pretty(&body)?;
+    let response = mac_serve_http_reply(&request, &state).await?;
     let header = format!(
-        "HTTP/1.1 {status} {reason}\r\ncontent-type: application/json\r\ncache-control: no-store\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
-        body.len()
+        "HTTP/1.1 {} {}\r\ncontent-type: {}\r\ncache-control: no-store\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+        response.status,
+        response.reason,
+        response.content_type,
+        response.body.len()
     );
     stream.write_all(header.as_bytes()).await.context("failed to write HTTP header")?;
-    stream.write_all(&body).await.context("failed to write HTTP body")?;
+    stream.write_all(&response.body).await.context("failed to write HTTP body")?;
     stream.shutdown().await.context("failed to close HTTP stream")?;
     Ok(())
+}
+
+struct MacServeHttpReply {
+    status: u16,
+    reason: &'static str,
+    content_type: &'static str,
+    body: Vec<u8>,
+}
+
+impl MacServeHttpReply {
+    fn json(status: u16, reason: &'static str, body: serde_json::Value) -> Result<Self> {
+        Ok(Self {
+            status,
+            reason,
+            content_type: "application/json",
+            body: serde_json::to_vec_pretty(&body)?,
+        })
+    }
+
+    fn sse(body: String) -> Self {
+        Self {
+            status: 200,
+            reason: "OK",
+            content_type: "text/event-stream",
+            body: body.into_bytes(),
+        }
+    }
+}
+
+async fn read_mac_serve_http_request(stream: &mut TcpStream) -> Result<String> {
+    let mut buffer = Vec::with_capacity(8192);
+    let mut chunk = [0u8; 4096];
+    loop {
+        let read = stream.read(&mut chunk).await.context("failed to read HTTP request")?;
+        if read == 0 {
+            break;
+        }
+        buffer.extend_from_slice(&chunk[..read]);
+        if buffer.len() > 1_048_576 {
+            anyhow::bail!("M4 local server request exceeded 1 MiB limit");
+        }
+        if mac_serve_http_request_complete(&buffer) {
+            break;
+        }
+    }
+    Ok(String::from_utf8_lossy(&buffer).to_string())
+}
+
+fn mac_serve_http_request_complete(buffer: &[u8]) -> bool {
+    let Some(header_end) = buffer.windows(4).position(|window| window == b"\r\n\r\n") else {
+        return false;
+    };
+    let header_len = header_end + 4;
+    let headers = String::from_utf8_lossy(&buffer[..header_end]);
+    let content_length = headers
+        .lines()
+        .find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.eq_ignore_ascii_case("content-length")
+                .then(|| value.trim().parse::<usize>().ok())
+                .flatten()
+        })
+        .unwrap_or(0);
+    buffer.len() >= header_len.saturating_add(content_length)
+}
+
+async fn mac_serve_http_reply(request: &str, state: &MacServeState) -> Result<MacServeHttpReply> {
+    let (method, path) = mac_serve_request_method_path(request);
+    if method == "POST" && path == "/v1/chat/completions" {
+        return mac_serve_completion_http_reply(request, state).await;
+    }
+    if method == "GET" && path.starts_with("/receipts/") {
+        return mac_serve_receipt_http_reply(path, state);
+    }
+    let (status, reason, body) = mac_serve_http_response(request, state);
+    MacServeHttpReply::json(status, reason, body)
 }
 
 fn mac_serve_http_response(
     request: &str,
     state: &MacServeState,
 ) -> (u16, &'static str, serde_json::Value) {
-    let mut parts = request.lines().next().unwrap_or_default().split_whitespace();
-    let method = parts.next().unwrap_or_default();
-    let path = parts.next().unwrap_or_default().split('?').next().unwrap_or_default();
+    let (method, path) = mac_serve_request_method_path(request);
     if method != "GET" {
         return (
             405,
@@ -1447,10 +1977,242 @@ fn mac_serve_http_response(
             serde_json::json!({
                 "status": "error",
                 "error": "not_found",
-                "available_endpoints": ["/health", "/health/live", "/ready", "/health/ready"],
+                "available_endpoints": ["/health", "/health/live", "/ready", "/health/ready", "/v1/chat/completions", "/receipts/{id}"],
             }),
         ),
     }
+}
+
+fn mac_serve_receipt_http_reply(path: &str, state: &MacServeState) -> Result<MacServeHttpReply> {
+    let receipt_id = path.trim_start_matches("/receipts/").trim();
+    let Some(receipt_stem) = mac_serve_normalize_receipt_id(receipt_id) else {
+        return MacServeHttpReply::json(
+            400,
+            "Bad Request",
+            serde_json::json!({
+                "status": "error",
+                "error": "invalid_receipt_id",
+                "message": "receipt id must be a single safe file stem, for example m4srv-123",
+            }),
+        );
+    };
+    let receipt_path = state.receipt_dir.join(format!("{receipt_stem}.json"));
+    if !receipt_path.exists() {
+        return MacServeHttpReply::json(
+            404,
+            "Not Found",
+            serde_json::json!({
+                "status": "error",
+                "error": "receipt_not_found",
+                "receipt_id": receipt_stem,
+                "receipt_dir": &state.receipt_dir,
+            }),
+        );
+    }
+    let canonical_dir = std::fs::canonicalize(&state.receipt_dir).with_context(|| {
+        format!("failed to canonicalize receipt directory {}", state.receipt_dir.display())
+    })?;
+    let canonical_receipt = std::fs::canonicalize(&receipt_path)
+        .with_context(|| format!("failed to canonicalize receipt {}", receipt_path.display()))?;
+    if !canonical_receipt.starts_with(&canonical_dir) {
+        return MacServeHttpReply::json(
+            400,
+            "Bad Request",
+            serde_json::json!({
+                "status": "error",
+                "error": "invalid_receipt_id",
+                "message": "receipt path escapes the configured receipt directory",
+            }),
+        );
+    }
+    let receipt_text = std::fs::read_to_string(&canonical_receipt)
+        .with_context(|| format!("failed to read receipt {}", canonical_receipt.display()))?;
+    let receipt: serde_json::Value = serde_json::from_str(&receipt_text)
+        .with_context(|| format!("receipt is not valid JSON: {}", canonical_receipt.display()))?;
+    MacServeHttpReply::json(200, "OK", receipt)
+}
+
+fn mac_serve_normalize_receipt_id(receipt_id: &str) -> Option<String> {
+    let receipt_id = receipt_id.strip_suffix(".json").unwrap_or(receipt_id);
+    if receipt_id.is_empty()
+        || receipt_id.contains('/')
+        || receipt_id.contains('\\')
+        || receipt_id.contains("..")
+    {
+        return None;
+    }
+    let safe = receipt_id.chars().all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_'));
+    safe.then(|| receipt_id.to_string())
+}
+
+async fn mac_serve_completion_http_reply(
+    request: &str,
+    state: &MacServeState,
+) -> Result<MacServeHttpReply> {
+    let body = mac_serve_http_body(request);
+    let completion_request: MacServeCompletionRequest = match serde_json::from_str(body) {
+        Ok(request) => request,
+        Err(error) => {
+            return MacServeHttpReply::json(
+                400,
+                "Bad Request",
+                serde_json::json!({
+                    "status": "error",
+                    "error": "invalid_completion_request",
+                    "message": error.to_string(),
+                }),
+            );
+        }
+    };
+    if let Some(requested_model) = completion_request.model.as_deref().map(str::trim)
+        && !requested_model.is_empty()
+        && requested_model != state.model.id
+    {
+        return MacServeHttpReply::json(
+            400,
+            "Bad Request",
+            serde_json::json!({
+                "status": "error",
+                "error": "unsupported_model",
+                "message": format!(
+                    "mac serve has resident model {}; request asked for {requested_model}",
+                    state.model.id
+                ),
+            }),
+        );
+    }
+    let Some(generator) = state.generator.as_ref() else {
+        return MacServeHttpReply::json(
+            503,
+            "Service Unavailable",
+            serde_json::json!({
+                "status": "error",
+                "error": "generation_unavailable",
+                "reason": "M4 local server state was created without a resident generator",
+            }),
+        );
+    };
+    let completion = {
+        let generator = generator.lock().await;
+        match generator.complete(state, completion_request) {
+            Ok(completion) => completion,
+            Err(error) => {
+                return MacServeHttpReply::json(
+                    500,
+                    "Internal Server Error",
+                    serde_json::json!({
+                        "status": "error",
+                        "error": "completion_failed",
+                        "message": error.to_string(),
+                        "claim_boundary": {
+                            "openai_compatibility_claimed": false,
+                            "production_readiness_claimed": false,
+                            "bitnet_quality_claimed": false,
+                            "full_metal_inference_claimed": false,
+                        },
+                    }),
+                );
+            }
+        }
+    };
+    if completion.stream {
+        Ok(MacServeHttpReply::sse(mac_serve_completion_sse(&completion)?))
+    } else {
+        MacServeHttpReply::json(200, "OK", mac_serve_completion_json(&completion))
+    }
+}
+
+fn mac_serve_request_method_path(request: &str) -> (&str, &str) {
+    let mut parts = request.lines().next().unwrap_or_default().split_whitespace();
+    let method = parts.next().unwrap_or_default();
+    let path = parts.next().unwrap_or_default().split('?').next().unwrap_or_default();
+    (method, path)
+}
+
+fn mac_serve_http_body(request: &str) -> &str {
+    request
+        .split_once("\r\n\r\n")
+        .map(|(_, body)| body)
+        .or_else(|| request.split_once("\n\n").map(|(_, body)| body))
+        .unwrap_or_default()
+}
+
+fn mac_serve_completion_json(completion: &MacServeCompletion) -> serde_json::Value {
+    serde_json::json!({
+        "id": completion.request_id,
+        "object": "chat.completion",
+        "model": completion.model_id,
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": completion.text,
+                },
+                "finish_reason": completion.finish_reason,
+            }
+        ],
+        "receipt_path": completion.receipt_path,
+        "receipt": completion.receipt,
+        "usage": {
+            "completion_tokens": completion.generated_token_ids.len(),
+        },
+        "claim_boundary": {
+            "openai_compatibility_claimed": false,
+            "production_readiness_claimed": false,
+        },
+    })
+}
+
+fn mac_serve_completion_sse(completion: &MacServeCompletion) -> Result<String> {
+    let mut output = String::new();
+    output.push_str("event: metadata\n");
+    output.push_str("data: ");
+    output.push_str(&serde_json::to_string(&serde_json::json!({
+        "id": completion.request_id,
+        "object": "chat.completion.chunk",
+        "model": completion.model_id,
+        "receipt_path": completion.receipt_path,
+        "generated_token_ids": completion.generated_token_ids,
+        "claim_boundary": {
+            "openai_compatibility_claimed": false,
+            "production_readiness_claimed": false,
+        },
+    }))?);
+    output.push_str("\n\n");
+    for token_text in &completion.token_texts {
+        output.push_str("data: ");
+        output.push_str(&serde_json::to_string(&serde_json::json!({
+            "id": completion.request_id,
+            "object": "chat.completion.chunk",
+            "model": completion.model_id,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "content": token_text,
+                    },
+                    "finish_reason": serde_json::Value::Null,
+                }
+            ],
+        }))?);
+        output.push_str("\n\n");
+    }
+    output.push_str("data: ");
+    output.push_str(&serde_json::to_string(&serde_json::json!({
+        "id": completion.request_id,
+        "object": "chat.completion.chunk",
+        "model": completion.model_id,
+        "choices": [
+            {
+                "index": 0,
+                "delta": {},
+                "finish_reason": completion.finish_reason,
+            }
+        ],
+    }))?);
+    output.push_str("\n\ndata: [DONE]\n\n");
+    Ok(output)
 }
 
 fn mac_serve_health_json(state: &MacServeState) -> serde_json::Value {
@@ -1463,6 +2225,8 @@ fn mac_serve_health_json(state: &MacServeState) -> serde_json::Value {
         "endpoints": {
             "health": "/health",
             "ready": "/ready",
+            "completions": "/v1/chat/completions",
+            "receipts": "/receipts/{id}",
         },
         "claim_boundary": mac_serve_claim_boundary_json(),
     })
@@ -1472,7 +2236,7 @@ fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
     let cache_ready = state.cache_status["ready"].as_bool().unwrap_or(false);
     let backend_ready = true;
     let tokenizer_ready = true;
-    let receipt_ready = state.receipt_dir.exists();
+    let receipt_ready = mac_serve_receipt_dir_ready(&state.receipt_dir);
     let ready = cache_ready && backend_ready && tokenizer_ready && receipt_ready;
     serde_json::json!({
         "artifact_kind": "bitnet_apple_m4_local_server_ready",
@@ -1518,7 +2282,8 @@ fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
                 "checked": true,
                 "ready": receipt_ready,
                 "dir": &state.receipt_dir,
-                "mode": "per_request_future",
+                "mode": "per_request_http_export",
+                "endpoint": "/receipts/{id}",
             },
             "generation": {
                 "checked": false,
@@ -1543,8 +2308,9 @@ fn mac_serve_server_json(state: &MacServeState) -> serde_json::Value {
 fn mac_serve_claim_boundary_json() -> serde_json::Value {
     serde_json::json!({
         "dense_slm_local_server_health_ready": true,
-        "generation_endpoint_implemented": false,
-        "streaming_completions_work": false,
+        "generation_endpoint_implemented": true,
+        "streaming_completions_work": true,
+        "receipt_export_endpoint_implemented": true,
         "openai_compatibility_claimed": false,
         "production_readiness_claimed": false,
         "bitnet_quality_claimed": false,
@@ -1556,12 +2322,58 @@ fn mac_serve_claim_boundary_json() -> serde_json::Value {
     })
 }
 
+fn ensure_mac_serve_receipt_dir_ready(receipt_dir: &Path) -> Result<()> {
+    if !receipt_dir.is_dir() {
+        anyhow::bail!("mac serve receipt path is not a directory: {}", receipt_dir.display());
+    }
+    mac_serve_write_receipt_probe(receipt_dir).with_context(|| {
+        format!("mac serve receipt directory is not writable: {}", receipt_dir.display())
+    })
+}
+
+fn mac_serve_receipt_dir_ready(receipt_dir: &Path) -> bool {
+    receipt_dir.is_dir() && mac_serve_write_receipt_probe(receipt_dir).is_ok()
+}
+
+fn mac_serve_write_receipt_probe(receipt_dir: &Path) -> Result<()> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    for attempt in 0..8 {
+        let probe = receipt_dir.join(format!(
+            ".bitnet-mac-serve-receipt-probe-{}-{now}-{attempt}",
+            std::process::id()
+        ));
+        match std::fs::OpenOptions::new().write(true).create_new(true).open(&probe) {
+            Ok(_) => {
+                std::fs::remove_file(&probe).with_context(|| {
+                    format!("failed to remove receipt probe {}", probe.display())
+                })?;
+                return Ok(());
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!("failed to create receipt probe {}", probe.display())
+                });
+            }
+        }
+    }
+    anyhow::bail!("failed to choose a unique receipt probe path in {}", receipt_dir.display())
+}
+
 fn mac_serve_host_is_loopback(host: &str) -> bool {
     let host = host.trim().trim_start_matches('[').trim_end_matches(']');
     if host.eq_ignore_ascii_case("localhost") {
         return true;
     }
     host.parse::<std::net::IpAddr>().map(|addr| addr.is_loopback()).unwrap_or(false)
+}
+
+fn mac_serve_request_id() -> String {
+    let nanos = chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default();
+    format!("m4srv-{nanos}")
 }
 
 fn mac_doctor_base_receipt(
@@ -3770,7 +4582,16 @@ mod tests {
             "127.0.0.1".to_string(),
             8080,
             true,
+            MacServeGenerationDefaults {
+                max_new_tokens: 8,
+                temperature: 0.0,
+                top_k: 1,
+                top_p: 1.0,
+                repetition_penalty: 1.1,
+                seed: None,
+            },
             receipt_dir,
+            None,
         );
         (temp, state)
     }
@@ -3787,7 +4608,7 @@ mod tests {
         assert_eq!(ready["backend"]["selected_backend"], APPLE_M4_CPU_NEON);
         assert_eq!(ready["backend"]["fallback_used"], false);
         assert_eq!(ready["checks"]["generation"]["executed"], false);
-        assert_eq!(ready["claim_boundary"]["generation_endpoint_implemented"], false);
+        assert_eq!(ready["claim_boundary"]["generation_endpoint_implemented"], true);
         assert_eq!(ready["claim_boundary"]["bitnet_quality_claimed"], false);
         assert_eq!(ready["claim_boundary"]["full_metal_inference_claimed"], false);
     }
@@ -3811,6 +4632,45 @@ mod tests {
     }
 
     #[test]
+    fn mac_serve_ready_json_requires_receipt_directory() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let receipt_path = temp.path().join("receipt-file");
+        std::fs::write(&receipt_path, b"not a directory").expect("receipt file");
+        let state = MacServeState::new(
+            test_verified_model(temp.path()),
+            "127.0.0.1".to_string(),
+            8080,
+            true,
+            MacServeGenerationDefaults {
+                max_new_tokens: 8,
+                temperature: 0.0,
+                top_k: 1,
+                top_p: 1.0,
+                repetition_penalty: 1.1,
+                seed: None,
+            },
+            receipt_path,
+            None,
+        );
+
+        let ready = mac_serve_ready_json(&state);
+
+        assert_eq!(ready["ready"], false);
+        assert_eq!(ready["status"], "not_ready");
+        assert_eq!(ready["checks"]["receipts"]["ready"], false);
+    }
+
+    #[test]
+    fn mac_serve_receipt_dir_probe_rejects_non_directory() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let receipt_path = temp.path().join("receipt-file");
+        std::fs::write(&receipt_path, b"not a directory").expect("receipt file");
+
+        assert!(!mac_serve_receipt_dir_ready(&receipt_path));
+        assert!(ensure_mac_serve_receipt_dir_ready(&receipt_path).is_err());
+    }
+
+    #[test]
     fn mac_serve_http_rejects_unknown_paths_and_methods() {
         let (_temp, state) = test_state();
 
@@ -3823,6 +4683,120 @@ mod tests {
             mac_serve_http_response("GET /v1/chat/completions HTTP/1.1\r\n\r\n", &state);
         assert_eq!((status, reason), (404, "Not Found"));
         assert_eq!(body["error"], "not_found");
+    }
+
+    #[tokio::test]
+    async fn mac_serve_receipt_endpoint_exports_existing_receipt() {
+        let (_temp, state) = test_state();
+        let receipt_path = state.receipt_dir.join("m4srv-test.json");
+        std::fs::write(
+            &receipt_path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "artifact_kind": "bitnet_apple_m4_local_server_completion",
+                "request_id": "m4srv-test",
+                "selected_backend": APPLE_M4_CPU_NEON,
+                "fallback_used": false,
+            }))
+            .expect("receipt json"),
+        )
+        .expect("write receipt");
+
+        let reply = mac_serve_http_reply("GET /receipts/m4srv-test HTTP/1.1\r\n\r\n", &state)
+            .await
+            .expect("reply");
+        assert_eq!(reply.status, 200);
+        assert_eq!(reply.content_type, "application/json");
+        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        assert_eq!(body["artifact_kind"], "bitnet_apple_m4_local_server_completion");
+        assert_eq!(body["request_id"], "m4srv-test");
+        assert_eq!(body["selected_backend"], APPLE_M4_CPU_NEON);
+        assert_eq!(body["fallback_used"], false);
+    }
+
+    #[tokio::test]
+    async fn mac_serve_receipt_endpoint_rejects_unsafe_or_missing_receipts() {
+        let (_temp, state) = test_state();
+
+        let unsafe_reply = mac_serve_http_reply("GET /receipts/../secret HTTP/1.1\r\n\r\n", &state)
+            .await
+            .expect("unsafe reply");
+        assert_eq!(unsafe_reply.status, 400);
+        let unsafe_body: serde_json::Value =
+            serde_json::from_slice(&unsafe_reply.body).expect("json body");
+        assert_eq!(unsafe_body["error"], "invalid_receipt_id");
+
+        let missing_reply =
+            mac_serve_http_reply("GET /receipts/m4srv-missing HTTP/1.1\r\n\r\n", &state)
+                .await
+                .expect("missing reply");
+        assert_eq!(missing_reply.status, 404);
+        let missing_body: serde_json::Value =
+            serde_json::from_slice(&missing_reply.body).expect("json body");
+        assert_eq!(missing_body["error"], "receipt_not_found");
+    }
+
+    #[tokio::test]
+    async fn mac_serve_completion_endpoint_reports_unavailable_without_generator() {
+        let (_temp, state) = test_state();
+        let request = concat!(
+            "POST /v1/chat/completions HTTP/1.1\r\n",
+            "content-type: application/json\r\n",
+            "content-length: 39\r\n",
+            "\r\n",
+            "{\"prompt\":\"What is 2+2?\",\"stream\":false}"
+        );
+        let reply = mac_serve_http_reply(request, &state).await.expect("reply");
+        assert_eq!(reply.status, 503);
+        assert_eq!(reply.content_type, "application/json");
+        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        assert_eq!(body["error"], "generation_unavailable");
+    }
+
+    #[tokio::test]
+    async fn mac_serve_completion_endpoint_rejects_invalid_json() {
+        let (_temp, state) = test_state();
+        let request = concat!(
+            "POST /v1/chat/completions HTTP/1.1\r\n",
+            "content-type: application/json\r\n",
+            "content-length: 5\r\n",
+            "\r\n",
+            "{bad}"
+        );
+        let state = MacServeState { generator: None, ..state };
+        let reply = mac_serve_http_reply(request, &state).await.expect("reply");
+        assert_eq!(reply.status, 400);
+        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        assert_eq!(body["error"], "invalid_completion_request");
+    }
+
+    #[tokio::test]
+    async fn mac_serve_completion_endpoint_rejects_wrong_model_id() {
+        let (_temp, state) = test_state();
+        let request = concat!(
+            "POST /v1/chat/completions HTTP/1.1\r\n",
+            "content-type: application/json\r\n",
+            "content-length: 64\r\n",
+            "\r\n",
+            "{\"model\":\"other-model\",\"prompt\":\"What is 2+2?\",\"stream\":false}"
+        );
+        let reply = mac_serve_http_reply(request, &state).await.expect("reply");
+        assert_eq!(reply.status, 400);
+        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        assert_eq!(body["error"], "unsupported_model");
+    }
+
+    #[test]
+    fn mac_serve_completion_request_accepts_prompt_or_chat_messages() {
+        let prompt_request: MacServeCompletionRequest =
+            serde_json::from_str(r#"{"prompt":"What is 2+2?"}"#).expect("prompt request");
+        assert_eq!(prompt_request.prompt_text().expect("prompt"), "What is 2+2?");
+
+        let chat_request: MacServeCompletionRequest = serde_json::from_str(
+            r#"{"messages":[{"role":"system","content":"Be brief."},{"role":"user","content":"Name the capital of France."}]}"#,
+        )
+        .expect("chat request");
+        assert_eq!(chat_request.prompt_text().expect("chat prompt"), "Name the capital of France.");
+        assert_eq!(chat_request.system_prompt().as_deref(), Some("Be brief."));
     }
 
     #[test]
