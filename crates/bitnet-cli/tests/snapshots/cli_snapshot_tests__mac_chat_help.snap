@@ -15,14 +15,16 @@ Options:
           Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
       --stdin
           Read additional prompts from stdin, one non-empty line per turn
+      --interactive
+          Collect prompts from an interactive line loop until /exit, /quit, or EOF
       --log-level <LEVEL>
           Log level (trace, debug, info, warn, error)
       --model-id <MODEL_ID>
           Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
-      --cache-dir <PATH>
-          Override model cache root. Defaults to ~/.cache/bitnet-rs/models
       --batch-size <SIZE>
           Batch size for processing
+      --cache-dir <PATH>
+          Override model cache root. Defaults to ~/.cache/bitnet-rs/models
       --system <TEXT>
           Optional system prompt
       --max-new-tokens <MAX_NEW_TOKENS>
@@ -45,6 +47,8 @@ Options:
           Emit operator progress lines to stderr while keeping token text on stdout
       --quiet
           Suppress warm-session status/progress lines; token streaming still uses stdout
+      --no-turn-receipts
+          Disable per-turn receipt files; the aggregate session receipt still records each turn
       --allocation-audit
           Include scoped hot-loop allocation counter deltas in session receipts
       --json-out <PATH>

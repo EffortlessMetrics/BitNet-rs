@@ -146,6 +146,12 @@ fn mac_chat_help() {
 }
 
 #[test]
+fn mac_serve_help() {
+    let help = bitnet_stdout(&["mac", "serve", "--help"]);
+    assert_snapshot!("mac_serve_help", help);
+}
+
+#[test]
 fn mac_validate_help() {
     let help = bitnet_stdout(&["mac", "validate", "--help"]);
     assert_snapshot!("mac_validate_help", help);

@@ -1,6 +1,5 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
-assertion_line: 57
 expression: help
 ---
 BitNet-rs CLI - one-shot generation and chat with strict receipts
@@ -102,6 +101,8 @@ Commands:
           Emit a dense GGUF one-layer CPU reference harness receipt
   dense-gguf-one-layer-cuda-parity
           Run integrated dense GGUF one-layer strict CUDA parity diagnostics
+  dense-gguf-model-boundary-fixtures
+          Emit dense GGUF model-boundary fixture receipts for embedding/norm/logits
   dense-gguf-norm-fixture
           Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
   dense-gguf-norm-cuda-parity
