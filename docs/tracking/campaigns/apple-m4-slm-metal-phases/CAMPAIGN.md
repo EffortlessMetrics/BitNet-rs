@@ -24,7 +24,7 @@ otherwise.
 | Work item | Status | Notes |
 |---|---|---|
 | M4-METAL-001 | merged | Selected prefill Q/K/V projection as the next phase target. |
-| M4-METAL-002 | in_progress | Add CPU/Metal parity fixture. |
+| M4-METAL-002 | pr_open | Add CPU/Metal parity fixture. |
 | M4-METAL-003 | blocked | Integrate phase receipt validation. |
 | M4-METAL-004 | blocked | Route the phase in resident sessions with parity. |
 | M4-METAL-005 | blocked | Record measured phase-local timing deltas. |

@@ -59,7 +59,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-002"
-status = "in_progress"
+status = "pr_open"
+pr = 4384
+head_sha = "a58f3bf81b733820f0e8b68c85c64aa376313ae7"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-002-parity-fixture"
 stackable = false
 review_mode = "codex_premerge"
