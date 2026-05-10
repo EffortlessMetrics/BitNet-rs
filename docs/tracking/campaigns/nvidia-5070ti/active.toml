@@ -3667,8 +3667,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-006"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-ux-006-bench-receipt-report"
+pr = 4454
+head_sha = "4b73f9857369aef6401333c7676c61fc653ba574"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

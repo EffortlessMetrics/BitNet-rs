@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T19:58:39Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-006"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/cuda-ux-006-bench-receipt-report"
+pr = 4454
+head_sha = "4b73f9857369aef6401333c7676c61fc653ba574"
+summary = "Opened CUDA-UX-006 benchmark receipt reporting PR."
+
+notes = [
+  "PR #4454 adds a governed receipt-reporting mode for `bitnet bench --device cuda --cuda-benchmark-receipt <path>`.",
+  "The PR preserves fail-closed CUDA bench behavior without a receipt and keeps fresh benchmark execution, speedup, full residency, server readiness, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, and CUDA kernel math claims false.",
+]
