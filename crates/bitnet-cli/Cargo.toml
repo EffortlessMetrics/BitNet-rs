@@ -98,6 +98,8 @@ cpu = [
   "bitnet-runtime-bootstrap/runtime-profile-cpu",
 ]
 cuda = [
+  "bitnet-common/cuda",
+  "bitnet-models/cuda",
   "bitnet-inference/cuda",
   "bitnet-kernels/cuda",
   "bitnet-qk256-dispatch/cuda",

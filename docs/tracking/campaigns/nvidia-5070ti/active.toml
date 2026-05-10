@@ -2949,8 +2949,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-044"
-status = "proposed"
+status = "pr_open"
 branch = "codex/cuda-dense-044-one-token-runtime-impl"
+pr = 4418
+head_sha = "5109cabd6d72914e210d0a5137c4f941b74869ad"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
