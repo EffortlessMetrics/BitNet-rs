@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T16:57:21Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-003"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-perf-003-transfer-timing"
+pr = 4443
+head_sha = "36e32c0ab026d4f8186ee86d82c783a8b8d2bdf3"
+merge_sha = "e584b154a5a42f8fe6691cc41d8186c0eb6a5542"
+
+notes = [
+  "PR #4443 merged after all required GitHub checks passed and GitHub reported mergeStateStatus=CLEAN.",
+  "CUDA-DENSE-PERF-003 now records measured device-to-host logits download timing in dense Qwen one-token, short-decode, and warm-session strict CUDA receipts while keeping host-to-device timing explicitly unmeasured.",
+  "The merged receipts preserve fallback_used=false, speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, server_ready_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+]
