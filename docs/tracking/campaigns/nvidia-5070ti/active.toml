@@ -3722,6 +3722,63 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-UX-007"
+status = "in_progress"
+branch = "codex/cuda-ux-007-receipts-explain-benchmark"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-UX-006", "CUDA-DENSE-PERF-006"]
+acceptance = "Extend `bitnet receipts explain` so governed CUDA benchmark qualification receipts show qualification status, accepted/blocked profiles, per-profile CPU/CUDA timing means, transfer timing sources, H2D envelope non-transfer-overhead labeling, and blockers while preserving ask/chat receipt summaries and keeping speedup, fresh benchmark execution, full-residency, server, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, and CUDA kernel math claims false."
+commands = [
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,full-cli receipts -- --nocapture",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli receipts -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-10\\dense-qwen-perf-006-h2d-envelope-qualification\\dense-gguf-qwen-benchmark-qualification-h2d-envelope.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-10\\dense-qwen-perf-006-h2d-envelope-qualification\\dense-gguf-qwen-benchmark-qualification-h2d-envelope.json --json",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+]
+may_claim = [
+  "`bitnet receipts explain` surfaces governed CUDA benchmark qualification decisions and blockers.",
+  "Dense Qwen and strict BitNet CUDA benchmark qualification receipts remain speedup-unqualified unless their receipt says otherwise.",
+  "Existing ask/chat proof summaries keep their generic receipt explanation fields.",
+]
+must_not_claim = [
+  "`bitnet receipts explain` executes a fresh CUDA benchmark.",
+  "`bitnet bench --device cuda` executes a fresh CUDA benchmark.",
+  "Dense regular LLM CUDA speedup exists.",
+  "Any profile has benchmark-qualified speedup unless the input receipt proves it.",
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Full CUDA residency exists.",
+  "Server readiness exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-021"
 status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"

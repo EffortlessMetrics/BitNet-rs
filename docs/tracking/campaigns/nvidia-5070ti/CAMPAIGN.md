@@ -215,6 +215,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-PERF-005 | merged | Dense Qwen strict CUDA runtime receipts record a measured H2D model-load envelope, explicitly not pure CUDA event copy timing; `speedup_claim=false`. |
 | CUDA-DENSE-PERF-006 | merged | Dense Qwen benchmark qualification consumes the H2D model-load envelope while preserving pure-H2D and speedup blockers. |
 | CUDA-UX-006 | merged | `bitnet bench --device cuda --cuda-benchmark-receipt` reports governed CUDA benchmark receipts without simulating CPU fallback or claiming fresh benchmark execution. |
+| CUDA-UX-007 | in progress | `bitnet receipts explain` surfaces benchmark qualification profile decisions, transfer timing sources, and blockers for governed CUDA benchmark receipts. |
 
 ## Review Policy
 

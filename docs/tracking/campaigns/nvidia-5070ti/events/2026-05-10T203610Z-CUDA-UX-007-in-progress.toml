@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T20:36:10Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-007"
+event = "in_progress"
+from = "untracked"
+to = "in_progress"
+actor = "codex"
+branch = "codex/cuda-ux-007-receipts-explain-benchmark"
+summary = "Start CUDA-UX-007 benchmark qualification receipt explanation."
+notes = [
+  "CUDA-UX-006 added `bitnet bench --device cuda --cuda-benchmark-receipt` for governed benchmark receipt reporting.",
+  "CUDA-UX-007 extends the existing `bitnet receipts explain` proof surface to show benchmark qualification status, per-profile decisions, transfer timing sources, and blockers.",
+  "The slice does not execute fresh benchmarks, claim speedup, claim full residency, touch kernels, or alter tokenizer, loader, transformer, QK256, or server behavior.",
+]
