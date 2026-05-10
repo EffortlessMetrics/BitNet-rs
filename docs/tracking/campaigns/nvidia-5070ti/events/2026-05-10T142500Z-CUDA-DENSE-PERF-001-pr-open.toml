@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T14:25:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-001"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-perf-001-baseline"
+pr = 4437
+head_sha = "8c299e96b00cfcfb8efd6eeab22cab150f45982b"
+summary = "Opened CUDA-DENSE-PERF-001 for the dense Qwen CUDA benchmark baseline."
+notes = [
+  "Opened PR #4437 to add a dense Qwen CUDA benchmark baseline receipt builder, validator, and committed RTX 5070 Ti baseline receipt.",
+  "The baseline aggregates existing one-token, short-decode, and warm-session strict CUDA receipts and records source receipt SHA256 hashes, profile timing, kernel invocation, transfer byte, route, fallback, and claim-boundary evidence.",
+  "The PR keeps speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, server_ready_claimed=false, dense_gguf_inference_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+]

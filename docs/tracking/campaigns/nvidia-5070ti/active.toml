@@ -2050,8 +2050,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-PERF-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-perf-001-baseline"
+pr = 4437
+head_sha = "8c299e96b00cfcfb8efd6eeab22cab150f45982b"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
