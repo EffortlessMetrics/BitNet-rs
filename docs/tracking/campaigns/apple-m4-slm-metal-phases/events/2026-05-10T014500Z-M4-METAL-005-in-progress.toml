@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T01:45:00Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-005"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started extracting the validated dense prefill Q/K/V Metal dispatch from test-only code into a non-dev bitnet-kernels runtime API.",
+  "The item remains fixture-scoped and does not route resident dense SLM generation through Metal.",
+  "Live Apple M4 Metal dispatch remains opt-in while generic tests cover API shape and output splitting without requiring a Metal runner.",
+  "No full apple-m4-metal inference claim, BitNet claim, QK256, Neural Engine, MPSGraph, MacBook work, model binary, or broad performance claim is introduced.",
+]

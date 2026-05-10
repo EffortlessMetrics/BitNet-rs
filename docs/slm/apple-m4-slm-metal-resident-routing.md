@@ -59,6 +59,14 @@ M4-METAL-007:
 fixture construction, and CPU-side behavior. Live Apple M4 Metal dispatch should
 remain opt-in or Mac-runner scoped.
 
+`M4-METAL-005` implements that first prerequisite as a fixture-scoped runtime
+API in `bitnet_kernels::metal::dense_prefill_qkv`, gated behind the opt-in
+`metal-runtime` feature so ordinary CI can keep using lightweight `metal`
+receipt checks without pulling live dispatch dependencies. That API is
+intentionally not wired into `bitnet mac chat`, `bitnet mac validate`, or
+resident generation; `M4-METAL-006` owns that routing decision after the runtime
+API is available.
+
 ## Allowed Claim After M4-METAL-004
 
 ```text
@@ -72,4 +80,3 @@ runtime API.
 Dense SLM Metal phase evidence does not prove BitNet quality, QK256 on Apple
 Silicon, Neural Engine execution, MPSGraph model inference, full
 `apple-m4-metal` inference, or broad M4 performance.
-
