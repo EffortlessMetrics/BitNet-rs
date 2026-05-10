@@ -46,6 +46,7 @@ mod gates;
 mod grid_check;
 #[allow(dead_code)]
 mod health_check;
+mod model_coverage;
 #[allow(dead_code)]
 mod model_info;
 mod model_registry;
@@ -1030,6 +1031,13 @@ enum Cmd {
         command: campaign::CampaignCmd,
     },
 
+    /// Validate the cross-family model coverage matrix.
+    #[command(name = "check-model-coverage")]
+    CheckModelCoverage {
+        #[arg(long, default_value = "ci/model-artifacts/model-coverage-matrix.toml")]
+        matrix: PathBuf,
+    },
+
     /// Run Apple M4 operational validation and receipt checks.
     #[command(name = "apple-m4")]
     AppleM4 {
@@ -1554,6 +1562,7 @@ fn real_main() -> Result<()> {
             grid_check::run(cpu_only, verbose, dry_run)
         }
         Cmd::Campaign { command } => campaign::run(command),
+        Cmd::CheckModelCoverage { matrix } => model_coverage::run(matrix),
         Cmd::AppleM4 { command } => apple_m4::run(command),
         Cmd::CiLaneWhitelist { command } => match command {
             CiLaneWhitelistCmd::Check {

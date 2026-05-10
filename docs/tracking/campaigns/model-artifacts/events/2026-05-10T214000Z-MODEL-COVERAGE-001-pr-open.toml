@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T21:40:00Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-001"
+event = "pr_open"
+actor = "codex"
+branch = "codex/model-coverage-001-matrix"
+pr = 4460
+head_sha = "7be4861cdb700be48bd0308ac06167e5987a0bff"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4460 for MODEL-COVERAGE-001 cross-family model coverage matrix validation.",
+  "The PR adds the machine-readable matrix, docs, and `xtask check-model-coverage` without runtime inference, tokenizer, loader, transformer, CUDA, server, speedup, or residency behavior changes.",
+]

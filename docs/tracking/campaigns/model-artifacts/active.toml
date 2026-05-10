@@ -577,6 +577,65 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "MODEL-COVERAGE-001"
+status = "pr_open"
+branch = "codex/model-coverage-001-matrix"
+pr = 4460
+head_sha = "7be4861cdb700be48bd0308ac06167e5987a0bff"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["BITNET-CONTRACT-004", "MODEL-CAPS-001"]
+acceptance = "Add a machine-readable cross-family model coverage matrix that records proof tiers and claim boundaries for the official BitNet 2B I2_S CUDA lane, dense Qwen SLM CUDA lane, storage/reference dense Qwen artifacts, unsupported 3B x86 I2_S, 3B TL2 candidate, selected small-LLM candidate, and docs-only modern LLM placeholder without changing runtime inference, tokenizer, loader, transformer, CUDA, server, speedup, or residency behavior."
+commands = [
+  "cargo run --release --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo test --locked -p xtask --bin xtask --no-default-features model_coverage -- --nocapture",
+  "cargo fmt -p xtask -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+  "xtask/src/main.rs",
+  "xtask/src/model_coverage.rs",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "dense GGUF inference",
+  "server inference",
+  "speed claims",
+  "full CUDA residency claims",
+]
+may_claim = [
+  "The cross-family model coverage matrix records current proof tiers and claim boundaries for BitNet, dense SLM, selected small-LLM, unsupported, and docs-only lanes.",
+  "`xtask check-model-coverage` validates the coverage matrix and rejects common claim leaks.",
+  "Official BitNet 2B I2_S and dense Qwen Q8_0 remain separate proof lanes.",
+]
+must_not_claim = [
+  "New runtime inference behavior exists.",
+  "Dense CUDA evidence satisfies BitNet packed I2_S/QK256 proof.",
+  "Unsupported 3B x86 I2_S is answer-ready.",
+  "Any backend speedup, server readiness, or full CUDA residency is proven.",
+  "Tokenizer, loader, prompt-template, transformer, QK256, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "MODEL-CAPS-001"
 status = "merged"
 branch = "codex/model-caps-001-dense-verify"

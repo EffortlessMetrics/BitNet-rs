@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T21:30:00Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/model-coverage-001-matrix"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "MODEL-COVERAGE-001 records proof tiers and claim boundaries across BitNet, dense SLM, selected small-LLM, unsupported, and docs-only lanes.",
+  "The slice is docs/control-plane only and must not change runtime inference, tokenizer, loader, transformer, CUDA, server, speedup, or residency behavior.",
+]

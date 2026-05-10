@@ -1,0 +1,327 @@
+use anyhow::{Context, Result, bail};
+use serde::Deserialize;
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::PathBuf,
+};
+
+#[derive(Debug, Deserialize)]
+struct CoverageMatrix {
+    schema: u32,
+    artifact_kind: String,
+    work_item: String,
+    claim_boundary: String,
+    tier: Vec<Tier>,
+    entry: Vec<Entry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Tier {
+    id: String,
+    rank: u32,
+    requires: Vec<String>,
+    meaning: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Entry {
+    id: String,
+    model_class: String,
+    family: String,
+    artifact_kind: String,
+    #[allow(dead_code)]
+    contract_id: Option<String>,
+    #[allow(dead_code)]
+    capability_id: Option<String>,
+    status: String,
+    current_tier: String,
+    verifier_surface: String,
+    tokenizer_authority: String,
+    prompt_authority: String,
+    cpu_reference: String,
+    accelerator_routes: Vec<String>,
+    required_receipts: Vec<String>,
+    forbidden_claims: Vec<String>,
+    next_proof: String,
+    claim_boundary: String,
+    claims: Claims,
+}
+
+#[derive(Debug, Deserialize)]
+struct Claims {
+    registered: bool,
+    structurally_valid: bool,
+    reference_good: bool,
+    cpu_answer_ready: bool,
+    accelerator_answer_ready: bool,
+    benchmark_qualified: bool,
+    product_cli_ready: bool,
+    server_ready: bool,
+    speedup_claim: bool,
+    full_residency_claim: bool,
+    bitnet_packed_i2s_qk256_proof: bool,
+    dense_regular_llm_cuda_proof: bool,
+}
+
+pub fn run(matrix_path: PathBuf) -> Result<()> {
+    let matrix = load_matrix(&matrix_path)?;
+    validate_matrix(&matrix)?;
+    println!(
+        "model coverage matrix passed: {} entries, {} tiers ({})",
+        matrix.entry.len(),
+        matrix.tier.len(),
+        matrix_path.display()
+    );
+    Ok(())
+}
+
+fn load_matrix(matrix_path: &PathBuf) -> Result<CoverageMatrix> {
+    let raw = fs::read_to_string(matrix_path)
+        .with_context(|| format!("reading {}", matrix_path.display()))?;
+    toml::from_str(&raw).with_context(|| format!("parsing {}", matrix_path.display()))
+}
+
+fn validate_matrix(matrix: &CoverageMatrix) -> Result<()> {
+    require_eq(matrix.schema, 1, "schema")?;
+    require_eq(matrix.artifact_kind.as_str(), "model_coverage_matrix", "artifact_kind")?;
+    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-001", "work_item")?;
+    require_nonempty(&matrix.claim_boundary, "claim_boundary")?;
+    validate_tiers(&matrix.tier)?;
+    validate_entries(matrix)?;
+    Ok(())
+}
+
+fn validate_tiers(tiers: &[Tier]) -> Result<()> {
+    if tiers.is_empty() {
+        bail!("matrix has no coverage tiers");
+    }
+    let mut seen_ids = HashSet::new();
+    let mut seen_ranks = HashSet::new();
+    let ranks_by_id: HashMap<_, _> =
+        tiers.iter().map(|tier| (tier.id.as_str(), tier.rank)).collect();
+
+    for tier in tiers {
+        require_nonempty(&tier.id, "tier.id")?;
+        require_nonempty(&tier.meaning, "tier.meaning")?;
+        if !seen_ids.insert(tier.id.as_str()) {
+            bail!("duplicate tier id `{}`", tier.id);
+        }
+        if !seen_ranks.insert(tier.rank) {
+            bail!("duplicate tier rank `{}`", tier.rank);
+        }
+        for required in &tier.requires {
+            let Some(required_rank) = ranks_by_id.get(required.as_str()) else {
+                bail!("tier `{}` requires unknown tier `{}`", tier.id, required);
+            };
+            if *required_rank >= tier.rank {
+                bail!(
+                    "tier `{}` requires `{}` but required rank {} is not lower than {}",
+                    tier.id,
+                    required,
+                    required_rank,
+                    tier.rank
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_entries(matrix: &CoverageMatrix) -> Result<()> {
+    if matrix.entry.is_empty() {
+        bail!("matrix has no entries");
+    }
+
+    let tiers: HashSet<_> = matrix.tier.iter().map(|tier| tier.id.as_str()).collect();
+    let mut seen_ids = HashSet::new();
+    for entry in &matrix.entry {
+        validate_entry(entry, &tiers)?;
+        if !seen_ids.insert(entry.id.as_str()) {
+            bail!("duplicate entry id `{}`", entry.id);
+        }
+    }
+
+    for required in [
+        "bitnet_official_2b_i2s_qk256",
+        "dense_qwen25_05b_q8_cuda",
+        "bitnet_3b_x86_i2s_unsupported",
+        "modern_llm_placeholder_contract",
+    ] {
+        if !seen_ids.contains(required) {
+            bail!("matrix missing required coverage entry `{required}`");
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_entry(entry: &Entry, tiers: &HashSet<&str>) -> Result<()> {
+    for (field, value) in [
+        ("id", &entry.id),
+        ("model_class", &entry.model_class),
+        ("family", &entry.family),
+        ("artifact_kind", &entry.artifact_kind),
+        ("status", &entry.status),
+        ("current_tier", &entry.current_tier),
+        ("verifier_surface", &entry.verifier_surface),
+        ("tokenizer_authority", &entry.tokenizer_authority),
+        ("prompt_authority", &entry.prompt_authority),
+        ("cpu_reference", &entry.cpu_reference),
+        ("next_proof", &entry.next_proof),
+        ("claim_boundary", &entry.claim_boundary),
+    ] {
+        require_nonempty(value, field).with_context(|| format!("entry `{}`", entry.id))?;
+    }
+
+    if !tiers.contains(entry.current_tier.as_str()) {
+        bail!("entry `{}` uses unknown tier `{}`", entry.id, entry.current_tier);
+    }
+    if entry.required_receipts.is_empty() {
+        bail!("entry `{}` has no required_receipts", entry.id);
+    }
+    if entry.forbidden_claims.is_empty() {
+        bail!("entry `{}` has no forbidden_claims", entry.id);
+    }
+    if !entry.claims.registered {
+        bail!("entry `{}` must at least be registered", entry.id);
+    }
+
+    validate_claim_progression(entry)?;
+    validate_claim_boundaries(entry)?;
+    Ok(())
+}
+
+fn validate_claim_progression(entry: &Entry) -> Result<()> {
+    let c = &entry.claims;
+    if c.structurally_valid && !c.registered {
+        bail!("entry `{}` is structurally_valid without registered", entry.id);
+    }
+    if c.reference_good && !c.structurally_valid {
+        bail!("entry `{}` is reference_good without structural validity", entry.id);
+    }
+    if c.cpu_answer_ready && !c.reference_good {
+        bail!("entry `{}` is cpu_answer_ready without reference_good", entry.id);
+    }
+    if c.accelerator_answer_ready && !c.cpu_answer_ready {
+        bail!("entry `{}` is accelerator_answer_ready without cpu_answer_ready", entry.id);
+    }
+    if c.benchmark_qualified && !c.accelerator_answer_ready {
+        bail!("entry `{}` is benchmark_qualified without accelerator_answer_ready", entry.id);
+    }
+    if c.product_cli_ready && !c.accelerator_answer_ready {
+        bail!("entry `{}` is product_cli_ready without accelerator_answer_ready", entry.id);
+    }
+    if c.server_ready && !c.product_cli_ready {
+        bail!("entry `{}` is server_ready without product_cli_ready", entry.id);
+    }
+    if c.speedup_claim && !c.benchmark_qualified {
+        bail!("entry `{}` claims speedup without benchmark qualification", entry.id);
+    }
+    if c.full_residency_claim && !c.accelerator_answer_ready {
+        bail!("entry `{}` claims full residency without accelerator answer readiness", entry.id);
+    }
+    Ok(())
+}
+
+fn validate_claim_boundaries(entry: &Entry) -> Result<()> {
+    let c = &entry.claims;
+    if entry.status == "unsupported_upstream"
+        && (c.structurally_valid
+            || c.reference_good
+            || c.cpu_answer_ready
+            || c.accelerator_answer_ready
+            || c.benchmark_qualified
+            || c.product_cli_ready
+            || c.server_ready
+            || c.speedup_claim)
+    {
+        bail!("unsupported entry `{}` has a proof or product claim", entry.id);
+    }
+    if entry.model_class != "bitnet" && c.bitnet_packed_i2s_qk256_proof {
+        bail!("non-BitNet entry `{}` claims BitNet packed I2_S/QK256 proof", entry.id);
+    }
+    if entry.model_class == "bitnet" && c.dense_regular_llm_cuda_proof {
+        bail!("BitNet entry `{}` claims dense regular-LLM CUDA proof", entry.id);
+    }
+    if c.accelerator_answer_ready && entry.accelerator_routes.is_empty() {
+        bail!("entry `{}` is accelerator-ready but has no accelerator route", entry.id);
+    }
+    if c.server_ready {
+        bail!(
+            "entry `{}` claims server readiness; no server-ready model coverage is accepted yet",
+            entry.id
+        );
+    }
+    Ok(())
+}
+
+fn require_nonempty(value: &str, field: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        bail!("{field} is empty");
+    }
+    Ok(())
+}
+
+fn require_eq<T>(actual: T, expected: T, field: &str) -> Result<()>
+where
+    T: std::fmt::Debug + PartialEq,
+{
+    if actual != expected {
+        bail!("{field} mismatch: expected {expected:?}, got {actual:?}");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn workspace_matrix_path() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .map_or_else(|| PathBuf::from("."), PathBuf::from)
+            .join("ci/model-artifacts/model-coverage-matrix.toml")
+    }
+
+    #[test]
+    fn current_matrix_validates() -> Result<()> {
+        let matrix = load_matrix(&workspace_matrix_path())?;
+        validate_matrix(&matrix)
+    }
+
+    #[test]
+    fn dense_entries_cannot_claim_bitnet_packed_proof() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) =
+            matrix.entry.iter_mut().find(|entry| entry.id == "dense_qwen25_05b_q8_cuda")
+        else {
+            bail!("missing dense qwen entry");
+        };
+        entry.claims.bitnet_packed_i2s_qk256_proof = true;
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("dense BitNet proof leak must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("claims BitNet packed I2_S/QK256 proof"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn unsupported_entries_cannot_claim_answer_readiness() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) =
+            matrix.entry.iter_mut().find(|entry| entry.id == "bitnet_3b_x86_i2s_unsupported")
+        else {
+            bail!("missing unsupported 3B entry");
+        };
+        entry.claims.cpu_answer_ready = true;
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("unsupported answer claim must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("without reference_good"), "{err}");
+        Ok(())
+    }
+}
