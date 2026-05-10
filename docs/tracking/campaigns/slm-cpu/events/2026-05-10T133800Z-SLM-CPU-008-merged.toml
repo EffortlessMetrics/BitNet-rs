@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T13:38:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008"
+event = "merged"
+pr = 4434
+merge_sha = "2891ffc95fbd9507e367bee98ff846918009fcf4"
+branch = "codex/slm-cpu-008-qwen3-first-token-parity"
+actor = "codex"
+
+notes = [
+  "Merged PR #4434, mapping Qwen3 GGUF architecture defaults to RMSNorm plus SiLU and keeping Qwen3 on the existing Qwen ChatML prompt-template route.",
+  "The closeout preserves the dense Qwen3 CPU first-token parity boundary and does not claim answer quality, throughput, server, GPU, NPU, OpenVINO, Qwen3.5, quant expansion, or BitNet QK256 changes.",
+]
