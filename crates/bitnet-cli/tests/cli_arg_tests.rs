@@ -2665,6 +2665,36 @@ fn chat_subcommand_help() {
         .stdout(predicate::str::contains("--model"));
 }
 
+/// `bench --help` makes clear that the legacy benchmark is not CUDA proof.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_help_documents_no_cuda_fallback() {
+    bitnet()
+        .args(["bench", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Only cpu/auto"))
+        .stdout(predicate::str::contains("receipt-backed CUDA"));
+}
+
+/// `bench --device cuda` must fail closed instead of silently benchmarking CPU.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_cuda_device_fails_closed_without_cpu_fallback() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let model = dir.path().join("placeholder.gguf");
+    std::fs::write(&model, b"placeholder").expect("write model placeholder");
+    let model_str = model.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["bench", "--model", model_str.as_str(), "--device", "cuda"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("does not support device label 'cuda'"))
+        .stderr(predicate::str::contains("must not silently fall back to CPU"))
+        .stderr(predicate::str::contains("CPU fallback cannot count as CUDA execution"));
+}
+
 /// `answer-corpus --help` is recognized (requires full-cli).
 #[cfg(feature = "full-cli")]
 #[test]

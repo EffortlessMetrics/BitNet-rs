@@ -9,17 +9,16 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use bitnet_inference::InferenceEngine;
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;
 
-use crate::config::{
-    CliConfig, LEGACY_RUNTIME_DEVICE_HELP, invalid_device_message, is_supported_device_label,
-    unsupported_legacy_command_device_message,
-};
+use crate::config::{CliConfig, invalid_device_message, is_supported_device_label};
+
+const BENCHMARK_DEVICE_HELP: &str = "Device for this legacy benchmark. Only cpu/auto are supported here; CUDA benchmarks must use governed receipt-backed CUDA benchmark paths.";
 
 /// Benchmark command arguments
 #[derive(Args, Debug)]
@@ -28,7 +27,7 @@ pub struct BenchmarkCommand {
     #[arg(short, long, value_name = "PATH")]
     pub model: PathBuf,
 
-    #[arg(short, long, value_name = "DEVICE", help = LEGACY_RUNTIME_DEVICE_HELP)]
+    #[arg(short, long, value_name = "DEVICE", help = BENCHMARK_DEVICE_HELP)]
     pub device: Option<String>,
 
     /// Number of benchmark iterations
@@ -264,15 +263,8 @@ impl BenchmarkCommand {
                 info!("Using CPU device for benchmarking");
                 Ok(Device::Cpu)
             }
-            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => {
-                warn!("CUDA support not yet implemented, falling back to CPU");
-                Ok(Device::Cpu)
-            }
             label if is_supported_device_label(label) => {
-                anyhow::bail!(
-                    "{}",
-                    unsupported_legacy_command_device_message("bitnet benchmark", label)
-                )
+                anyhow::bail!("{}", unsupported_benchmark_device_message(label))
             }
             _ => anyhow::bail!("{}", invalid_device_message(device_str)),
         }
@@ -692,4 +684,10 @@ fn percentile(sorted_data: &[f64], p: f64) -> f64 {
         let weight = index - lower as f64;
         sorted_data[lower] * (1.0 - weight) + sorted_data[upper] * weight
     }
+}
+
+fn unsupported_benchmark_device_message(device: &str) -> String {
+    format!(
+        "bitnet benchmark does not support device label '{device}'. This legacy benchmark simulates benchmark work and must not silently fall back to CPU for accelerator requests. Use receipt-backed CUDA paths such as `bitnet ask --device cuda ...`, `bitnet chat --device cuda ...`, or governed CUDA benchmark receipts; CPU fallback cannot count as CUDA execution."
+    )
 }
