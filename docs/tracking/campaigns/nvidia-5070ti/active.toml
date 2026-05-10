@@ -2892,6 +2892,117 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-043"
+status = "pr_open"
+branch = "codex/cuda-dense-043-one-token-runtime"
+pr = 4407
+head_sha = "aee2663382d34a539b0c161cf6fde1301f47cba1"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-042"]
+acceptance = "Define the governed CUDA-DENSE-044 runtime proof gate after CUDA-DENSE-042, documenting that the future implementation must consume the SHA-verified qwen2.5-0.5b-instruct-q8_0 artifact plus all-layer plan, model-boundary fixture, KV-cache policy, and sampling-policy receipts; execute exactly one deterministic greedy token through dense_regular_llm_cuda on the RTX 5070 Ti with fallback_used=false; compare CPU/CUDA selected token and logits/top-k evidence; emit and validate a dense_gguf_qwen_one_token_strict_cuda_proof hardware receipt; and preserve short-decode, chat, speedup, persistent/full-residency, server, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims."
+commands = [
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "Qwen short decode or chat implementation",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+]
+may_claim = [
+  "CUDA-DENSE-043 defines the governed runtime gate for the first dense Qwen one-token strict CUDA proof.",
+  "The future CUDA-DENSE-044 implementation must prove one deterministic greedy token through dense_regular_llm_cuda on the RTX 5070 Ti with fallback_used=false.",
+  "The future one-token proof must link the all-layer plan, model-boundary fixtures, KV-cache policy, and sampling-policy prerequisite receipts.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "A hardware Qwen one-token strict CUDA receipt exists.",
+  "Qwen short decode or chat works on CUDA.",
+  "Qwen one-token works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Server readiness exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
+id = "CUDA-DENSE-044"
+status = "proposed"
+branch = "codex/cuda-dense-044-one-token-runtime-impl"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-043"]
+acceptance = "Implement the governed dense Qwen one-token strict CUDA runtime proof defined by CUDA-DENSE-043, consuming the SHA-verified qwen2.5-0.5b-instruct-q8_0 artifact plus all-layer plan, model-boundary fixture, KV-cache policy, and sampling-policy receipts; execute exactly one deterministic greedy token through dense_regular_llm_cuda on the RTX 5070 Ti with fallback_used=false; compare CPU/CUDA selected token and logits/top-k evidence; emit and validate a dense_gguf_qwen_one_token_strict_cuda_proof hardware receipt; and preserve short-decode, chat, speedup, persistent/full-residency, server, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims."
+commands = [
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- model verify qwen2.5-0.5b-instruct-q8_0 --json",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-one-token-strict-cuda --model <verified-qwen-gguf> --device-index 0 --json-out ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features qwen_one_token -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "Qwen short decode or chat implementation",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+]
+may_claim = [
+  "CUDA-DENSE-044 records the first governed dense Qwen one-token strict CUDA proof if the hardware receipt validates.",
+  "The accepted receipt proves one deterministic greedy token through dense_regular_llm_cuda on the RTX 5070 Ti with fallback_used=false.",
+  "The one-token proof links the all-layer plan, model-boundary fixtures, KV-cache policy, and sampling-policy prerequisite receipts.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Qwen short decode or chat works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Server readiness exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-021"
 status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"
