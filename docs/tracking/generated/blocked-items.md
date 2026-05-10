@@ -219,7 +219,8 @@
 | nvidia-5070ti | CUDA-DENSE-042 | CUDA-DENSE-041 | merged |
 | nvidia-5070ti | CUDA-DENSE-043 | CUDA-DENSE-042 | merged |
 | nvidia-5070ti | CUDA-DENSE-044 | CUDA-DENSE-043 | merged |
-| nvidia-5070ti | CUDA-DENSE-045 | CUDA-DENSE-044 | pr_open |
+| nvidia-5070ti | CUDA-DENSE-045 | CUDA-DENSE-044 | merged |
+| nvidia-5070ti | CUDA-DENSE-046 | CUDA-DENSE-045 | proposed |
 | nvidia-5070ti | CUDA-DENSE-021 | CUDA-DENSE-020 | merged |
 | nvidia-5070ti | CUDA-DENSE-022 | CUDA-DENSE-021 | merged |
 | nvidia-5070ti | CUDA-DENSE-023 | CUDA-DENSE-022 | merged |
