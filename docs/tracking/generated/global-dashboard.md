@@ -15,7 +15,7 @@
 | apple-m4-slm-answer | SLM-M4-007 | #3991 | merged | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-slm-excellence | M4-SLM-EX-010 | #4307 | merged | none | This is an M4 Mac mini local campaign. |
 | apple-m4-slm-hardening | M4-SLM-HARDEN-004 | #4161 | merged | none | Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns. |
-| apple-m4-slm-metal-phases | M4-METAL-004 | #4385 | pr_open | M4-METAL-005 | This is an M4 Mac mini dense SLM campaign. |
+| apple-m4-slm-metal-phases | M4-METAL-006 | TBD | blocked | M4-METAL-007 | This is an M4 Mac mini dense SLM campaign. |
 | apple-m4-slm-model-breadth | M4-MODEL-004 | TBD | blocked | M4-MODEL-005 | This is an M4 Mac mini dense SLM campaign. |
 | apple-m4-slm-performance | M4-SLM-PERF-007 | #4081 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, apple-m4-slm-answer, or apple-m4-productization campaigns. |
 | apple-silicon-macbook | MB-AS-002 | TBD | blocked | MB-AS-004 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
@@ -27,7 +27,7 @@
 | intel-a770 | A770-003 | TBD | ready | none | OpenCL-first for native A770 proof. |
 | intel-npu | NPU-011 | #4097 | merged | none | Device-node detection is not inference. |
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
-| nvidia-5070ti | CUDA-DENSE-041 | #4381 | pr_open | none | CUDA visibility is not kernel execution. |
+| nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-001 | TBD | proposed | none | Do not reintroduce simulated inference. |
 | slm-cpu | SLM-CPU-008 | TBD | ready | none | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |

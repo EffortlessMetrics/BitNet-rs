@@ -15,7 +15,7 @@
 | apple-m4-slm-answer | Apple M4 SLM local answer usability | SLM-M4-007 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-slm-excellence | Apple M4 SLM excellence | M4-SLM-EX-010 | This is an M4 Mac mini local campaign. |
 | apple-m4-slm-hardening | Apple M4 SLM hardening | M4-SLM-HARDEN-004 | Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns. |
-| apple-m4-slm-metal-phases | Apple M4 SLM Metal phases | M4-METAL-004 | This is an M4 Mac mini dense SLM campaign. |
+| apple-m4-slm-metal-phases | Apple M4 SLM Metal phases | M4-METAL-006 | This is an M4 Mac mini dense SLM campaign. |
 | apple-m4-slm-model-breadth | Apple M4 SLM model breadth | M4-MODEL-004 | This is an M4 Mac mini dense SLM campaign. |
 | apple-m4-slm-performance | Apple M4 SLM performance | M4-SLM-PERF-007 | Do not reopen the completed apple-m4, apple-m4-operational, apple-m4-slm-answer, or apple-m4-productization campaigns. |
 | apple-silicon-macbook | Apple Silicon MacBook cross-reference | MB-AS-002 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
@@ -27,7 +27,7 @@
 | intel-a770 | Intel Arc A770 validation | A770-003 | OpenCL-first for native A770 proof. |
 | intel-npu | Intel NPU validation | NPU-011 | Device-node detection is not inference. |
 | model-artifacts | Model artifact answer authority | MODEL-ARTIFACT-002 | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
-| nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-DENSE-041 | CUDA visibility is not kernel execution. |
+| nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-DENSE-014 | CUDA visibility is not kernel execution. |
 | server-real-inference | Server real inference | SERVER-001 | Do not reintroduce simulated inference. |
 | slm-cpu | Small dense model CPU proof | SLM-CPU-008 | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | Tracker infrastructure | TRACKER-003 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |

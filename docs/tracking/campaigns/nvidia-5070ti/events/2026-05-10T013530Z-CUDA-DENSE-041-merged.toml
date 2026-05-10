@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T01:35:30Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-041"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4381
+merge_sha = "e56fa451bfc955da2fe419c090a796e9cd0aed2c"
+actor = "codex"
+branch = "codex/cuda-dense-041-one-token"
+summary = "Merged CUDA-DENSE-041 after defining the governed Qwen one-token strict CUDA proof contract."
+notes = [
+  "PR #4381 records the contract for the future one-token strict CUDA proof after the dense Qwen model-boundary gates.",
+  "The merged tracker-only work preserves non-claims for Qwen token/decode/chat execution, dense GGUF CUDA inference, speedup, persistent residency, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer behavior, server behavior, and CUDA kernel math.",
+]

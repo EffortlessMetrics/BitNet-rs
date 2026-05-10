@@ -2771,10 +2771,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-041"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-041-one-token"
 pr = 4381
 head_sha = "561bdbbc6054f367c2e267da33f465220e698d25"
+merge_sha = "e56fa451bfc955da2fe419c090a796e9cd0aed2c"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
