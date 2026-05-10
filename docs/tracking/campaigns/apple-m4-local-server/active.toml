@@ -97,7 +97,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-003"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-local-server/M4-SERVE-003-streaming-completions"
 stackable = false
 review_mode = "codex_premerge"

@@ -23,7 +23,7 @@ the same cache, tokenizer, backend, fallback, streaming, and receipt discipline.
 |---|---|---|
 | M4-SERVE-001 | merged | Defined command and configuration contract. |
 | M4-SERVE-002 | merged | Added health and ready endpoint behavior. |
-| M4-SERVE-003 | ready | Add streaming completion endpoint. |
+| M4-SERVE-003 | in progress | Add streaming completion endpoint. |
 | M4-SERVE-004 | pending | Add receipt export for server requests. |
 | M4-SERVE-005 | pending | Integrate doctor/smoke/regression readiness flow. |
 
@@ -38,9 +38,11 @@ strict `apple-m4-cpu-neon` routing, explicit no-hidden-fallback state, and no
 generation by default. It remains intentionally short of completions, OpenAI
 compatibility, receipt export, and production readiness.
 
-The next executable item is `M4-SERVE-003`: streaming local dense SLM completion
-behavior through the same supported model-cache, tokenizer, backend, fallback,
-resident-session, and receipt discipline.
+`M4-SERVE-003` adds the first streaming local dense SLM completion endpoint:
+`POST /v1/chat/completions`, using the verified supported model cache,
+`apple-m4-cpu-neon`, strict no-hidden-fallback routing, resident startup
+model/tokenizer load, per-request receipts, and no full OpenAI compatibility
+claim.
 
 ## Claim Boundary
 
