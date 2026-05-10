@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T17:32:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-004"
+event = "in_progress"
+previous_status = "proposed"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-perf-004-qualification-review"
+
+notes = [
+  "Start dense Qwen benchmark qualification review after CUDA-DENSE-PERF-001/002/003 baseline, repeated comparator, and transfer-timing receipts.",
+  "The review must keep speedup_claim=false and benchmark_qualified_speedup=false unless every profile-specific gate is satisfied.",
+  "Scope is bitnet-bench-receipts validation/generation, the committed qualification receipt, report, and tracker metadata only; no tokenizer, loader, transformer runtime, CUDA kernel math, QK256, BitNet CUDA behavior, ask/chat/server behavior, speedup upgrade, or full-residency claim is in scope.",
+]

@@ -209,7 +209,9 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-035 | merged | Implement the integrated dense GGUF one-layer CUDA parity harness and receipt validator for the CUDA-DENSE-034 contract without claiming dense inference, Qwen token/decode/chat, speedup, persistent/full residency, or BitNet packed proof. |
 | CUDA-DENSE-036 | merged | Define the governed dense GGUF all-layer execution-plan receipt contract so the next implementation must inspect every Qwen-family transformer layer, report route counts and graph differences, and keep model-boundary gaps explicit before any Qwen token/decode/chat claim. |
 | CUDA-DENSE-PERF-001 | merged | Dense Qwen CUDA benchmark baseline receipt for one-token, short-decode, and warm-session profiles; `speedup_claim=false`. |
-| CUDA-DENSE-PERF-002 | ready | Repeated same-artifact dense Qwen CPU/CUDA comparator receipts for the baseline profiles; still no speedup qualification. |
+| CUDA-DENSE-PERF-002 | merged | Repeated same-artifact dense Qwen CPU/CUDA comparator receipts for the baseline profiles; still no speedup qualification. |
+| CUDA-DENSE-PERF-003 | merged | Device-to-host logits download timing is measured in dense Qwen one-token, short-decode, and warm-session strict CUDA receipts; host-to-device timing remains explicitly unmeasured. |
+| CUDA-DENSE-PERF-004 | in progress | Dense Qwen benchmark qualification review consumes the baseline, repeated comparator, and D2H timing receipts while keeping speedup claims false. |
 
 ## Review Policy
 

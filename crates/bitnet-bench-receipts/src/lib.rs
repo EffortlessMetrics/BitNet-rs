@@ -1349,6 +1349,232 @@ pub fn validate_dense_gguf_qwen_repeated_comparator_receipt_file(
     validate_dense_gguf_qwen_repeated_comparator_receipt_json(&receipt)
 }
 
+/// Validate a dense Qwen benchmark qualification review receipt.
+///
+/// This receipt reviews the dense Qwen CPU/CUDA comparator and transfer-timing
+/// evidence without accepting a profile-specific speedup claim. The validator
+/// requires at least one blocked qualification requirement so a review cannot
+/// silently upgrade the dense CUDA lane without a future schema.
+pub fn validate_dense_gguf_qwen_benchmark_qualification_receipt_json(
+    receipt: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", "dense_gguf_qwen_benchmark_qualification_review")?;
+    require_string_eq(receipt, "machine_id", "windows-9950x3d-rtx5070ti")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia_rtx_5070_ti_cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "selected_route", "dense_regular_llm_cuda")?;
+    require_string_eq(receipt, "claim", "dense_gguf_qwen_benchmark_qualification_review")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_bool_eq(receipt, "benchmark_qualified_speedup", false)?;
+    require_bool_eq(receipt, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(receipt, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(receipt, "server_ready_claimed", false)?;
+    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", false)?;
+
+    let claim_boundary = require_object(receipt, "claim_boundary")?;
+    require_bool_eq(
+        claim_boundary,
+        "dense_gguf_qwen_benchmark_qualification_review_claimed",
+        true,
+    )?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_warm_session_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "benchmark_qualified_speedup", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "server_ready_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+
+    let model = require_object(receipt, "model")?;
+    require_string_eq(model, "id", "qwen2.5-0.5b-instruct-q8_0")?;
+    require_string_eq(model, "model_family", "qwen")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_string_eq(model, "file", "qwen2.5-0.5b-instruct-q8_0.gguf")?;
+    require_string_eq(
+        model,
+        "sha256",
+        "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    )?;
+
+    let tokenizer_prompt_authority = require_object(receipt, "tokenizer_prompt_authority")?;
+    require_string_eq(tokenizer_prompt_authority, "tokenizer_authority", "contract_authoritative")?;
+    require_string_eq(tokenizer_prompt_authority, "prompt_authority", "contract_authoritative")?;
+    require_string_eq(
+        tokenizer_prompt_authority,
+        "prompt_template",
+        "qwen-chat-raw-deterministic",
+    )?;
+    require_bool_eq(tokenizer_prompt_authority, "deterministic_prompt", true)?;
+    require_u64_at_least(tokenizer_prompt_authority, "prompt_token_count", 1)?;
+    require_non_empty_string(tokenizer_prompt_authority, "rendered_prompt_sha256")?;
+    require_non_empty_string(tokenizer_prompt_authority, "prompt_token_ids_sha256")?;
+
+    let execution_plan = require_object(receipt, "execution_plan")?;
+    require_string_eq(execution_plan, "selected_route", "dense_regular_llm_cuda")?;
+    require_string_eq(execution_plan, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(execution_plan, "runtime_api", "cuda")?;
+    require_string_eq(execution_plan, "strict_fallback_policy", "reject")?;
+    require_bool_eq(execution_plan, "dense_regular_llm_cuda", true)?;
+    require_bool_eq(execution_plan, "bitnet_packed_qk256_cuda", false)?;
+    require_bool_eq(execution_plan, "fallback_used", false)?;
+    require_bool_eq(execution_plan, "strict_cuda_ready", true)?;
+    require_bool_eq(execution_plan, "speedup_claim", false)?;
+    require_bool_eq(execution_plan, "full_cuda_residency_claimed", false)?;
+    require_u64_at_least(execution_plan, "cuda_dense_regular_llm_ops", 1)?;
+    require_u64_eq(execution_plan, "cuda_bitnet_qk256_ops", 0)?;
+    require_u64_eq(execution_plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(execution_plan, "unsupported_ops", 0)?;
+
+    let proof_inputs = require_object(receipt, "proof_inputs")?;
+    validate_dense_qwen_proof_input(
+        proof_inputs,
+        "benchmark_baseline",
+        "dense_gguf_qwen_cuda_benchmark_baseline",
+    )?;
+    validate_dense_qwen_proof_input(
+        proof_inputs,
+        "repeated_comparator",
+        "dense_gguf_qwen_repeated_comparator",
+    )?;
+    validate_dense_qwen_proof_input(
+        proof_inputs,
+        "one_token_transfer_timing",
+        "dense_gguf_qwen_one_token_strict_cuda_proof",
+    )?;
+    validate_dense_qwen_proof_input(
+        proof_inputs,
+        "short_decode_transfer_timing",
+        "dense_gguf_qwen_short_decode_strict_cuda_proof",
+    )?;
+    validate_dense_qwen_proof_input(
+        proof_inputs,
+        "warm_session_transfer_timing",
+        "dense_gguf_qwen_warm_session_strict_cuda_proof",
+    )?;
+
+    let decision = require_object(receipt, "qualification_decision")?;
+    require_string_eq(decision, "status", "not_accepted")?;
+    require_bool_eq(decision, "speedup_claim_allowed", false)?;
+    require_bool_eq(decision, "benchmark_qualified_speedup", false)?;
+    require_non_empty_string(decision, "reason")?;
+    let accepted_profiles = require_array(decision, "accepted_profiles")?;
+    if !accepted_profiles.is_empty() {
+        return Err(validation_error(
+            "qualification_decision.accepted_profiles must be empty while status is not_accepted",
+        ));
+    }
+    let blocked_profiles = require_array(decision, "blocked_profiles")?;
+    if blocked_profiles.len() < 3 {
+        return Err(validation_error(
+            "qualification_decision.blocked_profiles must include every dense profile",
+        ));
+    }
+
+    let requirements = require_array(receipt, "qualification_requirements")?;
+    if requirements.is_empty() {
+        return Err(validation_error("qualification_requirements must not be empty"));
+    }
+    let mut blocked_requirements = 0;
+    for requirement in requirements {
+        let status = validate_qualification_requirement(requirement)?;
+        if status == "blocked" {
+            blocked_requirements += 1;
+        }
+    }
+    if blocked_requirements == 0 {
+        return Err(validation_error(
+            "qualification_requirements must include at least one blocked requirement",
+        ));
+    }
+
+    let profile_reviews = require_array(receipt, "profile_reviews")?;
+    for expected in ["one_token", "short_decode_8", "warm_session_3_turns"] {
+        let profile = profile_reviews
+            .iter()
+            .find(|entry| {
+                entry.get("profile").and_then(serde_json::Value::as_str) == Some(expected)
+            })
+            .ok_or_else(|| validation_error(format!("profile_reviews missing {expected}")))?;
+        validate_dense_qwen_qualification_profile_review(profile)?;
+    }
+
+    let evidence = require_object(receipt, "evidence_summary")?;
+    for expected in ["one_token", "short_decode_8", "warm_session_3_turns"] {
+        let profile = require_object(evidence, expected)?;
+        require_u64_at_least(profile, "runs_per_backend", 3)?;
+        require_bool_eq(profile, "fallback_free", true)?;
+        require_bool_eq(profile, "quality_passed", true)?;
+        require_bool_eq(profile, "generated_token_ids_match", true)?;
+        require_non_negative_number(profile, "cpu_total_ms_mean")?;
+        require_non_negative_number(profile, "cuda_total_ms_mean")?;
+        require_non_negative_number(profile, "observed_cpu_total_ms_div_cuda_total_ms")?;
+        require_bool_eq(profile, "cuda_mean_slower_than_cpu", true)?;
+        require_non_negative_number(profile, "device_to_host_ms")?;
+        require_null(profile, "host_to_device_ms")?;
+        require_non_empty_string(profile, "host_to_device_ms_source")?;
+        require_bool_eq(profile, "speedup_claim", false)?;
+        require_bool_eq(profile, "benchmark_qualified_speedup", false)?;
+    }
+
+    let transfer_timing = require_object(receipt, "transfer_timing_review")?;
+    require_string_eq(
+        transfer_timing,
+        "status",
+        "device_to_host_measured_host_to_device_unmeasured",
+    )?;
+    require_bool_eq(transfer_timing, "device_to_host_timing_recorded", true)?;
+    require_bool_eq(transfer_timing, "host_to_device_timing_recorded", false)?;
+    require_non_empty_string(transfer_timing, "host_to_device_blocker")?;
+
+    let hardware_context = require_object(receipt, "hardware_context")?;
+    require_u64_at_least(hardware_context, "vram_bytes", 1)?;
+    require_non_negative_number(hardware_context, "power_draw_watts_min")?;
+    require_non_negative_number(hardware_context, "power_draw_watts_max")?;
+    require_non_negative_number(hardware_context, "temperature_c_min")?;
+    require_non_negative_number(hardware_context, "temperature_c_max")?;
+    require_non_empty_string(hardware_context, "source")?;
+
+    let cuda = require_object(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_u64_at_least(cuda, "device_count", 1)?;
+    let device_name = require_string(cuda, "device_name")?;
+    if !is_rtx5070ti_device_name(device_name) {
+        return Err(validation_error(format!(
+            "cuda.device_name must identify NVIDIA GeForce RTX 5070 Ti, got {device_name}"
+        )));
+    }
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_non_empty_string(cuda, "driver_version")?;
+    require_non_empty_string(cuda, "cuda_runtime_version")?;
+    require_non_empty_string(cuda, "cuda_toolkit_version")?;
+    require_non_empty_string(cuda, "nvrtc_version")?;
+    require_u64_at_least(cuda, "vram_bytes", 1)?;
+
+    let claim_boundaries = require_array(receipt, "claim_boundaries")?;
+    if claim_boundaries.is_empty() {
+        return Err(validation_error("claim_boundaries must not be empty"));
+    }
+
+    Ok(())
+}
+
+/// Validate a dense Qwen benchmark qualification review receipt file.
+pub fn validate_dense_gguf_qwen_benchmark_qualification_receipt_file(
+    path: &Path,
+) -> Result<(), ReceiptError> {
+    let receipt = serde_json::from_slice(&std::fs::read(path)?)?;
+    validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt)
+}
+
 fn validate_dense_qwen_repeated_comparator_profile(
     profile: &serde_json::Value,
     expected_profile: &str,
@@ -1550,6 +1776,36 @@ fn validate_qualification_profile_review(profile: &serde_json::Value) -> Result<
     let blockers = require_array(profile, "blockers")?;
     if blockers.is_empty() {
         return Err(validation_error("profile_review.blockers must not be empty"));
+    }
+    Ok(())
+}
+
+fn validate_dense_qwen_qualification_profile_review(
+    profile: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_non_empty_string(profile, "profile")?;
+    let decision = require_string(profile, "decision")?;
+    if decision != "not_accepted" {
+        return Err(validation_error(format!(
+            "dense profile review decision must be not_accepted, got {decision}"
+        )));
+    }
+    require_bool_eq(profile, "speedup_claim_allowed", false)?;
+    require_bool_eq(profile, "benchmark_qualified_speedup", false)?;
+    require_bool_eq(profile, "fallback_free", true)?;
+    require_bool_eq(profile, "quality_passed", true)?;
+    require_bool_eq(profile, "generated_token_ids_match", true)?;
+    require_bool_eq(profile, "dense_cuda_evidence_used", true)?;
+    require_u64_at_least(profile, "runs_per_backend", 3)?;
+    require_non_negative_number(profile, "observed_cpu_total_ms_div_cuda_total_ms")?;
+    require_bool_eq(profile, "cuda_mean_slower_than_cpu", true)?;
+    require_nullable_number_with_source(profile, "host_to_device_ms")?;
+    require_non_negative_number(profile, "device_to_host_ms")?;
+    require_non_empty_string(profile, "device_to_host_ms_source")?;
+    require_non_empty_string(profile, "reason")?;
+    let blockers = require_array(profile, "blockers")?;
+    if blockers.is_empty() {
+        return Err(validation_error("dense profile_review.blockers must not be empty"));
     }
     Ok(())
 }
@@ -2802,6 +3058,67 @@ mod tests {
         assert!(err.contains("unique"), "unexpected error: {err}");
     }
 
+    #[test]
+    fn dense_gguf_qwen_benchmark_qualification_receipt_validates() {
+        let receipt = sample_dense_gguf_qwen_benchmark_qualification_receipt();
+        validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
+    fn dense_gguf_qwen_benchmark_qualification_rejects_speedup_claim() {
+        let mut receipt = sample_dense_gguf_qwen_benchmark_qualification_receipt();
+        receipt["speedup_claim"] = json!(true);
+
+        let err = validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_gguf_qwen_benchmark_qualification_rejects_accepted_profile() {
+        let mut receipt = sample_dense_gguf_qwen_benchmark_qualification_receipt();
+        receipt["profile_reviews"][0]["decision"] = json!("accepted");
+
+        let err = validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("not_accepted"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_gguf_qwen_benchmark_qualification_requires_blocked_requirement() {
+        let mut receipt = sample_dense_gguf_qwen_benchmark_qualification_receipt();
+        for requirement in receipt["qualification_requirements"].as_array_mut().unwrap() {
+            requirement["status"] = json!("passed");
+            requirement.as_object_mut().unwrap().remove("blocker");
+        }
+
+        let err = validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("blocked requirement"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_gguf_qwen_benchmark_qualification_requires_h2d_timing_source() {
+        let mut receipt = sample_dense_gguf_qwen_benchmark_qualification_receipt();
+        receipt["profile_reviews"][0]["host_to_device_ms_source"] = json!("");
+
+        let err = validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("host_to_device_ms_source"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn committed_dense_gguf_qwen_benchmark_qualification_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-gguf-qwen-benchmark-qualification.json",
+        );
+        validate_dense_gguf_qwen_benchmark_qualification_receipt_file(&path).unwrap();
+    }
+
     fn sample_dense_gguf_qwen_cuda_benchmark_baseline_receipt() -> serde_json::Value {
         json!({
             "schema": 1,
@@ -3205,6 +3522,200 @@ mod tests {
             "min": 1,
             "mean": 1.0,
             "max": 1
+        })
+    }
+
+    fn sample_dense_gguf_qwen_benchmark_qualification_receipt() -> serde_json::Value {
+        let comparator = sample_dense_gguf_qwen_repeated_comparator_receipt();
+        json!({
+            "schema": 1,
+            "artifact_kind": "dense_gguf_qwen_benchmark_qualification_review",
+            "machine_id": "windows-9950x3d-rtx5070ti",
+            "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+            "timestamp_utc": "2026-05-10T18:00:00Z",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "reference_backend": "amd-9950x3d-cpu-avx512",
+            "runtime_api": "cuda",
+            "selected_route": "dense_regular_llm_cuda",
+            "claim": "dense_gguf_qwen_benchmark_qualification_review",
+            "fallback_used": false,
+            "fallback_backend": null,
+            "fallback_reason": null,
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "full_cuda_residency_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "server_ready_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "claim_boundary": {
+                "dense_gguf_qwen_benchmark_qualification_review_claimed": true,
+                "qwen_one_token_cuda_claimed": true,
+                "qwen_short_decode_cuda_claimed": true,
+                "qwen_warm_session_cuda_claimed": true,
+                "qwen_chat_cuda_claimed": false,
+                "speedup_claim": false,
+                "benchmark_qualified_speedup": false,
+                "full_cuda_residency_claimed": false,
+                "server_ready_claimed": false,
+                "bitnet_packed_i2s_qk256_proof": false
+            },
+            "model": comparator["model"].clone(),
+            "tokenizer_prompt_authority": comparator["tokenizer_prompt_authority"].clone(),
+            "execution_plan": comparator["execution_plan"].clone(),
+            "proof_inputs": {
+                "benchmark_baseline": {
+                    "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-cuda-benchmark-baseline.json",
+                    "sha256": "d84b094b29763d96820f69479394a3e7770ef9745ff4e14e7fad4cc36a6805c1",
+                    "artifact_kind": "dense_gguf_qwen_cuda_benchmark_baseline"
+                },
+                "repeated_comparator": {
+                    "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-gguf-qwen-repeated-comparator.json",
+                    "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                    "artifact_kind": "dense_gguf_qwen_repeated_comparator"
+                },
+                "one_token_transfer_timing": {
+                    "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-003-transfer-timing/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json",
+                    "sha256": "0b74e8d094a341a10710e3ec7c70a94062f67246bdff4f30fd3e9612c94c4ec4",
+                    "artifact_kind": "dense_gguf_qwen_one_token_strict_cuda_proof"
+                },
+                "short_decode_transfer_timing": {
+                    "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-003-transfer-timing/dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json",
+                    "sha256": "f72609cf52764f5e05aa0c981622c5333720794bcb87be59810722cf35beb502",
+                    "artifact_kind": "dense_gguf_qwen_short_decode_strict_cuda_proof"
+                },
+                "warm_session_transfer_timing": {
+                    "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-003-transfer-timing/dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json",
+                    "sha256": "ecf07d473bfdad091b806887e0744cc075af331e306b7a2fb9ad6c55d2f5d6ff",
+                    "artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof"
+                }
+            },
+            "qualification_decision": {
+                "status": "not_accepted",
+                "speedup_claim_allowed": false,
+                "benchmark_qualified_speedup": false,
+                "accepted_profiles": [],
+                "blocked_profiles": ["one_token", "short_decode_8", "warm_session_3_turns"],
+                "reason": "Reviewed dense Qwen profiles are fallback-free and repeated, but CUDA mean total time is slower than CPU mean total time and H2D timing is still unmeasured."
+            },
+            "qualification_requirements": [
+                {
+                    "id": "same_artifact_tokenizer_prompt_policy",
+                    "description": "Same artifact SHA, tokenizer authority, prompt template, deterministic policy, and fallback-free CPU/CUDA route.",
+                    "status": "passed"
+                },
+                {
+                    "id": "repeated_cpu_cuda_comparator",
+                    "description": "At least three CPU and CUDA runs exist for every reviewed dense Qwen profile.",
+                    "status": "passed"
+                },
+                {
+                    "id": "device_to_host_transfer_timing",
+                    "description": "Device-to-host logits transfer timing is measured for one-token, short-decode, and warm-session runtime receipts.",
+                    "status": "passed"
+                },
+                {
+                    "id": "host_to_device_transfer_timing",
+                    "description": "Host-to-device timing is measured, not only host-to-device byte counts.",
+                    "status": "blocked",
+                    "blocker": "CUDA-DENSE-PERF-003 keeps host_to_device_ms explicitly null with not_measured_by_dense_qwen_runtime source fields."
+                },
+                {
+                    "id": "profile_outperforms_cpu_reference",
+                    "description": "Each profile's CUDA mean total time is faster than the same-artifact CPU reference mean total time.",
+                    "status": "blocked",
+                    "blocker": "The reviewed one-token, short-decode, and warm-session CUDA means are all slower than their CPU reference means."
+                },
+                {
+                    "id": "profile_specific_thresholds",
+                    "description": "Profile-specific speedup thresholds are accepted before benchmark_qualified_speedup may become true.",
+                    "status": "blocked",
+                    "blocker": "No dense Qwen profile-specific speedup threshold has been accepted."
+                }
+            ],
+            "profile_reviews": [
+                dense_qwen_qualification_profile("one_token", 2872.8428, 3978.5710, 0.8534),
+                dense_qwen_qualification_profile("short_decode_8", 3528.0687, 4199.9896, 6.3089),
+                dense_qwen_qualification_profile("warm_session_3_turns", 4596.1352, 5034.9288, 18.7415)
+            ],
+            "evidence_summary": {
+                "one_token": dense_qwen_qualification_evidence("one_token", 2872.8428, 3978.5710, 0.8534),
+                "short_decode_8": dense_qwen_qualification_evidence("short_decode_8", 3528.0687, 4199.9896, 6.3089),
+                "warm_session_3_turns": dense_qwen_qualification_evidence("warm_session_3_turns", 4596.1352, 5034.9288, 18.7415)
+            },
+            "transfer_timing_review": {
+                "status": "device_to_host_measured_host_to_device_unmeasured",
+                "device_to_host_timing_recorded": true,
+                "host_to_device_timing_recorded": false,
+                "host_to_device_blocker": "The dense Qwen runtime still records H2D bytes but not H2D elapsed timing.",
+                "device_to_host_source": "wall_clock_extract_logits_2d_local",
+                "host_to_device_source": "not_measured_by_dense_qwen_runtime"
+            },
+            "hardware_context": comparator["hardware_context"].clone(),
+            "cuda": comparator["cuda"].clone(),
+            "claim_boundaries": [
+                "speedup_claim=false; no dense Qwen profile is upgraded by this review.",
+                "benchmark_qualified_speedup=false; current CUDA means are slower than same-artifact CPU means.",
+                "H2D transfer timing remains explicitly unmeasured.",
+                "dense_regular_llm_cuda receipts cannot satisfy BitNet packed I2S/QK256 proof."
+            ]
+        })
+    }
+
+    fn dense_qwen_qualification_profile(
+        profile: &str,
+        cpu_mean_ms: f64,
+        cuda_mean_ms: f64,
+        d2h_ms: f64,
+    ) -> serde_json::Value {
+        json!({
+            "profile": profile,
+            "decision": "not_accepted",
+            "speedup_claim_allowed": false,
+            "benchmark_qualified_speedup": false,
+            "fallback_free": true,
+            "quality_passed": true,
+            "generated_token_ids_match": true,
+            "dense_cuda_evidence_used": true,
+            "runs_per_backend": 3,
+            "cpu_total_ms_mean": cpu_mean_ms,
+            "cuda_total_ms_mean": cuda_mean_ms,
+            "observed_cpu_total_ms_div_cuda_total_ms": cpu_mean_ms / cuda_mean_ms,
+            "cuda_mean_slower_than_cpu": true,
+            "host_to_device_ms": null,
+            "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+            "device_to_host_ms": d2h_ms,
+            "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+            "reason": "This profile remains baseline/comparator evidence because CUDA mean total time is not faster than the same-artifact CPU reference and H2D timing is incomplete.",
+            "blockers": [
+                "CUDA mean total time is slower than CPU mean total time",
+                "host-to-device transfer timing is unmeasured",
+                "no profile-specific speedup threshold has been accepted"
+            ]
+        })
+    }
+
+    fn dense_qwen_qualification_evidence(
+        profile: &str,
+        cpu_mean_ms: f64,
+        cuda_mean_ms: f64,
+        d2h_ms: f64,
+    ) -> serde_json::Value {
+        json!({
+            "profile": profile,
+            "runs_per_backend": 3,
+            "fallback_free": true,
+            "quality_passed": true,
+            "generated_token_ids_match": true,
+            "cpu_total_ms_mean": cpu_mean_ms,
+            "cuda_total_ms_mean": cuda_mean_ms,
+            "observed_cpu_total_ms_div_cuda_total_ms": cpu_mean_ms / cuda_mean_ms,
+            "cuda_mean_slower_than_cpu": true,
+            "device_to_host_ms": d2h_ms,
+            "host_to_device_ms": null,
+            "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false
         })
     }
 

@@ -2231,6 +2231,65 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-PERF-004"
+status = "pr_open"
+branch = "codex/cuda-dense-perf-004-qualification-review"
+pr = 4445
+head_sha = "170756479ae24aca517f7d5d5ce9b777de89f367"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-PERF-003"]
+acceptance = "Add a governed dense Qwen benchmark qualification review after CUDA-DENSE-PERF-001/002/003, consuming the baseline, repeated CPU/CUDA comparator, and D2H transfer-timing receipts; explicitly keep speedup_claim=false and benchmark_qualified_speedup=false because reviewed CUDA mean total times are slower than CPU means and host-to-device timing remains unmeasured; preserve fallback_used=false, full_cuda_residency_claimed=false, server_ready_claimed=false, dense ask/chat claim boundaries, and bitnet_packed_i2s_qk256_proof=false; add validator coverage rejecting speedup/profile acceptance and missing transfer timing source fields."
+commands = [
+  "cargo run --locked -p bitnet-bench-receipts --bin dense_qwen_cuda_benchmark_qualification_receipt --no-default-features",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features dense_gguf_qwen_benchmark_qualification -- --nocapture",
+  "cargo fmt -p bitnet-bench-receipts -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+  "speedup or full CUDA residency claim upgrades",
+]
+may_claim = [
+  "A dense Qwen benchmark qualification review exists for the current baseline, repeated comparator, and D2H transfer-timing receipts.",
+  "The reviewed dense Qwen profiles remain same-artifact, deterministic, fallback-free, and generated-token matched.",
+  "No dense Qwen profile is speedup-qualified because CUDA means are slower than CPU means and H2D timing remains unmeasured.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "benchmark_qualified_speedup is accepted.",
+  "Full dense CUDA residency is proven.",
+  "Server readiness exists.",
+  "Host-to-device transfer timing is measured.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-029"
 status = "merged"
 branch = "codex/cuda-dense-029-mlp-activation-fixture"
