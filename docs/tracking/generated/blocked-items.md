@@ -68,7 +68,7 @@
 | apple-m4-slm-hardening | M4-SLM-HARDEN-004 | M4-SLM-HARDEN-003 | merged |
 | apple-m4-slm-metal-phases | M4-METAL-002 | M4-METAL-001 | merged |
 | apple-m4-slm-metal-phases | M4-METAL-003 | M4-METAL-002 | merged |
-| apple-m4-slm-metal-phases | M4-METAL-004 | M4-METAL-003 | in_progress |
+| apple-m4-slm-metal-phases | M4-METAL-004 | M4-METAL-003 | pr_open |
 | apple-m4-slm-metal-phases | M4-METAL-005 | M4-METAL-004 | blocked |
 | apple-m4-slm-metal-phases | M4-METAL-006 | M4-METAL-005 | blocked |
 | apple-m4-slm-metal-phases | M4-METAL-007 | M4-METAL-006 | blocked |

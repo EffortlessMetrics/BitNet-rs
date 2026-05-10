@@ -135,7 +135,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-004"
-status = "in_progress"
+status = "pr_open"
+pr = 4385
+head_sha = "898ce4dc48f99c904519d126dfa98f14d94630a8"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-004-runtime-boundary"
 stackable = false
 review_mode = "codex_premerge"
