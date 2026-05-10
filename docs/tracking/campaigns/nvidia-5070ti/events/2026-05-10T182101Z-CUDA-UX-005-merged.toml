@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T18:21:01Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/cuda-ux-005-benchmark-fail-closed"
+pr = 4448
+head_sha = "4f7dfaba5273880fa457c7fbaf46c5cee96f34ef"
+merge_sha = "70e4f44ef4c3443fbd481c2c59b7757ad2f91529"
+summary = "Merged CUDA-UX-005 legacy benchmark fail-closed implementation."
+notes = [
+  "PR #4448 makes `bitnet bench/benchmark --device cuda` fail closed instead of silently running the legacy simulated CPU benchmark.",
+  "The implementation updates help/error text to direct users to receipt-backed CUDA ask/chat paths and governed CUDA benchmark receipts.",
+  "Hosted CI was green and GitHub reported the PR clean before merge.",
+]
