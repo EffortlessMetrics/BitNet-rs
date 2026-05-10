@@ -124,3 +124,15 @@ phase receipts that omit timing or set `speedup_claim=true`.
 This proof still does not claim full `apple-m4-metal` inference, decode-loop
 Metal routing, KV-cache behavior on Metal, Neural Engine execution, MPSGraph
 execution, QK256 on Apple Silicon, or broad performance.
+
+## M4-METAL-001 Next Phase
+
+`M4-METAL-001` selects the next phase after the dense f32 prefill linear
+microphase: a prefill Q/K/V projection triplet for the supported Qwen2.5 dense
+SLM path. The full decision record is in
+`docs/slm/apple-m4-slm-metal-next-phase.md`.
+
+This selection remains a docs/control-plane decision. It does not add kernels,
+route generation through Metal, or claim acceleration. The next implementation
+item, `M4-METAL-002`, must prove CPU/Metal parity for Q, K, and V outputs
+before receipt integration or resident-session routing can proceed.
