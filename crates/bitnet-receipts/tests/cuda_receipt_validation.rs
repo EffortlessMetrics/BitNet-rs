@@ -26,6 +26,7 @@ use bitnet_receipts::{
     validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
     validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json,
+    validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
     validate_dense_gguf_rope_cuda_parity_receipt_json,
     validate_dense_gguf_sampling_policy_receipt_json,
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
@@ -1368,6 +1369,71 @@ fn dense_gguf_qwen_one_token_rejects_bitnet_proof_claim() {
         .to_string();
 
     assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_validates() {
+    let receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+
+    validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_rejects_one_token_only_receipt() {
+    let receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+
+    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("artifact_kind"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_requires_one_token_prerequisite() {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["prerequisite_receipts"]["one_token_proof_claimed"] = json!(false);
+
+    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("one_token_proof_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_rejects_generated_token_mismatch() {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["short_decode_proof"]["cuda_generated_token_ids"][2] = json!(999);
+
+    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("cpu_generated_token_ids"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_rejects_chat_speedup_full_residency_and_bitnet_claims() {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["speedup_claim"] = json!(true);
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(true);
+    receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(
+        err.contains("qwen_chat_cuda_claimed")
+            || err.contains("speedup_claim")
+            || err.contains("full_cuda_residency_claimed")
+            || err.contains("bitnet_packed_i2s_qk256_proof"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -3249,6 +3315,194 @@ fn valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt() -> Value {
     receipt["claim_boundary"]["dense_gguf_mlp_activation_cuda_parity_claimed"] = json!(true);
     receipt["claim_boundary"]["qwen_one_token_cuda_claimed"] = json!(true);
     receipt["claim_boundary"]["server_ready_claimed"] = json!(false);
+    receipt
+}
+
+fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
+    let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+    receipt["artifact_kind"] = json!("dense_gguf_qwen_short_decode_strict_cuda_proof");
+    receipt["artifact_path"] = json!("target/bitnet/receipts/dense-gguf-qwen-short-decode.json");
+    receipt["claim"] = json!("dense_gguf_qwen_short_decode_strict_cuda_proof_recorded");
+    receipt["execution_path"]["kernel_family"] = json!("dense_qwen_short_decode_strict_cuda");
+    receipt["execution_path"]["quantization_family"] =
+        json!("dense_gguf_q8_0_f16_qwen_short_decode_contract");
+    receipt["execution_plan"]["cuda_dense_regular_llm_ops"] = json!(264);
+    receipt["execution_plan"]["total_ops"] = json!(264);
+    receipt["execution_plan"]["cuda_ops"] = json!(264);
+    receipt["prerequisite_receipts"]["one_token_proof_artifact_kind"] =
+        json!("dense_gguf_qwen_one_token_strict_cuda_proof");
+    receipt["prerequisite_receipts"]["one_token_proof_receipt_sha256"] =
+        json!(format!("{:064x}", 48));
+    receipt["prerequisite_receipts"]["one_token_proof_claimed"] = json!(true);
+
+    let token_ids = vec![576_u64, 2, 2, 2, 2, 2, 2, 2];
+    let steps = token_ids
+        .iter()
+        .enumerate()
+        .map(|(index, token)| {
+            json!({
+                "index": index as u64,
+                "cpu_selected_token_id": *token,
+                "cuda_selected_token_id": *token,
+                "selected_token_match": true,
+                "cpu_logits_top_k_sha256": format!("{:064x}", 50 + index),
+                "cuda_logits_top_k_sha256": format!("{:064x}", 50 + index),
+                "cpu_logits_sha256": format!("{:064x}", 70 + index),
+                "cuda_logits_sha256": format!("{:064x}", 80 + index),
+                "logits_vector_length": 151936,
+                "cpu_top_k": [
+                    {"rank": 1, "token_id": *token, "value": 1.0},
+                    {"rank": 2, "token_id": 3, "value": 0.5}
+                ],
+                "cuda_top_k": [
+                    {"rank": 1, "token_id": *token, "value": 1.0},
+                    {"rank": 2, "token_id": 3, "value": 0.5}
+                ],
+                "top_k_match": true,
+                "top_k_max_abs_error": 0.0,
+                "top_k_mean_abs_error": 0.0,
+                "cuda_step_timing": {
+                    "embed_ms": 0.5,
+                    "forward_ms": 3.0,
+                    "logits_ms": 0.75,
+                    "decode_ms": 4.25,
+                    "logits_device_is_cuda": true
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+    receipt["short_decode_proof"] = json!({
+        "schema": 1,
+        "proof_scope": "qwen_strict_short_decode_greedy",
+        "model_family": "qwen",
+        "requested_new_tokens": 8,
+        "generated_tokens_count": 8,
+        "generation_policy": "greedy",
+        "deterministic": true,
+        "fallback_used": false,
+        "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+        "cuda_target_backend": "nvidia-rtx-5070-ti-cuda",
+        "prompt_token_count": 4,
+        "prompt_token_ids_sha256": format!("{:064x}", 45),
+        "cpu_generated_token_ids": token_ids,
+        "cuda_generated_token_ids": token_ids,
+        "cpu_generated_token_ids_sha256": format!("{:064x}", 49),
+        "cuda_generated_token_ids_sha256": format!("{:064x}", 49),
+        "generated_token_ids_match": true,
+        "first_token_divergence_index": null,
+        "cpu_logits_top_k_steps_sha256": format!("{:064x}", 90),
+        "cuda_logits_top_k_steps_sha256": format!("{:064x}", 90),
+        "top_k_evidence_recorded": true,
+        "top_k_compared": true,
+        "top_k_all_match": true,
+        "first_top_k_divergence_index": null,
+        "top_k_max_abs_error": 0.0,
+        "top_k_mean_abs_error": 0.0,
+        "steps": steps,
+        "decoded_text": "test answer",
+        "qwen_one_token_cuda_claimed": true,
+        "qwen_short_decode_cuda_claimed": true,
+        "qwen_chat_cuda_claimed": false,
+        "dense_gguf_inference_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "speedup_claim": false,
+        "server_ready_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["quality_gate"] = json!({
+        "schema": 1,
+        "gate": "qwen_short_decode_cuda_parity",
+        "passed": true,
+        "answer_ready_claimed": false,
+        "short_decode_claimed": true,
+        "chat_claimed": false
+    });
+    receipt["kernel_stats"] = json!([
+        {
+            "phase": "qwen_short_decode_runtime",
+            "kernel_id": "dense_qwen_short_decode_cuda_runtime",
+            "invocations": 248,
+            "fallback_invocations": 0,
+            "cpu_fallback_invocations": 0,
+            "host_to_device_bytes": 4096,
+            "device_to_host_bytes": 1024,
+            "kernel_launches": 248,
+            "kernel_time_ms": 25.0
+        },
+        {
+            "phase": "lm_head",
+            "kernel_id": "dense_qwen_lm_head_cuda",
+            "invocations": 8,
+            "fallback_invocations": 0,
+            "cpu_fallback_invocations": 0,
+            "host_to_device_bytes": 0,
+            "device_to_host_bytes": 0,
+            "kernel_launches": 8,
+            "kernel_time_ms": 6.0
+        },
+        {
+            "phase": "logits_transfer",
+            "kernel_id": "dense_qwen_logits_transfer_cuda",
+            "invocations": 8,
+            "fallback_invocations": 0,
+            "cpu_fallback_invocations": 0,
+            "host_to_device_bytes": 0,
+            "device_to_host_bytes": 0,
+            "kernel_launches": 8,
+            "kernel_time_ms": 0.0
+        }
+    ]);
+    receipt["kernel_coverage"] = json!({
+        "schema": 1,
+        "route": "dense_regular_llm_cuda",
+        "kernels_executed": [
+            "dense_qwen_short_decode_cuda_runtime",
+            "dense_qwen_lm_head_cuda",
+            "dense_qwen_logits_transfer_cuda"
+        ],
+        "all_required_dense_kernels_executed": true,
+        "dense_kernel_invocations": 264,
+        "dense_kernel_launches": 264,
+        "bitnet_qk256_kernel_invocations": 0,
+        "cpu_fallback_kernel_invocations": 0,
+        "fallback_used": false
+    });
+    receipt["timing"] = json!({
+        "total_ms": 50.0,
+        "first_token_ms": 8.0,
+        "prefill_ms": 10.0,
+        "decode_total_ms": 40.0,
+        "kernel_time_ms": 31.0,
+        "generated_tokens_count": 8,
+        "host_to_device_bytes": 4096,
+        "device_to_host_bytes": 1024,
+        "kernel_invocations": 264,
+        "kernel_launches": 264
+    });
+    receipt["tensor_residency"] = json!({
+        "schema": 1,
+        "scope": "qwen_short_decode_strict_cuda",
+        "model_class": "dense_regular_llm",
+        "residency_accounting_recorded": true,
+        "weights_uploaded_once": true,
+        "weights_resident_on_cuda": true,
+        "per_token_weight_upload": false,
+        "kv_cache_policy_recorded": true,
+        "sampling_policy_recorded": true,
+        "runtime_logits_cuda_resident_before_download": true,
+        "fallback_used": false,
+        "dense_gguf_inference_claimed": false,
+        "persistent_session_residency_claimed": false,
+        "full_cuda_residency_claimed": false,
+        "transfer_accounting": {
+            "status": "measured",
+            "host_to_device_bytes": 4096,
+            "device_to_host_bytes": 1024,
+            "kernel_invocations": 264,
+            "kernel_launches": 264
+        }
+    });
+    receipt["claim_boundary"]["qwen_short_decode_cuda_claimed"] = json!(true);
     receipt
 }
 

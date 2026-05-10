@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T05:42:11Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-045"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-045-short-decode-proof"
+pr = 4420
+head_sha = "c1c8f5a17127268c157aa094c2641adfb46a8c89"
+summary = "Opened CUDA-DENSE-045 dense Qwen short-decode strict CUDA runtime proof PR."
+notes = [
+  "PR #4420 adds the governed dense Qwen short-decode strict CUDA runtime proof command and commits the validated RTX 5070 Ti hardware receipt.",
+  "The receipt proves eight deterministic greedy tokens through dense_regular_llm_cuda with fallback_used=false and CPU/CUDA generated-token agreement.",
+  "The PR preserves chat, speedup, persistent/full-residency, server, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims.",
+]
