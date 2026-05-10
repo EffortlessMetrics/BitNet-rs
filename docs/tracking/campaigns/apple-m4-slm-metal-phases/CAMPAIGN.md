@@ -25,8 +25,8 @@ otherwise.
 |---|---|---|
 | M4-METAL-001 | merged | Selected prefill Q/K/V projection as the next phase target. |
 | M4-METAL-002 | merged | Added the env-gated CPU/Metal Q/K/V parity fixture. |
-| M4-METAL-003 | in progress | Integrate phase receipt validation. |
-| M4-METAL-004 | blocked | Route the phase in resident sessions with parity. |
+| M4-METAL-003 | merged | Integrated phase receipt validation. |
+| M4-METAL-004 | ready | Route the phase in resident sessions with parity. |
 | M4-METAL-005 | blocked | Record measured phase-local timing deltas. |
 
 ## Current Decision
@@ -37,8 +37,9 @@ decision record is in `docs/slm/apple-m4-slm-metal-next-phase.md`.
 
 `M4-METAL-002` added the parity fixture for that selected phase. The fixture is
 env-gated for live Metal dispatch and remains outside resident generation.
-`M4-METAL-003` promotes the phase evidence into validated receipt
-plumbing.
+`M4-METAL-003` promoted the phase evidence into validated receipt plumbing.
+`M4-METAL-004` is ready to route the phase in resident-session flow only where
+CPU/Metal parity remains explicit.
 
 ## Claim Boundary
 
