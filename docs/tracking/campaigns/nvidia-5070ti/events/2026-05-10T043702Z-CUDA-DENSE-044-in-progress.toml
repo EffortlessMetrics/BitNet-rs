@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T04:37:02Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-044"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-044-one-token-runtime-impl"
+summary = "Started CUDA-DENSE-044 dense Qwen one-token strict CUDA runtime proof implementation."
+notes = [
+  "The implementation adds the governed dense-gguf-qwen-one-token-strict-cuda command and emits a validated RTX 5070 Ti hardware receipt from the SHA-verified Qwen2.5 0.5B Q8_0 artifact.",
+  "The hardware receipt records fallback_used=false, dense_regular_llm_cuda route selection, CPU/CUDA selected-token agreement, and top-k rank agreement while preserving speedup, short-decode, chat, server, full-residency, BitNet packed proof, QK256, and CUDA kernel math non-claims.",
+]
