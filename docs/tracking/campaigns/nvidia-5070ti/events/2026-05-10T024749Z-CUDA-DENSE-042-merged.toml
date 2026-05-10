@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T02:47:49Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-042"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4392
+head_sha = "dfd26a74481023860abea923e28f2ec933b163c0"
+merge_sha = "7e9e4d3faf9729befd40c190c98eddbe325970ac"
+actor = "codex"
+branch = "codex/cuda-dense-042-one-token-impl"
+summary = "Merged CUDA-DENSE-042 dense Qwen one-token strict CUDA proof validator."
+notes = [
+  "PR #4392 added the fail-closed dense_gguf_qwen_one_token_strict_cuda_proof receipt validator and synthetic rejection tests.",
+  "The validator requires prerequisite all-layer plan, model-boundary fixture, KV-cache policy, and sampling-policy receipt evidence before accepting a one-token proof receipt.",
+  "The closeout preserves the non-claims for runtime dense GGUF inference, Qwen one-token/short decode/chat, speedup, persistent/full residency, server readiness, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math.",
+]
