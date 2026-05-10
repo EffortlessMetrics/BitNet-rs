@@ -138,9 +138,10 @@ use commands::{
     DenseGgufOneLayerCudaParityCommand, DenseGgufOneLayerPlanCommand,
     DenseGgufQwenOneTokenStrictCudaCommand, DenseGgufQwenShortDecodeStrictCudaCommand,
     DenseGgufQwenWarmSessionStrictCudaCommand, DenseGgufRopeCudaParityCommand,
-    DenseGgufSamplingPolicyCommand, ExternalReferenceInstrumentationCommand,
-    FirstTokenDivergenceCommand, InferenceCommand, InspectCommand, OutputHeadLogitsAuditCommand,
-    ReceiptsCommand, ReferenceCompareCommand, ServeCommand, TransformerLayerParityCommand,
+    DenseGgufSamplingPolicyCommand, DenseQwenCudaAskOptions,
+    ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
+    InspectCommand, OutputHeadLogitsAuditCommand, ReceiptsCommand, ReferenceCompareCommand,
+    ServeCommand, TransformerLayerParityCommand, run_dense_qwen_cuda_ask,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -432,8 +433,12 @@ enum Commands {
         tokenizer: Option<std::path::PathBuf>,
 
         /// User question to answer
-        #[arg(short, long)]
-        question: String,
+        #[arg(short, long, value_name = "TEXT", conflicts_with = "question_arg")]
+        question: Option<String>,
+
+        /// User question to answer (positional form)
+        #[arg(value_name = "QUESTION")]
+        question_arg: Option<String>,
 
         /// Optional system prompt
         #[arg(long = "system", value_name = "TEXT")]
@@ -1303,16 +1308,14 @@ async fn async_main() -> Result<()> {
     }
 
     // Setup logging
-    let command_default_log_level =
-        if cli.log_level.is_none() && std::env::var_os("BITNET_LOG_LEVEL").is_none() {
-            match &cli.command {
-                #[cfg(feature = "full-cli")]
-                Some(Commands::Mac(cmd)) => cmd.default_log_level(),
-                _ => None,
-            }
-        } else {
-            None
-        };
+    let command_default_log_level = if cli.log_level.is_none()
+        && std::env::var_os("BITNET_LOG_LEVEL").is_none()
+        && std::env::var_os("RUST_LOG").is_none()
+    {
+        default_log_level_for_command(cli.command.as_ref())
+    } else {
+        None
+    };
     setup_logging(&config, cli.log_level.as_deref().or(command_default_log_level))?;
 
     let startup_contract_report =
@@ -1438,6 +1441,7 @@ async fn async_main() -> Result<()> {
             model,
             tokenizer,
             question,
+            question_arg,
             system_prompt,
             max_new_tokens,
             temperature,
@@ -1447,6 +1451,7 @@ async fn async_main() -> Result<()> {
             strict_cpu,
             receipt_out,
         }) => {
+            let question = resolve_ask_question(question, question_arg)?;
             run_ask_generation(
                 &requested_backend_label,
                 model,
@@ -9179,6 +9184,24 @@ fn slm_warm_session_determinism_receipt(
     })
 }
 
+fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) -> Result<String> {
+    question.or(question_arg).ok_or_else(|| {
+        anyhow::anyhow!("ask requires a question via --question or positional QUESTION")
+    })
+}
+
+fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static str> {
+    match command {
+        Some(Commands::Ask { .. }) => Some("warn"),
+        Some(Commands::Model(_)) => Some("warn"),
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Receipts(_)) => Some("warn"),
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Mac(cmd)) => cmd.default_log_level(),
+        _ => None,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn run_ask_generation(
     requested_backend_label: &str,
@@ -9208,6 +9231,52 @@ async fn run_ask_generation(
         anyhow::bail!(
             "--strict-cpu requires --device cpu; requested backend was {requested_backend_label}"
         );
+    }
+    #[cfg(feature = "full-cli")]
+    if is_dense_qwen_cuda_ask_backend(requested_backend_label)
+        && let Some(model_path) = resolve_dense_qwen_cuda_ask_model(&model)?
+    {
+        if tokenizer.is_some() {
+            anyhow::bail!(
+                "dense Qwen CUDA ask uses contract-authoritative tokenizer resolution; do not pass --tokenizer"
+            );
+        }
+        if system_prompt.as_ref().is_some_and(|value| !value.trim().is_empty()) {
+            anyhow::bail!(
+                "dense Qwen CUDA ask is scoped to the contract deterministic prompt path; --system is not supported yet"
+            );
+        }
+        if temperature != 0.0 || top_p != 1.0 {
+            anyhow::bail!(
+                "dense Qwen CUDA ask is deterministic greedy only; use --temperature 0.0 --top-p 1.0"
+            );
+        }
+        if strict_cpu {
+            anyhow::bail!("dense Qwen CUDA ask cannot run with --strict-cpu");
+        }
+        if !(5..=16).contains(&max_new_tokens) {
+            anyhow::bail!("dense Qwen CUDA ask is currently bounded to --max-new-tokens 5..=16");
+        }
+        if let Some(cuda_bin) = ensure_strict_cuda_runtime_libraries_visible()? {
+            debug!(
+                "added CUDA Toolkit bin directory to process PATH for dense Qwen CUDA ask: {}",
+                cuda_bin.display()
+            );
+        }
+        let top_k = if top_k == 0 { 10 } else { top_k };
+        let outcome = run_dense_qwen_cuda_ask(DenseQwenCudaAskOptions {
+            model: model_path,
+            question,
+            max_new_tokens,
+            top_k,
+            device_index: 0,
+            receipt_out,
+        })
+        .await?;
+        println!("{}", outcome.answer);
+        println!();
+        print_strict_ask_proof_summary(&outcome.receipt, &outcome.receipt_path);
+        return Ok(());
     }
     if strict_cuda && let Some(cuda_bin) = ensure_strict_cuda_runtime_libraries_visible()? {
         debug!(
@@ -9383,6 +9452,33 @@ fn strict_ask_default_receipt_path(
         ),
         _ => None,
     }
+}
+
+#[cfg(feature = "full-cli")]
+fn is_dense_qwen_cuda_ask_backend(requested_backend_label: &str) -> bool {
+    matches!(
+        requested_backend_label.trim().to_ascii_lowercase().as_str(),
+        "cuda" | "nvidia-rtx-5070-ti-cuda"
+    )
+}
+
+#[cfg(feature = "full-cli")]
+fn resolve_dense_qwen_cuda_ask_model(
+    model: &std::path::Path,
+) -> Result<Option<std::path::PathBuf>> {
+    const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
+
+    if let Some(cached) = model_cache::verified_dense_qwen_cuda_model_arg(model, None)? {
+        return Ok(Some(cached.path));
+    }
+
+    if model.file_name().and_then(|value| value.to_str())
+        == Some(QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)
+    {
+        return Ok(Some(model.to_path_buf()));
+    }
+
+    Ok(None)
 }
 
 #[cfg(feature = "full-cli")]
@@ -11094,6 +11190,77 @@ mod tests {
                 .join("receipts")
                 .join("cuda-answer-readiness")
                 .join("strict-cpu-ask-latest.json")
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn dense_qwen_ask_resolves_positional_question() {
+        let question = resolve_ask_question(None, Some("What is 2+2?".to_string())).unwrap();
+
+        assert_eq!(question, "What is 2+2?");
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn dense_qwen_ask_resolves_flag_question_first() {
+        let question = resolve_ask_question(
+            Some("flag question".to_string()),
+            Some("positional question".to_string()),
+        )
+        .unwrap();
+
+        assert_eq!(question, "flag question");
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn dense_qwen_ask_backend_accepts_cuda_aliases_only() {
+        assert!(is_dense_qwen_cuda_ask_backend("cuda"));
+        assert!(is_dense_qwen_cuda_ask_backend("nvidia-rtx-5070-ti-cuda"));
+        assert!(!is_dense_qwen_cuda_ask_backend("cpu"));
+        assert!(!is_dense_qwen_cuda_ask_backend("apple-m4-cpu-neon"));
+    }
+
+    #[test]
+    fn ask_defaults_to_warn_logging_for_user_facing_output() {
+        let command = Commands::Ask {
+            model: std::path::PathBuf::from("qwen2.5-0.5b-instruct-q8_0"),
+            tokenizer: None,
+            question: None,
+            question_arg: Some("What is 2+2?".to_string()),
+            system_prompt: None,
+            max_new_tokens: 8,
+            temperature: 0.0,
+            top_k: 0,
+            top_p: 1.0,
+            strict_cuda: false,
+            strict_cpu: false,
+            receipt_out: None,
+        };
+
+        assert_eq!(default_log_level_for_command(Some(&command)), Some("warn"));
+        assert_eq!(default_log_level_for_command(None), None);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn model_and_receipts_default_to_warn_logging_for_user_facing_output() {
+        assert_eq!(
+            default_log_level_for_command(Some(&Commands::Model(ModelCommand {
+                action: model_cache::ModelAction::List { cache_dir: None, json: false },
+            }))),
+            Some("warn")
+        );
+        assert_eq!(
+            default_log_level_for_command(Some(&Commands::Receipts(ReceiptsCommand {
+                action: commands::receipts::ReceiptsAction::Explain {
+                    path: None,
+                    latest: true,
+                    json: false,
+                },
+            }))),
+            Some("warn")
         );
     }
 

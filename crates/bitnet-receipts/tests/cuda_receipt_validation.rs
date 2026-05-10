@@ -25,6 +25,7 @@ use bitnet_receipts::{
     validate_dense_gguf_one_layer_cpu_reference_receipt_json,
     validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
+    validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json,
@@ -1512,6 +1513,71 @@ fn dense_gguf_qwen_warm_session_rejects_broad_persistent_residency_claim() {
         .to_string();
 
     assert!(err.contains("persistent_session_residency_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_ask_strict_cuda_proof_receipt_validates() {
+    let receipt = valid_dense_gguf_qwen_ask_strict_cuda_proof_receipt();
+
+    validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_qwen_ask_rejects_short_decode_only_receipt() {
+    let receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+
+    let err = validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("artifact_kind"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_ask_requires_warm_session_prerequisite() {
+    let mut receipt = valid_dense_gguf_qwen_ask_strict_cuda_proof_receipt();
+    receipt["prerequisite_receipts"]["warm_session_proof_claimed"] = json!(false);
+
+    let err = validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("warm_session_proof_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_ask_rejects_generated_token_mismatch() {
+    let mut receipt = valid_dense_gguf_qwen_ask_strict_cuda_proof_receipt();
+    receipt["ask_proof"]["cuda_generated_token_ids"][0] = json!(999);
+
+    let err = validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("generated-token arrays"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_ask_rejects_chat_speedup_full_residency_and_bitnet_claims() {
+    let mut receipt = valid_dense_gguf_qwen_ask_strict_cuda_proof_receipt();
+    receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["speedup_claim"] = json!(true);
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(true);
+    receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    let err = validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(
+        err.contains("qwen_chat_cuda_claimed")
+            || err.contains("speedup_claim")
+            || err.contains("full_cuda_residency_claimed")
+            || err.contains("bitnet_packed_i2s_qk256_proof"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -3864,6 +3930,117 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
     receipt["claim_boundary"]["qwen_warm_session_cuda_claimed"] = json!(true);
     receipt["claim_boundary"]["scoped_warm_session_residency_claimed"] = json!(true);
     receipt["claim_boundary"]["qwen_ask_cuda_claimed"] = json!(false);
+    receipt
+}
+
+fn valid_dense_gguf_qwen_ask_strict_cuda_proof_receipt() -> Value {
+    let source = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    let source_proof = source["short_decode_proof"].clone();
+    let source_prerequisites = source["prerequisite_receipts"].clone();
+    let mut receipt = source.clone();
+
+    receipt["artifact_kind"] = json!("dense_gguf_qwen_ask_strict_cuda_proof");
+    receipt["artifact_path"] = json!("target/bitnet/receipts/dense-qwen-ask.json");
+    receipt["claim"] = json!("dense_gguf_qwen_ask_strict_cuda_proof_recorded");
+    receipt["execution_path"]["kernel_family"] = json!("dense_qwen_ask_strict_cuda");
+    receipt["execution_path"]["quantization_family"] =
+        json!("dense_gguf_q8_0_f16_qwen_ask_contract");
+    receipt["question"] = json!("What is 2+2?");
+    receipt["answer"] = json!("test answer");
+    receipt["receipt"] = json!({
+        "path": "target/bitnet/receipts/dense-qwen-ask.json",
+        "defaulted_for_dense_cuda_ask": true
+    });
+    receipt["prerequisite_receipts"] = json!({
+        "schema": 1,
+        "all_layer_execution_plan_artifact_kind": source_prerequisites["all_layer_execution_plan_artifact_kind"].clone(),
+        "all_layer_execution_plan_receipt_sha256": source_prerequisites["all_layer_execution_plan_receipt_sha256"].clone(),
+        "model_boundary_fixtures_artifact_kind": source_prerequisites["model_boundary_fixtures_artifact_kind"].clone(),
+        "model_boundary_fixtures_receipt_sha256": source_prerequisites["model_boundary_fixtures_receipt_sha256"].clone(),
+        "kv_cache_policy_artifact_kind": source_prerequisites["kv_cache_policy_artifact_kind"].clone(),
+        "kv_cache_policy_receipt_sha256": source_prerequisites["kv_cache_policy_receipt_sha256"].clone(),
+        "sampling_policy_artifact_kind": source_prerequisites["sampling_policy_artifact_kind"].clone(),
+        "sampling_policy_receipt_sha256": source_prerequisites["sampling_policy_receipt_sha256"].clone(),
+        "one_token_proof_artifact_kind": source_prerequisites["one_token_proof_artifact_kind"].clone(),
+        "one_token_proof_receipt_sha256": source_prerequisites["one_token_proof_receipt_sha256"].clone(),
+        "short_decode_proof_artifact_kind": "dense_gguf_qwen_short_decode_strict_cuda_proof",
+        "short_decode_proof_receipt_sha256": format!("{:064x}", 250),
+        "warm_session_proof_artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof",
+        "warm_session_proof_receipt_sha256": format!("{:064x}", 251),
+        "all_required_receipts_verified": true,
+        "all_layer_execution_plan_claimed": true,
+        "model_boundary_fixtures_claimed": true,
+        "kv_cache_policy_claimed": true,
+        "sampling_policy_claimed": true,
+        "one_token_proof_claimed": true,
+        "short_decode_proof_claimed": true,
+        "warm_session_proof_claimed": true
+    });
+    receipt["ask_proof"] = json!({
+        "schema": 1,
+        "proof_scope": "qwen_strict_cuda_ask_from_short_decode",
+        "model_family": "qwen",
+        "question": "What is 2+2?",
+        "answer": "test answer",
+        "requested_new_tokens": 8,
+        "generated_tokens_count": 8,
+        "generation_policy": "greedy",
+        "deterministic": true,
+        "fallback_used": false,
+        "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+        "cuda_target_backend": "nvidia-rtx-5070-ti-cuda",
+        "prompt_token_count": source_proof["prompt_token_count"].clone(),
+        "prompt_token_ids_sha256": source_proof["prompt_token_ids_sha256"].clone(),
+        "cpu_generated_token_ids": source_proof["cpu_generated_token_ids"].clone(),
+        "cuda_generated_token_ids": source_proof["cuda_generated_token_ids"].clone(),
+        "cpu_generated_token_ids_sha256": source_proof["cpu_generated_token_ids_sha256"].clone(),
+        "cuda_generated_token_ids_sha256": source_proof["cuda_generated_token_ids_sha256"].clone(),
+        "generated_token_ids_match": true,
+        "first_token_divergence_index": null,
+        "top_k_evidence_recorded": true,
+        "top_k_compared": true,
+        "top_k_all_match": true,
+        "first_top_k_divergence_index": null,
+        "top_k_max_abs_error": 0.0,
+        "top_k_mean_abs_error": 0.0,
+        "qwen_one_token_cuda_claimed": true,
+        "qwen_short_decode_cuda_claimed": true,
+        "qwen_warm_session_cuda_claimed": true,
+        "qwen_ask_cuda_claimed": true,
+        "qwen_chat_cuda_claimed": false,
+        "dense_gguf_inference_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "speedup_claim": false,
+        "server_ready_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["quality_gate"] = json!({
+        "schema": 1,
+        "gate": "qwen_cuda_ask_answer",
+        "passed": true,
+        "ask_claimed": true,
+        "chat_claimed": false
+    });
+    receipt["quality"] = json!({
+        "passed": true,
+        "gate": "qwen_cuda_ask_answer",
+        "ask_claimed": true,
+        "chat_claimed": false
+    });
+    receipt["tensor_residency"]["scope"] = json!("qwen_ask_strict_cuda");
+    receipt["residency"] = json!({
+        "weights_uploaded_once": true,
+        "per_token_weight_upload": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["claim_boundary"]["qwen_warm_session_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["qwen_ask_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(false);
+    receipt["claim_boundary"]["server_ready_claimed"] = json!(false);
+    receipt["claim_boundary"]["speedup_claim"] = json!(false);
+    receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(false);
+    receipt["source_short_decode_receipt"] = source;
     receipt
 }
 
