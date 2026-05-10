@@ -3185,8 +3185,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-004"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-ux-004-dense-chat"
+pr = 4427
+head_sha = "2cb7d4aba46968aaad5154fcc9f52939606950d6"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
