@@ -2356,10 +2356,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-PERF-006"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-perf-006-h2d-envelope-qualification"
 pr = 4452
-head_sha = "67af07bee097fe782f40342dc779effa01070537"
+head_sha = "89f441a0385f9ecc9267bb8943c3b405b407e605"
+merge_sha = "7ad21d6078f3c8b2c4b30055125ac16142e88c9a"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
