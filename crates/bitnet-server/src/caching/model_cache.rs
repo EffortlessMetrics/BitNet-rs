@@ -14,7 +14,7 @@ use super::CachingConfig;
 pub struct CachedModel {
     /// Model identifier
     pub id: String,
-    /// Model data (placeholder - in real implementation this would be the actual model)
+    /// Serialized or resident model bytes inserted by a real loader.
     pub data: Vec<u8>,
     /// Model size in bytes
     pub size_bytes: usize,
@@ -249,42 +249,13 @@ impl ModelCache {
         access_order.push(model_id.to_string());
     }
 
-    /// Load a model (placeholder implementation)
-    async fn load_model(&self, model_id: &str) -> Result<Option<CachedModel>> {
-        let start_time = Instant::now();
-
-        // Simulate model loading time
-        tokio::time::sleep(Duration::from_millis(100)).await;
-
-        // Create a mock model
-        let model_data = vec![0u8; 1024 * 1024]; // 1MB mock model
-        let model = CachedModel {
-            id: model_id.to_string(),
-            data: model_data.clone(),
-            size_bytes: model_data.len(),
-            last_accessed: Instant::now(),
-            created_at: Instant::now(),
-            access_count: 0,
-            metadata: ModelMetadata {
-                name: format!("model-{}", model_id),
-                version: "1.0.0".to_string(),
-                quantization: "I2_S".to_string(),
-                size_mb: model_data.len() as f64 / (1024.0 * 1024.0),
-                parameters: 1_580_000_000, // 1.58B parameters
-                context_length: 2048,
-            },
-        };
-
-        // Update load time statistics
-        let load_time = start_time.elapsed();
-        {
-            let mut stats = self.statistics.write().await;
-            let total_load_time = stats.average_load_time_ms * stats.cache_misses as f64;
-            stats.average_load_time_ms =
-                (total_load_time + load_time.as_millis() as f64) / (stats.cache_misses + 1) as f64;
-        }
-
-        Ok(Some(model))
+    /// Load a model into the cache.
+    ///
+    /// The server cache is not a model loader. Until a real verified loader is
+    /// wired into this layer, misses must remain misses instead of fabricating
+    /// model bytes or answer-ready metadata.
+    async fn load_model(&self, _model_id: &str) -> Result<Option<CachedModel>> {
+        Ok(None)
     }
 
     /// Start cleanup task for expired models
@@ -373,5 +344,42 @@ impl ModelCache {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn cache_miss_does_not_create_placeholder_model() {
+        let cache = ModelCache::new(&CachingConfig::default()).await.unwrap();
+
+        let model = cache.get_model("missing-model").await.unwrap();
+
+        assert!(model.is_none());
+        let stats = cache.get_statistics().await;
+        assert_eq!(stats.total_requests, 1);
+        assert_eq!(stats.cache_hits, 0);
+        assert_eq!(stats.cache_misses, 1);
+        assert_eq!(stats.total_models, 0);
+        assert_eq!(stats.total_size_mb, 0.0);
+        assert_eq!(stats.pre_warmed_models, 0);
+    }
+
+    #[tokio::test]
+    async fn pre_warm_does_not_create_placeholder_models() {
+        let cache = ModelCache::new(&CachingConfig::default()).await.unwrap();
+        let model_ids = vec!["model-a".to_string(), "model-b".to_string()];
+
+        cache.pre_warm(&model_ids).await.unwrap();
+
+        let stats = cache.get_statistics().await;
+        assert_eq!(stats.total_requests, 0);
+        assert_eq!(stats.cache_hits, 0);
+        assert_eq!(stats.cache_misses, 0);
+        assert_eq!(stats.total_models, 0);
+        assert_eq!(stats.total_size_mb, 0.0);
+        assert_eq!(stats.pre_warmed_models, 0);
     }
 }

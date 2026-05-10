@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T12:00:00Z"
+campaign = "server-real-inference"
+item = "SERVER-002"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/server-real-inference/SERVER-002-no-placeholder-model-readiness"
+summary = "Started SERVER-002 placeholder model lifecycle fail-closed cleanup."
+notes = [
+  "Scope is server-only lifecycle scaffolds that previously reported placeholder HuggingFace or cache model readiness without real I/O.",
+  "The implementation must not introduce real model loading claims, answer claims, hardware claims, tokenizer changes, loader changes, transformer behavior changes, or kernel changes.",
+]
