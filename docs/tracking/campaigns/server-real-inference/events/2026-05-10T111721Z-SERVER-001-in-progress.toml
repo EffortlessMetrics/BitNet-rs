@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T11:17:21Z"
+campaign = "server-real-inference"
+item = "SERVER-001"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/server-real-inference/SERVER-001-single-request-engine"
+summary = "Started SERVER-001 single-request server real inference wiring."
+notes = [
+  "Scope is explicit unavailable responses or real engine execution for non-test server inference paths; no simulated generated output may remain in production endpoints.",
+  "The implementation must not touch hardware kernels, tokenizer behavior, loader behavior, or hardware acceleration claims.",
+]

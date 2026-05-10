@@ -67,7 +67,13 @@ fn device_config_parse_ocl() {
 #[test]
 fn device_config_parse_npu() {
     let dc: DeviceConfig = "npu".parse().unwrap();
-    assert_eq!(dc, DeviceConfig::Gpu(0));
+    assert_eq!(dc, DeviceConfig::IntelNpu(0));
+}
+
+#[test]
+fn device_config_parse_metal() {
+    let dc: DeviceConfig = "metal".parse().unwrap();
+    assert_eq!(dc, DeviceConfig::Metal);
 }
 
 #[test]

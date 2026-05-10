@@ -18,7 +18,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "SERVER-001"
-status = "proposed"
+status = "pr_open"
+pr = 4429
+head_sha = "72d9f6d4669cb8c8a377fcb128d25e9e45a09b69"
 branch = "codex/server-real-inference/SERVER-001-single-request-engine"
 stackable = false
 review_mode = "codex_premerge"

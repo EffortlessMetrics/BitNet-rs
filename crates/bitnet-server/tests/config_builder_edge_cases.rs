@@ -31,7 +31,13 @@ fn device_config_from_str_gpu_variants() {
     assert_eq!("vulkan".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
     assert_eq!("opencl".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
     assert_eq!("ocl".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
-    assert_eq!("npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
+}
+
+#[test]
+fn device_config_from_str_specialized_backend_variants() {
+    assert_eq!("npu".parse::<DeviceConfig>().unwrap(), DeviceConfig::IntelNpu(0));
+    assert_eq!("intel-npu:1".parse::<DeviceConfig>().unwrap(), DeviceConfig::IntelNpu(1));
+    assert_eq!("metal".parse::<DeviceConfig>().unwrap(), DeviceConfig::Metal);
 }
 
 #[test]
@@ -48,7 +54,6 @@ fn device_config_from_str_gpu_with_id() {
 #[test]
 fn device_config_from_str_invalid() {
     assert!("invalid".parse::<DeviceConfig>().is_err());
-    assert!("metal".parse::<DeviceConfig>().is_err());
     assert!("tpu".parse::<DeviceConfig>().is_err());
     assert!("".parse::<DeviceConfig>().is_err());
 }

@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T11:35:47Z"
+campaign = "server-real-inference"
+item = "SERVER-001"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 4429
+head_sha = "72d9f6d4669cb8c8a377fcb128d25e9e45a09b69"
+actor = "codex"
+
+notes = [
+  "Opened SERVER-001 implementation PR for fail-closed server inference behavior when a real engine is unavailable.",
+  "The server streaming routes now return explicit 503 unavailable responses instead of synthesized token streams.",
+  "The request-batching scaffold no longer synthesizes generated text in non-test builds.",
+  "No hardware acceleration, server performance, tokenizer, loader, transformer, QK256, or CUDA kernel math claim is introduced.",
+]
