@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T02:24:41Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-006"
+event = "merged"
+actor = "codex"
+pr = 4395
+merge_sha = "6a10b87a85d4a06ec032fffb89a9ac85b7b158c0"
+previous_status = "in_progress"
+next_item = "M4-METAL-007"
+
+notes = [
+  "Merged the opt-in resident dense SLM Q/K/V Metal phase route for mac chat and smoke mac validate.",
+  "Generation remains on apple-m4-cpu-neon while the named Metal phase emits per-turn parity receipts.",
+  "Promoted M4-METAL-007 to ready for phase-local timing delta measurement.",
+  "No full apple-m4-metal inference claim, BitNet claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, model binary, or broad performance claim is introduced.",
+]

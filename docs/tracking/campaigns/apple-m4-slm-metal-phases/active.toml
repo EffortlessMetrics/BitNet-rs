@@ -210,7 +210,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-006"
-status = "in_progress"
+status = "merged"
+pr = 4395
+merge_sha = "6a10b87a85d4a06ec032fffb89a9ac85b7b158c0"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-006-resident-route"
 stackable = false
 review_mode = "codex_premerge"
@@ -249,13 +251,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-007"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-007-measured-delta"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-METAL-006"]
+blocked_by = []
 acceptance = "Record measured phase-local timing deltas for the resident-routed Metal phase, keeping speedup claims phase-local and updating docs without broad M4 or full Metal inference claims."
 commands = [
   "cargo fmt --all -- --check",
