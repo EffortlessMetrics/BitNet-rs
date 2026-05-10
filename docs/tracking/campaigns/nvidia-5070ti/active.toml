@@ -2830,8 +2830,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-042"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-042-one-token-impl"
+pr = 4392
+head_sha = "578df6b653898c6b7f66dbc6841fb92bc0e9a68d"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T01:55:39Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-042"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 4392
+head_sha = "578df6b653898c6b7f66dbc6841fb92bc0e9a68d"
+actor = "codex"
+branch = "codex/cuda-dense-042-one-token-impl"
+summary = "Opened CUDA-DENSE-042 one-token proof validator PR."
+notes = [
+  "PR #4392 adds the strict dense Qwen one-token proof receipt kind, validator, and synthetic rejection tests.",
+  "The PR keeps runtime one-token generation, hardware receipt evidence, short decode, chat, speedup, full-residency, server readiness, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math as non-claims.",
+]
