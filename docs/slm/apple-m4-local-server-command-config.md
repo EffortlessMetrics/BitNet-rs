@@ -65,6 +65,19 @@ bitnet mac serve \
   --strict
 ```
 
+The larger supported Qwen-class model is also explicit-only:
+
+```bash
+bitnet mac serve \
+  --model-id qwen2.5-1.5b-instruct-q4_k_m \
+  --device apple-m4-cpu-neon \
+  --strict
+```
+
+Use this only after `bitnet model fetch` / `bitnet model verify` succeeds for
+that model ID. It has a larger cache footprint and currently has bounded
+quality/registration evidence, not a published release-mode server envelope.
+
 Operators can verify a running server without starting a second model process:
 
 ```bash
