@@ -1940,6 +1940,9 @@ async fn mac_serve_http_reply(request: &str, state: &MacServeState) -> Result<Ma
     if method == "POST" && path == "/v1/chat/completions" {
         return mac_serve_completion_http_reply(request, state).await;
     }
+    if method == "GET" && path.starts_with("/receipts/") {
+        return mac_serve_receipt_http_reply(path, state);
+    }
     let (status, reason, body) = mac_serve_http_response(request, state);
     MacServeHttpReply::json(status, reason, body)
 }
@@ -1974,10 +1977,72 @@ fn mac_serve_http_response(
             serde_json::json!({
                 "status": "error",
                 "error": "not_found",
-                "available_endpoints": ["/health", "/health/live", "/ready", "/health/ready"],
+                "available_endpoints": ["/health", "/health/live", "/ready", "/health/ready", "/v1/chat/completions", "/receipts/{id}"],
             }),
         ),
     }
+}
+
+fn mac_serve_receipt_http_reply(path: &str, state: &MacServeState) -> Result<MacServeHttpReply> {
+    let receipt_id = path.trim_start_matches("/receipts/").trim();
+    let Some(receipt_stem) = mac_serve_normalize_receipt_id(receipt_id) else {
+        return MacServeHttpReply::json(
+            400,
+            "Bad Request",
+            serde_json::json!({
+                "status": "error",
+                "error": "invalid_receipt_id",
+                "message": "receipt id must be a single safe file stem, for example m4srv-123",
+            }),
+        );
+    };
+    let receipt_path = state.receipt_dir.join(format!("{receipt_stem}.json"));
+    if !receipt_path.exists() {
+        return MacServeHttpReply::json(
+            404,
+            "Not Found",
+            serde_json::json!({
+                "status": "error",
+                "error": "receipt_not_found",
+                "receipt_id": receipt_stem,
+                "receipt_dir": &state.receipt_dir,
+            }),
+        );
+    }
+    let canonical_dir = std::fs::canonicalize(&state.receipt_dir).with_context(|| {
+        format!("failed to canonicalize receipt directory {}", state.receipt_dir.display())
+    })?;
+    let canonical_receipt = std::fs::canonicalize(&receipt_path)
+        .with_context(|| format!("failed to canonicalize receipt {}", receipt_path.display()))?;
+    if !canonical_receipt.starts_with(&canonical_dir) {
+        return MacServeHttpReply::json(
+            400,
+            "Bad Request",
+            serde_json::json!({
+                "status": "error",
+                "error": "invalid_receipt_id",
+                "message": "receipt path escapes the configured receipt directory",
+            }),
+        );
+    }
+    let receipt_text = std::fs::read_to_string(&canonical_receipt)
+        .with_context(|| format!("failed to read receipt {}", canonical_receipt.display()))?;
+    let receipt: serde_json::Value = serde_json::from_str(&receipt_text)
+        .with_context(|| format!("receipt is not valid JSON: {}", canonical_receipt.display()))?;
+    MacServeHttpReply::json(200, "OK", receipt)
+}
+
+fn mac_serve_normalize_receipt_id(receipt_id: &str) -> Option<String> {
+    let receipt_id = receipt_id.strip_suffix(".json").unwrap_or(receipt_id);
+    if receipt_id.is_empty()
+        || receipt_id.contains('/')
+        || receipt_id.contains('\\')
+        || receipt_id.contains("..")
+    {
+        return None;
+    }
+    let safe = receipt_id.chars().all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_'));
+    safe.then(|| receipt_id.to_string())
 }
 
 async fn mac_serve_completion_http_reply(
@@ -2160,6 +2225,8 @@ fn mac_serve_health_json(state: &MacServeState) -> serde_json::Value {
         "endpoints": {
             "health": "/health",
             "ready": "/ready",
+            "completions": "/v1/chat/completions",
+            "receipts": "/receipts/{id}",
         },
         "claim_boundary": mac_serve_claim_boundary_json(),
     })
@@ -2215,7 +2282,8 @@ fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
                 "checked": true,
                 "ready": receipt_ready,
                 "dir": &state.receipt_dir,
-                "mode": "per_request_future",
+                "mode": "per_request_http_export",
+                "endpoint": "/receipts/{id}",
             },
             "generation": {
                 "checked": false,
@@ -2242,6 +2310,7 @@ fn mac_serve_claim_boundary_json() -> serde_json::Value {
         "dense_slm_local_server_health_ready": true,
         "generation_endpoint_implemented": true,
         "streaming_completions_work": true,
+        "receipt_export_endpoint_implemented": true,
         "openai_compatibility_claimed": false,
         "production_readiness_claimed": false,
         "bitnet_quality_claimed": false,
@@ -4572,7 +4641,16 @@ mod tests {
             "127.0.0.1".to_string(),
             8080,
             true,
+            MacServeGenerationDefaults {
+                max_new_tokens: 8,
+                temperature: 0.0,
+                top_k: 1,
+                top_p: 1.0,
+                repetition_penalty: 1.1,
+                seed: None,
+            },
             receipt_path,
+            None,
         );
 
         let ready = mac_serve_ready_json(&state);
@@ -4605,6 +4683,56 @@ mod tests {
             mac_serve_http_response("GET /v1/chat/completions HTTP/1.1\r\n\r\n", &state);
         assert_eq!((status, reason), (404, "Not Found"));
         assert_eq!(body["error"], "not_found");
+    }
+
+    #[tokio::test]
+    async fn mac_serve_receipt_endpoint_exports_existing_receipt() {
+        let (_temp, state) = test_state();
+        let receipt_path = state.receipt_dir.join("m4srv-test.json");
+        std::fs::write(
+            &receipt_path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "artifact_kind": "bitnet_apple_m4_local_server_completion",
+                "request_id": "m4srv-test",
+                "selected_backend": APPLE_M4_CPU_NEON,
+                "fallback_used": false,
+            }))
+            .expect("receipt json"),
+        )
+        .expect("write receipt");
+
+        let reply = mac_serve_http_reply("GET /receipts/m4srv-test HTTP/1.1\r\n\r\n", &state)
+            .await
+            .expect("reply");
+        assert_eq!(reply.status, 200);
+        assert_eq!(reply.content_type, "application/json");
+        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        assert_eq!(body["artifact_kind"], "bitnet_apple_m4_local_server_completion");
+        assert_eq!(body["request_id"], "m4srv-test");
+        assert_eq!(body["selected_backend"], APPLE_M4_CPU_NEON);
+        assert_eq!(body["fallback_used"], false);
+    }
+
+    #[tokio::test]
+    async fn mac_serve_receipt_endpoint_rejects_unsafe_or_missing_receipts() {
+        let (_temp, state) = test_state();
+
+        let unsafe_reply = mac_serve_http_reply("GET /receipts/../secret HTTP/1.1\r\n\r\n", &state)
+            .await
+            .expect("unsafe reply");
+        assert_eq!(unsafe_reply.status, 400);
+        let unsafe_body: serde_json::Value =
+            serde_json::from_slice(&unsafe_reply.body).expect("json body");
+        assert_eq!(unsafe_body["error"], "invalid_receipt_id");
+
+        let missing_reply =
+            mac_serve_http_reply("GET /receipts/m4srv-missing HTTP/1.1\r\n\r\n", &state)
+                .await
+                .expect("missing reply");
+        assert_eq!(missing_reply.status, 404);
+        let missing_body: serde_json::Value =
+            serde_json::from_slice(&missing_reply.body).expect("json body");
+        assert_eq!(missing_body["error"], "receipt_not_found");
     }
 
     #[tokio::test]

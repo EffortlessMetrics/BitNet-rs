@@ -58,9 +58,9 @@ The first server surface is `bitnet mac serve`: loopback by default,
 `apple-m4-cpu-neon`, supported dense model IDs only, startup
 cache/tokenizer/backend verification, streaming by default, a receipt directory
 contract, and no hidden fallback. Health/ready endpoints and the first local
-completion endpoint are implemented; receipt export remains a later
-implementation item. OpenAI-shaped endpoints must not be described as fully
-compatible until their request/response semantics are tested.
+completion endpoint are implemented, and per-request receipts can be exported
+through the local receipt endpoint. OpenAI-shaped endpoints must not be
+described as fully compatible until their request/response semantics are tested.
 
 ## Still Separate
 
