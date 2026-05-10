@@ -3,29 +3,34 @@
 use bitnet_device_probe::{AppleBackendReceipt, AppleResolvedDevice};
 use bitnet_kernels::metal::smoke::{
     ARTIFACT_KIND, DENSE_KERNEL_FAMILY, DENSE_LAYOUT_SOURCE, DENSE_METAL_PREFILL_LINEAR_KERNEL_ID,
-    DENSE_MODEL_FAMILY, DENSE_PREFILL_IN_FEATURES, DENSE_PREFILL_LINEAR_EXECUTION_PHASE,
-    DENSE_PREFILL_LINEAR_KV_CACHE_BEHAVIOR, DENSE_PREFILL_LINEAR_PHASE_SCOPE,
-    DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND, DENSE_PREFILL_LINEAR_TIMING_SCOPE,
-    DENSE_PREFILL_OUT_FEATURES, DENSE_PREFILL_TOKENS, DENSE_TRANSPORT_LAYOUT,
-    DenseMetalPrefillLinearFixture, DenseMetalPrefillLinearReceipt, DenseMetalPrefillLinearTiming,
-    I2S_EXECUTION_PHASE, I2S_KERNEL_FAMILY, I2S_LAYOUT_SOURCE, I2S_METAL_PARITY_KERNEL_ID,
-    I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID, I2S_METAL_PROJECTION_RESIDUAL_KERNEL_ID,
-    I2S_PARITY_BLOCK_SIZE, I2S_PARITY_K, I2S_PARITY_M, I2S_PARITY_N, I2S_PREFILL_EXECUTION_PHASE,
-    I2S_PREFILL_KV_CACHE_BEHAVIOR, I2S_PREFILL_PHASE_SCOPE, I2S_PREFILL_TOKENS,
-    I2S_PROJECTION_RESIDUAL_EXECUTION_PHASE, I2S_PROJECTION_RESIDUAL_GRAPH_ID,
-    I2S_PROJECTION_RESIDUAL_OPS, I2S_PROJECTION_RESIDUAL_PHASE_SCOPE, I2S_TRANSPORT_LAYOUT,
-    I2sMetalParityFixture, I2sMetalParityReceipt, I2sMetalPrefillContributionReceipt,
-    I2sMetalProjectionResidualFixture, I2sMetalProjectionResidualReceipt, MACHINE_ID,
-    PARITY_ARTIFACT_KIND, PHASE_CONTRIBUTION_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND,
-    RUNTIME_API, SELECTED_BACKEND, SMOKE_WORKGROUP_SIZE, SUBGRAPH_ARTIFACT_KIND, SmokeComparison,
+    DENSE_METAL_PREFILL_QKV_KERNEL_ID, DENSE_MODEL_FAMILY, DENSE_PREFILL_IN_FEATURES,
+    DENSE_PREFILL_LINEAR_EXECUTION_PHASE, DENSE_PREFILL_LINEAR_KV_CACHE_BEHAVIOR,
+    DENSE_PREFILL_LINEAR_PHASE_SCOPE, DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND,
+    DENSE_PREFILL_LINEAR_TIMING_SCOPE, DENSE_PREFILL_OUT_FEATURES,
+    DENSE_PREFILL_QKV_EXECUTION_PHASE, DENSE_PREFILL_QKV_KV_CACHE_BEHAVIOR,
+    DENSE_PREFILL_QKV_PHASE_SCOPE, DENSE_PREFILL_QKV_TIMING_SCOPE, DENSE_PREFILL_TOKENS,
+    DENSE_TRANSPORT_LAYOUT, DenseMetalPrefillLinearFixture, DenseMetalPrefillLinearReceipt,
+    DenseMetalPrefillLinearTiming, DenseMetalPrefillQkvFixture, DenseMetalPrefillQkvReceipt,
+    DenseMetalPrefillQkvTiming, I2S_EXECUTION_PHASE, I2S_KERNEL_FAMILY, I2S_LAYOUT_SOURCE,
+    I2S_METAL_PARITY_KERNEL_ID, I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID,
+    I2S_METAL_PROJECTION_RESIDUAL_KERNEL_ID, I2S_PARITY_BLOCK_SIZE, I2S_PARITY_K, I2S_PARITY_M,
+    I2S_PARITY_N, I2S_PREFILL_EXECUTION_PHASE, I2S_PREFILL_KV_CACHE_BEHAVIOR,
+    I2S_PREFILL_PHASE_SCOPE, I2S_PREFILL_TOKENS, I2S_PROJECTION_RESIDUAL_EXECUTION_PHASE,
+    I2S_PROJECTION_RESIDUAL_GRAPH_ID, I2S_PROJECTION_RESIDUAL_OPS,
+    I2S_PROJECTION_RESIDUAL_PHASE_SCOPE, I2S_TRANSPORT_LAYOUT, I2sMetalParityFixture,
+    I2sMetalParityReceipt, I2sMetalPrefillContributionReceipt, I2sMetalProjectionResidualFixture,
+    I2sMetalProjectionResidualReceipt, MACHINE_ID, PARITY_ARTIFACT_KIND,
+    PHASE_CONTRIBUTION_ARTIFACT_KIND, REFERENCE_BACKEND, REQUESTED_BACKEND, RUNTIME_API,
+    SELECTED_BACKEND, SMOKE_WORKGROUP_SIZE, SUBGRAPH_ARTIFACT_KIND, SmokeComparison,
     TINY_METAL_ADD_PARITY_KERNEL_ID, TINY_METAL_ADD_SMOKE_KERNEL_ID, TinyMetalAddParityReceipt,
     TinyMetalAddSmokeReceipt, argmax_index, compare_tiny_add_outputs,
-    dense_metal_prefill_linear_fixture, dense_prefill_linear_shape_words, expected_tiny_add,
+    dense_metal_prefill_linear_fixture, dense_metal_prefill_qkv_fixture,
+    dense_prefill_linear_shape_words, dense_prefill_qkv_shape_words, expected_tiny_add,
     i2s_metal_parity_fixture, i2s_metal_prefill_fixture, i2s_metal_projection_residual_fixture,
     i2s_parity_shape_words, is_apple_m4_adapter_name, metal_dense_prefill_linear_artifact_path,
-    metal_i2s_parity_artifact_path, metal_i2s_prefill_contribution_artifact_path,
-    metal_i2s_projection_residual_artifact_path, metal_parity_artifact_path,
-    metal_smoke_artifact_path, tiny_add_inputs,
+    metal_dense_prefill_qkv_artifact_path, metal_i2s_parity_artifact_path,
+    metal_i2s_prefill_contribution_artifact_path, metal_i2s_projection_residual_artifact_path,
+    metal_parity_artifact_path, metal_smoke_artifact_path, tiny_add_inputs,
 };
 
 #[test]
@@ -269,6 +274,88 @@ fn dense_prefill_linear_receipt_records_split_cpu_and_metal_phase_boundary() {
 }
 
 #[test]
+fn dense_prefill_qkv_fixture_records_qwen_projection_shapes() {
+    let fixture = dense_metal_prefill_qkv_fixture();
+
+    assert_eq!(fixture.prefill_tokens, DENSE_PREFILL_TOKENS);
+    assert_eq!(fixture.hidden_size, 896);
+    assert_eq!(fixture.attention_heads, 14);
+    assert_eq!(fixture.kv_heads, 2);
+    assert_eq!(fixture.head_dim, 64);
+    assert_eq!(fixture.q_dim, 896);
+    assert_eq!(fixture.kv_dim, 128);
+    assert_eq!(fixture.activations.len(), fixture.prefill_tokens * fixture.hidden_size);
+    assert_eq!(fixture.q_weights.len(), fixture.q_dim * fixture.hidden_size);
+    assert_eq!(fixture.k_weights.len(), fixture.kv_dim * fixture.hidden_size);
+    assert_eq!(fixture.v_weights.len(), fixture.kv_dim * fixture.hidden_size);
+    assert_eq!(fixture.q_bias.len(), fixture.q_dim);
+    assert_eq!(fixture.k_bias.len(), fixture.kv_dim);
+    assert_eq!(fixture.v_bias.len(), fixture.kv_dim);
+    assert_eq!(fixture.expected_q.len(), fixture.prefill_tokens * fixture.q_dim);
+    assert_eq!(fixture.expected_k.len(), fixture.prefill_tokens * fixture.kv_dim);
+    assert_eq!(fixture.expected_v.len(), fixture.prefill_tokens * fixture.kv_dim);
+    assert_eq!(dense_prefill_qkv_shape_words(&fixture), [2_u32, 896, 896, 128, 14, 2, 64]);
+    assert!(fixture.expected_q.iter().any(|value| *value != 0.0));
+    assert!(fixture.expected_k.iter().any(|value| *value != 0.0));
+    assert!(fixture.expected_v.iter().any(|value| *value != 0.0));
+}
+
+#[test]
+fn dense_prefill_qkv_receipt_records_phase_scope_and_qkv_parity() {
+    let fixture = dense_metal_prefill_qkv_fixture();
+    let zero = SmokeComparison { max_abs_error: 0.0, mean_abs_error: 0.0 };
+    let receipt = DenseMetalPrefillQkvReceipt::passed(
+        metal_dense_prefill_qkv_artifact_path("2026-05-10"),
+        zero,
+        zero,
+        zero,
+        &fixture,
+        DenseMetalPrefillQkvTiming::measured(0.25, 0.75),
+    );
+
+    assert_eq!(receipt.machine_id, MACHINE_ID);
+    assert_eq!(receipt.artifact_kind, PHASE_CONTRIBUTION_ARTIFACT_KIND);
+    assert_eq!(receipt.requested_backend, REQUESTED_BACKEND);
+    assert_eq!(receipt.selected_backend, SELECTED_BACKEND);
+    assert_eq!(receipt.runtime_api, RUNTIME_API);
+    assert_eq!(receipt.reference_backend, REFERENCE_BACKEND);
+    assert_eq!(receipt.target_backend, SELECTED_BACKEND);
+    assert_eq!(receipt.rest_of_pipeline_backend, DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND);
+    assert_eq!(receipt.kernel_id, DENSE_METAL_PREFILL_QKV_KERNEL_ID);
+    assert_eq!(receipt.model_family, DENSE_MODEL_FAMILY);
+    assert_eq!(receipt.kernel_family, DENSE_KERNEL_FAMILY);
+    assert_eq!(receipt.execution_phase, DENSE_PREFILL_QKV_EXECUTION_PHASE);
+    assert_eq!(receipt.phase_scope, DENSE_PREFILL_QKV_PHASE_SCOPE);
+    assert_eq!(receipt.layout_source, DENSE_LAYOUT_SOURCE);
+    assert_eq!(receipt.transport_layout, DENSE_TRANSPORT_LAYOUT);
+    assert_eq!(receipt.kv_cache_behavior, DENSE_PREFILL_QKV_KV_CACHE_BEHAVIOR);
+    assert!(!receipt.fallback_used);
+    assert_eq!(receipt.prefill_tokens, fixture.prefill_tokens);
+    assert_eq!(receipt.hidden_size, fixture.hidden_size);
+    assert_eq!(receipt.attention_heads, fixture.attention_heads);
+    assert_eq!(receipt.kv_heads, fixture.kv_heads);
+    assert_eq!(receipt.head_dim, fixture.head_dim);
+    assert_eq!(receipt.q_dim, fixture.q_dim);
+    assert_eq!(receipt.kv_dim, fixture.kv_dim);
+    assert_eq!(receipt.q_max_abs_error, 0.0);
+    assert_eq!(receipt.k_max_abs_error, 0.0);
+    assert_eq!(receipt.v_max_abs_error, 0.0);
+    assert_eq!(receipt.max_abs_error, 0.0);
+    assert_eq!(receipt.q_argmax_index, argmax_index(&fixture.expected_q));
+    assert_eq!(receipt.k_argmax_index, argmax_index(&fixture.expected_k));
+    assert_eq!(receipt.v_argmax_index, argmax_index(&fixture.expected_v));
+    assert_eq!(receipt.timing.cpu_reference_ms, 0.25);
+    assert_eq!(receipt.timing.metal_phase_ms, 0.75);
+    assert_eq!(receipt.timing.timing_delta_ms, 0.5);
+    assert_eq!(receipt.timing.timing_scope, DENSE_PREFILL_QKV_TIMING_SCOPE);
+    assert!(!receipt.timing.speedup_claim);
+    assert_eq!(
+        receipt.artifact_path,
+        "ci/hardware/apple-m4-mac-mini/2026-05-10/metal-dense-prefill-qkv.json"
+    );
+}
+
+#[test]
 fn comparison_fails_instead_of_falling_back_to_cpu() {
     let expected = [1.0_f32, 2.0, 3.0];
     let actual = [1.0_f32, 20.0, 3.0];
@@ -322,6 +409,10 @@ mod live_metal {
     const DENSE_PREFILL_LINEAR_RECEIPT_ENV: &str = "BITNET_M4_METAL_DENSE_PREFILL_LINEAR_RECEIPT";
     const DENSE_PREFILL_LINEAR_ARTIFACT_PATH_ENV: &str =
         "BITNET_M4_METAL_DENSE_PREFILL_LINEAR_ARTIFACT_PATH";
+    const RUN_DENSE_PREFILL_QKV_ENV: &str = "BITNET_RUN_M4_METAL_DENSE_PREFILL_QKV";
+    const DENSE_PREFILL_QKV_RECEIPT_ENV: &str = "BITNET_M4_METAL_DENSE_PREFILL_QKV_RECEIPT";
+    const DENSE_PREFILL_QKV_ARTIFACT_PATH_ENV: &str =
+        "BITNET_M4_METAL_DENSE_PREFILL_QKV_ARTIFACT_PATH";
     const TINY_KERNEL_SMOKE_PROFILE: &str = "tiny_kernel_smoke";
 
     struct MetalSmokeOutput {
@@ -338,6 +429,13 @@ mod live_metal {
     struct MetalI2sParityOutput {
         adapter_name: String,
         output: Vec<f32>,
+    }
+
+    struct MetalDenseQkvOutput {
+        adapter_name: String,
+        q: Vec<f32>,
+        k: Vec<f32>,
+        v: Vec<f32>,
     }
 
     struct BenchmarkTiming {
@@ -712,6 +810,82 @@ mod live_metal {
         extend_dense_prefill_linear_metrics(&mut receipt_json, &receipt, &fixture);
 
         if let Ok(path) = std::env::var(DENSE_PREFILL_LINEAR_RECEIPT_ENV) {
+            let output_path = receipt_output_path(&path);
+            if let Some(parent) = output_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(output_path, serde_json::to_string_pretty(&receipt_json)?)?;
+        }
+
+        println!("{}", serde_json::to_string_pretty(&receipt_json)?);
+        Ok(())
+    }
+
+    #[test]
+    fn tiny_m4_metal_dense_prefill_qkv_projection_matches_cpu_reference_when_enabled()
+    -> Result<(), Box<dyn Error>> {
+        if std::env::var(RUN_DENSE_PREFILL_QKV_ENV).as_deref() != Ok("1") {
+            eprintln!(
+                "skipping live M4 Metal dense prefill Q/K/V projection; set {RUN_DENSE_PREFILL_QKV_ENV}=1 to run it"
+            );
+            return Ok(());
+        }
+
+        let fixture = dense_metal_prefill_qkv_fixture();
+        let cpu_reference_start = Instant::now();
+        let (cpu_q, cpu_k, cpu_v) = run_dense_prefill_qkv_cpu_reference(&fixture)?;
+        let cpu_reference_duration = cpu_reference_start.elapsed();
+        let metal_phase_start = Instant::now();
+        let metal_output = run_dense_metal_prefill_qkv_fixture(&fixture)?;
+        let metal_phase_duration = metal_phase_start.elapsed();
+
+        if !is_apple_m4_adapter_name(&metal_output.adapter_name) {
+            return Err(io_error(format!(
+                "M4-METAL-002 dense prefill Q/K/V projection requires an Apple M4-family Metal adapter; found '{}'",
+                metal_output.adapter_name
+            )));
+        }
+
+        compare_tiny_add_outputs(&fixture.expected_q, &cpu_q, 0.0)?;
+        compare_tiny_add_outputs(&fixture.expected_k, &cpu_k, 0.0)?;
+        compare_tiny_add_outputs(&fixture.expected_v, &cpu_v, 0.0)?;
+        let q_comparison = compare_tiny_add_outputs(&cpu_q, &metal_output.q, 1e-5)?;
+        let k_comparison = compare_tiny_add_outputs(&cpu_k, &metal_output.k, 1e-5)?;
+        let v_comparison = compare_tiny_add_outputs(&cpu_v, &metal_output.v, 1e-5)?;
+
+        let artifact_path = std::env::var(DENSE_PREFILL_QKV_ARTIFACT_PATH_ENV)
+            .or_else(|_| std::env::var(DENSE_PREFILL_QKV_RECEIPT_ENV))
+            .unwrap_or_else(|_| {
+                "ci/hardware/apple-m4-mac-mini/<date>/metal-dense-prefill-qkv.json".to_string()
+            });
+        let receipt = DenseMetalPrefillQkvReceipt::passed(
+            artifact_path.clone(),
+            q_comparison,
+            k_comparison,
+            v_comparison,
+            &fixture,
+            DenseMetalPrefillQkvTiming::measured(
+                duration_ms(cpu_reference_duration),
+                duration_ms(metal_phase_duration),
+            ),
+        );
+
+        let mut receipt_json = apple_backend_receipt_json(
+            receipt.machine_id,
+            receipt.artifact_kind,
+            receipt.requested_backend,
+            Some(receipt.selected_backend),
+            receipt.runtime_api,
+            metal_output.adapter_name,
+            receipt.fallback_used,
+            receipt.artifact_path.clone(),
+            Some(receipt.kernel_id),
+            None,
+            receipt.result,
+        )?;
+        extend_dense_prefill_qkv_metrics(&mut receipt_json, &receipt, &fixture);
+
+        if let Ok(path) = std::env::var(DENSE_PREFILL_QKV_RECEIPT_ENV) {
             let output_path = receipt_output_path(&path);
             if let Some(parent) = output_path.parent() {
                 std::fs::create_dir_all(parent)?;
@@ -1231,6 +1405,199 @@ mod live_metal {
         })
     }
 
+    fn run_dense_metal_prefill_qkv_fixture(
+        fixture: &DenseMetalPrefillQkvFixture,
+    ) -> Result<MetalDenseQkvOutput, Box<dyn Error>> {
+        pollster::block_on(async move {
+            let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+                backends: wgpu::Backends::METAL,
+                ..Default::default()
+            });
+            let adapter = instance
+                .request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: wgpu::PowerPreference::HighPerformance,
+                    compatible_surface: None,
+                    force_fallback_adapter: false,
+                })
+                .await
+                .ok_or_else(|| {
+                    io_error(
+                        "no Metal adapter found for M4-METAL-002 dense prefill Q/K/V projection",
+                    )
+                })?;
+
+            let adapter_info = adapter.get_info();
+            if adapter_info.backend != wgpu::Backend::Metal {
+                return Err(io_error(format!(
+                    "M4-METAL-002 dense prefill Q/K/V projection requires Metal backend, found {:?}",
+                    adapter_info.backend
+                )));
+            }
+
+            let (device, queue) = adapter
+                .request_device(&wgpu::DeviceDescriptor::default(), None)
+                .await
+                .map_err(|error| io_error(format!("failed to create Metal device: {error}")))?;
+
+            let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some(DENSE_METAL_PREFILL_QKV_KERNEL_ID),
+                source: wgpu::ShaderSource::Wgsl(DENSE_PREFILL_QKV_SHADER.into()),
+            });
+
+            let activations_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_activations"),
+                contents: bytemuck::cast_slice(&fixture.activations),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let q_weights_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_q_weights"),
+                contents: bytemuck::cast_slice(&fixture.q_weights),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let k_weights_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_k_weights"),
+                contents: bytemuck::cast_slice(&fixture.k_weights),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let v_weights_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_v_weights"),
+                contents: bytemuck::cast_slice(&fixture.v_weights),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let mut bias = Vec::with_capacity(
+                fixture.q_bias.len() + fixture.k_bias.len() + fixture.v_bias.len(),
+            );
+            bias.extend_from_slice(&fixture.q_bias);
+            bias.extend_from_slice(&fixture.k_bias);
+            bias.extend_from_slice(&fixture.v_bias);
+            let bias_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_bias"),
+                contents: bytemuck::cast_slice(&bias),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let shape_words = dense_prefill_qkv_shape_words(fixture);
+            let shape_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_shape"),
+                contents: bytemuck::cast_slice(&shape_words),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let output_len =
+                fixture.expected_q.len() + fixture.expected_k.len() + fixture.expected_v.len();
+            let byte_len = (output_len * std::mem::size_of::<f32>()) as u64;
+            let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_output"),
+                size: byte_len,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: false,
+            });
+            let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_staging"),
+                size: byte_len,
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+
+            let bind_group_layout =
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("tiny_metal_dense_prefill_qkv_layout"),
+                    entries: &[
+                        storage_buffer_entry(0, true),
+                        storage_buffer_entry(1, true),
+                        storage_buffer_entry(2, true),
+                        storage_buffer_entry(3, true),
+                        storage_buffer_entry(4, true),
+                        storage_buffer_entry(5, false),
+                        storage_buffer_entry(6, true),
+                    ],
+                });
+
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_bind_group"),
+                layout: &bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: activations_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: q_weights_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: k_weights_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: v_weights_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry { binding: 4, resource: bias_buffer.as_entire_binding() },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: output_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry { binding: 6, resource: shape_buffer.as_entire_binding() },
+                ],
+            });
+
+            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_pipeline_layout"),
+                bind_group_layouts: &[&bind_group_layout],
+                push_constant_ranges: &[],
+            });
+            let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_pipeline"),
+                layout: Some(&pipeline_layout),
+                module: &shader,
+                entry_point: Some("main"),
+                compilation_options: Default::default(),
+                cache: None,
+            });
+
+            let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("tiny_metal_dense_prefill_qkv_encoder"),
+            });
+            {
+                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("tiny_metal_dense_prefill_qkv_pass"),
+                    timestamp_writes: None,
+                });
+                pass.set_pipeline(&pipeline);
+                pass.set_bind_group(0, &bind_group, &[]);
+                pass.dispatch_workgroups((output_len as u32).div_ceil(SMOKE_WORKGROUP_SIZE), 1, 1);
+            }
+
+            encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, byte_len);
+            queue.submit(std::iter::once(encoder.finish()));
+
+            let slice = staging_buffer.slice(..);
+            let (tx, rx) = std::sync::mpsc::channel();
+            slice.map_async(wgpu::MapMode::Read, move |result| {
+                tx.send(result).unwrap();
+            });
+            device.poll(wgpu::Maintain::Wait);
+            rx.recv()
+                .map_err(|error| io_error(format!("failed to receive Metal map result: {error}")))?
+                .map_err(|error| {
+                    io_error(format!("failed to map Metal dense prefill Q/K/V output: {error}"))
+                })?;
+
+            let data = slice.get_mapped_range();
+            let output = bytemuck::cast_slice::<u8, f32>(&data).to_vec();
+            drop(data);
+            staging_buffer.unmap();
+
+            let q_end = fixture.expected_q.len();
+            let k_end = q_end + fixture.expected_k.len();
+            Ok(MetalDenseQkvOutput {
+                adapter_name: adapter_info.name,
+                q: output[..q_end].to_vec(),
+                k: output[q_end..k_end].to_vec(),
+                v: output[k_end..].to_vec(),
+            })
+        })
+    }
+
     fn run_dense_prefill_linear_cpu_reference(
         fixture: &DenseMetalPrefillLinearFixture,
     ) -> Result<Vec<f32>, Box<dyn Error>> {
@@ -1246,6 +1613,62 @@ mod live_metal {
             &fixture.activations,
             &fixture.weights,
             Some(&fixture.bias),
+            &mut output,
+            &config,
+        )
+        .map_err(|error| io_error(format!("failed to run dense CPU reference: {error}")))?;
+        Ok(output)
+    }
+
+    fn run_dense_prefill_qkv_cpu_reference(
+        fixture: &DenseMetalPrefillQkvFixture,
+    ) -> Result<(Vec<f32>, Vec<f32>, Vec<f32>), Box<dyn Error>> {
+        let q = run_dense_cpu_linear(
+            &fixture.activations,
+            &fixture.q_weights,
+            &fixture.q_bias,
+            fixture.prefill_tokens,
+            fixture.hidden_size,
+            fixture.q_dim,
+        )?;
+        let k = run_dense_cpu_linear(
+            &fixture.activations,
+            &fixture.k_weights,
+            &fixture.k_bias,
+            fixture.prefill_tokens,
+            fixture.hidden_size,
+            fixture.kv_dim,
+        )?;
+        let v = run_dense_cpu_linear(
+            &fixture.activations,
+            &fixture.v_weights,
+            &fixture.v_bias,
+            fixture.prefill_tokens,
+            fixture.hidden_size,
+            fixture.kv_dim,
+        )?;
+        Ok((q, k, v))
+    }
+
+    fn run_dense_cpu_linear(
+        activations: &[f32],
+        weights: &[f32],
+        bias: &[f32],
+        batch_size: usize,
+        in_features: usize,
+        out_features: usize,
+    ) -> Result<Vec<f32>, Box<dyn Error>> {
+        let config =
+            bitnet_kernels::cpu::linear::LinearConfig::new(batch_size, in_features, out_features)
+                .map_err(|error| {
+                    io_error(format!("failed to build dense CPU reference config: {error}"))
+                })?
+                .with_bias(true);
+        let mut output = vec![0.0; batch_size * out_features];
+        bitnet_kernels::cpu::linear::linear_cpu(
+            activations,
+            weights,
+            Some(bias),
             &mut output,
             &config,
         )
@@ -1958,6 +2381,136 @@ mod live_metal {
         );
     }
 
+    fn extend_dense_prefill_qkv_metrics(
+        receipt_json: &mut serde_json::Value,
+        receipt: &DenseMetalPrefillQkvReceipt,
+        fixture: &DenseMetalPrefillQkvFixture,
+    ) {
+        let object = receipt_json.as_object_mut().expect("Apple receipt JSON is an object");
+        object.insert(
+            "model".to_string(),
+            json!({
+                "family": receipt.model_family,
+                "artifact": null,
+                "source": "deterministic_dense_qwen_shape_fixture",
+                "full_model_inference": false
+            }),
+        );
+        object.insert(
+            "slm_pipeline".to_string(),
+            json!({
+                "requested_backend": DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND,
+                "selected_backend": DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND,
+                "runtime_api": "cpu",
+                "remaining_phases_backend": receipt.rest_of_pipeline_backend,
+                "cpu_pipeline_for_remaining_phases": true,
+                "full_inference_exercised": false
+            }),
+        );
+        object.insert(
+            "metal_phase".to_string(),
+            json!({
+                "requested_backend": receipt.requested_backend,
+                "selected_backend": receipt.selected_backend,
+                "runtime_api": receipt.runtime_api,
+                "fallback_used": receipt.fallback_used,
+                "kernel_id": receipt.kernel_id,
+                "kernel_family": receipt.kernel_family,
+                "execution_phase": receipt.execution_phase,
+                "phase_scope": receipt.phase_scope,
+                "prefill_tokens": receipt.prefill_tokens,
+                "kv_cache_behavior": receipt.kv_cache_behavior,
+                "timing_recorded": true,
+                "full_autoregressive_decode": false,
+                "full_metal_inference": false
+            }),
+        );
+        object.insert(
+            "dimensions".to_string(),
+            json!({
+                "hidden_size": receipt.hidden_size,
+                "attention_heads": receipt.attention_heads,
+                "kv_heads": receipt.kv_heads,
+                "head_dim": receipt.head_dim,
+                "q_dim": receipt.q_dim,
+                "kv_dim": receipt.kv_dim,
+                "q_shape": [receipt.prefill_tokens, receipt.q_dim],
+                "k_shape": [receipt.prefill_tokens, receipt.kv_dim],
+                "v_shape": [receipt.prefill_tokens, receipt.kv_dim]
+            }),
+        );
+        object.insert(
+            "layout".to_string(),
+            json!({
+                "source": receipt.layout_source,
+                "transport_layout": receipt.transport_layout,
+                "activation_layout": "row_major_f32",
+                "weight_layout": "row_major_f32_out_features_by_in_features",
+                "bias_layout": "concatenated_row_major_f32_q_k_v",
+                "output_layout": "concatenated_row_major_f32_q_k_v",
+                "consumes_dense_f32_directly": true,
+                "dequantizes_before_compute": false,
+                "activation_elements": fixture.activations.len(),
+                "q_weight_elements": fixture.q_weights.len(),
+                "k_weight_elements": fixture.k_weights.len(),
+                "v_weight_elements": fixture.v_weights.len()
+            }),
+        );
+        object.insert(
+            "parity".to_string(),
+            json!({
+                "reference_backend": receipt.reference_backend,
+                "target_backend": receipt.target_backend,
+                "kernel_id": receipt.kernel_id,
+                "kernel_family": receipt.kernel_family,
+                "q_matches_cpu_reference": receipt.q_max_abs_error <= 1e-5,
+                "k_matches_cpu_reference": receipt.k_max_abs_error <= 1e-5,
+                "v_matches_cpu_reference": receipt.v_max_abs_error <= 1e-5,
+                "q_max_abs_error": receipt.q_max_abs_error,
+                "q_mean_abs_error": receipt.q_mean_abs_error,
+                "k_max_abs_error": receipt.k_max_abs_error,
+                "k_mean_abs_error": receipt.k_mean_abs_error,
+                "v_max_abs_error": receipt.v_max_abs_error,
+                "v_mean_abs_error": receipt.v_mean_abs_error,
+                "max_abs_error": receipt.max_abs_error,
+                "mean_abs_error": receipt.mean_abs_error,
+                "q_argmax_index": receipt.q_argmax_index,
+                "k_argmax_index": receipt.k_argmax_index,
+                "v_argmax_index": receipt.v_argmax_index,
+                "token_agreement_for_greedy": null
+            }),
+        );
+        object.insert(
+            "timing".to_string(),
+            json!({
+                "scope": receipt.timing.timing_scope,
+                "cpu_reference_ms": receipt.timing.cpu_reference_ms,
+                "metal_phase_ms": receipt.timing.metal_phase_ms,
+                "metal_q_ms": receipt.timing.metal_q_ms,
+                "metal_k_ms": receipt.timing.metal_k_ms,
+                "metal_v_ms": receipt.timing.metal_v_ms,
+                "dispatch_readback_ms": receipt.timing.dispatch_readback_ms,
+                "timing_delta_ms": receipt.timing.timing_delta_ms,
+                "individual_projection_timing_recorded": false,
+                "speedup_claim": receipt.timing.speedup_claim
+            }),
+        );
+        object.insert(
+            "claim_boundary".to_string(),
+            json!({
+                "slm_local_answer": false,
+                "phase_contribution_only": true,
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "bitnet_quality_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }),
+        );
+    }
+
     fn extend_i2s_projection_residual_metrics(
         receipt_json: &mut serde_json::Value,
         receipt: &I2sMetalProjectionResidualReceipt,
@@ -2085,6 +2638,82 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         k_index = k_index + 1u;
     }
 
+    output[output_index] = acc;
+}
+"#;
+
+    const DENSE_PREFILL_QKV_SHADER: &str = r#"
+@group(0) @binding(0) var<storage, read> activations: array<f32>;
+@group(0) @binding(1) var<storage, read> q_weights: array<f32>;
+@group(0) @binding(2) var<storage, read> k_weights: array<f32>;
+@group(0) @binding(3) var<storage, read> v_weights: array<f32>;
+@group(0) @binding(4) var<storage, read> bias: array<f32>;
+@group(0) @binding(5) var<storage, read_write> output: array<f32>;
+@group(0) @binding(6) var<storage, read> shape: array<u32>;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let output_index = global_id.x;
+    let batch_size = shape[0];
+    let hidden_size = shape[1];
+    let q_dim = shape[2];
+    let kv_dim = shape[3];
+    let q_count = batch_size * q_dim;
+    let kv_count = batch_size * kv_dim;
+    let total = q_count + kv_count + kv_count;
+
+    if output_index >= total {
+        return;
+    }
+
+    if output_index < q_count {
+        let row = output_index / q_dim;
+        let col = output_index % q_dim;
+        var acc = bias[col];
+        var k_index = 0u;
+        loop {
+            if k_index >= hidden_size {
+                break;
+            }
+            acc = acc + activations[row * hidden_size + k_index] *
+                q_weights[col * hidden_size + k_index];
+            k_index = k_index + 1u;
+        }
+        output[output_index] = acc;
+        return;
+    }
+
+    if output_index < q_count + kv_count {
+        let local_index = output_index - q_count;
+        let row = local_index / kv_dim;
+        let col = local_index % kv_dim;
+        var acc = bias[q_dim + col];
+        var k_index = 0u;
+        loop {
+            if k_index >= hidden_size {
+                break;
+            }
+            acc = acc + activations[row * hidden_size + k_index] *
+                k_weights[col * hidden_size + k_index];
+            k_index = k_index + 1u;
+        }
+        output[output_index] = acc;
+        return;
+    }
+
+    let local_index = output_index - q_count - kv_count;
+    let row = local_index / kv_dim;
+    let col = local_index % kv_dim;
+    var acc = bias[q_dim + kv_dim + col];
+    var k_index = 0u;
+    loop {
+        if k_index >= hidden_size {
+            break;
+        }
+        acc = acc + activations[row * hidden_size + k_index] *
+            v_weights[col * hidden_size + k_index];
+        k_index = k_index + 1u;
+    }
     output[output_index] = acc;
 }
 "#;
