@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T13:06:59Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008"
+event = "pr_open"
+pr = 4434
+branch = "codex/slm-cpu-008-qwen3-first-token-parity"
+head_sha = "8962bad85eb0137023ed9c95df867d625a8e8972"
+actor = "codex"
+
+notes = [
+  "Opened #4434 for the Qwen3 architecture-default fix that keeps GGUF qwen3 metadata on RMSNorm + SiLU instead of the generic LayerNorm default.",
+  "The PR adds config regression coverage and keeps the SLM-CPU-008 claim boundary to dense Qwen3 CPU first-token parity only; no answer-quality, throughput, server, GPU, NPU, OpenVINO, Qwen3.5, or BitNet QK256 claim is introduced.",
+]
