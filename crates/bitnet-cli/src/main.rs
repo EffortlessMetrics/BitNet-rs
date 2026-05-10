@@ -137,10 +137,10 @@ use commands::{
     DenseGgufNormFixtureCommand, DenseGgufOneLayerCpuReferenceCommand,
     DenseGgufOneLayerCudaParityCommand, DenseGgufOneLayerPlanCommand,
     DenseGgufQwenOneTokenStrictCudaCommand, DenseGgufQwenShortDecodeStrictCudaCommand,
-    DenseGgufRopeCudaParityCommand, DenseGgufSamplingPolicyCommand,
-    ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
-    InspectCommand, OutputHeadLogitsAuditCommand, ReceiptsCommand, ReferenceCompareCommand,
-    ServeCommand, TransformerLayerParityCommand,
+    DenseGgufQwenWarmSessionStrictCudaCommand, DenseGgufRopeCudaParityCommand,
+    DenseGgufSamplingPolicyCommand, ExternalReferenceInstrumentationCommand,
+    FirstTokenDivergenceCommand, InferenceCommand, InspectCommand, OutputHeadLogitsAuditCommand,
+    ReceiptsCommand, ReferenceCompareCommand, ServeCommand, TransformerLayerParityCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -651,6 +651,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Run dense Qwen short-decode strict CUDA proof and emit a governed receipt
     DenseGgufQwenShortDecodeStrictCuda(Box<DenseGgufQwenShortDecodeStrictCudaCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Run dense Qwen warm-session strict CUDA proof and emit a governed receipt
+    DenseGgufQwenWarmSessionStrictCuda(Box<DenseGgufQwenWarmSessionStrictCudaCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
@@ -1502,6 +1506,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufQwenOneTokenStrictCuda(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufQwenShortDecodeStrictCuda(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufQwenWarmSessionStrictCuda(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufNormFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

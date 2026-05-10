@@ -3067,7 +3067,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-046"
-status = "proposed"
+status = "in_progress"
 branch = "codex/cuda-dense-046-warm-session"
 stackable = false
 review_mode = "codex_premerge"

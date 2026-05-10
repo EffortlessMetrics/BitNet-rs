@@ -36,7 +36,8 @@ pub use dense_gguf_linear_parity::{
     DenseGgufNormFixtureCommand, DenseGgufOneLayerCpuReferenceCommand,
     DenseGgufOneLayerCudaParityCommand, DenseGgufOneLayerPlanCommand,
     DenseGgufQwenOneTokenStrictCudaCommand, DenseGgufQwenShortDecodeStrictCudaCommand,
-    DenseGgufRopeCudaParityCommand, DenseGgufSamplingPolicyCommand,
+    DenseGgufQwenWarmSessionStrictCudaCommand, DenseGgufRopeCudaParityCommand,
+    DenseGgufSamplingPolicyCommand,
 };
 pub use external_reference_instrumentation::ExternalReferenceInstrumentationCommand;
 pub use first_token_divergence::FirstTokenDivergenceCommand;

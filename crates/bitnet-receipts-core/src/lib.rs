@@ -228,6 +228,13 @@ pub const DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
 /// proof claims false.
 pub const DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
     "dense_gguf_qwen_short_decode_strict_cuda_proof";
+/// Artifact kind for the governed dense Qwen warm-session strict CUDA proof.
+///
+/// This is a bounded multi-turn proof layered after the short-decode proof. It
+/// may claim scoped warm-session reuse, but must keep ask/chat, speedup, server,
+/// full-residency, and BitNet packed I2_S/QK256 proof claims false.
+pub const DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
+    "dense_gguf_qwen_warm_session_strict_cuda_proof";
 const QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
 const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
 const QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
@@ -5986,6 +5993,379 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     Ok(())
 }
 
+/// Validate dense Qwen warm-session strict CUDA runtime proof evidence.
+///
+/// This artifact proves a bounded deterministic multi-turn warm session through
+/// the dense regular-LLM CUDA route. It must consume the short-decode proof and
+/// earlier prerequisite receipts, reject hidden CPU fallback, and keep ask/chat,
+/// server, speedup, full-residency, and BitNet packed I2_S/QK256 proof claims
+/// false.
+pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
+    receipt: &Value,
+) -> Result<()> {
+    validate_cuda_receipt_common(
+        receipt,
+        DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+        "dense_gguf_qwen_warm_session_strict_cuda_proof_recorded",
+    )?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_eq(model, "model_family", "qwen")?;
+    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
+    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
+    require_string_eq(model, "architecture", "qwen2")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(execution_path, "kernel_family", "dense_qwen_warm_session_strict_cuda")?;
+    require_string_non_empty(execution_path, "quantization_family")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "quantization_family")?,
+        "execution_path.quantization_family",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    validate_dense_one_layer_gap_execution_plan(receipt)?;
+
+    let prerequisites = object_field(receipt, "prerequisite_receipts")?;
+    require_u64_eq(prerequisites, "schema", 1)?;
+    require_string_eq(
+        prerequisites,
+        "all_layer_execution_plan_artifact_kind",
+        DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
+    )?;
+    require_sha256(prerequisites, "all_layer_execution_plan_receipt_sha256")?;
+    require_string_eq(
+        prerequisites,
+        "model_boundary_fixtures_artifact_kind",
+        DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND,
+    )?;
+    require_sha256(prerequisites, "model_boundary_fixtures_receipt_sha256")?;
+    require_string_eq(
+        prerequisites,
+        "kv_cache_policy_artifact_kind",
+        DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND,
+    )?;
+    require_sha256(prerequisites, "kv_cache_policy_receipt_sha256")?;
+    require_string_eq(
+        prerequisites,
+        "sampling_policy_artifact_kind",
+        DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND,
+    )?;
+    require_sha256(prerequisites, "sampling_policy_receipt_sha256")?;
+    require_string_eq(
+        prerequisites,
+        "one_token_proof_artifact_kind",
+        DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    )?;
+    require_sha256(prerequisites, "one_token_proof_receipt_sha256")?;
+    require_string_eq(
+        prerequisites,
+        "short_decode_proof_artifact_kind",
+        DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    )?;
+    require_sha256(prerequisites, "short_decode_proof_receipt_sha256")?;
+    require_bool_eq(prerequisites, "all_required_receipts_verified", true)?;
+    require_bool_eq(prerequisites, "all_layer_execution_plan_claimed", true)?;
+    require_bool_eq(prerequisites, "model_boundary_fixtures_claimed", true)?;
+    require_bool_eq(prerequisites, "kv_cache_policy_claimed", true)?;
+    require_bool_eq(prerequisites, "sampling_policy_claimed", true)?;
+    require_bool_eq(prerequisites, "one_token_proof_claimed", true)?;
+    require_bool_eq(prerequisites, "short_decode_proof_claimed", true)?;
+
+    let authority = object_field(receipt, "tokenizer_prompt_authority")?;
+    require_u64_eq(authority, "schema", 1)?;
+    require_string_eq(authority, "tokenizer_authority", "contract_authoritative")?;
+    require_string_eq(authority, "prompt_authority", "contract_authoritative")?;
+    require_string_non_empty(authority, "prompt_template")?;
+    require_string_non_empty(authority, "bos_policy")?;
+    require_bool_eq(authority, "deterministic_prompt", true)?;
+    let turns_count = required_u64(authority, "turns_count")?;
+    if !(2..=4).contains(&turns_count) {
+        return Err(anyhow!("tokenizer_prompt_authority.turns_count must be between 2 and 4"));
+    }
+    require_positive_u64(authority, "prompt_token_count_total")?;
+    require_sha256(authority, "prompt_token_ids_sha256")?;
+    require_sha256(authority, "rendered_prompt_sha256")?;
+    let authority_turns = array_field(authority, "turns")?;
+    if authority_turns.len() != turns_count as usize {
+        return Err(anyhow!("tokenizer_prompt_authority.turns length must match turns_count"));
+    }
+    for (idx, turn) in authority_turns.iter().enumerate() {
+        require_u64_eq(turn, "index", idx as u64)?;
+        require_positive_u64(turn, "prompt_token_count")?;
+        require_sha256(turn, "prompt_token_ids_sha256")?;
+        require_sha256(turn, "rendered_prompt_sha256")?;
+        required_u64(turn, "rendered_prompt_bytes")?;
+    }
+
+    let lifecycle = object_field(receipt, "session_lifecycle")?;
+    require_u64_eq(lifecycle, "schema", 1)?;
+    require_string_eq(lifecycle, "proof_scope", "qwen_warm_session_strict_cuda")?;
+    require_u64_eq(lifecycle, "turns_count", turns_count)?;
+    require_bool_eq(lifecycle, "model_loaded_once", true)?;
+    require_bool_eq(lifecycle, "tokenizer_loaded_once", true)?;
+    require_bool_eq(lifecycle, "cuda_context_initialized_once", true)?;
+    require_bool_eq(lifecycle, "weights_uploaded_once", true)?;
+    require_bool_eq(lifecycle, "per_turn_weight_upload", false)?;
+    require_bool_eq(lifecycle, "runtime_buffers_reused", true)?;
+    require_bool_eq(lifecycle, "kv_cache_policy_recorded", true)?;
+    require_bool_eq(lifecycle, "kv_cache_reinitialized_per_turn", true)?;
+    require_bool_eq(lifecycle, "sampling_policy_recorded", true)?;
+    require_bool_eq(lifecycle, "fallback_used", false)?;
+    require_bool_eq(lifecycle, "scoped_warm_session_residency_claimed", true)?;
+    require_bool_eq(lifecycle, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(lifecycle, "full_cuda_residency_claimed", false)?;
+
+    let proof = object_field(receipt, "warm_session_proof")?;
+    require_u64_eq(proof, "schema", 1)?;
+    require_string_eq(proof, "proof_scope", "qwen_strict_warm_session_greedy")?;
+    require_string_eq(proof, "model_family", "qwen")?;
+    require_u64_eq(proof, "turns_count", turns_count)?;
+    let requested = required_u64(proof, "requested_new_tokens_per_turn")?;
+    if !(5..=16).contains(&requested) {
+        return Err(anyhow!(
+            "warm_session_proof.requested_new_tokens_per_turn must be between 5 and 16"
+        ));
+    }
+    require_u64_eq(proof, "generated_tokens_total", turns_count * requested)?;
+    require_string_eq(proof, "generation_policy", "greedy")?;
+    require_bool_eq(proof, "deterministic", true)?;
+    require_bool_eq(proof, "fallback_used", false)?;
+    require_string_eq(proof, "cpu_reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(proof, "cuda_target_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_sha256(proof, "cpu_generated_token_ids_sha256")?;
+    require_sha256(proof, "cuda_generated_token_ids_sha256")?;
+    if required_string(proof, "cpu_generated_token_ids_sha256")?
+        != required_string(proof, "cuda_generated_token_ids_sha256")?
+    {
+        return Err(anyhow!(
+            "warm_session_proof.cpu_generated_token_ids_sha256 must match cuda_generated_token_ids_sha256"
+        ));
+    }
+    require_bool_eq(proof, "generated_token_ids_match", true)?;
+    require_null(proof, "first_token_divergence")?;
+    require_sha256(proof, "cuda_logits_top_k_session_sha256")?;
+    require_bool_eq(proof, "top_k_evidence_recorded", true)?;
+    require_bool_eq(proof, "top_k_compared", true)?;
+    let top_k_all_match = object_field(proof, "top_k_all_match")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `top_k_all_match` must be a bool"))?;
+    if top_k_all_match {
+        require_null(proof, "first_top_k_divergence")?;
+    }
+    require_non_negative_number(proof, "top_k_max_abs_error")?;
+    require_non_negative_number(proof, "top_k_mean_abs_error")?;
+    let turns = array_field(proof, "turns")?;
+    if turns.len() != turns_count as usize {
+        return Err(anyhow!("warm_session_proof.turns length must match turns_count"));
+    }
+    for (turn_idx, turn) in turns.iter().enumerate() {
+        require_u64_eq(turn, "index", turn_idx as u64)?;
+        require_positive_u64(turn, "prompt_token_count")?;
+        require_sha256(turn, "prompt_token_ids_sha256")?;
+        require_sha256(turn, "rendered_prompt_sha256")?;
+        require_u64_eq(turn, "requested_new_tokens", requested)?;
+        require_u64_eq(turn, "generated_tokens_count", requested)?;
+        require_sha256(turn, "cpu_generated_token_ids_sha256")?;
+        require_sha256(turn, "cuda_generated_token_ids_sha256")?;
+        if required_string(turn, "cpu_generated_token_ids_sha256")?
+            != required_string(turn, "cuda_generated_token_ids_sha256")?
+        {
+            return Err(anyhow!(
+                "warm_session_proof.turns[{turn_idx}] generated token SHA mismatch"
+            ));
+        }
+        require_bool_eq(turn, "generated_token_ids_match", true)?;
+        require_null(turn, "first_token_divergence_index")?;
+        let cpu_tokens = array_field(turn, "cpu_generated_token_ids")?;
+        let cuda_tokens = array_field(turn, "cuda_generated_token_ids")?;
+        if cpu_tokens.len() != requested as usize || cuda_tokens.len() != requested as usize {
+            return Err(anyhow!(
+                "warm_session_proof.turns[{turn_idx}] generated token arrays must match generated_tokens_count"
+            ));
+        }
+        if cpu_tokens != cuda_tokens {
+            return Err(anyhow!(
+                "warm_session_proof.turns[{turn_idx}] cpu_generated_token_ids must match cuda_generated_token_ids"
+            ));
+        }
+        let steps = array_field(turn, "steps")?;
+        if steps.len() != requested as usize {
+            return Err(anyhow!(
+                "warm_session_proof.turns[{turn_idx}].steps length must match generated_tokens_count"
+            ));
+        }
+        for (idx, step) in steps.iter().enumerate() {
+            require_u64_eq(step, "index", idx as u64)?;
+            let cpu_token = required_u64(step, "cpu_selected_token_id")?;
+            let cuda_token = required_u64(step, "cuda_selected_token_id")?;
+            if cpu_token != cuda_token {
+                return Err(anyhow!(
+                    "warm_session_proof turn {turn_idx} step {idx} selected token mismatch"
+                ));
+            }
+            require_bool_eq(step, "selected_token_match", true)?;
+            require_sha256(step, "cpu_logits_top_k_sha256")?;
+            require_sha256(step, "cuda_logits_top_k_sha256")?;
+            require_sha256(step, "cpu_logits_sha256")?;
+            require_sha256(step, "cuda_logits_sha256")?;
+            require_non_negative_number(step, "top_k_max_abs_error")?;
+            require_non_negative_number(step, "top_k_mean_abs_error")?;
+        }
+        require_string_non_empty(turn, "decoded_text")?;
+    }
+    require_bool_eq(proof, "qwen_one_token_cuda_claimed", true)?;
+    require_bool_eq(proof, "qwen_short_decode_cuda_claimed", true)?;
+    require_bool_eq(proof, "qwen_warm_session_cuda_claimed", true)?;
+    require_bool_eq(proof, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(proof, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(proof, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(proof, "speedup_claim", false)?;
+    require_bool_eq(proof, "server_ready_claimed", false)?;
+    require_bool_eq(proof, "full_cuda_residency_claimed", false)?;
+
+    let quality = object_field(receipt, "quality_gate")?;
+    require_u64_eq(quality, "schema", 1)?;
+    require_string_eq(quality, "gate", "qwen_warm_session_cuda_parity")?;
+    require_bool_eq(quality, "passed", true)?;
+    require_bool_eq(quality, "answer_ready_claimed", false)?;
+    require_bool_eq(quality, "short_decode_claimed", true)?;
+    require_bool_eq(quality, "warm_session_claimed", true)?;
+    require_bool_eq(quality, "chat_claimed", false)?;
+
+    let stats = array_field(receipt, "kernel_stats")?;
+    if stats.is_empty() {
+        return Err(anyhow!("kernel_stats must contain dense CUDA warm-session entries"));
+    }
+    let mut stats_h2d = 0_u64;
+    let mut stats_d2h = 0_u64;
+    let mut stats_invocations = 0_u64;
+    let mut stats_launches = 0_u64;
+    for stat in stats {
+        require_string_non_empty(stat, "kernel_id")?;
+        reject_bitnet_packed_marker(required_string(stat, "kernel_id")?, "kernel_stats.kernel_id")?;
+        require_positive_u64(stat, "invocations")?;
+        require_u64_eq(stat, "fallback_invocations", 0)?;
+        require_u64_eq(stat, "cpu_fallback_invocations", 0)?;
+        required_u64(stat, "host_to_device_bytes")?;
+        required_u64(stat, "device_to_host_bytes")?;
+        require_positive_u64(stat, "kernel_launches")?;
+        require_optional_non_negative_number(stat, "kernel_time_ms")?;
+        stats_h2d += required_u64(stat, "host_to_device_bytes")?;
+        stats_d2h += required_u64(stat, "device_to_host_bytes")?;
+        stats_invocations += required_u64(stat, "invocations")?;
+        stats_launches += required_u64(stat, "kernel_launches")?;
+    }
+
+    let kernel_coverage = object_field(receipt, "kernel_coverage")?;
+    require_u64_eq(kernel_coverage, "schema", 1)?;
+    require_string_eq(kernel_coverage, "route", DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)?;
+    require_bool_eq(kernel_coverage, "all_required_dense_kernels_executed", true)?;
+    require_u64_eq(kernel_coverage, "bitnet_qk256_kernel_invocations", 0)?;
+    require_u64_eq(kernel_coverage, "cpu_fallback_kernel_invocations", 0)?;
+    require_u64_eq(kernel_coverage, "dense_kernel_invocations", stats_invocations)?;
+    require_u64_eq(kernel_coverage, "dense_kernel_launches", stats_launches)?;
+    require_bool_eq(kernel_coverage, "fallback_used", false)?;
+    let kernels = array_field(kernel_coverage, "kernels_executed")?;
+    if kernels.is_empty() {
+        return Err(anyhow!("kernel_coverage.kernels_executed must not be empty"));
+    }
+    for kernel in kernels {
+        let kernel = kernel
+            .as_str()
+            .ok_or_else(|| anyhow!("kernel_coverage.kernels_executed entries must be strings"))?;
+        reject_bitnet_packed_marker(kernel, "kernel_coverage.kernels_executed")?;
+    }
+
+    let timing = object_field(receipt, "timing")?;
+    require_non_negative_number(timing, "total_ms")?;
+    require_non_negative_number(timing, "cpu_reference_total_ms")?;
+    require_non_negative_number(timing, "cuda_context_init_ms")?;
+    require_non_negative_number(timing, "tokenizer_load_ms")?;
+    require_non_negative_number(timing, "model_load_ms")?;
+    require_non_negative_number(timing, "cpu_reference_model_load_ms")?;
+    require_non_negative_number(timing, "first_token_ms")?;
+    require_non_negative_number(timing, "decode_total_ms")?;
+    require_non_negative_number(timing, "kernel_time_ms")?;
+    require_u64_eq(timing, "host_to_device_bytes", stats_h2d)?;
+    require_u64_eq(timing, "device_to_host_bytes", stats_d2h)?;
+    require_u64_eq(timing, "kernel_invocations", stats_invocations)?;
+    require_u64_eq(timing, "kernel_launches", stats_launches)?;
+    require_u64_eq(timing, "turns_count", turns_count)?;
+    require_u64_eq(timing, "generated_tokens_total", turns_count * requested)?;
+
+    let residency = object_field(receipt, "tensor_residency")?;
+    require_u64_eq(residency, "schema", 1)?;
+    require_string_eq(residency, "scope", "qwen_warm_session_strict_cuda")?;
+    require_string_eq(residency, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_bool_eq(residency, "residency_accounting_recorded", true)?;
+    require_bool_eq(residency, "model_loaded_once", true)?;
+    require_bool_eq(residency, "tokenizer_loaded_once", true)?;
+    require_bool_eq(residency, "cuda_context_initialized_once", true)?;
+    require_bool_eq(residency, "weights_uploaded_once", true)?;
+    require_bool_eq(residency, "weights_resident_on_cuda", true)?;
+    require_bool_eq(residency, "per_turn_weight_upload", false)?;
+    require_bool_eq(residency, "per_token_weight_upload", false)?;
+    require_bool_eq(residency, "runtime_buffers_reused", true)?;
+    require_bool_eq(residency, "kv_cache_policy_recorded", true)?;
+    require_bool_eq(residency, "kv_cache_reinitialized_per_turn", true)?;
+    require_bool_eq(residency, "sampling_policy_recorded", true)?;
+    require_bool_eq(residency, "runtime_logits_cuda_resident_before_download", true)?;
+    require_bool_eq(residency, "fallback_used", false)?;
+    require_bool_eq(residency, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(residency, "scoped_warm_session_residency_claimed", true)?;
+    require_bool_eq(residency, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+    let transfer = object_field(residency, "transfer_accounting")?;
+    require_string_eq(transfer, "status", "measured")?;
+    require_u64_eq(transfer, "host_to_device_bytes", stats_h2d)?;
+    require_u64_eq(transfer, "device_to_host_bytes", stats_d2h)?;
+    require_u64_eq(transfer, "kernel_invocations", stats_invocations)?;
+    require_u64_eq(transfer, "kernel_launches", stats_launches)?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_norm_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_rope_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_score_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_softmax_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_attention_v_mix_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_mlp_activation_cuda_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cpu_reference_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cuda_integrated_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_all_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_model_boundary_fixtures_claimed", true)?;
+    require_bool_eq(claim_boundary, "kv_cache_policy_claimed", true)?;
+    require_bool_eq(claim_boundary, "sampling_policy_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_warm_session_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "scoped_warm_session_residency_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_ask_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "server_ready_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
 /// Validate dense GGUF one-layer CPU reference harness evidence.
 ///
 /// This artifact records a CPU-only full layer-0 reference output. It is the
@@ -7014,6 +7394,10 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         .get("claim_boundary")
         .and_then(|claim_boundary| claim_boundary.get("qwen_short_decode_cuda_claimed"))
         .and_then(Value::as_bool);
+    let qwen_warm_session_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| claim_boundary.get("qwen_warm_session_cuda_claimed"))
+        .and_then(Value::as_bool);
 
     if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)
@@ -7040,6 +7424,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || artifact_kind == Some(DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND)
         || model_class == Some(DENSE_REGULAR_LLM_MODEL_CLASS)
         || dense_claim == Some(true)
         || descriptor_claim == Some(true)
@@ -7065,6 +7450,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || sampling_policy_claim == Some(true)
         || qwen_one_token_claim == Some(true)
         || qwen_short_decode_claim == Some(true)
+        || qwen_warm_session_claim == Some(true)
     {
         return Err(anyhow!(
             "dense_regular_llm CUDA receipt cannot satisfy BitNet packed I2_S/QK256 proof"
