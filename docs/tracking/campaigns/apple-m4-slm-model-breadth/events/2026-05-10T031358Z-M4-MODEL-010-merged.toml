@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T03:13:58Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-010"
+event = "merged"
+actor = "codex"
+pr = 4408
+merge_sha = "c88f575198a71ee02ef808b6c9a301255fb5f3a7"
+previous_status = "in_progress"
+next_item = "M4-MODEL-011"
+
+notes = [
+  "Merged the larger Qwen2.5 1.5B Q4_K_M reference-output sanity item.",
+  "Recorded source, revision, file, size, SHA256, qwen2 GGUF metadata, tokenizer authority, chat-template presence, reference command, and coherent bounded prompt outputs.",
+  "Promoted M4-MODEL-011 to ready for Rust M4 apple-m4-cpu-neon quality gates.",
+  "The candidate remains unregistered and is not M4-supported until Rust M4 quality and cache registration gates pass.",
+  "No model binary, BitNet claim, full Metal claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, or broad performance claim was introduced.",
+]
