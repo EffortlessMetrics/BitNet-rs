@@ -3723,8 +3723,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-007"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-ux-007-receipts-explain-benchmark"
+pr = 4456
+head_sha = "9191faad65a40875efc0b9aaa37be42aa58ac52e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
