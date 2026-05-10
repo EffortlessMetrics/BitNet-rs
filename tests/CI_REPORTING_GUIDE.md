@@ -1,6 +1,11 @@
-# BitNet-rs CI Reporting and Notifications Guide
+# BitNet-rs Legacy CI Reporting and Notifications Guide
 
-This guide explains how to use the comprehensive CI reporting and notifications system implemented for BitNet-rs.
+This guide documents the legacy CI reporting helpers under `tests/`. The
+GitHub Actions workflow that originally ran them, `ci-reporting.yml`, is no
+longer active; the disabled copy remains as
+`.github/workflows/ci-reporting.yml.disabled`. Current workflow-run metadata is
+collected by `.github/workflows/ci-actuals.yml`, which uploads
+`ci-actuals.json` artifacts for CI cost and verification analysis.
 
 ## Overview
 
@@ -75,11 +80,14 @@ reporter.record_test_results(&test_results, &metadata).await?;
 let report = reporter.generate_trend_report(30, Some("main")).await?;
 ```
 
-## GitHub Actions Integration
+## Legacy GitHub Actions Integration
 
 ### Workflow Configuration
 
-The CI reporting system integrates with GitHub Actions through the `ci-reporting.yml` workflow:
+The legacy CI reporting system was designed to integrate with GitHub Actions
+through `ci-reporting.yml`. That workflow is disabled in this repository. Use
+`.github/workflows/ci-actuals.yml` for current run metadata collection; keep the
+snippet below only as historical context for the helper binaries.
 
 ```yaml
 name: CI Reporting and Notifications
@@ -136,6 +144,7 @@ cargo run --bin generate_ci_report -- \
 ```
 
 **Outputs:**
+
 - `status-checks.json`: GitHub status check data
 - `pr-comment.md`: Pull request comment content
 - `test-results.json`: Processed test results
@@ -155,6 +164,7 @@ cargo run --bin check_performance_regressions -- \
 ```
 
 **Exit Codes:**
+
 - `0`: No regressions detected
 - `1`: Performance regressions found
 
@@ -171,6 +181,7 @@ cargo run --bin generate_trend_analysis -- \
 ```
 
 **Outputs:**
+
 - `trend-analysis.html`: Interactive HTML report
 - `trend-analysis.json`: Machine-readable data
 - `performance-trends.json`: Performance trend data
@@ -206,6 +217,7 @@ pub struct TrendConfig {
 ### Status Checks
 
 GitHub status checks are created for:
+
 - Overall test suite status
 - Individual test suite status
 - Performance regression status
@@ -213,6 +225,7 @@ GitHub status checks are created for:
 ### Pull Request Comments
 
 PR comments include:
+
 - Overall test summary with pass/fail counts
 - Test suite breakdown with individual results
 - Failed test details with error messages
@@ -221,6 +234,7 @@ PR comments include:
 ### Trend Reports
 
 HTML trend reports provide:
+
 - Test stability analysis over time
 - Performance trend visualization
 - Regression detection results
@@ -348,6 +362,7 @@ cargo run --example ci_reporting_example
 ## Future Enhancements
 
 Planned improvements include:
+
 - Slack/Teams integration for notifications
 - Advanced statistical analysis for regression detection
 - Interactive performance dashboards

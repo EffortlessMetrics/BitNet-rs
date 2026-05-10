@@ -11,11 +11,17 @@ Comprehensive documentation for the BitNet-rs validation CI workflow (`.github/w
 
 ## Overview
 
-The validation workflow enforces quality standards for all model operations and validation tooling in BitNet-rs. It ensures that:
+The validation workflow exercises validation tooling and model checks for
+validation-related changes in BitNet-rs. It currently runs as a Linux-only
+stabilization workflow: build failures are gating, while the security guard,
+validation tests, summary, and quality gate report problems without blocking
+merge while baselines are being stabilized.
 
-1. **Security**: No runtime correction flags are enabled in CI
-2. **Tooling**: All validation tools build and execute correctly across platforms
-3. **Testing**: Integration tests pass for validation workflows
+It ensures that:
+
+1. **Security visibility**: Runtime correction flags are reported if they appear in CI
+2. **Tooling**: Validation tools build and execute correctly on Linux
+3. **Testing**: Integration tests run for validation workflows and publish reports
 4. **Models**: GGUF models pass strict validation without corrections
 
 ## Workflow Structure
@@ -68,25 +74,29 @@ VERGEN_IDEMPOTENT=1
 
 ### Security Configuration
 
-**Blocked Environment Variables** (enforced by `security-guard` job):
+**Correction Environment Variables** (reported by `security-guard` job):
 
 - `BITNET_ALLOW_RUNTIME_CORRECTIONS` - Must not be set in CI
 - `BITNET_CORRECTION_POLICY` - Must not be set in CI
 - `BITNET_FIX_LN_SCALE` - Deprecated, must not be set in CI
 
-These flags are blocked to ensure models pass validation without runtime corrections. Runtime corrections are only allowed for known-bad models in local development with explicit fingerprinting.
+These flags should stay out of CI so models pass validation without runtime
+corrections. The current `security-guard` job is informational
+(`continue-on-error: true`) and reports violations while the workflow baseline
+is stabilizing. Runtime corrections are only allowed for known-bad models in
+local development with explicit fingerprinting.
 
 ## Jobs
 
 ### 1. Security Guard (`security-guard`)
 
-**Purpose**: Block correction flags and verify strict mode configuration
+**Purpose**: Report correction flags and verify strict mode configuration
 
 **Key Checks**:
 
 - Scans workflow files for forbidden correction environment variables
 - Verifies `BITNET_STRICT_MODE=1` is enabled in validation workflow
-- Fails immediately if any correction flags are found
+- Emits warnings if correction flags are found; currently exits successfully
 
 **Why This Matters**:
 
@@ -99,11 +109,11 @@ Runtime corrections mask underlying issues. CI must validate models with their a
 **Exit Codes**:
 
 - `0` - No forbidden flags found, strict mode verified
-- `1` - Forbidden flags detected or strict mode not enabled
+- `0` - Forbidden flags detected or strict mode missing while the guard is informational
 
 ### 2. Build Tools (`build-tools`)
 
-**Purpose**: Build validation tools across all platforms
+**Purpose**: Build validation tools on Linux
 
 **Tools Built**:
 
@@ -119,11 +129,9 @@ Runtime corrections mask underlying issues. CI must validate models with their a
    - `st-ln-inspect`: Inspect LayerNorm weights in SafeTensors
    - `st-merge-ln-f16`: Merge F16 LayerNorm weights into SafeTensors
 
-**Platform Matrix**:
+**Platform Coverage**:
 
 - Ubuntu (Linux x86_64)
-- Windows (x86_64)
-- macOS (x86_64)
 
 **Verification Steps**:
 
@@ -134,7 +142,7 @@ Runtime corrections mask underlying issues. CI must validate models with their a
 
 **Artifacts**:
 
-- `{os}-validation-tools` - Contains all built validation binaries
+- `bitnet-linux-x64-validation-tools` - Contains all built validation binaries
 - Retention: 7 days
 
 ### 3. Validation Tests (`validation-tests`)
@@ -158,7 +166,11 @@ Runtime corrections mask underlying issues. CI must validate models with their a
    - Quantized tensor handling
    - Text and JSON output formats
 
-**Platform Coverage**: Ubuntu, Windows, macOS
+**Platform Coverage**: Ubuntu (Linux x86_64)
+
+The test commands currently use `|| true` and the job has
+`continue-on-error: true`, so failures are surfaced in logs and artifacts
+without blocking the workflow.
 
 **Test Features**:
 
@@ -193,7 +205,8 @@ cargo test -p bitnet-cli --test validation_workflow \
    - Correct ruleset detected
    - Validation status (ok/warning/failed)
    - Suspicious weight counts for LayerNorm and projection
-5. Fail if suspicious weights detected in strict mode
+5. Fail on ruleset mismatches or strict-mode `status == "failed"`
+6. Warn if suspicious weights are detected in strict mode
 
 **JSON Output Structure**:
 
@@ -239,12 +252,12 @@ Can be skipped via workflow_dispatch input `skip_model_validation: true` for too
 
 **Success Criteria**:
 
-- All jobs must pass (or validate-models may be skipped)
-- Fails if any required job fails
+- Records whether each job passed, failed, or was skipped
+- Runs a gate script, but the job is currently non-blocking while baselines stabilize
 
 ### 6. Quality Gate (`quality-gate`)
 
-**Purpose**: Final gate that blocks PR merge on validation failure
+**Purpose**: Report whether validation passed
 
 **Permissions**:
 
@@ -258,7 +271,8 @@ permissions:
 
 - Always runs (even if previous jobs fail)
 - Checks validation-summary result
-- Fails with detailed error message if validation did not pass
+- Emits a detailed error message if validation did not pass, but is currently
+  non-blocking (`continue-on-error: true`)
 - Provides common troubleshooting guidance
 
 **Common Issues Reported**:
@@ -334,13 +348,13 @@ The validation workflow complements other CI workflows:
 
 ### Status Check Requirements
 
-For PR merges, the following validation jobs must pass:
+Current merge behavior:
 
-- `security-guard` - Critical (blocks merge)
-- `build-tools` - Critical (blocks merge)
-- `validation-tests` - Critical (blocks merge)
-- `validate-models` - Optional (may be skipped)
-- `quality-gate` - Critical (blocks merge)
+- `build-tools` is the only hard validation workflow job.
+- `security-guard`, `validation-tests`, `validation-summary`, and
+  `quality-gate` are informational while baselines stabilize.
+- `validate-models` runs when not skipped and can fail on ruleset mismatches
+  or strict-mode failed status.
 
 ## Troubleshooting
 
@@ -398,12 +412,14 @@ cargo test -p bitnet-cli --test validation_workflow \
 **Solution**:
 
 1. Regenerate model with proper LayerNorm preservation:
+
    ```bash
    cargo run -p bitnet-st2gguf --no-default-features --features cpu -- --input model.safetensors \
      --output model.gguf --strict
    ```
 
 2. Or use export scripts:
+
    ```bash
    just model-clean <model_dir> <tokenizer.json>
    ```
@@ -451,6 +467,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- inspect
    - Use `bitnet-st2gguf` with strict mode
 
 2. **Test locally with strict mode**
+
    ```bash
    export BITNET_STRICT_MODE=1
    cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- inspect --ln-stats your-model.gguf
@@ -470,15 +487,15 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- inspect
    - Update feature specs
    - Add examples to help text
 
-3. **Test across platforms**
-   - Ensure tools build on Windows, macOS, Linux
-   - Test platform-specific code paths
+3. **Test beyond Linux when needed**
+   - CI validates this workflow on Linux
+   - Test Windows or macOS locally when touching platform-specific code paths
 
 ### For CI Maintainers
 
 1. **Never disable strict mode in CI**
    - Always use `BITNET_STRICT_MODE=1`
-   - Block correction flags in security-guard
+   - Keep correction-flag reporting in security-guard
 
 2. **Keep validation fast**
    - Cache dependencies aggressively
