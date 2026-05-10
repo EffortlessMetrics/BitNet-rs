@@ -12,6 +12,7 @@ Commands:
   smoke           Run a compact Apple M4 dense-SLM health smoke with cache and receipt checks
   doctor          Run one local health verdict for the supported Apple M4 dense-SLM path
   serve           Serve local M4 dense-SLM health and readiness endpoints without generation
+  serve-check     Check a running M4 local server readiness and optional completion/receipt export
   chat            Run multiple prompts in one resident Apple M4 CPU/NEON SLM session
   validate        Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session
   bitnet-proof    Validate the blocked M4 BitNet proof inputs and receipt contract

@@ -23,6 +23,7 @@ const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
 const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
 const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
+const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-serve-check.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
@@ -234,6 +235,29 @@ enum MacAction {
         /// Directory where later request receipts will be exported.
         #[arg(long, value_name = "PATH", default_value = MAC_SERVE_DEFAULT_RECEIPT_DIR)]
         receipt_dir: PathBuf,
+    },
+
+    /// Check a running M4 local server readiness and optional completion/receipt export.
+    ServeCheck {
+        /// Base URL for the running local M4 server.
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        url: String,
+
+        /// Run a tiny completion and verify its receipt export endpoint.
+        #[arg(long, default_value_t = false)]
+        completion: bool,
+
+        /// Prompt for the optional completion probe.
+        #[arg(long, default_value = "What is 2+2? Answer briefly.")]
+        prompt: String,
+
+        /// Maximum new tokens for the optional completion probe.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 1)]
+        max_new_tokens: usize,
+
+        /// Output the server readiness check receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_CHECK_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
     },
 
     /// Run multiple prompts in one resident Apple M4 CPU/NEON SLM session.
@@ -551,6 +575,9 @@ impl MacCommand {
                     receipt_dir,
                 )
                 .await
+            }
+            MacAction::ServeCheck { url, completion, prompt, max_new_tokens, json_out } => {
+                run_mac_serve_check(&url, completion, &prompt, max_new_tokens, json_out)
             }
             MacAction::Chat {
                 prompts,
@@ -2043,6 +2070,203 @@ fn mac_serve_normalize_receipt_id(receipt_id: &str) -> Option<String> {
     }
     let safe = receipt_id.chars().all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_'));
     safe.then(|| receipt_id.to_string())
+}
+
+fn run_mac_serve_check(
+    url: &str,
+    completion: bool,
+    prompt: &str,
+    max_new_tokens: usize,
+    json_out: PathBuf,
+) -> Result<()> {
+    let base = MacServeCheckEndpoint::parse(url)?;
+    let ready_response = mac_serve_check_http_json(&base, "GET", "/ready", None)?;
+    let ready_json = ready_response.body.clone();
+    let ready_pass = ready_response.status == 200
+        && ready_json["ready"].as_bool() == Some(true)
+        && ready_json["backend"]["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
+        && ready_json["backend"]["fallback_used"].as_bool() == Some(false);
+
+    let mut completion_result = serde_json::json!({
+        "executed": false,
+        "passed": serde_json::Value::Null,
+    });
+    let mut receipt_export_result = serde_json::json!({
+        "executed": false,
+        "passed": serde_json::Value::Null,
+    });
+
+    if completion {
+        let request = serde_json::json!({
+            "prompt": prompt,
+            "max_tokens": max_new_tokens,
+            "stream": false,
+        });
+        let completion_response =
+            mac_serve_check_http_json(&base, "POST", "/v1/chat/completions", Some(&request))?;
+        let completion_json = completion_response.body.clone();
+        let receipt_id = completion_json["receipt_path"]
+            .as_str()
+            .and_then(|path| path.rsplit('/').next())
+            .and_then(mac_serve_normalize_receipt_id);
+        let completion_pass = completion_response.status == 200
+            && completion_json["receipt"]["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
+            && completion_json["receipt"]["fallback_used"].as_bool() == Some(false)
+            && receipt_id.is_some();
+        completion_result = serde_json::json!({
+            "executed": true,
+            "status": completion_response.status,
+            "passed": completion_pass,
+            "request_id": completion_json["id"],
+            "receipt_id": receipt_id,
+            "generated_tokens": completion_json["usage"]["completion_tokens"],
+            "finish_reason": completion_json["choices"][0]["finish_reason"],
+        });
+
+        if let Some(receipt_id) = receipt_id {
+            let receipt_path = format!("/receipts/{receipt_id}");
+            let receipt_response = mac_serve_check_http_json(&base, "GET", &receipt_path, None)?;
+            let receipt_json = receipt_response.body.clone();
+            let export_pass = receipt_response.status == 200
+                && receipt_json["request_id"] == completion_json["id"]
+                && receipt_json["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
+                && receipt_json["fallback_used"].as_bool() == Some(false);
+            receipt_export_result = serde_json::json!({
+                "executed": true,
+                "status": receipt_response.status,
+                "passed": export_pass,
+                "request_id": receipt_json["request_id"],
+                "artifact_kind": receipt_json["artifact_kind"],
+                "selected_backend": receipt_json["selected_backend"],
+                "fallback_used": receipt_json["fallback_used"],
+            });
+        }
+    }
+
+    let completion_pass = completion_result["passed"].as_bool().unwrap_or(!completion);
+    let receipt_export_pass = receipt_export_result["passed"].as_bool().unwrap_or(!completion);
+    let passed = ready_pass && completion_pass && receipt_export_pass;
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_local_server_check",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "result": if passed { "pass" } else { "fail" },
+        "server": {
+            "url": url,
+            "ready_endpoint": "/ready",
+            "completion_endpoint": "/v1/chat/completions",
+            "receipt_export_endpoint": "/receipts/{id}",
+        },
+        "checks": {
+            "ready": {
+                "executed": true,
+                "status": ready_response.status,
+                "passed": ready_pass,
+                "ready": ready_json["ready"],
+                "selected_backend": ready_json["backend"]["selected_backend"],
+                "fallback_used": ready_json["backend"]["fallback_used"],
+            },
+            "completion": completion_result,
+            "receipt_export": receipt_export_result,
+        },
+        "claim_boundary": {
+            "server_readiness_checked": true,
+            "completion_probe_executed": completion,
+            "receipt_export_checked": completion,
+            "production_readiness_claimed": false,
+            "openai_compatibility_claimed": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+        },
+    });
+    write_json_receipt(&json_out, &receipt)?;
+    if passed {
+        println!("mac serve-check passed: {}", json_out.display());
+        Ok(())
+    } else {
+        anyhow::bail!("mac serve-check failed; receipt written to {}", json_out.display())
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct MacServeCheckEndpoint {
+    host: String,
+    port: u16,
+}
+
+impl MacServeCheckEndpoint {
+    fn parse(url: &str) -> Result<Self> {
+        let rest = url
+            .trim()
+            .strip_prefix("http://")
+            .ok_or_else(|| anyhow!("mac serve-check currently supports http://HOST:PORT only"))?;
+        let authority = rest.trim_end_matches('/');
+        if authority.is_empty() || authority.contains('/') {
+            anyhow::bail!("mac serve-check URL must be a bare http://HOST:PORT base URL");
+        }
+        let (host, port) = authority
+            .rsplit_once(':')
+            .ok_or_else(|| anyhow!("mac serve-check URL must include an explicit port"))?;
+        let port = port
+            .parse::<u16>()
+            .with_context(|| format!("invalid mac serve-check port in {url}"))?;
+        if host.trim().is_empty() {
+            anyhow::bail!("mac serve-check URL host must not be empty");
+        }
+        Ok(Self { host: host.trim_start_matches('[').trim_end_matches(']').to_string(), port })
+    }
+}
+
+struct MacServeCheckHttpResponse {
+    status: u16,
+    body: serde_json::Value,
+}
+
+fn mac_serve_check_http_json(
+    endpoint: &MacServeCheckEndpoint,
+    method: &str,
+    path: &str,
+    body: Option<&serde_json::Value>,
+) -> Result<MacServeCheckHttpResponse> {
+    let host_authority = if endpoint.host.contains(':') {
+        format!("[{}]", endpoint.host)
+    } else {
+        endpoint.host.clone()
+    };
+    let addr = format!("{}:{}", host_authority, endpoint.port);
+    let mut stream = std::net::TcpStream::connect(&addr)
+        .with_context(|| format!("failed to connect to M4 local server at {addr}"))?;
+    stream.set_read_timeout(Some(std::time::Duration::from_secs(30)))?;
+    stream.set_write_timeout(Some(std::time::Duration::from_secs(30)))?;
+    let body_text = match body {
+        Some(value) => serde_json::to_string(value)?,
+        None => String::new(),
+    };
+    let request = format!(
+        "{method} {path} HTTP/1.1\r\nhost: {}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+        host_authority,
+        body_text.len(),
+        body_text
+    );
+    stream.write_all(request.as_bytes()).context("failed to write server check request")?;
+    let mut response = String::new();
+    stream.read_to_string(&mut response).context("failed to read server check response")?;
+    let (head, body) = response
+        .split_once("\r\n\r\n")
+        .ok_or_else(|| anyhow!("M4 local server returned a malformed HTTP response"))?;
+    let status = head
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .and_then(|value| value.parse::<u16>().ok())
+        .ok_or_else(|| anyhow!("M4 local server response did not include a status code"))?;
+    let body = serde_json::from_str(body).context("M4 local server response body was not JSON")?;
+    Ok(MacServeCheckHttpResponse { status, body })
 }
 
 async fn mac_serve_completion_http_reply(
@@ -4807,5 +5031,20 @@ mod tests {
         assert!(mac_serve_host_is_loopback("[::1]"));
         assert!(!mac_serve_host_is_loopback("0.0.0.0"));
         assert!(!mac_serve_host_is_loopback("192.168.1.5"));
+    }
+
+    #[test]
+    fn mac_serve_check_url_parser_requires_http_host_port() {
+        assert_eq!(
+            MacServeCheckEndpoint::parse("http://127.0.0.1:8080").expect("url"),
+            MacServeCheckEndpoint { host: "127.0.0.1".to_string(), port: 8080 }
+        );
+        assert_eq!(
+            MacServeCheckEndpoint::parse("http://[::1]:8080").expect("ipv6 url"),
+            MacServeCheckEndpoint { host: "::1".to_string(), port: 8080 }
+        );
+        assert!(MacServeCheckEndpoint::parse("https://127.0.0.1:8080").is_err());
+        assert!(MacServeCheckEndpoint::parse("http://127.0.0.1").is_err());
+        assert!(MacServeCheckEndpoint::parse("http://127.0.0.1:8080/path").is_err());
     }
 }
