@@ -135,14 +135,86 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-004"
-status = "ready"
-branch = "codex/apple-m4-slm-metal-phases/M4-METAL-004-resident-route"
+status = "pr_open"
+pr = 4385
+head_sha = "898ce4dc48f99c904519d126dfa98f14d94630a8"
+branch = "codex/apple-m4-slm-metal-phases/M4-METAL-004-runtime-boundary"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-METAL-003"]
-acceptance = "Route the validated phase into resident-session flow only where parity holds, with CPU-only versus CPU-plus-Metal greedy comparison, quality corpus pass, explicit CPU fallback for non-Metal phases, and phase receipts per relevant turn."
+acceptance = "Record the resident-routing feasibility boundary for the validated Q/K/V Metal phase, explicitly documenting that live dispatch is currently test-local, choosing the required runtime extraction path, and blocking resident routing until a non-dev Metal runtime API exists."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-metal-phases",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-metal-phases/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The runtime boundary and prerequisite path for resident Metal phase routing are documented.",
+]
+must_not_claim = [
+  "The named Metal phase participates in resident dense SLM generation.",
+  "Apple Metal accelerates the full SLM answer path.",
+]
+
+[[work_item]]
+id = "M4-METAL-005"
+status = "blocked"
+branch = "codex/apple-m4-slm-metal-phases/M4-METAL-005-runtime-api"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-METAL-004"]
+acceptance = "Promote the validated dense prefill Q/K/V Metal dispatch from test-only code into a non-dev runtime API with target/feature-gated dependencies, generic CI-safe fixture tests, live M4 opt-in proof, and no resident generation routing."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features metal --test metal_tiny_smoke dense_prefill",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-metal-phases",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/**/tests/**",
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-metal-phases/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The named Q/K/V Metal phase has a reusable runtime API outside test code.",
+]
+must_not_claim = [
+  "The runtime API participates in resident generation.",
+  "Full apple-m4-metal inference works.",
+]
+
+[[work_item]]
+id = "M4-METAL-006"
+status = "blocked"
+branch = "codex/apple-m4-slm-metal-phases/M4-METAL-006-resident-route"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-METAL-005"]
+acceptance = "Route the runtime Q/K/V Metal phase into resident-session flow only where parity holds, with CPU-only versus CPU-plus-Metal greedy comparison, quality corpus pass, explicit CPU/NEON routing for non-Metal phases, and phase receipts per relevant turn."
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,metal,full-cli",
@@ -169,17 +241,18 @@ may_claim = [
 ]
 must_not_claim = [
   "Apple Metal accelerates the full SLM answer path.",
+  "Full apple-m4-metal inference works.",
 ]
 
 [[work_item]]
-id = "M4-METAL-005"
+id = "M4-METAL-007"
 status = "blocked"
-branch = "codex/apple-m4-slm-metal-phases/M4-METAL-005-measured-delta"
+branch = "codex/apple-m4-slm-metal-phases/M4-METAL-007-measured-delta"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-METAL-004"]
+blocked_by = ["M4-METAL-006"]
 acceptance = "Record measured phase-local timing deltas for the resident-routed Metal phase, keeping speedup claims phase-local and updating docs without broad M4 or full Metal inference claims."
 commands = [
   "cargo fmt --all -- --check",
