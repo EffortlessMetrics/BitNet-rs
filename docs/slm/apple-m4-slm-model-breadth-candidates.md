@@ -117,3 +117,50 @@ baseline, not new breadth candidates.
 must record exact SHA256, GGUF metadata, tokenizer authority, prompt-template
 authority, reference command, prompt outputs, and accept/reject evidence before
 any Rust M4 quality work begins.
+
+## Follow-Up Candidate Cycle
+
+`M4-MODEL-006` opens the next candidate cycle because the first breadth round
+did not produce a model that could be registered: Qwen3 was rejected by the
+current reference path, and SmolLM2 was reference-good but rejected by Rust M4
+quality.
+
+### Priority 1: `gemma-3-270m-it-q8_0`
+
+- Source repository: `ggml-org/gemma-3-270m-it-GGUF`.
+- Source URL:
+  `https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/blob/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf`.
+- Revision: `e7647be17ae1108f2f605ed061ca0608b171afff`.
+- File: `gemma-3-270m-it-Q8_0.gguf`.
+- Expected size: `291545600` bytes.
+- LFS SHA256: `0ef57d2c838458a1952664260dcba38e5bdda37494f3af732f06e4add24068e3`.
+- License notes: the upstream base model `google/gemma-3-270m-it` reports
+  `license:gemma` and requires Gemma license acknowledgement on Hugging Face.
+- Expected GGUF architecture: Gemma 3 text-family metadata; the GGUF must
+  confirm the exact architecture before M4 promotion.
+- Expected quantization: `Q8_0`.
+- Tokenizer expectations: Gemma tokenizer metadata must be present in the GGUF;
+  the reference step must record tokenizer model, pre-tokenizer authority, BOS,
+  EOS, PAD policy, and special-token handling.
+- Prompt-template expectation: Gemma instruction/chat template, recorded from
+  GGUF metadata or an explicit reference-template decision before Rust M4 runs.
+- Storage budget: under `500 MiB` for the downloaded artifact, with no
+  committed binary.
+- Why selected: official Gemma-class small instruct base model, storage-light
+  GGUF artifact, and a different leading dense SLM family from Qwen. This is a
+  useful M4 model-runner breadth probe only if reference and Rust M4 gates pass.
+- Rejection criteria:
+  - Gemma license access is unavailable to the operator;
+  - GGUF metadata lacks tokenizer or chat-template authority;
+  - reference runner output is empty, non-UTF-8, repeated-token junk, or
+    semantically implausible on the bounded prompt suite;
+  - prompt template cannot be represented explicitly in the Rust M4 path;
+  - Rust M4 support requires broad Gemma architecture work outside
+    `M4-MODEL-008`.
+
+## Follow-Up Candidate Contract
+
+`M4-MODEL-007` should evaluate `gemma-3-270m-it-q8_0` with the reference runner
+only. It must record exact SHA256, GGUF metadata, tokenizer authority,
+prompt-template authority, reference command, prompt outputs, license/access
+status, and accept/reject evidence before any Rust M4 quality work begins.

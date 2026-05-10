@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T02:42:07Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-006"
+event = "in_progress"
+actor = "codex"
+previous_status = "new"
+
+notes = [
+  "Started the next M4 dense SLM model-breadth candidate cycle after Qwen3 and SmolLM2 failed to produce a registerable model.",
+  "Selected a pinned Gemma 3 270M IT Q8_0 GGUF candidate for reference-only evaluation in M4-MODEL-007.",
+  "No model artifact is downloaded, accepted, registered, or claimed supported by this item.",
+  "The M4 dense SLM default and supported set remain Qwen2.5 Q8_0 and Qwen2.5 Q4_K_M only.",
+]
