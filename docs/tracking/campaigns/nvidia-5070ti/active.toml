@@ -2640,10 +2640,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-039"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-039-kv-policy"
 pr = 4357
 head_sha = "0f0457e96e508d741ce4b021dddbf68c1c42a2f5"
+merge_sha = "aa025b6fc02f46b12a1008f2ec7e554066c716a8"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
