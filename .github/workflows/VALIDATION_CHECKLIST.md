@@ -7,6 +7,7 @@ Quick reference checklist for the validation workflow.
 ### Before Creating PR
 
 - [ ] Test validation tools locally with strict mode:
+
   ```bash
   export BITNET_STRICT_MODE=1
   export BITNET_DETERMINISTIC=1
@@ -15,6 +16,7 @@ Quick reference checklist for the validation workflow.
   ```
 
 - [ ] Build all validation tools:
+
   ```bash
   cargo build -p bitnet-cli --release --no-default-features --features cpu,full-cli
   cargo build -p bitnet-st2gguf --release
@@ -22,18 +24,21 @@ Quick reference checklist for the validation workflow.
   ```
 
 - [ ] Run validation tests locally:
+
   ```bash
   cargo test -p bitnet-cli --test validation_workflow \
     --no-default-features --features cpu,full-cli -- --nocapture
   ```
 
 - [ ] If modifying models, validate without corrections:
+
   ```bash
   cargo run -p bitnet-cli -- inspect --ln-stats --json your-model.gguf
   # Check that status is "ok" and suspicious counts are 0
   ```
 
 - [ ] Verify no correction flags in your changes:
+
   ```bash
   git diff main | grep -i "BITNET_ALLOW_RUNTIME_CORRECTIONS"
   git diff main | grep -i "BITNET_CORRECTION_POLICY"
@@ -44,11 +49,11 @@ Quick reference checklist for the validation workflow.
 ### After PR Creation
 
 - [ ] Check that validation workflow runs automatically
-- [ ] Verify security-guard passes (no correction flags detected)
-- [ ] Verify build-tools passes on all platforms (Ubuntu, Windows, macOS)
-- [ ] Verify validation-tests passes
+- [ ] Review security-guard warnings for correction flags
+- [ ] Verify build-tools passes on Ubuntu
+- [ ] Review validation-tests output and uploaded report
 - [ ] Verify validate-models passes (or is skipped if appropriate)
-- [ ] Check quality-gate status (must be green for merge)
+- [ ] Review quality-gate status report
 
 ### If Validation Fails
 
@@ -65,7 +70,7 @@ Quick reference checklist for the validation workflow.
 - [ ] Review validation workflow performance monthly
 - [ ] Check cache effectiveness (aim for < 10 minute builds)
 - [ ] Update Rust toolchain versions as needed
-- [ ] Verify all platforms still supported
+- [ ] Verify the Linux workflow still covers validation-tool build requirements
 - [ ] Review artifact retention policies
 
 ### When Adding New Validation Features
@@ -74,7 +79,7 @@ Quick reference checklist for the validation workflow.
 - [ ] Update security-guard checks if new env vars added
 - [ ] Document new features in `docs/development/validation-ci.md`
 - [ ] Add examples to workflow summary
-- [ ] Test locally on all platforms if possible
+- [ ] Test locally on additional platforms if the change touches platform-specific code
 
 ### When Updating Dependencies
 
@@ -85,7 +90,7 @@ Quick reference checklist for the validation workflow.
 
 ### Security Reviews
 
-- [ ] Verify correction flags still blocked in security-guard
+- [ ] Verify correction flags are still reported by security-guard
 - [ ] Check no new correction mechanisms bypass security-guard
 - [ ] Review workflow permissions (minimal required)
 - [ ] Audit artifact contents (no secrets leaked)
@@ -212,12 +217,12 @@ rg -n 'BITNET_FIX_LN_SCALE' .github/workflows
 
 ## Quick Reference
 
-### Required Jobs (Must Pass)
+### Current Merge Behavior
 
-- ✅ `security-guard` - Critical
-- ✅ `build-tools` - Critical
-- ✅ `validation-tests` - Critical
-- ✅ `quality-gate` - Critical
+- ✅ `build-tools` - Hard validation workflow job
+- ℹ️ `security-guard` - Informational while stabilizing
+- ℹ️ `validation-tests` - Informational while stabilizing
+- ℹ️ `quality-gate` - Informational while stabilizing
 
 ### Optional Jobs (Can Skip)
 
@@ -225,12 +230,12 @@ rg -n 'BITNET_FIX_LN_SCALE' .github/workflows
 
 ### Typical Timeline
 
-```
+```text
 0-1 min:   security-guard
-1-10 min:  build-tools (parallel across 3 platforms)
+1-10 min:  build-tools (Ubuntu)
 10-15 min: validation-tests + validate-models (parallel)
 15-20 min: validation-summary + quality-gate
-Total:     15-25 minutes with caching
+Total:     10-20 minutes with caching
 ```
 
 ### Key Environment Variables
@@ -241,7 +246,7 @@ BITNET_DETERMINISTIC=1            # Required - reproducible tests
 BITNET_SEED=42                    # Required - deterministic seed
 RAYON_NUM_THREADS=1               # Required - single-threaded
 
-# BLOCKED in CI (security-guard enforces):
+# Reported by security-guard:
 # BITNET_ALLOW_RUNTIME_CORRECTIONS  ❌
 # BITNET_CORRECTION_POLICY          ❌
 # BITNET_FIX_LN_SCALE               ❌ (deprecated)
@@ -249,7 +254,7 @@ RAYON_NUM_THREADS=1               # Required - single-threaded
 
 ### Monitored Paths
 
-```
+```text
 crates/bitnet-cli/**
 crates/bitnet-st-tools/**
 crates/bitnet-st2gguf/**
