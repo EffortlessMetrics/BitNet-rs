@@ -53,6 +53,7 @@ pub struct ReceiptExplanation {
     pub quality: QualityExplanation,
     pub timing: TimingExplanation,
     pub residency: ResidencyExplanation,
+    pub benchmark_qualification: BenchmarkQualificationExplanation,
     pub claim_limits: ClaimLimitsExplanation,
 }
 
@@ -109,6 +110,44 @@ pub struct ClaimLimitsExplanation {
     pub full_cuda_residency_claimed: Option<bool>,
     pub dense_gguf_inference_claimed: Option<bool>,
     pub bitnet_packed_i2s_qk256_proof: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, PartialEq)]
+pub struct BenchmarkQualificationExplanation {
+    pub status: Option<String>,
+    pub benchmark_qualified_speedup: Option<bool>,
+    pub accepted_profiles: Vec<String>,
+    pub blocked_profiles: Vec<String>,
+    pub speedup_claim_allowed: Option<bool>,
+    pub transfer_timing_status: Option<String>,
+    pub host_to_device_source: Option<String>,
+    pub host_to_device_scope: Option<String>,
+    pub host_to_device_includes_non_transfer_overhead: Option<bool>,
+    pub pure_host_to_device_timing_recorded: Option<bool>,
+    pub device_to_host_timing_recorded: Option<bool>,
+    pub profile_reviews: Vec<BenchmarkProfileExplanation>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, PartialEq)]
+pub struct BenchmarkProfileExplanation {
+    pub profile: String,
+    pub decision: Option<String>,
+    pub benchmark_qualified_speedup: Option<bool>,
+    pub speedup_claim_allowed: Option<bool>,
+    pub fallback_free: Option<bool>,
+    pub quality_passed: Option<bool>,
+    pub generated_token_ids_match: Option<bool>,
+    pub cpu_total_ms_mean: Option<f64>,
+    pub cuda_total_ms_mean: Option<f64>,
+    pub observed_cpu_total_ms_div_cuda_total_ms: Option<f64>,
+    pub host_to_device_ms: Option<f64>,
+    pub host_to_device_ms_source: Option<String>,
+    pub host_to_device_ms_scope: Option<String>,
+    pub host_to_device_ms_includes_non_transfer_overhead: Option<bool>,
+    pub pure_host_to_device_ms_source: Option<String>,
+    pub device_to_host_ms: Option<f64>,
+    pub device_to_host_ms_source: Option<String>,
+    pub blockers: Vec<String>,
 }
 
 impl ReceiptsCommand {
@@ -204,6 +243,7 @@ pub fn explain_receipt(path: &Path, receipt: &Value) -> ReceiptExplanation {
         quality: quality_explanation(receipt),
         timing: timing_explanation(receipt),
         residency: residency_explanation(receipt),
+        benchmark_qualification: benchmark_qualification_explanation(receipt),
         claim_limits: claim_limits_explanation(receipt),
     }
 }
@@ -379,6 +419,92 @@ fn claim_limits_explanation(receipt: &Value) -> ClaimLimitsExplanation {
         )
         .or_else(|| bool_at(receipt, &["execution_path", "bitnet_packed_kernel_proof"])),
     }
+}
+
+fn benchmark_qualification_explanation(receipt: &Value) -> BenchmarkQualificationExplanation {
+    BenchmarkQualificationExplanation {
+        status: string_at(receipt, &["qualification_decision", "status"]),
+        benchmark_qualified_speedup: bool_at(
+            receipt,
+            &["qualification_decision", "benchmark_qualified_speedup"],
+        )
+        .or_else(|| bool_at(receipt, &["benchmark_qualified_speedup"]))
+        .or_else(|| bool_at(receipt, &["claim_boundary", "benchmark_qualified_speedup"])),
+        accepted_profiles: string_array_at(
+            receipt,
+            &["qualification_decision", "accepted_profiles"],
+        ),
+        blocked_profiles: string_array_at(receipt, &["qualification_decision", "blocked_profiles"]),
+        speedup_claim_allowed: bool_at(
+            receipt,
+            &["qualification_decision", "speedup_claim_allowed"],
+        ),
+        transfer_timing_status: string_at(receipt, &["transfer_timing_review", "status"]),
+        host_to_device_source: string_at(
+            receipt,
+            &["transfer_timing_review", "host_to_device_source"],
+        ),
+        host_to_device_scope: string_at(
+            receipt,
+            &["transfer_timing_review", "host_to_device_scope"],
+        ),
+        host_to_device_includes_non_transfer_overhead: bool_at(
+            receipt,
+            &["transfer_timing_review", "host_to_device_ms_includes_non_transfer_overhead"],
+        ),
+        pure_host_to_device_timing_recorded: bool_at(
+            receipt,
+            &["transfer_timing_review", "host_to_device_pure_transfer_timing_recorded"],
+        ),
+        device_to_host_timing_recorded: bool_at(
+            receipt,
+            &["transfer_timing_review", "device_to_host_timing_recorded"],
+        ),
+        profile_reviews: benchmark_profile_reviews(receipt),
+    }
+}
+
+fn benchmark_profile_reviews(receipt: &Value) -> Vec<BenchmarkProfileExplanation> {
+    let Some(reviews) = receipt.get("profile_reviews").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+
+    reviews
+        .iter()
+        .filter_map(|review| {
+            let profile = string_at(review, &["profile"])?;
+            Some(BenchmarkProfileExplanation {
+                profile,
+                decision: string_at(review, &["decision"]),
+                benchmark_qualified_speedup: bool_at(review, &["benchmark_qualified_speedup"]),
+                speedup_claim_allowed: bool_at(review, &["speedup_claim_allowed"]),
+                fallback_free: bool_at(review, &["fallback_free"]),
+                quality_passed: bool_at(review, &["quality_passed"]),
+                generated_token_ids_match: bool_at(review, &["generated_token_ids_match"]),
+                cpu_total_ms_mean: f64_at(review, &["cpu_total_ms_mean"]),
+                cuda_total_ms_mean: f64_at(review, &["cuda_total_ms_mean"]),
+                observed_cpu_total_ms_div_cuda_total_ms: f64_at(
+                    review,
+                    &["observed_cpu_total_ms_div_cuda_total_ms"],
+                )
+                .or_else(|| f64_at(review, &["observed_median_cpu_total_ms_div_cuda_total_ms"])),
+                host_to_device_ms: f64_at(review, &["host_to_device_ms"]),
+                host_to_device_ms_source: string_at(review, &["host_to_device_ms_source"]),
+                host_to_device_ms_scope: string_at(review, &["host_to_device_ms_scope"]),
+                host_to_device_ms_includes_non_transfer_overhead: bool_at(
+                    review,
+                    &["host_to_device_ms_includes_non_transfer_overhead"],
+                ),
+                pure_host_to_device_ms_source: string_at(
+                    review,
+                    &["pure_host_to_device_ms_source"],
+                ),
+                device_to_host_ms: f64_at(review, &["device_to_host_ms"]),
+                device_to_host_ms_source: string_at(review, &["device_to_host_ms_source"]),
+                blockers: string_array_at(review, &["blockers"]),
+            })
+        })
+        .collect()
 }
 
 fn model_summary(receipt: &Value) -> Option<String> {
@@ -581,6 +707,58 @@ fn print_receipt_explanation(explanation: &ReceiptExplanation) {
         );
     }
 
+    if has_benchmark_qualification(&explanation.benchmark_qualification) {
+        println!();
+        println!("Benchmark Qualification:");
+        print_option_indented("status", explanation.benchmark_qualification.status.as_deref());
+        print_bool_indented(
+            "benchmark_qualified_speedup",
+            explanation.benchmark_qualification.benchmark_qualified_speedup,
+        );
+        print_bool_indented(
+            "speedup_claim_allowed",
+            explanation.benchmark_qualification.speedup_claim_allowed,
+        );
+        print_string_list_indented(
+            "accepted_profiles",
+            &explanation.benchmark_qualification.accepted_profiles,
+        );
+        print_string_list_indented(
+            "blocked_profiles",
+            &explanation.benchmark_qualification.blocked_profiles,
+        );
+        print_option_indented(
+            "transfer_timing_status",
+            explanation.benchmark_qualification.transfer_timing_status.as_deref(),
+        );
+        print_option_indented(
+            "host_to_device_source",
+            explanation.benchmark_qualification.host_to_device_source.as_deref(),
+        );
+        print_option_indented(
+            "host_to_device_scope",
+            explanation.benchmark_qualification.host_to_device_scope.as_deref(),
+        );
+        print_bool_indented(
+            "host_to_device_includes_non_transfer_overhead",
+            explanation.benchmark_qualification.host_to_device_includes_non_transfer_overhead,
+        );
+        print_bool_indented(
+            "pure_host_to_device_timing_recorded",
+            explanation.benchmark_qualification.pure_host_to_device_timing_recorded,
+        );
+        print_bool_indented(
+            "device_to_host_timing_recorded",
+            explanation.benchmark_qualification.device_to_host_timing_recorded,
+        );
+        if !explanation.benchmark_qualification.profile_reviews.is_empty() {
+            println!("  profiles:");
+            for profile in &explanation.benchmark_qualification.profile_reviews {
+                print_benchmark_profile(profile);
+            }
+        }
+    }
+
     println!();
     println!("Claim Limits:");
     print_bool_indented("speedup_claim", explanation.claim_limits.speedup_claim);
@@ -632,6 +810,62 @@ fn print_u64_indented(label: &str, value: Option<u64>) {
     }
 }
 
+fn print_string_list_indented(label: &str, values: &[String]) {
+    if !values.is_empty() {
+        println!("  {label}: {}", values.join(", "));
+    }
+}
+
+fn print_benchmark_profile(profile: &BenchmarkProfileExplanation) {
+    println!("    - profile: {}", profile.profile);
+    print_option_profile("decision", profile.decision.as_deref());
+    print_bool_profile("benchmark_qualified_speedup", profile.benchmark_qualified_speedup);
+    print_bool_profile("speedup_claim_allowed", profile.speedup_claim_allowed);
+    print_bool_profile("fallback_free", profile.fallback_free);
+    print_bool_profile("quality_passed", profile.quality_passed);
+    print_bool_profile("generated_token_ids_match", profile.generated_token_ids_match);
+    print_f64_profile("cpu_total_ms_mean", profile.cpu_total_ms_mean);
+    print_f64_profile("cuda_total_ms_mean", profile.cuda_total_ms_mean);
+    print_f64_profile(
+        "observed_cpu_total_ms_div_cuda_total_ms",
+        profile.observed_cpu_total_ms_div_cuda_total_ms,
+    );
+    print_f64_profile("host_to_device_ms", profile.host_to_device_ms);
+    print_option_profile("host_to_device_ms_source", profile.host_to_device_ms_source.as_deref());
+    print_option_profile("host_to_device_ms_scope", profile.host_to_device_ms_scope.as_deref());
+    print_bool_profile(
+        "host_to_device_ms_includes_non_transfer_overhead",
+        profile.host_to_device_ms_includes_non_transfer_overhead,
+    );
+    print_option_profile(
+        "pure_host_to_device_ms_source",
+        profile.pure_host_to_device_ms_source.as_deref(),
+    );
+    print_f64_profile("device_to_host_ms", profile.device_to_host_ms);
+    print_option_profile("device_to_host_ms_source", profile.device_to_host_ms_source.as_deref());
+    if !profile.blockers.is_empty() {
+        println!("      blockers: {}", profile.blockers.join("; "));
+    }
+}
+
+fn print_option_profile(label: &str, value: Option<&str>) {
+    if let Some(value) = value {
+        println!("      {label}: {value}");
+    }
+}
+
+fn print_bool_profile(label: &str, value: Option<bool>) {
+    if let Some(value) = value {
+        println!("      {label}: {value}");
+    }
+}
+
+fn print_f64_profile(label: &str, value: Option<f64>) {
+    if let Some(value) = value {
+        println!("      {label}: {value:.3}");
+    }
+}
+
 fn has_execution_plan(plan: &ExecutionPlanExplanation) -> bool {
     plan.selected_route.is_some()
         || plan.model_family.is_some()
@@ -666,6 +900,21 @@ fn has_residency(residency: &ResidencyExplanation) -> bool {
         || residency.full_cuda_residency_claimed.is_some()
 }
 
+fn has_benchmark_qualification(qualification: &BenchmarkQualificationExplanation) -> bool {
+    qualification.status.is_some()
+        || qualification.benchmark_qualified_speedup.is_some()
+        || !qualification.accepted_profiles.is_empty()
+        || !qualification.blocked_profiles.is_empty()
+        || qualification.speedup_claim_allowed.is_some()
+        || qualification.transfer_timing_status.is_some()
+        || qualification.host_to_device_source.is_some()
+        || qualification.host_to_device_scope.is_some()
+        || qualification.host_to_device_includes_non_transfer_overhead.is_some()
+        || qualification.pure_host_to_device_timing_recorded.is_some()
+        || qualification.device_to_host_timing_recorded.is_some()
+        || !qualification.profile_reviews.is_empty()
+}
+
 fn string_at(value: &Value, path: &[&str]) -> Option<String> {
     value_at(value, path).and_then(Value::as_str).map(str::to_string)
 }
@@ -688,6 +937,13 @@ fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
         current = current.get(*key)?;
     }
     Some(current)
+}
+
+fn string_array_at(value: &Value, path: &[&str]) -> Vec<String> {
+    let Some(entries) = value_at(value, path).and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    entries.iter().filter_map(Value::as_str).map(str::to_string).collect()
 }
 
 fn sum_kernel_u64(receipt: &Value, field: &str) -> Option<u64> {
@@ -845,6 +1101,110 @@ mod tests {
         assert!(lines.contains(&"  quality: true".to_string()));
         assert!(lines.contains(&"  weights: uploaded once".to_string()));
         assert!(lines.contains(&"  speed claim: false".to_string()));
+    }
+
+    #[test]
+    fn explain_receipt_extracts_benchmark_qualification_profiles() {
+        let receipt = json!({
+            "artifact_kind": "dense_gguf_qwen_benchmark_qualification_review",
+            "claim": "dense_gguf_qwen_benchmark_qualification_review",
+            "benchmark_qualified_speedup": false,
+            "speedup_claim": false,
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "fallback_used": false,
+            "execution_plan": {
+                "selected_route": "dense_regular_llm_cuda",
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "fallback_used": false,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            },
+            "qualification_decision": {
+                "accepted_profiles": [],
+                "benchmark_qualified_speedup": false,
+                "blocked_profiles": ["one_token", "warm_session_3_turns"],
+                "speedup_claim_allowed": false,
+                "status": "not_accepted"
+            },
+            "transfer_timing_review": {
+                "device_to_host_timing_recorded": true,
+                "host_to_device_ms_includes_non_transfer_overhead": true,
+                "host_to_device_pure_transfer_timing_recorded": false,
+                "host_to_device_scope": "model_load_wall_clock_envelope",
+                "host_to_device_source": "wall_clock_model_load_with_cuda_weight_upload",
+                "status": "host_to_device_model_load_envelope_device_to_host_measured"
+            },
+            "profile_reviews": [
+                {
+                    "benchmark_qualified_speedup": false,
+                    "blockers": [
+                        "CUDA mean total time is slower than CPU mean total time",
+                        "pure host-to-device transfer timing is unmeasured"
+                    ],
+                    "cpu_total_ms_mean": 2872.8427,
+                    "cuda_total_ms_mean": 3978.571,
+                    "decision": "not_accepted",
+                    "device_to_host_ms": 0.8953,
+                    "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+                    "fallback_free": true,
+                    "generated_token_ids_match": true,
+                    "host_to_device_ms": 3513.8495,
+                    "host_to_device_ms_includes_non_transfer_overhead": true,
+                    "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+                    "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+                    "observed_cpu_total_ms_div_cuda_total_ms": 0.722,
+                    "profile": "one_token",
+                    "pure_host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+                    "quality_passed": true,
+                    "speedup_claim_allowed": false
+                }
+            ],
+            "claim_boundary": {
+                "benchmark_qualified_speedup": false,
+                "full_cuda_residency_claimed": false,
+                "bitnet_packed_i2s_qk256_proof": false
+            }
+        });
+
+        let explanation = explain_receipt(Path::new("benchmark.json"), &receipt);
+
+        assert_eq!(explanation.benchmark_qualification.status.as_deref(), Some("not_accepted"));
+        assert_eq!(explanation.benchmark_qualification.benchmark_qualified_speedup, Some(false));
+        assert_eq!(
+            explanation.benchmark_qualification.blocked_profiles,
+            vec!["one_token", "warm_session_3_turns"]
+        );
+        assert_eq!(
+            explanation.benchmark_qualification.host_to_device_includes_non_transfer_overhead,
+            Some(true)
+        );
+        assert_eq!(
+            explanation.benchmark_qualification.pure_host_to_device_timing_recorded,
+            Some(false)
+        );
+        assert_eq!(explanation.benchmark_qualification.profile_reviews.len(), 1);
+        let profile = &explanation.benchmark_qualification.profile_reviews[0];
+        assert_eq!(profile.profile, "one_token");
+        assert_eq!(profile.decision.as_deref(), Some("not_accepted"));
+        assert_eq!(profile.cpu_total_ms_mean, Some(2872.8427));
+        assert_eq!(profile.cuda_total_ms_mean, Some(3978.571));
+        assert_eq!(profile.host_to_device_ms, Some(3513.8495));
+        assert_eq!(
+            profile.host_to_device_ms_source.as_deref(),
+            Some("wall_clock_model_load_with_cuda_weight_upload")
+        );
+        assert_eq!(
+            profile.pure_host_to_device_ms_source.as_deref(),
+            Some("not_measured_by_dense_qwen_runtime")
+        );
+        assert!(
+            profile
+                .blockers
+                .iter()
+                .any(|blocker| { blocker == "pure host-to-device transfer timing is unmeasured" })
+        );
     }
 
     #[test]

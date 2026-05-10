@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T20:39:41Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-007"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/cuda-ux-007-receipts-explain-benchmark"
+pr = 4456
+head_sha = "9191faad65a40875efc0b9aaa37be42aa58ac52e"
+summary = "Opened CUDA-UX-007 benchmark qualification receipt explanation PR."
+notes = [
+  "PR #4456 extends `bitnet receipts explain` with benchmark qualification profile decisions, transfer timing sources, and blockers.",
+  "The PR keeps fresh benchmark execution, speedup, full residency, server readiness, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, and CUDA kernel math claims false.",
+]
