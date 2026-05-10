@@ -1,0 +1,12 @@
+timestamp = "2026-05-10T00:42:10Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started the next dense SLM Metal phase selection slice.",
+  "Scope is limited to a docs/control-plane decision record for the next phase target, CPU reference scope, tensor shapes, parity method, timing fields, fallback rules, and claim boundaries.",
+  "No Metal kernels, resident routing, model downloads, BitNet claim, full apple-m4-metal inference claim, QK256, Neural Engine, MPSGraph, MacBook work, or broad performance claim is introduced.",
+]

@@ -23,7 +23,7 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-METAL-001"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-001-next-phase"
 stackable = false
 review_mode = "codex_premerge"
