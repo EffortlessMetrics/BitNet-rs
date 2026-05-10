@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T01:03:00Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-002"
+event = "merged"
+actor = "codex"
+pr = 4379
+merge_sha = "93503808535c387782401fa6fefadee5f5d88378"
+previous_status = "in_progress"
+next_item = "M4-METAL-003"
+
+notes = [
+  "Merged the phase-scoped Apple M4 dense prefill Q/K/V CPU/Metal parity fixture.",
+  "The fixture is env-gated for live Metal dispatch, records CPU versus Metal Q/K/V parity, and remains outside resident generation.",
+  "Promoted M4-METAL-003 to ready for phase receipt validation.",
+  "No full apple-m4-metal inference claim, BitNet claim, QK256, Neural Engine, MPSGraph, MacBook work, model binary, or broad performance claim is introduced.",
+]
