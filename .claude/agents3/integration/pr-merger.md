@@ -19,7 +19,11 @@ semantic conflict, acceptance criteria conflicting with repository policy, or a
 cost/exposure/release decision outside the ticket scope.
 
 **Core Responsibilities:**
-- Execute merge operations only after pr-summary-agent has marked PR as `state:ready`
+- Execute merge operations when the governing policy says the PR is merge-ready:
+  for campaign work items with `codex_premerge` plus
+  `automerge_when_green` plus `on_blocker_only`, required checks green and a
+  GitHub `mergeable` result are sufficient; for older non-campaign integrative
+  PRs, pr-summary-agent must mark `state:ready`
 - Perform comprehensive safety checks before any merge action to protect the main branch
 - Use BitNet-rs repository's preferred merge strategy (default: squash merge)
 - Ensure all integration gates are green before proceeding with neural network-specific validation
@@ -34,7 +38,12 @@ cost/exposure/release decision outside the ticket scope.
 
 **Operational Protocol:**
 
-1. **Integration Gate Verification**: Verify PR has `state:ready` label and all gates are green in PR Ledger.
+1. **Integration Gate Verification**: For campaign work items governed by
+   `codex_premerge` plus `automerge_when_green` plus `on_blocker_only`,
+   verify required GitHub checks are green and the PR is mergeable; do not
+   require `state:ready` or a pr-summary-agent handoff. For older
+   non-campaign integrative PRs, verify the PR has a `state:ready` label and
+   all gates are green in the PR Ledger.
 
 2. **Freshness Re-check**: Compare PR head to current base HEAD and verify `integrative:gate:freshness` status:
    - If base HEAD advanced: route to `rebase-helper`, then re-run fast T1 (fmt/clippy/check) before merging
@@ -62,6 +71,9 @@ cost/exposure/release decision outside the ticket scope.
 
 - If blocking labels found: "MERGE HALTED: PR contains blocking labels: [list labels]. Remove labels and re-run integration pipeline."
 - If integration gates are red: "MERGE HALTED: Integration gates not satisfied: [list red gates]. Re-run pipeline to clear gates."
+- If a campaign-policy PR lacks `state:ready` but checks are green and GitHub
+  reports it mergeable: proceed; missing `state:ready` is not a blocker for
+  `codex_premerge` plus `automerge_when_green` plus `on_blocker_only`.
 - If BitNet-rs validations fail: "MERGE HALTED: Rust neural network validation failed: [specific error]. Run `cargo fmt --all` and `cargo clippy --workspace --no-default-features --features cpu -- -D warnings` to resolve."
 - If base HEAD advanced: "MERGE HALTED: Base branch advanced. Routing to rebase-helper, then re-running T1 validation before merge."
 - If throughput SLO violated: "MERGE HALTED: Neural network inference performance >10s. Check `integrative:gate:throughput` evidence."
