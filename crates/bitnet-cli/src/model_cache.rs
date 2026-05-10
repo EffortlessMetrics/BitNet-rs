@@ -422,6 +422,25 @@ const SUPPORTED_MODELS: &[SupportedModel] = &[
         apple_m4_cpu_neon_supported: true,
         support_note: "Rust-native Apple M4 CPU/NEON storage-conscious SLM artifact.",
     },
+    SupportedModel {
+        id: "qwen2.5-1.5b-instruct-q4_k_m",
+        aliases: &[],
+        display_name: "Qwen2.5 1.5B Instruct Q4_K_M",
+        repo: "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+        revision: "91cad51170dc346986eccefdc2dd33a9da36ead9",
+        filename: "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        url: "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        sha256: "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        bytes: 1_117_320_736,
+        architecture: "qwen2",
+        quantization: "Q4_K_M",
+        tokenizer_model: "gpt2",
+        tokenizer_pre: "qwen2",
+        chat_template: true,
+        model_contract: None,
+        apple_m4_cpu_neon_supported: true,
+        support_note: "Rust-native Apple M4 CPU/NEON larger Qwen-class SLM artifact; non-default.",
+    },
 ];
 
 async fn fetch_model(
@@ -949,7 +968,9 @@ fn model_capability_summary(model: &SupportedModel) -> Option<VerifyModelCapabil
 
     let (id, cpu_oracle, accelerator_routes, permitted_claims, required_receipts, claim_boundary) =
         if supported_cpu_neon {
-            let capability_id = if model.quantization.eq_ignore_ascii_case("Q8_0") {
+            let capability_id = if model.id.contains("1.5b") {
+                "qwen_dense_slm_1_5b_q4_k_m"
+            } else if model.quantization.eq_ignore_ascii_case("Q8_0") {
                 "qwen_dense_slm_q8_0"
             } else if model.quantization.eq_ignore_ascii_case("Q4_K_M") {
                 "qwen_dense_slm_q4_k_m"
@@ -1317,6 +1338,23 @@ mod tests {
     }
 
     #[test]
+    fn supported_manifest_contains_larger_qwen_candidate() {
+        let model = supported_model("qwen2.5-1.5b-instruct-q4_k_m").unwrap();
+
+        assert!(model.apple_m4_cpu_neon_supported);
+        assert_eq!(model.repo, "Qwen/Qwen2.5-1.5B-Instruct-GGUF");
+        assert_eq!(model.revision, "91cad51170dc346986eccefdc2dd33a9da36ead9");
+        assert_eq!(model.bytes, 1_117_320_736);
+        assert_eq!(
+            model.sha256,
+            "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
+        );
+        assert_eq!(model.tokenizer_pre, "qwen2");
+        assert_eq!(model.quantization, "Q4_K_M");
+        assert!(model.support_note.contains("non-default"));
+    }
+
+    #[test]
     fn verify_model_includes_qwen_dense_capability_summary() {
         let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
         let result = verify_model(model, Path::new("/tmp/missing-qwen-q8.gguf")).unwrap();
@@ -1358,6 +1396,29 @@ mod tests {
         }));
         assert!(capability.permitted_claims.contains(&"apple_m4_cpu_neon_slm_answer".to_string()));
         assert!(capability.required_receipts.contains(&"slm_answer_receipt".to_string()));
+        assert!(capability.claim_boundary.contains("does not prove dense CUDA"));
+    }
+
+    #[test]
+    fn larger_qwen_capability_is_non_default_answer_lane() {
+        let model = supported_model("qwen2.5-1.5b-instruct-q4_k_m").unwrap();
+        let result = verify_model(model, Path::new("/tmp/missing-qwen-15-q4.gguf")).unwrap();
+        let capability = result.model_capability.expect("model capability summary");
+
+        assert!(!result.passed);
+        assert_eq!(capability.id, "qwen_dense_slm_1_5b_q4_k_m");
+        assert_eq!(capability.model_family, "qwen");
+        assert_eq!(capability.quantization, "Q4_K_M");
+        assert_eq!(capability.cpu_oracle, "apple_m4_cpu_neon_slm_answer_lane");
+        assert!(capability.accelerator_routes.iter().any(|route| {
+            route.backend == "apple-m4-cpu-neon"
+                && route.route == "dense_qwen_cpu_neon_slm"
+                && route.status == "answer_lane"
+        }));
+        assert!(capability.permitted_claims.contains(&"apple_m4_cpu_neon_slm_answer".to_string()));
+        assert!(
+            capability.required_receipts.contains(&"fallback_free_backend_receipt".to_string())
+        );
         assert!(capability.claim_boundary.contains("does not prove dense CUDA"));
     }
 

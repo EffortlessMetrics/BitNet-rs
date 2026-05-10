@@ -1,0 +1,77 @@
+schema = 1
+artifact_kind = "apple_m4_slm_model_breadth_cache_registration"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-004"
+created_utc = "2026-05-10T03:29:15Z"
+host = "apple-m4-mac-mini"
+claim_boundary = "Cache/model-registration evidence only. This registers Qwen2.5 1.5B Q4_K_M as a non-default selectable M4 dense SLM model ID after reference and Rust M4 quality gates. It does not change the default, commit a model binary, prove BitNet behavior, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, MacBook behavior, or broad M4 performance."
+
+[model]
+id = "qwen2.5-1.5b-instruct-q4_k_m"
+display_name = "Qwen2.5 1.5B Instruct Q4_K_M"
+source = "Qwen/Qwen2.5-1.5B-Instruct-GGUF"
+revision = "91cad51170dc346986eccefdc2dd33a9da36ead9"
+file = "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+url = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+size_bytes = 1117320736
+sha256 = "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
+architecture = "qwen2"
+quantization = "Q4_K_M"
+tokenizer_model = "gpt2"
+tokenizer_pre = "qwen2"
+chat_template = true
+apple_m4_cpu_neon_supported = true
+default_model = false
+
+[prerequisites]
+reference_gate = "M4-MODEL-010 accepted_reference_good"
+rust_m4_quality_gate = "M4-MODEL-011 accepted_rust_m4_quality"
+
+[[gate]]
+id = "model_cache_registry"
+status = "passed"
+default_model_unchanged = "qwen2.5-0.5b-instruct-q8_0"
+model_id_selectable = true
+capability_id = "qwen_dense_slm_1_5b_q4_k_m"
+permitted_claim = "apple_m4_cpu_neon_slm_answer"
+required_receipts = ["model_verify", "slm_answer_receipt", "fallback_free_backend_receipt"]
+
+[[gate]]
+id = "verify_cached_artifact"
+status = "passed"
+command = "target/debug/bitnet --log-level warn model verify qwen2.5-1.5b-instruct-q4_k_m --cache-dir target/apple-m4-slm-model-breadth/M4-MODEL-004/cache"
+cache_strategy = "target cache symlink to the already downloaded scratch GGUF; no duplicate model copy"
+verified = true
+metadata_written = true
+
+[[gate]]
+id = "fetch_offline_cached_artifact"
+status = "passed"
+command = "target/debug/bitnet --log-level warn model fetch qwen2.5-1.5b-instruct-q4_k_m --cache-dir target/apple-m4-slm-model-breadth/M4-MODEL-004/cache --offline"
+result = "cached"
+network_download = false
+
+[[gate]]
+id = "mac_cache_check"
+status = "passed"
+command = "target/debug/bitnet --device apple-m4-cpu-neon --log-level warn mac check --model-id qwen2.5-1.5b-instruct-q4_k_m --cache-dir target/apple-m4-slm-model-breadth/M4-MODEL-004/cache --json"
+receipt_path = "target/apple-m4-slm-model-breadth/M4-MODEL-004/qwen15-mac-check.json"
+receipt_artifact_kind = "apple_m4_slm_model_cache_check"
+cache_state = "ready"
+verified = true
+metadata_present = true
+runtime_support_apple_m4_cpu_neon = true
+
+[[gate]]
+id = "model_list_surface"
+status = "passed"
+command = "target/debug/bitnet --log-level warn model list --cache-dir target/apple-m4-slm-model-breadth/M4-MODEL-004/cache"
+observed_line = "qwen2.5-1.5b-instruct-q4_k_m             ready         Q4_K_M       supported   -"
+
+[decision]
+result = "registered_supported_non_default"
+supported_model = true
+register_in_cache = true
+default_model_change = false
+next_item_unblocked = true
+summary = "Qwen2.5 1.5B Q4_K_M is registered as an explicit non-default M4 dense SLM model ID after reference and Rust M4 quality gates. The default remains Qwen2.5 0.5B Q8_0."

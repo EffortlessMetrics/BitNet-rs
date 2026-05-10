@@ -209,6 +209,9 @@ registered, or user-supported by this item.
   with `fallback_used = false`, strict GGUF/tokenizer authority, receipt checks,
   and stable duplicate-prompt greedy token IDs. It remains unregistered and
   unsupported until cache/model-registration lands.
+- M4-MODEL-004 outcome: registered as a supported non-default M4 dense SLM model
+  ID. The model-cache entry records fetch/verify/list behavior and Mac cache
+  checks; the default remains `qwen2.5-0.5b-instruct-q8_0`.
 - Rejection criteria:
   - missing GGUF tokenizer or chat-template authority;
   - reference runner cannot produce sane short answers with deterministic

@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T03:29:15Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started cache/model-registration for the accepted Qwen2.5 1.5B Q4_K_M candidate.",
+  "The item registers the model as non-default and selectable by explicit model ID only after M4-MODEL-010 reference sanity and M4-MODEL-011 Rust M4 quality passed.",
+  "The default M4 dense SLM model remains qwen2.5-0.5b-instruct-q8_0.",
+  "No model binary, BitNet claim, full Metal claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, or broad performance claim is introduced.",
+]

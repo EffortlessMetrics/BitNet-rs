@@ -113,8 +113,8 @@ next_item_unblocked = false
 ```
 
 SmolLM2 remains a useful reference-good artifact, but it does not pass the Rust
-M4 quality gate. `M4-MODEL-004` must remain blocked because there is no accepted
-new model to register.
+M4 quality gate. That result did not unblock cache registration; the later
+Qwen2.5 1.5B cycle is the accepted candidate for registration review.
 
 ## Qwen2.5 1.5B Q4_K_M Rust M4 Acceptance
 
