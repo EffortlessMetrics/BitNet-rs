@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T18:51:25Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-005"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-perf-005-h2d-envelope"
+pr = 4450
+head_sha = "38bd37b4dcd4c8e0c277ada0d420c31cc066d772"
+summary = "Opened CUDA-DENSE-PERF-005 dense Qwen H2D transfer envelope PR."
+notes = [
+  "PR #4450 records measured host-to-device model-load wall-clock envelope timing in dense Qwen strict CUDA runtime receipts.",
+  "The receipts preserve D2H logits timing, same-artifact RTX 5070 Ti dense_regular_llm_cuda routing, fallback_used=false, and blocked speed/full-residency/server/BitNet-proof claims.",
+  "The H2D value is explicitly not pure CUDA event copy timing; it is scoped as a model-load wall-clock envelope and marks non-transfer overhead included.",
+]

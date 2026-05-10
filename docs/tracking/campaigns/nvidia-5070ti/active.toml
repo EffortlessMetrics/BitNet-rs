@@ -2292,8 +2292,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-PERF-005"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-perf-005-h2d-envelope"
+pr = 4450
+head_sha = "38bd37b4dcd4c8e0c277ada0d420c31cc066d772"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
