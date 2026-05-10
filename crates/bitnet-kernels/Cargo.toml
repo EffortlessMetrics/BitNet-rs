@@ -121,6 +121,7 @@ path = "tests/neon_correctness_exhaustive.rs"
 [[test]]
 name = "metal_device_integration_tests"
 path = "tests/metal_device_integration_tests.rs"
+required-features = ["metal-runtime"]
 
 [[test]]
 name = "metal_performance_tests"
