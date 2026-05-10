@@ -228,7 +228,8 @@ Your final output **MUST** include this format:
 **Context Check Needed**:
 - Review any new reviewer comments during cleanup
 - Verify all previous feedback has been addressed
-- Check if additional approvals needed
+- Check only for explicit branch-protection or `human_required` blockers;
+  `codex_premerge` work items do not need default human approval
 
 **Expected Flow**: pr-context → pr-finalize → pr-merge → pr-doc-finalize
 **Priority**: Medium - ready for final review phase
