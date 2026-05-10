@@ -1,6 +1,7 @@
 #![cfg(feature = "metal")]
 
 use bitnet_device_probe::{AppleBackendReceipt, AppleResolvedDevice};
+use bitnet_kernels::metal::dense_prefill_qkv::run_dense_prefill_qkv_projection_blocking;
 use bitnet_kernels::metal::smoke::{
     ARTIFACT_KIND, DENSE_KERNEL_FAMILY, DENSE_LAYOUT_SOURCE, DENSE_METAL_PREFILL_LINEAR_KERNEL_ID,
     DENSE_METAL_PREFILL_QKV_KERNEL_ID, DENSE_MODEL_FAMILY, DENSE_PREFILL_IN_FEATURES,
@@ -374,7 +375,7 @@ fn apple_m4_adapter_name_detection_is_specific() {
     assert!(!is_apple_m4_adapter_name("AMD Radeon Pro"));
 }
 
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+#[cfg(all(feature = "metal-runtime", target_os = "macos", target_arch = "aarch64"))]
 mod live_metal {
     use super::*;
     use serde_json::json;
@@ -429,13 +430,6 @@ mod live_metal {
     struct MetalI2sParityOutput {
         adapter_name: String,
         output: Vec<f32>,
-    }
-
-    struct MetalDenseQkvOutput {
-        adapter_name: String,
-        q: Vec<f32>,
-        k: Vec<f32>,
-        v: Vec<f32>,
     }
 
     struct BenchmarkTiming {
@@ -836,7 +830,7 @@ mod live_metal {
         let (cpu_q, cpu_k, cpu_v) = run_dense_prefill_qkv_cpu_reference(&fixture)?;
         let cpu_reference_duration = cpu_reference_start.elapsed();
         let metal_phase_start = Instant::now();
-        let metal_output = run_dense_metal_prefill_qkv_fixture(&fixture)?;
+        let metal_output = run_dense_prefill_qkv_projection_blocking(&fixture)?;
         let metal_phase_duration = metal_phase_start.elapsed();
 
         if !is_apple_m4_adapter_name(&metal_output.adapter_name) {
@@ -1402,199 +1396,6 @@ mod live_metal {
             staging_buffer.unmap();
 
             Ok(MetalI2sParityOutput { adapter_name: adapter_info.name, output })
-        })
-    }
-
-    fn run_dense_metal_prefill_qkv_fixture(
-        fixture: &DenseMetalPrefillQkvFixture,
-    ) -> Result<MetalDenseQkvOutput, Box<dyn Error>> {
-        pollster::block_on(async move {
-            let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-                backends: wgpu::Backends::METAL,
-                ..Default::default()
-            });
-            let adapter = instance
-                .request_adapter(&wgpu::RequestAdapterOptions {
-                    power_preference: wgpu::PowerPreference::HighPerformance,
-                    compatible_surface: None,
-                    force_fallback_adapter: false,
-                })
-                .await
-                .ok_or_else(|| {
-                    io_error(
-                        "no Metal adapter found for M4-METAL-002 dense prefill Q/K/V projection",
-                    )
-                })?;
-
-            let adapter_info = adapter.get_info();
-            if adapter_info.backend != wgpu::Backend::Metal {
-                return Err(io_error(format!(
-                    "M4-METAL-002 dense prefill Q/K/V projection requires Metal backend, found {:?}",
-                    adapter_info.backend
-                )));
-            }
-
-            let (device, queue) = adapter
-                .request_device(&wgpu::DeviceDescriptor::default(), None)
-                .await
-                .map_err(|error| io_error(format!("failed to create Metal device: {error}")))?;
-
-            let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some(DENSE_METAL_PREFILL_QKV_KERNEL_ID),
-                source: wgpu::ShaderSource::Wgsl(DENSE_PREFILL_QKV_SHADER.into()),
-            });
-
-            let activations_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_activations"),
-                contents: bytemuck::cast_slice(&fixture.activations),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-            let q_weights_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_q_weights"),
-                contents: bytemuck::cast_slice(&fixture.q_weights),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-            let k_weights_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_k_weights"),
-                contents: bytemuck::cast_slice(&fixture.k_weights),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-            let v_weights_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_v_weights"),
-                contents: bytemuck::cast_slice(&fixture.v_weights),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-            let mut bias = Vec::with_capacity(
-                fixture.q_bias.len() + fixture.k_bias.len() + fixture.v_bias.len(),
-            );
-            bias.extend_from_slice(&fixture.q_bias);
-            bias.extend_from_slice(&fixture.k_bias);
-            bias.extend_from_slice(&fixture.v_bias);
-            let bias_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_bias"),
-                contents: bytemuck::cast_slice(&bias),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-            let shape_words = dense_prefill_qkv_shape_words(fixture);
-            let shape_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_shape"),
-                contents: bytemuck::cast_slice(&shape_words),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-            let output_len =
-                fixture.expected_q.len() + fixture.expected_k.len() + fixture.expected_v.len();
-            let byte_len = (output_len * std::mem::size_of::<f32>()) as u64;
-            let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_output"),
-                size: byte_len,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-                mapped_at_creation: false,
-            });
-            let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_staging"),
-                size: byte_len,
-                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            });
-
-            let bind_group_layout =
-                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("tiny_metal_dense_prefill_qkv_layout"),
-                    entries: &[
-                        storage_buffer_entry(0, true),
-                        storage_buffer_entry(1, true),
-                        storage_buffer_entry(2, true),
-                        storage_buffer_entry(3, true),
-                        storage_buffer_entry(4, true),
-                        storage_buffer_entry(5, false),
-                        storage_buffer_entry(6, true),
-                    ],
-                });
-
-            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_bind_group"),
-                layout: &bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: activations_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: q_weights_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: k_weights_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: v_weights_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry { binding: 4, resource: bias_buffer.as_entire_binding() },
-                    wgpu::BindGroupEntry {
-                        binding: 5,
-                        resource: output_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry { binding: 6, resource: shape_buffer.as_entire_binding() },
-                ],
-            });
-
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_pipeline_layout"),
-                bind_group_layouts: &[&bind_group_layout],
-                push_constant_ranges: &[],
-            });
-            let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
-
-            let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("tiny_metal_dense_prefill_qkv_encoder"),
-            });
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("tiny_metal_dense_prefill_qkv_pass"),
-                    timestamp_writes: None,
-                });
-                pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &bind_group, &[]);
-                pass.dispatch_workgroups((output_len as u32).div_ceil(SMOKE_WORKGROUP_SIZE), 1, 1);
-            }
-
-            encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, byte_len);
-            queue.submit(std::iter::once(encoder.finish()));
-
-            let slice = staging_buffer.slice(..);
-            let (tx, rx) = std::sync::mpsc::channel();
-            slice.map_async(wgpu::MapMode::Read, move |result| {
-                tx.send(result).unwrap();
-            });
-            device.poll(wgpu::Maintain::Wait);
-            rx.recv()
-                .map_err(|error| io_error(format!("failed to receive Metal map result: {error}")))?
-                .map_err(|error| {
-                    io_error(format!("failed to map Metal dense prefill Q/K/V output: {error}"))
-                })?;
-
-            let data = slice.get_mapped_range();
-            let output = bytemuck::cast_slice::<u8, f32>(&data).to_vec();
-            drop(data);
-            staging_buffer.unmap();
-
-            let q_end = fixture.expected_q.len();
-            let k_end = q_end + fixture.expected_k.len();
-            Ok(MetalDenseQkvOutput {
-                adapter_name: adapter_info.name,
-                q: output[..q_end].to_vec(),
-                k: output[q_end..k_end].to_vec(),
-                v: output[k_end..].to_vec(),
-            })
         })
     }
 
@@ -2638,82 +2439,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         k_index = k_index + 1u;
     }
 
-    output[output_index] = acc;
-}
-"#;
-
-    const DENSE_PREFILL_QKV_SHADER: &str = r#"
-@group(0) @binding(0) var<storage, read> activations: array<f32>;
-@group(0) @binding(1) var<storage, read> q_weights: array<f32>;
-@group(0) @binding(2) var<storage, read> k_weights: array<f32>;
-@group(0) @binding(3) var<storage, read> v_weights: array<f32>;
-@group(0) @binding(4) var<storage, read> bias: array<f32>;
-@group(0) @binding(5) var<storage, read_write> output: array<f32>;
-@group(0) @binding(6) var<storage, read> shape: array<u32>;
-
-@compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let output_index = global_id.x;
-    let batch_size = shape[0];
-    let hidden_size = shape[1];
-    let q_dim = shape[2];
-    let kv_dim = shape[3];
-    let q_count = batch_size * q_dim;
-    let kv_count = batch_size * kv_dim;
-    let total = q_count + kv_count + kv_count;
-
-    if output_index >= total {
-        return;
-    }
-
-    if output_index < q_count {
-        let row = output_index / q_dim;
-        let col = output_index % q_dim;
-        var acc = bias[col];
-        var k_index = 0u;
-        loop {
-            if k_index >= hidden_size {
-                break;
-            }
-            acc = acc + activations[row * hidden_size + k_index] *
-                q_weights[col * hidden_size + k_index];
-            k_index = k_index + 1u;
-        }
-        output[output_index] = acc;
-        return;
-    }
-
-    if output_index < q_count + kv_count {
-        let local_index = output_index - q_count;
-        let row = local_index / kv_dim;
-        let col = local_index % kv_dim;
-        var acc = bias[q_dim + col];
-        var k_index = 0u;
-        loop {
-            if k_index >= hidden_size {
-                break;
-            }
-            acc = acc + activations[row * hidden_size + k_index] *
-                k_weights[col * hidden_size + k_index];
-            k_index = k_index + 1u;
-        }
-        output[output_index] = acc;
-        return;
-    }
-
-    let local_index = output_index - q_count - kv_count;
-    let row = local_index / kv_dim;
-    let col = local_index % kv_dim;
-    var acc = bias[q_dim + kv_dim + col];
-    var k_index = 0u;
-    loop {
-        if k_index >= hidden_size {
-            break;
-        }
-        acc = acc + activations[row * hidden_size + k_index] *
-            v_weights[col * hidden_size + k_index];
-        k_index = k_index + 1u;
-    }
     output[output_index] = acc;
 }
 "#;

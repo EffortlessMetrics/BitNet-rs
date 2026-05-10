@@ -36,6 +36,10 @@ half = { version = "2.7.1", optional = true }
 sysinfo = "0.38.0"
 memory-stats = "1.2.0"
 
+[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
+wgpu = { version = "24", optional = true, features = ["metal"] }
+pollster = { version = "0.4", optional = true }
+
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.182"
 
@@ -64,10 +68,6 @@ bitnet-test-support.workspace = true
 libc = "0.2.182"
 libm = "0.2.16"
 
-[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dev-dependencies]
-wgpu = { version = "24", features = ["metal"] }
-pollster = "0.4"
-
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 # x86-specific dependencies
 
@@ -93,6 +93,7 @@ oneapi = ["dep:opencl3", "bitnet-common/oneapi", "bitnet-device-probe/oneapi"]
 opencl = ["dep:opencl3", "bitnet-common/opencl", "bitnet-device-probe/opencl"]
 ffi = ["dep:cc", "dep:bindgen"]
 metal = []
+metal-runtime = ["metal", "dep:wgpu", "dep:pollster"]
 inference = []
 strict = []  # Strict mode for mock elimination validation
 

@@ -171,7 +171,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-005"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-005-runtime-api"
 stackable = false
 review_mode = "codex_premerge"
@@ -181,7 +181,7 @@ blocked_by = ["M4-METAL-004"]
 acceptance = "Promote the validated dense prefill Q/K/V Metal dispatch from test-only code into a non-dev runtime API with target/feature-gated dependencies, generic CI-safe fixture tests, live M4 opt-in proof, and no resident generation routing."
 commands = [
   "cargo fmt --all -- --check",
-  "cargo test --locked -p bitnet-kernels --no-default-features --features metal --test metal_tiny_smoke dense_prefill",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features metal,metal-runtime --test metal_tiny_smoke dense_prefill",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-metal-phases",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
