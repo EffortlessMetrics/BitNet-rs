@@ -3126,7 +3126,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-003"
-status = "proposed"
+status = "in_progress"
 branch = "codex/cuda-ux-003-dense-ask"
 stackable = false
 review_mode = "codex_premerge"

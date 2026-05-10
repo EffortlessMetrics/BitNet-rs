@@ -60,6 +60,7 @@ use bitnet_receipts_core::{
     DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
+    DENSE_GGUF_QWEN_ASK_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
@@ -83,6 +84,7 @@ use bitnet_receipts_core::{
     validate_dense_gguf_one_layer_cpu_reference_receipt_json,
     validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
+    validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json,
@@ -129,6 +131,7 @@ const DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT: &str =
     "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-sampling-policy-qwen25-q8.json";
 const DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json";
 const DEFAULT_DENSE_QWEN_SHORT_DECODE_PROOF_RECEIPT: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json";
+const DEFAULT_DENSE_QWEN_WARM_SESSION_PROOF_RECEIPT: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json";
 const DEFAULT_QWEN_WARM_SESSION_PROMPTS: &[&str] = &[
     "What is 2+2?",
     "Name one color of the sky.",
@@ -1346,6 +1349,248 @@ impl DenseGgufQwenWarmSessionStrictCudaCommand {
             .map(|prompt| (*prompt).to_string())
             .collect())
     }
+}
+
+/// Inputs for the user-facing dense Qwen CUDA ask wrapper.
+#[derive(Debug, Clone)]
+pub struct DenseQwenCudaAskOptions {
+    pub model: PathBuf,
+    pub question: String,
+    pub max_new_tokens: usize,
+    pub top_k: usize,
+    pub device_index: usize,
+    pub receipt_out: Option<PathBuf>,
+}
+
+/// Result of a governed dense Qwen CUDA ask run.
+#[derive(Debug, Clone)]
+pub struct DenseQwenCudaAskOutcome {
+    pub answer: String,
+    pub receipt_path: PathBuf,
+    pub receipt: Value,
+}
+
+/// Default receipt path for the dense Qwen CUDA ask UX receipt.
+pub(crate) fn dense_qwen_cuda_ask_default_receipt_path() -> PathBuf {
+    PathBuf::from("target")
+        .join("bitnet")
+        .join("receipts")
+        .join("dense-cuda-ask")
+        .join("dense-qwen-ask-latest.json")
+}
+
+/// Run the governed dense Qwen CUDA ask path by wrapping the bounded
+/// short-decode runtime proof in a user-facing ask receipt.
+pub async fn run_dense_qwen_cuda_ask(
+    options: DenseQwenCudaAskOptions,
+) -> Result<DenseQwenCudaAskOutcome> {
+    if options.question.trim().is_empty() {
+        bail!("dense Qwen CUDA ask requires a non-empty question");
+    }
+    if !(5..=16).contains(&options.max_new_tokens) {
+        bail!("dense Qwen CUDA ask is currently bounded to --max-new-tokens 5..=16");
+    }
+    if options.top_k == 0 {
+        bail!("dense Qwen CUDA ask requires top-k evidence; pass --top-k > 0 or use the default");
+    }
+
+    let receipt_path =
+        options.receipt_out.clone().unwrap_or_else(dense_qwen_cuda_ask_default_receipt_path);
+    let source_short_decode_path = dense_qwen_cuda_ask_source_receipt_path(&receipt_path);
+
+    let short_decode = DenseGgufQwenShortDecodeStrictCudaCommand {
+        model: options.model.clone(),
+        prompt: options.question.clone(),
+        max_new_tokens: options.max_new_tokens,
+        top_k: options.top_k,
+        device_index: options.device_index,
+        all_layer_plan: PathBuf::from(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT),
+        model_boundary_fixtures: PathBuf::from(DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT),
+        kv_cache_policy: PathBuf::from(DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT),
+        sampling_policy: PathBuf::from(DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT),
+        one_token_proof: PathBuf::from(DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT),
+        json_out: Some(source_short_decode_path.clone()),
+    };
+    short_decode.execute().await?;
+
+    let (source_short_decode_receipt, source_short_decode_sha256) =
+        read_and_validate_receipt(&source_short_decode_path, |receipt| {
+            validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(receipt)
+        })?;
+    let (_, warm_session_sha256) = read_and_validate_receipt(
+        Path::new(DEFAULT_DENSE_QWEN_WARM_SESSION_PROOF_RECEIPT),
+        |receipt| validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(receipt),
+    )?;
+
+    let source_proof = source_short_decode_receipt
+        .get("short_decode_proof")
+        .ok_or_else(|| anyhow!("short-decode source receipt is missing short_decode_proof"))?;
+    let answer = source_proof
+        .get("decoded_text")
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| anyhow!("short-decode source receipt produced an empty answer"))?
+        .to_string();
+    let generated_tokens_count = source_proof
+        .get("generated_tokens_count")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| anyhow!("short-decode source receipt is missing generated_tokens_count"))?;
+
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let receipt = dense_qwen_cuda_ask_receipt_json(
+        &source_short_decode_receipt,
+        &source_short_decode_sha256,
+        &warm_session_sha256,
+        &receipt_path,
+        &timestamp_utc,
+        &options.question,
+        &answer,
+        generated_tokens_count,
+    )?;
+    validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(&receipt)?;
+
+    if let Some(parent) = receipt_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)?;
+
+    Ok(DenseQwenCudaAskOutcome { answer, receipt_path, receipt })
+}
+
+fn dense_qwen_cuda_ask_source_receipt_path(receipt_path: &Path) -> PathBuf {
+    let parent = receipt_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem =
+        receipt_path.file_stem().and_then(|value| value.to_str()).unwrap_or("dense-qwen-ask");
+    parent.join(format!("{stem}.source-short-decode.json"))
+}
+
+fn dense_qwen_cuda_ask_receipt_json(
+    source_short_decode_receipt: &Value,
+    source_short_decode_sha256: &str,
+    warm_session_sha256: &str,
+    receipt_path: &Path,
+    timestamp_utc: &str,
+    question: &str,
+    answer: &str,
+    generated_tokens_count: u64,
+) -> Result<Value> {
+    let source_proof = source_short_decode_receipt
+        .get("short_decode_proof")
+        .ok_or_else(|| anyhow!("short-decode source receipt is missing short_decode_proof"))?;
+    let source_prerequisites = source_short_decode_receipt
+        .get("prerequisite_receipts")
+        .ok_or_else(|| anyhow!("short-decode source receipt is missing prerequisite_receipts"))?;
+
+    let mut receipt = source_short_decode_receipt.clone();
+    receipt["artifact_kind"] = json!(DENSE_GGUF_QWEN_ASK_STRICT_CUDA_PROOF_ARTIFACT_KIND);
+    receipt["artifact_path"] = json!(receipt_path.display().to_string());
+    receipt["claim"] = json!("dense_gguf_qwen_ask_strict_cuda_proof_recorded");
+    receipt["timestamp_utc"] = json!(timestamp_utc);
+    receipt["execution_path"]["kernel_family"] = json!("dense_qwen_ask_strict_cuda");
+    receipt["execution_path"]["quantization_family"] =
+        json!("dense_gguf_q8_0_f16_qwen_ask_contract");
+    receipt["execution_plan"]["quantization"] = json!("dense_gguf_q8_0_f16_qwen_ask_contract");
+    receipt["quality_gate"] = json!({
+        "schema": 1,
+        "gate": "qwen_cuda_ask_answer",
+        "passed": true,
+        "ask_claimed": true,
+        "chat_claimed": false
+    });
+    receipt["quality"] = json!({
+        "passed": true,
+        "gate": "qwen_cuda_ask_answer",
+        "ask_claimed": true,
+        "chat_claimed": false
+    });
+    receipt["tensor_residency"]["scope"] = json!("qwen_ask_strict_cuda");
+    receipt["residency"] = json!({
+        "weights_uploaded_once": true,
+        "per_token_weight_upload": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["answer"] = json!(answer);
+    receipt["question"] = json!(question);
+    receipt["receipt"] = json!({
+        "path": receipt_path.display().to_string(),
+        "defaulted_for_dense_cuda_ask": true
+    });
+    receipt["prerequisite_receipts"] = json!({
+        "schema": 1,
+        "all_layer_execution_plan_artifact_kind": source_prerequisites["all_layer_execution_plan_artifact_kind"].clone(),
+        "all_layer_execution_plan_receipt_sha256": source_prerequisites["all_layer_execution_plan_receipt_sha256"].clone(),
+        "model_boundary_fixtures_artifact_kind": source_prerequisites["model_boundary_fixtures_artifact_kind"].clone(),
+        "model_boundary_fixtures_receipt_sha256": source_prerequisites["model_boundary_fixtures_receipt_sha256"].clone(),
+        "kv_cache_policy_artifact_kind": source_prerequisites["kv_cache_policy_artifact_kind"].clone(),
+        "kv_cache_policy_receipt_sha256": source_prerequisites["kv_cache_policy_receipt_sha256"].clone(),
+        "sampling_policy_artifact_kind": source_prerequisites["sampling_policy_artifact_kind"].clone(),
+        "sampling_policy_receipt_sha256": source_prerequisites["sampling_policy_receipt_sha256"].clone(),
+        "one_token_proof_artifact_kind": source_prerequisites["one_token_proof_artifact_kind"].clone(),
+        "one_token_proof_receipt_sha256": source_prerequisites["one_token_proof_receipt_sha256"].clone(),
+        "short_decode_proof_artifact_kind": DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+        "short_decode_proof_receipt_sha256": source_short_decode_sha256,
+        "warm_session_proof_artifact_kind": DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+        "warm_session_proof_receipt_sha256": warm_session_sha256,
+        "all_required_receipts_verified": true,
+        "all_layer_execution_plan_claimed": true,
+        "model_boundary_fixtures_claimed": true,
+        "kv_cache_policy_claimed": true,
+        "sampling_policy_claimed": true,
+        "one_token_proof_claimed": true,
+        "short_decode_proof_claimed": true,
+        "warm_session_proof_claimed": true
+    });
+    receipt["ask_proof"] = json!({
+        "schema": 1,
+        "proof_scope": "qwen_strict_cuda_ask_from_short_decode",
+        "model_family": "qwen",
+        "question": question,
+        "answer": answer,
+        "requested_new_tokens": generated_tokens_count,
+        "generated_tokens_count": generated_tokens_count,
+        "generation_policy": "greedy",
+        "deterministic": true,
+        "fallback_used": false,
+        "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+        "cuda_target_backend": HARDWARE_LANE,
+        "prompt_token_count": source_proof["prompt_token_count"].clone(),
+        "prompt_token_ids_sha256": source_proof["prompt_token_ids_sha256"].clone(),
+        "cpu_generated_token_ids": source_proof["cpu_generated_token_ids"].clone(),
+        "cuda_generated_token_ids": source_proof["cuda_generated_token_ids"].clone(),
+        "cpu_generated_token_ids_sha256": source_proof["cpu_generated_token_ids_sha256"].clone(),
+        "cuda_generated_token_ids_sha256": source_proof["cuda_generated_token_ids_sha256"].clone(),
+        "generated_token_ids_match": true,
+        "first_token_divergence_index": null,
+        "top_k_evidence_recorded": true,
+        "top_k_compared": true,
+        "top_k_all_match": source_proof["top_k_all_match"].clone(),
+        "first_top_k_divergence_index": source_proof["first_top_k_divergence_index"].clone(),
+        "top_k_max_abs_error": source_proof["top_k_max_abs_error"].clone(),
+        "top_k_mean_abs_error": source_proof["top_k_mean_abs_error"].clone(),
+        "qwen_one_token_cuda_claimed": true,
+        "qwen_short_decode_cuda_claimed": true,
+        "qwen_warm_session_cuda_claimed": true,
+        "qwen_ask_cuda_claimed": true,
+        "qwen_chat_cuda_claimed": false,
+        "dense_gguf_inference_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "speedup_claim": false,
+        "server_ready_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["claim_boundary"]["qwen_warm_session_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["qwen_ask_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(false);
+    receipt["claim_boundary"]["server_ready_claimed"] = json!(false);
+    receipt["claim_boundary"]["speedup_claim"] = json!(false);
+    receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(false);
+    receipt["notes"] = json!([
+        "CUDA-UX-003 exposes the bounded dense Qwen CUDA ask path through the user-facing CLI.",
+        "This receipt wraps the short-decode runtime proof and warm-session prerequisite without claiming chat, server readiness, speedup, persistent residency, full CUDA residency, or BitNet packed I2_S/QK256 proof."
+    ]);
+    receipt["source_short_decode_receipt"] = source_short_decode_receipt.clone();
+    Ok(receipt)
 }
 
 /// Emit a full dense GGUF layer-0 CPU reference harness receipt.

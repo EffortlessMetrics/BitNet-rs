@@ -313,6 +313,56 @@ pub(crate) fn verified_apple_m4_slm_model(
 }
 
 #[cfg(feature = "full-cli")]
+pub(crate) fn verified_dense_qwen_cuda_model_arg(
+    model_arg: &Path,
+    cache_dir: Option<PathBuf>,
+) -> Result<Option<VerifiedCachedModel>> {
+    let model_label = model_arg.as_os_str().to_string_lossy();
+    let Some(model) = SUPPORTED_MODELS.iter().find(|model| {
+        model.id.eq_ignore_ascii_case(model_label.as_ref())
+            || model.aliases.iter().any(|alias| alias.eq_ignore_ascii_case(model_label.as_ref()))
+    }) else {
+        return Ok(None);
+    };
+
+    if model.id != M4_SLM_RUNTIME_MODEL_ID || model.quantization != "Q8_0" {
+        anyhow::bail!(
+            "model `{}` is not supported for dense RTX 5070 Ti CUDA ask yet; CUDA-UX-003 is scoped to qwen2.5-0.5b-instruct-q8_0",
+            model.id
+        );
+    }
+
+    let cache_root = resolve_cache_root(cache_dir)?;
+    let path = model_path(&cache_root, model);
+    let status = cache_status(&cache_root, *model, true)?;
+    if !cache_ready(&status) {
+        anyhow::bail!(
+            "cached dense Qwen CUDA model `{}` is not ready at {}.\nState: {}\n{}",
+            model.id,
+            path.display(),
+            cache_state_label(&status),
+            cache_repair_guidance(&cache_root, &status)
+        );
+    }
+    let result = verify_model(model, &path)?;
+    write_cache_metadata(&cache_root, model, &path, &result)?;
+    Ok(Some(VerifiedCachedModel {
+        id: model.id.to_string(),
+        display_name: model.display_name.to_string(),
+        path,
+        cache_root,
+        sha256: model.sha256.to_string(),
+        bytes: model.bytes,
+        architecture: model.architecture.to_string(),
+        quantization: model.quantization.to_string(),
+        tokenizer_model: model.tokenizer_model.to_string(),
+        tokenizer_pre: model.tokenizer_pre.to_string(),
+        chat_template: model.chat_template,
+        support_note: model.support_note.to_string(),
+    }))
+}
+
+#[cfg(feature = "full-cli")]
 pub(crate) fn apple_m4_slm_cache_status_json(
     id: &str,
     cache_dir: Option<PathBuf>,
@@ -401,7 +451,7 @@ const SUPPORTED_MODELS: &[SupportedModel] = &[
         chat_template: true,
         model_contract: None,
         apple_m4_cpu_neon_supported: true,
-        support_note: "Rust-native Apple M4 CPU/NEON SLM baseline artifact.",
+        support_note: "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate.",
     },
     SupportedModel {
         id: "qwen2.5-0.5b-instruct-q4_k_m",
@@ -977,25 +1027,40 @@ fn model_capability_summary(model: &SupportedModel) -> Option<VerifyModelCapabil
             } else {
                 "qwen_dense_slm_supported"
             };
+            let mut accelerator_routes = vec![VerifyRouteSummary {
+                backend: "apple-m4-cpu-neon".to_string(),
+                route: "dense_qwen_cpu_neon_slm".to_string(),
+                status: "answer_lane".to_string(),
+            }];
+            let mut permitted_claims = vec![
+                "artifact_inspection".to_string(),
+                "model_verify".to_string(),
+                "apple_m4_cpu_neon_slm_answer".to_string(),
+            ];
+            let mut required_receipts = vec![
+                "model_verify".to_string(),
+                "slm_answer_receipt".to_string(),
+                "fallback_free_backend_receipt".to_string(),
+            ];
+            let claim_boundary = if model.quantization.eq_ignore_ascii_case("Q8_0") {
+                accelerator_routes.push(VerifyRouteSummary {
+                    backend: "nvidia-rtx-5070-ti-cuda".to_string(),
+                    route: "dense_regular_llm_cuda".to_string(),
+                    status: "bounded_ask_receipt_gate".to_string(),
+                });
+                permitted_claims.push("nvidia_rtx_5070_ti_dense_cuda_ask".to_string());
+                required_receipts.push("dense_gguf_qwen_ask_strict_cuda_proof".to_string());
+                "Dense Qwen SLM artifact for the Apple M4 CPU/NEON answer lane and bounded RTX 5070 Ti dense CUDA ask gate; does not prove Qwen chat, broad dense GGUF inference, BitNet packed QK256, server, speedup, or full-residency claims."
+            } else {
+                "Dense Qwen SLM artifact for the Apple M4 CPU/NEON answer lane; does not prove dense CUDA, BitNet packed QK256, server, speedup, or full-residency claims."
+            };
             (
                 capability_id,
                 "apple_m4_cpu_neon_slm_answer_lane",
-                vec![VerifyRouteSummary {
-                    backend: "apple-m4-cpu-neon".to_string(),
-                    route: "dense_qwen_cpu_neon_slm".to_string(),
-                    status: "answer_lane".to_string(),
-                }],
-                vec![
-                    "artifact_inspection".to_string(),
-                    "model_verify".to_string(),
-                    "apple_m4_cpu_neon_slm_answer".to_string(),
-                ],
-                vec![
-                    "model_verify".to_string(),
-                    "slm_answer_receipt".to_string(),
-                    "fallback_free_backend_receipt".to_string(),
-                ],
-                "Dense Qwen SLM artifact for the Apple M4 CPU/NEON answer lane; does not prove dense CUDA, BitNet packed QK256, server, speedup, or full-residency claims.",
+                accelerator_routes,
+                permitted_claims,
+                required_receipts,
+                claim_boundary,
             )
         } else {
             (
@@ -1375,8 +1440,22 @@ mod tests {
                 && route.route == "dense_qwen_cpu_neon_slm"
                 && route.status == "answer_lane"
         }));
+        assert!(capability.accelerator_routes.iter().any(|route| {
+            route.backend == "nvidia-rtx-5070-ti-cuda"
+                && route.route == "dense_regular_llm_cuda"
+                && route.status == "bounded_ask_receipt_gate"
+        }));
         assert!(capability.permitted_claims.contains(&"apple_m4_cpu_neon_slm_answer".to_string()));
-        assert!(capability.claim_boundary.contains("does not prove dense CUDA"));
+        assert!(
+            capability.permitted_claims.contains(&"nvidia_rtx_5070_ti_dense_cuda_ask".to_string())
+        );
+        assert!(
+            capability
+                .required_receipts
+                .contains(&"dense_gguf_qwen_ask_strict_cuda_proof".to_string())
+        );
+        assert!(capability.claim_boundary.contains("bounded RTX 5070 Ti dense CUDA ask gate"));
+        assert!(capability.claim_boundary.contains("does not prove Qwen chat"));
     }
 
     #[test]
