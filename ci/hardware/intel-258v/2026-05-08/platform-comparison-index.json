@@ -2,7 +2,7 @@
   "schema": 1,
   "artifact_kind": "lunar_lake_platform_comparison_index",
   "machine_id": "intel-258v",
-  "captured_at_utc": "2026-05-08T22:21:06Z",
+  "captured_at_utc": "2026-05-09T23:57:22Z",
   "proof_stage": "comparison_indexed",
   "comparison_scope": "same_machine_artifact_index",
   "artifact_dates": [
