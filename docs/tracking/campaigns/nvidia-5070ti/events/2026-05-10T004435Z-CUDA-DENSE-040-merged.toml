@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T00:44:35Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-040"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4370
+merge_sha = "5cf420a3e0e3b3abf3df17196fc5b58c5060acde"
+actor = "codex"
+branch = "codex/cuda-dense-040-sampling-policy"
+summary = "Merged CUDA-DENSE-040 after adding governed dense GGUF sampling-policy receipts."
+notes = [
+  "PR #4370 added dense_gguf_sampling_policy receipt support and the committed RTX 5070 Ti Qwen2.5 Q8_0 hardware receipt.",
+  "The receipt records LM-head fixture logits hash and top-k evidence, deterministic greedy CPU sampler settings, and estimated logits D2H byte accounting.",
+  "The closeout preserves the existing non-claims for runtime sampling integration, dense GGUF inference, Qwen one-token/short decode/chat, speedup, persistent/full residency, server readiness, BitNet packed proof, tokenizer behavior, loader behavior, transformer runtime behavior, QK256, BitNet CUDA, and CUDA kernel math.",
+]
