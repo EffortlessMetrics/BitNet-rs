@@ -119,6 +119,26 @@
             border-color: #007bff;
         }
 
+        .range-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .range-header label {
+            margin-bottom: 0;
+        }
+
+        .range-value {
+            font-weight: 500;
+            color: #0056b3;
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
         textarea {
             resize: vertical;
             min-height: 100px;
@@ -436,9 +456,11 @@
             </div>
 
             <div class="input-group">
-                <label for="temperature">Temperature:</label>
+                <div class="range-header">
+                    <label for="temperature">Temperature:</label>
+                    <span id="temperature-value" class="range-value">0.7</span>
+                </div>
                 <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
-                <span id="temperature-value">0.7</span>
             </div>
 
             <div class="input-group">
@@ -447,9 +469,11 @@
             </div>
 
             <div class="input-group">
-                <label for="top-p">Top-P:</label>
+                <div class="range-header">
+                    <label for="top-p">Top-P:</label>
+                    <span id="top-p-value" class="range-value">0.9</span>
+                </div>
                 <input type="range" id="top-p" min="0" max="1" step="0.05" value="0.9">
-                <span id="top-p-value">0.9</span>
             </div>
 
             <div class="input-group">
