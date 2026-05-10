@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T06:28:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-046"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-046-warm-session"
+summary = "Started CUDA-DENSE-046 dense Qwen warm-session strict CUDA runtime proof implementation."
+notes = [
+  "The implementation adds the governed dense-gguf-qwen-warm-session-strict-cuda command and emits a validated RTX 5070 Ti hardware receipt from the SHA-verified Qwen2.5 0.5B Q8_0 artifact.",
+  "The hardware receipt records three deterministic turns, 24 generated greedy tokens, fallback_used=false, CPU/CUDA generated-token agreement, top-k comparison evidence, timing, transfer bytes, scoped warm-session reuse evidence, and prerequisite receipt hashes.",
+  "The lane preserves ask/chat UX, speedup, persistent/full-residency beyond the warm-session scope, server, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims.",
+]
