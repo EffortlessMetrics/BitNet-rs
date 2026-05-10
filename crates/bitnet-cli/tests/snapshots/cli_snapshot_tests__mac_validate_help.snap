@@ -62,6 +62,9 @@ Options:
       --allocation-audit
           Include scoped hot-loop allocation counter deltas in warm-session profile receipts
 
+      --metal-prefill-qkv-phase
+          Route the validated Q/K/V prefill Metal phase during the smoke quality corpus
+
       --progress
           Emit operator progress lines to stderr while validation runs
 

@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T02:18:00Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-006"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started routing the fixture-scoped dense prefill Q/K/V Metal runtime API into resident Mac dense SLM flows as an opt-in phase contribution.",
+  "The route keeps answer generation on apple-m4-cpu-neon, emits per-turn phase_contribution receipts, and records resident greedy token parity without claiming full Metal inference.",
+  "A live M4 smoke quality corpus run with --metal-prefill-qkv-phase passed and produced a durable aggregate receipt under ci/hardware/apple-m4-mac-mini/2026-05-10/slm-metal-phases/metal-dense-prefill-qkv-resident-session.json.",
+  "No full apple-m4-metal inference claim, BitNet claim, QK256, Neural Engine, MPSGraph, MacBook work, model binary, or broad performance claim is introduced.",
+]

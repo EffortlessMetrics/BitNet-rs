@@ -59,20 +59,32 @@ M4-METAL-007:
 fixture construction, and CPU-side behavior. Live Apple M4 Metal dispatch should
 remain opt-in or Mac-runner scoped.
 
-`M4-METAL-005` implements that first prerequisite as a fixture-scoped runtime
+`M4-METAL-005` implemented that first prerequisite as a fixture-scoped runtime
 API in `bitnet_kernels::metal::dense_prefill_qkv`, gated behind the opt-in
-`metal-runtime` feature so ordinary CI can keep using lightweight `metal`
-receipt checks without pulling live dispatch dependencies. That API is
-intentionally not wired into `bitnet mac chat`, `bitnet mac validate`, or
-resident generation; `M4-METAL-006` owns that routing decision after the runtime
-API is available.
+`metal-runtime` feature.
 
-## Allowed Claim After M4-METAL-004
+`M4-METAL-006` routes that API into resident Mac flows through the explicit
+`--metal-prefill-qkv-phase` option on `bitnet mac chat` and the smoke quality
+corpus mode of `bitnet mac validate`. The route emits per-turn
+`phase_contribution` receipts and records the aggregate resident receipt under:
 
 ```text
-The M4 dense SLM Metal resident-routing prerequisite is documented:
-the Q/K/V phase is validated, but resident routing waits for a non-dev Metal
-runtime API.
+ci/hardware/apple-m4-mac-mini/2026-05-10/slm-metal-phases/metal-dense-prefill-qkv-resident-session.json
+```
+
+This remains a phase contribution. Generated answer tokens are still produced
+by `apple-m4-cpu-neon`; the resident receipt records
+`cpu_pipeline_for_remaining_phases=true`,
+`resident_greedy_token_ids_match_cpu_reference=true`,
+`fallback_used=false` for the Metal phase, and
+`full_metal_inference_claimed=false`.
+
+## Allowed Claim After M4-METAL-006
+
+```text
+The named Q/K/V Metal phase can run as an opt-in resident dense SLM phase
+contribution with CPU/NEON generation for the rest of the pipeline and receipt
+validated parity.
 ```
 
 ## Claim Boundary

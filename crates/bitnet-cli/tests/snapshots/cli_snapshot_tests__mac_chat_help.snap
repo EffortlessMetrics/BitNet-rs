@@ -51,6 +51,8 @@ Options:
           Disable per-turn receipt files; the aggregate session receipt still records each turn
       --allocation-audit
           Include scoped hot-loop allocation counter deltas in session receipts
+      --metal-prefill-qkv-phase
+          Route the validated Q/K/V prefill Metal phase as an opt-in contribution; answers remain CPU/NEON
       --json-out <PATH>
           Output aggregate Mac chat session receipt [default: target/apple-m4-continuity/mac-chat.json]
   -h, --help

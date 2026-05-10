@@ -334,6 +334,10 @@ enum MacAction {
         #[arg(long, default_value_t = false)]
         allocation_audit: bool,
 
+        /// Route the validated Q/K/V prefill Metal phase as an opt-in contribution; answers remain CPU/NEON.
+        #[arg(long = "metal-prefill-qkv-phase", default_value_t = false)]
+        metal_prefill_qkv_phase: bool,
+
         /// Output aggregate Mac chat session receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_CHAT_DEFAULT_RECEIPT)]
         json_out: PathBuf,
@@ -372,6 +376,10 @@ enum MacAction {
         /// Include scoped hot-loop allocation counter deltas in warm-session profile receipts.
         #[arg(long, default_value_t = false)]
         allocation_audit: bool,
+
+        /// Route the validated Q/K/V prefill Metal phase during the smoke quality corpus.
+        #[arg(long = "metal-prefill-qkv-phase", default_value_t = false)]
+        metal_prefill_qkv_phase: bool,
 
         /// Emit operator progress lines to stderr while validation runs.
         #[arg(long, default_value_t = false)]
@@ -598,6 +606,7 @@ impl MacCommand {
                 quiet,
                 turn_receipts,
                 allocation_audit,
+                metal_prefill_qkv_phase,
                 json_out,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac chat")?;
@@ -620,6 +629,7 @@ impl MacCommand {
                     turn_receipts,
                     prompt_input.interactive,
                     allocation_audit,
+                    metal_prefill_qkv_phase,
                     json_out,
                 );
                 tokio::select! {
@@ -641,6 +651,7 @@ impl MacCommand {
                 max_new_tokens,
                 threads,
                 allocation_audit,
+                metal_prefill_qkv_phase,
                 progress,
                 quiet,
                 json_out,
@@ -655,6 +666,7 @@ impl MacCommand {
                     max_new_tokens,
                     threads,
                     allocation_audit,
+                    metal_prefill_qkv_phase,
                     progress,
                     quiet,
                     json_out,
@@ -2719,6 +2731,7 @@ async fn run_chat_session(
     turn_receipts: bool,
     interactive_prompt_collection: bool,
     allocation_audit: bool,
+    metal_prefill_qkv_phase: bool,
     json_out: PathBuf,
 ) -> Result<()> {
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
@@ -2759,7 +2772,8 @@ async fn run_chat_session(
         crate::SlmWarmSessionOutput::new(stream, progress, quiet)
             .with_prompt_receipts(turn_receipts)
             .with_interactive_prompt_collection(interactive_prompt_collection)
-            .with_model_sha256_override(Some(model.sha256.clone())),
+            .with_model_sha256_override(Some(model.sha256.clone()))
+            .with_metal_prefill_qkv_phase(metal_prefill_qkv_phase),
         1,
         1,
         json_out.clone(),
@@ -2786,6 +2800,7 @@ struct MacValidateRun<'a> {
     max_new_tokens: usize,
     threads: usize,
     allocation_audit: bool,
+    metal_prefill_qkv_phase: bool,
     progress: bool,
     quiet: bool,
     json_out: PathBuf,
@@ -2801,6 +2816,7 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
         max_new_tokens,
         threads,
         allocation_audit,
+        metal_prefill_qkv_phase,
         progress,
         quiet,
         json_out,
@@ -2813,10 +2829,20 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
     }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     if profile_set == MacValidateProfileSet::Operator {
+        if metal_prefill_qkv_phase {
+            anyhow::bail!(
+                "mac validate --metal-prefill-qkv-phase is scoped to the smoke quality corpus; profile timing remains CPU/NEON until M4-METAL-007"
+            );
+        }
         return run_operator_profiles(model, json_out, threads, allocation_audit, progress, quiet)
             .await;
     }
     if profile_set == MacValidateProfileSet::Performance {
+        if metal_prefill_qkv_phase {
+            anyhow::bail!(
+                "mac validate --metal-prefill-qkv-phase is scoped to the smoke quality corpus; profile timing remains CPU/NEON until M4-METAL-007"
+            );
+        }
         return run_performance_profiles(
             model,
             json_out,
@@ -2854,7 +2880,8 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
         true,
         allocation_audit,
         crate::SlmWarmSessionOutput::new(false, progress, quiet)
-            .with_model_sha256_override(Some(model.sha256.clone())),
+            .with_model_sha256_override(Some(model.sha256.clone()))
+            .with_metal_prefill_qkv_phase(metal_prefill_qkv_phase),
         1,
         1,
         json_out.clone(),
@@ -4596,6 +4623,11 @@ fn validate_warm_session_receipt(
     if prompts.is_empty() {
         anyhow::bail!("{} warm-session receipt has no prompts", path.display());
     }
+    let metal_phase_contributions_enabled =
+        receipt["metal_phase_contributions"]["enabled"].as_bool().unwrap_or(false);
+    if metal_phase_contributions_enabled {
+        validate_warm_session_metal_phase_header(path, receipt)?;
+    }
     let dense_quality_corpus =
         receipt["corpus"]["artifact_kind"].as_str() == Some("apple_m4_slm_quality_corpus");
     if dense_quality_corpus {
@@ -4652,6 +4684,9 @@ fn validate_warm_session_receipt(
                 "{} warm-session prompt is missing timing.time_to_first_token_ms",
                 path.display()
             );
+        }
+        if metal_phase_contributions_enabled {
+            validate_warm_session_prompt_metal_phase(path, prompt)?;
         }
         generated_total += generated;
     }
@@ -4830,6 +4865,67 @@ fn validate_dense_slm_quality_corpus_determinism(
                     path.display()
                 );
             }
+        }
+    }
+    Ok(())
+}
+
+fn validate_warm_session_metal_phase_header(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<()> {
+    let phase = &receipt["metal_phase_contributions"];
+    if phase["execution_phase"].as_str() != Some("prefill_qkv_projection")
+        || phase["selected_backend"].as_str() != Some(APPLE_M4_METAL)
+        || phase["runtime_api"].as_str() != Some("metal")
+        || phase["fallback_used"].as_bool() != Some(false)
+        || phase["cpu_pipeline_for_remaining_phases"].as_bool() != Some(true)
+        || phase["resident_generation_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+        || phase["resident_greedy_token_ids_match_cpu_reference"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "{} warm-session Metal phase header must record phase-scoped apple-m4-metal contribution with CPU/NEON resident generation",
+            path.display()
+        );
+    }
+    if receipt_flag_true(phase, "full_metal_inference_claimed")
+        || receipt_flag_true(phase, "speedup_claim")
+    {
+        anyhow::bail!(
+            "{} warm-session Metal phase header must not claim full Metal inference or speedup",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_warm_session_prompt_metal_phase(path: &Path, prompt: &serde_json::Value) -> Result<()> {
+    let phases = prompt["metal_phase_contributions"].as_array().ok_or_else(|| {
+        anyhow!("{} warm-session prompt is missing Metal phase contributions", path.display())
+    })?;
+    if phases.is_empty() {
+        anyhow::bail!("{} warm-session prompt has no Metal phase contributions", path.display());
+    }
+    for phase in phases {
+        if phase["execution_phase"].as_str() != Some("prefill_qkv_projection")
+            || phase["selected_backend"].as_str() != Some(APPLE_M4_METAL)
+            || phase["runtime_api"].as_str() != Some("metal")
+            || phase["fallback_used"].as_bool() != Some(false)
+            || phase["cpu_pipeline_for_remaining_phases"].as_bool() != Some(true)
+            || phase["resident_greedy_token_ids_match_cpu_reference"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} warm-session prompt Metal phase contribution must record Q/K/V Metal parity and CPU/NEON remainder",
+                path.display()
+            );
+        }
+        if receipt_flag_true(phase, "full_metal_inference_claimed")
+            || receipt_flag_true(phase, "speedup_claim")
+        {
+            anyhow::bail!(
+                "{} warm-session prompt Metal phase contribution must not claim full Metal inference or speedup",
+                path.display()
+            );
         }
     }
     Ok(())
