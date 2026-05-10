@@ -214,6 +214,7 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-PERF-004 | merged | Dense Qwen benchmark qualification review consumes the baseline, repeated comparator, and D2H timing receipts while keeping speedup claims false. |
 | CUDA-DENSE-PERF-005 | merged | Dense Qwen strict CUDA runtime receipts record a measured H2D model-load envelope, explicitly not pure CUDA event copy timing; `speedup_claim=false`. |
 | CUDA-DENSE-PERF-006 | merged | Dense Qwen benchmark qualification consumes the H2D model-load envelope while preserving pure-H2D and speedup blockers. |
+| CUDA-UX-006 | in progress | `bitnet bench --device cuda --cuda-benchmark-receipt` reports governed CUDA benchmark receipts without simulating CPU fallback or claiming fresh benchmark execution. |
 
 ## Review Policy
 

@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T19:55:01Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-006"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/cuda-ux-006-bench-receipt-report"
+summary = "Start CUDA-UX-006 governed CUDA benchmark receipt reporting."
+
+notes = [
+  "Start a narrow CUDA UX slice after CUDA-UX-005 and CUDA-DENSE-PERF-006.",
+  "The legacy bench command remains fail-closed for CUDA unless the user supplies a governed CUDA benchmark receipt.",
+  "This item reports existing receipt-backed CUDA benchmark evidence and does not claim fresh benchmark execution, speedup, full residency, server readiness, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, or CUDA kernel math changes.",
+]

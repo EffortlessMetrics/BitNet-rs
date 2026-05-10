@@ -5,8 +5,9 @@ use clap::Args;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, info};
@@ -18,7 +19,20 @@ use candle_core::Device;
 
 use crate::config::{CliConfig, invalid_device_message, is_supported_device_label};
 
-const BENCHMARK_DEVICE_HELP: &str = "Device for this legacy benchmark. Only cpu/auto are supported here; CUDA benchmarks must use governed receipt-backed CUDA benchmark paths.";
+use super::receipts::explain_receipt;
+
+const BENCHMARK_DEVICE_HELP: &str = "Device for this legacy benchmark. Use --cuda-benchmark-receipt with cuda/nvidia-rtx-5070-ti-cuda to report governed receipt-backed CUDA benchmark evidence; without a receipt only cpu/auto are supported.";
+
+const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+
+const GOVERNED_CUDA_BENCHMARK_ARTIFACTS: &[&str] = &[
+    "strict_cuda_benchmark_qualification_review",
+    "dense_gguf_qwen_benchmark_qualification_review",
+];
+
+fn is_cuda_benchmark_device_label(label: &str) -> bool {
+    matches!(label, "cuda" | RTX_5070_TI_CUDA)
+}
 
 /// Benchmark command arguments
 #[derive(Args, Debug)]
@@ -61,6 +75,10 @@ pub struct BenchmarkCommand {
     /// Output file for results
     #[arg(short, long, value_name = "PATH")]
     pub output: Option<PathBuf>,
+
+    /// Governed CUDA benchmark receipt to validate and report instead of running the legacy CPU benchmark
+    #[arg(long, value_name = "PATH")]
+    pub cuda_benchmark_receipt: Option<PathBuf>,
 
     /// Memory profiling
     #[arg(long)]
@@ -153,11 +171,55 @@ pub struct BestPerformance {
     pub sequence_length: usize,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CudaBenchmarkReceiptReport {
+    pub receipt_path: String,
+    pub artifact_kind: String,
+    pub claim: String,
+    pub selected_backend: String,
+    pub selected_route: Option<String>,
+    pub runtime_api: String,
+    pub fallback_used: bool,
+    pub speedup_claim: bool,
+    pub benchmark_qualified_speedup: bool,
+    pub full_cuda_residency_claimed: bool,
+    pub profile_count: usize,
+    pub profiles: Vec<CudaBenchmarkProfileReport>,
+    pub qualification_status: Option<String>,
+    pub claim_boundary: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CudaBenchmarkProfileReport {
+    pub profile: String,
+    pub decision: Option<String>,
+    pub cpu_total_ms_mean: Option<f64>,
+    pub cuda_total_ms_mean: Option<f64>,
+    pub cuda_total_ms: Option<f64>,
+    pub cuda_kernel_time_ms: Option<f64>,
+    pub host_to_device_bytes: Option<u64>,
+    pub device_to_host_bytes: Option<u64>,
+    pub host_to_device_ms: Option<f64>,
+    pub device_to_host_ms: Option<f64>,
+    pub quality_passed: Option<bool>,
+    pub fallback_free: Option<bool>,
+    pub benchmark_qualified_speedup: Option<bool>,
+}
+
 impl BenchmarkCommand {
     /// Execute the benchmark command
     pub async fn execute(&self, config: &CliConfig) -> Result<()> {
         // Validate arguments
         self.validate_args()?;
+
+        if self.cuda_benchmark_receipt.is_some() {
+            return self.execute_cuda_benchmark_receipt_report(config).await;
+        }
+
+        let device_label = self.requested_device_label(config);
+        if is_cuda_benchmark_device_label(device_label) {
+            anyhow::bail!("{}", unsupported_benchmark_device_message(device_label));
+        }
 
         info!("Starting benchmark for model: {}", self.model.display());
 
@@ -216,6 +278,28 @@ impl BenchmarkCommand {
         }
 
         Ok(())
+    }
+
+    fn requested_device_label<'a>(&'a self, config: &'a CliConfig) -> &'a str {
+        self.device.as_deref().unwrap_or(config.default_device.as_str())
+    }
+
+    async fn execute_cuda_benchmark_receipt_report(&self, config: &CliConfig) -> Result<()> {
+        let device_label = self.requested_device_label(config);
+        if !is_cuda_benchmark_device_label(device_label) {
+            anyhow::bail!(
+                "--cuda-benchmark-receipt requires --device cuda or --device {RTX_5070_TI_CUDA}; got {device_label}"
+            );
+        }
+
+        let receipt_path =
+            self.cuda_benchmark_receipt.as_ref().expect("checked cuda_benchmark_receipt presence");
+        let receipt = read_benchmark_receipt_json(receipt_path)?;
+        let report = cuda_benchmark_receipt_report(receipt_path, &receipt).with_context(|| {
+            format!("invalid governed CUDA benchmark receipt: {}", receipt_path.display())
+        })?;
+
+        self.output_cuda_benchmark_receipt_report(receipt_path, &receipt, &report).await
     }
 
     /// Load model and tokenizer
@@ -570,6 +654,133 @@ impl BenchmarkCommand {
         Ok(())
     }
 
+    async fn output_cuda_benchmark_receipt_report(
+        &self,
+        receipt_path: &Path,
+        receipt: &Value,
+        report: &CudaBenchmarkReceiptReport,
+    ) -> Result<()> {
+        let output: Box<dyn Write> = if let Some(output_path) = &self.output {
+            Box::new(std::fs::File::create(output_path).with_context(|| {
+                format!("Failed to create output file: {}", output_path.display())
+            })?)
+        } else {
+            Box::new(std::io::stdout())
+        };
+
+        match self.format.as_str() {
+            "json" => serde_json::to_writer_pretty(output, report)?,
+            "csv" => self.write_cuda_benchmark_receipt_csv(output, report)?,
+            _ => self.write_cuda_benchmark_receipt_text(output, receipt_path, receipt, report)?,
+        }
+
+        Ok(())
+    }
+
+    fn write_cuda_benchmark_receipt_text(
+        &self,
+        mut output: Box<dyn Write>,
+        receipt_path: &Path,
+        receipt: &Value,
+        report: &CudaBenchmarkReceiptReport,
+    ) -> Result<()> {
+        writeln!(output, "\n{}", style("CUDA Benchmark Receipt Report").bold().cyan())?;
+        writeln!(output, "================================")?;
+        writeln!(output)?;
+        writeln!(output, "Receipt: {}", report.receipt_path)?;
+        writeln!(output, "Artifact: {}", report.artifact_kind)?;
+        writeln!(output, "Claim: {}", report.claim)?;
+        writeln!(output, "Backend: {}", report.selected_backend)?;
+        if let Some(route) = &report.selected_route {
+            writeln!(output, "Route: {route}")?;
+        }
+        writeln!(output, "Runtime: {}", report.runtime_api)?;
+        writeln!(output, "Fallback: {}", report.fallback_used)?;
+        writeln!(output, "Speedup claim: {}", report.speedup_claim)?;
+        writeln!(output, "Benchmark-qualified speedup: {}", report.benchmark_qualified_speedup)?;
+        writeln!(output, "Full CUDA residency claimed: {}", report.full_cuda_residency_claimed)?;
+        if let Some(status) = &report.qualification_status {
+            writeln!(output, "Qualification status: {status}")?;
+        }
+        writeln!(output, "Claim boundary: {}", report.claim_boundary)?;
+
+        if !report.profiles.is_empty() {
+            writeln!(output)?;
+            writeln!(output, "Profiles:")?;
+            for profile in &report.profiles {
+                writeln!(output, "  - {}", profile.profile)?;
+                if let Some(decision) = &profile.decision {
+                    writeln!(output, "    decision: {decision}")?;
+                }
+                if let Some(cpu_ms) = profile.cpu_total_ms_mean {
+                    writeln!(output, "    cpu_mean_total_ms: {cpu_ms:.3}")?;
+                }
+                if let Some(cuda_ms) = profile.cuda_total_ms_mean.or(profile.cuda_total_ms) {
+                    writeln!(output, "    cuda_total_ms: {cuda_ms:.3}")?;
+                }
+                if let Some(kernel_ms) = profile.cuda_kernel_time_ms {
+                    writeln!(output, "    cuda_kernel_time_ms: {kernel_ms:.3}")?;
+                }
+                if let Some(h2d_ms) = profile.host_to_device_ms {
+                    writeln!(output, "    host_to_device_ms: {h2d_ms:.3}")?;
+                }
+                if let Some(d2h_ms) = profile.device_to_host_ms {
+                    writeln!(output, "    device_to_host_ms: {d2h_ms:.3}")?;
+                }
+                if let Some(h2d_bytes) = profile.host_to_device_bytes {
+                    writeln!(output, "    host_to_device_bytes: {h2d_bytes}")?;
+                }
+                if let Some(d2h_bytes) = profile.device_to_host_bytes {
+                    writeln!(output, "    device_to_host_bytes: {d2h_bytes}")?;
+                }
+                if let Some(quality) = profile.quality_passed {
+                    writeln!(output, "    quality_passed: {quality}")?;
+                }
+                if let Some(qualified) = profile.benchmark_qualified_speedup {
+                    writeln!(output, "    benchmark_qualified_speedup: {qualified}")?;
+                }
+            }
+        }
+
+        writeln!(output)?;
+        let explanation = explain_receipt(receipt_path, receipt);
+        for line in super::receipts::compact_proof_lines(&explanation) {
+            writeln!(output, "{line}")?;
+        }
+        Ok(())
+    }
+
+    fn write_cuda_benchmark_receipt_csv(
+        &self,
+        mut output: Box<dyn Write>,
+        report: &CudaBenchmarkReceiptReport,
+    ) -> Result<()> {
+        writeln!(
+            output,
+            "profile,decision,cpu_total_ms_mean,cuda_total_ms_mean,cuda_kernel_time_ms,host_to_device_bytes,device_to_host_bytes,host_to_device_ms,device_to_host_ms,quality_passed,benchmark_qualified_speedup"
+        )?;
+
+        for profile in &report.profiles {
+            writeln!(
+                output,
+                "{},{},{},{},{},{},{},{},{},{},{}",
+                profile.profile,
+                profile.decision.as_deref().unwrap_or(""),
+                optional_f64(profile.cpu_total_ms_mean),
+                optional_f64(profile.cuda_total_ms_mean.or(profile.cuda_total_ms)),
+                optional_f64(profile.cuda_kernel_time_ms),
+                optional_u64(profile.host_to_device_bytes),
+                optional_u64(profile.device_to_host_bytes),
+                optional_f64(profile.host_to_device_ms),
+                optional_f64(profile.device_to_host_ms),
+                optional_bool(profile.quality_passed),
+                optional_bool(profile.benchmark_qualified_speedup)
+            )?;
+        }
+
+        Ok(())
+    }
+
     /// Write results in text format
     fn write_text_results(
         &self,
@@ -670,6 +881,181 @@ impl BenchmarkCommand {
 
         Ok(())
     }
+}
+
+fn read_benchmark_receipt_json(path: &Path) -> Result<Value> {
+    let bytes =
+        std::fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+    serde_json::from_slice(&bytes)
+        .with_context(|| format!("failed to parse receipt JSON {}", path.display()))
+}
+
+fn cuda_benchmark_receipt_report(
+    receipt_path: &Path,
+    receipt: &Value,
+) -> Result<CudaBenchmarkReceiptReport> {
+    let artifact_kind = required_str(receipt, &["artifact_kind"])?;
+    if !GOVERNED_CUDA_BENCHMARK_ARTIFACTS.contains(&artifact_kind) {
+        anyhow::bail!(
+            "artifact_kind={artifact_kind} is not a governed CUDA benchmark receipt accepted by `bitnet bench --device cuda --cuda-benchmark-receipt`"
+        );
+    }
+
+    let claim = required_str(receipt, &["claim"])?;
+    let selected_backend = required_str(receipt, &["selected_backend"])
+        .or_else(|_| required_str(receipt, &["execution_plan", "selected_backend"]))?;
+    if selected_backend != RTX_5070_TI_CUDA {
+        anyhow::bail!("selected_backend must be {RTX_5070_TI_CUDA}, got {selected_backend}");
+    }
+
+    let runtime_api = required_str(receipt, &["runtime_api"])
+        .or_else(|_| required_str(receipt, &["execution_plan", "runtime_api"]))?;
+    if runtime_api != "cuda" {
+        anyhow::bail!("runtime_api must be cuda, got {runtime_api}");
+    }
+
+    let fallback_used = required_bool(receipt, &["fallback_used"])
+        .or_else(|_| required_bool(receipt, &["execution_plan", "fallback_used"]))?;
+    if fallback_used {
+        anyhow::bail!("fallback_used must be false for governed CUDA benchmark reporting");
+    }
+
+    let speedup_claim = bool_at_path(receipt, &["speedup_claim"])
+        .or_else(|| bool_at_path(receipt, &["claim_boundary", "speedup_claim"]))
+        .unwrap_or(false);
+    let benchmark_qualified_speedup =
+        bool_at_path(receipt, &["benchmark_qualified_speedup"]).unwrap_or(false);
+    if speedup_claim && !benchmark_qualified_speedup {
+        anyhow::bail!("speedup_claim=true is not accepted unless benchmark_qualified_speedup=true");
+    }
+
+    let full_cuda_residency_claimed = bool_at_path(receipt, &["full_cuda_residency_claimed"])
+        .or_else(|| bool_at_path(receipt, &["claim_boundary", "full_cuda_residency_claimed"]))
+        .or_else(|| bool_at_path(receipt, &["execution_plan", "full_cuda_residency_claimed"]))
+        .unwrap_or(false);
+
+    let selected_route = str_at_path(receipt, &["selected_route"])
+        .or_else(|| str_at_path(receipt, &["execution_plan", "selected_route"]))
+        .map(str::to_string);
+
+    let profiles = cuda_benchmark_profile_reports(receipt);
+    if profiles.is_empty() {
+        anyhow::bail!("governed CUDA benchmark receipt must include profile evidence");
+    }
+
+    let qualification_status = str_at_path(receipt, &["qualification_decision", "status"])
+        .or_else(|| str_at_path(receipt, &["benchmark_summary", "status"]))
+        .or_else(|| str_at_path(receipt, &["comparator_summary", "status"]))
+        .map(str::to_string);
+
+    Ok(CudaBenchmarkReceiptReport {
+        receipt_path: receipt_path.display().to_string(),
+        artifact_kind: artifact_kind.to_string(),
+        claim: claim.to_string(),
+        selected_backend: selected_backend.to_string(),
+        selected_route,
+        runtime_api: runtime_api.to_string(),
+        fallback_used,
+        speedup_claim,
+        benchmark_qualified_speedup,
+        full_cuda_residency_claimed,
+        profile_count: profiles.len(),
+        profiles,
+        qualification_status,
+        claim_boundary:
+            "receipt-backed CUDA benchmark report only; no fresh benchmark execution or new speedup claim"
+                .to_string(),
+    })
+}
+
+fn cuda_benchmark_profile_reports(receipt: &Value) -> Vec<CudaBenchmarkProfileReport> {
+    let mut profiles = Vec::new();
+    collect_cuda_benchmark_profiles(receipt.get("profile_reviews"), &mut profiles);
+    collect_cuda_benchmark_profiles(receipt.get("profiles"), &mut profiles);
+    collect_cuda_benchmark_profiles(receipt.get("benchmark_profiles"), &mut profiles);
+    profiles
+}
+
+fn collect_cuda_benchmark_profiles(
+    value: Option<&Value>,
+    profiles: &mut Vec<CudaBenchmarkProfileReport>,
+) {
+    let Some(entries) = value.and_then(Value::as_array) else {
+        return;
+    };
+
+    for entry in entries {
+        let Some(profile) = str_at_path(entry, &["profile"]) else {
+            continue;
+        };
+
+        profiles.push(CudaBenchmarkProfileReport {
+            profile: profile.to_string(),
+            decision: str_at_path(entry, &["decision"])
+                .or_else(|| str_at_path(entry, &["status"]))
+                .map(str::to_string),
+            cpu_total_ms_mean: f64_at_path(entry, &["cpu_total_ms_mean"])
+                .or_else(|| f64_at_path(entry, &["cpu_total_ms", "mean"])),
+            cuda_total_ms_mean: f64_at_path(entry, &["cuda_total_ms_mean"])
+                .or_else(|| f64_at_path(entry, &["cuda_total_ms", "mean"])),
+            cuda_total_ms: f64_at_path(entry, &["cuda_total_ms"]),
+            cuda_kernel_time_ms: f64_at_path(entry, &["cuda_kernel_time_ms"])
+                .or_else(|| f64_at_path(entry, &["kernel_time_ms", "mean"])),
+            host_to_device_bytes: u64_at_path(entry, &["host_to_device_bytes"])
+                .or_else(|| u64_at_path(entry, &["host_to_device_bytes", "mean"])),
+            device_to_host_bytes: u64_at_path(entry, &["device_to_host_bytes"])
+                .or_else(|| u64_at_path(entry, &["device_to_host_bytes", "mean"])),
+            host_to_device_ms: f64_at_path(entry, &["host_to_device_ms"]),
+            device_to_host_ms: f64_at_path(entry, &["device_to_host_ms"]),
+            quality_passed: bool_at_path(entry, &["quality_passed"]),
+            fallback_free: bool_at_path(entry, &["fallback_free"]),
+            benchmark_qualified_speedup: bool_at_path(entry, &["benchmark_qualified_speedup"]),
+        });
+    }
+}
+
+fn required_str<'a>(value: &'a Value, path: &[&str]) -> Result<&'a str> {
+    str_at_path(value, path).with_context(|| format!("missing string field {}", path.join(".")))
+}
+
+fn required_bool(value: &Value, path: &[&str]) -> Result<bool> {
+    bool_at_path(value, path).with_context(|| format!("missing bool field {}", path.join(".")))
+}
+
+fn str_at_path<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
+    value_at_path(value, path).and_then(Value::as_str)
+}
+
+fn bool_at_path(value: &Value, path: &[&str]) -> Option<bool> {
+    value_at_path(value, path).and_then(Value::as_bool)
+}
+
+fn f64_at_path(value: &Value, path: &[&str]) -> Option<f64> {
+    value_at_path(value, path).and_then(Value::as_f64)
+}
+
+fn u64_at_path(value: &Value, path: &[&str]) -> Option<u64> {
+    value_at_path(value, path).and_then(Value::as_u64)
+}
+
+fn value_at_path<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
+    let mut current = value;
+    for key in path {
+        current = current.get(*key)?;
+    }
+    Some(current)
+}
+
+fn optional_f64(value: Option<f64>) -> String {
+    value.map(|value| format!("{value:.6}")).unwrap_or_default()
+}
+
+fn optional_u64(value: Option<u64>) -> String {
+    value.map(|value| value.to_string()).unwrap_or_default()
+}
+
+fn optional_bool(value: Option<bool>) -> String {
+    value.map(|value| value.to_string()).unwrap_or_default()
 }
 
 /// Calculate percentile from sorted data
