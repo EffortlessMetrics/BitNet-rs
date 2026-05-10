@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T02:35:38Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-007"
+event = "merged"
+actor = "codex"
+pr = 4397
+merge_sha = "5254d4a125770796588fa567946344b4267849c9"
+previous_status = "in_progress"
+next_item = ""
+
+notes = [
+  "Merged phase-local timing evidence for the resident-routed dense SLM Q/K/V Metal contribution.",
+  "The timing evidence records the named phase only and preserves CPU/NEON generation for the rest of the resident flow.",
+  "All apple-m4-slm-metal-phases work items are now merged and the campaign is marked complete.",
+  "No full apple-m4-metal inference claim, full-pipeline speedup claim, BitNet claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, model binary, or broad performance claim is introduced.",
+]
