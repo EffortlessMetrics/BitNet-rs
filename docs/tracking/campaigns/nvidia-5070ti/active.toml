@@ -3067,8 +3067,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-046"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-046-warm-session"
+pr = 4422
+head_sha = "4f0b37c3920940e85ba25df6cc4c3986801e7beb"
+merge_sha = "8131952fd82c5dc7e51c3f8d4138078e2f428d53"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -3117,6 +3120,62 @@ must_not_claim = [
   "General dense GGUF CUDA inference is complete beyond the bounded warm-session gate.",
   "Qwen ask/chat UX works on CUDA.",
   "Persistent-session or full dense regular LLM CUDA residency exists beyond the scoped warm-session receipt.",
+  "Server readiness exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
+id = "CUDA-UX-003"
+status = "proposed"
+branch = "codex/cuda-ux-003-dense-ask"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-046", "CUDA-UX-002"]
+acceptance = "Promote the validated dense Qwen CUDA runtime receipts into the user-facing `bitnet ask --device cuda --model qwen2.5-0.5b-instruct-q8_0` path, resolving the verified artifact/cache entry, selecting dense_regular_llm_cuda, rejecting hidden fallback, producing a compact proof summary and receipt path, and preserving chat UX, speedup, full-residency, server, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims."
+commands = [
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- model verify qwen2.5-0.5b-instruct-q8_0 --json",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- ask --device cuda --model qwen2.5-0.5b-instruct-q8_0 --max-new-tokens 8 \"What is 2+2?\"",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- receipts explain --latest",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,cuda,full-cli dense_qwen_ask -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features qwen_ask -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+]
+may_claim = [
+  "`bitnet ask --device cuda --model qwen2.5-0.5b-instruct-q8_0` may produce a bounded dense Qwen CUDA answer if the receipt validates.",
+  "The ask proof summary may expose the dense_regular_llm_cuda route, backend, fallback=false, generated-token evidence, timing/transfer fields, claim boundary, and receipt path.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete beyond the bounded ask gate.",
+  "Qwen chat UX works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists beyond the scoped ask receipt.",
   "Server readiness exists.",
   "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
 ]
