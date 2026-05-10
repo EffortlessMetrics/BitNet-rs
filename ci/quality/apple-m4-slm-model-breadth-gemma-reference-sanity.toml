@@ -1,0 +1,61 @@
+schema = 1
+artifact_kind = "apple_m4_slm_model_breadth_reference_sanity"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-007"
+created_utc = "2026-05-10T02:48:00Z"
+host = "apple-m4-mac-mini"
+claim_boundary = "Reference-runner artifact sanity only. This does not prove Rust M4 support, cache registration, default model support, BitNet behavior, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance."
+
+[runner]
+name = "llama-cli"
+path = "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli"
+version = "build 3962 (1f86f058), Apple clang version 21.0.0 (clang-2100.0.123.102), arm64-apple-darwin25.4.0"
+cpu_only_args = "-ngl 0 --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt"
+
+[[prompt]]
+id = "math"
+text = "What is 2+2? Answer briefly."
+
+[[prompt]]
+id = "capital"
+text = "Name the capital of France."
+
+[[prompt]]
+id = "rust"
+text = "Write one short sentence about Rust."
+
+[[candidate]]
+id = "gemma-3-270m-it-q8_0"
+result = "rejected_reference_runner_unsupported_architecture"
+source = "ggml-org/gemma-3-270m-it-GGUF"
+revision = "e7647be17ae1108f2f605ed061ca0608b171afff"
+file = "gemma-3-270m-it-Q8_0.gguf"
+source_url = "https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF/blob/e7647be17ae1108f2f605ed061ca0608b171afff/gemma-3-270m-it-Q8_0.gguf"
+size_bytes = 291545600
+sha256 = "0ef57d2c838458a1952664260dcba38e5bdda37494f3af732f06e4add24068e3"
+license = "gemma"
+license_access = "download succeeded from the GGUF repository in this run; upstream base model reports Gemma license acknowledgement requirements"
+local_path = "target/apple-m4-slm-model-breadth/M4-MODEL-007/candidates/gemma_3_270m_it_q8_0/ggml-org-gemma-3-270m-it-GGUF/gemma-3-270m-it-Q8_0.gguf"
+cleanup_status = "downloaded to target for reference probe, then removed after metadata/error evidence was recorded"
+gguf_architecture = "gemma3"
+gguf_file_type = "Q8_0"
+gguf_general_name = "Gemma 3 270m It"
+gguf_context_length = 32768
+gguf_embedding_length = 640
+gguf_block_count = 18
+gguf_attention_heads = 4
+gguf_attention_kv_heads = 1
+gguf_attention_sliding_window = 512
+tokenizer_model = "llama"
+tokenizer_pre = "default"
+chat_template_present = true
+bos_token_id = 2
+eos_token_id = 1
+padding_token_id = 0
+add_bos_token = true
+add_eos_token = false
+reference_command = "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli -m target/apple-m4-slm-model-breadth/M4-MODEL-007/candidates/gemma_3_270m_it_q8_0/ggml-org-gemma-3-270m-it-GGUF/gemma-3-270m-it-Q8_0.gguf -p '<gemma chat prompt>' -n 8 -ngl 0 --no-display-prompt --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42"
+reference_exit_code = 1
+reference_error = "llama_model_load: error loading model: error loading model architecture: unknown model architecture: 'gemma3'"
+quality_status = "not_run_reference_runner_failed_before_generation"
+decision = "Do not promote to Rust M4 quality. Reconsider only after the reference runner selected for this lane supports gemma3 architecture."

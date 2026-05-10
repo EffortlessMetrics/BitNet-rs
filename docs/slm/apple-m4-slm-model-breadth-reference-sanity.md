@@ -8,6 +8,9 @@ default, prove Rust M4 support, or widen any Metal or BitNet claim.
 Machine-readable evidence is recorded in
 `ci/quality/apple-m4-slm-model-breadth-reference-sanity.toml`.
 
+The follow-up Gemma candidate cycle records machine-readable evidence in
+`ci/quality/apple-m4-slm-model-breadth-gemma-reference-sanity.toml`.
+
 ## Runner
 
 ```text
@@ -29,6 +32,7 @@ All reference generation attempts used CPU-only model layers with:
 |---|---|---|
 | `qwen3-0.6b-q8_0` | rejected for this round | The available reference runner reads GGUF metadata but fails before generation with `unknown model architecture: 'qwen3'`. |
 | `smollm2-360m-instruct-q8_0` | reference-good | The reference runner loads the artifact, confirms tokenizer/chat-template metadata, and produces coherent short outputs for the bounded prompt suite. |
+| `gemma-3-270m-it-q8_0` | rejected for this round | The available reference runner reads GGUF metadata but fails before generation with `unknown model architecture: 'gemma3'`. |
 
 ## Qwen3 Rejection
 
@@ -120,11 +124,63 @@ Promote smollm2-360m-instruct-q8_0 to M4-MODEL-003 for Rust M4
 apple-m4-cpu-neon quality gating.
 ```
 
+## Gemma 3 270M IT Rejection
+
+Artifact:
+
+```text
+repo = ggml-org/gemma-3-270m-it-GGUF
+revision = e7647be17ae1108f2f605ed061ca0608b171afff
+file = gemma-3-270m-it-Q8_0.gguf
+size = 291545600 bytes
+sha256 = 0ef57d2c838458a1952664260dcba38e5bdda37494f3af732f06e4add24068e3
+license = gemma
+```
+
+Observed metadata:
+
+```text
+general.architecture = gemma3
+general.name = Gemma 3 270m It
+general.file_type = 7
+tokenizer.ggml.model = llama
+tokenizer.ggml.pre = default
+tokenizer.chat_template = present
+bos_token_id = 2
+eos_token_id = 1
+padding_token_id = 0
+tokenizer.ggml.add_bos_token = true
+tokenizer.ggml.add_eos_token = false
+```
+
+Reference runner failure:
+
+```text
+llama_model_load: error loading model: error loading model architecture: unknown model architecture: 'gemma3'
+```
+
+Cleanup:
+
+```text
+The 291545600-byte scratch GGUF was downloaded under target/ for this probe and
+removed after metadata and failure evidence were recorded.
+```
+
+Decision:
+
+```text
+Do not promote Gemma 3 270M IT to Rust M4 quality. Reconsider only after the
+reference runner selected for this lane supports the gemma3 architecture.
+```
+
 ## Claim Boundary
 
 This reference pass may claim only that `smollm2-360m-instruct-q8_0` is
 reference-good for the bounded prompt suite and that `qwen3-0.6b-q8_0` is
-blocked by the current reference runner. It does not prove the SmolLM2 Rust M4
-path, cache registration, default-model support, BitNet behavior, full
+blocked by the current reference runner.
+
+The Gemma follow-up pass may claim only that `gemma-3-270m-it-q8_0` is blocked
+by the current reference runner. It does not prove the Gemma Rust M4 path,
+cache registration, default-model support, BitNet behavior, full
 `apple-m4-metal` inference, Neural Engine execution, MPSGraph model inference,
 QK256 support, or broad Apple Silicon performance.

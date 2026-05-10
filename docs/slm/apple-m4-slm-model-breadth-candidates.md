@@ -149,6 +149,10 @@ quality.
 - Why selected: official Gemma-class small instruct base model, storage-light
   GGUF artifact, and a different leading dense SLM family from Qwen. This is a
   useful M4 model-runner breadth probe only if reference and Rust M4 gates pass.
+- M4-MODEL-007 outcome: rejected by the current reference runner. The runner
+  reads GGUF metadata, including `general.architecture = gemma3`, tokenizer
+  metadata, and the chat template, but fails before generation with
+  `unknown model architecture: 'gemma3'`.
 - Rejection criteria:
   - Gemma license access is unavailable to the operator;
   - GGUF metadata lacks tokenizer or chat-template authority;
