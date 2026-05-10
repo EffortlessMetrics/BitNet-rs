@@ -4,6 +4,23 @@
 
 This directory contains specialized Claude agents designed for BitNet-rs PR review workflow. The system provides comprehensive PR review automation with GitHub integration, local verification (since CI billing is disabled), and documentation maintenance.
 
+Campaign work item policy is the authority for campaign PRs. For items with
+`review_mode = "codex_premerge"`,
+`merge_policy = "automerge_when_green"`, and
+`human_gate = "on_blocker_only"`, agents are authorized and expected to edit,
+validate, commit, push, open or update the PR, address CI, bot, and reviewer
+feedback, merge when checks are green and GitHub reports the PR mergeable, and
+create or merge closeout tracker PRs when required. Commit, push, PR creation,
+merge, and tracker closeout are not human approval gates for those items.
+
+Human involvement is required only for true blockers: permissions or branch
+protection prevent merge, destructive data loss or secret/model-binary exposure
+is possible, unresolved kernel/math/tokenizer/loader semantics conflict,
+acceptance criteria conflict with repository policy, or a cost, exposure, or
+release decision is outside the ticket scope. Older runbook language about
+manual intervention or human coordination applies only to those blockers or to
+non-campaign work whose policy explicitly requires it.
+
 ## Agent Architecture
 
 ### Core PR Review Flow
@@ -78,7 +95,7 @@ Analysis   Validation Analysis   Resolution  Preparation              Finalizati
 6. **Merge** → `pr-merge`
    - Executes merge operation
    - **On success**: "Next: invoke pr-doc-finalize"
-   - **On failure**: "Manual intervention required"
+   - **On true blocker**: "Escalate with blocker details"
 
 7. **Documentation** → `pr-doc-finalize`
    - Updates all affected documentation
@@ -189,13 +206,15 @@ Modify the standard flow by:
 1. **Use status comments**: Keep PR updated with progress
 2. **Address reviewer feedback**: Don't ignore human input
 3. **Maintain audit trail**: Log all decisions and actions
-4. **Coordinate timing**: Respect human reviewer availability
+4. **Follow campaign policy**: Merge green, mergeable campaign PRs when their
+   work item allows agentic merge
 
 ### Quality Assurance
 1. **Trust but verify**: Agents provide validation, but spot-check results
 2. **Maintain flexibility**: Override agent decisions when appropriate
 3. **Learn from patterns**: Use logs to improve agent behavior
-4. **Keep humans in the loop**: Complex decisions still need human judgment
+4. **Escalate true blockers**: Complex semantic, policy, permission, exposure,
+   or release decisions still need human judgment
 
 ## Troubleshooting
 
@@ -207,7 +226,10 @@ Modify the standard flow by:
 
 ### Recovery Procedures
 - **Reset agent state**: `rm .claude/pr-state.json`
-- **Manual intervention**: Any agent can be bypassed for manual work
+- **True blocker escalation**: Escalate only when permissions, branch protection,
+  destructive data loss, secret/model-binary exposure, semantic conflict,
+  policy conflict, or out-of-scope cost/exposure/release decisions block
+  agentic completion
 - **Rollback capability**: All agents support rollback to previous state
 - **Emergency stops**: Agents detect critical failures and pause for human input
 
@@ -227,4 +249,7 @@ Modify the standard flow by:
 
 ---
 
-This agent system is designed to provide comprehensive, reliable PR review automation while maintaining the flexibility to handle complex cases and coordinate effectively with human reviewers.
+This agent system is designed to provide comprehensive, reliable PR review
+automation while preserving safety gates for true blockers. For governed
+campaign work, ordinary commit, push, PR, merge, and closeout boundaries are
+agent responsibilities, not human approval gates.
