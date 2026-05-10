@@ -1519,21 +1519,50 @@ pub fn validate_dense_gguf_qwen_benchmark_qualification_receipt_json(
         require_non_negative_number(profile, "observed_cpu_total_ms_div_cuda_total_ms")?;
         require_bool_eq(profile, "cuda_mean_slower_than_cpu", true)?;
         require_non_negative_number(profile, "device_to_host_ms")?;
-        require_null(profile, "host_to_device_ms")?;
-        require_non_empty_string(profile, "host_to_device_ms_source")?;
+        validate_dense_qwen_qualification_h2d(profile)?;
         require_bool_eq(profile, "speedup_claim", false)?;
         require_bool_eq(profile, "benchmark_qualified_speedup", false)?;
     }
 
     let transfer_timing = require_object(receipt, "transfer_timing_review")?;
-    require_string_eq(
-        transfer_timing,
-        "status",
-        "device_to_host_measured_host_to_device_unmeasured",
-    )?;
+    let transfer_status = require_string(transfer_timing, "status")?;
     require_bool_eq(transfer_timing, "device_to_host_timing_recorded", true)?;
-    require_bool_eq(transfer_timing, "host_to_device_timing_recorded", false)?;
-    require_non_empty_string(transfer_timing, "host_to_device_blocker")?;
+    match transfer_status {
+        "device_to_host_measured_host_to_device_unmeasured" => {
+            require_bool_eq(transfer_timing, "host_to_device_timing_recorded", false)?;
+            require_non_empty_string(transfer_timing, "host_to_device_blocker")?;
+        }
+        "host_to_device_model_load_envelope_device_to_host_measured" => {
+            require_bool_eq(transfer_timing, "host_to_device_timing_recorded", true)?;
+            require_bool_eq(transfer_timing, "host_to_device_model_load_envelope_recorded", true)?;
+            require_bool_eq(
+                transfer_timing,
+                "host_to_device_pure_transfer_timing_recorded",
+                false,
+            )?;
+            require_non_empty_string(transfer_timing, "host_to_device_blocker")?;
+            require_string_eq(
+                transfer_timing,
+                "host_to_device_source",
+                "wall_clock_model_load_with_cuda_weight_upload",
+            )?;
+            require_string_eq(
+                transfer_timing,
+                "host_to_device_scope",
+                "model_load_wall_clock_envelope",
+            )?;
+            require_bool_eq(
+                transfer_timing,
+                "host_to_device_ms_includes_non_transfer_overhead",
+                true,
+            )?;
+        }
+        other => {
+            return Err(validation_error(format!(
+                "transfer_timing_review.status must be a supported dense Qwen transfer timing status, got {other}"
+            )));
+        }
+    }
 
     let hardware_context = require_object(receipt, "hardware_context")?;
     require_u64_at_least(hardware_context, "vram_bytes", 1)?;
@@ -1800,12 +1829,29 @@ fn validate_dense_qwen_qualification_profile_review(
     require_non_negative_number(profile, "observed_cpu_total_ms_div_cuda_total_ms")?;
     require_bool_eq(profile, "cuda_mean_slower_than_cpu", true)?;
     require_nullable_number_with_source(profile, "host_to_device_ms")?;
+    validate_dense_qwen_qualification_h2d(profile)?;
     require_non_negative_number(profile, "device_to_host_ms")?;
     require_non_empty_string(profile, "device_to_host_ms_source")?;
     require_non_empty_string(profile, "reason")?;
     let blockers = require_array(profile, "blockers")?;
     if blockers.is_empty() {
         return Err(validation_error("dense profile_review.blockers must not be empty"));
+    }
+    Ok(())
+}
+
+fn validate_dense_qwen_qualification_h2d(profile: &serde_json::Value) -> Result<(), ReceiptError> {
+    require_non_empty_string(profile, "host_to_device_ms_source")?;
+    if profile.get("host_to_device_ms").and_then(serde_json::Value::as_f64).is_some() {
+        require_string_eq(
+            profile,
+            "host_to_device_ms_source",
+            "wall_clock_model_load_with_cuda_weight_upload",
+        )?;
+        require_string_eq(profile, "host_to_device_ms_scope", "model_load_wall_clock_envelope")?;
+        require_bool_eq(profile, "host_to_device_ms_includes_non_transfer_overhead", true)?;
+        require_null(profile, "pure_host_to_device_ms")?;
+        require_non_empty_string(profile, "pure_host_to_device_ms_source")?;
     }
     Ok(())
 }
@@ -3065,6 +3111,12 @@ mod tests {
     }
 
     #[test]
+    fn dense_gguf_qwen_benchmark_qualification_accepts_h2d_envelope() {
+        let receipt = sample_dense_gguf_qwen_benchmark_qualification_receipt_with_h2d_envelope();
+        validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
     fn dense_gguf_qwen_benchmark_qualification_rejects_speedup_claim() {
         let mut receipt = sample_dense_gguf_qwen_benchmark_qualification_receipt();
         receipt["speedup_claim"] = json!(true);
@@ -3109,6 +3161,18 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("host_to_device_ms_source"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_gguf_qwen_benchmark_qualification_rejects_missing_h2d_envelope_scope() {
+        let mut receipt =
+            sample_dense_gguf_qwen_benchmark_qualification_receipt_with_h2d_envelope();
+        receipt["profile_reviews"][0].as_object_mut().unwrap().remove("host_to_device_ms_scope");
+
+        let err = validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("host_to_device_ms_scope"), "unexpected error: {err}");
     }
 
     #[test]
@@ -3660,6 +3724,63 @@ mod tests {
                 "dense_regular_llm_cuda receipts cannot satisfy BitNet packed I2S/QK256 proof."
             ]
         })
+    }
+
+    fn sample_dense_gguf_qwen_benchmark_qualification_receipt_with_h2d_envelope()
+    -> serde_json::Value {
+        let mut receipt = sample_dense_gguf_qwen_benchmark_qualification_receipt();
+        for profile in receipt["profile_reviews"].as_array_mut().unwrap() {
+            add_h2d_envelope_fields(profile, 100.0);
+        }
+        for profile in receipt["evidence_summary"].as_object_mut().unwrap().values_mut() {
+            add_h2d_envelope_fields(profile, 100.0);
+        }
+        receipt["qualification_decision"]["reason"] = json!(
+            "Reviewed dense Qwen profiles are fallback-free and repeated with H2D model-load envelope timing, but CUDA mean total time remains slower than CPU mean total time and pure H2D copy timing remains unmeasured."
+        );
+        receipt["qualification_requirements"][3] = json!({
+            "id": "host_to_device_model_load_envelope",
+            "description": "Host-to-device model-load wall-clock envelope timing is recorded with explicit non-transfer-overhead labeling.",
+            "status": "passed"
+        });
+        receipt["qualification_requirements"]
+            .as_array_mut()
+            .unwrap()
+            .insert(
+                4,
+                json!({
+                    "id": "pure_host_to_device_transfer_timing",
+                    "description": "Pure host-to-device copy timing is measured separately from model-load and upload overhead.",
+                    "status": "blocked",
+                    "blocker": "CUDA-DENSE-PERF-005 records a model-load wall-clock envelope, not pure CUDA event copy timing."
+                }),
+            );
+        receipt["transfer_timing_review"] = json!({
+            "status": "host_to_device_model_load_envelope_device_to_host_measured",
+            "device_to_host_timing_recorded": true,
+            "host_to_device_timing_recorded": true,
+            "host_to_device_model_load_envelope_recorded": true,
+            "host_to_device_pure_transfer_timing_recorded": false,
+            "host_to_device_blocker": "The dense Qwen runtime records an H2D model-load wall-clock envelope, but not pure CUDA event copy timing.",
+            "device_to_host_source": "wall_clock_extract_logits_2d_local",
+            "host_to_device_source": "wall_clock_model_load_with_cuda_weight_upload",
+            "host_to_device_scope": "model_load_wall_clock_envelope",
+            "host_to_device_ms_includes_non_transfer_overhead": true
+        });
+        receipt["claim_boundaries"][2] = json!(
+            "H2D model-load envelope timing is recorded, but pure CUDA event H2D copy timing remains unmeasured."
+        );
+        receipt
+    }
+
+    fn add_h2d_envelope_fields(profile: &mut serde_json::Value, h2d_ms: f64) {
+        profile["host_to_device_ms"] = json!(h2d_ms);
+        profile["host_to_device_ms_source"] =
+            json!("wall_clock_model_load_with_cuda_weight_upload");
+        profile["host_to_device_ms_scope"] = json!("model_load_wall_clock_envelope");
+        profile["host_to_device_ms_includes_non_transfer_overhead"] = json!(true);
+        profile["pure_host_to_device_ms"] = serde_json::Value::Null;
+        profile["pure_host_to_device_ms_source"] = json!("not_measured_by_dense_qwen_runtime");
     }
 
     fn dense_qwen_qualification_profile(

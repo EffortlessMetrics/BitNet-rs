@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T19:23:50Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-006"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-perf-006-h2d-envelope-qualification"
+pr = 4452
+head_sha = "67af07bee097fe782f40342dc779effa01070537"
+summary = "Opened PR #4452 for CUDA-DENSE-PERF-006 H2D envelope qualification."
+notes = [
+  "The PR refreshes dense Qwen benchmark qualification tooling to consume the PERF-005 H2D model-load envelope receipts.",
+  "The refreshed qualification receipt keeps pure H2D CUDA event timing, speedup, full residency, server readiness, and BitNet packed proof claims blocked.",
+]

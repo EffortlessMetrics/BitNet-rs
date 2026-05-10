@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T19:21:34Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-006"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-perf-006-h2d-envelope-qualification"
+summary = "Start dense Qwen benchmark qualification refresh for H2D model-load envelope receipts."
+notes = [
+  "CUDA-DENSE-PERF-005 added H2D model-load envelope timing to dense Qwen one-token, short-decode, and warm-session strict CUDA runtime receipts.",
+  "CUDA-DENSE-PERF-006 updates the qualification review to consume that envelope while preserving the blocker for pure CUDA event H2D copy timing.",
+  "No speedup, benchmark-qualified speedup, full residency, server readiness, or BitNet packed proof claim may be upgraded.",
+]

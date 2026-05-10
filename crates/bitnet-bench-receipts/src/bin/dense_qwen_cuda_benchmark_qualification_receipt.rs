@@ -14,11 +14,10 @@ const DEFAULT_BASELINE: &str =
     "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-cuda-benchmark-baseline.json";
 const DEFAULT_COMPARATOR: &str =
     "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-gguf-qwen-repeated-comparator.json";
-const DEFAULT_ONE_TOKEN_TRANSFER: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-003-transfer-timing/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json";
-const DEFAULT_SHORT_DECODE_TRANSFER: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-003-transfer-timing/dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json";
-const DEFAULT_WARM_SESSION_TRANSFER: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-003-transfer-timing/dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json";
-const DEFAULT_RECEIPT_OUT: &str =
-    "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-gguf-qwen-benchmark-qualification.json";
+const DEFAULT_ONE_TOKEN_TRANSFER: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-005-h2d-transfer-envelope/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json";
+const DEFAULT_SHORT_DECODE_TRANSFER: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-005-h2d-transfer-envelope/dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json";
+const DEFAULT_WARM_SESSION_TRANSFER: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-005-h2d-transfer-envelope/dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json";
+const DEFAULT_RECEIPT_OUT: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-10/dense-qwen-perf-006-h2d-envelope-qualification/dense-gguf-qwen-benchmark-qualification-h2d-envelope.json";
 
 #[derive(Debug)]
 struct Args {
@@ -152,17 +151,51 @@ fn read_transfer_receipt(
     if bool_at(&value, "/claim_boundary/bitnet_packed_i2s_qk256_proof")? {
         return Err(format!("{} must not claim BitNet packed proof", path_label(path)).into());
     }
-    if str_at(&value, "/timing/transfer_timing_status")?
-        != "device_to_host_measured_host_to_device_unmeasured"
-    {
-        return Err(format!(
-            "{} must record D2H-measured/H2D-unmeasured timing status",
-            path_label(path)
-        )
-        .into());
-    }
-    if value.pointer("/timing/host_to_device_ms").and_then(Value::as_f64).is_some() {
-        return Err(format!("{} must keep host_to_device_ms unmeasured", path_label(path)).into());
+    match str_at(&value, "/timing/transfer_timing_status")? {
+        "device_to_host_measured_host_to_device_unmeasured" => {
+            if value.pointer("/timing/host_to_device_ms").and_then(Value::as_f64).is_some() {
+                return Err(format!(
+                    "{} must keep host_to_device_ms unmeasured for D2H-only timing status",
+                    path_label(path)
+                )
+                .into());
+            }
+        }
+        "host_to_device_model_load_envelope_device_to_host_measured" => {
+            number_at(&value, "/timing/host_to_device_ms")?;
+            if str_at(&value, "/timing/host_to_device_ms_source")?
+                != "wall_clock_model_load_with_cuda_weight_upload"
+            {
+                return Err(format!(
+                    "{} must label H2D as wall_clock_model_load_with_cuda_weight_upload",
+                    path_label(path)
+                )
+                .into());
+            }
+            if str_at(&value, "/timing/host_to_device_ms_scope")?
+                != "model_load_wall_clock_envelope"
+            {
+                return Err(format!(
+                    "{} must label H2D scope as model_load_wall_clock_envelope",
+                    path_label(path)
+                )
+                .into());
+            }
+            if !bool_at(&value, "/timing/host_to_device_ms_includes_non_transfer_overhead")? {
+                return Err(format!(
+                    "{} must record that H2D envelope includes non-transfer overhead",
+                    path_label(path)
+                )
+                .into());
+            }
+        }
+        other => {
+            return Err(format!(
+                "{} has unsupported transfer timing status {other}",
+                path_label(path)
+            )
+            .into());
+        }
     }
     number_at(&value, "/timing/device_to_host_ms")?;
     Ok(TransferReceipt { path: path.to_owned(), value })
@@ -243,7 +276,7 @@ fn build_receipt(
             "benchmark_qualified_speedup": false,
             "accepted_profiles": [],
             "blocked_profiles": ["one_token", "short_decode_8", "warm_session_3_turns"],
-            "reason": "Dense Qwen CUDA evidence is fallback-free and repeated, with D2H logits timing measured, but every reviewed CUDA profile is slower than the same-artifact CPU reference mean and H2D timing remains unmeasured."
+            "reason": "Dense Qwen CUDA evidence is fallback-free and repeated, with D2H logits timing measured and an H2D model-load envelope recorded, but every reviewed CUDA profile is slower than the same-artifact CPU reference mean and pure H2D copy timing remains unmeasured."
         },
         "qualification_requirements": [
             {
@@ -262,10 +295,15 @@ fn build_receipt(
                 "status": "passed"
             },
             {
-                "id": "host_to_device_transfer_timing",
-                "description": "Host-to-device timing is measured, not only host-to-device byte counts.",
+                "id": "host_to_device_model_load_envelope",
+                "description": "Host-to-device model-load wall-clock envelope timing is recorded with explicit non-transfer-overhead labeling.",
+                "status": "passed"
+            },
+            {
+                "id": "pure_host_to_device_transfer_timing",
+                "description": "Pure host-to-device copy timing is measured separately from model-load and upload overhead.",
                 "status": "blocked",
-                "blocker": "CUDA-DENSE-PERF-003 keeps host_to_device_ms explicitly null with not_measured_by_dense_qwen_runtime source fields."
+                "blocker": "CUDA-DENSE-PERF-005 records a model-load wall-clock envelope, not pure CUDA event copy timing."
             },
             {
                 "id": "profile_outperforms_cpu_reference",
@@ -283,12 +321,16 @@ fn build_receipt(
         "profile_reviews": profiles,
         "evidence_summary": evidence,
         "transfer_timing_review": {
-            "status": "device_to_host_measured_host_to_device_unmeasured",
+            "status": str_at(&one_token.value, "/timing/transfer_timing_status")?,
             "device_to_host_timing_recorded": true,
-            "host_to_device_timing_recorded": false,
-            "host_to_device_blocker": "The dense Qwen runtime still records H2D bytes but not H2D elapsed timing.",
+            "host_to_device_timing_recorded": h2d_envelope_recorded(one_token),
+            "host_to_device_model_load_envelope_recorded": h2d_envelope_recorded(one_token),
+            "host_to_device_pure_transfer_timing_recorded": false,
+            "host_to_device_blocker": "The dense Qwen runtime records an H2D model-load wall-clock envelope, but not pure CUDA event copy timing.",
             "device_to_host_source": "wall_clock_extract_logits_2d_local",
-            "host_to_device_source": "not_measured_by_dense_qwen_runtime"
+            "host_to_device_source": h2d_source(one_token)?,
+            "host_to_device_scope": h2d_scope_json(one_token),
+            "host_to_device_ms_includes_non_transfer_overhead": h2d_includes_overhead_json(one_token)
         },
         "hardware_context": comparator
             .pointer("/hardware_context")
@@ -298,7 +340,7 @@ fn build_receipt(
         "claim_boundaries": [
             "speedup_claim=false; no dense Qwen profile is upgraded by this review.",
             "benchmark_qualified_speedup=false; current CUDA means are slower than same-artifact CPU means.",
-            "H2D transfer timing remains explicitly unmeasured.",
+            "H2D model-load envelope timing is recorded, but pure CUDA event H2D copy timing remains unmeasured.",
             "dense_regular_llm_cuda receipts cannot satisfy BitNet packed I2S/QK256 proof."
         ]
     }))
@@ -335,14 +377,18 @@ fn profile_review(
         "cuda_total_ms_mean": cuda_mean,
         "observed_cpu_total_ms_div_cuda_total_ms": cpu_mean / cuda_mean,
         "cuda_mean_slower_than_cpu": cuda_mean > cpu_mean,
-        "host_to_device_ms": null,
-        "host_to_device_ms_source": str_at(&transfer.value, "/timing/host_to_device_ms_source")?,
+        "host_to_device_ms": h2d_ms_json(transfer),
+        "host_to_device_ms_source": h2d_source(transfer)?,
+        "host_to_device_ms_scope": h2d_scope_json(transfer),
+        "host_to_device_ms_includes_non_transfer_overhead": h2d_includes_overhead_json(transfer),
+        "pure_host_to_device_ms": null,
+        "pure_host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
         "device_to_host_ms": d2h_ms,
         "device_to_host_ms_source": str_at(&transfer.value, "/timing/device_to_host_ms_source")?,
-        "reason": "This profile remains baseline/comparator evidence because CUDA mean total time is not faster than the same-artifact CPU reference and H2D timing is incomplete.",
+        "reason": "This profile remains baseline/comparator evidence because CUDA mean total time is not faster than the same-artifact CPU reference and pure H2D copy timing is incomplete.",
         "blockers": [
             "CUDA mean total time is slower than CPU mean total time",
-            "host-to-device transfer timing is unmeasured",
+            "pure host-to-device transfer timing is unmeasured",
             "no profile-specific speedup threshold has been accepted"
         ]
     }))
@@ -367,11 +413,39 @@ fn evidence_summary(
         "observed_cpu_total_ms_div_cuda_total_ms": cpu_mean / cuda_mean,
         "cuda_mean_slower_than_cpu": cuda_mean > cpu_mean,
         "device_to_host_ms": number_at(&transfer.value, "/timing/device_to_host_ms")?,
-        "host_to_device_ms": null,
-        "host_to_device_ms_source": str_at(&transfer.value, "/timing/host_to_device_ms_source")?,
+        "host_to_device_ms": h2d_ms_json(transfer),
+        "host_to_device_ms_source": h2d_source(transfer)?,
+        "host_to_device_ms_scope": h2d_scope_json(transfer),
+        "host_to_device_ms_includes_non_transfer_overhead": h2d_includes_overhead_json(transfer),
+        "pure_host_to_device_ms": null,
+        "pure_host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
         "speedup_claim": false,
         "benchmark_qualified_speedup": false
     }))
+}
+
+fn h2d_envelope_recorded(transfer: &TransferReceipt) -> bool {
+    transfer.value.pointer("/timing/host_to_device_ms").and_then(Value::as_f64).is_some()
+}
+
+fn h2d_ms_json(transfer: &TransferReceipt) -> Value {
+    transfer.value.pointer("/timing/host_to_device_ms").cloned().unwrap_or(Value::Null)
+}
+
+fn h2d_source(transfer: &TransferReceipt) -> Result<&str, Box<dyn Error>> {
+    str_at(&transfer.value, "/timing/host_to_device_ms_source")
+}
+
+fn h2d_scope_json(transfer: &TransferReceipt) -> Value {
+    transfer.value.pointer("/timing/host_to_device_ms_scope").cloned().unwrap_or(Value::Null)
+}
+
+fn h2d_includes_overhead_json(transfer: &TransferReceipt) -> Value {
+    transfer
+        .value
+        .pointer("/timing/host_to_device_ms_includes_non_transfer_overhead")
+        .cloned()
+        .unwrap_or(Value::Null)
 }
 
 fn comparator_profile<'a>(
