@@ -28,8 +28,8 @@ mini path without weakening the completed Qwen appliance baseline.
 | M4-MODEL-003 | merged | Rust M4 quality evidence rejects SmolLM2 for this round. |
 | M4-MODEL-004 | blocked | No accepted candidate is available to register. |
 | M4-MODEL-005 | blocked | Update model matrix and user envelope after registration. |
-| M4-MODEL-006 | in progress | Select the next exact candidate after the failed Qwen3/SmolLM2 round. |
-| M4-MODEL-007 | blocked | Run reference output sanity for the newly selected candidate. |
+| M4-MODEL-006 | merged | Select the next exact candidate after the failed Qwen3/SmolLM2 round. |
+| M4-MODEL-007 | ready | Run reference output sanity for the newly selected candidate. |
 | M4-MODEL-008 | blocked | Run Rust M4 quality gates for the newly selected candidate. |
 
 ## Current Selection

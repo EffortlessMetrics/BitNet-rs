@@ -202,7 +202,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-006"
-status = "in_progress"
+status = "merged"
+pr = 4399
+merge_sha = "7b3642d832403d39a169a8d4ed47e83969cade2d"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-006-gemma-candidate"
 stackable = false
 review_mode = "codex_premerge"
@@ -235,13 +237,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-007"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-007-gemma-reference"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-MODEL-006"]
+blocked_by = []
 acceptance = "Run reference output sanity for the newly selected candidate, recording exact artifact source, revision, file, size, SHA256, tokenizer authority, prompt template, reference command, prompt outputs, and reject/accept evidence."
 commands = [
   "cargo fmt --all -- --check",
