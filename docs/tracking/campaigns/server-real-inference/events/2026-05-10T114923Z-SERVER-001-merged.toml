@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T11:49:23Z"
+campaign = "server-real-inference"
+item = "SERVER-001"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 4429
+merge_sha = "355a6301c245dd363cd73efd7a57e5a300b0803e"
+actor = "codex"
+next_item = "none"
+
+notes = [
+  "Merged SERVER-001 implementation PR.",
+  "Server streaming routes now fail closed with explicit unavailable responses when no real engine is loaded or wired.",
+  "The request-batching scaffold no longer synthesizes generated text in non-test builds.",
+  "The implementation did not change hardware kernels, tokenizer behavior, loader behavior, transformer semantics, BitNet QK256, server performance claims, or hardware acceleration claims.",
+]
