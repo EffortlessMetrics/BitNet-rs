@@ -9193,6 +9193,8 @@ fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) 
 fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static str> {
     match command {
         Some(Commands::Ask { .. }) => Some("warn"),
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Chat(_)) => Some("warn"),
         Some(Commands::Model(_)) => Some("warn"),
         #[cfg(feature = "full-cli")]
         Some(Commands::Receipts(_)) => Some("warn"),
@@ -11260,6 +11262,12 @@ mod tests {
                     json: false,
                 },
             }))),
+            Some("warn")
+        );
+        assert_eq!(
+            default_log_level_for_command(Some(&Commands::Chat(Box::new(
+                InferenceCommand::default()
+            )))),
             Some("warn")
         );
     }

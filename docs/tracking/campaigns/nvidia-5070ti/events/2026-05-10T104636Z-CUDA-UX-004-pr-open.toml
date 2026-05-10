@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T10:46:36Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-004"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/cuda-ux-004-dense-chat"
+pr = 4427
+head_sha = "2cb7d4aba46968aaad5154fcc9f52939606950d6"
+summary = "Opened CUDA-UX-004 dense Qwen CUDA chat UX implementation PR."
+notes = [
+  "PR #4427 exposes the bounded dense Qwen CUDA chat path through `bitnet chat --device cuda --model qwen2.5-0.5b-instruct-q8_0`.",
+  "The implementation emits and validates dense_gguf_qwen_chat_strict_cuda_proof receipts backed by the warm-session proof source receipt.",
+  "The PR keeps speedup, full residency, server readiness, broad dense GGUF inference, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims false.",
+]

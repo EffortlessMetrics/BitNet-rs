@@ -26,6 +26,7 @@ use bitnet_receipts::{
     validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
     validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json,
+    validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json,
@@ -1574,6 +1575,71 @@ fn dense_gguf_qwen_ask_rejects_chat_speedup_full_residency_and_bitnet_claims() {
     assert!(
         err.contains("qwen_chat_cuda_claimed")
             || err.contains("speedup_claim")
+            || err.contains("full_cuda_residency_claimed")
+            || err.contains("bitnet_packed_i2s_qk256_proof"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn dense_gguf_qwen_chat_strict_cuda_proof_receipt_validates() {
+    let receipt = valid_dense_gguf_qwen_chat_strict_cuda_proof_receipt();
+
+    validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_qwen_chat_rejects_warm_session_only_receipt() {
+    let receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+
+    let err = validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("artifact_kind"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_chat_requires_source_warm_session_receipt() {
+    let mut receipt = valid_dense_gguf_qwen_chat_strict_cuda_proof_receipt();
+    receipt.as_object_mut().unwrap().remove("source_warm_session_receipt");
+
+    let err = validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("source_warm_session_receipt"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_chat_rejects_turn_token_mismatch() {
+    let mut receipt = valid_dense_gguf_qwen_chat_strict_cuda_proof_receipt();
+    receipt["chat_session"]["turns"][1]["cuda_generated_token_ids"][2] = json!(999);
+
+    let err = validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("generated token arrays"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_chat_rejects_speedup_server_full_residency_and_bitnet_claims() {
+    let mut receipt = valid_dense_gguf_qwen_chat_strict_cuda_proof_receipt();
+    receipt["claim_boundary"]["speedup_claim"] = json!(true);
+    receipt["claim_boundary"]["server_ready_claimed"] = json!(true);
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(true);
+    receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    let err = validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(
+        err.contains("speedup_claim")
+            || err.contains("server_ready_claimed")
             || err.contains("full_cuda_residency_claimed")
             || err.contains("bitnet_packed_i2s_qk256_proof"),
         "unexpected error: {err}"
@@ -4041,6 +4107,138 @@ fn valid_dense_gguf_qwen_ask_strict_cuda_proof_receipt() -> Value {
     receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
     receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(false);
     receipt["source_short_decode_receipt"] = source;
+    receipt
+}
+
+fn valid_dense_gguf_qwen_chat_strict_cuda_proof_receipt() -> Value {
+    let source = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    let source_proof = source["warm_session_proof"].clone();
+    let source_prerequisites = source["prerequisite_receipts"].clone();
+    let source_turns = source_proof["turns"].as_array().unwrap();
+    let turns = source_turns
+        .iter()
+        .enumerate()
+        .map(|(index, source_turn)| {
+            json!({
+                "index": index as u64,
+                "user_message": format!("turn {}", index + 1),
+                "assistant_answer": source_turn["decoded_text"].clone(),
+                "prompt_token_count": source_turn["prompt_token_count"].clone(),
+                "prompt_token_ids_sha256": source_turn["prompt_token_ids_sha256"].clone(),
+                "rendered_prompt_sha256": source_turn["rendered_prompt_sha256"].clone(),
+                "requested_new_tokens": source_turn["requested_new_tokens"].clone(),
+                "generated_tokens_count": source_turn["generated_tokens_count"].clone(),
+                "cpu_generated_token_ids": source_turn["cpu_generated_token_ids"].clone(),
+                "cuda_generated_token_ids": source_turn["cuda_generated_token_ids"].clone(),
+                "cpu_generated_token_ids_sha256": source_turn["cpu_generated_token_ids_sha256"].clone(),
+                "cuda_generated_token_ids_sha256": source_turn["cuda_generated_token_ids_sha256"].clone(),
+                "generated_token_ids_match": true,
+                "first_token_divergence_index": null,
+                "top_k_all_match": source_turn["top_k_all_match"].clone(),
+                "first_top_k_divergence_index": source_turn["first_top_k_divergence_index"].clone(),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let mut receipt = source.clone();
+    receipt["artifact_kind"] = json!("dense_gguf_qwen_chat_strict_cuda_proof");
+    receipt["artifact_path"] = json!("target/bitnet/receipts/dense-qwen-chat.json");
+    receipt["claim"] = json!("dense_gguf_qwen_chat_strict_cuda_proof_recorded");
+    receipt["execution_path"]["kernel_family"] = json!("dense_qwen_chat_strict_cuda");
+    receipt["execution_path"]["quantization_family"] =
+        json!("dense_gguf_q8_0_f16_qwen_chat_contract");
+    receipt["execution_plan"]["quantization"] = json!("dense_gguf_q8_0_f16_qwen_chat_contract");
+    receipt["answers"] = json!(["test answer", "test answer", "test answer"]);
+    receipt["receipt"] = json!({
+        "path": "target/bitnet/receipts/dense-qwen-chat.json",
+        "defaulted_for_dense_cuda_chat": true
+    });
+    receipt["prerequisite_receipts"] = json!({
+        "schema": 1,
+        "all_layer_execution_plan_artifact_kind": source_prerequisites["all_layer_execution_plan_artifact_kind"].clone(),
+        "all_layer_execution_plan_receipt_sha256": source_prerequisites["all_layer_execution_plan_receipt_sha256"].clone(),
+        "model_boundary_fixtures_artifact_kind": source_prerequisites["model_boundary_fixtures_artifact_kind"].clone(),
+        "model_boundary_fixtures_receipt_sha256": source_prerequisites["model_boundary_fixtures_receipt_sha256"].clone(),
+        "kv_cache_policy_artifact_kind": source_prerequisites["kv_cache_policy_artifact_kind"].clone(),
+        "kv_cache_policy_receipt_sha256": source_prerequisites["kv_cache_policy_receipt_sha256"].clone(),
+        "sampling_policy_artifact_kind": source_prerequisites["sampling_policy_artifact_kind"].clone(),
+        "sampling_policy_receipt_sha256": source_prerequisites["sampling_policy_receipt_sha256"].clone(),
+        "one_token_proof_artifact_kind": source_prerequisites["one_token_proof_artifact_kind"].clone(),
+        "one_token_proof_receipt_sha256": source_prerequisites["one_token_proof_receipt_sha256"].clone(),
+        "short_decode_proof_artifact_kind": source_prerequisites["short_decode_proof_artifact_kind"].clone(),
+        "short_decode_proof_receipt_sha256": source_prerequisites["short_decode_proof_receipt_sha256"].clone(),
+        "warm_session_proof_artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof",
+        "warm_session_proof_receipt_sha256": format!("{:064x}", 252),
+        "all_required_receipts_verified": true,
+        "all_layer_execution_plan_claimed": true,
+        "model_boundary_fixtures_claimed": true,
+        "kv_cache_policy_claimed": true,
+        "sampling_policy_claimed": true,
+        "one_token_proof_claimed": true,
+        "short_decode_proof_claimed": true,
+        "warm_session_proof_claimed": true
+    });
+    receipt["chat_session"] = json!({
+        "schema": 1,
+        "proof_scope": "qwen_strict_cuda_chat_from_warm_session",
+        "model_family": "qwen",
+        "turns_count": source_proof["turns_count"].clone(),
+        "requested_new_tokens_per_turn": source_proof["requested_new_tokens_per_turn"].clone(),
+        "generated_tokens_total": source_proof["generated_tokens_total"].clone(),
+        "generation_policy": "greedy",
+        "deterministic": true,
+        "fallback_used": false,
+        "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+        "cuda_target_backend": "nvidia-rtx-5070-ti-cuda",
+        "cpu_generated_token_ids_sha256": source_proof["cpu_generated_token_ids_sha256"].clone(),
+        "cuda_generated_token_ids_sha256": source_proof["cuda_generated_token_ids_sha256"].clone(),
+        "generated_token_ids_match": true,
+        "first_token_divergence": null,
+        "top_k_evidence_recorded": true,
+        "top_k_compared": true,
+        "top_k_all_match": source_proof["top_k_all_match"].clone(),
+        "first_top_k_divergence": source_proof["first_top_k_divergence"].clone(),
+        "top_k_max_abs_error": source_proof["top_k_max_abs_error"].clone(),
+        "top_k_mean_abs_error": source_proof["top_k_mean_abs_error"].clone(),
+        "turns": turns,
+        "qwen_one_token_cuda_claimed": true,
+        "qwen_short_decode_cuda_claimed": true,
+        "qwen_warm_session_cuda_claimed": true,
+        "qwen_ask_cuda_claimed": false,
+        "qwen_chat_cuda_claimed": true,
+        "dense_gguf_inference_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "speedup_claim": false,
+        "server_ready_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["quality_gate"] = json!({
+        "schema": 1,
+        "gate": "qwen_cuda_chat_session",
+        "passed": true,
+        "chat_claimed": true,
+        "server_claimed": false
+    });
+    receipt["quality"] = json!({
+        "passed": true,
+        "gate": "qwen_cuda_chat_session",
+        "chat_claimed": true,
+        "server_claimed": false
+    });
+    receipt["tensor_residency"]["scope"] = json!("qwen_chat_strict_cuda");
+    receipt["residency"] = json!({
+        "weights_uploaded_once": true,
+        "runtime_buffers_reused": true,
+        "per_turn_weight_upload": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["claim_boundary"]["qwen_ask_cuda_claimed"] = json!(false);
+    receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["server_ready_claimed"] = json!(false);
+    receipt["claim_boundary"]["speedup_claim"] = json!(false);
+    receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(false);
+    receipt["source_warm_session_receipt"] = source;
     receipt
 }
 

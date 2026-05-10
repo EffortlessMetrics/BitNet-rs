@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T10:34:47Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-004"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/cuda-ux-004-dense-chat"
+summary = "Started CUDA-UX-004 dense Qwen CUDA chat UX implementation."
+notes = [
+  "The implementation promotes the validated dense Qwen warm-session runtime proof path into user-facing bitnet chat --device cuda --model qwen2.5-0.5b-instruct-q8_0.",
+  "The scope is bounded 2-4 turn chat collection, verified cache/model alias resolution, strict dense_regular_llm_cuda chat dispatch, compact proof summary output, chat receipt validation, and tracker/report updates.",
+  "The lane preserves speedup, full residency, server readiness, broad dense GGUF inference, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims.",
+]
