@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T14:18:27Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-001"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-perf-001-baseline"
+
+notes = [
+  "Started CUDA-DENSE-PERF-001 to normalize existing dense Qwen one-token, short-decode, and warm-session RTX 5070 Ti receipts into a benchmark baseline.",
+  "The receipt must keep speedup_claim=false and benchmark_qualified_speedup=false while recording prerequisite receipt hashes, profile timing, kernel invocation, transfer byte, route, fallback, and claim-boundary evidence.",
+  "This slice does not change tokenizer, loader, transformer runtime, CUDA kernel math, BitNet QK256 code, server behavior, speedup claims, full-residency claims, or BitNet packed proof claims.",
+]
