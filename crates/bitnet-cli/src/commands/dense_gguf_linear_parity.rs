@@ -3311,6 +3311,7 @@ struct DenseQwenOneTokenRun {
     embed_ms: f64,
     forward_ms: f64,
     logits_ms: f64,
+    logits_download_ms: f64,
     logits_device_is_cuda: bool,
 }
 
@@ -3327,6 +3328,7 @@ struct DenseQwenShortDecodeRun {
     embed_ms_total: f64,
     forward_ms_total: f64,
     logits_ms_total: f64,
+    logits_download_ms_total: f64,
     logits_len: usize,
     logits_all_cuda_resident: bool,
 }
@@ -3342,6 +3344,7 @@ struct DenseQwenShortDecodeStep {
     embed_ms: f64,
     forward_ms: f64,
     logits_ms: f64,
+    logits_download_ms: f64,
     decode_ms: f64,
     logits_device_is_cuda: bool,
 }
@@ -3603,7 +3606,9 @@ fn run_qwen_one_token_once(
     if require_cuda && !logits_device_is_cuda {
         bail!("CUDA proof logits tensor was not CUDA-resident before download");
     }
+    let logits_download_start = std::time::Instant::now();
     let logits_vec = extract_logits_2d_local(&logits)?;
+    let logits_download_ms = elapsed_ms_f64(logits_download_start);
     let top_k_entries = dense_qwen_top_k(&logits_vec, top_k);
     let Some(selected) = top_k_entries.first().map(|entry| entry.token_id) else {
         bail!("one-token proof could not select a greedy token from logits");
@@ -3623,6 +3628,7 @@ fn run_qwen_one_token_once(
         embed_ms,
         forward_ms,
         logits_ms,
+        logits_download_ms,
         logits_device_is_cuda,
     })
 }
@@ -3744,6 +3750,7 @@ fn run_qwen_short_decode_with_loaded_model(
     let mut embed_ms_total = 0.0;
     let mut forward_ms_total = 0.0;
     let mut logits_ms_total = 0.0;
+    let mut logits_download_ms_total = 0.0;
     let mut logits_all_cuda_resident = true;
     let mut logits_len = 0_usize;
 
@@ -3782,7 +3789,10 @@ fn run_qwen_short_decode_with_loaded_model(
             );
         }
 
+        let logits_download_start = std::time::Instant::now();
         let logits_vec = extract_logits_2d_local(&logits)?;
+        let logits_download_ms = elapsed_ms_f64(logits_download_start);
+        logits_download_ms_total += logits_download_ms;
         logits_len = logits_vec.len();
         let top_k_entries = dense_qwen_top_k(&logits_vec, top_k);
         let Some(selected) = top_k_entries.first().map(|entry| entry.token_id) else {
@@ -3803,6 +3813,7 @@ fn run_qwen_short_decode_with_loaded_model(
             embed_ms,
             forward_ms,
             logits_ms,
+            logits_download_ms,
             decode_ms,
             logits_device_is_cuda,
         });
@@ -3825,6 +3836,7 @@ fn run_qwen_short_decode_with_loaded_model(
         embed_ms_total,
         forward_ms_total,
         logits_ms_total,
+        logits_download_ms_total,
         logits_len,
         logits_all_cuda_resident,
     })
@@ -4025,6 +4037,7 @@ fn dense_qwen_short_decode_steps_json(
                     "embed_ms": cuda_step.embed_ms,
                     "forward_ms": cuda_step.forward_ms,
                     "logits_ms": cuda_step.logits_ms,
+                    "logits_download_ms": cuda_step.logits_download_ms,
                     "decode_ms": cuda_step.decode_ms,
                     "logits_device_is_cuda": cuda_step.logits_device_is_cuda
                 }
@@ -4053,6 +4066,18 @@ fn dense_qwen_logits_error(
 
 fn elapsed_ms_f64(start: std::time::Instant) -> f64 {
     start.elapsed().as_secs_f64() * 1000.0
+}
+
+fn dense_qwen_transfer_timing_status() -> &'static str {
+    "device_to_host_measured_host_to_device_unmeasured"
+}
+
+fn dense_qwen_h2d_timing_source() -> &'static str {
+    "not_measured_by_dense_qwen_runtime"
+}
+
+fn dense_qwen_d2h_timing_source() -> &'static str {
+    "wall_clock_extract_logits_2d_local"
 }
 
 fn parse_dense_linear_role(value: &str) -> Result<DenseGgufTensorRole> {
@@ -10669,10 +10694,16 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
             "embed_ms": cuda.embed_ms,
             "forward_ms": cuda.forward_ms,
             "logits_ms": cuda.logits_ms,
+            "logits_download_ms": cuda.logits_download_ms,
             "kernel_time_ms": kernel_time_ms,
             "cpu_reference_total_ms": cpu.total_ms,
             "host_to_device_bytes": stats_h2d,
             "device_to_host_bytes": stats_d2h,
+            "host_to_device_ms": null,
+            "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+            "device_to_host_ms": cuda.logits_download_ms,
+            "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+            "transfer_timing_status": dense_qwen_transfer_timing_status(),
             "kernel_invocations": runtime_invocations,
             "kernel_launches": stats_launches
         },
@@ -10695,6 +10726,11 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
                 "status": "measured",
                 "host_to_device_bytes": stats_h2d,
                 "device_to_host_bytes": stats_d2h,
+                "host_to_device_ms": null,
+                "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+                "device_to_host_ms": cuda.logits_download_ms,
+                "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+                "transfer_timing_status": dense_qwen_transfer_timing_status(),
                 "kernel_invocations": runtime_invocations,
                 "kernel_launches": stats_launches
             }
@@ -11050,10 +11086,16 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
             "embed_ms_total": cuda.embed_ms_total,
             "forward_ms_total": cuda.forward_ms_total,
             "logits_ms_total": cuda.logits_ms_total,
+            "logits_download_ms_total": cuda.logits_download_ms_total,
             "kernel_time_ms": kernel_time_ms,
             "cpu_reference_total_ms": cpu.total_ms,
             "host_to_device_bytes": stats_h2d,
             "device_to_host_bytes": stats_d2h,
+            "host_to_device_ms": null,
+            "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+            "device_to_host_ms": cuda.logits_download_ms_total,
+            "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+            "transfer_timing_status": dense_qwen_transfer_timing_status(),
             "kernel_invocations": runtime_invocations,
             "kernel_launches": stats_launches,
             "generated_tokens_count": generated_count_u64
@@ -11077,6 +11119,11 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
                 "status": "measured",
                 "host_to_device_bytes": stats_h2d,
                 "device_to_host_bytes": stats_d2h,
+                "host_to_device_ms": null,
+                "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+                "device_to_host_ms": cuda.logits_download_ms_total,
+                "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+                "transfer_timing_status": dense_qwen_transfer_timing_status(),
                 "kernel_invocations": runtime_invocations,
                 "kernel_launches": stats_launches
             }
@@ -11360,6 +11407,7 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
                 "embed_ms_total": cuda_turn.embed_ms_total,
                 "forward_ms_total": cuda_turn.forward_ms_total,
                 "logits_ms_total": cuda_turn.logits_ms_total,
+                "logits_download_ms_total": cuda_turn.logits_download_ms_total,
                 "logits_device_all_cuda_resident": cuda_turn.logits_all_cuda_resident
             }
         }));
@@ -11580,9 +11628,15 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             "embed_ms_total": cuda.turns.iter().map(|turn| turn.embed_ms_total).sum::<f64>(),
             "forward_ms_total": cuda.turns.iter().map(|turn| turn.forward_ms_total).sum::<f64>(),
             "logits_ms_total": cuda.turns.iter().map(|turn| turn.logits_ms_total).sum::<f64>(),
+            "logits_download_ms_total": cuda.turns.iter().map(|turn| turn.logits_download_ms_total).sum::<f64>(),
             "kernel_time_ms": kernel_time_ms,
             "host_to_device_bytes": stats_h2d,
             "device_to_host_bytes": stats_d2h,
+            "host_to_device_ms": null,
+            "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+            "device_to_host_ms": cuda.turns.iter().map(|turn| turn.logits_download_ms_total).sum::<f64>(),
+            "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+            "transfer_timing_status": dense_qwen_transfer_timing_status(),
             "kernel_invocations": runtime_invocations,
             "kernel_launches": stats_launches,
             "turns_count": turns_count_u64,
@@ -11614,6 +11668,11 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
                 "status": "measured",
                 "host_to_device_bytes": stats_h2d,
                 "device_to_host_bytes": stats_d2h,
+                "host_to_device_ms": null,
+                "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+                "device_to_host_ms": cuda.turns.iter().map(|turn| turn.logits_download_ms_total).sum::<f64>(),
+                "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+                "transfer_timing_status": dense_qwen_transfer_timing_status(),
                 "kernel_invocations": runtime_invocations,
                 "kernel_launches": stats_launches
             }

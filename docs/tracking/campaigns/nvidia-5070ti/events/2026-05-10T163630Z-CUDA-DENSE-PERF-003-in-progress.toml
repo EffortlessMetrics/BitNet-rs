@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T16:36:30Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-003"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-perf-003-transfer-timing"
+notes = [
+  "The slice records measured device-to-host logits download timing in dense Qwen one-token, short-decode, and warm-session strict CUDA runtime receipts.",
+  "Host-to-device timing remains explicitly unmeasured with source fields.",
+  "The work preserves fallback_used=false, speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, server_ready_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+]
