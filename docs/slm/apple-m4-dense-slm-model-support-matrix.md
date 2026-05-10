@@ -91,6 +91,32 @@ record all of the following:
   execution, MPSGraph model inference, CUDA, x86, or broad Apple Silicon
   performance.
 
+### `qwen2.5-1.5b-instruct-q4_k_m`
+
+- State: `candidate`.
+- Source: `Qwen/Qwen2.5-1.5B-Instruct-GGUF`.
+- Revision: `91cad51170dc346986eccefdc2dd33a9da36ead9`.
+- File: `qwen2.5-1.5b-instruct-q4_k_m.gguf`.
+- Size: `1117320736` bytes.
+- SHA256: `6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e`.
+- GGUF architecture: `qwen2`.
+- Quantization: `Q4_K_M`.
+- Tokenizer authority: `tokenizer.ggml.model = gpt2`,
+  `tokenizer.ggml.pre = qwen2`.
+- Prompt template: `qwen2.5`.
+- Rust support status: passed bounded Rust M4 `apple-m4-cpu-neon` quality and
+  duplicate-prompt greedy determinism in `M4-MODEL-011`.
+- M4 support status: candidate pending cache/model-registration. It is not
+  selectable by model ID yet.
+- Cache policy: no registered model-cache entry until `M4-MODEL-004` records
+  fetch/verify/list behavior, cache metadata, and receipt validation.
+- Quality status: reference-good in `M4-MODEL-010`; Rust M4 quality accepted in
+  `M4-MODEL-011` for the bounded prompt suite with `fallback_used = false`.
+- Claim boundary: larger dense Qwen Apple CPU/NEON candidate only; it does not
+  prove BitNet, QK256, full Apple Metal inference, Neural Engine execution,
+  MPSGraph model inference, MacBook behavior, CUDA, x86, or broad Apple Silicon
+  performance.
+
 ### `qwen3-0.6b-q8_0`
 
 - State: `diagnostic-only`.
@@ -212,7 +238,7 @@ reference, Rust M4 quality, tokenizer, cache, and receipt gates in this matrix.
 qwen3-0.6b-q8_0                 rejected by current reference runner
 smollm2-360m-instruct-q8_0      reference-good, rejected by Rust M4 quality
 gemma-3-270m-it-q8_0            rejected by current reference runner
-qwen2.5-1.5b-instruct-q4_k_m    reference-good, pending Rust M4 quality
+qwen2.5-1.5b-instruct-q4_k_m    Rust M4 quality accepted, pending cache registration
 ```
 
 See [apple-m4-slm-model-breadth-candidates.md](apple-m4-slm-model-breadth-candidates.md)
@@ -228,3 +254,8 @@ receipt, and deterministic gates pass.
 SmolLM2 is not registered as a supported M4 dense SLM because the strict Rust
 loader rejects the artifact and diagnostic compatibility probes still produce
 incoherent output.
+`M4-MODEL-011` records the larger Qwen2.5 Rust M4 quality result in
+[apple-m4-slm-model-breadth-rust-m4-quality.md](apple-m4-slm-model-breadth-rust-m4-quality.md):
+Qwen2.5 1.5B Q4_K_M passes bounded Rust M4 quality and duplicate-prompt greedy
+determinism, but it remains unregistered and unsupported until the cache/model
+registration item lands.

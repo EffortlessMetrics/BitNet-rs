@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T03:22:11Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-011"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started Rust M4 apple-m4-cpu-neon quality gates for the larger Qwen2.5 1.5B Q4_K_M candidate.",
+  "The candidate generated coherent bounded outputs with real GGUF, GGUF tokenizer authority, strict loader/tokenizer mode, apple-m4-cpu-neon routing, and fallback_used=false.",
+  "A duplicate-prompt greedy determinism probe produced stable generated token IDs and text.",
+  "The candidate remains unregistered and unsupported until cache metadata and model-selection registration land in a later item.",
+  "No model binary, BitNet claim, full Metal claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, or broad performance claim is introduced.",
+]
