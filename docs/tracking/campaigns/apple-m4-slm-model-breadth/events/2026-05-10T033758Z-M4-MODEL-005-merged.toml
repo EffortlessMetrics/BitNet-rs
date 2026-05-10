@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T03:37:58Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-005"
+event = "merged"
+actor = "codex"
+pr = 4416
+merge_sha = "b7355e188536a09478fd34d95c8f485c4ca913fe"
+previous_status = "in_progress"
+campaign_status = "complete"
+
+notes = [
+  "Merged model matrix and M4 user-envelope updates for Qwen2.5 1.5B Q4_K_M.",
+  "Documented the model as an explicit non-default supported dense SLM with cache footprint, receipt evidence, bounded Rust M4 timing, and claim boundaries.",
+  "The default M4 dense SLM model remains qwen2.5-0.5b-instruct-q8_0.",
+  "Closed apple-m4-slm-model-breadth with no remaining ready item.",
+  "No model binary, BitNet claim, full Metal claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, or broad performance claim was introduced.",
+]
