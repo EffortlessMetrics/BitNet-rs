@@ -47,6 +47,47 @@ backend = apple-m4-cpu-neon
 fallback_used = false
 ```
 
+The supported non-default larger Qwen-class model is:
+
+```text
+model_id = qwen2.5-1.5b-instruct-q4_k_m
+model = Qwen2.5 1.5B Instruct Q4_K_M
+sha256 = 6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
+size_bytes = 1117320736
+cache_size_mib = 1065.56
+tokenizer_model = gpt2
+tokenizer_pre = qwen2
+prompt_template = qwen2.5
+backend = apple-m4-cpu-neon
+fallback_used = false
+selection = explicit only; pass --model-id qwen2.5-1.5b-instruct-q4_k_m
+```
+
+The 1.5B model is supported for the M4 dense SLM lane after reference-output,
+Rust M4 quality, deterministic duplicate-prompt, cache verification, and Mac
+cache-check gates. It is not the default because it has a larger cache footprint
+and materially slower warm-session timing than the 0.5B default.
+
+Bounded M4 registration receipts for the 1.5B model:
+
+```text
+ci/quality/apple-m4-slm-model-breadth-qwen15-reference-sanity.toml
+ci/quality/apple-m4-slm-model-breadth-qwen15-rust-m4-quality.toml
+ci/quality/apple-m4-slm-model-breadth-qwen15-cache-registration.toml
+```
+
+The bounded Rust M4 quality gate for the 1.5B model recorded:
+
+| Prompt | Generated tokens | TTFT ms | Decode tok/s | Normalized output |
+|---|---:|---:|---:|---|
+| `What is 2+2? Answer briefly.` | 9 | 22707 | 2.052 | `2+2 equals 4.` |
+| `Name the capital of France.` | 8 | 14102 | 2.064 | `The capital of France is Paris.` |
+| `Write one short sentence about Rust.` | 16 | 14808 | 2.028 | `Rust is a systems programming language known for its safety, speed, and` |
+
+This is quality and registration evidence, not a release-mode performance
+envelope. Publish a separate release-mode profile before making user-facing
+latency expectations for the 1.5B model.
+
 ## Release-Mode Warm Envelope
 
 Evidence receipt:
@@ -77,6 +118,8 @@ Healthy expectations for this M4 Mac mini:
 - warm time-to-first-token is around the recorded release envelope for matching
   model, profile, and machine context;
 - peak memory for the Q8_0 release profile is roughly 3.8-4.1 GB.
+- 1.5B Q4_K_M performance is not covered by this release envelope yet; use its
+  bounded registration receipts only to confirm coherent output and routing.
 
 ## Resident Soak Envelope
 

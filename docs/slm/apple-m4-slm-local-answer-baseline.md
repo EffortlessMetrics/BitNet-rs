@@ -54,7 +54,8 @@ Supported model IDs:
 
 ```text
 qwen2.5-0.5b-instruct-q8_0    Rust-native Apple M4 CPU/NEON baseline artifact
-qwen2.5-0.5b-instruct-q4_k_m  Reference-good storage-preferred artifact; strict Rust execution remains unsupported
+qwen2.5-0.5b-instruct-q4_k_m  Rust-native Apple M4 CPU/NEON storage-conscious artifact
+qwen2.5-1.5b-instruct-q4_k_m  Rust-native Apple M4 CPU/NEON larger Qwen artifact; explicit non-default
 ```
 
 Useful commands:
@@ -64,6 +65,17 @@ bitnet model list
 bitnet model fetch qwen2.5-0.5b-instruct-q8_0
 bitnet model verify qwen2.5-0.5b-instruct-q8_0
 bitnet model prune qwen2.5-0.5b-instruct-q8_0
+```
+
+The default remains `qwen2.5-0.5b-instruct-q8_0`. Select either non-default
+model explicitly with `--model-id` on Mac commands after fetching and verifying
+that artifact:
+
+```bash
+bitnet model fetch qwen2.5-1.5b-instruct-q4_k_m
+bitnet mac check --model-id qwen2.5-1.5b-instruct-q4_k_m
+bitnet mac ask "What is 2+2? Answer briefly." \
+  --model-id qwen2.5-1.5b-instruct-q4_k_m
 ```
 
 Cache metadata records source repository, revision, filename, SHA256, size, quantization, tokenizer metadata, chat-template presence, and Apple M4 CPU/NEON support status. Fetch warns on low disk headroom and honors `--offline` / `BITNET_OFFLINE`.
