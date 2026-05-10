@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T12:24:46Z"
+campaign = "server-real-inference"
+item = "SERVER-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4432
+branch = "codex/server-real-inference/SERVER-002-no-placeholder-model-readiness"
+head_sha = "8931f489c2253228293cac1ef30cecfd225990f5"
+summary = "Opened SERVER-002 PR to fail closed placeholder server model lifecycle readiness."
+notes = [
+  "PR keeps HuggingFace service and model cache scaffolds from reporting placeholder ready state or fabricated cached models.",
+  "No real server model loading, answer, hardware acceleration, speedup, or performance claim is made.",
+]
