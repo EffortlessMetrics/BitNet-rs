@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T20:13:55Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-006"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/cuda-ux-006-bench-receipt-report"
+pr = 4454
+head_sha = "f6312b2169a8bd4ed4c8153564547ab2cbea7a14"
+merge_sha = "b64737310fed807743e32cd84d37378e5f9473ea"
+summary = "Merged CUDA-UX-006 governed CUDA benchmark receipt reporting."
+notes = [
+  "PR #4454 adds `bitnet bench --device cuda --cuda-benchmark-receipt <path>` for validating and reporting governed CUDA benchmark qualification receipts.",
+  "The merged path renders text, JSON, and CSV summaries from existing CUDA benchmark receipts while preserving fail-closed CUDA bench behavior without a receipt.",
+  "The implementation keeps fresh CUDA benchmark execution, speedup, full-residency, server readiness, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, and CUDA kernel math claims false.",
+]
