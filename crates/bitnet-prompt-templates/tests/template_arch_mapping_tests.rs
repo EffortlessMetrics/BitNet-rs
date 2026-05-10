@@ -136,6 +136,7 @@ fn mistral_family_templates() {
 fn qwen_family_templates() {
     assert_eq!(TemplateType::suggest_for_arch("qwen"), Some(TemplateType::QwenChat));
     assert_eq!(TemplateType::suggest_for_arch("qwen2.5"), Some(TemplateType::Qwen25Chat));
+    assert_eq!(TemplateType::suggest_for_arch("qwen3"), Some(TemplateType::QwenChat));
 }
 
 #[test]

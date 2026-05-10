@@ -65,6 +65,18 @@ fn apply_defaults_qwen25() {
     assert_eq!(config.max_position_embeddings, 32768);
 }
 
+/// Qwen3 GGUF metadata should select RMSNorm rather than falling through to
+/// the generic LayerNorm default used by `ModelConfig::default()`.
+#[test]
+fn apply_defaults_qwen3() {
+    let mut config = ModelConfig::default();
+    config.apply_architecture_defaults("qwen3");
+
+    assert_eq!(config.norm_type, NormType::RmsNorm);
+    assert_eq!(config.activation_type, ActivationType::Silu);
+    assert_eq!(config.max_position_embeddings, 2048);
+}
+
 /// Unknown architectures should not change the config.
 #[test]
 fn apply_defaults_unknown_is_noop() {

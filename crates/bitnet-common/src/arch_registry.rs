@@ -43,6 +43,7 @@ impl ArchitectureRegistry {
 
             "qwen" | "qwen2" => (RmsNorm, Silu, None),
             "qwen2.5" | "qwen-2.5" => (RmsNorm, Silu, Some(32768)),
+            "qwen3" | "qwen-3" | "qwen_3" => (RmsNorm, Silu, None),
 
             "codegemma" | "code-gemma" => (RmsNorm, Gelu, Some(8192)),
             "gemma" => (RmsNorm, Gelu, None),
@@ -136,6 +137,9 @@ impl ArchitectureRegistry {
             "qwen2",
             "qwen2.5",
             "qwen-2.5",
+            "qwen3",
+            "qwen-3",
+            "qwen_3",
             "gemma",
             "gemma2",
             "gemma-2",
@@ -321,6 +325,16 @@ mod tests {
         assert_eq!(d.norm_type, NormType::RmsNorm);
         assert_eq!(d.activation_type, ActivationType::Gelu);
         assert_eq!(d.default_context_length, None);
+    }
+
+    #[test]
+    fn test_qwen3_defaults() {
+        for name in ["qwen3", "qwen-3", "qwen_3"] {
+            let d = ArchitectureRegistry::lookup(name).unwrap();
+            assert_eq!(d.norm_type, NormType::RmsNorm, "{name}");
+            assert_eq!(d.activation_type, ActivationType::Silu, "{name}");
+            assert_eq!(d.default_context_length, None, "{name}");
+        }
     }
 
     #[test]
