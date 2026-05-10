@@ -534,7 +534,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008"
-status = "pr_open"
+status = "merged"
 pr = 4434
 branch = "codex/slm-cpu-008-qwen3-first-token-parity"
 stackable = false
