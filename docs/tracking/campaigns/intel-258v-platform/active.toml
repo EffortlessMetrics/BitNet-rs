@@ -1613,7 +1613,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-026"
-status = "ready"
+status = "pr_open"
+pr = 4365
 branch = "codex/lunar-lake/CPU258V-026-reference-bundle-refresh"
 stackable = false
 review_mode = "codex_premerge"
