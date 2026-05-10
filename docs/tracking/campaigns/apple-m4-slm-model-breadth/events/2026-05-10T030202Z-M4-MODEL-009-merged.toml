@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T03:02:02Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-009"
+event = "merged"
+actor = "codex"
+pr = 4404
+merge_sha = "44f0b09bffeea3b61ec4f4b28291973dccb8b4d8"
+previous_status = "in_progress"
+next_item = "M4-MODEL-010"
+
+notes = [
+  "Merged the larger Qwen2.5 1.5B Q4_K_M candidate-selection item.",
+  "Promoted M4-MODEL-010 to ready for reference output sanity.",
+  "No model artifact was downloaded, accepted, registered, or claimed supported.",
+  "The supported M4 dense SLM set remains Qwen2.5 0.5B Q8_0 default and Qwen2.5 0.5B Q4_K_M supported non-default.",
+]
