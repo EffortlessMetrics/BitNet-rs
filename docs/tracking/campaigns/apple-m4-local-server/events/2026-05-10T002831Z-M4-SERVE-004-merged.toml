@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T00:28:31Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-004"
+event = "merged"
+actor = "codex"
+pr = 4371
+merge_sha = "035d46df6d6279d4fca0ebef0e9911cc35f841e9"
+previous_status = "in_progress"
+next_item = "M4-SERVE-005"
+
+notes = [
+  "Merged the bitnet mac serve HTTP receipt export slice.",
+  "The server now exports existing per-request JSON receipts through GET /receipts/{id}, rejects unsafe receipt IDs, returns missing receipts clearly, and does not run generation for export.",
+  "The merged item does not claim production readiness, full OpenAI compatibility, BitNet quality, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook, model binary, or broad performance.",
+  "Promoted M4-SERVE-005 to ready for doctor/smoke/regression server readiness integration.",
+]
