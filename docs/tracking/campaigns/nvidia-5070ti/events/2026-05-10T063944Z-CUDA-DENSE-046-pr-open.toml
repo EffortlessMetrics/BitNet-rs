@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T06:39:44Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-046"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-046-warm-session"
+pr = 4422
+head_sha = "e0304a67b56e15961459cdfedd06bc820614fafe"
+summary = "Opened CUDA-DENSE-046 dense Qwen warm-session strict CUDA runtime proof PR."
+notes = [
+  "PR #4422 adds the governed dense Qwen warm-session strict CUDA runtime proof command and commits the validated RTX 5070 Ti hardware receipt.",
+  "The receipt proves three deterministic turns and 24 greedy tokens through dense_regular_llm_cuda with fallback_used=false, CPU/CUDA generated-token agreement, and top-k comparison evidence.",
+  "The PR preserves ask/chat UX, speedup, persistent/full-residency beyond the scoped warm-session proof, server, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims.",
+]
