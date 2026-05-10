@@ -135,7 +135,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-004"
-status = "in_progress"
+status = "merged"
+pr = 4371
+merge_sha = "035d46df6d6279d4fca0ebef0e9911cc35f841e9"
 branch = "codex/apple-m4-local-server/M4-SERVE-004-receipt-export"
 stackable = false
 review_mode = "codex_premerge"
@@ -171,13 +173,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-005"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-local-server/M4-SERVE-005-doctor-smoke"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-SERVE-004"]
+blocked_by = []
 acceptance = "Integrate local server health with Mac doctor/smoke/regression workflows, documenting how operators verify server readiness and receipt export without making production uptime claims."
 commands = [
   "cargo fmt --all -- --check",

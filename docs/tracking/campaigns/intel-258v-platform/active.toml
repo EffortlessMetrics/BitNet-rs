@@ -1613,8 +1613,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-026"
-status = "pr_open"
+status = "merged"
 pr = 4365
+merge_sha = "a12d383215136fb9532a8405de41b74829628078"
 branch = "codex/lunar-lake/CPU258V-026-reference-bundle-refresh"
 stackable = false
 review_mode = "codex_premerge"
