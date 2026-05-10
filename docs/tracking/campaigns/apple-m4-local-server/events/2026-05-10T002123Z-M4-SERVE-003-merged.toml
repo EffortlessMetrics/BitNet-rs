@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T00:21:23Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-003"
+event = "merged"
+actor = "codex"
+pr = 4368
+merge_sha = "5dd5b3e35a10bb96cb4a2db8293ac44e76486071"
+previous_status = "in_progress"
+next_item = "M4-SERVE-004"
+
+notes = [
+  "Merged the first bitnet mac serve local completion endpoint slice.",
+  "The server now accepts the narrow POST /v1/chat/completions request shape for the supported dense SLM cache, loads model/tokenizer at startup, routes through apple-m4-cpu-neon, preserves fallback_used=false, and writes per-request receipts.",
+  "The merged item does not claim full OpenAI compatibility, production readiness, BitNet quality, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook, model binary, or broad performance.",
+  "Promoted M4-SERVE-004 to ready for HTTP receipt export.",
+]

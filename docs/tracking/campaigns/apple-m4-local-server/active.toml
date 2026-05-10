@@ -97,7 +97,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-003"
-status = "in_progress"
+status = "merged"
+pr = 4368
+merge_sha = "5dd5b3e35a10bb96cb4a2db8293ac44e76486071"
 branch = "codex/apple-m4-local-server/M4-SERVE-003-streaming-completions"
 stackable = false
 review_mode = "codex_premerge"
@@ -133,13 +135,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-004"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-local-server/M4-SERVE-004-receipt-export"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-SERVE-003"]
+blocked_by = []
 acceptance = "Add receipt export for local server requests, including model, tokenizer, backend, fallback, generated text, token IDs, timing, request metadata, streaming status, and claim boundaries."
 commands = [
   "cargo fmt --all -- --check",
