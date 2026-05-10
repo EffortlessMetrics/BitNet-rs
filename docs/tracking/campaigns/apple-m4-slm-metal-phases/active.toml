@@ -171,7 +171,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-005"
-status = "in_progress"
+status = "merged"
+pr = 4391
+merge_sha = "abc8fcaa9bb4748662b38d646b61093bc712b5b3"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-005-runtime-api"
 stackable = false
 review_mode = "codex_premerge"
@@ -208,7 +210,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-006"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-006-resident-route"
 stackable = false
 review_mode = "codex_premerge"

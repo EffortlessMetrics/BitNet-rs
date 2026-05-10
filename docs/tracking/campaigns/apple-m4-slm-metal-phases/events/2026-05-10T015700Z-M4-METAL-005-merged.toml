@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T01:57:00Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-005"
+event = "merged"
+actor = "codex"
+pr = 4391
+merge_sha = "abc8fcaa9bb4748662b38d646b61093bc712b5b3"
+previous_status = "in_progress"
+next_item = "M4-METAL-006"
+
+notes = [
+  "Merged the fixture-scoped dense prefill Q/K/V Metal runtime API in bitnet-kernels.",
+  "The runtime API is gated behind metal-runtime for live wgpu/pollster dispatch and remains opt-in for M4 Metal proof.",
+  "Promoted M4-METAL-006 to ready for resident-session routing with parity.",
+  "No resident Metal generation, full apple-m4-metal inference claim, BitNet claim, QK256, Neural Engine, MPSGraph, MacBook work, model binary, or broad performance claim is introduced.",
+]
