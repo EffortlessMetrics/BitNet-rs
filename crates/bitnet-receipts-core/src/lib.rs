@@ -221,6 +221,10 @@ pub const DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND: &str = "dense_gguf_sampling_
 /// I2_S/QK256 proof claims false.
 pub const DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
     "dense_gguf_qwen_one_token_strict_cuda_proof";
+const QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
+const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
+const QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
+    "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e";
 const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
     &["attention_softmax", "attention_v_mix", "mlp_activation"];
 const DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER: &[&str] =
@@ -5410,10 +5414,13 @@ pub fn validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
 
     let model = object_field(receipt, "model")?;
     require_string_eq(model, "model_family", "qwen")?;
-    require_string_non_empty(model, "architecture")?;
+    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
+    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
+    require_string_eq(model, "architecture", "qwen2")?;
     reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
     require_sha256(model, "sha256")?;
+    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
 
     let execution_path = object_field(receipt, "execution_path")?;
     require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
@@ -5470,6 +5477,7 @@ pub fn validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
     require_positive_u64(authority, "prompt_token_count")?;
     require_sha256(authority, "prompt_token_ids_sha256")?;
     require_sha256(authority, "rendered_prompt_sha256")?;
+    let authority_prompt_token_ids_sha256 = required_string(authority, "prompt_token_ids_sha256")?;
 
     let proof = object_field(receipt, "one_token_proof")?;
     require_u64_eq(proof, "schema", 1)?;
@@ -5484,8 +5492,21 @@ pub fn validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
     require_string_eq(proof, "cuda_target_backend", "nvidia-rtx-5070-ti-cuda")?;
     require_positive_u64(proof, "prompt_token_count")?;
     require_sha256(proof, "prompt_token_ids_sha256")?;
+    let proof_prompt_token_ids_sha256 = required_string(proof, "prompt_token_ids_sha256")?;
+    if proof_prompt_token_ids_sha256 != authority_prompt_token_ids_sha256 {
+        return Err(anyhow!(
+            "one_token_proof.prompt_token_ids_sha256 must match tokenizer_prompt_authority.prompt_token_ids_sha256"
+        ));
+    }
     require_sha256(proof, "cpu_logits_top_k_sha256")?;
     require_sha256(proof, "cuda_logits_top_k_sha256")?;
+    let cpu_top_k_sha256 = required_string(proof, "cpu_logits_top_k_sha256")?;
+    let cuda_top_k_sha256 = required_string(proof, "cuda_logits_top_k_sha256")?;
+    if cpu_top_k_sha256 != cuda_top_k_sha256 {
+        return Err(anyhow!(
+            "one_token_proof.cpu_logits_top_k_sha256 must match one_token_proof.cuda_logits_top_k_sha256"
+        ));
+    }
     require_bool_eq(proof, "top_k_evidence_recorded", true)?;
     require_bool_eq(proof, "top_k_compared", true)?;
     require_bool_eq(proof, "top_k_match", true)?;
@@ -5560,9 +5581,9 @@ pub fn validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
     }
 
     let timing = object_field(receipt, "timing")?;
-    require_optional_non_negative_number(timing, "total_ms")?;
-    require_optional_non_negative_number(timing, "first_token_ms")?;
-    require_optional_non_negative_number(timing, "kernel_time_ms")?;
+    require_non_negative_number(timing, "total_ms")?;
+    require_non_negative_number(timing, "first_token_ms")?;
+    require_non_negative_number(timing, "kernel_time_ms")?;
     require_u64_eq(timing, "host_to_device_bytes", stats_h2d)?;
     require_u64_eq(timing, "device_to_host_bytes", stats_d2h)?;
     require_u64_eq(timing, "kernel_invocations", stats_invocations)?;

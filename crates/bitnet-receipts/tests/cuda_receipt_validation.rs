@@ -1286,6 +1286,54 @@ fn dense_gguf_qwen_one_token_rejects_selected_token_mismatch() {
 }
 
 #[test]
+fn dense_gguf_qwen_one_token_rejects_prompt_hash_mismatch() {
+    let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+    receipt["one_token_proof"]["prompt_token_ids_sha256"] = json!(format!("{:064x}", 90));
+
+    let err = validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("prompt_token_ids_sha256"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_one_token_rejects_top_k_hash_mismatch() {
+    let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+    receipt["one_token_proof"]["cuda_logits_top_k_sha256"] = json!(format!("{:064x}", 91));
+
+    let err = validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("cuda_logits_top_k_sha256"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_one_token_rejects_unverified_model_identity() {
+    let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+    receipt["model"]["sha256"] = json!(format!("{:064x}", 92));
+
+    let err = validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("model.sha256") || err.contains("sha256"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_one_token_rejects_missing_timing_evidence() {
+    let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+    receipt["timing"]["total_ms"] = Value::Null;
+
+    let err = validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("total_ms"), "unexpected error: {err}");
+}
+
+#[test]
 fn dense_gguf_qwen_one_token_rejects_short_decode_claim() {
     let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
     receipt["claim_boundary"]["qwen_short_decode_cuda_claimed"] = json!(true);
@@ -3032,7 +3080,11 @@ fn valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt() -> Value {
     receipt["artifact_kind"] = json!("dense_gguf_qwen_one_token_strict_cuda_proof");
     receipt["artifact_path"] = json!("target/bitnet/receipts/dense-gguf-qwen-one-token.json");
     receipt["claim"] = json!("dense_gguf_qwen_one_token_strict_cuda_proof_recorded");
-    receipt["model"]["file"] = json!("synthetic-dense-gguf-qwen-one-token");
+    receipt["model"]["id"] = json!("qwen2.5-0.5b-instruct-q8_0");
+    receipt["model"]["file"] = json!("qwen2.5-0.5b-instruct-q8_0.gguf");
+    receipt["model"]["architecture"] = json!("qwen2");
+    receipt["model"]["sha256"] =
+        json!("ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e");
     receipt["execution_path"]["kernel_family"] = json!("dense_qwen_one_token_strict_cuda");
     receipt["execution_path"]["quantization_family"] =
         json!("dense_gguf_q8_0_f16_qwen_one_token_contract");
@@ -3084,7 +3136,7 @@ fn valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt() -> Value {
         "selected_token_match": true,
         "decoded_token_text": "test",
         "cpu_logits_top_k_sha256": format!("{:064x}", 47),
-        "cuda_logits_top_k_sha256": format!("{:064x}", 48),
+        "cuda_logits_top_k_sha256": format!("{:064x}", 47),
         "top_k_evidence_recorded": true,
         "top_k_compared": true,
         "top_k_match": true,
@@ -3156,9 +3208,9 @@ fn valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt() -> Value {
         "fallback_used": false
     });
     receipt["timing"] = json!({
-        "total_ms": null,
-        "first_token_ms": null,
-        "kernel_time_ms": null,
+        "total_ms": 12.5,
+        "first_token_ms": 12.5,
+        "kernel_time_ms": 3.25,
         "host_to_device_bytes": 4608,
         "device_to_host_bytes": 1408,
         "kernel_invocations": 31,
