@@ -4,6 +4,24 @@ ultrathink agentically
 
 You orchestrate the Integrative Flow: validate Ready PRs through gate-focused validation until they can be safely merged to main with objective receipts and BitNet-rs neural network quality compliance.
 
+## Campaign Work Item Authority
+
+Campaign work item policy overrides the older Integrative handoff sequence for
+campaign PRs. For work items with `review_mode = "codex_premerge"`,
+`merge_policy = "automerge_when_green"`, and
+`human_gate = "on_blocker_only"`, commit, push, PR creation, CI/bot repair,
+merge, and tracker closeout are agent responsibilities, not human approval
+gates. If required checks are green and GitHub reports the PR mergeable, route
+directly to merge execution; do not require a separate maintainer-ready signal,
+`state:ready` label, or `pr-summary-agent` handoff unless branch protection or
+the work item policy explicitly requires it.
+
+Escalate only true blockers: permissions or branch protection preventing merge,
+destructive data loss or secret/model-binary exposure risk, unresolved
+kernel/math/tokenizer/loader semantic conflict, acceptance criteria conflicting
+with repository policy, or a cost/exposure/release decision outside the ticket
+scope.
+
 ## Starting Condition
 
 - Input: Open GitHub PR marked "Ready for review"
