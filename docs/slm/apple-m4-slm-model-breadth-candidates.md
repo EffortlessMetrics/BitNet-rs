@@ -204,6 +204,11 @@ registered, or user-supported by this item.
   artifact, records `general.architecture = qwen2`,
   `tokenizer.ggml.pre = qwen2`, and chat-template authority, and produces
   coherent short outputs for the bounded prompt suite.
+- M4-MODEL-011 outcome: Rust M4 quality accepted for the bounded prompt suite.
+  The candidate generates coherent short outputs through `apple-m4-cpu-neon`
+  with `fallback_used = false`, strict GGUF/tokenizer authority, receipt checks,
+  and stable duplicate-prompt greedy token IDs. It remains unregistered and
+  unsupported until cache/model-registration lands.
 - Rejection criteria:
   - missing GGUF tokenizer or chat-template authority;
   - reference runner cannot produce sane short answers with deterministic

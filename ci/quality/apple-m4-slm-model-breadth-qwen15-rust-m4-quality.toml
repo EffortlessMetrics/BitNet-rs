@@ -1,0 +1,112 @@
+schema = 1
+artifact_kind = "apple_m4_slm_model_breadth_rust_m4_quality"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-011"
+created_utc = "2026-05-10T03:22:11Z"
+host = "apple-m4-mac-mini"
+claim_boundary = "Rust M4 quality-gate evidence only. This accepts the Qwen2.5 1.5B Q4_K_M candidate for cache-registration consideration; it does not register a model, change the default, prove BitNet behavior, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, MacBook behavior, or broad M4 performance."
+
+[candidate]
+id = "qwen2.5-1.5b-instruct-q4_k_m"
+source = "Qwen/Qwen2.5-1.5B-Instruct-GGUF"
+revision = "91cad51170dc346986eccefdc2dd33a9da36ead9"
+file = "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+source_url = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/blob/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+size_bytes = 1117320736
+sha256 = "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
+license = "apache-2.0"
+local_path = "target/apple-m4-slm-model-breadth/M4-MODEL-010/candidates/qwen2_5_1_5b_instruct_q4_k_m/Qwen-Qwen2.5-1.5B-Instruct-GGUF/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+gguf_architecture = "qwen2"
+gguf_basename = "qwen2.5-1.5b-instruct"
+gguf_file_type = "Q4_K_M"
+tokenizer_model = "gpt2"
+tokenizer_pre = "qwen2"
+chat_template_present = true
+eos_token_id = 151645
+bos_token_id = 151643
+padding_token_id = 151643
+reference_status = "accepted_reference_good_by_M4-MODEL-010"
+rust_m4_status = "accepted"
+
+[[gate]]
+id = "strict_rust_m4_quality"
+status = "passed"
+requested_backend = "apple-m4-cpu-neon"
+selected_backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+loader_mode = "real_gguf"
+tokenizer_source = "gguf_metadata"
+tokenizer_strict = true
+receipt_path = "target/apple-m4-slm-model-breadth/M4-MODEL-011/qwen15-rust-m4-quality.json"
+receipt_check = "passed"
+command_shape = "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device apple-m4-cpu-neon slm-warm-session --model <qwen2.5-1.5b-q4_k_m.gguf> --prompt <math> --prompt <capital> --prompt <rust> --max-new-tokens 16 --temperature 0 --top-k 1 --top-p 1 --greedy --deterministic --strict-loader --strict-tokenizer --repetition-penalty 1.0 --prompt-template qwen2.5 --fail-on-quality --min-generated-tokens 1 --min-distinct-generated-tokens 1 --json-out <target receipt> --quiet"
+model_load_ms = 30374.613
+model_sha256_ms = 1962.101
+tokenizer_load_ms = 215.5
+total_session_ms = 99341.727
+generated_tokens_total = 33
+
+[[gate.prompt]]
+prompt = "What is 2+2? Answer briefly."
+generated_tokens = 9
+generated_token_ids = [220, 17, 10, 17, 16819, 220, 19, 13, 151645]
+generated_text = " 2+2 equals 4.<|im_end|>"
+normalized_text = "2+2 equals 4."
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+quality_passed = true
+time_to_first_token_ms = 22707
+decode_steady_state_tok_s = 2.052
+
+[[gate.prompt]]
+prompt = "Name the capital of France."
+generated_tokens = 8
+generated_token_ids = [576, 6722, 315, 9625, 374, 12095, 13, 151645]
+generated_text = " The capital of France is Paris.<|im_end|>"
+normalized_text = "The capital of France is Paris."
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+quality_passed = true
+time_to_first_token_ms = 14102
+decode_steady_state_tok_s = 2.064
+
+[[gate.prompt]]
+prompt = "Write one short sentence about Rust."
+generated_tokens = 16
+generated_token_ids = [198, 49, 590, 374, 264, 5942, 15473, 4128, 3881, 369, 1181, 7149, 11, 4628, 11, 323]
+generated_text = "\nRust is a systems programming language known for its safety, speed, and"
+normalized_text = "Rust is a systems programming language known for its safety, speed, and"
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+quality_passed = true
+time_to_first_token_ms = 14808
+decode_steady_state_tok_s = 2.028
+
+[[gate]]
+id = "duplicate_prompt_greedy_determinism"
+status = "passed"
+requested_backend = "apple-m4-cpu-neon"
+selected_backend = "apple-m4-cpu-neon"
+runtime_api = "cpu"
+fallback_used = false
+receipt_path = "target/apple-m4-slm-model-breadth/M4-MODEL-011/qwen15-rust-m4-determinism.json"
+receipt_check = "passed"
+command_shape = "target/debug/bitnet --device apple-m4-cpu-neon slm-warm-session --model <qwen2.5-1.5b-q4_k_m.gguf> --prompt <math> --prompt <math> --max-new-tokens 16 --temperature 0 --top-k 1 --top-p 1 --greedy --deterministic --strict-loader --strict-tokenizer --repetition-penalty 1.0 --prompt-template qwen2.5 --fail-on-quality --require-determinism --min-generated-tokens 1 --min-distinct-generated-tokens 1 --json-out <target receipt> --quiet"
+determinism_passed = true
+attempt_count = 2
+generated_token_ids = [220, 17, 10, 17, 16819, 220, 19, 13, 151645]
+generated_text = " 2+2 equals 4.<|im_end|>"
+total_session_ms = 77466.265
+
+[decision]
+result = "accepted_rust_m4_quality"
+supported_model = false
+register_in_cache = false
+eligible_for_cache_registration = true
+default_model_change = false
+next_item_unblocked = true
+summary = "Qwen2.5 1.5B Q4_K_M passes bounded Rust M4 apple-m4-cpu-neon quality and duplicate-prompt greedy determinism. It remains unregistered and unsupported until the cache/model-registration item lands."
