@@ -79,12 +79,44 @@ by `apple-m4-cpu-neon`; the resident receipt records
 `fallback_used=false` for the Metal phase, and
 `full_metal_inference_claimed=false`.
 
+`M4-METAL-007` records phase-local timing deltas for the same resident-routed
+phase. The measured run used the smoke quality corpus and wrote durable
+evidence under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-10/slm-metal-phases/metal-dense-prefill-qkv-resident-phase-timing.json
+ci/hardware/apple-m4-mac-mini/2026-05-10/slm-metal-phases/M4-METAL-007-phase-timing-prompts/
+ci/hardware/apple-m4-mac-mini/2026-05-10/slm-metal-phases/metal-dense-prefill-qkv-phase-timing-summary.json
+```
+
+The summary records 14 phase dispatches. The first dispatch includes adapter
+startup and measured `metal_phase_ms=41.307`. The remaining 13 warm phase
+dispatches measured:
+
+```text
+min_metal_phase_ms = 4.752
+max_metal_phase_ms = 6.442
+avg_metal_phase_ms = 5.020846153846154
+avg_timing_delta_ms = 5.020076923076923
+```
+
+Those numbers are for the named fixture-scoped Q/K/V phase dispatch and
+readback only. They are not a full-answer speedup, full `apple-m4-metal`
+inference, or broad M4 performance claim.
+
 ## Allowed Claim After M4-METAL-006
 
 ```text
 The named Q/K/V Metal phase can run as an opt-in resident dense SLM phase
 contribution with CPU/NEON generation for the rest of the pipeline and receipt
 validated parity.
+```
+
+## Allowed Claim After M4-METAL-007
+
+```text
+Phase-local timing deltas are recorded for the named resident-routed Q/K/V
+Metal contribution.
 ```
 
 ## Claim Boundary

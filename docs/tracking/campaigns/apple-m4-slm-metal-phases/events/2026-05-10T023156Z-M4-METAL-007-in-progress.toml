@@ -1,0 +1,12 @@
+timestamp = "2026-05-10T02:31:56Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-007"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started phase-local timing delta recording for the resident-routed dense SLM Q/K/V Metal contribution.",
+  "The measured run uses the smoke quality corpus with apple-m4-cpu-neon generation and opt-in Metal phase receipts.",
+  "Evidence remains phase-local and does not claim full apple-m4-metal inference, BitNet quality, QK256, Neural Engine execution, MPSGraph inference, MacBook coverage, or broad performance.",
+]

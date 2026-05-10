@@ -29,7 +29,7 @@ otherwise.
 | M4-METAL-004 | merged | Recorded the resident-route runtime boundary and prerequisite path. |
 | M4-METAL-005 | merged | Promoted Q/K/V Metal dispatch from test-only fixture to runtime API. |
 | M4-METAL-006 | merged | Route the phase in resident sessions with parity. |
-| M4-METAL-007 | ready | Record measured phase-local timing deltas. |
+| M4-METAL-007 | in progress | Record measured phase-local timing deltas. |
 
 ## Current Decision
 

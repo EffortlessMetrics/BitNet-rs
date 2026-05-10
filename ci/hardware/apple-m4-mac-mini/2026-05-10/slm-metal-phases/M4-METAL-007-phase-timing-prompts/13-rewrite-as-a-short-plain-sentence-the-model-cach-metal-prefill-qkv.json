@@ -1,0 +1,150 @@
+{
+  "artifact_kind": "phase_contribution",
+  "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-007/mac-validate-metal-qkv-phase-timing-prompts/13-rewrite-as-a-short-plain-sentence-the-model-cach-metal-prefill-qkv.json",
+  "bitnet_quality_claimed": false,
+  "broad_performance_claim": false,
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "phase_contribution_only": true,
+    "qk256_apple_claimed": false,
+    "resident_session_phase_route": true,
+    "speedup_claim": false
+  },
+  "dimensions": {
+    "attention_heads": 14,
+    "head_dim": 64,
+    "hidden_size": 896,
+    "k_shape": [
+      2,
+      128
+    ],
+    "kv_dim": 128,
+    "kv_heads": 2,
+    "prefill_tokens": 2,
+    "q_dim": 896,
+    "q_shape": [
+      2,
+      896
+    ],
+    "v_shape": [
+      2,
+      128
+    ]
+  },
+  "fallback_used": false,
+  "full_metal_inference_claimed": false,
+  "kernel_family": "dense_f32",
+  "layout": {
+    "activation_elements": 1792,
+    "bias_elements": 1152,
+    "bias_layout": "concatenated_row_major_f32_q_k_v",
+    "consumes_dense_f32_directly": true,
+    "dequantizes_before_compute": false,
+    "k_weight_elements": 114688,
+    "output_layout": "concatenated_row_major_f32_q_k_v",
+    "q_weight_elements": 802816,
+    "source": "fixture_dense_f32_row_major",
+    "transport_layout": "row_major_f32",
+    "v_weight_elements": 114688
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "metal_phase": {
+    "adapter_name": "Apple M4",
+    "execution_phase": "prefill_qkv_projection",
+    "fallback_used": false,
+    "kernel_family": "dense_f32",
+    "kernel_id": "tiny_metal_dense_prefill_qkv_projection",
+    "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+    "prefill_tokens": 2,
+    "requested_backend": "apple-m4-metal",
+    "runtime_api": "metal",
+    "selected_backend": "apple-m4-metal",
+    "timing_recorded": true
+  },
+  "model_family": "qwen2.5",
+  "mpsgraph_inference_claimed": false,
+  "neural_engine_execution_claimed": false,
+  "parity": {
+    "greedy_token_ids_match_cpu_reference": true,
+    "k_argmax_index": 11,
+    "k_matches_cpu_reference": true,
+    "k_max_abs_error": 0.0,
+    "k_mean_abs_error": 0.0,
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0,
+    "q_argmax_index": 1689,
+    "q_matches_cpu_reference": true,
+    "q_max_abs_error": 0.0,
+    "q_mean_abs_error": 0.0,
+    "reference_backend": "apple-m4-cpu-neon",
+    "resident_greedy_token_ids_match_cpu_reference": true,
+    "target_backend": "apple-m4-metal",
+    "v_argmax_index": 108,
+    "v_matches_cpu_reference": true,
+    "v_max_abs_error": 0.0,
+    "v_mean_abs_error": 0.0
+  },
+  "qk256_apple_claimed": false,
+  "requested_backend": "apple-m4-metal",
+  "resident_session": {
+    "cpu_only_generated_token_ids": [
+      25,
+      576,
+      1614,
+      6500,
+      374,
+      304,
+      1661,
+      2971,
+      13,
+      151645
+    ],
+    "cpu_pipeline_for_remaining_phases": true,
+    "cpu_plus_metal_phase_generated_token_ids": [
+      25,
+      576,
+      1614,
+      6500,
+      374,
+      304,
+      1661,
+      2971,
+      13,
+      151645
+    ],
+    "generation_tokens_unchanged_by_phase": true,
+    "phase_participates_in_resident_session": true,
+    "phase_scope": "per_turn_prefill_qkv_projection_contribution",
+    "prompt_index": 12,
+    "remaining_generation_backend": "apple-m4-cpu-neon",
+    "resident_greedy_token_ids_match_cpu_reference": true
+  },
+  "result": "pass",
+  "runtime_api": "metal",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-metal",
+  "slm_pipeline": {
+    "cpu_pipeline_for_remaining_phases": true,
+    "requested_backend": "apple-m4-cpu-neon",
+    "resident_generation_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon"
+  },
+  "speedup_claim": false,
+  "timestamp": "2026-05-10T02:29:51.293745+00:00",
+  "timing": {
+    "cpu_reference_ms": 0.001,
+    "dispatch_readback_ms": 4.982,
+    "metal_k_ms": 0.0,
+    "metal_phase_ms": 4.982,
+    "metal_q_ms": 0.0,
+    "metal_v_ms": 0.0,
+    "scope": "single_live_qkv_phase_dispatch_readback_vs_cpu_reference_fixture",
+    "speedup_claim": false,
+    "timing_delta_ms": 4.981
+  }
+}
