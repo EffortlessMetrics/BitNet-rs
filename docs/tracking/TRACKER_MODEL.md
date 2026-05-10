@@ -133,6 +133,11 @@ secret/model-binary exposure risk, unresolved kernel/math/tokenizer/loader
 semantic conflict, acceptance criteria that conflict with repo policy, or a
 cost/exposure/release decision genuinely outside the ticket scope.
 
+This campaign work item policy is the authority for campaign branches. If an
+older agent runbook describes default human approvals, maintainer-ready handoff,
+or manual intervention for ordinary commit, push, PR, CI repair, merge, or
+closeout work, follow the campaign work item policy instead.
+
 Allowed `review_mode` values are:
 
 - `codex_premerge`

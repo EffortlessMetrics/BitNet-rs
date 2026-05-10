@@ -301,7 +301,8 @@ Your final output **MUST** include this format based on outcome:
 
 - ✅ All validation commands succeed with exit code 0
 - ✅ No merge conflicts with current main branch
-- ✅ All required GitHub approvals obtained
+- ✅ Review state satisfies the work item's policy; for `codex_premerge`, do not
+  wait for human approval unless GitHub branch protection explicitly requires it
 - ✅ Documentation updates completed appropriately
 - ✅ Performance within acceptable bounds (if applicable)
 - ✅ Cross-validation parity maintained (if FFI changes)

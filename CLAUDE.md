@@ -148,6 +148,11 @@ exposure is possible, kernel/math/tokenizer/loader semantics are in unresolved
 conflict, acceptance criteria conflict with repository policy, or a
 cost/exposure/release decision is outside the ticket scope.
 
+This policy supersedes older agent runbook wording that treats ordinary commit,
+push, PR creation, CI repair, merge, or tracker closeout as a human approval
+boundary for `codex_premerge` plus `automerge_when_green` plus
+`on_blocker_only` work items.
+
 ## Critical Gotchas
 
 1. **Empty default features** — `cargo build` alone fails. Always pass `--no-default-features --features cpu|gpu`.
