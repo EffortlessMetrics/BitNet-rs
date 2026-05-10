@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T01:10:00Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started phase receipt validation for the selected Apple M4 dense prefill Q/K/V Metal contribution.",
+  "Scope is limited to mac receipts-check validation, a durable Apple M4 phase receipt, and claim-boundary documentation.",
+  "No resident-session routing, full apple-m4-metal inference claim, BitNet claim, QK256, Neural Engine, MPSGraph, MacBook work, model binary, or broad performance claim is introduced.",
+]
+

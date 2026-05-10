@@ -4382,9 +4382,10 @@ fn validate_metal_phase_receipt(
             path.display()
         );
     }
-    if metal_phase["execution_phase"].as_str() != Some("prefill_linear_projection") {
+    let execution_phase = metal_phase["execution_phase"].as_str().unwrap_or_default();
+    if !matches!(execution_phase, "prefill_linear_projection" | "prefill_qkv_projection") {
         anyhow::bail!(
-            "{} Metal phase must be execution_phase=prefill_linear_projection",
+            "{} Metal phase has unsupported execution_phase={execution_phase:?}",
             path.display()
         );
     }
@@ -4404,24 +4405,26 @@ fn validate_metal_phase_receipt(
             path.display()
         );
     }
-    for field in ["batch_size", "in_features", "out_features"] {
-        if layout[field].as_u64().unwrap_or_default() == 0 {
-            anyhow::bail!("{} Metal phase layout is missing {field}", path.display());
-        }
-    }
-
     let parity = &receipt["parity"];
     if parity["reference_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
         || parity["target_backend"].as_str() != Some(APPLE_M4_METAL)
-        || parity["greedy_token_ids_match_cpu_reference"].as_bool() != Some(true)
     {
         anyhow::bail!(
-            "{} Metal phase parity must match CPU/NEON reference greedy token IDs",
+            "{} Metal phase parity must compare {APPLE_M4_CPU_NEON} against {APPLE_M4_METAL}",
             path.display()
         );
     }
     if parity["max_abs_error"].is_null() || parity["mean_abs_error"].is_null() {
         anyhow::bail!("{} Metal phase parity is missing error metrics", path.display());
+    }
+    match execution_phase {
+        "prefill_linear_projection" => {
+            validate_prefill_linear_phase_receipt(path, layout, parity)?;
+        }
+        "prefill_qkv_projection" => {
+            validate_prefill_qkv_phase_receipt(path, receipt, layout, parity)?;
+        }
+        _ => unreachable!("execution_phase was matched above"),
     }
 
     let timing = &receipt["timing"];
@@ -4457,6 +4460,83 @@ fn validate_metal_phase_receipt(
         passed: true,
         regression: None,
     })
+}
+
+fn validate_prefill_linear_phase_receipt(
+    path: &Path,
+    layout: &serde_json::Value,
+    parity: &serde_json::Value,
+) -> Result<()> {
+    for field in ["batch_size", "in_features", "out_features"] {
+        if layout[field].as_u64().unwrap_or_default() == 0 {
+            anyhow::bail!("{} Metal phase layout is missing {field}", path.display());
+        }
+    }
+    if parity["greedy_token_ids_match_cpu_reference"].as_bool() != Some(true) {
+        anyhow::bail!(
+            "{} Metal phase parity must match CPU/NEON reference greedy token IDs",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_prefill_qkv_phase_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+    layout: &serde_json::Value,
+    parity: &serde_json::Value,
+) -> Result<()> {
+    let dimensions = &receipt["dimensions"];
+    for field in ["hidden_size", "attention_heads", "kv_heads", "head_dim", "q_dim", "kv_dim"] {
+        if dimensions[field].as_u64().unwrap_or_default() == 0 {
+            anyhow::bail!("{} Metal Q/K/V phase dimensions are missing {field}", path.display());
+        }
+    }
+    let prefill_tokens = receipt["metal_phase"]["prefill_tokens"].as_u64().unwrap_or_default();
+    let q_dim = dimensions["q_dim"].as_u64().unwrap_or_default();
+    let kv_dim = dimensions["kv_dim"].as_u64().unwrap_or_default();
+    for (field, expected_width) in [("q_shape", q_dim), ("k_shape", kv_dim), ("v_shape", kv_dim)] {
+        let shape = dimensions[field].as_array();
+        if shape.is_none_or(|shape| {
+            shape.len() != 2
+                || shape[0].as_u64() != Some(prefill_tokens)
+                || shape[1].as_u64() != Some(expected_width)
+        }) {
+            anyhow::bail!("{} Metal Q/K/V phase dimensions have invalid {field}", path.display());
+        }
+    }
+    for field in
+        ["activation_elements", "q_weight_elements", "k_weight_elements", "v_weight_elements"]
+    {
+        if layout[field].as_u64().unwrap_or_default() == 0 {
+            anyhow::bail!("{} Metal Q/K/V phase layout is missing {field}", path.display());
+        }
+    }
+    if layout["output_layout"].as_str() != Some("concatenated_row_major_f32_q_k_v")
+        || layout["bias_layout"].as_str() != Some("concatenated_row_major_f32_q_k_v")
+    {
+        anyhow::bail!(
+            "{} Metal Q/K/V phase layout must record concatenated Q/K/V output and bias layouts",
+            path.display()
+        );
+    }
+    for prefix in ["q", "k", "v"] {
+        let matches_field = format!("{prefix}_matches_cpu_reference");
+        if parity[matches_field.as_str()].as_bool() != Some(true) {
+            anyhow::bail!(
+                "{} Metal Q/K/V phase parity must record {prefix}_matches_cpu_reference=true",
+                path.display()
+            );
+        }
+        for suffix in ["max_abs_error", "mean_abs_error"] {
+            let field = format!("{prefix}_{suffix}");
+            if parity[&field].as_f64().is_none() {
+                anyhow::bail!("{} Metal Q/K/V phase parity is missing {field}", path.display());
+            }
+        }
+    }
+    Ok(())
 }
 
 fn validate_one_shot_receipt(

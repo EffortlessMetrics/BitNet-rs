@@ -105,6 +105,8 @@ Commands:
           Emit dense GGUF model-boundary fixture receipts for embedding/norm/logits
   dense-gguf-kv-cache-policy
           Emit dense GGUF KV-cache policy receipts for the strict CUDA lane
+  dense-gguf-sampling-policy
+          Emit dense GGUF logits-transfer and sampling policy receipts
   dense-gguf-norm-fixture
           Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
   dense-gguf-norm-cuda-parity

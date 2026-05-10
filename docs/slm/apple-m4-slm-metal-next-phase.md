@@ -189,9 +189,22 @@ full_metal_inference_claimed = false
 speedup_claim = false
 ```
 
-The receipt was written under `target/` during the proof run and is not a
-committed performance artifact. `M4-METAL-003` owns durable phase receipt
-validation and any committed Apple-hardware receipt path.
+`M4-METAL-003` promotes the proof into a durable phase receipt:
+
+```bash
+cargo run --locked -p bitnet-cli \
+  --no-default-features \
+  --features cpu,metal,full-cli \
+  -- mac receipts-check \
+  ci/hardware/apple-m4-mac-mini/2026-05-10/slm-metal-phases/metal-dense-prefill-qkv.json \
+  --json
+```
+
+The checked receipt validates the named Q/K/V phase only. It records
+`selected_backend=apple-m4-metal`, `runtime_api=metal`, `fallback_used=false`,
+the `prefill_qkv_projection` execution phase, CPU/NEON routing for the rest of
+the SLM pipeline, Q/K/V parity against CPU, and phase-local timing. It remains
+outside resident generation.
 
 ## Explicit Deferrals
 
