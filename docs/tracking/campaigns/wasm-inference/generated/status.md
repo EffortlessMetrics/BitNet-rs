@@ -9,7 +9,7 @@
 
 | Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
 |---|---|---:|---|---|---|---|---|
-| WASM-001 | ready | TBD | `codex/wasm-inference/WASM-001-proof-contract` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Document the WASM proof contract, current scaffold boundary, explicit backend identities, receipt requirements, model/tokenizer strategy, memory plan, milestones, and PR ladder without changing runtime code. |
+| WASM-001 | merged | #4090 | `codex/wasm-inference/WASM-001-proof-contract` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Document the WASM proof contract, current scaffold boundary, explicit backend identities, receipt requirements, model/tokenizer strategy, memory plan, milestones, and PR ladder without changing runtime code. |
 | WASM-002 | ready | TBD | `codex/wasm-inference/WASM-002-honest-inference-compile` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Make cargo check --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser,inference compile, with unsupported runtime paths returning explicit not-implemented errors rather than placeholder success. |
 | WASM-003 | ready | TBD | `codex/wasm-inference/WASM-003-byte-loaders` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add byte-backed model and tokenizer loader APIs for WASM so browser paths do not depend on virtual filesystem placeholders. |
 | WASM-004 | ready | TBD | `codex/wasm-inference/WASM-004-worker-api` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Expose a worker-safe JS API for loadModel, generate, generateStream, unload, and getMemoryStats, with abort support and no fake generation responses. |
