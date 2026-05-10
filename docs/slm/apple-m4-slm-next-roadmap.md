@@ -59,8 +59,10 @@ The first server surface is `bitnet mac serve`: loopback by default,
 cache/tokenizer/backend verification, streaming by default, a receipt directory
 contract, and no hidden fallback. Health/ready endpoints and the first local
 completion endpoint are implemented, and per-request receipts can be exported
-through the local receipt endpoint. OpenAI-shaped endpoints must not be
-described as fully compatible until their request/response semantics are tested.
+through the local receipt endpoint. `bitnet mac serve-check` verifies readiness
+and can run a tiny completion-plus-receipt-export probe against a running local
+server. OpenAI-shaped endpoints must not be described as fully compatible until
+their request/response semantics are tested.
 
 ## Still Separate
 

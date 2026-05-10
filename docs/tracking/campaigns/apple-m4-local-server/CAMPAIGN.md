@@ -25,7 +25,7 @@ the same cache, tokenizer, backend, fallback, streaming, and receipt discipline.
 | M4-SERVE-002 | merged | Added health and ready endpoint behavior. |
 | M4-SERVE-003 | merged | Added streaming completion endpoint. |
 | M4-SERVE-004 | merged | Added receipt export for server requests. |
-| M4-SERVE-005 | ready | Integrate doctor/smoke/regression readiness flow. |
+| M4-SERVE-005 | in progress | Integrate doctor/smoke/regression readiness flow. |
 
 ## Current Contract
 
@@ -47,6 +47,10 @@ claim.
 `M4-SERVE-004` adds HTTP export for those per-request receipts through
 `GET /receipts/{id}`. The endpoint is read-only, rejects unsafe receipt IDs, and
 does not run generation.
+
+`M4-SERVE-005` adds the operator check path for a running local server:
+`bitnet mac serve-check` validates readiness without generation by default, and
+can optionally run a tiny completion plus receipt export probe.
 
 ## Claim Boundary
 

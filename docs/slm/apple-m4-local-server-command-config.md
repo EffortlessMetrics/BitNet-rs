@@ -1,7 +1,8 @@
 # Apple M4 Local Server Command And Config Contract
 
 Status: command/config contract, health/readiness endpoints, the first
-streaming local completion endpoint, and HTTP export for per-request receipts.
+streaming local completion endpoint, HTTP export for per-request receipts, and
+operator readiness checking.
 
 The Apple M4 local server should expose the already working dense SLM Mac
 appliance as a loopback service while preserving the same model-cache,
@@ -63,6 +64,25 @@ bitnet mac serve \
   --device apple-m4-cpu-neon \
   --strict
 ```
+
+Operators can verify a running server without starting a second model process:
+
+```bash
+bitnet mac serve-check --url http://127.0.0.1:8080
+```
+
+For an end-to-end local service smoke that exercises readiness, one completion,
+and receipt export:
+
+```bash
+bitnet mac serve-check \
+  --url http://127.0.0.1:8080 \
+  --completion \
+  --max-new-tokens 1
+```
+
+`serve-check` writes a compact operator receipt and does not claim production
+uptime, full OpenAI compatibility, BitNet quality, or full Metal inference.
 
 ## Config File Shape
 

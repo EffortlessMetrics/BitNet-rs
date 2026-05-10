@@ -1,0 +1,12 @@
+timestamp = "2026-05-10T00:31:50Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-005"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started the local server doctor/smoke/regression readiness integration slice.",
+  "Scope is limited to operator verification for a running bitnet mac serve instance, including cheap readiness checks and an optional tiny completion plus receipt export probe.",
+  "No production readiness, full OpenAI compatibility, BitNet, full Metal, QK256, Neural Engine, MPSGraph, MacBook, model binary, or broad performance claim is introduced.",
+]
