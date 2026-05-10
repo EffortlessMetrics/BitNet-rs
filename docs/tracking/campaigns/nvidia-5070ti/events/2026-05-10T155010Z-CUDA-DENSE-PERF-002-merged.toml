@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T15:50:10Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-002"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-perf-002-repeated-comparator"
+pr = 4440
+head_sha = "8d783813b4649eca84794601c62b5534d2848bb2"
+merge_sha = "2779dad4468c60451fe03c048f5172992f981994"
+
+notes = [
+  "PR #4440 merged after all required GitHub checks passed and GitHub reported mergeStateStatus=CLEAN.",
+  "CUDA-DENSE-PERF-002 now records repeated same-artifact dense Qwen CPU/CUDA comparator evidence while preserving speedup_claim=false and benchmark_qualified_speedup=false.",
+]

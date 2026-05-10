@@ -204,7 +204,7 @@
 | nvidia-5070ti | CUDA-DENSE-012 | CUDA-DENSE-011 | merged |
 | nvidia-5070ti | CUDA-DENSE-013 | CUDA-DENSE-012, CUDA-PLANNER-004 | merged |
 | nvidia-5070ti | CUDA-DENSE-PERF-001 | CUDA-DENSE-046, CUDA-UX-003, CUDA-UX-004 | merged |
-| nvidia-5070ti | CUDA-DENSE-PERF-002 | CUDA-DENSE-PERF-001 | pr_open |
+| nvidia-5070ti | CUDA-DENSE-PERF-002 | CUDA-DENSE-PERF-001 | merged |
 | nvidia-5070ti | CUDA-DENSE-029 | CUDA-DENSE-028 | merged |
 | nvidia-5070ti | CUDA-DENSE-030 | CUDA-DENSE-029 | merged |
 | nvidia-5070ti | CUDA-DENSE-031 | CUDA-DENSE-030 | merged |
