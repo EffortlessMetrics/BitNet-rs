@@ -29,8 +29,8 @@ mini path without weakening the completed Qwen appliance baseline.
 | M4-MODEL-004 | blocked | No accepted candidate is available to register. |
 | M4-MODEL-005 | blocked | Update model matrix and user envelope after registration. |
 | M4-MODEL-006 | merged | Select the next exact candidate after the failed Qwen3/SmolLM2 round. |
-| M4-MODEL-007 | in progress | Run reference output sanity for the newly selected candidate. |
-| M4-MODEL-008 | blocked | Run Rust M4 quality gates for the newly selected candidate. |
+| M4-MODEL-007 | merged | Gemma is rejected by the current reference runner. |
+| M4-MODEL-008 | blocked | No reference-good candidate is available for Rust M4 quality. |
 
 ## Current Selection
 
