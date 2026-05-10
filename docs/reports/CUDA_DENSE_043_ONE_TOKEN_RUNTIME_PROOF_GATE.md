@@ -1,10 +1,10 @@
 # CUDA-DENSE-043 One-Token Runtime Proof Gate
 
-`CUDA-DENSE-043` is the first dense CUDA runtime proof gate after
-`CUDA-DENSE-042` added the fail-closed receipt validator. It is deliberately
-separate from the validator slice: the next implementation must run one real,
-deterministic Qwen token through the dense CUDA route and commit the hardware
-receipt only if the validator accepts it.
+`CUDA-DENSE-043` defines the first dense CUDA runtime proof gate after
+`CUDA-DENSE-042` added the fail-closed receipt validator. It is deliberately a
+tracker/report slice: `CUDA-DENSE-044` must run one real, deterministic Qwen
+token through the dense CUDA route and commit the hardware receipt only if the
+validator accepts it.
 
 ## Required Runtime Evidence
 
@@ -42,7 +42,7 @@ is not a one-token CUDA runtime proof.
 
 ## Next Implementation Slice
 
-The implementation PR should add a narrow CLI/operator command for the strict
+`CUDA-DENSE-044` should add a narrow CLI/operator command for the strict
 one-token proof, emit the hardware receipt under
 `ci/hardware/windows-9950x3d-rtx5070ti/`, validate it with
 `validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json`, and keep

@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T03:10:20Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-043"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 4407
+head_sha = "aee2663382d34a539b0c161cf6fde1301f47cba1"
+actor = "codex"
+branch = "codex/cuda-dense-043-one-token-runtime"
+summary = "Opened CUDA-DENSE-043 runtime proof gate PR."
+notes = [
+  "PR #4407 defines the governed CUDA-DENSE-044 runtime proof gate for the first dense Qwen one-token strict CUDA hardware receipt.",
+  "The PR is docs/tracker only and keeps runtime token generation, hardware one-token receipt evidence, short decode, chat, speedup, full-residency, server readiness, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math as non-claims.",
+]
