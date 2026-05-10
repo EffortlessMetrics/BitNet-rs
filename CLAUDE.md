@@ -97,6 +97,40 @@ fn gpu_only_function() { /* ... */ }
 - TDD scaffolds use `panic!("not yet implemented")` inside `#[ignore]` — this is intentional
 - ~58,700 test annotations; ~2,800 intentionally ignored (TDD scaffolds, resource-gated, slow, CUDA, crossval)
 
+### Optional-dependency test targets
+
+Any `[[test]]`, `[[bench]]`, or `[[example]]` that imports an optional crate (e.g. `wgpu`,
+`opencl3`, `pollster`, `cuda-*`) **must** declare `required-features` in `Cargo.toml`:
+
+```toml
+[[test]]
+name = "metal_device_integration_tests"
+path = "tests/metal_device_integration_tests.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
+name = "metal_compute_pipeline_tests"
+path = "tests/metal_compute_pipeline_tests.rs"
+required-features = ["metal-runtime", "cpu"]   # match the file-level #![cfg(...)]
+```
+
+Without this gate, CPU-only and no-features builds attempt to compile the test and fail with
+unresolved-crate errors. Check the file-level `#![cfg(...)]` to confirm which features are needed.
+
+### Platform-specific dead code
+
+Use `cfg_attr` rather than a blanket `#[allow(dead_code)]` when a struct or function is only used
+on a specific target:
+
+```rust
+// Only suppress the lint on non-aarch64 targets where NEON methods are absent
+#[cfg_attr(not(target_arch = "aarch64"), allow(dead_code))]
+pub struct PagedCacheBlock { ... }
+```
+
+Do not use `#[allow(dead_code)]` without a `cfg_attr` scope — prefer the cfg guard or remove the
+dead code instead.
+
 ### Feature gates
 
 ```rust
