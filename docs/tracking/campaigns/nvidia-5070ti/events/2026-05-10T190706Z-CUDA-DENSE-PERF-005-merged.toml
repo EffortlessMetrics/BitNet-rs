@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T19:07:06Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-perf-005-h2d-envelope"
+pr = 4450
+head_sha = "03f57197fd0556be5cb9885ecae56a9a101e17cd"
+merge_sha = "da1cf17767e7ab6cbf19514ed82d9963daf3a679"
+summary = "Merged CUDA-DENSE-PERF-005 H2D transfer envelope implementation."
+notes = [
+  "PR #4450 records host-to-device model-load wall-clock envelope timing in dense Qwen one-token, short-decode, and warm-session strict CUDA runtime receipts.",
+  "The H2D timing is explicitly scoped as a model-load envelope with non-transfer overhead, not pure CUDA event copy timing.",
+  "The merged receipts preserve fallback_used=false, speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, server_ready_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+]
