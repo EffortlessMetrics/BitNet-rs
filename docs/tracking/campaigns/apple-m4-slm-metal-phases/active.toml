@@ -210,7 +210,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-006"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-006-resident-route"
 stackable = false
 review_mode = "codex_premerge"
@@ -240,7 +240,7 @@ forbidden_paths = [
   "models/**",
 ]
 may_claim = [
-  "A named Metal phase participates in resident dense SLM generation with parity receipts.",
+  "A named Metal phase participates as an opt-in resident dense SLM phase contribution with parity receipts.",
 ]
 must_not_claim = [
   "Apple Metal accelerates the full SLM answer path.",

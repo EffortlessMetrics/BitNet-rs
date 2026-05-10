@@ -1,0 +1,2671 @@
+{
+  "allocation_audit": {
+    "enabled": false,
+    "method": "not_requested",
+    "scope": "not_requested"
+  },
+  "apple": {
+    "machine_id": "apple-m4-mac-mini",
+    "macos": {
+      "build": "25E253",
+      "native_or_virtualized": "native-macos",
+      "version": "26.4.1"
+    },
+    "metal_visible": true,
+    "resolved_device": {
+      "chip": "Apple M4",
+      "cpu_cores": 10,
+      "gpu_cores": 10,
+      "unified_memory": true,
+      "unified_memory_bytes": 17179869184
+    }
+  },
+  "artifact_kind": "slm_apple_m4_warm_session",
+  "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase.json",
+  "backend": {
+    "fallback_reason": null,
+    "fallback_used": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon"
+  },
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "metal_phase_contribution_only": true,
+    "model_loaded_once": true,
+    "speedup_claim": false,
+    "tokenizer_loaded_once": true,
+    "warm_session_flow": true
+  },
+  "corpus": {
+    "artifact_kind": "apple_m4_slm_quality_corpus",
+    "case_count": 7,
+    "defaults": {
+      "deterministic": true,
+      "greedy": true,
+      "max_new_tokens": 16,
+      "min_distinct_generated_tokens": 2,
+      "min_generated_tokens": 1,
+      "prompt_template": "qwen2.5",
+      "temperature": 0.0,
+      "top_k": 1
+    },
+    "description": "Deterministic Apple M4 dense SLM warm-session quality corpus 2.0.",
+    "model": {
+      "architecture": "qwen2",
+      "family": "qwen",
+      "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+      "quant_format": "Q8_0",
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+      "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+    },
+    "name": "apple-m4-slm-quality-determinism-v2",
+    "path": "ci/quality/apple-m4-slm-quality-corpus.yaml",
+    "repeat_runs": 2
+  },
+  "counts": {
+    "n_kv": 26,
+    "n_tensors": 291
+  },
+  "cpu": {
+    "arch": "aarch64",
+    "features": [
+      "neon"
+    ],
+    "model": "unknown-cpu",
+    "threads": 1
+  },
+  "determinism": {
+    "checked": true,
+    "groups": [
+      {
+        "attempt_count": 2,
+        "case_id": "ready_instruction",
+        "prompt": "In one short sentence, say that the system is ready.",
+        "prompt_indices": [
+          6,
+          7
+        ],
+        "reference_generated_ids": [
+          198,
+          785,
+          1849,
+          374,
+          5527,
+          11,
+          438,
+          432,
+          702,
+          1012,
+          19755,
+          323,
+          33340,
+          369,
+          1181,
+          10602
+        ],
+        "reference_text": "\nThe system is ready, as it has been configured and optimized for its intended",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      },
+      {
+        "attempt_count": 2,
+        "case_id": "capital_france",
+        "prompt": "Name the capital of France.",
+        "prompt_indices": [
+          2,
+          3
+        ],
+        "reference_generated_ids": [
+          198,
+          785,
+          6722,
+          315,
+          9625,
+          374,
+          12095,
+          13,
+          151645
+        ],
+        "reference_text": "\nThe capital of France is Paris.<|im_end|>",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      },
+      {
+        "attempt_count": 2,
+        "case_id": "answer_prefix_blue",
+        "prompt": "Return the answer as 'Answer: blue' for this question: What color is a clear daytime sky?",
+        "prompt_indices": [
+          8,
+          9
+        ],
+        "reference_generated_ids": [
+          25,
+          21806,
+          25,
+          6303,
+          151645
+        ],
+        "reference_text": ": Answer: blue<|im_end|>",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      },
+      {
+        "attempt_count": 2,
+        "case_id": "rewrite_cache_sentence",
+        "prompt": "Rewrite as a short plain sentence: The model cache is healthy.",
+        "prompt_indices": [
+          12,
+          13
+        ],
+        "reference_generated_ids": [
+          25,
+          576,
+          1614,
+          6500,
+          374,
+          304,
+          1661,
+          2971,
+          13,
+          151645
+        ],
+        "reference_text": ": The model cache is in good condition.<|im_end|>",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      },
+      {
+        "attempt_count": 2,
+        "case_id": "summarize_rust_traits",
+        "prompt": "Summarize in three words: Rust is fast, safe, and reliable.",
+        "prompt_indices": [
+          10,
+          11
+        ],
+        "reference_generated_ids": [
+          25,
+          33789,
+          374,
+          4937,
+          11,
+          6092,
+          11,
+          323,
+          14720,
+          13,
+          151645
+        ],
+        "reference_text": ": Rust is fast, safe, and reliable.<|im_end|>",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      },
+      {
+        "attempt_count": 2,
+        "case_id": "math_2_plus_2",
+        "prompt": "What is 2+2? Answer briefly.",
+        "prompt_indices": [
+          0,
+          1
+        ],
+        "reference_generated_ids": [
+          198,
+          17,
+          10,
+          17,
+          16819,
+          220,
+          19,
+          13,
+          151645
+        ],
+        "reference_text": "\n2+2 equals 4.<|im_end|>",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      },
+      {
+        "attempt_count": 2,
+        "case_id": "rust_sentence",
+        "prompt": "Write one short sentence about Rust.",
+        "prompt_indices": [
+          4,
+          5
+        ],
+        "reference_generated_ids": [
+          33789,
+          374,
+          264,
+          7988,
+          11,
+          31945,
+          15473,
+          4128,
+          429,
+          702,
+          18163,
+          22538,
+          304,
+          3213,
+          1635,
+          369
+        ],
+        "reference_text": " Rust is a powerful, versatile programming language that has gained popularity in recent years for",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      }
+    ],
+    "passed": true,
+    "repeated_prompt_groups": 7
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generation": {
+    "deterministic": true,
+    "max_new_tokens": 16,
+    "mode": "greedy",
+    "prompt_template": "qwen2.5",
+    "repetition_penalty": 1.100000023841858,
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0
+  },
+  "mac_claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "slm_local_answer": true
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "memory": {
+    "peak_memory_mb": 3845.297,
+    "peak_memory_source": "getrusage.ru_maxrss"
+  },
+  "metal_phase_contributions": {
+    "cpu_pipeline_for_remaining_phases": true,
+    "enabled": true,
+    "execution_phase": "prefill_qkv_projection",
+    "fallback_used": false,
+    "full_metal_inference_claimed": false,
+    "resident_generation_backend": "apple-m4-cpu-neon",
+    "resident_greedy_token_ids_match_cpu_reference": true,
+    "runtime_api": "metal",
+    "selected_backend": "apple-m4-metal",
+    "speedup_claim": false
+  },
+  "model": {
+    "architecture": "qwen2",
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "sha256_rehash_skipped": true,
+    "sha256_source": "verified_mac_model_cache",
+    "tokenizer": "gguf_metadata",
+    "vocab_size": 151936
+  },
+  "model_cache": {
+    "architecture": "qwen2",
+    "bytes": 675710816,
+    "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "chat_template": true,
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "support_note": "Rust-native Apple M4 CPU/NEON SLM baseline artifact.",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2"
+  },
+  "operator_command": "mac validate",
+  "operator_ux": {
+    "aggregate_receipt_at_exit": true,
+    "clear_failure_messages": true,
+    "interactive_prompt_collection": false,
+    "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+    "per_turn_receipts_enabled": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": true,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipts": true,
+    "token_stream": "disabled"
+  },
+  "prompts": [
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "math_2_plus_2",
+      "generated_token_ids": [
+        198,
+        17,
+        10,
+        17,
+        16819,
+        220,
+        19,
+        13,
+        151645
+      ],
+      "generated_tokens": 9,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/01-what-is-22-answer-briefly-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "What is 2+2? Answer briefly.",
+      "prompt_index": 0,
+      "quality": {
+        "distinct_generated_tokens": 8,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 9,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "2+2 equals 4.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/01-what-is-22-answer-briefly.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "\n2+2 equals 4.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.324,
+        "decode_total_ms": 1428.371,
+        "embed_ms": {
+          "count": 9,
+          "max_ms": 0.005,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.005,
+          "total_ms": 0.029
+        },
+        "first_token_decode_ms": 163.283,
+        "first_token_ms": 4443,
+        "forward_ms": {
+          "count": 9,
+          "max_ms": 114.118,
+          "mean_ms": 113.633,
+          "min_ms": 112.963,
+          "p50_ms": 113.685,
+          "p95_ms": 114.118,
+          "total_ms": 1022.699
+        },
+        "logits_ms": {
+          "count": 9,
+          "max_ms": 48.311,
+          "mean_ms": 43.081,
+          "min_ms": 41.834,
+          "p50_ms": 42.506,
+          "p95_ms": 48.311,
+          "total_ms": 387.731
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 4192.292,
+        "sample_ms": {
+          "count": 9,
+          "max_ms": 2.036,
+          "mean_ms": 1.981,
+          "min_ms": 1.947,
+          "p50_ms": 1.972,
+          "p95_ms": 2.036,
+          "total_ms": 17.827
+        },
+        "sampling_ms_per_token": 1.981,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 4443,
+        "token_decode_ms": {
+          "count": 9,
+          "max_ms": 0.017,
+          "mean_ms": 0.005,
+          "min_ms": 0.003,
+          "p50_ms": 0.004,
+          "p95_ms": 0.017,
+          "total_ms": 0.048
+        },
+        "tokenize_ms": 77.068,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 5751.861
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "math_2_plus_2",
+      "generated_token_ids": [
+        198,
+        17,
+        10,
+        17,
+        16819,
+        220,
+        19,
+        13,
+        151645
+      ],
+      "generated_tokens": 9,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/02-what-is-22-answer-briefly-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "What is 2+2? Answer briefly.",
+      "prompt_index": 1,
+      "quality": {
+        "distinct_generated_tokens": 8,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 9,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "2+2 equals 4.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/02-what-is-22-answer-briefly.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "\n2+2 equals 4.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.314,
+        "decode_total_ms": 1458.972,
+        "embed_ms": {
+          "count": 9,
+          "max_ms": 0.008,
+          "mean_ms": 0.005,
+          "min_ms": 0.003,
+          "p50_ms": 0.004,
+          "p95_ms": 0.008,
+          "total_ms": 0.044
+        },
+        "first_token_decode_ms": 191.85,
+        "first_token_ms": 4910,
+        "forward_ms": {
+          "count": 9,
+          "max_ms": 114.005,
+          "mean_ms": 113.831,
+          "min_ms": 113.567,
+          "p50_ms": 113.895,
+          "p95_ms": 114.005,
+          "total_ms": 1024.481
+        },
+        "logits_ms": {
+          "count": 9,
+          "max_ms": 76.162,
+          "mean_ms": 46.268,
+          "min_ms": 42.238,
+          "p50_ms": 42.573,
+          "p95_ms": 76.162,
+          "total_ms": 416.414
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 4334.19,
+        "sample_ms": {
+          "count": 9,
+          "max_ms": 2.036,
+          "mean_ms": 1.99,
+          "min_ms": 1.92,
+          "p50_ms": 1.987,
+          "p95_ms": 2.036,
+          "total_ms": 17.909
+        },
+        "sampling_ms_per_token": 1.99,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 4910,
+        "token_decode_ms": {
+          "count": 9,
+          "max_ms": 0.016,
+          "mean_ms": 0.012,
+          "min_ms": 0.003,
+          "p50_ms": 0.013,
+          "p95_ms": 0.016,
+          "total_ms": 0.104
+        },
+        "tokenize_ms": 76.795,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 6210.151
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "capital_france",
+      "generated_token_ids": [
+        198,
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_tokens": 9,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/03-name-the-capital-of-france-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Name the capital of France.",
+      "prompt_index": 2,
+      "quality": {
+        "distinct_generated_tokens": 9,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 9,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The capital of France is Paris.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/03-name-the-capital-of-france.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "\nThe capital of France is Paris.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.315,
+        "decode_total_ms": 1425.124,
+        "embed_ms": {
+          "count": 9,
+          "max_ms": 0.005,
+          "mean_ms": 0.004,
+          "min_ms": 0.003,
+          "p50_ms": 0.003,
+          "p95_ms": 0.005,
+          "total_ms": 0.032
+        },
+        "first_token_decode_ms": 158.2,
+        "first_token_ms": 4046,
+        "forward_ms": {
+          "count": 9,
+          "max_ms": 114.056,
+          "mean_ms": 113.741,
+          "min_ms": 113.333,
+          "p50_ms": 113.776,
+          "p95_ms": 114.056,
+          "total_ms": 1023.665
+        },
+        "logits_ms": {
+          "count": 9,
+          "max_ms": 42.723,
+          "mean_ms": 42.598,
+          "min_ms": 42.22,
+          "p50_ms": 42.64,
+          "p95_ms": 42.723,
+          "total_ms": 383.385
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 3746.766,
+        "sample_ms": {
+          "count": 9,
+          "max_ms": 2.039,
+          "mean_ms": 1.998,
+          "min_ms": 1.98,
+          "p50_ms": 1.99,
+          "p95_ms": 2.039,
+          "total_ms": 17.984
+        },
+        "sampling_ms_per_token": 1.998,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 4046,
+        "token_decode_ms": {
+          "count": 9,
+          "max_ms": 0.007,
+          "mean_ms": 0.004,
+          "min_ms": 0.003,
+          "p50_ms": 0.004,
+          "p95_ms": 0.007,
+          "total_ms": 0.036
+        },
+        "tokenize_ms": 79.195,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 5344.406
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "capital_france",
+      "generated_token_ids": [
+        198,
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_tokens": 9,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/04-name-the-capital-of-france-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Name the capital of France.",
+      "prompt_index": 3,
+      "quality": {
+        "distinct_generated_tokens": 9,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 9,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The capital of France is Paris.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/04-name-the-capital-of-france.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "\nThe capital of France is Paris.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.256,
+        "decode_total_ms": 1436.621,
+        "embed_ms": {
+          "count": 9,
+          "max_ms": 0.007,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.007,
+          "total_ms": 0.032
+        },
+        "first_token_decode_ms": 157.931,
+        "first_token_ms": 3989,
+        "forward_ms": {
+          "count": 9,
+          "max_ms": 122.99,
+          "mean_ms": 114.833,
+          "min_ms": 113.327,
+          "p50_ms": 113.81,
+          "p95_ms": 122.99,
+          "total_ms": 1033.493
+        },
+        "logits_ms": {
+          "count": 9,
+          "max_ms": 43.911,
+          "mean_ms": 42.77,
+          "min_ms": 42.19,
+          "p50_ms": 42.602,
+          "p95_ms": 43.911,
+          "total_ms": 384.934
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 3737.351,
+        "sample_ms": {
+          "count": 9,
+          "max_ms": 2.053,
+          "mean_ms": 2.011,
+          "min_ms": 1.984,
+          "p50_ms": 2.005,
+          "p95_ms": 2.053,
+          "total_ms": 18.096
+        },
+        "sampling_ms_per_token": 2.011,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 3989,
+        "token_decode_ms": {
+          "count": 9,
+          "max_ms": 0.008,
+          "mean_ms": 0.005,
+          "min_ms": 0.003,
+          "p50_ms": 0.004,
+          "p95_ms": 0.008,
+          "total_ms": 0.041
+        },
+        "tokenize_ms": 76.624,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 5300.144
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "rust_sentence",
+      "generated_token_ids": [
+        33789,
+        374,
+        264,
+        7988,
+        11,
+        31945,
+        15473,
+        4128,
+        429,
+        702,
+        18163,
+        22538,
+        304,
+        3213,
+        1635,
+        369
+      ],
+      "generated_tokens": 16,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/05-write-one-short-sentence-about-rust-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Write one short sentence about Rust.",
+      "prompt_index": 4,
+      "quality": {
+        "distinct_generated_tokens": 16,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 16,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Rust is a powerful, versatile programming language that has gained popularity in recent years for",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/05-write-one-short-sentence-about-rust.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": " Rust is a powerful, versatile programming language that has gained popularity in recent years for",
+      "timing": {
+        "decode_steady_state_tok_s": 6.307,
+        "decode_total_ms": 2536.82,
+        "embed_ms": {
+          "count": 16,
+          "max_ms": 0.008,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.004,
+          "p95_ms": 0.008,
+          "total_ms": 0.072
+        },
+        "first_token_decode_ms": 158.62,
+        "first_token_ms": 4106,
+        "forward_ms": {
+          "count": 16,
+          "max_ms": 114.351,
+          "mean_ms": 113.927,
+          "min_ms": 113.477,
+          "p50_ms": 113.911,
+          "p95_ms": 114.351,
+          "total_ms": 1822.838
+        },
+        "logits_ms": {
+          "count": 16,
+          "max_ms": 42.725,
+          "mean_ms": 42.612,
+          "min_ms": 42.52,
+          "p50_ms": 42.605,
+          "p95_ms": 42.725,
+          "total_ms": 681.798
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 3850.789,
+        "sample_ms": {
+          "count": 16,
+          "max_ms": 2.034,
+          "mean_ms": 2.001,
+          "min_ms": 1.874,
+          "p50_ms": 2.004,
+          "p95_ms": 2.034,
+          "total_ms": 32.016
+        },
+        "sampling_ms_per_token": 2.001,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 4106,
+        "token_decode_ms": {
+          "count": 16,
+          "max_ms": 0.007,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.007,
+          "total_ms": 0.061
+        },
+        "tokenize_ms": 79.565,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 6516.404
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "rust_sentence",
+      "generated_token_ids": [
+        33789,
+        374,
+        264,
+        7988,
+        11,
+        31945,
+        15473,
+        4128,
+        429,
+        702,
+        18163,
+        22538,
+        304,
+        3213,
+        1635,
+        369
+      ],
+      "generated_tokens": 16,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/06-write-one-short-sentence-about-rust-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Write one short sentence about Rust.",
+      "prompt_index": 5,
+      "quality": {
+        "distinct_generated_tokens": 16,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 16,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Rust is a powerful, versatile programming language that has gained popularity in recent years for",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/06-write-one-short-sentence-about-rust.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": " Rust is a powerful, versatile programming language that has gained popularity in recent years for",
+      "timing": {
+        "decode_steady_state_tok_s": 6.275,
+        "decode_total_ms": 2548.654,
+        "embed_ms": {
+          "count": 16,
+          "max_ms": 0.006,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.006,
+          "total_ms": 0.059
+        },
+        "first_token_decode_ms": 158.157,
+        "first_token_ms": 4105,
+        "forward_ms": {
+          "count": 16,
+          "max_ms": 119.532,
+          "mean_ms": 114.5,
+          "min_ms": 113.594,
+          "p50_ms": 113.982,
+          "p95_ms": 119.532,
+          "total_ms": 1832.001
+        },
+        "logits_ms": {
+          "count": 16,
+          "max_ms": 44.679,
+          "mean_ms": 42.735,
+          "min_ms": 42.428,
+          "p50_ms": 42.612,
+          "p95_ms": 44.679,
+          "total_ms": 683.753
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 3851.084,
+        "sample_ms": {
+          "count": 16,
+          "max_ms": 2.429,
+          "mean_ms": 2.046,
+          "min_ms": 2.004,
+          "p50_ms": 2.019,
+          "p95_ms": 2.429,
+          "total_ms": 32.736
+        },
+        "sampling_ms_per_token": 2.046,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 4105,
+        "token_decode_ms": {
+          "count": 16,
+          "max_ms": 0.006,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.004,
+          "p95_ms": 0.006,
+          "total_ms": 0.065
+        },
+        "tokenize_ms": 78.494,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 6527.132
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "ready_instruction",
+      "generated_token_ids": [
+        198,
+        785,
+        1849,
+        374,
+        5527,
+        11,
+        438,
+        432,
+        702,
+        1012,
+        19755,
+        323,
+        33340,
+        369,
+        1181,
+        10602
+      ],
+      "generated_tokens": 16,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/07-in-one-short-sentence-say-that-the-system-is-rea-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "In one short sentence, say that the system is ready.",
+      "prompt_index": 6,
+      "quality": {
+        "distinct_generated_tokens": 16,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 16,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The system is ready, as it has been configured and optimized for its intended",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/07-in-one-short-sentence-say-that-the-system-is-rea.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "\nThe system is ready, as it has been configured and optimized for its intended",
+      "timing": {
+        "decode_steady_state_tok_s": 6.255,
+        "decode_total_ms": 2557.17,
+        "embed_ms": {
+          "count": 16,
+          "max_ms": 0.019,
+          "mean_ms": 0.006,
+          "min_ms": 0.002,
+          "p50_ms": 0.004,
+          "p95_ms": 0.019,
+          "total_ms": 0.098
+        },
+        "first_token_decode_ms": 158.961,
+        "first_token_ms": 4677,
+        "forward_ms": {
+          "count": 16,
+          "max_ms": 117.725,
+          "mean_ms": 114.496,
+          "min_ms": 113.965,
+          "p50_ms": 114.094,
+          "p95_ms": 117.725,
+          "total_ms": 1831.928
+        },
+        "logits_ms": {
+          "count": 16,
+          "max_ms": 47.771,
+          "mean_ms": 43.263,
+          "min_ms": 42.766,
+          "p50_ms": 42.954,
+          "p95_ms": 47.771,
+          "total_ms": 692.204
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 4422.051,
+        "sample_ms": {
+          "count": 16,
+          "max_ms": 2.436,
+          "mean_ms": 2.05,
+          "min_ms": 1.986,
+          "p50_ms": 2.021,
+          "p95_ms": 2.436,
+          "total_ms": 32.803
+        },
+        "sampling_ms_per_token": 2.05,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 4677,
+        "token_decode_ms": {
+          "count": 16,
+          "max_ms": 0.008,
+          "mean_ms": 0.005,
+          "min_ms": 0.003,
+          "p50_ms": 0.005,
+          "p95_ms": 0.008,
+          "total_ms": 0.083
+        },
+        "tokenize_ms": 78.661,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 7107.634
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "ready_instruction",
+      "generated_token_ids": [
+        198,
+        785,
+        1849,
+        374,
+        5527,
+        11,
+        438,
+        432,
+        702,
+        1012,
+        19755,
+        323,
+        33340,
+        369,
+        1181,
+        10602
+      ],
+      "generated_tokens": 16,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/08-in-one-short-sentence-say-that-the-system-is-rea-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "In one short sentence, say that the system is ready.",
+      "prompt_index": 7,
+      "quality": {
+        "distinct_generated_tokens": 16,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 16,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The system is ready, as it has been configured and optimized for its intended",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/08-in-one-short-sentence-say-that-the-system-is-rea.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "\nThe system is ready, as it has been configured and optimized for its intended",
+      "timing": {
+        "decode_steady_state_tok_s": 6.302,
+        "decode_total_ms": 2538.736,
+        "embed_ms": {
+          "count": 16,
+          "max_ms": 0.005,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.005,
+          "total_ms": 0.045
+        },
+        "first_token_decode_ms": 158.583,
+        "first_token_ms": 4679,
+        "forward_ms": {
+          "count": 16,
+          "max_ms": 114.289,
+          "mean_ms": 114.054,
+          "min_ms": 113.867,
+          "p50_ms": 114.018,
+          "p95_ms": 114.289,
+          "total_ms": 1824.868
+        },
+        "logits_ms": {
+          "count": 16,
+          "max_ms": 42.647,
+          "mean_ms": 42.595,
+          "min_ms": 42.47,
+          "p50_ms": 42.602,
+          "p95_ms": 42.647,
+          "total_ms": 681.522
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 4424.576,
+        "sample_ms": {
+          "count": 16,
+          "max_ms": 2.03,
+          "mean_ms": 2.014,
+          "min_ms": 1.918,
+          "p50_ms": 2.019,
+          "p95_ms": 2.03,
+          "total_ms": 32.217
+        },
+        "sampling_ms_per_token": 2.014,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 4679,
+        "token_decode_ms": {
+          "count": 16,
+          "max_ms": 0.007,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.007,
+          "total_ms": 0.053
+        },
+        "tokenize_ms": 78.579,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 7091.649
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "answer_prefix_blue",
+      "generated_token_ids": [
+        25,
+        21806,
+        25,
+        6303,
+        151645
+      ],
+      "generated_tokens": 5,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/09-return-the-answer-as-answer-blue-for-this-questi-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Return the answer as 'Answer: blue' for this question: What color is a clear daytime sky?",
+      "prompt_index": 8,
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [],
+        "gate_kind": "starts_with_any",
+        "gate_passed": true,
+        "generated_tokens": 5,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Answer: blue",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/09-return-the-answer-as-answer-blue-for-this-questi.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": ": Answer: blue<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.3,
+        "decode_total_ms": 793.45,
+        "embed_ms": {
+          "count": 5,
+          "max_ms": 0.003,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.003,
+          "total_ms": 0.013
+        },
+        "first_token_decode_ms": 158.515,
+        "first_token_ms": 5713,
+        "forward_ms": {
+          "count": 5,
+          "max_ms": 114.165,
+          "mean_ms": 114.057,
+          "min_ms": 113.971,
+          "p50_ms": 114.056,
+          "p95_ms": 114.165,
+          "total_ms": 570.283
+        },
+        "logits_ms": {
+          "count": 5,
+          "max_ms": 42.685,
+          "mean_ms": 42.604,
+          "min_ms": 42.511,
+          "p50_ms": 42.611,
+          "p95_ms": 42.685,
+          "total_ms": 213.02
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 5458.614,
+        "sample_ms": {
+          "count": 5,
+          "max_ms": 2.033,
+          "mean_ms": 2.021,
+          "min_ms": 2.014,
+          "p50_ms": 2.02,
+          "p95_ms": 2.033,
+          "total_ms": 10.103
+        },
+        "sampling_ms_per_token": 2.021,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 5713,
+        "token_decode_ms": {
+          "count": 5,
+          "max_ms": 0.007,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.007,
+          "total_ms": 0.02
+        },
+        "tokenize_ms": 78.449,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 6379.889
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "answer_prefix_blue",
+      "generated_token_ids": [
+        25,
+        21806,
+        25,
+        6303,
+        151645
+      ],
+      "generated_tokens": 5,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/10-return-the-answer-as-answer-blue-for-this-questi-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Return the answer as 'Answer: blue' for this question: What color is a clear daytime sky?",
+      "prompt_index": 9,
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [],
+        "gate_kind": "starts_with_any",
+        "gate_passed": true,
+        "generated_tokens": 5,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Answer: blue",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/10-return-the-answer-as-answer-blue-for-this-questi.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": ": Answer: blue<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.298,
+        "decode_total_ms": 794.784,
+        "embed_ms": {
+          "count": 5,
+          "max_ms": 0.005,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.005,
+          "total_ms": 0.016
+        },
+        "first_token_decode_ms": 159.691,
+        "first_token_ms": 5705,
+        "forward_ms": {
+          "count": 5,
+          "max_ms": 114.849,
+          "mean_ms": 114.302,
+          "min_ms": 114.05,
+          "p50_ms": 114.159,
+          "p95_ms": 114.849,
+          "total_ms": 571.512
+        },
+        "logits_ms": {
+          "count": 5,
+          "max_ms": 42.801,
+          "mean_ms": 42.636,
+          "min_ms": 42.571,
+          "p50_ms": 42.602,
+          "p95_ms": 42.801,
+          "total_ms": 213.178
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 5448.136,
+        "sample_ms": {
+          "count": 5,
+          "max_ms": 2.026,
+          "mean_ms": 2.009,
+          "min_ms": 1.965,
+          "p50_ms": 2.017,
+          "p95_ms": 2.026,
+          "total_ms": 10.044
+        },
+        "sampling_ms_per_token": 2.009,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 5705,
+        "token_decode_ms": {
+          "count": 5,
+          "max_ms": 0.007,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.004,
+          "p95_ms": 0.007,
+          "total_ms": 0.022
+        },
+        "tokenize_ms": 79.13,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 6371.557
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "summarize_rust_traits",
+      "generated_token_ids": [
+        25,
+        33789,
+        374,
+        4937,
+        11,
+        6092,
+        11,
+        323,
+        14720,
+        13,
+        151645
+      ],
+      "generated_tokens": 11,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/11-summarize-in-three-words-rust-is-fast-safe-and-r-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Summarize in three words: Rust is fast, safe, and reliable.",
+      "prompt_index": 10,
+      "quality": {
+        "distinct_generated_tokens": 10,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 11,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Rust is fast, safe, and reliable.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/11-summarize-in-three-words-rust-is-fast-safe-and-r.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": ": Rust is fast, safe, and reliable.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.298,
+        "decode_total_ms": 1746.384,
+        "embed_ms": {
+          "count": 11,
+          "max_ms": 0.005,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.005,
+          "total_ms": 0.031
+        },
+        "first_token_decode_ms": 158.556,
+        "first_token_ms": 5146,
+        "forward_ms": {
+          "count": 11,
+          "max_ms": 114.32,
+          "mean_ms": 114.122,
+          "min_ms": 113.946,
+          "p50_ms": 114.099,
+          "p95_ms": 114.32,
+          "total_ms": 1255.345
+        },
+        "logits_ms": {
+          "count": 11,
+          "max_ms": 42.785,
+          "mean_ms": 42.61,
+          "min_ms": 42.48,
+          "p50_ms": 42.599,
+          "p95_ms": 42.785,
+          "total_ms": 468.71
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 4891.105,
+        "sample_ms": {
+          "count": 11,
+          "max_ms": 2.038,
+          "mean_ms": 2.021,
+          "min_ms": 1.968,
+          "p50_ms": 2.024,
+          "p95_ms": 2.038,
+          "total_ms": 22.228
+        },
+        "sampling_ms_per_token": 2.021,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 5146,
+        "token_decode_ms": {
+          "count": 11,
+          "max_ms": 0.007,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.004,
+          "p95_ms": 0.007,
+          "total_ms": 0.043
+        },
+        "tokenize_ms": 78.462,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 6766.177
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "summarize_rust_traits",
+      "generated_token_ids": [
+        25,
+        33789,
+        374,
+        4937,
+        11,
+        6092,
+        11,
+        323,
+        14720,
+        13,
+        151645
+      ],
+      "generated_tokens": 11,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/12-summarize-in-three-words-rust-is-fast-safe-and-r-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Summarize in three words: Rust is fast, safe, and reliable.",
+      "prompt_index": 11,
+      "quality": {
+        "distinct_generated_tokens": 10,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 11,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Rust is fast, safe, and reliable.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/12-summarize-in-three-words-rust-is-fast-safe-and-r.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": ": Rust is fast, safe, and reliable.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.299,
+        "decode_total_ms": 1746.045,
+        "embed_ms": {
+          "count": 11,
+          "max_ms": 0.004,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.004,
+          "total_ms": 0.03
+        },
+        "first_token_decode_ms": 158.471,
+        "first_token_ms": 5144,
+        "forward_ms": {
+          "count": 11,
+          "max_ms": 114.41,
+          "mean_ms": 114.081,
+          "min_ms": 113.81,
+          "p50_ms": 114.067,
+          "p95_ms": 114.41,
+          "total_ms": 1254.887
+        },
+        "logits_ms": {
+          "count": 11,
+          "max_ms": 42.795,
+          "mean_ms": 42.622,
+          "min_ms": 42.557,
+          "p50_ms": 42.613,
+          "p95_ms": 42.795,
+          "total_ms": 468.845
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 4888.879,
+        "sample_ms": {
+          "count": 11,
+          "max_ms": 2.031,
+          "mean_ms": 2.02,
+          "min_ms": 2.005,
+          "p50_ms": 2.021,
+          "p95_ms": 2.031,
+          "total_ms": 22.219
+        },
+        "sampling_ms_per_token": 2.02,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 5144,
+        "token_decode_ms": {
+          "count": 11,
+          "max_ms": 0.007,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.007,
+          "total_ms": 0.039
+        },
+        "tokenize_ms": 78.939,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 6763.507
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "rewrite_cache_sentence",
+      "generated_token_ids": [
+        25,
+        576,
+        1614,
+        6500,
+        374,
+        304,
+        1661,
+        2971,
+        13,
+        151645
+      ],
+      "generated_tokens": 10,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/13-rewrite-as-a-short-plain-sentence-the-model-cach-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Rewrite as a short plain sentence: The model cache is healthy.",
+      "prompt_index": 12,
+      "quality": {
+        "distinct_generated_tokens": 10,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 10,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The model cache is in good condition.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/13-rewrite-as-a-short-plain-sentence-the-model-cach.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": ": The model cache is in good condition.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.285,
+        "decode_total_ms": 1590.783,
+        "embed_ms": {
+          "count": 10,
+          "max_ms": 0.011,
+          "mean_ms": 0.005,
+          "min_ms": 0.003,
+          "p50_ms": 0.004,
+          "p95_ms": 0.011,
+          "total_ms": 0.045
+        },
+        "first_token_decode_ms": 158.775,
+        "first_token_ms": 4907,
+        "forward_ms": {
+          "count": 10,
+          "max_ms": 114.19,
+          "mean_ms": 114.074,
+          "min_ms": 113.803,
+          "p50_ms": 114.078,
+          "p95_ms": 114.19,
+          "total_ms": 1140.737
+        },
+        "logits_ms": {
+          "count": 10,
+          "max_ms": 43.054,
+          "mean_ms": 42.972,
+          "min_ms": 42.896,
+          "p50_ms": 42.972,
+          "p95_ms": 43.054,
+          "total_ms": 429.718
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 4651.969,
+        "sample_ms": {
+          "count": 10,
+          "max_ms": 2.038,
+          "mean_ms": 2.021,
+          "min_ms": 1.987,
+          "p50_ms": 2.018,
+          "p95_ms": 2.038,
+          "total_ms": 20.205
+        },
+        "sampling_ms_per_token": 2.021,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 4907,
+        "token_decode_ms": {
+          "count": 10,
+          "max_ms": 0.007,
+          "mean_ms": 0.005,
+          "min_ms": 0.004,
+          "p50_ms": 0.004,
+          "p95_ms": 0.007,
+          "total_ms": 0.048
+        },
+        "tokenize_ms": 79.322,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 6372.333
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "rewrite_cache_sentence",
+      "generated_token_ids": [
+        25,
+        576,
+        1614,
+        6500,
+        374,
+        304,
+        1661,
+        2971,
+        13,
+        151645
+      ],
+      "generated_tokens": 10,
+      "metal_phase_contributions": [
+        {
+          "artifact_kind": "phase_contribution",
+          "artifact_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/14-rewrite-as-a-short-plain-sentence-the-model-cach-metal-prefill-qkv.json",
+          "cpu_pipeline_for_remaining_phases": true,
+          "execution_phase": "prefill_qkv_projection",
+          "fallback_used": false,
+          "full_metal_inference_claimed": false,
+          "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+          "resident_greedy_token_ids_match_cpu_reference": true,
+          "runtime_api": "metal",
+          "selected_backend": "apple-m4-metal",
+          "speedup_claim": false
+        }
+      ],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Rewrite as a short plain sentence: The model cache is healthy.",
+      "prompt_index": 13,
+      "quality": {
+        "distinct_generated_tokens": 10,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "gate_passed": true,
+        "generated_tokens": 10,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "The model cache is in good condition.",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/14-rewrite-as-a-short-plain-sentence-the-model-cach.json",
+      "repeat_index": 1,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": ": The model cache is in good condition.<|im_end|>",
+      "timing": {
+        "decode_steady_state_tok_s": 6.293,
+        "decode_total_ms": 1588.852,
+        "embed_ms": {
+          "count": 10,
+          "max_ms": 0.004,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.003,
+          "p95_ms": 0.004,
+          "total_ms": 0.031
+        },
+        "first_token_decode_ms": 158.765,
+        "first_token_ms": 4926,
+        "forward_ms": {
+          "count": 10,
+          "max_ms": 114.419,
+          "mean_ms": 114.23,
+          "min_ms": 114.07,
+          "p50_ms": 114.154,
+          "p95_ms": 114.419,
+          "total_ms": 1142.296
+        },
+        "logits_ms": {
+          "count": 10,
+          "max_ms": 42.736,
+          "mean_ms": 42.626,
+          "min_ms": 42.537,
+          "p50_ms": 42.622,
+          "p95_ms": 42.736,
+          "total_ms": 426.263
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 4670.721,
+        "sample_ms": {
+          "count": 10,
+          "max_ms": 2.051,
+          "mean_ms": 2.02,
+          "min_ms": 1.973,
+          "p50_ms": 2.022,
+          "p95_ms": 2.051,
+          "total_ms": 20.196
+        },
+        "sampling_ms_per_token": 2.02,
+        "session_model_load_ms": 9665.58,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 179.573,
+        "time_to_first_token_ms": 4926,
+        "token_decode_ms": {
+          "count": 10,
+          "max_ms": 0.007,
+          "mean_ms": 0.004,
+          "min_ms": 0.002,
+          "p50_ms": 0.004,
+          "p95_ms": 0.007,
+          "total_ms": 0.04
+        },
+        "tokenize_ms": 79.303,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 6388.544
+      }
+    }
+  ],
+  "quality_summary": {
+    "fail_on_quality": true,
+    "failed_prompt_indices": [],
+    "min_distinct_generated_tokens": 2,
+    "min_generated_tokens": 1,
+    "passed": true
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "unified_memory": true,
+    "unified_memory_bytes": 17179869184
+  },
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "session": {
+    "allocation_audit_buffers_reused": true,
+    "generated_token_buffer_reused": true,
+    "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+    "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+    "metal_phase_contributions_enabled": true,
+    "metal_phase_receipts": [
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/01-what-is-22-answer-briefly-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/02-what-is-22-answer-briefly-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/03-name-the-capital-of-france-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/04-name-the-capital-of-france-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/05-write-one-short-sentence-about-rust-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/06-write-one-short-sentence-about-rust-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/07-in-one-short-sentence-say-that-the-system-is-rea-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/08-in-one-short-sentence-say-that-the-system-is-rea-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/09-return-the-answer-as-answer-blue-for-this-questi-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/10-return-the-answer-as-answer-blue-for-this-questi-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/11-summarize-in-three-words-rust-is-fast-safe-and-r-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/12-summarize-in-three-words-rust-is-fast-safe-and-r-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/13-rewrite-as-a-short-plain-sentence-the-model-cach-metal-prefill-qkv.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/14-rewrite-as-a-short-plain-sentence-the-model-cach-metal-prefill-qkv.json"
+    ],
+    "model_loaded_once": true,
+    "per_prompt_receipt_dir": "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts",
+    "per_prompt_receipts": [
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/01-what-is-22-answer-briefly.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/02-what-is-22-answer-briefly.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/03-name-the-capital-of-france.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/04-name-the-capital-of-france.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/05-write-one-short-sentence-about-rust.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/06-write-one-short-sentence-about-rust.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/07-in-one-short-sentence-say-that-the-system-is-rea.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/08-in-one-short-sentence-say-that-the-system-is-rea.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/09-return-the-answer-as-answer-blue-for-this-questi.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/10-return-the-answer-as-answer-blue-for-this-questi.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/11-summarize-in-three-words-rust-is-fast-safe-and-r.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/12-summarize-in-three-words-rust-is-fast-safe-and-r.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/13-rewrite-as-a-short-plain-sentence-the-model-cach.json",
+      "target/apple-m4-slm-metal-phases/M4-METAL-006/mac-validate-metal-qkv-phase-prompts/14-rewrite-as-a-short-plain-sentence-the-model-cach.json"
+    ],
+    "per_prompt_receipts_enabled": true,
+    "prompt_count": 14,
+    "prompt_token_buffer_reused": true,
+    "reuse_scope": "resident_session",
+    "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+    "session_owned_buffers": true,
+    "stop_tail_buffer_reused": true,
+    "timing_buffers_reused": true,
+    "tokenizer_loaded_once": true
+  },
+  "speed": {
+    "broad_performance_claim": false,
+    "claim": "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+    "counts": {
+      "generated_tokens": 152,
+      "prompt_count": 14,
+      "prompt_tokens": 564
+    },
+    "measurement_scope": "validated SLM warm session on apple-m4-cpu-neon",
+    "reuse": {
+      "allocation_audit_buffers_reused": true,
+      "generated_token_buffer_reused": true,
+      "kv_cache_recreated_per_prompt": true,
+      "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+      "logits_buffer_reuse_claimed": false,
+      "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+      "model_loaded_once": true,
+      "per_prompt_model_load_ms": 0.0,
+      "per_prompt_tokenizer_load_ms": 0.0,
+      "prompt_token_buffer_reused": true,
+      "reuse_scope": "resident_session",
+      "sampler_recreated_per_prompt": true,
+      "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+      "session_owned_buffers": true,
+      "stop_tail_buffer_reused": true,
+      "timing_buffers_reused": true,
+      "tokenizer_loaded_once": true
+    },
+    "speedup_claim": false,
+    "throughput": {
+      "cold_session_generated_tok_s": 1.533,
+      "decode_generated_tok_s": 6.283,
+      "warm_prompt_generated_tok_s": 1.71
+    },
+    "timing": {
+      "decode_total_ms": 24190.766,
+      "first_token_ms": {
+        "count": 14,
+        "max_ms": 5713.0,
+        "mean_ms": 4749.714,
+        "min_ms": 3989.0,
+        "p50_ms": 4679.0,
+        "p95_ms": 5713.0,
+        "total_ms": 66496.0
+      },
+      "model_load_ms": 9665.58,
+      "prefill_ms": 62568.523,
+      "sampling_ms": 306.581,
+      "steady_decode_tok_s": {
+        "count": 14,
+        "max": 6.324,
+        "mean": 6.294,
+        "min": 6.255,
+        "p50": 6.298,
+        "p95": 6.324
+      },
+      "time_to_first_token_ms": {
+        "count": 14,
+        "max_ms": 5713.0,
+        "mean_ms": 4749.714,
+        "min_ms": 3989.0,
+        "p50_ms": 4679.0,
+        "p95_ms": 5713.0,
+        "total_ms": 66496.0
+      },
+      "tokenize_ms": 1098.585,
+      "tokenizer_load_ms": 179.573,
+      "total_session_ms": 99183.58,
+      "warm_prompt_wall_ms": 88891.388
+    }
+  },
+  "speedup_claim": false,
+  "timestamp": "2026-05-10T02:16:55.586553+00:00",
+  "timing": {
+    "model_load_ms": 9665.58,
+    "model_sha256_ms": 0.0,
+    "tokenizer_load_ms": 179.573,
+    "total_session_ms": 99183.58
+  },
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "model_family": "gguf_metadata",
+    "pretokenizer_authority": "present",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  }
+}

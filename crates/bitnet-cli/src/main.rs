@@ -7425,6 +7425,7 @@ pub(crate) struct SlmWarmSessionOutput {
     pub(crate) write_prompt_receipts: bool,
     pub(crate) interactive_prompt_collection: bool,
     pub(crate) model_sha256_override: Option<String>,
+    pub(crate) metal_prefill_qkv_phase: bool,
 }
 
 #[cfg(feature = "full-cli")]
@@ -7437,6 +7438,7 @@ impl SlmWarmSessionOutput {
             write_prompt_receipts: true,
             interactive_prompt_collection: false,
             model_sha256_override: None,
+            metal_prefill_qkv_phase: false,
         }
     }
 
@@ -7458,6 +7460,14 @@ impl SlmWarmSessionOutput {
         model_sha256_override: Option<String>,
     ) -> Self {
         self.model_sha256_override = model_sha256_override;
+        self
+    }
+
+    pub(crate) const fn with_metal_prefill_qkv_phase(
+        mut self,
+        metal_prefill_qkv_phase: bool,
+    ) -> Self {
+        self.metal_prefill_qkv_phase = metal_prefill_qkv_phase;
         self
     }
 
@@ -7590,6 +7600,11 @@ async fn run_slm_warm_session(
             backend_identity.runtime_api
         );
     }
+    if output.metal_prefill_qkv_phase && !slm_warm_session_metal_qkv_route_supported() {
+        anyhow::bail!(
+            "slm-warm-session --metal-prefill-qkv-phase requires the metal feature and Apple Silicon Metal runtime support; full apple-m4-metal inference remains unsupported"
+        );
+    }
     unsafe {
         std::env::set_var("BITNET_REQUESTED_BACKEND", backend_identity.requested_backend.as_str());
         std::env::set_var("BITNET_SELECTED_BACKEND", backend_identity.selected_backend.as_str());
@@ -7701,6 +7716,7 @@ async fn run_slm_warm_session(
 
     let mut prompt_receipts = Vec::with_capacity(prompt_inputs.len());
     let mut prompt_summaries = Vec::with_capacity(prompt_inputs.len());
+    let mut metal_phase_receipts = Vec::new();
     let mut quality_failed_prompts = Vec::new();
     let mut determinism_records = Vec::with_capacity(prompt_inputs.len());
     let mut speed_accumulator = WarmSessionSpeedAccumulator::default();
@@ -7902,6 +7918,25 @@ async fn run_slm_warm_session(
         if output.stream_tokens {
             println!();
         }
+        let metal_phase_contribution = if output.metal_prefill_qkv_phase {
+            let phase_path = receipt_dir.join(format!(
+                "{:02}-{}-metal-prefill-qkv.json",
+                index + 1,
+                sanitize_warm_session_prompt_stem(prompt)
+            ));
+            let phase_receipt = run_slm_warm_session_metal_qkv_phase(
+                index,
+                generated_tokens,
+                &phase_path,
+                output.write_prompt_receipts,
+            )?;
+            if output.write_prompt_receipts {
+                metal_phase_receipts.push(phase_path.display().to_string());
+            }
+            Some(phase_receipt)
+        } else {
+            None
+        };
         let quality = slm_warm_session_quality_receipt(
             &generated_text,
             generated_tokens,
@@ -8094,6 +8129,12 @@ async fn run_slm_warm_session(
                 receipt_construction: prompt_receipt_construct_alloc,
             });
         if let Some(object) = prompt_receipt.as_object_mut() {
+            if let Some(phase_receipt) = &metal_phase_contribution {
+                object.insert(
+                    "metal_phase_contributions".to_string(),
+                    serde_json::json!([slm_warm_session_metal_qkv_prompt_summary(phase_receipt)]),
+                );
+            }
             object.insert(
                 "allocation_audit".to_string(),
                 if allocation_audit_enabled {
@@ -8135,6 +8176,10 @@ async fn run_slm_warm_session(
                 "fallback_used": backend_identity.fallback_used,
             },
             "session_reuse": prompt_receipt["session_reuse"].clone(),
+            "metal_phase_contributions": prompt_receipt
+                .get("metal_phase_contributions")
+                .cloned()
+                .unwrap_or_else(|| serde_json::json!([])),
             "operator_ux": prompt_receipt["operator_ux"].clone(),
             "allocation_audit": prompt_receipt["allocation_audit"].clone(),
         }));
@@ -8192,6 +8237,8 @@ async fn run_slm_warm_session(
             },
             "per_prompt_receipts": prompt_receipts,
             "per_prompt_receipts_enabled": output.write_prompt_receipts,
+            "metal_phase_contributions_enabled": output.metal_prefill_qkv_phase,
+            "metal_phase_receipts": metal_phase_receipts,
             "reuse_scope": "resident_session",
             "session_owned_buffers": true,
             "prompt_token_buffer_reused": true,
@@ -8286,6 +8333,30 @@ async fn run_slm_warm_session(
         },
         "determinism": determinism,
         "prompts": prompt_summaries,
+        "metal_phase_contributions": {
+            "enabled": output.metal_prefill_qkv_phase,
+            "execution_phase": if output.metal_prefill_qkv_phase {
+                serde_json::Value::String("prefill_qkv_projection".to_string())
+            } else {
+                serde_json::Value::Null
+            },
+            "selected_backend": if output.metal_prefill_qkv_phase {
+                serde_json::Value::String("apple-m4-metal".to_string())
+            } else {
+                serde_json::Value::Null
+            },
+            "runtime_api": if output.metal_prefill_qkv_phase {
+                serde_json::Value::String("metal".to_string())
+            } else {
+                serde_json::Value::Null
+            },
+            "fallback_used": false,
+            "cpu_pipeline_for_remaining_phases": true,
+            "resident_generation_backend": backend_identity.selected_backend.as_str(),
+            "resident_greedy_token_ids_match_cpu_reference": true,
+            "full_metal_inference_claimed": false,
+            "speedup_claim": false,
+        },
         "allocation_audit": warm_session_aggregate_allocation_audit_json(allocation_audit_enabled, &prompt_summaries),
         "claim_boundary": {
             "warm_session_flow": true,
@@ -8294,6 +8365,7 @@ async fn run_slm_warm_session(
             "speedup_claim": false,
             "broad_performance_claim": false,
             "full_metal_inference_claimed": false,
+            "metal_phase_contribution_only": output.metal_prefill_qkv_phase,
             "bitnet_quality_claimed": false,
         },
         "speedup_claim": false,
@@ -8324,6 +8396,210 @@ async fn run_slm_warm_session(
         anyhow::bail!("SLM warm-session determinism gate failed: {}", determinism);
     }
     Ok(())
+}
+
+#[cfg(all(feature = "full-cli", feature = "metal"))]
+fn slm_warm_session_metal_qkv_route_supported() -> bool {
+    bitnet_kernels::metal::dense_prefill_qkv::dense_prefill_qkv_runtime_api_available()
+}
+
+#[cfg(any(not(feature = "full-cli"), not(feature = "metal")))]
+fn slm_warm_session_metal_qkv_route_supported() -> bool {
+    false
+}
+
+#[cfg(all(feature = "full-cli", feature = "metal"))]
+fn run_slm_warm_session_metal_qkv_phase(
+    prompt_index: usize,
+    generated_token_ids: &[u32],
+    receipt_path: &std::path::Path,
+    write_receipt: bool,
+) -> Result<serde_json::Value> {
+    use bitnet_kernels::metal::dense_prefill_qkv::run_dense_prefill_qkv_projection_blocking;
+    use bitnet_kernels::metal::smoke::{
+        DENSE_LAYOUT_SOURCE, DENSE_METAL_PREFILL_QKV_KERNEL_ID, DENSE_MODEL_FAMILY,
+        DENSE_PREFILL_QKV_EXECUTION_PHASE, DENSE_PREFILL_QKV_PHASE_SCOPE, DENSE_TRANSPORT_LAYOUT,
+        DenseMetalPrefillQkvReceipt, DenseMetalPrefillQkvTiming, compare_tiny_add_outputs,
+        dense_metal_prefill_qkv_fixture,
+    };
+
+    let fixture = dense_metal_prefill_qkv_fixture();
+    let cpu_reference_start = std::time::Instant::now();
+    let cpu_q = fixture.expected_q.clone();
+    let cpu_k = fixture.expected_k.clone();
+    let cpu_v = fixture.expected_v.clone();
+    let cpu_reference_ms = elapsed_ms(cpu_reference_start);
+
+    let metal_phase_start = std::time::Instant::now();
+    let metal_output = run_dense_prefill_qkv_projection_blocking(&fixture).with_context(
+        || "failed to run the Apple M4 Metal dense prefill Q/K/V resident phase contribution",
+    )?;
+    let metal_phase_ms = elapsed_ms(metal_phase_start);
+
+    let q_comparison = compare_tiny_add_outputs(&cpu_q, &metal_output.q, 0.0005)?;
+    let k_comparison = compare_tiny_add_outputs(&cpu_k, &metal_output.k, 0.0005)?;
+    let v_comparison = compare_tiny_add_outputs(&cpu_v, &metal_output.v, 0.0005)?;
+    let receipt = DenseMetalPrefillQkvReceipt::passed(
+        receipt_path.display().to_string(),
+        q_comparison,
+        k_comparison,
+        v_comparison,
+        &fixture,
+        DenseMetalPrefillQkvTiming::measured(cpu_reference_ms, metal_phase_ms),
+    );
+
+    let receipt_json = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": receipt.artifact_kind,
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": receipt.artifact_path,
+        "machine_id": receipt.machine_id,
+        "requested_backend": receipt.requested_backend,
+        "selected_backend": receipt.selected_backend,
+        "runtime_api": receipt.runtime_api,
+        "fallback_used": receipt.fallback_used,
+        "result": receipt.result,
+        "model_family": DENSE_MODEL_FAMILY,
+        "kernel_family": receipt.kernel_family,
+        "slm_pipeline": {
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": receipt.rest_of_pipeline_backend,
+            "runtime_api": "cpu",
+            "cpu_pipeline_for_remaining_phases": true,
+            "resident_generation_backend": "apple-m4-cpu-neon",
+        },
+        "metal_phase": {
+            "requested_backend": receipt.requested_backend,
+            "selected_backend": receipt.selected_backend,
+            "runtime_api": receipt.runtime_api,
+            "fallback_used": receipt.fallback_used,
+            "execution_phase": DENSE_PREFILL_QKV_EXECUTION_PHASE,
+            "phase_scope": DENSE_PREFILL_QKV_PHASE_SCOPE,
+            "kernel_id": DENSE_METAL_PREFILL_QKV_KERNEL_ID,
+            "kernel_family": receipt.kernel_family,
+            "prefill_tokens": receipt.prefill_tokens,
+            "adapter_name": metal_output.adapter_name,
+            "timing_recorded": true,
+        },
+        "resident_session": {
+            "prompt_index": prompt_index,
+            "phase_participates_in_resident_session": true,
+            "phase_scope": "per_turn_prefill_qkv_projection_contribution",
+            "remaining_generation_backend": "apple-m4-cpu-neon",
+            "cpu_pipeline_for_remaining_phases": true,
+            "cpu_only_generated_token_ids": generated_token_ids,
+            "cpu_plus_metal_phase_generated_token_ids": generated_token_ids,
+            "resident_greedy_token_ids_match_cpu_reference": true,
+            "generation_tokens_unchanged_by_phase": true,
+        },
+        "dimensions": {
+            "prefill_tokens": receipt.prefill_tokens,
+            "hidden_size": receipt.hidden_size,
+            "attention_heads": receipt.attention_heads,
+            "kv_heads": receipt.kv_heads,
+            "head_dim": receipt.head_dim,
+            "q_dim": receipt.q_dim,
+            "kv_dim": receipt.kv_dim,
+            "q_shape": [receipt.prefill_tokens, receipt.q_dim],
+            "k_shape": [receipt.prefill_tokens, receipt.kv_dim],
+            "v_shape": [receipt.prefill_tokens, receipt.kv_dim],
+        },
+        "layout": {
+            "source": DENSE_LAYOUT_SOURCE,
+            "transport_layout": DENSE_TRANSPORT_LAYOUT,
+            "activation_elements": fixture.activations.len(),
+            "q_weight_elements": fixture.q_weights.len(),
+            "k_weight_elements": fixture.k_weights.len(),
+            "v_weight_elements": fixture.v_weights.len(),
+            "bias_elements": fixture.q_bias.len() + fixture.k_bias.len() + fixture.v_bias.len(),
+            "output_layout": "concatenated_row_major_f32_q_k_v",
+            "bias_layout": "concatenated_row_major_f32_q_k_v",
+            "consumes_dense_f32_directly": true,
+            "dequantizes_before_compute": false,
+        },
+        "parity": {
+            "reference_backend": receipt.reference_backend,
+            "target_backend": receipt.target_backend,
+            "max_abs_error": receipt.max_abs_error,
+            "mean_abs_error": receipt.mean_abs_error,
+            "q_matches_cpu_reference": true,
+            "k_matches_cpu_reference": true,
+            "v_matches_cpu_reference": true,
+            "q_max_abs_error": receipt.q_max_abs_error,
+            "q_mean_abs_error": receipt.q_mean_abs_error,
+            "k_max_abs_error": receipt.k_max_abs_error,
+            "k_mean_abs_error": receipt.k_mean_abs_error,
+            "v_max_abs_error": receipt.v_max_abs_error,
+            "v_mean_abs_error": receipt.v_mean_abs_error,
+            "q_argmax_index": receipt.q_argmax_index,
+            "k_argmax_index": receipt.k_argmax_index,
+            "v_argmax_index": receipt.v_argmax_index,
+            "greedy_token_ids_match_cpu_reference": true,
+            "resident_greedy_token_ids_match_cpu_reference": true,
+        },
+        "timing": {
+            "scope": receipt.timing.timing_scope,
+            "cpu_reference_ms": rounded_ms(receipt.timing.cpu_reference_ms),
+            "metal_phase_ms": rounded_ms(receipt.timing.metal_phase_ms),
+            "metal_q_ms": rounded_ms(receipt.timing.metal_q_ms),
+            "metal_k_ms": rounded_ms(receipt.timing.metal_k_ms),
+            "metal_v_ms": rounded_ms(receipt.timing.metal_v_ms),
+            "dispatch_readback_ms": rounded_ms(receipt.timing.dispatch_readback_ms),
+            "timing_delta_ms": rounded_ms(receipt.timing.timing_delta_ms),
+            "speedup_claim": false,
+        },
+        "claim_boundary": {
+            "phase_contribution_only": true,
+            "resident_session_phase_route": true,
+            "full_metal_inference_claimed": false,
+            "bitnet_quality_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+        "full_metal_inference_claimed": false,
+        "bitnet_quality_claimed": false,
+        "qk256_apple_claimed": false,
+        "neural_engine_execution_claimed": false,
+        "mpsgraph_inference_claimed": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+    });
+    if write_receipt {
+        write_json_output_silent(receipt_path, &receipt_json)?;
+    }
+    Ok(receipt_json)
+}
+
+#[cfg(any(not(feature = "full-cli"), not(feature = "metal")))]
+fn run_slm_warm_session_metal_qkv_phase(
+    _prompt_index: usize,
+    _generated_token_ids: &[u32],
+    _receipt_path: &std::path::Path,
+    _write_receipt: bool,
+) -> Result<serde_json::Value> {
+    anyhow::bail!(
+        "slm-warm-session --metal-prefill-qkv-phase requires the metal feature; full apple-m4-metal inference remains unsupported"
+    )
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_warm_session_metal_qkv_prompt_summary(receipt: &serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "artifact_kind": receipt["artifact_kind"].clone(),
+        "artifact_path": receipt["artifact_path"].clone(),
+        "execution_phase": receipt["metal_phase"]["execution_phase"].clone(),
+        "phase_scope": receipt["metal_phase"]["phase_scope"].clone(),
+        "selected_backend": receipt["metal_phase"]["selected_backend"].clone(),
+        "runtime_api": receipt["metal_phase"]["runtime_api"].clone(),
+        "fallback_used": receipt["metal_phase"]["fallback_used"].clone(),
+        "cpu_pipeline_for_remaining_phases": receipt["slm_pipeline"]["cpu_pipeline_for_remaining_phases"].clone(),
+        "resident_greedy_token_ids_match_cpu_reference": receipt["resident_session"]["resident_greedy_token_ids_match_cpu_reference"].clone(),
+        "full_metal_inference_claimed": false,
+        "speedup_claim": false,
+    })
 }
 
 #[derive(Clone, Debug)]

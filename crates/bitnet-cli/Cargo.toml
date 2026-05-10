@@ -108,6 +108,7 @@ cuda = [
 metal = [
   "bitnet-common/metal",
   "bitnet-inference/metal",
+  "bitnet-kernels/metal-runtime",
   "bitnet-qk256-dispatch/metal",
   "runtime-profile-core",
 ]
