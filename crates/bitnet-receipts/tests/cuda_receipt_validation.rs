@@ -1338,6 +1338,18 @@ fn dense_gguf_qwen_one_token_rejects_missing_timing_evidence() {
 }
 
 #[test]
+fn dense_gguf_qwen_one_token_rejects_missing_transfer_timing_source_fields() {
+    let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+    receipt["timing"]["device_to_host_ms"] = Value::Null;
+
+    let err = validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("device_to_host_ms"), "unexpected error: {err}");
+}
+
+#[test]
 fn dense_gguf_qwen_one_token_rejects_short_decode_claim() {
     let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
     receipt["claim_boundary"]["qwen_short_decode_cuda_claimed"] = json!(true);
@@ -1419,6 +1431,18 @@ fn dense_gguf_qwen_short_decode_rejects_generated_token_mismatch() {
 }
 
 #[test]
+fn dense_gguf_qwen_short_decode_rejects_missing_transfer_timing_source_fields() {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["tensor_residency"]["transfer_accounting"]["device_to_host_ms"] = Value::Null;
+
+    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("device_to_host_ms"), "unexpected error: {err}");
+}
+
+#[test]
 fn dense_gguf_qwen_short_decode_rejects_chat_speedup_full_residency_and_bitnet_claims() {
     let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
     receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(true);
@@ -1481,6 +1505,18 @@ fn dense_gguf_qwen_warm_session_rejects_turn_token_mismatch() {
         .to_string();
 
     assert!(err.contains("cpu_generated_token_ids"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_rejects_missing_transfer_timing_source_fields() {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["timing"]["transfer_timing_status"] = json!("bytes_measured_time_unmeasured");
+
+    let err = validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("transfer_timing_status"), "unexpected error: {err}");
 }
 
 #[test]
@@ -3486,9 +3522,15 @@ fn valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt() -> Value {
     receipt["timing"] = json!({
         "total_ms": 12.5,
         "first_token_ms": 12.5,
+        "logits_download_ms": 0.4,
         "kernel_time_ms": 3.25,
         "host_to_device_bytes": 4608,
         "device_to_host_bytes": 1408,
+        "host_to_device_ms": null,
+        "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+        "device_to_host_ms": 0.4,
+        "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+        "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
         "kernel_invocations": 31,
         "kernel_launches": 31
     });
@@ -3510,6 +3552,11 @@ fn valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt() -> Value {
             "status": "measured",
             "host_to_device_bytes": 4608,
             "device_to_host_bytes": 1408,
+            "host_to_device_ms": null,
+            "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+            "device_to_host_ms": 0.4,
+            "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+            "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
             "kernel_invocations": 31,
             "kernel_launches": 31
         }
@@ -3575,6 +3622,7 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
                     "embed_ms": 0.5,
                     "forward_ms": 3.0,
                     "logits_ms": 0.75,
+                    "logits_download_ms": 0.4,
                     "decode_ms": 4.25,
                     "logits_device_is_cuda": true
                 }
@@ -3682,10 +3730,16 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
         "first_token_ms": 8.0,
         "prefill_ms": 10.0,
         "decode_total_ms": 40.0,
+        "logits_download_ms_total": 3.2,
         "kernel_time_ms": 31.0,
         "generated_tokens_count": 8,
         "host_to_device_bytes": 4096,
         "device_to_host_bytes": 1024,
+        "host_to_device_ms": null,
+        "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+        "device_to_host_ms": 3.2,
+        "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+        "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
         "kernel_invocations": 264,
         "kernel_launches": 264
     });
@@ -3708,6 +3762,11 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
             "status": "measured",
             "host_to_device_bytes": 4096,
             "device_to_host_bytes": 1024,
+            "host_to_device_ms": null,
+            "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+            "device_to_host_ms": 3.2,
+            "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+            "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
             "kernel_invocations": 264,
             "kernel_launches": 264
         }
@@ -3814,6 +3873,7 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
                             "embed_ms": 0.5,
                             "forward_ms": 3.0,
                             "logits_ms": 0.75,
+                            "logits_download_ms": 0.4,
                             "decode_ms": 4.25,
                             "logits_device_is_cuda": true
                         }
@@ -3847,6 +3907,7 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
                     "embed_ms_total": 4.0,
                     "forward_ms_total": 24.0,
                     "logits_ms_total": 6.0,
+                    "logits_download_ms_total": 3.2,
                     "logits_device_all_cuda_resident": true
                 }
             })
@@ -3955,9 +4016,15 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
         "first_token_ms": 8.0,
         "prefill_ms": 30.0,
         "decode_total_ms": 120.0,
+        "logits_download_ms_total": 9.6,
         "kernel_time_ms": 93.0,
         "host_to_device_bytes": 4096,
         "device_to_host_bytes": 3072,
+        "host_to_device_ms": null,
+        "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+        "device_to_host_ms": 9.6,
+        "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+        "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
         "kernel_invocations": 792,
         "kernel_launches": 792,
         "turns_count": 3,
@@ -3989,6 +4056,11 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
             "status": "measured",
             "host_to_device_bytes": 4096,
             "device_to_host_bytes": 3072,
+            "host_to_device_ms": null,
+            "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+            "device_to_host_ms": 9.6,
+            "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+            "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
             "kernel_invocations": 792,
             "kernel_launches": 792
         }

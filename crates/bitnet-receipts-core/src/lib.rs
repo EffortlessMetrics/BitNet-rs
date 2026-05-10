@@ -5425,6 +5425,44 @@ pub fn validate_dense_gguf_sampling_policy_receipt_json(receipt: &Value) -> Resu
     Ok(())
 }
 
+fn validate_dense_qwen_transfer_timing(timing: &Value, transfer: &Value) -> Result<()> {
+    require_string_eq(
+        timing,
+        "transfer_timing_status",
+        "device_to_host_measured_host_to_device_unmeasured",
+    )?;
+    require_null(timing, "host_to_device_ms")?;
+    require_string_eq(timing, "host_to_device_ms_source", "not_measured_by_dense_qwen_runtime")?;
+    require_non_negative_number(timing, "device_to_host_ms")?;
+    require_string_eq(timing, "device_to_host_ms_source", "wall_clock_extract_logits_2d_local")?;
+
+    require_string_eq(
+        transfer,
+        "transfer_timing_status",
+        "device_to_host_measured_host_to_device_unmeasured",
+    )?;
+    require_null(transfer, "host_to_device_ms")?;
+    require_string_eq(transfer, "host_to_device_ms_source", "not_measured_by_dense_qwen_runtime")?;
+    require_non_negative_number(transfer, "device_to_host_ms")?;
+    require_string_eq(transfer, "device_to_host_ms_source", "wall_clock_extract_logits_2d_local")?;
+
+    let timing_d2h = timing
+        .get("device_to_host_ms")
+        .and_then(Value::as_f64)
+        .ok_or_else(|| anyhow!("timing.device_to_host_ms must be a number"))?;
+    let transfer_d2h = transfer
+        .get("device_to_host_ms")
+        .and_then(Value::as_f64)
+        .ok_or_else(|| anyhow!("transfer_accounting.device_to_host_ms must be a number"))?;
+    if (timing_d2h - transfer_d2h).abs() > f64::EPSILON {
+        return Err(anyhow!(
+            "timing.device_to_host_ms must match tensor_residency.transfer_accounting.device_to_host_ms"
+        ));
+    }
+
+    Ok(())
+}
+
 /// Validate strict dense Qwen one-token CUDA proof receipts.
 ///
 /// This artifact may claim only that one deterministic greedy token was
@@ -5613,6 +5651,7 @@ pub fn validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
     let timing = object_field(receipt, "timing")?;
     require_non_negative_number(timing, "total_ms")?;
     require_non_negative_number(timing, "first_token_ms")?;
+    require_non_negative_number(timing, "logits_download_ms")?;
     require_non_negative_number(timing, "kernel_time_ms")?;
     require_u64_eq(timing, "host_to_device_bytes", stats_h2d)?;
     require_u64_eq(timing, "device_to_host_bytes", stats_d2h)?;
@@ -5648,6 +5687,7 @@ pub fn validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
     require_u64_eq(transfer, "device_to_host_bytes", stats_d2h)?;
     require_u64_eq(transfer, "kernel_invocations", stats_invocations)?;
     require_u64_eq(transfer, "kernel_launches", stats_launches)?;
+    validate_dense_qwen_transfer_timing(timing, transfer)?;
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
@@ -5869,6 +5909,8 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         object_field(step, "top_k_match")?
             .as_bool()
             .ok_or_else(|| anyhow!("field `top_k_match` must be a bool"))?;
+        let step_timing = object_field(step, "cuda_step_timing")?;
+        require_non_negative_number(step_timing, "logits_download_ms")?;
         require_non_negative_number(step, "top_k_max_abs_error")?;
         require_non_negative_number(step, "top_k_mean_abs_error")?;
     }
@@ -5938,6 +5980,7 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     require_non_negative_number(timing, "total_ms")?;
     require_non_negative_number(timing, "first_token_ms")?;
     require_non_negative_number(timing, "decode_total_ms")?;
+    require_non_negative_number(timing, "logits_download_ms_total")?;
     require_non_negative_number(timing, "kernel_time_ms")?;
     require_u64_eq(timing, "generated_tokens_count", requested)?;
     require_u64_eq(timing, "host_to_device_bytes", stats_h2d)?;
@@ -5974,6 +6017,7 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     require_u64_eq(transfer, "device_to_host_bytes", stats_d2h)?;
     require_u64_eq(transfer, "kernel_invocations", stats_invocations)?;
     require_u64_eq(transfer, "kernel_launches", stats_launches)?;
+    validate_dense_qwen_transfer_timing(timing, transfer)?;
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
@@ -6231,10 +6275,14 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             require_sha256(step, "cuda_logits_top_k_sha256")?;
             require_sha256(step, "cpu_logits_sha256")?;
             require_sha256(step, "cuda_logits_sha256")?;
+            let step_timing = object_field(step, "cuda_step_timing")?;
+            require_non_negative_number(step_timing, "logits_download_ms")?;
             require_non_negative_number(step, "top_k_max_abs_error")?;
             require_non_negative_number(step, "top_k_mean_abs_error")?;
         }
         require_string_non_empty(turn, "decoded_text")?;
+        let turn_timing = object_field(turn, "cuda_turn_timing")?;
+        require_non_negative_number(turn_timing, "logits_download_ms_total")?;
     }
     require_bool_eq(proof, "qwen_one_token_cuda_claimed", true)?;
     require_bool_eq(proof, "qwen_short_decode_cuda_claimed", true)?;
@@ -6308,6 +6356,7 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     require_non_negative_number(timing, "cpu_reference_model_load_ms")?;
     require_non_negative_number(timing, "first_token_ms")?;
     require_non_negative_number(timing, "decode_total_ms")?;
+    require_non_negative_number(timing, "logits_download_ms_total")?;
     require_non_negative_number(timing, "kernel_time_ms")?;
     require_u64_eq(timing, "host_to_device_bytes", stats_h2d)?;
     require_u64_eq(timing, "device_to_host_bytes", stats_d2h)?;
@@ -6344,6 +6393,7 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     require_u64_eq(transfer, "device_to_host_bytes", stats_d2h)?;
     require_u64_eq(transfer, "kernel_invocations", stats_invocations)?;
     require_u64_eq(transfer, "kernel_launches", stats_launches)?;
+    validate_dense_qwen_transfer_timing(timing, transfer)?;
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;

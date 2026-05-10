@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T16:40:36Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-003"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-perf-003-transfer-timing"
+pr = 4443
+head_sha = "b2963605fa6acb2dacb63e0cbc7c6270162a0bee"
+
+notes = [
+  "Opened PR #4443 with dense Qwen strict CUDA D2H logits download timing fields and receipt validator coverage.",
+  "The PR keeps host-to-device timing explicitly unmeasured and preserves speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, server_ready_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+]
