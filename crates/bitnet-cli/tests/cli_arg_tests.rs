@@ -1471,6 +1471,202 @@ fn mac_receipts_check_accepts_split_metal_phase_receipt() {
 }
 
 #[test]
+fn mac_receipts_check_accepts_dense_qkv_metal_phase_receipt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("metal-qkv-phase.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "phase_contribution",
+            "requested_backend": "apple-m4-metal",
+            "selected_backend": "apple-m4-metal",
+            "runtime_api": "metal",
+            "fallback_used": false,
+            "kernel_id": "tiny_metal_dense_prefill_qkv_projection",
+            "resolved_device": {
+                "chip": "Apple M4",
+                "unified_memory": true
+            },
+            "slm_pipeline": {
+                "requested_backend": "apple-m4-cpu-neon",
+                "selected_backend": "apple-m4-cpu-neon",
+                "runtime_api": "cpu",
+                "remaining_phases_backend": "apple-m4-cpu-neon",
+                "cpu_pipeline_for_remaining_phases": true,
+                "full_inference_exercised": false
+            },
+            "metal_phase": {
+                "requested_backend": "apple-m4-metal",
+                "selected_backend": "apple-m4-metal",
+                "runtime_api": "metal",
+                "fallback_used": false,
+                "kernel_id": "tiny_metal_dense_prefill_qkv_projection",
+                "kernel_family": "dense_f32",
+                "execution_phase": "prefill_qkv_projection",
+                "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+                "prefill_tokens": 2,
+                "kv_cache_behavior": "not_exercised",
+                "timing_recorded": true,
+                "full_metal_inference": false,
+                "full_autoregressive_decode": false
+            },
+            "dimensions": {
+                "hidden_size": 896,
+                "attention_heads": 14,
+                "kv_heads": 2,
+                "head_dim": 64,
+                "q_dim": 896,
+                "kv_dim": 128,
+                "q_shape": [2, 896],
+                "k_shape": [2, 128],
+                "v_shape": [2, 128]
+            },
+            "layout": {
+                "source": "fixture_dense_f32_row_major",
+                "transport_layout": "row_major_f32",
+                "activation_layout": "row_major_f32",
+                "weight_layout": "row_major_f32_out_features_by_in_features",
+                "bias_layout": "concatenated_row_major_f32_q_k_v",
+                "output_layout": "concatenated_row_major_f32_q_k_v",
+                "consumes_dense_f32_directly": true,
+                "dequantizes_before_compute": false,
+                "activation_elements": 1792,
+                "q_weight_elements": 802816,
+                "k_weight_elements": 114688,
+                "v_weight_elements": 114688
+            },
+            "parity": {
+                "reference_backend": "apple-m4-cpu-neon",
+                "target_backend": "apple-m4-metal",
+                "kernel_family": "dense_f32",
+                "kernel_id": "tiny_metal_dense_prefill_qkv_projection",
+                "q_matches_cpu_reference": true,
+                "k_matches_cpu_reference": true,
+                "v_matches_cpu_reference": true,
+                "q_max_abs_error": 0.0,
+                "q_mean_abs_error": 0.0,
+                "k_max_abs_error": 0.0,
+                "k_mean_abs_error": 0.0,
+                "v_max_abs_error": 0.0,
+                "v_mean_abs_error": 0.0,
+                "max_abs_error": 0.0,
+                "mean_abs_error": 0.0
+            },
+            "timing": {
+                "scope": "single_live_qkv_phase_dispatch_readback_vs_cpu_reference_fixture",
+                "cpu_reference_ms": 12.0,
+                "metal_phase_ms": 661.0,
+                "timing_delta_ms": 649.0,
+                "dispatch_readback_ms": 661.0,
+                "speedup_claim": false
+            },
+            "claim_boundary": {
+                "phase_contribution_only": true,
+                "full_metal_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "bitnet_quality_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("phase_contribution"))
+        .stdout(predicate::str::contains("apple-m4-metal"));
+}
+
+#[test]
+fn mac_receipts_check_rejects_dense_qkv_phase_without_component_parity() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("metal-qkv-phase-bad.json");
+    let mut receipt = serde_json::json!({
+        "artifact_kind": "phase_contribution",
+        "requested_backend": "apple-m4-metal",
+        "selected_backend": "apple-m4-metal",
+        "runtime_api": "metal",
+        "fallback_used": false,
+        "kernel_id": "tiny_metal_dense_prefill_qkv_projection",
+        "slm_pipeline": {
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "cpu_pipeline_for_remaining_phases": true
+        },
+        "metal_phase": {
+            "selected_backend": "apple-m4-metal",
+            "runtime_api": "metal",
+            "fallback_used": false,
+            "kernel_id": "tiny_metal_dense_prefill_qkv_projection",
+            "execution_phase": "prefill_qkv_projection",
+            "prefill_tokens": 2,
+            "full_metal_inference": false,
+            "timing_recorded": true
+        },
+        "dimensions": {
+            "hidden_size": 896,
+            "attention_heads": 14,
+            "kv_heads": 2,
+            "head_dim": 64,
+            "q_dim": 896,
+            "kv_dim": 128,
+            "q_shape": [2, 896],
+            "k_shape": [2, 128],
+            "v_shape": [2, 128]
+        },
+        "layout": {
+            "consumes_dense_f32_directly": true,
+            "dequantizes_before_compute": false,
+            "bias_layout": "concatenated_row_major_f32_q_k_v",
+            "output_layout": "concatenated_row_major_f32_q_k_v",
+            "activation_elements": 1792,
+            "q_weight_elements": 802816,
+            "k_weight_elements": 114688,
+            "v_weight_elements": 114688
+        },
+        "parity": {
+            "reference_backend": "apple-m4-cpu-neon",
+            "target_backend": "apple-m4-metal",
+            "q_matches_cpu_reference": true,
+            "k_matches_cpu_reference": true,
+            "v_matches_cpu_reference": true,
+            "q_max_abs_error": 0.0,
+            "q_mean_abs_error": 0.0,
+            "k_max_abs_error": 0.0,
+            "k_mean_abs_error": 0.0,
+            "v_max_abs_error": 0.0,
+            "v_mean_abs_error": 0.0,
+            "max_abs_error": 0.0,
+            "mean_abs_error": 0.0
+        },
+        "timing": {
+            "scope": "single_live_qkv_phase_dispatch_readback_vs_cpu_reference_fixture",
+            "cpu_reference_ms": 12.0,
+            "metal_phase_ms": 661.0,
+            "timing_delta_ms": 649.0,
+            "speedup_claim": false
+        }
+    });
+    receipt["parity"]["v_matches_cpu_reference"] = serde_json::json!(false);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("must record v_matches_cpu_reference=true"));
+}
+
+#[test]
 fn mac_receipts_check_rejects_metal_phase_without_timing() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("metal-phase-missing-timing.json");

@@ -1,0 +1,122 @@
+{
+  "artifact_kind": "phase_contribution",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-10/slm-metal-phases/metal-dense-prefill-qkv.json",
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "phase_contribution_only": true,
+    "qk256_apple_claimed": false,
+    "slm_local_answer": false,
+    "speedup_claim": false
+  },
+  "dimensions": {
+    "attention_heads": 14,
+    "head_dim": 64,
+    "hidden_size": 896,
+    "k_shape": [
+      2,
+      128
+    ],
+    "kv_dim": 128,
+    "kv_heads": 2,
+    "q_dim": 896,
+    "q_shape": [
+      2,
+      896
+    ],
+    "v_shape": [
+      2,
+      128
+    ]
+  },
+  "fallback_used": false,
+  "kernel_id": "tiny_metal_dense_prefill_qkv_projection",
+  "layout": {
+    "activation_elements": 1792,
+    "activation_layout": "row_major_f32",
+    "bias_layout": "concatenated_row_major_f32_q_k_v",
+    "consumes_dense_f32_directly": true,
+    "dequantizes_before_compute": false,
+    "k_weight_elements": 114688,
+    "output_layout": "concatenated_row_major_f32_q_k_v",
+    "q_weight_elements": 802816,
+    "source": "fixture_dense_f32_row_major",
+    "transport_layout": "row_major_f32",
+    "v_weight_elements": 114688,
+    "weight_layout": "row_major_f32_out_features_by_in_features"
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "metal_phase": {
+    "execution_phase": "prefill_qkv_projection",
+    "fallback_used": false,
+    "full_autoregressive_decode": false,
+    "full_metal_inference": false,
+    "kernel_family": "dense_f32",
+    "kernel_id": "tiny_metal_dense_prefill_qkv_projection",
+    "kv_cache_behavior": "not_exercised",
+    "phase_scope": "qwen2_5_dense_prefill_qkv_projection_fixture",
+    "prefill_tokens": 2,
+    "requested_backend": "apple-m4-metal",
+    "runtime_api": "metal",
+    "selected_backend": "apple-m4-metal",
+    "timing_recorded": true
+  },
+  "model": {
+    "artifact": null,
+    "family": "qwen2.5",
+    "full_model_inference": false,
+    "source": "deterministic_dense_qwen_shape_fixture"
+  },
+  "parity": {
+    "k_argmax_index": 11,
+    "k_matches_cpu_reference": true,
+    "k_max_abs_error": 0.0,
+    "k_mean_abs_error": 0.0,
+    "kernel_family": "dense_f32",
+    "kernel_id": "tiny_metal_dense_prefill_qkv_projection",
+    "max_abs_error": 0.0,
+    "mean_abs_error": 0.0,
+    "q_argmax_index": 1689,
+    "q_matches_cpu_reference": true,
+    "q_max_abs_error": 0.0,
+    "q_mean_abs_error": 0.0,
+    "reference_backend": "apple-m4-cpu-neon",
+    "target_backend": "apple-m4-metal",
+    "token_agreement_for_greedy": null,
+    "v_argmax_index": 108,
+    "v_matches_cpu_reference": true,
+    "v_max_abs_error": 0.0,
+    "v_mean_abs_error": 0.0
+  },
+  "requested_backend": "apple-m4-metal",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "unified_memory": true
+  },
+  "result": "pass",
+  "runtime_api": "metal",
+  "selected_backend": "apple-m4-metal",
+  "slm_pipeline": {
+    "cpu_pipeline_for_remaining_phases": true,
+    "full_inference_exercised": false,
+    "remaining_phases_backend": "apple-m4-cpu-neon",
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon"
+  },
+  "timing": {
+    "cpu_reference_ms": 15.327292,
+    "dispatch_readback_ms": 1318.460291,
+    "individual_projection_timing_recorded": false,
+    "metal_k_ms": 0.0,
+    "metal_phase_ms": 1318.460291,
+    "metal_q_ms": 0.0,
+    "metal_v_ms": 0.0,
+    "scope": "single_live_qkv_phase_dispatch_readback_vs_cpu_reference_fixture",
+    "speedup_claim": false,
+    "timing_delta_ms": 1303.1329990000002
+  }
+}
