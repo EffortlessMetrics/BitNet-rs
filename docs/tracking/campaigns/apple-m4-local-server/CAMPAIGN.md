@@ -24,7 +24,7 @@ the same cache, tokenizer, backend, fallback, streaming, and receipt discipline.
 | M4-SERVE-001 | merged | Defined command and configuration contract. |
 | M4-SERVE-002 | merged | Added health and ready endpoint behavior. |
 | M4-SERVE-003 | merged | Added streaming completion endpoint. |
-| M4-SERVE-004 | ready | Add receipt export for server requests. |
+| M4-SERVE-004 | in progress | Add receipt export for server requests. |
 | M4-SERVE-005 | pending | Integrate doctor/smoke/regression readiness flow. |
 
 ## Current Contract
@@ -43,6 +43,10 @@ compatibility, receipt export, and production readiness.
 `apple-m4-cpu-neon`, strict no-hidden-fallback routing, resident startup
 model/tokenizer load, per-request receipts, and no full OpenAI compatibility
 claim.
+
+`M4-SERVE-004` adds HTTP export for those per-request receipts through
+`GET /receipts/{id}`. The endpoint is read-only, rejects unsafe receipt IDs, and
+does not run generation.
 
 ## Claim Boundary
 

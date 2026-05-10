@@ -1,7 +1,7 @@
 # Apple M4 Local Server Command And Config Contract
 
-Status: command/config contract, health/readiness endpoints, and the first
-streaming local completion endpoint. Receipt export by endpoint is later work.
+Status: command/config contract, health/readiness endpoints, the first
+streaming local completion endpoint, and HTTP export for per-request receipts.
 
 The Apple M4 local server should expose the already working dense SLM Mac
 appliance as a loopback service while preserving the same model-cache,
@@ -149,7 +149,7 @@ contract:
 | `GET /ready` | `M4-SERVE-002` | Implemented with model-cache, tokenizer, backend, fallback, disk, and receipt readiness. |
 | `GET /health/ready` | `M4-SERVE-002` | Implemented as a readiness alias for `/ready`. |
 | `POST /v1/chat/completions` | `M4-SERVE-003` | Implemented as a streaming dense SLM completion surface with per-request receipts. |
-| `GET /receipts/{id}` | `M4-SERVE-004` | Export strict per-request receipts. |
+| `GET /receipts/{id}` | `M4-SERVE-004` | Implemented to export strict per-request receipts from the configured receipt directory. |
 
 The completion endpoint may be OpenAI-shaped, but full OpenAI compatibility must
 not be claimed until request/response semantics, streaming chunks, errors, and
@@ -159,7 +159,8 @@ receipts are tested.
 `messages` array, optional `max_tokens`/`max_new_tokens`, sampling defaults, and
 `stream`. The server loads the supported model/tokenizer at startup, serializes
 completion requests through that resident state, and writes a strict per-request
-receipt under `receipt_dir`. `GET /receipts/{id}` remains a later export item.
+receipt under `receipt_dir`. `M4-SERVE-004` exports those receipts through
+`GET /receipts/{id}` after rejecting unsafe IDs and missing receipt files.
 
 `M4-SERVE-002` does not run generation. Readiness reports whether startup
 verified the supported model cache, tokenizer authority, `apple-m4-cpu-neon`
@@ -190,14 +191,13 @@ receipt directory is available.
 ## Claim Boundary
 
 This contract may claim only that the M4 local server command/config surface,
-initial health/readiness endpoint slice, and first local completion endpoint are
-defined.
+initial health/readiness endpoint slice, first local completion endpoint, and
+receipt export endpoint are defined.
 
 It must not claim:
 
 - full OpenAI compatibility;
 - production-grade concurrency, uptime, or deployment readiness;
-- receipt export by HTTP endpoint;
 - BitNet local-answer quality;
 - full `apple-m4-metal` inference;
 - Neural Engine execution;

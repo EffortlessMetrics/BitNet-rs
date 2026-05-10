@@ -1,0 +1,12 @@
+timestamp = "2026-05-10T00:23:53Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started the HTTP receipt export slice for bitnet mac serve.",
+  "Scope is limited to GET /receipts/{id} exporting existing per-request JSON receipts from the configured receipt directory with unsafe receipt IDs rejected.",
+  "No production readiness, full OpenAI compatibility, BitNet, full Metal, QK256, Neural Engine, MPSGraph, MacBook, model binary, or broad performance claim is introduced.",
+]
