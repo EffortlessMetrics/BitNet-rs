@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T11:02:03Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/cuda-ux-004-dense-chat"
+pr = 4427
+head_sha = "ad3475d030c998723efccc2c8c680aa7fa03f344"
+merge_sha = "3082f2905b2162c6dfe7f994195f357984fb1042"
+summary = "Merged CUDA-UX-004 dense Qwen CUDA chat UX implementation."
+notes = [
+  "PR #4427 exposed the bounded dense Qwen CUDA chat path through `bitnet chat --device cuda --model qwen2.5-0.5b-instruct-q8_0`.",
+  "The implementation emits and validates dense_gguf_qwen_chat_strict_cuda_proof receipts backed by the warm-session proof source receipt.",
+  "Hosted CI was green after updating the PR title to claim CUDA-UX-004; Doctor + Generated Dashboards passed on rerun.",
+]
