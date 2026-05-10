@@ -2232,10 +2232,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-PERF-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-perf-004-qualification-review"
 pr = 4445
 head_sha = "170756479ae24aca517f7d5d5ce9b777de89f367"
+merge_sha = "f1818820e3991641f6302534f810a774c98a5035"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
