@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T01:26:18Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-004"
+event = "pr_open"
+actor = "codex"
+pr = 4385
+head_sha = "898ce4dc48f99c904519d126dfa98f14d94630a8"
+previous_status = "in_progress"
+
+notes = [
+  "Recorded PR #4385 for the resident-routing runtime boundary item.",
+  "The PR documents that the validated Q/K/V Metal phase is still test-local and resident routing remains blocked until a non-dev Metal runtime API exists.",
+  "No resident Metal generation, full apple-m4-metal inference claim, BitNet claim, QK256, Neural Engine, MPSGraph, MacBook work, model binary, or broad performance claim is introduced.",
+]

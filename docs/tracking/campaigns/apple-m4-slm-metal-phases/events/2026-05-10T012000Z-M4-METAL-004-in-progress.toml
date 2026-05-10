@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T01:20:00Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started the resident-routing runtime boundary item for the validated Apple M4 dense prefill Q/K/V Metal phase.",
+  "Current evidence shows the live dispatch helper is test-local and depends on dev-only Metal dispatch dependencies, so resident routing is blocked until a non-dev runtime API exists.",
+  "The campaign is split so M4-METAL-005 promotes the runtime API, M4-METAL-006 owns resident-session routing, and M4-METAL-007 owns phase-local timing deltas.",
+  "No resident Metal generation, full apple-m4-metal inference claim, BitNet claim, QK256, Neural Engine, MPSGraph, MacBook work, model binary, or broad performance claim is introduced.",
+]
+
