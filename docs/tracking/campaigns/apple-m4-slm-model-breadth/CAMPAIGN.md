@@ -26,7 +26,7 @@ mini path without weakening the completed Qwen appliance baseline.
 | M4-MODEL-001 | merged | Selected the next exact dense instruct GGUF candidate set. |
 | M4-MODEL-002 | merged | Ran reference output sanity and recorded exact artifact metadata. |
 | M4-MODEL-003 | merged | Rust M4 quality evidence rejects SmolLM2 for this round. |
-| M4-MODEL-004 | ready | Register the accepted larger Qwen2.5 candidate in cache/model selection. |
+| M4-MODEL-004 | in progress | Register the accepted larger Qwen2.5 candidate in cache/model selection. |
 | M4-MODEL-005 | blocked | Update model matrix and user envelope after registration. |
 | M4-MODEL-006 | merged | Select the next exact candidate after the failed Qwen3/SmolLM2 round. |
 | M4-MODEL-007 | merged | Gemma is rejected by the current reference runner. |
@@ -80,6 +80,11 @@ M4-supported until Rust M4 quality and cache registration gates pass.
 `apple-m4-cpu-neon` quality and duplicate-prompt greedy determinism. It remains
 unregistered and is not selectable by model ID until the cache/model
 registration item lands.
+
+`M4-MODEL-004` registers the candidate as an explicit non-default supported
+model ID. The default model remains `qwen2.5-0.5b-instruct-q8_0`; the larger
+candidate is selected only when the operator passes
+`--model-id qwen2.5-1.5b-instruct-q4_k_m`.
 
 ## Claim Boundary
 

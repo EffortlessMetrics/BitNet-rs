@@ -244,7 +244,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-004"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-004-cache-registration"
 stackable = false
 review_mode = "codex_premerge"

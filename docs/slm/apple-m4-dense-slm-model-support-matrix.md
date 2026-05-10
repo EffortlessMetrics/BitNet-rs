@@ -93,7 +93,7 @@ record all of the following:
 
 ### `qwen2.5-1.5b-instruct-q4_k_m`
 
-- State: `candidate`.
+- State: `supported`.
 - Source: `Qwen/Qwen2.5-1.5B-Instruct-GGUF`.
 - Revision: `91cad51170dc346986eccefdc2dd33a9da36ead9`.
 - File: `qwen2.5-1.5b-instruct-q4_k_m.gguf`.
@@ -106,10 +106,11 @@ record all of the following:
 - Prompt template: `qwen2.5`.
 - Rust support status: passed bounded Rust M4 `apple-m4-cpu-neon` quality and
   duplicate-prompt greedy determinism in `M4-MODEL-011`.
-- M4 support status: candidate pending cache/model-registration. It is not
-  selectable by model ID yet.
-- Cache policy: no registered model-cache entry until `M4-MODEL-004` records
-  fetch/verify/list behavior, cache metadata, and receipt validation.
+- M4 support status: supported non-default model for `apple-m4-cpu-neon` dense
+  SLM answers.
+- Cache policy: registered artifact may be fetched and verified for inspection,
+  ask/chat/validate use through `--model-id qwen2.5-1.5b-instruct-q4_k_m`.
+  It is not the default model.
 - Quality status: reference-good in `M4-MODEL-010`; Rust M4 quality accepted in
   `M4-MODEL-011` for the bounded prompt suite with `fallback_used = false`.
 - Claim boundary: larger dense Qwen Apple CPU/NEON candidate only; it does not
@@ -224,11 +225,14 @@ The supported M4 dense SLM set currently contains two models:
 ```text
 qwen2.5-0.5b-instruct-q8_0
 qwen2.5-0.5b-instruct-q4_k_m
+qwen2.5-1.5b-instruct-q4_k_m
 ```
 
 `qwen2.5-0.5b-instruct-q8_0` remains the default. The Q4_K_M artifact is the
 first non-default supported dense SLM for the M4 lane because it passes the
 reference, Rust M4 quality, tokenizer, cache, and receipt gates in this matrix.
+The 1.5B Q4_K_M artifact is the first larger Qwen-class supported dense SLM;
+it is selectable by explicit model ID only and keeps the default unchanged.
 
 ## Next Breadth Candidates
 
@@ -238,7 +242,7 @@ reference, Rust M4 quality, tokenizer, cache, and receipt gates in this matrix.
 qwen3-0.6b-q8_0                 rejected by current reference runner
 smollm2-360m-instruct-q8_0      reference-good, rejected by Rust M4 quality
 gemma-3-270m-it-q8_0            rejected by current reference runner
-qwen2.5-1.5b-instruct-q4_k_m    Rust M4 quality accepted, pending cache registration
+qwen2.5-1.5b-instruct-q4_k_m    supported non-default after cache registration
 ```
 
 See [apple-m4-slm-model-breadth-candidates.md](apple-m4-slm-model-breadth-candidates.md)
@@ -259,3 +263,6 @@ incoherent output.
 Qwen2.5 1.5B Q4_K_M passes bounded Rust M4 quality and duplicate-prompt greedy
 determinism, but it remains unregistered and unsupported until the cache/model
 registration item lands.
+`M4-MODEL-004` registers Qwen2.5 1.5B Q4_K_M as an explicit non-default
+supported model ID after reference, Rust M4 quality, cache verify/list, and Mac
+cache-check gates pass.
