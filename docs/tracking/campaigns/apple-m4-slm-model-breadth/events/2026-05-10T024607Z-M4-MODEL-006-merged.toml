@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T02:46:07Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-006"
+event = "merged"
+actor = "codex"
+pr = 4399
+merge_sha = "7b3642d832403d39a169a8d4ed47e83969cade2d"
+previous_status = "in_progress"
+next_item = "M4-MODEL-007"
+
+notes = [
+  "Merged the pinned Gemma 3 270M IT Q8_0 candidate-selection item for the next M4 dense SLM breadth round.",
+  "Promoted M4-MODEL-007 to ready for reference output sanity.",
+  "No model artifact was downloaded, accepted, registered, or claimed supported.",
+  "The supported M4 dense SLM set remains Qwen2.5 Q8_0 default and Qwen2.5 Q4_K_M supported non-default.",
+]

@@ -75,8 +75,7 @@
 | apple-m4-slm-model-breadth | M4-MODEL-003 | M4-MODEL-002 | merged |
 | apple-m4-slm-model-breadth | M4-MODEL-004 |  | blocked |
 | apple-m4-slm-model-breadth | M4-MODEL-005 | M4-MODEL-004 | blocked |
-| apple-m4-slm-model-breadth | M4-MODEL-006 | M4-MODEL-003 | in_progress |
-| apple-m4-slm-model-breadth | M4-MODEL-007 | M4-MODEL-006 | blocked |
+| apple-m4-slm-model-breadth | M4-MODEL-006 | M4-MODEL-003 | merged |
 | apple-m4-slm-model-breadth | M4-MODEL-008 | M4-MODEL-007 | blocked |
 | apple-m4-slm-performance | M4-SLM-PERF-002 | M4-SLM-PERF-001 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-003 | M4-SLM-PERF-002 | merged |
