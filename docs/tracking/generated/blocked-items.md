@@ -73,6 +73,9 @@
 | apple-m4-slm-metal-phases | M4-METAL-006 | M4-METAL-005 | merged |
 | apple-m4-slm-model-breadth | M4-MODEL-002 | M4-MODEL-001 | merged |
 | apple-m4-slm-model-breadth | M4-MODEL-003 | M4-MODEL-002 | merged |
+| apple-m4-slm-model-breadth | M4-MODEL-009 | M4-MODEL-007 | in_progress |
+| apple-m4-slm-model-breadth | M4-MODEL-010 | M4-MODEL-009 | blocked |
+| apple-m4-slm-model-breadth | M4-MODEL-011 | M4-MODEL-010 | blocked |
 | apple-m4-slm-model-breadth | M4-MODEL-004 |  | blocked |
 | apple-m4-slm-model-breadth | M4-MODEL-005 | M4-MODEL-004 | blocked |
 | apple-m4-slm-model-breadth | M4-MODEL-006 | M4-MODEL-003 | merged |

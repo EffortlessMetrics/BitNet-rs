@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T02:58:13Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-009"
+event = "in_progress"
+actor = "codex"
+previous_status = "new"
+
+notes = [
+  "Started a larger Qwen2.5 1.5B Q4_K_M candidate-selection cycle for M4 dense SLM model breadth.",
+  "This candidate remains in the Qwen-class architecture family already supported by the M4 lane, but is larger than the current 0.5B supported models.",
+  "No model artifact is downloaded, accepted, registered, or claimed supported by this item.",
+  "The M4 dense SLM default and supported set remain Qwen2.5 0.5B Q8_0 and Qwen2.5 0.5B Q4_K_M only.",
+]

@@ -134,6 +134,109 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-MODEL-009"
+status = "in_progress"
+branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-009-qwen15-candidate"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-MODEL-007"]
+acceptance = "Select a larger but still storage-conscious Qwen2.5 dense instruct GGUF candidate for M4 evaluation, recording source, license notes, revision, file, expected size, tokenizer expectations, prompt template, storage budget, and rejection criteria without downloading or accepting a model."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-model-breadth",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-model-breadth/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The next larger Qwen-class M4 dense SLM candidate is selected for evaluation.",
+]
+must_not_claim = [
+  "A new model is supported.",
+  "A model artifact was downloaded or accepted.",
+]
+
+[[work_item]]
+id = "M4-MODEL-010"
+status = "blocked"
+branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-010-qwen15-reference"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-MODEL-009"]
+acceptance = "Run reference output sanity for the selected larger Qwen2.5 candidate, recording exact artifact source, revision, file, size, SHA256, tokenizer authority, prompt template, reference command, prompt outputs, and reject/accept evidence."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-model-breadth",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-model-breadth/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The larger Qwen2.5 candidate is reference-good only if receipts prove it.",
+]
+must_not_claim = [
+  "Rust M4 support works.",
+  "A model is supported by the Mac wrapper.",
+]
+
+[[work_item]]
+id = "M4-MODEL-011"
+status = "blocked"
+branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-011-qwen15-rust-m4-quality"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-MODEL-010"]
+acceptance = "Run the larger Qwen2.5 candidate through Rust M4 apple-m4-cpu-neon quality gates with valid UTF-8, non-empty output, non-degenerate output, backend/fallback receipts, generated token IDs, timing, and deterministic behavior where required."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-model-breadth",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-models/**",
+  "crates/**/tests/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-slm-model-breadth/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+]
+may_claim = [
+  "The larger Qwen2.5 candidate passes Rust M4 quality only if receipts prove it.",
+]
+must_not_claim = [
+  "The candidate is registered as supported before cache metadata lands.",
+]
+
+[[work_item]]
 id = "M4-MODEL-004"
 status = "blocked"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-004-cache-registration"
