@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T09:25:56Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-003"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/cuda-ux-003-dense-ask"
+pr = 4424
+head_sha = "fe94761879d48afa26a3d3b149e9ed74b4c0e72d"
+merge_sha = "66b36643daf1d46a5587aa2f14e6bfdd833431f1"
+summary = "Merged CUDA-UX-003 dense Qwen CUDA ask path."
+notes = [
+  "PR #4424 landed the bounded user-facing `bitnet ask --device cuda --model qwen2.5-0.5b-instruct-q8_0` path backed by dense Qwen strict CUDA runtime receipts.",
+  "The merged path resolves the verified Qwen Q8 artifact/cache entry, selects dense_regular_llm_cuda, rejects hidden fallback, emits a validated dense_gguf_qwen_ask_strict_cuda_proof receipt, and prints a compact proof summary.",
+  "The merged UX gate remains claim-separated from chat UX, speedup, full-residency, server readiness, broad dense GGUF inference, BitNet packed I2S/QK256 proof, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math changes.",
+]
