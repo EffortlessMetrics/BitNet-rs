@@ -3008,10 +3008,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-045"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-045-short-decode-proof"
 pr = 4420
-head_sha = "c1c8f5a17127268c157aa094c2641adfb46a8c89"
+head_sha = "c692a16828d465b9159c4bd20654a6f7b7b55472"
+merge_sha = "6fc2fec58642c9da69dde6762a1b0b530810b51a"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -3060,6 +3061,62 @@ must_not_claim = [
   "General dense GGUF CUDA inference is complete beyond the bounded short-decode gate.",
   "Qwen chat works on CUDA.",
   "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Server readiness exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
+id = "CUDA-DENSE-046"
+status = "proposed"
+branch = "codex/cuda-dense-046-warm-session"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-045"]
+acceptance = "Extend the governed dense Qwen strict CUDA runtime from the CUDA-DENSE-045 short-decode proof to a warm-session proof, loading the SHA-verified qwen2.5-0.5b-instruct-q8_0 artifact and tokenizer once, initializing CUDA once, reusing dense CUDA weights and governed runtime buffers across multiple deterministic turns, emitting per-turn and session-summary dense_gguf_qwen_warm_session_strict_cuda receipts with fallback_used=false, generated-token evidence, kernel/residency/timing/transfer summaries, prerequisite receipt hashes, and preserving ask/chat UX, speedup, persistent/full-residency beyond the warm-session scope, server, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims."
+commands = [
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- model verify qwen2.5-0.5b-instruct-q8_0 --json",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-warm-session-strict-cuda --model <verified-qwen-gguf> --device-index 0 --turns 3 --max-new-tokens 8 --json-out ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features qwen_warm_session -- --nocapture",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "Qwen ask/chat UX implementation",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+]
+may_claim = [
+  "CUDA-DENSE-046 may record a bounded dense Qwen warm-session strict CUDA proof if the hardware receipt validates.",
+  "The future receipt may prove multiple deterministic turns through dense_regular_llm_cuda on the RTX 5070 Ti with model/tokenizer load, CUDA initialization, and weight upload reused within the session.",
+  "The warm-session proof remains claim-separated from ask/chat UX, speedup, full-residency, server readiness, and BitNet packed I2S/QK256 proof.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete beyond the bounded warm-session gate.",
+  "Qwen ask/chat UX works on CUDA.",
+  "Persistent-session or full dense regular LLM CUDA residency exists beyond the scoped warm-session receipt.",
   "Server readiness exists.",
   "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
 ]
