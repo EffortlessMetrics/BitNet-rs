@@ -11,6 +11,9 @@ Machine-readable evidence is recorded in
 The follow-up Gemma candidate cycle records machine-readable evidence in
 `ci/quality/apple-m4-slm-model-breadth-gemma-reference-sanity.toml`.
 
+The larger Qwen2.5 candidate cycle records machine-readable evidence in
+`ci/quality/apple-m4-slm-model-breadth-qwen15-reference-sanity.toml`.
+
 ## Runner
 
 ```text
@@ -33,6 +36,7 @@ All reference generation attempts used CPU-only model layers with:
 | `qwen3-0.6b-q8_0` | rejected for this round | The available reference runner reads GGUF metadata but fails before generation with `unknown model architecture: 'qwen3'`. |
 | `smollm2-360m-instruct-q8_0` | reference-good | The reference runner loads the artifact, confirms tokenizer/chat-template metadata, and produces coherent short outputs for the bounded prompt suite. |
 | `gemma-3-270m-it-q8_0` | rejected for this round | The available reference runner reads GGUF metadata but fails before generation with `unknown model architecture: 'gemma3'`. |
+| `qwen2.5-1.5b-instruct-q4_k_m` | reference-good | The reference runner loads the larger Qwen artifact, confirms tokenizer/chat-template metadata, and produces coherent short outputs for the bounded prompt suite. |
 
 ## Qwen3 Rejection
 
@@ -173,6 +177,61 @@ Do not promote Gemma 3 270M IT to Rust M4 quality. Reconsider only after the
 reference runner selected for this lane supports the gemma3 architecture.
 ```
 
+## Qwen2.5 1.5B Q4_K_M Acceptance
+
+Artifact:
+
+```text
+repo = Qwen/Qwen2.5-1.5B-Instruct-GGUF
+revision = 91cad51170dc346986eccefdc2dd33a9da36ead9
+file = qwen2.5-1.5b-instruct-q4_k_m.gguf
+size = 1117320736 bytes
+sha256 = 6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
+license = apache-2.0
+```
+
+Observed metadata:
+
+```text
+general.architecture = qwen2
+general.name = qwen2.5-1.5b-instruct
+general.file_type = 15
+model params = 1.78 B
+model size = 1.04 GiB
+tokenizer.ggml.model = gpt2
+tokenizer.ggml.pre = qwen2
+tokenizer.chat_template = present
+bos_token_id = 151643
+eos_token_id = 151645
+padding_token_id = 151643
+tokenizer.ggml.add_bos_token = false
+```
+
+Prompt template:
+
+```text
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+<prompt><|im_end|>
+<|im_start|>assistant
+```
+
+Reference outputs:
+
+| Prompt | Output |
+|---|---|
+| `What is 2+2? Answer briefly.` | `2+2 equals 4. [end of text]` |
+| `Name the capital of France.` | `The capital of France is Paris. [end of text]` |
+| `Write one short sentence about Rust.` | `Rust is a systems programming language known for its memory safety and performance. [end of text]` |
+
+Decision:
+
+```text
+Promote qwen2.5-1.5b-instruct-q4_k_m to M4-MODEL-011 for Rust M4
+apple-m4-cpu-neon quality gating.
+```
+
 ## Claim Boundary
 
 This reference pass may claim only that `smollm2-360m-instruct-q8_0` is
@@ -184,3 +243,9 @@ by the current reference runner. It does not prove the Gemma Rust M4 path,
 cache registration, default-model support, BitNet behavior, full
 `apple-m4-metal` inference, Neural Engine execution, MPSGraph model inference,
 QK256 support, or broad Apple Silicon performance.
+
+The larger Qwen2.5 follow-up pass may claim only that
+`qwen2.5-1.5b-instruct-q4_k_m` is reference-good for the bounded prompt suite.
+It does not prove the Rust M4 path, cache registration, default-model support,
+BitNet behavior, full `apple-m4-metal` inference, Neural Engine execution,
+MPSGraph model inference, QK256 support, or broad Apple Silicon performance.

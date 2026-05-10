@@ -170,7 +170,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-010"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-010-qwen15-reference"
 stackable = false
 review_mode = "codex_premerge"

@@ -1,0 +1,89 @@
+schema = 1
+artifact_kind = "apple_m4_slm_model_breadth_reference_sanity"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-010"
+created_utc = "2026-05-10T03:05:00Z"
+host = "apple-m4-mac-mini"
+claim_boundary = "Reference-runner artifact sanity only. This does not prove Rust M4 support, cache registration, default model support, BitNet behavior, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad M4 performance."
+
+[runner]
+name = "llama-cli"
+path = "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli"
+version = "build 3962 (1f86f058), Apple clang version 21.0.0 (clang-2100.0.123.102), arm64-apple-darwin25.4.0"
+cpu_only_args = "-ngl 0 --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt"
+runtime_note = "Reference commands set -ngl 0 and report offloaded 0/29 layers. The reference binary still initializes a Metal backend context internally, but no model layers are offloaded."
+
+[[prompt]]
+id = "math"
+text = "What is 2+2? Answer briefly."
+
+[[prompt]]
+id = "capital"
+text = "Name the capital of France."
+
+[[prompt]]
+id = "rust"
+text = "Write one short sentence about Rust."
+
+[[candidate]]
+id = "qwen2.5-1.5b-instruct-q4_k_m"
+result = "accepted_reference_good"
+source = "Qwen/Qwen2.5-1.5B-Instruct-GGUF"
+revision = "91cad51170dc346986eccefdc2dd33a9da36ead9"
+file = "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+source_url = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/blob/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+size_bytes = 1117320736
+sha256 = "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
+license = "apache-2.0"
+local_path = "target/apple-m4-slm-model-breadth/M4-MODEL-010/candidates/qwen2_5_1_5b_instruct_q4_k_m/Qwen-Qwen2.5-1.5B-Instruct-GGUF/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+cleanup_status = "retained under target after reference pass for optional immediate Rust M4 quality probing; never committed"
+gguf_architecture = "qwen2"
+gguf_file_type = "Q4_K_M"
+gguf_general_name = "qwen2.5-1.5b-instruct"
+model_params = "1.78 B"
+model_size = "1.04 GiB"
+context_length = 32768
+embedding_length = 1536
+block_count = 28
+attention_heads = 12
+attention_kv_heads = 2
+rope_freq_base = 1000000.0
+rms_norm_epsilon = 0.000001
+tokenizer_model = "gpt2"
+tokenizer_pre = "qwen2"
+chat_template_present = true
+eos_token_id = 151645
+bos_token_id = 151643
+padding_token_id = 151643
+add_bos_token = false
+reference_command_shape = "/Users/steven/.cache/bitnet_cpp/build/bin/llama-cli -m <qwen15.gguf> -p '<qwen2.5 chatml prompt>' -n 24 -ngl 0 --no-display-prompt --no-warmup --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42"
+prompt_template = "qwen2.5_chatml_with_explicit_system"
+quality_status = "pass_reference_output_sanity"
+decision = "Promote to M4-MODEL-011 Rust M4 apple-m4-cpu-neon quality gate as a reference-good larger Qwen candidate."
+
+[[reference_output]]
+candidate = "qwen2.5-1.5b-instruct-q4_k_m"
+prompt = "math"
+text = "2+2 equals 4. [end of text]"
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+semantically_plausible = true
+
+[[reference_output]]
+candidate = "qwen2.5-1.5b-instruct-q4_k_m"
+prompt = "capital"
+text = "The capital of France is Paris. [end of text]"
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+semantically_plausible = true
+
+[[reference_output]]
+candidate = "qwen2.5-1.5b-instruct-q4_k_m"
+prompt = "rust"
+text = "Rust is a systems programming language known for its memory safety and performance. [end of text]"
+valid_utf8 = true
+non_empty = true
+non_degenerate = true
+semantically_plausible = true
