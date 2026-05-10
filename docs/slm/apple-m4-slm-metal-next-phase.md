@@ -152,6 +152,47 @@ Timing is phase-local. It must not be reported as full-pipeline speedup.
 - Generic CI may validate schema and CPU fixture construction without running
   live Metal dispatch.
 
+## M4-METAL-002 Proof Shape
+
+`M4-METAL-002` implements the parity fixture as a deterministic dense f32
+Qwen-shaped prefill projection test. Generic CI covers fixture shape and
+receipt contracts. The live Apple M4 proof remains opt-in:
+
+```bash
+BITNET_RUN_M4_METAL_DENSE_PREFILL_QKV=1 \
+BITNET_M4_METAL_DENSE_PREFILL_QKV_RECEIPT=ci/hardware/apple-m4-mac-mini/<date>/metal-dense-prefill-qkv.json \
+cargo test --locked -p bitnet-kernels \
+  --no-default-features \
+  --features metal \
+  --test metal_tiny_smoke \
+  tiny_m4_metal_dense_prefill_qkv_projection_matches_cpu_reference_when_enabled \
+  -- --nocapture
+```
+
+The receipt is still a phase contribution: it records Q, K, and V tensor
+parity against CPU and leaves RoPE, attention, KV cache, decode, sampling, and
+the rest of the pipeline outside the Metal claim.
+
+The first live M4 run of this fixture passed with:
+
+```text
+machine_id = apple-m4-mac-mini
+resolved_device.chip = Apple M4
+execution_phase = prefill_qkv_projection
+kernel_id = tiny_metal_dense_prefill_qkv_projection
+q_matches_cpu_reference = true
+k_matches_cpu_reference = true
+v_matches_cpu_reference = true
+max_abs_error = 0.0
+fallback_used = false
+full_metal_inference_claimed = false
+speedup_claim = false
+```
+
+The receipt was written under `target/` during the proof run and is not a
+committed performance artifact. `M4-METAL-003` owns durable phase receipt
+validation and any committed Apple-hardware receipt path.
+
 ## Explicit Deferrals
 
 The following remain out of scope for this item:

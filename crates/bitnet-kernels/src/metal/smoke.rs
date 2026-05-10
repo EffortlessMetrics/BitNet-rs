@@ -19,6 +19,7 @@ pub const I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID: &str = "tiny_metal_i2s_prefi
 pub const I2S_METAL_PROJECTION_RESIDUAL_KERNEL_ID: &str = "tiny_metal_i2s_projection_residual";
 pub const I2S_PROJECTION_RESIDUAL_GRAPH_ID: &str = "tiny_i2s_projection_residual_subgraph";
 pub const DENSE_METAL_PREFILL_LINEAR_KERNEL_ID: &str = "tiny_metal_dense_prefill_linear_projection";
+pub const DENSE_METAL_PREFILL_QKV_KERNEL_ID: &str = "tiny_metal_dense_prefill_qkv_projection";
 pub const I2S_KERNEL_FAMILY: &str = "i2_s";
 pub const DENSE_KERNEL_FAMILY: &str = "dense_f32";
 pub const DENSE_MODEL_FAMILY: &str = "qwen2.5";
@@ -30,9 +31,14 @@ pub const DENSE_PREFILL_LINEAR_EXECUTION_PHASE: &str = "prefill_linear_projectio
 pub const DENSE_PREFILL_LINEAR_PHASE_SCOPE: &str =
     "qwen2_5_dense_prefill_linear_projection_fixture";
 pub const DENSE_PREFILL_LINEAR_KV_CACHE_BEHAVIOR: &str = "not_exercised";
+pub const DENSE_PREFILL_QKV_EXECUTION_PHASE: &str = "prefill_qkv_projection";
+pub const DENSE_PREFILL_QKV_PHASE_SCOPE: &str = "qwen2_5_dense_prefill_qkv_projection_fixture";
+pub const DENSE_PREFILL_QKV_KV_CACHE_BEHAVIOR: &str = "not_exercised";
 pub const DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND: &str = "apple-m4-cpu-neon";
 pub const DENSE_PREFILL_LINEAR_TIMING_SCOPE: &str =
     "single_live_phase_dispatch_readback_vs_cpu_reference_fixture";
+pub const DENSE_PREFILL_QKV_TIMING_SCOPE: &str =
+    "single_live_qkv_phase_dispatch_readback_vs_cpu_reference_fixture";
 pub const I2S_PROJECTION_RESIDUAL_EXECUTION_PHASE: &str = "parity";
 pub const I2S_PROJECTION_RESIDUAL_PHASE_SCOPE: &str = "projection_residual_subgraph";
 pub const I2S_PROJECTION_RESIDUAL_OPS: [&str; 2] = ["packed_i2_s_matmul", "residual_add"];
@@ -48,6 +54,12 @@ pub const I2S_PREFILL_TOKENS: usize = 2;
 pub const DENSE_PREFILL_TOKENS: usize = 2;
 pub const DENSE_PREFILL_IN_FEATURES: usize = 8;
 pub const DENSE_PREFILL_OUT_FEATURES: usize = 6;
+pub const QWEN2_5_0_5B_HIDDEN_SIZE: usize = 896;
+pub const QWEN2_5_0_5B_ATTENTION_HEADS: usize = 14;
+pub const QWEN2_5_0_5B_KV_HEADS: usize = 2;
+pub const QWEN2_5_0_5B_HEAD_DIM: usize = QWEN2_5_0_5B_HIDDEN_SIZE / QWEN2_5_0_5B_ATTENTION_HEADS;
+pub const QWEN2_5_0_5B_Q_DIM: usize = QWEN2_5_0_5B_HIDDEN_SIZE;
+pub const QWEN2_5_0_5B_KV_DIM: usize = QWEN2_5_0_5B_KV_HEADS * QWEN2_5_0_5B_HEAD_DIM;
 pub const SMOKE_ELEMENT_COUNT: usize = 64;
 pub const SMOKE_WORKGROUP_SIZE: u32 = 64;
 
@@ -218,10 +230,65 @@ pub struct DenseMetalPrefillLinearReceipt {
     pub timing: DenseMetalPrefillLinearTiming,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseMetalPrefillQkvReceipt {
+    pub machine_id: &'static str,
+    pub artifact_kind: &'static str,
+    pub requested_backend: &'static str,
+    pub selected_backend: &'static str,
+    pub runtime_api: &'static str,
+    pub reference_backend: &'static str,
+    pub target_backend: &'static str,
+    pub rest_of_pipeline_backend: &'static str,
+    pub kernel_id: &'static str,
+    pub model_family: &'static str,
+    pub kernel_family: &'static str,
+    pub execution_phase: &'static str,
+    pub phase_scope: &'static str,
+    pub layout_source: &'static str,
+    pub transport_layout: &'static str,
+    pub kv_cache_behavior: &'static str,
+    pub fallback_used: bool,
+    pub result: &'static str,
+    pub artifact_path: String,
+    pub prefill_tokens: usize,
+    pub hidden_size: usize,
+    pub attention_heads: usize,
+    pub kv_heads: usize,
+    pub head_dim: usize,
+    pub q_dim: usize,
+    pub kv_dim: usize,
+    pub q_max_abs_error: f32,
+    pub q_mean_abs_error: f32,
+    pub k_max_abs_error: f32,
+    pub k_mean_abs_error: f32,
+    pub v_max_abs_error: f32,
+    pub v_mean_abs_error: f32,
+    pub max_abs_error: f32,
+    pub mean_abs_error: f32,
+    pub q_argmax_index: usize,
+    pub k_argmax_index: usize,
+    pub v_argmax_index: usize,
+    pub timing: DenseMetalPrefillQkvTiming,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DenseMetalPrefillLinearTiming {
     pub cpu_reference_ms: f64,
     pub metal_phase_ms: f64,
+    pub timing_delta_ms: f64,
+    pub timing_scope: &'static str,
+    pub speedup_claim: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DenseMetalPrefillQkvTiming {
+    pub cpu_reference_ms: f64,
+    pub metal_phase_ms: f64,
+    pub metal_q_ms: f64,
+    pub metal_k_ms: f64,
+    pub metal_v_ms: f64,
+    pub dispatch_readback_ms: f64,
     pub timing_delta_ms: f64,
     pub timing_scope: &'static str,
     pub speedup_claim: bool,
@@ -234,6 +301,22 @@ impl DenseMetalPrefillLinearTiming {
             metal_phase_ms,
             timing_delta_ms: metal_phase_ms - cpu_reference_ms,
             timing_scope: DENSE_PREFILL_LINEAR_TIMING_SCOPE,
+            speedup_claim: false,
+        }
+    }
+}
+
+impl DenseMetalPrefillQkvTiming {
+    pub fn measured(cpu_reference_ms: f64, metal_phase_ms: f64) -> Self {
+        Self {
+            cpu_reference_ms,
+            metal_phase_ms,
+            metal_q_ms: 0.0,
+            metal_k_ms: 0.0,
+            metal_v_ms: 0.0,
+            dispatch_readback_ms: metal_phase_ms,
+            timing_delta_ms: metal_phase_ms - cpu_reference_ms,
+            timing_scope: DENSE_PREFILL_QKV_TIMING_SCOPE,
             speedup_claim: false,
         }
     }
@@ -392,6 +475,66 @@ impl DenseMetalPrefillLinearReceipt {
     }
 }
 
+impl DenseMetalPrefillQkvReceipt {
+    pub fn passed(
+        artifact_path: impl Into<String>,
+        q_comparison: SmokeComparison,
+        k_comparison: SmokeComparison,
+        v_comparison: SmokeComparison,
+        fixture: &DenseMetalPrefillQkvFixture,
+        timing: DenseMetalPrefillQkvTiming,
+    ) -> Self {
+        let max_abs_error = q_comparison
+            .max_abs_error
+            .max(k_comparison.max_abs_error)
+            .max(v_comparison.max_abs_error);
+        let mean_abs_error = (q_comparison.mean_abs_error
+            + k_comparison.mean_abs_error
+            + v_comparison.mean_abs_error)
+            / 3.0;
+        Self {
+            machine_id: MACHINE_ID,
+            artifact_kind: PHASE_CONTRIBUTION_ARTIFACT_KIND,
+            requested_backend: REQUESTED_BACKEND,
+            selected_backend: SELECTED_BACKEND,
+            runtime_api: RUNTIME_API,
+            reference_backend: REFERENCE_BACKEND,
+            target_backend: SELECTED_BACKEND,
+            rest_of_pipeline_backend: DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND,
+            kernel_id: DENSE_METAL_PREFILL_QKV_KERNEL_ID,
+            model_family: DENSE_MODEL_FAMILY,
+            kernel_family: DENSE_KERNEL_FAMILY,
+            execution_phase: DENSE_PREFILL_QKV_EXECUTION_PHASE,
+            phase_scope: DENSE_PREFILL_QKV_PHASE_SCOPE,
+            layout_source: DENSE_LAYOUT_SOURCE,
+            transport_layout: DENSE_TRANSPORT_LAYOUT,
+            kv_cache_behavior: DENSE_PREFILL_QKV_KV_CACHE_BEHAVIOR,
+            fallback_used: false,
+            result: "pass",
+            artifact_path: artifact_path.into(),
+            prefill_tokens: fixture.prefill_tokens,
+            hidden_size: fixture.hidden_size,
+            attention_heads: fixture.attention_heads,
+            kv_heads: fixture.kv_heads,
+            head_dim: fixture.head_dim,
+            q_dim: fixture.q_dim,
+            kv_dim: fixture.kv_dim,
+            q_max_abs_error: q_comparison.max_abs_error,
+            q_mean_abs_error: q_comparison.mean_abs_error,
+            k_max_abs_error: k_comparison.max_abs_error,
+            k_mean_abs_error: k_comparison.mean_abs_error,
+            v_max_abs_error: v_comparison.max_abs_error,
+            v_mean_abs_error: v_comparison.mean_abs_error,
+            max_abs_error,
+            mean_abs_error,
+            q_argmax_index: argmax_index(&fixture.expected_q),
+            k_argmax_index: argmax_index(&fixture.expected_k),
+            v_argmax_index: argmax_index(&fixture.expected_v),
+            timing,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct I2sMetalParityFixture {
     pub activations: Vec<f32>,
@@ -422,6 +565,27 @@ pub struct DenseMetalPrefillLinearFixture {
     pub in_features: usize,
     pub out_features: usize,
     pub cpu_reference_token_id: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseMetalPrefillQkvFixture {
+    pub activations: Vec<f32>,
+    pub q_weights: Vec<f32>,
+    pub k_weights: Vec<f32>,
+    pub v_weights: Vec<f32>,
+    pub q_bias: Vec<f32>,
+    pub k_bias: Vec<f32>,
+    pub v_bias: Vec<f32>,
+    pub expected_q: Vec<f32>,
+    pub expected_k: Vec<f32>,
+    pub expected_v: Vec<f32>,
+    pub prefill_tokens: usize,
+    pub hidden_size: usize,
+    pub attention_heads: usize,
+    pub kv_heads: usize,
+    pub head_dim: usize,
+    pub q_dim: usize,
+    pub kv_dim: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -480,6 +644,10 @@ pub fn metal_i2s_projection_residual_artifact_path(date: &str) -> String {
 
 pub fn metal_dense_prefill_linear_artifact_path(date: &str) -> String {
     format!("ci/hardware/{MACHINE_ID}/{date}/metal-dense-prefill-linear.json")
+}
+
+pub fn metal_dense_prefill_qkv_artifact_path(date: &str) -> String {
+    format!("ci/hardware/{MACHINE_ID}/{date}/metal-dense-prefill-qkv.json")
 }
 
 pub fn tiny_add_inputs() -> (Vec<f32>, Vec<f32>) {
@@ -566,6 +734,112 @@ pub fn dense_metal_prefill_linear_fixture() -> DenseMetalPrefillLinearFixture {
     }
 }
 
+pub fn dense_metal_prefill_qkv_fixture() -> DenseMetalPrefillQkvFixture {
+    let prefill_tokens = DENSE_PREFILL_TOKENS;
+    let hidden_size = QWEN2_5_0_5B_HIDDEN_SIZE;
+    let q_dim = QWEN2_5_0_5B_Q_DIM;
+    let kv_dim = QWEN2_5_0_5B_KV_DIM;
+    let activations = (0..prefill_tokens * hidden_size)
+        .map(|index| {
+            let row = index / hidden_size;
+            ((index as i32 * 5 + row as i32 * 7) % 23 - 11) as f32 * 0.015625
+        })
+        .collect::<Vec<_>>();
+    let q_weights = deterministic_dense_weights(q_dim, hidden_size, 7, 29, 0.0078125);
+    let k_weights = deterministic_dense_weights(kv_dim, hidden_size, 11, 31, 0.0078125);
+    let v_weights = deterministic_dense_weights(kv_dim, hidden_size, 13, 37, 0.0078125);
+    let q_bias = deterministic_dense_bias(q_dim, 3, 17, 0.00390625);
+    let k_bias = deterministic_dense_bias(kv_dim, 5, 19, 0.00390625);
+    let v_bias = deterministic_dense_bias(kv_dim, 7, 23, 0.00390625);
+    let expected_q = dense_linear_expected(
+        &activations,
+        &q_weights,
+        &q_bias,
+        prefill_tokens,
+        hidden_size,
+        q_dim,
+    );
+    let expected_k = dense_linear_expected(
+        &activations,
+        &k_weights,
+        &k_bias,
+        prefill_tokens,
+        hidden_size,
+        kv_dim,
+    );
+    let expected_v = dense_linear_expected(
+        &activations,
+        &v_weights,
+        &v_bias,
+        prefill_tokens,
+        hidden_size,
+        kv_dim,
+    );
+
+    DenseMetalPrefillQkvFixture {
+        activations,
+        q_weights,
+        k_weights,
+        v_weights,
+        q_bias,
+        k_bias,
+        v_bias,
+        expected_q,
+        expected_k,
+        expected_v,
+        prefill_tokens,
+        hidden_size,
+        attention_heads: QWEN2_5_0_5B_ATTENTION_HEADS,
+        kv_heads: QWEN2_5_0_5B_KV_HEADS,
+        head_dim: QWEN2_5_0_5B_HEAD_DIM,
+        q_dim,
+        kv_dim,
+    }
+}
+
+fn deterministic_dense_weights(
+    out_features: usize,
+    in_features: usize,
+    multiplier: i32,
+    modulus: i32,
+    scale: f32,
+) -> Vec<f32> {
+    (0..out_features * in_features)
+        .map(|index| {
+            let row = index / in_features;
+            ((index as i32 * multiplier + row as i32 * 3) % modulus - modulus / 2) as f32 * scale
+        })
+        .collect()
+}
+
+fn deterministic_dense_bias(
+    out_features: usize,
+    multiplier: i32,
+    modulus: i32,
+    scale: f32,
+) -> Vec<f32> {
+    (0..out_features)
+        .map(|index| ((index as i32 * multiplier) % modulus - modulus / 2) as f32 * scale)
+        .collect()
+}
+
+fn dense_linear_expected(
+    activations: &[f32],
+    weights: &[f32],
+    bias: &[f32],
+    prefill_tokens: usize,
+    in_features: usize,
+    out_features: usize,
+) -> Vec<f32> {
+    let mut expected = vec![0.0; prefill_tokens * out_features];
+    let config = LinearConfig::new(prefill_tokens, in_features, out_features)
+        .expect("deterministic dense QKV fixture shape is valid")
+        .with_bias(true);
+    linear_cpu(activations, weights, Some(bias), &mut expected, &config)
+        .expect("deterministic dense QKV fixture is valid");
+    expected
+}
+
 fn i2s_metal_fixture(m: usize) -> I2sMetalParityFixture {
     let activations = (0..m * I2S_PARITY_K)
         .map(|index| {
@@ -630,6 +904,18 @@ pub fn i2s_parity_shape_words(fixture: &I2sMetalParityFixture) -> [u32; 6] {
 
 pub fn dense_prefill_linear_shape_words(fixture: &DenseMetalPrefillLinearFixture) -> [u32; 3] {
     [fixture.batch_size as u32, fixture.out_features as u32, fixture.in_features as u32]
+}
+
+pub fn dense_prefill_qkv_shape_words(fixture: &DenseMetalPrefillQkvFixture) -> [u32; 7] {
+    [
+        fixture.prefill_tokens as u32,
+        fixture.hidden_size as u32,
+        fixture.q_dim as u32,
+        fixture.kv_dim as u32,
+        fixture.attention_heads as u32,
+        fixture.kv_heads as u32,
+        fixture.head_dim as u32,
+    ]
 }
 
 pub fn argmax_index(values: &[f32]) -> usize {
