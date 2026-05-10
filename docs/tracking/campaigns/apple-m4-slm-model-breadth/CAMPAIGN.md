@@ -27,7 +27,10 @@ mini path without weakening the completed Qwen appliance baseline.
 | M4-MODEL-002 | merged | Ran reference output sanity and recorded exact artifact metadata. |
 | M4-MODEL-003 | merged | Rust M4 quality evidence rejects SmolLM2 for this round. |
 | M4-MODEL-004 | blocked | No accepted candidate is available to register. |
-| M4-MODEL-005 | pending | Update model matrix and user envelope. |
+| M4-MODEL-005 | blocked | Update model matrix and user envelope after registration. |
+| M4-MODEL-006 | in progress | Select the next exact candidate after the failed Qwen3/SmolLM2 round. |
+| M4-MODEL-007 | blocked | Run reference output sanity for the newly selected candidate. |
+| M4-MODEL-008 | blocked | Run Rust M4 quality gates for the newly selected candidate. |
 
 ## Current Selection
 
@@ -49,6 +52,11 @@ new model to register.
 
 The model-breadth lane must not promote cache/model registration until a later
 candidate passes both reference output sanity and Rust M4 quality gates.
+
+`M4-MODEL-006` starts that later candidate cycle with a pinned Gemma 3 270M IT
+GGUF candidate from `ggml-org/gemma-3-270m-it-GGUF`. This is selection metadata
+only: no model artifact is downloaded, accepted, registered, or claimed
+supported by the M4 lane.
 
 ## Claim Boundary
 
