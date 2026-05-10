@@ -1,6 +1,7 @@
 # CI Integration Guide
 
-This document describes the comprehensive CI integration setup for the BitNet-rs testing framework.
+This document describes the legacy testing-framework CI integration model and
+the current reporting path used by the active GitHub Actions workflows.
 
 > Before adding a new CI workflow or expanding an existing one, read
 > [CI Cost and Verification Policy](../ci/cost-and-verification-policy.md).
@@ -90,11 +91,13 @@ graph TD
   - Triggered by: PR/push to main/develop affecting inference/benchmarks
 
 #### 3. Reporting and Coordination
-- **CI Reporting** (`ci-reporting.yml`)
-  - Aggregates results from all workflows
-  - Generates comprehensive reports
-  - Updates PR comments with status
-  - Creates GitHub status checks
+- **CI Actuals** (`ci-actuals.yml`)
+  - Records completed workflow run timing and job metadata
+  - Emits `ci-actuals.json` artifacts for CI cost and verification analysis
+  - Watches the active default PR lanes, including CI Core, Feature Matrix,
+    Compatibility Tests, Test Telemetry, Fuzz CI, PR Plan, Policy, PR Gate, and
+    ripr
+  - Replaces the disabled legacy `ci-reporting.yml.disabled` reporter
 
 ## Workflow Triggers
 

@@ -36,7 +36,6 @@ on:
       - '.github/workflows/ci-core.yml'
       - '.github/workflows/pr-plan.yml'
       - '.github/workflows/coverage.yml'
-      - '.github/workflows/ci-reporting.yml'
 
       # CI configuration - codecov config affects verification signal
       - 'codecov.yml'
