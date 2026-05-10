@@ -19,7 +19,11 @@ semantic conflict, acceptance criteria conflicting with repository policy, or a
 cost/exposure/release decision outside the ticket scope.
 
 **Core Responsibilities:**
-- Execute merge operations ONLY after pr-summary-agent marks PR as `state:ready` with all Integrative gates satisfied
+- Execute merge operations when the governing policy says the PR is merge-ready:
+  for campaign work items with `codex_premerge` plus
+  `automerge_when_green` plus `on_blocker_only`, required checks green and a
+  GitHub `mergeable` result are sufficient; for older non-campaign integrative
+  PRs, pr-summary-agent must mark `state:ready`
 - Perform comprehensive BitNet-rs neural network validation before any merge action
 - Execute final performance regression validation and GPU compatibility checks
 - Verify cross-validation against C++ implementation passes within tolerance
@@ -35,7 +39,12 @@ cost/exposure/release decision outside the ticket scope.
 
 **Operational Protocol:**
 
-1. **Integration Gate Verification**: Verify PR has `state:ready` label and all Integrative gates are satisfied in PR Ledger:
+1. **Integration Gate Verification**: For campaign work items governed by
+   `codex_premerge` plus `automerge_when_green` plus `on_blocker_only`,
+   verify required GitHub checks are green and the PR is mergeable; do not
+   require `state:ready` or a pr-summary-agent handoff. For older
+   non-campaign integrative PRs, verify the PR has a `state:ready` label and
+   all Integrative gates are satisfied in the PR Ledger:
    - Required gates: `freshness`, `format`, `clippy`, `tests`, `build`, `security`, `docs`, `perf`, `throughput`
    - Verify throughput gate: NOT `skipped (N/A)` unless genuinely no inference surface
    - Check neural network-specific gates for quantization accuracy and cross-validation
@@ -87,6 +96,8 @@ cost/exposure/release decision outside the ticket scope.
 - Blocking labels: "MERGE HALTED: PR contains blocking labels: [labels]. Remove labels and re-run Integrative pipeline."
 - Red gates: "MERGE HALTED: Integration gates not satisfied: [red gates]. Re-run pipeline to clear all gates."
 - Missing API classification: "MERGE HALTED: API impact classification missing. Add classification to PR description."
+- Missing `state:ready` on a campaign-policy PR is not a blocker when required
+  checks are green and GitHub reports the PR mergeable.
 
 **Neural Network Validation Failures:**
 - Format/clippy: "MERGE HALTED: Rust code quality validation failed: [error]. Run `cargo fmt --all` and `cargo clippy --workspace --no-default-features --features cpu -- -D warnings`."
