@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T00:27:23Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-040"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-040-sampling-policy"
+pr = 4370
+head_sha = "07fcc58d362e3e3109eaaf985b9616b81e362b02"
+
+notes = [
+  "Opened PR #4370 for the CUDA-DENSE-040 dense GGUF sampling-policy receipt implementation.",
+  "The PR adds a receipt-backed command for LM-head fixture logits hash/top-k evidence, deterministic greedy CPU sampler settings, and estimated logits D2H byte accounting.",
+  "The committed RTX 5070 Ti receipt was emitted from the SHA-verified Qwen2.5 0.5B Q8_0 artifact and keeps dense inference, one-token/decode/chat, speedup, runtime sampling integration, persistent/full residency, server readiness, BitNet packed proof, tokenizer, loader, transformer, QK256, BitNet CUDA, and CUDA kernel math claims false.",
+]
