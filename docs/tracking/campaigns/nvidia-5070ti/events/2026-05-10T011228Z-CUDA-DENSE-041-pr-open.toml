@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T01:12:28Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-041"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-041-one-token"
+pr = 4381
+head_sha = "561bdbbc6054f367c2e267da33f465220e698d25"
+summary = "Opened CUDA-DENSE-041 tracker-contract PR for governed Qwen one-token strict CUDA proof."
+notes = [
+  "Opened PR #4381 to define the CUDA-DENSE-041 proof contract after CUDA-DENSE-040.",
+  "The contract requires future implementation to consume the verified Qwen artifact plus all-layer route, model-boundary fixture, KV-cache policy, and sampling-policy receipts before a one-token CUDA claim.",
+  "The PR remains tracker/docs only and keeps runtime token generation, dense GGUF inference, short decode, chat, speedup, full residency, server behavior, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math out of scope.",
+]
