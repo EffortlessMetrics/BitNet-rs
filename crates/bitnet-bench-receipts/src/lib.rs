@@ -1026,6 +1026,209 @@ pub fn validate_strict_cuda_benchmark_qualification_receipt_file(
     validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
 }
 
+/// Validate a dense Qwen CUDA benchmark baseline receipt.
+///
+/// This is baseline evidence only. It normalizes the existing one-token,
+/// short-decode, and warm-session strict CUDA proof receipts for Qwen2.5 0.5B
+/// Q8_0 without accepting any profile-specific speedup claim.
+pub fn validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_json(
+    receipt: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", "dense_gguf_qwen_cuda_benchmark_baseline")?;
+    require_string_eq(receipt, "machine_id", "windows-9950x3d-rtx5070ti")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia_rtx_5070_ti_cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "reference_backend", "amd-9950x3d-cpu-avx512")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_string_eq(receipt, "selected_route", "dense_regular_llm_cuda")?;
+    require_string_eq(receipt, "claim", "dense_gguf_qwen_cuda_benchmark_baseline")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_bool_eq(receipt, "benchmark_qualified_speedup", false)?;
+    require_bool_eq(receipt, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(receipt, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(receipt, "server_ready_claimed", false)?;
+    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", false)?;
+
+    let claim_boundary = require_object(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_gguf_qwen_cuda_benchmark_baseline_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_warm_session_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "benchmark_qualified_speedup", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "server_ready_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+
+    let model = require_object(receipt, "model")?;
+    require_string_eq(model, "id", "qwen2.5-0.5b-instruct-q8_0")?;
+    require_string_eq(model, "model_family", "qwen")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_string_eq(model, "file", "qwen2.5-0.5b-instruct-q8_0.gguf")?;
+    require_non_empty_string(model, "sha256")?;
+
+    let tokenizer_prompt_authority = require_object(receipt, "tokenizer_prompt_authority")?;
+    require_string_eq(tokenizer_prompt_authority, "tokenizer_authority", "contract_authoritative")?;
+    require_string_eq(tokenizer_prompt_authority, "prompt_authority", "contract_authoritative")?;
+    require_non_empty_string(tokenizer_prompt_authority, "prompt_template")?;
+    require_non_empty_string(tokenizer_prompt_authority, "rendered_prompt_sha256")?;
+    require_non_empty_string(tokenizer_prompt_authority, "prompt_token_ids_sha256")?;
+    require_u64_at_least(tokenizer_prompt_authority, "prompt_token_count", 1)?;
+
+    let execution_plan = require_object(receipt, "execution_plan")?;
+    require_string_eq(execution_plan, "selected_route", "dense_regular_llm_cuda")?;
+    require_string_eq(execution_plan, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(execution_plan, "runtime_api", "cuda")?;
+    require_string_eq(execution_plan, "strict_fallback_policy", "reject")?;
+    require_bool_eq(execution_plan, "dense_regular_llm_cuda", true)?;
+    require_bool_eq(execution_plan, "bitnet_packed_qk256_cuda", false)?;
+    require_bool_eq(execution_plan, "fallback_used", false)?;
+    require_bool_eq(execution_plan, "strict_cuda_ready", true)?;
+    require_bool_eq(execution_plan, "speedup_claim", false)?;
+    require_bool_eq(execution_plan, "full_cuda_residency_claimed", false)?;
+    require_u64_at_least(execution_plan, "cuda_dense_regular_llm_ops", 1)?;
+    require_u64_eq(execution_plan, "cuda_bitnet_qk256_ops", 0)?;
+    require_u64_eq(execution_plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(execution_plan, "unsupported_ops", 0)?;
+
+    let proof_inputs = require_object(receipt, "proof_inputs")?;
+    validate_dense_qwen_proof_input(
+        proof_inputs,
+        "one_token",
+        "dense_gguf_qwen_one_token_strict_cuda_proof",
+    )?;
+    validate_dense_qwen_proof_input(
+        proof_inputs,
+        "short_decode",
+        "dense_gguf_qwen_short_decode_strict_cuda_proof",
+    )?;
+    validate_dense_qwen_proof_input(
+        proof_inputs,
+        "warm_session",
+        "dense_gguf_qwen_warm_session_strict_cuda_proof",
+    )?;
+
+    let profiles = require_array(receipt, "profiles")?;
+    for expected in ["one_token", "short_decode_8", "warm_session_3_turns"] {
+        let profile = profiles
+            .iter()
+            .find(|entry| {
+                entry.get("profile").and_then(serde_json::Value::as_str) == Some(expected)
+            })
+            .ok_or_else(|| validation_error(format!("profiles missing {expected}")))?;
+        validate_dense_qwen_benchmark_profile(profile, expected)?;
+    }
+
+    let kernel_summary = require_object(receipt, "kernel_summary")?;
+    require_u64_at_least(kernel_summary, "total_kernel_invocations", 1)?;
+    require_u64_at_least(kernel_summary, "total_kernel_launches", 1)?;
+    require_non_negative_number(kernel_summary, "total_kernel_time_ms")?;
+    require_u64_at_least(kernel_summary, "total_host_to_device_bytes", 1)?;
+    require_u64_at_least(kernel_summary, "total_device_to_host_bytes", 1)?;
+    require_u64_eq(kernel_summary, "total_cpu_fallback_invocations", 0)?;
+    require_bool_eq(kernel_summary, "fallback_used", false)?;
+
+    let benchmark_summary = require_object(receipt, "benchmark_summary")?;
+    require_string_eq(benchmark_summary, "status", "baseline_only")?;
+    require_bool_eq(benchmark_summary, "speedup_claim_allowed", false)?;
+    require_bool_eq(benchmark_summary, "benchmark_qualified_speedup", false)?;
+    require_u64_at_least(benchmark_summary, "profiles_recorded", 3)?;
+    require_non_empty_string(benchmark_summary, "next_step")?;
+    let accepted_profiles = require_array(benchmark_summary, "accepted_speedup_profiles")?;
+    if !accepted_profiles.is_empty() {
+        return Err(validation_error("benchmark_summary.accepted_speedup_profiles must be empty"));
+    }
+    let blockers = require_array(benchmark_summary, "qualification_blockers")?;
+    if blockers.is_empty() {
+        return Err(validation_error("benchmark_summary.qualification_blockers must not be empty"));
+    }
+
+    let cuda = require_object(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_u64_at_least(cuda, "device_count", 1)?;
+    let device_name = require_string(cuda, "device_name")?;
+    if !is_rtx5070ti_device_name(device_name) {
+        return Err(validation_error(format!(
+            "cuda.device_name must identify NVIDIA GeForce RTX 5070 Ti, got {device_name}"
+        )));
+    }
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_non_empty_string(cuda, "driver_version")?;
+    require_non_empty_string(cuda, "cuda_runtime_version")?;
+    require_non_empty_string(cuda, "cuda_toolkit_version")?;
+    require_non_empty_string(cuda, "nvrtc_version")?;
+    require_u64_at_least(cuda, "vram_bytes", 1)?;
+
+    let claim_boundaries = require_array(receipt, "claim_boundaries")?;
+    if claim_boundaries.is_empty() {
+        return Err(validation_error("claim_boundaries must not be empty"));
+    }
+
+    Ok(())
+}
+
+/// Validate a dense Qwen CUDA benchmark baseline receipt file.
+pub fn validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_file(
+    path: &Path,
+) -> Result<(), ReceiptError> {
+    let receipt = serde_json::from_slice(&std::fs::read(path)?)?;
+    validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_json(&receipt)
+}
+
+fn validate_dense_qwen_proof_input(
+    proof_inputs: &serde_json::Value,
+    field: &str,
+    expected_artifact_kind: &str,
+) -> Result<(), ReceiptError> {
+    let input = require_object(proof_inputs, field)?;
+    require_non_empty_string(input, "path")?;
+    require_non_empty_string(input, "sha256")?;
+    require_string_eq(input, "artifact_kind", expected_artifact_kind)?;
+    Ok(())
+}
+
+fn validate_dense_qwen_benchmark_profile(
+    profile: &serde_json::Value,
+    expected_profile: &str,
+) -> Result<(), ReceiptError> {
+    require_string_eq(profile, "profile", expected_profile)?;
+    require_string_eq(profile, "backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(profile, "runtime_api", "cuda")?;
+    require_string_eq(profile, "selected_route", "dense_regular_llm_cuda")?;
+    require_string_eq(profile, "status", "measured_existing_receipt")?;
+    require_non_empty_string(profile, "source_receipt_path")?;
+    require_non_empty_string(profile, "source_receipt_sha256")?;
+    require_non_empty_string(profile, "source_artifact_kind")?;
+    require_bool_eq(profile, "fallback_used", false)?;
+    require_bool_eq(profile, "quality_passed", true)?;
+    require_bool_eq(profile, "parity_passed", true)?;
+    require_bool_eq(profile, "speedup_claim", false)?;
+    require_bool_eq(profile, "benchmark_qualified_speedup", false)?;
+    require_bool_eq(profile, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(profile, "full_cuda_residency_claimed", false)?;
+    require_u64_at_least(profile, "prompt_tokens", 1)?;
+    require_u64_at_least(profile, "generated_tokens", 1)?;
+    require_non_negative_number(profile, "total_ms")?;
+    require_non_negative_number(profile, "first_token_ms")?;
+    require_non_negative_number(profile, "decode_total_ms")?;
+    require_non_negative_number(profile, "kernel_time_ms")?;
+    require_u64_at_least(profile, "kernel_invocations", 1)?;
+    require_u64_at_least(profile, "kernel_launches", 1)?;
+    require_u64_at_least(profile, "host_to_device_bytes", 1)?;
+    require_u64_at_least(profile, "device_to_host_bytes", 1)?;
+    require_non_negative_number(profile, "cpu_reference_total_ms")?;
+    if expected_profile == "warm_session_3_turns" {
+        require_u64_at_least(profile, "turns_count", 3)?;
+    }
+    Ok(())
+}
+
 fn validate_qualification_requirement(
     requirement: &serde_json::Value,
 ) -> Result<&str, ReceiptError> {
@@ -2179,6 +2382,237 @@ mod tests {
             "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json",
         );
         validate_strict_cuda_benchmark_qualification_receipt_file(&path).unwrap();
+    }
+
+    #[test]
+    fn dense_gguf_qwen_cuda_benchmark_baseline_receipt_validates() {
+        let receipt = sample_dense_gguf_qwen_cuda_benchmark_baseline_receipt();
+        validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
+    fn dense_gguf_qwen_cuda_benchmark_baseline_rejects_speedup_claim() {
+        let mut receipt = sample_dense_gguf_qwen_cuda_benchmark_baseline_receipt();
+        receipt["speedup_claim"] = json!(true);
+
+        let err = validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_gguf_qwen_cuda_benchmark_baseline_rejects_bitnet_proof_claim() {
+        let mut receipt = sample_dense_gguf_qwen_cuda_benchmark_baseline_receipt();
+        receipt["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+        let err = validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_gguf_qwen_cuda_benchmark_baseline_rejects_missing_warm_profile() {
+        let mut receipt = sample_dense_gguf_qwen_cuda_benchmark_baseline_receipt();
+        receipt["profiles"] = json!([
+            dense_qwen_benchmark_profile("one_token", 1, 8),
+            dense_qwen_benchmark_profile("short_decode_8", 8, 8)
+        ]);
+
+        let err = validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("warm_session_3_turns"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn dense_gguf_qwen_cuda_benchmark_baseline_rejects_hidden_fallback() {
+        let mut receipt = sample_dense_gguf_qwen_cuda_benchmark_baseline_receipt();
+        receipt["profiles"][0]["fallback_used"] = json!(true);
+
+        let err = validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("fallback_used"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn committed_dense_gguf_qwen_cuda_benchmark_baseline_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-cuda-benchmark-baseline.json",
+        );
+        validate_dense_gguf_qwen_cuda_benchmark_baseline_receipt_file(&path).unwrap();
+    }
+
+    fn sample_dense_gguf_qwen_cuda_benchmark_baseline_receipt() -> serde_json::Value {
+        json!({
+            "schema": 1,
+            "artifact_kind": "dense_gguf_qwen_cuda_benchmark_baseline",
+            "machine_id": "windows-9950x3d-rtx5070ti",
+            "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+            "timestamp_utc": "2026-05-10T05:00:00Z",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "reference_backend": "amd-9950x3d-cpu-avx512",
+            "runtime_api": "cuda",
+            "selected_route": "dense_regular_llm_cuda",
+            "claim": "dense_gguf_qwen_cuda_benchmark_baseline",
+            "fallback_used": false,
+            "fallback_backend": null,
+            "fallback_reason": null,
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "full_cuda_residency_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "server_ready_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "claim_boundary": {
+                "dense_gguf_qwen_cuda_benchmark_baseline_claimed": true,
+                "qwen_one_token_cuda_claimed": true,
+                "qwen_short_decode_cuda_claimed": true,
+                "qwen_warm_session_cuda_claimed": true,
+                "qwen_chat_cuda_claimed": false,
+                "speedup_claim": false,
+                "benchmark_qualified_speedup": false,
+                "full_cuda_residency_claimed": false,
+                "server_ready_claimed": false,
+                "bitnet_packed_i2s_qk256_proof": false
+            },
+            "model": {
+                "id": "qwen2.5-0.5b-instruct-q8_0",
+                "model_family": "qwen",
+                "artifact_kind": "dense_gguf",
+                "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+                "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+            },
+            "tokenizer_prompt_authority": {
+                "tokenizer_authority": "contract_authoritative",
+                "prompt_authority": "contract_authoritative",
+                "prompt_template": "qwen-chat-raw-deterministic",
+                "prompt_token_count": 8,
+                "prompt_token_ids_sha256": "c94c330c606eb24adef37d7fd276fc45a01c9fb21b6a8cea482102513f767144",
+                "rendered_prompt_sha256": "52cb6b5e4a038af1756708f98afb718a08c75b87b2f03dbee4dd9c8139c15c5e"
+            },
+            "execution_plan": {
+                "planner_version": "cuda-planner-004",
+                "model_family": "qwen",
+                "quantization": "dense_gguf_q8_0_f16_qwen_warm_session_contract",
+                "selected_route": "dense_regular_llm_cuda",
+                "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "strict_fallback_policy": "reject",
+                "dense_regular_llm_cuda": true,
+                "bitnet_packed_qk256_cuda": false,
+                "fallback_used": false,
+                "strict_cuda_ready": true,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false,
+                "cuda_dense_regular_llm_ops": 8112,
+                "cuda_bitnet_qk256_ops": 0,
+                "cpu_fallback_ops": 0,
+                "unsupported_ops": 0
+            },
+            "proof_inputs": {
+                "one_token": {
+                    "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json",
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "artifact_kind": "dense_gguf_qwen_one_token_strict_cuda_proof"
+                },
+                "short_decode": {
+                    "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json",
+                    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                    "artifact_kind": "dense_gguf_qwen_short_decode_strict_cuda_proof"
+                },
+                "warm_session": {
+                    "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json",
+                    "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                    "artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof"
+                }
+            },
+            "profiles": [
+                dense_qwen_benchmark_profile("one_token", 1, 8),
+                dense_qwen_benchmark_profile("short_decode_8", 8, 8),
+                dense_qwen_benchmark_profile("warm_session_3_turns", 24, 22)
+            ],
+            "kernel_summary": {
+                "total_kernel_invocations": 11154,
+                "total_kernel_launches": 11154,
+                "total_kernel_time_ms": 13182.4159,
+                "total_host_to_device_bytes": 2027132448,
+                "total_device_to_host_bytes": 20055552,
+                "total_cpu_fallback_invocations": 0,
+                "fallback_used": false
+            },
+            "benchmark_summary": {
+                "status": "baseline_only",
+                "speedup_claim_allowed": false,
+                "benchmark_qualified_speedup": false,
+                "profiles_recorded": 3,
+                "accepted_speedup_profiles": [],
+                "qualification_blockers": [
+                    "missing repeated CPU/CUDA comparator for dense profiles",
+                    "missing profile-specific speedup thresholds"
+                ],
+                "next_step": "CUDA-DENSE-PERF-002 repeated CPU/CUDA comparator"
+            },
+            "cuda": {
+                "available": true,
+                "device_count": 1,
+                "device_name": "NVIDIA GeForce RTX 5070 Ti",
+                "compute_capability": "12.0",
+                "driver_version": "591.86",
+                "cuda_runtime_version": "12.9",
+                "cuda_toolkit_version": "12.9",
+                "nvrtc_version": "12.9",
+                "vram_bytes": 17094475776u64
+            },
+            "claim_boundaries": [
+                "speedup_claim=false; dense Qwen CUDA timing is baseline evidence only.",
+                "dense_regular_llm_cuda receipts cannot satisfy BitNet packed I2S/QK256 proof.",
+                "full_cuda_residency_claimed=false; warm-session residency remains scoped."
+            ]
+        })
+    }
+
+    fn dense_qwen_benchmark_profile(
+        profile: &str,
+        generated_tokens: u64,
+        prompt_tokens: u64,
+    ) -> serde_json::Value {
+        let mut value = json!({
+            "profile": profile,
+            "backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "selected_route": "dense_regular_llm_cuda",
+            "status": "measured_existing_receipt",
+            "source_receipt_path": format!("ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/{profile}.json"),
+            "source_receipt_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "source_artifact_kind": "dense_gguf_qwen_short_decode_strict_cuda_proof",
+            "fallback_used": false,
+            "quality_passed": true,
+            "parity_passed": true,
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "full_cuda_residency_claimed": false,
+            "prompt_tokens": prompt_tokens,
+            "generated_tokens": generated_tokens,
+            "total_ms": 1.0,
+            "first_token_ms": 1.0,
+            "decode_total_ms": 1.0,
+            "kernel_time_ms": 1.0,
+            "kernel_invocations": 1,
+            "kernel_launches": 1,
+            "host_to_device_bytes": 1,
+            "device_to_host_bytes": 1,
+            "cpu_reference_total_ms": 1.0
+        });
+        if profile == "warm_session_3_turns" {
+            value["turns_count"] = json!(3);
+        }
+        value
     }
 
     fn sample_strict_cuda_benchmark_qualification_receipt() -> serde_json::Value {

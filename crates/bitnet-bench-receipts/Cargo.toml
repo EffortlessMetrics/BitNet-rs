@@ -11,6 +11,7 @@ bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev", 
 chrono.workspace = true
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10.9"
 thiserror = "2"
 
 [dev-dependencies]

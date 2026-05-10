@@ -2049,6 +2049,64 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-PERF-001"
+status = "pr_open"
+branch = "codex/cuda-dense-perf-001-baseline"
+pr = 4437
+head_sha = "8c299e96b00cfcfb8efd6eeab22cab150f45982b"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-046", "CUDA-UX-003", "CUDA-UX-004"]
+acceptance = "Normalize the existing RTX 5070 Ti dense Qwen CUDA one-token, short-decode, and warm-session receipts into a governed benchmark baseline receipt with prerequisite receipt SHA256 hashes, profile timing, kernel, transfer, residency, route, fallback, and claim-boundary fields while preserving speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, server_ready_claimed=false, dense_gguf_inference_claimed=false, and bitnet_packed_i2s_qk256_proof=false."
+commands = [
+  "cargo run --locked -p bitnet-bench-receipts --bin dense_qwen_cuda_benchmark_baseline_receipt --no-default-features",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features dense_gguf_qwen_cuda_benchmark_baseline -- --nocapture",
+  "cargo fmt -p bitnet-bench-receipts -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "Cargo.lock",
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+  "speedup or full CUDA residency claim upgrades",
+]
+may_claim = [
+  "A dense Qwen CUDA benchmark baseline receipt now aggregates the existing one-token, short-decode, and warm-session RTX 5070 Ti receipts.",
+  "The baseline records selected_route=dense_regular_llm_cuda, selected_backend=nvidia-rtx-5070-ti-cuda, fallback_used=false, profile timing, kernel invocation, and transfer byte evidence.",
+  "The baseline records prerequisite receipt SHA256 hashes and keeps profile-specific speedup qualification blocked for a later repeated CPU/CUDA comparator.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "benchmark_qualified_speedup is accepted.",
+  "Full dense CUDA residency is proven.",
+  "Server readiness exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-029"
 status = "merged"
 branch = "codex/cuda-dense-029-mlp-activation-fixture"
