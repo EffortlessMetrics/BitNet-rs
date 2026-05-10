@@ -1,0 +1,12 @@
+timestamp = "2026-05-10T00:55:12Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started the selected prefill Q/K/V projection parity fixture slice.",
+  "Scope is limited to deterministic Qwen2.5 dense fixture metadata, CPU reference tensors, and a gated live Metal parity path for Q, K, and V outputs.",
+  "No resident generation routing, phase receipt claim, model download, BitNet quality claim, full apple-m4-metal inference claim, QK256, Neural Engine, MPSGraph, MacBook work, or broad performance claim is introduced.",
+]

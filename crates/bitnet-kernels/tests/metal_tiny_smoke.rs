@@ -3,11 +3,16 @@
 use bitnet_device_probe::{AppleBackendReceipt, AppleResolvedDevice};
 use bitnet_kernels::metal::smoke::{
     ARTIFACT_KIND, DENSE_KERNEL_FAMILY, DENSE_LAYOUT_SOURCE, DENSE_METAL_PREFILL_LINEAR_KERNEL_ID,
-    DENSE_MODEL_FAMILY, DENSE_PREFILL_IN_FEATURES, DENSE_PREFILL_LINEAR_EXECUTION_PHASE,
-    DENSE_PREFILL_LINEAR_KV_CACHE_BEHAVIOR, DENSE_PREFILL_LINEAR_PHASE_SCOPE,
-    DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND, DENSE_PREFILL_LINEAR_TIMING_SCOPE,
-    DENSE_PREFILL_OUT_FEATURES, DENSE_PREFILL_TOKENS, DENSE_TRANSPORT_LAYOUT,
-    DenseMetalPrefillLinearFixture, DenseMetalPrefillLinearReceipt, DenseMetalPrefillLinearTiming,
+    DENSE_METAL_PREFILL_QKV_KERNEL_ID, DENSE_MODEL_FAMILY, DENSE_PREFILL_IN_FEATURES,
+    DENSE_PREFILL_LINEAR_EXECUTION_PHASE, DENSE_PREFILL_LINEAR_KV_CACHE_BEHAVIOR,
+    DENSE_PREFILL_LINEAR_PHASE_SCOPE, DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND,
+    DENSE_PREFILL_LINEAR_TIMING_SCOPE, DENSE_PREFILL_OUT_FEATURES,
+    DENSE_PREFILL_QKV_ATTENTION_HEADS, DENSE_PREFILL_QKV_EXECUTION_PHASE,
+    DENSE_PREFILL_QKV_HEAD_DIM, DENSE_PREFILL_QKV_HIDDEN_SIZE, DENSE_PREFILL_QKV_KV_CACHE_BEHAVIOR,
+    DENSE_PREFILL_QKV_KV_DIM, DENSE_PREFILL_QKV_KV_HEADS, DENSE_PREFILL_QKV_PHASE_SCOPE,
+    DENSE_PREFILL_QKV_Q_DIM, DENSE_PREFILL_QKV_REST_OF_PIPELINE_BACKEND, DENSE_PREFILL_QKV_TOKENS,
+    DENSE_PREFILL_TOKENS, DENSE_TRANSPORT_LAYOUT, DenseMetalPrefillLinearFixture,
+    DenseMetalPrefillLinearReceipt, DenseMetalPrefillLinearTiming, DenseMetalPrefillQkvFixture,
     I2S_EXECUTION_PHASE, I2S_KERNEL_FAMILY, I2S_LAYOUT_SOURCE, I2S_METAL_PARITY_KERNEL_ID,
     I2S_METAL_PREFILL_CONTRIBUTION_KERNEL_ID, I2S_METAL_PROJECTION_RESIDUAL_KERNEL_ID,
     I2S_PARITY_BLOCK_SIZE, I2S_PARITY_K, I2S_PARITY_M, I2S_PARITY_N, I2S_PREFILL_EXECUTION_PHASE,
@@ -20,12 +25,13 @@ use bitnet_kernels::metal::smoke::{
     RUNTIME_API, SELECTED_BACKEND, SMOKE_WORKGROUP_SIZE, SUBGRAPH_ARTIFACT_KIND, SmokeComparison,
     TINY_METAL_ADD_PARITY_KERNEL_ID, TINY_METAL_ADD_SMOKE_KERNEL_ID, TinyMetalAddParityReceipt,
     TinyMetalAddSmokeReceipt, argmax_index, compare_tiny_add_outputs,
-    dense_metal_prefill_linear_fixture, dense_prefill_linear_shape_words, expected_tiny_add,
-    i2s_metal_parity_fixture, i2s_metal_prefill_fixture, i2s_metal_projection_residual_fixture,
-    i2s_parity_shape_words, is_apple_m4_adapter_name, metal_dense_prefill_linear_artifact_path,
-    metal_i2s_parity_artifact_path, metal_i2s_prefill_contribution_artifact_path,
-    metal_i2s_projection_residual_artifact_path, metal_parity_artifact_path,
-    metal_smoke_artifact_path, tiny_add_inputs,
+    dense_metal_prefill_linear_fixture, dense_metal_prefill_qkv_fixture,
+    dense_prefill_kv_shape_words, dense_prefill_linear_shape_words, dense_prefill_qkv_shape_words,
+    expected_tiny_add, i2s_metal_parity_fixture, i2s_metal_prefill_fixture,
+    i2s_metal_projection_residual_fixture, i2s_parity_shape_words, is_apple_m4_adapter_name,
+    metal_dense_prefill_linear_artifact_path, metal_i2s_parity_artifact_path,
+    metal_i2s_prefill_contribution_artifact_path, metal_i2s_projection_residual_artifact_path,
+    metal_parity_artifact_path, metal_smoke_artifact_path, tiny_add_inputs,
 };
 
 #[test]
@@ -269,6 +275,65 @@ fn dense_prefill_linear_receipt_records_split_cpu_and_metal_phase_boundary() {
 }
 
 #[test]
+fn dense_prefill_qkv_fixture_records_qwen_shape_contract() {
+    let fixture = dense_metal_prefill_qkv_fixture();
+
+    assert_eq!(fixture.prefill_tokens, DENSE_PREFILL_QKV_TOKENS);
+    assert_eq!(fixture.hidden_size, DENSE_PREFILL_QKV_HIDDEN_SIZE);
+    assert_eq!(fixture.attention_heads, DENSE_PREFILL_QKV_ATTENTION_HEADS);
+    assert_eq!(fixture.kv_heads, DENSE_PREFILL_QKV_KV_HEADS);
+    assert_eq!(fixture.head_dim, DENSE_PREFILL_QKV_HEAD_DIM);
+    assert_eq!(fixture.q_dim, DENSE_PREFILL_QKV_Q_DIM);
+    assert_eq!(fixture.kv_dim, DENSE_PREFILL_QKV_KV_DIM);
+    assert_eq!(fixture.attention_heads * fixture.head_dim, fixture.q_dim);
+    assert_eq!(fixture.kv_heads * fixture.head_dim, fixture.kv_dim);
+    assert!(!fixture.has_bias);
+
+    assert_eq!(fixture.activations.len(), fixture.prefill_tokens * fixture.hidden_size);
+    assert_eq!(fixture.q_weights.len(), fixture.q_dim * fixture.hidden_size);
+    assert_eq!(fixture.k_weights.len(), fixture.kv_dim * fixture.hidden_size);
+    assert_eq!(fixture.v_weights.len(), fixture.kv_dim * fixture.hidden_size);
+    assert_eq!(fixture.q_expected.len(), fixture.prefill_tokens * fixture.q_dim);
+    assert_eq!(fixture.k_expected.len(), fixture.prefill_tokens * fixture.kv_dim);
+    assert_eq!(fixture.v_expected.len(), fixture.prefill_tokens * fixture.kv_dim);
+
+    assert!(fixture.q_expected.iter().any(|value| *value != 0.0));
+    assert!(fixture.k_expected.iter().any(|value| *value != 0.0));
+    assert!(fixture.v_expected.iter().any(|value| *value != 0.0));
+}
+
+#[test]
+fn dense_prefill_qkv_fixture_contract_preserves_phase_boundary() {
+    let fixture = dense_metal_prefill_qkv_fixture();
+
+    assert_eq!(DENSE_METAL_PREFILL_QKV_KERNEL_ID, "tiny_metal_dense_prefill_qkv_projection");
+    assert_eq!(DENSE_PREFILL_QKV_EXECUTION_PHASE, "prefill_qkv_projection");
+    assert_eq!(DENSE_PREFILL_QKV_PHASE_SCOPE, "qwen2_5_dense_prefill_qkv_projection_fixture");
+    assert_eq!(DENSE_PREFILL_QKV_KV_CACHE_BEHAVIOR, "not_exercised");
+    assert_eq!(DENSE_PREFILL_QKV_REST_OF_PIPELINE_BACKEND, "apple-m4-cpu-neon");
+    assert_eq!(DENSE_KERNEL_FAMILY, "dense_f32");
+    assert_eq!(DENSE_MODEL_FAMILY, "qwen2.5");
+    assert_eq!(DENSE_LAYOUT_SOURCE, "fixture_dense_f32_row_major");
+    assert_eq!(DENSE_TRANSPORT_LAYOUT, "row_major_f32");
+    assert_eq!(
+        dense_prefill_qkv_shape_words(&fixture),
+        [
+            DENSE_PREFILL_QKV_TOKENS as u32,
+            DENSE_PREFILL_QKV_Q_DIM as u32,
+            DENSE_PREFILL_QKV_HIDDEN_SIZE as u32,
+        ],
+    );
+    assert_eq!(
+        dense_prefill_kv_shape_words(&fixture),
+        [
+            DENSE_PREFILL_QKV_TOKENS as u32,
+            DENSE_PREFILL_QKV_KV_DIM as u32,
+            DENSE_PREFILL_QKV_HIDDEN_SIZE as u32,
+        ],
+    );
+}
+
+#[test]
 fn comparison_fails_instead_of_falling_back_to_cpu() {
     let expected = [1.0_f32, 2.0, 3.0];
     let actual = [1.0_f32, 20.0, 3.0];
@@ -322,6 +387,7 @@ mod live_metal {
     const DENSE_PREFILL_LINEAR_RECEIPT_ENV: &str = "BITNET_M4_METAL_DENSE_PREFILL_LINEAR_RECEIPT";
     const DENSE_PREFILL_LINEAR_ARTIFACT_PATH_ENV: &str =
         "BITNET_M4_METAL_DENSE_PREFILL_LINEAR_ARTIFACT_PATH";
+    const RUN_DENSE_PREFILL_QKV_ENV: &str = "BITNET_RUN_M4_METAL_DENSE_PREFILL_QKV";
     const TINY_KERNEL_SMOKE_PROFILE: &str = "tiny_kernel_smoke";
 
     struct MetalSmokeOutput {
@@ -338,6 +404,13 @@ mod live_metal {
     struct MetalI2sParityOutput {
         adapter_name: String,
         output: Vec<f32>,
+    }
+
+    struct MetalQkvProjectionOutput {
+        adapter_name: String,
+        q_output: Vec<f32>,
+        k_output: Vec<f32>,
+        v_output: Vec<f32>,
     }
 
     struct BenchmarkTiming {
@@ -724,6 +797,64 @@ mod live_metal {
     }
 
     #[test]
+    fn tiny_m4_metal_dense_prefill_qkv_projection_matches_cpu_reference_when_enabled()
+    -> Result<(), Box<dyn Error>> {
+        if std::env::var(RUN_DENSE_PREFILL_QKV_ENV).as_deref() != Ok("1") {
+            eprintln!(
+                "skipping live M4 Metal dense prefill Q/K/V projection; set {RUN_DENSE_PREFILL_QKV_ENV}=1 to run it"
+            );
+            return Ok(());
+        }
+
+        let fixture = dense_metal_prefill_qkv_fixture();
+        let metal_output = run_dense_metal_prefill_qkv_fixture(&fixture)?;
+
+        if !is_apple_m4_adapter_name(&metal_output.adapter_name) {
+            return Err(io_error(format!(
+                "M4-METAL-002 dense prefill Q/K/V projection requires an Apple M4-family Metal adapter; found '{}'",
+                metal_output.adapter_name
+            )));
+        }
+
+        compare_tiny_add_outputs(&fixture.q_expected, &metal_output.q_output, 1e-4)?;
+        compare_tiny_add_outputs(&fixture.k_expected, &metal_output.k_output, 1e-4)?;
+        compare_tiny_add_outputs(&fixture.v_expected, &metal_output.v_output, 1e-4)?;
+
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "machine_id": MACHINE_ID,
+                "artifact_kind": "parity_fixture",
+                "requested_backend": REQUESTED_BACKEND,
+                "selected_backend": SELECTED_BACKEND,
+                "runtime_api": RUNTIME_API,
+                "reference_backend": REFERENCE_BACKEND,
+                "target_backend": SELECTED_BACKEND,
+                "kernel_id": DENSE_METAL_PREFILL_QKV_KERNEL_ID,
+                "kernel_family": DENSE_KERNEL_FAMILY,
+                "model_family": DENSE_MODEL_FAMILY,
+                "execution_phase": DENSE_PREFILL_QKV_EXECUTION_PHASE,
+                "phase_scope": DENSE_PREFILL_QKV_PHASE_SCOPE,
+                "layout_source": DENSE_LAYOUT_SOURCE,
+                "transport_layout": DENSE_TRANSPORT_LAYOUT,
+                "fallback_used": false,
+                "kv_cache_behavior": DENSE_PREFILL_QKV_KV_CACHE_BEHAVIOR,
+                "rest_of_pipeline_backend": DENSE_PREFILL_QKV_REST_OF_PIPELINE_BACKEND,
+                "prefill_tokens": fixture.prefill_tokens,
+                "hidden_size": fixture.hidden_size,
+                "attention_heads": fixture.attention_heads,
+                "kv_heads": fixture.kv_heads,
+                "head_dim": fixture.head_dim,
+                "q_dim": fixture.q_dim,
+                "kv_dim": fixture.kv_dim,
+                "full_metal_inference_claimed": false,
+                "resident_generation_routing_claimed": false
+            }))?
+        );
+        Ok(())
+    }
+
+    #[test]
     fn tiny_m4_metal_i2s_projection_residual_subgraph_matches_cpu_reference_when_enabled()
     -> Result<(), Box<dyn Error>> {
         if std::env::var(RUN_I2S_PROJECTION_RESIDUAL_ENV).as_deref() != Ok("1") {
@@ -1072,6 +1203,67 @@ mod live_metal {
     fn run_dense_metal_prefill_linear_fixture(
         fixture: &DenseMetalPrefillLinearFixture,
     ) -> Result<MetalI2sParityOutput, Box<dyn Error>> {
+        run_dense_metal_projection(
+            &fixture.activations,
+            &fixture.weights,
+            Some(&fixture.bias),
+            dense_prefill_linear_shape_words(fixture),
+            fixture.expected.len(),
+            DENSE_METAL_PREFILL_LINEAR_KERNEL_ID,
+            "M4-PROD-005 dense prefill linear projection",
+        )
+    }
+
+    fn run_dense_metal_prefill_qkv_fixture(
+        fixture: &DenseMetalPrefillQkvFixture,
+    ) -> Result<MetalQkvProjectionOutput, Box<dyn Error>> {
+        let q_shape = dense_prefill_qkv_shape_words(fixture);
+        let kv_shape = dense_prefill_kv_shape_words(fixture);
+        let q = run_dense_metal_projection(
+            &fixture.activations,
+            &fixture.q_weights,
+            None,
+            q_shape,
+            fixture.q_expected.len(),
+            DENSE_METAL_PREFILL_QKV_KERNEL_ID,
+            "M4-METAL-002 dense prefill Q projection",
+        )?;
+        let k = run_dense_metal_projection(
+            &fixture.activations,
+            &fixture.k_weights,
+            None,
+            kv_shape,
+            fixture.k_expected.len(),
+            DENSE_METAL_PREFILL_QKV_KERNEL_ID,
+            "M4-METAL-002 dense prefill K projection",
+        )?;
+        let v = run_dense_metal_projection(
+            &fixture.activations,
+            &fixture.v_weights,
+            None,
+            kv_shape,
+            fixture.v_expected.len(),
+            DENSE_METAL_PREFILL_QKV_KERNEL_ID,
+            "M4-METAL-002 dense prefill V projection",
+        )?;
+
+        Ok(MetalQkvProjectionOutput {
+            adapter_name: q.adapter_name,
+            q_output: q.output,
+            k_output: k.output,
+            v_output: v.output,
+        })
+    }
+
+    fn run_dense_metal_projection(
+        activations: &[f32],
+        weights: &[f32],
+        bias: Option<&[f32]>,
+        shape_words: [u32; 3],
+        output_len: usize,
+        kernel_id: &'static str,
+        proof_label: &str,
+    ) -> Result<MetalI2sParityOutput, Box<dyn Error>> {
         pollster::block_on(async move {
             let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
                 backends: wgpu::Backends::METAL,
@@ -1084,16 +1276,12 @@ mod live_metal {
                     force_fallback_adapter: false,
                 })
                 .await
-                .ok_or_else(|| {
-                    io_error(
-                        "no Metal adapter found for M4-PROD-005 dense prefill linear projection",
-                    )
-                })?;
+                .ok_or_else(|| io_error(format!("no Metal adapter found for {proof_label}")))?;
 
             let adapter_info = adapter.get_info();
             if adapter_info.backend != wgpu::Backend::Metal {
                 return Err(io_error(format!(
-                    "M4-PROD-005 dense prefill linear projection requires Metal backend, found {:?}",
+                    "{proof_label} requires Metal backend, found {:?}",
                     adapter_info.backend
                 )));
             }
@@ -1104,32 +1292,38 @@ mod live_metal {
                 .map_err(|error| io_error(format!("failed to create Metal device: {error}")))?;
 
             let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some(DENSE_METAL_PREFILL_LINEAR_KERNEL_ID),
+                label: Some(kernel_id),
                 source: wgpu::ShaderSource::Wgsl(DENSE_PREFILL_LINEAR_SHADER.into()),
             });
 
             let activations_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("tiny_metal_dense_prefill_linear_activations"),
-                contents: bytemuck::cast_slice(&fixture.activations),
+                contents: bytemuck::cast_slice(activations),
                 usage: wgpu::BufferUsages::STORAGE,
             });
             let weights_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("tiny_metal_dense_prefill_linear_weights"),
-                contents: bytemuck::cast_slice(&fixture.weights),
+                contents: bytemuck::cast_slice(weights),
                 usage: wgpu::BufferUsages::STORAGE,
             });
+            let zero_bias;
+            let bias_contents = if let Some(bias) = bias {
+                bias
+            } else {
+                zero_bias = vec![0.0_f32; shape_words[1] as usize];
+                &zero_bias
+            };
             let bias_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("tiny_metal_dense_prefill_linear_bias"),
-                contents: bytemuck::cast_slice(&fixture.bias),
+                contents: bytemuck::cast_slice(bias_contents),
                 usage: wgpu::BufferUsages::STORAGE,
             });
-            let shape_words = dense_prefill_linear_shape_words(fixture);
             let shape_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("tiny_metal_dense_prefill_linear_shape"),
                 contents: bytemuck::cast_slice(&shape_words),
                 usage: wgpu::BufferUsages::STORAGE,
             });
-            let byte_len = std::mem::size_of_val(&fixture.expected[..]) as u64;
+            let byte_len = (output_len * std::mem::size_of::<f32>()) as u64;
             let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("tiny_metal_dense_prefill_linear_output"),
                 size: byte_len,
@@ -1200,11 +1394,7 @@ mod live_metal {
                 });
                 pass.set_pipeline(&pipeline);
                 pass.set_bind_group(0, &bind_group, &[]);
-                pass.dispatch_workgroups(
-                    (fixture.expected.len() as u32).div_ceil(SMOKE_WORKGROUP_SIZE),
-                    1,
-                    1,
-                );
+                pass.dispatch_workgroups((output_len as u32).div_ceil(SMOKE_WORKGROUP_SIZE), 1, 1);
             }
 
             encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, byte_len);
