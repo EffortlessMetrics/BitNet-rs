@@ -136,9 +136,10 @@ use commands::{
     DenseGgufModelBoundaryFixturesCommand, DenseGgufNormCudaParityCommand,
     DenseGgufNormFixtureCommand, DenseGgufOneLayerCpuReferenceCommand,
     DenseGgufOneLayerCudaParityCommand, DenseGgufOneLayerPlanCommand,
-    DenseGgufRopeCudaParityCommand, ExternalReferenceInstrumentationCommand,
-    FirstTokenDivergenceCommand, InferenceCommand, InspectCommand, OutputHeadLogitsAuditCommand,
-    ReceiptsCommand, ReferenceCompareCommand, ServeCommand, TransformerLayerParityCommand,
+    DenseGgufRopeCudaParityCommand, DenseGgufSamplingPolicyCommand,
+    ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
+    InspectCommand, OutputHeadLogitsAuditCommand, ReceiptsCommand, ReferenceCompareCommand,
+    ServeCommand, TransformerLayerParityCommand,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -637,6 +638,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Emit dense GGUF KV-cache policy receipts for the strict CUDA lane
     DenseGgufKvCachePolicy(Box<DenseGgufKvCachePolicyCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Emit dense GGUF logits-transfer and sampling policy receipts
+    DenseGgufSamplingPolicy(Box<DenseGgufSamplingPolicyCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
@@ -1482,6 +1487,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufModelBoundaryFixtures(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufKvCachePolicy(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufSamplingPolicy(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufNormFixture(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

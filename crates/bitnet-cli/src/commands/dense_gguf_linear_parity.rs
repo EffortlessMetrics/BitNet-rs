@@ -58,7 +58,7 @@ use bitnet_receipts_core::{
     DENSE_GGUF_NORM_FIXTURE_ARTIFACT_KIND, DENSE_GGUF_ONE_LAYER_CPU_REFERENCE_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND, DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND,
-    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
+    DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND, DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
     validate_dense_gguf_all_layer_execution_plan_receipt_json,
     validate_dense_gguf_attention_score_cuda_parity_receipt_json,
     validate_dense_gguf_attention_score_fixture_receipt_json,
@@ -78,6 +78,7 @@ use bitnet_receipts_core::{
     validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
     validate_dense_gguf_rope_cuda_parity_receipt_json,
+    validate_dense_gguf_sampling_policy_receipt_json,
 };
 use clap::Args;
 use memmap2::Mmap;
@@ -565,6 +566,87 @@ impl DenseGgufKvCachePolicyCommand {
             &timestamp_utc,
         )?;
         validate_dense_gguf_kv_cache_policy_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
+/// Emit a dense GGUF logits-transfer and sampling policy receipt.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufSamplingPolicyCommand {
+    /// Dense GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Number of token positions used to derive the fixture logits boundary.
+    #[arg(long, default_value_t = 4)]
+    pub seq_len: usize,
+
+    /// Number of top logits to record for deterministic sampler policy evidence.
+    #[arg(long, default_value_t = 5)]
+    pub top_k: usize,
+
+    /// CUDA device index used for route identity and claim-boundary receipts.
+    #[arg(long, default_value_t = 0)]
+    pub device_index: usize,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufSamplingPolicyCommand {
+    pub async fn execute(&self) -> Result<()> {
+        if self.seq_len == 0 {
+            bail!("dense GGUF sampling policy requires --seq-len > 0");
+        }
+        if self.top_k == 0 {
+            bail!("dense GGUF sampling policy requires --top-k > 0");
+        }
+
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
+        if !probe.available {
+            bail!("CUDA-DENSE-040 requires CUDA probe success: {:?}", probe.failure_reason);
+        }
+        let device_name = probe.selected_device_name.as_deref().unwrap_or("unknown");
+        if !is_rtx5070ti_device_name(device_name) {
+            bail!("CUDA-DENSE-040 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
+        }
+
+        let policy =
+            dense_gguf_sampling_policy_from_reader(&reader, &inspection, self.seq_len, self.top_k)?;
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_sampling_policy_receipt_json(
+            &inspection,
+            &policy,
+            Some(&probe),
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+        )?;
+        validate_dense_gguf_sampling_policy_receipt_json(&receipt)?;
 
         if let Some(path) = &self.json_out {
             if let Some(parent) = path.parent() {
@@ -1948,6 +2030,33 @@ struct DenseGgufKvCachePolicy {
 }
 
 #[derive(Debug, Clone)]
+struct DenseGgufSamplingPolicy {
+    policy_id: String,
+    model_family: String,
+    architecture: String,
+    seq_len: usize,
+    vocab_size: usize,
+    logits_len: usize,
+    logits_sha256: String,
+    logits_element_dtype: &'static str,
+    logits_element_bytes: usize,
+    logits_transfer_bytes_per_step_estimate: u64,
+    logits_top_k: Vec<DenseGgufLogitTopKEntry>,
+    top_k: usize,
+    selected_token_id_from_fixture_logits: usize,
+    sampler_backend: &'static str,
+    sampler_location: &'static str,
+    sampler_mode: &'static str,
+    temperature: f32,
+    top_k_filter: usize,
+    top_p: f32,
+    repetition_penalty: f32,
+    deterministic: bool,
+    tie_break_policy: &'static str,
+    rng_required: bool,
+}
+
+#[derive(Debug, Clone)]
 struct DenseLayerPlanEntry {
     op: DispatchOp,
     role: String,
@@ -3051,6 +3160,83 @@ fn dense_gguf_kv_cache_policy_from_reader(
         decode_read_bytes_per_step_estimate,
         decode_write_bytes_per_step_estimate,
         max_context_bytes_estimate,
+    })
+}
+
+fn dense_gguf_sampling_policy_from_reader(
+    reader: &GgufReader<'_>,
+    inspection: &DenseGgufDescriptorInspection,
+    seq_len: usize,
+    requested_top_k: usize,
+) -> Result<DenseGgufSamplingPolicy> {
+    if seq_len == 0 {
+        bail!("dense GGUF sampling policy requires a non-zero sequence length");
+    }
+    if requested_top_k == 0 {
+        bail!("dense GGUF sampling policy requires a non-zero top-k");
+    }
+    if !inspection.required_roles_present || !inspection.strict_descriptor_complete {
+        bail!("dense GGUF sampling policy requires complete dense descriptor coverage");
+    }
+
+    let fixtures = dense_gguf_model_boundary_fixtures_from_reader(
+        reader,
+        inspection,
+        seq_len,
+        requested_top_k,
+    )
+    .context("failed to derive dense GGUF logits boundary for sampling policy")?;
+    if fixtures.logits_len == 0 || fixtures.vocab_size == 0 {
+        bail!("dense GGUF sampling policy requires non-empty logits and vocab");
+    }
+    if fixtures.logits_len != fixtures.vocab_size {
+        bail!(
+            "dense GGUF sampling policy logits/vocab mismatch: logits_len={} vocab_size={}",
+            fixtures.logits_len,
+            fixtures.vocab_size
+        );
+    }
+    let selected = fixtures
+        .logits_top_k
+        .first()
+        .ok_or_else(|| anyhow!("dense GGUF sampling policy requires a top logit entry"))?;
+    let selected_token_id_from_fixture_logits = selected.token_id;
+    let logits_element_bytes = 4usize;
+    let logits_transfer_bytes_per_step_estimate = checked_u64_mul(
+        fixtures.logits_len as u64,
+        logits_element_bytes as u64,
+        "logits_transfer_bytes_per_step_estimate",
+    )?;
+
+    Ok(DenseGgufSamplingPolicy {
+        policy_id: format!(
+            "dense_gguf_sampling_policy_{}_vocab{}_top{}",
+            sanitize_label(&inspection.model_family),
+            fixtures.vocab_size,
+            fixtures.logits_top_k.len()
+        ),
+        model_family: inspection.model_family.clone(),
+        architecture: inspection.architecture.clone(),
+        seq_len: fixtures.seq_len,
+        vocab_size: fixtures.vocab_size,
+        logits_len: fixtures.logits_len,
+        logits_sha256: fixtures.logits_sha256,
+        logits_element_dtype: "f32",
+        logits_element_bytes,
+        logits_transfer_bytes_per_step_estimate,
+        logits_top_k: fixtures.logits_top_k,
+        top_k: requested_top_k.min(fixtures.logits_len),
+        selected_token_id_from_fixture_logits,
+        sampler_backend: "bitnet-sampling",
+        sampler_location: "cpu",
+        sampler_mode: "greedy",
+        temperature: 0.0,
+        top_k_filter: 0,
+        top_p: 1.0,
+        repetition_penalty: 1.0,
+        deterministic: true,
+        tie_break_policy: "lowest_token_id",
+        rng_required: false,
     })
 }
 
@@ -8034,6 +8220,201 @@ fn dense_gguf_kv_cache_policy_receipt_json(
     }))
 }
 
+fn dense_gguf_sampling_policy_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    policy: &DenseGgufSamplingPolicy,
+    probe: Option<&bitnet_device_probe::NvidiaCudaProbe>,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+) -> Result<Value> {
+    if policy.model_family != inspection.model_family
+        || policy.architecture != inspection.architecture
+    {
+        bail!(
+            "dense GGUF sampling policy identity mismatch: inspection={}/{} policy={}/{}",
+            inspection.model_family,
+            inspection.architecture,
+            policy.model_family,
+            policy.architecture
+        );
+    }
+    if policy.logits_len == 0 || policy.vocab_size == 0 || policy.logits_top_k.is_empty() {
+        bail!("dense GGUF sampling policy requires logits and top-k evidence");
+    }
+    if policy.logits_len != policy.vocab_size {
+        bail!(
+            "dense GGUF sampling policy logits/vocab mismatch: logits_len={} vocab_size={}",
+            policy.logits_len,
+            policy.vocab_size
+        );
+    }
+
+    let summary = ModelDispatchSummary {
+        total_ops: 1,
+        cuda_bitnet_qk256_ops: 0,
+        cuda_dense_regular_llm_ops: 1,
+        cpu_fallback_ops: 0,
+        unsupported_ops: 0,
+        fallback_used: false,
+        selected_route: Some(ModelDispatchBackend::CudaDenseRegularLlm),
+        strict_cuda_ready: true,
+    };
+    let execution_plan = execution_plan_receipt(ExecutionPlanReceiptInput {
+        model_family: &inspection.model_family,
+        quantization: "dense_fp16",
+        requested_backend: HARDWARE_LANE,
+        selected_backend: HARDWARE_LANE,
+        runtime_api: "cuda",
+        strict_fallback_policy: "reject",
+        summary,
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+    });
+    let top_k_entries = policy
+        .logits_top_k
+        .iter()
+        .map(|entry| {
+            json!({
+                "rank": entry.rank as u64,
+                "token_id": entry.token_id as u64,
+                "value": entry.value
+            })
+        })
+        .collect::<Vec<_>>();
+
+    Ok(json!({
+        "schema": 1,
+        "artifact_kind": DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND,
+        "artifact_path": artifact_path,
+        "claim": "dense_gguf_sampling_policy_recorded",
+        "machine_id": MACHINE_ID,
+        "hardware_lane": HARDWARE_LANE,
+        "timestamp_utc": timestamp_utc,
+        "requested_backend": HARDWARE_LANE,
+        "selected_backend": HARDWARE_LANE,
+        "runtime_api": "cuda",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "cuda": cuda_identity_json(probe),
+        "model": {
+            "model_family": inspection.model_family,
+            "architecture": inspection.architecture,
+            "artifact_kind": "dense_gguf",
+            "file": model_path.display().to_string(),
+            "sha256": model_sha256
+        },
+        "execution_path": {
+            "model_class": "dense_regular_llm",
+            "kernel_family": "dense_cuda_sampling_policy_route",
+            "quantization_family": "dense_gguf_q8_0_f16_logits_sampling_policy_contract",
+            "bitnet_packed_kernel_proof": false,
+            "qk256_proof": false
+        },
+        "execution_plan": execution_plan,
+        "descriptor_coverage": {
+            "schema": 1,
+            "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+            "tensor_count": inspection.tensor_count,
+            "metadata_count": inspection.metadata_count as u64,
+            "required_roles_present": inspection.required_roles_present,
+            "strict_descriptor_complete": inspection.strict_descriptor_complete,
+            "dense_cuda_route_status": inspection.dense_cuda_route_status,
+            "quantization_families": inspection.quantization_families,
+            "bitnet_packed_marker_found": inspection.bitnet_packed_marker_found,
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "sampling_policy": {
+            "schema": 1,
+            "policy_id": policy.policy_id,
+            "policy_scope": "dense_qwen_logits_to_sampler_boundary",
+            "logits_source": "dense_gguf_model_boundary_lm_head_logits",
+            "logits_sha256": policy.logits_sha256,
+            "logits_len": policy.logits_len as u64,
+            "vocab_size": policy.vocab_size as u64,
+            "seq_len": policy.seq_len as u64,
+            "logits_dtype": policy.logits_element_dtype,
+            "logits_element_bytes": policy.logits_element_bytes as u64,
+            "logits_transfer_bytes_per_step_estimate": policy.logits_transfer_bytes_per_step_estimate,
+            "logits_transfer_path": "cuda_lm_head_logits_to_cpu_sampler",
+            "logits_transfer_required_for_cpu_sampling": true,
+            "logits_transfer_bytes_measured": false,
+            "logits_transfer_timing_measured": false,
+            "sampler_backend": policy.sampler_backend,
+            "sampler_location": policy.sampler_location,
+            "sampler_mode": policy.sampler_mode,
+            "temperature": policy.temperature,
+            "top_k_filter": policy.top_k_filter as u64,
+            "top_p": policy.top_p,
+            "repetition_penalty": policy.repetition_penalty,
+            "deterministic": policy.deterministic,
+            "tie_break_policy": policy.tie_break_policy,
+            "rng_required": policy.rng_required,
+            "selected_token_id_from_fixture_logits": policy.selected_token_id_from_fixture_logits as u64,
+            "selected_token_scope": "fixture_logits_only_not_generation",
+            "top_k": policy.top_k as u64,
+            "top_k_entries": top_k_entries,
+            "sampling_policy_claimed": true,
+            "sampling_integration_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "remaining_model_boundary_gaps": {
+            "schema": 1,
+            "gaps": [],
+            "all_model_boundary_policies_governed": true,
+            "kv_cache_policy_claimed": true,
+            "sampling_policy_claimed": true,
+            "sampling_integration_claimed": false,
+            "qwen_one_token_cuda_blocked": false,
+            "qwen_short_decode_cuda_blocked": true,
+            "qwen_chat_cuda_blocked": true,
+            "next_required_proof": "qwen_one_token_strict_cuda_proof",
+            "dense_gguf_inference_claimed": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
+        },
+        "claim_boundary": {
+            "dense_regular_llm_cuda_claimed": true,
+            "dense_tensor_residency_claimed": false,
+            "dense_gguf_descriptor_inspection_claimed": true,
+            "dense_gguf_linear_fixture_extraction_claimed": true,
+            "dense_gguf_linear_cuda_parity_claimed": false,
+            "dense_gguf_linear_role_sweep_cuda_parity_claimed": false,
+            "dense_gguf_one_layer_execution_plan_claimed": true,
+            "dense_gguf_one_layer_cpu_reference_claimed": true,
+            "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+            "dense_gguf_all_layer_execution_plan_claimed": true,
+            "dense_gguf_model_boundary_fixtures_claimed": true,
+            "kv_cache_policy_claimed": true,
+            "kv_cache_cuda_residency_claimed": false,
+            "sampling_policy_claimed": true,
+            "sampling_integration_claimed": false,
+            "dense_gguf_one_layer_inference_claimed": false,
+            "dense_gguf_inference_claimed": false,
+            "qwen_one_token_cuda_claimed": false,
+            "qwen_short_decode_cuda_claimed": false,
+            "qwen_chat_cuda_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "speedup_claim": false,
+            "persistent_session_residency_claimed": false,
+            "full_cuda_residency_claimed": false
+        },
+        "error": null
+    }))
+}
+
 fn dense_gguf_one_layer_cpu_reference_receipt_json(
     inspection: &DenseGgufDescriptorInspection,
     reference: &DenseGgufOneLayerCpuReference,
@@ -9487,6 +9868,61 @@ mod tests {
         assert_eq!(
             receipt["remaining_model_boundary_gaps"]["next_required_proof"],
             "dense_gguf_sampling_policy_receipt"
+        );
+    }
+
+    #[test]
+    fn dense_gguf_sampling_policy_receipt_records_logits_transfer_and_sampler() {
+        let data = build_model_boundary_qwen_gguf();
+        let reader = GgufReader::new(&data).expect("parse sampling policy qwen fixture");
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader).expect("inspect");
+        let policy = dense_gguf_sampling_policy_from_reader(&reader, &inspection, 4, 3)
+            .expect("sampling policy");
+
+        assert_eq!(policy.seq_len, 4);
+        assert_eq!(policy.logits_len, policy.vocab_size);
+        assert_eq!(policy.logits_element_bytes, 4);
+        assert_eq!(policy.logits_transfer_bytes_per_step_estimate, policy.logits_len as u64 * 4);
+        assert_eq!(policy.sampler_backend, "bitnet-sampling");
+        assert_eq!(policy.sampler_location, "cpu");
+        assert_eq!(policy.sampler_mode, "greedy");
+        assert_eq!(policy.temperature, 0.0);
+        assert_eq!(policy.top_k_filter, 0);
+        assert!(policy.deterministic);
+        assert!(!policy.rng_required);
+
+        let receipt = dense_gguf_sampling_policy_receipt_json(
+            &inspection,
+            &policy,
+            None,
+            Path::new("synthetic-qwen3-q8_0-sampling-policy.gguf"),
+            &"0".repeat(64),
+            "target/bitnet/receipts/dense-gguf-sampling-policy.json",
+            "2026-05-09T00:00:00Z",
+        )
+        .unwrap();
+
+        validate_dense_gguf_sampling_policy_receipt_json(&receipt).unwrap();
+        assert_eq!(receipt["artifact_kind"], "dense_gguf_sampling_policy");
+        assert_eq!(receipt["execution_plan"]["cuda_dense_regular_llm_ops"], 1);
+        assert_eq!(
+            receipt["sampling_policy"]["logits_transfer_path"],
+            "cuda_lm_head_logits_to_cpu_sampler"
+        );
+        assert_eq!(receipt["sampling_policy"]["sampler_backend"], "bitnet-sampling");
+        assert_eq!(receipt["sampling_policy"]["sampler_location"], "cpu");
+        assert_eq!(receipt["sampling_policy"]["sampler_mode"], "greedy");
+        assert_eq!(receipt["sampling_policy"]["sampling_policy_claimed"], true);
+        assert_eq!(receipt["sampling_policy"]["sampling_integration_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["sampling_policy_claimed"], true);
+        assert_eq!(receipt["claim_boundary"]["sampling_integration_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["qwen_one_token_cuda_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["dense_gguf_inference_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["speedup_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(
+            receipt["remaining_model_boundary_gaps"]["next_required_proof"],
+            "qwen_one_token_strict_cuda_proof"
         );
     }
 

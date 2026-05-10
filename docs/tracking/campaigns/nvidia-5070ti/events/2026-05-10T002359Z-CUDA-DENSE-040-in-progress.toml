@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T00:23:59Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-040"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-040-sampling-policy"
+
+notes = [
+  "Started CUDA-DENSE-040 implementation for governed dense GGUF logits-transfer and sampling-policy receipts after CUDA-DENSE-039.",
+  "Scope is LM-head logits source/hash/length/top-k evidence, deterministic greedy CPU sampler policy, estimated D2H logits bytes per decode step, and validator rejection of runtime sampling integration, inference, speedup, full-residency, and BitNet packed proof claims.",
+  "The implementation may commit a real verified Qwen sampling-policy receipt; no tokenizer, loader, transformer runtime, QK256, BitNet CUDA, server, runtime sampling integration, CUDA kernel math, one-token, short-decode, chat, speedup, persistent-session, or full-residency claim is in scope.",
+]

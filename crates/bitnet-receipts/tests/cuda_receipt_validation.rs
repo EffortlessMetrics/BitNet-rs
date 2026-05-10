@@ -26,6 +26,7 @@ use bitnet_receipts::{
     validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
     validate_dense_gguf_rope_cuda_parity_receipt_json,
+    validate_dense_gguf_sampling_policy_receipt_json,
     validate_dense_gguf_tensor_descriptor_inspection_receipt_json,
     validate_dense_regular_llm_cuda_persistent_residency_receipt_json,
     validate_dense_regular_llm_cuda_receipt_json,
@@ -275,6 +276,18 @@ fn committed_dense_gguf_kv_cache_policy_receipt_validates() {
     .unwrap();
 
     validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn committed_dense_gguf_sampling_policy_receipt_validates() {
+    let receipt: Value = serde_json::from_str(include_str!(
+        "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-sampling-policy-qwen25-q8.json"
+    ))
+    .unwrap();
+
+    validate_dense_gguf_sampling_policy_receipt_json(&receipt).unwrap();
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
 }
@@ -1171,6 +1184,58 @@ fn dense_gguf_kv_cache_policy_rejects_bitnet_proof_claim() {
     receipt["kv_cache_policy"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
 
     let err = validate_dense_gguf_kv_cache_policy_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_sampling_policy_receipt_validates_without_inference_claims() {
+    let receipt = valid_dense_gguf_sampling_policy_receipt();
+
+    validate_dense_gguf_sampling_policy_receipt_json(&receipt).unwrap();
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+}
+
+#[test]
+fn dense_gguf_sampling_policy_rejects_sampling_integration_claim() {
+    let mut receipt = valid_dense_gguf_sampling_policy_receipt();
+    receipt["claim_boundary"]["sampling_integration_claimed"] = json!(true);
+    receipt["sampling_policy"]["sampling_integration_claimed"] = json!(true);
+
+    let err = validate_dense_gguf_sampling_policy_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("sampling_integration_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_sampling_policy_rejects_qwen_one_token_claim() {
+    let mut receipt = valid_dense_gguf_sampling_policy_receipt();
+    receipt["claim_boundary"]["qwen_one_token_cuda_claimed"] = json!(true);
+    receipt["sampling_policy"]["qwen_one_token_cuda_claimed"] = json!(true);
+
+    let err = validate_dense_gguf_sampling_policy_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("qwen_one_token_cuda_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_sampling_policy_rejects_bad_logits_transfer_byte_math() {
+    let mut receipt = valid_dense_gguf_sampling_policy_receipt();
+    receipt["sampling_policy"]["logits_transfer_bytes_per_step_estimate"] = json!(1234);
+
+    let err = validate_dense_gguf_sampling_policy_receipt_json(&receipt).unwrap_err().to_string();
+
+    assert!(err.contains("logits_transfer_bytes_per_step_estimate"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_sampling_policy_rejects_bitnet_proof_claim() {
+    let mut receipt = valid_dense_gguf_sampling_policy_receipt();
+    receipt["claim_boundary"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+    receipt["sampling_policy"]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    let err = validate_dense_gguf_sampling_policy_receipt_json(&receipt).unwrap_err().to_string();
 
     assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
 }
@@ -2805,6 +2870,79 @@ fn valid_dense_gguf_kv_cache_policy_receipt() -> Value {
         },
         "error": null
     })
+}
+
+fn valid_dense_gguf_sampling_policy_receipt() -> Value {
+    let mut receipt = valid_dense_gguf_kv_cache_policy_receipt();
+    receipt["artifact_kind"] = json!("dense_gguf_sampling_policy");
+    receipt["artifact_path"] = json!("target/bitnet/receipts/dense-gguf-sampling-policy.json");
+    receipt["claim"] = json!("dense_gguf_sampling_policy_recorded");
+    receipt["model"]["file"] = json!("synthetic-dense-gguf-sampling-policy");
+    receipt["execution_path"]["kernel_family"] = json!("dense_cuda_sampling_policy_route");
+    receipt["execution_path"]["quantization_family"] =
+        json!("dense_gguf_q8_0_f16_logits_sampling_policy_contract");
+    receipt["sampling_policy"] = json!({
+        "schema": 1,
+        "policy_id": "dense_gguf_sampling_policy_qwen_vocab8_top3",
+        "policy_scope": "dense_qwen_logits_to_sampler_boundary",
+        "logits_source": "dense_gguf_model_boundary_lm_head_logits",
+        "logits_sha256": format!("{:064x}", 22),
+        "logits_len": 8,
+        "vocab_size": 8,
+        "seq_len": 4,
+        "logits_dtype": "f32",
+        "logits_element_bytes": 4,
+        "logits_transfer_bytes_per_step_estimate": 32,
+        "logits_transfer_path": "cuda_lm_head_logits_to_cpu_sampler",
+        "logits_transfer_required_for_cpu_sampling": true,
+        "logits_transfer_bytes_measured": false,
+        "logits_transfer_timing_measured": false,
+        "sampler_backend": "bitnet-sampling",
+        "sampler_location": "cpu",
+        "sampler_mode": "greedy",
+        "temperature": 0.0,
+        "top_k_filter": 0,
+        "top_p": 1.0,
+        "repetition_penalty": 1.0,
+        "deterministic": true,
+        "tie_break_policy": "lowest_token_id",
+        "rng_required": false,
+        "selected_token_id_from_fixture_logits": 2,
+        "selected_token_scope": "fixture_logits_only_not_generation",
+        "top_k": 3,
+        "top_k_entries": [
+            {"rank": 0, "token_id": 2, "value": 3.0},
+            {"rank": 1, "token_id": 1, "value": 2.0},
+            {"rank": 2, "token_id": 0, "value": 1.0}
+        ],
+        "sampling_policy_claimed": true,
+        "sampling_integration_claimed": false,
+        "qwen_one_token_cuda_claimed": false,
+        "qwen_short_decode_cuda_claimed": false,
+        "qwen_chat_cuda_claimed": false,
+        "dense_gguf_inference_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "speedup_claim": false,
+        "persistent_session_residency_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["remaining_model_boundary_gaps"] = json!({
+        "schema": 1,
+        "gaps": [],
+        "all_model_boundary_policies_governed": true,
+        "kv_cache_policy_claimed": true,
+        "sampling_policy_claimed": true,
+        "sampling_integration_claimed": false,
+        "qwen_one_token_cuda_blocked": false,
+        "qwen_short_decode_cuda_blocked": true,
+        "qwen_chat_cuda_blocked": true,
+        "next_required_proof": "qwen_one_token_strict_cuda_proof",
+        "dense_gguf_inference_claimed": false,
+        "speedup_claim": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["claim_boundary"]["sampling_policy_claimed"] = json!(true);
+    receipt
 }
 
 fn dense_boundary_fixture(
