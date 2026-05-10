@@ -22,26 +22,25 @@ the same cache, tokenizer, backend, fallback, streaming, and receipt discipline.
 | Work item | Status | Notes |
 |---|---|---|
 | M4-SERVE-001 | merged | Defined command and configuration contract. |
-| M4-SERVE-002 | in progress | Add health and ready endpoint behavior. |
-| M4-SERVE-003 | pending | Add streaming completion endpoint. |
+| M4-SERVE-002 | merged | Added health and ready endpoint behavior. |
+| M4-SERVE-003 | ready | Add streaming completion endpoint. |
 | M4-SERVE-004 | pending | Add receipt export for server requests. |
 | M4-SERVE-005 | pending | Integrate doctor/smoke/regression readiness flow. |
 
 ## Current Contract
 
 `M4-SERVE-001` defines the intended `bitnet mac serve` command/config contract
-in `docs/slm/apple-m4-local-server-command-config.md`. The contract keeps the
-first slice docs-only: no endpoint implementation, OpenAI compatibility,
-production-readiness, BitNet, Metal, QK256, Neural Engine, MPSGraph, or broad
-performance claim is introduced.
+in `docs/slm/apple-m4-local-server-command-config.md`.
 
-After `M4-SERVE-001`, the next executable item is `M4-SERVE-002`: health and
-ready endpoint behavior for model-cache, tokenizer, backend/fallback, disk/cache,
-and unsupported-backend state without expensive generation by default.
+`M4-SERVE-002` added the initial `bitnet mac serve` endpoint slice: `/health`,
+`/health/live`, `/ready`, and `/health/ready`, with startup cache verification,
+strict `apple-m4-cpu-neon` routing, explicit no-hidden-fallback state, and no
+generation by default. It remains intentionally short of completions, OpenAI
+compatibility, receipt export, and production readiness.
 
-`M4-SERVE-002` adds the initial `bitnet mac serve` endpoint slice: `/health`,
-`/health/live`, `/ready`, and `/health/ready`. It remains intentionally short
-of completions, OpenAI compatibility, receipt export, and production readiness.
+The next executable item is `M4-SERVE-003`: streaming local dense SLM completion
+behavior through the same supported model-cache, tokenizer, backend, fallback,
+resident-session, and receipt discipline.
 
 ## Claim Boundary
 

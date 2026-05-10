@@ -59,7 +59,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-002"
-status = "in_progress"
+status = "merged"
+pr = 4363
+merge_sha = "64c70ec866af39cde68c5a5fd022e38ea5d26971"
 branch = "codex/apple-m4-local-server/M4-SERVE-002-health-ready"
 stackable = false
 review_mode = "codex_premerge"
@@ -95,13 +97,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-003"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-local-server/M4-SERVE-003-streaming-completions"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-SERVE-002"]
+blocked_by = []
 acceptance = "Add a streaming local completion endpoint for the supported dense SLM path, preserving model/tokenizer authority, resident session reuse, generated text and token IDs, backend identity, fallback_used=false, and timing receipts."
 commands = [
   "cargo fmt --all -- --check",

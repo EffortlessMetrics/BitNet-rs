@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T00:05:00Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-002"
+event = "merged"
+actor = "codex"
+pr = 4363
+merge_sha = "64c70ec866af39cde68c5a5fd022e38ea5d26971"
+previous_status = "in_progress"
+next_item = "M4-SERVE-003"
+
+notes = [
+  "Merged the initial bitnet mac serve health/readiness endpoint slice.",
+  "The server now exposes /health, /health/live, /ready, and /health/ready after verifying supported dense SLM cache state, tokenizer authority, apple-m4-cpu-neon routing, receipt directory readiness, and no hidden fallback.",
+  "The merged item does not implement generation, streaming completions, receipt export, OpenAI compatibility, production readiness, BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, model binary, or broad performance claims.",
+  "Promoted M4-SERVE-003 to ready for streaming local dense SLM completions.",
+]
