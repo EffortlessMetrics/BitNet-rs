@@ -3424,7 +3424,7 @@ impl TemplateType {
 
             // Qwen family
             "qwen2.5" | "qwen-2.5" => Some(Self::Qwen25Chat),
-            "qwen" | "qwen2" => Some(Self::QwenChat),
+            "qwen" | "qwen2" | "qwen3" | "qwen-3" | "qwen_3" => Some(Self::QwenChat),
 
             // Gemma family
             "gemma2" | "gemma-2" => Some(Self::Gemma2Chat),
@@ -4369,6 +4369,7 @@ mod tests {
             ("mixtral", TemplateType::MixtralInstruct),
             ("qwen", TemplateType::QwenChat),
             ("qwen2.5", TemplateType::Qwen25Chat),
+            ("qwen3", TemplateType::QwenChat),
             ("gemma", TemplateType::GemmaChat),
             ("gemma2", TemplateType::Gemma2Chat),
             ("codegemma", TemplateType::CodeGemma),

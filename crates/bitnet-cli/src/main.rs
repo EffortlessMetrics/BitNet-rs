@@ -8427,7 +8427,7 @@ fn slm_warm_session_metal_qkv_route_supported() -> bool {
     bitnet_kernels::metal::dense_prefill_qkv::dense_prefill_qkv_runtime_api_available()
 }
 
-#[cfg(any(not(feature = "full-cli"), not(feature = "metal")))]
+#[cfg(all(feature = "full-cli", not(feature = "metal")))]
 fn slm_warm_session_metal_qkv_route_supported() -> bool {
     false
 }
@@ -8597,7 +8597,7 @@ fn run_slm_warm_session_metal_qkv_phase(
     Ok(receipt_json)
 }
 
-#[cfg(any(not(feature = "full-cli"), not(feature = "metal")))]
+#[cfg(all(feature = "full-cli", not(feature = "metal")))]
 fn run_slm_warm_session_metal_qkv_phase(
     _prompt_index: usize,
     _generated_token_ids: &[u32],

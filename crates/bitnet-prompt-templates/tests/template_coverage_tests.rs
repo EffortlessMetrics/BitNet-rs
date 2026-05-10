@@ -233,6 +233,7 @@ fn test_major_model_families_have_templates() {
         ("mixtral", TemplateType::MixtralInstruct),
         ("qwen", TemplateType::QwenChat),
         ("qwen2.5", TemplateType::Qwen25Chat),
+        ("qwen3", TemplateType::QwenChat),
         ("gemma", TemplateType::GemmaChat),
         ("gemma2", TemplateType::Gemma2Chat),
         ("deepseek", TemplateType::DeepSeekChat),
