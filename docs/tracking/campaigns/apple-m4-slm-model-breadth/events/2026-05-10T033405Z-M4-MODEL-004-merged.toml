@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T03:34:05Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-004"
+event = "merged"
+actor = "codex"
+pr = 4414
+merge_sha = "98e556d0230f61c045a25ccfc5cb7e118acadcbe"
+previous_status = "in_progress"
+next_item = "M4-MODEL-005"
+
+notes = [
+  "Merged cache/model-registration for Qwen2.5 1.5B Q4_K_M as an explicit non-default M4 dense SLM model ID.",
+  "Recorded fetch/verify/list behavior, Mac cache checks, and model-cache metadata without changing the default model.",
+  "Promoted M4-MODEL-005 to ready for model matrix and M4 user-envelope updates.",
+  "No model binary, BitNet claim, full Metal claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, or broad performance claim was introduced.",
+]

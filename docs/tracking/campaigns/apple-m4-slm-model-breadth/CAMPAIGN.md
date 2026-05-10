@@ -26,8 +26,8 @@ mini path without weakening the completed Qwen appliance baseline.
 | M4-MODEL-001 | merged | Selected the next exact dense instruct GGUF candidate set. |
 | M4-MODEL-002 | merged | Ran reference output sanity and recorded exact artifact metadata. |
 | M4-MODEL-003 | merged | Rust M4 quality evidence rejects SmolLM2 for this round. |
-| M4-MODEL-004 | in progress | Register the accepted larger Qwen2.5 candidate in cache/model selection. |
-| M4-MODEL-005 | blocked | Update model matrix and user envelope after registration. |
+| M4-MODEL-004 | merged | Registered the accepted larger Qwen2.5 candidate in cache/model selection. |
+| M4-MODEL-005 | ready | Update model matrix and user envelope after registration. |
 | M4-MODEL-006 | merged | Select the next exact candidate after the failed Qwen3/SmolLM2 round. |
 | M4-MODEL-007 | merged | Gemma is rejected by the current reference runner. |
 | M4-MODEL-008 | blocked | No reference-good candidate is available for Rust M4 quality. |
