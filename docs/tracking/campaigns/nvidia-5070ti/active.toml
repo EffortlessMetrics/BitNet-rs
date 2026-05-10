@@ -2707,10 +2707,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-040"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-dense-040-sampling-policy"
 pr = 4370
 head_sha = "07fcc58d362e3e3109eaaf985b9616b81e362b02"
+merge_sha = "5cf420a3e0e3b3abf3df17196fc5b58c5060acde"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
