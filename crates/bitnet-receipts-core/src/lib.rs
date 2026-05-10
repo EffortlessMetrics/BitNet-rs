@@ -203,6 +203,14 @@ pub const DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND: &str =
 /// allocation, token generation, speedup, full CUDA residency, or BitNet
 /// packed I2_S/QK256 proof.
 pub const DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND: &str = "dense_gguf_kv_cache_policy";
+
+/// Artifact kind for dense GGUF sampling-policy receipts.
+///
+/// This receipt records the governed logits-transfer and deterministic sampler
+/// policy needed before Qwen one-token CUDA proof. It is not token generation,
+/// runtime sampling integration, speedup, full CUDA residency, or BitNet packed
+/// I2_S/QK256 proof.
+pub const DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND: &str = "dense_gguf_sampling_policy";
 const DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER: &[&str] =
     &["attention_softmax", "attention_v_mix", "mlp_activation"];
 const DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER: &[&str] =
@@ -5134,6 +5142,245 @@ pub fn validate_dense_gguf_kv_cache_policy_receipt_json(receipt: &Value) -> Resu
     Ok(())
 }
 
+/// Validate dense GGUF logits-transfer and sampling-policy evidence.
+///
+/// This artifact records the governed logits boundary and deterministic CPU
+/// sampler policy needed before Qwen one-token CUDA proof. It does not execute
+/// runtime sampling, generate tokens, claim dense GGUF inference, claim speedup,
+/// claim full CUDA residency, or prove BitNet packed I2_S/QK256 execution.
+pub fn validate_dense_gguf_sampling_policy_receipt_json(receipt: &Value) -> Result<()> {
+    require_u64_eq(receipt, "schema", 1)?;
+    require_string_eq(receipt, "artifact_kind", DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND)?;
+    require_string_eq(receipt, "claim", "dense_gguf_sampling_policy_recorded")?;
+    require_string_eq(receipt, "hardware_lane", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(receipt, "runtime_api", "cuda")?;
+    require_bool_eq(receipt, "fallback_used", false)?;
+    require_null(receipt, "fallback_backend")?;
+    require_null(receipt, "fallback_reason")?;
+    require_bool_eq(receipt, "speedup_claim", false)?;
+    require_null(receipt, "error")?;
+
+    let cuda = object_field(receipt, "cuda")?;
+    require_bool_eq(cuda, "available", true)?;
+    require_positive_u64(cuda, "device_count")?;
+    require_cuda_device_index(cuda)?;
+    require_rtx_5070_ti_name(cuda, "device_name")?;
+    require_string_eq(cuda, "compute_capability", "12.0")?;
+    require_string_non_empty_not_tbd(cuda, "driver_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_runtime_version")?;
+    require_string_non_empty_not_tbd(cuda, "cuda_toolkit_version")?;
+    require_string_non_empty_not_tbd(cuda, "nvrtc_version")?;
+    require_positive_u64(cuda, "vram_bytes")?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_non_empty(model, "model_family")?;
+    reject_bitnet_packed_marker(required_string(model, "model_family")?, "model.model_family")?;
+    require_string_non_empty(model, "architecture")?;
+    reject_bitnet_packed_marker(required_string(model, "architecture")?, "model.architecture")?;
+    require_string_eq(model, "artifact_kind", "dense_gguf")?;
+    require_sha256(model, "sha256")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
+    require_string_eq(execution_path, "kernel_family", "dense_cuda_sampling_policy_route")?;
+    reject_bitnet_packed_marker(
+        required_string(execution_path, "kernel_family")?,
+        "execution_path.kernel_family",
+    )?;
+    require_string_eq(
+        execution_path,
+        "quantization_family",
+        "dense_gguf_q8_0_f16_logits_sampling_policy_contract",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    validate_dense_one_layer_gap_execution_plan(receipt)?;
+    let plan = object_field(receipt, "execution_plan")?;
+    require_u64_eq(plan, "total_ops", 1)?;
+    require_u64_eq(plan, "cuda_ops", 1)?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 1)?;
+
+    let descriptor = object_field(receipt, "descriptor_coverage")?;
+    require_u64_eq(descriptor, "schema", 1)?;
+    require_string_eq(
+        descriptor,
+        "source_artifact_kind",
+        DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND,
+    )?;
+    require_positive_u64(descriptor, "tensor_count")?;
+    require_positive_u64(descriptor, "metadata_count")?;
+    require_bool_eq(descriptor, "required_roles_present", true)?;
+    require_bool_eq(descriptor, "strict_descriptor_complete", true)?;
+    require_string_non_empty(descriptor, "dense_cuda_route_status")?;
+    reject_bitnet_packed_marker(
+        required_string(descriptor, "dense_cuda_route_status")?,
+        "descriptor_coverage.dense_cuda_route_status",
+    )?;
+    require_bool_eq(descriptor, "bitnet_packed_marker_found", false)?;
+    require_bool_eq(descriptor, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(descriptor, "speedup_claim", false)?;
+    require_bool_eq(descriptor, "full_cuda_residency_claimed", false)?;
+    let quantization_families = array_field(descriptor, "quantization_families")?;
+    if quantization_families.is_empty() {
+        return Err(anyhow!("descriptor_coverage.quantization_families must not be empty"));
+    }
+    for family in quantization_families {
+        let family = family.as_str().ok_or_else(|| {
+            anyhow!("descriptor_coverage.quantization_families entries must be strings")
+        })?;
+        reject_bitnet_packed_marker(family, "descriptor_coverage.quantization_families")?;
+    }
+
+    let policy = object_field(receipt, "sampling_policy")?;
+    require_u64_eq(policy, "schema", 1)?;
+    reject_bitnet_packed_marker(
+        required_string(policy, "policy_id")?,
+        "sampling_policy.policy_id",
+    )?;
+    require_string_eq(policy, "policy_scope", "dense_qwen_logits_to_sampler_boundary")?;
+    require_string_eq(policy, "logits_source", "dense_gguf_model_boundary_lm_head_logits")?;
+    require_sha256(policy, "logits_sha256")?;
+    let logits_len = required_u64(policy, "logits_len")?;
+    let vocab_size = required_u64(policy, "vocab_size")?;
+    let seq_len = required_u64(policy, "seq_len")?;
+    if logits_len == 0 || vocab_size == 0 || seq_len == 0 {
+        return Err(anyhow!(
+            "sampling_policy logits_len, vocab_size, and seq_len must be positive"
+        ));
+    }
+    if logits_len != vocab_size {
+        return Err(anyhow!("sampling_policy logits_len must equal vocab_size"));
+    }
+    require_string_eq(policy, "logits_dtype", "f32")?;
+    let logits_element_bytes = required_u64(policy, "logits_element_bytes")?;
+    if logits_element_bytes != 4 {
+        return Err(anyhow!("sampling_policy.logits_element_bytes must be 4 for f32 logits"));
+    }
+    require_u64_eq(
+        policy,
+        "logits_transfer_bytes_per_step_estimate",
+        logits_len
+            .checked_mul(logits_element_bytes)
+            .ok_or_else(|| anyhow!("sampling_policy logits transfer byte estimate overflowed"))?,
+    )?;
+    require_string_eq(policy, "logits_transfer_path", "cuda_lm_head_logits_to_cpu_sampler")?;
+    require_bool_eq(policy, "logits_transfer_required_for_cpu_sampling", true)?;
+    require_bool_eq(policy, "logits_transfer_bytes_measured", false)?;
+    require_bool_eq(policy, "logits_transfer_timing_measured", false)?;
+    require_string_eq(policy, "sampler_backend", "bitnet-sampling")?;
+    require_string_eq(policy, "sampler_location", "cpu")?;
+    require_string_eq(policy, "sampler_mode", "greedy")?;
+    let temperature = object_field(policy, "temperature")?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `temperature` must be a number"))?;
+    if temperature != 0.0 {
+        return Err(anyhow!("sampling_policy.temperature must be 0.0 for greedy policy"));
+    }
+    require_u64_eq(policy, "top_k_filter", 0)?;
+    let top_p = object_field(policy, "top_p")?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `top_p` must be a number"))?;
+    if top_p != 1.0 {
+        return Err(anyhow!("sampling_policy.top_p must be 1.0 for greedy policy"));
+    }
+    let repetition_penalty = object_field(policy, "repetition_penalty")?
+        .as_f64()
+        .ok_or_else(|| anyhow!("field `repetition_penalty` must be a number"))?;
+    if repetition_penalty != 1.0 {
+        return Err(anyhow!("sampling_policy.repetition_penalty must be 1.0 for fixture policy"));
+    }
+    require_bool_eq(policy, "deterministic", true)?;
+    require_string_eq(policy, "tie_break_policy", "lowest_token_id")?;
+    require_bool_eq(policy, "rng_required", false)?;
+    let selected_token = required_u64(policy, "selected_token_id_from_fixture_logits")?;
+    if selected_token >= logits_len {
+        return Err(anyhow!(
+            "sampling_policy.selected_token_id_from_fixture_logits must be inside logits range"
+        ));
+    }
+    require_string_eq(policy, "selected_token_scope", "fixture_logits_only_not_generation")?;
+    let top_k = required_u64(policy, "top_k")?;
+    let top_k_entries = array_field(policy, "top_k_entries")?;
+    if top_k == 0 || top_k_entries.is_empty() {
+        return Err(anyhow!("sampling_policy must record non-empty top_k_entries"));
+    }
+    if top_k_entries.len() as u64 != top_k {
+        return Err(anyhow!("sampling_policy.top_k must match top_k_entries length"));
+    }
+    if top_k > logits_len {
+        return Err(anyhow!("sampling_policy.top_k cannot exceed logits_len"));
+    }
+    for (idx, entry) in top_k_entries.iter().enumerate() {
+        require_u64_eq(entry, "rank", idx as u64)?;
+        let token_id = required_u64(entry, "token_id")?;
+        if token_id >= logits_len {
+            return Err(anyhow!("sampling_policy.top_k_entries token_id outside logits range"));
+        }
+        require_number(entry, "value")?;
+    }
+    require_u64_eq(&top_k_entries[0], "token_id", selected_token)?;
+
+    require_bool_eq(policy, "sampling_policy_claimed", true)?;
+    require_bool_eq(policy, "sampling_integration_claimed", false)?;
+    require_bool_eq(policy, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(policy, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(policy, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(policy, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(policy, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(policy, "speedup_claim", false)?;
+    require_bool_eq(policy, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(policy, "full_cuda_residency_claimed", false)?;
+
+    let remaining = object_field(receipt, "remaining_model_boundary_gaps")?;
+    require_u64_eq(remaining, "schema", 1)?;
+    let gaps = array_field(remaining, "gaps")?;
+    if !gaps.is_empty() {
+        return Err(anyhow!("sampling policy receipt must clear model-boundary policy gaps"));
+    }
+    require_bool_eq(remaining, "all_model_boundary_policies_governed", true)?;
+    require_bool_eq(remaining, "kv_cache_policy_claimed", true)?;
+    require_bool_eq(remaining, "sampling_policy_claimed", true)?;
+    require_bool_eq(remaining, "sampling_integration_claimed", false)?;
+    require_bool_eq(remaining, "qwen_one_token_cuda_blocked", false)?;
+    require_bool_eq(remaining, "qwen_short_decode_cuda_blocked", true)?;
+    require_bool_eq(remaining, "qwen_chat_cuda_blocked", true)?;
+    require_string_eq(remaining, "next_required_proof", "qwen_one_token_strict_cuda_proof")?;
+    require_bool_eq(remaining, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(remaining, "speedup_claim", false)?;
+    require_bool_eq(remaining, "full_cuda_residency_claimed", false)?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_tensor_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_descriptor_inspection_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_fixture_extraction_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_linear_role_sweep_cuda_parity_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cpu_reference_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_cuda_integrated_parity_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_all_layer_execution_plan_claimed", true)?;
+    require_bool_eq(claim_boundary, "dense_gguf_model_boundary_fixtures_claimed", true)?;
+    require_bool_eq(claim_boundary, "kv_cache_policy_claimed", true)?;
+    require_bool_eq(claim_boundary, "kv_cache_cuda_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "sampling_policy_claimed", true)?;
+    require_bool_eq(claim_boundary, "sampling_integration_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_one_layer_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "dense_gguf_inference_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_one_token_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_short_decode_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+
+    Ok(())
+}
+
 /// Validate dense GGUF one-layer CPU reference harness evidence.
 ///
 /// This artifact records a CPU-only full layer-0 reference output. It is the
@@ -6150,6 +6397,10 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         .get("claim_boundary")
         .and_then(|claim_boundary| claim_boundary.get("kv_cache_policy_claimed"))
         .and_then(Value::as_bool);
+    let sampling_policy_claim = receipt
+        .get("claim_boundary")
+        .and_then(|claim_boundary| claim_boundary.get("sampling_policy_claimed"))
+        .and_then(Value::as_bool);
 
     if artifact_kind == Some(DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_DESCRIPTOR_INSPECTION_ARTIFACT_KIND)
@@ -6173,6 +6424,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || artifact_kind == Some(DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_MODEL_BOUNDARY_FIXTURES_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_KV_CACHE_POLICY_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND)
         || model_class == Some(DENSE_REGULAR_LLM_MODEL_CLASS)
         || dense_claim == Some(true)
         || descriptor_claim == Some(true)
@@ -6195,6 +6447,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || all_layer_execution_plan_claim == Some(true)
         || model_boundary_fixtures_claim == Some(true)
         || kv_cache_policy_claim == Some(true)
+        || sampling_policy_claim == Some(true)
     {
         return Err(anyhow!(
             "dense_regular_llm CUDA receipt cannot satisfy BitNet packed I2_S/QK256 proof"

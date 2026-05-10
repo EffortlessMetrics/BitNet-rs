@@ -2706,6 +2706,69 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-040"
+status = "pr_open"
+branch = "codex/cuda-dense-040-sampling-policy"
+pr = 4370
+head_sha = "07fcc58d362e3e3109eaaf985b9616b81e362b02"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-039"]
+acceptance = "Implement governed dense GGUF logits-transfer and sampling-policy receipts after CUDA-DENSE-039, recording LM-head logits source/hash/length/top-k evidence, deterministic greedy CPU sampler policy, estimated D2H logits bytes per decode step, remaining model-boundary policy gaps, and claim-boundary rejection of runtime sampling integration, dense GGUF inference, Qwen one-token/short decode/chat, speedup, persistent/full residency, server readiness, BitNet packed proof, tokenizer behavior, loader behavior, transformer runtime behavior, QK256, BitNet CUDA, and CUDA kernel math claims."
+commands = [
+  "cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,cuda,full-cli dense_gguf_sampling -- --nocapture",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features sampling_policy -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-sampling-policy --model <verified-qwen2.5-q8-gguf> --device-index 0 --seq-len 4 --top-k 5 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-09\\dense-gguf-sampling-policy-qwen25-q8.json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "dense GGUF model inference implementation",
+  "Qwen one-token, short decode, or chat implementation",
+  "runtime sampling integration",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+]
+may_claim = [
+  "CUDA-DENSE-040 records the governed dense GGUF logits-transfer and deterministic sampling policy needed after KV cache policy and before Qwen one-token proof.",
+  "The dense_gguf_sampling_policy receipt records LM-head fixture logits hash, top-k evidence, greedy CPU sampler settings, and estimated logits D2H bytes from the SHA-verified Qwen2.5 0.5B Q8_0 artifact.",
+  "KV and sampling policies are now explicit model-boundary gates, but runtime sampling integration and Qwen one-token proof remain future work.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete.",
+  "Qwen one-token, short decode, or chat works on CUDA.",
+  "Runtime sampling integration is implemented.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-021"
 status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"
