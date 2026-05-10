@@ -3,4 +3,3 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
-| nvidia-5070ti | CUDA-DENSE-044 | #4418 | `codex/cuda-dense-044-one-token-runtime-impl` | Implement the governed dense Qwen one-token strict CUDA runtime proof defined by CUDA-DENSE-043, consuming the SHA-verified qwen2.5-0.5b-instruct-q8_0 artifact plus all-layer plan, model-boundary fixture, KV-cache policy, and sampling-policy receipts; execute exactly one deterministic greedy token through dense_regular_llm_cuda on the RTX 5070 Ti with fallback_used=false; compare CPU/CUDA selected token and logits/top-k evidence; emit and validate a dense_gguf_qwen_one_token_strict_cuda_proof hardware receipt; and preserve short-decode, chat, speedup, persistent/full-residency, server, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims. |
