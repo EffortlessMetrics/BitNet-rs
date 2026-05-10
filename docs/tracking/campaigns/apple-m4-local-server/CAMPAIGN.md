@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-local-server`
 
-Status: active
+Status: complete
 
 ## Objective
 
@@ -25,7 +25,7 @@ the same cache, tokenizer, backend, fallback, streaming, and receipt discipline.
 | M4-SERVE-002 | merged | Added health and ready endpoint behavior. |
 | M4-SERVE-003 | merged | Added streaming completion endpoint. |
 | M4-SERVE-004 | merged | Added receipt export for server requests. |
-| M4-SERVE-005 | in progress | Integrate doctor/smoke/regression readiness flow. |
+| M4-SERVE-005 | merged | Added local server readiness check flow. |
 
 ## Current Contract
 

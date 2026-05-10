@@ -2,7 +2,7 @@
 # Apple M4 local server Campaign Status
 
 - Campaign: `apple-m4-local-server`
-- State: `active`
+- State: `complete`
 - Objective: Expose the working Apple M4 dense SLM appliance as a local service with command/config, health and ready endpoints, streaming completions, receipt export, model-cache verification, and no hidden fallback, while reusing the same Mac model/cache/tokenizer/backend discipline.
 
 ## Work Items
@@ -13,7 +13,7 @@
 | M4-SERVE-002 | merged | #4363 | `codex/apple-m4-local-server/M4-SERVE-002-health-ready` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add health and ready endpoint behavior for model-cache, tokenizer, backend/fallback, disk/cache, and unsupported-backend state, with tests and no expensive generation by default. |
 | M4-SERVE-003 | merged | #4368 | `codex/apple-m4-local-server/M4-SERVE-003-streaming-completions` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a streaming local completion endpoint for the supported dense SLM path, preserving model/tokenizer authority, resident session reuse, generated text and token IDs, backend identity, fallback_used=false, and timing receipts. |
 | M4-SERVE-004 | merged | #4371 | `codex/apple-m4-local-server/M4-SERVE-004-receipt-export` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add receipt export for local server requests, including model, tokenizer, backend, fallback, generated text, token IDs, timing, request metadata, streaming status, and claim boundaries. |
-| M4-SERVE-005 | in_progress | TBD | `codex/apple-m4-local-server/M4-SERVE-005-doctor-smoke` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Integrate local server health with Mac doctor/smoke/regression workflows, documenting how operators verify server readiness and receipt export without making production uptime claims. |
+| M4-SERVE-005 | merged | #4374 | `codex/apple-m4-local-server/M4-SERVE-005-doctor-smoke` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Integrate local server health with Mac doctor/smoke/regression workflows, documenting how operators verify server readiness and receipt export without making production uptime claims. |
 
 ## Hard Constraints
 
