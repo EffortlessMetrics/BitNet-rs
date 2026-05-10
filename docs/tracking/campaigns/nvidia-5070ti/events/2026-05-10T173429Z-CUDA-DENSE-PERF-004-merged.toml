@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T17:34:29Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-004"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-perf-004-qualification-review"
+pr = 4445
+head_sha = "170756479ae24aca517f7d5d5ce9b777de89f367"
+merge_sha = "f1818820e3991641f6302534f810a774c98a5035"
+
+notes = [
+  "Merged PR #4445 with the dense Qwen benchmark qualification review receipt and validator.",
+  "The review keeps speedup_claim=false and benchmark_qualified_speedup=false for one_token, short_decode_8, and warm_session_3_turns because CUDA mean totals are slower than CPU means and H2D timing remains unmeasured.",
+  "The merged receipt preserves fallback_used=false, full_cuda_residency_claimed=false, server_ready_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+]
