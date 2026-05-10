@@ -23,7 +23,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-METAL-001"
-status = "in_progress"
+status = "merged"
+pr = 4376
+merge_sha = "74993bc9b02ed1f0cd3b92158b5f3f751cca1e0a"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-001-next-phase"
 stackable = false
 review_mode = "codex_premerge"
@@ -57,7 +59,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-002"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-002-parity-fixture"
 stackable = false
 review_mode = "codex_premerge"

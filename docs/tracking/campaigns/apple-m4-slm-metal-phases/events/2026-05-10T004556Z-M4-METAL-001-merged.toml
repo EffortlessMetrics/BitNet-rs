@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T00:45:56Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-001"
+event = "merged"
+actor = "codex"
+pr = 4376
+merge_sha = "74993bc9b02ed1f0cd3b92158b5f3f751cca1e0a"
+previous_status = "in_progress"
+next_item = "M4-METAL-002"
+
+notes = [
+  "Merged the next dense SLM Metal phase selection record.",
+  "The selected target is a prefill Q/K/V projection triplet for the supported Qwen2.5 dense SLM path, with CPU reference scope, expected shapes, parity method, timing fields, fallback rules, and claim boundaries documented.",
+  "No Metal kernel, resident routing, model download, BitNet claim, full apple-m4-metal inference claim, QK256, Neural Engine, MPSGraph, MacBook work, or broad performance claim is introduced.",
+  "Promoted M4-METAL-002 to ready for the CPU/Metal parity fixture.",
+]
