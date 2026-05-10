@@ -136,9 +136,10 @@ graph execution, parity, or benchmark performance.
 
 ### Current Comparison Index
 
-`LNL258V-COMPARE-002` refreshes the same-machine comparison index after the
-post-mechanics 258V CPU reference bundle, selected NPU FFN/ReLU2 subgraph
-parity, and Arc 140V native OpenCL CPU/iGPU parity receipts landed:
+`CPU258V-026` refreshes the same-machine comparison index after the 258V CPU
+reference bundle gained semantic-debug evidence through transformer-layer
+parity, while preserving the selected NPU FFN/ReLU2 subgraph parity and Arc
+140V native OpenCL CPU/iGPU parity receipts:
 
 ```text
 ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
@@ -452,14 +453,15 @@ The current Lunar Lake comparison index is:
 ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
 ```
 
-It points at the post-mechanics 258V CPU reference bundle, the CPU full-corpus
-parity receipts, the warm CPU phase receipts, the Arc 140V native OpenCL
-CPU/iGPU parity receipt, the live OpenVINO NPU runtime/smoke/RMSNorm/linear/FFN
-selected subgraph parity receipts, and the NPU OpenVINO llama.cpp GGUF reference
-blocker receipt. This makes the available CPU, GPU, and NPU evidence
-discoverable from one artifact while preserving separate proof boundaries. It is
-not a cross-device performance comparison and does not imply that Arc 140V or
-Intel NPU run full BitNet inference.
+It points at the current 258V CPU reference bundle, CPU full-corpus parity
+receipts, warm CPU phase receipts, semantic-debug ladder receipts through
+transformer-layer parity, the Arc 140V native OpenCL CPU/iGPU parity receipt,
+the live OpenVINO NPU runtime/smoke/RMSNorm/linear/FFN selected subgraph parity
+receipts, and the NPU OpenVINO llama.cpp GGUF reference blocker receipt. This
+makes the available CPU, GPU, and NPU evidence discoverable from one artifact
+while preserving separate proof boundaries. It is not a cross-device
+performance comparison and does not imply that Arc 140V or Intel NPU run full
+BitNet inference.
 
 ## Windows PowerShell Bundle
 
@@ -712,27 +714,48 @@ Packed BitNet QK256 GGUF decode works on Intel NPU.
 CPU fallback satisfies NPU proof.
 ```
 
-## Post-Baseline CPU Reference Bundle
+## Current CPU Reference Bundle
 
-`CPU258V-016` records the current 258V CPU reference plate as a single
-same-machine bundle:
+`CPU258V-026` refreshes the current 258V CPU reference plate as a single
+same-machine evidence index:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json
+```
+
+It supersedes the post-mechanics bundle:
 
 ```text
 ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
 ```
 
-The bundle links the strict real-GGUF decode smoke, the post-mechanics full
-fixed-corpus scalar and AVX2 answer-corpus receipts, the scalar-vs-AVX2
-answer-parity receipt, and the warm-session `prefill_512` / `decode_128` phase
-receipts. It records the Microsoft BitNet b1.58 I2_S GGUF SHA, explicit LLaMA 3
-tokenizer source, selected scalar and AVX2 CPU kernel IDs, and
+The refreshed bundle links the strict real-GGUF decode smoke, the
+post-mechanics full fixed-corpus scalar and AVX2 answer-corpus receipts, the
+scalar-vs-AVX2 answer-parity receipt, warm-session `prefill_512` /
+`decode_128` phase receipts, and the CPU semantic-debug ladder through
+transformer-layer parity. It records the Microsoft BitNet b1.58 I2_S GGUF SHA,
+explicit LLaMA 3 tokenizer source, selected scalar and AVX2 CPU kernel IDs, and
 `fallback_used=false`.
+
+The CPU semantic-debug ladder links:
+
+```text
+ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json
+ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity.json
+ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json
+ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json
+ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json
+ci/hardware/intel-258v/2026-05-08/cpu-qk256-i8s-semantic-audit.json
+ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json
+ci/hardware/intel-258v/2026-05-08/transformer-layer-parity.json
+```
 
 Allowed claims:
 
 ```text
 The 258V CPU reference plate is bundled from strict real-GGUF receipts,
-full fixed-corpus scalar-vs-AVX2 answer parity, and warm-session phase receipts.
+full fixed-corpus scalar-vs-AVX2 answer parity, warm-session phase receipts,
+and CPU semantic-debug evidence through transformer-layer parity.
 The bundle is a CPU reference input for later Arc 140V and Intel NPU parity
 comparisons.
 ```
@@ -745,6 +768,8 @@ Sustained throughput is proven.
 A CPU speedup is proven.
 Arc 140V or Intel NPU execution is proven by this CPU bundle.
 CPU fallback can satisfy Arc 140V or Intel NPU proof.
+External first-token logits parity is proven.
+Full model correctness is proven.
 ```
 
 ## Post-Baseline Next Queue
@@ -755,12 +780,12 @@ After `CPU258V-016`, the next Lunar Lake work should remain CPU-referenced:
 NPU-011:
   selected static BitNet-shaped OpenVINO NPU FFN/ReLU2 subgraph parity
   artifact: ci/hardware/intel-258v/2026-05-08/npu-bitnet-ffn-subgraph-parity.json
-  anchor: ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
+  anchor: ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json
 
 ARC140V-005:
   native OpenCL CPU/iGPU parity for one isolated kernel or subgraph
   artifact: ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json
-  anchor: ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json
+  anchor: ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json
 
 ARC140V-003 live artifact:
   OpenVINO GPU tiny static graph smoke on Arc 140V
@@ -792,7 +817,7 @@ proof.
 platform. The live receipt records `selected_backend=intel-arc-140v-opencl`,
 `runtime_api=opencl`, `proof_stage=parity_tested`, `kernel_execution=true`,
 `graph_execution=false`, and `fallback_used=false` for the isolated
-`tiny_vector_add` kernel against the post-mechanics 258V CPU reference bundle.
+`tiny_vector_add` kernel against the current 258V CPU reference bundle.
 This is native OpenCL parity only; it is not BitNet inference, Arc acceleration,
 packed QK256 decode, OpenVINO GPU proof, or CPU fallback proof.
 
