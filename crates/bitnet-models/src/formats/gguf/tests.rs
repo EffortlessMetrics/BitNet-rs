@@ -1368,6 +1368,8 @@ fn dense_qwen_extracts_arch_prefixed_metadata_and_vocab_from_embedding() {
     assert_eq!(config.model.max_position_embeddings, 40960);
     assert_eq!(config.model.rope_theta, Some(1_000_000.0));
     assert_eq!(config.model.rms_norm_eps, Some(1e-6));
+    assert_eq!(config.model.norm_type, bitnet_common::config::NormType::RmsNorm);
+    assert_eq!(config.model.activation_type, bitnet_common::config::ActivationType::Silu);
 }
 
 #[test]

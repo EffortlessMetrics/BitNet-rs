@@ -1,0 +1,11 @@
+timestamp = "2026-05-10T13:02:11Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008"
+event = "in_progress"
+branch = "codex/slm-cpu-008-qwen3-first-token-parity"
+actor = "codex"
+
+notes = [
+  "Started the Qwen3 first-token parity fix from SLM-CPU-007B evidence.",
+  "The captured bitnet-rs trace selected LayerNorm for Qwen3 metadata; this slice fixes Qwen3 architecture defaults to select RMSNorm without touching tokenizer, loader semantics, BitNet QK256, server, GPU, NPU, OpenVINO, or throughput claims.",
+]

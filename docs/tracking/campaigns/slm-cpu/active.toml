@@ -534,7 +534,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008"
-status = "ready"
+status = "in_progress"
 branch = "codex/slm-cpu-008-qwen3-first-token-parity"
 stackable = false
 review_mode = "codex_premerge"
