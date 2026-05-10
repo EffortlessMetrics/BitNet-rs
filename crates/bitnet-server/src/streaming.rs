@@ -2,8 +2,11 @@
 
 use anyhow::Result;
 use axum::{
+    Json,
     extract::State,
+    http::StatusCode,
     response::sse::{Event, KeepAlive, Sse},
+    response::{IntoResponse, Response},
 };
 use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
@@ -82,7 +85,7 @@ pub struct StreamingError {
 pub(crate) async fn streaming_handler(
     State(state): State<ProductionAppState>,
     axum::Json(request): axum::Json<StreamingRequest>,
-) -> impl axum::response::IntoResponse {
+) -> Response {
     info!(
         "Streaming request received: prompt_len={}, max_tokens={:?}, timeout={:?}s",
         request.prompt.len(),
@@ -99,12 +102,24 @@ pub(crate) async fn streaming_handler(
         debug!("Creating real stream with {}s timeout", timeout_seconds);
         Box::pin(create_error_handling_stream(real_stream(model, request).await, detailed_errors))
     } else {
-        warn!("No inference engine available, using mock stream");
-        Box::pin(create_error_handling_stream(mock_stream(request).await, detailed_errors))
+        warn!("No inference engine available for streaming request");
+        let error = StreamingError {
+            error_type: "unavailable".to_string(),
+            message: "Streaming inference is unavailable until a real model engine is loaded"
+                .to_string(),
+            recovery_hints: Some(vec![
+                "Load a verified model before requesting streaming inference".to_string(),
+                "Use a non-streaming endpoint only after real server inference is wired"
+                    .to_string(),
+            ]),
+            tokens_before_error: 0,
+        };
+        return (StatusCode::SERVICE_UNAVAILABLE, Json(error)).into_response();
     };
 
     Sse::new(stream)
         .keep_alive(KeepAlive::new().interval(Duration::from_secs(1)).text("keep-alive"))
+        .into_response()
 }
 
 /// Create a stream with error handling (timeout handled at higher level)
@@ -251,131 +266,14 @@ async fn real_stream(
     }
 }
 
-/// Mock streaming for testing without a model
-async fn mock_stream(
-    request: StreamingRequest,
-) -> impl Stream<Item = Result<Event, anyhow::Error>> {
-    let start = std::time::Instant::now();
-    let tokens = ["Hello", " ", "from", " ", "BitNet", " ", "server", "!"];
-    let max_tokens = request.max_tokens.unwrap_or(8).min(tokens.len());
-
-    async_stream::stream! {
-        for (i, token) in tokens.iter().take(max_tokens).enumerate() {
-            tokio::time::sleep(Duration::from_millis(50)).await;
-
-            let elapsed = start.elapsed();
-            let data = StreamingToken {
-                token: token.to_string(),
-                token_id: 0, // Mock token ID matching test tokenizer behavior
-                cumulative_time_ms: elapsed.as_millis() as u64,
-                position: i + 1,
-            };
-
-            yield Ok(Event::default()
-                .event("token")
-                .json_data(data)
-                .unwrap());
-        }
-
-        // Send completion
-        let elapsed = start.elapsed();
-        let complete = StreamingComplete {
-            total_tokens: max_tokens as u64,
-            total_time_ms: elapsed.as_millis() as u64,
-            tokens_per_second: (max_tokens as f64 * 1000.0) / elapsed.as_millis() as f64,
-            completed_normally: true,
-            completion_reason: Some("Mock generation completed".to_string()),
-        };
-
-        debug!("Mock stream completed: {} tokens", max_tokens);
-
-        yield Ok(Event::default()
-            .event("complete")
-            .json_data(complete)
-            .unwrap());
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::response::IntoResponse;
-    use bitnet_common::{BitNetConfig, ConcreteTensor};
-    use bitnet_inference::InferenceEngine;
-    use bitnet_models::Model;
-    use bitnet_tokenizers::Tokenizer;
     use http_body_util::BodyExt;
 
-    use std::any::Any;
-
-    #[derive(Clone)]
-    struct TestTokenizer;
-
-    impl Tokenizer for TestTokenizer {
-        fn encode(
-            &self,
-            text: &str,
-            _add_bos: bool,
-            _add_special: bool,
-        ) -> bitnet_common::Result<Vec<u32>> {
-            if let Some(id) = text.strip_prefix("token_") {
-                Ok(vec![id.parse().unwrap_or(0)])
-            } else {
-                Ok(vec![0])
-            }
-        }
-
-        fn decode(&self, tokens: &[u32]) -> bitnet_common::Result<String> {
-            Ok(format!("token_{}", tokens[0]))
-        }
-
-        fn vocab_size(&self) -> usize {
-            1000
-        }
-
-        fn token_to_piece(&self, token: u32) -> Option<String> {
-            Some(format!("token_{}", token))
-        }
-    }
-
-    struct DummyModel {
-        config: BitNetConfig,
-    }
-
-    impl DummyModel {
-        fn new() -> Self {
-            Self { config: BitNetConfig::default() }
-        }
-    }
-
-    impl Model for DummyModel {
-        fn config(&self) -> &BitNetConfig {
-            &self.config
-        }
-
-        fn forward(
-            &self,
-            _input: &ConcreteTensor,
-            _cache: &mut dyn Any,
-        ) -> bitnet_common::Result<ConcreteTensor> {
-            Ok(ConcreteTensor::mock(vec![1, 50257]))
-        }
-
-        fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<ConcreteTensor> {
-            Ok(ConcreteTensor::mock(vec![1, tokens.len(), 1]))
-        }
-
-        fn logits(&self, _hidden: &ConcreteTensor) -> bitnet_common::Result<ConcreteTensor> {
-            Ok(ConcreteTensor::mock(vec![1, 1, 50257]))
-        }
-    }
-
     #[tokio::test]
-    async fn sse_token_ids_match_model_outputs() {
-        let model = Arc::new(DummyModel::new());
-        let tokenizer = Arc::new(TestTokenizer);
-        let _engine =
-            InferenceEngine::new(model, tokenizer.clone(), bitnet_common::Device::Cpu).unwrap();
+    async fn streaming_without_loaded_model_returns_503_instead_of_mock_tokens() {
         let app_state = ProductionAppState {
             config: crate::config::ServerConfig::default(),
             model_manager: Arc::new(crate::model_manager::ModelManager::new(
@@ -421,18 +319,12 @@ mod tests {
 
         let sse = streaming_handler(State(app_state), axum::Json(request)).await;
         let response = sse.into_response();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+
         let body = response.into_body().collect().await.unwrap().to_bytes();
         let body_str = String::from_utf8(body.to_vec()).unwrap();
-
-        for event in body_str.split("\n\n") {
-            if event.starts_with("event: token")
-                && let Some(data_line) = event.lines().find(|l| l.starts_with("data: "))
-            {
-                let json = &data_line[6..];
-                let token: StreamingToken = serde_json::from_str(json).unwrap();
-                let expected = tokenizer.encode(&token.token, false, false).unwrap();
-                assert_eq!(expected[0], token.token_id);
-            }
-        }
+        assert!(body_str.contains("Streaming inference is unavailable"));
+        assert!(!body_str.contains("event: token"));
+        assert!(!body_str.contains("BitNet server"));
     }
 }

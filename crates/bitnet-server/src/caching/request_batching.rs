@@ -279,20 +279,17 @@ impl RequestBatcher {
         let start_time = Instant::now();
         let batch_size = batch.requests.len();
 
-        // Simulate batch processing (in real implementation, this would call the inference engine)
-        let processing_time = Duration::from_millis(50 + (batch_size as u64 * 10)); // Simulate processing time
-        tokio::time::sleep(processing_time).await;
-
         let processing_time_ms = start_time.elapsed().as_millis() as u64;
 
-        // Send responses to all requests in the batch
+        // Request batching is a queueing scaffold only until it is wired to
+        // the real inference engine. Do not synthesize generated text here.
         for request in batch.requests {
             let wait_time_ms = start_time.duration_since(request.timestamp).as_millis() as u64;
 
             let response = BatchedResponse {
                 request_id: request.id,
-                text: format!("Generated response for: {}", request.prompt),
-                tokens_generated: request.max_tokens as u64,
+                text: "Batch inference unavailable: real server inference is not wired".to_string(),
+                tokens_generated: 0,
                 processing_time_ms,
                 batch_size,
             };
