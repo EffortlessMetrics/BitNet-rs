@@ -230,6 +230,7 @@
 | nvidia-5070ti | CUDA-UX-003 | CUDA-DENSE-046, CUDA-UX-002 | merged |
 | nvidia-5070ti | CUDA-UX-004 | CUDA-DENSE-046, CUDA-UX-003 | merged |
 | nvidia-5070ti | CUDA-UX-005 | CUDA-DENSE-PERF-004 | merged |
+| nvidia-5070ti | CUDA-UX-006 | CUDA-UX-005, CUDA-DENSE-PERF-006 | pr_open |
 | nvidia-5070ti | CUDA-DENSE-021 | CUDA-DENSE-020 | merged |
 | nvidia-5070ti | CUDA-DENSE-022 | CUDA-DENSE-021 | merged |
 | nvidia-5070ti | CUDA-DENSE-023 | CUDA-DENSE-022 | merged |
