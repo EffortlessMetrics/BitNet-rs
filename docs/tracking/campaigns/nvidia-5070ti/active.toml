@@ -3126,8 +3126,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-003"
-status = "in_progress"
+status = "merged"
 branch = "codex/cuda-ux-003-dense-ask"
+pr = 4424
+head_sha = "fe94761879d48afa26a3d3b149e9ed74b4c0e72d"
+merge_sha = "66b36643daf1d46a5587aa2f14e6bfdd833431f1"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
