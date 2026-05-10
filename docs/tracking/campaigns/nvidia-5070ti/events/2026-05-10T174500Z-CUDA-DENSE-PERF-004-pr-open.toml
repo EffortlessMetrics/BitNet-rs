@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T17:45:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-004"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-perf-004-qualification-review"
+pr = 4445
+head_sha = "170756479ae24aca517f7d5d5ce9b777de89f367"
+
+notes = [
+  "Opened PR #4445 for the dense Qwen benchmark qualification review.",
+  "The review consumes the dense benchmark baseline, repeated comparator, and D2H transfer-timing receipts.",
+  "All reviewed profiles remain not accepted for speedup; speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, server_ready_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+]
