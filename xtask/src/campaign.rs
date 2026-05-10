@@ -249,19 +249,7 @@ fn cmd_status(root: &Path, campaign_id: &str) -> Result<()> {
 
 fn cmd_next(root: &Path, campaign_id: &str) -> Result<()> {
     let campaign = load_campaign(root, campaign_id)?;
-    let item_by_id = item_map(&campaign.manifest);
-    let next = campaign
-        .manifest
-        .work_items
-        .iter()
-        .find(|item| item.status == "ready" && deps_met(item, &item_by_id))
-        .or_else(|| {
-            campaign
-                .manifest
-                .work_items
-                .iter()
-                .find(|item| item.status == "proposed" && deps_met(item, &item_by_id))
-        });
+    let next = next_runnable_item(&campaign.manifest);
 
     match next {
         Some(item) => {
@@ -684,11 +672,31 @@ fn deps_met<'a>(item: &WorkItem, item_by_id: &BTreeMap<&'a str, &'a WorkItem>) -
         .all(|dep| item_by_id.get(dep.as_str()).is_some_and(|dep_item| dep_item.status == "merged"))
 }
 
+fn next_runnable_item(manifest: &CampaignManifest) -> Option<&WorkItem> {
+    let item_by_id = item_map(manifest);
+    manifest
+        .work_items
+        .iter()
+        .find(|item| item.status == "ready" && deps_met(item, &item_by_id))
+        .or_else(|| {
+            manifest
+                .work_items
+                .iter()
+                .find(|item| item.status == "proposed" && deps_met(item, &item_by_id))
+        })
+}
+
 fn current_item(manifest: &CampaignManifest) -> Option<&WorkItem> {
-    for status in ["pr_open", "in_progress", "blocked", "ready", "proposed"] {
+    for status in ["pr_open", "in_progress"] {
         if let Some(item) = manifest.work_items.iter().find(|item| item.status == status) {
             return Some(item);
         }
+    }
+    if let Some(item) = next_runnable_item(manifest) {
+        return Some(item);
+    }
+    if let Some(item) = manifest.work_items.iter().find(|item| item.status == "blocked") {
+        return Some(item);
     }
     manifest.work_items.iter().rev().find(|item| item.status == "merged")
 }
@@ -1275,8 +1283,8 @@ fn fail_on_errors(problems: &[Problem]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        CampaignManifest, LoadedCampaign, Severity, TextList, WorkItem, parse_pull_request_ref,
-        text_contains_item_token, validate_campaign,
+        CampaignManifest, LoadedCampaign, Severity, TextList, WorkItem, current_item,
+        parse_pull_request_ref, text_contains_item_token, validate_campaign,
     };
     use std::path::PathBuf;
 
@@ -1366,18 +1374,91 @@ mod tests {
         }));
     }
 
+    #[test]
+    fn current_item_prefers_actionable_work_over_blocked_followup() {
+        let manifest = campaign_manifest(vec![
+            work_item("POLICY-001", "merged", &[]),
+            work_item("POLICY-002", "ready", &["POLICY-001"]),
+            work_item("POLICY-003", "blocked", &["POLICY-002"]),
+        ]);
+
+        assert_eq!(current_item(&manifest).map(|item| item.id.as_str()), Some("POLICY-002"));
+    }
+
+    #[test]
+    fn current_item_prefers_runnable_proposed_work_over_blocked_followup() {
+        let manifest = campaign_manifest(vec![
+            work_item("POLICY-001", "merged", &[]),
+            work_item("POLICY-002", "blocked", &[]),
+            work_item("POLICY-003", "proposed", &["POLICY-001"]),
+        ]);
+
+        assert_eq!(current_item(&manifest).map(|item| item.id.as_str()), Some("POLICY-003"));
+    }
+
+    #[test]
+    fn current_item_keeps_open_pr_and_in_progress_items_first() {
+        let pr_open = campaign_manifest(vec![
+            work_item("POLICY-001", "merged", &[]),
+            work_item("POLICY-002", "pr_open", &["POLICY-001"]),
+            work_item("POLICY-003", "ready", &["POLICY-001"]),
+        ]);
+        let in_progress = campaign_manifest(vec![
+            work_item("POLICY-001", "merged", &[]),
+            work_item("POLICY-002", "in_progress", &["POLICY-001"]),
+            work_item("POLICY-003", "ready", &["POLICY-001"]),
+        ]);
+
+        assert_eq!(current_item(&pr_open).map(|item| item.id.as_str()), Some("POLICY-002"));
+        assert_eq!(current_item(&in_progress).map(|item| item.id.as_str()), Some("POLICY-002"));
+    }
+
+    #[test]
+    fn current_item_skips_unblocked_statuses_with_unmet_dependencies() {
+        let manifest = campaign_manifest(vec![
+            work_item("POLICY-001", "ready", &["POLICY-000"]),
+            work_item("POLICY-002", "blocked", &["POLICY-001"]),
+        ]);
+
+        assert_eq!(current_item(&manifest).map(|item| item.id.as_str()), Some("POLICY-002"));
+    }
+
+    fn campaign_manifest(work_items: Vec<WorkItem>) -> CampaignManifest {
+        CampaignManifest {
+            id: "policy-campaign".to_string(),
+            title: "Policy Campaign".to_string(),
+            status: "active".to_string(),
+            objective: "Validate campaign policy fields.".to_string(),
+            end_state: vec!["Policy validation is covered.".to_string()],
+            hard_constraints: vec!["Do not accept deprecated policy fields.".to_string()],
+            work_items,
+        }
+    }
+
+    fn work_item(id: &str, status: &str, blocked_by: &[&str]) -> WorkItem {
+        WorkItem {
+            id: id.to_string(),
+            status: status.to_string(),
+            branch: format!("codex/policy/{id}"),
+            stackable: Some(false),
+            requires_human_merge: None,
+            review_mode: Some("codex_premerge".to_string()),
+            merge_policy: Some("automerge_when_green".to_string()),
+            human_gate: Some("on_blocker_only".to_string()),
+            blocked_by: blocked_by.iter().map(|dep| dep.to_string()).collect(),
+            acceptance: Some(TextList::One(format!("Complete {id}."))),
+            commands: vec!["cargo fmt --all -- --check".to_string()],
+            allowed_paths: vec!["docs/**".to_string()],
+            forbidden_paths: vec!["crates/**".to_string()],
+            may_claim: vec![format!("{id} is complete.")],
+            must_not_claim: vec![format!("{id} has runtime impact.")],
+        }
+    }
+
     fn policy_campaign(item: WorkItem) -> LoadedCampaign {
         LoadedCampaign {
             dir: PathBuf::from("policy-campaign"),
-            manifest: CampaignManifest {
-                id: "policy-campaign".to_string(),
-                title: "Policy Campaign".to_string(),
-                status: "active".to_string(),
-                objective: "Validate campaign policy fields.".to_string(),
-                end_state: vec!["Policy validation is covered.".to_string()],
-                hard_constraints: vec!["Do not accept deprecated policy fields.".to_string()],
-                work_items: vec![item],
-            },
+            manifest: campaign_manifest(vec![item]),
             events: Vec::new(),
         }
     }
