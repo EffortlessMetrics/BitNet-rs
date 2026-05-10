@@ -211,7 +211,7 @@ reference, Rust M4 quality, tokenizer, cache, and receipt gates in this matrix.
 ```text
 qwen3-0.6b-q8_0                 rejected by current reference runner
 smollm2-360m-instruct-q8_0      reference-good, rejected by Rust M4 quality
-gemma-3-270m-it-q8_0            selected for the next reference-sanity cycle
+gemma-3-270m-it-q8_0            rejected by current reference runner
 ```
 
 See [apple-m4-slm-model-breadth-candidates.md](apple-m4-slm-model-breadth-candidates.md)

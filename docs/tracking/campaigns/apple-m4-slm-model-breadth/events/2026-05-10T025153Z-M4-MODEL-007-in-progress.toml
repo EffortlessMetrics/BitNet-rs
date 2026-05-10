@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T02:51:53Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-007"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started reference output sanity for the pinned Gemma 3 270M IT Q8_0 candidate.",
+  "The current reference runner reads the GGUF metadata but rejects the artifact before generation with unknown model architecture gemma3.",
+  "The scratch GGUF was downloaded under target for the probe and removed after evidence was recorded.",
+  "No Rust M4 support, cache registration, model support claim, BitNet claim, full Metal claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, or broad performance claim is introduced.",
+]

@@ -29,7 +29,7 @@ mini path without weakening the completed Qwen appliance baseline.
 | M4-MODEL-004 | blocked | No accepted candidate is available to register. |
 | M4-MODEL-005 | blocked | Update model matrix and user envelope after registration. |
 | M4-MODEL-006 | merged | Select the next exact candidate after the failed Qwen3/SmolLM2 round. |
-| M4-MODEL-007 | ready | Run reference output sanity for the newly selected candidate. |
+| M4-MODEL-007 | in progress | Run reference output sanity for the newly selected candidate. |
 | M4-MODEL-008 | blocked | Run Rust M4 quality gates for the newly selected candidate. |
 
 ## Current Selection
@@ -57,6 +57,12 @@ candidate passes both reference output sanity and Rust M4 quality gates.
 GGUF candidate from `ggml-org/gemma-3-270m-it-GGUF`. This is selection metadata
 only: no model artifact is downloaded, accepted, registered, or claimed
 supported by the M4 lane.
+
+`M4-MODEL-007` records that the current reference runner reads the Gemma GGUF
+metadata but rejects the artifact before generation because the runner does not
+support `general.architecture = gemma3`. The downloaded scratch artifact is
+removed after recording evidence, and no Rust M4 quality or cache registration
+item is unblocked.
 
 ## Claim Boundary
 
