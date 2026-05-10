@@ -15,3 +15,7 @@
 ## 2024-05-22 - Focus Visibility and Box Sizing
 **Learning:** Adding `box-sizing: border-box` to inputs prevents them from overflowing containers when padding is applied and `width: 100%` is used. Furthermore, relying on default browser focus rings is insufficient for accessibility; explicit `:focus-visible` styles with custom outlines ensure clear visual feedback for keyboard users across different platforms.
 **Action:** Always include `box-sizing: border-box` for standard form inputs and define clear `:focus-visible` styles for better keyboard navigation.
+
+## 2024-05-22 - Improved Range Slider Layout
+**Learning:** Range sliders with adjacent value readouts can suffer from poor layout and spacing when placed in standard `div` containers. The label and value span can become disjointed or visually misaligned with the slider.
+**Action:** Group the label and value span in a flex container (`display: flex; justify-content: space-between;`) above the range input to create a clear visual header for the slider control. Style the value readout distinctively (e.g., using a pill-shaped badge) to emphasize it as an interactive state value rather than static text.
