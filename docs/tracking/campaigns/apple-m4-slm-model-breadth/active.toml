@@ -237,7 +237,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-007"
-status = "in_progress"
+status = "merged"
+pr = 4402
+merge_sha = "1ea03da02e71d998ebd9d9e832a859cdd850f1e1"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-007-gemma-reference"
 stackable = false
 review_mode = "codex_premerge"
@@ -277,7 +279,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-MODEL-007"]
+blocked_by = []
 acceptance = "Run the selected candidate through Rust M4 apple-m4-cpu-neon quality gates with valid UTF-8, non-empty output, non-degenerate output, backend/fallback receipts, generated token IDs, timing, and deterministic behavior where required."
 commands = [
   "cargo fmt --all -- --check",

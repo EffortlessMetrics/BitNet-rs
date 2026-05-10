@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T02:54:32Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-007"
+event = "merged"
+actor = "codex"
+pr = 4402
+merge_sha = "1ea03da02e71d998ebd9d9e832a859cdd850f1e1"
+previous_status = "in_progress"
+next_item = ""
+
+notes = [
+  "Merged Gemma 3 270M IT reference-runner evidence.",
+  "The candidate is rejected for this round because the current reference runner does not support the gemma3 architecture.",
+  "M4-MODEL-008 remains blocked because no reference-good new dense SLM candidate is available for Rust M4 quality.",
+  "No model artifact was retained or committed, and no model support, BitNet, QK256, full Metal, Neural Engine, MPSGraph, MacBook, or broad performance claim is introduced.",
+]
