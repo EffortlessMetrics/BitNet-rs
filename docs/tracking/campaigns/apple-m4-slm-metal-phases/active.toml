@@ -251,7 +251,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-007"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-metal-phases/M4-METAL-007-measured-delta"
 stackable = false
 review_mode = "codex_premerge"
