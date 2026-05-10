@@ -52,8 +52,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SERVER-002"
-status = "pr_open"
+status = "merged"
 pr = 4432
+merge_sha = "b08910e38a5a3bcc5cadaae014c798044a3743b1"
 branch = "codex/server-real-inference/SERVER-002-no-placeholder-model-readiness"
 stackable = false
 review_mode = "codex_premerge"

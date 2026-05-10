@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T12:41:00Z"
+campaign = "server-real-inference"
+item = "SERVER-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4432
+merge_sha = "b08910e38a5a3bcc5cadaae014c798044a3743b1"
+branch = "codex/server-real-inference/SERVER-002-no-placeholder-model-readiness"
+summary = "SERVER-002 merged after placeholder HuggingFace/cache model readiness paths were changed to fail closed."
+notes = [
+  "Merged PR #4432 keeps HfModelService from reporting placeholder Ready state and keeps ModelCache misses/pre-warm from fabricating mock models.",
+  "The merged item preserves no real HuggingFace server loading, no new answer path, no hardware acceleration, and no performance claims.",
+]
