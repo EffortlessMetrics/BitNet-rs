@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T00:38:12Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-005"
+event = "merged"
+actor = "codex"
+pr = 4374
+merge_sha = "7cb277beb5012ffd2e91cb694c5eeb9b8b9b3027"
+previous_status = "in_progress"
+next_item = "none"
+
+notes = [
+  "Merged the bitnet mac serve-check local server readiness slice.",
+  "Operators can now validate /ready without generation by default, optionally run a tiny completion probe, and verify HTTP receipt export for a running local M4 server.",
+  "The readiness check writes its own receipt and preserves the boundaries that production readiness, full OpenAI compatibility, BitNet quality, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook behavior, model binaries, and broad performance are not claimed.",
+  "All apple-m4-local-server work items are merged and the campaign is complete.",
+]

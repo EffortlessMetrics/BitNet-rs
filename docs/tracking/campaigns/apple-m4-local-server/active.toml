@@ -1,6 +1,6 @@
 id = "apple-m4-local-server"
 title = "Apple M4 local server"
-status = "active"
+status = "complete"
 
 objective = "Expose the working Apple M4 dense SLM appliance as a local service with command/config, health and ready endpoints, streaming completions, receipt export, model-cache verification, and no hidden fallback, while reusing the same Mac model/cache/tokenizer/backend discipline."
 
@@ -173,7 +173,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-005"
-status = "in_progress"
+status = "merged"
+pr = 4374
+merge_sha = "7cb277beb5012ffd2e91cb694c5eeb9b8b9b3027"
 branch = "codex/apple-m4-local-server/M4-SERVE-005-doctor-smoke"
 stackable = false
 review_mode = "codex_premerge"
