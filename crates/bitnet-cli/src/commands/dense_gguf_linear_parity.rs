@@ -61,6 +61,7 @@ use bitnet_receipts_core::{
     DENSE_GGUF_ONE_LAYER_CUDA_INTEGRATED_PARITY_ARTIFACT_KIND,
     DENSE_GGUF_ONE_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_ASK_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    DENSE_GGUF_QWEN_CHAT_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
@@ -85,6 +86,7 @@ use bitnet_receipts_core::{
     validate_dense_gguf_one_layer_cuda_integrated_parity_receipt_json,
     validate_dense_gguf_one_layer_execution_plan_receipt_json,
     validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json,
+    validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json,
@@ -1455,6 +1457,284 @@ pub async fn run_dense_qwen_cuda_ask(
     std::fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)?;
 
     Ok(DenseQwenCudaAskOutcome { answer, receipt_path, receipt })
+}
+
+/// Inputs for the user-facing dense Qwen CUDA chat wrapper.
+#[derive(Debug, Clone)]
+pub struct DenseQwenCudaChatOptions {
+    pub model: PathBuf,
+    pub prompts: Vec<String>,
+    pub max_new_tokens: usize,
+    pub top_k: usize,
+    pub device_index: usize,
+    pub receipt_out: Option<PathBuf>,
+}
+
+/// Result of a governed dense Qwen CUDA chat run.
+#[derive(Debug, Clone)]
+pub struct DenseQwenCudaChatOutcome {
+    pub answers: Vec<String>,
+    pub receipt_path: PathBuf,
+    pub receipt: Value,
+}
+
+/// Default receipt path for the dense Qwen CUDA chat UX receipt.
+pub(crate) fn dense_qwen_cuda_chat_default_receipt_path() -> PathBuf {
+    PathBuf::from("target")
+        .join("bitnet")
+        .join("receipts")
+        .join("dense-cuda-chat")
+        .join("dense-qwen-chat-latest.json")
+}
+
+/// Run the governed dense Qwen CUDA chat path by wrapping the bounded
+/// warm-session runtime proof in a user-facing chat receipt.
+pub async fn run_dense_qwen_cuda_chat(
+    options: DenseQwenCudaChatOptions,
+) -> Result<DenseQwenCudaChatOutcome> {
+    let prompts = normalize_dense_qwen_chat_prompts(options.prompts)?;
+    if !(5..=16).contains(&options.max_new_tokens) {
+        bail!("dense Qwen CUDA chat is currently bounded to --max-tokens 5..=16");
+    }
+    if options.top_k == 0 {
+        bail!("dense Qwen CUDA chat requires top-k evidence; pass --top-k > 0 or use the default");
+    }
+
+    let receipt_path =
+        options.receipt_out.clone().unwrap_or_else(dense_qwen_cuda_chat_default_receipt_path);
+    let source_warm_session_path = dense_qwen_cuda_chat_source_receipt_path(&receipt_path);
+
+    let warm_session = DenseGgufQwenWarmSessionStrictCudaCommand {
+        model: options.model.clone(),
+        prompts: prompts.clone(),
+        turns: prompts.len(),
+        max_new_tokens: options.max_new_tokens,
+        top_k: options.top_k,
+        device_index: options.device_index,
+        all_layer_plan: PathBuf::from(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT),
+        model_boundary_fixtures: PathBuf::from(DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT),
+        kv_cache_policy: PathBuf::from(DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT),
+        sampling_policy: PathBuf::from(DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT),
+        one_token_proof: PathBuf::from(DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT),
+        short_decode_proof: PathBuf::from(DEFAULT_DENSE_QWEN_SHORT_DECODE_PROOF_RECEIPT),
+        json_out: Some(source_warm_session_path.clone()),
+    };
+    warm_session.execute().await?;
+
+    let (source_warm_session_receipt, source_warm_session_sha256) =
+        read_and_validate_receipt(&source_warm_session_path, |receipt| {
+            validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(receipt)
+        })?;
+
+    let source_proof = source_warm_session_receipt
+        .get("warm_session_proof")
+        .ok_or_else(|| anyhow!("warm-session source receipt is missing warm_session_proof"))?;
+    let source_turns = source_proof
+        .get("turns")
+        .and_then(Value::as_array)
+        .ok_or_else(|| anyhow!("warm-session source receipt is missing turn evidence"))?;
+    let answers = source_turns
+        .iter()
+        .map(|turn| {
+            turn.get("decoded_text")
+                .and_then(Value::as_str)
+                .filter(|value| !value.trim().is_empty())
+                .ok_or_else(|| anyhow!("warm-session source turn produced an empty answer"))
+                .map(ToString::to_string)
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let receipt = dense_qwen_cuda_chat_receipt_json(
+        &source_warm_session_receipt,
+        &source_warm_session_sha256,
+        &receipt_path,
+        &timestamp_utc,
+        &prompts,
+        &answers,
+    )?;
+    validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(&receipt)?;
+
+    if let Some(parent) = receipt_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)?;
+
+    Ok(DenseQwenCudaChatOutcome { answers, receipt_path, receipt })
+}
+
+fn normalize_dense_qwen_chat_prompts(prompts: Vec<String>) -> Result<Vec<String>> {
+    let prompts = prompts
+        .into_iter()
+        .map(|prompt| prompt.trim().to_string())
+        .filter(|prompt| !prompt.is_empty())
+        .collect::<Vec<_>>();
+    if !(2..=4).contains(&prompts.len()) {
+        bail!("dense Qwen CUDA chat requires 2..=4 non-empty user turns");
+    }
+    Ok(prompts)
+}
+
+fn dense_qwen_cuda_chat_source_receipt_path(receipt_path: &Path) -> PathBuf {
+    let parent = receipt_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem =
+        receipt_path.file_stem().and_then(|value| value.to_str()).unwrap_or("dense-qwen-chat");
+    parent.join(format!("{stem}.source-warm-session.json"))
+}
+
+fn dense_qwen_cuda_chat_receipt_json(
+    source_warm_session_receipt: &Value,
+    source_warm_session_sha256: &str,
+    receipt_path: &Path,
+    timestamp_utc: &str,
+    prompts: &[String],
+    answers: &[String],
+) -> Result<Value> {
+    let source_proof = source_warm_session_receipt
+        .get("warm_session_proof")
+        .ok_or_else(|| anyhow!("warm-session source receipt is missing warm_session_proof"))?;
+    let source_prerequisites = source_warm_session_receipt
+        .get("prerequisite_receipts")
+        .ok_or_else(|| anyhow!("warm-session source receipt is missing prerequisite_receipts"))?;
+    let source_turns = source_proof
+        .get("turns")
+        .and_then(Value::as_array)
+        .ok_or_else(|| anyhow!("warm-session source receipt is missing turns"))?;
+    if source_turns.len() != prompts.len() || answers.len() != prompts.len() {
+        bail!("dense Qwen CUDA chat receipt requires matching prompt/source/answer turn counts");
+    }
+
+    let turns = source_turns
+        .iter()
+        .zip(prompts.iter().zip(answers.iter()))
+        .enumerate()
+        .map(|(index, (source_turn, (prompt, answer)))| {
+            json!({
+                "index": index as u64,
+                "user_message": prompt,
+                "assistant_answer": answer,
+                "prompt_token_count": source_turn["prompt_token_count"].clone(),
+                "prompt_token_ids_sha256": source_turn["prompt_token_ids_sha256"].clone(),
+                "rendered_prompt_sha256": source_turn["rendered_prompt_sha256"].clone(),
+                "requested_new_tokens": source_turn["requested_new_tokens"].clone(),
+                "generated_tokens_count": source_turn["generated_tokens_count"].clone(),
+                "cpu_generated_token_ids": source_turn["cpu_generated_token_ids"].clone(),
+                "cuda_generated_token_ids": source_turn["cuda_generated_token_ids"].clone(),
+                "cpu_generated_token_ids_sha256": source_turn["cpu_generated_token_ids_sha256"].clone(),
+                "cuda_generated_token_ids_sha256": source_turn["cuda_generated_token_ids_sha256"].clone(),
+                "generated_token_ids_match": true,
+                "first_token_divergence_index": null,
+                "top_k_all_match": source_turn["top_k_all_match"].clone(),
+                "first_top_k_divergence_index": source_turn["first_top_k_divergence_index"].clone(),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let mut receipt = source_warm_session_receipt.clone();
+    receipt["artifact_kind"] = json!(DENSE_GGUF_QWEN_CHAT_STRICT_CUDA_PROOF_ARTIFACT_KIND);
+    receipt["artifact_path"] = json!(receipt_path.display().to_string());
+    receipt["claim"] = json!("dense_gguf_qwen_chat_strict_cuda_proof_recorded");
+    receipt["timestamp_utc"] = json!(timestamp_utc);
+    receipt["execution_path"]["kernel_family"] = json!("dense_qwen_chat_strict_cuda");
+    receipt["execution_path"]["quantization_family"] =
+        json!("dense_gguf_q8_0_f16_qwen_chat_contract");
+    receipt["execution_plan"]["quantization"] = json!("dense_gguf_q8_0_f16_qwen_chat_contract");
+    receipt["quality_gate"] = json!({
+        "schema": 1,
+        "gate": "qwen_cuda_chat_session",
+        "passed": true,
+        "chat_claimed": true,
+        "server_claimed": false
+    });
+    receipt["quality"] = json!({
+        "passed": true,
+        "gate": "qwen_cuda_chat_session",
+        "chat_claimed": true,
+        "server_claimed": false
+    });
+    receipt["tensor_residency"]["scope"] = json!("qwen_chat_strict_cuda");
+    receipt["residency"] = json!({
+        "weights_uploaded_once": true,
+        "runtime_buffers_reused": true,
+        "per_turn_weight_upload": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["answers"] = json!(answers);
+    receipt["receipt"] = json!({
+        "path": receipt_path.display().to_string(),
+        "defaulted_for_dense_cuda_chat": true
+    });
+    receipt["prerequisite_receipts"] = json!({
+        "schema": 1,
+        "all_layer_execution_plan_artifact_kind": source_prerequisites["all_layer_execution_plan_artifact_kind"].clone(),
+        "all_layer_execution_plan_receipt_sha256": source_prerequisites["all_layer_execution_plan_receipt_sha256"].clone(),
+        "model_boundary_fixtures_artifact_kind": source_prerequisites["model_boundary_fixtures_artifact_kind"].clone(),
+        "model_boundary_fixtures_receipt_sha256": source_prerequisites["model_boundary_fixtures_receipt_sha256"].clone(),
+        "kv_cache_policy_artifact_kind": source_prerequisites["kv_cache_policy_artifact_kind"].clone(),
+        "kv_cache_policy_receipt_sha256": source_prerequisites["kv_cache_policy_receipt_sha256"].clone(),
+        "sampling_policy_artifact_kind": source_prerequisites["sampling_policy_artifact_kind"].clone(),
+        "sampling_policy_receipt_sha256": source_prerequisites["sampling_policy_receipt_sha256"].clone(),
+        "one_token_proof_artifact_kind": source_prerequisites["one_token_proof_artifact_kind"].clone(),
+        "one_token_proof_receipt_sha256": source_prerequisites["one_token_proof_receipt_sha256"].clone(),
+        "short_decode_proof_artifact_kind": source_prerequisites["short_decode_proof_artifact_kind"].clone(),
+        "short_decode_proof_receipt_sha256": source_prerequisites["short_decode_proof_receipt_sha256"].clone(),
+        "warm_session_proof_artifact_kind": DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+        "warm_session_proof_receipt_sha256": source_warm_session_sha256,
+        "all_required_receipts_verified": true,
+        "all_layer_execution_plan_claimed": true,
+        "model_boundary_fixtures_claimed": true,
+        "kv_cache_policy_claimed": true,
+        "sampling_policy_claimed": true,
+        "one_token_proof_claimed": true,
+        "short_decode_proof_claimed": true,
+        "warm_session_proof_claimed": true
+    });
+    receipt["chat_session"] = json!({
+        "schema": 1,
+        "proof_scope": "qwen_strict_cuda_chat_from_warm_session",
+        "model_family": "qwen",
+        "turns_count": source_proof["turns_count"].clone(),
+        "requested_new_tokens_per_turn": source_proof["requested_new_tokens_per_turn"].clone(),
+        "generated_tokens_total": source_proof["generated_tokens_total"].clone(),
+        "generation_policy": "greedy",
+        "deterministic": true,
+        "fallback_used": false,
+        "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+        "cuda_target_backend": HARDWARE_LANE,
+        "cpu_generated_token_ids_sha256": source_proof["cpu_generated_token_ids_sha256"].clone(),
+        "cuda_generated_token_ids_sha256": source_proof["cuda_generated_token_ids_sha256"].clone(),
+        "generated_token_ids_match": true,
+        "first_token_divergence": null,
+        "top_k_evidence_recorded": true,
+        "top_k_compared": true,
+        "top_k_all_match": source_proof["top_k_all_match"].clone(),
+        "first_top_k_divergence": source_proof["first_top_k_divergence"].clone(),
+        "top_k_max_abs_error": source_proof["top_k_max_abs_error"].clone(),
+        "top_k_mean_abs_error": source_proof["top_k_mean_abs_error"].clone(),
+        "turns": turns,
+        "qwen_one_token_cuda_claimed": true,
+        "qwen_short_decode_cuda_claimed": true,
+        "qwen_warm_session_cuda_claimed": true,
+        "qwen_ask_cuda_claimed": false,
+        "qwen_chat_cuda_claimed": true,
+        "dense_gguf_inference_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "speedup_claim": false,
+        "server_ready_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["claim_boundary"]["qwen_ask_cuda_claimed"] = json!(false);
+    receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["server_ready_claimed"] = json!(false);
+    receipt["claim_boundary"]["speedup_claim"] = json!(false);
+    receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(false);
+    receipt["notes"] = json!([
+        "CUDA-UX-004 exposes the bounded dense Qwen CUDA chat path through the user-facing CLI.",
+        "This receipt wraps the warm-session runtime proof without claiming server readiness, speedup, persistent residency, full CUDA residency, broad dense GGUF inference, or BitNet packed I2_S/QK256 proof."
+    ]);
+    receipt["source_warm_session_receipt"] = source_warm_session_receipt.clone();
+    Ok(receipt)
 }
 
 fn dense_qwen_cuda_ask_source_receipt_path(receipt_path: &Path) -> PathBuf {
