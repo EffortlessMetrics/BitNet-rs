@@ -135,7 +135,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-009"
-status = "in_progress"
+status = "merged"
+pr = 4404
+merge_sha = "44f0b09bffeea3b61ec4f4b28291973dccb8b4d8"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-009-qwen15-candidate"
 stackable = false
 review_mode = "codex_premerge"
@@ -168,13 +170,13 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-010"
-status = "blocked"
+status = "ready"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-010-qwen15-reference"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-MODEL-009"]
+blocked_by = []
 acceptance = "Run reference output sanity for the selected larger Qwen2.5 candidate, recording exact artifact source, revision, file, size, SHA256, tokenizer authority, prompt template, reference command, prompt outputs, and reject/accept evidence."
 commands = [
   "cargo fmt --all -- --check",
