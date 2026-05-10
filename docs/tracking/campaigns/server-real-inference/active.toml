@@ -49,3 +49,40 @@ must_not_claim = [
   "Any hardware acceleration works.",
   "Server performance is proven.",
 ]
+
+[[work_item]]
+id = "SERVER-002"
+status = "in_progress"
+branch = "codex/server-real-inference/SERVER-002-no-placeholder-model-readiness"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SERVER-001"]
+acceptance = "Fail closed server model lifecycle scaffolds that previously reported placeholder HuggingFace/cache model readiness without real I/O or a real inference engine."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-server --no-default-features --features cpu",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check server-real-inference",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-server/**",
+  "docs/tracking/campaigns/server-real-inference/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "Placeholder server model lifecycle scaffolds fail closed instead of reporting answer-ready model state.",
+]
+must_not_claim = [
+  "Real HuggingFace server model loading is implemented.",
+  "Any server endpoint can answer through a new model family.",
+  "Any hardware acceleration works.",
+  "Server performance is proven.",
+]

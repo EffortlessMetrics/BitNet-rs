@@ -198,42 +198,26 @@ impl HfModelService {
         self.state = ModelLoadState::Error(reason);
     }
 
-    /// Simulate a model load (no real I/O) and return a response.
+    /// Attempt to load a model through this service.
     ///
-    /// In production this would delegate to `HuggingFaceLoader` from
-    /// `bitnet-models`; here we perform the state-machine transition and
-    /// build a `HfModelLoadResponse`.
+    /// This scaffold is not wired to a real HuggingFace or GGUF inference
+    /// engine, so it must fail closed instead of reporting placeholder model
+    /// readiness.
     pub fn load_model(&mut self, req: &HfModelLoadRequest) -> HfModelLoadResponse {
         let start = Instant::now();
         self.begin_loading();
 
-        let format =
-            req.model_format.clone().unwrap_or_else(|| ModelFormat::from_path(&req.model_path));
-        let arch = req.architecture.clone().unwrap_or_else(|| "unknown".to_string());
-
-        // Build placeholder model info
-        let info = ModelInfo {
-            architecture: arch,
-            num_parameters: 0,
-            hidden_size: 0,
-            num_layers: 0,
-            num_heads: 0,
-            vocab_size: 0,
-            max_context: 0,
-            dtype: match format {
-                ModelFormat::Safetensors => "float16".to_string(),
-                ModelFormat::Gguf => "i2_s".to_string(),
-                ModelFormat::Auto => "auto".to_string(),
-            },
-        };
-
-        self.finish_loading(info.clone());
+        let reason = format!(
+            "real HuggingFace server model loading is not wired for {}; use the verified ModelManager path instead",
+            req.model_path
+        );
+        self.fail_loading(reason.clone());
 
         HfModelLoadResponse {
-            success: true,
-            model_info: Some(info),
+            success: false,
+            model_info: None,
             load_time_ms: start.elapsed().as_millis() as u64,
-            error: None,
+            error: Some(reason),
         }
     }
 }
@@ -345,15 +329,18 @@ mod tests {
     }
 
     #[test]
-    fn service_load_model_ends_in_ready() {
+    fn service_load_model_fails_closed_without_placeholder_readiness() {
         let mut svc = HfModelService::new();
         let resp = svc.load_model(&HfModelLoadRequest {
             model_path: "model.safetensors".into(),
             model_format: None,
             architecture: Some("llama3".into()),
         });
-        assert!(resp.success);
-        assert_eq!(*svc.state(), ModelLoadState::Ready);
+        assert!(!resp.success);
+        assert!(resp.model_info.is_none());
+        assert!(resp.error.as_deref().unwrap().contains("real HuggingFace server model loading"));
+        assert!(matches!(*svc.state(), ModelLoadState::Error(_)));
+        assert!(svc.model_info().is_none());
     }
 
     // -- ModelInfo construction for architectures ---------------------------
