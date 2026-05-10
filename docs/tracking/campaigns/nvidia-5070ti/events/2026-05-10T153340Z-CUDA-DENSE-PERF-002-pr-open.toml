@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T15:33:40Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-002"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+branch = "codex/cuda-dense-perf-002-repeated-comparator"
+pr = 4440
+head_sha = "04e1dc341275c3bfcbd0e2a0a51734798ef86646"
+
+notes = [
+  "Opened PR #4440 with repeated same-artifact dense Qwen CPU/CUDA comparator receipts for one-token, short-decode, and warm-session profiles.",
+  "The PR keeps speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, server_ready_claimed=false, and bitnet_packed_i2s_qk256_proof=false.",
+]

@@ -1,0 +1,3505 @@
+{
+  "artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof",
+  "artifact_path": "ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-10\\dense-qwen-perf-002\\run-03\\dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json",
+  "claim": "dense_gguf_qwen_warm_session_strict_cuda_proof_recorded",
+  "claim_boundary": {
+    "bitnet_packed_i2s_qk256_proof": false,
+    "dense_gguf_all_layer_execution_plan_claimed": true,
+    "dense_gguf_attention_score_cuda_parity_claimed": true,
+    "dense_gguf_attention_softmax_cuda_parity_claimed": true,
+    "dense_gguf_attention_v_mix_cuda_parity_claimed": true,
+    "dense_gguf_descriptor_inspection_claimed": true,
+    "dense_gguf_inference_claimed": false,
+    "dense_gguf_linear_cuda_parity_claimed": true,
+    "dense_gguf_linear_fixture_extraction_claimed": true,
+    "dense_gguf_linear_role_sweep_cuda_parity_claimed": true,
+    "dense_gguf_mlp_activation_cuda_parity_claimed": true,
+    "dense_gguf_model_boundary_fixtures_claimed": true,
+    "dense_gguf_norm_cuda_parity_claimed": true,
+    "dense_gguf_one_layer_cpu_reference_claimed": true,
+    "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+    "dense_gguf_one_layer_execution_plan_claimed": true,
+    "dense_gguf_one_layer_inference_claimed": false,
+    "dense_gguf_rope_cuda_parity_claimed": true,
+    "dense_regular_llm_cuda_claimed": true,
+    "dense_tensor_residency_claimed": true,
+    "full_cuda_residency_claimed": false,
+    "kv_cache_policy_claimed": true,
+    "persistent_session_residency_claimed": false,
+    "qwen_ask_cuda_claimed": false,
+    "qwen_chat_cuda_claimed": false,
+    "qwen_one_token_cuda_claimed": true,
+    "qwen_short_decode_cuda_claimed": true,
+    "qwen_warm_session_cuda_claimed": true,
+    "sampling_policy_claimed": true,
+    "scoped_warm_session_residency_claimed": true,
+    "server_ready_claimed": false,
+    "speedup_claim": false
+  },
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "nvml_available": true,
+    "nvrtc_version": "12.9",
+    "power_draw_watts": 34.37,
+    "power_limit_watts": 300.0,
+    "temperature_c": 37.0,
+    "vram_bytes": 17094475776
+  },
+  "descriptor_coverage": {
+    "bitnet_packed_marker_found": false,
+    "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+    "dense_gguf_inference_claimed": false,
+    "full_cuda_residency_claimed": false,
+    "metadata_count": 26,
+    "quantization_families": [
+      "f32",
+      "q8_0"
+    ],
+    "required_roles_present": true,
+    "schema": 1,
+    "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+    "speedup_claim": false,
+    "strict_descriptor_complete": true,
+    "tensor_count": 291
+  },
+  "error": null,
+  "execution_path": {
+    "bitnet_packed_kernel_proof": false,
+    "kernel_family": "dense_qwen_warm_session_strict_cuda",
+    "model_class": "dense_regular_llm",
+    "qk256_proof": false,
+    "quantization_family": "dense_gguf_q8_0_f16_qwen_warm_session_contract"
+  },
+  "execution_plan": {
+    "bitnet_packed_qk256_cuda": false,
+    "cpu_fallback_ops": 0,
+    "cuda_bitnet_qk256_ops": 0,
+    "cuda_dense_regular_llm_ops": 8112,
+    "cuda_ops": 8112,
+    "dense_regular_llm_cuda": true,
+    "fallback_used": false,
+    "full_cuda_residency_claimed": false,
+    "mixed_cuda_routes": false,
+    "model_family": "qwen",
+    "planner_version": "cuda-planner-004",
+    "quantization": "dense_gguf_q8_0_f16_qwen_warm_session_contract",
+    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+    "runtime_api": "cuda",
+    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+    "selected_route": "dense_regular_llm_cuda",
+    "speedup_claim": false,
+    "strict_cuda_ready": true,
+    "strict_fallback_policy": "reject",
+    "total_ops": 8112,
+    "unsupported_ops": 0
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "kernel_coverage": {
+    "all_required_dense_kernels_executed": true,
+    "bitnet_qk256_kernel_invocations": 0,
+    "cpu_fallback_kernel_invocations": 0,
+    "dense_kernel_invocations": 8112,
+    "dense_kernel_launches": 8112,
+    "fallback_used": false,
+    "kernels_executed": [
+      "dense_qwen_warm_session_cuda_runtime",
+      "dense_qwen_lm_head_cuda",
+      "dense_qwen_logits_transfer_cuda"
+    ],
+    "route": "dense_regular_llm_cuda",
+    "schema": 1
+  },
+  "kernel_stats": [
+    {
+      "cpu_fallback_invocations": 0,
+      "device_to_host_bytes": 14585856,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 675710816,
+      "invocations": 8064,
+      "kernel_id": "dense_qwen_warm_session_cuda_runtime",
+      "kernel_launches": 8064,
+      "kernel_time_ms": 1088.1489,
+      "phase": "qwen_warm_session_runtime"
+    },
+    {
+      "cpu_fallback_invocations": 0,
+      "device_to_host_bytes": 0,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 0,
+      "invocations": 24,
+      "kernel_id": "dense_qwen_lm_head_cuda",
+      "kernel_launches": 24,
+      "kernel_time_ms": 0.7458,
+      "phase": "lm_head"
+    },
+    {
+      "cpu_fallback_invocations": 0,
+      "device_to_host_bytes": 0,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 0,
+      "invocations": 24,
+      "kernel_id": "dense_qwen_logits_transfer_cuda",
+      "kernel_launches": 24,
+      "kernel_time_ms": 0.0,
+      "phase": "logits_transfer"
+    }
+  ],
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "architecture": "qwen2",
+    "artifact_kind": "dense_gguf",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "model_family": "qwen",
+    "path": "C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+  },
+  "notes": [
+    "CUDA-DENSE-046 proves a bounded deterministic multi-turn Qwen warm session through the dense regular-LLM CUDA route.",
+    "This receipt does not claim ask/chat UX, server readiness, speedup, persistent residency beyond this warm-session scope, full CUDA residency, or BitNet packed I2_S/QK256 proof."
+  ],
+  "parity": {
+    "fixture_id": "qwen2.5-0.5b-instruct-q8_0-warm-session-greedy",
+    "kernel_id": "dense_qwen_warm_session_cuda_runtime",
+    "max_abs_error": 0.00003337860107421875,
+    "mean_abs_error": 7.100900014241536e-6,
+    "passed": true,
+    "reference_backend": "amd-9950x3d-cpu-avx512",
+    "target_backend": "nvidia-rtx-5070-ti-cuda",
+    "tolerance": 0.00003337860107421875,
+    "tolerance_source": "generated token equality; numeric drift recorded for top-k logits"
+  },
+  "prerequisite_receipts": {
+    "all_layer_execution_plan_artifact_kind": "dense_gguf_all_layer_execution_plan",
+    "all_layer_execution_plan_claimed": true,
+    "all_layer_execution_plan_receipt_sha256": "73098ba20677b277084c75f287daf4b0ef32d72a9458f4e7406239654b727a85",
+    "all_required_receipts_verified": true,
+    "kv_cache_policy_artifact_kind": "dense_gguf_kv_cache_policy",
+    "kv_cache_policy_claimed": true,
+    "kv_cache_policy_receipt_sha256": "29bb9f2136e4cd39742c8d9bbc398770a6a1f82314d66e8fa0a57f8ebbb8a965",
+    "model_boundary_fixtures_artifact_kind": "dense_gguf_model_boundary_fixtures",
+    "model_boundary_fixtures_claimed": true,
+    "model_boundary_fixtures_receipt_sha256": "70d2bf61e9cbaa067ce3b0c12200cc48ffb2cc89a5032f6fd8864f3f31cb5519",
+    "one_token_proof_artifact_kind": "dense_gguf_qwen_one_token_strict_cuda_proof",
+    "one_token_proof_claimed": true,
+    "one_token_proof_receipt_sha256": "30edf4db9442981c0cb49a2e99ff2c9410babb193557c8a0860e9bcef7a9c6fa",
+    "sampling_policy_artifact_kind": "dense_gguf_sampling_policy",
+    "sampling_policy_claimed": true,
+    "sampling_policy_receipt_sha256": "798e87fc12d86fd8bccaa88704f90fb3086f47ca4bc7984916c8c3bdf07c4263",
+    "schema": 1,
+    "short_decode_proof_artifact_kind": "dense_gguf_qwen_short_decode_strict_cuda_proof",
+    "short_decode_proof_claimed": true,
+    "short_decode_proof_receipt_sha256": "f27f31598ecd09e28b0e25e992283eaaf6b388254bb687ebcc90c90f8c9ee4ea"
+  },
+  "quality_gate": {
+    "answer_ready_claimed": false,
+    "chat_claimed": false,
+    "gate": "qwen_warm_session_cuda_parity",
+    "passed": true,
+    "schema": 1,
+    "short_decode_claimed": true,
+    "warm_session_claimed": true
+  },
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "session_lifecycle": {
+    "cuda_context_initialized_once": true,
+    "fallback_used": false,
+    "full_cuda_residency_claimed": false,
+    "kv_cache_policy_recorded": true,
+    "kv_cache_reinitialized_per_turn": true,
+    "model_loaded_once": true,
+    "per_turn_weight_upload": false,
+    "persistent_session_residency_claimed": false,
+    "proof_scope": "qwen_warm_session_strict_cuda",
+    "runtime_buffers_reused": true,
+    "sampling_policy_recorded": true,
+    "schema": 1,
+    "scoped_warm_session_residency_claimed": true,
+    "tokenizer_loaded_once": true,
+    "turns_count": 3,
+    "weights_uploaded_once": true
+  },
+  "speedup_claim": false,
+  "tensor_residency": {
+    "cuda_context_initialized_once": true,
+    "dense_gguf_inference_claimed": false,
+    "fallback_used": false,
+    "full_cuda_residency_claimed": false,
+    "kv_cache_policy_recorded": true,
+    "kv_cache_reinitialized_per_turn": true,
+    "model_class": "dense_regular_llm",
+    "model_loaded_once": true,
+    "per_token_weight_upload": false,
+    "per_turn_weight_upload": false,
+    "persistent_session_residency_claimed": false,
+    "residency_accounting_recorded": true,
+    "runtime_buffers_reused": true,
+    "runtime_logits_cuda_resident_before_download": true,
+    "sampling_policy_recorded": true,
+    "schema": 1,
+    "scope": "qwen_warm_session_strict_cuda",
+    "scoped_warm_session_residency_claimed": true,
+    "tokenizer_loaded_once": true,
+    "transfer_accounting": {
+      "device_to_host_bytes": 14585856,
+      "host_to_device_bytes": 675710816,
+      "kernel_invocations": 8112,
+      "kernel_launches": 8112,
+      "status": "measured"
+    },
+    "weights_resident_on_cuda": true,
+    "weights_uploaded_once": true
+  },
+  "timestamp_utc": "2026-05-10T15:29:54Z",
+  "timing": {
+    "cpu_reference_model_load_ms": 2543.6722,
+    "cpu_reference_total_ms": 4524.1793,
+    "cuda_context_init_ms": 100.6498,
+    "decode_total_ms": 858.9534000000001,
+    "device_to_host_bytes": 14585856,
+    "embed_ms_total": 2.0616000000000003,
+    "first_token_ms": 36.6073,
+    "forward_ms_total": 551.7742,
+    "generated_tokens_total": 24,
+    "host_to_device_bytes": 675710816,
+    "kernel_invocations": 8112,
+    "kernel_launches": 8112,
+    "kernel_time_ms": 1088.1489,
+    "logits_ms_total": 0.7458,
+    "model_load_ms": 3399.0646,
+    "prefill_ms": 535.6289,
+    "tokenizer_load_ms": 133.413,
+    "total_ms": 4898.469300000001,
+    "turns_count": 3
+  },
+  "tokenizer_prompt_authority": {
+    "bos_policy": "contract_default_add_bos",
+    "deterministic_prompt": true,
+    "prompt_authority": "contract_authoritative",
+    "prompt_template": "qwen-chat-raw-deterministic",
+    "prompt_token_count_total": 22,
+    "prompt_token_ids_sha256": "bd83ae2967c74760fa25e66ce5e32ee3c515a40280dec9e2fcf1138ffdaad077",
+    "rendered_prompt_sha256": "eae12bfc9b8f412835ae5700e706c0741ac63ec1f667e260a803c719ea6dca99",
+    "schema": 1,
+    "tokenizer_authority": "contract_authoritative",
+    "turns": [
+      {
+        "index": 0,
+        "prompt_token_count": 8,
+        "prompt_token_ids_sha256": "c94c330c606eb24adef37d7fd276fc45a01c9fb21b6a8cea482102513f767144",
+        "rendered_prompt_bytes": 12,
+        "rendered_prompt_sha256": "52cb6b5e4a038af1756708f98afb718a08c75b87b2f03dbee4dd9c8139c15c5e"
+      },
+      {
+        "index": 1,
+        "prompt_token_count": 8,
+        "prompt_token_ids_sha256": "fd0e904f0e9424b82cd2874c0cb38b24ddd2ef8b744f9d739913fda9ecd027f7",
+        "rendered_prompt_bytes": 26,
+        "rendered_prompt_sha256": "5ed56ad87c189de4a8c998af85805b1b102da7f3516fac9df67092cd86cfc402"
+      },
+      {
+        "index": 2,
+        "prompt_token_count": 6,
+        "prompt_token_ids_sha256": "65cae70493af9aff899cae73ccfd9bf4aee1650f87263bc74cadc7cab8b31a5b",
+        "rendered_prompt_bytes": 25,
+        "rendered_prompt_sha256": "f21eb9adee9c24775f51deee6140b05d6ccac4a19eca4b8bfbe67d0307c93f9a"
+      }
+    ],
+    "turns_count": 3
+  },
+  "warm_session_proof": {
+    "bitnet_packed_i2s_qk256_proof": false,
+    "cpu_generated_token_ids_sha256": "be450feae8c07f55d431d4cf132349970479e54bb236ff81b866df8919a4d4b3",
+    "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+    "cuda_generated_token_ids_sha256": "be450feae8c07f55d431d4cf132349970479e54bb236ff81b866df8919a4d4b3",
+    "cuda_logits_top_k_session_sha256": "286ff84e54b56a052c2210db7b449549d445f2e5c12d04c07037662608f5d9d0",
+    "cuda_target_backend": "nvidia-rtx-5070-ti-cuda",
+    "dense_gguf_inference_claimed": false,
+    "deterministic": true,
+    "fallback_used": false,
+    "first_token_divergence": null,
+    "first_top_k_divergence": null,
+    "full_cuda_residency_claimed": false,
+    "generated_token_ids_match": true,
+    "generated_tokens_total": 24,
+    "generation_policy": "greedy",
+    "model_family": "qwen",
+    "proof_scope": "qwen_strict_warm_session_greedy",
+    "qwen_chat_cuda_claimed": false,
+    "qwen_one_token_cuda_claimed": true,
+    "qwen_short_decode_cuda_claimed": true,
+    "qwen_warm_session_cuda_claimed": true,
+    "requested_new_tokens_per_turn": 8,
+    "schema": 1,
+    "server_ready_claimed": false,
+    "speedup_claim": false,
+    "top_k_all_match": true,
+    "top_k_compared": true,
+    "top_k_evidence_recorded": true,
+    "top_k_max_abs_error": 0.00003337860107421875,
+    "top_k_mean_abs_error": 7.100900014241536e-6,
+    "turns": [
+      {
+        "cpu_generated_token_ids": [
+          576,
+          4226,
+          374,
+          220,
+          19,
+          13,
+          3555,
+          374
+        ],
+        "cpu_generated_token_ids_sha256": "638e3358dd291728156e5d98d5fc9cb7e66afa992c8cd16833c85a552572aa4f",
+        "cpu_logits_top_k_steps_sha256": "ef27ee5864553c438a72ccaa3c1c29435109292eb5c6203210a7a5e70c06781b",
+        "cuda_generated_token_ids": [
+          576,
+          4226,
+          374,
+          220,
+          19,
+          13,
+          3555,
+          374
+        ],
+        "cuda_generated_token_ids_sha256": "638e3358dd291728156e5d98d5fc9cb7e66afa992c8cd16833c85a552572aa4f",
+        "cuda_logits_top_k_steps_sha256": "ef27ee5864553c438a72ccaa3c1c29435109292eb5c6203210a7a5e70c06781b",
+        "cuda_turn_timing": {
+          "decode_total_ms": 287.02680000000004,
+          "embed_ms_total": 0.6378,
+          "first_token_ms": 36.6073,
+          "forward_ms_total": 185.78369999999998,
+          "logits_device_all_cuda_resident": true,
+          "logits_ms_total": 0.323,
+          "prefill_ms": 266.6803,
+          "total_ms": 556.1885
+        },
+        "decoded_text": " The answer is 4. What is",
+        "first_token_divergence_index": null,
+        "first_top_k_divergence_index": null,
+        "generated_token_ids_match": true,
+        "generated_tokens_count": 8,
+        "index": 0,
+        "prompt_token_count": 8,
+        "prompt_token_ids_sha256": "c94c330c606eb24adef37d7fd276fc45a01c9fb21b6a8cea482102513f767144",
+        "rendered_prompt_sha256": "52cb6b5e4a038af1756708f98afb718a08c75b87b2f03dbee4dd9c8139c15c5e",
+        "requested_new_tokens": 8,
+        "steps": [
+          {
+            "cpu_logits_sha256": "9c41a0f538ac93a611ea3d7416a4520564180cfb4d519943a893103d1024781f",
+            "cpu_logits_top_k_sha256": "11c23707326a6332bfe35089e493fd68955f5d38359d8fb0749f205a92d95ac8",
+            "cpu_selected_token_id": 576,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 576,
+                "value": 16.249156951904297
+              },
+              {
+                "rank": 2,
+                "token_id": 220,
+                "value": 16.129838943481445
+              },
+              {
+                "rank": 3,
+                "token_id": 3555,
+                "value": 15.84369945526123
+              },
+              {
+                "rank": 4,
+                "token_id": 715,
+                "value": 15.685256004333496
+              },
+              {
+                "rank": 5,
+                "token_id": 4710,
+                "value": 15.459883689880371
+              },
+              {
+                "rank": 6,
+                "token_id": 2160,
+                "value": 15.193166732788086
+              },
+              {
+                "rank": 7,
+                "token_id": 2014,
+                "value": 15.151866912841797
+              },
+              {
+                "rank": 8,
+                "token_id": 1416,
+                "value": 15.037195205688477
+              },
+              {
+                "rank": 9,
+                "token_id": 6771,
+                "value": 14.951605796813965
+              },
+              {
+                "rank": 10,
+                "token_id": 1084,
+                "value": 14.933817863464355
+              }
+            ],
+            "cuda_logits_sha256": "704efaa5d8f4fd89fc999aee9a23dbd66c498a7f1c4d1c4c0a73d6c67602b4e9",
+            "cuda_logits_top_k_sha256": "11c23707326a6332bfe35089e493fd68955f5d38359d8fb0749f205a92d95ac8",
+            "cuda_selected_token_id": 576,
+            "cuda_step_timing": {
+              "decode_ms": 36.6073,
+              "embed_ms": 0.0322,
+              "forward_ms": 23.1466,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0937
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 576,
+                "value": 16.249155044555664
+              },
+              {
+                "rank": 2,
+                "token_id": 220,
+                "value": 16.12985610961914
+              },
+              {
+                "rank": 3,
+                "token_id": 3555,
+                "value": 15.8436918258667
+              },
+              {
+                "rank": 4,
+                "token_id": 715,
+                "value": 15.685262680053711
+              },
+              {
+                "rank": 5,
+                "token_id": 4710,
+                "value": 15.459882736206055
+              },
+              {
+                "rank": 6,
+                "token_id": 2160,
+                "value": 15.193158149719238
+              },
+              {
+                "rank": 7,
+                "token_id": 2014,
+                "value": 15.151872634887695
+              },
+              {
+                "rank": 8,
+                "token_id": 1416,
+                "value": 15.037190437316895
+              },
+              {
+                "rank": 9,
+                "token_id": 6771,
+                "value": 14.951603889465332
+              },
+              {
+                "rank": 10,
+                "token_id": 1084,
+                "value": 14.933810234069824
+              }
+            ],
+            "index": 0,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000171661376953125,
+            "top_k_mean_abs_error": 6.29425048828125e-6
+          },
+          {
+            "cpu_logits_sha256": "fb2c5d109ff5b8911039a56f5d054e4e61829737eacd9d59c15a327b58d9b784",
+            "cpu_logits_top_k_sha256": "69082a30bafc857f49c2f42e3c8fd8f24a747b6ae24214a0fcc4d435889c635d",
+            "cpu_selected_token_id": 4226,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 4226,
+                "value": 19.77118682861328
+              },
+              {
+                "rank": 2,
+                "token_id": 2629,
+                "value": 18.732378005981445
+              },
+              {
+                "rank": 3,
+                "token_id": 1102,
+                "value": 17.001209259033203
+              },
+              {
+                "rank": 4,
+                "token_id": 1372,
+                "value": 15.891441345214844
+              },
+              {
+                "rank": 5,
+                "token_id": 4396,
+                "value": 15.56988525390625
+              },
+              {
+                "rank": 6,
+                "token_id": 5297,
+                "value": 14.95963191986084
+              },
+              {
+                "rank": 7,
+                "token_id": 35972,
+                "value": 14.825130462646484
+              },
+              {
+                "rank": 8,
+                "token_id": 3491,
+                "value": 14.564616203308105
+              },
+              {
+                "rank": 9,
+                "token_id": 3405,
+                "value": 14.428616523742676
+              },
+              {
+                "rank": 10,
+                "token_id": 1378,
+                "value": 14.204804420471191
+              }
+            ],
+            "cuda_logits_sha256": "a4e10a7f0afa757bdaff49168349302b88f7659abafc8e872ba8c27fecb8cfed",
+            "cuda_logits_top_k_sha256": "69082a30bafc857f49c2f42e3c8fd8f24a747b6ae24214a0fcc4d435889c635d",
+            "cuda_selected_token_id": 4226,
+            "cuda_step_timing": {
+              "decode_ms": 36.0609,
+              "embed_ms": 0.0809,
+              "forward_ms": 23.2759,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0385
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 4226,
+                "value": 19.771198272705078
+              },
+              {
+                "rank": 2,
+                "token_id": 2629,
+                "value": 18.732376098632812
+              },
+              {
+                "rank": 3,
+                "token_id": 1102,
+                "value": 17.00120735168457
+              },
+              {
+                "rank": 4,
+                "token_id": 1372,
+                "value": 15.891446113586426
+              },
+              {
+                "rank": 5,
+                "token_id": 4396,
+                "value": 15.569906234741211
+              },
+              {
+                "rank": 6,
+                "token_id": 5297,
+                "value": 14.95964241027832
+              },
+              {
+                "rank": 7,
+                "token_id": 35972,
+                "value": 14.825128555297852
+              },
+              {
+                "rank": 8,
+                "token_id": 3491,
+                "value": 14.564616203308105
+              },
+              {
+                "rank": 9,
+                "token_id": 3405,
+                "value": 14.428614616394043
+              },
+              {
+                "rank": 10,
+                "token_id": 1378,
+                "value": 14.204805374145508
+              }
+            ],
+            "index": 1,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000209808349609375,
+            "top_k_mean_abs_error": 5.626678466796875e-6
+          },
+          {
+            "cpu_logits_sha256": "ac485c9fb69237e11df678443d080e16c473a8d4ab213b7349d6a23da41fe7db",
+            "cpu_logits_top_k_sha256": "4d1448a43ac04f6091307a5c221222d43f01569c87c00001b071c3e9c31b26c1",
+            "cpu_selected_token_id": 374,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 374,
+                "value": 22.422094345092773
+              },
+              {
+                "rank": 2,
+                "token_id": 311,
+                "value": 20.031709671020508
+              },
+              {
+                "rank": 3,
+                "token_id": 13798,
+                "value": 18.953344345092773
+              },
+              {
+                "rank": 4,
+                "token_id": 11,
+                "value": 18.830766677856445
+              },
+              {
+                "rank": 5,
+                "token_id": 646,
+                "value": 17.980789184570312
+              },
+              {
+                "rank": 6,
+                "token_id": 220,
+                "value": 17.765226364135742
+              },
+              {
+                "rank": 7,
+                "token_id": 304,
+                "value": 17.490705490112305
+              },
+              {
+                "rank": 8,
+                "token_id": 686,
+                "value": 17.391921997070312
+              },
+              {
+                "rank": 9,
+                "token_id": 1265,
+                "value": 17.376712799072266
+              },
+              {
+                "rank": 10,
+                "token_id": 702,
+                "value": 16.965118408203125
+              }
+            ],
+            "cuda_logits_sha256": "a717cf67161ce6abf21d11aeb996b9bcef7c2aab0e4696759dd45b9b5d53f38e",
+            "cuda_logits_top_k_sha256": "4d1448a43ac04f6091307a5c221222d43f01569c87c00001b071c3e9c31b26c1",
+            "cuda_selected_token_id": 374,
+            "cuda_step_timing": {
+              "decode_ms": 34.0484,
+              "embed_ms": 0.0876,
+              "forward_ms": 21.880799999999997,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0304
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 374,
+                "value": 22.4221134185791
+              },
+              {
+                "rank": 2,
+                "token_id": 311,
+                "value": 20.031719207763672
+              },
+              {
+                "rank": 3,
+                "token_id": 13798,
+                "value": 18.95334815979004
+              },
+              {
+                "rank": 4,
+                "token_id": 11,
+                "value": 18.830780029296875
+              },
+              {
+                "rank": 5,
+                "token_id": 646,
+                "value": 17.980798721313477
+              },
+              {
+                "rank": 6,
+                "token_id": 220,
+                "value": 17.765239715576172
+              },
+              {
+                "rank": 7,
+                "token_id": 304,
+                "value": 17.490699768066406
+              },
+              {
+                "rank": 8,
+                "token_id": 686,
+                "value": 17.391925811767578
+              },
+              {
+                "rank": 9,
+                "token_id": 1265,
+                "value": 17.376728057861328
+              },
+              {
+                "rank": 10,
+                "token_id": 702,
+                "value": 16.965120315551758
+              }
+            ],
+            "index": 2,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.000019073486328125,
+            "top_k_mean_abs_error": 9.5367431640625e-6
+          },
+          {
+            "cpu_logits_sha256": "063c69eaa4c26b2792ad7c00d7534ddef9009f59a40524a23b27ffb7b3dd6793",
+            "cpu_logits_top_k_sha256": "d5ec5c77ce10d987612c0990daae50e7f951b021dda1dc4592f6d0c397e83c6a",
+            "cpu_selected_token_id": 220,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 220,
+                "value": 20.693721771240234
+              },
+              {
+                "rank": 2,
+                "token_id": 3040,
+                "value": 17.138336181640625
+              },
+              {
+                "rank": 3,
+                "token_id": 2677,
+                "value": 17.022083282470703
+              },
+              {
+                "rank": 4,
+                "token_id": 1378,
+                "value": 16.535795211791992
+              },
+              {
+                "rank": 5,
+                "token_id": 4743,
+                "value": 16.498340606689453
+              },
+              {
+                "rank": 6,
+                "token_id": 264,
+                "value": 16.000713348388672
+              },
+              {
+                "rank": 7,
+                "token_id": 8063,
+                "value": 15.980793952941895
+              },
+              {
+                "rank": 8,
+                "token_id": 458,
+                "value": 15.898508071899414
+              },
+              {
+                "rank": 9,
+                "token_id": 8094,
+                "value": 15.624893188476562
+              },
+              {
+                "rank": 10,
+                "token_id": 4236,
+                "value": 15.402939796447754
+              }
+            ],
+            "cuda_logits_sha256": "d0ca23176071781170e53e3f351a20f1642f8a42b53ebf1f950bc88fae3df146",
+            "cuda_logits_top_k_sha256": "d5ec5c77ce10d987612c0990daae50e7f951b021dda1dc4592f6d0c397e83c6a",
+            "cuda_selected_token_id": 220,
+            "cuda_step_timing": {
+              "decode_ms": 33.851,
+              "embed_ms": 0.0633,
+              "forward_ms": 21.9982,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0275
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 220,
+                "value": 20.693721771240234
+              },
+              {
+                "rank": 2,
+                "token_id": 3040,
+                "value": 17.13835906982422
+              },
+              {
+                "rank": 3,
+                "token_id": 2677,
+                "value": 17.022085189819336
+              },
+              {
+                "rank": 4,
+                "token_id": 1378,
+                "value": 16.535802841186523
+              },
+              {
+                "rank": 5,
+                "token_id": 4743,
+                "value": 16.498355865478516
+              },
+              {
+                "rank": 6,
+                "token_id": 264,
+                "value": 16.000703811645508
+              },
+              {
+                "rank": 7,
+                "token_id": 8063,
+                "value": 15.980806350708008
+              },
+              {
+                "rank": 8,
+                "token_id": 458,
+                "value": 15.898500442504883
+              },
+              {
+                "rank": 9,
+                "token_id": 8094,
+                "value": 15.624894142150879
+              },
+              {
+                "rank": 10,
+                "token_id": 4236,
+                "value": 15.402945518493652
+              }
+            ],
+            "index": 3,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.00002288818359375,
+            "top_k_mean_abs_error": 8.392333984375e-6
+          },
+          {
+            "cpu_logits_sha256": "85753fd103853e9d7e7a3c440641ef9a62b96dc5c80eb195773bcb1bf7fffbac",
+            "cpu_logits_top_k_sha256": "f2a10af27982b6b5d1465c02701ecc42a7a76f2b5e16ed448993dce7999dd0f8",
+            "cpu_selected_token_id": 19,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 19,
+                "value": 23.5830078125
+              },
+              {
+                "rank": 2,
+                "token_id": 4102,
+                "value": 16.516143798828125
+              },
+              {
+                "rank": 3,
+                "token_id": 20,
+                "value": 16.03639793395996
+              },
+              {
+                "rank": 4,
+                "token_id": 17,
+                "value": 15.923938751220703
+              },
+              {
+                "rank": 5,
+                "token_id": 220,
+                "value": 15.411267280578613
+              },
+              {
+                "rank": 6,
+                "token_id": 16,
+                "value": 15.254029273986816
+              },
+              {
+                "rank": 7,
+                "token_id": 21,
+                "value": 14.075338363647461
+              },
+              {
+                "rank": 8,
+                "token_id": 18,
+                "value": 13.652740478515625
+              },
+              {
+                "rank": 9,
+                "token_id": 1036,
+                "value": 13.261192321777344
+              },
+              {
+                "rank": 10,
+                "token_id": 311,
+                "value": 13.14815902709961
+              }
+            ],
+            "cuda_logits_sha256": "2a92a1ca5475c73cea1549d0ff046878c41fc86908aa2c62ff1db24797866136",
+            "cuda_logits_top_k_sha256": "f2a10af27982b6b5d1465c02701ecc42a7a76f2b5e16ed448993dce7999dd0f8",
+            "cuda_selected_token_id": 19,
+            "cuda_step_timing": {
+              "decode_ms": 33.4907,
+              "embed_ms": 0.058100000000000006,
+              "forward_ms": 21.6133,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0275
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 19,
+                "value": 23.583019256591797
+              },
+              {
+                "rank": 2,
+                "token_id": 4102,
+                "value": 16.516157150268555
+              },
+              {
+                "rank": 3,
+                "token_id": 20,
+                "value": 16.03638458251953
+              },
+              {
+                "rank": 4,
+                "token_id": 17,
+                "value": 15.92393684387207
+              },
+              {
+                "rank": 5,
+                "token_id": 220,
+                "value": 15.41126537322998
+              },
+              {
+                "rank": 6,
+                "token_id": 16,
+                "value": 15.254026412963867
+              },
+              {
+                "rank": 7,
+                "token_id": 21,
+                "value": 14.075335502624512
+              },
+              {
+                "rank": 8,
+                "token_id": 18,
+                "value": 13.652742385864258
+              },
+              {
+                "rank": 9,
+                "token_id": 1036,
+                "value": 13.261176109313965
+              },
+              {
+                "rank": 10,
+                "token_id": 311,
+                "value": 13.148154258728027
+              }
+            ],
+            "index": 4,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.00001621246337890625,
+            "top_k_mean_abs_error": 7.05718994140625e-6
+          },
+          {
+            "cpu_logits_sha256": "f6cb4701edc96f357553f316fb9a04f5051dd31b946387746d0b0a2fee6d3273",
+            "cpu_logits_top_k_sha256": "e5113b0cf47fd18f8d26c1a56226fa52b19caf1993cad6cf44ec0d5bd110824a",
+            "cpu_selected_token_id": 13,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 13,
+                "value": 21.449298858642578
+              },
+              {
+                "rank": 2,
+                "token_id": 382,
+                "value": 19.94641876220703
+              },
+              {
+                "rank": 3,
+                "token_id": 624,
+                "value": 19.87297821044922
+              },
+              {
+                "rank": 4,
+                "token_id": 11,
+                "value": 19.649404525756836
+              },
+              {
+                "rank": 5,
+                "token_id": 7110,
+                "value": 18.028823852539062
+              },
+              {
+                "rank": 6,
+                "token_id": 0,
+                "value": 17.998214721679688
+              },
+              {
+                "rank": 7,
+                "token_id": 271,
+                "value": 17.013883590698242
+              },
+              {
+                "rank": 8,
+                "token_id": 1576,
+                "value": 16.997007369995117
+              },
+              {
+                "rank": 9,
+                "token_id": 198,
+                "value": 16.544633865356445
+              },
+              {
+                "rank": 10,
+                "token_id": 4894,
+                "value": 16.22014045715332
+              }
+            ],
+            "cuda_logits_sha256": "4200bd683503e3136394e820a6a55581755a85de463bb78945d85efe6d11e136",
+            "cuda_logits_top_k_sha256": "e5113b0cf47fd18f8d26c1a56226fa52b19caf1993cad6cf44ec0d5bd110824a",
+            "cuda_selected_token_id": 13,
+            "cuda_step_timing": {
+              "decode_ms": 37.0096,
+              "embed_ms": 0.0664,
+              "forward_ms": 24.5375,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.030199999999999998
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 13,
+                "value": 21.449302673339844
+              },
+              {
+                "rank": 2,
+                "token_id": 382,
+                "value": 19.946420669555664
+              },
+              {
+                "rank": 3,
+                "token_id": 624,
+                "value": 19.872976303100586
+              },
+              {
+                "rank": 4,
+                "token_id": 11,
+                "value": 19.64940071105957
+              },
+              {
+                "rank": 5,
+                "token_id": 7110,
+                "value": 18.028839111328125
+              },
+              {
+                "rank": 6,
+                "token_id": 0,
+                "value": 17.99821662902832
+              },
+              {
+                "rank": 7,
+                "token_id": 271,
+                "value": 17.013874053955078
+              },
+              {
+                "rank": 8,
+                "token_id": 1576,
+                "value": 16.997013092041016
+              },
+              {
+                "rank": 9,
+                "token_id": 198,
+                "value": 16.54462242126465
+              },
+              {
+                "rank": 10,
+                "token_id": 4894,
+                "value": 16.22014045715332
+              }
+            ],
+            "index": 5,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000152587890625,
+            "top_k_mean_abs_error": 5.53131103515625e-6
+          },
+          {
+            "cpu_logits_sha256": "84d0d125887d73cbd347ac75d4f69e0d13c922c3839a524bffe8896928835932",
+            "cpu_logits_top_k_sha256": "825c3d5d4c5b6bc084c3a5ceacb94ad06e724aaeb32ec85508eae2810925c470",
+            "cpu_selected_token_id": 3555,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 3555,
+                "value": 16.94931411743164
+              },
+              {
+                "rank": 2,
+                "token_id": 576,
+                "value": 15.68709659576416
+              },
+              {
+                "rank": 3,
+                "token_id": 1096,
+                "value": 15.473098754882812
+              },
+              {
+                "rank": 4,
+                "token_id": 2160,
+                "value": 15.352792739868164
+              },
+              {
+                "rank": 5,
+                "token_id": 4710,
+                "value": 15.294947624206543
+              },
+              {
+                "rank": 6,
+                "token_id": 2980,
+                "value": 15.033794403076172
+              },
+              {
+                "rank": 7,
+                "token_id": 8429,
+                "value": 14.87730884552002
+              },
+              {
+                "rank": 8,
+                "token_id": 2585,
+                "value": 14.703033447265625
+              },
+              {
+                "rank": 9,
+                "token_id": 1416,
+                "value": 14.647891998291016
+              },
+              {
+                "rank": 10,
+                "token_id": 758,
+                "value": 14.38176155090332
+              }
+            ],
+            "cuda_logits_sha256": "36905ec938684ce5f77f04d3735a7d4721f64addede5f0cafebb62b9477408f4",
+            "cuda_logits_top_k_sha256": "825c3d5d4c5b6bc084c3a5ceacb94ad06e724aaeb32ec85508eae2810925c470",
+            "cuda_selected_token_id": 3555,
+            "cuda_step_timing": {
+              "decode_ms": 37.3483,
+              "embed_ms": 0.1171,
+              "forward_ms": 24.0387,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0359
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 3555,
+                "value": 16.94931411743164
+              },
+              {
+                "rank": 2,
+                "token_id": 576,
+                "value": 15.687095642089844
+              },
+              {
+                "rank": 3,
+                "token_id": 1096,
+                "value": 15.473102569580078
+              },
+              {
+                "rank": 4,
+                "token_id": 2160,
+                "value": 15.352802276611328
+              },
+              {
+                "rank": 5,
+                "token_id": 4710,
+                "value": 15.294950485229492
+              },
+              {
+                "rank": 6,
+                "token_id": 2980,
+                "value": 15.033793449401855
+              },
+              {
+                "rank": 7,
+                "token_id": 8429,
+                "value": 14.877306938171387
+              },
+              {
+                "rank": 8,
+                "token_id": 2585,
+                "value": 14.703034400939941
+              },
+              {
+                "rank": 9,
+                "token_id": 1416,
+                "value": 14.647892951965332
+              },
+              {
+                "rank": 10,
+                "token_id": 758,
+                "value": 14.381758689880371
+              }
+            ],
+            "index": 6,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 9.5367431640625e-6,
+            "top_k_mean_abs_error": 2.47955322265625e-6
+          },
+          {
+            "cpu_logits_sha256": "cb999ca9eb5623f6b74c857f133ce62a927cc6a6069951be047e0bb684b88e88",
+            "cpu_logits_top_k_sha256": "82a3fa393c4e10b978a0a04ccde26bd12f82e163ec2e205c35814660248df7f4",
+            "cpu_selected_token_id": 374,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 374,
+                "value": 22.524051666259766
+              },
+              {
+                "rank": 2,
+                "token_id": 1558,
+                "value": 20.176965713500977
+              },
+              {
+                "rank": 3,
+                "token_id": 421,
+                "value": 19.489093780517578
+              },
+              {
+                "rank": 4,
+                "token_id": 911,
+                "value": 18.550600051879883
+              },
+              {
+                "rank": 5,
+                "token_id": 1035,
+                "value": 18.45684242248535
+              },
+              {
+                "rank": 6,
+                "token_id": 8573,
+                "value": 18.42165184020996
+              },
+              {
+                "rank": 7,
+                "token_id": 525,
+                "value": 18.090484619140625
+              },
+              {
+                "rank": 8,
+                "token_id": 653,
+                "value": 17.987998962402344
+              },
+              {
+                "rank": 9,
+                "token_id": 1265,
+                "value": 17.886125564575195
+              },
+              {
+                "rank": 10,
+                "token_id": 572,
+                "value": 17.448291778564453
+              }
+            ],
+            "cuda_logits_sha256": "c12c360303024e23285db03bd75ff91e3ad16446273c24c0197e713d1e7d9d5f",
+            "cuda_logits_top_k_sha256": "82a3fa393c4e10b978a0a04ccde26bd12f82e163ec2e205c35814660248df7f4",
+            "cuda_selected_token_id": 374,
+            "cuda_step_timing": {
+              "decode_ms": 37.8376,
+              "embed_ms": 0.13219999999999998,
+              "forward_ms": 25.2927,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0393
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 374,
+                "value": 22.524065017700195
+              },
+              {
+                "rank": 2,
+                "token_id": 1558,
+                "value": 20.17696189880371
+              },
+              {
+                "rank": 3,
+                "token_id": 421,
+                "value": 19.48909568786621
+              },
+              {
+                "rank": 4,
+                "token_id": 911,
+                "value": 18.55060577392578
+              },
+              {
+                "rank": 5,
+                "token_id": 1035,
+                "value": 18.456844329833984
+              },
+              {
+                "rank": 6,
+                "token_id": 8573,
+                "value": 18.421655654907227
+              },
+              {
+                "rank": 7,
+                "token_id": 525,
+                "value": 18.090492248535156
+              },
+              {
+                "rank": 8,
+                "token_id": 653,
+                "value": 17.988000869750977
+              },
+              {
+                "rank": 9,
+                "token_id": 1265,
+                "value": 17.886123657226562
+              },
+              {
+                "rank": 10,
+                "token_id": 572,
+                "value": 17.448293685913086
+              }
+            ],
+            "index": 7,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000133514404296875,
+            "top_k_mean_abs_error": 4.38690185546875e-6
+          }
+        ],
+        "top_k_all_match": true
+      },
+      {
+        "cpu_generated_token_ids": [
+          576,
+          1894,
+          315,
+          279,
+          12884,
+          374,
+          6303,
+          13
+        ],
+        "cpu_generated_token_ids_sha256": "002ef099187206ad1e10cc05d79233140eb0151a9340788cc09a741e9a163a26",
+        "cpu_logits_top_k_steps_sha256": "4baa959752f8dede207bef90a73737ef49a38dad8b2f0bbbb3607507ee99075d",
+        "cuda_generated_token_ids": [
+          576,
+          1894,
+          315,
+          279,
+          12884,
+          374,
+          6303,
+          13
+        ],
+        "cuda_generated_token_ids_sha256": "002ef099187206ad1e10cc05d79233140eb0151a9340788cc09a741e9a163a26",
+        "cuda_logits_top_k_steps_sha256": "4baa959752f8dede207bef90a73737ef49a38dad8b2f0bbbb3607507ee99075d",
+        "cuda_turn_timing": {
+          "decode_total_ms": 276.7194,
+          "embed_ms_total": 0.6173,
+          "first_token_ms": 37.6285,
+          "forward_ms_total": 176.4817,
+          "logits_device_all_cuda_resident": true,
+          "logits_ms_total": 0.19840000000000002,
+          "prefill_ms": 165.11700000000002,
+          "total_ms": 442.42150000000004
+        },
+        "decoded_text": " The color of the sky is blue.",
+        "first_token_divergence_index": null,
+        "first_top_k_divergence_index": null,
+        "generated_token_ids_match": true,
+        "generated_tokens_count": 8,
+        "index": 1,
+        "prompt_token_count": 8,
+        "prompt_token_ids_sha256": "fd0e904f0e9424b82cd2874c0cb38b24ddd2ef8b744f9d739913fda9ecd027f7",
+        "rendered_prompt_sha256": "5ed56ad87c189de4a8c998af85805b1b102da7f3516fac9df67092cd86cfc402",
+        "requested_new_tokens": 8,
+        "steps": [
+          {
+            "cpu_logits_sha256": "010058f7c620b542b152c83cbc666aaf9d604538f3256e6a3662f0960e0bcfe3",
+            "cpu_logits_top_k_sha256": "8f71d62d1a7856480e019204cbbec522b48eaa5b08838160ee72345ba65070c5",
+            "cpu_selected_token_id": 576,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 576,
+                "value": 15.630014419555664
+              },
+              {
+                "rank": 2,
+                "token_id": 8697,
+                "value": 14.660989761352539
+              },
+              {
+                "rank": 3,
+                "token_id": 7840,
+                "value": 13.775830268859863
+              },
+              {
+                "rank": 4,
+                "token_id": 2308,
+                "value": 13.600127220153809
+              },
+              {
+                "rank": 5,
+                "token_id": 481,
+                "value": 13.428404808044434
+              },
+              {
+                "rank": 6,
+                "token_id": 14722,
+                "value": 13.205903053283691
+              },
+              {
+                "rank": 7,
+                "token_id": 3478,
+                "value": 13.166378021240234
+              },
+              {
+                "rank": 8,
+                "token_id": 4102,
+                "value": 13.154850959777832
+              },
+              {
+                "rank": 9,
+                "token_id": 715,
+                "value": 13.091631889343262
+              },
+              {
+                "rank": 10,
+                "token_id": 358,
+                "value": 12.944604873657227
+              }
+            ],
+            "cuda_logits_sha256": "48d9a7e68c42ec82104a6148c4b27c909c419ff00492b3690f41eb90ec59bc61",
+            "cuda_logits_top_k_sha256": "8f71d62d1a7856480e019204cbbec522b48eaa5b08838160ee72345ba65070c5",
+            "cuda_selected_token_id": 576,
+            "cuda_step_timing": {
+              "decode_ms": 37.6285,
+              "embed_ms": 0.0224,
+              "forward_ms": 24.2041,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0291
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 576,
+                "value": 15.630002975463867
+              },
+              {
+                "rank": 2,
+                "token_id": 8697,
+                "value": 14.661005020141602
+              },
+              {
+                "rank": 3,
+                "token_id": 7840,
+                "value": 13.775847434997559
+              },
+              {
+                "rank": 4,
+                "token_id": 2308,
+                "value": 13.60013198852539
+              },
+              {
+                "rank": 5,
+                "token_id": 481,
+                "value": 13.428410530090332
+              },
+              {
+                "rank": 6,
+                "token_id": 14722,
+                "value": 13.205907821655273
+              },
+              {
+                "rank": 7,
+                "token_id": 3478,
+                "value": 13.166379928588867
+              },
+              {
+                "rank": 8,
+                "token_id": 4102,
+                "value": 13.154855728149414
+              },
+              {
+                "rank": 9,
+                "token_id": 715,
+                "value": 13.091636657714844
+              },
+              {
+                "rank": 10,
+                "token_id": 358,
+                "value": 12.944600105285645
+              }
+            ],
+            "index": 0,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000171661376953125,
+            "top_k_mean_abs_error": 7.534027099609375e-6
+          },
+          {
+            "cpu_logits_sha256": "1e07fdbbd5f37c8aa05387d07a29c1f33f5567ab39ed602fb1aca559f94805be",
+            "cpu_logits_top_k_sha256": "174c6615507cf433615f27ad1d2bbf5f4a547a170332bf1493213a8434edabb5",
+            "cpu_selected_token_id": 1894,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 1894,
+                "value": 18.470476150512695
+              },
+              {
+                "rank": 2,
+                "token_id": 12884,
+                "value": 17.79047203063965
+              },
+              {
+                "rank": 3,
+                "token_id": 829,
+                "value": 16.170412063598633
+              },
+              {
+                "rank": 4,
+                "token_id": 7015,
+                "value": 15.891199111938477
+              },
+              {
+                "rank": 5,
+                "token_id": 6303,
+                "value": 15.189851760864258
+              },
+              {
+                "rank": 6,
+                "token_id": 1429,
+                "value": 14.999699592590332
+              },
+              {
+                "rank": 7,
+                "token_id": 1887,
+                "value": 14.262332916259766
+              },
+              {
+                "rank": 8,
+                "token_id": 4226,
+                "value": 14.211432456970215
+              },
+              {
+                "rank": 9,
+                "token_id": 7987,
+                "value": 14.074722290039062
+              },
+              {
+                "rank": 10,
+                "token_id": 6028,
+                "value": 14.049015045166016
+              }
+            ],
+            "cuda_logits_sha256": "8fa085aae5e6e932b1fcb07f29cfc68992c403d1ff3844f2ea27bb03f37a5072",
+            "cuda_logits_top_k_sha256": "174c6615507cf433615f27ad1d2bbf5f4a547a170332bf1493213a8434edabb5",
+            "cuda_selected_token_id": 1894,
+            "cuda_step_timing": {
+              "decode_ms": 32.9444,
+              "embed_ms": 0.0868,
+              "forward_ms": 21.1112,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0233
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 1894,
+                "value": 18.47047996520996
+              },
+              {
+                "rank": 2,
+                "token_id": 12884,
+                "value": 17.790470123291016
+              },
+              {
+                "rank": 3,
+                "token_id": 829,
+                "value": 16.170413970947266
+              },
+              {
+                "rank": 4,
+                "token_id": 7015,
+                "value": 15.891205787658691
+              },
+              {
+                "rank": 5,
+                "token_id": 6303,
+                "value": 15.189860343933105
+              },
+              {
+                "rank": 6,
+                "token_id": 1429,
+                "value": 14.9996976852417
+              },
+              {
+                "rank": 7,
+                "token_id": 1887,
+                "value": 14.262334823608398
+              },
+              {
+                "rank": 8,
+                "token_id": 4226,
+                "value": 14.211429595947266
+              },
+              {
+                "rank": 9,
+                "token_id": 7987,
+                "value": 14.074722290039062
+              },
+              {
+                "rank": 10,
+                "token_id": 6028,
+                "value": 14.049009323120117
+              }
+            ],
+            "index": 1,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 8.58306884765625e-6,
+            "top_k_mean_abs_error": 3.528594970703125e-6
+          },
+          {
+            "cpu_logits_sha256": "47d36ea6932de9381c1456d6d144e49669f3d0e041b50c9c649d84fe9b9e1f10",
+            "cpu_logits_top_k_sha256": "4d4d892be56456777b8ba7c7c0ff4894ad11b12c6af35b7f5e2e2665bb65c0f6",
+            "cpu_selected_token_id": 315,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 315,
+                "value": 21.216379165649414
+              },
+              {
+                "rank": 2,
+                "token_id": 6303,
+                "value": 17.32604217529297
+              },
+              {
+                "rank": 3,
+                "token_id": 829,
+                "value": 16.547880172729492
+              },
+              {
+                "rank": 4,
+                "token_id": 429,
+                "value": 15.969880104064941
+              },
+              {
+                "rank": 5,
+                "token_id": 2518,
+                "value": 15.273370742797852
+              },
+              {
+                "rank": 6,
+                "token_id": 6176,
+                "value": 15.038966178894043
+              },
+              {
+                "rank": 7,
+                "token_id": 4158,
+                "value": 15.006814956665039
+              },
+              {
+                "rank": 8,
+                "token_id": 374,
+                "value": 14.96002197265625
+              },
+              {
+                "rank": 9,
+                "token_id": 330,
+                "value": 14.88979434967041
+              },
+              {
+                "rank": 10,
+                "token_id": 12884,
+                "value": 14.8836669921875
+              }
+            ],
+            "cuda_logits_sha256": "a801565b96bee5484497b5a4b87e642f1221036cfd3415b16b2bf445f54a9380",
+            "cuda_logits_top_k_sha256": "4d4d892be56456777b8ba7c7c0ff4894ad11b12c6af35b7f5e2e2665bb65c0f6",
+            "cuda_selected_token_id": 315,
+            "cuda_step_timing": {
+              "decode_ms": 34.433699999999995,
+              "embed_ms": 0.0554,
+              "forward_ms": 22.3428,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.017
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 315,
+                "value": 21.216381072998047
+              },
+              {
+                "rank": 2,
+                "token_id": 6303,
+                "value": 17.326045989990234
+              },
+              {
+                "rank": 3,
+                "token_id": 829,
+                "value": 16.547882080078125
+              },
+              {
+                "rank": 4,
+                "token_id": 429,
+                "value": 15.969883918762207
+              },
+              {
+                "rank": 5,
+                "token_id": 2518,
+                "value": 15.273368835449219
+              },
+              {
+                "rank": 6,
+                "token_id": 6176,
+                "value": 15.038968086242676
+              },
+              {
+                "rank": 7,
+                "token_id": 4158,
+                "value": 15.006818771362305
+              },
+              {
+                "rank": 8,
+                "token_id": 374,
+                "value": 14.960031509399414
+              },
+              {
+                "rank": 9,
+                "token_id": 330,
+                "value": 14.889788627624512
+              },
+              {
+                "rank": 10,
+                "token_id": 12884,
+                "value": 14.883667945861816
+              }
+            ],
+            "index": 2,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 9.5367431640625e-6,
+            "top_k_mean_abs_error": 3.528594970703125e-6
+          },
+          {
+            "cpu_logits_sha256": "7523e31aae780ec909750d7f7e1afbfdb49a1e01fccb17e11eaad3083e9d7b91",
+            "cpu_logits_top_k_sha256": "a412ade7a68df1b79267524730f8ed7e144ee07c5fe3212beee254edbaeca480",
+            "cpu_selected_token_id": 279,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 279,
+                "value": 23.48712921142578
+              },
+              {
+                "rank": 2,
+                "token_id": 12884,
+                "value": 17.88309097290039
+              },
+              {
+                "rank": 3,
+                "token_id": 264,
+                "value": 17.13467025756836
+              },
+              {
+                "rank": 4,
+                "token_id": 1039,
+                "value": 14.829833030700684
+              },
+              {
+                "rank": 5,
+                "token_id": 3720,
+                "value": 13.975626945495605
+              },
+              {
+                "rank": 6,
+                "token_id": 825,
+                "value": 13.962289810180664
+              },
+              {
+                "rank": 7,
+                "token_id": 3100,
+                "value": 13.956870079040527
+              },
+              {
+                "rank": 8,
+                "token_id": 697,
+                "value": 13.672799110412598
+              },
+              {
+                "rank": 9,
+                "token_id": 9237,
+                "value": 13.545928001403809
+              },
+              {
+                "rank": 10,
+                "token_id": 3729,
+                "value": 13.465359687805176
+              }
+            ],
+            "cuda_logits_sha256": "c1e880ee62db0c33dca1e82c7a8b8d2f6e1db827e469cd5c6bee2375cb211fc5",
+            "cuda_logits_top_k_sha256": "a412ade7a68df1b79267524730f8ed7e144ee07c5fe3212beee254edbaeca480",
+            "cuda_selected_token_id": 279,
+            "cuda_step_timing": {
+              "decode_ms": 37.1205,
+              "embed_ms": 0.1182,
+              "forward_ms": 24.1071,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0293
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 279,
+                "value": 23.48712921142578
+              },
+              {
+                "rank": 2,
+                "token_id": 12884,
+                "value": 17.883106231689453
+              },
+              {
+                "rank": 3,
+                "token_id": 264,
+                "value": 17.134666442871094
+              },
+              {
+                "rank": 4,
+                "token_id": 1039,
+                "value": 14.829837799072266
+              },
+              {
+                "rank": 5,
+                "token_id": 3720,
+                "value": 13.97563648223877
+              },
+              {
+                "rank": 6,
+                "token_id": 825,
+                "value": 13.96229362487793
+              },
+              {
+                "rank": 7,
+                "token_id": 3100,
+                "value": 13.95687198638916
+              },
+              {
+                "rank": 8,
+                "token_id": 697,
+                "value": 13.672802925109863
+              },
+              {
+                "rank": 9,
+                "token_id": 9237,
+                "value": 13.54593276977539
+              },
+              {
+                "rank": 10,
+                "token_id": 3729,
+                "value": 13.46536636352539
+              }
+            ],
+            "index": 3,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000152587890625,
+            "top_k_mean_abs_error": 5.435943603515625e-6
+          },
+          {
+            "cpu_logits_sha256": "90cdf5b8ef1fc120a0d079a7abb98913a022821efc5efc7d78b0d3f41edeb52b",
+            "cpu_logits_top_k_sha256": "5fa0953c8b2d45f14c7323ffe6575b45c39550f2bb8de1523c5d3f6da95d6173",
+            "cpu_selected_token_id": 12884,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 12884,
+                "value": 23.64210319519043
+              },
+              {
+                "rank": 2,
+                "token_id": 7015,
+                "value": 16.782934188842773
+              },
+              {
+                "rank": 3,
+                "token_id": 6303,
+                "value": 15.49651050567627
+              },
+              {
+                "rank": 4,
+                "token_id": 17788,
+                "value": 14.389461517333984
+              },
+              {
+                "rank": 5,
+                "token_id": 14722,
+                "value": 14.33864688873291
+              },
+              {
+                "rank": 6,
+                "token_id": 3729,
+                "value": 14.227602005004883
+              },
+              {
+                "rank": 7,
+                "token_id": 3720,
+                "value": 14.101845741271973
+              },
+              {
+                "rank": 8,
+                "token_id": 9237,
+                "value": 13.814719200134277
+              },
+              {
+                "rank": 9,
+                "token_id": 198,
+                "value": 13.780912399291992
+              },
+              {
+                "rank": 10,
+                "token_id": 17951,
+                "value": 13.582427024841309
+              }
+            ],
+            "cuda_logits_sha256": "aa6827bd6571610abd5bdbeac62c2992e92afcce66f430b5061b682c37d6dace",
+            "cuda_logits_top_k_sha256": "5fa0953c8b2d45f14c7323ffe6575b45c39550f2bb8de1523c5d3f6da95d6173",
+            "cuda_selected_token_id": 12884,
+            "cuda_step_timing": {
+              "decode_ms": 33.686,
+              "embed_ms": 0.10189999999999999,
+              "forward_ms": 20.934,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0266
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 12884,
+                "value": 23.642107009887695
+              },
+              {
+                "rank": 2,
+                "token_id": 7015,
+                "value": 16.78293800354004
+              },
+              {
+                "rank": 3,
+                "token_id": 6303,
+                "value": 15.496517181396484
+              },
+              {
+                "rank": 4,
+                "token_id": 17788,
+                "value": 14.38946533203125
+              },
+              {
+                "rank": 5,
+                "token_id": 14722,
+                "value": 14.338659286499023
+              },
+              {
+                "rank": 6,
+                "token_id": 3729,
+                "value": 14.227603912353516
+              },
+              {
+                "rank": 7,
+                "token_id": 3720,
+                "value": 14.101849555969238
+              },
+              {
+                "rank": 8,
+                "token_id": 9237,
+                "value": 13.814720153808594
+              },
+              {
+                "rank": 9,
+                "token_id": 198,
+                "value": 13.780904769897461
+              },
+              {
+                "rank": 10,
+                "token_id": 17951,
+                "value": 13.58242130279541
+              }
+            ],
+            "index": 4,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.00001239776611328125,
+            "top_k_mean_abs_error": 5.054473876953125e-6
+          },
+          {
+            "cpu_logits_sha256": "49cd77163307724d3b33421c2258b5d1d65db3c669a0527ce022c9ea5ba36cae",
+            "cpu_logits_top_k_sha256": "c4f66b450c45e3cd1939fb1d93f22abe2f98f51befcbf066a691f9ea09a5a39c",
+            "cpu_selected_token_id": 374,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 374,
+                "value": 22.870969772338867
+              },
+              {
+                "rank": 2,
+                "token_id": 11,
+                "value": 18.887611389160156
+              },
+              {
+                "rank": 3,
+                "token_id": 646,
+                "value": 18.608278274536133
+              },
+              {
+                "rank": 4,
+                "token_id": 13798,
+                "value": 17.805173873901367
+              },
+              {
+                "rank": 5,
+                "token_id": 1558,
+                "value": 17.771223068237305
+              },
+              {
+                "rank": 6,
+                "token_id": 34227,
+                "value": 16.746986389160156
+              },
+              {
+                "rank": 7,
+                "token_id": 702,
+                "value": 16.70303726196289
+              },
+              {
+                "rank": 8,
+                "token_id": 4157,
+                "value": 16.682035446166992
+              },
+              {
+                "rank": 9,
+                "token_id": 4344,
+                "value": 16.431156158447266
+              },
+              {
+                "rank": 10,
+                "token_id": 17180,
+                "value": 15.91404914855957
+              }
+            ],
+            "cuda_logits_sha256": "f1e99e68558e4a2d3bfd8868eebc243795cd8bec48801c685fba48a47bc388c5",
+            "cuda_logits_top_k_sha256": "c4f66b450c45e3cd1939fb1d93f22abe2f98f51befcbf066a691f9ea09a5a39c",
+            "cuda_selected_token_id": 374,
+            "cuda_step_timing": {
+              "decode_ms": 32.5529,
+              "embed_ms": 0.09280000000000001,
+              "forward_ms": 20.5825,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0298
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 374,
+                "value": 22.8709659576416
+              },
+              {
+                "rank": 2,
+                "token_id": 11,
+                "value": 18.887611389160156
+              },
+              {
+                "rank": 3,
+                "token_id": 646,
+                "value": 18.608261108398438
+              },
+              {
+                "rank": 4,
+                "token_id": 13798,
+                "value": 17.80516242980957
+              },
+              {
+                "rank": 5,
+                "token_id": 1558,
+                "value": 17.771215438842773
+              },
+              {
+                "rank": 6,
+                "token_id": 34227,
+                "value": 16.746976852416992
+              },
+              {
+                "rank": 7,
+                "token_id": 702,
+                "value": 16.703027725219727
+              },
+              {
+                "rank": 8,
+                "token_id": 4157,
+                "value": 16.682025909423828
+              },
+              {
+                "rank": 9,
+                "token_id": 4344,
+                "value": 16.43114471435547
+              },
+              {
+                "rank": 10,
+                "token_id": 17180,
+                "value": 15.91405200958252
+              }
+            ],
+            "index": 5,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000171661376953125,
+            "top_k_mean_abs_error": 8.296966552734374e-6
+          },
+          {
+            "cpu_logits_sha256": "c8995d6d9fa14c53d83c792b2d025eddefac6eb35c9d74de1bd2a530684a2ddf",
+            "cpu_logits_top_k_sha256": "ef5d5c32a11e9eeaf2240b1d919c1ed7f58eb69f061bb8d4ff8071d9e0b2b1ce",
+            "cpu_selected_token_id": 6303,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 6303,
+                "value": 20.41819190979004
+              },
+              {
+                "rank": 2,
+                "token_id": 5990,
+                "value": 18.401269912719727
+              },
+              {
+                "rank": 3,
+                "token_id": 11136,
+                "value": 16.766319274902344
+              },
+              {
+                "rank": 4,
+                "token_id": 10008,
+                "value": 16.06846809387207
+              },
+              {
+                "rank": 5,
+                "token_id": 8789,
+                "value": 15.971077919006348
+              },
+              {
+                "rank": 6,
+                "token_id": 4158,
+                "value": 15.880762100219727
+              },
+              {
+                "rank": 7,
+                "token_id": 3545,
+                "value": 15.617501258850098
+              },
+              {
+                "rank": 8,
+                "token_id": 24932,
+                "value": 15.21773910522461
+              },
+              {
+                "rank": 9,
+                "token_id": 8697,
+                "value": 15.047674179077148
+              },
+              {
+                "rank": 10,
+                "token_id": 12884,
+                "value": 14.986679077148438
+              }
+            ],
+            "cuda_logits_sha256": "2c0a27009a5a4bd851e2a6cf862fd4d7b9292acf1adde872c847c00776ed10ee",
+            "cuda_logits_top_k_sha256": "ef5d5c32a11e9eeaf2240b1d919c1ed7f58eb69f061bb8d4ff8071d9e0b2b1ce",
+            "cuda_selected_token_id": 6303,
+            "cuda_step_timing": {
+              "decode_ms": 32.639799999999994,
+              "embed_ms": 0.0567,
+              "forward_ms": 20.4632,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.016
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 6303,
+                "value": 20.418195724487305
+              },
+              {
+                "rank": 2,
+                "token_id": 5990,
+                "value": 18.401264190673828
+              },
+              {
+                "rank": 3,
+                "token_id": 11136,
+                "value": 16.766307830810547
+              },
+              {
+                "rank": 4,
+                "token_id": 10008,
+                "value": 16.068464279174805
+              },
+              {
+                "rank": 5,
+                "token_id": 8789,
+                "value": 15.971070289611816
+              },
+              {
+                "rank": 6,
+                "token_id": 4158,
+                "value": 15.880765914916992
+              },
+              {
+                "rank": 7,
+                "token_id": 3545,
+                "value": 15.617490768432617
+              },
+              {
+                "rank": 8,
+                "token_id": 24932,
+                "value": 15.217733383178711
+              },
+              {
+                "rank": 9,
+                "token_id": 8697,
+                "value": 15.047675132751465
+              },
+              {
+                "rank": 10,
+                "token_id": 12884,
+                "value": 14.986677169799805
+              }
+            ],
+            "index": 6,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.000011444091796875,
+            "top_k_mean_abs_error": 5.53131103515625e-6
+          },
+          {
+            "cpu_logits_sha256": "6f6ec735b2423215e38a692c29e13a8ffc24a34bf896e1012d456ec25cb90ba1",
+            "cpu_logits_top_k_sha256": "1497472299a51611ae0a1b640c377c77d5200057654c852e845c34dbecdd3606",
+            "cpu_selected_token_id": 13,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 13,
+                "value": 23.942153930664062
+              },
+              {
+                "rank": 2,
+                "token_id": 382,
+                "value": 22.072616577148438
+              },
+              {
+                "rank": 3,
+                "token_id": 624,
+                "value": 21.86819839477539
+              },
+              {
+                "rank": 4,
+                "token_id": 11,
+                "value": 18.651363372802734
+              },
+              {
+                "rank": 5,
+                "token_id": 476,
+                "value": 16.736921310424805
+              },
+              {
+                "rank": 6,
+                "token_id": 271,
+                "value": 16.485979080200195
+              },
+              {
+                "rank": 7,
+                "token_id": 323,
+                "value": 16.433948516845703
+              },
+              {
+                "rank": 8,
+                "token_id": 320,
+                "value": 16.339080810546875
+              },
+              {
+                "rank": 9,
+                "token_id": 198,
+                "value": 16.119598388671875
+              },
+              {
+                "rank": 10,
+                "token_id": 1576,
+                "value": 15.18204116821289
+              }
+            ],
+            "cuda_logits_sha256": "2ebb48ce5b498bd1e4e6639355385ffd13cd0c795589abac5103882258c01a3e",
+            "cuda_logits_top_k_sha256": "1497472299a51611ae0a1b640c377c77d5200057654c852e845c34dbecdd3606",
+            "cuda_selected_token_id": 13,
+            "cuda_step_timing": {
+              "decode_ms": 35.1064,
+              "embed_ms": 0.08310000000000001,
+              "forward_ms": 22.736800000000002,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.027299999999999998
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 13,
+                "value": 23.942150115966797
+              },
+              {
+                "rank": 2,
+                "token_id": 382,
+                "value": 22.07261085510254
+              },
+              {
+                "rank": 3,
+                "token_id": 624,
+                "value": 21.868196487426758
+              },
+              {
+                "rank": 4,
+                "token_id": 11,
+                "value": 18.65135955810547
+              },
+              {
+                "rank": 5,
+                "token_id": 476,
+                "value": 16.736919403076172
+              },
+              {
+                "rank": 6,
+                "token_id": 271,
+                "value": 16.485977172851562
+              },
+              {
+                "rank": 7,
+                "token_id": 323,
+                "value": 16.433956146240234
+              },
+              {
+                "rank": 8,
+                "token_id": 320,
+                "value": 16.339082717895508
+              },
+              {
+                "rank": 9,
+                "token_id": 198,
+                "value": 16.119598388671875
+              },
+              {
+                "rank": 10,
+                "token_id": 1576,
+                "value": 15.182052612304688
+              }
+            ],
+            "index": 7,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.000011444091796875,
+            "top_k_mean_abs_error": 4.00543212890625e-6
+          }
+        ],
+        "top_k_all_match": true
+      },
+      {
+        "cpu_generated_token_ids": [
+          7684,
+          6556,
+          0,
+          2585,
+          646,
+          358,
+          7789,
+          498
+        ],
+        "cpu_generated_token_ids_sha256": "da701d5e11cbeb1fa50d8cf680bc266d7601fa181b8e0cbe8c6e9d77e603aa5d",
+        "cpu_logits_top_k_steps_sha256": "37d3720ce21bde37a0a757c71836b7d7021a8cb1004dbcb68a2bf98ef2bc3999",
+        "cuda_generated_token_ids": [
+          7684,
+          6556,
+          0,
+          2585,
+          646,
+          358,
+          7789,
+          498
+        ],
+        "cuda_generated_token_ids_sha256": "da701d5e11cbeb1fa50d8cf680bc266d7601fa181b8e0cbe8c6e9d77e603aa5d",
+        "cuda_logits_top_k_steps_sha256": "37d3720ce21bde37a0a757c71836b7d7021a8cb1004dbcb68a2bf98ef2bc3999",
+        "cuda_turn_timing": {
+          "decode_total_ms": 295.2072,
+          "embed_ms_total": 0.8065000000000001,
+          "first_token_ms": 33.8119,
+          "forward_ms_total": 189.50879999999998,
+          "logits_device_all_cuda_resident": true,
+          "logits_ms_total": 0.2244,
+          "prefill_ms": 103.8316,
+          "total_ms": 399.7519
+        },
+        "decoded_text": " Good morning! How can I assist you",
+        "first_token_divergence_index": null,
+        "first_top_k_divergence_index": null,
+        "generated_token_ids_match": true,
+        "generated_tokens_count": 8,
+        "index": 2,
+        "prompt_token_count": 6,
+        "prompt_token_ids_sha256": "65cae70493af9aff899cae73ccfd9bf4aee1650f87263bc74cadc7cab8b31a5b",
+        "rendered_prompt_sha256": "f21eb9adee9c24775f51deee6140b05d6ccac4a19eca4b8bfbe67d0307c93f9a",
+        "requested_new_tokens": 8,
+        "steps": [
+          {
+            "cpu_logits_sha256": "d53f7b53a804c2c21ff83566144b93cbbaefc6c7ba724dc8e3b9d1ad31f3b001",
+            "cpu_logits_top_k_sha256": "7844b6c331bd7628b6d19b2b4698071e807c76830f3f8ed2dd5e10aeaf9b7818",
+            "cpu_selected_token_id": 7684,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 7684,
+                "value": 16.53923225402832
+              },
+              {
+                "rank": 2,
+                "token_id": 21927,
+                "value": 16.38619613647461
+              },
+              {
+                "rank": 3,
+                "token_id": 330,
+                "value": 14.853167533874512
+              },
+              {
+                "rank": 4,
+                "token_id": 362,
+                "value": 13.471681594848633
+              },
+              {
+                "rank": 5,
+                "token_id": 42822,
+                "value": 13.362239837646484
+              },
+              {
+                "rank": 6,
+                "token_id": 5692,
+                "value": 13.235687255859375
+              },
+              {
+                "rank": 7,
+                "token_id": 479,
+                "value": 13.18674087524414
+              },
+              {
+                "rank": 8,
+                "token_id": 2585,
+                "value": 12.979314804077148
+              },
+              {
+                "rank": 9,
+                "token_id": 467,
+                "value": 12.962869644165039
+              },
+              {
+                "rank": 10,
+                "token_id": 21018,
+                "value": 12.924253463745117
+              }
+            ],
+            "cuda_logits_sha256": "1a645e3539aa4813607d12f83e3f0550b95fa55d3378a81e231e53276e462047",
+            "cuda_logits_top_k_sha256": "7844b6c331bd7628b6d19b2b4698071e807c76830f3f8ed2dd5e10aeaf9b7818",
+            "cuda_selected_token_id": 7684,
+            "cuda_step_timing": {
+              "decode_ms": 33.8119,
+              "embed_ms": 0.0347,
+              "forward_ms": 21.4473,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0244
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 7684,
+                "value": 16.53923225402832
+              },
+              {
+                "rank": 2,
+                "token_id": 21927,
+                "value": 16.386198043823242
+              },
+              {
+                "rank": 3,
+                "token_id": 330,
+                "value": 14.853166580200195
+              },
+              {
+                "rank": 4,
+                "token_id": 362,
+                "value": 13.471681594848633
+              },
+              {
+                "rank": 5,
+                "token_id": 42822,
+                "value": 13.362239837646484
+              },
+              {
+                "rank": 6,
+                "token_id": 5692,
+                "value": 13.235686302185059
+              },
+              {
+                "rank": 7,
+                "token_id": 479,
+                "value": 13.186755180358887
+              },
+              {
+                "rank": 8,
+                "token_id": 2585,
+                "value": 12.979320526123047
+              },
+              {
+                "rank": 9,
+                "token_id": 467,
+                "value": 12.962869644165039
+              },
+              {
+                "rank": 10,
+                "token_id": 21018,
+                "value": 12.924263954162598
+              }
+            ],
+            "index": 0,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.00001430511474609375,
+            "top_k_mean_abs_error": 3.4332275390625e-6
+          },
+          {
+            "cpu_logits_sha256": "af47e4f91e9fcbb3cefb2dd3e211a3df318083be486eccc01a1a7a138d66caeb",
+            "cpu_logits_top_k_sha256": "941345ca9e909e2fd7593677081fd7c1a2c804adc5ccff78796e5ca0b57fd53e",
+            "cpu_selected_token_id": 6556,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 6556,
+                "value": 20.38543701171875
+              },
+              {
+                "rank": 2,
+                "token_id": 1899,
+                "value": 19.539875030517578
+              },
+              {
+                "rank": 3,
+                "token_id": 11458,
+                "value": 18.978199005126953
+              },
+              {
+                "rank": 4,
+                "token_id": 28374,
+                "value": 17.859722137451172
+              },
+              {
+                "rank": 5,
+                "token_id": 3729,
+                "value": 17.212448120117188
+              },
+              {
+                "rank": 6,
+                "token_id": 9287,
+                "value": 16.791378021240234
+              },
+              {
+                "rank": 7,
+                "token_id": 13354,
+                "value": 16.7855167388916
+              },
+              {
+                "rank": 8,
+                "token_id": 15019,
+                "value": 15.897418022155762
+              },
+              {
+                "rank": 9,
+                "token_id": 6059,
+                "value": 14.778162956237793
+              },
+              {
+                "rank": 10,
+                "token_id": 27984,
+                "value": 14.649077415466309
+              }
+            ],
+            "cuda_logits_sha256": "ff486b1ae5d2608596210df6841b6290883ff7968ef8114f088eaee38e3224f6",
+            "cuda_logits_top_k_sha256": "941345ca9e909e2fd7593677081fd7c1a2c804adc5ccff78796e5ca0b57fd53e",
+            "cuda_selected_token_id": 6556,
+            "cuda_step_timing": {
+              "decode_ms": 35.1292,
+              "embed_ms": 0.10189999999999999,
+              "forward_ms": 22.6513,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0257
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 6556,
+                "value": 20.385446548461914
+              },
+              {
+                "rank": 2,
+                "token_id": 1899,
+                "value": 19.539886474609375
+              },
+              {
+                "rank": 3,
+                "token_id": 11458,
+                "value": 18.978191375732422
+              },
+              {
+                "rank": 4,
+                "token_id": 28374,
+                "value": 17.859704971313477
+              },
+              {
+                "rank": 5,
+                "token_id": 3729,
+                "value": 17.21244239807129
+              },
+              {
+                "rank": 6,
+                "token_id": 9287,
+                "value": 16.791364669799805
+              },
+              {
+                "rank": 7,
+                "token_id": 13354,
+                "value": 16.785511016845703
+              },
+              {
+                "rank": 8,
+                "token_id": 15019,
+                "value": 15.897400856018066
+              },
+              {
+                "rank": 9,
+                "token_id": 6059,
+                "value": 14.778153419494629
+              },
+              {
+                "rank": 10,
+                "token_id": 27984,
+                "value": 14.649068832397461
+              }
+            ],
+            "index": 1,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000171661376953125,
+            "top_k_mean_abs_error": 0.000010585784912109375
+          },
+          {
+            "cpu_logits_sha256": "5fc68e109b93b0d5e5725bf6ae6ac39a757b80c86e9aaa4a04a990cce7419e59",
+            "cpu_logits_top_k_sha256": "bd08f961d747a747a2f4eda48c898eac7bac2f207f84baebf2c31d2013b45011",
+            "cpu_selected_token_id": 0,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 0,
+                "value": 19.042804718017578
+              },
+              {
+                "rank": 2,
+                "token_id": 11,
+                "value": 18.327634811401367
+              },
+              {
+                "rank": 3,
+                "token_id": 13,
+                "value": 17.904464721679688
+              },
+              {
+                "rank": 4,
+                "token_id": 311,
+                "value": 16.375141143798828
+              },
+              {
+                "rank": 5,
+                "token_id": 5019,
+                "value": 16.151222229003906
+              },
+              {
+                "rank": 6,
+                "token_id": 382,
+                "value": 15.820879936218262
+              },
+              {
+                "rank": 7,
+                "token_id": 2219,
+                "value": 15.742547035217285
+              },
+              {
+                "rank": 8,
+                "token_id": 4894,
+                "value": 14.856035232543945
+              },
+              {
+                "rank": 9,
+                "token_id": 14,
+                "value": 14.593253135681152
+              },
+              {
+                "rank": 10,
+                "token_id": 624,
+                "value": 14.462924003601074
+              }
+            ],
+            "cuda_logits_sha256": "e143594eff475ccdf29d92215a70305269f74ede4a7328e0d83020aa8759d8f1",
+            "cuda_logits_top_k_sha256": "bd08f961d747a747a2f4eda48c898eac7bac2f207f84baebf2c31d2013b45011",
+            "cuda_selected_token_id": 0,
+            "cuda_step_timing": {
+              "decode_ms": 37.2335,
+              "embed_ms": 0.056,
+              "forward_ms": 24.6404,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0304
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 0,
+                "value": 19.042800903320312
+              },
+              {
+                "rank": 2,
+                "token_id": 11,
+                "value": 18.32763671875
+              },
+              {
+                "rank": 3,
+                "token_id": 13,
+                "value": 17.904457092285156
+              },
+              {
+                "rank": 4,
+                "token_id": 311,
+                "value": 16.375144958496094
+              },
+              {
+                "rank": 5,
+                "token_id": 5019,
+                "value": 16.151229858398438
+              },
+              {
+                "rank": 6,
+                "token_id": 382,
+                "value": 15.820874214172363
+              },
+              {
+                "rank": 7,
+                "token_id": 2219,
+                "value": 15.742545127868652
+              },
+              {
+                "rank": 8,
+                "token_id": 4894,
+                "value": 14.856038093566895
+              },
+              {
+                "rank": 9,
+                "token_id": 14,
+                "value": 14.593245506286621
+              },
+              {
+                "rank": 10,
+                "token_id": 624,
+                "value": 14.462922096252441
+              }
+            ],
+            "index": 2,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 7.62939453125e-6,
+            "top_k_mean_abs_error": 4.482269287109375e-6
+          },
+          {
+            "cpu_logits_sha256": "84644baf630c6b767d56d1dec391acb40306fc35eefe2412d67015546f44f29d",
+            "cpu_logits_top_k_sha256": "bcfdabe119c2a55a46fdebb35e0911535196d9f6fe2584b3eb5d01af1b3a13b2",
+            "cpu_selected_token_id": 2585,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 2585,
+                "value": 17.502696990966797
+              },
+              {
+                "rank": 2,
+                "token_id": 3555,
+                "value": 14.969440460205078
+              },
+              {
+                "rank": 3,
+                "token_id": 21927,
+                "value": 14.57716178894043
+              },
+              {
+                "rank": 4,
+                "token_id": 4710,
+                "value": 14.538919448852539
+              },
+              {
+                "rank": 5,
+                "token_id": 20166,
+                "value": 14.339221000671387
+              },
+              {
+                "rank": 6,
+                "token_id": 1084,
+                "value": 13.821264266967773
+              },
+              {
+                "rank": 7,
+                "token_id": 11162,
+                "value": 13.60300064086914
+              },
+              {
+                "rank": 8,
+                "token_id": 7684,
+                "value": 13.549558639526367
+              },
+              {
+                "rank": 9,
+                "token_id": 320,
+                "value": 13.474176406860352
+              },
+              {
+                "rank": 10,
+                "token_id": 3217,
+                "value": 13.106443405151367
+              }
+            ],
+            "cuda_logits_sha256": "a09edd3fa1e019ddd1bc314cd3fe91ae38d489961565db57b898f1ce57650791",
+            "cuda_logits_top_k_sha256": "bcfdabe119c2a55a46fdebb35e0911535196d9f6fe2584b3eb5d01af1b3a13b2",
+            "cuda_selected_token_id": 2585,
+            "cuda_step_timing": {
+              "decode_ms": 38.709399999999995,
+              "embed_ms": 0.1143,
+              "forward_ms": 25.393,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0296
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 2585,
+                "value": 17.50269317626953
+              },
+              {
+                "rank": 2,
+                "token_id": 3555,
+                "value": 14.969437599182129
+              },
+              {
+                "rank": 3,
+                "token_id": 21927,
+                "value": 14.577168464660645
+              },
+              {
+                "rank": 4,
+                "token_id": 4710,
+                "value": 14.538905143737793
+              },
+              {
+                "rank": 5,
+                "token_id": 20166,
+                "value": 14.339223861694336
+              },
+              {
+                "rank": 6,
+                "token_id": 1084,
+                "value": 13.821276664733887
+              },
+              {
+                "rank": 7,
+                "token_id": 11162,
+                "value": 13.603010177612305
+              },
+              {
+                "rank": 8,
+                "token_id": 7684,
+                "value": 13.549568176269531
+              },
+              {
+                "rank": 9,
+                "token_id": 320,
+                "value": 13.474164962768555
+              },
+              {
+                "rank": 10,
+                "token_id": 3217,
+                "value": 13.106446266174316
+              }
+            ],
+            "index": 3,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.00001430511474609375,
+            "top_k_mean_abs_error": 7.62939453125e-6
+          },
+          {
+            "cpu_logits_sha256": "4383d902b32b9b25c24a5aa99b57ecd6d01c31590224cdada8fbb8a19a0b4c30",
+            "cpu_logits_top_k_sha256": "e385ff021b50bc824f760528f9bae8cfa62a8a0655861c1d5ac97101c6d103d1",
+            "cpu_selected_token_id": 646,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 646,
+                "value": 22.042131423950195
+              },
+              {
+                "rank": 2,
+                "token_id": 1231,
+                "value": 19.93634796142578
+              },
+              {
+                "rank": 3,
+                "token_id": 525,
+                "value": 18.44613265991211
+              },
+              {
+                "rank": 4,
+                "token_id": 374,
+                "value": 16.673906326293945
+              },
+              {
+                "rank": 5,
+                "token_id": 594,
+                "value": 16.10301399230957
+              },
+              {
+                "rank": 6,
+                "token_id": 3217,
+                "value": 15.613911628723145
+              },
+              {
+                "rank": 7,
+                "token_id": 572,
+                "value": 15.31209659576416
+              },
+              {
+                "rank": 8,
+                "token_id": 653,
+                "value": 14.35822582244873
+              },
+              {
+                "rank": 9,
+                "token_id": 10258,
+                "value": 13.887127876281738
+              },
+              {
+                "rank": 10,
+                "token_id": 614,
+                "value": 13.770082473754883
+              }
+            ],
+            "cuda_logits_sha256": "63da88e98db7e0fde8d18b2b4b555d81e74792ea070193552032e6a1cdbfb416",
+            "cuda_logits_top_k_sha256": "e385ff021b50bc824f760528f9bae8cfa62a8a0655861c1d5ac97101c6d103d1",
+            "cuda_selected_token_id": 646,
+            "cuda_step_timing": {
+              "decode_ms": 38.2599,
+              "embed_ms": 0.1326,
+              "forward_ms": 25.4472,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.027800000000000002
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 646,
+                "value": 22.042139053344727
+              },
+              {
+                "rank": 2,
+                "token_id": 1231,
+                "value": 19.936359405517578
+              },
+              {
+                "rank": 3,
+                "token_id": 525,
+                "value": 18.446144104003906
+              },
+              {
+                "rank": 4,
+                "token_id": 374,
+                "value": 16.67391586303711
+              },
+              {
+                "rank": 5,
+                "token_id": 594,
+                "value": 16.103025436401367
+              },
+              {
+                "rank": 6,
+                "token_id": 3217,
+                "value": 15.613910675048828
+              },
+              {
+                "rank": 7,
+                "token_id": 572,
+                "value": 15.312101364135742
+              },
+              {
+                "rank": 8,
+                "token_id": 653,
+                "value": 14.358238220214844
+              },
+              {
+                "rank": 9,
+                "token_id": 10258,
+                "value": 13.88712215423584
+              },
+              {
+                "rank": 10,
+                "token_id": 614,
+                "value": 13.770094871520996
+              }
+            ],
+            "index": 4,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.00001239776611328125,
+            "top_k_mean_abs_error": 8.7738037109375e-6
+          },
+          {
+            "cpu_logits_sha256": "b6b00cb592a9648d4b89347bca8590ec2b3e6767691baa6a9340595d87ce391c",
+            "cpu_logits_top_k_sha256": "d27af0df5a315b82b5efa07c47b79fe343e5ba3b6f3a8468fd857afb138ada63",
+            "cpu_selected_token_id": 358,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 358,
+                "value": 24.033761978149414
+              },
+              {
+                "rank": 2,
+                "token_id": 582,
+                "value": 18.800458908081055
+              },
+              {
+                "rank": 3,
+                "token_id": 498,
+                "value": 17.218093872070312
+              },
+              {
+                "rank": 4,
+                "token_id": 600,
+                "value": 15.798501968383789
+              },
+              {
+                "rank": 5,
+                "token_id": 432,
+                "value": 13.225662231445312
+              },
+              {
+                "rank": 6,
+                "token_id": 279,
+                "value": 13.133779525756836
+              },
+              {
+                "rank": 7,
+                "token_id": 1492,
+                "value": 12.693300247192383
+              },
+              {
+                "rank": 8,
+                "token_id": 12994,
+                "value": 12.49215030670166
+              },
+              {
+                "rank": 9,
+                "token_id": 264,
+                "value": 12.401302337646484
+              },
+              {
+                "rank": 10,
+                "token_id": 458,
+                "value": 12.365001678466797
+              }
+            ],
+            "cuda_logits_sha256": "6c2886df3858af8225c3f12dd150c62d7a79c15eae8b6b5d85dfd84d690e804d",
+            "cuda_logits_top_k_sha256": "d27af0df5a315b82b5efa07c47b79fe343e5ba3b6f3a8468fd857afb138ada63",
+            "cuda_selected_token_id": 358,
+            "cuda_step_timing": {
+              "decode_ms": 37.3315,
+              "embed_ms": 0.14100000000000001,
+              "forward_ms": 23.5996,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0258
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 358,
+                "value": 24.03373146057129
+              },
+              {
+                "rank": 2,
+                "token_id": 582,
+                "value": 18.800439834594727
+              },
+              {
+                "rank": 3,
+                "token_id": 498,
+                "value": 17.218090057373047
+              },
+              {
+                "rank": 4,
+                "token_id": 600,
+                "value": 15.798469543457031
+              },
+              {
+                "rank": 5,
+                "token_id": 432,
+                "value": 13.225647926330566
+              },
+              {
+                "rank": 6,
+                "token_id": 279,
+                "value": 13.133793830871582
+              },
+              {
+                "rank": 7,
+                "token_id": 1492,
+                "value": 12.693281173706055
+              },
+              {
+                "rank": 8,
+                "token_id": 12994,
+                "value": 12.492124557495117
+              },
+              {
+                "rank": 9,
+                "token_id": 264,
+                "value": 12.401302337646484
+              },
+              {
+                "rank": 10,
+                "token_id": 458,
+                "value": 12.365006446838379
+              }
+            ],
+            "index": 5,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000324249267578125,
+            "top_k_mean_abs_error": 0.0000164031982421875
+          },
+          {
+            "cpu_logits_sha256": "f60b4772cc90b044f2eee3f6615314c1f6caf3fa9a90631e0ace1186e4d07033",
+            "cpu_logits_top_k_sha256": "128f1456954796fbdef42bbfc4c26e70f72398d5a5b3d2fe324de9899d5af2be",
+            "cpu_selected_token_id": 7789,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 7789,
+                "value": 24.400423049926758
+              },
+              {
+                "rank": 2,
+                "token_id": 1492,
+                "value": 23.46498680114746
+              },
+              {
+                "rank": 3,
+                "token_id": 387,
+                "value": 17.913921356201172
+              },
+              {
+                "rank": 4,
+                "token_id": 633,
+                "value": 17.022558212280273
+              },
+              {
+                "rank": 5,
+                "token_id": 8683,
+                "value": 15.700626373291016
+              },
+              {
+                "rank": 6,
+                "token_id": 12994,
+                "value": 15.255938529968262
+              },
+              {
+                "rank": 7,
+                "token_id": 1281,
+                "value": 15.095301628112793
+              },
+              {
+                "rank": 8,
+                "token_id": 2548,
+                "value": 15.012622833251953
+              },
+              {
+                "rank": 9,
+                "token_id": 1824,
+                "value": 14.789691925048828
+              },
+              {
+                "rank": 10,
+                "token_id": 653,
+                "value": 14.497172355651855
+              }
+            ],
+            "cuda_logits_sha256": "0545cad5e09d509ecbcdf028ee5774fd97228cfbde9ad8e32c02cf05f3ddb8dd",
+            "cuda_logits_top_k_sha256": "128f1456954796fbdef42bbfc4c26e70f72398d5a5b3d2fe324de9899d5af2be",
+            "cuda_selected_token_id": 7789,
+            "cuda_step_timing": {
+              "decode_ms": 37.8516,
+              "embed_ms": 0.12760000000000002,
+              "forward_ms": 23.9073,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.0305
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 7789,
+                "value": 24.400436401367188
+              },
+              {
+                "rank": 2,
+                "token_id": 1492,
+                "value": 23.46500015258789
+              },
+              {
+                "rank": 3,
+                "token_id": 387,
+                "value": 17.91393280029297
+              },
+              {
+                "rank": 4,
+                "token_id": 633,
+                "value": 17.0225830078125
+              },
+              {
+                "rank": 5,
+                "token_id": 8683,
+                "value": 15.700634002685547
+              },
+              {
+                "rank": 6,
+                "token_id": 12994,
+                "value": 15.25594711303711
+              },
+              {
+                "rank": 7,
+                "token_id": 1281,
+                "value": 15.095316886901855
+              },
+              {
+                "rank": 8,
+                "token_id": 2548,
+                "value": 15.012638092041016
+              },
+              {
+                "rank": 9,
+                "token_id": 1824,
+                "value": 14.789703369140625
+              },
+              {
+                "rank": 10,
+                "token_id": 653,
+                "value": 14.4971923828125
+              }
+            ],
+            "index": 6,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.0000247955322265625,
+            "top_k_mean_abs_error": 0.0000141143798828125
+          },
+          {
+            "cpu_logits_sha256": "9151242a6ed2cffba3f229eb05aeba8438221380bbbf63799342ec96db185bb8",
+            "cpu_logits_top_k_sha256": "8a6519aabd67035b8a8c004c1a17e4b1bc5e9316cf9726a3501e43864e0c769a",
+            "cpu_selected_token_id": 498,
+            "cpu_top_k": [
+              {
+                "rank": 1,
+                "token_id": 498,
+                "value": 27.842199325561523
+              },
+              {
+                "rank": 2,
+                "token_id": 30,
+                "value": 18.983478546142578
+              },
+              {
+                "rank": 3,
+                "token_id": 87026,
+                "value": 18.959707260131836
+              },
+              {
+                "rank": 4,
+                "token_id": 3351,
+                "value": 18.157508850097656
+              },
+              {
+                "rank": 5,
+                "token_id": 448,
+                "value": 17.179594039916992
+              },
+              {
+                "rank": 6,
+                "token_id": 1939,
+                "value": 16.710159301757812
+              },
+              {
+                "rank": 7,
+                "token_id": 39244,
+                "value": 16.187952041625977
+              },
+              {
+                "rank": 8,
+                "token_id": 4623,
+                "value": 15.900796890258789
+              },
+              {
+                "rank": 9,
+                "token_id": 752,
+                "value": 15.628233909606934
+              },
+              {
+                "rank": 10,
+                "token_id": 1446,
+                "value": 15.194782257080078
+              }
+            ],
+            "cuda_logits_sha256": "5472d73ba5445542853779b1ec338864bcd738d8e6cc43f77a3e796bd24ba76d",
+            "cuda_logits_top_k_sha256": "8a6519aabd67035b8a8c004c1a17e4b1bc5e9316cf9726a3501e43864e0c769a",
+            "cuda_selected_token_id": 498,
+            "cuda_step_timing": {
+              "decode_ms": 36.000699999999995,
+              "embed_ms": 0.0984,
+              "forward_ms": 22.4227,
+              "logits_device_is_cuda": true,
+              "logits_ms": 0.030199999999999998
+            },
+            "cuda_top_k": [
+              {
+                "rank": 1,
+                "token_id": 498,
+                "value": 27.842191696166992
+              },
+              {
+                "rank": 2,
+                "token_id": 30,
+                "value": 18.98349952697754
+              },
+              {
+                "rank": 3,
+                "token_id": 87026,
+                "value": 18.9597110748291
+              },
+              {
+                "rank": 4,
+                "token_id": 3351,
+                "value": 18.157520294189453
+              },
+              {
+                "rank": 5,
+                "token_id": 448,
+                "value": 17.179595947265625
+              },
+              {
+                "rank": 6,
+                "token_id": 1939,
+                "value": 16.71017837524414
+              },
+              {
+                "rank": 7,
+                "token_id": 39244,
+                "value": 16.18794822692871
+              },
+              {
+                "rank": 8,
+                "token_id": 4623,
+                "value": 15.90079116821289
+              },
+              {
+                "rank": 9,
+                "token_id": 752,
+                "value": 15.62820053100586
+              },
+              {
+                "rank": 10,
+                "token_id": 1446,
+                "value": 15.194762229919434
+              }
+            ],
+            "index": 7,
+            "logits_vector_length": 151936,
+            "selected_token_match": true,
+            "top_k_match": true,
+            "top_k_max_abs_error": 0.00003337860107421875,
+            "top_k_mean_abs_error": 0.00001277923583984375
+          }
+        ],
+        "top_k_all_match": true
+      }
+    ],
+    "turns_count": 3
+  }
+}
