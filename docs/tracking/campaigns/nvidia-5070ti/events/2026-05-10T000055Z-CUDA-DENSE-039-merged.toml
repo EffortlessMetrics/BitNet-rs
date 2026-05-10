@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T00:00:55Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-039"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+branch = "codex/cuda-dense-039-kv-policy"
+pr = 4357
+head_sha = "8ebc4dd06e75611203f9307d17419b93fc56d5e6"
+merge_sha = "aa025b6fc02f46b12a1008f2ec7e554066c716a8"
+
+notes = [
+  "PR #4357 merged, implementing CUDA-DENSE-039 dense GGUF KV-cache policy receipts.",
+  "The merged slice records model-derived KV shape, prefill write policy, decode read/write policy, estimated byte accounting, planned strict CUDA residency, and the remaining sampling-policy gap.",
+  "CUDA-DENSE-039 keeps runtime KV allocation/residency, dense GGUF inference, Qwen one-token/decode/chat, speedup, persistent/full residency, server readiness, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, and CUDA kernel math claims false.",
+]
