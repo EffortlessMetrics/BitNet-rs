@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T01:14:00Z"
+campaign = "apple-m4-slm-metal-phases"
+item = "M4-METAL-003"
+event = "merged"
+actor = "codex"
+pr = 4382
+merge_sha = "4ca6bd17b38a52f0d14102b24eb8f3bd384244c0"
+previous_status = "in_progress"
+next_item = "M4-METAL-004"
+
+notes = [
+  "Merged phase receipt validation for the Apple M4 dense prefill Q/K/V Metal contribution.",
+  "The durable receipt is recorded under ci/hardware/apple-m4-mac-mini/2026-05-10/slm-metal-phases/metal-dense-prefill-qkv.json and passes mac receipts-check.",
+  "Promoted M4-METAL-004 to ready for resident-session phase routing.",
+  "No full apple-m4-metal inference claim, BitNet claim, QK256, Neural Engine, MPSGraph, MacBook work, model binary, or broad performance claim is introduced.",
+]
+
