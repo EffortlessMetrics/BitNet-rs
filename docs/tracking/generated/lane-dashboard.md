@@ -9,7 +9,7 @@
 | apple-m4-continuity | Apple M4 continuity | M4-CONT-005 | This is an M4 Mac mini local campaign; do not execute MacBook artifact sweeps or MacBook receipts here. |
 | apple-m4-dense-slm-regression | Apple M4 dense SLM regression guardrails | M4-SLM-REG-005 | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
 | apple-m4-local-answer | Apple M4 local answer usability | M4-QA-001 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
-| apple-m4-local-server | Apple M4 local server | M4-SERVE-003 | This is an M4 Mac mini dense SLM service campaign. |
+| apple-m4-local-server | Apple M4 local server | M4-SERVE-002 | This is an M4 Mac mini dense SLM service campaign. |
 | apple-m4-operational | Apple M4 operational readiness | M4-OP-006 | Do not reopen the completed apple-m4 proof campaign. |
 | apple-m4-productization | Apple M4 local answer productization | M4-PROD-005 | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
 | apple-m4-slm-answer | Apple M4 SLM local answer usability | SLM-M4-007 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |

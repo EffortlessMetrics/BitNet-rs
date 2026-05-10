@@ -563,6 +563,52 @@ fn mac_doctor_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_serve_help_documents_health_ready_surface() {
+    bitnet()
+        .args(["mac", "serve", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("health and readiness endpoints"))
+        .stdout(predicate::str::contains("--model-id <MODEL_ID>"))
+        .stdout(predicate::str::contains("--host <HOST>"))
+        .stdout(predicate::str::contains("--port <PORT>"))
+        .stdout(predicate::str::contains("--receipt-dir <PATH>"));
+}
+
+#[test]
+fn mac_serve_missing_cache_fails_before_listening() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let receipt_dir = dir.path().join("receipts");
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt_dir.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "serve",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--receipt-dir",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac serve cannot start"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_serve_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "serve"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
 fn mac_chat_help_documents_resident_prompts() {
     bitnet()
         .args(["mac", "chat", "--help"])

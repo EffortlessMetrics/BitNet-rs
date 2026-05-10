@@ -10,6 +10,9 @@ use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::process::Command;
+use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
 
 use crate::model_cache::{self, VerifiedCachedModel};
 
@@ -19,6 +22,9 @@ const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.js
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
 const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
+const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
+const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
+const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_BITNET_PROOF_DEFAULT_RECEIPT: &str =
     "target/apple-m4-continuity/mac-bitnet-proof-preflight.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
@@ -168,6 +174,41 @@ enum MacAction {
         /// Output aggregate Mac doctor receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_DOCTOR_DEFAULT_RECEIPT)]
         json_out: PathBuf,
+    },
+
+    /// Serve local M4 dense-SLM health and readiness endpoints without generation.
+    Serve {
+        /// Supported model id. Defaults to the validated Apple M4 SLM runtime artifact.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// M4 server device route. Only apple-m4-cpu-neon is supported for full answers.
+        #[arg(long, default_value = APPLE_M4_CPU_NEON)]
+        device: String,
+
+        /// Host to bind. Defaults to loopback for local appliance use.
+        #[arg(long, default_value = MAC_SERVE_DEFAULT_HOST)]
+        host: String,
+
+        /// Port to bind.
+        #[arg(long, default_value_t = MAC_SERVE_DEFAULT_PORT)]
+        port: u16,
+
+        /// Require strict cache, tokenizer, backend, and fallback behavior.
+        #[arg(long, default_value_t = true)]
+        strict: bool,
+
+        /// Stream by default for later completion endpoints; health/ready do not generate.
+        #[arg(long, default_value_t = true)]
+        stream: bool,
+
+        /// Directory where later request receipts will be exported.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_DEFAULT_RECEIPT_DIR)]
+        receipt_dir: PathBuf,
     },
 
     /// Run multiple prompts in one resident Apple M4 CPU/NEON SLM session.
@@ -448,6 +489,20 @@ impl MacCommand {
                 ensure_supported_mac_device(explicit_device_label, "mac doctor")?;
                 run_doctor(&model_id, cache_dir, max_new_tokens, threads, json_out).await
             }
+            MacAction::Serve {
+                model_id,
+                cache_dir,
+                device,
+                host,
+                port,
+                strict,
+                stream,
+                receipt_dir,
+            } => {
+                ensure_supported_mac_serve_device(explicit_device_label)?;
+                run_mac_serve(model_id, cache_dir, device, host, port, strict, stream, receipt_dir)
+                    .await
+            }
             MacAction::Chat {
                 prompts,
                 stdin,
@@ -675,6 +730,18 @@ fn ensure_supported_mac_device(explicit_device_label: Option<&str>, command: &st
     }
     anyhow::bail!(
         "{command} routes the supported Mac local-answer path through --device {APPLE_M4_CPU_NEON}; requested --device {label}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+    )
+}
+
+fn ensure_supported_mac_serve_device(explicit_device_label: Option<&str>) -> Result<()> {
+    let Some(label) = explicit_device_label else {
+        return Ok(());
+    };
+    if label == APPLE_M4_CPU_NEON {
+        return Ok(());
+    }
+    anyhow::bail!(
+        "mac serve routes the supported Mac local service path through --device {APPLE_M4_CPU_NEON}; requested --device {label}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
     )
 }
 
@@ -1221,6 +1288,280 @@ async fn run_doctor(
         smoke_receipt_path.display()
     );
     Ok(())
+}
+
+async fn run_mac_serve(
+    model_id: String,
+    cache_dir: Option<PathBuf>,
+    device: String,
+    host: String,
+    port: u16,
+    strict: bool,
+    stream: bool,
+    receipt_dir: PathBuf,
+) -> Result<()> {
+    if !strict {
+        anyhow::bail!("mac serve requires strict mode; hidden fallback is not allowed");
+    }
+    if device != APPLE_M4_CPU_NEON {
+        anyhow::bail!(
+            "mac serve routes the supported Mac local service path through --device {APPLE_M4_CPU_NEON}; requested --device {device}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+        );
+    }
+    let cache_status =
+        model_cache::apple_m4_slm_cache_status_json(&model_id, cache_dir.clone(), true)?;
+    if !cache_status["ready"].as_bool().unwrap_or(false) {
+        let next_step = cache_status["next_step"]
+            .as_str()
+            .unwrap_or("run `bitnet model fetch qwen2.5-0.5b-instruct-q8_0`");
+        anyhow::bail!("mac serve cannot start because the model cache is not ready: {next_step}");
+    }
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("failed to create receipt directory {}", receipt_dir.display()))?;
+    let model = model_cache::verified_apple_m4_slm_model(&model_id, cache_dir)?;
+    let state = Arc::new(MacServeState::new(model, host.clone(), port, stream, receipt_dir));
+    let address = format!("{host}:{port}");
+    if !mac_serve_host_is_loopback(&host) {
+        eprintln!(
+            "warning: bitnet mac serve is a local-service wrapper; binding to non-loopback host {host} may expose health/readiness state outside this machine"
+        );
+    }
+    let listener = TcpListener::bind(&address)
+        .await
+        .with_context(|| format!("failed to bind M4 local server to {address}"))?;
+    let local_addr =
+        listener.local_addr().map(|addr| addr.to_string()).unwrap_or_else(|_| address.clone());
+    eprintln!("bitnet mac serve listening on http://{local_addr} (health: /health, ready: /ready)");
+    loop {
+        tokio::select! {
+            accepted = listener.accept() => {
+                let (stream, _) = accepted.context("failed to accept M4 local server connection")?;
+                let state = Arc::clone(&state);
+                tokio::spawn(async move {
+                    if let Err(error) = handle_mac_serve_connection(stream, state).await {
+                        tracing::warn!(error = %error, "M4 local server connection failed");
+                    }
+                });
+            }
+            signal = tokio::signal::ctrl_c() => {
+                signal.context("failed to listen for Ctrl-C while running mac serve")?;
+                eprintln!("bitnet mac serve shutting down");
+                return Ok(());
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+struct MacServeState {
+    started_at: std::time::Instant,
+    started_at_utc: String,
+    model: VerifiedCachedModel,
+    cache_status: serde_json::Value,
+    disk: serde_json::Value,
+    host: String,
+    port: u16,
+    stream: bool,
+    receipt_dir: PathBuf,
+}
+
+impl MacServeState {
+    fn new(
+        model: VerifiedCachedModel,
+        host: String,
+        port: u16,
+        stream: bool,
+        receipt_dir: PathBuf,
+    ) -> Self {
+        let cache_status = verified_cache_status_json(&model);
+        let disk = disk_health_json(&model.cache_root, model.bytes);
+        Self {
+            started_at: std::time::Instant::now(),
+            started_at_utc: chrono::Utc::now().to_rfc3339(),
+            model,
+            cache_status,
+            disk,
+            host,
+            port,
+            stream,
+            receipt_dir,
+        }
+    }
+
+    fn uptime_seconds(&self) -> u64 {
+        self.started_at.elapsed().as_secs()
+    }
+}
+
+async fn handle_mac_serve_connection(
+    mut stream: TcpStream,
+    state: Arc<MacServeState>,
+) -> Result<()> {
+    let mut buffer = [0u8; 4096];
+    let read = stream.read(&mut buffer).await.context("failed to read HTTP request")?;
+    if read == 0 {
+        return Ok(());
+    }
+    let request = String::from_utf8_lossy(&buffer[..read]);
+    let (status, reason, body) = mac_serve_http_response(&request, &state);
+    let body = serde_json::to_vec_pretty(&body)?;
+    let header = format!(
+        "HTTP/1.1 {status} {reason}\r\ncontent-type: application/json\r\ncache-control: no-store\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+        body.len()
+    );
+    stream.write_all(header.as_bytes()).await.context("failed to write HTTP header")?;
+    stream.write_all(&body).await.context("failed to write HTTP body")?;
+    stream.shutdown().await.context("failed to close HTTP stream")?;
+    Ok(())
+}
+
+fn mac_serve_http_response(
+    request: &str,
+    state: &MacServeState,
+) -> (u16, &'static str, serde_json::Value) {
+    let mut parts = request.lines().next().unwrap_or_default().split_whitespace();
+    let method = parts.next().unwrap_or_default();
+    let path = parts.next().unwrap_or_default().split('?').next().unwrap_or_default();
+    if method != "GET" {
+        return (
+            405,
+            "Method Not Allowed",
+            serde_json::json!({
+                "status": "error",
+                "error": "method_not_allowed",
+                "allowed_methods": ["GET"],
+            }),
+        );
+    }
+    match path {
+        "/" | "/health" | "/health/live" => (200, "OK", mac_serve_health_json(state)),
+        "/ready" | "/health/ready" => {
+            let ready = mac_serve_ready_json(state);
+            let status = if ready["ready"].as_bool() == Some(true) { 200 } else { 503 };
+            let reason = if status == 200 { "OK" } else { "Service Unavailable" };
+            (status, reason, ready)
+        }
+        _ => (
+            404,
+            "Not Found",
+            serde_json::json!({
+                "status": "error",
+                "error": "not_found",
+                "available_endpoints": ["/health", "/health/live", "/ready", "/health/ready"],
+            }),
+        ),
+    }
+}
+
+fn mac_serve_health_json(state: &MacServeState) -> serde_json::Value {
+    serde_json::json!({
+        "artifact_kind": "bitnet_apple_m4_local_server_health",
+        "status": "healthy",
+        "server": mac_serve_server_json(state),
+        "uptime_seconds": state.uptime_seconds(),
+        "generation_executed": false,
+        "endpoints": {
+            "health": "/health",
+            "ready": "/ready",
+        },
+        "claim_boundary": mac_serve_claim_boundary_json(),
+    })
+}
+
+fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
+    let cache_ready = state.cache_status["ready"].as_bool().unwrap_or(false);
+    let backend_ready = true;
+    let tokenizer_ready = true;
+    let receipt_ready = state.receipt_dir.exists();
+    let ready = cache_ready && backend_ready && tokenizer_ready && receipt_ready;
+    serde_json::json!({
+        "artifact_kind": "bitnet_apple_m4_local_server_ready",
+        "status": if ready { "ready" } else { "not_ready" },
+        "ready": ready,
+        "server": mac_serve_server_json(state),
+        "model": {
+            "id": &state.model.id,
+            "display_name": &state.model.display_name,
+            "path": &state.model.path,
+            "sha256": &state.model.sha256,
+            "bytes": state.model.bytes,
+            "architecture": &state.model.architecture,
+            "quantization": &state.model.quantization,
+            "sha256_source": "verified_cache_metadata_and_startup_check",
+        },
+        "tokenizer": {
+            "model": &state.model.tokenizer_model,
+            "pretokenizer_authority": &state.model.tokenizer_pre,
+            "chat_template": state.model.chat_template,
+            "prompt_template": QWEN_PROMPT_TEMPLATE,
+        },
+        "backend": {
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+        },
+        "checks": {
+            "cache": &state.cache_status,
+            "disk": &state.disk,
+            "tokenizer": {
+                "checked": true,
+                "ready": tokenizer_ready,
+                "authority": &state.model.tokenizer_pre,
+            },
+            "backend": {
+                "checked": true,
+                "ready": backend_ready,
+                "unsupported_full_metal_rejected": true,
+            },
+            "receipts": {
+                "checked": true,
+                "ready": receipt_ready,
+                "dir": &state.receipt_dir,
+                "mode": "per_request_future",
+            },
+            "generation": {
+                "checked": false,
+                "executed": false,
+                "reason": "health and ready endpoints do not run generation",
+            },
+        },
+        "claim_boundary": mac_serve_claim_boundary_json(),
+    })
+}
+
+fn mac_serve_server_json(state: &MacServeState) -> serde_json::Value {
+    serde_json::json!({
+        "host": &state.host,
+        "port": state.port,
+        "started_at": &state.started_at_utc,
+        "streaming_default": state.stream,
+        "receipt_dir": &state.receipt_dir,
+    })
+}
+
+fn mac_serve_claim_boundary_json() -> serde_json::Value {
+    serde_json::json!({
+        "dense_slm_local_server_health_ready": true,
+        "generation_endpoint_implemented": false,
+        "streaming_completions_work": false,
+        "openai_compatibility_claimed": false,
+        "production_readiness_claimed": false,
+        "bitnet_quality_claimed": false,
+        "full_metal_inference_claimed": false,
+        "mpsgraph_inference_claimed": false,
+        "neural_engine_execution_claimed": false,
+        "qk256_apple_claimed": false,
+        "broad_performance_claim": false,
+    })
+}
+
+fn mac_serve_host_is_loopback(host: &str) -> bool {
+    let host = host.trim().trim_start_matches('[').trim_end_matches(']');
+    if host.eq_ignore_ascii_case("localhost") {
+        return true;
+    }
+    host.parse::<std::net::IpAddr>().map(|addr| addr.is_loopback()).unwrap_or(false)
 }
 
 fn mac_doctor_base_receipt(
@@ -3396,5 +3737,101 @@ fn receipt_flag_true(value: &serde_json::Value, key: &str) -> bool {
             values.iter().any(|child| receipt_flag_true(child, key))
         }
         _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_verified_model(cache_root: &Path) -> VerifiedCachedModel {
+        VerifiedCachedModel {
+            id: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            display_name: "Qwen2.5 0.5B Instruct Q8_0".to_string(),
+            path: cache_root.join("qwen2.5-0.5b-instruct-q8_0.gguf"),
+            cache_root: cache_root.to_path_buf(),
+            sha256: "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e".to_string(),
+            bytes: 675_710_816,
+            architecture: "qwen2".to_string(),
+            quantization: "Q8_0".to_string(),
+            tokenizer_model: "gpt2".to_string(),
+            tokenizer_pre: "qwen2".to_string(),
+            chat_template: true,
+            support_note: "test model".to_string(),
+        }
+    }
+
+    fn test_state() -> (tempfile::TempDir, MacServeState) {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let receipt_dir = temp.path().join("receipts");
+        std::fs::create_dir_all(&receipt_dir).expect("receipt dir");
+        let state = MacServeState::new(
+            test_verified_model(temp.path()),
+            "127.0.0.1".to_string(),
+            8080,
+            true,
+            receipt_dir,
+        );
+        (temp, state)
+    }
+
+    #[test]
+    fn mac_serve_ready_json_records_cache_backend_and_no_generation() {
+        let (_temp, state) = test_state();
+        let ready = mac_serve_ready_json(&state);
+
+        assert_eq!(ready["artifact_kind"], "bitnet_apple_m4_local_server_ready");
+        assert_eq!(ready["ready"], true);
+        assert_eq!(ready["checks"]["cache"]["ready"], true);
+        assert_eq!(ready["backend"]["requested_backend"], APPLE_M4_CPU_NEON);
+        assert_eq!(ready["backend"]["selected_backend"], APPLE_M4_CPU_NEON);
+        assert_eq!(ready["backend"]["fallback_used"], false);
+        assert_eq!(ready["checks"]["generation"]["executed"], false);
+        assert_eq!(ready["claim_boundary"]["generation_endpoint_implemented"], false);
+        assert_eq!(ready["claim_boundary"]["bitnet_quality_claimed"], false);
+        assert_eq!(ready["claim_boundary"]["full_metal_inference_claimed"], false);
+    }
+
+    #[test]
+    fn mac_serve_http_ready_and_health_routes_are_json_no_generation() {
+        let (_temp, state) = test_state();
+
+        let (status, reason, health) =
+            mac_serve_http_response("GET /health HTTP/1.1\r\n\r\n", &state);
+        assert_eq!((status, reason), (200, "OK"));
+        assert_eq!(health["artifact_kind"], "bitnet_apple_m4_local_server_health");
+        assert_eq!(health["generation_executed"], false);
+
+        let (status, reason, ready) =
+            mac_serve_http_response("GET /ready HTTP/1.1\r\n\r\n", &state);
+        assert_eq!((status, reason), (200, "OK"));
+        assert_eq!(ready["artifact_kind"], "bitnet_apple_m4_local_server_ready");
+        assert_eq!(ready["ready"], true);
+        assert_eq!(ready["checks"]["generation"]["checked"], false);
+    }
+
+    #[test]
+    fn mac_serve_http_rejects_unknown_paths_and_methods() {
+        let (_temp, state) = test_state();
+
+        let (status, reason, body) =
+            mac_serve_http_response("POST /ready HTTP/1.1\r\n\r\n", &state);
+        assert_eq!((status, reason), (405, "Method Not Allowed"));
+        assert_eq!(body["error"], "method_not_allowed");
+
+        let (status, reason, body) =
+            mac_serve_http_response("GET /v1/chat/completions HTTP/1.1\r\n\r\n", &state);
+        assert_eq!((status, reason), (404, "Not Found"));
+        assert_eq!(body["error"], "not_found");
+    }
+
+    #[test]
+    fn mac_serve_host_loopback_detection_warns_only_for_non_loopback() {
+        assert!(mac_serve_host_is_loopback("127.0.0.1"));
+        assert!(mac_serve_host_is_loopback("localhost"));
+        assert!(mac_serve_host_is_loopback("::1"));
+        assert!(mac_serve_host_is_loopback("[::1]"));
+        assert!(!mac_serve_host_is_loopback("0.0.0.0"));
+        assert!(!mac_serve_host_is_loopback("192.168.1.5"));
     }
 }

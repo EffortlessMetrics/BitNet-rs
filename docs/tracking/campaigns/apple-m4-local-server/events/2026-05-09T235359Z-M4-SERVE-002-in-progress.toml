@@ -1,0 +1,12 @@
+timestamp = "2026-05-09T23:53:59Z"
+campaign = "apple-m4-local-server"
+item = "M4-SERVE-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started the Apple M4 local server health/ready endpoint slice.",
+  "Scope is limited to bitnet mac serve health and readiness behavior tied to supported dense SLM cache, tokenizer, backend, fallback, disk/cache, and unsupported-backend state.",
+  "No completion endpoint, OpenAI compatibility, production readiness, BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, model binary, or broad performance claim is introduced.",
+]

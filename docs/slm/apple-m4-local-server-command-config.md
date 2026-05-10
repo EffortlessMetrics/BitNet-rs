@@ -1,6 +1,7 @@
 # Apple M4 Local Server Command And Config Contract
 
-Status: contract only. No server endpoint is implemented by this document.
+Status: command/config contract plus the initial health/readiness endpoint
+slice. Completion endpoints and receipt export are later work.
 
 The Apple M4 local server should expose the already working dense SLM Mac
 appliance as a loopback service while preserving the same model-cache,
@@ -143,14 +144,21 @@ contract:
 
 | Endpoint | First item | Purpose |
 |---|---|---|
-| `GET /health` | `M4-SERVE-002` | Process health, version, and cheap server status. |
-| `GET /ready` | `M4-SERVE-002` | Model-cache, tokenizer, backend, fallback, disk, and receipt readiness. |
+| `GET /health` | `M4-SERVE-002` | Implemented as process health and cheap server status. |
+| `GET /health/live` | `M4-SERVE-002` | Implemented as a liveness alias for `/health`. |
+| `GET /ready` | `M4-SERVE-002` | Implemented with model-cache, tokenizer, backend, fallback, disk, and receipt readiness. |
+| `GET /health/ready` | `M4-SERVE-002` | Implemented as a readiness alias for `/ready`. |
 | `POST /v1/chat/completions` | `M4-SERVE-003` | Streaming dense SLM completion surface. |
 | `GET /receipts/{id}` | `M4-SERVE-004` | Export strict per-request receipts. |
 
 The completion endpoint may be OpenAI-shaped, but full OpenAI compatibility must
 not be claimed until request/response semantics, streaming chunks, errors, and
 receipts are tested.
+
+`M4-SERVE-002` does not run generation. Readiness reports whether startup
+verified the supported model cache, tokenizer authority, `apple-m4-cpu-neon`
+backend route, no-hidden-fallback policy, disk/cache state, and receipt
+directory. Missing or invalid cache still prevents startup.
 
 ## Receipt Requirements
 
@@ -175,12 +183,12 @@ receipt directory is available.
 
 ## Claim Boundary
 
-This contract may claim only that the M4 local server command/config surface is
-defined.
+This contract may claim only that the M4 local server command/config surface and
+initial health/readiness endpoint slice are defined.
 
 It must not claim:
 
-- a server endpoint is implemented;
+- a generation endpoint is implemented;
 - streaming completions work;
 - OpenAI compatibility is proven;
 - production deployment readiness;

@@ -22,7 +22,7 @@ the same cache, tokenizer, backend, fallback, streaming, and receipt discipline.
 | Work item | Status | Notes |
 |---|---|---|
 | M4-SERVE-001 | merged | Defined command and configuration contract. |
-| M4-SERVE-002 | ready | Add health and ready endpoint behavior. |
+| M4-SERVE-002 | in progress | Add health and ready endpoint behavior. |
 | M4-SERVE-003 | pending | Add streaming completion endpoint. |
 | M4-SERVE-004 | pending | Add receipt export for server requests. |
 | M4-SERVE-005 | pending | Integrate doctor/smoke/regression readiness flow. |
@@ -38,6 +38,10 @@ performance claim is introduced.
 After `M4-SERVE-001`, the next executable item is `M4-SERVE-002`: health and
 ready endpoint behavior for model-cache, tokenizer, backend/fallback, disk/cache,
 and unsupported-backend state without expensive generation by default.
+
+`M4-SERVE-002` adds the initial `bitnet mac serve` endpoint slice: `/health`,
+`/health/live`, `/ready`, and `/health/ready`. It remains intentionally short
+of completions, OpenAI compatibility, receipt export, and production readiness.
 
 ## Claim Boundary
 

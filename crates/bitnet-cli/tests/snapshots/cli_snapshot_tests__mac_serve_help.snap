@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Serve local M4 dense-SLM health and readiness endpoints without generation
+
+Usage: bitnet mac serve [OPTIONS]
+
+Options:
+  -c, --config <PATH>        Configuration file path
+      --model-id <MODEL_ID>  Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
+      --cache-dir <PATH>     Override model cache root. Defaults to ~/.cache/bitnet-rs/models
+      --device <DEVICE>      M4 server device route. Only apple-m4-cpu-neon is supported for full answers [default: apple-m4-cpu-neon]
+      --log-level <LEVEL>    Log level (trace, debug, info, warn, error)
+      --host <HOST>          Host to bind. Defaults to loopback for local appliance use [default: 127.0.0.1]
+      --threads <N>          Number of CPU threads
+      --batch-size <SIZE>    Batch size for processing
+      --port <PORT>          Port to bind [default: 8080]
+      --strict               Require strict cache, tokenizer, backend, and fallback behavior
+      --stream               Stream by default for later completion endpoints; health/ready do not generate
+      --receipt-dir <PATH>   Directory where later request receipts will be exported [default: target/apple-m4-local-server/receipts]
+  -h, --help                 Print help
