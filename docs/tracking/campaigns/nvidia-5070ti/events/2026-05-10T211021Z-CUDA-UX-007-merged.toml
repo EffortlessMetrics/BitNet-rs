@@ -1,0 +1,17 @@
+timestamp = "2026-05-10T21:10:21Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-007"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/cuda-ux-007-receipts-explain-benchmark"
+pr = 4456
+head_sha = "df98280d167e1909729309d49e81ee7fc260cf69"
+merge_sha = "a36a048af4c677a4b8b2067887f2094f5278d423"
+summary = "Merged CUDA-UX-007 benchmark qualification receipt explanation."
+notes = [
+  "PR #4456 extends `bitnet receipts explain` with benchmark qualification status, per-profile decisions, transfer timing sources, and blockers.",
+  "The PR keeps fresh benchmark execution, speedup, full residency, server readiness, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, and CUDA kernel math claims false.",
+  "Hosted CI was green after the stale campaign-doctor failure was rerun with PR metadata claiming CUDA-UX-007.",
+]
