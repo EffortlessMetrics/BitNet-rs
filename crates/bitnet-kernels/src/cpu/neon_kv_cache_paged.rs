@@ -41,7 +41,7 @@ pub enum EvictionPolicy {
 /// Each token occupies `head_dim` f32 elements; both keys and values are
 /// stored contiguously inside the block.
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Fields used by aarch64 methods gated with cfg.
+#[cfg_attr(not(target_arch = "aarch64"), allow(dead_code))]
 pub struct PagedCacheBlock {
     /// Key vectors: `[tokens_stored, head_dim]` flattened.
     pub keys: Vec<f32>,

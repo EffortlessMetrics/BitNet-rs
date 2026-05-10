@@ -126,10 +126,12 @@ required-features = ["metal-runtime"]
 [[test]]
 name = "metal_performance_tests"
 path = "tests/metal_performance_tests.rs"
+required-features = ["metal-runtime"]
 
 [[test]]
 name = "opencl_fuzz_targets"
 path = "tests/opencl_fuzz_targets.rs"
+required-features = ["opencl"]
 
 [[test]]
 name = "cpu_scalar_parity"
@@ -159,18 +161,22 @@ required-features = ["cpu"]
 [[test]]
 name = "metal_error_recovery_tests"
 path = "tests/metal_error_recovery_tests.rs"
+required-features = ["metal-runtime"]
 
 [[test]]
 name = "metal_compute_pipeline_tests"
 path = "tests/metal_compute_pipeline_tests.rs"
+required-features = ["metal-runtime", "cpu"]
 
 [[test]]
 name = "metal_layernorm_shader_tests"
 path = "tests/metal_layernorm_shader_tests.rs"
+required-features = ["metal-runtime"]
 
 [[test]]
 name = "metal_reduction_shader_tests"
 path = "tests/metal_reduction_shader_tests.rs"
+required-features = ["metal-runtime"]
 
 [[test]]
 name = "bdd_wave_8"
