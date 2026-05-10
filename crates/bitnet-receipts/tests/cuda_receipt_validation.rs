@@ -1350,6 +1350,30 @@ fn dense_gguf_qwen_one_token_rejects_missing_transfer_timing_source_fields() {
 }
 
 #[test]
+fn dense_gguf_qwen_one_token_rejects_missing_h2d_timing_envelope() {
+    let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+    receipt["timing"]["host_to_device_ms"] = Value::Null;
+
+    let err = validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("host_to_device_ms"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_one_token_rejects_h2d_timing_accounting_mismatch() {
+    let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
+    receipt["tensor_residency"]["transfer_accounting"]["host_to_device_ms"] = json!(99.0);
+
+    let err = validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("host_to_device_ms"), "unexpected error: {err}");
+}
+
+#[test]
 fn dense_gguf_qwen_one_token_rejects_short_decode_claim() {
     let mut receipt = valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt();
     receipt["claim_boundary"]["qwen_short_decode_cuda_claimed"] = json!(true);
@@ -3526,11 +3550,13 @@ fn valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt() -> Value {
         "kernel_time_ms": 3.25,
         "host_to_device_bytes": 4608,
         "device_to_host_bytes": 1408,
-        "host_to_device_ms": null,
-        "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+        "host_to_device_ms": 100.0,
+        "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+        "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+        "host_to_device_ms_includes_non_transfer_overhead": true,
         "device_to_host_ms": 0.4,
         "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
-        "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
+        "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured",
         "kernel_invocations": 31,
         "kernel_launches": 31
     });
@@ -3552,11 +3578,13 @@ fn valid_dense_gguf_qwen_one_token_strict_cuda_proof_receipt() -> Value {
             "status": "measured",
             "host_to_device_bytes": 4608,
             "device_to_host_bytes": 1408,
-            "host_to_device_ms": null,
-            "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+            "host_to_device_ms": 100.0,
+            "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+            "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+            "host_to_device_ms_includes_non_transfer_overhead": true,
             "device_to_host_ms": 0.4,
             "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
-            "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
+            "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured",
             "kernel_invocations": 31,
             "kernel_launches": 31
         }
@@ -3735,11 +3763,13 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
         "generated_tokens_count": 8,
         "host_to_device_bytes": 4096,
         "device_to_host_bytes": 1024,
-        "host_to_device_ms": null,
-        "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+        "host_to_device_ms": 100.0,
+        "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+        "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+        "host_to_device_ms_includes_non_transfer_overhead": true,
         "device_to_host_ms": 3.2,
         "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
-        "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
+        "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured",
         "kernel_invocations": 264,
         "kernel_launches": 264
     });
@@ -3762,11 +3792,13 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
             "status": "measured",
             "host_to_device_bytes": 4096,
             "device_to_host_bytes": 1024,
-            "host_to_device_ms": null,
-            "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+            "host_to_device_ms": 100.0,
+            "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+            "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+            "host_to_device_ms_includes_non_transfer_overhead": true,
             "device_to_host_ms": 3.2,
             "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
-            "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
+            "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured",
             "kernel_invocations": 264,
             "kernel_launches": 264
         }
@@ -4020,11 +4052,13 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
         "kernel_time_ms": 93.0,
         "host_to_device_bytes": 4096,
         "device_to_host_bytes": 3072,
-        "host_to_device_ms": null,
-        "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+        "host_to_device_ms": 100.0,
+        "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+        "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+        "host_to_device_ms_includes_non_transfer_overhead": true,
         "device_to_host_ms": 9.6,
         "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
-        "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
+        "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured",
         "kernel_invocations": 792,
         "kernel_launches": 792,
         "turns_count": 3,
@@ -4056,11 +4090,13 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
             "status": "measured",
             "host_to_device_bytes": 4096,
             "device_to_host_bytes": 3072,
-            "host_to_device_ms": null,
-            "host_to_device_ms_source": "not_measured_by_dense_qwen_runtime",
+            "host_to_device_ms": 100.0,
+            "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+            "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+            "host_to_device_ms_includes_non_transfer_overhead": true,
             "device_to_host_ms": 9.6,
             "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
-            "transfer_timing_status": "device_to_host_measured_host_to_device_unmeasured",
+            "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured",
             "kernel_invocations": 792,
             "kernel_launches": 792
         }

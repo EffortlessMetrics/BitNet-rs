@@ -5426,23 +5426,70 @@ pub fn validate_dense_gguf_sampling_policy_receipt_json(receipt: &Value) -> Resu
 }
 
 fn validate_dense_qwen_transfer_timing(timing: &Value, transfer: &Value) -> Result<()> {
-    require_string_eq(
-        timing,
-        "transfer_timing_status",
-        "device_to_host_measured_host_to_device_unmeasured",
-    )?;
-    require_null(timing, "host_to_device_ms")?;
-    require_string_eq(timing, "host_to_device_ms_source", "not_measured_by_dense_qwen_runtime")?;
+    let timing_status = required_string(timing, "transfer_timing_status")?;
+    require_string_eq(transfer, "transfer_timing_status", timing_status)?;
+
+    match timing_status {
+        "device_to_host_measured_host_to_device_unmeasured" => {
+            require_null(timing, "host_to_device_ms")?;
+            require_string_eq(
+                timing,
+                "host_to_device_ms_source",
+                "not_measured_by_dense_qwen_runtime",
+            )?;
+            require_null(transfer, "host_to_device_ms")?;
+            require_string_eq(
+                transfer,
+                "host_to_device_ms_source",
+                "not_measured_by_dense_qwen_runtime",
+            )?;
+        }
+        "host_to_device_model_load_envelope_device_to_host_measured" => {
+            require_non_negative_number(timing, "host_to_device_ms")?;
+            require_string_eq(
+                timing,
+                "host_to_device_ms_source",
+                "wall_clock_model_load_with_cuda_weight_upload",
+            )?;
+            require_string_eq(timing, "host_to_device_ms_scope", "model_load_wall_clock_envelope")?;
+            require_bool_eq(timing, "host_to_device_ms_includes_non_transfer_overhead", true)?;
+
+            require_non_negative_number(transfer, "host_to_device_ms")?;
+            require_string_eq(
+                transfer,
+                "host_to_device_ms_source",
+                "wall_clock_model_load_with_cuda_weight_upload",
+            )?;
+            require_string_eq(
+                transfer,
+                "host_to_device_ms_scope",
+                "model_load_wall_clock_envelope",
+            )?;
+            require_bool_eq(transfer, "host_to_device_ms_includes_non_transfer_overhead", true)?;
+
+            let timing_h2d = timing
+                .get("host_to_device_ms")
+                .and_then(Value::as_f64)
+                .ok_or_else(|| anyhow!("timing.host_to_device_ms must be a number"))?;
+            let transfer_h2d = transfer
+                .get("host_to_device_ms")
+                .and_then(Value::as_f64)
+                .ok_or_else(|| anyhow!("transfer_accounting.host_to_device_ms must be a number"))?;
+            if (timing_h2d - transfer_h2d).abs() > f64::EPSILON {
+                return Err(anyhow!(
+                    "timing.host_to_device_ms must match tensor_residency.transfer_accounting.host_to_device_ms"
+                ));
+            }
+        }
+        other => {
+            return Err(anyhow!(
+                "field `transfer_timing_status` must be a supported dense Qwen transfer timing status, got `{other}`"
+            ));
+        }
+    }
+
     require_non_negative_number(timing, "device_to_host_ms")?;
     require_string_eq(timing, "device_to_host_ms_source", "wall_clock_extract_logits_2d_local")?;
-
-    require_string_eq(
-        transfer,
-        "transfer_timing_status",
-        "device_to_host_measured_host_to_device_unmeasured",
-    )?;
-    require_null(transfer, "host_to_device_ms")?;
-    require_string_eq(transfer, "host_to_device_ms_source", "not_measured_by_dense_qwen_runtime")?;
     require_non_negative_number(transfer, "device_to_host_ms")?;
     require_string_eq(transfer, "device_to_host_ms_source", "wall_clock_extract_logits_2d_local")?;
 

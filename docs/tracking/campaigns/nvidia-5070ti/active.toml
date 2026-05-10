@@ -2291,6 +2291,69 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-PERF-005"
+status = "pr_open"
+branch = "codex/cuda-dense-perf-005-h2d-envelope"
+pr = 4450
+head_sha = "38bd37b4dcd4c8e0c277ada0d420c31cc066d772"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-PERF-004"]
+acceptance = "Record a measured host-to-device model-load wall-clock envelope in the dense Qwen one-token, short-decode, and warm-session strict CUDA runtime receipts using the verified qwen2.5-0.5b-instruct-q8_0 GGUF artifact on RTX 5070 Ti; preserve measured device-to-host logits download timing, fallback_used=false, speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, server_ready_claimed=false, dense ask/chat claim boundaries, and bitnet_packed_i2s_qk256_proof=false; clearly label the H2D value as a model-load envelope that includes non-transfer overhead rather than pure CUDA event copy timing; add validator coverage rejecting missing H2D envelope fields and timing/accounting mismatches."
+commands = [
+  "cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-receipts -- --check",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features qwen_ -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-one-token-strict-cuda --model C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-10\\dense-qwen-perf-005-h2d-transfer-envelope\\dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-short-decode-strict-cuda --model C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --one-token-proof ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-10\\dense-qwen-perf-005-h2d-transfer-envelope\\dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-10\\dense-qwen-perf-005-h2d-transfer-envelope\\dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-warm-session-strict-cuda --model C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --one-token-proof ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-10\\dense-qwen-perf-005-h2d-transfer-envelope\\dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json --short-decode-proof ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-10\\dense-qwen-perf-005-h2d-transfer-envelope\\dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-10\\dense-qwen-perf-005-h2d-transfer-envelope\\dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+  "speedup or full CUDA residency claim upgrades",
+]
+may_claim = [
+  "Dense Qwen strict CUDA runtime receipts now record a measured host-to-device model-load wall-clock envelope with explicit source, scope, and non-transfer-overhead fields.",
+  "The one-token, short-decode, and warm-session receipts preserve measured device-to-host logits download timing.",
+  "The receipts preserve same-artifact RTX 5070 Ti dense_regular_llm_cuda routing, fallback_used=false, and blocked speed/full-residency/server/BitNet-proof claims.",
+]
+must_not_claim = [
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "benchmark_qualified_speedup is accepted.",
+  "Full dense CUDA residency is proven.",
+  "Server readiness exists.",
+  "Host-to-device timing is pure CUDA event copy timing.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-029"
 status = "merged"
 branch = "codex/cuda-dense-029-mlp-activation-fixture"

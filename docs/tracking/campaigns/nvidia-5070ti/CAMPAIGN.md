@@ -211,7 +211,8 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-PERF-001 | merged | Dense Qwen CUDA benchmark baseline receipt for one-token, short-decode, and warm-session profiles; `speedup_claim=false`. |
 | CUDA-DENSE-PERF-002 | merged | Repeated same-artifact dense Qwen CPU/CUDA comparator receipts for the baseline profiles; still no speedup qualification. |
 | CUDA-DENSE-PERF-003 | merged | Device-to-host logits download timing is measured in dense Qwen one-token, short-decode, and warm-session strict CUDA receipts; host-to-device timing remains explicitly unmeasured. |
-| CUDA-DENSE-PERF-004 | in progress | Dense Qwen benchmark qualification review consumes the baseline, repeated comparator, and D2H timing receipts while keeping speedup claims false. |
+| CUDA-DENSE-PERF-004 | merged | Dense Qwen benchmark qualification review consumes the baseline, repeated comparator, and D2H timing receipts while keeping speedup claims false. |
+| CUDA-DENSE-PERF-005 | in progress | Dense Qwen strict CUDA runtime receipts record a measured H2D model-load envelope, explicitly not pure CUDA event copy timing; `speedup_claim=false`. |
 
 ## Review Policy
 
