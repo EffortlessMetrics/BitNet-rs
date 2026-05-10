@@ -1613,7 +1613,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-026"
-status = "ready"
+status = "pr_open"
+pr = 4365
 branch = "codex/lunar-lake/CPU258V-026-reference-bundle-refresh"
 stackable = false
 review_mode = "codex_premerge"
@@ -1623,6 +1624,7 @@ blocked_by = ["CPU258V-025"]
 acceptance = "Refresh the 258V CPU reference bundle after prompt/token parity, external first-token evidence, QK256 semantics, output-head/logits-index checks, observed logits length, and transformer-layer parity ladder evidence are recorded."
 commands = [
   "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
