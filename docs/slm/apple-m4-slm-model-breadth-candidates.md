@@ -200,6 +200,10 @@ registered, or user-supported by this item.
 - Why selected: same leading Qwen-class architecture family as the supported M4
   default, larger capacity than the 0.5B baseline, and likely to exercise model
   runner scalability without requiring a new tokenizer or architecture family.
+- M4-MODEL-010 outcome: reference-good. The current reference runner loads the
+  artifact, records `general.architecture = qwen2`,
+  `tokenizer.ggml.pre = qwen2`, and chat-template authority, and produces
+  coherent short outputs for the bounded prompt suite.
 - Rejection criteria:
   - missing GGUF tokenizer or chat-template authority;
   - reference runner cannot produce sane short answers with deterministic

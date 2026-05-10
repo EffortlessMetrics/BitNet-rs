@@ -1,0 +1,13 @@
+timestamp = "2026-05-10T03:08:52Z"
+campaign = "apple-m4-slm-model-breadth"
+item = "M4-MODEL-010"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+
+notes = [
+  "Started reference output sanity for the Qwen2.5 1.5B Q4_K_M candidate.",
+  "The reference runner loads the artifact and produces coherent short outputs for the bounded prompt suite.",
+  "The artifact remains under target only and is not committed, accepted as supported, or registered by this item.",
+  "No Rust M4 support, cache registration, BitNet claim, full Metal claim, QK256 claim, Neural Engine claim, MPSGraph claim, MacBook work, or broad performance claim is introduced.",
+]
