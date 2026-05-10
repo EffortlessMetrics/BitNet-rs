@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T18:48:53Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-PERF-005"
+event = "in_progress"
+previous_status = "proposed"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-dense-perf-005-h2d-envelope"
+
+notes = [
+  "Started CUDA-DENSE-PERF-005 to add measured host-to-device model-load wall-clock envelope timing to dense Qwen strict CUDA runtime receipts.",
+  "The H2D value is explicitly scoped as model_load_wall_clock_envelope and records that it includes non-transfer overhead; it is not pure CUDA event copy timing.",
+  "Scope is dense Qwen runtime receipt accounting, receipt validators, hardware receipts, report, and tracker metadata only; no tokenizer, loader, transformer runtime, CUDA kernel math, QK256, BitNet CUDA behavior, ask/chat/server behavior, speedup upgrade, or full-residency claim is in scope.",
+]

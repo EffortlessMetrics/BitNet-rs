@@ -3306,6 +3306,7 @@ struct DenseQwenOneTokenRun {
     logits_len: usize,
     logits_sha256: String,
     total_ms: f64,
+    model_load_ms: f64,
     prefill_ms: f64,
     decode_ms: f64,
     embed_ms: f64,
@@ -3322,6 +3323,7 @@ struct DenseQwenShortDecodeRun {
     generated_token_ids_sha256: String,
     top_k_steps_sha256: String,
     total_ms: f64,
+    model_load_ms: f64,
     prefill_ms: f64,
     decode_total_ms: f64,
     first_token_ms: f64,
@@ -3554,9 +3556,11 @@ fn run_qwen_one_token_once(
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
     let total_start = std::time::Instant::now();
+    let load_start = std::time::Instant::now();
     let model = loader
         .load_with_config(model_path, &load_config)
         .with_context(|| format!("failed to load model {}", model_path.display()))?;
+    let model_load_ms = elapsed_ms_f64(load_start);
     let mut cache = bitnet_models::transformer::KVCache::new(model.config(), 1, &candle_device)?;
 
     let mut prefill_ms = 0.0;
@@ -3623,6 +3627,7 @@ fn run_qwen_one_token_once(
         logits_len: logits_vec.len(),
         logits_sha256,
         total_ms: elapsed_ms_f64(total_start),
+        model_load_ms,
         prefill_ms,
         decode_ms: elapsed_ms_f64(decode_start),
         embed_ms,
@@ -3650,9 +3655,11 @@ fn run_qwen_short_decode(
     let loader = ModelLoader::new(device);
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
+    let load_start = std::time::Instant::now();
     let model = loader
         .load_with_config(model_path, &load_config)
         .with_context(|| format!("failed to load model {}", model_path.display()))?;
+    let model_load_ms = elapsed_ms_f64(load_start);
     run_qwen_short_decode_with_loaded_model(
         model.as_ref(),
         &candle_device,
@@ -3661,6 +3668,7 @@ fn run_qwen_short_decode(
         top_k,
         require_cuda,
         total_start,
+        model_load_ms,
     )
 }
 
@@ -3700,6 +3708,7 @@ fn run_qwen_warm_session(
             top_k,
             require_cuda,
             turn_start,
+            0.0,
         )
         .with_context(|| format!("failed warm-session turn {turn_index}"))?;
         turns.push(turn);
@@ -3721,6 +3730,7 @@ fn run_qwen_short_decode_with_loaded_model(
     top_k: usize,
     require_cuda: bool,
     total_start: std::time::Instant,
+    model_load_ms: f64,
 ) -> Result<DenseQwenShortDecodeRun> {
     let mut cache = bitnet_models::transformer::KVCache::new(model.config(), 1, candle_device)?;
 
@@ -3830,6 +3840,7 @@ fn run_qwen_short_decode_with_loaded_model(
         generated_token_ids_sha256,
         top_k_steps_sha256,
         total_ms: elapsed_ms_f64(total_start),
+        model_load_ms,
         prefill_ms,
         decode_total_ms: elapsed_ms_f64(decode_start),
         first_token_ms,
@@ -4069,11 +4080,15 @@ fn elapsed_ms_f64(start: std::time::Instant) -> f64 {
 }
 
 fn dense_qwen_transfer_timing_status() -> &'static str {
-    "device_to_host_measured_host_to_device_unmeasured"
+    "host_to_device_model_load_envelope_device_to_host_measured"
 }
 
 fn dense_qwen_h2d_timing_source() -> &'static str {
-    "not_measured_by_dense_qwen_runtime"
+    "wall_clock_model_load_with_cuda_weight_upload"
+}
+
+fn dense_qwen_h2d_timing_scope() -> &'static str {
+    "model_load_wall_clock_envelope"
 }
 
 fn dense_qwen_d2h_timing_source() -> &'static str {
@@ -10689,6 +10704,8 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
         "timing": {
             "total_ms": cuda.total_ms,
             "first_token_ms": cuda.total_ms,
+            "model_load_ms": cuda.model_load_ms,
+            "cpu_reference_model_load_ms": cpu.model_load_ms,
             "prefill_ms": cuda.prefill_ms,
             "decode_ms": cuda.decode_ms,
             "embed_ms": cuda.embed_ms,
@@ -10699,8 +10716,10 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
             "cpu_reference_total_ms": cpu.total_ms,
             "host_to_device_bytes": stats_h2d,
             "device_to_host_bytes": stats_d2h,
-            "host_to_device_ms": null,
+            "host_to_device_ms": cuda.model_load_ms,
             "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+            "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
+            "host_to_device_ms_includes_non_transfer_overhead": true,
             "device_to_host_ms": cuda.logits_download_ms,
             "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
             "transfer_timing_status": dense_qwen_transfer_timing_status(),
@@ -10726,8 +10745,10 @@ fn dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
                 "status": "measured",
                 "host_to_device_bytes": stats_h2d,
                 "device_to_host_bytes": stats_d2h,
-                "host_to_device_ms": null,
+                "host_to_device_ms": cuda.model_load_ms,
                 "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+                "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
+                "host_to_device_ms_includes_non_transfer_overhead": true,
                 "device_to_host_ms": cuda.logits_download_ms,
                 "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
                 "transfer_timing_status": dense_qwen_transfer_timing_status(),
@@ -11081,6 +11102,8 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         "timing": {
             "total_ms": cuda.total_ms,
             "first_token_ms": cuda.first_token_ms,
+            "model_load_ms": cuda.model_load_ms,
+            "cpu_reference_model_load_ms": cpu.model_load_ms,
             "prefill_ms": cuda.prefill_ms,
             "decode_total_ms": cuda.decode_total_ms,
             "embed_ms_total": cuda.embed_ms_total,
@@ -11091,8 +11114,10 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
             "cpu_reference_total_ms": cpu.total_ms,
             "host_to_device_bytes": stats_h2d,
             "device_to_host_bytes": stats_d2h,
-            "host_to_device_ms": null,
+            "host_to_device_ms": cuda.model_load_ms,
             "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+            "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
+            "host_to_device_ms_includes_non_transfer_overhead": true,
             "device_to_host_ms": cuda.logits_download_ms_total,
             "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
             "transfer_timing_status": dense_qwen_transfer_timing_status(),
@@ -11119,8 +11144,10 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
                 "status": "measured",
                 "host_to_device_bytes": stats_h2d,
                 "device_to_host_bytes": stats_d2h,
-                "host_to_device_ms": null,
+                "host_to_device_ms": cuda.model_load_ms,
                 "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+                "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
+                "host_to_device_ms_includes_non_transfer_overhead": true,
                 "device_to_host_ms": cuda.logits_download_ms_total,
                 "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
                 "transfer_timing_status": dense_qwen_transfer_timing_status(),
@@ -11632,8 +11659,10 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             "kernel_time_ms": kernel_time_ms,
             "host_to_device_bytes": stats_h2d,
             "device_to_host_bytes": stats_d2h,
-            "host_to_device_ms": null,
+            "host_to_device_ms": cuda.model_load_ms,
             "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+            "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
+            "host_to_device_ms_includes_non_transfer_overhead": true,
             "device_to_host_ms": cuda.turns.iter().map(|turn| turn.logits_download_ms_total).sum::<f64>(),
             "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
             "transfer_timing_status": dense_qwen_transfer_timing_status(),
@@ -11668,8 +11697,10 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
                 "status": "measured",
                 "host_to_device_bytes": stats_h2d,
                 "device_to_host_bytes": stats_d2h,
-                "host_to_device_ms": null,
+                "host_to_device_ms": cuda.model_load_ms,
                 "host_to_device_ms_source": dense_qwen_h2d_timing_source(),
+                "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
+                "host_to_device_ms_includes_non_transfer_overhead": true,
                 "device_to_host_ms": cuda.turns.iter().map(|turn| turn.logits_download_ms_total).sum::<f64>(),
                 "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
                 "transfer_timing_status": dense_qwen_transfer_timing_status(),
