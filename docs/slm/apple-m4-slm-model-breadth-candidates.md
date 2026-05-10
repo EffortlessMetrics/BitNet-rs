@@ -168,3 +168,50 @@ quality.
 only. It must record exact SHA256, GGUF metadata, tokenizer authority,
 prompt-template authority, reference command, prompt outputs, license/access
 status, and accept/reject evidence before any Rust M4 quality work begins.
+
+## Larger Qwen Candidate Cycle
+
+`M4-MODEL-009` opens a larger Qwen-class candidate cycle after the cross-family
+Gemma and SmolLM2 probes failed to produce a registerable model. This cycle is
+still selection metadata only: no model artifact is downloaded, accepted,
+registered, or user-supported by this item.
+
+### Priority 1: `qwen2.5-1.5b-instruct-q4_k_m`
+
+- Source repository: `Qwen/Qwen2.5-1.5B-Instruct-GGUF`.
+- Source URL:
+  `https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/blob/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf`.
+- Revision: `91cad51170dc346986eccefdc2dd33a9da36ead9`.
+- File: `qwen2.5-1.5b-instruct-q4_k_m.gguf`.
+- Expected size: `1117320736` bytes.
+- LFS SHA256: `6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e`.
+- License notes: upstream model card reports Apache-2.0 for Qwen2.5.
+- Expected GGUF architecture: `qwen2`.
+- Expected quantization: `Q4_K_M`.
+- Tokenizer expectations: Qwen tokenizer metadata must be present in GGUF,
+  including `tokenizer.ggml.model = gpt2`, `tokenizer.ggml.pre = qwen2`, and
+  the Qwen chat template or equivalent explicit template authority.
+- Prompt-template expectation: existing `qwen2.5` prompt template used by the
+  supported 0.5B Qwen artifacts.
+- Storage budget: approximately `1.1 GiB`, which is larger than the preferred
+  sub-1 GiB target but still inside the previously accepted M4 one-off model
+  experiment envelope. Scratch downloads must remain under `target/` and be
+  removed if the candidate is rejected.
+- Why selected: same leading Qwen-class architecture family as the supported M4
+  default, larger capacity than the 0.5B baseline, and likely to exercise model
+  runner scalability without requiring a new tokenizer or architecture family.
+- Rejection criteria:
+  - missing GGUF tokenizer or chat-template authority;
+  - reference runner cannot produce sane short answers with deterministic
+    settings;
+  - Rust M4 quality fails, is incoherent, or is too slow for the bounded smoke;
+  - cache registration would push the default model or storage UX outside the
+    documented M4 envelope;
+  - support would require broad architecture work outside `M4-MODEL-011`.
+
+## Larger Qwen Candidate Contract
+
+`M4-MODEL-010` should evaluate `qwen2.5-1.5b-instruct-q4_k_m` with the reference
+runner only. It must record exact SHA256, GGUF metadata, tokenizer authority,
+prompt-template authority, reference command, prompt outputs, storage cleanup
+status, and accept/reject evidence before any Rust M4 quality work begins.

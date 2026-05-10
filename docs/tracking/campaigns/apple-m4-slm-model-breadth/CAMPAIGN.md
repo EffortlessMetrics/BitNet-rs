@@ -31,6 +31,9 @@ mini path without weakening the completed Qwen appliance baseline.
 | M4-MODEL-006 | merged | Select the next exact candidate after the failed Qwen3/SmolLM2 round. |
 | M4-MODEL-007 | merged | Gemma is rejected by the current reference runner. |
 | M4-MODEL-008 | blocked | No reference-good candidate is available for Rust M4 quality. |
+| M4-MODEL-009 | in progress | Select a larger Qwen2.5 candidate for M4 evaluation. |
+| M4-MODEL-010 | blocked | Run reference output sanity for the larger Qwen2.5 candidate. |
+| M4-MODEL-011 | blocked | Run Rust M4 quality gates for the larger Qwen2.5 candidate. |
 
 ## Current Selection
 
@@ -63,6 +66,12 @@ metadata but rejects the artifact before generation because the runner does not
 support `general.architecture = gemma3`. The downloaded scratch artifact is
 removed after recording evidence, and no Rust M4 quality or cache registration
 item is unblocked.
+
+`M4-MODEL-009` starts a Qwen2.5 1.5B Q4_K_M candidate cycle. This remains the
+same Qwen-class architecture family as the supported 0.5B models, but it tests
+whether the M4 appliance can grow toward a larger leading dense SLM while
+staying storage-conscious. This is selection metadata only: no model artifact is
+downloaded, accepted, registered, or claimed supported.
 
 ## Claim Boundary
 
