@@ -18,9 +18,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "SERVER-001"
-status = "pr_open"
+status = "merged"
 pr = 4429
-head_sha = "72d9f6d4669cb8c8a377fcb128d25e9e45a09b69"
+merge_sha = "355a6301c245dd363cd73efd7a57e5a300b0803e"
 branch = "codex/server-real-inference/SERVER-001-single-request-engine"
 stackable = false
 review_mode = "codex_premerge"
