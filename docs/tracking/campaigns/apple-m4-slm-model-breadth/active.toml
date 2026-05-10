@@ -1,6 +1,6 @@
 id = "apple-m4-slm-model-breadth"
 title = "Apple M4 SLM model breadth"
-status = "active"
+status = "complete"
 
 objective = "Add more storage-conscious dense instruct model families to the Apple M4 Mac mini path through exact artifact selection, reference output sanity, Rust M4 quality gates, tokenizer authority, cache metadata, receipt validation, and deterministic checks without weakening the completed Qwen appliance baseline."
 
@@ -281,7 +281,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-005"
-status = "in_progress"
+status = "merged"
+pr = 4416
+merge_sha = "b7355e188536a09478fd34d95c8f485c4ca913fe"
 branch = "codex/apple-m4-slm-model-breadth/M4-MODEL-005-docs-envelope"
 stackable = false
 review_mode = "codex_premerge"
