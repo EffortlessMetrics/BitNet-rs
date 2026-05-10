@@ -3008,8 +3008,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-045"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-045-short-decode-proof"
+pr = 4420
+head_sha = "c1c8f5a17127268c157aa094c2641adfb46a8c89"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
