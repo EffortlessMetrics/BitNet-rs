@@ -24,8 +24,8 @@ the same cache, tokenizer, backend, fallback, streaming, and receipt discipline.
 | M4-SERVE-001 | merged | Defined command and configuration contract. |
 | M4-SERVE-002 | merged | Added health and ready endpoint behavior. |
 | M4-SERVE-003 | merged | Added streaming completion endpoint. |
-| M4-SERVE-004 | in progress | Add receipt export for server requests. |
-| M4-SERVE-005 | pending | Integrate doctor/smoke/regression readiness flow. |
+| M4-SERVE-004 | merged | Added receipt export for server requests. |
+| M4-SERVE-005 | ready | Integrate doctor/smoke/regression readiness flow. |
 
 ## Current Contract
 
