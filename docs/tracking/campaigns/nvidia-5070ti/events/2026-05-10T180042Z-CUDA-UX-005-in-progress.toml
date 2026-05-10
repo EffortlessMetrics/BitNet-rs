@@ -1,0 +1,14 @@
+timestamp = "2026-05-10T18:00:42Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-005"
+event = "in_progress"
+previous_status = "proposed"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/cuda-ux-005-benchmark-fail-closed"
+
+notes = [
+  "Start CUDA-UX-005 to close the legacy benchmark hidden-fallback gap after dense CUDA benchmark qualification review.",
+  "Scope is the bitnet-cli benchmark command, CLI argument tests, and tracker metadata only.",
+  "The work must make `bitnet bench --device cuda` fail closed instead of silently benchmarking CPU while preserving speedup, full-residency, dense broad-inference, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, CUDA kernel math, and server non-claims.",
+]

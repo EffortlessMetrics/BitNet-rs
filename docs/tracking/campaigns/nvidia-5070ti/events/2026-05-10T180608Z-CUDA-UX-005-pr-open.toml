@@ -1,0 +1,16 @@
+timestamp = "2026-05-10T18:06:08Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-005"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/cuda-ux-005-benchmark-fail-closed"
+pr = 4448
+head_sha = "9fc1c65109984ef30e6b1c58ca8353a94fd09e82"
+summary = "Opened CUDA-UX-005 legacy benchmark fail-closed PR."
+notes = [
+  "PR #4448 makes `bitnet bench/benchmark --device cuda` fail closed instead of silently running the legacy simulated CPU benchmark.",
+  "The help and error text direct CUDA users to receipt-backed ask/chat paths and governed CUDA benchmark receipts.",
+  "The PR keeps speedup, full residency, broad dense GGUF inference, server readiness, BitNet packed proof, QK256, tokenizer behavior, loader behavior, transformer runtime behavior, and CUDA kernel math non-claims false.",
+]

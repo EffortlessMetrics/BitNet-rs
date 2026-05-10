@@ -3487,6 +3487,60 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-UX-005"
+status = "pr_open"
+branch = "codex/cuda-ux-005-benchmark-fail-closed"
+pr = 4448
+head_sha = "9fc1c65109984ef30e6b1c58ca8353a94fd09e82"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-PERF-004"]
+acceptance = "Make the legacy `bitnet bench/benchmark --device cuda` path fail closed instead of silently benchmarking CPU, with help/error text pointing users to receipt-backed CUDA ask/chat and governed benchmark receipts while preserving speedup, full-residency, dense broad-inference, BitNet packed proof, QK256, tokenizer, loader, transformer runtime, CUDA kernel math, and server non-claims."
+commands = [
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests --no-default-features --features cpu,full-cli bench_ -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "runtime tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+]
+may_claim = [
+  "`bitnet bench --device cuda` no longer silently falls back to CPU through the legacy simulated benchmark path.",
+  "The legacy benchmark help/error text directs users to receipt-backed CUDA paths for governed CUDA evidence.",
+]
+must_not_claim = [
+  "`bitnet bench --device cuda` runs a receipt-backed CUDA benchmark.",
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Dense regular LLM CUDA speedup exists.",
+  "General dense GGUF CUDA inference is complete beyond the bounded ask/chat gates.",
+  "Persistent-session or full dense regular LLM CUDA residency exists.",
+  "Server readiness exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-021"
 status = "merged"
 branch = "codex/cuda-dense-021-attention-score-parity"
