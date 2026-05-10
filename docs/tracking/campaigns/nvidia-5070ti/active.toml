@@ -2168,8 +2168,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-PERF-003"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-dense-perf-003-transfer-timing"
+pr = 4443
+head_sha = "b2963605fa6acb2dacb63e0cbc7c6270162a0bee"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
