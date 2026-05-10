@@ -24,7 +24,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "WASM-001"
-status = "ready"
+status = "merged"
+pr = 4090
+merge_sha = "cac5dea998d2ac75a5c40b579856598dec136888"
 branch = "codex/wasm-inference/WASM-001-proof-contract"
 stackable = false
 review_mode = "codex_premerge"
