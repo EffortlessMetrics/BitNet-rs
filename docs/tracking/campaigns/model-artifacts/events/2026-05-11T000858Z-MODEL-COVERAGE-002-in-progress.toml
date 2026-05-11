@@ -1,0 +1,11 @@
+timestamp = "2026-05-11T00:08:58Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-002"
+event = "in_progress"
+actor = "codex"
+branch = "codex/model-coverage-002-bitnet-family"
+
+notes = [
+  "Started MODEL-COVERAGE-002 to expand the cross-family model coverage matrix with broader BitNet-family rows.",
+  "Scope is registry, docs, validator, and tracker only; no runtime inference, tokenizer, loader, transformer, QK256, CUDA kernel, server, speedup, or residency behavior changes.",
+]

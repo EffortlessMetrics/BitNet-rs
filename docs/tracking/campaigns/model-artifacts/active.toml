@@ -637,6 +637,62 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "MODEL-COVERAGE-002"
+status = "in_progress"
+branch = "codex/model-coverage-002-bitnet-family"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-COVERAGE-001"]
+acceptance = "Expand the machine-readable model coverage matrix with broader BitNet-family coverage rows for official 2B TL1, official 2B TL2, official BF16-to-GPU-packed-int2, 1bitLLM large diagnostics, Llama3/Falcon 1.58-bit diagnostics, and BitNetMCU fixture-only coverage while preserving official 2B I2_S/QK256 as the current answer authority and keeping all non-I2_S lanes from claiming packed QK256 proof."
+commands = [
+  "cargo run --release --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo test --locked -p xtask --bin xtask --no-default-features model_coverage -- --nocapture",
+  "cargo fmt -p xtask -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+  "xtask/src/model_coverage.rs",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "dense GGUF inference",
+  "server inference",
+  "speed claims",
+  "full CUDA residency claims",
+]
+may_claim = [
+  "The coverage matrix registers broader BitNet-family lanes and keeps each lane at its current proof tier.",
+  "TL1, TL2, BF16-to-GPU-packed-int2, diagnostic 1.58-bit variants, and MCU fixtures cannot claim official GGUF I2_S/QK256 proof.",
+  "`xtask check-model-coverage` rejects non-I2_S BitNet rows that claim packed I2_S/QK256 proof.",
+]
+must_not_claim = [
+  "Official TL1, TL2, GPU-packed int2, 1bitLLM large, Llama3/Falcon 1.58-bit, or MCU fixture rows are answer-ready.",
+  "Non-I2_S BitNet lanes satisfy official I2_S/QK256 proof.",
+  "New runtime inference behavior exists.",
+  "Any backend speedup, server readiness, or full CUDA residency is proven.",
+  "Tokenizer, loader, prompt-template, transformer, QK256, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "MODEL-CAPS-001"
 status = "merged"
 branch = "codex/model-caps-001-dense-verify"
