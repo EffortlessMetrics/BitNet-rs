@@ -1,0 +1,17 @@
+timestamp = "2026-05-11T19:13:51Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-047"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/nvidia-5070ti/CUDA-DENSE-047-qwen15-all-layer-plan"
+pr = 4492
+head_sha = "58f1fdedd6018efdc27a7fa854650cecf6c9c25e"
+merge_sha = "4b7f1a1baf25df156c164f7d2c961cc1e37a0c0a"
+summary = "Merged CUDA-DENSE-047 Qwen2.5 1.5B Q4_K_M strict CUDA route audit."
+notes = [
+  "PR #4492 records the verified Qwen2.5 1.5B Q4_K_M artifact fetch/verify evidence, RTX 5070 Ti visibility, and the fail-closed strict CUDA all-layer planner boundary.",
+  "The merged audit keeps the larger Qwen row CPU-answer-ready only until Q4_K_M CUDA route support or an explicit unsupported-route receipt lands.",
+  "The audit does not claim Qwen2.5 1.5B CUDA all-layer readiness, one-token/short-decode/chat, speedup, full residency, server readiness, or BitNet packed I2S/QK256 proof.",
+]
