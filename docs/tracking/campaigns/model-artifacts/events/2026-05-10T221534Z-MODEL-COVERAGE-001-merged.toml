@@ -1,0 +1,15 @@
+timestamp = "2026-05-10T22:15:34Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-001"
+event = "merged"
+actor = "codex"
+pr = 4460
+head_sha = "fd18f1df9351d4f788477711b50f5c4d58846b22"
+merge_sha = "8a3cbfe5c0a9075abdbb14382cac25cdc0fbf140"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4460 merged MODEL-COVERAGE-001 cross-family model coverage matrix validation.",
+  "The merged slice adds `ci/model-artifacts/model-coverage-matrix.toml`, `xtask check-model-coverage`, and docs without runtime inference, tokenizer, loader, transformer, CUDA, server, speedup, or residency behavior changes.",
+]
