@@ -100,7 +100,7 @@ For each fuzzing session, provide:
 
 **Draft→Ready PR Integration:**
 - Run fuzzing as part of comprehensive quality validation before promoting Draft PRs to Ready
-- Ensure all fuzz test reproducers pass before PR approval with both CPU and GPU validation when applicable
+- Ensure all fuzz test reproducers pass before PR promotion or merge with both CPU and GPU validation when applicable
 - Create GitHub check runs for `review:gate:fuzz` with clear pass/fail status
 - Document any discovered edge cases in PR comments with clear remediation steps and numerical impact analysis
 - Validate that fixes don't introduce quantization accuracy regressions or performance degradation via benchmark comparison

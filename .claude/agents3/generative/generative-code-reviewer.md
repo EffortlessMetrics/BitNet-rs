@@ -73,7 +73,7 @@ Routing
    - Provide specific remediation steps aligned with BitNet-rs standards
    - Allow up to 2 mechanical retries for automatic fixes (format, simple clippy suggestions)
    - Route to code-refiner for complex issues requiring architectural changes
-   - Escalate to human review only for design-level decisions
+   - Escalate to true blocker review only for design-level decisions
 
 6. **Documentation**: Generate receipts including:
    - Hoplog summary of all quality checks performed with BitNet-rs-specific metrics

@@ -69,7 +69,7 @@ You follow MergeCode's GitHub-native receipts and TDD-driven patterns:
 - **Non-breaking additions** → schema-fixer (safe additive changes, max 2 attempts)
 - **Breaking changes** → api-intent-reviewer (requires documentation and migration planning)
 - **Already aligned** → api-intent-reviewer (continue review flow)
-- **Failed fixes after retries** → escalate to manual review with detailed error context
+- **Failed fixes after retries** → escalate to true blocker review with detailed error context
 
 **Success Criteria for Draft→Ready Promotion**:
 - All schema validation passes with `cargo xtask validate-schemas`

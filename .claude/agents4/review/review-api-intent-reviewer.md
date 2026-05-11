@@ -81,7 +81,7 @@ Your primary responsibilities:
 - **Flow successful: API classification complete** → route to contract-reviewer for contract validation
 - **Flow successful: documentation gaps identified** → route to docs-reviewer for documentation improvement
 - **Flow successful: breaking change detected** → route to breaking-change-detector for impact analysis and migration planning
-- **Flow successful: additive change validated** → route to contract-finalizer for final approval
+- **Flow successful: additive change validated** → route to contract-finalizer for final validation
 - **Flow successful: quantization API change** → route to crossval validator for C++ reference comparison
 - **Flow successful: performance-critical change** → route to review-performance-benchmark for regression analysis
 - **Flow successful: needs additional validation** → loop back to self for another iteration with evidence of progress

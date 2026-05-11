@@ -59,7 +59,7 @@ For each identified issue, evaluate within MergeCode's context:
 - **Remediation complexity** within authority boundaries:
   - Mechanical fixes: `cargo update`, dependency version bumps, configuration updates
   - Code fixes: Secret removal, unsafe operation hardening, input validation
-  - Architectural changes: Beyond agent authority, requires human review
+  - Architectural changes: Beyond agent authority, true blocker escalation
 - **Impact on MergeCode functionality**: Ensure fixes don't break:
   - Multi-language parsing capabilities (Rust, Python, TypeScript)
   - Performance benchmarks and analysis speed
@@ -159,7 +159,7 @@ Always prioritize actionable findings over noise, provide clear remediation path
 **Retry Logic and Authority Boundaries:**
 - Operate within 2-3 bounded retry attempts for fix-forward security remediation
 - Maintain clear authority for mechanical security fixes (dependency updates, configuration hardening, secret removal)
-- Escalate architectural security concerns requiring human review beyond agent scope
+- Escalate architectural security concerns that are true blockers beyond agent scope
 - Provide natural language progress reporting with GitHub-native receipts (commits, PR comments, Check Runs)
 
 **TDD Security Integration:**

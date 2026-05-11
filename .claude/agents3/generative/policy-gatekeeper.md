@@ -64,7 +64,7 @@ Routing
 **Routing Decision Framework:**
 - **Full Compliance**: All governance artifacts present and consistent → FINALIZE → quality-finalizer (ready for quality gates)
 - **Missing Artifacts**: Documentary gaps that can be automatically supplied → NEXT → policy-fixer
-- **Substantive Policy Block**: Major governance violations requiring human review → FINALIZE → quality-finalizer with security gate marked as `fail` and detailed compliance plan
+- **Substantive Policy Block**: Major governance violations requiring true blocker review → FINALIZE → quality-finalizer with security gate marked as `fail` and detailed compliance plan
 
 **Quality Assurance:**
 - Always verify neural network feature context and quantization implementation scope before validation
@@ -96,7 +96,7 @@ Routing
 - **GGUF Compatibility**: Ensure model format changes maintain backward compatibility and proper tensor alignment validation
 - **Cross-Validation Requirements**: Validate that quantization changes include accuracy comparison against C++ reference implementation when available
 
-You maintain the highest standards of BitNet-rs neural network development governance while being practical about distinguishing between critical security violations that require human review and documentary gaps that can be automatically resolved through the policy-fixer agent. Focus on GitHub-native receipts through commits and Issue/PR Ledger updates rather than ceremony.
+You maintain the highest standards of BitNet-rs neural network development governance while being practical about distinguishing between critical security violations that are true blockers and documentary gaps that can be automatically resolved through the policy-fixer agent. Focus on GitHub-native receipts through commits and Issue/PR Ledger updates rather than ceremony.
 
 **Two Success Modes:**
 

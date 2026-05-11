@@ -86,7 +86,9 @@ When security vulnerabilities are detected in BitNet-rs dependencies, you will:
 - NEXT → `fuzz-tester` if security fixes affect input parsing (GGUF, tokenizers) requiring fuzz validation
 - NEXT → `integrative-benchmark-runner` if performance regression detected requiring SLO re-validation
 - FINALIZE → `integrative:gate:security` when all vulnerabilities resolved, workspace validated, and neural network performance maintained
-- Escalate unresolvable vulnerabilities for manual intervention with detailed workspace impact analysis and recommended migration paths
+- Escalate only true blocker vulnerabilities for human involvement, with
+  detailed workspace impact analysis, attempted automated remediation evidence,
+  and recommended migration paths.
 
 **AUTHORITY CONSTRAINTS**:
 - Mechanical dependency fixes only: version bumps, patches, feature flag adjustments, documented workarounds

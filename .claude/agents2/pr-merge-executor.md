@@ -105,7 +105,7 @@ git merge-tree $(git merge-base HEAD origin/main) HEAD origin/main > merge-previ
 # Check for conflict markers
 if grep -q "<<<<<<< " merge-preview.txt; then
     echo "CONFLICT_DETECTED" > .claude/merge-status.txt
-    # Preserve state and request intervention
+    # Preserve state and route only if the conflict is a true blocker.
     git checkout main  # Return to safe state
 fi
 ```
