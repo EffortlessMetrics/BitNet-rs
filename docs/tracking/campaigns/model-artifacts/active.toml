@@ -697,10 +697,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-COVERAGE-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/model-coverage-003-slm-families"
 pr = 4465
 head_sha = "c38226591f0600e68a3912f8a7e7a745de3fcb24"
+merge_sha = "7ff9c65dc08e64dad3d9737fe90681e642aa9383"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

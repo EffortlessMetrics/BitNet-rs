@@ -1,0 +1,14 @@
+timestamp = "2026-05-11T01:19:34Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-003"
+event = "merged"
+actor = "codex"
+pr = 4465
+branch = "codex/model-coverage-003-slm-families"
+head_sha = "0b544006743729967cd77a4c1ecf5acf067f2e71"
+merge_sha = "7ff9c65dc08e64dad3d9737fe90681e642aa9383"
+
+notes = [
+  "PR #4465 merged with dense SLM family rows for Qwen3, SmolLM2, Llama 3.2, Gemma, and Phi.",
+  "MODEL-COVERAGE-003 remains a registry and validator milestone only; no runtime, CUDA, speedup, full-residency, or server claims were added.",
+]
