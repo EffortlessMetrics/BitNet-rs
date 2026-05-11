@@ -1,0 +1,13 @@
+timestamp = "2026-05-11T03:25:39Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-007"
+event = "pr_open"
+actor = "codex"
+pr = 4475
+branch = "codex/model-coverage-007-cli-binding"
+head_sha = "b3a2698f7e9e99b76755d38d2a9a2d95cfdfd65d"
+
+notes = [
+  "Opened PR #4475 for MODEL-COVERAGE-007 supported-artifact coverage binding.",
+  "The PR adds a targeted CLI model-cache invariant test and preserves runtime inference, tokenizer, loader, transformer, QK256, CUDA kernel, server, speedup, and residency behavior.",
+]
