@@ -1,0 +1,14 @@
+timestamp = "2026-05-11T18:56:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-047"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/nvidia-5070ti/CUDA-DENSE-047-qwen15-all-layer-plan"
+summary = "Start Qwen2.5 1.5B Q4_K_M strict CUDA all-layer route audit."
+notes = [
+  "The registered Qwen2.5 1.5B Q4_K_M artifact is CPU-answer-ready on the Apple M4 lane but has no dense CUDA claim.",
+  "This audit records the verified artifact SHA and the fail-closed 5070 Ti strict CUDA all-layer planner boundary.",
+  "No runtime, tokenizer, loader, transformer, CUDA kernel, speedup, full-residency, server, or BitNet packed proof claim may be upgraded.",
+]

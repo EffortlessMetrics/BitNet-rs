@@ -3491,6 +3491,65 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-DENSE-047"
+status = "pr_open"
+pr = 4492
+head_sha = "a9f67f0aabd264dd2889ae107171bb86d544f72c"
+branch = "codex/nvidia-5070ti/CUDA-DENSE-047-qwen15-all-layer-plan"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-DENSE-046"]
+acceptance = "Record the first RTX 5070 Ti strict CUDA route audit for the verified Qwen2.5 1.5B Q4_K_M dense GGUF artifact after CUDA-DENSE-046, proving the artifact fetch and model verify gates pass, the 5070 Ti backend is visible, and the existing dense-gguf-all-layer-plan command fails closed with strict_cuda_ready=false instead of inheriting Qwen2.5 0.5B Q8_0 CUDA proof; update model coverage to require Q4_K_M CUDA route support or an explicit unsupported-route receipt before any larger-Qwen CUDA answer claim."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model fetch qwen2.5-1.5b-instruct-q4_k_m --json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model verify qwen2.5-1.5b-instruct-q4_k_m --json",
+  "nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-all-layer-plan --model <verified-qwen2.5-1.5b-q4_k_m-gguf> --device nvidia-rtx-5070-ti-cuda --device-index 0 --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-11\\dense-gguf-all-layer-plan-qwen25-15b-q4km.json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/model-artifacts/MODEL_COVERAGE_MATRIX.md",
+  "docs/reports/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "runtime behavior",
+  "tokenizer behavior changes",
+  "model loader behavior changes",
+  "transformer runtime behavior changes",
+  "server runtime behavior",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA kernel math changes",
+  "Qwen one-token, short decode, or chat implementation",
+  "new CUDA-ready hardware receipt for Qwen2.5 1.5B Q4_K_M",
+]
+may_claim = [
+  "The verified Qwen2.5 1.5B Q4_K_M artifact is cached on the 5070 Ti box and passes model verify by SHA.",
+  "The existing strict dense GGUF all-layer CUDA planner fails closed for Qwen2.5 1.5B Q4_K_M with strict_cuda_ready=false.",
+  "The larger Qwen row remains CPU-answer-ready only until Q4_K_M CUDA route support or a validated unsupported-route receipt lands.",
+]
+must_not_claim = [
+  "Qwen2.5 1.5B Q4_K_M is dense CUDA answer-ready.",
+  "Qwen2.5 1.5B Q4_K_M has a strict CUDA all-layer plan receipt.",
+  "Qwen2.5 0.5B Q8_0 CUDA proof applies to Qwen2.5 1.5B Q4_K_M.",
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "CUDA speedup exists.",
+  "Full CUDA residency is proven.",
+  "Server readiness exists.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, BitNet CUDA behavior, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-UX-003"
 status = "merged"
 branch = "codex/cuda-ux-003-dense-ask"
