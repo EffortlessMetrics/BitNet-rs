@@ -937,10 +937,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-COVERAGE-007"
-status = "pr_open"
+status = "merged"
 branch = "codex/model-coverage-007-cli-binding"
 pr = 4475
-head_sha = "b3a2698f7e9e99b76755d38d2a9a2d95cfdfd65d"
+head_sha = "9e5e9745e430670c3440c0ed90e8536c9f317230"
+merge_sha = "9a8803374655a1d9232307e52441c6eb23eb1f01"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
