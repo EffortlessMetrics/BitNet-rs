@@ -257,6 +257,7 @@
 | nvidia-5070ti | CUDA-DENSE-014 | CUDA-DENSE-013 | merged |
 | server-real-inference | SERVER-002 | SERVER-001 | merged |
 | server-real-inference | SERVER-003 | SERVER-002 | merged |
+| server-real-inference | SERVER-004 | SERVER-003 | in_progress |
 | slm-cpu | SLM-CPU-001 | SLM-CPU-000 | merged |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | merged |
 | slm-cpu | SLM-CPU-002A | SLM-CPU-002 | merged |
