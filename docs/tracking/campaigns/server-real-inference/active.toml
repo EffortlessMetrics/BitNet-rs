@@ -131,8 +131,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SERVER-004"
-status = "pr_open"
+status = "merged"
 pr = 4479
+merge_sha = "e0cef6807baad37f3e2e30a1bdd3c51cce80c987"
 branch = "codex/server-004-openai-chat-fail-closed"
 stackable = false
 review_mode = "codex_premerge"
