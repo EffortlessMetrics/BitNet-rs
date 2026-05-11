@@ -258,7 +258,7 @@
 | server-real-inference | SERVER-002 | SERVER-001 | merged |
 | server-real-inference | SERVER-003 | SERVER-002 | merged |
 | server-real-inference | SERVER-004 | SERVER-003 | merged |
-| server-real-inference | SERVER-005 | SERVER-004 | in_progress |
+| server-real-inference | SERVER-005 | SERVER-004 | pr_open |
 | slm-cpu | SLM-CPU-001 | SLM-CPU-000 | merged |
 | slm-cpu | SLM-CPU-002 | SLM-CPU-001 | merged |
 | slm-cpu | SLM-CPU-002A | SLM-CPU-002 | merged |
