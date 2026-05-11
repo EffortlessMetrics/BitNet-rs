@@ -174,7 +174,8 @@ Campaign work items are authoritative for review and merge flow. For items with
 `human_gate = "on_blocker_only"`, Codex agents are expected to edit, validate,
 commit, push, open or update the PR, address CI/bot/reviewer feedback, merge
 when GitHub reports the PR green and mergeable, and close out tracker PRs when
-required. Commit, push, PR creation, and merge are not human approval gates.
+required. Commit, push, PR creation, CI/bot/reviewer repair, merge, and tracker
+closeout are not human approval gates.
 
 Human involvement is required only for true blockers: permissions or branch
 protection prevent the merge, destructive data loss or secret/model-binary

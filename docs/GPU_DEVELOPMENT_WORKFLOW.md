@@ -42,7 +42,13 @@ CI pipeline, and review workflow for GPU backend contributions to BitNet-rs.
 
 - Open a PR following the conventions below
 - CI runs automatically; add labels for GPU-specific checks
-- Address review feedback; maintainer merges when CI is green
+- Address review feedback; for campaign work items with
+  `review_mode = "codex_premerge"`,
+  `merge_policy = "automerge_when_green"`, and
+  `human_gate = "on_blocker_only"`, the agent merges when required checks are
+  green and GitHub reports the PR mergeable. Human involvement is reserved for
+  true blockers such as permissions, branch protection, secret/model-binary
+  exposure risk, or unresolved kernel/math/tokenizer/loader conflicts.
 
 ---
 
