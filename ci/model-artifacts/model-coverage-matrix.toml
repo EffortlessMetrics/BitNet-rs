@@ -1,7 +1,7 @@
 schema = 1
 artifact_kind = "model_coverage_matrix"
-updated = "2026-05-10"
-work_item = "MODEL-COVERAGE-001"
+updated = "2026-05-11"
+work_item = "MODEL-COVERAGE-002"
 claim_boundary = "Model coverage is a claim-control surface. Registered or structurally valid models cannot imply CPU answer-readiness, CUDA execution, speedup, server readiness, BitNet packed QK256 proof, or dense regular-LLM proof unless the corresponding receipts are listed and the claim booleans are explicitly true."
 
 [[tier]]
@@ -89,6 +89,131 @@ claim_boundary = "Official Microsoft 2B I2_S is the current BitNet QK256 x86/CUD
   speedup_claim = false
   full_residency_claim = false
   bitnet_packed_i2s_qk256_proof = true
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "bitnet_official_2b_tl1_arm_candidate"
+model_class = "bitnet"
+family = "bitnet_b1_58"
+artifact_kind = "gguf_tl1"
+contract_id = "microsoft_bitnet_b158_2b_4t_tl1_arm"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model contracts microsoft_bitnet_b158_2b_4t_tl1_arm"
+tokenizer_authority = "pending_tl1_runner_verification"
+prompt_authority = "pending_tl1_runner_verification"
+cpu_reference = "tl1_scalar_then_neon_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "tl1_layout_spec",
+  "tl1_scalar_fixture",
+  "tl1_neon_or_apple_answer_proof",
+]
+forbidden_claims = [
+  "i2_s_qk256_proof",
+  "x86_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "TL1 tensor/layout spec, scalar fixture, NEON parity, and Apple/ARM answer proof."
+claim_boundary = "Official or derived TL1 BitNet rows are ARM-oriented candidates and do not inherit the official I2_S/QK256 x86/CUDA proof lane."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "bitnet_official_2b_tl2_x86_candidate"
+model_class = "bitnet"
+family = "bitnet_b1_58"
+artifact_kind = "gguf_tl2"
+contract_id = "microsoft_bitnet_b158_2b_4t_tl2_x86"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model contracts microsoft_bitnet_b158_2b_4t_tl2_x86"
+tokenizer_authority = "pending_tl2_runner_verification"
+prompt_authority = "pending_tl2_runner_verification"
+cpu_reference = "tl2_scalar_then_avx_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "tl2_layout_spec",
+  "tl2_reference_runner_verification",
+  "tl2_scalar_fixture",
+  "tl2_avx_parity",
+]
+forbidden_claims = [
+  "i2_s_qk256_proof",
+  "answer_ready_before_runner_verification",
+  "speedup",
+  "server_ready",
+]
+next_proof = "TL2 tensor/layout spec, reference-runner verification, scalar fixture, and AVX2/AVX512 parity."
+claim_boundary = "Official or derived TL2 BitNet rows are separate x86 LUT candidates and do not inherit I2_S/QK256 CPU or CUDA proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "bitnet_official_2b_bf16_gpu_int2_candidate"
+model_class = "bitnet"
+family = "bitnet_b1_58"
+artifact_kind = "bf16_master_to_gpu_packed_int2_w2a8"
+contract_id = "microsoft_bitnet_b158_2b_4t_gpu_int2_reference"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_gpu_reference_artifact_contract"
+prompt_authority = "pending_gpu_reference_artifact_contract"
+cpu_reference = "bf16_master_reference_and_packer_parity_required"
+accelerator_routes = []
+required_receipts = [
+  "bf16_master_artifact_contract",
+  "gpu_int2_w2a8_packer_parity",
+  "cuda_int2_gemv_fixture",
+  "gpu_reference_one_token_proof",
+]
+forbidden_claims = [
+  "gguf_i2_s_qk256_proof",
+  "answer_ready_before_packer_parity",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Document BF16 to packed int2/W2A8 pipeline, upstream packer parity, Rust packer, CUDA int2 GEMV fixture, and one-token proof."
+claim_boundary = "BF16 master to GPU packed int2/W2A8 is a separate GPU-reference path and cannot satisfy GGUF I2_S/QK256 proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
   dense_regular_llm_cuda_proof = false
 
 [[entry]]
@@ -240,6 +365,176 @@ forbidden_claims = [
 ]
 next_proof = "BITNET-TL2 runner verification, scalar fixture, AVX parity, and answer diagnostic."
 claim_boundary = "3B x86 TL2 is listed upstream but is not answer authority until runner verification and Rust TL2 proofs land."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "bitnet_onebit_large_diagnostic"
+model_class = "bitnet"
+family = "bitnet_b1_58"
+artifact_kind = "listed_bitnet_variant"
+contract_id = "onebitllm_bitnet_b158_large"
+status = "diagnostic_only"
+current_tier = "registered"
+verifier_surface = "bitnet model contracts onebitllm_bitnet_b158_large"
+tokenizer_authority = "pending_family_specific_contract"
+prompt_authority = "pending_family_specific_contract"
+cpu_reference = "reference_runner_and_cpu_scalar_diagnostic_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_contract",
+  "prompt_authority_audit",
+  "kernel_route_map",
+  "reference_runner_evidence",
+]
+forbidden_claims = [
+  "answer_ready",
+  "reference_authority",
+  "backend_parity",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Family-specific artifact, tokenizer, prompt, and kernel support gates before any CPU or backend proof."
+claim_boundary = "1bitLLM large-family artifacts are diagnostic until artifact authority, tokenizer/prompt authority, kernel route, and reference-runner evidence are pinned."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "bitnet_llama3_8b_158_diagnostic"
+model_class = "bitnet"
+family = "llama3_1_58"
+artifact_kind = "ptq_or_native_158_variant"
+contract_id = "llama3_8b_158_diagnostic"
+status = "diagnostic_only"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_family_specific_contract"
+prompt_authority = "pending_family_specific_contract"
+cpu_reference = "reference_runner_and_tensor_contract_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_contract",
+  "tokenizer_prompt_authority",
+  "kernel_route_map",
+  "reference_runner_evidence",
+]
+forbidden_claims = [
+  "official_bitnet_answer_authority",
+  "i2_s_qk256_proof",
+  "dense_regular_llm_cuda_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Per-model artifact contract, reference-runner evidence, tokenizer/prompt authority, and supported kernel route map."
+claim_boundary = "Llama3-family 1.58-bit variants are supported-upstream-style diagnostics, not official Microsoft 2B I2_S answer authority."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "bitnet_falcon3_falcon_e_158_diagnostic"
+model_class = "bitnet"
+family = "falcon_1_58"
+artifact_kind = "ptq_or_native_158_variant"
+contract_id = "falcon3_falcon_e_158_diagnostic"
+status = "diagnostic_only"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_family_specific_contract"
+prompt_authority = "pending_family_specific_contract"
+cpu_reference = "reference_runner_and_tensor_contract_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_contract",
+  "tokenizer_prompt_authority",
+  "kernel_route_map",
+  "reference_runner_evidence",
+]
+forbidden_claims = [
+  "official_bitnet_answer_authority",
+  "i2_s_qk256_proof",
+  "dense_regular_llm_cuda_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Per-model artifact contract, reference-runner evidence, tokenizer/prompt authority, and supported kernel route map."
+claim_boundary = "Falcon-family 1.58-bit variants are diagnostic contracts until their artifact, tokenizer, prompt, and kernel routes are independently proven."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "bitnet_mcu_tiny_fixture"
+model_class = "bitnet"
+family = "bitnet_mcu"
+artifact_kind = "mcu_low_bit_fixture"
+status = "arithmetic_testbed"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "not_llm_answer_authority"
+prompt_authority = "not_llm_answer_authority"
+cpu_reference = "deterministic_low_bit_packing_fixture_required"
+accelerator_routes = []
+required_receipts = [
+  "packing_fixture",
+  "kernel_regression_fixture",
+  "unsupported_llm_answer_authority_receipt",
+]
+forbidden_claims = [
+  "llm_answer_authority",
+  "reference_runner_passed",
+  "i2_s_qk256_answer_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Deterministic low-bit packing and kernel regression fixtures only; no LLM answer proof."
+claim_boundary = "BitNetMCU-style tiny artifacts are arithmetic fixtures and cannot become LLM answer authority without a separate model contract."
 
   [entry.claims]
   registered = true

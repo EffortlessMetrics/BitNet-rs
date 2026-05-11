@@ -85,7 +85,7 @@ fn load_matrix(matrix_path: &PathBuf) -> Result<CoverageMatrix> {
 fn validate_matrix(matrix: &CoverageMatrix) -> Result<()> {
     require_eq(matrix.schema, 1, "schema")?;
     require_eq(matrix.artifact_kind.as_str(), "model_coverage_matrix", "artifact_kind")?;
-    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-001", "work_item")?;
+    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-002", "work_item")?;
     require_nonempty(&matrix.claim_boundary, "claim_boundary")?;
     validate_tiers(&matrix.tier)?;
     validate_entries(matrix)?;
@@ -145,8 +145,16 @@ fn validate_entries(matrix: &CoverageMatrix) -> Result<()> {
 
     for required in [
         "bitnet_official_2b_i2s_qk256",
+        "bitnet_official_2b_tl1_arm_candidate",
+        "bitnet_official_2b_tl2_x86_candidate",
+        "bitnet_official_2b_bf16_gpu_int2_candidate",
         "dense_qwen25_05b_q8_cuda",
         "bitnet_3b_x86_i2s_unsupported",
+        "bitnet_3b_x86_tl2_candidate",
+        "bitnet_onebit_large_diagnostic",
+        "bitnet_llama3_8b_158_diagnostic",
+        "bitnet_falcon3_falcon_e_158_diagnostic",
+        "bitnet_mcu_tiny_fixture",
         "modern_llm_placeholder_contract",
     ] {
         if !seen_ids.contains(required) {
@@ -242,6 +250,16 @@ fn validate_claim_boundaries(entry: &Entry) -> Result<()> {
     if entry.model_class != "bitnet" && c.bitnet_packed_i2s_qk256_proof {
         bail!("non-BitNet entry `{}` claims BitNet packed I2_S/QK256 proof", entry.id);
     }
+    if entry.model_class == "bitnet"
+        && entry.artifact_kind != "gguf_i2_s"
+        && c.bitnet_packed_i2s_qk256_proof
+    {
+        bail!(
+            "BitNet entry `{}` claims packed I2_S/QK256 proof for non-I2_S artifact `{}`",
+            entry.id,
+            entry.artifact_kind
+        );
+    }
     if entry.model_class == "bitnet" && c.dense_regular_llm_cuda_proof {
         bail!("BitNet entry `{}` claims dense regular-LLM CUDA proof", entry.id);
     }
@@ -322,6 +340,23 @@ mod tests {
             Err(err) => err,
         };
         assert!(err.to_string().contains("without reference_good"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn tl2_entries_cannot_claim_i2s_qk256_proof() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) =
+            matrix.entry.iter_mut().find(|entry| entry.id == "bitnet_3b_x86_tl2_candidate")
+        else {
+            bail!("missing 3B TL2 entry");
+        };
+        entry.claims.bitnet_packed_i2s_qk256_proof = true;
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("TL2 I2_S/QK256 proof leak must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("non-I2_S artifact"), "{err}");
         Ok(())
     }
 }
