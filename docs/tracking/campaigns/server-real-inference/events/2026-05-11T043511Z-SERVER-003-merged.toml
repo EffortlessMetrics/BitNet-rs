@@ -1,0 +1,15 @@
+timestamp = "2026-05-11T04:35:11Z"
+campaign = "server-real-inference"
+item = "SERVER-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4477
+merge_sha = "b3f16139042af4e0aefe35ac973db659c936dcd5"
+branch = "codex/server-003-readiness-certification"
+summary = "SERVER-003 merged after adding fail-closed readiness/certification endpoints."
+notes = [
+  "Merged PR #4477 adds /readiness and /v1/readiness responses for active model, backend, inference, fallback, and claim-boundary state.",
+  "The merged endpoint returns unavailable until a real server inference engine is wired and makes no server answer, CUDA, speedup, or full-residency claim.",
+]
