@@ -1,0 +1,15 @@
+timestamp = "2026-05-11T04:23:36Z"
+campaign = "server-real-inference"
+item = "SERVER-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4477
+branch = "codex/server-003-readiness-certification"
+head_sha = "b86244f559e7ca7d82fff4b38bc68a433f1769dd"
+summary = "Opened SERVER-003 PR to add a fail-closed server readiness/certification endpoint."
+notes = [
+  "PR exposes active model, backend, inference, fallback, and claim-boundary state through /readiness and /v1/readiness.",
+  "The endpoint returns unavailable until a real server inference engine is wired, with no server answer, CUDA, speedup, or full-residency claim.",
+]

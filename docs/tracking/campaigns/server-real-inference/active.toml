@@ -91,7 +91,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SERVER-003"
-status = "in_progress"
+status = "pr_open"
+pr = 4477
 branch = "codex/server-003-readiness-certification"
 stackable = false
 review_mode = "codex_premerge"
