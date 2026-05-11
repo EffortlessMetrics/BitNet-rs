@@ -85,7 +85,7 @@ fn load_matrix(matrix_path: &PathBuf) -> Result<CoverageMatrix> {
 fn validate_matrix(matrix: &CoverageMatrix) -> Result<()> {
     require_eq(matrix.schema, 1, "schema")?;
     require_eq(matrix.artifact_kind.as_str(), "model_coverage_matrix", "artifact_kind")?;
-    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-003", "work_item")?;
+    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-004", "work_item")?;
     require_nonempty(&matrix.claim_boundary, "claim_boundary")?;
     validate_tiers(&matrix.tier)?;
     validate_entries(matrix)?;
@@ -162,6 +162,10 @@ fn validate_entries(matrix: &CoverageMatrix) -> Result<()> {
         "bitnet_llama3_8b_158_diagnostic",
         "bitnet_falcon3_falcon_e_158_diagnostic",
         "bitnet_mcu_tiny_fixture",
+        "small_llm_qwen25_15b_q4km_candidate",
+        "small_llm_qwen3_17b_q8_candidate",
+        "small_llm_llama32_3b_candidate",
+        "small_llm_gemma_2b_candidate",
         "modern_llm_placeholder_contract",
     ] {
         if !seen_ids.contains(required) {
@@ -281,6 +285,11 @@ fn validate_claim_boundaries(entry: &Entry) -> Result<()> {
     if c.accelerator_answer_ready && entry.accelerator_routes.is_empty() {
         bail!("entry `{}` is accelerator-ready but has no accelerator route", entry.id);
     }
+    if entry.model_class == "small_llm"
+        && !entry.required_receipts.iter().any(|receipt| receipt == "memory_envelope")
+    {
+        bail!("small LLM entry `{}` must require a memory_envelope receipt", entry.id);
+    }
     if c.server_ready {
         bail!(
             "entry `{}` claims server readiness; no server-ready model coverage is accepted yet",
@@ -389,6 +398,23 @@ mod tests {
             Err(err) => err,
         };
         assert!(err.to_string().contains("without a dense_regular_llm_cuda route"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn small_llm_entries_require_memory_envelope_receipts() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) =
+            matrix.entry.iter_mut().find(|entry| entry.id == "small_llm_qwen25_15b_q4km_candidate")
+        else {
+            bail!("missing small Qwen entry");
+        };
+        entry.required_receipts.retain(|receipt| receipt != "memory_envelope");
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("small LLM without memory envelope must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("must require a memory_envelope receipt"), "{err}");
         Ok(())
     }
 }

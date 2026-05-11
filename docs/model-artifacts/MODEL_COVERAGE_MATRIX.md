@@ -71,6 +71,20 @@ not inherit Qwen2.5 CUDA proof or claim dense CUDA execution.
 | `dense_gemma_small_candidate` | Gemma small GGUF candidate | `registered` | Alternate architecture coverage row; activation and attention policy must be proven separately. |
 | `dense_phi_small_candidate` | Phi small GGUF candidate | `registered` | Phi-family tokenizer/model-quirk coverage row; needs its own boundary fixtures and proof receipts. |
 
+## Selected Small-LLM Rows
+
+`MODEL-COVERAGE-004` expands the selected small-LLM side of the matrix. These
+rows are larger than the first dense SLM answer lane and are intended to expose
+memory envelope, longer layer-stack, KV, LM-head, and warm-session pressure
+before any user-facing or speed claim is allowed.
+
+| Entry | Artifact lane | Current tier | Boundary |
+|---|---|---|---|
+| `small_llm_qwen25_15b_q4km_candidate` | Qwen2.5 1.5B Q4_K_M GGUF candidate | `registered` | Existing larger-Qwen pressure row; needs artifact verify, memory envelope, CPU sanity, and all-layer plan. |
+| `small_llm_qwen3_17b_q8_candidate` | Qwen3 1.7B-class Q8_0 GGUF candidate | `registered` | Future Qwen3 small-LLM row; does not inherit Qwen2.5 0.5B CUDA receipts. |
+| `small_llm_llama32_3b_candidate` | Llama 3.2 3B-class GGUF candidate | `registered` | Llama-family selected small-LLM row; needs its own memory, CPU, KV, and CUDA plan receipts. |
+| `small_llm_gemma_2b_candidate` | Gemma 2B-class GGUF candidate | `registered` | Alternate architecture selected small-LLM row; cannot inherit Qwen, Llama, or BitNet proof. |
+
 ## Validation
 
 Run:
@@ -83,4 +97,5 @@ The validator parses the matrix, checks tier ordering, requires core lane
 coverage, and rejects common claim leaks such as dense entries claiming BitNet
 packed proof, TL1/TL2 rows claiming I2_S/QK256 proof, unsupported entries
 claiming answer readiness, or SLM candidates claiming dense CUDA proof without
-a `dense_regular_llm_cuda` accelerator route.
+a `dense_regular_llm_cuda` accelerator route. Selected small-LLM rows must also
+require a `memory_envelope` receipt before later proof work can build on them.

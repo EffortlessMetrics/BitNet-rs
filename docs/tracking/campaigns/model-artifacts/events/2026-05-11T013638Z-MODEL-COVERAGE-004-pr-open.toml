@@ -1,0 +1,13 @@
+timestamp = "2026-05-11T01:36:38Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-004"
+event = "pr_open"
+actor = "codex"
+pr = 4467
+branch = "codex/model-coverage-004-small-llms"
+head_sha = "c92a35c09040e96709279a1ffb11202e1e770cf0"
+
+notes = [
+  "Opened PR #4467 for MODEL-COVERAGE-004 selected small-LLM coverage rows.",
+  "The PR remains registry, docs, validator, and tracker only and preserves all runtime and claim boundaries.",
+]

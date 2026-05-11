@@ -756,6 +756,65 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "MODEL-COVERAGE-004"
+status = "pr_open"
+branch = "codex/model-coverage-004-small-llms"
+pr = 4467
+head_sha = "c92a35c09040e96709279a1ffb11202e1e770cf0"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-COVERAGE-003"]
+acceptance = "Expand the machine-readable model coverage matrix with selected small-LLM candidate rows for Qwen 1.5/1.7B-class, Llama 3.2 3B-class, and Gemma 2B-class artifacts, requiring memory-envelope receipts and keeping all rows registered/pending only without runtime or CUDA proof claims."
+commands = [
+  "cargo run --release --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo test --locked -p xtask --bin xtask --no-default-features model_coverage -- --nocapture",
+  "cargo fmt -p xtask -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+  "xtask/src/model_coverage.rs",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "dense GGUF inference",
+  "server inference",
+  "speed claims",
+  "full CUDA residency claims",
+]
+may_claim = [
+  "The coverage matrix registers selected small-LLM candidate rows for larger Qwen, Llama 3.2, and Gemma-class artifacts.",
+  "Selected small-LLM candidates remain pending proof and do not inherit dense Qwen2.5 0.5B CUDA receipts.",
+  "`xtask check-model-coverage` rejects small-LLM rows that omit a memory_envelope receipt.",
+]
+must_not_claim = [
+  "Selected small-LLM rows are answer-ready or CUDA-ready.",
+  "Selected small-LLM rows satisfy dense Qwen2.5 CUDA proof.",
+  "Selected small-LLM evidence satisfies BitNet packed I2_S/QK256 proof.",
+  "New runtime inference behavior exists.",
+  "Any backend speedup, server readiness, or full CUDA residency is proven.",
+  "Tokenizer, loader, prompt-template, transformer, QK256, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "MODEL-CAPS-001"
 status = "merged"
 branch = "codex/model-caps-001-dense-verify"
