@@ -85,7 +85,7 @@ fn load_matrix(matrix_path: &PathBuf) -> Result<CoverageMatrix> {
 fn validate_matrix(matrix: &CoverageMatrix) -> Result<()> {
     require_eq(matrix.schema, 1, "schema")?;
     require_eq(matrix.artifact_kind.as_str(), "model_coverage_matrix", "artifact_kind")?;
-    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-004", "work_item")?;
+    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-005", "work_item")?;
     require_nonempty(&matrix.claim_boundary, "claim_boundary")?;
     validate_tiers(&matrix.tier)?;
     validate_entries(matrix)?;
@@ -166,6 +166,9 @@ fn validate_entries(matrix: &CoverageMatrix) -> Result<()> {
         "small_llm_qwen3_17b_q8_candidate",
         "small_llm_llama32_3b_candidate",
         "small_llm_gemma_2b_candidate",
+        "modern_llm_dense_frontier_placeholder",
+        "modern_llm_moe_frontier_placeholder",
+        "modern_llm_multimodal_placeholder",
         "modern_llm_placeholder_contract",
     ] {
         if !seen_ids.contains(required) {
@@ -289,6 +292,38 @@ fn validate_claim_boundaries(entry: &Entry) -> Result<()> {
         && !entry.required_receipts.iter().any(|receipt| receipt == "memory_envelope")
     {
         bail!("small LLM entry `{}` must require a memory_envelope receipt", entry.id);
+    }
+    if entry.model_class == "modern_llm_docs_only" {
+        if entry.status != "docs_only_placeholder" {
+            bail!("modern LLM docs-only entry `{}` must stay docs_only_placeholder", entry.id);
+        }
+        if !entry.accelerator_routes.is_empty() {
+            bail!("modern LLM docs-only entry `{}` cannot define accelerator routes", entry.id);
+        }
+        if !entry
+            .required_receipts
+            .iter()
+            .any(|receipt| receipt == "unsupported_on_current_hardware_receipt")
+        {
+            bail!(
+                "modern LLM docs-only entry `{}` must require an unsupported_on_current_hardware_receipt",
+                entry.id
+            );
+        }
+        if c.structurally_valid
+            || c.reference_good
+            || c.cpu_answer_ready
+            || c.accelerator_answer_ready
+            || c.benchmark_qualified
+            || c.product_cli_ready
+            || c.server_ready
+            || c.speedup_claim
+            || c.full_residency_claim
+            || c.bitnet_packed_i2s_qk256_proof
+            || c.dense_regular_llm_cuda_proof
+        {
+            bail!("modern LLM docs-only entry `{}` has a runtime or proof claim", entry.id);
+        }
     }
     if c.server_ready {
         bail!(
@@ -415,6 +450,25 @@ mod tests {
             Err(err) => err,
         };
         assert!(err.to_string().contains("must require a memory_envelope receipt"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn modern_llm_docs_only_entries_cannot_define_routes() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) = matrix
+            .entry
+            .iter_mut()
+            .find(|entry| entry.id == "modern_llm_dense_frontier_placeholder")
+        else {
+            bail!("missing modern dense placeholder entry");
+        };
+        entry.accelerator_routes.push("dense_regular_llm_cuda".to_string());
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("modern docs-only route leak must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("cannot define accelerator routes"), "{err}");
         Ok(())
     }
 }

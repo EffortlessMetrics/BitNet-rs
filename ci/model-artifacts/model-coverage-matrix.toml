@@ -1,7 +1,7 @@
 schema = 1
 artifact_kind = "model_coverage_matrix"
 updated = "2026-05-11"
-work_item = "MODEL-COVERAGE-004"
+work_item = "MODEL-COVERAGE-005"
 claim_boundary = "Model coverage is a claim-control surface. Registered or structurally valid models cannot imply CPU answer-readiness, CUDA execution, speedup, server readiness, BitNet packed QK256 proof, or dense regular-LLM proof unless the corresponding receipts are listed and the claim booleans are explicitly true."
 
 [[tier]]
@@ -1021,6 +1021,134 @@ forbidden_claims = [
 ]
 next_proof = "Gemma 2B-class artifact contract, memory envelope, architecture policy, tokenizer/prompt authority, CPU sanity, and all-layer plan."
 claim_boundary = "Gemma 2B-class coverage is registered as an alternate selected small-LLM architecture and cannot inherit Qwen, Llama, or BitNet receipts."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "modern_llm_dense_frontier_placeholder"
+model_class = "modern_llm_docs_only"
+family = "dense_frontier"
+artifact_kind = "docs_only"
+status = "docs_only_placeholder"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "artifact_required"
+prompt_authority = "artifact_required"
+cpu_reference = "not_available"
+accelerator_routes = []
+required_receipts = [
+  "artifact_contract",
+  "memory_envelope",
+  "unsupported_on_current_hardware_receipt",
+  "future_hardware_validation_checklist",
+]
+forbidden_claims = [
+  "runtime_support",
+  "answer_ready",
+  "cuda_support",
+  "speedup",
+  "server_ready",
+]
+next_proof = "supply a concrete dense modern LLM artifact contract, memory envelope, and future hardware acceptance checklist before runtime work."
+claim_boundary = "Dense frontier-scale placeholders are docs-only and record future proof ladders without claiming local runtime, CUDA support, answer readiness, speedup, or server readiness."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "modern_llm_moe_frontier_placeholder"
+model_class = "modern_llm_docs_only"
+family = "moe_frontier"
+artifact_kind = "docs_only"
+status = "docs_only_placeholder"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "artifact_required"
+prompt_authority = "artifact_required"
+cpu_reference = "not_available"
+accelerator_routes = []
+required_receipts = [
+  "artifact_contract",
+  "memory_envelope",
+  "expert_routing_contract",
+  "unsupported_on_current_hardware_receipt",
+  "future_hardware_validation_checklist",
+]
+forbidden_claims = [
+  "runtime_support",
+  "answer_ready",
+  "cuda_support",
+  "speedup",
+  "server_ready",
+]
+next_proof = "supply a concrete MoE artifact contract, expert-routing contract, memory envelope, and future hardware acceptance checklist before runtime work."
+claim_boundary = "MoE frontier placeholders are docs-only and cannot imply local expert routing, CUDA execution, answer readiness, speedup, or server readiness."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "modern_llm_multimodal_placeholder"
+model_class = "modern_llm_docs_only"
+family = "multimodal_frontier"
+artifact_kind = "docs_only"
+status = "docs_only_placeholder"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "artifact_required"
+prompt_authority = "artifact_required"
+cpu_reference = "not_available"
+accelerator_routes = []
+required_receipts = [
+  "artifact_contract",
+  "memory_envelope",
+  "modality_contract",
+  "unsupported_on_current_hardware_receipt",
+  "future_hardware_validation_checklist",
+]
+forbidden_claims = [
+  "runtime_support",
+  "answer_ready",
+  "cuda_support",
+  "speedup",
+  "server_ready",
+]
+next_proof = "supply a concrete multimodal artifact contract, modality boundary, memory envelope, and future hardware acceptance checklist before runtime work."
+claim_boundary = "Multimodal frontier placeholders are docs-only and do not imply tokenizer, vision/audio, CUDA, answer, speedup, or server support."
 
   [entry.claims]
   registered = true

@@ -816,6 +816,62 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "MODEL-COVERAGE-005"
+status = "in_progress"
+branch = "codex/model-coverage-005-modern-placeholders"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-COVERAGE-004"]
+acceptance = "Expand the machine-readable model coverage matrix with docs-only modern LLM placeholders for dense frontier-scale, MoE frontier-scale, and multimodal frontier-scale contracts, keeping them route-free, unsupported on current hardware, and unable to claim runtime, CUDA, answer, speedup, server, or residency support."
+commands = [
+  "cargo run --release --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo test --locked -p xtask --bin xtask --no-default-features model_coverage -- --nocapture",
+  "cargo fmt -p xtask -- --check",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+  "xtask/src/model_coverage.rs",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "dense GGUF inference",
+  "server inference",
+  "speed claims",
+  "full CUDA residency claims",
+]
+may_claim = [
+  "The coverage matrix registers docs-only modern LLM placeholders for future dense, MoE, and multimodal contracts.",
+  "Modern LLM placeholders are route-free and require unsupported-on-current-hardware receipts.",
+  "`xtask check-model-coverage` rejects modern docs-only rows that define accelerator routes.",
+]
+must_not_claim = [
+  "Modern LLM placeholders identify concrete public artifacts.",
+  "Modern LLM placeholders are runtime-ready, answer-ready, CUDA-ready, speed-qualified, server-ready, or resident.",
+  "Modern LLM placeholders satisfy dense SLM, small-LLM, or BitNet packed I2_S/QK256 proof.",
+  "New runtime inference behavior exists.",
+  "Tokenizer, loader, prompt-template, transformer, QK256, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "MODEL-CAPS-001"
 status = "merged"
 branch = "codex/model-caps-001-dense-verify"
