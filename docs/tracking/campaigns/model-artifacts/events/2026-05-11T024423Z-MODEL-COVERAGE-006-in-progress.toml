@@ -1,0 +1,11 @@
+timestamp = "2026-05-11T02:44:23Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-006"
+event = "in_progress"
+actor = "codex"
+branch = "codex/model-coverage-006-cli"
+
+notes = [
+  "Started MODEL-COVERAGE-006 to expose the cross-family model coverage matrix through `bitnet model coverage`.",
+  "Scope is CLI read-only reporting, docs, tests, and tracker only; no runtime inference, tokenizer, loader, transformer, QK256, CUDA kernel, server, speedup, or residency behavior changes.",
+]

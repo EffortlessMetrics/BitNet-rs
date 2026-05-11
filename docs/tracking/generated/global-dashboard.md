@@ -26,7 +26,7 @@
 | intel-258v-platform | LNL258V-004 | #4148 | merged | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
 | intel-a770 | A770-003 | TBD | ready | none | OpenCL-first for native A770 proof. |
 | intel-npu | NPU-011 | #4097 | merged | none | Device-node detection is not inference. |
-| model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
+| model-artifacts | MODEL-COVERAGE-006 | #4473 | pr_open | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-002 | #4432 | merged | none | Do not reintroduce simulated inference. |
 | slm-cpu | SLM-CPU-008 | #4434 | merged | none | Do not edit BitNet QK256/I2_S kernels. |

@@ -875,6 +875,66 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "MODEL-COVERAGE-006"
+status = "pr_open"
+branch = "codex/model-coverage-006-cli"
+pr = 4473
+head_sha = "1a4eb863051b08b830b45d79392fa226405c17d7"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-COVERAGE-005"]
+acceptance = "Expose the machine-readable model coverage matrix through `bitnet model coverage [id] --json` so users can inspect cross-family proof tiers, routes, missing receipts, and claim boundaries without changing runtime inference, tokenizer, loader, transformer, CUDA, server, speedup, or residency behavior."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli model_cache -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- model coverage --json",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/model_cache.rs",
+  "crates/bitnet-cli/tests/**",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "dense GGUF inference",
+  "server inference",
+  "speed claims",
+  "full CUDA residency claims",
+]
+may_claim = [
+  "`bitnet model coverage` exposes the existing cross-family model coverage matrix for human and JSON inspection.",
+  "Coverage output shows current proof tiers, accelerator routes, required receipts, next proof, and claim boundaries.",
+  "Coverage output preserves separation between BitNet packed I2_S/QK256, dense regular-LLM CUDA, unsupported rows, and docs-only placeholders.",
+]
+must_not_claim = [
+  "New runtime inference behavior exists.",
+  "A registered or structurally valid row is answer-ready without listed receipts.",
+  "Dense CUDA evidence satisfies BitNet packed I2_S/QK256 proof.",
+  "Unsupported 3B x86 I2_S is answer-ready.",
+  "Any backend speedup, server readiness, or full CUDA residency is proven.",
+  "Tokenizer, loader, prompt-template, transformer, QK256, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "MODEL-CAPS-001"
 status = "merged"
 branch = "codex/model-caps-001-dense-verify"
