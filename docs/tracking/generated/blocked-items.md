@@ -164,6 +164,7 @@
 | model-artifacts | MODEL-COVERAGE-001 | BITNET-CONTRACT-004, MODEL-CAPS-001 | merged |
 | model-artifacts | MODEL-COVERAGE-002 | MODEL-COVERAGE-001 | merged |
 | model-artifacts | MODEL-COVERAGE-003 | MODEL-COVERAGE-002 | merged |
+| model-artifacts | MODEL-COVERAGE-004 | MODEL-COVERAGE-003 | in_progress |
 | model-artifacts | MODEL-CAPS-001 | BITNET-CONTRACT-004 | merged |
 | model-artifacts | BITNET-CONTRACT-004 | BITNET-CONTRACT-003 | merged |
 | nvidia-5070ti | RTX5070TI-004 | RTX5070TI-003 | merged |
