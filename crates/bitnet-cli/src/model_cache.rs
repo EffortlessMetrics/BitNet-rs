@@ -1856,6 +1856,27 @@ mod tests {
     }
 
     #[test]
+    fn every_supported_model_has_model_coverage_matrix_row() {
+        let matrix = read_model_coverage_matrix(&workspace_model_coverage_matrix_path()).unwrap();
+
+        for model in SUPPORTED_MODELS {
+            let has_coverage = matrix.entry.iter().any(|entry| {
+                entry.capability_id.as_deref() == Some(model.id)
+                    || model
+                        .model_contract
+                        .is_some_and(|contract| entry.contract_id.as_deref() == Some(contract))
+                    || entry.verifier_surface.split_whitespace().any(|part| part == model.id)
+            });
+
+            assert!(
+                has_coverage,
+                "supported model `{}` must have a model coverage matrix row through capability_id, contract_id, or verifier_surface",
+                model.id
+            );
+        }
+    }
+
+    #[test]
     fn cache_paths_are_under_model_id() {
         let root = PathBuf::from("/tmp/bitnet-cache");
         let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();

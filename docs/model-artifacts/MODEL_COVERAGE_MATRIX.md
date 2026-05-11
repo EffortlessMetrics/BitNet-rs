@@ -116,6 +116,12 @@ run inference, select a backend, execute CUDA, or upgrade answer, speedup,
 server, or residency claims. If the matrix is outside the working directory,
 pass `--matrix <PATH>` or set `BITNET_MODEL_COVERAGE_MATRIX`.
 
+`MODEL-COVERAGE-007` adds the matching CI guard in the model-cache tests: every
+artifact exposed through `bitnet model fetch/list/verify` must be represented by
+the coverage matrix through a `capability_id`, `contract_id`, or verifier
+surface. Adding a new supported model without a coverage row is a test failure,
+so user-facing artifacts cannot bypass the registry claim boundary.
+
 ## Validation
 
 Run:

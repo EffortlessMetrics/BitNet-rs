@@ -936,6 +936,64 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "MODEL-COVERAGE-007"
+status = "pr_open"
+branch = "codex/model-coverage-007-cli-binding"
+pr = 4475
+head_sha = "b3a2698f7e9e99b76755d38d2a9a2d95cfdfd65d"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["MODEL-COVERAGE-006"]
+acceptance = "Add a CI-covered invariant that every `bitnet model` supported artifact has a corresponding model coverage matrix row through its model contract, capability id, or verifier surface, so future user-facing model artifacts cannot bypass the registry claim boundary."
+commands = [
+  "cargo fmt -p bitnet-cli -- --check",
+  "cargo test --locked -p bitnet-cli --bin bitnet --no-default-features --features cpu,full-cli model_cache -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo run --release --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/model_cache.rs",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/model-artifacts/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/src/loader.rs",
+  "crates/bitnet-models/src/production_loader.rs",
+  "crates/bitnet-server/**",
+  "QK256 math",
+  "tokenizer behavior",
+  "model loader behavior",
+  "prompt-template behavior",
+  "dense GGUF inference",
+  "server inference",
+  "speed claims",
+  "full CUDA residency claims",
+]
+may_claim = [
+  "The CLI-supported model artifact list is covered by the model coverage matrix.",
+  "Future supported model additions fail the targeted CLI model-cache test unless a matching coverage row is present.",
+  "The invariant preserves BitNet packed I2_S/QK256, dense regular-LLM CUDA, unsupported, and docs-only claim separation.",
+]
+must_not_claim = [
+  "New runtime inference behavior exists.",
+  "New supported models are added.",
+  "A registered or structurally valid row is answer-ready without listed receipts.",
+  "Any backend speedup, server readiness, or full CUDA residency is proven.",
+  "Tokenizer, loader, prompt-template, transformer, QK256, CUDA kernel math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "MODEL-CAPS-001"
 status = "merged"
 branch = "codex/model-caps-001-dense-verify"
