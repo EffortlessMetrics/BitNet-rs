@@ -638,8 +638,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-COVERAGE-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/model-coverage-002-bitnet-family"
+pr = 4463
+head_sha = "47e23388dbf41236cb8de8c0aa81baed447e9757"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

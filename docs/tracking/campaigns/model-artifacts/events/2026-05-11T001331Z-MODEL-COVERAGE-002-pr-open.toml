@@ -1,0 +1,13 @@
+timestamp = "2026-05-11T00:13:31Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-002"
+event = "pr_open"
+actor = "codex"
+pr = 4463
+branch = "codex/model-coverage-002-bitnet-family"
+head_sha = "47e23388dbf41236cb8de8c0aa81baed447e9757"
+
+notes = [
+  "Opened PR #4463 for MODEL-COVERAGE-002 BitNet-family coverage rows.",
+  "The PR remains registry, docs, validator, and tracker only and preserves all runtime and claim boundaries.",
+]
