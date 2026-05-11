@@ -1,0 +1,14 @@
+timestamp = "2026-05-11T03:10:11Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-006"
+event = "merged"
+actor = "codex"
+pr = 4473
+branch = "codex/model-coverage-006-cli"
+head_sha = "94cbcebeebd47328c014338f33e2109549993b18"
+merge_sha = "3ae5cd490b97bd32a061f6e43abe7b63d1108c15"
+
+notes = [
+  "Merged PR #4473 for MODEL-COVERAGE-006, adding `bitnet model coverage` as a read-only cross-family model coverage CLI surface.",
+  "The merged scope preserved runtime inference, tokenizer, loader, transformer, QK256, CUDA kernel, server, speedup, and residency behavior.",
+]
