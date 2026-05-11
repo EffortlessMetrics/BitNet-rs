@@ -1,0 +1,15 @@
+timestamp = "2026-05-11T16:21:32Z"
+campaign = "server-real-inference"
+item = "SERVER-004"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4479
+head_sha = "c387827baa258e4f50a013aad59152baeef1359a"
+branch = "codex/server-004-openai-chat-fail-closed"
+summary = "Opened SERVER-004 PR for the fail-closed OpenAI-compatible chat completions endpoint."
+notes = [
+  "PR #4479 adds POST /v1/chat/completions and returns SERVER_INFERENCE_UNAVAILABLE with readiness/certification details until real inference is wired.",
+  "The PR keeps chat inference, server answer readiness, CUDA server execution, speedup, and full-residency claims false.",
+]
