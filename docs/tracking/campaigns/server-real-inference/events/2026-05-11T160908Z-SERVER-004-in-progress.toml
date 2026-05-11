@@ -1,0 +1,13 @@
+timestamp = "2026-05-11T16:09:08Z"
+campaign = "server-real-inference"
+item = "SERVER-004"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/server-004-openai-chat-fail-closed"
+summary = "SERVER-004 started to add an OpenAI-compatible chat completions endpoint that fails closed."
+notes = [
+  "The endpoint must return the stable error envelope with readiness/certification details until a real server inference engine is wired.",
+  "The work item must not claim real chat inference, CUDA server execution, server answer readiness, speedup, or full residency.",
+]

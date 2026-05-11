@@ -128,3 +128,43 @@ must_not_claim = [
   "Server performance is proven.",
   "A dense or BitNet CUDA server path is implemented.",
 ]
+
+[[work_item]]
+id = "SERVER-004"
+status = "pr_open"
+pr = 4479
+branch = "codex/server-004-openai-chat-fail-closed"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SERVER-003"]
+acceptance = "Add an OpenAI-compatible /v1/chat/completions endpoint that fails closed with readiness/certification details until a real server inference engine is wired."
+commands = [
+  "cargo fmt -p bitnet-server -- --check",
+  "cargo test --locked -p bitnet-server --no-default-features --features cpu test_v1_chat_completions_fails_closed_without_simulated_output -- --nocapture",
+  "cargo test --locked -p bitnet-server --no-default-features --features cpu",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check server-real-inference",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-server/**",
+  "docs/tracking/campaigns/server-real-inference/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "OpenAI-compatible chat completions fail closed with readiness/certification details.",
+]
+must_not_claim = [
+  "Server answer readiness is proven.",
+  "Real chat inference is implemented.",
+  "A dense or BitNet CUDA server path is implemented.",
+  "Any hardware acceleration works.",
+  "Server performance is proven.",
+]

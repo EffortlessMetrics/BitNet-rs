@@ -121,6 +121,24 @@ pub struct EnhancedInferenceResponse {
     pub queue_time_ms: u64,
 }
 
+/// OpenAI-compatible chat completions request.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ChatCompletionRequest {
+    pub model: String,
+    pub messages: Vec<ChatCompletionMessage>,
+    pub max_tokens: Option<usize>,
+    pub temperature: Option<f32>,
+    pub top_p: Option<f32>,
+    pub stream: Option<bool>,
+}
+
+/// OpenAI-compatible chat message.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ChatCompletionMessage {
+    pub role: String,
+    pub content: String,
+}
+
 /// Model loading request
 #[derive(Deserialize)]
 pub struct ModelLoadRequest {
@@ -348,6 +366,7 @@ impl BitNetServer {
             // Core inference endpoints
             .route("/v1/inference", post(enhanced_inference_handler))
             .route("/v1/inference/stream", post(streaming::streaming_handler))
+            .route("/v1/chat/completions", post(chat_completions_handler))
             .route("/inference", post(legacy_inference_handler)) // Legacy compatibility
             // Model management endpoints
             .route("/v1/models/load", post(load_model_handler))
@@ -590,6 +609,30 @@ async fn legacy_inference_handler(
     }
 }
 
+/// OpenAI-compatible chat completions endpoint.
+async fn chat_completions_handler(
+    State(state): State<ProductionAppState>,
+    Json(request): Json<ChatCompletionRequest>,
+) -> (StatusCode, Json<ErrorResponse>) {
+    let readiness = collect_server_readiness_response(&state).await;
+    let details = serde_json::json!({
+        "requested_model": request.model,
+        "message_count": request.messages.len(),
+        "stream": request.stream.unwrap_or(false),
+        "readiness": readiness,
+    });
+
+    (
+        StatusCode::SERVICE_UNAVAILABLE,
+        create_error_response(
+            "OpenAI-compatible chat completions are unavailable until a real server inference engine is wired",
+            "SERVER_INFERENCE_UNAVAILABLE",
+            Some(Uuid::new_v4().to_string()),
+            Some(details),
+        ),
+    )
+}
+
 /// Load model handler
 async fn load_model_handler(
     State(state): State<ProductionAppState>,
@@ -697,6 +740,13 @@ async fn device_status_handler(
 async fn server_readiness_handler(
     State(state): State<ProductionAppState>,
 ) -> (StatusCode, Json<ServerReadinessResponse>) {
+    let response = collect_server_readiness_response(&state).await;
+    let status = if response.ready { StatusCode::OK } else { StatusCode::SERVICE_UNAVAILABLE };
+
+    (status, Json(response))
+}
+
+async fn collect_server_readiness_response(state: &ProductionAppState) -> ServerReadinessResponse {
     let model_memory = state.model_manager.get_memory_stats().await;
     let active_model = if let Some(model_id) = &model_memory.active_model_id {
         state.model_manager.get_model_metadata(model_id).await
@@ -705,17 +755,14 @@ async fn server_readiness_handler(
     };
     let device_statuses = state.execution_router.get_device_statuses().await;
 
-    let response = build_server_readiness_response(
+    build_server_readiness_response(
         model_memory,
         active_model,
         state.config.server.default_model_path.is_some(),
         format!("{:?}", state.config.server.default_device),
         state.config.execution_router.fallback_enabled,
         device_statuses,
-    );
-    let status = if response.ready { StatusCode::OK } else { StatusCode::SERVICE_UNAVAILABLE };
-
-    (status, Json(response))
+    )
 }
 
 fn build_server_readiness_response(
