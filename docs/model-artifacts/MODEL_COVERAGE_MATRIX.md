@@ -53,6 +53,24 @@ official I2_S answer lane:
 | `bitnet_falcon3_falcon_e_158_diagnostic` | Falcon-family 1.58-bit variant | `registered` | Diagnostic contract, not official BitNet answer authority. |
 | `bitnet_mcu_tiny_fixture` | MCU low-bit fixture | `registered` | Arithmetic/kernel regression testbed only, not LLM answer authority. |
 
+## Dense SLM Family Rows
+
+`MODEL-COVERAGE-003` expands the dense SLM side of the matrix beyond the
+current Qwen2.5 Q8_0 CUDA answer lane. These rows are coverage contracts only:
+they register future model families and required proof receipts, but they do
+not inherit Qwen2.5 CUDA proof or claim dense CUDA execution.
+
+| Entry | Artifact lane | Current tier | Boundary |
+|---|---|---|---|
+| `dense_qwen25_05b_q8_cuda` | Qwen2.5 0.5B Q8_0 GGUF | `product_cli_ready` | Current dense CUDA SLM answer lane, not globally speed-qualified. |
+| `dense_qwen3_06b_q8_candidate` | Qwen3 0.6B Q8_0 GGUF candidate | `registered` | Future Qwen-family coverage row; needs its own artifact, authority, CPU sanity, and CUDA receipts. |
+| `dense_smollm2_360m_candidate` | SmolLM2 360M GGUF candidate | `registered` | Low-footprint dense SLM control; no CPU answer, CUDA route, speedup, or server claim. |
+| `dense_smollm2_17b_candidate` | SmolLM2 1.7B GGUF candidate | `registered` | Larger low-footprint pressure row; no answer or CUDA claim. |
+| `dense_llama32_1b_candidate` | Llama 3.2 1B GGUF candidate | `registered` | Llama-family tokenizer/model-shape control; does not inherit Qwen proof. |
+| `dense_llama32_3b_candidate` | Llama 3.2 3B GGUF candidate | `registered` | Larger Llama-family small-LLM pressure row; needs its own proof ladder. |
+| `dense_gemma_small_candidate` | Gemma small GGUF candidate | `registered` | Alternate architecture coverage row; activation and attention policy must be proven separately. |
+| `dense_phi_small_candidate` | Phi small GGUF candidate | `registered` | Phi-family tokenizer/model-quirk coverage row; needs its own boundary fixtures and proof receipts. |
+
 ## Validation
 
 Run:
@@ -63,5 +81,6 @@ cargo run --release --locked -p xtask --no-default-features -- check-model-cover
 
 The validator parses the matrix, checks tier ordering, requires core lane
 coverage, and rejects common claim leaks such as dense entries claiming BitNet
-packed proof, TL1/TL2 rows claiming I2_S/QK256 proof, or unsupported entries
-claiming answer readiness.
+packed proof, TL1/TL2 rows claiming I2_S/QK256 proof, unsupported entries
+claiming answer readiness, or SLM candidates claiming dense CUDA proof without
+a `dense_regular_llm_cuda` accelerator route.

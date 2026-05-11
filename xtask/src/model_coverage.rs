@@ -85,7 +85,7 @@ fn load_matrix(matrix_path: &PathBuf) -> Result<CoverageMatrix> {
 fn validate_matrix(matrix: &CoverageMatrix) -> Result<()> {
     require_eq(matrix.schema, 1, "schema")?;
     require_eq(matrix.artifact_kind.as_str(), "model_coverage_matrix", "artifact_kind")?;
-    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-002", "work_item")?;
+    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-003", "work_item")?;
     require_nonempty(&matrix.claim_boundary, "claim_boundary")?;
     validate_tiers(&matrix.tier)?;
     validate_entries(matrix)?;
@@ -149,6 +149,13 @@ fn validate_entries(matrix: &CoverageMatrix) -> Result<()> {
         "bitnet_official_2b_tl2_x86_candidate",
         "bitnet_official_2b_bf16_gpu_int2_candidate",
         "dense_qwen25_05b_q8_cuda",
+        "dense_qwen3_06b_q8_candidate",
+        "dense_smollm2_360m_candidate",
+        "dense_smollm2_17b_candidate",
+        "dense_llama32_1b_candidate",
+        "dense_llama32_3b_candidate",
+        "dense_gemma_small_candidate",
+        "dense_phi_small_candidate",
         "bitnet_3b_x86_i2s_unsupported",
         "bitnet_3b_x86_tl2_candidate",
         "bitnet_onebit_large_diagnostic",
@@ -263,6 +270,14 @@ fn validate_claim_boundaries(entry: &Entry) -> Result<()> {
     if entry.model_class == "bitnet" && c.dense_regular_llm_cuda_proof {
         bail!("BitNet entry `{}` claims dense regular-LLM CUDA proof", entry.id);
     }
+    if c.dense_regular_llm_cuda_proof
+        && !entry.accelerator_routes.iter().any(|route| route == "dense_regular_llm_cuda")
+    {
+        bail!(
+            "entry `{}` claims dense regular-LLM CUDA proof without a dense_regular_llm_cuda route",
+            entry.id
+        );
+    }
     if c.accelerator_answer_ready && entry.accelerator_routes.is_empty() {
         bail!("entry `{}` is accelerator-ready but has no accelerator route", entry.id);
     }
@@ -357,6 +372,23 @@ mod tests {
             Err(err) => err,
         };
         assert!(err.to_string().contains("non-I2_S artifact"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn slm_candidates_cannot_claim_dense_cuda_without_route() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) =
+            matrix.entry.iter_mut().find(|entry| entry.id == "dense_smollm2_360m_candidate")
+        else {
+            bail!("missing SmolLM2 360M entry");
+        };
+        entry.claims.dense_regular_llm_cuda_proof = true;
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("SLM candidate dense CUDA proof leak must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("without a dense_regular_llm_cuda route"), "{err}");
         Ok(())
     }
 }
