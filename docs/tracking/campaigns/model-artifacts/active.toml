@@ -817,10 +817,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-COVERAGE-005"
-status = "pr_open"
+status = "merged"
 branch = "codex/model-coverage-005-modern-placeholders"
 pr = 4470
 head_sha = "16352bc03944730c495a95651a830db2473f3ce0"
+merge_sha = "0c89636ec781a8af3a22fbb6777595a4759f9451"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
