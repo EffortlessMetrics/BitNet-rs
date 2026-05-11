@@ -879,6 +879,7 @@ required_receipts = [
   "model_verify",
   "slm_answer_receipt",
   "fallback_free_backend_receipt",
+  "q4_k_m_strict_cuda_route_audit",
   "dense_cuda_all_layer_plan",
 ]
 forbidden_claims = [
@@ -888,8 +889,8 @@ forbidden_claims = [
   "speedup",
   "bitnet_packed_i2s_qk256_proof",
 ]
-next_proof = "dense CUDA all-layer plan, KV/sampling policy, one-token proof, and short-decode proof before any CUDA answer claim."
-claim_boundary = "Qwen2.5 1.5B Q4_K_M is an explicit non-default Apple M4 CPU/NEON answer model after reference and Rust M4 quality gates. This does not prove dense CUDA, BitNet QK256, speedup, server readiness, or full residency."
+next_proof = "Q4_K_M strict CUDA route support or explicit unsupported-route receipt before dense CUDA all-layer plan, KV/sampling policy, one-token proof, and short-decode proof."
+claim_boundary = "Qwen2.5 1.5B Q4_K_M is an explicit non-default Apple M4 CPU/NEON answer model after reference and Rust M4 quality gates. A 5070 Ti strict CUDA all-layer plan attempt currently fails closed at strict_cuda_ready=false for this Q4_K_M artifact, so it does not prove dense CUDA, BitNet QK256, speedup, server readiness, or full residency."
 
   [entry.claims]
   registered = true
