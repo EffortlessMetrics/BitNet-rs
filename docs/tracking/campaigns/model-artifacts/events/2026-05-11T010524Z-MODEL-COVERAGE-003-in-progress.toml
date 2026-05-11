@@ -1,0 +1,11 @@
+timestamp = "2026-05-11T01:05:24Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-003"
+event = "in_progress"
+actor = "codex"
+branch = "codex/model-coverage-003-slm-families"
+
+notes = [
+  "Started MODEL-COVERAGE-003 to expand the cross-family model coverage matrix with primary dense SLM family rows.",
+  "Scope is registry, docs, validator, and tracker only; no runtime inference, tokenizer, loader, transformer, QK256, CUDA kernel, server, speedup, or residency behavior changes.",
+]

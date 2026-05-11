@@ -1,7 +1,7 @@
 schema = 1
 artifact_kind = "model_coverage_matrix"
 updated = "2026-05-11"
-work_item = "MODEL-COVERAGE-002"
+work_item = "MODEL-COVERAGE-003"
 claim_boundary = "Model coverage is a claim-control surface. Registered or structurally valid models cannot imply CPU answer-readiness, CUDA execution, speedup, server readiness, BitNet packed QK256 proof, or dense regular-LLM proof unless the corresponding receipts are listed and the claim booleans are explicitly true."
 
 [[tier]]
@@ -291,6 +291,314 @@ claim_boundary = "Q4_K_M is useful storage/reference coverage and Apple M4 metad
   registered = true
   structurally_valid = true
   reference_good = true
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "dense_qwen3_06b_q8_candidate"
+model_class = "dense_slm"
+family = "qwen3"
+artifact_kind = "gguf_q8_0_candidate"
+capability_id = "qwen3-0.6b-instruct-q8_0"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen3-0.6b-instruct-q8_0"
+tokenizer_authority = "pending_qwen3_contract"
+prompt_authority = "pending_qwen3_chat_template_contract"
+cpu_reference = "candidate_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_verify",
+  "tokenizer_prompt_authority",
+  "cpu_reference_sanity",
+  "all_layer_plan",
+  "model_boundary_fixtures",
+]
+forbidden_claims = [
+  "cuda_answer_ready",
+  "dense_regular_llm_cuda_proof",
+  "bitnet_packed_i2s_qk256_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Qwen3 artifact contract, tokenizer/prompt authority, CPU sanity, dense all-layer plan, and model-boundary fixtures."
+claim_boundary = "Qwen3 0.6B is registered as a future dense SLM coverage row and does not inherit Qwen2.5 CUDA answer receipts."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "dense_smollm2_360m_candidate"
+model_class = "dense_slm"
+family = "smollm2"
+artifact_kind = "gguf_dense_candidate"
+capability_id = "smollm2-360m-instruct"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify smollm2-360m-instruct"
+tokenizer_authority = "pending_smollm2_contract"
+prompt_authority = "pending_smollm2_chat_template_contract"
+cpu_reference = "candidate_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_verify",
+  "tokenizer_prompt_authority",
+  "cpu_reference_sanity",
+  "all_layer_plan",
+  "model_boundary_fixtures",
+]
+forbidden_claims = [
+  "cuda_answer_ready",
+  "dense_regular_llm_cuda_proof",
+  "bitnet_packed_i2s_qk256_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "SmolLM2 360M artifact contract, tokenizer/prompt authority, CPU sanity, dense all-layer plan, and model-boundary fixtures."
+claim_boundary = "SmolLM2 360M is registered for low-footprint dense SLM coverage; it has no CPU answer, CUDA route, speedup, or server claim."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "dense_smollm2_17b_candidate"
+model_class = "dense_slm"
+family = "smollm2"
+artifact_kind = "gguf_dense_candidate"
+capability_id = "smollm2-1.7b-instruct"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify smollm2-1.7b-instruct"
+tokenizer_authority = "pending_smollm2_contract"
+prompt_authority = "pending_smollm2_chat_template_contract"
+cpu_reference = "candidate_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_verify",
+  "tokenizer_prompt_authority",
+  "memory_envelope",
+  "cpu_reference_sanity",
+  "all_layer_plan",
+]
+forbidden_claims = [
+  "cuda_answer_ready",
+  "dense_regular_llm_cuda_proof",
+  "bitnet_packed_i2s_qk256_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "SmolLM2 1.7B artifact contract, memory envelope, tokenizer/prompt authority, CPU sanity, and dense all-layer plan."
+claim_boundary = "SmolLM2 1.7B is registered for larger low-footprint dense SLM pressure testing; it is not answer-ready or CUDA-ready."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "dense_llama32_1b_candidate"
+model_class = "dense_slm"
+family = "llama3"
+artifact_kind = "gguf_dense_candidate"
+capability_id = "llama3.2-1b-instruct"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify llama3.2-1b-instruct"
+tokenizer_authority = "pending_llama3_contract"
+prompt_authority = "pending_llama3_chat_template_contract"
+cpu_reference = "candidate_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_verify",
+  "tokenizer_prompt_authority",
+  "cpu_reference_sanity",
+  "all_layer_plan",
+  "kv_sampling_policy",
+]
+forbidden_claims = [
+  "cuda_answer_ready",
+  "dense_regular_llm_cuda_proof",
+  "bitnet_packed_i2s_qk256_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Llama 3.2 1B artifact contract, tokenizer/prompt authority, CPU sanity, all-layer plan, and KV/sampling policy."
+claim_boundary = "Llama 3.2 1B is a dense SLM tokenizer/model-shape control row and does not inherit Qwen CUDA proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "dense_llama32_3b_candidate"
+model_class = "dense_slm"
+family = "llama3"
+artifact_kind = "gguf_dense_candidate"
+capability_id = "llama3.2-3b-instruct"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify llama3.2-3b-instruct"
+tokenizer_authority = "pending_llama3_contract"
+prompt_authority = "pending_llama3_chat_template_contract"
+cpu_reference = "candidate_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_verify",
+  "tokenizer_prompt_authority",
+  "memory_envelope",
+  "cpu_reference_sanity",
+  "all_layer_plan",
+]
+forbidden_claims = [
+  "cuda_answer_ready",
+  "dense_regular_llm_cuda_proof",
+  "bitnet_packed_i2s_qk256_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Llama 3.2 3B artifact contract, memory envelope, tokenizer/prompt authority, CPU sanity, and dense all-layer plan."
+claim_boundary = "Llama 3.2 3B is registered for selected small dense LLM pressure testing and is not CUDA answer-ready."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "dense_gemma_small_candidate"
+model_class = "dense_slm"
+family = "gemma"
+artifact_kind = "gguf_dense_candidate"
+capability_id = "gemma-small-instruct"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify gemma-small-instruct"
+tokenizer_authority = "pending_gemma_contract"
+prompt_authority = "pending_gemma_chat_template_contract"
+cpu_reference = "candidate_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_verify",
+  "tokenizer_prompt_authority",
+  "architecture_policy",
+  "cpu_reference_sanity",
+  "all_layer_plan",
+]
+forbidden_claims = [
+  "cuda_answer_ready",
+  "dense_regular_llm_cuda_proof",
+  "bitnet_packed_i2s_qk256_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Gemma small artifact contract, tokenizer/prompt authority, architecture policy, CPU sanity, and dense all-layer plan."
+claim_boundary = "Gemma small is registered as an alternate dense architecture control and does not inherit Qwen or BitNet proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "dense_phi_small_candidate"
+model_class = "dense_slm"
+family = "phi"
+artifact_kind = "gguf_dense_candidate"
+capability_id = "phi-small-instruct"
+status = "registered_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify phi-small-instruct"
+tokenizer_authority = "pending_phi_contract"
+prompt_authority = "pending_phi_chat_template_contract"
+cpu_reference = "candidate_reference_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_verify",
+  "tokenizer_prompt_authority",
+  "architecture_policy",
+  "cpu_reference_sanity",
+  "all_layer_plan",
+]
+forbidden_claims = [
+  "cuda_answer_ready",
+  "dense_regular_llm_cuda_proof",
+  "bitnet_packed_i2s_qk256_proof",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Phi small artifact contract, tokenizer/prompt authority, architecture policy, CPU sanity, and dense all-layer plan."
+claim_boundary = "Phi small is registered as an edge/small-LLM control row and does not inherit Qwen or BitNet proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
   cpu_answer_ready = false
   accelerator_answer_ready = false
   benchmark_qualified = false
