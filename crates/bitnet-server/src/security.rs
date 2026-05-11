@@ -277,6 +277,15 @@ impl SecurityValidator {
                     "Model path not in allowed directories".to_string(),
                 ));
             }
+        } else {
+            // If no directories are configured, do not allow absolute paths to prevent reading arbitrary files
+            let path = std::path::Path::new(model_path);
+            if path.is_absolute() {
+                return Err(ValidationError::InvalidFieldValue(
+                    "Absolute paths are not allowed when allowed_model_directories is empty"
+                        .to_string(),
+                ));
+            }
         }
 
         Ok(())
@@ -614,7 +623,10 @@ mod tests {
         let config = SecurityConfig::default();
         let validator = SecurityValidator::new(config).unwrap();
 
-        assert!(validator.validate_model_request("/tmp/model.gguf").is_ok());
+        assert!(matches!(
+            validator.validate_model_request("/tmp/model.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Absolute paths are not allowed when allowed_model_directories is empty"
+        ));
         assert!(validator.validate_model_request("relative/model.gguf").is_ok());
 
         // Case 2: Restricted directories
