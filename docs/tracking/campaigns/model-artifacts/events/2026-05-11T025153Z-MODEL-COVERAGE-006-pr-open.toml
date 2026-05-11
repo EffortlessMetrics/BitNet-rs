@@ -1,0 +1,13 @@
+timestamp = "2026-05-11T02:51:53Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-006"
+event = "pr_open"
+actor = "codex"
+pr = 4473
+branch = "codex/model-coverage-006-cli"
+head_sha = "1a4eb863051b08b830b45d79392fa226405c17d7"
+
+notes = [
+  "Opened PR #4473 for MODEL-COVERAGE-006 model coverage CLI exposure.",
+  "The PR remains read-only reporting, docs, tests, and tracker only and preserves tokenizer, loader, transformer, QK256, CUDA kernel, server, speedup, and residency behavior.",
+]
