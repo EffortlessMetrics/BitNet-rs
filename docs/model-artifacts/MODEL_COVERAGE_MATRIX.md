@@ -80,7 +80,7 @@ before any user-facing or speed claim is allowed.
 
 | Entry | Artifact lane | Current tier | Boundary |
 |---|---|---|---|
-| `small_llm_qwen25_15b_q4km_candidate` | Qwen2.5 1.5B Q4_K_M GGUF candidate | `registered` | Existing larger-Qwen pressure row; needs artifact verify, memory envelope, CPU sanity, and all-layer plan. |
+| `small_llm_qwen25_15b_q4km_candidate` | Qwen2.5 1.5B Q4_K_M GGUF candidate | `cpu_answer_ready` | Supported non-default Apple M4 CPU/NEON answer model after reference and Rust M4 quality gates; still needs its own dense CUDA all-layer plan and CUDA proof before any CUDA claim. |
 | `small_llm_qwen3_17b_q8_candidate` | Qwen3 1.7B-class Q8_0 GGUF candidate | `registered` | Future Qwen3 small-LLM row; does not inherit Qwen2.5 0.5B CUDA receipts. |
 | `small_llm_llama32_3b_candidate` | Llama 3.2 3B-class GGUF candidate | `registered` | Llama-family selected small-LLM row; needs its own memory, CPU, KV, and CUDA plan receipts. |
 | `small_llm_gemma_2b_candidate` | Gemma 2B-class GGUF candidate | `registered` | Alternate architecture selected small-LLM row; cannot inherit Qwen, Llama, or BitNet proof. |
