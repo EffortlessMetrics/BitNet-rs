@@ -150,6 +150,72 @@ pub struct ServerStats {
     pub concurrency_stats: concurrency::ConcurrencyStats,
 }
 
+/// Server readiness and certification response.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerReadinessResponse {
+    pub ready: bool,
+    pub status: String,
+    pub reason: Option<String>,
+    pub model: ServerReadinessModelState,
+    pub backend: ServerReadinessBackendState,
+    pub inference: ServerReadinessInferenceState,
+    pub claim_boundary: ServerReadinessClaimBoundary,
+}
+
+/// Model state used by the server readiness endpoint.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerReadinessModelState {
+    pub default_model_configured: bool,
+    pub loaded_models: usize,
+    pub total_size_mb: u64,
+    pub cache_size_limit: usize,
+    pub memory_limit_gb: Option<f64>,
+    pub active_model_id: Option<String>,
+    pub active_model: Option<ServerReadinessActiveModel>,
+}
+
+/// Active model summary used by the server readiness endpoint.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerReadinessActiveModel {
+    pub model_id: String,
+    pub model_path: String,
+    pub device: String,
+    pub quantization_type: String,
+    pub size_mb: u64,
+    pub parameters: u64,
+    pub context_length: u32,
+}
+
+/// Backend state used by the server readiness endpoint.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerReadinessBackendState {
+    pub requested_default_device: String,
+    pub selected_backend: Option<String>,
+    pub configured_fallback_enabled: bool,
+    pub server_fallback_policy: String,
+    pub device_statuses: Vec<execution_router::DeviceStatus>,
+}
+
+/// Server inference readiness state.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerReadinessInferenceState {
+    pub real_server_inference_ready: bool,
+    pub batch_inference_ready: bool,
+    pub simulated_inference_enabled: bool,
+    pub runtime_path: String,
+    pub unavailable_reason: String,
+}
+
+/// Claim boundaries reported by the server readiness endpoint.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerReadinessClaimBoundary {
+    pub server_ready_claimed: bool,
+    pub dense_regular_llm_cuda_inference_claimed: bool,
+    pub bitnet_packed_i2s_qk256_proof: bool,
+    pub speedup_claim: bool,
+    pub full_cuda_residency_claimed: bool,
+}
+
 /// BitNet inference server (pre-alpha; inference endpoints incomplete)
 pub struct BitNetServer {
     config: ServerConfig,
@@ -286,11 +352,13 @@ impl BitNetServer {
             // Model management endpoints
             .route("/v1/models/load", post(load_model_handler))
             .route("/v1/models", get(list_models_handler))
-            .route("/v1/models/:model_id", get(get_model_handler))
-            .route("/v1/models/:model_id", axum::routing::delete(unload_model_handler))
+            .route("/v1/models/{model_id}", get(get_model_handler))
+            .route("/v1/models/{model_id}", axum::routing::delete(unload_model_handler))
             // Server statistics and management
             .route("/v1/stats", get(server_stats_handler))
             .route("/v1/devices", get(device_status_handler))
+            .route("/readiness", get(server_readiness_handler))
+            .route("/v1/readiness", get(server_readiness_handler))
             // GPU streaming endpoint
             .route("/api/v1/generate/stream", post(gpu_streaming::gpu_stream_handler))
             // Root endpoint
@@ -625,6 +693,103 @@ async fn device_status_handler(
     Json(statuses)
 }
 
+/// Readiness and certification handler.
+async fn server_readiness_handler(
+    State(state): State<ProductionAppState>,
+) -> (StatusCode, Json<ServerReadinessResponse>) {
+    let model_memory = state.model_manager.get_memory_stats().await;
+    let active_model = if let Some(model_id) = &model_memory.active_model_id {
+        state.model_manager.get_model_metadata(model_id).await
+    } else {
+        None
+    };
+    let device_statuses = state.execution_router.get_device_statuses().await;
+
+    let response = build_server_readiness_response(
+        model_memory,
+        active_model,
+        state.config.server.default_model_path.is_some(),
+        format!("{:?}", state.config.server.default_device),
+        state.config.execution_router.fallback_enabled,
+        device_statuses,
+    );
+    let status = if response.ready { StatusCode::OK } else { StatusCode::SERVICE_UNAVAILABLE };
+
+    (status, Json(response))
+}
+
+fn build_server_readiness_response(
+    model_memory: model_manager::ModelMemoryStats,
+    active_model: Option<model_manager::ModelMetadata>,
+    default_model_configured: bool,
+    requested_default_device: String,
+    configured_fallback_enabled: bool,
+    device_statuses: Vec<execution_router::DeviceStatus>,
+) -> ServerReadinessResponse {
+    let active_model_summary = active_model.as_ref().map(|metadata| ServerReadinessActiveModel {
+        model_id: metadata.model_id.clone(),
+        model_path: metadata.model_path.clone(),
+        device: metadata.device.clone(),
+        quantization_type: metadata.quantization_type.clone(),
+        size_mb: metadata.size_mb,
+        parameters: metadata.parameters,
+        context_length: metadata.context_length,
+    });
+    let selected_backend = active_model.as_ref().map(|metadata| metadata.device.clone());
+
+    let real_server_inference_ready = false;
+    let batch_inference_ready = false;
+    let simulated_inference_enabled = false;
+    let reason = if model_memory.active_model_id.is_none() {
+        Some("no_active_model".to_string())
+    } else if !real_server_inference_ready {
+        Some("server_batch_inference_not_implemented".to_string())
+    } else {
+        None
+    };
+    let ready = model_memory.active_model_id.is_some()
+        && real_server_inference_ready
+        && !simulated_inference_enabled;
+
+    ServerReadinessResponse {
+        ready,
+        status: if ready { "ready".to_string() } else { "not_ready".to_string() },
+        reason,
+        model: ServerReadinessModelState {
+            default_model_configured,
+            loaded_models: model_memory.total_models,
+            total_size_mb: model_memory.total_size_mb,
+            cache_size_limit: model_memory.cache_size_limit,
+            memory_limit_gb: model_memory.memory_limit_gb,
+            active_model_id: model_memory.active_model_id,
+            active_model: active_model_summary,
+        },
+        backend: ServerReadinessBackendState {
+            requested_default_device,
+            selected_backend,
+            configured_fallback_enabled,
+            server_fallback_policy: "fail_closed_until_real_engine".to_string(),
+            device_statuses,
+        },
+        inference: ServerReadinessInferenceState {
+            real_server_inference_ready,
+            batch_inference_ready,
+            simulated_inference_enabled,
+            runtime_path: "unavailable".to_string(),
+            unavailable_reason:
+                "batch inference rejects requests until a real server inference engine is wired"
+                    .to_string(),
+        },
+        claim_boundary: ServerReadinessClaimBoundary {
+            server_ready_claimed: false,
+            dense_regular_llm_cuda_inference_claimed: false,
+            bitnet_packed_i2s_qk256_proof: false,
+            speedup_claim: false,
+            full_cuda_residency_claimed: false,
+        },
+    }
+}
+
 /// Enhanced middleware for comprehensive request metrics collection
 async fn enhanced_metrics_middleware(request: Request, next: Next) -> Response {
     let start = Instant::now();
@@ -790,8 +955,11 @@ fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_device;
+    use super::{build_server_readiness_response, parse_device};
     use bitnet_common::Device;
+    use std::time::SystemTime;
+
+    use crate::model_manager::{ModelMemoryStats, ModelMetadata};
 
     #[test]
     fn parse_device_supports_vulkan_and_opencl_aliases() {
@@ -805,5 +973,78 @@ mod tests {
         assert_eq!(parse_device("vulkan:2").unwrap(), Device::Cuda(2));
         assert_eq!(parse_device("opencl:3").unwrap(), Device::Cuda(3));
         assert_eq!(parse_device("ocl:4").unwrap(), Device::Cuda(4));
+    }
+
+    #[test]
+    fn server_readiness_without_active_model_fails_closed() {
+        let response = build_server_readiness_response(
+            ModelMemoryStats {
+                total_models: 0,
+                total_size_mb: 0,
+                active_model_id: None,
+                cache_size_limit: 3,
+                memory_limit_gb: Some(16.0),
+            },
+            None,
+            false,
+            "Auto".to_string(),
+            true,
+            Vec::new(),
+        );
+
+        assert!(!response.ready);
+        assert_eq!(response.status, "not_ready");
+        assert_eq!(response.reason.as_deref(), Some("no_active_model"));
+        assert!(!response.model.default_model_configured);
+        assert_eq!(response.model.loaded_models, 0);
+        assert!(response.model.active_model.is_none());
+        assert_eq!(response.backend.server_fallback_policy, "fail_closed_until_real_engine");
+        assert!(!response.inference.real_server_inference_ready);
+        assert!(!response.inference.batch_inference_ready);
+        assert!(!response.inference.simulated_inference_enabled);
+        assert!(!response.claim_boundary.server_ready_claimed);
+        assert!(!response.claim_boundary.speedup_claim);
+        assert!(!response.claim_boundary.full_cuda_residency_claimed);
+    }
+
+    #[test]
+    fn server_readiness_with_active_model_still_fails_until_real_engine() {
+        let response = build_server_readiness_response(
+            ModelMemoryStats {
+                total_models: 1,
+                total_size_mb: 512,
+                active_model_id: Some("model-1".to_string()),
+                cache_size_limit: 3,
+                memory_limit_gb: Some(16.0),
+            },
+            Some(ModelMetadata {
+                model_id: "model-1".to_string(),
+                model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+                device: "Cuda(0)".to_string(),
+                quantization_type: "Q8_0".to_string(),
+                loaded_at: SystemTime::UNIX_EPOCH,
+                size_mb: 512,
+                parameters: 500_000_000,
+                context_length: 32_768,
+                inference_count: 0,
+                avg_tokens_per_second: 0.0,
+            }),
+            true,
+            "Gpu(0)".to_string(),
+            false,
+            Vec::new(),
+        );
+
+        assert!(!response.ready);
+        assert_eq!(response.status, "not_ready");
+        assert_eq!(response.reason.as_deref(), Some("server_batch_inference_not_implemented"));
+        assert!(response.model.default_model_configured);
+        assert_eq!(response.model.active_model_id.as_deref(), Some("model-1"));
+        assert_eq!(response.backend.selected_backend.as_deref(), Some("Cuda(0)"));
+        assert!(!response.backend.configured_fallback_enabled);
+        assert!(!response.inference.real_server_inference_ready);
+        assert_eq!(response.inference.runtime_path, "unavailable");
+        assert!(!response.claim_boundary.dense_regular_llm_cuda_inference_claimed);
+        assert!(!response.claim_boundary.bitnet_packed_i2s_qk256_proof);
     }
 }
