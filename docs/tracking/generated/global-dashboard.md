@@ -28,7 +28,7 @@
 | intel-npu | NPU-011 | #4097 | merged | none | Device-node detection is not inference. |
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
-| server-real-inference | SERVER-005 | TBD | proposed | none | Do not reintroduce simulated inference. |
+| server-real-inference | SERVER-005 | #4490 | pr_open | none | Do not reintroduce simulated inference. |
 | slm-cpu | SLM-CPU-008 | #4434 | merged | none | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM-002 | TBD | ready | WASM-003 | WASM detection is not inference. |

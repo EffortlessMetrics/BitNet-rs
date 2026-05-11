@@ -1,0 +1,13 @@
+timestamp = "2026-05-11T18:10:03Z"
+campaign = "server-real-inference"
+item = "SERVER-005"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/server-real-inference/SERVER-005-shared-engine-runtime"
+summary = "SERVER-005 started to wire one non-streaming chat-completions path to the shared local inference engine."
+notes = [
+  "The path must use the active ModelManager inference engine and preserve explicit unavailable responses when no verified model is loaded.",
+  "The work item must not claim streaming, performance, new model-family answer readiness, CUDA speedup, full CUDA residency, BitNet QK256 proof, or kernel math changes.",
+]

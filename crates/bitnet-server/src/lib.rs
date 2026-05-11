@@ -43,14 +43,20 @@ use axum::{
     extract::{Request, State},
     http::{HeaderMap, StatusCode},
     middleware::{self, Next},
-    response::{Json, Response},
+    response::{IntoResponse, Json, Response},
     routing::{get, post},
 };
 use bitnet_common::Device;
+use bitnet_inference::{
+    GenerationConfig,
+    prompt_formatter::{
+        Message as PromptMessage, Role as PromptRole, detect_template, format_prompt,
+    },
+};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tower_http::trace::TraceLayer;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
@@ -137,6 +143,60 @@ pub struct ChatCompletionRequest {
 pub struct ChatCompletionMessage {
     pub role: String,
     pub content: String,
+}
+
+/// OpenAI-compatible chat completions response.
+#[derive(Debug, Clone, Serialize)]
+pub struct ChatCompletionResponse {
+    pub id: String,
+    pub object: String,
+    pub created: u64,
+    pub model: String,
+    pub choices: Vec<ChatCompletionChoice>,
+    pub usage: ChatCompletionUsage,
+    pub receipt: ServerSharedEngineReceipt,
+}
+
+/// OpenAI-compatible chat completion choice.
+#[derive(Debug, Clone, Serialize)]
+pub struct ChatCompletionChoice {
+    pub index: usize,
+    pub message: ChatCompletionMessage,
+    pub finish_reason: String,
+}
+
+/// OpenAI-compatible token usage summary.
+#[derive(Debug, Clone, Serialize)]
+pub struct ChatCompletionUsage {
+    pub prompt_tokens: usize,
+    pub completion_tokens: usize,
+    pub total_tokens: usize,
+}
+
+/// Per-request receipt summary for server shared-engine inference.
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerSharedEngineReceipt {
+    pub receipt_kind: String,
+    pub request_id: String,
+    pub runtime_path: String,
+    pub requested_model: String,
+    pub active_model_id: String,
+    pub active_model_path: String,
+    pub selected_backend: String,
+    pub selected_route: String,
+    pub prompt_template: String,
+    pub tokenizer_authority: String,
+    pub prompt_authority: String,
+    pub fallback_used: bool,
+    pub simulated_inference: bool,
+    pub streaming: bool,
+    pub prompt_tokens: usize,
+    pub completion_tokens: usize,
+    pub total_ms: u64,
+    pub speedup_claim: bool,
+    pub full_cuda_residency_claimed: bool,
+    pub dense_regular_llm_cuda_inference_claimed: bool,
+    pub bitnet_packed_i2s_qk256_proof: bool,
 }
 
 /// Model loading request
@@ -613,24 +673,275 @@ async fn legacy_inference_handler(
 async fn chat_completions_handler(
     State(state): State<ProductionAppState>,
     Json(request): Json<ChatCompletionRequest>,
-) -> (StatusCode, Json<ErrorResponse>) {
+) -> Response {
+    let request_id = Uuid::new_v4().to_string();
     let readiness = collect_server_readiness_response(&state).await;
-    let details = serde_json::json!({
-        "requested_model": request.model,
-        "message_count": request.messages.len(),
-        "stream": request.stream.unwrap_or(false),
-        "readiness": readiness,
-    });
 
-    (
-        StatusCode::SERVICE_UNAVAILABLE,
-        create_error_response(
-            "OpenAI-compatible chat completions are unavailable until a real server inference engine is wired",
-            "SERVER_INFERENCE_UNAVAILABLE",
-            Some(Uuid::new_v4().to_string()),
-            Some(details),
-        ),
-    )
+    if request.stream.unwrap_or(false) {
+        let details = serde_json::json!({
+            "requested_model": request.model,
+            "message_count": request.messages.len(),
+            "stream": true,
+            "required_stream": false,
+            "readiness": readiness,
+        });
+
+        return (
+            StatusCode::BAD_REQUEST,
+            create_error_response(
+                "Streaming chat completions are not wired to the shared inference engine yet",
+                "SERVER_STREAMING_UNAVAILABLE",
+                Some(request_id),
+                Some(details),
+            ),
+        )
+            .into_response();
+    }
+
+    let Some(active_model) = state.model_manager.get_active_model().await else {
+        let details = serde_json::json!({
+            "requested_model": request.model,
+            "message_count": request.messages.len(),
+            "stream": false,
+            "readiness": readiness,
+        });
+
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            create_error_response(
+                "OpenAI-compatible chat completions require an active verified model loaded through the server ModelManager",
+                "SERVER_INFERENCE_UNAVAILABLE",
+                Some(request_id),
+                Some(details),
+            ),
+        )
+            .into_response();
+    };
+
+    let (rendered_prompt, prompt_template) = match render_chat_completion_prompt(&request) {
+        Ok(prompt) => prompt,
+        Err(error) => {
+            let details = serde_json::json!({
+                "requested_model": request.model,
+                "message_count": request.messages.len(),
+                "stream": false,
+                "readiness": readiness,
+            });
+
+            return (
+                StatusCode::BAD_REQUEST,
+                create_error_response(
+                    &error,
+                    "INVALID_CHAT_COMPLETION_REQUEST",
+                    Some(request_id),
+                    Some(details),
+                ),
+            )
+                .into_response();
+        }
+    };
+
+    let generation_config = match generation_config_from_chat_request(&request) {
+        Ok(config) => config,
+        Err(error) => {
+            let details = serde_json::json!({
+                "requested_model": request.model,
+                "message_count": request.messages.len(),
+                "stream": false,
+                "readiness": readiness,
+            });
+
+            return (
+                StatusCode::BAD_REQUEST,
+                create_error_response(
+                    &error,
+                    "INVALID_GENERATION_CONFIG",
+                    Some(request_id),
+                    Some(details),
+                ),
+            )
+                .into_response();
+        }
+    };
+
+    let prompt_tokens = token_count_for_text(&active_model.engine, &rendered_prompt)
+        .unwrap_or_else(|| {
+            bitnet_inference::prompt_formatter::estimate_token_count(&rendered_prompt)
+        });
+
+    let start = Instant::now();
+    let generated = match active_model
+        .engine
+        .generate_with_config(&rendered_prompt, &generation_config)
+        .await
+    {
+        Ok(text) => text,
+        Err(error) => {
+            let details = serde_json::json!({
+                "requested_model": request.model,
+                "message_count": request.messages.len(),
+                "stream": false,
+                "active_model_id": active_model.metadata.model_id.clone(),
+                "selected_backend": active_model.metadata.device.clone(),
+                "readiness": readiness,
+                "engine_error": error.to_string(),
+            });
+
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                create_error_response(
+                    "Shared local inference engine failed to generate a chat completion",
+                    "SERVER_SHARED_ENGINE_FAILED",
+                    Some(request_id),
+                    Some(details),
+                ),
+            )
+                .into_response();
+        }
+    };
+    let total_ms = start.elapsed().as_millis() as u64;
+
+    active_model.update_usage();
+
+    let completion_tokens = token_count_for_text(&active_model.engine, &generated)
+        .unwrap_or_else(|| bitnet_inference::prompt_formatter::estimate_token_count(&generated));
+
+    let usage = ChatCompletionUsage {
+        prompt_tokens,
+        completion_tokens,
+        total_tokens: prompt_tokens.saturating_add(completion_tokens),
+    };
+    let receipt = build_server_shared_engine_receipt(
+        &request_id,
+        &request,
+        &active_model.metadata,
+        &prompt_template,
+        &usage,
+        total_ms,
+    );
+    let response = ChatCompletionResponse {
+        id: format!("chatcmpl-{request_id}"),
+        object: "chat.completion".to_string(),
+        created: current_unix_timestamp(),
+        model: request.model.clone(),
+        choices: vec![ChatCompletionChoice {
+            index: 0,
+            message: ChatCompletionMessage { role: "assistant".to_string(), content: generated },
+            finish_reason: "stop".to_string(),
+        }],
+        usage,
+        receipt,
+    };
+
+    (StatusCode::OK, Json(response)).into_response()
+}
+
+fn render_chat_completion_prompt(
+    request: &ChatCompletionRequest,
+) -> std::result::Result<(String, String), String> {
+    if request.messages.is_empty() {
+        return Err("messages must contain at least one chat message".to_string());
+    }
+
+    let mut messages = Vec::with_capacity(request.messages.len());
+    for message in &request.messages {
+        let role = match message.role.as_str() {
+            "system" => PromptRole::System,
+            "user" => PromptRole::User,
+            "assistant" => PromptRole::Assistant,
+            other => {
+                return Err(format!(
+                    "unsupported chat role `{other}`; supported roles are system, user, assistant"
+                ));
+            }
+        };
+        messages.push(PromptMessage { role, content: message.content.clone() });
+    }
+
+    let template = detect_template(&request.model);
+    let rendered = format_prompt(&messages, &template);
+    Ok((rendered, template.as_str().to_string()))
+}
+
+fn generation_config_from_chat_request(
+    request: &ChatCompletionRequest,
+) -> std::result::Result<GenerationConfig, String> {
+    let max_tokens = request.max_tokens.unwrap_or(16);
+    if max_tokens == 0 {
+        return Err("max_tokens must be greater than zero".to_string());
+    }
+    let max_tokens =
+        u32::try_from(max_tokens).map_err(|_| "max_tokens exceeds u32::MAX".to_string())?;
+
+    let temperature = request.temperature.unwrap_or(0.0);
+    let top_p = request.top_p.unwrap_or(1.0);
+    let config = GenerationConfig::greedy()
+        .with_max_tokens(max_tokens)
+        .with_temperature(temperature)
+        .with_top_p(top_p);
+
+    config.validate()?;
+    Ok(config)
+}
+
+fn token_count_for_text(engine: &bitnet_inference::InferenceEngine, text: &str) -> Option<usize> {
+    engine.tokenizer().encode(text, false, true).ok().map(|tokens| tokens.len())
+}
+
+fn build_server_shared_engine_receipt(
+    request_id: &str,
+    request: &ChatCompletionRequest,
+    active_model: &model_manager::ModelMetadata,
+    prompt_template: &str,
+    usage: &ChatCompletionUsage,
+    total_ms: u64,
+) -> ServerSharedEngineReceipt {
+    ServerSharedEngineReceipt {
+        receipt_kind: "server_shared_engine_chat_completion".to_string(),
+        request_id: request_id.to_string(),
+        runtime_path: "shared_local_inference_engine".to_string(),
+        requested_model: request.model.clone(),
+        active_model_id: active_model.model_id.clone(),
+        active_model_path: active_model.model_path.clone(),
+        selected_backend: active_model.device.clone(),
+        selected_route: "shared_validated_local_inference_engine".to_string(),
+        prompt_template: prompt_template.to_string(),
+        tokenizer_authority: "active_model_tokenizer".to_string(),
+        prompt_authority: "server_chat_template".to_string(),
+        fallback_used: false,
+        simulated_inference: false,
+        streaming: request.stream.unwrap_or(false),
+        prompt_tokens: usage.prompt_tokens,
+        completion_tokens: usage.completion_tokens,
+        total_ms,
+        speedup_claim: false,
+        full_cuda_residency_claimed: false,
+        dense_regular_llm_cuda_inference_claimed: false,
+        bitnet_packed_i2s_qk256_proof: false,
+    }
+}
+
+fn current_unix_timestamp() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|duration| duration.as_secs()).unwrap_or(0)
+}
+
+fn active_model_supports_shared_inference(
+    active_model: Option<&model_manager::ModelMetadata>,
+) -> bool {
+    active_model.is_some()
+}
+
+fn shared_engine_readiness_reason(
+    active_model_id: Option<&str>,
+    real_server_inference_ready: bool,
+) -> Option<String> {
+    if active_model_id.is_none() {
+        Some("no_active_model".to_string())
+    } else if !real_server_inference_ready {
+        Some("server_shared_engine_not_available".to_string())
+    } else {
+        None
+    }
 }
 
 /// Load model handler
@@ -773,6 +1084,7 @@ fn build_server_readiness_response(
     configured_fallback_enabled: bool,
     device_statuses: Vec<execution_router::DeviceStatus>,
 ) -> ServerReadinessResponse {
+    let real_server_inference_ready = active_model_supports_shared_inference(active_model.as_ref());
     let active_model_summary = active_model.as_ref().map(|metadata| ServerReadinessActiveModel {
         model_id: metadata.model_id.clone(),
         model_path: metadata.model_path.clone(),
@@ -784,16 +1096,12 @@ fn build_server_readiness_response(
     });
     let selected_backend = active_model.as_ref().map(|metadata| metadata.device.clone());
 
-    let real_server_inference_ready = false;
     let batch_inference_ready = false;
     let simulated_inference_enabled = false;
-    let reason = if model_memory.active_model_id.is_none() {
-        Some("no_active_model".to_string())
-    } else if !real_server_inference_ready {
-        Some("server_batch_inference_not_implemented".to_string())
-    } else {
-        None
-    };
+    let reason = shared_engine_readiness_reason(
+        model_memory.active_model_id.as_deref(),
+        real_server_inference_ready,
+    );
     let ready = model_memory.active_model_id.is_some()
         && real_server_inference_ready
         && !simulated_inference_enabled;
@@ -822,13 +1130,20 @@ fn build_server_readiness_response(
             real_server_inference_ready,
             batch_inference_ready,
             simulated_inference_enabled,
-            runtime_path: "unavailable".to_string(),
-            unavailable_reason:
-                "batch inference rejects requests until a real server inference engine is wired"
-                    .to_string(),
+            runtime_path: if real_server_inference_ready {
+                "shared_local_inference_engine".to_string()
+            } else {
+                "unavailable".to_string()
+            },
+            unavailable_reason: if real_server_inference_ready {
+                "available".to_string()
+            } else {
+                "no active verified model is loaded for the shared local inference engine"
+                    .to_string()
+            },
         },
         claim_boundary: ServerReadinessClaimBoundary {
-            server_ready_claimed: false,
+            server_ready_claimed: ready,
             dense_regular_llm_cuda_inference_claimed: false,
             bitnet_packed_i2s_qk256_proof: false,
             speedup_claim: false,
@@ -1002,7 +1317,11 @@ fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_server_readiness_response, parse_device};
+    use super::{
+        ChatCompletionMessage, ChatCompletionRequest, ChatCompletionUsage,
+        build_server_readiness_response, build_server_shared_engine_receipt,
+        generation_config_from_chat_request, parse_device, render_chat_completion_prompt,
+    };
     use bitnet_common::Device;
     use std::time::SystemTime;
 
@@ -1055,7 +1374,7 @@ mod tests {
     }
 
     #[test]
-    fn server_readiness_with_active_model_still_fails_until_real_engine() {
+    fn server_shared_engine_readiness_with_active_model_is_ready_for_non_streaming_chat() {
         let response = build_server_readiness_response(
             ModelMemoryStats {
                 total_models: 1,
@@ -1082,16 +1401,115 @@ mod tests {
             Vec::new(),
         );
 
-        assert!(!response.ready);
-        assert_eq!(response.status, "not_ready");
-        assert_eq!(response.reason.as_deref(), Some("server_batch_inference_not_implemented"));
+        assert!(response.ready);
+        assert_eq!(response.status, "ready");
+        assert_eq!(response.reason, None);
         assert!(response.model.default_model_configured);
         assert_eq!(response.model.active_model_id.as_deref(), Some("model-1"));
         assert_eq!(response.backend.selected_backend.as_deref(), Some("Cuda(0)"));
         assert!(!response.backend.configured_fallback_enabled);
-        assert!(!response.inference.real_server_inference_ready);
-        assert_eq!(response.inference.runtime_path, "unavailable");
+        assert!(response.inference.real_server_inference_ready);
+        assert!(!response.inference.batch_inference_ready);
+        assert_eq!(response.inference.runtime_path, "shared_local_inference_engine");
+        assert_eq!(response.inference.unavailable_reason, "available");
+        assert!(response.claim_boundary.server_ready_claimed);
         assert!(!response.claim_boundary.dense_regular_llm_cuda_inference_claimed);
         assert!(!response.claim_boundary.bitnet_packed_i2s_qk256_proof);
+        assert!(!response.claim_boundary.speedup_claim);
+        assert!(!response.claim_boundary.full_cuda_residency_claimed);
+    }
+
+    #[test]
+    fn server_shared_engine_renders_qwen_chatml_prompt() {
+        let request = ChatCompletionRequest {
+            model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            messages: vec![ChatCompletionMessage {
+                role: "user".to_string(),
+                content: "Explain deferred revenue.".to_string(),
+            }],
+            max_tokens: Some(16),
+            temperature: Some(0.0),
+            top_p: Some(1.0),
+            stream: Some(false),
+        };
+
+        let (rendered, template) = render_chat_completion_prompt(&request).unwrap();
+
+        assert_eq!(template, "chatml");
+        assert!(rendered.contains("<|im_start|>user"));
+        assert!(rendered.contains("Explain deferred revenue."));
+        assert!(rendered.ends_with("<|im_start|>assistant\n"));
+    }
+
+    #[test]
+    fn server_shared_engine_rejects_invalid_generation_config() {
+        let request = ChatCompletionRequest {
+            model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            messages: vec![ChatCompletionMessage {
+                role: "user".to_string(),
+                content: "Hi".to_string(),
+            }],
+            max_tokens: Some(0),
+            temperature: Some(0.0),
+            top_p: Some(1.0),
+            stream: Some(false),
+        };
+
+        let error = generation_config_from_chat_request(&request).unwrap_err();
+
+        assert_eq!(error, "max_tokens must be greater than zero");
+    }
+
+    #[test]
+    fn server_shared_engine_receipt_preserves_claim_boundaries() {
+        let request = ChatCompletionRequest {
+            model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            messages: vec![ChatCompletionMessage {
+                role: "user".to_string(),
+                content: "What is working capital?".to_string(),
+            }],
+            max_tokens: Some(16),
+            temperature: Some(0.0),
+            top_p: Some(1.0),
+            stream: Some(false),
+        };
+        let usage =
+            ChatCompletionUsage { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 };
+        let metadata = ModelMetadata {
+            model_id: "model-1".to_string(),
+            model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+            device: "Cuda(0)".to_string(),
+            quantization_type: "Q8_0".to_string(),
+            loaded_at: SystemTime::UNIX_EPOCH,
+            size_mb: 512,
+            parameters: 500_000_000,
+            context_length: 32_768,
+            inference_count: 0,
+            avg_tokens_per_second: 0.0,
+        };
+
+        let receipt = build_server_shared_engine_receipt(
+            "request-1",
+            &request,
+            &metadata,
+            "chatml",
+            &usage,
+            25,
+        );
+
+        assert_eq!(receipt.receipt_kind, "server_shared_engine_chat_completion");
+        assert_eq!(receipt.runtime_path, "shared_local_inference_engine");
+        assert_eq!(receipt.selected_route, "shared_validated_local_inference_engine");
+        assert_eq!(receipt.selected_backend, "Cuda(0)");
+        assert!(!receipt.fallback_used);
+        assert!(!receipt.simulated_inference);
+        assert!(!receipt.streaming);
+        assert_eq!(receipt.prompt_tokens, 12);
+        assert_eq!(receipt.completion_tokens, 4);
+        assert_eq!(receipt.total_ms, 25);
+        assert!(!receipt.speedup_claim);
+        assert!(!receipt.full_cuda_residency_claimed);
+        assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
+        assert!(!receipt.bitnet_packed_i2s_qk256_proof);
     }
 }
