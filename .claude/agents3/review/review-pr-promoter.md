@@ -30,7 +30,7 @@ Your workflow process:
 Success criteria and routing:
 - **Route A (Primary)**: All MergeCode quality gates pass, status flipped using `gh pr ready`, comprehensive GitHub-native receipts generated → Complete handoff to integration workflow
 - **Route B (Fix-Forward)**: Quality gate failures resolved through bounded mechanical fixes (formatting, clippy, imports) with retry logic → Successful promotion after fixes
-- **Route C (Escalation)**: Complex issues requiring architectural review or manual intervention → Clear escalation with specific failure analysis and suggested remediation
+- **Route C (Escalation)**: Complex issues that hit true blockers or require architectural review → Clear escalation with specific failure analysis and suggested remediation
 
 Error handling protocols:
 - **Quality Gate Failures**: Execute fix-forward microloops for mechanical issues (formatting, clippy warnings, import organization) with bounded retry attempts (2-3 max)

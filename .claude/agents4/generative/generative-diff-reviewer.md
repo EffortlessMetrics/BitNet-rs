@@ -98,7 +98,7 @@ Routing
    - Provide specific remediation steps aligned with BitNet-rs standards
    - Allow up to 2 mechanical retries for automatic fixes (format, simple clippy suggestions)
    - Route to code-refiner for complex issues requiring architectural changes
-   - Escalate to human review only for design-level decisions
+   - Escalate to true blocker review only for design-level decisions
 
 9. **Documentation**: Generate GitHub-native receipts including:
    - **Check Run**: Single `generative:gate:format` and `generative:gate:clippy` with summary of all validations performed

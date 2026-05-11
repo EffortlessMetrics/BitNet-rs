@@ -64,7 +64,9 @@ When security vulnerabilities are detected in BitNet-rs dependencies, you will:
 - NEXT → `rebase-helper` if dependency updates require fresh rebase
 - NEXT → `build-validator` if major dependency changes need comprehensive validation
 - FINALIZE → `integrative:gate:security` when all vulnerabilities resolved and performance validated
-- Flag unresolvable vulnerabilities for manual intervention with detailed neural network impact analysis
+- Flag only true blocker vulnerabilities for human escalation, with detailed
+  neural network impact analysis and the attempted automated remediation
+  evidence.
 
 **AUTHORITY CONSTRAINTS**:
 - Mechanical fixes only: version bumps, patches, documented workarounds

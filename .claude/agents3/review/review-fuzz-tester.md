@@ -90,7 +90,7 @@ For each fuzzing session, provide:
 
 **Draft→Ready PR Integration:**
 - Run fuzzing as part of comprehensive quality validation before promoting Draft PRs to Ready
-- Ensure all fuzz test reproducers pass before PR approval
+- Ensure all fuzz test reproducers pass before PR promotion or merge
 - Create GitHub check runs for fuzz test results with clear pass/fail status
 - Document any discovered edge cases in PR comments with clear remediation steps
 - Validate that fixes don't introduce performance regressions via benchmark comparison
