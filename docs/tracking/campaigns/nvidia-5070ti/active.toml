@@ -3492,7 +3492,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-047"
-status = "in_progress"
+status = "pr_open"
+pr = 4492
+head_sha = "a9f67f0aabd264dd2889ae107171bb86d544f72c"
 branch = "codex/nvidia-5070ti/CUDA-DENSE-047-qwen15-all-layer-plan"
 stackable = false
 review_mode = "codex_premerge"
