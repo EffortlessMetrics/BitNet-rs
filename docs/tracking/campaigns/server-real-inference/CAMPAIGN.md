@@ -24,7 +24,25 @@ Replace server-side simulated inference surfaces with real engine execution or e
 
 | Work item | Status | Notes |
 |---|---|---|
-| SERVER-001 | proposed | Wire single-request server inference to real engine surfaces or explicit 501/503. |
+| SERVER-001 | merged | Wired single-request server inference surfaces to real execution or explicit unavailable responses; no simulated response path in non-test builds. |
+| SERVER-002 | merged | Failed closed placeholder model lifecycle scaffolds that previously reported HuggingFace/cache readiness without real I/O or a real inference engine. |
+| SERVER-003 | merged | Added `/readiness` and `/v1/readiness` certification responses for active model, backend, inference, fallback, and claim-boundary state. |
+| SERVER-004 | merged | Added `POST /v1/chat/completions` as an OpenAI-compatible surface that returns `SERVER_INFERENCE_UNAVAILABLE` with readiness/certification details until real inference is wired. |
+
+There is no active next item in `active.toml` after `SERVER-004`. Add a new
+campaign work item before reopening server runtime work.
+
+## Current Claim Boundary
+
+- Server endpoints must not return fake model output in non-test builds.
+- `/v1/chat/completions` is a compatibility surface only; it does not claim real
+  chat inference, server answer readiness, CUDA execution, speedup, or full
+  residency.
+- `/readiness` and `/v1/readiness` expose fail-closed certification state until
+  the server shares the validated CLI loader, tokenizer, planner, receipt, and
+  fallback paths.
+- Future server-answer items must keep hardware kernel claims separate from
+  server routing claims.
 
 ## Review Policy
 
