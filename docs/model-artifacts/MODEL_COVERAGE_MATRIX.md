@@ -99,6 +99,23 @@ remain scoped to verified BitNet, dense SLM, and selected small-LLM work.
 | `modern_llm_multimodal_placeholder` | Multimodal frontier-scale placeholder | `registered` | Docs-only future contract; modality boundaries and hardware envelope must be specified before runtime work. |
 | `modern_llm_placeholder_contract` | Generic docs-only placeholder | `registered` | Existing generic placeholder for future concrete artifact contracts. |
 
+## CLI Surface
+
+`MODEL-COVERAGE-006` exposes the matrix through the model command surface:
+
+```powershell
+bitnet model coverage
+bitnet model coverage dense_qwen25_05b_q8_cuda
+bitnet model coverage bitnet_official_2b_i2s_qk256 --json
+```
+
+The command is read-only. It reports current proof tier, routes, required
+receipts, next proof, and claim boundary from
+`ci/model-artifacts/model-coverage-matrix.toml`. It does not verify artifacts,
+run inference, select a backend, execute CUDA, or upgrade answer, speedup,
+server, or residency claims. If the matrix is outside the working directory,
+pass `--matrix <PATH>` or set `BITNET_MODEL_COVERAGE_MATRIX`.
+
 ## Validation
 
 Run:
