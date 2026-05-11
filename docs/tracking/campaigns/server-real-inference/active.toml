@@ -88,3 +88,42 @@ must_not_claim = [
   "Any hardware acceleration works.",
   "Server performance is proven.",
 ]
+
+[[work_item]]
+id = "SERVER-003"
+status = "pr_open"
+pr = 4477
+branch = "codex/server-003-readiness-certification"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SERVER-002"]
+acceptance = "Add a server readiness/certification endpoint that exposes active model, backend, inference, fallback, and claim-boundary state while failing closed until a real server inference engine is wired."
+commands = [
+  "cargo fmt -p bitnet-server -- --check",
+  "cargo test --locked -p bitnet-server --no-default-features --features cpu server_readiness -- --nocapture",
+  "cargo test --locked -p bitnet-server --no-default-features --features cpu",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check server-real-inference",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-server/**",
+  "docs/tracking/campaigns/server-real-inference/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+]
+may_claim = [
+  "Server readiness/certification exposes fail-closed active model, backend, inference, fallback, and claim-boundary state.",
+]
+must_not_claim = [
+  "Server answer readiness is proven.",
+  "Any hardware acceleration works.",
+  "Server performance is proven.",
+  "A dense or BitNet CUDA server path is implemented.",
+]
