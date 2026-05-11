@@ -1,0 +1,15 @@
+timestamp = "2026-05-11T00:31:03Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-002"
+event = "merged"
+actor = "codex"
+pr = 4463
+head_sha = "a9344ca33f21d56a178fcfa197a14a85928c9f8d"
+merge_sha = "d1b4165c8c9cbc058bb590cfb8545f640c704b95"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4463 merged MODEL-COVERAGE-002 BitNet-family coverage rows.",
+  "The merged slice adds registry/docs/validator coverage for TL1, TL2, GPU-packed int2, diagnostic 1.58-bit variants, and MCU fixtures without runtime behavior changes.",
+]
