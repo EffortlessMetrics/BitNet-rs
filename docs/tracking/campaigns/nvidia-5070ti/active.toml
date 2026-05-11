@@ -3492,9 +3492,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-047"
-status = "pr_open"
+status = "merged"
 pr = 4492
-head_sha = "a9f67f0aabd264dd2889ae107171bb86d544f72c"
+head_sha = "58f1fdedd6018efdc27a7fa854650cecf6c9c25e"
+merge_sha = "4b7f1a1baf25df156c164f7d2c961cc1e37a0c0a"
 branch = "codex/nvidia-5070ti/CUDA-DENSE-047-qwen15-all-layer-plan"
 stackable = false
 review_mode = "codex_premerge"
