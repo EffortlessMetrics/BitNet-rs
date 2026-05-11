@@ -85,6 +85,20 @@ before any user-facing or speed claim is allowed.
 | `small_llm_llama32_3b_candidate` | Llama 3.2 3B-class GGUF candidate | `registered` | Llama-family selected small-LLM row; needs its own memory, CPU, KV, and CUDA plan receipts. |
 | `small_llm_gemma_2b_candidate` | Gemma 2B-class GGUF candidate | `registered` | Alternate architecture selected small-LLM row; cannot inherit Qwen, Llama, or BitNet proof. |
 
+## Modern LLM Placeholders
+
+`MODEL-COVERAGE-005` expands docs-only modern LLM placeholders without naming a
+specific public artifact or claiming current hardware support. These rows exist
+to keep future proof ladders explicit while the current 5070 Ti/local CPU lanes
+remain scoped to verified BitNet, dense SLM, and selected small-LLM work.
+
+| Entry | Artifact lane | Current tier | Boundary |
+|---|---|---|---|
+| `modern_llm_dense_frontier_placeholder` | Dense frontier-scale placeholder | `registered` | Docs-only future contract; no local runtime, CUDA, answer, speedup, or server claim. |
+| `modern_llm_moe_frontier_placeholder` | MoE frontier-scale placeholder | `registered` | Docs-only future contract; expert routing and memory envelope must be specified before runtime work. |
+| `modern_llm_multimodal_placeholder` | Multimodal frontier-scale placeholder | `registered` | Docs-only future contract; modality boundaries and hardware envelope must be specified before runtime work. |
+| `modern_llm_placeholder_contract` | Generic docs-only placeholder | `registered` | Existing generic placeholder for future concrete artifact contracts. |
+
 ## Validation
 
 Run:
@@ -99,3 +113,5 @@ packed proof, TL1/TL2 rows claiming I2_S/QK256 proof, unsupported entries
 claiming answer readiness, or SLM candidates claiming dense CUDA proof without
 a `dense_regular_llm_cuda` accelerator route. Selected small-LLM rows must also
 require a `memory_envelope` receipt before later proof work can build on them.
+Modern LLM docs-only placeholders must stay route-free and require an
+`unsupported_on_current_hardware_receipt`.

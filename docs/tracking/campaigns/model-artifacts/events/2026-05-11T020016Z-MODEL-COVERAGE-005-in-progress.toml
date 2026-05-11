@@ -1,0 +1,11 @@
+timestamp = "2026-05-11T02:00:16Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-005"
+event = "in_progress"
+actor = "codex"
+branch = "codex/model-coverage-005-modern-placeholders"
+
+notes = [
+  "Started MODEL-COVERAGE-005 to expand the cross-family model coverage matrix with docs-only modern LLM placeholders.",
+  "Scope is registry, docs, validator, and tracker only; no concrete public artifact, runtime inference, tokenizer, loader, transformer, QK256, CUDA kernel, server, speedup, or residency behavior changes.",
+]
