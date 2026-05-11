@@ -757,10 +757,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "MODEL-COVERAGE-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/model-coverage-004-small-llms"
 pr = 4467
 head_sha = "c92a35c09040e96709279a1ffb11202e1e770cf0"
+merge_sha = "cf6c38d927bd567a721ba8b52437dc5fddf13084"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
