@@ -169,3 +169,52 @@ must_not_claim = [
   "Any hardware acceleration works.",
   "Server performance is proven.",
 ]
+
+[[work_item]]
+id = "SERVER-005"
+status = "proposed"
+branch = "codex/server-real-inference/SERVER-005-shared-engine-runtime"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SERVER-004"]
+acceptance = "Wire one non-streaming server chat-completions request path to the same validated local inference engine surface used by CLI ask/chat for already verified product-ready models, preserving strict model verification, tokenizer/prompt authority, planner route, fallback rejection, per-request receipt semantics, and explicit unavailable responses when no verified engine configuration is present."
+commands = [
+  "cargo fmt -p bitnet-server -- --check",
+  "cargo test --locked -p bitnet-server --no-default-features --features cpu server_shared_engine -- --nocapture",
+  "cargo test --locked -p bitnet-server --no-default-features --features cpu",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check server-real-inference",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-receipts/**",
+  "docs/tracking/campaigns/server-real-inference/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+]
+may_claim = [
+  "One non-streaming server chat-completions path uses the same verified local inference surface as CLI ask/chat when a supported model/backend is explicitly configured.",
+  "Server request receipts preserve model, tokenizer, prompt, planner route, fallback, and claim-boundary fields from the shared engine path.",
+  "Unsupported or unconfigured server requests still fail closed with readiness/certification details.",
+]
+must_not_claim = [
+  "Server streaming is implemented.",
+  "Server performance is proven.",
+  "A new model family is answer-ready.",
+  "CUDA speedup is accepted.",
+  "Full CUDA residency is proven.",
+  "BitNet QK256, dense CUDA, tokenizer, loader, transformer, or kernel math changed.",
+]
