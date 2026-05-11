@@ -91,8 +91,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SERVER-003"
-status = "pr_open"
+status = "merged"
 pr = 4477
+merge_sha = "b3f16139042af4e0aefe35ac973db659c936dcd5"
 branch = "codex/server-003-readiness-certification"
 stackable = false
 review_mode = "codex_premerge"
