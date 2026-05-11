@@ -463,7 +463,7 @@ rayon = "1.11.0"
 
 # Tensor operations
 candle-core = { version = "0.9.1", default-features = false }
-candle-nn = { version = "0.9.1", default-features = false }
+candle-nn = { version = "0.10.2", default-features = false }
 candle-transformers = { version = "0.9.1", default-features = false }
 
 # Serialization formats
