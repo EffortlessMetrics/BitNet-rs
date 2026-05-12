@@ -91,6 +91,8 @@ struct Exception {
     allowed: bool,
     owner: String,
     #[serde(default)]
+    issue: String,
+    #[serde(default)]
     reason: String,
     #[serde(default)]
     created: String,
@@ -247,6 +249,21 @@ pub fn check(
 
     // Validate exceptions independently.
     for ex in &exceptions.exceptions {
+        if ex.owner.trim().is_empty() || ex.owner.trim().eq_ignore_ascii_case("todo") {
+            report.errors.push(format!("exception `{}` has placeholder owner", ex.id));
+        }
+        if ex.issue.trim().is_empty() || ex.issue.trim().eq_ignore_ascii_case("todo") {
+            report.errors.push(format!("exception `{}` has placeholder issue", ex.id));
+        }
+        if ex.reason.trim().is_empty() || ex.reason.trim().eq_ignore_ascii_case("todo") {
+            report.errors.push(format!("exception `{}` has placeholder reason", ex.id));
+        }
+        if ex.created.trim().is_empty() {
+            report.errors.push(format!("exception `{}` missing created date", ex.id));
+        }
+        if ex.review_after.trim().is_empty() {
+            report.errors.push(format!("exception `{}` missing review_after date", ex.id));
+        }
         if !lane_ids.contains(ex.lane.as_str()) {
             report
                 .errors
@@ -439,10 +456,38 @@ kind = "default_pr_compile_lane"
 lane = "x"
 allowed = true
 owner = "o"
+issue = "ci-expiry-test"
+reason = "test"
+created = "1999-01-01"
+review_after = "1999-01-01"
 expires = "1999-01-01"
 "#;
         let ex = write_tmp("ex_exp.toml", ex_body);
         let r = check(&wl, &ex, Path::new("nope"), None).unwrap();
         assert!(r.errors.iter().any(|e| e.contains("expired")));
+    }
+
+    #[test]
+    fn rejects_placeholder_exception_metadata() {
+        let wl = write_tmp("wl_placeholder.toml", minimal_whitelist());
+        let ex_body = r#"
+schema_version = "1.0"
+[[exception]]
+id = "placeholder"
+kind = "default_pr_compile_lane"
+lane = "x"
+allowed = true
+owner = "TODO"
+issue = "TODO"
+reason = "TODO"
+expires = "3000-01-01"
+"#;
+        let ex = write_tmp("ex_placeholder.toml", ex_body);
+        let r = check(&wl, &ex, Path::new("nope"), None).unwrap();
+        assert!(r.errors.iter().any(|e| e.contains("placeholder owner")));
+        assert!(r.errors.iter().any(|e| e.contains("placeholder issue")));
+        assert!(r.errors.iter().any(|e| e.contains("placeholder reason")));
+        assert!(r.errors.iter().any(|e| e.contains("missing created date")));
+        assert!(r.errors.iter().any(|e| e.contains("missing review_after date")));
     }
 }
