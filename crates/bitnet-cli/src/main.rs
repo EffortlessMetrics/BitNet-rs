@@ -91,6 +91,7 @@ mod mac;
 mod model_cache;
 mod planner_receipts;
 mod score;
+mod simple_generation;
 pub mod tokenizer_discovery;
 
 use exit::*;
@@ -3787,26 +3788,13 @@ async fn run_simple_generation(
     use bitnet_tokenizers::Tokenizer;
     use std::sync::Arc;
 
-    if let Some(path) = &qwen_trace_jsonl {
-        unsafe {
-            std::env::set_var("BITNET_QWEN_TRACE_JSONL", path);
-        }
+    simple_generation::environment::QwenTraceEnv {
+        jsonl_path: qwen_trace_jsonl.as_deref(),
+        layer: qwen_trace_layer,
+        full_prompt: qwen_trace_full_prompt,
+        prompt_ids: qwen_trace_prompt_ids.as_deref(),
     }
-    if let Some(layer) = qwen_trace_layer {
-        unsafe {
-            std::env::set_var("BITNET_QWEN_TRACE_LAYER", layer.to_string());
-        }
-    }
-    if qwen_trace_full_prompt {
-        unsafe {
-            std::env::set_var("BITNET_QWEN_TRACE_FULL_PROMPT", "1");
-        }
-    }
-    if let Some(prompt_ids) = &qwen_trace_prompt_ids {
-        unsafe {
-            std::env::set_var("BITNET_QWEN_TRACE_PROMPT_IDS", prompt_ids);
-        }
-    }
+    .apply();
 
     answer_corpus_child_phase("process_start", serde_json::json!({ "command": "run" }));
     answer_corpus_child_phase(
@@ -3821,23 +3809,8 @@ async fn run_simple_generation(
         }),
     );
 
-    // Validate --model-format
-    match model_format.as_str() {
-        "auto" | "gguf" | "safetensors" => {}
-        other => {
-            anyhow::bail!(
-                "Invalid --model-format '{}'. Supported values: auto, gguf, safetensors",
-                other
-            );
-        }
-    }
-
-    // Resolve model format: auto-detect from path when format is "auto"
-    let is_hf_directory = match model_format.as_str() {
-        "gguf" => false,
-        "safetensors" => true,
-        _ => model_path.is_dir(),
-    };
+    let model_format_mode = simple_generation::model_format::ModelFormatMode::parse(&model_format)?;
+    let is_hf_directory = model_format_mode.is_hf_directory(&model_path);
 
     // Simple logit step for dumping
     #[derive(Debug, serde::Serialize)]
@@ -3848,23 +3821,11 @@ async fn run_simple_generation(
         chosen_id: Option<u32>,
     }
 
-    // Set deterministic mode if requested
-    if deterministic {
-        unsafe {
-            std::env::set_var("BITNET_DETERMINISTIC", "1");
-            std::env::set_var("RAYON_NUM_THREADS", "1");
-            if threads > 0 {
-                std::env::set_var("RAYON_NUM_THREADS", threads.to_string());
-            }
-        }
-    }
+    simple_generation::environment::apply_deterministic_env(deterministic, threads);
 
     // Set strict loader mode if requested (AC1: fail-fast with enhanced loader + strict tolerance)
+    simple_generation::environment::apply_strict_loader_env(strict_loader);
     if strict_loader {
-        unsafe {
-            std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");
-            std::env::set_var("BITNET_STRICT_MODE", "1");
-        }
         debug!("Strict loader enabled (BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)");
     }
 
@@ -3922,30 +3883,14 @@ async fn run_simple_generation(
     }
     let cuda_memory_before_bytes =
         strict_cuda_backend_selected.then(|| nvidia_smi_memory_used_bytes(Some(0))).flatten();
-    unsafe {
-        std::env::set_var("BITNET_REQUESTED_BACKEND", backend_identity.requested_backend.as_str());
-        std::env::set_var("BITNET_SELECTED_BACKEND", backend_identity.selected_backend.as_str());
-        std::env::set_var("BITNET_RUNTIME_API", backend_identity.runtime_api.as_str());
-        if strict_cuda_backend_selected {
-            std::env::set_var("BITNET_STRICT_CUDA_BACKEND", "1");
-        } else {
-            std::env::remove_var("BITNET_STRICT_CUDA_BACKEND");
-        }
-    }
+    simple_generation::environment::apply_backend_identity_env(
+        backend_identity.requested_backend.as_str(),
+        backend_identity.selected_backend.as_str(),
+        backend_identity.runtime_api.as_str(),
+        strict_cuda_backend_selected,
+    );
 
-    // Parse and resolve template type
-    use bitnet_inference::TemplateType;
-    let template_type: TemplateType = if prompt_template == "auto" {
-        // Auto-detect will be done after loading tokenizer
-        TemplateType::Instruct // Default fallback
-    } else {
-        prompt_template.parse().with_context(|| {
-            format!(
-                "Invalid prompt template '{}'. Supported: raw, instruct, llama3-chat, bitnetcpp-answer",
-                prompt_template
-            )
-        })?
-    };
+    let template_type = simple_generation::prompt::parse_prompt_template(&prompt_template)?;
 
     if is_hf_directory {
         println!("Loading HuggingFace model from directory: {}", model_path.display());
@@ -4167,23 +4112,13 @@ async fn run_simple_generation(
         }),
     );
 
-    // Auto-detect template if needed
-    let template_type = if prompt_template == "auto" {
-        let path_template =
-            TemplateType::detect_from_paths(Some(&model_path), tokenizer_path.as_deref());
-        if matches!(path_template, TemplateType::BitnetCppAnswer) {
-            debug!("Auto-detected bitnetcpp-answer template (model path matches BitNet)");
-            TemplateType::BitnetCppAnswer
-        } else if tokenizer.token_to_id("<|eot_id|>").is_some() {
-            debug!("Auto-detected llama3-chat template (tokenizer has <|eot_id|>)");
-            TemplateType::Llama3Chat
-        } else {
-            debug!("Auto-detected instruct template (fallback)");
-            TemplateType::Instruct
-        }
-    } else {
-        template_type
-    };
+    let template_type = simple_generation::prompt::resolve_prompt_template(
+        &prompt_template,
+        template_type,
+        &model_path,
+        tokenizer_path.as_deref(),
+        tokenizer.as_ref(),
+    );
 
     // Format prompt using the template
     answer_corpus_child_phase(
@@ -4204,35 +4139,19 @@ async fn run_simple_generation(
         }),
     );
 
-    // Get template's default stop sequences and merge with manual stops
-    let template_stops = template_type.default_stop_sequences();
-    let mut all_stop_sequences = stop.clone();
-    for template_stop in template_stops {
-        if !all_stop_sequences.contains(&template_stop) {
-            all_stop_sequences.push(template_stop);
-        }
-    }
-
-    // Resolve template stop sequences to token IDs and merge with manual stop IDs
-    let template_stop_ids = template_type.resolve_stop_token_ids(tokenizer.as_ref());
-    let mut all_stop_ids = stop_id.clone();
-    for template_id in template_stop_ids {
-        if !all_stop_ids.contains(&template_id) {
-            all_stop_ids.push(template_id);
-        }
-    }
+    let all_stop_sequences = simple_generation::prompt::merge_stop_sequences(&stop, template_type);
+    let all_stop_ids = simple_generation::prompt::merge_stop_token_ids(
+        &stop_id,
+        template_type,
+        tokenizer.as_ref(),
+    );
 
     debug!(
         "Template: {} | Stop sequences: {:?} | Stop IDs: {:?}",
         template_type, all_stop_sequences, all_stop_ids
     );
 
-    // Determine BOS policy (user flag wins, else template default)
-    let bos_policy = if bos {
-        true // explicit --bos flag
-    } else {
-        template_type.should_add_bos() // template default
-    };
+    let bos_policy = simple_generation::prompt::bos_policy(bos, template_type);
 
     // Tokenize formatted prompt with proper BOS policy and special token parsing
     let parse_special = template_type.parse_special();
