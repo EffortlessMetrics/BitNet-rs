@@ -2027,8 +2027,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM258V-003"
-status = "pr_open"
+status = "merged"
 pr = 4535
+merge_sha = "9c8029e74f2b67a0fa3a4c9e4794b4fccc6f4ce2"
 branch = "codex/lunar-lake/SLM258V-003-dense-slm-provenance"
 stackable = false
 review_mode = "codex_premerge"
@@ -2070,4 +2071,46 @@ must_not_claim = [
   "BitNet QK256/I2_S proof is affected.",
   "Arc 140V or Intel NPU execution is proven.",
   "Acceleration or performance is proven.",
+]
+
+[[work_item]]
+id = "SLM258V-004"
+status = "ready"
+branch = "codex/lunar-lake/SLM258V-004-dense-slm-phase-receipts"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM258V-003"]
+acceptance = "Record 258V dense Qwen SLM CPU phase receipts after the clean-provenance answer smoke, keeping dense SLM phase timing separate from BitNet QK256/I2_S receipts and avoiding broad SLM quality, Arc/NPU execution, acceleration, or performance claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet receipt_identity -- --nocapture",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "Dense Qwen SLM phase timing receipts exist for the 258V CPU path.",
+  "Dense SLM phase receipts remain separate from BitNet QK256/I2_S receipts.",
+]
+must_not_claim = [
+  "Broad dense SLM chat quality is proven.",
+  "BitNet QK256/I2_S proof is affected.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Acceleration or sustained performance is proven.",
 ]

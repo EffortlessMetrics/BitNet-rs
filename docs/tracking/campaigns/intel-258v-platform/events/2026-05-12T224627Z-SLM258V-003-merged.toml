@@ -1,0 +1,14 @@
+timestamp = "2026-05-12T22:46:27Z"
+campaign = "intel-258v-platform"
+item = "SLM258V-003"
+event = "merged"
+pr = 4535
+actor = "codex"
+merge_sha = "9c8029e74f2b67a0fa3a4c9e4794b4fccc6f4ce2"
+summary = "Merged SLM258V-003, separating dense Qwen SLM receipt provenance from BitNet I2_S/QK256 fields."
+notes = [
+  "The corrected 258V dense SLM answer-smoke receipt records clean dense SLM provenance with fallback_used=false.",
+  "Dense Qwen child receipts use dense-qwen-cpu-reference, gguf_dense_q8_0, and dense_slm provenance instead of BitNet I2_S/QK256 fields.",
+  "SLM258V-004 is ready to record dense SLM CPU phase receipts separately from BitNet QK256/I2_S phase evidence.",
+  "Broad dense SLM chat quality, BitNet QK256/I2_S proof, Arc 140V execution, Intel NPU execution, acceleration, and sustained performance remain unclaimed.",
+]

@@ -70,7 +70,8 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | SLM258V-001 | merged | Add a Lunar Lake dense SLM artifact manifest as a separate dense-model path, not a BitNet QK256/I2_S receipt; merged in #4527. |
 | LNL258V-004 | merged | Add Windows Level Zero loader fallback and refresh the 258V platform probe so Arc 140V records Level Zero identity and PCI ID `0x64A0`; merged in #4148. |
 | SLM258V-002 | merged | Run the pinned Qwen2.5 dense SLM candidate through a strict 258V CPU answer smoke with `fallback_used=false`; current #4530 evidence is diagnostic until BitNet I2_S provenance is removed from the dense SLM receipt; merged in #4530. |
-| SLM258V-003 | pr_open | Separate dense Qwen SLM receipt provenance from BitNet I2_S/QK256 kernel/layout fields and rerun the 258V Qwen2.5 CPU smoke with clean dense SLM provenance; open in #4535. |
+| SLM258V-003 | merged | Separate dense Qwen SLM receipt provenance from BitNet I2_S/QK256 kernel/layout fields and rerun the 258V Qwen2.5 CPU smoke with clean dense SLM provenance; merged in #4535. |
+| SLM258V-004 | ready | Record dense Qwen SLM phase timing receipts on the 258V CPU path, keeping dense SLM phase evidence separate from BitNet QK256/I2_S receipts. |
 
 ## Review Policy
 
