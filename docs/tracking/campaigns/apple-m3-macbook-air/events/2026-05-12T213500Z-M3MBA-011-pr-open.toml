@@ -1,0 +1,13 @@
+timestamp = "2026-05-12T21:35:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-011"
+event = "pr_open"
+pr = 4541
+head_sha = "ea92a6d27d935557e3d39f567cc3f0a332257852"
+actor = "codex"
+
+notes = [
+  "Opened the roadmap-depth PR for the live M3 MacBook Air lane.",
+  "The PR adds explicit host-proof, dense-SLM-control, Mac-BitNet-artifact, and strict-proof-handoff tracks plus a current PR stack.",
+  "Scope remains docs/tracker only: no model inference, large artifact download, runtime change, BitNet acceptance, M4 proof, or Apple Silicon performance claim.",
+]

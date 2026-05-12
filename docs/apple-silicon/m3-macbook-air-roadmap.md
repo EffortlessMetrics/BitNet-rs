@@ -71,6 +71,22 @@ docs/apple-silicon/apple-bitnet-artifact-sweep.md
 docs/tracking/campaigns/apple-bitnet-artifact-sweep/
 ```
 
+## Operating Tracks
+
+The M3 Air work is not one roadmap item. It is four coordinated tracks with
+different evidence standards:
+
+| Track | Owner items | What moves here | What stops it |
+|---|---|---|---|
+| Host proof | `M3MBA-002`, `M3MBA-003` | Machine profile, storage budget, cache root, Apple CPU/NEON receipt label, and no-inference proof. | Missing host facts, ambiguous cache root, or any need to weaken M4 receipt wording. |
+| Dense SLM control | `M3MBA-004A`, `M3MBA-004B`, `M3MBA-009` | Qwen smoke/operator receipts and cross-lane SLM comparison against M4 and CPU evidence. | No explicit M3 backend label, missing model/tokenizer hash, fallback ambiguity, or thermal/power context gaps. |
+| Mac BitNet artifacts | `M3MBA-005A`, `M3MBA-005B`, `M3MBA-005C`, `M3MBA-006`, `M3MBA-007`, `M3MBA-010` | Larger local downloads, source revisions, SHA256, tokenizer authority, reference-runner output, and cleanup state. | Dense control has not passed or produced an accepted blocker, storage headroom is unclear, or tokenizer authority is missing. |
+| Strict-proof handoff | `M3MBA-008` | Convert accepted artifact evidence into separate M4 proof work. | No accepted artifact exists, or the proposed handoff would imply M3 timing is M4 evidence. |
+
+The first two tracks protect the SLM lane. The third track uses the MacBook's
+available storage for BitNet qualification. The fourth track is deliberately
+thin: proof still belongs to a fresh M4 item with fresh M4 receipts.
+
 ## Roadmap Summary
 
 | Phase | Work item | Outcome | Evidence |
@@ -83,12 +99,32 @@ docs/tracking/campaigns/apple-bitnet-artifact-sweep/
 | 5 | `M3MBA-005A` | Official Microsoft 2B I2_S artifact identity | Source revision, filename, size, SHA256, cache root, storage context |
 | 6 | `M3MBA-005B` | Official Microsoft 2B I2_S tokenizer authority | Tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence |
 | 7 | `M3MBA-005C` | Official Microsoft 2B I2_S reference output decision | Reference-runner report, answer-gate result or failing prompt IDs, cleanup state |
-| 8 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
-| 9 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
-| 10 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
-| 11 | `M3MBA-009` | M3 SLM lane synthesis | Cross-lane report comparing M3 Air dense SLM receipts against M4 and 8250U SLM evidence |
-| 12 | `M3MBA-010` | Storage and cache hygiene audit | Artifact ledger audit with retained/deleted model state and free-space floor |
+| 8 | `M3MBA-010` | Storage and cache hygiene audit | Artifact ledger audit with retained/deleted model state and free-space floor |
+| 9 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
+| 10 | `M3MBA-009` | M3 SLM lane synthesis | Cross-lane report comparing M3 Air dense SLM receipts against M4 and 8250U SLM evidence |
+| 11 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
+| 12 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
 | 13 | `M3MBA-011` | Roadmap depth and stale-reference cleanup | Operating horizons, stop/go decisions, parallel lane policy, resource budget, and M3MBA authority alignment |
+
+## Current PR Stack
+
+The next sequence should be opened as small PRs, with each PR either merging
+evidence or naming a blocker:
+
+| Stack position | Item | PR shape | Blocks |
+|---:|---|---|---|
+| 1 | `M3MBA-002` | Commit the machine-profile receipt and free-space/cache-root facts. | Any live model receipt. |
+| 2 | `M3MBA-003` | Add or confirm `apple-m3-air-cpu-neon` receipt labeling. | Dense timing and MacBook-vs-M4 wording. |
+| 3 | `M3MBA-004A` | Run dense Qwen smoke with model/tokenizer/backend/fallback context. | BitNet downloads. |
+| 4 | `M3MBA-004B` | Run bounded dense operator profile with thermal, power, and allocation context. | Comparison-grade SLM synthesis and BitNet screening. |
+| 5 | `M3MBA-005A` | Download/hash the official Microsoft 2B I2_S artifact with storage evidence. | Tokenizer authority and reference output decisions. |
+| 6 | `M3MBA-005B` | Prove tokenizer/pre-tokenizer authority and bad/no-authority rejection. | Artifact acceptance. |
+| 7 | `M3MBA-005C` | Accept, reject, or block Microsoft 2B reference output. | Secondary candidates and handoff. |
+| 8 | `M3MBA-010` | Audit cache retention, deletion, and free-space floor. | Additional large downloads. |
+| 9 | `M3MBA-006` | Evaluate the smaller 0.7B control candidate. | Handoff completeness when Microsoft 2B is blocked or rejected. |
+| 10 | `M3MBA-009` | Compare M3 dense SLM evidence against M4 and CPU receipts. | SLM lane closeout only. |
+| 11 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Optional secondary evidence. |
+| 12 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts. | M4 proof work. |
 
 ## 2026-05-12 Tactical Plan
 
