@@ -1,0 +1,554 @@
+id = "apple-m3-macbook-air"
+title = "Apple M3 MacBook Air"
+status = "active"
+
+objective = "Turn the available M3 MacBook Air into a disciplined Apple Silicon lane for machine-profile evidence, dense SLM cross-checks, large BitNet artifact qualification, and M4 strict-proof handoff planning without converting MacBook receipts into M4 Mac mini performance or BitNet local-answer claims."
+
+end_state = [
+  "A real M3 MacBook Air machine-profile receipt is committed with inference_run=false.",
+  "M3 Air dense Qwen receipts use an explicit MacBook backend label and record power, thermal, storage, model, tokenizer, and fallback context.",
+  "Larger BitNet candidate downloads are accepted, rejected, or blocked with source, revision, size, SHA256, tokenizer authority, prompt output, and cleanup status.",
+  "Accepted artifacts feed separate M4 Mac mini strict Apple CPU/NEON proof items; M3 evidence does not become M4 evidence by wording.",
+  "The MacBook lane remains storage-aware and never commits model binaries.",
+]
+
+hard_constraints = [
+  "This is the Apple M3 MacBook Air lane, not the M4 Mac mini product, performance, or strict-proof lane.",
+  "Do not claim BitNet local-answer quality from dense Qwen SLM receipts.",
+  "Do not claim M4 Mac mini performance, broad Apple Silicon performance, QK256 support, full Apple Metal inference, Neural Engine execution, or MPSGraph model inference from this lane.",
+  "Do not weaken existing M4 receipt checks to make M3 receipts fit; add the smallest MacBook-specific label or validation path instead.",
+  "Do not add live model downloads, large artifact sweeps, or hardware timing runs to generic required CI.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M3MBA-001"
+status = "merged"
+branch = "codex/apple-m3-macbook-air/roadmap-campaign"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add the M3 MacBook Air campaign control plane, roadmap linkage, generated status, and first lifecycle event without running models or changing runtime behavior."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 MacBook Air lane has a campaign-local roadmap and tracker.",
+]
+must_not_claim = [
+  "Any model was run.",
+  "Any BitNet artifact was accepted.",
+  "M3 Air evidence proves M4 Mac mini performance.",
+]
+
+[[work_item]]
+id = "M3MBA-002"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-002-machine-profile"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-001"]
+acceptance = "Commit a real M3 MacBook Air machine-profile receipt with model identifier, chip, core split, memory, macOS version, free disk, cache root, power source, thermal state when available, CPU/NEON visibility, Metal visibility, MPSGraph visibility when available, and inference_run=false."
+commands = [
+  "sw_vers",
+  "sysctl -n machdep.cpu.brand_string hw.memsize hw.physicalcpu hw.perflevel0.physicalcpu hw.perflevel1.physicalcpu",
+  "system_profiler SPHardwareDataType SPDisplaysDataType SPPowerDataType",
+  "df -k . \"$HOME/Library/Caches\"",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air machine facts and storage budget are recorded.",
+]
+must_not_claim = [
+  "Model inference was run.",
+  "Dense SLM or BitNet answer quality is proven.",
+]
+
+[[work_item]]
+id = "M3MBA-003"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-003-receipt-label"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-002"]
+acceptance = "Add or confirm the smallest receipt validation path for apple-m3-air-cpu-neon, preserving existing apple-m4-cpu-neon checks and making MacBook timing impossible to label as M4 evidence."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli mac_receipts -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "models/**",
+]
+may_claim = [
+  "M3 Air receipts can use an explicit MacBook Apple CPU/NEON label.",
+]
+must_not_claim = [
+  "M3 Air receipts are M4 Mac mini receipts.",
+  "BitNet local-answer quality is proven.",
+]
+
+[[work_item]]
+id = "M3MBA-004A"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-003"]
+acceptance = "Run the dense Qwen2.5 0.5B Mac smoke path on M3 Air with the known model hash, tokenizer metadata, deterministic settings, explicit backend label, fallback status, power and thermal context, storage before/after, receipts-check output, and dense-only claim boundary."
+commands = [
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set smoke --backend-label apple-m3-air-cpu-neon --quiet",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check <receipt> --json",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "models/**",
+]
+may_claim = [
+  "The dense Qwen SLM smoke path passed or failed on M3 Air for the recorded context.",
+]
+must_not_claim = [
+  "Dense Qwen evidence proves BitNet behavior.",
+  "M3 Air timing replaces the M4 Mac mini envelope.",
+]
+
+[[work_item]]
+id = "M3MBA-004B"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-004B-dense-qwen-operator"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-004A"]
+acceptance = "Run the dense Qwen2.5 0.5B bounded operator profile only after smoke passes, recording allocation-audit context, power and thermal context, repeat count, token budget, storage before/after, receipts-check output, fallback status, and whether the result is comparison-grade or diagnostic-only."
+commands = [
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set operator --backend-label apple-m3-air-cpu-neon --allocation-audit --quiet",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check <receipt> --json",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+  "models/**",
+]
+may_claim = [
+  "The dense Qwen SLM operator profile passed, failed, or remained diagnostic-only on M3 Air for the recorded context.",
+]
+must_not_claim = [
+  "Dense Qwen evidence proves BitNet behavior.",
+  "M3 Air timing replaces the M4 Mac mini envelope.",
+]
+
+[[work_item]]
+id = "M3MBA-005A"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-005A-microsoft-2b-identity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-004B"]
+acceptance = "Identify and hash the official Microsoft BitNet 2B I2_S GGUF on M3 Air without accepting model behavior yet, recording source repository, revision, filename, size, SHA256, local cache root, free space before/after, and the shared model-artifact gate and compatibility ledger entries consulted."
+commands = [
+  "huggingface-cli download microsoft/bitnet-b1.58-2B-4T-gguf ggml-model-i2_s.gguf --revision <revision> --local-dir <cache-root>/microsoft-bitnet-2b-i2s",
+  "shasum -a 256 <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "ci/model-artifacts/**",
+  "docs/apple-silicon/**",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/campaigns/apple-bitnet-artifact-sweep/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+  "models/**",
+]
+may_claim = [
+  "The official Microsoft 2B I2_S artifact identity and hash are recorded for the M3 Air context.",
+]
+must_not_claim = [
+  "The Microsoft 2B artifact is accepted.",
+  "Rust M4 BitNet local answers work.",
+  "Apple Metal BitNet inference works.",
+  "QK256 works on Apple Silicon.",
+]
+
+[[work_item]]
+id = "M3MBA-005B"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-005B-microsoft-2b-tokenizer-authority"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-005A"]
+acceptance = "Record tokenizer and external pre-tokenizer authority for the official Microsoft BitNet 2B I2_S GGUF, including required override keys, bad/no-authority rejection evidence when applicable, and links to the shared answer artifact gate and compatibility ledger."
+commands = [
+  "cargo run --release --locked -p xtask --no-default-features -- fetch-cpp --backend cpu",
+  "${BITNET_CPP_DIR:-$HOME/.cache/bitnet_cpp}/build/bin/llama-cli -m <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf -p <diagnostic-prompt> -n 8 --no-display-prompt --temp 0 --top-k 1 --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap",
+  "${BITNET_CPP_DIR:-$HOME/.cache/bitnet_cpp}/build/bin/llama-cli -m <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf -p <diagnostic-prompt> -n 8 --no-display-prompt --temp 0 --top-k 1 --no-mmap",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "ci/model-artifacts/**",
+  "docs/apple-silicon/**",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/campaigns/apple-bitnet-artifact-sweep/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+  "models/**",
+]
+may_claim = [
+  "The tokenizer authority path for the official Microsoft 2B I2_S artifact is recorded or blocked.",
+]
+must_not_claim = [
+  "The Microsoft 2B artifact is accepted.",
+  "Rust M4 BitNet local answers work.",
+  "Apple Metal BitNet inference works.",
+]
+
+[[work_item]]
+id = "M3MBA-005C"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-005C-microsoft-2b-reference-output"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-005B"]
+acceptance = "Decide whether the official Microsoft BitNet 2B I2_S artifact is accepted, rejected, or blocked for the M3 Air reference context by recording the reference-runner command, prompt-suite outputs, answer-gate result or failing prompt IDs, and cleanup/retention status."
+commands = [
+  "${BITNET_CPP_DIR:-$HOME/.cache/bitnet_cpp}/build/bin/llama-cli -m <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf -f ci/quality/bitnet-answer-corpus.yaml -n 32 --no-display-prompt --temp 0 --top-k 1 --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap",
+  "rg -n \"answer-gate|failing prompt|accepted|rejected|blocked\" docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "ci/model-artifacts/**",
+  "docs/apple-silicon/**",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/campaigns/apple-bitnet-artifact-sweep/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+  "models/**",
+]
+may_claim = [
+  "The official Microsoft 2B I2_S artifact is accepted, rejected, or blocked for the recorded M3 Air reference context.",
+]
+must_not_claim = [
+  "Rust M4 BitNet local answers work.",
+  "Apple Metal BitNet inference works.",
+  "QK256 works on Apple Silicon.",
+]
+
+[[work_item]]
+id = "M3MBA-006"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-006-1bitllm-07b"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-005C"]
+acceptance = "Evaluate 1bitLLM/bitnet_b1_58-large as the smaller M3 Air control candidate only after the Microsoft 2B path records acceptance, rejection, or a clear blocker."
+commands = [
+  "huggingface-cli download 1bitLLM/bitnet_b1_58-large <gguf-file> --revision <revision> --local-dir <cache-root>/1bitllm-07b",
+  "shasum -a 256 <cache-root>/1bitllm-07b/<gguf-file>",
+  "${BITNET_CPP_DIR:-$HOME/.cache/bitnet_cpp}/build/bin/llama-cli -m <cache-root>/1bitllm-07b/<gguf-file> -p <prompt-from-ci/quality/bitnet-answer-corpus.yaml> -n 32 --no-display-prompt --temp 0 --top-k 1 --no-mmap",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "ci/model-artifacts/**",
+  "docs/apple-silicon/**",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+  "models/**",
+]
+may_claim = [
+  "The 0.7B candidate is accepted, rejected, or blocked as a smaller M3 Air control artifact.",
+]
+must_not_claim = [
+  "The 0.7B candidate proves official Microsoft 2B behavior.",
+  "Rust M4 BitNet local answers work.",
+]
+
+[[work_item]]
+id = "M3MBA-007"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-007-3b-diagnostic"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-005C"]
+acceptance = "Evaluate the 3B candidate only on supported TL1/TL2 diagnostic routes, recording why I2_S remains unsupported and why the result is diagnostic rather than proof."
+commands = [
+  "huggingface-cli download 1bitLLM/bitnet_b1_58-3B <tl1-or-tl2-gguf-file> --revision <revision> --local-dir <cache-root>/1bitllm-3b-diagnostic",
+  "shasum -a 256 <cache-root>/1bitllm-3b-diagnostic/<tl1-or-tl2-gguf-file>",
+  "${BITNET_CPP_DIR:-$HOME/.cache/bitnet_cpp}/build/bin/llama-cli -m <cache-root>/1bitllm-3b-diagnostic/<tl1-or-tl2-gguf-file> -p <diagnostic-prompt> -n 32 --no-display-prompt --temp 0 --top-k 1 --no-mmap",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "ci/model-artifacts/**",
+  "docs/apple-silicon/**",
+  "docs/model-artifacts/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+  "models/**",
+]
+may_claim = [
+  "The 3B candidate has recorded TL diagnostic evidence for the M3 Air context.",
+]
+must_not_claim = [
+  "3B I2_S is supported.",
+  "The 3B diagnostic route proves Apple local-answer quality.",
+]
+
+[[work_item]]
+id = "M3MBA-008"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-008-m4-proof-handoff"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-005C"]
+acceptance = "Promote accepted M3 Air BitNet artifact evidence into a separate M4 Mac mini strict Apple CPU/NEON proof item, preserving source, hash, tokenizer authority, route, and claim boundary without running or claiming the proof in this handoff item."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/campaigns/apple-bitnet-artifact-sweep/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+]
+may_claim = [
+  "Accepted M3 Air artifact evidence is ready for a separate M4 strict-proof item.",
+]
+must_not_claim = [
+  "The M4 strict proof already passed.",
+  "M3 Air evidence is M4 Mac mini evidence.",
+]
+
+[[work_item]]
+id = "M3MBA-009"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-009-slm-synthesis"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-004B"]
+acceptance = "Synthesize M3 Air dense SLM behavior against comparable M4 Mac mini and SLM CPU receipts, naming exact models, hashes, tokenizers, prompt sets, backend labels, fallback status, power/thermal context, and gaps that make evidence non-comparable."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "docs/reports/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+]
+may_claim = [
+  "M3 Air dense SLM evidence has been compared against named M4 and SLM CPU receipts where fields match.",
+]
+must_not_claim = [
+  "M3 Air timing replaces M4 Mac mini performance.",
+  "Dense SLM evidence proves BitNet behavior.",
+  "Non-comparable receipts are equivalent.",
+]
+
+[[work_item]]
+id = "M3MBA-010"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-010-storage-audit"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-005A"]
+acceptance = "Audit the M3 Air model cache after the first large BitNet download, recording retained artifacts, deleted artifacts, SHA256 evidence, cleanup status, free-space before/after, and whether additional candidate downloads are allowed under the lane storage policy."
+commands = [
+  "df -k . \"$HOME/Library/Caches\"",
+  "shasum -a 256 <retained-artifacts>",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air artifact cache retention and cleanup state is recorded for the lane.",
+]
+must_not_claim = [
+  "Deleted artifacts remain available locally.",
+  "Cache retention proves model quality.",
+  "Large model binaries were committed.",
+]

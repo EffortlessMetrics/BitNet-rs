@@ -1,0 +1,16 @@
+timestamp = "2026-05-12T12:05:47Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-029"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4516
+head_sha = "08f3d7f72"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-029-answer-corpus-after-prompt-fix"
+summary = "Opened CPU258V-029 to record 258V scalar and AVX2 answer-corpus receipts after the prompt-policy fix."
+notes = [
+  "The scalar and AVX2 corpus receipts both pass all five fixed tiny answer gates.",
+  "The scalar-vs-AVX2 parity receipt records failed=0 and first_divergence=null.",
+  "The receipts preserve the corrected BitNet answer-ready prompt boundary and do not claim broad chat quality, speed, Arc/NPU execution, QK256 changes, or full model correctness.",
+]

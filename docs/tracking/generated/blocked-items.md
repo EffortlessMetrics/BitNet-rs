@@ -7,6 +7,18 @@
 | apple-bitnet-artifact-sweep | ABAS-003 | ABAS-001 | proposed |
 | apple-bitnet-artifact-sweep | ABAS-004 | ABAS-001, ABAS-002 | proposed |
 | apple-bitnet-artifact-sweep | ABAS-005 | ABAS-001 | proposed |
+| apple-m3-macbook-air | M3MBA-002 | M3MBA-001 | proposed |
+| apple-m3-macbook-air | M3MBA-003 | M3MBA-002 | proposed |
+| apple-m3-macbook-air | M3MBA-004A | M3MBA-003 | proposed |
+| apple-m3-macbook-air | M3MBA-004B | M3MBA-004A | proposed |
+| apple-m3-macbook-air | M3MBA-005A | M3MBA-004B | proposed |
+| apple-m3-macbook-air | M3MBA-005B | M3MBA-005A | proposed |
+| apple-m3-macbook-air | M3MBA-005C | M3MBA-005B | proposed |
+| apple-m3-macbook-air | M3MBA-006 | M3MBA-005C | proposed |
+| apple-m3-macbook-air | M3MBA-007 | M3MBA-005C | proposed |
+| apple-m3-macbook-air | M3MBA-008 | M3MBA-005C | proposed |
+| apple-m3-macbook-air | M3MBA-009 | M3MBA-004B | proposed |
+| apple-m3-macbook-air | M3MBA-010 | M3MBA-005A | proposed |
 | apple-m4 | M4-002 | M4-001 | merged |
 | apple-m4 | M4-003 | M4-002 | merged |
 | apple-m4 | M4-004 | M4-003 | merged |
@@ -84,11 +96,12 @@
 | apple-m4-slm-performance | M4-SLM-PERF-005 | M4-SLM-PERF-004 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-006 | M4-SLM-PERF-005 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-007 | M4-SLM-PERF-006 | merged |
-| apple-silicon-macbook | MB-AS-002 |  | blocked |
+| apple-silicon-macbook | MB-AS-002 | MB-AS-008 | proposed |
 | apple-silicon-macbook | MB-AS-003 | MB-AS-001 | merged |
-| apple-silicon-macbook | MB-AS-004 | MB-AS-003 | proposed |
-| apple-silicon-macbook | MB-AS-005 | MB-AS-003 | proposed |
-| apple-silicon-macbook | MB-AS-006 | MB-AS-003 | proposed |
+| apple-silicon-macbook | MB-AS-004 | MB-AS-002, MB-AS-003 | proposed |
+| apple-silicon-macbook | MB-AS-005 | MB-AS-004 | proposed |
+| apple-silicon-macbook | MB-AS-006 | MB-AS-004 | proposed |
+| apple-silicon-macbook | MB-AS-008 | MB-AS-007 | proposed |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | merged |
@@ -141,6 +154,12 @@
 | intel-258v-platform | CPU258V-024 | CPU258V-023 | merged |
 | intel-258v-platform | CPU258V-025 | CPU258V-024 | merged |
 | intel-258v-platform | CPU258V-026 | CPU258V-025 | merged |
+| intel-258v-platform | CPU258V-027 | CPU258V-026 | merged |
+| intel-258v-platform | CPU258V-028 | CPU258V-027 | merged |
+| intel-258v-platform | CPU258V-029 | CPU258V-028 | merged |
+| intel-258v-platform | CPU258V-030 | CPU258V-029 | merged |
+| intel-258v-platform | CPU258V-031 | CPU258V-030 | merged |
+| intel-258v-platform | SLM258V-001 | CPU258V-031 | merged |
 | intel-258v-platform | LNL258V-004 | LNL258V-003, ARC140V-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |

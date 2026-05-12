@@ -32,7 +32,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.93.0"
+          toolchain: "1.95.0"
 
       - name: Cache cargo
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57  # v4.2.0
@@ -41,9 +41,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: policy-${{ runner.os }}-1.93.0-${{ hashFiles('**/Cargo.lock') }}
+          key: policy-${{ runner.os }}-1.95.0-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            policy-${{ runner.os }}-1.93.0-
+            policy-${{ runner.os }}-1.95.0-
 
       - name: ci-lane-whitelist check
         run: |

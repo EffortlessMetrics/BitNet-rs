@@ -6,6 +6,19 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ### Rust 1.95 / Next Minor CI Economics Continuation (planned)
 
+- chore(msrv): raise workspace toolchain to Rust 1.95.0
+  - Updates `Cargo.toml`, `rust-toolchain.toml`, `clippy.toml`,
+    explicit member `rust-version` pins, `policy/clippy-lints.toml`, workflow
+    toolchain pins, and the Rust CI image tag.
+  - Explicitly keeps Rust 1.94/1.95 Clippy ratchets staged so the MSRV bump does
+    not silently activate lint cleanup before the dedicated ratchet PR.
+  - Keeps Clippy test carveouts, lint activation, no-panic baseline work,
+    release version reconciliation, and Rust 1.95 API cleanup scoped to their
+    later rollout PRs.
+  - Carries forward the compatibility-audit caveat: completed Rust 1.95 probe
+    slices passed, but full local workspace validation was blocked by the
+    Windows native SentencePiece/Python build path and still needs full CI or a
+    known-good native build host before release readiness.
 - docs(policy): refresh Rust 1.95 and next-minor rollout map — `docs/development/RUST_1_95_ROLLOUT.md`
   - Continuation of #3866 CI economics control plane; refreshes the existing Rust 1.95
     rollout map against current `main` instead of starting from a blank template.

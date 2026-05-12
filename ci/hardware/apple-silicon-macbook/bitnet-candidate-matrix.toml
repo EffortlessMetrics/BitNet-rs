@@ -6,7 +6,8 @@ machine_lane = "apple-silicon-macbook"
 claim_boundary = "Candidate planning only. No candidate is accepted for Apple local-answer claims until the MacBook lane records source, size, SHA256, tokenizer authority, coherent reference-runner output, and cleanup status. Dense Qwen evidence does not prove BitNet quality."
 
 storage_policy = [
-  "Prefer candidates that fit comfortably in the model cache with at least 8 GiB free after download.",
+  "Use 8 GiB as the hard free-space floor for avoiding an unsafe local checkout.",
+  "Prefer candidates that leave at least 25 GiB free after active downloads on the live M3 MacBook Air lane.",
   "Download candidates under cache or target during proof runs; never commit model binaries.",
   "Record exact byte size and SHA256 before accepting or rejecting a candidate.",
   "Delete rejected candidates unless a later item explicitly keeps them for a bounded diagnostic reason.",

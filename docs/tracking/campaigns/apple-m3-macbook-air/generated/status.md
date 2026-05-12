@@ -1,0 +1,33 @@
+<!-- GENERATED: do not edit by hand. Run cargo run -p xtask --no-default-features -- campaign generate. -->
+# Apple M3 MacBook Air Campaign Status
+
+- Campaign: `apple-m3-macbook-air`
+- State: `active`
+- Objective: Turn the available M3 MacBook Air into a disciplined Apple Silicon lane for machine-profile evidence, dense SLM cross-checks, large BitNet artifact qualification, and M4 strict-proof handoff planning without converting MacBook receipts into M4 Mac mini performance or BitNet local-answer claims.
+
+## Work Items
+
+| Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
+|---|---|---:|---|---|---|---|---|
+| M3MBA-001 | merged | #4518 | `codex/apple-m3-macbook-air/roadmap-campaign` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add the M3 MacBook Air campaign control plane, roadmap linkage, generated status, and first lifecycle event without running models or changing runtime behavior. |
+| M3MBA-002 | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-002-machine-profile` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Commit a real M3 MacBook Air machine-profile receipt with model identifier, chip, core split, memory, macOS version, free disk, cache root, power source, thermal state when available, CPU/NEON visibility, Metal visibility, MPSGraph visibility when available, and inference_run=false. |
+| M3MBA-003 | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-003-receipt-label` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add or confirm the smallest receipt validation path for apple-m3-air-cpu-neon, preserving existing apple-m4-cpu-neon checks and making MacBook timing impossible to label as M4 evidence. |
+| M3MBA-004A | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Run the dense Qwen2.5 0.5B Mac smoke path on M3 Air with the known model hash, tokenizer metadata, deterministic settings, explicit backend label, fallback status, power and thermal context, storage before/after, receipts-check output, and dense-only claim boundary. |
+| M3MBA-004B | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-004B-dense-qwen-operator` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Run the dense Qwen2.5 0.5B bounded operator profile only after smoke passes, recording allocation-audit context, power and thermal context, repeat count, token budget, storage before/after, receipts-check output, fallback status, and whether the result is comparison-grade or diagnostic-only. |
+| M3MBA-005A | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-005A-microsoft-2b-identity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Identify and hash the official Microsoft BitNet 2B I2_S GGUF on M3 Air without accepting model behavior yet, recording source repository, revision, filename, size, SHA256, local cache root, free space before/after, and the shared model-artifact gate and compatibility ledger entries consulted. |
+| M3MBA-005B | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-005B-microsoft-2b-tokenizer-authority` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record tokenizer and external pre-tokenizer authority for the official Microsoft BitNet 2B I2_S GGUF, including required override keys, bad/no-authority rejection evidence when applicable, and links to the shared answer artifact gate and compatibility ledger. |
+| M3MBA-005C | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-005C-microsoft-2b-reference-output` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Decide whether the official Microsoft BitNet 2B I2_S artifact is accepted, rejected, or blocked for the M3 Air reference context by recording the reference-runner command, prompt-suite outputs, answer-gate result or failing prompt IDs, and cleanup/retention status. |
+| M3MBA-006 | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-006-1bitllm-07b` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Evaluate 1bitLLM/bitnet_b1_58-large as the smaller M3 Air control candidate only after the Microsoft 2B path records acceptance, rejection, or a clear blocker. |
+| M3MBA-007 | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-007-3b-diagnostic` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Evaluate the 3B candidate only on supported TL1/TL2 diagnostic routes, recording why I2_S remains unsupported and why the result is diagnostic rather than proof. |
+| M3MBA-008 | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-008-m4-proof-handoff` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Promote accepted M3 Air BitNet artifact evidence into a separate M4 Mac mini strict Apple CPU/NEON proof item, preserving source, hash, tokenizer authority, route, and claim boundary without running or claiming the proof in this handoff item. |
+| M3MBA-009 | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-009-slm-synthesis` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Synthesize M3 Air dense SLM behavior against comparable M4 Mac mini and SLM CPU receipts, naming exact models, hashes, tokenizers, prompt sets, backend labels, fallback status, power/thermal context, and gaps that make evidence non-comparable. |
+| M3MBA-010 | proposed | TBD | `codex/apple-m3-macbook-air/M3MBA-010-storage-audit` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Audit the M3 Air model cache after the first large BitNet download, recording retained artifacts, deleted artifacts, SHA256 evidence, cleanup status, free-space before/after, and whether additional candidate downloads are allowed under the lane storage policy. |
+
+## Hard Constraints
+
+- This is the Apple M3 MacBook Air lane, not the M4 Mac mini product, performance, or strict-proof lane.
+- Do not claim BitNet local-answer quality from dense Qwen SLM receipts.
+- Do not claim M4 Mac mini performance, broad Apple Silicon performance, QK256 support, full Apple Metal inference, Neural Engine execution, or MPSGraph model inference from this lane.
+- Do not weaken existing M4 receipt checks to make M3 receipts fit; add the smallest MacBook-specific label or validation path instead.
+- Do not add live model downloads, large artifact sweeps, or hardware timing runs to generic required CI.
+- Never commit model binaries.

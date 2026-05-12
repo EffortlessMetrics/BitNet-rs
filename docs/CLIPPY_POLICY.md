@@ -110,10 +110,12 @@ The following changes are planned as part of the Rust 1.95 / next minor wave.
 See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder and
 CI economics framing.
 
-Current `main` still has `clippy.toml` pinned to `msrv = "1.93.0"` and keeps
-the temporary test unwrap/expect carveouts. `policy/clippy-lints.toml` already
-stages Rust 1.94/1.95 lints; the rollout moves from staged policy to measured
-activation after the Rust 1.95 compatibility probe and MSRV bump.
+Current `main` has `clippy.toml` pinned to `msrv = "1.95.0"` and still keeps
+the temporary test unwrap/expect carveouts. `policy/clippy-lints.toml` records
+the Rust 1.95 MSRV, while `Cargo.toml` explicitly keeps the Rust 1.94/1.95
+ratchets staged at `allow` so the MSRV bump does not silently activate lint
+cleanup. The rollout moves from staged policy to measured activation in the
+dedicated lint-ratchet PR.
 
 ### Lint ratchets (PR 5)
 
