@@ -1,0 +1,12 @@
+timestamp = "2026-05-12T13:21:43Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-002"
+event = "in_progress"
+branch = "codex/apple-silicon-macbook/MB-AS-002-qwen-baseline"
+actor = "codex"
+
+notes = [
+  "Returned the dense Qwen MacBook mirror to proposed work because the active host is now a real M3 MacBook Air, not the earlier M4 Mac mini host that made MB-AS-002 invalid.",
+  "The item must wait for the M3 Air machine/profile receipt before the dense SLM mirror command emits a real MacBook receipt.",
+  "M3 Air dense SLM evidence must remain a mobile Apple Silicon cross-check and must not be presented as M4 Mac mini performance or BitNet local-answer evidence.",
+]
