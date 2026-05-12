@@ -278,7 +278,8 @@ impl SecurityValidator {
                 ));
             }
         } else {
-            // If no directories are configured, do not allow absolute paths to prevent reading arbitrary files
+            // With no allowlist configured, keep relative model names usable but
+            // reject absolute paths so a request cannot point at arbitrary host files.
             let path = std::path::Path::new(model_path);
             if path.is_absolute() {
                 return Err(ValidationError::InvalidFieldValue(
@@ -619,7 +620,7 @@ mod tests {
 
     #[test]
     fn test_model_path_restriction() {
-        // Case 1: No restriction (empty allowed directories)
+        // Case 1: Empty allowed directories still reject absolute paths.
         let config = SecurityConfig::default();
         let validator = SecurityValidator::new(config).unwrap();
 
