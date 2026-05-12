@@ -46,6 +46,7 @@ review) or removed.
 2. If the exception is genuinely temporary, add a TOML entry with:
    * a stable `id`
    * a real `owner` (team / area, not an individual)
+   * a real `issue` or tracking key (not "TODO")
    * a real `reason` (what is acceptable today, not just "TODO")
    * a real `expires` date (typical: 60–90 days; never longer than
      the surrounding rollout phase)

@@ -38,6 +38,11 @@ All notable changes to bitnet-rs will be documented in this file.
     `path + family + selector.kind + selector.callee + snippet + count`.
   - Consumes allowlist counts before optional baseline counts and keeps
     baseline output advisory until the dedicated no-new-debt baseline PR.
+- policy(ci): require issue metadata on CI whitelist exceptions
+  - Replaces placeholder CI whitelist exception issue fields with stable
+    tracking keys.
+  - Extends `xtask ci-lane-whitelist check` to reject placeholder owner,
+    issue, reason, and missing lifecycle dates on exception receipts.
 - docs(policy): refresh Rust 1.95 and next-minor rollout map — `docs/development/RUST_1_95_ROLLOUT.md`
   - Continuation of #3866 CI economics control plane; refreshes the existing Rust 1.95
     rollout map against current `main` instead of starting from a blank template.
