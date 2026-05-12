@@ -29,14 +29,23 @@ Dense Qwen success remains dense SLM evidence. It validates Mac UX and Apple CPU
 | Work item | Status | Notes |
 |---|---|---|
 | MB-AS-001 | merged | Add a MacBook machine/storage/profile receipt contract. |
-| MB-AS-002 | blocked | Mirror the dense Qwen Apple CPU/NEON baseline once an actual MacBook runner is available. |
+| MB-AS-002 | proposed | Mirror the dense Qwen Apple CPU/NEON baseline on the live M3 MacBook Air runner. |
 | MB-AS-003 | merged | Add the Apple BitNet candidate artifact matrix for MacBook sweeps. |
 | MB-AS-004 | proposed | Validate official Microsoft 2B I2_S with external tokenizer authority. |
 | MB-AS-005 | proposed | Evaluate 0.7B `1bitLLM/bitnet_b1_58-large` as the smaller Apple BitNet target. |
 | MB-AS-006 | proposed | Evaluate 3B only on supported TL1/TL2 diagnostic routes. |
+| MB-AS-007 | merged | Add the live M3 MacBook Air lane roadmap, storage policy, sequencing, and claim boundaries. |
+| MB-AS-008 | proposed | Capture the real M3 MacBook Air machine/profile receipt before model inference. |
 
 ## Review Policy
 
 Each PR owns one MacBook item. Keep model downloads under cache or `target/`, delete rejected candidates when the item requires cleanup, and never commit model binaries. Hardware and model claims must be scoped to the exact machine, model, tokenizer authority, backend, fallback status, and receipt evidence.
+
+CI validates schemas, TOML, docs, generated tracker pages, committed receipts, and
+small fixtures only. Model downloads, Hugging Face artifact fetches, reference
+runs, thermal/mobile measurements, and large-cache cleanup are local hardware
+tasks unless a future PR adds an explicit label-gated CI job for them. Any
+committed artifact receipt must include source revision, filename, byte size,
+SHA256, tokenizer authority when relevant, and cleanup or retention status.
 
 Human direction is required only when a candidate needs a new dependency, a license-sensitive decision, a destructive cleanup, a claim boundary is ambiguous, or branch/repository policy blocks the allowed merge path.

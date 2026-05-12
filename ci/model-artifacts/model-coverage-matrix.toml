@@ -864,18 +864,23 @@ model_class = "small_llm"
 family = "qwen2"
 artifact_kind = "gguf_q4_k_m"
 capability_id = "qwen2.5-1.5b-instruct-q4_k_m"
-status = "registered_candidate"
-current_tier = "registered"
+status = "apple_m4_cpu_neon_supported_non_default"
+current_tier = "cpu_answer_ready"
 verifier_surface = "bitnet model verify qwen2.5-1.5b-instruct-q4_k_m"
 tokenizer_authority = "contract_authoritative_qwen2"
 prompt_authority = "contract_authoritative_chat_template"
-cpu_reference = "candidate_reference_required"
+cpu_reference = "apple_m4_cpu_neon_slm_answer_lane"
 accelerator_routes = []
 required_receipts = [
   "artifact_verify",
   "memory_envelope",
-  "cpu_reference_sanity",
-  "all_layer_plan",
+  "reference_runner_quality",
+  "rust_m4_quality",
+  "model_verify",
+  "slm_answer_receipt",
+  "fallback_free_backend_receipt",
+  "q4_k_m_strict_cuda_route_audit",
+  "dense_cuda_all_layer_plan",
 ]
 forbidden_claims = [
   "cuda_answer_ready",
@@ -884,14 +889,14 @@ forbidden_claims = [
   "speedup",
   "bitnet_packed_i2s_qk256_proof",
 ]
-next_proof = "artifact verify, memory envelope, CPU reference sanity, and dense CUDA all-layer plan."
-claim_boundary = "The larger Qwen candidate is registered for future small-LLM pressure testing; it is not CUDA answer-ready."
+next_proof = "Q4_K_M strict CUDA route support or explicit unsupported-route receipt before dense CUDA all-layer plan, KV/sampling policy, one-token proof, and short-decode proof."
+claim_boundary = "Qwen2.5 1.5B Q4_K_M is an explicit non-default Apple M4 CPU/NEON answer model after reference and Rust M4 quality gates. A 5070 Ti strict CUDA all-layer plan attempt currently fails closed at strict_cuda_ready=false for this Q4_K_M artifact, so it does not prove dense CUDA, BitNet QK256, speedup, server readiness, or full residency."
 
   [entry.claims]
   registered = true
-  structurally_valid = false
-  reference_good = false
-  cpu_answer_ready = false
+  structurally_valid = true
+  reference_good = true
+  cpu_answer_ready = true
   accelerator_answer_ready = false
   benchmark_qualified = false
   product_cli_ready = false

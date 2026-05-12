@@ -110,6 +110,13 @@ The following changes are planned as part of the Rust 1.95 / next minor wave.
 See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder and
 CI economics framing.
 
+Current `main` has `clippy.toml` pinned to `msrv = "1.95.0"` and still keeps
+the temporary test unwrap/expect carveouts. `policy/clippy-lints.toml` records
+the Rust 1.95 MSRV, while `Cargo.toml` explicitly keeps the Rust 1.94/1.95
+ratchets staged at `allow` so the MSRV bump does not silently activate lint
+cleanup. The rollout moves from staged policy to measured activation in the
+dedicated lint-ratchet PR.
+
 ### Lint ratchets (PR 5)
 
 The lints staged in `policy/clippy-lints.toml` for MSRV 1.95 will be
@@ -118,6 +125,8 @@ promoted to `[workspace.lints.clippy]`:
 | Lint | Level | Reason |
 |---|---|---|
 | `same_length_and_capacity` | `deny` | Catch raw-parts reconstruction mistakes (also staged at 1.94) |
+| `manual_ilog2` | `warn` | Prefer standard integer log helper (also staged at 1.94) |
+| `decimal_bitwise_operands` | `warn` | Make bit masks visually inspectable (also staged at 1.94) |
 | `manual_checked_ops` | `warn` | Prefer checked arithmetic over manual divide-by-zero guards |
 | `manual_take` | `warn` | Use standard ownership helper instead of local reimplementation |
 | `manual_pop_if` | `warn` | Use collection APIs that encode predicate-and-pop intent |
@@ -125,8 +134,11 @@ promoted to `[workspace.lints.clippy]`:
 | `needless_type_cast` | `warn` | Avoid stale numeric type drift (also staged at 1.94) |
 | `unnecessary_trailing_comma` | `warn` | Keep format macro calls clean |
 
-Lints are only promoted after a clean measurement pass confirms zero or
-cheap-to-fix violations in the workspace.
+Lints are only promoted after a measurement pass confirms zero or cheap-to-fix
+violations in the workspace. Because CI Core uses `RUSTFLAGS = "-Dwarnings"`
+and Clippy with `-D warnings`, warning-level Clippy lints can still behave as
+hard failures in default lanes. If measurement finds hits, PR 5 either fixes
+them in scope or keeps the lint staged with a real debt entry.
 
 ### `disallowed_fields` (PR 5 prerequisite)
 

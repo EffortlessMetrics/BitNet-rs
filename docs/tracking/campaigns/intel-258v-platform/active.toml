@@ -1658,6 +1658,98 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CPU258V-027"
+status = "merged"
+pr = 4508
+merge_sha = "fdde46f6303448e241c045e6a41e78ab244746ba"
+branch = "codex/lunar-lake/CPU258V-027-semantic-diagnosis"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-026"]
+acceptance = "Add a 258V CPU semantic diagnosis artifact that reads the current CPU reference bundle evidence, classifies prompt/token, external reference, QK256/I8_S, output-head/logits-index, transformer-layer, answer-parity, and phase statuses, names the current blocker and next fix, and preserves diagnostic-only claim boundaries."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-semantic-diagnosis.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The 258V CPU semantic diagnosis identifies the next actionable CPU semantic blocker from the current CPU reference bundle evidence.",
+  "The current CPU prompt-policy, external reference, QK256/I8_S, output-head/logits-index, transformer-layer, answer-parity, and phase evidence statuses are summarized in one artifact.",
+]
+must_not_claim = [
+  "The prompt-policy mismatch is fixed.",
+  "New BitNet answer quality is proven.",
+  "External generated-token-ID parity is proven.",
+  "External first-token logits parity is proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Full model correctness is proven.",
+]
+
+[[work_item]]
+id = "CPU258V-028"
+status = "pr_open"
+pr = 4512
+branch = "codex/lunar-lake/CPU258V-028-prompt-policy-fix"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-027"]
+acceptance = "Fix the 258V BitNet metadata-authoritative prompt policy identified by CPU258V-027 so rendered chat prompts preserve the official generation-prompt spacing, avoid executor-added duplicate BOS/EOS after rendered templates, and make BitNet-rs prompt string and token IDs match the external HF apply_chat_template boundary for the fixed prompts."
+commands = [
+  "cargo test --locked -p bitnet-prompt-templates-core",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli prompt_authority -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- prompt-authority-audit --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --prompt \"What is 2+2? Answer with only the number.\" --json-out target/cpu258v-028/prompt-authority-audit-math.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity-after-prompt-fix.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-prompt-templates-core/**",
+  "crates/bitnet-tokenizers/**",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The 258V BitNet prompt rendering policy matches the external HF apply_chat_template boundary for the fixed prompt corpus after merge and receipt refresh.",
+  "The prompt-policy fix removes the CPU258V-027 BOS/trailing-generation-space mismatch for metadata-authoritative BitNet prompts.",
+]
+must_not_claim = [
+  "General BitNet answer quality is proven.",
+  "External first-token logits parity is proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "QK256 semantics or transformer math changed.",
+  "Full model correctness is proven.",
+]
+
+[[work_item]]
 id = "LNL258V-004"
 status = "merged"
 pr = 4148

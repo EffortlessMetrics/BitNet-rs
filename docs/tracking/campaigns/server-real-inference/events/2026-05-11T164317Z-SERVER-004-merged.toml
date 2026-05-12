@@ -1,0 +1,15 @@
+timestamp = "2026-05-11T16:43:17Z"
+campaign = "server-real-inference"
+item = "SERVER-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4479
+merge_sha = "e0cef6807baad37f3e2e30a1bdd3c51cce80c987"
+branch = "codex/server-004-openai-chat-fail-closed"
+summary = "SERVER-004 merged after adding the fail-closed OpenAI-compatible chat completions endpoint."
+notes = [
+  "Merged PR #4479 adds POST /v1/chat/completions and returns SERVER_INFERENCE_UNAVAILABLE with readiness/certification details until real inference is wired.",
+  "The merged endpoint emits no choices, no fake model output, and no server answer, CUDA, speedup, or full-residency claim.",
+]

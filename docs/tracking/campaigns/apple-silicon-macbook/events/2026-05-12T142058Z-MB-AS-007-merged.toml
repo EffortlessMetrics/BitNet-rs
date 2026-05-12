@@ -1,0 +1,14 @@
+timestamp = "2026-05-12T14:20:58Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-007"
+event = "merged"
+pr = 4511
+head_sha = "78d09d1dbc906fe2e66e2b763ddf62ed0d0adcf9"
+merge_sha = "51f779f2d8efab2947a4184c59021e0912e1dbbf"
+actor = "codex"
+
+notes = [
+  "Merged the live M3 MacBook Air lane roadmap.",
+  "The merged roadmap makes MB-AS-008 the next MacBook item: capture a real M3 Air machine/profile receipt before model validation starts.",
+  "The merge preserves the non-claims for M4 Mac mini performance, BitNet local-answer quality, full Apple Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, and broad Apple Silicon performance.",
+]

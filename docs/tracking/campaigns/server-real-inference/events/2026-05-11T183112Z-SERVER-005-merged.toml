@@ -1,0 +1,15 @@
+timestamp = "2026-05-11T18:31:12Z"
+campaign = "server-real-inference"
+item = "SERVER-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4490
+merge_sha = "b76e7ed5a163845898c6e19aa789e3084683f421"
+branch = "codex/server-real-inference/SERVER-005-shared-engine-runtime"
+summary = "Merged SERVER-005 non-streaming shared-engine chat-completions runtime path."
+notes = [
+  "PR #4490 routes non-streaming OpenAI-compatible chat completions through the active ModelManager InferenceEngine and emits per-request shared-engine receipt metadata.",
+  "Streaming, performance, full residency, dense CUDA proof, BitNet QK256 proof, new model-family readiness, and kernel math claims remain out of scope.",
+]

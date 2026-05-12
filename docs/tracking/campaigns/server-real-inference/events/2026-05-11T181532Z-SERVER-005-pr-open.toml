@@ -1,0 +1,15 @@
+timestamp = "2026-05-11T18:15:32Z"
+campaign = "server-real-inference"
+item = "SERVER-005"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4490
+head_sha = "0c82eef62240e0145dbc62a19ccc557682368156"
+branch = "codex/server-real-inference/SERVER-005-shared-engine-runtime"
+summary = "Opened SERVER-005 PR for the non-streaming shared-engine chat-completions path."
+notes = [
+  "PR #4490 routes non-streaming OpenAI-compatible chat completions through the active ModelManager InferenceEngine and includes per-request receipt metadata.",
+  "The PR keeps streaming, speedup, full residency, dense CUDA proof, BitNet QK256 proof, new model-family readiness, and kernel math claims false.",
+]

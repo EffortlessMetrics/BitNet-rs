@@ -742,6 +742,7 @@ The CPU semantic-debug ladder links:
 ```text
 ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json
 ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity.json
+ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity-after-prompt-fix.json
 ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json
 ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json
 ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json
@@ -770,6 +771,57 @@ Arc 140V or Intel NPU execution is proven by this CPU bundle.
 CPU fallback can satisfy Arc 140V or Intel NPU proof.
 External first-token logits parity is proven.
 Full model correctness is proven.
+```
+
+## Current CPU Semantic Diagnosis
+
+`CPU258V-027` converts the current CPU reference bundle into a
+machine-readable diagnosis artifact:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-semantic-diagnosis.json
+```
+
+The diagnosis keeps two boundaries separate. The first actionable semantic
+blocker is prompt policy: the external HF `apply_chat_template` reference omits
+BOS and preserves a trailing `Assistant: ` generation-prompt space, while the
+current BitNet-rs metadata-authority path prepends BOS and renders `Assistant:`
+without that trailing space. The separate evidence blocker is external reference
+instrumentation: generated-token IDs and first-token logits/top-k remain
+unavailable from the current external runner evidence, so external logits parity
+is not proven.
+
+The artifact also summarizes the evidence that is not currently first-failing:
+QK256/I2_S/I8_S fixture semantics match the canonical oracle, output-head and
+logits-index boundaries report 128,256-token consistency, scalar and AVX2
+transformer-layer traces match across 13 recorded boundaries, and the fixed
+five-case answer corpus passes scalar-vs-AVX2 parity. Those are narrow
+diagnostic claims only; they do not fix prompt policy or prove broad answer
+quality.
+
+Recommended next work:
+
+```text
+CPU258V-028:
+  align metadata-authoritative BitNet prompt rendering with the official
+  template boundary, preserving generation-prompt spacing exactly and avoiding
+  executor-added BOS/EOS after rendered chat templates.
+
+CPU258V-029:
+  rerun scalar and AVX2 answer-corpus receipts after the prompt-policy fix.
+
+CPU258V-031:
+  refresh the CPU reference bundle after the semantic fix and parity rerun.
+```
+
+Not allowed:
+
+```text
+The prompt-policy mismatch is fixed by CPU258V-027.
+External generated-token-ID parity is proven.
+External first-token logits parity is proven.
+New or general BitNet answer quality is proven.
+CPU speed, Arc 140V execution, or Intel NPU execution is proven.
 ```
 
 ## Post-Baseline Next Queue
@@ -868,6 +920,46 @@ First-token logits or model inference parity is proven.
 CPU speed is proven.
 Arc 140V or Intel NPU execution is proven.
 Packed QK256 decode semantics are fixed.
+```
+
+## CPU258V-028 Prompt Policy Fix
+
+Artifact:
+
+```text
+ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity-after-prompt-fix.json
+```
+
+`CPU258V-028` removes the prompt-policy mismatch classified by `CPU258V-027`.
+The BitNet answer-ready template now preserves the official HF
+`apply_chat_template` generation prompt boundary, including the trailing
+`Assistant: ` space, and the metadata-authoritative path no longer prepends an
+executor BOS after rendering that chat template.
+
+Current result:
+
+```text
+first_divergence_stage = none
+cases_passed = 4
+cases_failed = 0
+```
+
+Allowed claim:
+
+```text
+BitNet-rs metadata-authoritative BitNet prompt strings and prompt token IDs
+match the external HF apply_chat_template boundary for the fixed prompt corpus.
+```
+
+Not allowed:
+
+```text
+Answer quality is proven.
+External first-token logits parity is proven.
+CPU speed is proven.
+Arc 140V or Intel NPU execution is proven.
+Packed QK256 decode semantics are changed by this prompt-policy fix.
+Full model correctness is proven.
 ```
 
 ## CPU258V-021 External Reference Instrumentation Boundary

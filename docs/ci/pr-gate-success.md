@@ -26,7 +26,7 @@ default-PR lanes that this rollout treats as authoritative:
 
 Lanes that are **not** required by `PR Gate Success`:
 
-* `ripr static exposure` (advisory only)
+* `ripr static exposure` (advisory static mutation-exposure analysis)
 * All macOS / GPU / Docker / Coverage / Crossval / Property /
   Model-validation lanes (label- or path-gated; opting in is the
   PR author's decision)
