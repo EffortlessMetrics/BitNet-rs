@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
         with:
-          fetch-depth: 0  # required so the base SHA is available for diffs
+          fetch-depth: 1
 
       - name: Install Rust (MSRV)
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
@@ -46,8 +46,17 @@ jobs:
             echo "base=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
             echo "head=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           else
-            echo "base=${{ github.sha }}^" >> "$GITHUB_OUTPUT"
+            echo "base=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
             echo "head=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch public API diff base
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="${{ steps.revs.outputs.base }}"
+          if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE"
           fi
 
       - name: Find crates to check (dynamic)
