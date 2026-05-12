@@ -1803,7 +1803,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-030"
-status = "ready"
+status = "pr_open"
+pr = 4520
 branch = "codex/lunar-lake/CPU258V-030-phase-receipts-after-prompt-fix"
 stackable = false
 review_mode = "codex_premerge"

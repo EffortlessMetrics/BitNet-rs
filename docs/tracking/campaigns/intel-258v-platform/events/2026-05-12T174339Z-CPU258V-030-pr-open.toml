@@ -1,0 +1,11 @@
+timestamp = "2026-05-12T17:43:39Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-030"
+event = "pr_open"
+pr = 4520
+summary = "Opened CPU258V-030 to refresh 258V strict CPU warm-session phase receipts after the prompt-policy fix."
+details = [
+  "The PR records an aggregate warm-session receipt plus prefill_512 and decode_128 profile receipts from the release-built CLI.",
+  "The run used real GGUF loading, explicit tokenizer resolution, corrected BitNet.cpp answer prompt policy, selected i2_s-avx2-reference, and fallback_used=false.",
+  "The claim boundary remains CPU phase timing evidence only: no speedup, sustained throughput, Arc/NPU execution, QK256 changes, broad answer quality, or full model correctness.",
+]
