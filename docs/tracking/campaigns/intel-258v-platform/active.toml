@@ -1752,7 +1752,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-029"
-status = "ready"
+status = "pr_open"
+pr = 4516
 branch = "codex/lunar-lake/CPU258V-029-answer-corpus-after-prompt-fix"
 stackable = false
 review_mode = "codex_premerge"
