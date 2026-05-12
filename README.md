@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml/badge.svg?branch=main)](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml)
 [![Codecov](https://codecov.io/gh/EffortlessMetrics/BitNet-rs/graph/badge.svg?branch=main)](https://codecov.io/gh/EffortlessMetrics/BitNet-rs)
-[![MSRV](https://img.shields.io/badge/MSRV-1.92.0-blue.svg)](./rust-toolchain.toml)
+[![MSRV](https://img.shields.io/badge/MSRV-1.93.0-blue.svg)](./rust-toolchain.toml)
 [![Rust 2024](https://img.shields.io/badge/edition-2024-orange.svg)](./rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](./LICENSE)
 
@@ -61,6 +61,16 @@ Backend receipts remain useful for selected-device execution, tokenizer and prom
 | Honest-compute receipts | Supported | Receipts preserve backend, runtime, fallback, kernel, and timing metadata. |
 | CLI run/chat | Diagnostic | Useful for exercising the pipeline; generated text is not yet a supported answer-quality surface. |
 | Server / HTTP API | Incomplete | Health wiring exists; inference serving is not ready. |
+
+## Requirements
+
+- Rust 1.93.0, pinned by [`rust-toolchain.toml`](rust-toolchain.toml).
+- A host with enough memory for the model artifact you are validating.
+- Optional: `cargo-nextest` for the full workspace test lane.
+- Optional: Nix for reproducible development shells and package builds.
+
+Default features are intentionally empty. Pass `--no-default-features` plus the
+backend feature you need, usually `--features cpu` for local diagnostic work.
 
 ## First Diagnostic Run
 
@@ -191,6 +201,11 @@ The repository contains unit, property, snapshot, fixture, fuzz, BDD, receipt, a
 | [docs/model-artifacts/](docs/model-artifacts/) | Model artifact status and validation. |
 | [docs/hardware/](docs/hardware/) | Hardware validation and benchmark protocol. |
 | [docs/tracking/](docs/tracking/) | Campaign state and active work. |
+
+For a fuller map, see the [documentation index](docs/README.md). Archived notes
+under `docs/archive/` and `archive/` are retained for provenance and may describe
+older targets, toolchains, or workflows. Prefer the active tutorials, how-to
+guides, reference pages, and tracking docs above for current work.
 
 ## What We Are Working On
 
