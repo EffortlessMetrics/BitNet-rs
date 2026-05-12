@@ -85,7 +85,7 @@ fn load_matrix(matrix_path: &PathBuf) -> Result<CoverageMatrix> {
 fn validate_matrix(matrix: &CoverageMatrix) -> Result<()> {
     require_eq(matrix.schema, 1, "schema")?;
     require_eq(matrix.artifact_kind.as_str(), "model_coverage_matrix", "artifact_kind")?;
-    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-002", "work_item")?;
+    require_eq(matrix.work_item.as_str(), "MODEL-COVERAGE-005", "work_item")?;
     require_nonempty(&matrix.claim_boundary, "claim_boundary")?;
     validate_tiers(&matrix.tier)?;
     validate_entries(matrix)?;
@@ -149,12 +149,26 @@ fn validate_entries(matrix: &CoverageMatrix) -> Result<()> {
         "bitnet_official_2b_tl2_x86_candidate",
         "bitnet_official_2b_bf16_gpu_int2_candidate",
         "dense_qwen25_05b_q8_cuda",
+        "dense_qwen3_06b_q8_candidate",
+        "dense_smollm2_360m_candidate",
+        "dense_smollm2_17b_candidate",
+        "dense_llama32_1b_candidate",
+        "dense_llama32_3b_candidate",
+        "dense_gemma_small_candidate",
+        "dense_phi_small_candidate",
         "bitnet_3b_x86_i2s_unsupported",
         "bitnet_3b_x86_tl2_candidate",
         "bitnet_onebit_large_diagnostic",
         "bitnet_llama3_8b_158_diagnostic",
         "bitnet_falcon3_falcon_e_158_diagnostic",
         "bitnet_mcu_tiny_fixture",
+        "small_llm_qwen25_15b_q4km_candidate",
+        "small_llm_qwen3_17b_q8_candidate",
+        "small_llm_llama32_3b_candidate",
+        "small_llm_gemma_2b_candidate",
+        "modern_llm_dense_frontier_placeholder",
+        "modern_llm_moe_frontier_placeholder",
+        "modern_llm_multimodal_placeholder",
         "modern_llm_placeholder_contract",
     ] {
         if !seen_ids.contains(required) {
@@ -263,8 +277,53 @@ fn validate_claim_boundaries(entry: &Entry) -> Result<()> {
     if entry.model_class == "bitnet" && c.dense_regular_llm_cuda_proof {
         bail!("BitNet entry `{}` claims dense regular-LLM CUDA proof", entry.id);
     }
+    if c.dense_regular_llm_cuda_proof
+        && !entry.accelerator_routes.iter().any(|route| route == "dense_regular_llm_cuda")
+    {
+        bail!(
+            "entry `{}` claims dense regular-LLM CUDA proof without a dense_regular_llm_cuda route",
+            entry.id
+        );
+    }
     if c.accelerator_answer_ready && entry.accelerator_routes.is_empty() {
         bail!("entry `{}` is accelerator-ready but has no accelerator route", entry.id);
+    }
+    if entry.model_class == "small_llm"
+        && !entry.required_receipts.iter().any(|receipt| receipt == "memory_envelope")
+    {
+        bail!("small LLM entry `{}` must require a memory_envelope receipt", entry.id);
+    }
+    if entry.model_class == "modern_llm_docs_only" {
+        if entry.status != "docs_only_placeholder" {
+            bail!("modern LLM docs-only entry `{}` must stay docs_only_placeholder", entry.id);
+        }
+        if !entry.accelerator_routes.is_empty() {
+            bail!("modern LLM docs-only entry `{}` cannot define accelerator routes", entry.id);
+        }
+        if !entry
+            .required_receipts
+            .iter()
+            .any(|receipt| receipt == "unsupported_on_current_hardware_receipt")
+        {
+            bail!(
+                "modern LLM docs-only entry `{}` must require an unsupported_on_current_hardware_receipt",
+                entry.id
+            );
+        }
+        if c.structurally_valid
+            || c.reference_good
+            || c.cpu_answer_ready
+            || c.accelerator_answer_ready
+            || c.benchmark_qualified
+            || c.product_cli_ready
+            || c.server_ready
+            || c.speedup_claim
+            || c.full_residency_claim
+            || c.bitnet_packed_i2s_qk256_proof
+            || c.dense_regular_llm_cuda_proof
+        {
+            bail!("modern LLM docs-only entry `{}` has a runtime or proof claim", entry.id);
+        }
     }
     if c.server_ready {
         bail!(
@@ -357,6 +416,59 @@ mod tests {
             Err(err) => err,
         };
         assert!(err.to_string().contains("non-I2_S artifact"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn slm_candidates_cannot_claim_dense_cuda_without_route() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) =
+            matrix.entry.iter_mut().find(|entry| entry.id == "dense_smollm2_360m_candidate")
+        else {
+            bail!("missing SmolLM2 360M entry");
+        };
+        entry.claims.dense_regular_llm_cuda_proof = true;
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("SLM candidate dense CUDA proof leak must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("without a dense_regular_llm_cuda route"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn small_llm_entries_require_memory_envelope_receipts() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) =
+            matrix.entry.iter_mut().find(|entry| entry.id == "small_llm_qwen25_15b_q4km_candidate")
+        else {
+            bail!("missing small Qwen entry");
+        };
+        entry.required_receipts.retain(|receipt| receipt != "memory_envelope");
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("small LLM without memory envelope must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("must require a memory_envelope receipt"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn modern_llm_docs_only_entries_cannot_define_routes() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) = matrix
+            .entry
+            .iter_mut()
+            .find(|entry| entry.id == "modern_llm_dense_frontier_placeholder")
+        else {
+            bail!("missing modern dense placeholder entry");
+        };
+        entry.accelerator_routes.push("dense_regular_llm_cuda".to_string());
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("modern docs-only route leak must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("cannot define accelerator routes"), "{err}");
         Ok(())
     }
 }

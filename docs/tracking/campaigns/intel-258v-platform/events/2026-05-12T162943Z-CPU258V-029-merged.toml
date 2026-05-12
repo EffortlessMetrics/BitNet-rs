@@ -1,0 +1,16 @@
+timestamp = "2026-05-12T16:29:43Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-029"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4516
+merge_sha = "7836f9be2e4031b9ea83b210eb828e9630dbc5c3"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-029-answer-corpus-after-prompt-fix"
+summary = "Merged CPU258V-029, recording 258V scalar and AVX2 answer-corpus receipts after the prompt-policy fix."
+notes = [
+  "Scalar and AVX2 each passed all five fixed tiny answer-corpus gates.",
+  "The scalar-vs-AVX2 parity receipt records failed=0 and first_divergence=null.",
+  "CPU258V-030 is ready to refresh warm-session phase receipts against the corrected prompt/model path.",
+]

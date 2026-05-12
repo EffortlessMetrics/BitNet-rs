@@ -1,0 +1,14 @@
+timestamp = "2026-05-11T01:46:37Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-004"
+event = "merged"
+actor = "codex"
+pr = 4467
+branch = "codex/model-coverage-004-small-llms"
+head_sha = "8b6292137ef3ce544f4a0429ff1ac12984cd39a2"
+merge_sha = "cf6c38d927bd567a721ba8b52437dc5fddf13084"
+
+notes = [
+  "PR #4467 merged with selected small-LLM coverage rows and the small-LLM memory-envelope validator.",
+  "MODEL-COVERAGE-004 remains a registry and validator milestone only; no runtime, CUDA, speedup, full-residency, or server claims were added.",
+]

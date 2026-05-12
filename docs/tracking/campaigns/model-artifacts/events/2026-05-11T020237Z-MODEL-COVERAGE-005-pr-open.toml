@@ -1,0 +1,13 @@
+timestamp = "2026-05-11T02:02:37Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-005"
+event = "pr_open"
+actor = "codex"
+pr = 4470
+branch = "codex/model-coverage-005-modern-placeholders"
+head_sha = "16352bc03944730c495a95651a830db2473f3ce0"
+
+notes = [
+  "Opened PR #4470 for MODEL-COVERAGE-005 docs-only modern LLM placeholders.",
+  "The PR remains registry, docs, validator, and tracker only and preserves all runtime and claim boundaries.",
+]

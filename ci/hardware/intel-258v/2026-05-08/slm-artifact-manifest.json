@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "intel_258v_dense_slm_artifact_manifest",
+  "campaign": "intel-258v-platform",
+  "item": "SLM258V-001",
+  "created_utc": "2026-05-12T19:31:09Z",
+  "machine_id": "intel-258v",
+  "purpose": "Pin the first dense SLM candidate for future Lunar Lake CPU strict answer smoke work.",
+  "selected_candidate": {
+    "id": "qwen2_5_0_5b_instruct_q8_0",
+    "status": "accepted_for_lunar_lake_candidate_manifest_not_yet_run_on_258v",
+    "target_role": "first Lunar Lake dense SLM CPU strict answer smoke candidate",
+    "family": "qwen",
+    "model_name": "qwen2.5-0.5b-instruct",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "repo_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "source_url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/blob/9217f5db79a29953eb74d5343926648285ec7e67/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "bytes": 675710816,
+    "format": "gguf",
+    "gguf_architecture": "qwen2",
+    "quantization": "Q8_0",
+    "context_length": 32768,
+    "expected_local_path": "models/slm/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "model_file_committed": false
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "tokenizer_model": "gpt2",
+    "pretokenizer": "qwen2",
+    "chat_template_present": true,
+    "prompt_template": "qwen2.5",
+    "bos_token_id": 151643,
+    "eos_token_id": 151645,
+    "padding_token_id": 151643,
+    "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+  },
+  "reference_expectations": {
+    "status": "cross_lane_reference_and_rust_evidence_available_not_lunar_lake_proof",
+    "primary_prompt": {
+      "id": "math_2_plus_2",
+      "text": "What is 2+2? Answer briefly.",
+      "template": "qwen2.5",
+      "expected_answer_class": "contains 4 or four"
+    },
+    "known_reference_boundary": {
+      "runner": "llama-cli",
+      "mode": "cpu_layers_greedy",
+      "first_generated_token_id": 198,
+      "first_generated_token_text": "\\n",
+      "continuation_preview": "2+2"
+    },
+    "known_rust_boundary": {
+      "host": "apple-m4-mac-mini",
+      "selected_backend": "apple-m4-cpu-neon",
+      "fallback_used": false,
+      "generated_ids": [198, 17, 10, 17, 16819, 220, 19, 13, 151645],
+      "decoded_text": "\\n2+2 equals 4.<|im_end|>"
+    }
+  },
+  "evidence_sources": [
+    {
+      "path": "docs/slm/apple-m4-dense-slm-model-support-matrix.md",
+      "summary": "Records qwen2.5-0.5b-instruct-q8_0 as the current dense Qwen Apple CPU/NEON baseline artifact."
+    },
+    {
+      "path": "docs/slm/apple-m4-qwen-first-token-parity.md",
+      "summary": "Records reference/Rust first-token parity and a coherent Qwen2.5 Q8_0 smoke answer on Apple M4 CPU/NEON."
+    },
+    {
+      "path": "ci/quality/apple-m4-slm-answer-first-token-parity.toml",
+      "summary": "Records the exact Q8_0 SHA256, prompt IDs, first-token boundary, and post-fix Rust evidence."
+    }
+  ],
+  "lunar_lake_execution_status": {
+    "strict_cpu_answer_smoke": "not_run",
+    "phase_receipts": "not_run",
+    "arc_140v_execution": "not_run",
+    "intel_npu_execution": "not_run"
+  },
+  "next_actions": [
+    "Fetch or place the exact GGUF outside the repository under the expected local path.",
+    "Verify SHA256 before any SLM258V-002 strict answer smoke.",
+    "Run a Lunar Lake CPU strict answer smoke with the qwen2.5 prompt template and fallback_used=false."
+  ],
+  "claim_boundary": {
+    "may_claim": [
+      "A dense SLM candidate artifact is pinned for future Lunar Lake CPU strict answer smoke work.",
+      "The manifest records source, SHA256, architecture, quantization, tokenizer metadata, prompt template, context length, and reference-output expectations.",
+      "No model binary is committed."
+    ],
+    "must_not_claim": [
+      "Dense SLM inference works on the 258V.",
+      "Dense SLM answer quality is proven on the 258V.",
+      "BitNet QK256/I2_S proof is affected.",
+      "Arc 140V or Intel NPU execution is proven.",
+      "Acceleration or performance is proven."
+    ]
+  }
+}

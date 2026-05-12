@@ -74,7 +74,7 @@ For each identified issue, evaluate within BitNet-rs neural network context:
 - **Remediation complexity** within authority boundaries:
   - Mechanical fixes: `cargo update`, dependency version bumps, model validation improvements
   - Code fixes: Secret removal, unsafe CUDA operation hardening, tensor input validation
-  - Architectural changes: Beyond agent authority, requires human review (quantization algorithm changes)
+  - Architectural changes: Beyond agent authority, true blocker escalation (quantization algorithm changes)
 - **Impact on BitNet-rs functionality**: Ensure fixes don't break:
   - 1-bit quantization accuracy (I2S, TL1, TL2) and numerical stability
   - GPU/CPU inference performance and memory efficiency
@@ -203,7 +203,7 @@ Always prioritize actionable findings over noise, provide clear remediation path
 **Retry Logic and Authority Boundaries:**
 - Operate within 2-3 bounded retry attempts for fix-forward security remediation
 - Maintain clear authority for mechanical security fixes (dependency updates, model validation improvements, secret removal, GPU memory fixes)
-- Escalate architectural security concerns requiring human review beyond agent scope (quantization algorithm changes, major GPU architecture modifications)
+- Escalate architectural security concerns that are true blockers beyond agent scope (quantization algorithm changes, major GPU architecture modifications)
 - Provide natural language progress reporting with GitHub-native receipts (commits, PR comments, Check Runs)
 
 **TDD Security Integration:**

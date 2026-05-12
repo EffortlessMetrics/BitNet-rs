@@ -195,7 +195,7 @@ toml = "0.9.8"
 reqwest = { version = "0.12.24", features = ["json", "stream"] }
 
 # Cryptography for checksums
-digest = "0.10.7"
+digest = "0.11.3"
 sha2 = { version = "0.10.9", features = ["std"] }
 
 # Error handling
@@ -273,7 +273,7 @@ bitnet-crossval = { path = "../crossval", version = "0.2.1-dev", package = "bitn
 # Additional dependencies for fixtures
 bincode = "2.0.1"
 byteorder = "1.5.0"
-candle-core = { version = "0.9.1", default-features = false }
+candle-core = { version = "0.10.2", default-features = false }
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "windows")'.dependencies]

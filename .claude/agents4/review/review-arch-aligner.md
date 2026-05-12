@@ -78,7 +78,7 @@ You have mechanical authority for:
 - GPU/CPU kernel trait implementations and feature flag organization
 - GGUF model loading interface improvements
 
-You must route for approval:
+You must route as true blockers:
 - Changes affecting quantization accuracy or inference determinism
 - Performance-critical path modifications that may impact neural network benchmarks
 - Public API changes in core `bitnet` crate

@@ -53,8 +53,18 @@ pub async fn init_tracing(config: &MonitoringConfig) -> Result<TracingGuard> {
         .with_line_number(true)
         .with_writer(file_writer);
 
-    // Build the subscriber
-    tracing_subscriber::registry().with(env_filter).with(console_layer).with(file_layer).init();
+    // Build the subscriber. Tests and embedded server users can construct more
+    // than one server in the same process, so tracing setup must be idempotent.
+    if tracing_subscriber::registry()
+        .with(env_filter)
+        .with(console_layer)
+        .with(file_layer)
+        .try_init()
+        .is_err()
+    {
+        tracing::debug!("Tracing already initialized");
+        return Ok(TracingGuard::new(None));
+    }
 
     tracing::info!(
         log_level = %config.log_level,

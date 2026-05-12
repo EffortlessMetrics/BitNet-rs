@@ -76,7 +76,7 @@ You have mechanical authority for:
 - Cache backend abstraction improvements
 - Parser trait implementations and feature flag organization
 
-You must route for approval:
+You must route as true blockers:
 - Changes affecting semantic analysis accuracy or output determinism
 - Performance-critical path modifications that may impact benchmarks
 - Public API changes in `code-graph` library crate

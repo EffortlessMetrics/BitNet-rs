@@ -11,13 +11,14 @@ Campaign work item policy is authoritative. For work items with
 `review_mode = "codex_premerge"`,
 `merge_policy = "automerge_when_green"`, and
 `human_gate = "on_blocker_only"`, you are authorized and expected to commit,
-push, open or update the PR, address CI/bot/reviewer feedback, and merge when
-checks are green and GitHub reports the PR mergeable. Do not treat commit, push,
-PR creation, or merge as human approval gates. Escalate only true blockers:
+push, open or update the PR, address CI/bot/reviewer feedback, merge when checks
+are green and GitHub reports the PR mergeable, and create or merge required
+tracker closeout PRs. Do not treat commit, push, PR creation, CI/bot repair,
+merge, or tracker closeout as human approval gates. Escalate only true blockers:
 permissions or branch protection, destructive data loss or secret/model-binary
 exposure risk, unresolved kernel/math/tokenizer/loader semantic conflict,
-acceptance criteria conflicting with repository policy, or a cost/exposure/release
-decision outside the ticket scope.
+acceptance criteria conflicting with repository policy, or a
+cost/exposure/release decision outside the ticket scope.
 
 **Your Core Responsibilities:**
 

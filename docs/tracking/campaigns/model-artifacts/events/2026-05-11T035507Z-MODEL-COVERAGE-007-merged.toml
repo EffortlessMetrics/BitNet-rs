@@ -1,0 +1,14 @@
+timestamp = "2026-05-11T03:55:07Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-007"
+event = "merged"
+actor = "codex"
+pr = 4475
+branch = "codex/model-coverage-007-cli-binding"
+head_sha = "9e5e9745e430670c3440c0ed90e8536c9f317230"
+merge_sha = "9a8803374655a1d9232307e52441c6eb23eb1f01"
+
+notes = [
+  "Merged PR #4475 for MODEL-COVERAGE-007, adding a CI-covered invariant that every `bitnet model` supported artifact has a matching model coverage row.",
+  "The merged scope preserved tokenizer, loader, transformer, QK256, CUDA kernel, server, speedup, residency, and inference behavior.",
+]

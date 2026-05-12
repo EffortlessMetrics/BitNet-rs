@@ -91,7 +91,7 @@ Route to pr-publisher agent after successful branch preparation. The branch shou
 
 **Routing Decision:**
 - **NEXT → pr-publisher**: When all quality gates pass and branch is ready for GitHub-native PR creation
-- **FINALIZE → self**: When preparation encounters issues requiring manual intervention or conflict resolution
+- **FINALIZE → self**: When preparation encounters issues requiring true blocker escalation or conflict resolution
 
 ## BitNet-rs Generative Adapter — Required Behavior (subagent)
 

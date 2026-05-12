@@ -1,0 +1,13 @@
+timestamp = "2026-05-11T01:09:10Z"
+campaign = "model-artifacts"
+item = "MODEL-COVERAGE-003"
+event = "pr_open"
+actor = "codex"
+pr = 4465
+branch = "codex/model-coverage-003-slm-families"
+head_sha = "c38226591f0600e68a3912f8a7e7a745de3fcb24"
+
+notes = [
+  "Opened PR #4465 for MODEL-COVERAGE-003 dense SLM family coverage rows.",
+  "The PR remains registry, docs, validator, and tracker only and preserves all runtime and claim boundaries.",
+]

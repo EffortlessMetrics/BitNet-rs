@@ -1,0 +1,20 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Inspect cross-family model coverage tiers and claim boundaries
+
+Usage: bitnet model coverage [OPTIONS] [ID]
+
+Arguments:
+  [ID]  Optional coverage entry id. Omit to list every model coverage row
+
+Options:
+  -c, --config <PATH>      Configuration file path
+      --matrix <PATH>      Override the coverage matrix path. Defaults to ci/model-artifacts/model-coverage-matrix.toml when run from this repo [env: BITNET_MODEL_COVERAGE_MATRIX=]
+  -d, --device <DEVICE>    Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+      --json               Emit JSON instead of text
+      --log-level <LEVEL>  Log level (trace, debug, info, warn, error)
+      --threads <N>        Number of CPU threads
+      --batch-size <SIZE>  Batch size for processing
+  -h, --help               Print help

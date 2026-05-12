@@ -28,7 +28,7 @@ thiserror.workspace = true
 bytemuck.workspace = true
 rayon.workspace = true
 log.workspace = true
-cudarc = { version = "0.17.8", optional = true, default-features = false, features = ["std", "driver", "nvrtc", "dynamic-loading", "cuda-12000"] }
+cudarc = { version = "0.19.6", optional = true, default-features = false, features = ["std", "driver", "nvrtc", "dynamic-loading", "cuda-12000"] }
 opencl3 = { version = "0.12", optional = true }
 cc = { version = "1.2.46", optional = true }
 bindgen = { version = "0.72.1", optional = true }
@@ -119,6 +119,16 @@ name = "neon_correctness_exhaustive"
 path = "tests/neon_correctness_exhaustive.rs"
 
 [[test]]
+name = "metal_adapter_detection_tests"
+path = "tests/metal_adapter_detection_tests.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
+name = "metal_compute_validation_tests"
+path = "tests/metal_compute_validation_tests.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
 name = "metal_device_integration_tests"
 path = "tests/metal_device_integration_tests.rs"
 required-features = ["metal-runtime"]
@@ -169,13 +179,48 @@ path = "tests/metal_compute_pipeline_tests.rs"
 required-features = ["metal-runtime", "cpu"]
 
 [[test]]
+name = "metal_embedding_shader_tests"
+path = "tests/metal_embedding_shader_tests.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
 name = "metal_layernorm_shader_tests"
 path = "tests/metal_layernorm_shader_tests.rs"
 required-features = ["metal-runtime"]
 
 [[test]]
+name = "metal_matmul_shader_tests"
+path = "tests/metal_matmul_shader_tests.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
+name = "metal_normalization_shader_tests"
+path = "tests/metal_normalization_shader_tests.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
 name = "metal_reduction_shader_tests"
 path = "tests/metal_reduction_shader_tests.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
+name = "metal_rope_shader_tests"
+path = "tests/metal_rope_shader_tests.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
+name = "metal_shader_library_tests"
+path = "tests/metal_shader_library_tests.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
+name = "metal_tiny_smoke"
+path = "tests/metal_tiny_smoke.rs"
+required-features = ["metal-runtime"]
+
+[[test]]
+name = "metal_wgpu_adapter_tests"
+path = "tests/metal_wgpu_adapter_tests.rs"
 required-features = ["metal-runtime"]
 
 [[test]]

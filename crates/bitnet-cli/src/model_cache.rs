@@ -8,7 +8,7 @@ use bitnet_models::{
 use clap::{Args, Subcommand};
 use futures::StreamExt;
 use humansize::{DECIMAL, format_size};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 #[cfg(unix)]
 use std::process::Command;
@@ -20,6 +20,8 @@ use std::{
 use tokio::io::AsyncWriteExt;
 
 const DEFAULT_CACHE_RELATIVE: &[&str] = &["bitnet-rs", "models"];
+const MODEL_COVERAGE_MATRIX_RELATIVE: &[&str] =
+    &["ci", "model-artifacts", "model-coverage-matrix.toml"];
 const LOW_DISK_HEADROOM_BYTES: u64 = 1_073_741_824;
 #[cfg(feature = "full-cli")]
 pub(crate) const M4_SLM_RUNTIME_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
@@ -77,6 +79,20 @@ pub enum ModelAction {
     Contracts {
         /// Optional contract id or alias. Omit to list every BitNet-family contract.
         id: Option<String>,
+
+        /// Emit JSON instead of text.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
+    /// Inspect cross-family model coverage tiers and claim boundaries.
+    Coverage {
+        /// Optional coverage entry id. Omit to list every model coverage row.
+        id: Option<String>,
+
+        /// Override the coverage matrix path. Defaults to ci/model-artifacts/model-coverage-matrix.toml when run from this repo.
+        #[arg(long, value_name = "PATH", env = "BITNET_MODEL_COVERAGE_MATRIX")]
+        matrix: Option<PathBuf>,
 
         /// Emit JSON instead of text.
         #[arg(long, default_value_t = false)]
@@ -251,6 +267,83 @@ struct PruneResult {
     dry_run: bool,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct ModelCoverageMatrix {
+    schema: u32,
+    artifact_kind: String,
+    updated: String,
+    work_item: String,
+    claim_boundary: String,
+    #[serde(default)]
+    tier: Vec<ModelCoverageTier>,
+    #[serde(default)]
+    entry: Vec<ModelCoverageEntry>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct ModelCoverageTier {
+    id: String,
+    rank: u32,
+    #[serde(default)]
+    requires: Vec<String>,
+    meaning: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct ModelCoverageEntry {
+    id: String,
+    model_class: String,
+    family: String,
+    artifact_kind: String,
+    #[serde(default)]
+    contract_id: Option<String>,
+    #[serde(default)]
+    capability_id: Option<String>,
+    status: String,
+    current_tier: String,
+    verifier_surface: String,
+    tokenizer_authority: String,
+    prompt_authority: String,
+    cpu_reference: String,
+    #[serde(default)]
+    accelerator_routes: Vec<String>,
+    #[serde(default)]
+    required_receipts: Vec<String>,
+    #[serde(default)]
+    forbidden_claims: Vec<String>,
+    next_proof: String,
+    claim_boundary: String,
+    claims: ModelCoverageClaims,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct ModelCoverageClaims {
+    registered: bool,
+    structurally_valid: bool,
+    reference_good: bool,
+    cpu_answer_ready: bool,
+    accelerator_answer_ready: bool,
+    benchmark_qualified: bool,
+    product_cli_ready: bool,
+    server_ready: bool,
+    speedup_claim: bool,
+    full_residency_claim: bool,
+    bitnet_packed_i2s_qk256_proof: bool,
+    dense_regular_llm_cuda_proof: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct ModelCoverageMatrixOutput<'a> {
+    matrix_path: &'a Path,
+    matrix: &'a ModelCoverageMatrix,
+}
+
+#[derive(Debug, Serialize)]
+struct ModelCoverageEntryOutput<'a> {
+    matrix_path: &'a Path,
+    entry: &'a ModelCoverageEntry,
+}
+
 impl ModelCommand {
     pub async fn execute(self) -> Result<()> {
         match self.action {
@@ -261,6 +354,9 @@ impl ModelCommand {
                 verify_model_command(&id, path, cache_dir, json)
             }
             ModelAction::Contracts { id, json } => list_model_contracts(id.as_deref(), json),
+            ModelAction::Coverage { id, matrix, json } => {
+                list_model_coverage(id.as_deref(), matrix, json)
+            }
             ModelAction::List { cache_dir, json } => list_models(cache_dir, json),
             ModelAction::Prune { id, all, dry_run, cache_dir, json } => {
                 prune_models(id, all, dry_run, cache_dir, json)
@@ -733,6 +829,173 @@ fn print_contract_summary(summary: &VerifyContractSummary) {
     println!("permitted claims: {}", summary.permitted_claims.join(", "));
     println!("required receipts: {}", summary.required_receipts.join(", "));
     println!("claim boundary: {}", summary.claim_boundary);
+}
+
+fn list_model_coverage(id: Option<&str>, matrix: Option<PathBuf>, json: bool) -> Result<()> {
+    let matrix_path = resolve_model_coverage_matrix_path(matrix)?;
+    let matrix = read_model_coverage_matrix(&matrix_path)?;
+
+    if let Some(id) = id {
+        let entry = find_model_coverage_entry(&matrix, id).ok_or_else(|| {
+            let known = matrix.entry.iter().map(|entry| entry.id.as_str()).collect::<Vec<_>>();
+            anyhow!("unknown model coverage id `{id}`. Known coverage ids: {}", known.join(", "))
+        })?;
+        if json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&ModelCoverageEntryOutput {
+                    matrix_path: &matrix_path,
+                    entry,
+                })?
+            );
+        } else {
+            print_model_coverage_entry(&matrix_path, entry);
+        }
+        return Ok(());
+    }
+
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&ModelCoverageMatrixOutput {
+                matrix_path: &matrix_path,
+                matrix: &matrix,
+            })?
+        );
+        return Ok(());
+    }
+
+    print_model_coverage_overview(&matrix_path, &matrix);
+    Ok(())
+}
+
+fn resolve_model_coverage_matrix_path(matrix: Option<PathBuf>) -> Result<PathBuf> {
+    if let Some(path) = matrix {
+        return Ok(path);
+    }
+    if let Some(path) = std::env::var_os("BITNET_MODEL_COVERAGE_MATRIX") {
+        return Ok(PathBuf::from(path));
+    }
+    if let Ok(current_dir) = std::env::current_dir()
+        && let Some(path) = find_model_coverage_matrix_from(&current_dir)
+    {
+        return Ok(path);
+    }
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(parent) = exe.parent()
+        && let Some(path) = find_model_coverage_matrix_from(parent)
+    {
+        return Ok(path);
+    }
+
+    anyhow::bail!(
+        "could not locate {}; run from the BitNet-rs repo, pass --matrix <PATH>, or set BITNET_MODEL_COVERAGE_MATRIX",
+        MODEL_COVERAGE_MATRIX_RELATIVE.join("/")
+    )
+}
+
+fn find_model_coverage_matrix_from(start: &Path) -> Option<PathBuf> {
+    for ancestor in start.ancestors() {
+        let mut candidate = ancestor.to_path_buf();
+        for segment in MODEL_COVERAGE_MATRIX_RELATIVE {
+            candidate.push(segment);
+        }
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn read_model_coverage_matrix(path: &Path) -> Result<ModelCoverageMatrix> {
+    let text =
+        fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let matrix: ModelCoverageMatrix = toml::from_str(&text)
+        .with_context(|| format!("failed to parse model coverage matrix {}", path.display()))?;
+    if matrix.schema != 1 {
+        anyhow::bail!("unsupported model coverage schema {}", matrix.schema);
+    }
+    if matrix.artifact_kind != "model_coverage_matrix" {
+        anyhow::bail!("expected artifact_kind=model_coverage_matrix, got {}", matrix.artifact_kind);
+    }
+    if matrix.tier.is_empty() {
+        anyhow::bail!("model coverage matrix has no tiers");
+    }
+    if matrix.entry.is_empty() {
+        anyhow::bail!("model coverage matrix has no entries");
+    }
+    Ok(matrix)
+}
+
+fn find_model_coverage_entry<'a>(
+    matrix: &'a ModelCoverageMatrix,
+    id: &str,
+) -> Option<&'a ModelCoverageEntry> {
+    matrix.entry.iter().find(|entry| entry.id.eq_ignore_ascii_case(id))
+}
+
+fn print_model_coverage_overview(path: &Path, matrix: &ModelCoverageMatrix) {
+    println!("Model coverage matrix: {} entries, {} tiers", matrix.entry.len(), matrix.tier.len());
+    println!("source: {}", path.display());
+    println!("updated: {} ({})", matrix.updated, matrix.work_item);
+    println!("claim boundary: {}", matrix.claim_boundary);
+    println!();
+    println!("{:<42} {:<20} {:<20} {:<28} Routes", "ID", "Class", "Tier", "Status");
+    println!("{}", "-".repeat(128));
+    for entry in &matrix.entry {
+        let routes = if entry.accelerator_routes.is_empty() {
+            "-".to_string()
+        } else {
+            entry.accelerator_routes.join(", ")
+        };
+        println!(
+            "{:<42} {:<20} {:<20} {:<28} {}",
+            entry.id, entry.model_class, entry.current_tier, entry.status, routes
+        );
+    }
+    println!();
+    println!("Use `bitnet model coverage <id>` for one row, or add --json for receipts tooling.");
+}
+
+fn print_model_coverage_entry(path: &Path, entry: &ModelCoverageEntry) {
+    println!("coverage: {}", entry.id);
+    println!("source: {}", path.display());
+    println!("class: {} / {}", entry.model_class, entry.family);
+    println!("artifact: {}", entry.artifact_kind);
+    if let Some(contract_id) = &entry.contract_id {
+        println!("contract: {contract_id}");
+    }
+    if let Some(capability_id) = &entry.capability_id {
+        println!("capability: {capability_id}");
+    }
+    println!("status: {}", entry.status);
+    println!("tier: {}", entry.current_tier);
+    println!("verifier: {}", entry.verifier_surface);
+    println!("tokenizer authority: {}", entry.tokenizer_authority);
+    println!("prompt authority: {}", entry.prompt_authority);
+    println!("cpu reference: {}", entry.cpu_reference);
+    if entry.accelerator_routes.is_empty() {
+        println!("routes: -");
+    } else {
+        println!("routes: {}", entry.accelerator_routes.join(", "));
+    }
+    println!("required receipts: {}", entry.required_receipts.join(", "));
+    println!("forbidden claims: {}", entry.forbidden_claims.join(", "));
+    println!("next proof: {}", entry.next_proof);
+    println!("claim boundary: {}", entry.claim_boundary);
+    println!("claims:");
+    println!("  registered: {}", entry.claims.registered);
+    println!("  structurally_valid: {}", entry.claims.structurally_valid);
+    println!("  reference_good: {}", entry.claims.reference_good);
+    println!("  cpu_answer_ready: {}", entry.claims.cpu_answer_ready);
+    println!("  accelerator_answer_ready: {}", entry.claims.accelerator_answer_ready);
+    println!("  benchmark_qualified: {}", entry.claims.benchmark_qualified);
+    println!("  product_cli_ready: {}", entry.claims.product_cli_ready);
+    println!("  server_ready: {}", entry.claims.server_ready);
+    println!("  speedup_claim: {}", entry.claims.speedup_claim);
+    println!("  full_residency_claim: {}", entry.claims.full_residency_claim);
+    println!("  bitnet_packed_i2s_qk256_proof: {}", entry.claims.bitnet_packed_i2s_qk256_proof);
+    println!("  dense_regular_llm_cuda_proof: {}", entry.claims.dense_regular_llm_cuda_proof);
 }
 
 fn list_models(cache_dir: Option<PathBuf>, json: bool) -> Result<()> {
@@ -1291,6 +1554,15 @@ fn available_bytes(path: &Path) -> Option<u64> {
 mod tests {
     use super::*;
 
+    fn workspace_model_coverage_matrix_path() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("ci")
+            .join("model-artifacts")
+            .join("model-coverage-matrix.toml")
+    }
+
     #[test]
     fn supported_manifest_contains_m4_runtime_artifact() {
         let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
@@ -1518,6 +1790,90 @@ mod tests {
 
         assert!(result.model_contract.is_some());
         assert!(result.model_capability.is_none());
+    }
+
+    #[test]
+    fn model_coverage_matrix_parse_exposes_bitnet_and_dense_boundaries() {
+        let matrix = read_model_coverage_matrix(&workspace_model_coverage_matrix_path()).unwrap();
+
+        assert_eq!(matrix.schema, 1);
+        assert_eq!(matrix.artifact_kind, "model_coverage_matrix");
+        assert!(matrix.tier.iter().any(|tier| tier.id == "product_cli_ready"));
+
+        let bitnet = find_model_coverage_entry(&matrix, "bitnet_official_2b_i2s_qk256")
+            .expect("official BitNet coverage row");
+        assert_eq!(bitnet.current_tier, "product_cli_ready");
+        assert_eq!(bitnet.accelerator_routes, ["bitnet_qk256_cuda"]);
+        assert!(bitnet.claims.bitnet_packed_i2s_qk256_proof);
+        assert!(!bitnet.claims.dense_regular_llm_cuda_proof);
+        assert!(!bitnet.claims.speedup_claim);
+
+        let dense = find_model_coverage_entry(&matrix, "dense_qwen25_05b_q8_cuda")
+            .expect("dense Qwen coverage row");
+        assert_eq!(dense.current_tier, "product_cli_ready");
+        assert_eq!(dense.accelerator_routes, ["dense_regular_llm_cuda"]);
+        assert!(dense.claims.dense_regular_llm_cuda_proof);
+        assert!(!dense.claims.bitnet_packed_i2s_qk256_proof);
+        assert!(!dense.claims.speedup_claim);
+    }
+
+    #[test]
+    fn model_coverage_matrix_preserves_unsupported_and_docs_only_boundaries() {
+        let matrix = read_model_coverage_matrix(&workspace_model_coverage_matrix_path()).unwrap();
+
+        let unsupported = find_model_coverage_entry(&matrix, "bitnet_3b_x86_i2s_unsupported")
+            .expect("3B unsupported coverage row");
+        assert_eq!(unsupported.status, "unsupported_upstream");
+        assert_eq!(unsupported.accelerator_routes, Vec::<String>::new());
+        assert!(unsupported.forbidden_claims.iter().any(|claim| claim == "answer_ready"));
+        assert!(!unsupported.claims.cpu_answer_ready);
+        assert!(!unsupported.claims.accelerator_answer_ready);
+
+        let docs_only = find_model_coverage_entry(&matrix, "modern_llm_dense_frontier_placeholder")
+            .expect("docs-only modern LLM coverage row");
+        assert_eq!(docs_only.model_class, "modern_llm_docs_only");
+        assert_eq!(docs_only.accelerator_routes, Vec::<String>::new());
+        assert!(
+            docs_only
+                .required_receipts
+                .iter()
+                .any(|receipt| { receipt == "unsupported_on_current_hardware_receipt" })
+        );
+        assert!(docs_only.claims.registered);
+        assert!(!docs_only.claims.structurally_valid);
+        assert!(!docs_only.claims.dense_regular_llm_cuda_proof);
+        assert!(!docs_only.claims.server_ready);
+    }
+
+    #[test]
+    fn model_coverage_lookup_is_case_insensitive_and_fails_closed() {
+        let matrix = read_model_coverage_matrix(&workspace_model_coverage_matrix_path()).unwrap();
+
+        let entry = find_model_coverage_entry(&matrix, "DENSE_QWEN25_05B_Q8_CUDA")
+            .expect("case-insensitive coverage lookup");
+        assert_eq!(entry.id, "dense_qwen25_05b_q8_cuda");
+        assert!(find_model_coverage_entry(&matrix, "missing_model_coverage_row").is_none());
+    }
+
+    #[test]
+    fn every_supported_model_has_model_coverage_matrix_row() {
+        let matrix = read_model_coverage_matrix(&workspace_model_coverage_matrix_path()).unwrap();
+
+        for model in SUPPORTED_MODELS {
+            let has_coverage = matrix.entry.iter().any(|entry| {
+                entry.capability_id.as_deref() == Some(model.id)
+                    || model
+                        .model_contract
+                        .is_some_and(|contract| entry.contract_id.as_deref() == Some(contract))
+                    || entry.verifier_surface.split_whitespace().any(|part| part == model.id)
+            });
+
+            assert!(
+                has_coverage,
+                "supported model `{}` must have a model coverage matrix row through capability_id, contract_id, or verifier_surface",
+                model.id
+            );
+        }
     }
 
     #[test]

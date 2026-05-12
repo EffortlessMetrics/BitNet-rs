@@ -41,6 +41,7 @@ fn bitnet_stderr_failure(args: &[&str]) -> String {
 fn trim_trailing_line_whitespace(output: String) -> String {
     let ends_with_newline = output.ends_with('\n');
     let mut normalized = output.lines().map(str::trim_end).collect::<Vec<_>>().join("\n");
+    normalized = normalized.replace("bitnet.exe", "bitnet");
     if ends_with_newline {
         normalized.push('\n');
     }
@@ -101,6 +102,12 @@ fn model_fetch_help() {
 fn model_verify_help() {
     let help = bitnet_stdout(&["model", "verify", "--help"]);
     assert_snapshot!("model_verify_help", help);
+}
+
+#[test]
+fn model_coverage_help() {
+    let help = bitnet_stdout(&["model", "coverage", "--help"]);
+    assert_snapshot!("model_coverage_help", help);
 }
 
 #[test]

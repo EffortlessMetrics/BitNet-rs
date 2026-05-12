@@ -1,0 +1,13 @@
+timestamp = "2026-05-12T14:05:00Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-007"
+event = "pr_open"
+pr = 4511
+head_sha = "78d09d1dbc906fe2e66e2b763ddf62ed0d0adcf9"
+actor = "codex"
+
+notes = [
+  "Opened PR #4511 for the live M3 MacBook Air lane roadmap.",
+  "The PR scopes M3 Air roadmap, storage policy, receipt label, dense SLM mirror sequence, BitNet artifact qualification sequence, and M4 handoff boundaries.",
+  "No model binary, model inference receipt, BitNet local-answer claim, M4 performance claim, full Metal inference claim, Neural Engine claim, or QK256 claim is included.",
+]

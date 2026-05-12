@@ -20,12 +20,17 @@ ci/hardware/intel-258v/<date>/cpu-answer-corpus-scalar-bitnetcpp-template-math_2
 ci/hardware/intel-258v/<date>/cpu-answer-parity-bitnetcpp-template-math_2_plus_2-release.json
 ci/hardware/intel-258v/<date>/prompt-authority-audit-math.json
 ci/hardware/intel-258v/<date>/hf-prompt-token-reference-parity.json
+ci/hardware/intel-258v/<date>/hf-prompt-token-reference-parity-after-prompt-fix.json
+ci/hardware/intel-258v/<date>/cpu-answer-corpus-scalar-after-prompt-fix.json
+ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-after-prompt-fix.json
+ci/hardware/intel-258v/<date>/cpu-answer-parity-after-prompt-fix.json
 ci/hardware/intel-258v/<date>/external-first-token-reference.json
 ci/hardware/intel-258v/<date>/first-token-divergence-classification.json
 ci/hardware/intel-258v/<date>/cpu-qk256-i8s-semantic-audit.json
 ci/hardware/intel-258v/<date>/output-head-logits-index-audit.json
 ci/hardware/intel-258v/<date>/transformer-layer-parity.json
 ci/hardware/intel-258v/<date>/cpu-reference-bundle.json
+ci/hardware/intel-258v/<date>/cpu-semantic-diagnosis.json
 ci/hardware/intel-258v/<date>/npu-openvino-runtime-probe.json
 ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
@@ -61,6 +66,29 @@ per-profile strict CPU receipts under `cpu-phase-warm-session-profiles/`, and
 remains CPU-only phase timing evidence until those profile receipts are
 converted by `cpu_phase_benchmark_receipt`.
 
+`cpu-phase-warm-session-after-prompt-fix.json` refreshes that one-process phase
+surface after the metadata-authoritative prompt-policy fix and fixed-corpus
+answer pass. It writes per-profile receipts under
+`cpu-phase-warm-session-after-prompt-fix-profiles/`, records
+`i2_s-avx2-reference` with `fallback_used=false`, and remains phase timing
+evidence only; it does not claim speedup, sustained throughput, Arc/NPU
+execution, QK256 changes, or full model correctness.
+
+`cpu-reference-bundle-after-semantic-fix.json` is the corrected CPU reference
+index after the prompt-policy fix, fixed-corpus scalar/AVX2 answer pass, and
+post-fix warm-session phase receipts. It supersedes the semantic-debug
+`cpu-reference-bundle.json` for new accelerator comparisons, while preserving
+the same claim boundary: no new runtime behavior, no broad answer-quality
+claim, no speedup/sustained-throughput claim, and no Arc/NPU execution claim.
+
+`slm-artifact-manifest.json` pins the first dense SLM candidate for future
+Lunar Lake CPU strict answer smoke work. It records the exact Qwen2.5 0.5B
+Instruct Q8_0 GGUF source, revision, SHA256, architecture, quantization,
+tokenizer metadata, prompt template, context length, and cross-lane reference
+expectations. It does not commit a model binary and does not claim dense SLM
+inference, answer quality, speed, Arc 140V execution, Intel NPU execution, or
+BitNet QK256/I2_S coverage on the 258V.
+
 `cpu-answer-corpus-avx2-bitnetcpp-template.json` records the first 258V AVX2
 attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready
 prompt envelope. Timeout rows and `missing_child_receipt` kernels are blocker
@@ -87,6 +115,18 @@ matching scalar run and scalar-vs-AVX2 parity result. Scalar and AVX2 generate
 the same token IDs and decoded text for the selected case, so the selected bad
 answer is not AVX2-specific.
 
+`cpu-answer-corpus-scalar-after-prompt-fix.json`,
+`cpu-answer-corpus-avx2-after-prompt-fix.json`, and
+`cpu-answer-parity-after-prompt-fix.json` rerun the full fixed
+`strict-bitnet-answer-corpus-v1` prompt set after the CPU258V-028 prompt-policy
+fix. They record the corrected BitNet answer-ready prompt boundary with the
+trailing `Assistant: ` generation prompt, `add_bos=false`, explicit tokenizer
+authority, scalar/AVX2 selected kernels, and `fallback_used=false`. The five
+tiny deterministic gates pass in both scalar and AVX2 and scalar-vs-AVX2 parity
+has no divergence. These receipts still do not claim broad chat quality, CPU
+speed, Arc 140V execution, Intel NPU execution, QK256 changes, or full model
+correctness.
+
 `platform-comparison-index.json` links independently scoped CPU, Arc 140V, and
 Intel NPU artifacts from the same Lunar Lake laptop. It is an index only: it may
 record artifact paths, backend identity, runtime API, proof stage, and fallback
@@ -101,6 +141,15 @@ audit, output-head/logits-index audit, observed logits evidence, and
 transformer-layer parity ladder. It is a CPU reference index only and must not
 claim new answer quality, CPU speed, Arc 140V execution, Intel NPU execution,
 external first-token logits parity, or full model correctness.
+
+`cpu-semantic-diagnosis.json` turns the CPU reference bundle into a
+machine-readable diagnosis. It records the current prompt-policy mismatch
+against the external HF `apply_chat_template` boundary, preserves the separate
+external-reference instrumentation gap for generated-token IDs and first-token
+logits, and summarizes QK256/I8_S, output-head/logits-index, transformer-layer,
+answer-parity, and phase evidence. It is diagnostic only: it does not fix prompt
+policy, prove external logits parity, add answer quality or speed claims, or
+prove Arc 140V / Intel NPU execution.
 
 `arc-140v-opencl-parity.json` records one isolated native OpenCL vector-add
 parity run on Arc 140V against the selected 258V CPU reference bundle. It may

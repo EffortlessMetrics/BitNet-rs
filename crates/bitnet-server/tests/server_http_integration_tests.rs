@@ -16,7 +16,7 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 
 use bitnet_server::{
-    ErrorResponse,
+    BitNetServer, ErrorResponse, ServerConfig,
     concurrency::{ConcurrencyConfig, ConcurrencyManager},
     config::ConfigBuilder,
     monitoring::{
@@ -254,4 +254,77 @@ async fn test_health_response_build_info_present() {
     let build = json.get("build").expect("/health JSON must contain 'build' key");
     assert!(build.get("version").is_some(), "'build' object must contain 'version'");
     assert!(build.get("git_sha").is_some(), "'build' object must contain 'git_sha'");
+}
+
+/// `/v1/readiness` reports fail-closed certification state for the production app.
+#[tokio::test]
+async fn test_v1_readiness_fails_closed_without_active_model() {
+    let server = BitNetServer::new(ServerConfig::default()).await.expect("server must initialize");
+    let app = server.create_app();
+
+    let resp = app
+        .oneshot(Request::builder().uri("/v1/readiness").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+    let body =
+        axum::body::to_bytes(resp.into_body(), usize::MAX).await.expect("body read must succeed");
+    let json: Value = serde_json::from_slice(&body).expect("body must be valid JSON");
+
+    assert_eq!(json["ready"], false);
+    assert_eq!(json["status"], "not_ready");
+    assert_eq!(json["reason"], "no_active_model");
+    assert_eq!(json["inference"]["real_server_inference_ready"], false);
+    assert_eq!(json["inference"]["simulated_inference_enabled"], false);
+    assert_eq!(json["backend"]["server_fallback_policy"], "fail_closed_until_real_engine");
+    assert_eq!(json["claim_boundary"]["server_ready_claimed"], false);
+    assert_eq!(json["claim_boundary"]["speedup_claim"], false);
+    assert_eq!(json["claim_boundary"]["full_cuda_residency_claimed"], false);
+}
+
+/// `/v1/chat/completions` is OpenAI-compatible but fail-closed until real inference is wired.
+#[tokio::test]
+async fn test_v1_chat_completions_fails_closed_without_simulated_output() {
+    let server = BitNetServer::new(ServerConfig::default()).await.expect("server must initialize");
+    let app = server.create_app();
+
+    let body = json!({
+        "model": "qwen2.5-0.5b-q8",
+        "messages": [
+            {"role": "user", "content": "Explain deferred revenue."}
+        ],
+        "max_tokens": 16,
+        "temperature": 0.0,
+        "stream": false
+    });
+
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header(axum::http::header::CONTENT_TYPE, "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+    let body =
+        axum::body::to_bytes(resp.into_body(), usize::MAX).await.expect("body read must succeed");
+    let json: Value = serde_json::from_slice(&body).expect("body must be valid JSON");
+
+    assert_eq!(json["error_code"], "SERVER_INFERENCE_UNAVAILABLE");
+    assert_eq!(json["details"]["requested_model"], "qwen2.5-0.5b-q8");
+    assert_eq!(json["details"]["message_count"], 1);
+    assert_eq!(json["details"]["stream"], false);
+    assert_eq!(json["details"]["readiness"]["ready"], false);
+    assert_eq!(json["details"]["readiness"]["reason"], "no_active_model");
+    assert_eq!(json["details"]["readiness"]["inference"]["simulated_inference_enabled"], false);
+    assert_eq!(json["details"]["readiness"]["claim_boundary"]["server_ready_claimed"], false);
+    assert!(json.get("choices").is_none(), "fail-closed response must not look like chat output");
 }

@@ -92,6 +92,12 @@ The following changes are planned as part of the Rust 1.95 / next minor wave.
 See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder and
 CI economics framing.
 
+Current `main` has a broad but structured non-Rust allowlist. Legitimate
+surfaces include GitHub workflows, docs, policy ledgers, GPU shaders, FFI,
+Python/WASM bindings, runtime config, tooling, fixtures, snapshots, and
+archives. The Rust 1.95 wave tightens this existing ledger; it does not add a
+new broad allowlist layer.
+
 ### Allowlist tightening (PR 10)
 
 PR 10 reviews the current `policy/non-rust-allowlist.toml` and:
@@ -109,6 +115,8 @@ The following constraints apply to PR 10:
 * No broad catch-all globs added.
 * Checker policy is not weakened.
 * Production GPU/FFI code is not reclassified as docs or tooling.
+* Process and network behavior stays in companion policies rather than being
+  buried inside broad non-Rust file allowances.
 
 ### Non-Rust surfaces that must remain explicit
 

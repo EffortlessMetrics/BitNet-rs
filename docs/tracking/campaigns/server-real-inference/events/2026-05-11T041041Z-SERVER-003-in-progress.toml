@@ -1,0 +1,14 @@
+timestamp = "2026-05-11T04:10:41Z"
+campaign = "server-real-inference"
+item = "SERVER-003"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+branch = "codex/server-003-readiness-certification"
+actor = "codex"
+summary = "Started SERVER-003 to add a fail-closed readiness/certification endpoint exposing active model, backend, inference, fallback, and claim-boundary state."
+notes = [
+  "SERVER-001 and SERVER-002 are merged.",
+  "The endpoint must fail closed until a real server inference engine is wired.",
+  "Scope is server contract/readiness only; no model runtime, CUDA kernel, or speed claim changes.",
+]

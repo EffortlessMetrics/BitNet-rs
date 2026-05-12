@@ -69,7 +69,7 @@ After completing checks, route based on outcomes:
   - CUDA/GPU issues → NEXT → developer with specific GPU setup context
   - Workspace compilation errors → NEXT → architecture-reviewer for design validation
 - **Security issues**:
-  - CVE advisories → attempt `cargo audit fix`, route to security-scanner if manual review needed
+  - CVE advisories → attempt `cargo audit fix`, route to security-scanner if true blocker review is needed
   - Neural network security patterns → NEXT → security-scanner for comprehensive validation
 - **Performance markers detected**: Note for throughput validation, continue with current flow
 
