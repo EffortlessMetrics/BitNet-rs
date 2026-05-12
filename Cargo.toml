@@ -278,8 +278,8 @@ bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-rope = { path = "crates/bitnet-rope", version = "0.2.1-dev" }
 bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.2.1-dev" }
 bitnet-tests = { path = "tests", version = "0.2.1-dev", package = "bitnet-tests", default-features = false }
-candle-core = { version = "0.9.1", default-features = false }
-candle-nn = { version = "0.9.1", default-features = false }
+candle-core = { version = "0.10.2", default-features = false }
+candle-nn = { version = "0.10.2", default-features = false }
 criterion = "0.7.0"
 ctor = "0.6.1"
 env_logger = "0.11.8"
@@ -462,9 +462,9 @@ bytemuck = { version = "1.24.0", features = ["derive"] }
 rayon = "1.11.0"
 
 # Tensor operations
-candle-core = { version = "0.9.1", default-features = false }
+candle-core = { version = "0.10.2", default-features = false }
 candle-nn = { version = "0.10.2", default-features = false }
-candle-transformers = { version = "0.9.1", default-features = false }
+candle-transformers = { version = "0.10.2", default-features = false }
 
 # Serialization formats
 memmap2 = "0.9.9"
