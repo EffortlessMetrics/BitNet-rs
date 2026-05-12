@@ -66,6 +66,12 @@ jobs:
           cargo run --locked -p xtask --no-default-features -- check-clippy-exceptions \
             --report-dir target/bitnet/reports
 
+      - name: clippy-lint-policy check
+        run: |
+          cargo run --locked -p xtask --no-default-features -- check-lint-policy \
+            --report-dir target/bitnet/reports \
+            --fail-on-error
+
       - name: no-panic-family check
         run: |
           cargo run --locked -p xtask --no-default-features -- check-no-panic-family \

@@ -110,6 +110,75 @@ This order keeps the MacBook useful immediately while preserving the existing
 proof hierarchy: first prove the host, then prove the dense control route, then
 spend disk on BitNet candidates.
 
+## Planning Horizons
+
+The lane should be managed as three review horizons instead of one long
+hardware push:
+
+| Horizon | Work items | Purpose | Exit condition |
+|---|---|---|---|
+| H1: Make the host trustworthy | `M3MBA-002`, `M3MBA-003` | Turn this exact M3 Air into a receipt-backed Apple CPU/NEON evidence source. | Machine profile and backend label are committed without inference claims. |
+| H2: Prove the operator path | `M3MBA-004A`, `M3MBA-004B`, `M3MBA-009` | Show the MacBook can run the known dense SLM control path with comparable receipt fields. | Smoke/operator receipts are pass/fail reviewed and synthesis names comparable gaps. |
+| H3: Spend disk on BitNet candidates | `M3MBA-005A`, `M3MBA-005B`, `M3MBA-005C`, `M3MBA-010`, `M3MBA-006`, `M3MBA-007`, `M3MBA-008` | Use the available storage for artifact identity, tokenizer authority, answer screening, cleanup, and strict-proof handoff. | Each candidate is accepted, rejected, blocked, or handed to a separate M4 proof item. |
+
+H1 is the current active horizon. H2 should not begin until the profile and
+receipt label are reviewable. H3 should not download the official 2B artifact
+until the dense control path leaves either passing receipts or a committed
+MacBook-specific blocker.
+
+## Dependency Map
+
+The roadmap has one hard path and three side paths:
+
+```text
+M3MBA-001
+  -> M3MBA-002
+    -> M3MBA-003
+      -> M3MBA-004A
+        -> M3MBA-004B
+          -> M3MBA-005A
+            -> M3MBA-005B
+              -> M3MBA-005C
+                -> M3MBA-006
+                -> M3MBA-007
+                -> M3MBA-008
+
+M3MBA-005A -> M3MBA-010
+M3MBA-004B -> M3MBA-009
+M3MBA-005C -> M3MBA-008
+```
+
+`M3MBA-010` is allowed to interrupt the main artifact path after the first large
+download and is a required gate before secondary large candidates. If free space
+drops below the lane floor, storage audit and cleanup take priority over
+additional candidate screening.
+
+`M3MBA-009` is a synthesis side path, not a prerequisite for Microsoft 2B
+identity work. It should wait for dense smoke/operator receipts, then compare
+only fields that are present across M3, M4, and SLM CPU evidence.
+
+`M3MBA-008` is the handoff side path. It should not invent M4 evidence; it
+should create the next strict-proof item with the exact artifact and authority
+requirements that passed on M3. If no artifact is accepted, close the handoff
+with a no-accepted-artifact report instead of opening proof work.
+
+## Parallelization Policy
+
+The lane can use agents and parallel review, but the evidence sequence should
+stay narrow:
+
+| Work type | Can run in parallel? | Boundary |
+|---|---|---|
+| Review of machine-profile schema, report templates, and tracker docs | Yes | Must not change live receipt state without the owning work item. |
+| Dense SLM command planning and artifact-cache inspection | Yes | Must not run model inference before `M3MBA-003` lands. |
+| Tokenizer authority research for Microsoft 2B | Yes | Must not accept or reject the artifact before `M3MBA-005A` records identity and hash. |
+| Large artifact downloads | No, unless storage audit says there is headroom | One active large BitNet candidate at a time until `M3MBA-010` records retention policy. |
+| M4 proof planning | Yes | Planning only; proof claims require fresh M4 receipts outside this lane. |
+
+This lets the lane move quickly on docs, schemas, and review while keeping model
+execution, artifact acceptance, and proof claims serialized behind committed
+evidence.
+
 ## Success Metrics
 
 The M3 Air lane is successful when it produces one of these reviewable outcomes:
@@ -359,6 +428,10 @@ reproduced cheaply. The committed report should state what happened either way.
 
 ## PR Stack
 
+This table mirrors the canonical tactical order above. It includes synthesis and
+storage side paths so later PRs do not silently skip the cleanup and comparison
+work.
+
 | Order | Branch / item | Scope | Stop condition |
 |---:|---|---|---|
 | 1 | `M3MBA-002` | Real M3 Air profile receipt | Machine facts and `inference_run=false` committed |
@@ -368,9 +441,11 @@ reproduced cheaply. The committed report should state what happened either way.
 | 5 | `M3MBA-005A` | Microsoft 2B I2_S artifact identity | Source, revision, size, hash, cache root, and storage state recorded |
 | 6 | `M3MBA-005B` | Microsoft 2B I2_S tokenizer authority | Authority and bad/no-authority rejection evidence recorded |
 | 7 | `M3MBA-005C` | Microsoft 2B I2_S reference output decision | Accept/reject/block report with answer-gate result |
-| 8 | `M3MBA-006` | 0.7B 1bitLLM control candidate | Accept/reject report and cleanup state |
-| 9 | `M3MBA-007` | 3B TL1/TL2 diagnostic | Diagnostic report only |
-| 10 | `M3MBA-008` | M4 strict-proof handoff | New M4 proof item, not an M3 claim |
+| 8 | `M3MBA-010` | Storage and cache hygiene audit | Headroom decision before secondary large candidates |
+| 9 | `M3MBA-006` | 0.7B 1bitLLM control candidate | Accept/reject report and cleanup state |
+| 10 | `M3MBA-009` | Dense SLM cross-lane synthesis | Comparable receipt fields and gaps named |
+| 11 | `M3MBA-007` | 3B TL1/TL2 diagnostic | Diagnostic report only |
+| 12 | `M3MBA-008` | M4 strict-proof handoff | New M4 proof item, or no-accepted-artifact closure |
 
 ## Execution Roadmap
 
@@ -566,10 +641,18 @@ reproduced cheaply. The committed report should state what happened either way.
 6. Run `M3MBA-005A`, `M3MBA-005B`, and `M3MBA-005C` for official Microsoft 2B
    I2_S identity, tokenizer authority, and reference-output decisions before
    any secondary BitNet candidate.
-7. Use the 0.7B 1bitLLM candidate in `M3MBA-006` only after the Microsoft path
-   records either acceptance or a clear blocker.
-8. Keep M4 proof handoff separate in `M3MBA-008` until a candidate passes
-   reference output with tokenizer authority.
+7. Run `M3MBA-010` after the first large BitNet download so retained/deleted
+   artifacts, free-space before/after, and secondary-download headroom are
+   committed.
+8. Use the 0.7B 1bitLLM candidate in `M3MBA-006` only after the Microsoft path
+   records a decision and `M3MBA-010` permits another large candidate.
+9. Run `M3MBA-009` once dense smoke/operator receipts exist so the M3 dense SLM
+   lane is compared against M4 and SLM CPU evidence before broader claims.
+10. Keep `M3MBA-007` diagnostic-only and run it only after storage audit permits
+    the 3B download.
+11. Keep M4 proof handoff separate in `M3MBA-008` until a candidate passes
+    reference output with tokenizer authority; otherwise close it as no accepted
+    artifact.
 
 ## Review Checklist
 

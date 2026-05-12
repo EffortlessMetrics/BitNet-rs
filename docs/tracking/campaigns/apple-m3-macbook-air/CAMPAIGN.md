@@ -101,6 +101,7 @@ Local cache state, terminal output, and downloaded model files are not enough.
 | Work item | Primary output |
 |---|---|
 | M3MBA-002 | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/machine-profile.json` |
+| M3MBA-003 | Receipt validator/test fixture or documented schema evidence proving `apple-m3-air-cpu-neon` support without weakening `apple-m4-cpu-neon`. |
 | M3MBA-004A | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json` and `docs/reports/apple-silicon-macbook-m3-air-qwen-smoke.md` |
 | M3MBA-004B | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-operator.json` and `docs/reports/apple-silicon-macbook-m3-air-qwen-operator.md` |
 | M3MBA-005A | `docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md` identity/hash section |
@@ -132,6 +133,15 @@ The first live sequence is:
 Do not skip the dense control path and jump straight to BitNet downloads. The
 dense run proves the MacBook runner, receipts, cache policy, backend labels, and
 operator flow before larger artifacts consume the local storage budget.
+
+`M3MBA-010` is a blocker for secondary large downloads. `M3MBA-006` and
+`M3MBA-007` may proceed only after the storage audit records retained/deleted
+artifacts, free-space before/after, and whether the lane has headroom for
+another candidate.
+
+`M3MBA-008` is conditional on an accepted artifact. If the Microsoft path and
+secondary candidates are rejected or blocked, close the handoff with a
+no-accepted-artifact report instead of opening a proof item.
 
 ## Report Minimum Sections
 

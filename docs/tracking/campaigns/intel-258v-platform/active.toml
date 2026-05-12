@@ -1981,3 +1981,45 @@ must_not_claim = [
   "Arc 140V acceleration or performance is proven.",
   "CPU fallback satisfies Arc 140V proof.",
 ]
+
+[[work_item]]
+id = "SLM258V-002"
+status = "pr_open"
+pr = 4530
+branch = "codex/lunar-lake/SLM258V-002-cpu-answer-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM258V-001"]
+acceptance = "Run the pinned Qwen2.5 0.5B Instruct Q8_0 dense SLM candidate through a strict 258V CPU answer smoke, recording GGUF tokenizer metadata, qwen2.5 prompt policy, generated token IDs/text, fallback=false, bounded answer-readiness gates, and any provenance blocker without claiming broad SLM quality, clean dense SLM proof while BitNet I2_S provenance is present, BitNet QK256/I2_S proof, Arc/NPU execution, acceleration, or performance."
+commands = [
+  "target/release/bitnet.exe model verify qwen2.5-0.5b-instruct-q8_0",
+  "target/release/bitnet.exe answer-corpus --dry-run --device cpu --model C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --corpus ci\\quality\\slm258v-qwen25-answer-corpus.yaml --json-out target\\bitnet\\receipts\\slm258v-qwen25-dry-run-verify.json",
+  "target/release/bitnet.exe answer-corpus --device cpu --model C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --corpus ci\\quality\\slm258v-qwen25-answer-corpus.yaml --fail-on-quality --json-out ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/slm258v-qwen25-answer-corpus.yaml",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The pinned Qwen2.5 dense SLM artifact produced 3/3 bounded CPU answer-gate passes on the 258V.",
+  "The SLM smoke receipt records GGUF tokenizer metadata, qwen2.5 prompt policy, generated token IDs/text, selected CPU backend, fallback_used=false, and the current BitNet I2_S provenance blocker.",
+]
+must_not_claim = [
+  "The 258V has a clean dense SLM CPU answer-smoke proof while the receipt still records BitNet I2_S provenance.",
+  "Broad dense SLM chat quality is proven.",
+  "BitNet QK256/I2_S proof is affected.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Acceleration or performance is proven.",
+  "Dense SLM receipts are interchangeable with BitNet packed-kernel receipts.",
+]

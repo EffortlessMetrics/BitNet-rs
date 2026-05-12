@@ -585,8 +585,10 @@ function saveSettings() {
 }
 
 function resetSettings() {
-    localStorage.removeItem('bitnet-wasm-settings');
-    location.reload();
+    if (confirm('Are you sure you want to reset all settings to their defaults?')) {
+        localStorage.removeItem('bitnet-wasm-settings');
+        location.reload();
+    }
 }
 
 function exportSettings() {

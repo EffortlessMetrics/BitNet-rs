@@ -13,6 +13,7 @@
 
 pub mod ci_lanes;
 pub mod clippy;
+pub mod clippy_lints;
 pub mod file_policy;
 pub mod lints;
 pub mod no_panic;
