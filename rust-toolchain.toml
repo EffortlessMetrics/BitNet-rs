@@ -3,7 +3,7 @@
 #
 # Bumped from 1.93.0 in the Rust 1.95 / next-minor rollout:
 # - keeps local, core CI, policy, coverage, and ripr lanes on the declared floor
-# - leaves lint activation and Clippy test carveout removal to later rollout PRs
+# - follow-up rollout PRs own lint activation and no-panic debt burn-down
 [toolchain]
 channel = "1.95.0"
 profile = "minimal"

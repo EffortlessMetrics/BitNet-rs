@@ -117,4 +117,4 @@ When `BITNET_STRICT_MODE=1`: validation fails with exit code 8 on suspicious Lay
 When loading I2_S tensors, QK256 (256-element blocks) is checked before BitNet32-F16 (32-element blocks with inline F16 scales) for closer-match disambiguation. See `bitnet-models/src/formats/` for the loader.
 
 ### clippy & formatting
-`max_width = 100`, `tab_spaces = 4`, Rust 2024 edition. `cognitive-complexity-threshold = 30`. `allow-expect-in-tests = true`, `allow-unwrap-in-tests = true`.
+`max_width = 100`, `tab_spaces = 4`, Rust 2024 edition. `cognitive-complexity-threshold = 30`. Do not add Clippy test carveouts such as `allow-expect-in-tests` or `allow-unwrap-in-tests`.

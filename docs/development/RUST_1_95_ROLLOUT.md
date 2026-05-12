@@ -66,7 +66,7 @@ PR #3866 established the Rust 1.93 CI economics control plane:
 The 1.93 rollout explicitly deferred:
 
 - strict Clippy ratchets and receipt discipline,
-- removal of test carveouts still in `clippy.toml`,
+- removal of the test carveouts that were still in `clippy.toml` at the time,
 - no-panic identity hardening and no-new-debt mode,
 - real `ripr` advisory execution when the binary is absent,
 - LEM/risk-pack tightening to reduce default per-PR mutation and over-testing,

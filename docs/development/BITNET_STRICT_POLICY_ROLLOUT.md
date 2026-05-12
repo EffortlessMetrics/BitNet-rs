@@ -58,10 +58,10 @@ allow-indexing-slicing-in-tests = true
 allow-dbg-in-tests      = true
 ```
 
-Tests are part of the contract. The current `clippy.toml` keeps
-`allow-unwrap-in-tests` and `allow-expect-in-tests` only as a staging
-window; PR 09 adds the fallible helpers and PR 12 deletes the
-carveouts.
+Tests are part of the contract. The staging window for
+`allow-unwrap-in-tests` and `allow-expect-in-tests` has closed; current
+`clippy.toml` should not reintroduce those carveouts. Use fallible helpers and
+owner-lane no-panic burndown instead.
 
 ### No global `-D warnings` for the policy lane
 
