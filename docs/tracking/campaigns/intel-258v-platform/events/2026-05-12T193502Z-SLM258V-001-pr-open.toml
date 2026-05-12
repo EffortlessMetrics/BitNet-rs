@@ -1,0 +1,16 @@
+timestamp = "2026-05-12T19:35:02Z"
+campaign = "intel-258v-platform"
+item = "SLM258V-001"
+event = "pr_open"
+pr = 4527
+actor = "EffortlessSteven"
+head_sha = "11ab9653d827a91ece54aa8633b5e9bcd4010980"
+summary = "Opened SLM258V-001 to pin the first Lunar Lake dense SLM artifact manifest."
+notes = [
+  "The PR records Qwen2.5 0.5B Instruct Q8_0 as the first dense SLM CPU smoke candidate for the 258V lane.",
+]
+details = [
+  "The manifest records the exact GGUF source, revision, file, SHA256, architecture, quantization, tokenizer metadata, prompt template, context length, and reference-output expectations.",
+  "Lunar Lake dense SLM execution remains not_run until SLM258V-002.",
+  "The PR does not commit model binaries or claim dense SLM answer quality, BitNet QK256/I2_S coverage, Arc 140V execution, Intel NPU execution, acceleration, or performance.",
+]
