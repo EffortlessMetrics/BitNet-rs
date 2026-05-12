@@ -1803,8 +1803,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-030"
-status = "pr_open"
+status = "merged"
 pr = 4520
+merge_sha = "14345efa39ccefbbc2c6fd8456bb7cc911fbf286"
 branch = "codex/lunar-lake/CPU258V-030-phase-receipts-after-prompt-fix"
 stackable = false
 review_mode = "codex_premerge"
@@ -1839,6 +1840,48 @@ must_not_claim = [
   "Sustained throughput is proven.",
   "General BitNet chat quality is proven beyond the fixed tiny corpus.",
   "Arc 140V or Intel NPU execution is proven.",
+  "QK256 semantics or transformer math changed.",
+  "Full model correctness is proven.",
+]
+
+[[work_item]]
+id = "CPU258V-031"
+status = "ready"
+branch = "codex/lunar-lake/CPU258V-031-corrected-reference-bundle"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-030"]
+acceptance = "Refresh the 258V CPU reference bundle after the prompt-policy fix, fixed-corpus scalar/AVX2 answer pass, and corrected warm-session phase receipts, linking the semantic diagnosis, implemented fix, prompt/token parity, answer corpus, scalar/AVX2 parity, phase receipts, and remaining gaps without adding new runtime behavior or accelerator claims."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-prompt-fix.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The corrected 258V CPU reference bundle points to the prompt-policy fix, answer-corpus pass, scalar/AVX2 parity, and corrected phase receipts.",
+  "NPU and Arc comparison lanes can cite the corrected CPU bundle as the current 258V CPU evidence index after merge.",
+]
+must_not_claim = [
+  "New runtime behavior is added.",
+  "New BitNet answer quality is proven beyond the fixed tiny corpus.",
+  "External first-token logits parity is proven.",
+  "CPU speedup or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is newly proven.",
   "QK256 semantics or transformer math changed.",
   "Full model correctness is proven.",
 ]

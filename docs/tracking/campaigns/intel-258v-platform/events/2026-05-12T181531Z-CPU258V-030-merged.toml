@@ -1,0 +1,18 @@
+timestamp = "2026-05-12T18:15:31Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-030"
+event = "merged"
+actor = "codex"
+pr = 4520
+merge_sha = "14345efa39ccefbbc2c6fd8456bb7cc911fbf286"
+summary = "Merged CPU258V-030, refreshing 258V strict CPU warm-session phase receipts after the prompt-policy fix."
+notes = [
+  "CPU258V-030 merged as #4520 with corrected warm-session phase receipts.",
+  "CPU258V-031 is promoted as the corrected CPU reference bundle refresh.",
+]
+details = [
+  "The merged receipts include an aggregate warm-session artifact plus prefill_512 and decode_128 profile receipts.",
+  "The phase run used real GGUF loading, explicit tokenizer resolution, corrected BitNet.cpp answer prompt policy, selected i2_s-avx2-reference, and fallback_used=false.",
+  "CPU258V-031 is ready to refresh the corrected CPU reference bundle around the prompt fix, answer-corpus pass, scalar/AVX2 parity, and corrected phase receipts.",
+  "The claim boundary remains CPU phase timing evidence only: no speedup, sustained throughput, Arc/NPU execution, QK256 changes, broad answer quality, or full model correctness.",
+]
