@@ -272,7 +272,7 @@ jobs:
             -p bitnet-testing-policy-interop \
             --no-default-features --features cpu
 
-      - name: "Run unit tests: AVX2 (x86_64 static +avx2)"
+      - name: "Run unit tests: AVX2 quantization (x86_64 static +avx2)"
         if: needs.classify-changes.outputs.tracker_only != 'true' && runner.os == 'Linux' && runner.arch == 'X64'
         env:
           RUSTFLAGS: "-D warnings -C target-feature=+avx2"
@@ -282,6 +282,12 @@ jobs:
             --lib \
             --no-default-features --features cpu \
             -- --nocapture
+
+      - name: "Run unit tests: AVX2 kernels (x86_64 static +avx2)"
+        if: needs.classify-changes.outputs.tracker_only != 'true' && runner.os == 'Linux' && runner.arch == 'X64'
+        env:
+          RUSTFLAGS: "-D warnings -C target-feature=+avx2"
+        run: |
           cargo test --locked \
             -p bitnet-kernels \
             --lib \
