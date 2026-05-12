@@ -7,9 +7,7 @@
 //! See `docs/NO_PANIC_POLICY.md` for the broader rationale: tests
 //! are part of the contract, and the long-term goal is for fixture
 //! loading, parsing, indexing, and helper plumbing to all be
-//! fallible. The short-term Clippy carveouts
-//! (`allow-unwrap-in-tests` / `allow-expect-in-tests`) are a
-//! staging window; PR 12 of the strict-policy rollout removes them.
+//! fallible.
 //!
 //! # Quick reference
 //!
@@ -122,58 +120,74 @@ mod tests {
     use super::*;
 
     #[test]
-    fn ensure_passes_when_true() {
-        ensure(true, "always").unwrap();
+    fn ensure_passes_when_true() -> anyhow::Result<()> {
+        ensure(true, "always")
     }
 
     #[test]
-    fn ensure_fails_with_message() {
-        let e = ensure(false, "bad thing").unwrap_err();
-        assert!(e.to_string().contains("bad thing"));
+    fn ensure_fails_with_message() -> anyhow::Result<()> {
+        let Err(e) = ensure(false, "bad thing") else {
+            anyhow::bail!("ensure unexpectedly passed");
+        };
+        ensure(e.to_string().contains("bad thing"), "error includes label")
     }
 
     #[test]
-    fn ensure_eq_renders_values() {
-        let e = ensure_eq(1u32, 2u32, "magic value").unwrap_err();
+    fn ensure_eq_renders_values() -> anyhow::Result<()> {
+        let Err(e) = ensure_eq(1u32, 2u32, "magic value") else {
+            anyhow::bail!("ensure_eq unexpectedly passed");
+        };
         let s = e.to_string();
-        assert!(s.contains("magic value"));
-        assert!(s.contains("actual = 1"));
-        assert!(s.contains("expected = 2"));
+        ensure(s.contains("magic value"), "error includes label")?;
+        ensure(s.contains("actual = 1"), "error includes actual value")?;
+        ensure(s.contains("expected = 2"), "error includes expected value")
     }
 
     #[test]
-    fn ensure_ne_passes() {
-        ensure_ne(1u32, 2u32, "different").unwrap();
-        let e = ensure_ne(1u32, 1u32, "same").unwrap_err();
-        assert!(e.to_string().contains("same"));
+    fn ensure_ne_passes() -> anyhow::Result<()> {
+        ensure_ne(1u32, 2u32, "different")?;
+        let Err(e) = ensure_ne(1u32, 1u32, "same") else {
+            anyhow::bail!("ensure_ne unexpectedly passed");
+        };
+        ensure(e.to_string().contains("same"), "error includes label")
     }
 
     #[test]
-    fn require_some_unwraps_or_labels() {
-        assert_eq!(require_some(Some(7u32), "no seven").unwrap(), 7);
-        let e = require_some(Option::<u32>::None, "no value").unwrap_err();
-        assert!(e.to_string().contains("no value"));
+    fn require_some_unwraps_or_labels() -> anyhow::Result<()> {
+        ensure_eq(require_some(Some(7u32), "no seven")?, 7, "some value")?;
+        let Err(e) = require_some(Option::<u32>::None, "no value") else {
+            anyhow::bail!("require_some unexpectedly passed");
+        };
+        ensure(e.to_string().contains("no value"), "error includes label")
     }
 
     #[test]
-    fn require_ok_renders_inner_error_with_debug() {
-        #[derive(Debug)]
+    fn require_ok_renders_inner_error_with_debug() -> anyhow::Result<()> {
         struct E(&'static str);
-        let e = require_ok::<(), E>(Err(E("boom")), "thing").unwrap_err();
+        impl std::fmt::Debug for E {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "debug-boom: {}", self.0)
+            }
+        }
+        let Err(e) = require_ok::<(), E>(Err(E("boom")), "thing") else {
+            anyhow::bail!("require_ok unexpectedly passed");
+        };
         let s = e.to_string();
-        assert!(s.contains("thing"));
-        assert!(s.contains("boom"));
+        ensure(s.contains("thing"), "error includes label")?;
+        ensure(s.contains("boom"), "error includes debug detail")
     }
 
     #[test]
-    fn require_ok_display_uses_display_format() {
+    fn require_ok_display_uses_display_format() -> anyhow::Result<()> {
         struct E(&'static str);
         impl std::fmt::Display for E {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "boom-display: {}", self.0)
             }
         }
-        let e = require_ok_display::<(), E>(Err(E("X")), "thing").unwrap_err();
-        assert!(e.to_string().contains("boom-display: X"));
+        let Err(e) = require_ok_display::<(), E>(Err(E("X")), "thing") else {
+            anyhow::bail!("require_ok_display unexpectedly passed");
+        };
+        ensure(e.to_string().contains("boom-display: X"), "error uses display detail")
     }
 }

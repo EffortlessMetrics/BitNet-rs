@@ -27,6 +27,12 @@ All notable changes to bitnet-rs will be documented in this file.
     `duration_suboptimal_units`, `unnecessary_trailing_comma`) staged with
     policy debt, and keeps `manual_pop_if` staged because the installed Rust
     1.95 Clippy reports it as unknown.
+- policy(clippy): remove Clippy test unwrap/expect carveouts
+  - Deletes the remaining `allow-expect-in-tests` and `allow-unwrap-in-tests`
+    entries from `clippy.toml`.
+  - Uses the existing `bitnet-test-support::assertions` helpers as the first
+    migrated slice by making their unit tests fallible instead of relying on
+    unwrap/expect.
 - docs(policy): refresh Rust 1.95 and next-minor rollout map — `docs/development/RUST_1_95_ROLLOUT.md`
   - Continuation of #3866 CI economics control plane; refreshes the existing Rust 1.95
     rollout map against current `main` instead of starting from a blank template.

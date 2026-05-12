@@ -72,11 +72,11 @@ Tests are part of the contract. `unwrap`/`expect` in tests are not
 free of cost — they hide real failure modes behind a single line of
 panic. Use the helpers in `bitnet-test-support::assertions` (`ensure`,
 `ensure_eq`, `require_some`, `require_ok`) to make tests fallible
-where it makes sense. The current carveouts in `clippy.toml`
-(`allow-unwrap-in-tests`, `allow-expect-in-tests`) are temporary
-during the 1.93 rollout PR 09–11 window and removed by that rollout's
-PR 12 plan. The Rust 1.95 follow-up ladder now tracks the remaining
-carveout removal as PR 6.
+where it makes sense. The Rust 1.95 PR 6 removed the remaining
+`clippy.toml` test carveouts (`allow-unwrap-in-tests` and
+`allow-expect-in-tests`). Remaining panic-family findings are handled by
+exact identity, baseline, and owner-lane burndown instead of reintroducing
+test-specific Clippy exemptions.
 
 ## When `panic` is genuinely acceptable
 

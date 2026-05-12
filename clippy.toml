@@ -1,8 +1,7 @@
 # Clippy configuration for bitnet-rs
 # Ensures high code quality standards for crates.io publication
 
-# MSRV compatibility. Clippy test carveouts remain until the dedicated
-# no-test-carveouts rollout PR.
+# MSRV compatibility.
 msrv = "1.95.0"
 
 # Complexity thresholds
@@ -12,6 +11,4 @@ type-complexity-threshold = 250
 trivial-copy-size-limit = 64
 
 # Allow certain patterns common in ML/systems code
-allow-expect-in-tests = true
-allow-unwrap-in-tests = true
 allow-mixed-uninlined-format-args = true  # Performance in hot paths

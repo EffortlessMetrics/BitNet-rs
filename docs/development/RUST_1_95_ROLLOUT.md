@@ -66,7 +66,7 @@ PR #3866 established the Rust 1.93 CI economics control plane:
 The 1.93 rollout explicitly deferred:
 
 - strict Clippy ratchets and receipt discipline,
-- removal of test carveouts still in `clippy.toml`,
+- removal of the test carveouts that were still in `clippy.toml` at the time,
 - no-panic identity hardening and no-new-debt mode,
 - real `ripr` advisory execution when the binary is absent,
 - LEM/risk-pack tightening to reduce default per-PR mutation and over-testing,
@@ -85,7 +85,7 @@ ladder.
 | Toolchain | `1.95.0` in `rust-toolchain.toml` | `1.95.0` with rustfmt, clippy, rust-analyzer | 3 |
 | Root version | `0.2.1-dev` | next minor dev line | 16 |
 | Clippy MSRV | `msrv = "1.95.0"` | `msrv = "1.95.0"` | 3 |
-| Clippy test carveouts | `allow-expect-in-tests = true`, `allow-unwrap-in-tests = true` | no test carveouts | 6 |
+| Clippy test carveouts | removed in PR 6 | no test carveouts | 6 |
 | Clippy 1.94/1.95 lints | `policy/clippy-lints.toml` now records `msrv = "1.95"`; planned lints are explicitly staged at `allow` in `Cargo.toml` | active or explicitly deferred with debt | 5 |
 | No-panic allowlist | present, empty/advisory, identity is `path + family + selector` | exact counted identity | 7 |
 | No-panic baseline | absent | generated no-new-debt baseline | 8 |
@@ -225,6 +225,11 @@ allow-unwrap-in-tests = true
 
 Add or extend fallible helpers in the correct test-support crate and convert one
 narrow helper slice only. Do not migrate the whole test suite here.
+
+PR 6 uses the existing `bitnet-test-support::assertions` helpers and converts
+that module's own unit tests to fallible `anyhow::Result<()>` tests. Broader
+test-suite panic-family cleanup stays in the no-panic identity, baseline, and
+owner-lane burndown PRs.
 
 ### PR 7: No-Panic Exact Identity
 
@@ -506,7 +511,7 @@ rollout builds on it without replacing it.
 
 ### Clippy Test Carveout Mismatch
 
-`clippy.toml` currently has:
+Before PR 6, `clippy.toml` had:
 
 ```toml
 allow-expect-in-tests = true
@@ -520,8 +525,8 @@ panic_free_tests = true
 allow_test_carveouts = false
 ```
 
-This contradiction is intentional during the staging window. PR 6 resolves it
-by removing the carveouts and converting one narrow helper slice.
+PR 6 resolved this contradiction by removing the carveouts and converting one
+narrow helper slice.
 
 ### No-Panic Identity Hardening
 
