@@ -1701,8 +1701,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-028"
-status = "pr_open"
+status = "merged"
 pr = 4512
+merge_sha = "dd20cf946eb140d3233b204d58ed93e5f6b4d1d8"
 branch = "codex/lunar-lake/CPU258V-028-prompt-policy-fix"
 stackable = false
 review_mode = "codex_premerge"
@@ -1739,6 +1740,55 @@ forbidden_paths = [
 may_claim = [
   "The 258V BitNet prompt rendering policy matches the external HF apply_chat_template boundary for the fixed prompt corpus after merge and receipt refresh.",
   "The prompt-policy fix removes the CPU258V-027 BOS/trailing-generation-space mismatch for metadata-authoritative BitNet prompts.",
+]
+must_not_claim = [
+  "General BitNet answer quality is proven.",
+  "External first-token logits parity is proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "QK256 semantics or transformer math changed.",
+  "Full model correctness is proven.",
+]
+
+[[work_item]]
+id = "CPU258V-029"
+status = "ready"
+branch = "codex/lunar-lake/CPU258V-029-answer-corpus-after-prompt-fix"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-028"]
+acceptance = "Rerun the 258V scalar and AVX2 BitNet answer corpus after the CPU258V-028 prompt-policy fix, rerun scalar-vs-AVX2 answer parity, record the corrected prompt/token policy in receipts, and classify remaining tiny-corpus failures without claiming broad answer quality, speed, Arc/NPU execution, QK256 changes, or full model correctness."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --help",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-parity --help",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-prompt-fix.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-prompt-fix.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-prompt-fix.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The fixed prompt-policy path was used for the 258V scalar and AVX2 answer-corpus rerun.",
+  "Scalar-vs-AVX2 answer parity was evaluated after the prompt-policy fix.",
+  "Tiny-corpus answer failures, if any, are classified after prompt/token parity is fixed.",
 ]
 must_not_claim = [
   "General BitNet answer quality is proven.",
