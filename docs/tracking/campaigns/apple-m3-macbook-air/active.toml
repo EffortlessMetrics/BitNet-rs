@@ -354,6 +354,43 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M3MBA-011"
+status = "in_progress"
+branch = "codex/apple-m3-macbook-air/roadmap-depth"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-001"]
+acceptance = "Deepen the M3 Air roadmap into operating horizons, stop/go decisions, parallel lane policy, local resource budgets, and explicit SLM vs BitNet sequencing without running models or changing runtime behavior."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/campaigns/apple-silicon-macbook/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air lane roadmap now names operating horizons, stop/go decisions, parallel work boundaries, and local resource budgets.",
+]
+must_not_claim = [
+  "Any M3 Air model inference was run.",
+  "Any BitNet artifact was downloaded or accepted.",
+  "M3 Air evidence proves M4 Mac mini performance.",
+]
+
+[[work_item]]
 id = "M3MBA-006"
 status = "proposed"
 branch = "codex/apple-m3-macbook-air/M3MBA-006-1bitllm-07b"
@@ -449,8 +486,8 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M3MBA-005C"]
-acceptance = "Promote accepted M3 Air BitNet artifact evidence into a separate M4 Mac mini strict Apple CPU/NEON proof item, preserving source, hash, tokenizer authority, route, and claim boundary without running or claiming the proof in this handoff item; if M3MBA-005C rejects or blocks every candidate, close this handoff with an explicit no-accepted-artifact report instead."
+blocked_by = ["M3MBA-005C", "M3MBA-006", "M3MBA-007"]
+acceptance = "Promote accepted M3 Air BitNet artifact evidence into a separate M4 Mac mini strict Apple CPU/NEON proof item, preserving source, hash, tokenizer authority, route, and claim boundary without running or claiming the proof in this handoff item; if the M3 Air candidate sweep rejects or blocks every candidate, close this handoff with an explicit no-accepted-artifact report instead."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",

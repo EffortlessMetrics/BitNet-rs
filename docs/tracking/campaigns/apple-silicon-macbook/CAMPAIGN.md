@@ -41,13 +41,13 @@ of duplicating them.
 | Work item | Status | Notes |
 |---|---|---|
 | MB-AS-001 | merged | Add a MacBook machine/storage/profile receipt contract. |
-| MB-AS-002 | proposed | Mirror the dense Qwen Apple CPU/NEON baseline on the live M3 MacBook Air runner. |
+| MB-AS-002 | superseded | Live M3 dense Qwen work now belongs to `M3MBA-004A`/`M3MBA-004B` in `apple-m3-macbook-air`. |
 | MB-AS-003 | merged | Add the Apple BitNet candidate artifact matrix for MacBook sweeps. |
-| MB-AS-004 | proposed | Validate official Microsoft 2B I2_S with external tokenizer authority. |
-| MB-AS-005 | proposed | Evaluate 0.7B `1bitLLM/bitnet_b1_58-large` as the smaller Apple BitNet target. |
-| MB-AS-006 | proposed | Evaluate 3B only on supported TL1/TL2 diagnostic routes. |
+| MB-AS-004 | superseded | Official Microsoft 2B I2_S validation now belongs to `M3MBA-005A`/`M3MBA-005B`/`M3MBA-005C`. |
+| MB-AS-005 | superseded | 0.7B `1bitLLM/bitnet_b1_58-large` evaluation now belongs to `M3MBA-006`. |
+| MB-AS-006 | superseded | 3B TL1/TL2 diagnostics now belong to `M3MBA-007`. |
 | MB-AS-007 | merged | Add the live M3 MacBook Air lane roadmap, storage policy, sequencing, and claim boundaries. |
-| MB-AS-008 | proposed | Capture the real M3 MacBook Air machine/profile receipt before model inference. |
+| MB-AS-008 | superseded | Real M3 Air machine/profile evidence now belongs to `M3MBA-002`. |
 
 ## Review Policy
 

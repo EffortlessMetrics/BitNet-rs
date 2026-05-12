@@ -1,8 +1,8 @@
 schema = 1
 artifact_kind = "apple_silicon_macbook_bitnet_candidate_matrix"
-updated = "2026-05-09"
+updated = "2026-05-12"
 work_item = "MB-AS-003"
-machine_lane = "apple-silicon-macbook"
+machine_lane = "apple-m3-macbook-air"
 claim_boundary = "Candidate planning only. No candidate is accepted for Apple local-answer claims until the MacBook lane records source, size, SHA256, tokenizer authority, coherent reference-runner output, and cleanup status. Dense Qwen evidence does not prove BitNet quality."
 
 storage_policy = [
@@ -36,7 +36,7 @@ prompt_template = "User: <question><|eot_id|>Assistant:"
 reference_runner = "microsoft_bitnet_cpp"
 reference_status = "answer_ready_shared_gate; MacBook rerun required before Apple claim"
 cleanup_required = true
-next_item = "MB-AS-004"
+next_item = "M3MBA-005A/M3MBA-005B/M3MBA-005C"
 notes = [
   "Shared gate records coherent Microsoft BitNet.cpp output when external tokenizer authority is supplied.",
   "MacBook must rerun the reference prompt suite and record local storage/cache context before this becomes Apple artifact-ready evidence.",
@@ -73,7 +73,7 @@ prompt_template = "pending_reference_runner_decision"
 reference_runner = "microsoft_bitnet_cpp_candidate"
 reference_status = "not_run_on_macbook"
 cleanup_required = true
-next_item = "MB-AS-005"
+next_item = "M3MBA-006"
 notes = [
   "Upstream lists this 0.7B model with ARM I2_S and TL1 support.",
   "Use as a smaller Apple BitNet control only if a GGUF/reference-runner path produces coherent output and records tokenizer authority.",
@@ -110,7 +110,7 @@ prompt_template = "pending_reference_runner_decision"
 reference_runner = "microsoft_bitnet_cpp_candidate"
 reference_status = "diagnostic_only_until_runner_path_verified"
 cleanup_required = true
-next_item = "MB-AS-006"
+next_item = "M3MBA-007"
 notes = [
   "Compatibility ledger marks 3B I2_S unsupported upstream for ARM and x86.",
   "Use only TL1/TL2 diagnostic routes until a verified runner path and coherent reference output exist.",
