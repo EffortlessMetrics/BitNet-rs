@@ -67,7 +67,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | CPU258V-029 | merged | Rerun scalar and AVX2 BitNet answer-corpus receipts after the prompt-policy fix and classify any remaining tiny-corpus failures without broad answer-quality, speed, Arc/NPU, or QK256 claims; merged in #4516. |
 | CPU258V-030 | merged | Rerun strict CPU warm-session phase receipts after the prompt-policy fix and fixed-corpus pass without speedup, sustained-throughput, Arc/NPU, QK256, or full-model claims; merged in #4520. |
 | CPU258V-031 | merged | Refresh the 258V CPU reference bundle after the prompt-policy fix, answer-corpus pass, scalar/AVX2 parity, and corrected warm-session phase receipts without new runtime or accelerator claims; merged in #4523. |
-| SLM258V-001 | ready | Add a Lunar Lake dense SLM artifact manifest as a separate dense-model path, not a BitNet QK256/I2_S receipt. |
+| SLM258V-001 | pr_open | Add a Lunar Lake dense SLM artifact manifest as a separate dense-model path, not a BitNet QK256/I2_S receipt; open in #4527. |
 | LNL258V-004 | merged | Add Windows Level Zero loader fallback and refresh the 258V platform probe so Arc 140V records Level Zero identity and PCI ID `0x64A0`; merged in #4148. |
 
 ## Review Policy
