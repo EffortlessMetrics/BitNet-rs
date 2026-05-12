@@ -3370,6 +3370,59 @@ fn dequantizes_before_compute(quantization: bitnet_common::QuantizationType) -> 
     !matches!(quantization, bitnet_common::QuantizationType::I2S)
 }
 
+fn is_dense_slm_model(model_family: &str, model_architecture: &str) -> bool {
+    model_family == "qwen" || matches!(model_architecture, "qwen2" | "qwen3")
+}
+
+fn dense_slm_kernel_family(model_family: &str, model_architecture: &str) -> Option<&'static str> {
+    is_dense_slm_model(model_family, model_architecture).then_some("dense_qwen")
+}
+
+fn dense_slm_kernel_id(model_family: &str, model_architecture: &str) -> Option<&'static str> {
+    is_dense_slm_model(model_family, model_architecture).then_some("dense-qwen-cpu-reference")
+}
+
+fn uses_dense_slm_cpu_reference(
+    requested_backend: &str,
+    selected_backend: &str,
+    runtime_api: &str,
+    fallback_used: bool,
+) -> bool {
+    runtime_api == "cpu"
+        && !fallback_used
+        && (requested_backend == "cpu" || requested_backend.ends_with("-cpu-neon"))
+        && (selected_backend == "cpu"
+            || selected_backend == "cpu-rust"
+            || selected_backend.ends_with("-cpu-neon"))
+}
+
+fn dense_slm_layout_source(path: &std::path::Path) -> &'static str {
+    match dense_slm_quant_format(path) {
+        "Q8_0" => "gguf_dense_q8_0_reference",
+        "Q4_K_M" => "gguf_dense_q4_k_m_reference",
+        _ => "gguf_dense_reference",
+    }
+}
+
+fn dense_slm_kernel_layout(path: &std::path::Path) -> &'static str {
+    match dense_slm_quant_format(path) {
+        "Q8_0" => "gguf_dense_q8_0",
+        "Q4_K_M" => "gguf_dense_q4_k_m",
+        _ => "gguf_dense",
+    }
+}
+
+fn dense_slm_quant_format(path: &std::path::Path) -> &'static str {
+    let normalized = path.to_string_lossy().to_ascii_lowercase();
+    if normalized.contains("q8_0") || normalized.contains("q8-0") {
+        "Q8_0"
+    } else if normalized.contains("q4_k_m") || normalized.contains("q4-k-m") {
+        "Q4_K_M"
+    } else {
+        "unknown_dense"
+    }
+}
+
 fn infer_model_repo(path: &std::path::Path) -> String {
     let normalized = path.to_string_lossy().to_ascii_lowercase();
     if normalized.contains("bitnet-b1.58-2b-4t")
@@ -5214,6 +5267,73 @@ async fn run_simple_generation(
                 None
             },
         });
+        if uses_dense_slm_cpu_reference(
+            requested_backend,
+            &selected_backend,
+            runtime_api,
+            backend_identity.fallback_used,
+        ) && let Some(dense_kernel_id) = dense_slm_kernel_id(model_family, &model_architecture)
+            && let Some(object) = output.as_object_mut()
+        {
+            let dense_kernel_family =
+                dense_slm_kernel_family(model_family, &model_architecture).unwrap_or("dense_slm");
+            let dense_quant_format = dense_slm_quant_format(&model_path);
+            let dense_layout_source = dense_slm_layout_source(&model_path);
+            let dense_kernel_layout = dense_slm_kernel_layout(&model_path);
+            object.remove("bitnet");
+            object.insert(
+                "dense_slm".to_string(),
+                serde_json::json!({
+                    "model_family": model_family,
+                    "architecture": model_architecture,
+                    "quant_format": dense_quant_format,
+                    "kernel_family": dense_kernel_family,
+                    "kernel_id": dense_kernel_id,
+                    "layout_source": dense_layout_source,
+                    "layout": dense_kernel_layout,
+                    "execution_phase": execution_phase,
+                    "provenance": "dense_slm_gguf_cpu_reference",
+                    "claim_scope": "strict dense SLM CPU answer smoke only",
+                }),
+            );
+            object.insert(
+                "execution_coverage".to_string(),
+                serde_json::json!({
+                    "dense_slm_layers_total": serde_json::Value::Null,
+                    "dense_slm_layers_on_cpu": serde_json::Value::Null,
+                    "unsupported_ops": [],
+                    "execution_claim": "dense_slm_cpu_reference_answer_smoke",
+                }),
+            );
+            object.insert(
+                "kernel".to_string(),
+                serde_json::json!({
+                    "family": dense_kernel_family,
+                    "implementation": "cpu-reference",
+                    "layout": dense_kernel_layout,
+                    "dequantizes_before_compute": true,
+                    "kernel_id": dense_kernel_id,
+                }),
+            );
+            if let Some(model) = object.get_mut("model").and_then(serde_json::Value::as_object_mut)
+            {
+                model.insert("quant_format".to_string(), serde_json::json!(dense_quant_format));
+            }
+            if let Some(strict_provenance) =
+                object.get_mut("strict_provenance").and_then(serde_json::Value::as_object_mut)
+            {
+                strict_provenance
+                    .insert("requested_kernel".to_string(), serde_json::json!(dense_kernel_id));
+                strict_provenance
+                    .insert("selected_kernel".to_string(), serde_json::json!(dense_kernel_id));
+                strict_provenance
+                    .insert("quant_format".to_string(), serde_json::json!(dense_quant_format));
+                strict_provenance.insert(
+                    "provenance".to_string(),
+                    serde_json::json!("dense_slm_gguf_cpu_reference"),
+                );
+            }
+        }
         if strict_cuda_proof_artifact && let Some(object) = output.as_object_mut() {
             object.insert("claim".to_string(), serde_json::json!("strict_bitnet_cuda_inference"));
             object.insert("speedup_claim".to_string(), serde_json::json!(false));
@@ -11498,10 +11618,43 @@ mod tests {
     fn qwen_receipt_identity_uses_dense_family() {
         let path = std::path::Path::new("models/slm/Qwen3-0.6B-Q8_0.gguf");
         let architecture = infer_model_architecture(path);
+        let family = receipt_model_family(&architecture);
 
         assert_eq!(infer_model_repo(path), "Qwen/Qwen3-0.6B-GGUF");
         assert_eq!(architecture, "qwen3");
-        assert_eq!(receipt_model_family(&architecture), "qwen");
+        assert_eq!(family, "qwen");
+        assert!(is_dense_slm_model(family, &architecture));
+        assert_eq!(dense_slm_kernel_family(family, &architecture), Some("dense_qwen"));
+        assert_eq!(dense_slm_kernel_id(family, &architecture), Some("dense-qwen-cpu-reference"));
+        assert_eq!(dense_slm_quant_format(path), "Q8_0");
+        assert_eq!(dense_slm_layout_source(path), "gguf_dense_q8_0_reference");
+        assert_eq!(dense_slm_kernel_layout(path), "gguf_dense_q8_0");
+    }
+
+    #[test]
+    fn dense_slm_cpu_reference_requires_cpu_backend_without_fallback() {
+        assert!(uses_dense_slm_cpu_reference("cpu", "cpu-rust", "cpu", false));
+        assert!(uses_dense_slm_cpu_reference(
+            "apple-m4-cpu-neon",
+            "apple-m4-cpu-neon",
+            "cpu",
+            false
+        ));
+        assert!(!uses_dense_slm_cpu_reference("cuda", "cuda", "cuda", false));
+        assert!(!uses_dense_slm_cpu_reference("cuda", "cpu-rust", "cpu", true));
+        assert!(!uses_dense_slm_cpu_reference("apple-m4-metal", "cpu-rust", "cpu", true));
+    }
+
+    #[test]
+    fn canonical_bitnet_receipt_identity_does_not_use_dense_slm_kernel() {
+        let path = std::path::Path::new("models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf");
+        let architecture = infer_model_architecture(path);
+        let family = receipt_model_family(&architecture);
+
+        assert_eq!(family, "bitnet");
+        assert!(!is_dense_slm_model(family, &architecture));
+        assert_eq!(dense_slm_kernel_family(family, &architecture), None);
+        assert_eq!(dense_slm_kernel_id(family, &architecture), None);
     }
 
     #[test]

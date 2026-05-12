@@ -166,6 +166,14 @@ impl AnswerCorpusCommand {
                 _ => "llama3",
             };
         let aggregate_execution_plan = aggregate_execution_plan(&rows, &device);
+        let slm_answer_path = corpus.artifact_kind == "slm_answer_corpus";
+        let bounded_slm_answer_smoke_passed =
+            slm_answer_path && passed == total && failed == 0 && timed_out == 0 && not_run == 0;
+        let dense_slm_clean_provenance = slm_answer_path
+            && rows.iter().all(|row| {
+                row["kernel"]["selected_kernel"] == "dense-qwen-cpu-reference"
+                    && row["kernel"]["family"] == "dense_qwen"
+            });
 
         let receipt = json!({
             "schema_version": "1.0.0",
@@ -225,9 +233,11 @@ impl AnswerCorpusCommand {
                 "not_run": not_run,
             },
             "claim_boundary": {
-                "slm_answer_path": corpus.artifact_kind == "slm_answer_corpus",
+                "slm_answer_path": slm_answer_path,
+                "bounded_slm_answer_smoke_passed": bounded_slm_answer_smoke_passed,
+                "dense_slm_clean_provenance": dense_slm_clean_provenance,
                 "local_answer_path": device.as_str() == "apple-m4-cpu-neon",
-                "diagnostic_only_until_answer_ready_artifact": true,
+                "diagnostic_only_until_answer_ready_artifact": !bounded_slm_answer_smoke_passed,
                 "coherent_answer_claimed": false,
                 "cuda_answer_corpus": is_cuda_answer_corpus_device(&device),
                 "strict_cuda_answer_claimed": false,
@@ -741,6 +751,38 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
     if selected_kernel.contains("mock") || selected_kernel.contains("diagnostic") {
         failed.push("selected_kernel_production".to_string());
     }
+    let model_family = run_receipt["model"]["family"].as_str().unwrap_or_default();
+    if model_family == "qwen" {
+        if run_receipt.get("dense_slm").is_none() {
+            failed.push("dense_slm_provenance_recorded".to_string());
+        }
+        if run_receipt.get("bitnet").is_some() {
+            failed.push("dense_slm_no_bitnet_provenance".to_string());
+        }
+        if contains_bitnet_dense_forbidden(selected_kernel) {
+            failed.push("dense_slm_kernel_not_bitnet_qk256".to_string());
+        }
+        let kernel_layout = run_receipt["kernel"]["layout"].as_str().unwrap_or_default();
+        if contains_bitnet_dense_forbidden(kernel_layout) {
+            failed.push("dense_slm_layout_not_bitnet_qk256".to_string());
+        }
+        let kernel_family = run_receipt["kernel"]["family"].as_str().unwrap_or_default();
+        if contains_bitnet_dense_forbidden(kernel_family) {
+            failed.push("dense_slm_kernel_family_not_bitnet_qk256".to_string());
+        }
+        if run_receipt.get("dense_slm").is_some_and(json_contains_bitnet_dense_forbidden) {
+            failed.push("dense_slm_fields_not_bitnet_qk256".to_string());
+        }
+        if run_receipt.get("strict_provenance").is_some_and(json_contains_bitnet_dense_forbidden) {
+            failed.push("dense_slm_strict_provenance_not_bitnet_qk256".to_string());
+        }
+        if run_receipt["execution_coverage"]
+            .as_object()
+            .is_some_and(|coverage| coverage.keys().any(|key| key.starts_with("bitnet_")))
+        {
+            failed.push("dense_slm_execution_coverage_not_bitnet_qk256".to_string());
+        }
+    }
     if is_cuda_answer_corpus_device(expected_backend) {
         let cuda_kernel_recorded = selected_kernel.contains("cuda")
             || run_receipt["kernel_stats"].as_array().is_some_and(|stats| {
@@ -774,6 +816,22 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
         failed.push("generated_token_ids_recorded".to_string());
     }
     failed
+}
+
+fn contains_bitnet_dense_forbidden(value: &str) -> bool {
+    let normalized = value.to_ascii_lowercase();
+    normalized.contains("i2_s") || normalized.contains("qk256") || normalized.contains("bitnet")
+}
+
+fn json_contains_bitnet_dense_forbidden(value: &Value) -> bool {
+    match value {
+        Value::String(value) => contains_bitnet_dense_forbidden(value),
+        Value::Array(values) => values.iter().any(json_contains_bitnet_dense_forbidden),
+        Value::Object(values) => values.iter().any(|(key, value)| {
+            contains_bitnet_dense_forbidden(key) || json_contains_bitnet_dense_forbidden(value)
+        }),
+        _ => false,
+    }
 }
 
 fn aggregate_execution_plan(rows: &[Value], device: &str) -> Value {
@@ -1201,6 +1259,116 @@ mod tests {
         });
 
         assert!(answer_receipt_failed_rules(&receipt, "cpu").is_empty());
+    }
+
+    #[test]
+    fn slm_answer_receipt_accepts_dense_qwen_cpu_provenance() {
+        let receipt = json!({
+            "requested_backend": "cpu",
+            "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "explicit", "strict": true },
+            "model": { "family": "qwen" },
+            "dense_slm": {
+                "model_family": "qwen",
+                "kernel_id": "dense-qwen-cpu-reference",
+                "layout": "gguf_dense_q8_0"
+            },
+            "execution_coverage": {
+                "dense_slm_layers_total": null,
+                "dense_slm_layers_on_cpu": null,
+                "unsupported_ops": [],
+                "execution_claim": "dense_slm_cpu_reference_answer_smoke"
+            },
+            "kernel": {
+                "kernel_id": "dense-qwen-cpu-reference",
+                "family": "dense_qwen",
+                "layout": "gguf_dense_q8_0"
+            },
+            "tokens": {
+                "prompt_ids": [1, 2, 3],
+                "generated_ids": [4]
+            }
+        });
+
+        assert!(answer_receipt_failed_rules(&receipt, "cpu").is_empty());
+    }
+
+    #[test]
+    fn slm_answer_receipt_rejects_bitnet_provenance_for_qwen() {
+        let receipt = json!({
+            "requested_backend": "cpu",
+            "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "explicit", "strict": true },
+            "model": { "family": "qwen" },
+            "bitnet": { "kernel_family": "i2_s" },
+            "execution_coverage": { "bitnet_linear_layers_cpu_fallback": 0 },
+            "kernel": {
+                "kernel_id": "i2_s-avx2-reference",
+                "family": "i2_s",
+                "layout": "gguf_packed_i2_s"
+            },
+            "tokens": {
+                "prompt_ids": [1, 2, 3],
+                "generated_ids": [4]
+            }
+        });
+
+        let failed = answer_receipt_failed_rules(&receipt, "cpu");
+        assert!(failed.contains(&"dense_slm_provenance_recorded".to_string()));
+        assert!(failed.contains(&"dense_slm_no_bitnet_provenance".to_string()));
+        assert!(failed.contains(&"dense_slm_kernel_not_bitnet_qk256".to_string()));
+        assert!(failed.contains(&"dense_slm_layout_not_bitnet_qk256".to_string()));
+        assert!(failed.contains(&"dense_slm_execution_coverage_not_bitnet_qk256".to_string()));
+    }
+
+    #[test]
+    fn slm_answer_receipt_rejects_nested_bitnet_provenance_for_qwen() {
+        let receipt = json!({
+            "requested_backend": "cpu",
+            "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "loader": { "mode": "real_gguf" },
+            "tokenizer": { "source": "explicit", "strict": true },
+            "model": { "family": "qwen" },
+            "dense_slm": {
+                "model_family": "qwen",
+                "bitnet_kernel_family": "dense_qwen",
+                "kernel_id": "dense-qwen-cpu-reference",
+                "layout": "gguf_dense_q8_0"
+            },
+            "execution_coverage": {
+                "dense_slm_layers_total": null,
+                "dense_slm_layers_on_cpu": null,
+                "unsupported_ops": [],
+                "execution_claim": "dense_slm_cpu_reference_answer_smoke"
+            },
+            "kernel": {
+                "kernel_id": "dense-qwen-cpu-reference",
+                "family": "qk256",
+                "layout": "gguf_dense_q8_0"
+            },
+            "strict_provenance": {
+                "requested_kernel": "i2_s-avx2-reference",
+                "selected_kernel": "dense-qwen-cpu-reference",
+                "quant_format": "BitNet packed kernel"
+            },
+            "tokens": {
+                "prompt_ids": [1, 2, 3],
+                "generated_ids": [4]
+            }
+        });
+
+        let failed = answer_receipt_failed_rules(&receipt, "cpu");
+        assert!(failed.contains(&"dense_slm_kernel_family_not_bitnet_qk256".to_string()));
+        assert!(failed.contains(&"dense_slm_fields_not_bitnet_qk256".to_string()));
+        assert!(failed.contains(&"dense_slm_strict_provenance_not_bitnet_qk256".to_string()));
     }
 
     #[test]

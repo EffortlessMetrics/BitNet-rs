@@ -2027,7 +2027,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM258V-003"
-status = "ready"
+status = "pr_open"
+pr = 4535
 branch = "codex/lunar-lake/SLM258V-003-dense-slm-provenance"
 stackable = false
 review_mode = "codex_premerge"
@@ -2042,6 +2043,7 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
   "crates/bitnet-cli/src/commands/answer_corpus.rs",
   "crates/bitnet-cli/tests/cli_arg_tests.rs",
   "ci/quality/slm258v-qwen25-answer-corpus.yaml",
