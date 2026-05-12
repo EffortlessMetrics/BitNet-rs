@@ -742,6 +742,7 @@ The CPU semantic-debug ladder links:
 ```text
 ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json
 ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity.json
+ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity-after-prompt-fix.json
 ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json
 ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json
 ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json
@@ -919,6 +920,46 @@ First-token logits or model inference parity is proven.
 CPU speed is proven.
 Arc 140V or Intel NPU execution is proven.
 Packed QK256 decode semantics are fixed.
+```
+
+## CPU258V-028 Prompt Policy Fix
+
+Artifact:
+
+```text
+ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity-after-prompt-fix.json
+```
+
+`CPU258V-028` removes the prompt-policy mismatch classified by `CPU258V-027`.
+The BitNet answer-ready template now preserves the official HF
+`apply_chat_template` generation prompt boundary, including the trailing
+`Assistant: ` space, and the metadata-authoritative path no longer prepends an
+executor BOS after rendering that chat template.
+
+Current result:
+
+```text
+first_divergence_stage = none
+cases_passed = 4
+cases_failed = 0
+```
+
+Allowed claim:
+
+```text
+BitNet-rs metadata-authoritative BitNet prompt strings and prompt token IDs
+match the external HF apply_chat_template boundary for the fixed prompt corpus.
+```
+
+Not allowed:
+
+```text
+Answer quality is proven.
+External first-token logits parity is proven.
+CPU speed is proven.
+Arc 140V or Intel NPU execution is proven.
+Packed QK256 decode semantics are changed by this prompt-policy fix.
+Full model correctness is proven.
 ```
 
 ## CPU258V-021 External Reference Instrumentation Boundary

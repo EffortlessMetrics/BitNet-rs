@@ -20,6 +20,7 @@ ci/hardware/intel-258v/<date>/cpu-answer-corpus-scalar-bitnetcpp-template-math_2
 ci/hardware/intel-258v/<date>/cpu-answer-parity-bitnetcpp-template-math_2_plus_2-release.json
 ci/hardware/intel-258v/<date>/prompt-authority-audit-math.json
 ci/hardware/intel-258v/<date>/hf-prompt-token-reference-parity.json
+ci/hardware/intel-258v/<date>/hf-prompt-token-reference-parity-after-prompt-fix.json
 ci/hardware/intel-258v/<date>/external-first-token-reference.json
 ci/hardware/intel-258v/<date>/first-token-divergence-classification.json
 ci/hardware/intel-258v/<date>/cpu-qk256-i8s-semantic-audit.json

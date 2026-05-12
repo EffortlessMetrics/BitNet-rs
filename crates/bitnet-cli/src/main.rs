@@ -11638,6 +11638,56 @@ mod tests {
         assert!(metadata.is_none());
     }
 
+    struct PromptAuthorityHfBoundaryTokenizer;
+
+    impl bitnet_tokenizers::Tokenizer for PromptAuthorityHfBoundaryTokenizer {
+        fn encode(
+            &self,
+            text: &str,
+            add_bos: bool,
+            parse_special: bool,
+        ) -> bitnet_common::Result<Vec<u32>> {
+            assert_eq!(text, "User: Say exactly: OK<|eot_id|>Assistant: ");
+            assert!(!add_bos, "BitNet HF-style chat boundary must not add executor BOS");
+            assert!(parse_special, "BitNet answer template must parse <|eot_id|>");
+            Ok(vec![1502, 25, 25961, 7041, 25, 10619, 128009, 72803, 25, 220])
+        }
+
+        fn decode(&self, _ids: &[u32]) -> bitnet_common::Result<String> {
+            Ok(String::new())
+        }
+
+        fn vocab_size(&self) -> usize {
+            128_256
+        }
+
+        fn token_to_piece(&self, _token: u32) -> Option<String> {
+            None
+        }
+    }
+
+    #[test]
+    fn prompt_authority_bitnetcpp_variant_matches_hf_boundary() {
+        let tokenizer = PromptAuthorityHfBoundaryTokenizer;
+        let (entry, ids, rendered) = prompt_audit_variant_json(
+            "metadata_authority",
+            bitnet_inference::TemplateType::BitnetCppAnswer,
+            "gguf_or_tokenizer_metadata",
+            "Say exactly: OK",
+            None,
+            &tokenizer,
+        );
+
+        assert_eq!(rendered, "User: Say exactly: OK<|eot_id|>Assistant: ");
+        assert_eq!(ids, Some(vec![1502, 25, 25961, 7041, 25, 10619, 128009, 72803, 25, 220]));
+        assert_eq!(entry["prompt_policy"]["add_bos"], false);
+        assert_eq!(entry["prompt_policy"]["parse_special"], true);
+        assert_eq!(
+            entry["tokens"]["prompt_token_ids"],
+            serde_json::json!([1502, 25, 25961, 7041, 25, 10619, 128009, 72803, 25, 220])
+        );
+    }
+
     #[test]
     fn prompt_authority_reference_parity_records_external_mismatch() {
         let parity = prompt_audit_reference_parity_json(
