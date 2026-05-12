@@ -1,0 +1,16 @@
+timestamp = "2026-05-12T14:31:58Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-028"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4512
+head_sha = "50a9c8d417d35846a41414ee9da923f5ee2149ba"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-028-prompt-policy-fix"
+summary = "Opened CPU258V-028 to align BitNet metadata-authoritative prompt policy with the HF apply_chat_template boundary."
+notes = [
+  "BitnetCppAnswer now preserves the trailing Assistant generation-prompt space.",
+  "BitnetCppAnswer no longer requests executor-added BOS after rendering the chat template.",
+  "The after-fix 258V prompt/token parity artifact records 4/4 fixed prompt cases matching the HF boundary.",
+]

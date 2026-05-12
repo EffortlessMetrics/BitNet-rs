@@ -1701,7 +1701,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-028"
-status = "ready"
+status = "pr_open"
+pr = 4512
 branch = "codex/lunar-lake/CPU258V-028-prompt-policy-fix"
 stackable = false
 review_mode = "codex_premerge"

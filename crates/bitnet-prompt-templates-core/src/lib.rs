@@ -649,7 +649,7 @@ impl TemplateType {
     /// Apply the Microsoft BitNet.cpp answer-ready reference envelope.
     ///
     /// This mirrors the MODEL-ARTIFACT-007 reference runner prompt:
-    /// `User: {question}<|eot_id|>Assistant:`.
+    /// `User: {question}<|eot_id|>Assistant: `.
     fn apply_bitnetcpp_answer(user_text: &str, system_prompt: Option<&str>) -> String {
         let mut result = String::new();
         if let Some(system) = system_prompt.filter(|system| !system.trim().is_empty()) {
@@ -659,7 +659,7 @@ impl TemplateType {
         }
         result.push_str("User: ");
         result.push_str(user_text);
-        result.push_str("<|eot_id|>Assistant:");
+        result.push_str("<|eot_id|>Assistant: ");
         result
     }
 
@@ -1537,7 +1537,7 @@ impl TemplateType {
         match self {
             Self::Raw | Self::Instruct => true,
             Self::Llama3Chat => false, // Template includes <|begin_of_text|>
-            Self::BitnetCppAnswer => true, // Reference envelope has no literal BOS marker
+            Self::BitnetCppAnswer => false, // HF apply_chat_template owns the chat boundary.
             Self::Phi4Chat => false,   // ChatML uses im_start/im_end tokens
             Self::QwenChat => false,   // ChatML uses im_start/im_end tokens
             Self::GemmaChat => false,  // Uses start_of_turn/end_of_turn tokens
@@ -1691,7 +1691,7 @@ impl TemplateType {
                     }
                 }
 
-                write!(out, "Assistant:")?;
+                write!(out, "Assistant: ")?;
             }
             TemplateType::Phi4Chat => {
                 // ChatML format with im_start/im_end tokens
@@ -3128,12 +3128,12 @@ mod tests {
         let template = TemplateType::BitnetCppAnswer;
 
         let result = template.apply("What is 2+2? Answer with only the number.", None);
-        assert_eq!(result, "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant:");
+        assert_eq!(result, "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant: ");
 
         let result = template.apply("Say exactly: OK", Some("Keep answers short."));
         assert_eq!(
             result,
-            "System: Keep answers short.<|eot_id|>User: Say exactly: OK<|eot_id|>Assistant:"
+            "System: Keep answers short.<|eot_id|>User: Say exactly: OK<|eot_id|>Assistant: "
         );
     }
 
@@ -3352,7 +3352,7 @@ mod tests {
         assert!(TemplateType::Raw.should_add_bos());
         assert!(TemplateType::Instruct.should_add_bos());
         assert!(!TemplateType::Llama3Chat.should_add_bos()); // Has its own BOS
-        assert!(TemplateType::BitnetCppAnswer.should_add_bos()); // Reference envelope has no BOS marker
+        assert!(!TemplateType::BitnetCppAnswer.should_add_bos()); // HF template owns BOS/special-token policy
         assert!(!TemplateType::Phi4Chat.should_add_bos()); // Uses im_start/im_end
         assert!(!TemplateType::QwenChat.should_add_bos()); // Uses im_start/im_end
         assert!(!TemplateType::GemmaChat.should_add_bos()); // Uses start_of_turn
