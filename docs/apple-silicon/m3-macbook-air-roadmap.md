@@ -4,7 +4,7 @@ The M3 MacBook Air lane is the live Apple Silicon MacBook lane for larger
 artifact sweeps and dense SLM cross-checks. It is separate from the completed
 M4 Mac mini product and performance campaigns.
 
-Current host facts from the active runner:
+Provisional host facts from the active runner:
 
 ```text
 machine = MacBook Air
@@ -18,8 +18,10 @@ available_repo_volume_space = about 99 GiB on 2026-05-12
 ```
 
 These facts make the machine suitable for storage-conscious BitNet artifact
-qualification and dense SLM Apple CPU/NEON cross-checks. They do not create M4
-Mac mini performance evidence and do not prove BitNet local-answer quality.
+qualification and dense SLM Apple CPU/NEON cross-checks, but `M3MBA-002` owns
+the authoritative committed machine-profile receipt. Until that receipt lands,
+these facts are planning context only. They do not create M4 Mac mini
+performance evidence and do not prove BitNet local-answer quality.
 
 The campaign-local tracker for this lane is:
 
@@ -86,6 +88,7 @@ docs/tracking/campaigns/apple-bitnet-artifact-sweep/
 | 10 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
 | 11 | `M3MBA-009` | M3 SLM lane synthesis | Cross-lane report comparing M3 Air dense SLM receipts against M4 and 8250U SLM evidence |
 | 12 | `M3MBA-010` | Storage and cache hygiene audit | Artifact ledger audit with retained/deleted model state and free-space floor |
+| 13 | `M3MBA-011` | Roadmap depth and stale-reference cleanup | Operating horizons, stop/go decisions, parallel lane policy, resource budget, and M3MBA authority alignment |
 
 ## 2026-05-12 Tactical Plan
 
@@ -139,13 +142,14 @@ M3MBA-001
           -> M3MBA-005A
             -> M3MBA-005B
               -> M3MBA-005C
-                -> M3MBA-006
-                -> M3MBA-007
-                -> M3MBA-008
+                -> M3MBA-010
+                  -> M3MBA-006
+                  -> M3MBA-007
+                    -> M3MBA-008
 
 M3MBA-005A -> M3MBA-010
 M3MBA-004B -> M3MBA-009
-M3MBA-005C -> M3MBA-008
+M3MBA-005C -> M3MBA-008 only after accepted-artifact or no-accepted-artifact state is explicit
 ```
 
 `M3MBA-010` is allowed to interrupt the main artifact path after the first large
@@ -599,8 +603,11 @@ work.
 
    Evaluate `1bitLLM/bitnet_b1_58-large` as the smaller control candidate, then
    use `1bitLLM/bitnet_b1_58-3B` only for supported TL1/TL2 diagnostic routes.
-   Falcon-E candidates remain secondary and should wait until Microsoft and
-   1bitLLM behavior is understood.
+   Before either download, resolve the exact GGUF filename, revision, size
+   estimate, tokenizer authority, and runner route in the report. Falcon-E
+   candidates remain secondary in the shared matrix and should wait until
+   Microsoft and 1bitLLM behavior is understood; the M3 Air campaign should add
+   a future work item only if those earlier candidates leave a useful gap.
 
    Required reports:
 
@@ -645,14 +652,15 @@ work.
    artifacts, free-space before/after, and secondary-download headroom are
    committed.
 8. Use the 0.7B 1bitLLM candidate in `M3MBA-006` only after the Microsoft path
-   records a decision and `M3MBA-010` permits another large candidate.
+   records a decision, the preflight resolves concrete artifact identity, and
+   `M3MBA-010` permits another large candidate.
 9. Run `M3MBA-009` once dense smoke/operator receipts exist so the M3 dense SLM
    lane is compared against M4 and SLM CPU evidence before broader claims.
 10. Keep `M3MBA-007` diagnostic-only and run it only after storage audit permits
     the 3B download.
 11. Keep M4 proof handoff separate in `M3MBA-008` until a candidate passes
-    reference output with tokenizer authority; otherwise close it as no accepted
-    artifact.
+    reference output with tokenizer authority and the secondary-candidate
+    decision surface is explicit; otherwise close it as no accepted artifact.
 
 ## Review Checklist
 
@@ -715,16 +723,18 @@ the next item requires a fresh M4 strict receipt
 
 ## Open Engineering Questions
 
-1. Should the CLI keep using `mac validate` for all Apple Silicon hosts, or should
-   the receipt schema add an explicit `apple-macbook-cpu-neon` backend label for
-   M3 Air cross-reference receipts?
-2. Should M3 Air dense SLM timing be tracked in the MacBook lane only, or should a
-   separate `apple-m3-slm-performance` campaign exist after the first receipts?
-3. Should accepted BitNet artifacts remain in the local cache after reference
-   qualification, or should the default be delete-and-redownload for strict M4
-   proof to avoid stale local state?
-4. Which cache root should be canonical for large MacBook artifacts on this
-   machine: the default user cache, `target/model-cache`, or an external volume?
+1. `M3MBA-003`: should the CLI keep using `mac validate` for all Apple Silicon
+   hosts, or should the receipt schema add an explicit
+   `apple-macbook-cpu-neon` backend label for M3 Air cross-reference receipts?
+2. `M3MBA-009`: should M3 Air dense SLM timing stay in the MacBook lane only, or
+   should a separate `apple-m3-slm-performance` campaign exist after the first
+   receipts?
+3. `M3MBA-010`: should accepted BitNet artifacts remain in the local cache after
+   reference qualification, or should the default be delete-and-redownload for
+   strict M4 proof to avoid stale local state?
+4. `M3MBA-002`/`M3MBA-010`: which cache root should be canonical for large
+   MacBook artifacts on this machine: the default user cache,
+   `target/model-cache`, or an external volume?
 
 The default answer is conservative: keep one MacBook lane until actual receipts
 show enough work to justify a separate M3 performance campaign; keep artifacts

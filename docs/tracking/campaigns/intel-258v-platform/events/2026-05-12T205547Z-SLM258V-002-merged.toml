@@ -1,0 +1,15 @@
+timestamp = "2026-05-12T20:55:47Z"
+campaign = "intel-258v-platform"
+item = "SLM258V-002"
+event = "merged"
+pr = 4530
+head_sha = "9fabf44dd333740c7c4c17421592c3ec0dbfb9bc"
+merge_sha = "80c315a07de48ddd30b3eb0e4e224af61417cec5"
+actor = "codex"
+summary = "Merged SLM258V-002, recording the first 258V dense SLM CPU answer-smoke evidence and its provenance blocker."
+notes = [
+  "The Qwen2.5 0.5B Instruct Q8_0 dense SLM receipt records 3/3 bounded answer-gate passes with fallback_used=false.",
+  "The merged evidence is diagnostic because the aggregate and child receipts still record BitNet I2_S kernel/layout provenance.",
+  "SLM258V-003 is ready to separate dense SLM provenance from BitNet packed-kernel receipt fields and rerun the smoke.",
+  "Broad SLM chat quality, BitNet QK256/I2_S proof, Arc 140V execution, Intel NPU execution, acceleration, and performance remain unclaimed.",
+]
