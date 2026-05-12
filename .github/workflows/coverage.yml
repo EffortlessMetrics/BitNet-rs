@@ -97,6 +97,17 @@ jobs:
               cargo llvm-cov report --text | tee coverage.txt
             '
 
+      - name: Restore coverage receipt ownership
+        if: always()
+        run: |
+          sudo mkdir -p target/bitnet/reports
+          sudo chown -R "$USER:$USER" target/bitnet
+          for file in coverage.json coverage.txt lcov.info; do
+            if [ -e "$file" ]; then
+              sudo chown "$USER:$USER" "$file"
+            fi
+          done
+
       - name: Disk usage after coverage
         if: always()
         run: |
