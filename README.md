@@ -38,6 +38,23 @@ What exists today:
 - receipts that record hardware identity, runtime identity, fallback behavior, and kernel coverage
 - dense SLM work used as a first-class local-answer model family and to validate shared generation surfaces while BitNet model-artifact work continues
 
+### Reader Guide
+
+Use this README as the project map, then jump to the workflow that matches your
+intent:
+
+| If you want to... | Read / run | Expected result |
+| --- | --- | --- |
+| Understand project readiness | [Current Status](#current-status) and [Capability Matrix](#capability-matrix) | Know which paths are supported, diagnostic, or incomplete. |
+| Try a local smoke run | [First Diagnostic Run](#first-diagnostic-run) | Build the CLI, download a GGUF, and emit a receipt. |
+| Work on loaders or tokenizers | [Model validation workflow](docs/howto/validate-models.md) | Validate artifacts before treating generated output as evidence. |
+| Work on kernels or hardware | [Hardware Validation](#hardware-validation) | Keep runtime identity, fallbacks, and parity receipts explicit. |
+| Add or review code | [Building](#building), [Testing](#testing), and [Contributing](#contributing) | Run the same checks expected before a PR. |
+
+Keep the project status language in mind when reading examples: commands that
+exercise generation are validation smoke tests unless the linked proof lane says
+otherwise.
+
 ## Current Status
 
 The repo has real inference infrastructure, but it does not yet provide supported coherent Rust BitNet local answers. The Microsoft BitNet.cpp reference path can answer the tiny suite with the official I2_S GGUF when the missing pre-tokenizer is supplied from Microsoft's tokenizer assets.
@@ -47,7 +64,7 @@ Backend receipts remain useful for selected-device execution, tokenizer and prom
 ## Capability Matrix
 
 | Area | State | What it means today |
-|---|---|---|
+| --- | --- | --- |
 | GGUF loading | Supported / hardening | Structural loading and metadata extraction are active work surfaces. |
 | Tokenizer handling | Supported / hardening | Tokenizer metadata is checked strictly for answer-quality work. |
 | I2_S BitNet32 CPU path | Diagnostic | CPU execution exists; coherent BitNet answer quality is still under validation. |
@@ -65,7 +82,7 @@ Backend receipts remain useful for selected-device execution, tokenizer and prom
 ## First Diagnostic Run
 
 | Need | Start here |
-|---|---|
+| --- | --- |
 | First token-generation walkthrough | [docs/tutorials/first-inference.md](docs/tutorials/first-inference.md) |
 | Real GGUF model walkthrough | [docs/tutorials/real-gguf-model-inference.md](docs/tutorials/real-gguf-model-inference.md) |
 | Model validation workflow | [docs/howto/validate-models.md](docs/howto/validate-models.md) |
@@ -73,6 +90,10 @@ Backend receipts remain useful for selected-device execution, tokenizer and prom
 | CLI flags and receipt options | [docs/reference/inference-cli-reference.md](docs/reference/inference-cli-reference.md) |
 
 The commands below are a smoke path for contributors, not an answer-quality quickstart.
+They assume a Rust toolchain matching `rust-toolchain.toml`, enough disk space for
+the downloaded model artifact, and a CPU-only path. Accelerator-specific runs
+should use the relevant hardware validation docs instead of changing these
+baseline commands.
 
 Build the CPU CLI:
 
@@ -102,6 +123,13 @@ RUST_LOG=warn cargo run --locked -p bitnet-cli \
 
 This exercises the model, tokenizer, generation, and receipt path. Treat the output as diagnostic evidence, not as a supported chat answer.
 
+The most useful artifact from the smoke run is the JSON receipt written under
+`target/bitnet/receipts/`. Include that receipt, the exact command, and the model
+identifier when reporting loader, tokenizer, backend-selection, or generation
+behavior. If the run fails before receipt creation, capture the full terminal log
+and note whether the failure happened during build, model download, tokenizer
+loading, or generation.
+
 ## Architecture
 
 ```text
@@ -130,7 +158,7 @@ The workspace contains roughly 200 crates. See [docs/architecture-overview.md](d
 Hardware validation is organized by platform so backend identity, runtime identity, fallback status, and receipt coverage stay explicit.
 
 | Platform | Role |
-|---|---|
+| --- | --- |
 | Intel 258V CPU | Lead BitNet CPU reference and AVX2 diagnostics. |
 | i5-8250U CPU | Dense SLM CPU lead and low-power comparison. |
 | Ryzen 9950X3D | AVX-512 support and high-performance CPU diagnostics. |
@@ -160,7 +188,7 @@ RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
 ### Feature Flags
 
 | Flag | Purpose |
-|---|---|
+| --- | --- |
 | `cpu` | CPU inference and diagnostics. |
 | `cuda` | CUDA backend surface. |
 | `gpu` | GPU umbrella feature for accelerator backends currently wired through the workspace. |
@@ -182,15 +210,24 @@ The repository contains unit, property, snapshot, fixture, fuzz, BDD, receipt, a
 
 ## Documentation
 
-| Section | Contents |
-|---|---|
-| [docs/tutorials/](docs/tutorials/) | Getting started and first diagnostic runs. |
-| [docs/howto/](docs/howto/) | Install, run, export, validate, and cross-check. |
-| [docs/explanation/](docs/explanation/) | Architecture and design notes. |
-| [docs/reference/](docs/reference/) | CLI, environment variables, quantization, and receipts. |
-| [docs/model-artifacts/](docs/model-artifacts/) | Model artifact status and validation. |
-| [docs/hardware/](docs/hardware/) | Hardware validation and benchmark protocol. |
-| [docs/tracking/](docs/tracking/) | Campaign state and active work. |
+The documentation is organized by task type. Prefer the highest-level guide that
+matches your question, then follow links from there so examples stay consistent
+with the current validation state.
+
+| Section | Contents | When to use it |
+| --- | --- | --- |
+| [docs/tutorials/](docs/tutorials/) | Getting started and first diagnostic runs. | You are new to the repo or want a guided smoke test. |
+| [docs/howto/](docs/howto/) | Install, run, export, validate, and cross-check. | You know the task and need command-oriented steps. |
+| [docs/explanation/](docs/explanation/) | Architecture and design notes. | You need design context before changing internals. |
+| [docs/reference/](docs/reference/) | CLI, environment variables, quantization, and receipts. | You need exact flag, schema, or configuration details. |
+| [docs/model-artifacts/](docs/model-artifacts/) | Model artifact status and validation. | You are deciding whether an artifact can support answer-quality claims. |
+| [docs/hardware/](docs/hardware/) | Hardware validation and benchmark protocol. | You are collecting backend, fallback, parity, or performance evidence. |
+| [docs/tracking/](docs/tracking/) | Campaign state and active work. | You are aligning a change with active validation campaigns. |
+
+When adding docs, use the same status vocabulary as this README: **supported**
+means the proof lane accepts the behavior, **diagnostic** means useful evidence
+that is not yet an answer-quality claim, and **incomplete** means the surface is
+not ready for users.
 
 ## What We Are Working On
 
