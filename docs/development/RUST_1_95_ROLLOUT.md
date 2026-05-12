@@ -87,7 +87,7 @@ ladder.
 | Clippy MSRV | `msrv = "1.95.0"` | `msrv = "1.95.0"` | 3 |
 | Clippy test carveouts | removed in PR 6 | no test carveouts | 6 |
 | Clippy 1.94/1.95 lints | `policy/clippy-lints.toml` now records `msrv = "1.95"`; planned lints are explicitly staged at `allow` in `Cargo.toml` | active or explicitly deferred with debt | 5 |
-| No-panic allowlist | present, empty/advisory, identity is `path + family + selector` | exact counted identity | 7 |
+| No-panic allowlist | present, empty/advisory, exact counted identity | exact counted identity | 7 |
 | No-panic baseline | absent | generated no-new-debt baseline | 8 |
 | Non-Rust allowlist | present, broad | narrowed with explicit covered-by evidence | 10 |
 | CI lane whitelist / LEM | present | calibrated for Rust 1.95 and risk-pack routing | 15 |
@@ -232,6 +232,12 @@ test-suite panic-family cleanup stays in the no-panic identity, baseline, and
 owner-lane burndown PRs.
 
 ### PR 7: No-Panic Exact Identity
+
+Harden the checker before any committed baseline exists. Matching uses
+`path + family + selector_kind + selector_callee + snippet + count`, consumes
+allowlist counts first, and only then consumes baseline counts when not in
+blocking mode. This PR may emit advisory proposed baseline reports under
+`target/bitnet/reports`; it must not add `policy/no-panic-baseline.toml`.
 
 ```bash
 cargo test -p xtask no_panic --locked

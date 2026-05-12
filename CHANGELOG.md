@@ -33,6 +33,11 @@ All notable changes to bitnet-rs will be documented in this file.
   - Uses the existing `bitnet-test-support::assertions` helpers as the first
     migrated slice by making their unit tests fallible instead of relying on
     unwrap/expect.
+- policy(panic): harden no-panic allowlist identity
+  - Changes no-panic matching to exact counted identity:
+    `path + family + selector.kind + selector.callee + snippet + count`.
+  - Consumes allowlist counts before optional baseline counts and keeps
+    baseline output advisory until the dedicated no-new-debt baseline PR.
 - docs(policy): refresh Rust 1.95 and next-minor rollout map — `docs/development/RUST_1_95_ROLLOUT.md`
   - Continuation of #3866 CI economics control plane; refreshes the existing Rust 1.95
     rollout map against current `main` instead of starting from a blank template.

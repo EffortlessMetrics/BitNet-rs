@@ -23,6 +23,8 @@ exception is a receipt with:
 * `id` — stable identifier
 * `path` — file path the receipt applies to
 * `family` — one of the panic families above
+* `snippet` — exact normalized source snippet for the finding
+* `count` — number of matching occurrences covered by this receipt
 * `classification` — `test_helper`, `kernel`, `ffi_boundary`, etc.
 * `owner` — team / area responsible
 * `explanation` — why this exception is acceptable now
@@ -31,8 +33,13 @@ exception is a receipt with:
   (`kind`, `container`, `callee`, `receiver_fingerprint`)
 * `last_seen` — advisory line/column
 
-Identity is `path + family + selector`. `last_seen` is not part of
-identity, so the receipt keeps matching across small edits.
+Identity is exact and counted:
+
+```text
+path + family + selector.kind + selector.callee + snippet + count
+```
+
+`last_seen` is not part of identity; it is advisory location evidence only.
 
 ## Workflow
 
@@ -44,7 +51,11 @@ identity, so the receipt keeps matching across small edits.
    for the human to edit and copy in.
 3. The real allowlist is `policy/no-panic-allowlist.toml`. Auto-tools
    never write to it; humans review each entry.
-4. CI runs the checker with `--fail-on-error` once the rollout reaches
+4. The checker also emits
+   `target/bitnet/reports/no-panic-proposed-baseline.toml` after subtracting
+   exact allowlist counts. The committed baseline is still introduced only in
+   the dedicated baseline PR.
+5. CI runs the checker with `--fail-on-error` once the rollout reaches
    PR 10 / 11 / 12. Until then it runs advisory.
 
 ## Family staging
@@ -99,13 +110,12 @@ CI economics framing.
 
 Current `main` has the no-panic allowlist present but intentionally empty and
 advisory-style. There is no generated `policy/no-panic-baseline.toml` yet. The
-Rust 1.95 wave hardens identity first, then generates the baseline and switches
-to no-new-debt mode.
+Rust 1.95 wave now has exact counted identity in the checker; the next step is
+to generate the baseline and switch to no-new-debt mode.
 
 ### Identity hardening (PR 7)
 
-Current allowlist identity is `path + family + selector`. Before bulk baseline
-work begins, identity must expand to include `snippet` and `count`:
+Allowlist identity is now exact and counted before bulk baseline work begins:
 
 ```text
 path
@@ -116,7 +126,7 @@ snippet
 count
 ```
 
-Matching becomes **counted and consumptive**:
+Matching is **counted and consumptive**:
 
 1. Consume exact allowlist count slots.
 2. Then consume baseline count slots, unless in blocking mode.
@@ -125,7 +135,7 @@ Matching becomes **counted and consumptive**:
 This prevents one allow entry from accidentally covering unrelated calls in the
 same file with the same callee.
 
-Required tests before PR 7 merges:
+Required tests for this contract:
 
 ```text
 allowlist_entry_requires_exact_snippet

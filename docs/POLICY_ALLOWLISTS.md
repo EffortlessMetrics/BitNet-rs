@@ -17,7 +17,7 @@ which `xtask` command checks it.
 
 `policy/no-panic-baseline.toml` is intentionally absent before PR 8 of the
 Rust 1.95 wave. It is listed here as a planned ledger so agents do not create a
-baseline before exact counted identity lands in PR 7.
+committed baseline before exact counted identity has landed.
 
 ## Rust 1.95 planned changes
 
@@ -64,6 +64,7 @@ target/bitnet/reports/file-policy.json
 target/bitnet/reports/no-panic.json
 target/bitnet/reports/clippy-exceptions.json
 target/bitnet/reports/no-panic-proposed-allowlist.toml   # advisory
+target/bitnet/reports/no-panic-proposed-baseline.toml    # advisory
 ```
 
 The aggregator never fails the build by itself; each individual
