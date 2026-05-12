@@ -361,8 +361,8 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M3MBA-005C"]
-acceptance = "Evaluate 1bitLLM/bitnet_b1_58-large as the smaller M3 Air control candidate only after the Microsoft 2B path records acceptance, rejection, or a clear blocker."
+blocked_by = ["M3MBA-005C", "M3MBA-010"]
+acceptance = "Evaluate 1bitLLM/bitnet_b1_58-large as the smaller M3 Air control candidate only after the Microsoft 2B path records acceptance, rejection, or a clear blocker and the M3MBA-010 storage audit permits another large candidate download."
 commands = [
   "huggingface-cli download 1bitLLM/bitnet_b1_58-large <gguf-file> --revision <revision> --local-dir <cache-root>/1bitllm-07b",
   "shasum -a 256 <cache-root>/1bitllm-07b/<gguf-file>",
@@ -405,8 +405,8 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M3MBA-005C"]
-acceptance = "Evaluate the 3B candidate only on supported TL1/TL2 diagnostic routes, recording why I2_S remains unsupported and why the result is diagnostic rather than proof."
+blocked_by = ["M3MBA-005C", "M3MBA-010"]
+acceptance = "Evaluate the 3B candidate only on supported TL1/TL2 diagnostic routes after M3MBA-010 permits another large candidate download, recording why I2_S remains unsupported and why the result is diagnostic rather than proof."
 commands = [
   "huggingface-cli download 1bitLLM/bitnet_b1_58-3B <tl1-or-tl2-gguf-file> --revision <revision> --local-dir <cache-root>/1bitllm-3b-diagnostic",
   "shasum -a 256 <cache-root>/1bitllm-3b-diagnostic/<tl1-or-tl2-gguf-file>",
@@ -450,7 +450,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-005C"]
-acceptance = "Promote accepted M3 Air BitNet artifact evidence into a separate M4 Mac mini strict Apple CPU/NEON proof item, preserving source, hash, tokenizer authority, route, and claim boundary without running or claiming the proof in this handoff item."
+acceptance = "Promote accepted M3 Air BitNet artifact evidence into a separate M4 Mac mini strict Apple CPU/NEON proof item, preserving source, hash, tokenizer authority, route, and claim boundary without running or claiming the proof in this handoff item; if M3MBA-005C rejects or blocks every candidate, close this handoff with an explicit no-accepted-artifact report instead."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
