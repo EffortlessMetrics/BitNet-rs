@@ -2042,6 +2042,7 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
   "crates/bitnet-cli/src/commands/answer_corpus.rs",
   "crates/bitnet-cli/tests/cli_arg_tests.rs",
   "ci/quality/slm258v-qwen25-answer-corpus.yaml",

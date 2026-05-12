@@ -203,15 +203,12 @@ ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json
 ```
 
 The manifest selects `qwen2.5-0.5b-instruct-q8_0` as the first 258V dense SLM
-CPU smoke candidate and links the CPU answer-smoke receipt below. It records the
-exact GGUF repository, revision, file, SHA256, architecture, quantization,
-tokenizer metadata, prompt template, context length, and reference-output
-expectations inherited from the existing dense Qwen evidence. It also records
-the current blocker: the answer text gates pass, but the receipt still includes
-BitNet I2_S kernel/layout provenance and is diagnostic until dense SLM
-provenance is cleanly separated. It does not commit a model binary, prove broad
-258V SLM answer quality, touch BitNet QK256/I2_S proof, or prove Arc 140V /
-Intel NPU execution.
+CPU smoke candidate and links the CPU answer-smoke receipt below plus the
+clean-provenance rerun. It records the exact GGUF repository, revision, file,
+SHA256, architecture, quantization, tokenizer metadata, prompt template, context
+length, and reference-output expectations inherited from the existing dense Qwen
+evidence. It does not commit a model binary, prove broad 258V SLM answer
+quality, touch BitNet QK256/I2_S proof, or prove Arc 140V / Intel NPU execution.
 
 ### Dense SLM CPU Answer Smoke
 
@@ -231,10 +228,23 @@ ci/quality/slm258v-qwen25-answer-corpus.yaml
 The receipt uses the real `qwen2.5-0.5b-instruct-q8_0.gguf` artifact, GGUF
 tokenizer metadata, the `qwen2.5` prompt template, greedy deterministic
 generation, `selected_backend=cpu`, and `fallback_used=false`. All three tiny
-answer-readiness cases pass. This is diagnostic evidence only because the same
-receipt records `i2_s-avx2-reference` / `gguf_packed_i2_s` provenance fields.
-Do not treat it as a clean dense SLM CPU smoke until those provenance fields are
-fixed and the receipt is rerun.
+answer-readiness cases pass. This first receipt is diagnostic evidence because
+it records `i2_s-avx2-reference` / `gguf_packed_i2_s` provenance fields.
+
+`SLM258V-003` reruns the same smoke after separating dense SLM provenance from
+BitNet packed-kernel receipt fields:
+
+```text
+ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json
+```
+
+The clean-provenance receipt preserves the same model SHA256, tokenizer
+metadata, prompt template, generated IDs/text, `selected_backend=cpu`, and
+`fallback_used=false`, while its child receipts record
+`dense-qwen-cpu-reference`, `gguf_dense_q8_0`, and `dense_slm` provenance
+instead of BitNet I2_S/QK256 provenance. It remains a bounded dense SLM CPU
+answer-smoke receipt only; it does not prove broad SLM chat quality, speed,
+Arc/NPU execution, or BitNet QK256/I2_S proof.
 
 The 2026-05-08 CLI platform probe refresh is:
 

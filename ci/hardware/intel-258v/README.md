@@ -33,6 +33,7 @@ ci/hardware/intel-258v/<date>/cpu-reference-bundle.json
 ci/hardware/intel-258v/<date>/cpu-semantic-diagnosis.json
 ci/hardware/intel-258v/<date>/slm-artifact-manifest.json
 ci/hardware/intel-258v/<date>/slm-answer-corpus-qwen25-cpu.json
+ci/hardware/intel-258v/<date>/slm-answer-corpus-qwen25-cpu-clean-provenance.json
 ci/hardware/intel-258v/<date>/npu-openvino-runtime-probe.json
 ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
@@ -84,8 +85,8 @@ the same claim boundary: no new runtime behavior, no broad answer-quality
 claim, no speedup/sustained-throughput claim, and no Arc/NPU execution claim.
 
 `slm-artifact-manifest.json` pins the first dense SLM candidate and links the
-Lunar Lake CPU answer-smoke receipt plus its current provenance blocker. It
-records the exact Qwen2.5 0.5B Instruct Q8_0 GGUF source, revision, SHA256,
+Lunar Lake CPU answer-smoke receipt plus the clean dense SLM provenance rerun.
+It records the exact Qwen2.5 0.5B Instruct Q8_0 GGUF source, revision, SHA256,
 architecture, quantization, tokenizer metadata, prompt template, context length,
 and cross-lane reference expectations. It does not commit a model binary and
 does not claim broad SLM answer quality, speed, Arc 140V execution, Intel NPU
@@ -95,10 +96,18 @@ execution, or BitNet QK256/I2_S coverage on the 258V.
 smoke for the pinned Qwen2.5 0.5B Instruct Q8_0 artifact. It uses GGUF tokenizer
 metadata, the `qwen2.5` prompt template, greedy deterministic generation,
 `selected_backend=cpu`, and `fallback_used=false`, and its three tiny answer
-gates pass. The receipt is diagnostic, not clean proof, because it still records
-BitNet I2_S kernel/layout provenance in the aggregate and child receipts. It
-must be rerun or regenerated after dense SLM provenance is separated from
-BitNet I2_S fields.
+gates pass. It remains the diagnostic pre-cleanup receipt because it still
+records BitNet I2_S kernel/layout provenance in the aggregate and child
+receipts.
+
+`slm-answer-corpus-qwen25-cpu-clean-provenance.json` reruns the same three-case
+Qwen2.5 CPU answer smoke after separating dense SLM provenance from BitNet
+packed-kernel receipt fields. Its child receipts record
+`dense-qwen-cpu-reference`, `gguf_dense_q8_0`, `dense_slm` provenance,
+`selected_backend=cpu`, and `fallback_used=false`, with no top-level BitNet
+I2_S/QK256 child receipt provenance. It is a bounded dense SLM CPU answer-smoke
+receipt only; it does not claim broad chat quality, speed, Arc/NPU execution, or
+BitNet QK256/I2_S proof.
 
 `cpu-answer-corpus-avx2-bitnetcpp-template.json` records the first 258V AVX2
 attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready
