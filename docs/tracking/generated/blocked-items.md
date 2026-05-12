@@ -7,6 +7,13 @@
 | apple-bitnet-artifact-sweep | ABAS-003 | ABAS-001 | proposed |
 | apple-bitnet-artifact-sweep | ABAS-004 | ABAS-001, ABAS-002 | proposed |
 | apple-bitnet-artifact-sweep | ABAS-005 | ABAS-001 | proposed |
+| apple-m3-macbook-air | M3MBA-002 | M3MBA-001 | proposed |
+| apple-m3-macbook-air | M3MBA-003 | M3MBA-002 | proposed |
+| apple-m3-macbook-air | M3MBA-004 | M3MBA-003 | proposed |
+| apple-m3-macbook-air | M3MBA-005 | M3MBA-004 | proposed |
+| apple-m3-macbook-air | M3MBA-006 | M3MBA-005 | proposed |
+| apple-m3-macbook-air | M3MBA-007 | M3MBA-005 | proposed |
+| apple-m3-macbook-air | M3MBA-008 | M3MBA-005 | proposed |
 | apple-m4 | M4-002 | M4-001 | merged |
 | apple-m4 | M4-003 | M4-002 | merged |
 | apple-m4 | M4-004 | M4-003 | merged |
