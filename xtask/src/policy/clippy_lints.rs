@@ -165,21 +165,21 @@ fn check(
             Some("allow") if debt_entries > 0 => report.deferred.push(status),
             None if debt_entries > 0 => report.deferred.push(status),
             Some("allow") => {
-                report.warnings.push(format!(
+                report.errors.push(format!(
                     "{} is due at MSRV {} but remains `allow` without debt",
                     planned.name, planned.activate_when_msrv
                 ));
                 report.deferred.push(status);
             }
             None => {
-                report.warnings.push(format!(
+                report.errors.push(format!(
                     "{} is due at MSRV {} but is absent from workspace Clippy lints and has no debt",
                     planned.name, planned.activate_when_msrv
                 ));
                 report.missing.push(status);
             }
             Some(level) => {
-                report.warnings.push(format!(
+                report.errors.push(format!(
                     "{} has workspace level `{level}` but policy level `{}`",
                     planned.name, planned.level
                 ));
@@ -388,5 +388,77 @@ manual_checked_ops = "allow"
         assert_eq!(report.active.len(), 1);
         assert_eq!(report.deferred.len(), 1);
         assert!(report.errors.is_empty(), "{:?}", report.errors);
+    }
+
+    #[test]
+    fn due_lints_without_activation_or_debt_are_errors() {
+        let dir = std::env::temp_dir().join(format!(
+            "clippy-lints-errors-{}-{}",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        let lints = dir.join("clippy-lints.toml");
+        let debt = dir.join("clippy-debt.toml");
+        let manifest = dir.join("Cargo.toml");
+        writeln!(
+            fs::File::create(&lints).unwrap(),
+            r#"
+schema_version = "1.0"
+msrv = "1.95"
+
+[[planned]]
+name = "clippy::same_length_and_capacity"
+level = "deny"
+activate_when_msrv = "1.94"
+reason = "reason"
+
+[[planned]]
+name = "clippy::manual_take"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "reason"
+
+[[planned]]
+name = "clippy::needless_type_cast"
+level = "warn"
+activate_when_msrv = "1.95"
+reason = "reason"
+"#
+        )
+        .unwrap();
+        writeln!(fs::File::create(&debt).unwrap(), "schema_version = \"1.0\"").unwrap();
+        writeln!(
+            fs::File::create(&manifest).unwrap(),
+            r#"
+[workspace.lints.clippy]
+same_length_and_capacity = "allow"
+manual_take = "deny"
+"#
+        )
+        .unwrap();
+        let report = check(&lints, &debt, &manifest, &dir).unwrap();
+        assert_eq!(report.errors.len(), 3, "{:?}", report.errors);
+        assert!(
+            report
+                .errors
+                .iter()
+                .any(|e| e.contains("same_length_and_capacity") && e.contains("without debt")),
+            "{:?}",
+            report.errors
+        );
+        assert!(
+            report
+                .errors
+                .iter()
+                .any(|e| e.contains("manual_take") && e.contains("workspace level")),
+            "{:?}",
+            report.errors
+        );
+        assert!(
+            report.errors.iter().any(|e| e.contains("needless_type_cast") && e.contains("absent")),
+            "{:?}",
+            report.errors
+        );
     }
 }
