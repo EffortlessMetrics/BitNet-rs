@@ -39,7 +39,7 @@ The repo already has:
 - `ripr-advisory` in `policy/ci-lane-whitelist.toml`.
 
 The current workflow may record a no-op when the `ripr` binary is not present
-on the runner. That is acceptable for the Rust 1.93 control plane, but it is
+on the runner. That was acceptable for the Rust 1.93 control plane, but it is
 not the Rust 1.95 target state.
 
 ## Rust 1.95 Target State

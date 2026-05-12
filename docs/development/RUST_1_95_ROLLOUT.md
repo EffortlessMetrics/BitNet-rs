@@ -81,17 +81,17 @@ ladder.
 | Layer | Current state on `main` | Target state | PR |
 |---|---|---|---|
 | Edition | Rust 2024 | Rust 2024 | current |
-| Workspace MSRV | `1.93.0` in `Cargo.toml` | `1.95.0` | 3 |
-| Toolchain | `1.93.0` in `rust-toolchain.toml` | `1.95.0` with rustfmt, clippy, rust-analyzer | 3 |
+| Workspace MSRV | `1.95.0` in `Cargo.toml` | `1.95.0` | 3 |
+| Toolchain | `1.95.0` in `rust-toolchain.toml` | `1.95.0` with rustfmt, clippy, rust-analyzer | 3 |
 | Root version | `0.2.1-dev` | next minor dev line | 16 |
-| Clippy MSRV | `msrv = "1.93.0"` | `msrv = "1.95.0"` | 3 |
+| Clippy MSRV | `msrv = "1.95.0"` | `msrv = "1.95.0"` | 3 |
 | Clippy test carveouts | `allow-expect-in-tests = true`, `allow-unwrap-in-tests = true` | no test carveouts | 6 |
-| Clippy 1.94/1.95 lints | staged in `policy/clippy-lints.toml` | active or explicitly deferred with debt | 5 |
+| Clippy 1.94/1.95 lints | `policy/clippy-lints.toml` now records `msrv = "1.95"`; planned lints are explicitly staged at `allow` in `Cargo.toml` | active or explicitly deferred with debt | 5 |
 | No-panic allowlist | present, empty/advisory, identity is `path + family + selector` | exact counted identity | 7 |
 | No-panic baseline | absent | generated no-new-debt baseline | 8 |
 | Non-Rust allowlist | present, broad | narrowed with explicit covered-by evidence | 10 |
 | CI lane whitelist / LEM | present | calibrated for Rust 1.95 and risk-pack routing | 15 |
-| Core CI toolchain | important jobs still pin `1.93.0` | core/policy/coverage/ripr jobs pin `1.95.0` | 3 |
+| Core CI toolchain | workflow toolchain pins use `1.95.0`; coverage image is `rust-1.95` | workflows and the Rust CI image stay on the declared floor | 3 |
 | `ripr` | workflow exists, may skip when binary is absent | real advisory static mutation-exposure signal | 11 |
 | Mutation testing | expensive runtime evidence outside default PR | targeted risk PR, broader nightly, release readiness | 11, 15, 17 |
 
@@ -121,7 +121,7 @@ Each PR below is a single objective. Start every PR from clean `origin/main`.
 |---:|---|---|---|
 | 1 | `docs/rust-1.95-rollout-refresh` | `docs(policy): refresh Rust 1.95 and next-minor rollout map` | Documentation refresh/correction only. No Cargo, workflow, toolchain, or Rust source changes. |
 | 2 | `probe/rust-1.95-compat` | `chore(msrv): probe Rust 1.95 compatibility` | Run current `main` under Rust 1.95 before changing declared MSRV. Audit note preferred. |
-| 3 | `chore/msrv-rust-1.95` | `chore(msrv): raise workspace toolchain to Rust 1.95` | Bump `Cargo.toml`, `rust-toolchain.toml`, `clippy.toml`, core/policy/coverage/ripr workflows, and `policy/clippy-lints.toml` MSRV. |
+| 3 | `chore/msrv-rust-1.95` | `chore(msrv): raise workspace toolchain to Rust 1.95` | Bump workspace and explicit member MSRV pins, `rust-toolchain.toml`, `clippy.toml`, workflow toolchain pins, the Rust CI image tag, `policy/clippy-lints.toml` MSRV, and explicit lint-ratchet deferrals. |
 | 4 | `policy/rust-1.95-lints` | `policy(rust): enable Rust 1.95 compiler lint floor` | Move compiler lint floor forward. Do not use `unsafe_code = "forbid"` globally. |
 | 5 | `policy/clippy-rust-1.95-ratchets` | `policy(clippy): activate Rust 1.95 lint ratchets` | Measure first, then activate clean or cheaply fixed 1.94/1.95 Clippy ratchets. Keep `disallowed_fields` planned until real fields are configured. |
 | 6 | `policy/no-test-clippy-carveouts` | `policy(clippy): remove test unwrap and expect carveouts` | Remove Clippy test carveouts and convert one narrow helper slice only. |
