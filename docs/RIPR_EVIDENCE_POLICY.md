@@ -92,6 +92,6 @@ have an owner, a reason, and an expiry.
 
 ## Toolchain dependency
 
-`ripr` requires Rust `1.93` or newer. The current workspace MSRV is 1.93.0; the
-Rust 1.95 / next minor rollout raises the workspace floor to 1.95.0 before the
-real advisory `ripr` provisioning PR.
+`ripr` requires Rust `1.93` or newer. The current workspace MSRV is 1.95.0; the
+Rust 1.95 / next minor rollout keeps the floor ahead of that requirement before
+the real advisory `ripr` provisioning PR.
