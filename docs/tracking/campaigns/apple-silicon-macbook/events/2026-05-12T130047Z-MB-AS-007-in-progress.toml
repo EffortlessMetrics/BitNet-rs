@@ -1,0 +1,12 @@
+timestamp = "2026-05-12T13:00:47Z"
+campaign = "apple-silicon-macbook"
+item = "MB-AS-007"
+event = "in_progress"
+branch = "codex/apple-silicon-macbook/m3-air-roadmap"
+actor = "codex"
+
+notes = [
+  "Started the live M3 MacBook Air lane roadmap now that the active host is a MacBook Air Mac15,13 with Apple M3, 16 GB memory, and about 99 GiB free on the repo volume.",
+  "Scope is documentation and campaign tracking for M3 Air sequencing, storage policy, receipt locations, decision gates, dense SLM cross-checks, BitNet artifact sweeps, open engineering questions, and M4 strict-proof handoff boundaries.",
+  "No model artifact is downloaded, no inference receipt is produced, and no M4 Mac mini, BitNet local-answer, full Metal, Neural Engine, MPSGraph inference, QK256, or broad Apple Silicon performance claim is made by this item.",
+]

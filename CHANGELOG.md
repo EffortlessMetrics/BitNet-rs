@@ -6,16 +6,34 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ### Rust 1.95 / Next Minor CI Economics Continuation (planned)
 
-- policy: map Rust 1.95 CI economics and strict Clippy continuation — `docs/development/RUST_1_95_ROLLOUT.md`
-  - Continuation of #3866 CI economics control plane; rebuilds closed #4136 against current `main`.
-  - Planned 17-PR ladder: compatibility spike → MSRV bump → rustc lint floor →
-    Clippy 1.95 ratchets → remove test carveouts → exact no-panic identity →
-    no-new-debt baseline → no-panic diagnostics → file-policy tightening →
-    real `ripr` advisory → targeted 1.95 API cleanup → numeric/kernel lint cleanup →
-    no-panic owner-lane burndown → LEM/risk-pack tightening →
-    next-minor release prep → release dry-run proof.
-  - Goal: better-shaped CI per PR (cheaper lane selection, clearer risk-pack routing,
-    `ripr` advisory evidence, stricter Clippy receipts, less per-PR churn).
+- chore(msrv): raise workspace toolchain to Rust 1.95.0
+  - Updates `Cargo.toml`, `rust-toolchain.toml`, `clippy.toml`,
+    explicit member `rust-version` pins, `policy/clippy-lints.toml`, workflow
+    toolchain pins, and the Rust CI image tag.
+  - Explicitly keeps Rust 1.94/1.95 Clippy ratchets staged so the MSRV bump does
+    not silently activate lint cleanup before the dedicated ratchet PR.
+  - Keeps Clippy test carveouts, lint activation, no-panic baseline work,
+    release version reconciliation, and Rust 1.95 API cleanup scoped to their
+    later rollout PRs.
+  - Carries forward the compatibility-audit caveat: completed Rust 1.95 probe
+    slices passed, but full local workspace validation was blocked by the
+    Windows native SentencePiece/Python build path and still needs full CI or a
+    known-good native build host before release readiness.
+- docs(policy): refresh Rust 1.95 and next-minor rollout map — `docs/development/RUST_1_95_ROLLOUT.md`
+  - Continuation of #3866 CI economics control plane; refreshes the existing Rust 1.95
+    rollout map against current `main` instead of starting from a blank template.
+  - Corrected doctrine: `ripr` is static mutation-exposure analysis. It catches much
+    of the same weak test/oracle exposure signal mutation testing catches, but earlier
+    and cheaper; mutation testing remains the runtime empirical backstop.
+  - Planned 17-PR ladder: compatibility spike -> MSRV bump -> rustc lint floor ->
+    Clippy 1.95 ratchets -> remove test carveouts -> exact no-panic identity ->
+    no-new-debt baseline -> no-panic diagnostics -> file-policy tightening ->
+    real `ripr` advisory -> targeted 1.95 API cleanup -> numeric/kernel lint cleanup ->
+    no-panic owner-lane burndown -> LEM/risk-pack tightening ->
+    next-minor release prep -> release dry-run proof.
+  - Goal: better-shaped CI per PR: cheaper lane selection, clearer risk-pack routing,
+    `ripr` static mutation-exposure evidence, stricter Clippy receipts, and targeted
+    mutation where owner risk justifies the runtime cost.
   - Raising MSRV from 1.93.0 to 1.95.0 accompanies a minor version bump
     (MSRV change is a user-visible build-requirement break under semver). The
     exact version and tag are finalized in the release-prep PR because this
@@ -1153,4 +1171,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic BitNet model loading and inference
 - CPU-only quantization support
 - Core API design and architecture
-
