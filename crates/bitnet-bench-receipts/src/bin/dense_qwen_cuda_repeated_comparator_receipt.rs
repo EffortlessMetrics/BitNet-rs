@@ -330,7 +330,7 @@ fn build_receipt(
             "device_to_host_timing_recorded": false,
             "next_step": "CUDA-DENSE-PERF-003 transfer timing or profile-specific qualification review"
         },
-        "hardware_context": hardware_context(&runs)?,
+        "hardware_context": hardware_context(runs)?,
         "cuda": baseline.pointer("/cuda").cloned().ok_or("baseline cuda block missing")?,
         "claim_boundaries": [
             "speedup_claim=false; repeated CPU/CUDA comparator evidence is not a speedup qualification.",
