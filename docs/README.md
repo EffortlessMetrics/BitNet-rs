@@ -1,8 +1,58 @@
 # BitNet-rs Documentation
 
-BitNet-rs is a Rust implementation of BitNet — Microsoft's 1-bit weight neural network inference framework.
+BitNet-rs is a pre-alpha Rust inference engine for BitNet-style 1-bit
+language models. CPU inference is the primary validated path; GPU and
+accelerator backends are documented as scaffolded or validation work unless a
+platform page explicitly says otherwise.
 
-Documentation is organized using the [Diátaxis](https://diataxis.fr/) framework.
+Documentation is organized using the [Diátaxis](https://diataxis.fr/) framework:
+tutorials for learning, how-to guides for tasks, explanation for design
+context, and reference pages for exact behavior.
+
+## Start here
+
+| If you want to... | Read this first | Then check |
+|---|---|---|
+| Build the project locally | [development/build-commands.md](development/build-commands.md) | [development/test-suite.md](development/test-suite.md) |
+| Run the CLI against a GGUF model | [tutorials/first-inference.md](tutorials/first-inference.md) | [howto/gguf-model-validation-and-loading.md](howto/gguf-model-validation-and-loading.md) |
+| Understand the repository layout | [architecture-overview.md](architecture-overview.md) | [development/REPO_SURFACES.md](development/REPO_SURFACES.md) |
+| Validate a model artifact | [model-artifacts/MODEL_COVERAGE_MATRIX.md](model-artifacts/MODEL_COVERAGE_MATRIX.md) | [howto/validate-models.md](howto/validate-models.md) |
+| Debug tokenizer or answer-quality drift | [howto/troubleshoot-intelligibility.md](howto/troubleshoot-intelligibility.md) | [howto/parity-playbook.md](howto/parity-playbook.md) |
+| Check hardware support status | [hardware/HARDWARE_MATRIX.md](hardware/HARDWARE_MATRIX.md) | [hardware/PROOF_STAGES.md](hardware/PROOF_STAGES.md) |
+
+## Command conventions
+
+Unless a page says otherwise, commands assume they are run from the repository
+root. Default Cargo features are intentionally empty, so examples spell out the
+runtime feature set explicitly:
+
+```bash
+cargo build --locked --no-default-features --features cpu
+cargo test --locked --workspace --no-default-features --features cpu
+```
+
+Use `cpu,full-cli` when invoking CLI subcommands that are not part of the
+minimal library surface:
+
+```bash
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --help
+```
+
+GPU examples document wiring and validation work. Treat them as platform notes
+until the relevant hardware page records proof-stage evidence for your backend.
+
+## Documentation maintenance checklist
+
+When adding or updating docs, keep the following contract in sync:
+
+1. Link new user-facing pages from this index or the nearest section index.
+2. Mark diagnostic, scaffolded, or hardware-specific flows explicitly.
+3. Prefer copy-pasteable commands with `--locked`, `--no-default-features`, and
+   the intended feature list.
+4. Put model, tokenizer, and receipt paths in examples so validation artifacts
+   are easy to reproduce.
+5. Move stale sprint notes and superseded plans into [`archive/`](archive/)
+   instead of leaving them in the main navigation path.
 
 ---
 
