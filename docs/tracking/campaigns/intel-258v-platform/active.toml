@@ -1984,8 +1984,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM258V-002"
-status = "pr_open"
+status = "merged"
 pr = 4530
+merge_sha = "80c315a07de48ddd30b3eb0e4e224af61417cec5"
 branch = "codex/lunar-lake/SLM258V-002-cpu-answer-smoke"
 stackable = false
 review_mode = "codex_premerge"
@@ -2022,4 +2023,49 @@ must_not_claim = [
   "Arc 140V or Intel NPU execution is proven.",
   "Acceleration or performance is proven.",
   "Dense SLM receipts are interchangeable with BitNet packed-kernel receipts.",
+]
+
+[[work_item]]
+id = "SLM258V-003"
+status = "ready"
+branch = "codex/lunar-lake/SLM258V-003-dense-slm-provenance"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM258V-002"]
+acceptance = "Separate dense Qwen SLM receipt provenance from BitNet I2_S/QK256 kernel/layout fields, then rerun the 258V Qwen2.5 strict CPU answer smoke with fallback=false and clean dense SLM provenance without claiming broad SLM quality, BitNet packed-kernel proof, Arc/NPU execution, acceleration, or performance."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::answer_corpus::tests -- --nocapture",
+  "target/release/bitnet.exe answer-corpus --device cpu --model C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --corpus ci\\quality\\slm258v-qwen25-answer-corpus.yaml --fail-on-quality --json-out ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "ci/quality/slm258v-qwen25-answer-corpus.yaml",
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "Dense Qwen SLM answer-corpus receipts no longer record BitNet I2_S/QK256 kernel/layout provenance.",
+  "The corrected 258V dense SLM smoke receipt records clean dense SLM provenance with fallback_used=false.",
+]
+must_not_claim = [
+  "Broad dense SLM chat quality is proven.",
+  "BitNet QK256/I2_S proof is affected.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Acceleration or performance is proven.",
 ]
