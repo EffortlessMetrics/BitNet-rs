@@ -6,8 +6,40 @@ Essential guidance for working with the bitnet-rs codebase.
 
 - **Name:** bitnet-rs — 1-bit LLM inference engine in Rust
 - **Version:** v0.2.1-dev (pre-alpha)
-- **MSRV: 1.93.0 (Rust 2024 edition, pinned in `rust-toolchain.toml`)
+- **MSRV:** 1.93.0 (Rust 2024 edition, pinned in `rust-toolchain.toml`)
 - **Status:** CPU inference works with SIMD optimization. GPU backends are scaffolded but not validated. Do not use in production.
+
+## Rust 1.95 Rollout Rails
+
+The Rust 1.95 / next minor rollout is a continuation of the Rust 1.93 CI
+economics control plane, not a new rollout from scratch. Start each rollout PR
+from clean `origin/main`, keep one PR per objective, open draft PRs first, and
+do not combine MSRV bump, lint activation, no-panic baseline, release bump, or
+API cleanup.
+
+Critical doctrine:
+
+```text
+ripr is static mutation-exposure analysis.
+
+It catches much of the same signal mutation testing catches -- weak test/oracle
+exposure -- but earlier and cheaper, because it runs statically and can run
+per PR.
+
+Mutation testing remains the runtime empirical backstop, especially for
+nightly and release readiness. The CI design should use ripr to shift
+mutation signal left, not to pretend mutation is unnecessary.
+```
+
+First PR is documentation-only:
+
+```text
+docs/rust-1.95-rollout-refresh
+docs(policy): refresh Rust 1.95 and next-minor rollout map
+```
+
+Roadmap and acceptance gates live in
+`docs/development/RUST_1_95_ROLLOUT.md`.
 
 ## Build and Test
 
