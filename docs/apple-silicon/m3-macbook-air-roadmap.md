@@ -81,6 +81,71 @@ docs/tracking/campaigns/apple-bitnet-artifact-sweep/
 | 5 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
 | 6 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
 | 7 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
+| 8 | `M3MBA-009` | M3 SLM lane synthesis | Cross-lane report comparing M3 Air dense SLM receipts against M4 and 8250U SLM evidence |
+| 9 | `M3MBA-010` | Storage and cache hygiene audit | Artifact ledger audit with retained/deleted model state and free-space floor |
+
+## 2026-05-12 Tactical Plan
+
+The M3 Air should now move as a short stack, not a single exploratory blob:
+
+| Order | Item | Target | Merge decision |
+|---:|---|---|---|
+| 1 | `M3MBA-002` | Commit the live machine profile and storage budget. | Merge when schema-valid and `inference_run=false`. |
+| 2 | `M3MBA-003` | Make `apple-m3-air-cpu-neon` a valid receipt label. | Merge only if M4 labels remain strict. |
+| 3 | `M3MBA-004` | Run the dense Qwen mirror as the control path. | Merge pass receipts or a blocker report; do not skip to BitNet silently. |
+| 4 | `M3MBA-005` | Screen Microsoft 2B I2_S with tokenizer authority. | Accept, reject, or block with hash and reference output evidence. |
+| 5 | `M3MBA-010` | Audit local cache retention after the first large download. | Merge before additional large candidates if free space falls below policy. |
+| 6 | `M3MBA-006` | Try the smaller 0.7B control candidate. | Proceed only after Microsoft 2B has a decision. |
+| 7 | `M3MBA-009` | Summarize dense SLM cross-lane behavior. | Merge after M3 dense receipts exist; feeds SLM CPU/M4 comparison. |
+| 8 | `M3MBA-007` | Run 3B TL diagnostics only. | Keep diagnostic-only unless the compatibility matrix changes. |
+| 9 | `M3MBA-008` | Write M4 strict-proof handoff. | Only for accepted artifacts, with fresh M4 proof still required. |
+
+This order keeps the MacBook useful immediately while preserving the existing
+proof hierarchy: first prove the host, then prove the dense control route, then
+spend disk on BitNet candidates.
+
+## Success Metrics
+
+The M3 Air lane is successful when it produces one of these reviewable outcomes:
+
+| Area | Success metric | Failure still worth merging |
+|---|---|---|
+| Host readiness | Machine profile has exact model, chip, memory, macOS, power, thermal, cache, and free-space fields. | A blocker report names the missing host field and command that failed. |
+| Dense SLM control | Qwen mirror receipts pass with deterministic settings and explicit M3 backend labels. | Receipt-check or quality failure is committed with model hash, tokenizer metadata, and fallback state. |
+| BitNet Microsoft 2B | Official I2_S artifact has source revision, SHA256, tokenizer authority, and reference output decision. | Reference runner or tokenizer authority failure is committed as a rejection/blocker. |
+| Storage discipline | Every large artifact has retention, cleanup status, and free-space before/after. | Additional model work pauses until cleanup is recorded. |
+| Handoff quality | Accepted artifacts name the exact M4 proof item and receipt requirements. | No handoff if the artifact is only diagnostic or reference-bad. |
+
+Timing numbers are secondary until the lane has comparison-grade receipts. A
+fast diagnostic run without power, thermal, fallback, model hash, tokenizer, and
+prompt context should not be used to steer product claims.
+
+## SLM Lane Integration
+
+The M3 Air is a useful dense SLM cross-check because it is a mobile Apple
+Silicon host with enough storage to keep the known-good dense control model near
+the BitNet candidate cache. It should feed the SLM lanes in three ways:
+
+```text
+M4 dense SLM lane:
+  compare behavior and timing context, but keep M4 as the published Mac product
+  and performance envelope
+
+SLM CPU lane:
+  compare dense Qwen prompt behavior and failure signatures against the i5-8250U
+  CPU lane when both receipts name the same model, tokenizer, prompt, and greedy
+  settings
+
+Apple BitNet artifact sweep:
+  use dense SLM receipts as a control that proves the MacBook runner, cache,
+  tokenizer handling, receipt fields, and operator workflow before spending disk
+  on larger BitNet artifacts
+```
+
+`M3MBA-009` owns the first cross-lane synthesis after `M3MBA-004` exists. That
+report should not add a new model claim; it should tell reviewers whether M3
+behavior looks aligned enough to keep using the MacBook as an SLM/BitNet
+screening host.
 
 ## Milestone Gates
 

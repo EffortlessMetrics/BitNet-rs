@@ -345,3 +345,79 @@ must_not_claim = [
   "The M4 strict proof already passed.",
   "M3 Air evidence is M4 Mac mini evidence.",
 ]
+
+[[work_item]]
+id = "M3MBA-009"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-009-slm-synthesis"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-004"]
+acceptance = "Synthesize M3 Air dense SLM behavior against comparable M4 Mac mini and SLM CPU receipts, naming exact models, hashes, tokenizers, prompt sets, backend labels, fallback status, power/thermal context, and gaps that make evidence non-comparable."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "docs/reports/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+]
+may_claim = [
+  "M3 Air dense SLM evidence has been compared against named M4 and SLM CPU receipts where fields match.",
+]
+must_not_claim = [
+  "M3 Air timing replaces M4 Mac mini performance.",
+  "Dense SLM evidence proves BitNet behavior.",
+  "Non-comparable receipts are equivalent.",
+]
+
+[[work_item]]
+id = "M3MBA-010"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-010-storage-audit"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-005"]
+acceptance = "Audit the M3 Air model cache after the first large BitNet download, recording retained artifacts, deleted artifacts, SHA256 evidence, cleanup status, free-space before/after, and whether additional candidate downloads are allowed under the lane storage policy."
+commands = [
+  "df -k . \"$HOME/Library/Caches\"",
+  "shasum -a 256 <retained-artifacts>",
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/**",
+  "docs/apple-silicon/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air artifact cache retention and cleanup state is recorded for the lane.",
+]
+must_not_claim = [
+  "Deleted artifacts remain available locally.",
+  "Cache retention proves model quality.",
+  "Large model binaries were committed.",
+]
