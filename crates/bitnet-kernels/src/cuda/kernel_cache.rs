@@ -705,6 +705,7 @@ impl BinaryCache {
         }
 
         let path = self.cache_dir.join(&filename);
+        ensure_dir(&self.cache_dir)?;
         // Serialize: 8-byte compile_time_nanos + 8-byte compiled_at + entry_point_len(4) + entry_point + binary
         let mut data = Vec::new();
         data.extend_from_slice(&kernel.compile_time.as_nanos().to_le_bytes());
@@ -1691,6 +1692,21 @@ mod tests {
         let loaded = bc.load(&key).unwrap().unwrap();
         assert_eq!(loaded.entry_point, "test_store");
         assert_eq!(loaded.binary, kernel.binary);
+        cleanup_dir(&dir);
+    }
+
+    #[test]
+    fn binary_cache_store_recreates_missing_dir() {
+        let dir = temp_dir();
+        let mut bc = BinaryCache::open(&dir, 1024 * 1024, 0).unwrap();
+        cleanup_dir(&dir);
+
+        let key = make_key("recreate_dir");
+        let kernel = make_kernel("recreate_dir");
+        bc.store(&key, &kernel).unwrap();
+
+        assert!(dir.exists());
+        assert!(bc.contains(&key));
         cleanup_dir(&dir);
     }
 
