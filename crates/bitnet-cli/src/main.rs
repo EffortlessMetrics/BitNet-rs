@@ -5885,11 +5885,7 @@ async fn run_cpu_phase_warm_session(
     let dense_quant_format = dense_slm_quant_format(&model_path);
     let dense_layout_source = dense_slm_layout_source(&model_path);
     let dense_kernel_layout = dense_slm_kernel_layout(&model_path);
-    let model_quant_format = if dense_slm_model {
-        dense_quant_format
-    } else {
-        "QK256/I2_S"
-    };
+    let model_quant_format = if dense_slm_model { dense_quant_format } else { "QK256/I2_S" };
     let layout_source = if dense_slm_model {
         dense_layout_source
     } else {
@@ -6011,11 +6007,8 @@ async fn run_cpu_phase_warm_session(
         }));
     }
 
-    let aggregate_artifact_kind = if dense_slm_model {
-        "dense_slm_cpu_phase_warm_session"
-    } else {
-        "cpu_phase_warm_session"
-    };
+    let aggregate_artifact_kind =
+        if dense_slm_model { "dense_slm_cpu_phase_warm_session" } else { "cpu_phase_warm_session" };
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": aggregate_artifact_kind,
@@ -6284,11 +6277,8 @@ fn cpu_phase_strict_profile_receipt(
     } else {
         Some(sampling_total_ms / run.sample_step_ms.len() as f64)
     };
-    let artifact_kind = if dense_slm_model {
-        "dense_slm_cpu_phase_profile"
-    } else {
-        "strict_bitnet_cpu_profile"
-    };
+    let artifact_kind =
+        if dense_slm_model { "dense_slm_cpu_phase_profile" } else { "strict_bitnet_cpu_profile" };
     let mut receipt = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": artifact_kind,
