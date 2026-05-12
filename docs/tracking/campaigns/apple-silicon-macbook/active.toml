@@ -6,8 +6,9 @@ objective = "Use a MacBook as the Apple Silicon cross-reference and larger-artif
 
 end_state = [
   "MacBook receipts identify chip, memory, macOS, storage, thermal/mobile context, model cache root, CPU/NEON, Metal, and MPSGraph availability.",
-  "The live M3 MacBook Air lane has a documented roadmap, storage budget, dense SLM mirror sequence, BitNet artifact sweep sequence, and M4 handoff boundary.",
-  "The known-good Qwen2.5 dense SLM Mac path is mirrored on MacBook with the same model hash, tokenizer metadata, quality corpus, deterministic greedy checks, and receipt schema used by the M4 Mac mini lane.",
+  "The live M3 MacBook Air lane has a documented roadmap, storage budget, first-run checklist, thermal/power policy, dense SLM mirror sequence, BitNet artifact sweep sequence, and M4 handoff boundary.",
+  "M3 Air receipts use an explicit MacBook backend label such as apple-m3-air-cpu-neon instead of reusing M4 Mac mini wording.",
+  "The known-good Qwen2.5 dense SLM Mac path is mirrored on MacBook with the same model hash, tokenizer metadata, quality corpus, deterministic greedy checks, thermal/power context, backend/fallback status, and receipt schema used by the M4 Mac mini lane.",
   "Larger Apple BitNet / 1-bit candidate artifact sweeps run on MacBook first when storage allows, with source, size, SHA256, tokenizer authority, reference-runner output, and cleanup status recorded.",
   "Accepted BitNet candidates remain artifact-qualified only until a strict Apple CPU/NEON local-answer receipt passes on the target backend.",
   "MacBook evidence cross-checks Apple Silicon behavior but does not turn one mobile run into a fleet-wide Apple performance guarantee.",
@@ -72,8 +73,8 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = []
-acceptance = "Mirror the supported dense Qwen2.5 SLM Mac baseline on the live M3 MacBook Air with the same model hash, tokenizer metadata, quality corpus, deterministic greedy settings, backend/fallback receipt schema, and MacBook-specific timing context."
+blocked_by = ["MB-AS-008"]
+acceptance = "Mirror the supported dense Qwen2.5 SLM Mac baseline on the live M3 MacBook Air with the same model hash, tokenizer metadata, quality corpus, deterministic greedy settings, the apple-m3-air-cpu-neon receipt label or documented successor, backend/fallback receipt schema, thermal/power context, receipts-check output, and MacBook-specific timing context."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
@@ -271,7 +272,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
-acceptance = "Add a live M3 MacBook Air lane roadmap that records the current host class, storage budget, near-term execution order, receipt locations, dense SLM mirror sequence, BitNet artifact sweep sequence, decision gates, open engineering questions, M4 strict-proof handoff boundary, and explicit non-claims."
+acceptance = "Add a live M3 MacBook Air lane roadmap that records the current host class, storage budget, roadmap lanes, first-run checklist, thermal/power policy, explicit apple-m3-air-cpu-neon receipt label, near-term PR stack, receipt locations, dense SLM mirror sequence, BitNet artifact sweep sequence, decision gates, open engineering questions, M4 strict-proof handoff boundary, and explicit non-claims."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
@@ -311,7 +312,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["MB-AS-007"]
-acceptance = "Capture a real M3 MacBook Air machine/profile receipt with chip, model identifier, memory, macOS, free disk, cache root, power/thermal context when available, CPU/NEON visibility, Metal visibility, MPSGraph visibility when available, and inference_run=false before model validation starts."
+acceptance = "Capture a real M3 MacBook Air machine/profile receipt with chip, model identifier, memory, macOS, free disk, cache root, power/thermal context when available, Low Power Mode when available, CPU/NEON visibility, Metal visibility, MPSGraph visibility when available, requested_backend=none, selected_backend=none, and inference_run=false before model validation starts."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
