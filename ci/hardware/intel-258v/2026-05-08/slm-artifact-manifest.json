@@ -74,7 +74,8 @@
     }
   ],
   "lunar_lake_execution_status": {
-    "strict_cpu_answer_smoke": "not_run",
+    "strict_cpu_answer_smoke": "passed",
+    "strict_cpu_answer_smoke_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json",
     "phase_receipts": "not_run",
     "arc_140v_execution": "not_run",
     "intel_npu_execution": "not_run"

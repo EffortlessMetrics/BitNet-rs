@@ -31,6 +31,8 @@ ci/hardware/intel-258v/<date>/output-head-logits-index-audit.json
 ci/hardware/intel-258v/<date>/transformer-layer-parity.json
 ci/hardware/intel-258v/<date>/cpu-reference-bundle.json
 ci/hardware/intel-258v/<date>/cpu-semantic-diagnosis.json
+ci/hardware/intel-258v/<date>/slm-artifact-manifest.json
+ci/hardware/intel-258v/<date>/slm-answer-corpus-qwen25-cpu.json
 ci/hardware/intel-258v/<date>/npu-openvino-runtime-probe.json
 ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
@@ -88,6 +90,14 @@ tokenizer metadata, prompt template, context length, and cross-lane reference
 expectations. It does not commit a model binary and does not claim dense SLM
 inference, answer quality, speed, Arc 140V execution, Intel NPU execution, or
 BitNet QK256/I2_S coverage on the 258V.
+
+`slm-answer-corpus-qwen25-cpu.json` records the first 258V dense SLM strict CPU
+answer smoke for the pinned Qwen2.5 0.5B Instruct Q8_0 artifact. It uses GGUF
+tokenizer metadata, the `qwen2.5` prompt template, greedy deterministic
+generation, `selected_backend=cpu`, and `fallback_used=false`. The three-case
+smoke proves only bounded dense SLM CPU answer-readiness on the 258V; it does
+not prove broad SLM chat quality, BitNet QK256/I2_S behavior, Arc 140V
+execution, Intel NPU execution, acceleration, or performance.
 
 `cpu-answer-corpus-avx2-bitnetcpp-template.json` records the first 258V AVX2
 attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready

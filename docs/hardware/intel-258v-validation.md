@@ -210,6 +210,28 @@ dense Qwen evidence. This is a candidate manifest only: it does not commit a
 model binary, run dense SLM inference on the 258V, prove 258V answer quality,
 touch BitNet QK256/I2_S proof, or prove Arc 140V / Intel NPU execution.
 
+### Dense SLM CPU Answer Smoke
+
+`SLM258V-002` runs the pinned Qwen2.5 dense SLM candidate through a strict
+three-case CPU answer smoke on the 258V:
+
+```text
+ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json
+```
+
+The corpus is defined at:
+
+```text
+ci/quality/slm258v-qwen25-answer-corpus.yaml
+```
+
+The receipt uses the real `qwen2.5-0.5b-instruct-q8_0.gguf` artifact, GGUF
+tokenizer metadata, the `qwen2.5` prompt template, greedy deterministic
+generation, `selected_backend=cpu`, and `fallback_used=false`. All three tiny
+answer-readiness cases pass. This proves only a bounded dense SLM CPU smoke on
+the 258V. It does not claim broad SLM chat quality, BitNet QK256/I2_S proof,
+Arc 140V execution, Intel NPU execution, acceleration, or performance.
+
 The 2026-05-08 CLI platform probe refresh is:
 
 ```text
