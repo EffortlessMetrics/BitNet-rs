@@ -108,7 +108,7 @@ That means we can run deep checks without needing every ordinary PR to
 download models, build external C++ references, start Docker images,
 provision macOS runners, or touch live hardware.
 
-### ripr is mutation-testing-lite at static-analysis prices
+### ripr shifts mutation signal left
 
 The CI design principles in this document are adapted from the
 [ripr](https://github.com/EffortlessMetrics/ripr) project, which we also use
@@ -123,14 +123,16 @@ sit at different points on the cost curve:
 coverage:
   cheap, but often too weak as an oracle signal
 ripr:
-  mutation-testing-shaped static exposure signal
+  static mutation-exposure signal
 mutation testing:
   strong runtime confirmation, but expensive
 ```
 
-`ripr` is the middle layer. It analyzes the diff, builds mutation-shaped
-static probes, and asks whether the changed behavior appears exposed to a
-meaningful test discriminator. The PR-time question it answers is:
+`ripr` is static mutation-exposure analysis. It catches much of the same signal
+mutation testing catches -- weak test/oracle exposure -- but earlier and
+cheaper, because it runs statically and can run per PR.
+
+The PR-time question it answers is:
 
 > For the behavior changed in this diff, do the current tests appear to
 > contain a discriminator that would notice if that behavior were wrong?
@@ -140,8 +142,8 @@ targeted, and cheap enough to run while a PR is still being drafted.
 
 `ripr` does **not** run mutants, does **not** report `killed` / `survived`
 outcomes, and does **not** replace execution-backed mutation testing. It
-*shifts mutation-testing-shaped feedback earlier and cheaper*. Full mutation
-testing remains valuable for calibration, nightly, and high-risk changes.
+shifts mutation signal left. Mutation testing remains the runtime empirical
+backstop, especially for targeted risk PRs, nightly, and release readiness.
 
 ### The verification ladder
 
@@ -149,7 +151,7 @@ testing remains valuable for calibration, nightly, and high-risk changes.
 | -------------------------------------- | ----------: | ---------------------------------------- |
 | `cargo check` / clippy                 |         low | type / lint correctness                  |
 | unit / oracle tests                    |         low | deterministic behavior proof             |
-| `ripr`                                 |  low-medium | static mutation-shaped oracle-gap signal |
+| `ripr`                                 |  low-medium | static mutation-exposure signal |
 | property tests                         |      medium | bounded-input confidence                 |
 | coverage                               | medium-high | execution surface                        |
 | mutation testing                       |        high | runtime adequacy confirmation            |
@@ -383,5 +385,5 @@ after-the-fact billing concerns. The test rig is part of the machine.
 - [PR Plan workflow](../../.github/workflows/pr-plan.yml) — advisory per-PR
   Linux-equivalent-minute (LEM) estimate posted to the run summary.
 - [ripr](https://github.com/EffortlessMetrics/ripr) — source of the CI
-  design principles used here, and the mutation-testing-lite tooling that
+  design principles used here, and the static mutation-exposure tooling that
   makes this verification ladder economically viable.

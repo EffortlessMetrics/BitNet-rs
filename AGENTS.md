@@ -25,8 +25,8 @@ Codex agents are authorized and expected to:
 7. merge the PR when required checks are green and GitHub reports it mergeable,
 8. create and merge closeout tracker PRs when required.
 
-Commit, push, PR creation, merge, and tracker closeout are agent
-responsibilities for those items. They are not human approval gates.
+Commit, push, PR creation, CI/bot/reviewer repair, merge, and tracker closeout
+are agent responsibilities for those items. They are not human approval gates.
 
 ## Human Gates
 

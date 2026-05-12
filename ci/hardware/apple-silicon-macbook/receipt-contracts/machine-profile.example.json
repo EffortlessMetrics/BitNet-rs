@@ -10,6 +10,9 @@
     "cpu_arch": "arm64",
     "physical_cores": 1,
     "logical_cores": 1,
+    "performance_cores": null,
+    "efficiency_cores": null,
+    "fanless_chassis": null,
     "memory_bytes": 1,
     "macos_version": "not captured",
     "kernel_version": "not captured"
@@ -19,6 +22,7 @@
     "available_bytes": 0,
     "total_bytes": 1,
     "low_disk_threshold_bytes": 8589934592,
+    "preferred_free_floor_bytes": 26843545600,
     "large_artifact_sweep_allowed": false
   },
   "model_cache": {
@@ -59,7 +63,9 @@
   },
   "power": {
     "source": "unknown",
-    "low_power_mode": null
+    "low_power_mode": null,
+    "charger_attached": null,
+    "battery_percent": null
   },
   "claim_boundary": {
     "inference_run": false,

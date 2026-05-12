@@ -126,12 +126,13 @@ For work items with `review_mode = "codex_premerge"`,
 7. merge the PR when required checks are green and GitHub reports it mergeable,
 8. create and merge closeout tracker PRs when required.
 
-The commit, push, PR creation, and merge boundaries are not human gates for
-those items. Human involvement is required only for true blockers: GitHub
-permissions or branch protection preventing merge, destructive data loss or
-secret/model-binary exposure risk, unresolved kernel/math/tokenizer/loader
-semantic conflict, acceptance criteria that conflict with repo policy, or a
-cost/exposure/release decision genuinely outside the ticket scope.
+The commit, push, PR creation, CI/bot/reviewer repair, merge, and tracker
+closeout boundaries are not human gates for those items. Human involvement is
+required only for true blockers: GitHub permissions or branch protection
+preventing merge, destructive data loss or secret/model-binary exposure risk,
+unresolved kernel/math/tokenizer/loader semantic conflict, acceptance criteria
+that conflict with repo policy, or a cost/exposure/release decision genuinely
+outside the ticket scope.
 
 This campaign work item policy is the authority for campaign branches. If an
 older agent runbook describes default human approvals, maintainer-ready handoff,
