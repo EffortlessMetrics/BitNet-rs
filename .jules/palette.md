@@ -19,3 +19,6 @@
 ## 2024-05-22 - Improved Range Slider Layout
 **Learning:** Range sliders with adjacent value readouts can suffer from poor layout and spacing when placed in standard `div` containers. The label and value span can become disjointed or visually misaligned with the slider.
 **Action:** Group the label and value span in a flex container (`display: flex; justify-content: space-between;`) above the range input to create a clear visual header for the slider control. Style the value readout distinctively (e.g., using a pill-shaped badge) to emphasize it as an interactive state value rather than static text.
+## 2024-05-24 - Confirm Destructive Actions
+**Learning:** Destructive actions that result in data loss or immediate page reloads (like resetting settings) must have a confirmation prompt to prevent accidental activation and poor UX.
+**Action:** Always add a confirmation step (e.g., using `confirm()`) or a custom confirmation modal before executing destructive actions or operations that force a full page reload.
