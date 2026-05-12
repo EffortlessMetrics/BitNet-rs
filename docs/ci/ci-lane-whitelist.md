@@ -72,8 +72,9 @@ Practical bands:
 `policy/ci-whitelist-exceptions.toml` records every lane that
 intentionally violates a default rule (for example, an expensive lane
 left in the default PR set, or a duplicate that we accept temporarily).
-Each exception requires `owner`, `reason`, `created`, `review_after`,
-and `expires`.
+Each exception requires `owner`, `issue`, `reason`, `created`, `review_after`,
+and `expires`. `issue` may be a GitHub issue/PR reference or a stable tracking
+key, but it must not be a placeholder such as `TODO`.
 
 ## How to update
 
@@ -82,7 +83,8 @@ When adding or modifying a CI workflow:
 1. Add or update the corresponding `[[lane]]` entry in
    `policy/ci-lane-whitelist.toml`.
 2. If the lane runs by default and is expensive, add an exception in
-   `policy/ci-whitelist-exceptions.toml` with a real expiry.
+   `policy/ci-whitelist-exceptions.toml` with a real issue/tracking key and
+   expiry.
 3. If the lane duplicates an existing proof obligation, set
    `duplicate_of` to the other lane's `id`.
 4. Confirm `cargo run --no-default-features -p xtask -- ci-lane-whitelist check` passes
