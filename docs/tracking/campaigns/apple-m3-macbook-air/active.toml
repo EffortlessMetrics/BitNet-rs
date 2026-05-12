@@ -68,7 +68,10 @@ human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-001"]
 acceptance = "Commit a real M3 MacBook Air machine-profile receipt with model identifier, chip, core split, memory, macOS version, free disk, cache root, power source, thermal state when available, CPU/NEON visibility, Metal visibility, MPSGraph visibility when available, and inference_run=false."
 commands = [
-  "Machine profile capture on M3 MacBook Air",
+  "sw_vers",
+  "sysctl -n machdep.cpu.brand_string hw.memsize hw.physicalcpu hw.perflevel0.physicalcpu hw.perflevel1.physicalcpu",
+  "system_profiler SPHardwareDataType SPDisplaysDataType SPPowerDataType",
+  "df -k . \"$HOME/Library/Caches\"",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
@@ -183,7 +186,10 @@ human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-004"]
 acceptance = "Qualify the official Microsoft BitNet 2B I2_S GGUF on M3 Air with source revision, filename, size, SHA256, tokenizer/pre-tokenizer authority, reference-runner command, prompt outputs, bad/no-authority rejection evidence, and cleanup status."
 commands = [
-  "Reference runner prompt-suite command on M3 MacBook Air",
+  "huggingface-cli download microsoft/bitnet-b1.58-2B-4T-gguf ggml-model-i2_s.gguf --revision <revision> --local-dir <cache-root>/microsoft-bitnet-2b-i2s",
+  "shasum -a 256 <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf",
+  "cargo run --release --locked -p xtask --no-default-features -- fetch-cpp --backend cpu",
+  "${BITNET_CPP_DIR:-$HOME/.cache/bitnet_cpp}/build/bin/llama-cli -m <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf -p <prompt-from-ci/quality/bitnet-answer-corpus.yaml> -n 32 --no-display-prompt --temp 0 --top-k 1 --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
@@ -227,7 +233,9 @@ human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-005"]
 acceptance = "Evaluate 1bitLLM/bitnet_b1_58-large as the smaller M3 Air control candidate only after the Microsoft 2B path records acceptance, rejection, or a clear blocker."
 commands = [
-  "Reference runner prompt-suite command on M3 MacBook Air",
+  "huggingface-cli download 1bitLLM/bitnet_b1_58-large <gguf-file> --revision <revision> --local-dir <cache-root>/1bitllm-07b",
+  "shasum -a 256 <cache-root>/1bitllm-07b/<gguf-file>",
+  "${BITNET_CPP_DIR:-$HOME/.cache/bitnet_cpp}/build/bin/llama-cli -m <cache-root>/1bitllm-07b/<gguf-file> -p <prompt-from-ci/quality/bitnet-answer-corpus.yaml> -n 32 --no-display-prompt --temp 0 --top-k 1 --no-mmap",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
@@ -269,7 +277,9 @@ human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-005"]
 acceptance = "Evaluate the 3B candidate only on supported TL1/TL2 diagnostic routes, recording why I2_S remains unsupported and why the result is diagnostic rather than proof."
 commands = [
-  "Reference runner diagnostic command on M3 MacBook Air",
+  "huggingface-cli download 1bitLLM/bitnet_b1_58-3B <tl1-or-tl2-gguf-file> --revision <revision> --local-dir <cache-root>/1bitllm-3b-diagnostic",
+  "shasum -a 256 <cache-root>/1bitllm-3b-diagnostic/<tl1-or-tl2-gguf-file>",
+  "${BITNET_CPP_DIR:-$HOME/.cache/bitnet_cpp}/build/bin/llama-cli -m <cache-root>/1bitllm-3b-diagnostic/<tl1-or-tl2-gguf-file> -p <diagnostic-prompt> -n 32 --no-display-prompt --temp 0 --top-k 1 --no-mmap",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",

@@ -64,6 +64,39 @@ artifacts to separate strict proof items.
 | M3MBA-007 | proposed | Run only diagnostic TL1/TL2 checks for the 3B candidate and record the I2_S non-claim. |
 | M3MBA-008 | proposed | Hand accepted artifacts to separate M4 strict-proof items without claiming proof in this lane. |
 
+## Phase Roadmap
+
+| Phase | Work item(s) | Purpose | Committed output |
+|---|---|---|---|
+| Foundation | M3MBA-001, M3MBA-002, M3MBA-003 | Make the M3 Air a receipt-backed evidence source before model timing exists. | Campaign tracker, real machine profile, explicit MacBook backend label. |
+| Dense control | M3MBA-004 | Mirror the established dense Qwen SLM path on the exact MacBook host. | Smoke/operator receipts, receipt-check output, thermal and power context. |
+| BitNet artifact qualification | M3MBA-005, M3MBA-006, M3MBA-007 | Use the MacBook storage budget to accept, reject, or block candidate artifacts. | Candidate reports with source, revision, SHA256, tokenizer authority, prompt output, and cleanup state. |
+| Strict-proof handoff | M3MBA-008 | Convert accepted artifact evidence into separate M4 proof work. | Handoff report only; no manufactured M4 receipt. |
+
+## Milestone Gates
+
+The lane advances only when the previous gate leaves durable committed evidence.
+Local cache state, terminal output, and downloaded model files are not enough.
+
+| Gate | Required before advancing |
+|---|---|
+| Machine readiness | Real profile receipt records model identifier, chip, core split, memory, macOS version, cache root, free disk, power, thermal state when available, CPU/NEON visibility, Metal visibility, MPSGraph visibility when available, and `inference_run=false`. |
+| Receipt label readiness | `apple-m3-air-cpu-neon` or a documented successor is accepted without weakening `apple-m4-cpu-neon` validation. |
+| Dense control readiness | Dense Qwen smoke/operator receipts pass validation or leave a blocker report with backend, fallback, model hash, tokenizer metadata, power, thermal, and storage context. |
+| BitNet screening readiness | Official Microsoft 2B I2_S evidence records source revision, filename, size, SHA256, tokenizer authority, reference outputs, no-authority rejection evidence, and cleanup status. |
+| Handoff readiness | Only accepted artifacts are named in separate M4 strict-proof work, and the handoff requires fresh M4 receipts before any M4 claim. |
+
+## Output Map
+
+| Work item | Primary output |
+|---|---|
+| M3MBA-002 | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/machine-profile.json` |
+| M3MBA-004 | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json` and `docs/reports/apple-silicon-macbook-m3-air-qwen-mirror.md` |
+| M3MBA-005 | `docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md` |
+| M3MBA-006 | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
+| M3MBA-007 | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
+| M3MBA-008 | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
+
 ## Review Policy
 
 Each PR should own one work item and should leave either passing evidence or a

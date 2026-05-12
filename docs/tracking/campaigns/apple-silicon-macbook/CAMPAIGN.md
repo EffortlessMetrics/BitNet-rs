@@ -26,6 +26,12 @@ Dense Qwen success remains dense SLM evidence. It validates Mac UX and Apple CPU
 
 ## Initial Work Items
 
+The live M3 MacBook Air execution lane now has its own campaign-local control
+plane at `docs/tracking/campaigns/apple-m3-macbook-air/`. Treat this campaign as
+the broader MacBook umbrella and historical cross-reference record; use
+`apple-m3-macbook-air` for current M3 Air item state, validation commands,
+output paths, and merge gates.
+
 | Work item | Status | Notes |
 |---|---|---|
 | MB-AS-001 | merged | Add a MacBook machine/storage/profile receipt contract. |
