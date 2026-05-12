@@ -3,17 +3,12 @@ campaign = "intel-258v-platform"
 item = "SLM258V-003"
 event = "pr_open"
 pr = 4535
+head_sha = "921122f02b8d2f822bbe6885de55e27d3c054857"
 branch = "codex/lunar-lake/SLM258V-003-dense-slm-provenance"
-summary = "Opened SLM258V-003 to separate dense Qwen SLM receipt provenance from BitNet I2_S/QK256 kernel/layout fields and rerun the 258V Qwen2.5 CPU smoke with clean dense SLM provenance."
-
-[claim_boundary]
-may_claim = [
+actor = "codex"
+notes = [
+  "Opened SLM258V-003 to separate dense Qwen SLM receipt provenance from BitNet I2_S/QK256 kernel/layout fields and rerun the 258V Qwen2.5 CPU smoke with clean dense SLM provenance.",
   "Dense Qwen SLM answer-corpus receipts no longer record BitNet I2_S/QK256 kernel/layout provenance.",
   "The corrected 258V dense SLM smoke receipt records clean dense SLM provenance with fallback_used=false.",
-]
-must_not_claim = [
-  "Broad dense SLM chat quality is proven.",
-  "BitNet QK256/I2_S proof is affected.",
-  "Arc 140V or Intel NPU execution is proven.",
-  "Acceleration or performance is proven.",
+  "Broad dense SLM chat quality, BitNet QK256/I2_S proof, Arc 140V execution, Intel NPU execution, acceleration, and performance remain unclaimed.",
 ]
