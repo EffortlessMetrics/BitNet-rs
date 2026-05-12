@@ -203,12 +203,15 @@ ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json
 ```
 
 The manifest selects `qwen2.5-0.5b-instruct-q8_0` as the first 258V dense SLM
-CPU smoke candidate and links the strict CPU answer-smoke receipt below. It
-records the exact GGUF repository, revision, file, SHA256, architecture,
-quantization, tokenizer metadata, prompt template, context length, and
-reference-output expectations inherited from the existing dense Qwen evidence.
-It does not commit a model binary, prove broad 258V SLM answer quality, touch
-BitNet QK256/I2_S proof, or prove Arc 140V / Intel NPU execution.
+CPU smoke candidate and links the CPU answer-smoke receipt below. It records the
+exact GGUF repository, revision, file, SHA256, architecture, quantization,
+tokenizer metadata, prompt template, context length, and reference-output
+expectations inherited from the existing dense Qwen evidence. It also records
+the current blocker: the answer text gates pass, but the receipt still includes
+BitNet I2_S kernel/layout provenance and is diagnostic until dense SLM
+provenance is cleanly separated. It does not commit a model binary, prove broad
+258V SLM answer quality, touch BitNet QK256/I2_S proof, or prove Arc 140V /
+Intel NPU execution.
 
 ### Dense SLM CPU Answer Smoke
 
@@ -228,9 +231,10 @@ ci/quality/slm258v-qwen25-answer-corpus.yaml
 The receipt uses the real `qwen2.5-0.5b-instruct-q8_0.gguf` artifact, GGUF
 tokenizer metadata, the `qwen2.5` prompt template, greedy deterministic
 generation, `selected_backend=cpu`, and `fallback_used=false`. All three tiny
-answer-readiness cases pass. This proves only a bounded dense SLM CPU smoke on
-the 258V. It does not claim broad SLM chat quality, BitNet QK256/I2_S proof,
-Arc 140V execution, Intel NPU execution, acceleration, or performance.
+answer-readiness cases pass. This is diagnostic evidence only because the same
+receipt records `i2_s-avx2-reference` / `gguf_packed_i2_s` provenance fields.
+Do not treat it as a clean dense SLM CPU smoke until those provenance fields are
+fixed and the receipt is rerun.
 
 The 2026-05-08 CLI platform probe refresh is:
 

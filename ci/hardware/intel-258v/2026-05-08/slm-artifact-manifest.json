@@ -5,10 +5,10 @@
   "item": "SLM258V-001",
   "created_utc": "2026-05-12T19:31:09Z",
   "machine_id": "intel-258v",
-  "purpose": "Pin the first dense SLM candidate and link the Lunar Lake CPU strict answer smoke evidence.",
+  "purpose": "Pin the first dense SLM candidate and link the Lunar Lake CPU answer-smoke evidence, including the current provenance blocker.",
   "selected_candidate": {
     "id": "qwen2_5_0_5b_instruct_q8_0",
-    "status": "accepted_for_lunar_lake_candidate_manifest_and_strict_cpu_answer_smoke_passed",
+    "status": "accepted_for_lunar_lake_candidate_manifest_cpu_answer_text_passed_provenance_blocked",
     "target_role": "first Lunar Lake dense SLM CPU strict answer smoke candidate",
     "family": "qwen",
     "model_name": "qwen2.5-0.5b-instruct",
@@ -74,25 +74,29 @@
     }
   ],
   "lunar_lake_execution_status": {
-    "strict_cpu_answer_smoke": "passed",
+    "strict_cpu_answer_smoke": "quality_gates_passed_provenance_blocked",
     "strict_cpu_answer_smoke_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json",
+    "strict_cpu_answer_smoke_blocker": "Receipt records dense Qwen2.5 Q8_0 model identity and 3/3 answer gates, but also records i2_s-avx2-reference / gguf_packed_i2_s provenance. Treat as diagnostic until dense SLM provenance is separated from BitNet I2_S receipt fields.",
     "phase_receipts": "not_run",
     "arc_140v_execution": "not_run",
     "intel_npu_execution": "not_run"
   },
   "next_actions": [
-    "Use the strict CPU answer smoke receipt as the bounded dense SLM CPU baseline for follow-on 258V SLM work.",
+    "Fix the answer-corpus receipt path so dense Qwen Q8_0 evidence does not record BitNet I2_S kernel/layout provenance.",
+    "Rerun SLM258V-002 after provenance is clean, preserving model SHA256, qwen2.5 prompt template, generated token IDs/text, and fallback_used=false.",
     "Keep Arc 140V and Intel NPU execution as separate future work with their own receipts.",
     "Do not treat the dense SLM CPU smoke as BitNet QK256/I2_S proof or acceleration evidence."
   ],
   "claim_boundary": {
     "may_claim": [
       "A dense SLM candidate artifact is pinned for Lunar Lake CPU strict answer smoke work.",
-      "The pinned dense SLM candidate passed the bounded strict CPU answer smoke recorded in ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json.",
+      "The pinned dense SLM candidate produced 3/3 passing bounded answer gates in ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json.",
+      "The current SLM258V-002 receipt is diagnostic because its provenance still includes BitNet I2_S kernel/layout fields.",
       "The manifest records source, SHA256, architecture, quantization, tokenizer metadata, prompt template, context length, and reference-output expectations.",
       "No model binary is committed."
     ],
     "must_not_claim": [
+      "The 258V has a clean dense SLM CPU answer-smoke proof.",
       "Broad dense SLM chat quality is proven on the 258V.",
       "BitNet QK256/I2_S proof is affected.",
       "Arc 140V or Intel NPU execution is proven.",
