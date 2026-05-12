@@ -21,6 +21,16 @@ These facts make the machine suitable for storage-conscious BitNet artifact
 qualification and dense SLM Apple CPU/NEON cross-checks. They do not create M4
 Mac mini performance evidence and do not prove BitNet local-answer quality.
 
+The campaign-local tracker for this lane is:
+
+```text
+docs/tracking/campaigns/apple-m3-macbook-air/
+```
+
+Use that tracker as the source of truth for work-item state, allowed paths,
+validation commands, and claim boundaries. This roadmap remains the operator
+sequence and evidence rubric.
+
 ## Lane Roles
 
 M3 MacBook Air:
@@ -54,13 +64,14 @@ handoff only after coherent reference output is recorded
 
 | Phase | Work item | Outcome | Evidence |
 |---:|---|---|---|
-| 0 | `MB-AS-007` | M3 Air roadmap, storage policy, sequencing, and claim boundaries | This document and campaign tracking |
-| 1 | `MB-AS-008` | Real M3 Air machine profile, no inference | `ci/hardware/apple-silicon-macbook/.../machine-profile.json` |
-| 2 | `MB-AS-002` | Dense Qwen SLM mirror on M3 Air | Mac validate receipt plus receipts-check output |
-| 3 | `ABAS-001` / `MB-AS-004` | Official Microsoft 2B I2_S artifact qualification | Reference-runner report, SHA256, tokenizer authority |
-| 4 | `ABAS-002` / `MB-AS-005` | Smaller 0.7B BitNet control candidate | Reference-runner report and cleanup record |
-| 5 | `ABAS-003` / `MB-AS-006` | 3B TL1/TL2 diagnostic only | Diagnostic report, explicit I2_S non-support note |
-| 6 | `ABAS-005` | M4 strict-proof handoff for accepted artifacts | Handoff plan only; no manufactured M4 receipt |
+| 0 | `M3MBA-001` | Campaign tracker, roadmap linkage, and claim boundaries | `docs/tracking/campaigns/apple-m3-macbook-air/` |
+| 1 | `M3MBA-002` | Real M3 Air machine profile, no inference | `ci/hardware/apple-silicon-macbook/.../machine-profile.json` |
+| 2 | `M3MBA-003` | Explicit M3 Air receipt label | Validator or label evidence for `apple-m3-air-cpu-neon` |
+| 3 | `M3MBA-004` | Dense Qwen SLM mirror on M3 Air | Mac validate receipt plus receipts-check output |
+| 4 | `M3MBA-005` | Official Microsoft 2B I2_S artifact qualification | Reference-runner report, SHA256, tokenizer authority |
+| 5 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | Reference-runner report and cleanup record |
+| 6 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | Diagnostic report, explicit I2_S non-support note |
+| 7 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | Handoff plan only; no manufactured M4 receipt |
 
 ## Milestone Gates
 
@@ -69,14 +80,14 @@ that a reviewer can inspect without access to the local model cache.
 
 | Gate | Owner item | Required committed evidence | Local-only state | Exit decision |
 |---|---|---|---|---|
-| Machine readiness | `MB-AS-008` | Machine-profile receipt, schema-valid profile JSON, campaign event | None | Ready for dense control run |
-| Receipt label readiness | `MB-AS-008` or `MB-AS-002` | Validator or documented label support for `apple-m3-air-cpu-neon` | None | Ready to record M3 timing without M4 wording |
-| Dense control | `MB-AS-002` | Smoke receipt, receipts-check output, model hash, tokenizer metadata, fallback status | Downloaded dense Qwen artifact | Ready for bounded operator run or blocker report |
-| Dense operator | `MB-AS-002` | Operator receipt, allocation-audit summary, thermal/power context | Warm model cache | Ready for BitNet artifact screening |
-| Microsoft 2B screening | `MB-AS-004` | Candidate report with source revision, SHA256, tokenizer authority, reference output, cleanup status | Official 2B GGUF while active | Accept, reject, or block before secondary candidates |
-| Small candidate screening | `MB-AS-005` | Candidate report with route evidence and cleanup status | 0.7B GGUF while active | Keep for fast iteration or reject |
-| Diagnostic candidate | `MB-AS-006` | TL1/TL2 diagnostic report and I2_S non-claim | 3B GGUF while active | Diagnostic only, no proof claim |
-| Strict proof handoff | `ABAS-005` | New M4 work item naming artifact, backend, and receipt requirements | No dependency on M3 cache | Ready for separate M4 proof |
+| Machine readiness | `M3MBA-002` | Machine-profile receipt, schema-valid profile JSON, campaign event | None | Ready for receipt-label work |
+| Receipt label readiness | `M3MBA-003` | Validator or documented label support for `apple-m3-air-cpu-neon` | None | Ready to record M3 timing without M4 wording |
+| Dense control | `M3MBA-004` | Smoke receipt, receipts-check output, model hash, tokenizer metadata, fallback status | Downloaded dense Qwen artifact | Ready for bounded operator run or blocker report |
+| Dense operator | `M3MBA-004` | Operator receipt, allocation-audit summary, thermal/power context | Warm model cache | Ready for BitNet artifact screening |
+| Microsoft 2B screening | `M3MBA-005` | Candidate report with source revision, SHA256, tokenizer authority, reference output, cleanup status | Official 2B GGUF while active | Accept, reject, or block before secondary candidates |
+| Small candidate screening | `M3MBA-006` | Candidate report with route evidence and cleanup status | 0.7B GGUF while active | Keep for fast iteration or reject |
+| Diagnostic candidate | `M3MBA-007` | TL1/TL2 diagnostic report and I2_S non-claim | 3B GGUF while active | Diagnostic only, no proof claim |
+| Strict proof handoff | `M3MBA-008` | New M4 work item naming artifact, backend, and receipt requirements | No dependency on M3 cache | Ready for separate M4 proof |
 
 If a gate cannot pass, the PR should still leave a blocker report instead of
 silently skipping forward. A blocker report is acceptable evidence when it names
@@ -268,12 +279,13 @@ reproduced cheaply. The committed report should state what happened either way.
 
 | Order | Branch / item | Scope | Stop condition |
 |---:|---|---|---|
-| 1 | `MB-AS-008` | Real M3 Air profile receipt | Machine facts and `inference_run=false` committed |
-| 2 | `MB-AS-002` | Dense Qwen smoke/operator mirror | Receipts pass or blocker is recorded |
-| 3 | `MB-AS-004` | Microsoft 2B I2_S artifact qualification | Accept/reject report with tokenizer authority |
-| 4 | `MB-AS-005` | 0.7B 1bitLLM control candidate | Accept/reject report and cleanup state |
-| 5 | `MB-AS-006` | 3B TL1/TL2 diagnostic | Diagnostic report only |
-| 6 | `ABAS-005` | M4 strict-proof handoff | New M4 proof item, not an M3 claim |
+| 1 | `M3MBA-002` | Real M3 Air profile receipt | Machine facts and `inference_run=false` committed |
+| 2 | `M3MBA-003` | Explicit M3 Air receipt label | `apple-m3-air-cpu-neon` validation does not weaken M4 checks |
+| 3 | `M3MBA-004` | Dense Qwen smoke/operator mirror | Receipts pass or blocker is recorded |
+| 4 | `M3MBA-005` | Microsoft 2B I2_S artifact qualification | Accept/reject report with tokenizer authority |
+| 5 | `M3MBA-006` | 0.7B 1bitLLM control candidate | Accept/reject report and cleanup state |
+| 6 | `M3MBA-007` | 3B TL1/TL2 diagnostic | Diagnostic report only |
+| 7 | `M3MBA-008` | M4 strict-proof handoff | New M4 proof item, not an M3 claim |
 
 ## Execution Roadmap
 
@@ -435,14 +447,20 @@ reproduced cheaply. The committed report should state what happened either way.
 
 ## Near-Term Order
 
-1. Treat `MB-AS-007` as complete after PR #4511; keep this document as the lane
-   control plane.
-2. Run `MB-AS-008` to generate a real M3 Air machine-profile receipt under `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/`.
-3. Add or confirm the `apple-m3-air-cpu-neon` receipt label before model timing is recorded.
-4. Run `MB-AS-002` as an M3 Air dense Qwen mirror now that real MacBook hardware is available.
-5. Run the official Microsoft 2B I2_S reference qualification before any secondary BitNet candidate.
-6. Use the 0.7B 1bitLLM candidate only after the Microsoft path records either acceptance or a clear blocker.
-7. Keep M4 proof handoff separate until a candidate passes reference output with tokenizer authority.
+1. Land `M3MBA-001` so the campaign tracker, generated status, and roadmap link
+   become the lane control plane.
+2. Run `M3MBA-002` to generate a real M3 Air machine-profile receipt under
+   `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/`.
+3. Run `M3MBA-003` to add or confirm the `apple-m3-air-cpu-neon` receipt label
+   before model timing is recorded.
+4. Run `M3MBA-004` as an M3 Air dense Qwen mirror now that real MacBook hardware
+   is available.
+5. Run `M3MBA-005` for the official Microsoft 2B I2_S reference qualification
+   before any secondary BitNet candidate.
+6. Use the 0.7B 1bitLLM candidate in `M3MBA-006` only after the Microsoft path
+   records either acceptance or a clear blocker.
+7. Keep M4 proof handoff separate in `M3MBA-008` until a candidate passes
+   reference output with tokenizer authority.
 
 ## Review Checklist
 
