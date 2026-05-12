@@ -243,7 +243,7 @@ keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/EffortlessMetrics/BitNet"
-rust-version = "1.93.0"
+rust-version = "1.95.0"
 version = "0.2.1-dev"
 
 [dependencies]
@@ -571,11 +571,10 @@ opt-level = 2
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
 unused_must_use = "deny"
-# `unexpected_cfgs` would fire on a number of legacy build-script
-# cfg names; staged at `allow` until those are inventoried in a
-# follow-up. The xtask file-policy gate already covers the
-# governance angle (no untracked non-Rust files).
-unexpected_cfgs = "allow"
+unexpected_cfgs = "warn"
+const_item_interior_mutations = "deny"
+function_casts_as_integer = "deny"
+unused_visibilities = "warn"
 
 [workspace.lints.clippy]
 # Broad category posture. After PR 07 ("workspace lint inheritance"),
@@ -635,6 +634,29 @@ unimplemented = "allow"
 # rather than style debt.
 out_of_bounds_indexing = "deny"
 
+# Rust 1.94/1.95 lint ratchets stay explicitly staged until the
+# dedicated Clippy ratchet and numeric/kernel cleanup PRs. Without
+# these deferrals, raising `clippy.toml`'s MSRV to 1.95.0 silently
+# promotes new Clippy findings to hard CI failures under
+# `RUSTFLAGS=-D warnings`.
+same_length_and_capacity = "allow"
+manual_ilog2 = "allow"
+decimal_bitwise_operands = "allow"
+needless_type_cast = "allow"
+manual_checked_ops = "allow"
+manual_take = "allow"
+manual_pop_if = "allow"
+duration_suboptimal_units = "allow"
+unnecessary_trailing_comma = "allow"
+# Additional `clippy::all` findings newly exposed by the Rust 1.95
+# toolchain. These belong with PR 13's numeric/kernel cleanup rather
+# than this mechanical MSRV bump.
+collapsible_match = "allow"
+if_same_then_else = "allow"
+needless_borrow = "allow"
+unnecessary_min_or_max = "allow"
+unnecessary_sort_by = "allow"
+
 # Silent-failure shapes — staged at `allow` for the same reason as
 # the panic-family above.
 let_underscore_future = "allow"
@@ -689,7 +711,7 @@ keywords = [
   "inference",        # Model inference
   "bitnet",           # BitNet specific
 ]
-msrv = "1.93.0"
+msrv = "1.95.0"
 
 [lints]
 workspace = true

@@ -60,7 +60,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.93.0"
+          toolchain: "1.95.0"
 
       - name: Build PR plan (xtask ci plan)
         id: plan

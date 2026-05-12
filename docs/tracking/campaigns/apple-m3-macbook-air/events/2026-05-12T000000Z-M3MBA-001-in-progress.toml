@@ -1,0 +1,12 @@
+timestamp = "2026-05-12T00:00:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/roadmap-campaign"
+
+notes = [
+  "The item adds campaign-local control files for the live M3 MacBook Air lane.",
+  "Scope is tracker and roadmap documentation only; no model inference, large artifact download, runtime change, or hardware performance claim is introduced.",
+  "The lane remains separate from M4 Mac mini dense SLM performance, strict BitNet proof, QK256, Neural Engine, MPSGraph, and full Apple Metal claims.",
+]

@@ -1,0 +1,15 @@
+timestamp = "2026-05-11T19:02:20Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-047"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4492
+head_sha = "a9f67f0aabd264dd2889ae107171bb86d544f72c"
+branch = "codex/nvidia-5070ti/CUDA-DENSE-047-qwen15-all-layer-plan"
+summary = "Open PR #4492 for the Qwen2.5 1.5B Q4_K_M strict CUDA route audit."
+notes = [
+  "PR #4492 records the verified artifact fetch/verify evidence and fail-closed 5070 Ti strict CUDA all-layer planner boundary.",
+  "The row remains CPU-answer-ready only; no Qwen2.5 1.5B CUDA all-layer receipt, answer-ready claim, speedup claim, server claim, or BitNet packed proof is added.",
+]

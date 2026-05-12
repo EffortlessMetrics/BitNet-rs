@@ -6,6 +6,12 @@ See also [Reference Topology](../architecture/reference-topology.md) for the
 scalar -> AVX2/NEON -> accelerator validation chain and the dense SLM vs BitNet
 claim boundary.
 
+The active live MacBook lane is the Apple M3 MacBook Air documented in
+[M3 MacBook Air Lane Roadmap](m3-macbook-air-roadmap.md). Its job is to provide
+mobile Apple Silicon receipts, storage-aware BitNet artifact screening, and dense
+SLM cross-checks without converting M3 evidence into M4 Mac mini performance
+claims.
+
 ## Roles
 
 M4 Mac mini:
@@ -128,6 +134,12 @@ The dedicated Apple BitNet sweep control plane is documented at:
 
 ```text
 docs/apple-silicon/apple-bitnet-artifact-sweep.md
+```
+
+The M3 Air sequencing and storage budget are documented at:
+
+```text
+docs/apple-silicon/m3-macbook-air-roadmap.md
 ```
 
 No artifact becomes an Apple local-answer claim until a strict backend receipt produces coherent output with real model, tokenizer authority, selected backend, fallback status, generated text, token IDs, and timing.
