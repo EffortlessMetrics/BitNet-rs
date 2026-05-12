@@ -1079,10 +1079,14 @@ enum Cmd {
     CheckNoPanicFamily {
         #[arg(long, default_value = "policy/no-panic-allowlist.toml")]
         allowlist: PathBuf,
+        #[arg(long, default_value = "policy/no-panic-baseline.toml")]
+        baseline: PathBuf,
         #[arg(long, default_value = "target/bitnet/reports")]
         report_dir: PathBuf,
         #[arg(long, default_value_t = false)]
         fail_on_error: bool,
+        #[arg(long, default_value_t = false)]
+        blocking_mode: bool,
     },
 
     /// Validate `#[expect(clippy::...)]` exception receipts.
@@ -1600,9 +1604,13 @@ fn real_main() -> Result<()> {
         Cmd::CheckFilePolicy { allowlist, report_dir, fail_on_error } => {
             policy::file_policy::run(allowlist, report_dir, fail_on_error)
         }
-        Cmd::CheckNoPanicFamily { allowlist, report_dir, fail_on_error } => {
-            policy::no_panic::run(allowlist, report_dir, fail_on_error)
-        }
+        Cmd::CheckNoPanicFamily {
+            allowlist,
+            baseline,
+            report_dir,
+            fail_on_error,
+            blocking_mode,
+        } => policy::no_panic::run(allowlist, baseline, report_dir, fail_on_error, blocking_mode),
         Cmd::CheckClippyExceptions { exceptions, report_dir, fail_on_error } => {
             policy::clippy::run(exceptions, report_dir, fail_on_error)
         }
@@ -1698,7 +1706,9 @@ fn run_policy_report(report_dir: PathBuf) -> Result<()> {
     println!("== no-panic-family ==");
     let _ = policy::no_panic::run(
         PathBuf::from("policy/no-panic-allowlist.toml"),
+        PathBuf::from("policy/no-panic-baseline.toml"),
         report_dir.clone(),
+        false,
         false,
     );
     println!("== clippy-exceptions ==");

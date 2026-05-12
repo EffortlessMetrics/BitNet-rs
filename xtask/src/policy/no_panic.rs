@@ -5,9 +5,9 @@
 //! `unreachable!`) that are not covered by an exception receipt in
 //! `policy/no-panic-allowlist.toml`.
 //!
-//! Identity for an exception is `path + family + selector`. The
-//! `last_seen` line/column is advisory only — the goal is for an
-//! existing receipt to keep matching across small edits.
+//! Identity for an exception is exact and counted:
+//! `path + family + selector_kind + selector_callee + snippet + count`.
+//! The `last_seen` line/column is advisory only.
 //!
 //! This is a lightweight regex-shaped detector, not a full AST parse.
 //! It is deliberately conservative: false positives are tolerable in
@@ -16,7 +16,7 @@
 
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -29,7 +29,15 @@ struct Allowlist {
 }
 
 fn schema_default() -> String {
-    "0.3".into()
+    "0.4".into()
+}
+
+fn baseline_schema_default() -> String {
+    "0.1".into()
+}
+
+fn default_count() -> usize {
+    1
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -37,6 +45,10 @@ struct Entry {
     id: String,
     path: String,
     family: String,
+    #[serde(default)]
+    snippet: String,
+    #[serde(default = "default_count")]
+    count: usize,
     #[serde(default)]
     classification: String,
     #[serde(default)]
@@ -49,6 +61,24 @@ struct Entry {
     selector: Option<Selector>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     last_seen: Option<LastSeen>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+struct Baseline {
+    #[serde(default = "baseline_schema_default", skip_serializing_if = "String::is_empty")]
+    schema_version: String,
+    #[serde(default, rename = "baseline")]
+    entries: Vec<BaselineEntry>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct BaselineEntry {
+    path: String,
+    family: String,
+    snippet: String,
+    #[serde(default = "default_count")]
+    count: usize,
+    selector: Selector,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -78,20 +108,59 @@ struct Finding {
     snippet: String,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+struct FindingKey {
+    path: String,
+    family: String,
+    selector_kind: String,
+    selector_callee: String,
+    snippet: String,
+}
+
+#[derive(Debug, Clone)]
+struct FindingBucket {
+    key: FindingKey,
+    count: usize,
+    first_line: usize,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum MatchingMode {
+    NoNewDebt,
+    Blocking,
+}
+
+#[derive(Debug, Default)]
+struct MatchOutcome {
+    errors: Vec<String>,
+    allow_consumed: usize,
+    baseline_consumed: usize,
+    new_debt: usize,
+}
+
 #[derive(Debug, Default)]
 pub struct Report {
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
     pub findings: usize,
     pub allow_count: usize,
+    pub baseline_count: usize,
 }
 
-pub fn run(allowlist_path: PathBuf, report_dir: PathBuf, fail_on_error: bool) -> Result<()> {
-    let report = check(&allowlist_path, &report_dir)?;
+pub fn run(
+    allowlist_path: PathBuf,
+    baseline_path: PathBuf,
+    report_dir: PathBuf,
+    fail_on_error: bool,
+    blocking_mode: bool,
+) -> Result<()> {
+    let mode = if blocking_mode { MatchingMode::Blocking } else { MatchingMode::NoNewDebt };
+    let report = check(&allowlist_path, &baseline_path, &report_dir, mode)?;
     println!(
-        "no-panic: {} findings vs {} allowlist entries; {} unallowlisted",
+        "no-panic: {} findings vs {} allowlist entries and {} baseline entries; {} unallowlisted",
         report.findings,
         report.allow_count,
+        report.baseline_count,
         report.errors.len()
     );
     for w in &report.warnings {
@@ -106,7 +175,12 @@ pub fn run(allowlist_path: PathBuf, report_dir: PathBuf, fail_on_error: bool) ->
     Ok(())
 }
 
-fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
+fn check(
+    allowlist_path: &Path,
+    baseline_path: &Path,
+    report_dir: &Path,
+    mode: MatchingMode,
+) -> Result<Report> {
     let mut report = Report::default();
 
     // Allowlist may not exist yet on first run.
@@ -122,22 +196,23 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
         Allowlist::default()
     };
     report.allow_count = allowlist.entries.len();
+    let allow_counts = validate_allowlist(&allowlist)?;
 
-    let allow_keys: BTreeSet<(String, String)> =
-        allowlist.entries.iter().map(|e| (normalise_path(&e.path), e.family.clone())).collect();
+    let baseline: Baseline = if baseline_path.exists() {
+        let text = fs::read_to_string(baseline_path)
+            .with_context(|| format!("reading {}", baseline_path.display()))?;
+        toml::from_str(&text).with_context(|| format!("parsing {}", baseline_path.display()))?
+    } else {
+        Baseline::default()
+    };
+    report.baseline_count = baseline.entries.len();
+    let baseline_counts = validate_baseline(&baseline)?;
 
     let findings = scan_workspace()?;
     report.findings = findings.len();
 
-    for f in &findings {
-        let key = (normalise_path(&f.path), f.family.to_string());
-        if !allow_keys.contains(&key) {
-            report.errors.push(format!(
-                "{}:{} {} not allowlisted: `{}`",
-                f.path, f.line, f.family, f.snippet
-            ));
-        }
-    }
+    let outcome = match_findings(&findings, &allow_counts, &baseline_counts, mode);
+    report.errors = outcome.errors;
 
     fs::create_dir_all(report_dir).with_context(|| format!("creating {}", report_dir.display()))?;
     let json = serde_json::json!({
@@ -146,6 +221,14 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
         "warnings": report.warnings,
         "findings": report.findings,
         "allow_count": report.allow_count,
+        "baseline_count": report.baseline_count,
+        "allow_consumed": outcome.allow_consumed,
+        "baseline_consumed": outcome.baseline_consumed,
+        "new_debt": outcome.new_debt,
+        "matching_mode": match mode {
+            MatchingMode::NoNewDebt => "no-new-debt",
+            MatchingMode::Blocking => "blocking",
+        },
     });
     fs::write(report_dir.join("no-panic.json"), serde_json::to_string_pretty(&json)?)?;
 
@@ -154,6 +237,10 @@ fn check(allowlist_path: &Path, report_dir: &Path) -> Result<Report> {
     let proposed_text = toml::to_string_pretty(&proposed)?;
     fs::write(report_dir.join("no-panic-proposed-allowlist.toml"), proposed_text)?;
 
+    let proposed_baseline = synthesize_baseline(&findings, &allow_counts);
+    let proposed_baseline_text = toml::to_string_pretty(&proposed_baseline)?;
+    fs::write(report_dir.join("no-panic-proposed-baseline.toml"), proposed_baseline_text)?;
+
     Ok(report)
 }
 
@@ -161,28 +248,214 @@ fn normalise_path(p: &str) -> String {
     p.replace('\\', "/")
 }
 
+fn normalise_snippet(snippet: &str) -> String {
+    snippet.trim().to_string()
+}
+
+fn selector_for_family(family: &str) -> (&'static str, &str) {
+    match family {
+        "unwrap" | "expect" => ("method_call", family),
+        "panic_macro" => ("macro_call", "panic"),
+        "todo" => ("macro_call", "todo"),
+        "unimplemented" => ("macro_call", "unimplemented"),
+        "unreachable" => ("macro_call", "unreachable"),
+        _ => ("call", family),
+    }
+}
+
+impl Finding {
+    fn key(&self) -> FindingKey {
+        let (selector_kind, selector_callee) = selector_for_family(self.family);
+        FindingKey {
+            path: normalise_path(&self.path),
+            family: self.family.to_string(),
+            selector_kind: selector_kind.to_string(),
+            selector_callee: selector_callee.to_string(),
+            snippet: normalise_snippet(&self.snippet),
+        }
+    }
+}
+
+impl Entry {
+    fn key(&self) -> Result<FindingKey> {
+        if normalise_snippet(&self.snippet).is_empty() {
+            bail!("no-panic allowlist entry `{}` must set non-empty `snippet`", self.id);
+        }
+        if self.count == 0 {
+            bail!("no-panic allowlist entry `{}` must set positive `count`", self.id);
+        }
+        let selector = self.selector.as_ref().with_context(|| {
+            format!("no-panic allowlist entry `{}` must set `selector`", self.id)
+        })?;
+        if selector.kind.trim().is_empty() {
+            bail!("no-panic allowlist entry `{}` must set selector.kind", self.id);
+        }
+        if selector.callee.trim().is_empty() {
+            bail!("no-panic allowlist entry `{}` must set selector.callee", self.id);
+        }
+        Ok(FindingKey {
+            path: normalise_path(&self.path),
+            family: self.family.clone(),
+            selector_kind: selector.kind.trim().to_string(),
+            selector_callee: selector.callee.trim().to_string(),
+            snippet: normalise_snippet(&self.snippet),
+        })
+    }
+}
+
+impl BaselineEntry {
+    fn key(&self) -> Result<FindingKey> {
+        if normalise_snippet(&self.snippet).is_empty() {
+            bail!("no-panic baseline entry for `{}` must set non-empty `snippet`", self.path);
+        }
+        if self.count == 0 {
+            bail!("no-panic baseline entry for `{}` must set positive `count`", self.path);
+        }
+        if self.selector.kind.trim().is_empty() {
+            bail!("no-panic baseline entry for `{}` must set selector.kind", self.path);
+        }
+        if self.selector.callee.trim().is_empty() {
+            bail!("no-panic baseline entry for `{}` must set selector.callee", self.path);
+        }
+        Ok(FindingKey {
+            path: normalise_path(&self.path),
+            family: self.family.clone(),
+            selector_kind: self.selector.kind.trim().to_string(),
+            selector_callee: self.selector.callee.trim().to_string(),
+            snippet: normalise_snippet(&self.snippet),
+        })
+    }
+}
+
+fn validate_allowlist(allowlist: &Allowlist) -> Result<BTreeMap<FindingKey, usize>> {
+    let mut counts = BTreeMap::new();
+    for entry in &allowlist.entries {
+        let key = entry.key()?;
+        if counts.insert(key, entry.count).is_some() {
+            bail!("duplicate no-panic allowlist key for entry `{}`", entry.id);
+        }
+    }
+    Ok(counts)
+}
+
+fn validate_baseline(baseline: &Baseline) -> Result<BTreeMap<FindingKey, usize>> {
+    let mut counts = BTreeMap::new();
+    for entry in &baseline.entries {
+        let key = entry.key()?;
+        if counts.insert(key, entry.count).is_some() {
+            bail!("duplicate no-panic baseline key for `{}` `{}`", entry.path, entry.snippet);
+        }
+    }
+    Ok(counts)
+}
+
+fn bucket_findings(findings: &[Finding]) -> BTreeMap<FindingKey, FindingBucket> {
+    let mut buckets = BTreeMap::new();
+    for finding in findings {
+        let key = finding.key();
+        buckets
+            .entry(key.clone())
+            .and_modify(|bucket: &mut FindingBucket| bucket.count += 1)
+            .or_insert(FindingBucket { key, count: 1, first_line: finding.line });
+    }
+    buckets
+}
+
+fn match_findings(
+    findings: &[Finding],
+    allow_counts: &BTreeMap<FindingKey, usize>,
+    baseline_counts: &BTreeMap<FindingKey, usize>,
+    mode: MatchingMode,
+) -> MatchOutcome {
+    let mut outcome = MatchOutcome::default();
+
+    for bucket in bucket_findings(findings).values() {
+        let mut remaining = bucket.count;
+
+        let allow_slots = allow_counts.get(&bucket.key).copied().unwrap_or(0);
+        let allow_used = remaining.min(allow_slots);
+        remaining -= allow_used;
+        outcome.allow_consumed += allow_used;
+
+        if mode == MatchingMode::NoNewDebt {
+            let baseline_slots = baseline_counts.get(&bucket.key).copied().unwrap_or(0);
+            let baseline_used = remaining.min(baseline_slots);
+            remaining -= baseline_used;
+            outcome.baseline_consumed += baseline_used;
+        }
+
+        if remaining > 0 {
+            outcome.new_debt += remaining;
+            outcome.errors.push(format!(
+                "{}:{} {} not covered by exact no-panic identity ({} occurrence{} new): `{}`",
+                bucket.key.path,
+                bucket.first_line,
+                bucket.key.family,
+                remaining,
+                if remaining == 1 { "" } else { "s" },
+                bucket.key.snippet
+            ));
+        }
+    }
+
+    outcome
+}
+
 fn synthesize_allowlist(findings: &[Finding]) -> Allowlist {
+    let buckets = bucket_findings(findings);
     let mut al =
-        Allowlist { schema_version: "0.3".into(), entries: Vec::with_capacity(findings.len()) };
-    for (i, f) in findings.iter().enumerate() {
+        Allowlist { schema_version: "0.4".into(), entries: Vec::with_capacity(buckets.len()) };
+    for (i, bucket) in buckets.values().enumerate() {
+        let f = &bucket.key;
         al.entries.push(Entry {
             id: format!("panic-proposed-{:04}", i + 1),
             path: f.path.clone(),
-            family: f.family.to_string(),
+            family: f.family.clone(),
+            snippet: f.snippet.clone(),
+            count: bucket.count,
             classification: "uncategorised".into(),
             owner: "TODO".into(),
             explanation: "auto-proposed; reviewer must classify and justify".into(),
             expires: String::new(),
             selector: Some(Selector {
-                kind: "auto".into(),
+                kind: f.selector_kind.clone(),
                 container: String::new(),
-                callee: f.family.to_string(),
+                callee: f.selector_callee.clone(),
                 receiver_fingerprint: f.snippet.clone(),
             }),
-            last_seen: Some(LastSeen { line: f.line, column: 0 }),
+            last_seen: Some(LastSeen { line: bucket.first_line, column: 0 }),
         });
     }
     al
+}
+
+fn synthesize_baseline(
+    findings: &[Finding],
+    allow_counts: &BTreeMap<FindingKey, usize>,
+) -> Baseline {
+    let mut baseline = Baseline { schema_version: "0.1".into(), entries: Vec::new() };
+
+    for bucket in bucket_findings(findings).values() {
+        let allow_slots = allow_counts.get(&bucket.key).copied().unwrap_or(0);
+        let remaining = bucket.count.saturating_sub(allow_slots);
+        if remaining == 0 {
+            continue;
+        }
+        baseline.entries.push(BaselineEntry {
+            path: bucket.key.path.clone(),
+            family: bucket.key.family.clone(),
+            snippet: bucket.key.snippet.clone(),
+            count: remaining,
+            selector: Selector {
+                kind: bucket.key.selector_kind.clone(),
+                container: String::new(),
+                callee: bucket.key.selector_callee.clone(),
+                receiver_fingerprint: bucket.key.snippet.clone(),
+            },
+        });
+    }
+
+    baseline
 }
 
 fn scan_workspace() -> Result<Vec<Finding>> {
@@ -279,5 +552,198 @@ mod tests {
         let al = synthesize_allowlist(&findings);
         assert_eq!(al.entries.len(), 1);
         assert_eq!(al.entries[0].family, "unwrap");
+        assert_eq!(al.entries[0].snippet, "foo.unwrap()");
+        assert_eq!(al.entries[0].count, 1);
+    }
+
+    #[test]
+    fn allowlist_entry_requires_exact_snippet() -> Result<()> {
+        let allowlist = Allowlist {
+            schema_version: "0.4".into(),
+            entries: vec![allow_entry("panic-0001", "crates/x/src/lib.rs", "unwrap", "", 1)],
+        };
+
+        let err = match validate_allowlist(&allowlist) {
+            Ok(_) => anyhow::bail!("empty snippet was accepted"),
+            Err(err) => err.to_string(),
+        };
+        assert!(err.contains("snippet"));
+        Ok(())
+    }
+
+    #[test]
+    fn allowlist_count_is_consumed_per_occurrence() -> Result<()> {
+        let findings = vec![
+            finding("crates/x/src/lib.rs", "unwrap", 10, "foo.unwrap()"),
+            finding("crates/x/src/lib.rs", "unwrap", 11, "foo.unwrap()"),
+        ];
+        let allowlist = Allowlist {
+            schema_version: "0.4".into(),
+            entries: vec![allow_entry(
+                "panic-0001",
+                "crates/x/src/lib.rs",
+                "unwrap",
+                "foo.unwrap()",
+                1,
+            )],
+        };
+        let allow_counts = validate_allowlist(&allowlist)?;
+        let baseline_counts = BTreeMap::new();
+
+        let outcome =
+            match_findings(&findings, &allow_counts, &baseline_counts, MatchingMode::NoNewDebt);
+
+        assert_eq!(outcome.allow_consumed, 1);
+        assert_eq!(outcome.new_debt, 1);
+        assert_eq!(outcome.errors.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn allowlist_does_not_cover_same_file_same_callee_different_snippet() -> Result<()> {
+        let findings = vec![finding("crates/x/src/lib.rs", "unwrap", 10, "right.unwrap()")];
+        let allowlist = Allowlist {
+            schema_version: "0.4".into(),
+            entries: vec![allow_entry(
+                "panic-0001",
+                "crates/x/src/lib.rs",
+                "unwrap",
+                "left.unwrap()",
+                1,
+            )],
+        };
+        let allow_counts = validate_allowlist(&allowlist)?;
+        let baseline_counts = BTreeMap::new();
+
+        let outcome =
+            match_findings(&findings, &allow_counts, &baseline_counts, MatchingMode::NoNewDebt);
+
+        assert_eq!(outcome.allow_consumed, 0);
+        assert_eq!(outcome.new_debt, 1);
+        assert!(outcome.errors[0].contains("right.unwrap()"));
+        Ok(())
+    }
+
+    #[test]
+    fn baseline_generation_subtracts_allowlisted_counts() -> Result<()> {
+        let findings = vec![
+            finding("crates/x/src/lib.rs", "unwrap", 10, "foo.unwrap()"),
+            finding("crates/x/src/lib.rs", "unwrap", 11, "foo.unwrap()"),
+            finding("crates/x/src/lib.rs", "unwrap", 12, "foo.unwrap()"),
+        ];
+        let allowlist = Allowlist {
+            schema_version: "0.4".into(),
+            entries: vec![allow_entry(
+                "panic-0001",
+                "crates/x/src/lib.rs",
+                "unwrap",
+                "foo.unwrap()",
+                2,
+            )],
+        };
+        let allow_counts = validate_allowlist(&allowlist)?;
+
+        let baseline = synthesize_baseline(&findings, &allow_counts);
+
+        assert_eq!(baseline.entries.len(), 1);
+        assert_eq!(baseline.entries[0].count, 1);
+        assert_eq!(baseline.entries[0].snippet, "foo.unwrap()");
+        Ok(())
+    }
+
+    #[test]
+    fn blocking_mode_ignores_baseline_but_honors_counted_allowlist() -> Result<()> {
+        let findings = vec![
+            finding("crates/x/src/lib.rs", "unwrap", 10, "foo.unwrap()"),
+            finding("crates/x/src/lib.rs", "unwrap", 11, "foo.unwrap()"),
+        ];
+        let allowlist = Allowlist {
+            schema_version: "0.4".into(),
+            entries: vec![allow_entry(
+                "panic-0001",
+                "crates/x/src/lib.rs",
+                "unwrap",
+                "foo.unwrap()",
+                1,
+            )],
+        };
+        let baseline = Baseline {
+            schema_version: "0.1".into(),
+            entries: vec![baseline_entry("crates/x/src/lib.rs", "unwrap", "foo.unwrap()", 1)],
+        };
+        let allow_counts = validate_allowlist(&allowlist)?;
+        let baseline_counts = validate_baseline(&baseline)?;
+
+        let advisory =
+            match_findings(&findings, &allow_counts, &baseline_counts, MatchingMode::NoNewDebt);
+        let blocking =
+            match_findings(&findings, &allow_counts, &baseline_counts, MatchingMode::Blocking);
+
+        assert_eq!(advisory.errors.len(), 0);
+        assert_eq!(advisory.baseline_consumed, 1);
+        assert_eq!(blocking.allow_consumed, 1);
+        assert_eq!(blocking.baseline_consumed, 0);
+        assert_eq!(blocking.new_debt, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn duplicate_allowlist_keys_are_rejected() -> Result<()> {
+        let allowlist = Allowlist {
+            schema_version: "0.4".into(),
+            entries: vec![
+                allow_entry("panic-0001", "crates/x/src/lib.rs", "unwrap", "foo.unwrap()", 1),
+                allow_entry("panic-0002", "crates/x/src/lib.rs", "unwrap", "foo.unwrap()", 1),
+            ],
+        };
+
+        let err = match validate_allowlist(&allowlist) {
+            Ok(_) => anyhow::bail!("duplicate allowlist key was accepted"),
+            Err(err) => err.to_string(),
+        };
+        assert!(err.contains("duplicate no-panic allowlist key"));
+        Ok(())
+    }
+
+    fn finding(path: &str, family: &'static str, line: usize, snippet: &str) -> Finding {
+        Finding { path: path.into(), family, line, snippet: snippet.into() }
+    }
+
+    fn allow_entry(id: &str, path: &str, family: &str, snippet: &str, count: usize) -> Entry {
+        let (selector_kind, selector_callee) = selector_for_family(family);
+        Entry {
+            id: id.into(),
+            path: path.into(),
+            family: family.into(),
+            snippet: snippet.into(),
+            count,
+            classification: "test".into(),
+            owner: "tests".into(),
+            explanation: "test fixture".into(),
+            expires: String::new(),
+            selector: Some(Selector {
+                kind: selector_kind.into(),
+                container: String::new(),
+                callee: selector_callee.into(),
+                receiver_fingerprint: snippet.into(),
+            }),
+            last_seen: None,
+        }
+    }
+
+    fn baseline_entry(path: &str, family: &str, snippet: &str, count: usize) -> BaselineEntry {
+        let (selector_kind, selector_callee) = selector_for_family(family);
+        BaselineEntry {
+            path: path.into(),
+            family: family.into(),
+            snippet: snippet.into(),
+            count,
+            selector: Selector {
+                kind: selector_kind.into(),
+                container: String::new(),
+                callee: selector_callee.into(),
+                receiver_fingerprint: snippet.into(),
+            },
+        }
     }
 }

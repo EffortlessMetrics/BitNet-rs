@@ -33,6 +33,11 @@ All notable changes to bitnet-rs will be documented in this file.
   - Uses the existing `bitnet-test-support::assertions` helpers as the first
     migrated slice by making their unit tests fallible instead of relying on
     unwrap/expect.
+- policy(panic): harden no-panic allowlist identity
+  - Changes no-panic matching to exact counted identity:
+    `path + family + selector.kind + selector.callee + snippet + count`.
+  - Consumes allowlist counts before optional baseline counts and keeps
+    baseline output advisory until the dedicated no-new-debt baseline PR.
 - policy(ci): require issue metadata on CI whitelist exceptions
   - Replaces placeholder CI whitelist exception issue fields with stable
     tracking keys.
