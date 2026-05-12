@@ -273,7 +273,7 @@ bitnet-crossval = { path = "../crossval", version = "0.2.1-dev", package = "bitn
 # Additional dependencies for fixtures
 bincode = "2.0.1"
 byteorder = "1.5.0"
-candle-core = { version = "0.9.1", default-features = false }
+candle-core = { version = "0.10.2", default-features = false }
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "windows")'.dependencies]
