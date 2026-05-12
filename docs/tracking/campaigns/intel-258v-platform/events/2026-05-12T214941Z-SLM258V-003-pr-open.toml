@@ -1,4 +1,5 @@
 timestamp = "2026-05-12T21:49:41Z"
+campaign = "intel-258v-platform"
 item = "SLM258V-003"
 event = "pr_open"
 pr = 4535

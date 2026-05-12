@@ -3382,6 +3382,20 @@ fn dense_slm_kernel_id(model_family: &str, model_architecture: &str) -> Option<&
     is_dense_slm_model(model_family, model_architecture).then_some("dense-qwen-cpu-reference")
 }
 
+fn uses_dense_slm_cpu_reference(
+    requested_backend: &str,
+    selected_backend: &str,
+    runtime_api: &str,
+    fallback_used: bool,
+) -> bool {
+    runtime_api == "cpu"
+        && !fallback_used
+        && (requested_backend == "cpu" || requested_backend.ends_with("-cpu-neon"))
+        && (selected_backend == "cpu"
+            || selected_backend == "cpu-rust"
+            || selected_backend.ends_with("-cpu-neon"))
+}
+
 fn dense_slm_layout_source(path: &std::path::Path) -> &'static str {
     match dense_slm_quant_format(path) {
         "Q8_0" => "gguf_dense_q8_0_reference",
@@ -5253,7 +5267,12 @@ async fn run_simple_generation(
                 None
             },
         });
-        if let Some(dense_kernel_id) = dense_slm_kernel_id(model_family, &model_architecture)
+        if uses_dense_slm_cpu_reference(
+            requested_backend,
+            &selected_backend,
+            runtime_api,
+            backend_identity.fallback_used,
+        ) && let Some(dense_kernel_id) = dense_slm_kernel_id(model_family, &model_architecture)
             && let Some(object) = output.as_object_mut()
         {
             let dense_kernel_family =
@@ -11610,6 +11629,20 @@ mod tests {
         assert_eq!(dense_slm_quant_format(path), "Q8_0");
         assert_eq!(dense_slm_layout_source(path), "gguf_dense_q8_0_reference");
         assert_eq!(dense_slm_kernel_layout(path), "gguf_dense_q8_0");
+    }
+
+    #[test]
+    fn dense_slm_cpu_reference_requires_cpu_backend_without_fallback() {
+        assert!(uses_dense_slm_cpu_reference("cpu", "cpu-rust", "cpu", false));
+        assert!(uses_dense_slm_cpu_reference(
+            "apple-m4-cpu-neon",
+            "apple-m4-cpu-neon",
+            "cpu",
+            false
+        ));
+        assert!(!uses_dense_slm_cpu_reference("cuda", "cuda", "cuda", false));
+        assert!(!uses_dense_slm_cpu_reference("cuda", "cpu-rust", "cpu", true));
+        assert!(!uses_dense_slm_cpu_reference("apple-m4-metal", "cpu-rust", "cpu", true));
     }
 
     #[test]
