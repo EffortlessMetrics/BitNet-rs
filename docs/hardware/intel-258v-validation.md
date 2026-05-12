@@ -194,6 +194,22 @@ does not prove broad BitNet answer quality, speedup, sustained throughput,
 external first-token logits parity, Arc 140V execution, Intel NPU execution,
 QK256 changes, or full model correctness.
 
+### Dense SLM Artifact Manifest
+
+`SLM258V-001` adds the first Lunar Lake dense SLM artifact manifest:
+
+```text
+ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json
+```
+
+The manifest selects `qwen2.5-0.5b-instruct-q8_0` as the first 258V dense SLM
+CPU smoke candidate. It records the exact GGUF repository, revision, file,
+SHA256, architecture, quantization, tokenizer metadata, prompt template,
+context length, and reference-output expectations inherited from the existing
+dense Qwen evidence. This is a candidate manifest only: it does not commit a
+model binary, run dense SLM inference on the 258V, prove 258V answer quality,
+touch BitNet QK256/I2_S proof, or prove Arc 140V / Intel NPU execution.
+
 The 2026-05-08 CLI platform probe refresh is:
 
 ```text

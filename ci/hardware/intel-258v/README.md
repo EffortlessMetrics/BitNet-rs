@@ -81,6 +81,14 @@ post-fix warm-session phase receipts. It supersedes the semantic-debug
 the same claim boundary: no new runtime behavior, no broad answer-quality
 claim, no speedup/sustained-throughput claim, and no Arc/NPU execution claim.
 
+`slm-artifact-manifest.json` pins the first dense SLM candidate for future
+Lunar Lake CPU strict answer smoke work. It records the exact Qwen2.5 0.5B
+Instruct Q8_0 GGUF source, revision, SHA256, architecture, quantization,
+tokenizer metadata, prompt template, context length, and cross-lane reference
+expectations. It does not commit a model binary and does not claim dense SLM
+inference, answer quality, speed, Arc 140V execution, Intel NPU execution, or
+BitNet QK256/I2_S coverage on the 258V.
+
 `cpu-answer-corpus-avx2-bitnetcpp-template.json` records the first 258V AVX2
 attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready
 prompt envelope. Timeout rows and `missing_child_receipt` kernels are blocker
