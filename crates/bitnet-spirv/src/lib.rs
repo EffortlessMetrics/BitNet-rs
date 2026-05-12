@@ -299,7 +299,7 @@ impl SpirVValidator {
     /// Check whether the binary might contain a given SPIR-V capability.
     #[must_use]
     pub fn has_capability(bytes: &[u8], capability_id: u32) -> bool {
-        let op_capability: u32 = (2 << 16) | 17;
+        let op_capability: u32 = (2 << 16) | 0x0011;
         if bytes.len() < 24 {
             return false;
         }
