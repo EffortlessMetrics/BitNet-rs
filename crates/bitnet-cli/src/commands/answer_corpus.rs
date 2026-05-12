@@ -773,10 +773,7 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
         if run_receipt.get("dense_slm").is_some_and(json_contains_bitnet_dense_forbidden) {
             failed.push("dense_slm_fields_not_bitnet_qk256".to_string());
         }
-        let strict_provenance = &run_receipt["strict_provenance"];
-        if ["requested_kernel", "selected_kernel", "provenance"].iter().any(|field| {
-            strict_provenance[*field].as_str().is_some_and(contains_bitnet_dense_forbidden)
-        }) {
+        if run_receipt.get("strict_provenance").is_some_and(json_contains_bitnet_dense_forbidden) {
             failed.push("dense_slm_strict_provenance_not_bitnet_qk256".to_string());
         }
         if run_receipt["execution_coverage"]
@@ -830,7 +827,9 @@ fn json_contains_bitnet_dense_forbidden(value: &Value) -> bool {
     match value {
         Value::String(value) => contains_bitnet_dense_forbidden(value),
         Value::Array(values) => values.iter().any(json_contains_bitnet_dense_forbidden),
-        Value::Object(values) => values.values().any(json_contains_bitnet_dense_forbidden),
+        Value::Object(values) => values.iter().any(|(key, value)| {
+            contains_bitnet_dense_forbidden(key) || json_contains_bitnet_dense_forbidden(value)
+        }),
         _ => false,
     }
 }
@@ -1340,7 +1339,7 @@ mod tests {
             "model": { "family": "qwen" },
             "dense_slm": {
                 "model_family": "qwen",
-                "kernel_family": "bitnet_i2_s",
+                "bitnet_kernel_family": "dense_qwen",
                 "kernel_id": "dense-qwen-cpu-reference",
                 "layout": "gguf_dense_q8_0"
             },
@@ -1358,7 +1357,7 @@ mod tests {
             "strict_provenance": {
                 "requested_kernel": "i2_s-avx2-reference",
                 "selected_kernel": "dense-qwen-cpu-reference",
-                "provenance": "bitnet_packed_kernel"
+                "quant_format": "BitNet packed kernel"
             },
             "tokens": {
                 "prompt_ids": [1, 2, 3],
