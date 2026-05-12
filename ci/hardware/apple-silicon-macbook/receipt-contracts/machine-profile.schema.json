@@ -39,6 +39,9 @@
         "cpu_arch",
         "physical_cores",
         "logical_cores",
+        "performance_cores",
+        "efficiency_cores",
+        "fanless_chassis",
         "memory_bytes",
         "macos_version",
         "kernel_version"
@@ -74,6 +77,26 @@
           "type": "integer",
           "minimum": 1
         },
+        "performance_cores": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "efficiency_cores": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "fanless_chassis": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "memory_bytes": {
           "type": "integer",
           "minimum": 1
@@ -96,6 +119,7 @@
         "available_bytes",
         "total_bytes",
         "low_disk_threshold_bytes",
+        "preferred_free_floor_bytes",
         "large_artifact_sweep_allowed"
       ],
       "properties": {
@@ -112,6 +136,10 @@
           "minimum": 1
         },
         "low_disk_threshold_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "preferred_free_floor_bytes": {
           "type": "integer",
           "minimum": 0
         },
@@ -195,7 +223,9 @@
       "additionalProperties": false,
       "required": [
         "source",
-        "low_power_mode"
+        "low_power_mode",
+        "charger_attached",
+        "battery_percent"
       ],
       "properties": {
         "source": {
@@ -210,6 +240,20 @@
             "boolean",
             "null"
           ]
+        },
+        "charger_attached": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "battery_percent": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
         }
       }
     },

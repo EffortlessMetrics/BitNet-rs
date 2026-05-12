@@ -86,9 +86,9 @@
 | apple-m4-slm-performance | M4-SLM-PERF-007 | M4-SLM-PERF-006 | merged |
 | apple-silicon-macbook | MB-AS-002 | MB-AS-008 | proposed |
 | apple-silicon-macbook | MB-AS-003 | MB-AS-001 | merged |
-| apple-silicon-macbook | MB-AS-004 | MB-AS-003 | proposed |
-| apple-silicon-macbook | MB-AS-005 | MB-AS-003 | proposed |
-| apple-silicon-macbook | MB-AS-006 | MB-AS-003 | proposed |
+| apple-silicon-macbook | MB-AS-004 | MB-AS-002, MB-AS-003 | proposed |
+| apple-silicon-macbook | MB-AS-005 | MB-AS-004 | proposed |
+| apple-silicon-macbook | MB-AS-006 | MB-AS-004 | proposed |
 | apple-silicon-macbook | MB-AS-008 | MB-AS-007 | proposed |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |

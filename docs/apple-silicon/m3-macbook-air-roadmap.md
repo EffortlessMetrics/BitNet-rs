@@ -62,6 +62,38 @@ handoff only after coherent reference output is recorded
 | 5 | `ABAS-003` / `MB-AS-006` | 3B TL1/TL2 diagnostic only | Diagnostic report, explicit I2_S non-support note |
 | 6 | `ABAS-005` | M4 strict-proof handoff for accepted artifacts | Handoff plan only; no manufactured M4 receipt |
 
+## Milestone Gates
+
+The lane should advance only when the previous milestone leaves durable evidence
+that a reviewer can inspect without access to the local model cache.
+
+| Gate | Owner item | Required committed evidence | Local-only state | Exit decision |
+|---|---|---|---|---|
+| Machine readiness | `MB-AS-008` | Machine-profile receipt, schema-valid profile JSON, campaign event | None | Ready for dense control run |
+| Receipt label readiness | `MB-AS-008` or `MB-AS-002` | Validator or documented label support for `apple-m3-air-cpu-neon` | None | Ready to record M3 timing without M4 wording |
+| Dense control | `MB-AS-002` | Smoke receipt, receipts-check output, model hash, tokenizer metadata, fallback status | Downloaded dense Qwen artifact | Ready for bounded operator run or blocker report |
+| Dense operator | `MB-AS-002` | Operator receipt, allocation-audit summary, thermal/power context | Warm model cache | Ready for BitNet artifact screening |
+| Microsoft 2B screening | `MB-AS-004` | Candidate report with source revision, SHA256, tokenizer authority, reference output, cleanup status | Official 2B GGUF while active | Accept, reject, or block before secondary candidates |
+| Small candidate screening | `MB-AS-005` | Candidate report with route evidence and cleanup status | 0.7B GGUF while active | Keep for fast iteration or reject |
+| Diagnostic candidate | `MB-AS-006` | TL1/TL2 diagnostic report and I2_S non-claim | 3B GGUF while active | Diagnostic only, no proof claim |
+| Strict proof handoff | `ABAS-005` | New M4 work item naming artifact, backend, and receipt requirements | No dependency on M3 cache | Ready for separate M4 proof |
+
+If a gate cannot pass, the PR should still leave a blocker report instead of
+silently skipping forward. A blocker report is acceptable evidence when it names
+the failed command, host context, artifact identity when relevant, and the next
+smallest fix.
+
+Use numbered acceptance criteria in each PR:
+
+```text
+AC1 schema-valid evidence exists at the expected path
+AC2 source, model, tokenizer, backend, and fallback fields are recorded when relevant
+AC3 receipts-check or the applicable schema validator passes
+AC4 no model binaries are committed
+AC5 storage cleanup or retention status is recorded for every large artifact
+AC6 claim boundaries remain unchanged or the PR explicitly explains the change
+```
+
 ## Roadmap Shape
 
 The M3 Air lane should move in four narrow lanes, each with a concrete stop
@@ -159,6 +191,79 @@ recorded. If the run starts or ends in `serious` or `critical` thermal state,
 record the receipt as diagnostic and do not compare it against M4 Mac mini
 performance.
 
+## Measurement Plan
+
+Each model run should record enough context to separate behavior evidence from
+mobile performance noise:
+
+```text
+run_mode = cold | warm | operator | diagnostic
+power_source
+low_power_mode
+thermal_state_before
+thermal_state_after
+cooldown_seconds_before_run
+repeat_count
+prompt_count
+ttft_ms when available
+max_new_tokens
+decode_tokens
+wall_time_ms
+tokens_per_second when supported by the receipt
+peak_rss_bytes when available
+swap_used_bytes when available
+memory_pressure = normal | warning | critical | unknown
+disk_free_before_bytes
+disk_free_after_bytes
+fallback_used
+requested_backend
+selected_backend
+grade = comparison_grade | diagnostic_only
+```
+
+Use this ordering:
+
+1. Cold smoke run after a clean process start.
+2. Warm smoke rerun with the same artifact and prompt set.
+3. Operator profile only after smoke passes.
+4. Artifact diagnostic runs only after dense control receipts exist.
+
+Do not compare cold and warm runs as regressions. Do not compare battery and AC
+runs unless the report says the comparison is mobile-context-only. Do not compare
+M3 Air timing to M4 Mac mini timing unless both receipts name the same model,
+tokenizer, backend label, fallback status, prompt set, token budget, and thermal
+context.
+
+A run is comparison-grade only when power source, Low Power Mode, thermal
+before/after, fallback status, model hash, tokenizer metadata, prompt set,
+repeat count, and token budget are all recorded. Otherwise the run is
+diagnostic-only.
+
+## Artifact Ledger
+
+Large model downloads should have a small committed ledger entry in the relevant
+report or receipt even when the binary remains local-only:
+
+```text
+artifact_id
+source_url_or_repo
+source_revision
+filename
+size_bytes
+sha256
+local_cache_root
+download_started_at
+download_completed_at
+free_space_before_bytes
+free_space_after_bytes
+retention = keep | delete_after_report | delete_after_handoff
+cleanup_status
+```
+
+Accepted candidates may stay in the local cache until M4 handoff is created.
+Rejected candidates should be deleted unless their failure evidence cannot be
+reproduced cheaply. The committed report should state what happened either way.
+
 ## PR Stack
 
 | Order | Branch / item | Scope | Stop condition |
@@ -210,6 +315,21 @@ performance.
    hash, tokenizer metadata, deterministic greedy settings, quality corpus, and
    receipt schema used by the established M4 SLM lane. The result is a mobile
    Apple Silicon cross-check, not a replacement for the M4 performance envelope.
+
+   Pass/fail criteria:
+
+   ```text
+   corpus = ci/quality/apple-m4-slm-quality-corpus.yaml
+   profile_set = smoke before operator
+   corpus_repeat_runs >= 2
+   max_new_tokens = 32 for smoke/operator parity unless the PR explains a change
+   requested_backend = apple-m3-air-cpu-neon or documented successor
+   selected_backend = apple-m3-air-cpu-neon or documented successor
+   fallback_used = false for pass; true requires blocker or diagnostic-only grade
+   receipts-check = pass
+   generated output must satisfy the existing corpus checks
+   thermal/power context must be present for comparison-grade timing
+   ```
 
    Candidate command shape:
 
@@ -284,6 +404,17 @@ performance.
    cleanup status
    ```
 
+   Reference-output rubric:
+
+   ```text
+   prompt suite = ci/quality/bitnet-answer-corpus.yaml unless the report names a narrower suite
+   deterministic settings and prompt template are recorded
+   every required prompt has non-empty generated text
+   answers do not collapse into repeated special tokens or tokenizer garbage
+   shared answer gate passes or the report lists failing prompt IDs
+   no-authority tokenizer attempts are rejected or explicitly marked diagnostic
+   ```
+
 4. Smaller and diagnostic BitNet candidates
 
    Evaluate `1bitLLM/bitnet_b1_58-large` as the smaller control candidate, then
@@ -304,13 +435,32 @@ performance.
 
 ## Near-Term Order
 
-1. Finish `MB-AS-007` and merge the M3 Air roadmap.
+1. Treat `MB-AS-007` as complete after PR #4511; keep this document as the lane
+   control plane.
 2. Run `MB-AS-008` to generate a real M3 Air machine-profile receipt under `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/`.
 3. Add or confirm the `apple-m3-air-cpu-neon` receipt label before model timing is recorded.
 4. Run `MB-AS-002` as an M3 Air dense Qwen mirror now that real MacBook hardware is available.
 5. Run the official Microsoft 2B I2_S reference qualification before any secondary BitNet candidate.
 6. Use the 0.7B 1bitLLM candidate only after the Microsoft path records either acceptance or a clear blocker.
 7. Keep M4 proof handoff separate until a candidate passes reference output with tokenizer authority.
+
+## Review Checklist
+
+Every PR in this lane should answer these questions in its description or
+committed report:
+
+```text
+What evidence was produced?
+Which receipts or reports were committed?
+Which artifacts remain only in local cache?
+What was deleted?
+Which claim boundary is unchanged?
+Which next work item is unblocked?
+Which validation commands passed?
+```
+
+Do not merge a lane PR that only updates prose when a machine-readable campaign
+state or generated tracker page also needs to change.
 
 ## Decision Gates
 
@@ -378,9 +528,10 @@ model binaries.
 
 With about 99 GiB free at lane bootstrap, the M3 Air can attempt the official 2B
 I2_S candidate and one smaller control candidate without treating local storage
-as unlimited. Keep at least 25 GiB free after active downloads when practical,
-delete rejected candidates unless a later work item explicitly retains them, and
-record cleanup status in every artifact report.
+as unlimited. Use 8 GiB as the hard floor for avoiding an unsafe local checkout,
+prefer at least 25 GiB free after active downloads, delete rejected candidates
+unless a later work item explicitly retains them, and record cleanup status in
+every artifact report.
 
 ## Claim Boundaries
 
