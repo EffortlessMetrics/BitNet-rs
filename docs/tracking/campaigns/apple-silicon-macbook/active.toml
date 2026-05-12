@@ -67,14 +67,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-002"
-status = "proposed"
+status = "blocked"
 branch = "codex/apple-silicon-macbook/MB-AS-002-qwen-baseline"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["MB-AS-008"]
-acceptance = "Mirror the supported dense Qwen2.5 SLM Mac baseline on the live M3 MacBook Air with the same model hash, tokenizer metadata, quality corpus, deterministic greedy settings, the apple-m3-air-cpu-neon receipt label or documented successor, backend/fallback receipt schema, thermal/power context, receipts-check output, and MacBook-specific timing context."
+acceptance = "Superseded for live M3 Air execution by M3MBA-004A and M3MBA-004B in the apple-m3-macbook-air campaign; keep this umbrella item closed to new execution PRs unless a proxy note is needed."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
@@ -148,14 +148,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-004"
-status = "proposed"
+status = "blocked"
 branch = "codex/apple-silicon-macbook/MB-AS-004-microsoft-2b-i2s"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["MB-AS-002", "MB-AS-003"]
-acceptance = "Validate the official Microsoft BitNet b1.58 2B / 2B4T I2_S GGUF on MacBook only after the M3 machine profile and dense SLM control path are recorded, under the required external tokenizer pre-tokenizer authority, recording AC1 source revision/file/size/SHA256, AC2 tokenizer and pre-tokenizer authority, AC3 reference prompt-suite outputs, AC4 bad/no-authority rejection evidence when applicable, AC5 local artifact ledger with free-space before/after, and AC6 storage cleanup or retention status."
+acceptance = "Superseded for live M3 Air execution by M3MBA-005A, M3MBA-005B, and M3MBA-005C in the apple-m3-macbook-air campaign; keep this umbrella item closed to new execution PRs unless a proxy note is needed."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
@@ -187,14 +187,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-005"
-status = "proposed"
+status = "blocked"
 branch = "codex/apple-silicon-macbook/MB-AS-005-1bitllm-07b"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["MB-AS-004"]
-acceptance = "Evaluate 1bitLLM/bitnet_b1_58-large as the smaller Apple BitNet candidate only after Microsoft 2B records acceptance, rejection, or a named blocker, recording AC1 source revision/file/size/SHA256, AC2 I2_S/TL1 route evidence, AC3 tokenizer authority, AC4 reference prompt-suite outputs, AC5 acceptance or rejection, and AC6 storage cleanup or retention status."
+acceptance = "Superseded for live M3 Air execution by M3MBA-006 in the apple-m3-macbook-air campaign; keep this umbrella item closed to new execution PRs unless a proxy note is needed."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
@@ -226,14 +226,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-006"
-status = "proposed"
+status = "blocked"
 branch = "codex/apple-silicon-macbook/MB-AS-006-3b-tl-diagnostic"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["MB-AS-004"]
-acceptance = "Evaluate 1bitLLM/bitnet_b1_58-3B only after Microsoft 2B records acceptance, rejection, or a named blocker, only on supported TL1/TL2 diagnostic routes, documenting AC1 source revision/file/size/SHA256, AC2 supported route evidence, AC3 tokenizer authority when available, AC4 diagnostic reference output, AC5 why 3B I2_S is not an Apple proof target unless compatibility evidence changes, and AC6 storage cleanup or retention status."
+acceptance = "Superseded for live M3 Air execution by M3MBA-007 in the apple-m3-macbook-air campaign; keep this umbrella item closed to new execution PRs unless a proxy note is needed."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",
@@ -307,14 +307,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "MB-AS-008"
-status = "proposed"
+status = "blocked"
 branch = "codex/apple-silicon-macbook/MB-AS-008-m3-air-machine-profile"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["MB-AS-007"]
-acceptance = "Capture a real M3 MacBook Air machine/profile receipt with AC1 schema-valid machine facts, AC2 model identifier, chip, performance/efficiency core split, fanless chassis flag, memory, macOS, and kernel version, AC3 free disk, preferred and hard free-space floors, and cache root, AC4 power source, charger/battery context when available, thermal context when available, and Low Power Mode when available, AC5 CPU/NEON visibility, Metal visibility, and MPSGraph visibility when available, and AC6 requested_backend=none, selected_backend=none, inference_run=false, and no model binaries committed before model validation starts."
+acceptance = "Superseded for live M3 Air execution by M3MBA-002 in the apple-m3-macbook-air campaign; keep this umbrella item closed to new execution PRs unless a proxy note is needed."
 commands = [
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-silicon-macbook",

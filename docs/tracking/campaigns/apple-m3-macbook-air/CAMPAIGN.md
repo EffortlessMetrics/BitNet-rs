@@ -68,6 +68,7 @@ artifacts to separate strict proof items.
 | M3MBA-008 | proposed | Hand accepted artifacts to separate M4 strict-proof items without claiming proof in this lane. |
 | M3MBA-009 | proposed | Synthesize M3 dense SLM behavior against M4 and SLM CPU evidence after dense smoke/operator evidence exists. |
 | M3MBA-010 | proposed | Audit MacBook model-cache retention and cleanup after the first large BitNet download. |
+| M3MBA-011 | in_progress | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
 
 ## Phase Roadmap
 
@@ -79,6 +80,78 @@ artifacts to separate strict proof items.
 | Storage hygiene | M3MBA-010 | Keep the MacBook lane usable for large artifacts without hiding local cache state. | Artifact ledger audit with retained/deleted state and free-space floor. |
 | Cross-lane synthesis | M3MBA-009 | Compare M3 dense SLM behavior against M4 and SLM CPU evidence without broad claims. | Synthesis report naming comparable receipts and non-comparable gaps. |
 | Strict-proof handoff | M3MBA-008 | Convert accepted artifact evidence into separate M4 proof work. | Handoff report only; no manufactured M4 receipt. |
+
+## Roadmap Horizons
+
+The roadmap is planned as four horizons. Each horizon has a concrete exit
+condition so the lane can stop, report, and re-plan without blurring evidence.
+
+| Horizon | Scope | Exit condition |
+|---|---|---|
+| H0: lane readiness | `M3MBA-002`, `M3MBA-003`, `M3MBA-011` | The MacBook has a real machine/profile receipt, an explicit receipt label path, and a roadmap that names gates, artifacts, owners, and local resource limits. |
+| H1: dense SLM control | `M3MBA-004A`, `M3MBA-004B`, `M3MBA-009` | The known dense Qwen path has M3 Air smoke/operator evidence, or a blocker report explains why M3 dense SLM evidence is not comparison-grade. |
+| H2: primary BitNet candidate | `M3MBA-005A`, `M3MBA-005B`, `M3MBA-005C`, `M3MBA-010` | The official Microsoft 2B I2_S artifact is accepted, rejected, or blocked with identity, tokenizer authority, prompt output, and cache-retention evidence. |
+| H3: secondary sweep and handoff | `M3MBA-006`, `M3MBA-007`, `M3MBA-008` | Secondary candidates either add bounded evidence or are skipped by policy, then accepted artifacts are handed to separate M4 strict-proof work. |
+
+H0 and H1 protect the SLM lane. H2 and H3 protect the Mac BitNet lane. Do not
+start H2 before the dense control path proves that receipts, labels, cache
+state, and local runner commands are trustworthy on this exact machine.
+
+## Parallel Lane Policy
+
+Some work can move in parallel, but only where the outputs do not depend on the
+same local artifact cache or claim boundary.
+
+| Parallel path | Allowed overlap | Shared dependency |
+|---|---|---|
+| Machine/profile and receipt-label work | `M3MBA-002` can collect host facts while `M3MBA-003` prepares or confirms synthetic label validation. | The final label must cite the committed machine-profile receipt before live timing is treated as M3 Air evidence. |
+| Dense SLM reporting and BitNet planning | `M3MBA-009` can draft comparison tables while `M3MBA-005A` prepares artifact identity commands. | No BitNet download starts until `M3MBA-004A` passes or leaves a blocker accepted by the roadmap. |
+| Tokenizer authority and storage audit prep | `M3MBA-005B` can define authority/rejection evidence while `M3MBA-010` defines audit tables. | The audit must use the actual artifact path and free-space data from `M3MBA-005A`. |
+| M4 handoff planning and secondary candidates | `M3MBA-008` can draft the handoff template while `M3MBA-006`/`M3MBA-007` remain blocked. | Handoff is opened only after an accepted artifact exists, or closed as no-accepted-artifact evidence. |
+
+The M3 Air is a single fanless local host, so live model execution is serialized.
+Only docs, schema, validator, and report-template PRs should run in parallel
+with active downloads or timing runs.
+
+## Stop/Go Decisions
+
+| Decision point | Go condition | Stop or re-plan condition |
+|---|---|---|
+| Start live M3 evidence | `M3MBA-002` records free disk, cache root, power, thermal context when available, and `inference_run=false`. | Host facts are missing, free-space floor is not recorded, or the cache root is ambiguous. |
+| Accept M3 Air receipt label | `M3MBA-003` proves `apple-m3-air-cpu-neon` without weakening M4 labels. | The only path is to reuse M4 wording or loosen M4 validation. |
+| Proceed to BitNet downloads | Dense smoke passes with model hash, tokenizer metadata, backend label, fallback status, and receipt-check output. | Dense smoke fails without a named blocker, or the receipt cannot distinguish M3 from M4 evidence. |
+| Keep a large artifact | SHA256, source revision, tokenizer authority, free-space before/after, and cleanup status are recorded. | The artifact lacks authority, exceeds the storage budget, or cannot be reproduced from source/revision. |
+| Open M4 strict-proof work | A candidate is accepted by the M3 Air reference context and has handoff-ready source/hash/tokenizer metadata. | All candidates are rejected or blocked; close `M3MBA-008` with no-accepted-artifact evidence. |
+
+## Secondary Candidate Depth
+
+The smaller and diagnostic candidates are not a vague backlog. They have a
+preflight shape even while upstream filenames and tokenizer authority are still
+pending.
+
+| Candidate | Owner | Preflight before download | Decision output |
+|---|---|---|---|
+| 0.7B `1bitLLM/bitnet_b1_58-large` | `M3MBA-006` | Resolve exact GGUF filename, revision, size estimate, tokenizer files, runner command, and expected ARM route. | Accept, reject, or block as a smaller control artifact, with source/hash/tokenizer evidence and cleanup status. |
+| 3B `1bitLLM/bitnet_b1_58-3B` | `M3MBA-007` | Resolve only TL1/TL2 diagnostic files and confirm I2_S remains unsupported before any run. | Diagnostic report only; no I2_S or local-answer proof claim. |
+| Falcon-E secondary family | deferred | Keep in the shared candidate matrix until Microsoft and 1bitLLM behavior is understood. | Future item only if the primary family leaves enough evidence and storage headroom. |
+
+`M3MBA-008` waits for the secondary-candidate decision surface, not just the
+Microsoft 2B path. If Microsoft 2B is accepted early, the handoff can cite that
+artifact as the proof target; if it is rejected or blocked, the handoff must wait
+for `M3MBA-006`/`M3MBA-007` or close with no accepted artifact.
+
+## Local Resource Budget
+
+The M3 Air lane can use local storage aggressively, but every large-artifact PR
+must preserve a clear rollback path.
+
+| Resource | Policy |
+|---|---|
+| Free-space floor | Record free space before and after each large artifact action. Re-plan before starting a secondary candidate if the post-cleanup floor is not explicitly acceptable in `M3MBA-010`. |
+| Cache root | Use the machine-profile cache root unless a PR records a deliberate temporary override and cleanup plan. |
+| Artifact retention | Retain only artifacts needed for the next accepted/rejected/blocker decision; otherwise record deletion plus enough source/revision/hash metadata to reproduce. |
+| Power and thermal context | Dense operator and large artifact runs record charger/battery state and thermal state when macOS exposes it; missing thermal telemetry is reported as unavailable, not inferred. |
+| CI boundary | CI validates docs, schemas, command wiring, and synthetic receipts. Live downloads and timing runs remain local M3 Air evidence. |
 
 ## Milestone Gates
 

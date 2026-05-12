@@ -14,9 +14,10 @@
 | apple-m3-macbook-air | M3MBA-005A | M3MBA-004B | proposed |
 | apple-m3-macbook-air | M3MBA-005B | M3MBA-005A | proposed |
 | apple-m3-macbook-air | M3MBA-005C | M3MBA-005B | proposed |
+| apple-m3-macbook-air | M3MBA-011 | M3MBA-001 | in_progress |
 | apple-m3-macbook-air | M3MBA-006 | M3MBA-005C, M3MBA-010 | proposed |
 | apple-m3-macbook-air | M3MBA-007 | M3MBA-005C, M3MBA-010 | proposed |
-| apple-m3-macbook-air | M3MBA-008 | M3MBA-005C | proposed |
+| apple-m3-macbook-air | M3MBA-008 | M3MBA-005C, M3MBA-006, M3MBA-007 | proposed |
 | apple-m3-macbook-air | M3MBA-009 | M3MBA-004B | proposed |
 | apple-m3-macbook-air | M3MBA-010 | M3MBA-005A | proposed |
 | apple-m4 | M4-002 | M4-001 | merged |
@@ -96,12 +97,12 @@
 | apple-m4-slm-performance | M4-SLM-PERF-005 | M4-SLM-PERF-004 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-006 | M4-SLM-PERF-005 | merged |
 | apple-m4-slm-performance | M4-SLM-PERF-007 | M4-SLM-PERF-006 | merged |
-| apple-silicon-macbook | MB-AS-002 | MB-AS-008 | proposed |
+| apple-silicon-macbook | MB-AS-002 | MB-AS-008 | blocked |
 | apple-silicon-macbook | MB-AS-003 | MB-AS-001 | merged |
-| apple-silicon-macbook | MB-AS-004 | MB-AS-002, MB-AS-003 | proposed |
-| apple-silicon-macbook | MB-AS-005 | MB-AS-004 | proposed |
-| apple-silicon-macbook | MB-AS-006 | MB-AS-004 | proposed |
-| apple-silicon-macbook | MB-AS-008 | MB-AS-007 | proposed |
+| apple-silicon-macbook | MB-AS-004 | MB-AS-002, MB-AS-003 | blocked |
+| apple-silicon-macbook | MB-AS-005 | MB-AS-004 | blocked |
+| apple-silicon-macbook | MB-AS-006 | MB-AS-004 | blocked |
+| apple-silicon-macbook | MB-AS-008 | MB-AS-007 | blocked |
 | cpu-proof | CPU-BITNET-001 | CPU-BITNET-000 | merged |
 | cpu-proof | CPU-BITNET-002 | CPU-BITNET-001 | merged |
 | cpu-proof | CPU-BITNET-003 | CPU-BITNET-002 | merged |

@@ -1,0 +1,12 @@
+timestamp = "2026-05-12T21:15:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-011"
+event = "in_progress"
+branch = "codex/apple-m3-macbook-air/roadmap-depth"
+actor = "codex"
+
+notes = [
+  "Started a roadmap-depth item for the live M3 MacBook Air lane.",
+  "Scope is docs/tracker only: operating horizons, stop/go decisions, parallel lane policy, local resource budgets, and SLM vs BitNet sequencing.",
+  "No model inference, large artifact download, runtime change, BitNet acceptance, M4 Mac mini performance claim, or Apple Silicon performance claim is introduced.",
+]
