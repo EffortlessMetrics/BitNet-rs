@@ -177,6 +177,23 @@ loading, explicit tokenizer resolution, corrected prompt policy,
 speedup, sustained throughput, broad BitNet answer quality, Arc 140V execution,
 Intel NPU execution, QK256 changes, or full model correctness.
 
+### Corrected CPU Reference Bundle
+
+`CPU258V-031` replaces the semantic-debug CPU reference index with a corrected
+CPU reference bundle that links the prompt-policy fix, post-fix HF prompt/token
+parity, post-fix scalar and AVX2 answer-corpus receipts, post-fix answer
+parity, and post-fix phase receipts:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json
+```
+
+This bundle is the current 258V CPU reference index for future Arc 140V and
+Intel NPU comparison work after it lands. It does not add runtime behavior and
+does not prove broad BitNet answer quality, speedup, sustained throughput,
+external first-token logits parity, Arc 140V execution, Intel NPU execution,
+QK256 changes, or full model correctness.
+
 The 2026-05-08 CLI platform probe refresh is:
 
 ```text

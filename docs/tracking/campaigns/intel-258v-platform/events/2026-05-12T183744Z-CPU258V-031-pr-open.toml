@@ -1,0 +1,11 @@
+timestamp = "2026-05-12T18:37:44Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-031"
+event = "pr_open"
+pr = 4523
+summary = "Opened CPU258V-031 to refresh the corrected 258V CPU reference bundle after the prompt-policy fix."
+details = [
+  "The PR adds cpu-reference-bundle-after-semantic-fix.json as the corrected CPU reference index for future accelerator comparison.",
+  "The bundle links the prompt-policy fix, post-fix HF prompt/token parity, post-fix scalar and AVX2 answer corpus receipts, post-fix answer parity, and post-fix warm-session phase receipts.",
+  "The claim boundary remains artifact/index only: no new runtime behavior, broad answer-quality claim, speedup, sustained throughput, external first-token logits parity, Arc/NPU execution, QK256 changes, or full model correctness.",
+]

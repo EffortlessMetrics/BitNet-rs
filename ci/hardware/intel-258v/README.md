@@ -74,6 +74,13 @@ answer pass. It writes per-profile receipts under
 evidence only; it does not claim speedup, sustained throughput, Arc/NPU
 execution, QK256 changes, or full model correctness.
 
+`cpu-reference-bundle-after-semantic-fix.json` is the corrected CPU reference
+index after the prompt-policy fix, fixed-corpus scalar/AVX2 answer pass, and
+post-fix warm-session phase receipts. It supersedes the semantic-debug
+`cpu-reference-bundle.json` for new accelerator comparisons, while preserving
+the same claim boundary: no new runtime behavior, no broad answer-quality
+claim, no speedup/sustained-throughput claim, and no Arc/NPU execution claim.
+
 `cpu-answer-corpus-avx2-bitnetcpp-template.json` records the first 258V AVX2
 attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready
 prompt envelope. Timeout rows and `missing_child_receipt` kernels are blocker
