@@ -50,6 +50,24 @@ acceptance or rejection
 cleanup status
 ```
 
+## Reference Prompt Rubric
+
+Use `ci/quality/bitnet-answer-corpus.yaml` as the shared prompt suite unless the
+item records a narrower candidate-specific suite. A candidate is coherent only
+when the reference runner:
+
+```text
+loads the named GGUF without tokenizer fallback
+uses the recorded prompt template
+returns non-empty generated text for every required prompt
+does not emit repeated special tokens as the answer body
+does not answer with tokenizer/control-token garbage
+passes the shared answer gate or records the exact failing prompt IDs
+```
+
+Rejected runs should keep enough output in the report for review, but model
+binaries stay local-only.
+
 ## Claim Boundary
 
 This matrix is planning evidence. It does not prove Rust Apple BitNet local answers, full Apple Metal inference, QK256 on Apple Silicon, Neural Engine execution, MPSGraph model inference, or broad Apple Silicon performance.
