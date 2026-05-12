@@ -26,6 +26,7 @@ ci/hardware/intel-258v/<date>/cpu-qk256-i8s-semantic-audit.json
 ci/hardware/intel-258v/<date>/output-head-logits-index-audit.json
 ci/hardware/intel-258v/<date>/transformer-layer-parity.json
 ci/hardware/intel-258v/<date>/cpu-reference-bundle.json
+ci/hardware/intel-258v/<date>/cpu-semantic-diagnosis.json
 ci/hardware/intel-258v/<date>/npu-openvino-runtime-probe.json
 ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
@@ -101,6 +102,15 @@ audit, output-head/logits-index audit, observed logits evidence, and
 transformer-layer parity ladder. It is a CPU reference index only and must not
 claim new answer quality, CPU speed, Arc 140V execution, Intel NPU execution,
 external first-token logits parity, or full model correctness.
+
+`cpu-semantic-diagnosis.json` turns the CPU reference bundle into a
+machine-readable diagnosis. It records the current prompt-policy mismatch
+against the external HF `apply_chat_template` boundary, preserves the separate
+external-reference instrumentation gap for generated-token IDs and first-token
+logits, and summarizes QK256/I8_S, output-head/logits-index, transformer-layer,
+answer-parity, and phase evidence. It is diagnostic only: it does not fix prompt
+policy, prove external logits parity, add answer quality or speed claims, or
+prove Arc 140V / Intel NPU execution.
 
 `arc-140v-opencl-parity.json` records one isolated native OpenCL vector-add
 parity run on Arc 140V against the selected 258V CPU reference bundle. It may
