@@ -7,7 +7,7 @@ This document describes the multi-PR rollout that brings BitNet-rs to:
 * a strict Rust policy stack (Clippy receipts, no-panic semantic
   allowlist, non-Rust file allowlist, workspace lint inheritance,
   unsafe islands)
-* `ripr` advisory static-exposure analysis on production Rust diffs
+* `ripr` advisory static mutation-exposure analysis on production Rust diffs
 * an `xtask`-driven CI control plane that emits `ci-plan.json` and
   later learns from observed actuals
 
@@ -71,11 +71,15 @@ explicit `deny` for blocking lints and `warn` for staged debt.
 
 ### `ripr` is advisory first
 
-`ripr` is the static oracle-gap layer ("does the changed behavior
-appear gripped by a meaningful test discriminator?"). It is not a
-substitute for mutation testing. PR 13 adds it as advisory JSON /
-SARIF / step-summary output. Promotion is later, after baseline
-behavior is understood.
+`ripr` is static mutation-exposure analysis. It catches much of the same
+signal mutation testing catches -- weak test/oracle exposure -- but earlier
+and cheaper, because it runs statically and can run per PR.
+
+Mutation testing remains the runtime empirical backstop, especially for
+nightly and release readiness. The CI design uses `ripr` to shift mutation
+signal left, not to pretend mutation is unnecessary. PR 13 adds it as
+advisory JSON / SARIF / step-summary output. Promotion is later, after
+baseline behavior is understood.
 
 ## Status
 
@@ -176,6 +180,8 @@ docs/development/RUST_1_95_ROLLOUT.md
 That document contains:
 
 * the CI economics control-plane intent;
+* the corrected `ripr` doctrine: static mutation-exposure analysis that shifts
+  mutation signal left while preserving runtime mutation as the backstop;
 * the current vs. target state table;
 * the PR ladder (PRs 1–17) with branch names, titles, and acceptance gates;
 * the revised ladder adjustment notes;

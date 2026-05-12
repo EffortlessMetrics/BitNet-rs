@@ -1,13 +1,17 @@
 # `ripr` Evidence Policy
 
-`ripr` is a static oracle-gap analyzer. It asks:
+`ripr` is static mutation-exposure analysis. It asks:
 
 > Does the changed Rust behavior appear gripped by a meaningful test
 > discriminator?
 
-It is **mutation-testing-lite, run at static-analysis prices**. It
-does not run mutants, does not report `killed`/`survived`, and does
-not replace mutation testing.
+It catches much of the same signal mutation testing catches -- weak
+test/oracle exposure -- but earlier and cheaper, because it runs statically and
+can run per PR.
+
+Mutation testing remains the runtime empirical backstop, especially for nightly
+and release readiness. The CI design uses `ripr` to shift mutation signal left,
+not to pretend mutation is unnecessary. See also `docs/ci/ripr.md`.
 
 ## What ripr produces
 
@@ -34,10 +38,10 @@ PR 13 ships ripr **advisory only**. The workflow at
 * writes a step summary;
 * exits 0 regardless of finding severity.
 
-The `ripr` binary is expected to be provisioned on the runner image
-(or installed by a future PR). When it is missing, the workflow
-records that fact in the step summary and still exits 0 — the
-advisory posture means "report what you can; never block merge".
+The Rust 1.95 rollout changes this from "binary may be absent" to "install and
+run `ripr` consistently." When analysis is skipped by policy or cannot run, the
+workflow records that fact in the step summary. Skipped analysis must not be
+reported as passed proof.
 
 ## Why advisory first
 
@@ -63,8 +67,8 @@ advisory posture means "report what you can; never block merge".
 
 ## What ripr is not
 
-* Not a substitute for mutation testing (which still runs in nightly
-  / labeled lanes).
+* Not a substitute for mutation testing (which still runs for targeted risk
+  PRs, nightly, and release readiness).
 * Not a coverage report.
 * Not a code reviewer — its annotations are inputs for review, not
   decisions.
@@ -88,5 +92,6 @@ have an owner, a reason, and an expiry.
 
 ## Toolchain dependency
 
-`ripr` requires Rust `1.93` or newer; PR 03 of this rollout bumped
-the workspace MSRV to 1.93.0, so the prerequisite is in place.
+`ripr` requires Rust `1.93` or newer. The current workspace MSRV is 1.93.0; the
+Rust 1.95 / next minor rollout raises the workspace floor to 1.95.0 before the
+real advisory `ripr` provisioning PR.
