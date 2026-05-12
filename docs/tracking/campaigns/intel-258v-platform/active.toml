@@ -1846,8 +1846,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-031"
-status = "pr_open"
+status = "merged"
 pr = 4523
+merge_sha = "cf387bdc74649006f8aaed245a89fba487ce6e7c"
 branch = "codex/lunar-lake/CPU258V-031-corrected-reference-bundle"
 stackable = false
 review_mode = "codex_premerge"
@@ -1885,6 +1886,44 @@ must_not_claim = [
   "Arc 140V or Intel NPU execution is newly proven.",
   "QK256 semantics or transformer math changed.",
   "Full model correctness is proven.",
+]
+
+[[work_item]]
+id = "SLM258V-001"
+status = "ready"
+branch = "codex/lunar-lake/SLM258V-001-dense-slm-artifact-manifest"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-031"]
+acceptance = "Add a Lunar Lake dense SLM artifact manifest that pins one known-good small dense GGUF candidate with repo/file/SHA256, GGUF architecture, quantization, tokenizer metadata, chat template, context length, reference prompt output, and accepted/blocked status, while keeping dense SLM receipts separate from BitNet QK256/I2_S receipts."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "A candidate dense SLM artifact is documented for future 258V CPU strict answer smoke work after merge.",
+  "The dense SLM artifact manifest records accepted/blocked status and reference-output expectations without committing model files.",
+]
+must_not_claim = [
+  "Dense SLM inference works on the 258V.",
+  "Dense SLM answer quality is proven.",
+  "BitNet QK256/I2_S proof is affected.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Acceleration or performance is proven.",
 ]
 
 [[work_item]]

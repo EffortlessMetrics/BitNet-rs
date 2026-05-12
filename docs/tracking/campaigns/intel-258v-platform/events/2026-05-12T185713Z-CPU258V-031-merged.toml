@@ -1,0 +1,13 @@
+timestamp = "2026-05-12T18:57:13Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-031"
+event = "merged"
+pr = 4523
+merge_sha = "cf387bdc74649006f8aaed245a89fba487ce6e7c"
+summary = "Merged CPU258V-031, refreshing the corrected 258V CPU reference bundle after the prompt-policy fix."
+details = [
+  "The corrected bundle links the prompt-policy fix, post-fix HF prompt/token parity, post-fix scalar and AVX2 answer corpus receipts, post-fix answer parity, and post-fix warm-session phase receipts.",
+  "The corrected bundle is the current 258V CPU reference index for future Arc 140V and Intel NPU comparison work.",
+  "SLM258V-001 is ready to add a dense SLM artifact manifest as a separate dense-model path.",
+  "The claim boundary remains artifact/index only: no new runtime behavior, broad answer-quality claim, speedup, sustained throughput, external first-token logits parity, Arc/NPU execution, QK256 changes, or full model correctness.",
+]
