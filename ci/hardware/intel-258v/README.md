@@ -31,6 +31,8 @@ ci/hardware/intel-258v/<date>/output-head-logits-index-audit.json
 ci/hardware/intel-258v/<date>/transformer-layer-parity.json
 ci/hardware/intel-258v/<date>/cpu-reference-bundle.json
 ci/hardware/intel-258v/<date>/cpu-semantic-diagnosis.json
+ci/hardware/intel-258v/<date>/slm-artifact-manifest.json
+ci/hardware/intel-258v/<date>/slm-answer-corpus-qwen25-cpu.json
 ci/hardware/intel-258v/<date>/npu-openvino-runtime-probe.json
 ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
@@ -81,13 +83,22 @@ post-fix warm-session phase receipts. It supersedes the semantic-debug
 the same claim boundary: no new runtime behavior, no broad answer-quality
 claim, no speedup/sustained-throughput claim, and no Arc/NPU execution claim.
 
-`slm-artifact-manifest.json` pins the first dense SLM candidate for future
-Lunar Lake CPU strict answer smoke work. It records the exact Qwen2.5 0.5B
-Instruct Q8_0 GGUF source, revision, SHA256, architecture, quantization,
-tokenizer metadata, prompt template, context length, and cross-lane reference
-expectations. It does not commit a model binary and does not claim dense SLM
-inference, answer quality, speed, Arc 140V execution, Intel NPU execution, or
-BitNet QK256/I2_S coverage on the 258V.
+`slm-artifact-manifest.json` pins the first dense SLM candidate and links the
+Lunar Lake CPU answer-smoke receipt plus its current provenance blocker. It
+records the exact Qwen2.5 0.5B Instruct Q8_0 GGUF source, revision, SHA256,
+architecture, quantization, tokenizer metadata, prompt template, context length,
+and cross-lane reference expectations. It does not commit a model binary and
+does not claim broad SLM answer quality, speed, Arc 140V execution, Intel NPU
+execution, or BitNet QK256/I2_S coverage on the 258V.
+
+`slm-answer-corpus-qwen25-cpu.json` records the first 258V dense SLM CPU answer
+smoke for the pinned Qwen2.5 0.5B Instruct Q8_0 artifact. It uses GGUF tokenizer
+metadata, the `qwen2.5` prompt template, greedy deterministic generation,
+`selected_backend=cpu`, and `fallback_used=false`, and its three tiny answer
+gates pass. The receipt is diagnostic, not clean proof, because it still records
+BitNet I2_S kernel/layout provenance in the aggregate and child receipts. It
+must be rerun or regenerated after dense SLM provenance is separated from
+BitNet I2_S fields.
 
 `cpu-answer-corpus-avx2-bitnetcpp-template.json` records the first 258V AVX2
 attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready

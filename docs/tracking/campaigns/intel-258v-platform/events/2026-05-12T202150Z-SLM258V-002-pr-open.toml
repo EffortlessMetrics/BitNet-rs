@@ -1,0 +1,14 @@
+timestamp = "2026-05-12T20:21:50Z"
+campaign = "intel-258v-platform"
+item = "SLM258V-002"
+event = "pr_open"
+pr = 4530
+head_sha = "13133bf9b47897f4fd2f36da9c98626a2f6aff1a"
+branch = "codex/lunar-lake/SLM258V-002-cpu-answer-smoke"
+actor = "codex"
+summary = "Opened SLM258V-002 to record the first Lunar Lake dense SLM strict CPU answer smoke."
+notes = [
+  "The PR records a 3/3 strict CPU answer smoke for the pinned Qwen2.5 0.5B Instruct Q8_0 artifact on the 258V.",
+  "The receipt uses GGUF tokenizer metadata, the qwen2.5 prompt template, greedy deterministic generation, selected CPU backend, and fallback_used=false.",
+  "Broad SLM chat quality, BitNet QK256/I2_S proof, Arc 140V execution, Intel NPU execution, acceleration, and performance remain unclaimed.",
+]
