@@ -61,12 +61,11 @@ indexing, and helper plumbing should be fallible. The
 `ensure_eq`, `require_some`, and `require_ok` to make panic-free
 tests practical.
 
-The current `clippy.toml` retains
-`allow-expect-in-tests = true` / `allow-unwrap-in-tests = true` for
-the 1.93 staging window only. In that rollout plan, PR 09–11 were planned to
-remove the dependency on these carveouts and PR 12 was planned to delete them.
-The Rust 1.95 follow-up ladder renumbers the actual remaining carveout removal
-as PR 6.
+The Rust 1.95 follow-up PR 6 removed the last
+`allow-expect-in-tests = true` / `allow-unwrap-in-tests = true` entries from
+`clippy.toml`. The workspace still carries broader panic-family debt under the
+staged lint profile; that debt is tracked by the no-panic checker and later
+owner-lane burndown, not by reintroducing test carveouts.
 
 ## `unsafe_code`
 
@@ -110,11 +109,10 @@ The following changes are planned as part of the Rust 1.95 / next minor wave.
 See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder and
 CI economics framing.
 
-Current `main` has `clippy.toml` pinned to `msrv = "1.95.0"` and still keeps
-the temporary test unwrap/expect carveouts. `policy/clippy-lints.toml` records
-the Rust 1.95 MSRV. PR 5 measured the Rust 1.94/1.95 ratchets before
-activation and promoted only the clean lints from staged policy into
-`[workspace.lints.clippy]`.
+Current `main` has `clippy.toml` pinned to `msrv = "1.95.0"` and no longer
+uses test unwrap/expect carveouts. `policy/clippy-lints.toml` records the Rust
+1.95 MSRV. PR 5 measured the Rust 1.94/1.95 ratchets before activation and
+promoted only the clean lints from staged policy into `[workspace.lints.clippy]`.
 
 ### Lint ratchets (PR 5)
 
@@ -151,16 +149,11 @@ the seams are specified, not an automatic promotion.
 
 ### Test carveout removal (PR 6)
 
-The following lines in `clippy.toml` are a staging window and will be removed
-in PR 6:
-
-```toml
-allow-expect-in-tests = true
-allow-unwrap-in-tests = true
-```
-
-PR 6 also adds any remaining ergonomic fallible helpers to the appropriate
-test-support crate and converts a first narrow batch of tests before removal.
+PR 6 removed the remaining Clippy test unwrap/expect carveouts from
+`clippy.toml`. The first migrated helper slice is
+`bitnet-test-support::assertions`, whose unit tests now return
+`anyhow::Result<()>` and exercise `ensure`, `ensure_eq`, `require_some`, and
+`require_ok` without relying on unwrap/expect.
 
 ### Clippy debt and exceptions (PR 5–6 and later)
 
