@@ -54,7 +54,7 @@ isolated worktree at `E:\Code\Rust\BitNet-rust-195-compat`.
 | `rtk cargo +1.95.0 fmt --all -- --check` | blocked | Windows command-line/path expansion failed with `The filename or extension is too long. (os error 206)`. This is the same local `cargo fmt --all` failure mode seen before this PR and is not a Rust source incompatibility. |
 | `rtk cargo +1.95.0 check -p bitnet-common --locked --no-default-features` | passed | Completed with the isolated Cargo paths. |
 | `rtk cargo +1.95.0 check -p bitnet-kernels --locked --lib --no-default-features --features cpu` | passed | Completed with the isolated Cargo paths. |
-| `rtk cargo +1.95.0 check --locked --workspace --all-targets --no-default-features` | blocked locally | No Rust 1.95 source diagnostic was observed before the Windows native build path stalled. A direct `rtk rustup run 1.95.0 cargo check --locked --workspace --all-targets --no-default-features` run exceeded 2 hours while compiling `sentencepiece-sys`, `bitnet-py`, and related Python/SPM native dependencies. |
+| `rtk cargo +1.95.0 check --locked --workspace --all-targets --no-default-features` | blocked locally | No Rust 1.95 source diagnostic was observed before the Windows native build path stalled. A direct `rtk rustup run 1.95.0 cargo check --locked --workspace --all-targets --no-default-features` execution exceeded 2 hours while compiling `sentencepiece-sys`, `bitnet-py`, and related Python/SPM native dependencies. |
 | `rtk cargo +1.95.0 check --locked --workspace --all-targets --features cpu` | not run | Deferred because the no-default full-workspace gate did not clear the native Python/SPM build precondition. |
 | `rtk cargo +1.95.0 clippy --locked --workspace --all-targets --no-default-features -- -D warnings` | not run | Deferred behind the full-workspace check blocker. |
 | `rtk cargo +1.95.0 clippy --locked --workspace --all-targets --features cpu -- -D warnings` | not run | Deferred behind the full-workspace check blocker. |
@@ -72,9 +72,9 @@ complete locally within the available runtime. The next MSRV bump PR must not
 claim the full Rust 1.95 matrix is green until the full gates complete in CI or
 on a host with the native Python/SPM build path known-good.
 
-## Carry-Forward For PR 3
+## Carry-Forward For MSRV Bump
 
-- Keep the PR 3 MSRV/toolchain bump separate from lint activation, release
+- Keep the Rust 1.95 MSRV/toolchain bump separate from lint activation, release
   version changes, no-panic baselines, and Rust 1.95 API cleanup.
 - Re-run the full required Rust 1.95 check/clippy matrix from a clean checkout
   with a known-good native SentencePiece/Python build environment.
