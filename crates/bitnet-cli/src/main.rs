@@ -5856,28 +5856,55 @@ async fn run_cpu_phase_warm_session(
     let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
     let model_file =
         model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
-    let kernel_family = kernel_family_for_quantization(config.quantization.quantization_type);
-    let kernel_implementation = cpu_kernel_implementation(config.quantization.quantization_type);
-    if cpu_kernel == "avx2" && kernel_implementation != "avx2" {
+    let dense_slm_model = is_dense_slm_model(model_family, &model_architecture);
+    let kernel_family = dense_slm_kernel_family(model_family, &model_architecture)
+        .unwrap_or_else(|| kernel_family_for_quantization(config.quantization.quantization_type));
+    let kernel_implementation = if dense_slm_model {
+        "cpu"
+    } else {
+        cpu_kernel_implementation(config.quantization.quantization_type)
+    };
+    if !dense_slm_model && cpu_kernel == "avx2" && kernel_implementation != "avx2" {
         anyhow::bail!(
             "--cpu-kernel avx2 requested but selected CPU kernel implementation is {kernel_implementation}"
         );
     }
-    if cpu_kernel == "scalar" && kernel_implementation != "scalar" {
+    if !dense_slm_model && cpu_kernel == "scalar" && kernel_implementation != "scalar" {
         anyhow::bail!(
             "--cpu-kernel scalar requested but selected CPU kernel implementation is {kernel_implementation}"
         );
     }
-    if cpu_kernel == "avx512" && kernel_implementation != "avx512" {
+    if !dense_slm_model && cpu_kernel == "avx512" && kernel_implementation != "avx512" {
         anyhow::bail!(
             "--cpu-kernel avx512 requested but selected CPU kernel implementation is {kernel_implementation}"
         );
     }
-    let selected_kernel = format!("{kernel_family}-{kernel_implementation}-reference");
-    let layout_source = layout_source_for_quantization(config.quantization.quantization_type);
-    let kernel_layout = kernel_layout_for_quantization(config.quantization.quantization_type);
-    let dequantizes_before_compute =
-        dequantizes_before_compute(config.quantization.quantization_type);
+    let selected_kernel = dense_slm_kernel_id(model_family, &model_architecture)
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("{kernel_family}-{kernel_implementation}-reference"));
+    let dense_quant_format = dense_slm_quant_format(&model_path);
+    let dense_layout_source = dense_slm_layout_source(&model_path);
+    let dense_kernel_layout = dense_slm_kernel_layout(&model_path);
+    let model_quant_format = if dense_slm_model {
+        dense_quant_format
+    } else {
+        "QK256/I2_S"
+    };
+    let layout_source = if dense_slm_model {
+        dense_layout_source
+    } else {
+        layout_source_for_quantization(config.quantization.quantization_type)
+    };
+    let kernel_layout = if dense_slm_model {
+        dense_kernel_layout
+    } else {
+        kernel_layout_for_quantization(config.quantization.quantization_type)
+    };
+    let dequantizes_before_compute = if dense_slm_model {
+        false
+    } else {
+        dequantizes_before_compute(config.quantization.quantization_type)
+    };
     let thread_count = effective_thread_count(threads);
     let cpu_features = detected_cpu_feature_labels();
     let cpu_model = detected_cpu_model_label();
@@ -5951,6 +5978,8 @@ async fn run_cpu_phase_warm_session(
             tokenizer_strict,
             pretokenizer_authority,
             tokenizer.as_ref(),
+            dense_slm_model,
+            model_quant_format,
             kernel_family,
             kernel_implementation,
             &selected_kernel,
@@ -5982,9 +6011,14 @@ async fn run_cpu_phase_warm_session(
         }));
     }
 
+    let aggregate_artifact_kind = if dense_slm_model {
+        "dense_slm_cpu_phase_warm_session"
+    } else {
+        "cpu_phase_warm_session"
+    };
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
-        "artifact_kind": "cpu_phase_warm_session",
+        "artifact_kind": aggregate_artifact_kind,
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "artifact_path": json_out.display().to_string(),
         "machine_id": machine_id,
@@ -6014,6 +6048,7 @@ async fn run_cpu_phase_warm_session(
             "fallback_loader_used": false,
             "tokenizer": tokenizer_label.as_str(),
             "vocab_size": tokenizer.vocab_size(),
+            "quant_format": model_quant_format,
         },
         "tokenizer": {
             "type": tokenizer_type.as_str(),
@@ -6027,7 +6062,24 @@ async fn run_cpu_phase_warm_session(
             "kernel_id": selected_kernel.as_str(),
             "requested_kernel": selected_kernel.as_str(),
             "selected_kernel": selected_kernel.as_str(),
+            "layout_source": layout_source,
+            "layout": kernel_layout,
             "fallback_used": false,
+        },
+        "dense_slm": if dense_slm_model {
+            serde_json::json!({
+                "model_family": model_family,
+                "architecture": model_architecture,
+                "quant_format": model_quant_format,
+                "kernel_family": kernel_family,
+                "kernel_id": selected_kernel.as_str(),
+                "layout_source": layout_source,
+                "layout": kernel_layout,
+                "provenance": "dense_slm_gguf_cpu_reference",
+                "claim_scope": "dense SLM CPU phase timing only",
+            })
+        } else {
+            serde_json::Value::Null
         },
         "cpu": {
             "model": cpu_model.as_str(),
@@ -6043,11 +6095,13 @@ async fn run_cpu_phase_warm_session(
         "profiles": profile_summaries,
         "claim_boundary": {
             "cpu_phase_timing_only": true,
+            "dense_slm_cpu_phase_timing_only": dense_slm_model,
             "speedup_claim": false,
             "sustained_throughput_claim": false,
             "arc140v_claim": false,
             "intel_npu_claim": false,
             "bitnet_answer_quality_claim": false,
+            "bitnet_qk256_i2s_claim": false,
         },
         "speedup_claim": false,
     });
@@ -6205,6 +6259,8 @@ fn cpu_phase_strict_profile_receipt(
     tokenizer_strict: bool,
     pretokenizer_authority: &str,
     tokenizer: &(dyn bitnet_tokenizers::Tokenizer + Send + Sync),
+    dense_slm_model: bool,
+    model_quant_format: &str,
     kernel_family: &str,
     kernel_implementation: &str,
     selected_kernel: &str,
@@ -6228,9 +6284,14 @@ fn cpu_phase_strict_profile_receipt(
     } else {
         Some(sampling_total_ms / run.sample_step_ms.len() as f64)
     };
-    serde_json::json!({
+    let artifact_kind = if dense_slm_model {
+        "dense_slm_cpu_phase_profile"
+    } else {
+        "strict_bitnet_cpu_profile"
+    };
+    let mut receipt = serde_json::json!({
         "schema_version": "1.0.0",
-        "artifact_kind": "strict_bitnet_cpu_profile",
+        "artifact_kind": artifact_kind,
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "session_artifact_path": session_path.display().to_string(),
         "artifact_path": receipt_path.display().to_string(),
@@ -6337,7 +6398,7 @@ fn cpu_phase_strict_profile_receipt(
             "vocab_size": tokenizer.vocab_size(),
             "loader_mode": loader_mode,
             "fallback_loader_used": false,
-            "quant_format": "QK256/I2_S",
+            "quant_format": model_quant_format,
         },
         "bitnet": {
             "weight_quantization": "W1.58",
@@ -6383,7 +6444,7 @@ fn cpu_phase_strict_profile_receipt(
             "tokenizer_source": tokenizer_source_str,
             "tokenizer_strict": tokenizer_strict,
             "model_family": model_family,
-            "quant_format": "QK256/I2_S",
+            "quant_format": model_quant_format,
             "cpu_model": cpu_model,
             "cpu_features": cpu_features,
             "thread_count": thread_count,
@@ -6426,7 +6487,31 @@ fn cpu_phase_strict_profile_receipt(
             "stop_policy": "fixed_token_count_no_eos_stop",
         },
         "speedup_claim": false,
-    })
+    });
+    if dense_slm_model {
+        if let Some(object) = receipt.as_object_mut() {
+            object.remove("bitnet");
+            object.insert(
+                "dense_slm".to_string(),
+                serde_json::json!({
+                    "model_family": model_family,
+                    "architecture": model_architecture,
+                    "quant_format": model_quant_format,
+                    "kernel_family": kernel_family,
+                    "kernel_id": selected_kernel,
+                    "layout_source": layout_source,
+                    "layout": kernel_layout,
+                    "execution_phase": run.phase,
+                    "provenance": "dense_slm_gguf_cpu_reference",
+                    "claim_scope": "dense SLM CPU phase timing only",
+                }),
+            );
+            object.insert("bitnet_qk256_i2s_claim".to_string(), serde_json::json!(false));
+            object.insert("arc140v_claim".to_string(), serde_json::json!(false));
+            object.insert("intel_npu_claim".to_string(), serde_json::json!(false));
+        }
+    }
+    receipt
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -80,13 +80,19 @@
     "strict_cpu_answer_smoke_previous_diagnostic_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json",
     "strict_cpu_answer_smoke_blocker": null,
     "strict_cpu_answer_smoke_notes": "The clean-provenance rerun records dense-qwen-cpu-reference / gguf_dense_q8_0 provenance, removes top-level BitNet I2_S provenance from child run receipts, and preserves 3/3 bounded answer gates with fallback_used=false.",
-    "phase_receipts": "not_run",
+    "phase_receipts": {
+      "status": "recorded_clean_dense_slm_provenance",
+      "aggregate": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json",
+      "prefill_512": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/prefill_512.json",
+      "decode_128": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/decode_128.json",
+      "notes": "The dense Qwen SLM phase receipts record dense-qwen-cpu-reference and gguf_dense_q8_0 provenance with fallback_used=false and no top-level BitNet I2_S/QK256 provenance."
+    },
     "arc_140v_execution": "not_run",
     "intel_npu_execution": "not_run"
   },
   "next_actions": [
     "Use the clean dense SLM provenance receipt as the 258V Qwen2.5 CPU answer-smoke baseline.",
-    "Add dense SLM phase receipts separately from BitNet QK256/I2_S receipts.",
+    "Use the dense SLM phase receipts separately from BitNet QK256/I2_S receipts.",
     "Keep Arc 140V and Intel NPU execution as separate future work with their own receipts.",
     "Do not treat the dense SLM CPU smoke as BitNet QK256/I2_S proof or acceleration evidence."
   ],
@@ -96,6 +102,7 @@
       "The pinned dense SLM candidate produced 3/3 passing bounded answer gates in ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json.",
       "The clean-provenance rerun produced 3/3 passing bounded answer gates in ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json.",
       "The clean-provenance child receipts record dense-qwen-cpu-reference and gguf_dense_q8_0 instead of BitNet I2_S/QK256 kernel or layout provenance.",
+      "The dense SLM phase receipts record prefill_512 and decode_128 timing for the pinned Qwen2.5 Q8_0 artifact with fallback_used=false and clean dense SLM provenance.",
       "The manifest records source, SHA256, architecture, quantization, tokenizer metadata, prompt template, context length, and reference-output expectations.",
       "No model binary is committed."
     ],
