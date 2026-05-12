@@ -962,6 +962,65 @@ Packed QK256 decode semantics are changed by this prompt-policy fix.
 Full model correctness is proven.
 ```
 
+## CPU258V-029 Answer Corpus After Prompt Fix
+
+Artifacts:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-prompt-fix.json
+ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-prompt-fix.json
+ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-prompt-fix.json
+```
+
+CPU258V-029 reruns the full fixed `strict-bitnet-answer-corpus-v1` prompt set
+after the CPU258V-028 prompt-policy fix. The release-built scalar and AVX2 runs
+use the same real GGUF model, explicit tokenizer, BitNet.cpp answer-ready prompt
+template, greedy settings, one-step top-k capture, and `fallback_used=false`.
+
+Current result:
+
+```text
+scalar_quality_failed = 0
+avx2_quality_failed = 0
+scalar_cases_passed = 5
+avx2_cases_passed = 5
+answer_parity_failed = 0
+first_divergence = null
+prompt_template = bitnetcpp-answer
+prompt_boundary = trailing Assistant: generation prompt preserved
+prompt_add_bos = false
+prompt_parse_special = true
+```
+
+The tiny corpus answers are:
+
+```text
+math_2_plus_2 = 4
+capital_france = Paris
+repeat_colors = red blue green
+say_ok = OK
+yes_no_water = No. Water is
+```
+
+Allowed claim:
+
+```text
+The corrected prompt-policy path was used for the 258V scalar and AVX2
+answer-corpus rerun, all five tiny deterministic gates passed in both lanes,
+and scalar-vs-AVX2 answer parity has no divergence for those receipts.
+```
+
+Not allowed:
+
+```text
+General BitNet chat quality is proven.
+External first-token logits parity is proven.
+CPU speed or sustained throughput is proven.
+Arc 140V or Intel NPU execution is proven.
+QK256 semantics or transformer math changed in this PR.
+Full model correctness is proven.
+```
+
 ## CPU258V-021 External Reference Instrumentation Boundary
 
 Artifact:

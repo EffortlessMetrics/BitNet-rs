@@ -21,6 +21,9 @@ ci/hardware/intel-258v/<date>/cpu-answer-parity-bitnetcpp-template-math_2_plus_2
 ci/hardware/intel-258v/<date>/prompt-authority-audit-math.json
 ci/hardware/intel-258v/<date>/hf-prompt-token-reference-parity.json
 ci/hardware/intel-258v/<date>/hf-prompt-token-reference-parity-after-prompt-fix.json
+ci/hardware/intel-258v/<date>/cpu-answer-corpus-scalar-after-prompt-fix.json
+ci/hardware/intel-258v/<date>/cpu-answer-corpus-avx2-after-prompt-fix.json
+ci/hardware/intel-258v/<date>/cpu-answer-parity-after-prompt-fix.json
 ci/hardware/intel-258v/<date>/external-first-token-reference.json
 ci/hardware/intel-258v/<date>/first-token-divergence-classification.json
 ci/hardware/intel-258v/<date>/cpu-qk256-i8s-semantic-audit.json
@@ -88,6 +91,18 @@ and `fallback_used=false`, but the generated answer fails the exact-answer gate.
 matching scalar run and scalar-vs-AVX2 parity result. Scalar and AVX2 generate
 the same token IDs and decoded text for the selected case, so the selected bad
 answer is not AVX2-specific.
+
+`cpu-answer-corpus-scalar-after-prompt-fix.json`,
+`cpu-answer-corpus-avx2-after-prompt-fix.json`, and
+`cpu-answer-parity-after-prompt-fix.json` rerun the full fixed
+`strict-bitnet-answer-corpus-v1` prompt set after the CPU258V-028 prompt-policy
+fix. They record the corrected BitNet answer-ready prompt boundary with the
+trailing `Assistant: ` generation prompt, `add_bos=false`, explicit tokenizer
+authority, scalar/AVX2 selected kernels, and `fallback_used=false`. The five
+tiny deterministic gates pass in both scalar and AVX2 and scalar-vs-AVX2 parity
+has no divergence. These receipts still do not claim broad chat quality, CPU
+speed, Arc 140V execution, Intel NPU execution, QK256 changes, or full model
+correctness.
 
 `platform-comparison-index.json` links independently scoped CPU, Arc 140V, and
 Intel NPU artifacts from the same Lunar Lake laptop. It is an index only: it may
