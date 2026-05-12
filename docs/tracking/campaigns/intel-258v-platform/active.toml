@@ -2027,7 +2027,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM258V-003"
-status = "ready"
+status = "pr_open"
+pr = 4535
 branch = "codex/lunar-lake/SLM258V-003-dense-slm-provenance"
 stackable = false
 review_mode = "codex_premerge"

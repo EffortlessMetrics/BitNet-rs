@@ -1,0 +1,18 @@
+timestamp = "2026-05-12T21:49:41Z"
+item = "SLM258V-003"
+event = "pr_open"
+pr = 4535
+branch = "codex/lunar-lake/SLM258V-003-dense-slm-provenance"
+summary = "Opened SLM258V-003 to separate dense Qwen SLM receipt provenance from BitNet I2_S/QK256 kernel/layout fields and rerun the 258V Qwen2.5 CPU smoke with clean dense SLM provenance."
+
+[claim_boundary]
+may_claim = [
+  "Dense Qwen SLM answer-corpus receipts no longer record BitNet I2_S/QK256 kernel/layout provenance.",
+  "The corrected 258V dense SLM smoke receipt records clean dense SLM provenance with fallback_used=false.",
+]
+must_not_claim = [
+  "Broad dense SLM chat quality is proven.",
+  "BitNet QK256/I2_S proof is affected.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Acceleration or performance is proven.",
+]
