@@ -1096,6 +1096,21 @@ enum Cmd {
         fail_on_error: bool,
     },
 
+    /// Validate `policy/clippy-lints.toml` and `policy/clippy-debt.toml`.
+    #[command(name = "check-lint-policy")]
+    CheckLintPolicy {
+        #[arg(long, default_value = "policy/clippy-lints.toml")]
+        lints: PathBuf,
+        #[arg(long, default_value = "policy/clippy-debt.toml")]
+        debt: PathBuf,
+        #[arg(long, default_value = "Cargo.toml")]
+        manifest: PathBuf,
+        #[arg(long, default_value = "target/bitnet/reports")]
+        report_dir: PathBuf,
+        #[arg(long, default_value_t = false)]
+        fail_on_error: bool,
+    },
+
     /// Run every policy checker in sequence and write a combined report.
     #[command(name = "policy-report")]
     PolicyReport {
@@ -1591,6 +1606,9 @@ fn real_main() -> Result<()> {
         Cmd::CheckClippyExceptions { exceptions, report_dir, fail_on_error } => {
             policy::clippy::run(exceptions, report_dir, fail_on_error)
         }
+        Cmd::CheckLintPolicy { lints, debt, manifest, report_dir, fail_on_error } => {
+            policy::clippy_lints::run(lints, debt, manifest, report_dir, fail_on_error)
+        }
         Cmd::PolicyReport { report_dir } => run_policy_report(report_dir),
         Cmd::LintWorkflows => xtask::lint_workflows::lint_workflows(),
         Cmd::Ci { command } => match command {
@@ -1689,6 +1707,14 @@ fn run_policy_report(report_dir: PathBuf) -> Result<()> {
         report_dir.clone(),
         false,
     );
+    println!("== clippy-lint-policy ==");
+    let _ = policy::clippy_lints::run(
+        PathBuf::from("policy/clippy-lints.toml"),
+        PathBuf::from("policy/clippy-debt.toml"),
+        PathBuf::from("Cargo.toml"),
+        report_dir.clone(),
+        false,
+    );
 
     let combined = report_dir.join("policy-report.md");
     let mut md = String::new();
@@ -1699,6 +1725,7 @@ fn run_policy_report(report_dir: PathBuf) -> Result<()> {
         ("File Policy", "file-policy.json"),
         ("No-Panic Family", "no-panic.json"),
         ("Clippy Exceptions", "clippy-exceptions.json"),
+        ("Clippy Lint Policy", "clippy-lint-policy.json"),
     ] {
         md.push_str(&format!("## {label}\n\n"));
         let path = report_dir.join(file);
