@@ -1659,7 +1659,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-027"
-status = "ready"
+status = "pr_open"
+pr = 4508
+head_sha = "c6da991ef0066f5375652b76aa2c4c44e49e0160"
 branch = "codex/lunar-lake/CPU258V-027-semantic-diagnosis"
 stackable = false
 review_mode = "codex_premerge"
