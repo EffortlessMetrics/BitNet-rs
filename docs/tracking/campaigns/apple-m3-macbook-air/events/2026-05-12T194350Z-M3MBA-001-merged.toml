@@ -1,0 +1,14 @@
+timestamp = "2026-05-12T19:43:50Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-001"
+event = "merged"
+pr = 4518
+head_sha = "d14075203bf362f2ef56cb2bda2a20871059ab44"
+merge_sha = "33ff04f0ccd0892a301c8569ea33d4ce29feaf13"
+actor = "codex"
+
+notes = [
+  "Merged the M3 MacBook Air campaign control plane and roadmap linkage.",
+  "Follow-on roadmap detail and decomposition landed through PRs #4519 and #4525 without changing the M3MBA-001 lifecycle state.",
+  "The next unblocked item is M3MBA-002: capture the real M3 Air machine/profile receipt with inference_run=false before model validation starts.",
+]
