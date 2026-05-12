@@ -32,6 +32,12 @@ the broader MacBook umbrella and historical cross-reference record; use
 `apple-m3-macbook-air` for current M3 Air item state, validation commands,
 output paths, and merge gates.
 
+Do not open new live M3 Air execution work here unless it is explicitly an
+umbrella/proxy note. Machine-profile receipts, dense SLM MacBook runs, large
+artifact downloads, storage audits, and M4 handoff reports belong in
+`apple-m3-macbook-air` first; this campaign should link to those items instead
+of duplicating them.
+
 | Work item | Status | Notes |
 |---|---|---|
 | MB-AS-001 | merged | Add a MacBook machine/storage/profile receipt contract. |
