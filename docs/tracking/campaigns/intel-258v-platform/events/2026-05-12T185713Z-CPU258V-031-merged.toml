@@ -3,8 +3,12 @@ campaign = "intel-258v-platform"
 item = "CPU258V-031"
 event = "merged"
 pr = 4523
+actor = "EffortlessSteven"
 merge_sha = "cf387bdc74649006f8aaed245a89fba487ce6e7c"
 summary = "Merged CPU258V-031, refreshing the corrected 258V CPU reference bundle after the prompt-policy fix."
+notes = [
+  "Closed the corrected 258V CPU reference bundle and promoted the dense SLM manifest follow-up.",
+]
 details = [
   "The corrected bundle links the prompt-policy fix, post-fix HF prompt/token parity, post-fix scalar and AVX2 answer corpus receipts, post-fix answer parity, and post-fix warm-session phase receipts.",
   "The corrected bundle is the current 258V CPU reference index for future Arc 140V and Intel NPU comparison work.",
