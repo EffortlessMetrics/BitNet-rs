@@ -1,0 +1,14 @@
+timestamp = "2026-05-12T20:01:24Z"
+campaign = "intel-258v-platform"
+item = "SLM258V-001"
+event = "merged"
+pr = 4527
+head_sha = "8467cf96eae403999d7f478b7d91963c373a8205"
+merge_sha = "624b59258683ba766aec023eeb51af1b3a37a362"
+actor = "codex"
+
+notes = [
+  "Merged the Lunar Lake dense SLM artifact manifest.",
+  "The manifest pins Qwen2.5 0.5B Instruct Q8_0 as a future 258V CPU strict answer smoke candidate without committing a model binary.",
+  "Dense SLM execution on the 258V, answer quality, BitNet QK256/I2_S proof, Arc 140V execution, Intel NPU execution, acceleration, and performance remain unclaimed.",
+]
