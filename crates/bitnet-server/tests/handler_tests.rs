@@ -13,7 +13,7 @@ use bitnet_server::config::{ConfigBuilder, ServerSettings};
 use bitnet_server::execution_router::ExecutionRouterConfig;
 use bitnet_server::model_manager::ModelManagerConfig;
 use bitnet_server::monitoring::MonitoringConfig;
-use bitnet_server::security::SecurityConfig;
+use bitnet_server::security::{SecurityConfig, ValidationError};
 use bitnet_server::{
     EnhancedInferenceRequest, EnhancedInferenceResponse, ErrorResponse, InferenceRequest,
     InferenceResponse, ModelLoadRequest, ModelLoadResponse, ServerConfig,
@@ -575,14 +575,25 @@ fn validator_rejects_non_gguf_extension() {
 fn validator_accepts_gguf_extension() {
     let validator =
         bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
-    assert!(validator.validate_model_request("/models/model.gguf").is_ok());
+    assert!(validator.validate_model_request("models/model.gguf").is_ok());
 }
 
 #[test]
 fn validator_accepts_safetensors_extension() {
     let validator =
         bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
-    assert!(validator.validate_model_request("/models/model.safetensors").is_ok());
+    assert!(validator.validate_model_request("models/model.safetensors").is_ok());
+}
+
+#[test]
+fn validator_rejects_absolute_model_path_without_allowlist() {
+    let validator =
+        bitnet_server::security::SecurityValidator::new(SecurityConfig::default()).unwrap();
+    assert!(matches!(
+        validator.validate_model_request("/models/model.gguf"),
+        Err(ValidationError::InvalidFieldValue(msg))
+            if msg == "Absolute paths are not allowed when allowed_model_directories is empty"
+    ));
 }
 
 // ---------------------------------------------------------------------------

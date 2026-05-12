@@ -463,8 +463,21 @@ fn test_model_path_unsupported_extension_rejected() {
 fn test_model_path_safetensors_extension_accepted() {
     let v = validator(false, false);
     assert!(
-        v.validate_model_request("/models/llama.safetensors").is_ok(),
+        v.validate_model_request("models/llama.safetensors").is_ok(),
         ".safetensors extension must be accepted"
+    );
+}
+
+#[test]
+fn test_absolute_model_path_rejected_without_allowlist() {
+    let v = validator(false, false);
+    assert!(
+        matches!(
+            v.validate_model_request("/models/llama.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg))
+                if msg == "Absolute paths are not allowed when allowed_model_directories is empty"
+        ),
+        "absolute model paths require allowed_model_directories"
     );
 }
 

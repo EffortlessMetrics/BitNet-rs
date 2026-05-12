@@ -326,7 +326,7 @@ Environment variables for `bitnet-server` (axum HTTP server). All are optional w
 - `BITNET_BLOCKED_IPS`: Blocked IP addresses (comma-separated)
 - `BITNET_INPUT_SANITIZATION`: Enable input sanitization (`true`/`false`)
 - `BITNET_CONTENT_FILTERING`: Enable content filtering (`true`/`false`)
-- `BITNET_ALLOWED_MODEL_DIRECTORIES`: Allowed model directories (comma-separated)
+- `BITNET_ALLOWED_MODEL_DIRECTORIES`: Allowed model directories (comma-separated). When unset or empty, server model-path validation allows relative model names but rejects absolute paths; configure explicit directories before accepting absolute model paths from requests.
 
 ### Observability
 - `BITNET_PROMETHEUS_ENABLED`: Enable Prometheus metrics (`true`/`false`)
