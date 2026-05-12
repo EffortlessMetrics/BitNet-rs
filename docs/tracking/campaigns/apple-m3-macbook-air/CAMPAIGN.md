@@ -63,6 +63,8 @@ artifacts to separate strict proof items.
 | M3MBA-006 | proposed | Evaluate the smaller 0.7B 1bitLLM control candidate after Microsoft 2B is accepted, rejected, or blocked. |
 | M3MBA-007 | proposed | Run only diagnostic TL1/TL2 checks for the 3B candidate and record the I2_S non-claim. |
 | M3MBA-008 | proposed | Hand accepted artifacts to separate M4 strict-proof items without claiming proof in this lane. |
+| M3MBA-009 | proposed | Synthesize M3 dense SLM behavior against M4 and SLM CPU evidence after M3MBA-004 exists. |
+| M3MBA-010 | proposed | Audit MacBook model-cache retention and cleanup after the first large BitNet download. |
 
 ## Phase Roadmap
 
@@ -71,6 +73,8 @@ artifacts to separate strict proof items.
 | Foundation | M3MBA-001, M3MBA-002, M3MBA-003 | Make the M3 Air a receipt-backed evidence source before model timing exists. | Campaign tracker, real machine profile, explicit MacBook backend label. |
 | Dense control | M3MBA-004 | Mirror the established dense Qwen SLM path on the exact MacBook host. | Smoke/operator receipts, receipt-check output, thermal and power context. |
 | BitNet artifact qualification | M3MBA-005, M3MBA-006, M3MBA-007 | Use the MacBook storage budget to accept, reject, or block candidate artifacts. | Candidate reports with source, revision, SHA256, tokenizer authority, prompt output, and cleanup state. |
+| Storage hygiene | M3MBA-010 | Keep the MacBook lane usable for large artifacts without hiding local cache state. | Artifact ledger audit with retained/deleted state and free-space floor. |
+| Cross-lane synthesis | M3MBA-009 | Compare M3 dense SLM behavior against M4 and SLM CPU evidence without broad claims. | Synthesis report naming comparable receipts and non-comparable gaps. |
 | Strict-proof handoff | M3MBA-008 | Convert accepted artifact evidence into separate M4 proof work. | Handoff report only; no manufactured M4 receipt. |
 
 ## Milestone Gates
@@ -96,6 +100,26 @@ Local cache state, terminal output, and downloaded model files are not enough.
 | M3MBA-006 | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
 | M3MBA-007 | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
 | M3MBA-008 | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
+| M3MBA-009 | `docs/reports/apple-silicon-macbook-m3-air-slm-synthesis.md` |
+| M3MBA-010 | `docs/reports/apple-silicon-macbook-m3-air-storage-audit.md` |
+
+## Tactical Order
+
+The first live sequence is:
+
+1. `M3MBA-002` records host facts and free disk without inference.
+2. `M3MBA-003` adds or confirms the explicit M3 Air CPU/NEON receipt label.
+3. `M3MBA-004` runs the dense Qwen control path before any BitNet artifact sweep.
+4. `M3MBA-005` screens the official Microsoft 2B I2_S artifact.
+5. `M3MBA-010` audits cache retention before secondary large downloads.
+6. `M3MBA-006` evaluates the smaller 0.7B control candidate.
+7. `M3MBA-009` summarizes M3 dense SLM behavior against comparable M4 and SLM CPU evidence.
+8. `M3MBA-007` keeps 3B TL routes diagnostic-only.
+9. `M3MBA-008` opens M4 proof handoff only for accepted artifacts.
+
+Do not skip the dense control path and jump straight to BitNet downloads. The
+dense run proves the MacBook runner, receipts, cache policy, backend labels, and
+operator flow before larger artifacts consume the local storage budget.
 
 ## Review Policy
 
