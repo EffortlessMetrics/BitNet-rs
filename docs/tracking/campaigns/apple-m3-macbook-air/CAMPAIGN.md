@@ -81,6 +81,18 @@ artifacts to separate strict proof items.
 | Cross-lane synthesis | M3MBA-009 | Compare M3 dense SLM behavior against M4 and SLM CPU evidence without broad claims. | Synthesis report naming comparable receipts and non-comparable gaps. |
 | Strict-proof handoff | M3MBA-008 | Convert accepted artifact evidence into separate M4 proof work. | Handoff report only; no manufactured M4 receipt. |
 
+## Operating Tracks
+
+The lane is managed as four tracks so SLM cross-check work, Mac BitNet artifact
+qualification, and M4 strict-proof handoff do not collapse into one claim.
+
+| Track | Items | Advances when | Stops when |
+|---|---|---|---|
+| Host proof | M3MBA-002, M3MBA-003 | Machine facts, cache root, storage budget, and explicit M3 Air CPU/NEON receipt labeling are committed. | Host facts are missing, cache root is ambiguous, or M4 receipt wording would need to be loosened. |
+| Dense SLM control | M3MBA-004A, M3MBA-004B, M3MBA-009 | Dense Qwen smoke/operator receipts record model hash, tokenizer metadata, backend label, fallback status, power, thermal, and comparison-grade status. | The M3 Air receipt cannot be distinguished from M4 evidence or dense SLM evidence lacks model/tokenizer/backend context. |
+| Mac BitNet artifacts | M3MBA-005A, M3MBA-005B, M3MBA-005C, M3MBA-006, M3MBA-007, M3MBA-010 | Candidate reports record source, revision, size, SHA256, tokenizer authority, prompt output, and cleanup/retention state. | Dense control has not passed or produced an accepted blocker, storage state is unclear, or tokenizer authority is missing. |
+| Strict-proof handoff | M3MBA-008 | An accepted artifact has enough source/hash/tokenizer metadata to open separate M4 strict-proof work. | No artifact is accepted, or the handoff would imply M3 evidence is M4 proof. |
+
 ## Roadmap Horizons
 
 The roadmap is planned as four horizons. Each horizon has a concrete exit
