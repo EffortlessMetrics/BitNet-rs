@@ -1752,8 +1752,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-029"
-status = "pr_open"
+status = "merged"
 pr = 4516
+merge_sha = "7836f9be2e4031b9ea83b210eb828e9630dbc5c3"
 branch = "codex/lunar-lake/CPU258V-029-answer-corpus-after-prompt-fix"
 stackable = false
 review_mode = "codex_premerge"
@@ -1795,6 +1796,47 @@ must_not_claim = [
   "General BitNet answer quality is proven.",
   "External first-token logits parity is proven.",
   "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "QK256 semantics or transformer math changed.",
+  "Full model correctness is proven.",
+]
+
+[[work_item]]
+id = "CPU258V-030"
+status = "ready"
+branch = "codex/lunar-lake/CPU258V-030-phase-receipts-after-prompt-fix"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-029"]
+acceptance = "Rerun 258V strict CPU warm-session phase receipts after the CPU258V-028 prompt-policy fix and CPU258V-029 answer-corpus pass, recording model load, tokenizer, prefill_512, first_token, decode_128, selected kernel, thread count, power/topology context, prompt policy, and fallback=false without claiming speedup, sustained throughput, Arc/NPU execution, QK256 changes, or full model correctness."
+commands = [
+  "target/release/bitnet.exe cpu-phase-warm-session --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --strict-loader --strict-tokenizer --threads 8 --prefill-prompt-file ci/hardware/intel-258v/2026-05-08/prefill-512-prompt.txt --decode-tokens 128 --cpu-kernel avx2 --prompt-template bitnetcpp-answer --platform-artifact ci/hardware/intel-258v/2026-05-08/platform-probe.json --json-out ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/prefill_512.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/decode_128.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The release-built 258V warm-session phase receipts were refreshed after the prompt-policy fix.",
+  "The phase run used real_gguf loading, explicit strict tokenizer resolution, selected i2_s-avx2-reference, corrected prompt policy, and fallback_used=false.",
+  "prefill_512, first_token, and decode_128 phase evidence is recorded for the corrected prompt/model path.",
+]
+must_not_claim = [
+  "A speedup is proven.",
+  "Sustained throughput is proven.",
+  "General BitNet chat quality is proven beyond the fixed tiny corpus.",
   "Arc 140V or Intel NPU execution is proven.",
   "QK256 semantics or transformer math changed.",
   "Full model correctness is proven.",
