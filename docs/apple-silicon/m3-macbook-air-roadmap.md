@@ -60,6 +60,15 @@ candidate acceptance or rejection
 handoff only after coherent reference output is recorded
 ```
 
+Related control files:
+
+```text
+ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml
+docs/apple-silicon/bitnet-candidate-matrix.md
+docs/apple-silicon/apple-bitnet-artifact-sweep.md
+docs/tracking/campaigns/apple-bitnet-artifact-sweep/
+```
+
 ## Roadmap Summary
 
 | Phase | Work item | Outcome | Evidence |
@@ -67,11 +76,11 @@ handoff only after coherent reference output is recorded
 | 0 | `M3MBA-001` | Campaign tracker, roadmap linkage, and claim boundaries | `docs/tracking/campaigns/apple-m3-macbook-air/` |
 | 1 | `M3MBA-002` | Real M3 Air machine profile, no inference | `ci/hardware/apple-silicon-macbook/.../machine-profile.json` |
 | 2 | `M3MBA-003` | Explicit M3 Air receipt label | Validator or label evidence for `apple-m3-air-cpu-neon` |
-| 3 | `M3MBA-004` | Dense Qwen SLM mirror on M3 Air | Mac validate receipt plus receipts-check output |
+| 3 | `M3MBA-004` | Dense Qwen SLM mirror on M3 Air | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json` plus report |
 | 4 | `M3MBA-005` | Official Microsoft 2B I2_S artifact qualification | Reference-runner report, SHA256, tokenizer authority |
-| 5 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | Reference-runner report and cleanup record |
-| 6 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | Diagnostic report, explicit I2_S non-support note |
-| 7 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | Handoff plan only; no manufactured M4 receipt |
+| 5 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
+| 6 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
+| 7 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
 
 ## Milestone Gates
 
@@ -113,7 +122,7 @@ condition:
 ```text
 foundation lane:
   prove the local machine facts, storage budget, cache root, and receipt label
-  stop when MB-AS-008 records inference_run=false profile evidence
+  stop when M3MBA-002 records inference_run=false profile evidence
 
 dense SLM lane:
   mirror the known-good Qwen route on the M3 Air with deterministic receipts
@@ -360,11 +369,11 @@ reproduced cheaply. The committed report should state what happened either way.
      --corpus-repeat-runs 2 \
      --max-new-tokens 32 \
      --backend-label apple-m3-air-cpu-neon \
-     --json-out target/apple-silicon-macbook/m3-air/MB-AS-002/qwen-mirror-smoke.json \
+     --json-out target/apple-silicon-macbook/m3-air/M3MBA-004/qwen-mirror-smoke.json \
      --quiet
 
    cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check \
-     target/apple-silicon-macbook/m3-air/MB-AS-002/qwen-mirror-smoke.json \
+     target/apple-silicon-macbook/m3-air/M3MBA-004/qwen-mirror-smoke.json \
      --json
    ```
 
@@ -378,7 +387,7 @@ reproduced cheaply. The committed report should state what happened either way.
      --max-new-tokens 32 \
      --allocation-audit \
      --backend-label apple-m3-air-cpu-neon \
-     --json-out target/apple-silicon-macbook/m3-air/MB-AS-002/qwen-mirror-operator.json \
+     --json-out target/apple-silicon-macbook/m3-air/M3MBA-004/qwen-mirror-operator.json \
      --quiet
    ```
 
@@ -394,6 +403,14 @@ reproduced cheaply. The committed report should state what happened either way.
    authority, external Microsoft pre-tokenizer authority, reference-runner
    command, prompt outputs, bad/no-authority rejection evidence, and cleanup
    status.
+
+   Cross-check candidate priority and route expectations against:
+
+   ```text
+   ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml
+   docs/apple-silicon/bitnet-candidate-matrix.md
+   docs/apple-silicon/apple-bitnet-artifact-sweep.md
+   ```
 
    Required report:
 
@@ -434,6 +451,13 @@ reproduced cheaply. The committed report should state what happened either way.
    Falcon-E candidates remain secondary and should wait until Microsoft and
    1bitLLM behavior is understood.
 
+   Required reports:
+
+   ```text
+   docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md
+   docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md
+   ```
+
    The 0.7B candidate should answer whether the smaller artifact is useful for
    fast local iteration on this M3 Air. The 3B diagnostic should answer only
    whether supported TL routes provide useful compatibility evidence; it must
@@ -444,6 +468,12 @@ reproduced cheaply. The committed report should state what happened either way.
    Promote only accepted artifacts to a separate M4 strict Apple CPU/NEON proof
    item. The M3 Air can qualify artifacts and compare Apple Silicon behavior; it
    must not be used to manufacture M4 receipts.
+
+   Required handoff report:
+
+   ```text
+   docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md
+   ```
 
 ## Near-Term Order
 
