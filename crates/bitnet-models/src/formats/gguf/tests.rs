@@ -1201,15 +1201,15 @@ fn q4_k_block(scale: f32, min: f32, code: u8) -> Vec<u8> {
     data.extend_from_slice(&half::f16::from_f32(scale).to_bits().to_le_bytes());
     data.extend_from_slice(&half::f16::from_f32(min).to_bits().to_le_bytes());
     data.extend_from_slice(&[1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
-    data.extend(std::iter::repeat(code).take(128));
+    data.extend(std::iter::repeat_n(code, 128));
     data
 }
 
 fn q6_k_block(scale: f32, super_scale: i8, qh_byte: u8, ql_byte: u8) -> Vec<u8> {
     let mut data = Vec::with_capacity(210);
-    data.extend(std::iter::repeat(ql_byte).take(128));
-    data.extend(std::iter::repeat(qh_byte).take(64));
-    data.extend(std::iter::repeat(super_scale as u8).take(16));
+    data.extend(std::iter::repeat_n(ql_byte, 128));
+    data.extend(std::iter::repeat_n(qh_byte, 64));
+    data.extend(std::iter::repeat_n(super_scale as u8, 16));
     data.extend_from_slice(&half::f16::from_f32(scale).to_bits().to_le_bytes());
     data
 }
