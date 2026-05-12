@@ -1,0 +1,18 @@
+timestamp = "2026-05-12T13:10:50Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-027"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4508
+head_sha = "c6da991ef0066f5375652b76aa2c4c44e49e0160"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-027-semantic-diagnosis"
+summary = "Opened CPU258V-027 to add the 258V CPU semantic diagnosis artifact."
+notes = [
+  "PR #4508 adds ci/hardware/intel-258v/2026-05-08/cpu-semantic-diagnosis.json.",
+  "The diagnosis names the HF prompt-policy mismatch as the next actionable semantic blocker and preserves the separate external-reference instrumentation gap.",
+  "The PR is artifact/docs/tracker only and does not touch runtime code.",
+  "It must not claim prompt-policy fix, external generated-token-ID parity, external logits parity, new answer quality, CPU speed, Arc 140V execution, Intel NPU execution, or full model correctness.",
+]
+

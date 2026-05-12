@@ -97,6 +97,11 @@ The following changes are planned as part of the Rust 1.95 / next minor wave.
 See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder and
 CI economics framing.
 
+Current `main` has the no-panic allowlist present but intentionally empty and
+advisory-style. There is no generated `policy/no-panic-baseline.toml` yet. The
+Rust 1.95 wave hardens identity first, then generates the baseline and switches
+to no-new-debt mode.
+
 ### Identity hardening (PR 7)
 
 Current allowlist identity is `path + family + selector`. Before bulk baseline
@@ -126,6 +131,7 @@ Required tests before PR 7 merges:
 allowlist_entry_requires_exact_snippet
 allowlist_count_is_consumed_per_occurrence
 allowlist_does_not_cover_same_file_same_callee_different_snippet
+baseline_generation_subtracts_allowlisted_counts
 duplicate_allowlist_keys_are_rejected
 blocking_mode_ignores_baseline_but_honors_counted_allowlist
 ```

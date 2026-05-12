@@ -1,0 +1,18 @@
+timestamp = "2026-05-12T13:40:39Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-027"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4508
+merge_sha = "fdde46f6303448e241c045e6a41e78ab244746ba"
+actor = "codex"
+branch = "codex/lunar-lake/CPU258V-027-semantic-diagnosis"
+summary = "Merged CPU258V-027, adding the 258V CPU semantic diagnosis artifact."
+notes = [
+  "The merged PR adds ci/hardware/intel-258v/2026-05-08/cpu-semantic-diagnosis.json.",
+  "The diagnosis names the metadata-authority prompt-policy mismatch against the external HF apply_chat_template boundary as the next actionable CPU blocker.",
+  "It preserves the separate external-reference instrumentation gap for generated-token IDs and first-token logits/top-k.",
+  "CPU258V-028 is now the next prompt-policy fix item.",
+]
+

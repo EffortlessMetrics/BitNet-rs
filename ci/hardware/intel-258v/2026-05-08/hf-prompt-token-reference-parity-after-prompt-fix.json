@@ -1,0 +1,304 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "bitnet_hf_prompt_token_reference_parity_after_prompt_fix",
+  "machine_id": "intel-258v",
+  "proof_stage": "external_prompt_token_reference_matched_after_prompt_policy_fix",
+  "created_utc": "2026-05-12T00:00:00Z",
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T",
+    "gguf_path": "C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "gguf_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tokenizer_path": "C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json",
+    "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+  },
+  "reference": {
+    "source": "HF AutoTokenizer.apply_chat_template",
+    "transformers_version": "5.8.0",
+    "tokenizers_version": "0.22.2",
+    "jinja2_version": "3.1.6",
+    "python_version": "3.14.4",
+    "tokenizer_bos_token": "<|begin_of_text|>",
+    "tokenizer_bos_token_id": 128000,
+    "tokenizer_eos_token": "<|eot_id|>",
+    "tokenizer_eos_token_id": 128009,
+    "base_vocab_size": 128000,
+    "total_token_count": 128256,
+    "chat_template_present": true
+  },
+  "summary": {
+    "cases_total": 4,
+    "cases_passed": 4,
+    "cases_failed": 0,
+    "all_rendered_prompts_match": true,
+    "all_prompt_token_ids_match": true,
+    "first_divergence_stage": "none",
+    "notes": [
+      "CPU258V-028 preserves the HF apply_chat_template trailing generation-prompt space: Assistant: .",
+      "CPU258V-028 does not prepend executor BOS after rendering the BitNet answer-ready chat template.",
+      "The fixed BitNet-rs metadata_authority prompt strings and token IDs match the external HF boundary for the fixed prompt corpus."
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "math_2_plus_2",
+      "prompt": "What is 2+2? Answer with only the number.",
+      "reference": {
+        "source": "hf_autotokenizer_apply_chat_template",
+        "rendered_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 19
+      },
+      "bitnet_rs": {
+        "template_mode": "metadata_authority",
+        "rendered_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 19,
+        "prompt_policy": {
+          "add_bos": false,
+          "parse_special": true,
+          "add_generation_prompt": true
+        }
+      },
+      "comparison": {
+        "rendered_prompt_match": true,
+        "prompt_token_ids_match": true,
+        "first_rendered_prompt_mismatch": null,
+        "first_prompt_token_id_mismatch": null,
+        "observed_delta": "none_after_prompt_policy_fix"
+      }
+    },
+    {
+      "case_id": "say_ok",
+      "prompt": "Say exactly: OK",
+      "reference": {
+        "source": "hf_autotokenizer_apply_chat_template",
+        "rendered_prompt": "User: Say exactly: OK<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 10
+      },
+      "bitnet_rs": {
+        "template_mode": "metadata_authority",
+        "rendered_prompt": "User: Say exactly: OK<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 10,
+        "prompt_policy": {
+          "add_bos": false,
+          "parse_special": true,
+          "add_generation_prompt": true
+        }
+      },
+      "comparison": {
+        "rendered_prompt_match": true,
+        "prompt_token_ids_match": true,
+        "first_rendered_prompt_mismatch": null,
+        "first_prompt_token_id_mismatch": null,
+        "observed_delta": "none_after_prompt_policy_fix"
+      }
+    },
+    {
+      "case_id": "capital_france",
+      "prompt": "What is the capital of France? Answer with one word.",
+      "reference": {
+        "source": "hf_autotokenizer_apply_chat_template",
+        "rendered_prompt": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 18
+      },
+      "bitnet_rs": {
+        "template_mode": "metadata_authority",
+        "rendered_prompt": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 18,
+        "prompt_policy": {
+          "add_bos": false,
+          "parse_special": true,
+          "add_generation_prompt": true
+        }
+      },
+      "comparison": {
+        "rendered_prompt_match": true,
+        "prompt_token_ids_match": true,
+        "first_rendered_prompt_mismatch": null,
+        "first_prompt_token_id_mismatch": null,
+        "observed_delta": "none_after_prompt_policy_fix"
+      }
+    },
+    {
+      "case_id": "yes_no_water",
+      "prompt": "Answer yes or no: is water wet?",
+      "reference": {
+        "source": "hf_autotokenizer_apply_chat_template",
+        "rendered_prompt": "User: Answer yes or no: is water wet?<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 15
+      },
+      "bitnet_rs": {
+        "template_mode": "metadata_authority",
+        "rendered_prompt": "User: Answer yes or no: is water wet?<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "token_count": 15,
+        "prompt_policy": {
+          "add_bos": false,
+          "parse_special": true,
+          "add_generation_prompt": true
+        }
+      },
+      "comparison": {
+        "rendered_prompt_match": true,
+        "prompt_token_ids_match": true,
+        "first_rendered_prompt_mismatch": null,
+        "first_prompt_token_id_mismatch": null,
+        "observed_delta": "none_after_prompt_policy_fix"
+      }
+    }
+  ],
+  "fallback_used": false,
+  "claim_boundary": {
+    "may_claim": [
+      "BitNet-rs metadata-authoritative BitNet prompt rendering matches the external HF apply_chat_template prompt strings for the fixed prompt corpus.",
+      "BitNet-rs metadata-authoritative BitNet prompt token IDs match the external HF apply_chat_template token IDs for the fixed prompt corpus.",
+      "The CPU258V-027 BOS/trailing-generation-space prompt mismatch is removed by the CPU258V-028 prompt-policy fix."
+    ],
+    "must_not_claim": [
+      "answer quality",
+      "model inference or logits parity",
+      "speed or throughput",
+      "Arc 140V execution or acceleration",
+      "Intel NPU execution or acceleration",
+      "QK256 decode correctness",
+      "full model correctness"
+    ]
+  }
+}

@@ -5,6 +5,7 @@
 |---|---|---|---|
 | amd-cpu-baselines | AMD CPU baselines | AMD5700X-003 | These lanes are CPU proof lanes, not accelerator lanes. |
 | apple-bitnet-artifact-sweep | Apple BitNet artifact sweep | ABAS-001 | Use MacBook first for larger artifact sweeps; do not manufacture MacBook receipts from the M4 Mac mini. |
+| apple-m3-macbook-air | Apple M3 MacBook Air | M3MBA-001 | This is the Apple M3 MacBook Air lane, not the M4 Mac mini product, performance, or strict-proof lane. |
 | apple-m4 | Apple M4 Mac mini validation | M4-018 | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
 | apple-m4-continuity | Apple M4 continuity | M4-CONT-005 | This is an M4 Mac mini local campaign; do not execute MacBook artifact sweeps or MacBook receipts here. |
 | apple-m4-dense-slm-regression | Apple M4 dense SLM regression guardrails | M4-SLM-REG-005 | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
@@ -18,17 +19,17 @@
 | apple-m4-slm-metal-phases | Apple M4 SLM Metal phases | M4-METAL-007 | This is an M4 Mac mini dense SLM campaign. |
 | apple-m4-slm-model-breadth | Apple M4 SLM model breadth | M4-MODEL-008 | This is an M4 Mac mini dense SLM campaign. |
 | apple-m4-slm-performance | Apple M4 SLM performance | M4-SLM-PERF-007 | Do not reopen the completed apple-m4, apple-m4-operational, apple-m4-slm-answer, or apple-m4-productization campaigns. |
-| apple-silicon-macbook | Apple Silicon MacBook cross-reference | MB-AS-004 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
+| apple-silicon-macbook | Apple Silicon MacBook cross-reference | MB-AS-008 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
 | ci-coverage | CI coverage | CI-COVERAGE-001 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
 | cpu-proof | BitNet CPU proof | CPU-ANSWER-007 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | CPU QK256 performance | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
-| intel-258v-platform | Intel 258V platform validation | LNL258V-004 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
+| intel-258v-platform | Intel 258V platform validation | CPU258V-030 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
 | intel-a770 | Intel Arc A770 validation | A770-003 | OpenCL-first for native A770 proof. |
 | intel-npu | Intel NPU validation | NPU-011 | Device-node detection is not inference. |
 | model-artifacts | Model artifact answer authority | MODEL-ARTIFACT-002 | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-DENSE-014 | CUDA visibility is not kernel execution. |
-| server-real-inference | Server real inference | SERVER-003 | Do not reintroduce simulated inference. |
+| server-real-inference | Server real inference | SERVER-005 | Do not reintroduce simulated inference. |
 | slm-cpu | Small dense model CPU proof | SLM-CPU-008 | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | Tracker infrastructure | TRACKER-003 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM inference proof lane | WASM-002 | WASM detection is not inference. |

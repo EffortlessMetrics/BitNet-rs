@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "artifact_kind": "intel_258v_cpu_semantic_diagnosis",
+  "machine_id": "intel-258v",
+  "captured_at_utc": "2026-05-12T13:04:35Z",
+  "proof_stage": "semantic_diagnosed",
+  "diagnosis_scope": "bitnet_cpu_reference_ladder",
+  "source_bundle": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
+  "source_artifacts": {
+    "prompt_authority_audit": "ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json",
+    "hf_prompt_token_reference_parity": "ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity.json",
+    "external_first_token_reference": "ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json",
+    "first_token_divergence_classifier": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json",
+    "external_reference_instrumentation": "ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json",
+    "qk256_i8s_semantic_audit": "ci/hardware/intel-258v/2026-05-08/cpu-qk256-i8s-semantic-audit.json",
+    "output_head_logits_index_audit": "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
+    "observed_logits_scalar": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-full-observed-logits.json",
+    "observed_logits_avx2": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-full-observed-logits.json",
+    "transformer_layer_parity": "ci/hardware/intel-258v/2026-05-08/transformer-layer-parity.json",
+    "answer_parity": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
+    "phase_warm_session": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json"
+  },
+  "status": {
+    "overall_classification": "prompt_policy_mismatch_before_external_logits_parity",
+    "current_blocker": "BitNet-rs metadata-authority prompt rendering still differs from the official HF apply_chat_template boundary: HF omits BOS and preserves a trailing Assistant: generation-prompt space, while BitNet-rs prepends BOS and renders Assistant: without that trailing space.",
+    "secondary_evidence_blocker": "External bitnet.cpp/HF reference evidence still lacks direct generated-token IDs and first-token logits/top-k, so external first-token logits parity remains unavailable after prompt/token policy is corrected.",
+    "recommended_next_fix": "CPU258V-028 should align metadata-authoritative BitNet prompt rendering with the official template boundary, preserving generation-prompt spacing exactly and avoiding duplicate or executor-added BOS/EOS for rendered chat templates, then rerun the fixed 258V answer corpus and scalar-vs-AVX2 parity."
+  },
+  "prompt_token_status": {
+    "local_current_default_vs_metadata_authority": "matched",
+    "local_classification": "current_default_and_metadata_authority_prompt_tokens_match",
+    "hf_reference_status": "mismatched",
+    "hf_cases_total": 4,
+    "hf_cases_passed": 0,
+    "hf_cases_failed": 4,
+    "hf_first_divergence_stage": "prompt",
+    "rendered_prompt_match": false,
+    "prompt_token_ids_match": false,
+    "observed_deltas": [
+      "HF apply_chat_template(tokenize=True) did not prepend BOS for the fixed prompts.",
+      "HF apply_chat_template renders the generation prompt with a trailing space after Assistant:.",
+      "BitNet-rs metadata_authority prepends BOS and renders Assistant: without the trailing generation-prompt space."
+    ]
+  },
+  "external_first_token_status": {
+    "generated_text_available": true,
+    "generated_token_ids_available": false,
+    "first_token_logits_available": false,
+    "classifier_summary": "reference_generated_token_ids_and_logits_unavailable",
+    "cases_total": 4,
+    "cases_inconclusive": 4,
+    "prompt_token_exact_matches": 0,
+    "prompt_token_local_bos_prefix_matches": 4,
+    "generated_text_trimmed_scalar_avx2_matches": 4,
+    "next_required_evidence": "capture direct reference generated-token IDs and first-token logits/top-k, or patch/script the reference runner to expose them without text re-tokenization"
+  },
+  "qk256_i8s_semantic_status": {
+    "classification": "matches_canonical_oracle_semantics",
+    "first_mismatch": null,
+    "answer_quality_classification": "not_evaluated",
+    "accelerator_execution_classification": "not_evaluated"
+  },
+  "output_head_logits_index_status": {
+    "classification": "output_head_logits_index_boundary_recorded",
+    "first_mismatch_stage": null,
+    "model_vocab_size": 128256,
+    "tokenizer_vocab_size": 128256,
+    "observed_scalar_logits_vector_length": 128256,
+    "observed_avx2_logits_vector_length": 128256,
+    "external_logits_parity_proven": false
+  },
+  "transformer_layer_status": {
+    "classification": "primary_and_comparison_transformer_layer_ladder_matched",
+    "first_divergence_stage": "none",
+    "boundaries_total": 13,
+    "boundaries_recorded": 13,
+    "comparison_boundaries_matched": 13,
+    "comparison_boundaries_mismatched": 0
+  },
+  "answer_parity_status": {
+    "proof_stage": "full_decode_parity_compared",
+    "corpus": "strict-bitnet-answer-corpus-v1",
+    "prompt_envelope": "bitnetcpp-template",
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "first_divergence": null,
+    "scalar_and_avx2_match": true,
+    "quality_scope": "narrow_fixed_corpus_only",
+    "general_answer_quality_proven": false
+  },
+  "phase_status": {
+    "warm_session_artifact": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
+    "profiles_recorded": [
+      "prefill_512",
+      "decode_128"
+    ],
+    "fallback_used": false,
+    "speedup_claim": false
+  },
+  "next_steps": [
+    {
+      "item": "CPU258V-028",
+      "action": "Fix metadata-authoritative BitNet prompt policy to match the official HF template boundary for generation-prompt spacing and BOS/EOS handling."
+    },
+    {
+      "item": "CPU258V-029",
+      "action": "Rerun scalar and AVX2 answer corpus receipts after the prompt policy fix and preserve first-divergence evidence."
+    },
+    {
+      "item": "CPU258V-031",
+      "action": "Refresh the CPU reference bundle after the semantic fix, answer corpus rerun, and parity rerun."
+    },
+    {
+      "item": "CPU258V-021 follow-up",
+      "action": "If deeper external parity is still needed, instrument the reference runner for generated-token IDs and first-token logits/top-k rather than inferring them from generated text."
+    }
+  ],
+  "may_claim": [
+    "The 258V CPU semantic diagnosis identifies the first currently actionable blocker as prompt-policy mismatch against the external HF apply_chat_template boundary.",
+    "The existing 258V CPU scalar and AVX2 paths match each other across the fixed full answer corpus, observed logits-vector length boundary, and transformer-layer parity ladder.",
+    "CPU QK256/I2_S/I8_S fixture semantics match the canonical oracle for the audited fixture."
+  ],
+  "must_not_claim": [
+    "The prompt-policy mismatch is fixed by this artifact.",
+    "External first-token logits parity is proven.",
+    "External generated-token-ID parity is proven.",
+    "Full model correctness is proven.",
+    "New or general BitNet answer quality is proven.",
+    "Sustained throughput or CPU speedup is proven.",
+    "Arc 140V or Intel NPU execution is proven by this CPU diagnosis.",
+    "CPU fallback satisfies accelerator proof.",
+    "Accelerator QK256 decode correctness is proven."
+  ],
+  "fallback_used": false
+}

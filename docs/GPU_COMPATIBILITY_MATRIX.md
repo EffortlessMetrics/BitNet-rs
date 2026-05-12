@@ -63,7 +63,7 @@ the CUDA kernel structure. Runtime integration is not yet implemented.
 |------|--------|---------------|-------|
 | M1 / M1 Pro / M1 Max | 🔮 Planned | v0.3.0 | macOS 13+ (Ventura) |
 | M2 / M2 Pro / M2 Max | 🔮 Planned | v0.3.0 | |
-| M3 / M3 Pro / M3 Max | 🔮 Planned | v0.3.0 | |
+| M3 / M3 Pro / M3 Max | 🔮 Planned | v0.3.0 | Metal GPU support remains planned; the live M3 MacBook Air lane is CPU/NEON receipt and artifact-screening work. See `docs/apple-silicon/m3-macbook-air-roadmap.md`. |
 | M4 / M4 Pro / M4 Max | 🔮 Planned | v0.3.0 | |
 
 Metal GPU detection is already present via `system_profiler` in

@@ -29,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RUST_CI_IMAGE: ghcr.io/effortlessmetrics/bitnet-rs-ci:rust-1.93
+  RUST_CI_IMAGE: ghcr.io/effortlessmetrics/bitnet-rs-ci:rust-1.95
 
 jobs:
   coverage:
@@ -96,6 +96,17 @@ jobs:
               cargo llvm-cov report --lcov --output-path lcov.info
               cargo llvm-cov report --text | tee coverage.txt
             '
+
+      - name: Restore coverage receipt ownership
+        if: always()
+        run: |
+          sudo mkdir -p target/bitnet/reports
+          sudo chown -R "$USER:$USER" target/bitnet
+          for file in coverage.json coverage.txt lcov.info; do
+            if [ -e "$file" ]; then
+              sudo chown "$USER:$USER" "$file"
+            fi
+          done
 
       - name: Disk usage after coverage
         if: always()

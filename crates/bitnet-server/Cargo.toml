@@ -51,7 +51,6 @@ metrics-prometheus = { workspace = true, optional = true }
 num_cpus.workspace = true
 opentelemetry = { workspace = true, optional = true }
 opentelemetry-otlp = { workspace = true, optional = true }
-opentelemetry-stdout = { workspace = true, optional = true }
 opentelemetry_sdk = { workspace = true, optional = true }
 prometheus = { workspace = true, optional = true }
 tonic = { workspace = true, optional = true }
@@ -122,7 +121,7 @@ gpu = [
   "runtime-profile-core",
 ]
 server = ["runtime-profile-core", "bitnet-runtime-bootstrap/runtime-profile-server"]
-opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry", "dep:tonic"]
+opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:tracing-opentelemetry", "dep:tonic"]
 prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
 request_batching = []                                                                                                                                                             # Gate request batching module (PR-1 scope)
 connection_pool = []                                                                                                                                                              # Gate connection pool module (PR-1 scope)
