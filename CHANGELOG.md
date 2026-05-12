@@ -19,6 +19,14 @@ All notable changes to bitnet-rs will be documented in this file.
     slices passed, but full local workspace validation was blocked by the
     Windows native SentencePiece/Python build path and still needs full CI or a
     known-good native build host before release readiness.
+- policy(clippy): activate the clean Rust 1.94/1.95 ratchets after measurement
+  - Promotes `same_length_and_capacity`, `manual_ilog2`,
+    `decimal_bitwise_operands`, `needless_type_cast`, and `manual_take` in the
+    workspace Clippy profile.
+  - Keeps measured fallout (`manual_checked_ops`,
+    `duration_suboptimal_units`, `unnecessary_trailing_comma`) staged with
+    policy debt, and keeps `manual_pop_if` staged because the installed Rust
+    1.95 Clippy reports it as unknown.
 - docs(policy): refresh Rust 1.95 and next-minor rollout map — `docs/development/RUST_1_95_ROLLOUT.md`
   - Continuation of #3866 CI economics control plane; refreshes the existing Rust 1.95
     rollout map against current `main` instead of starting from a blank template.

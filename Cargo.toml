@@ -633,18 +633,20 @@ unimplemented = "allow"
 # rather than style debt.
 out_of_bounds_indexing = "deny"
 
-# Rust 1.94/1.95 lint ratchets stay explicitly staged until the
-# dedicated Clippy ratchet and numeric/kernel cleanup PRs. Without
-# these deferrals, raising `clippy.toml`'s MSRV to 1.95.0 silently
-# promotes new Clippy findings to hard CI failures under
-# `RUSTFLAGS=-D warnings`.
-same_length_and_capacity = "allow"
-manual_ilog2 = "allow"
-decimal_bitwise_operands = "allow"
-needless_type_cast = "allow"
+# Rust 1.94/1.95 lint ratchets. PR5 measured the CI Core Clippy
+# surface first and only promotes the clean lints here; noisy or
+# currently unknown lints stay deferred with policy debt.
+same_length_and_capacity = "deny"
+manual_ilog2 = "warn"
+decimal_bitwise_operands = "warn"
+needless_type_cast = "warn"
+manual_take = "warn"
+
+# Deferred Rust 1.95 ratchets. CI Core runs with `RUSTFLAGS=-D warnings`,
+# so warning-level activation is a hard gate once these move out of
+# staging. `manual_pop_if` stays in the policy ledger only because this
+# Rust 1.95 Clippy reports it as unknown.
 manual_checked_ops = "allow"
-manual_take = "allow"
-manual_pop_if = "allow"
 duration_suboptimal_units = "allow"
 unnecessary_trailing_comma = "allow"
 # Additional `clippy::all` findings newly exposed by the Rust 1.95
