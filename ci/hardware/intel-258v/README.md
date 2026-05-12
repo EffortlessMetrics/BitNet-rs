@@ -66,6 +66,14 @@ per-profile strict CPU receipts under `cpu-phase-warm-session-profiles/`, and
 remains CPU-only phase timing evidence until those profile receipts are
 converted by `cpu_phase_benchmark_receipt`.
 
+`cpu-phase-warm-session-after-prompt-fix.json` refreshes that one-process phase
+surface after the metadata-authoritative prompt-policy fix and fixed-corpus
+answer pass. It writes per-profile receipts under
+`cpu-phase-warm-session-after-prompt-fix-profiles/`, records
+`i2_s-avx2-reference` with `fallback_used=false`, and remains phase timing
+evidence only; it does not claim speedup, sustained throughput, Arc/NPU
+execution, QK256 changes, or full model correctness.
+
 `cpu-answer-corpus-avx2-bitnetcpp-template.json` records the first 258V AVX2
 attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready
 prompt envelope. Timeout rows and `missing_child_receipt` kernels are blocker

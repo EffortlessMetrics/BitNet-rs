@@ -158,6 +158,25 @@ performance comparability, Arc 140V BitNet inference, Intel NPU BitNet
 inference, QK256 accelerator decode, acceleration, or CPU fallback as
 accelerator proof.
 
+### CPU Phase Receipts After Prompt Fix
+
+`CPU258V-030` refreshes the 258V CPU warm-session phase surface after the
+metadata-authoritative BitNet prompt-policy fix and the fixed-corpus
+scalar/AVX2 answer pass:
+
+```text
+ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix.json
+ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/prefill_512.json
+ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/decode_128.json
+```
+
+These receipts record a release-built strict CPU warm session with real GGUF
+loading, explicit tokenizer resolution, corrected prompt policy,
+`i2_s-avx2-reference`, `prefill_512`, `first_token`, `decode_128`, and
+`fallback_used=false`. They are CPU phase evidence only. They do not claim
+speedup, sustained throughput, broad BitNet answer quality, Arc 140V execution,
+Intel NPU execution, QK256 changes, or full model correctness.
+
 The 2026-05-08 CLI platform probe refresh is:
 
 ```text

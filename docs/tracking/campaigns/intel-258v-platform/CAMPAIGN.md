@@ -65,7 +65,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | CPU258V-027 | merged | Add a 258V CPU semantic diagnosis artifact that classifies the current blocker and recommended next fix from the CPU reference bundle evidence without runtime changes or new answer-quality, speed, Arc, or NPU claims; merged in #4508. |
 | CPU258V-028 | merged | Fix the metadata-authoritative BitNet prompt policy mismatch identified by CPU258V-027 so fixed prompt strings and token IDs match the external HF `apply_chat_template` boundary; merged in #4512. |
 | CPU258V-029 | merged | Rerun scalar and AVX2 BitNet answer-corpus receipts after the prompt-policy fix and classify any remaining tiny-corpus failures without broad answer-quality, speed, Arc/NPU, or QK256 claims; merged in #4516. |
-| CPU258V-030 | ready | Rerun strict CPU warm-session phase receipts after the prompt-policy fix and fixed-corpus pass without speedup, sustained-throughput, Arc/NPU, QK256, or full-model claims. |
+| CPU258V-030 | pr_open | Rerun strict CPU warm-session phase receipts after the prompt-policy fix and fixed-corpus pass without speedup, sustained-throughput, Arc/NPU, QK256, or full-model claims; opened in #4520. |
 | LNL258V-004 | merged | Add Windows Level Zero loader fallback and refresh the 258V platform probe so Arc 140V records Level Zero identity and PCI ID `0x64A0`; merged in #4148. |
 
 ## Review Policy
