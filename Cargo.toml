@@ -571,11 +571,10 @@ opt-level = 2
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
 unused_must_use = "deny"
-# `unexpected_cfgs` would fire on a number of legacy build-script
-# cfg names; staged at `allow` until those are inventoried in a
-# follow-up. The xtask file-policy gate already covers the
-# governance angle (no untracked non-Rust files).
-unexpected_cfgs = "allow"
+unexpected_cfgs = "warn"
+const_item_interior_mutations = "deny"
+function_casts_as_integer = "deny"
+unused_visibilities = "warn"
 
 [workspace.lints.clippy]
 # Broad category posture. After PR 07 ("workspace lint inheritance"),
