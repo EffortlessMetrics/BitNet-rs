@@ -5,10 +5,10 @@
   "item": "SLM258V-001",
   "created_utc": "2026-05-12T19:31:09Z",
   "machine_id": "intel-258v",
-  "purpose": "Pin the first dense SLM candidate for future Lunar Lake CPU strict answer smoke work.",
+  "purpose": "Pin the first dense SLM candidate and link the Lunar Lake CPU strict answer smoke evidence.",
   "selected_candidate": {
     "id": "qwen2_5_0_5b_instruct_q8_0",
-    "status": "accepted_for_lunar_lake_candidate_manifest_not_yet_run_on_258v",
+    "status": "accepted_for_lunar_lake_candidate_manifest_and_strict_cpu_answer_smoke_passed",
     "target_role": "first Lunar Lake dense SLM CPU strict answer smoke candidate",
     "family": "qwen",
     "model_name": "qwen2.5-0.5b-instruct",
@@ -81,19 +81,19 @@
     "intel_npu_execution": "not_run"
   },
   "next_actions": [
-    "Fetch or place the exact GGUF outside the repository under the expected local path.",
-    "Verify SHA256 before any SLM258V-002 strict answer smoke.",
-    "Run a Lunar Lake CPU strict answer smoke with the qwen2.5 prompt template and fallback_used=false."
+    "Use the strict CPU answer smoke receipt as the bounded dense SLM CPU baseline for follow-on 258V SLM work.",
+    "Keep Arc 140V and Intel NPU execution as separate future work with their own receipts.",
+    "Do not treat the dense SLM CPU smoke as BitNet QK256/I2_S proof or acceleration evidence."
   ],
   "claim_boundary": {
     "may_claim": [
-      "A dense SLM candidate artifact is pinned for future Lunar Lake CPU strict answer smoke work.",
+      "A dense SLM candidate artifact is pinned for Lunar Lake CPU strict answer smoke work.",
+      "The pinned dense SLM candidate passed the bounded strict CPU answer smoke recorded in ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json.",
       "The manifest records source, SHA256, architecture, quantization, tokenizer metadata, prompt template, context length, and reference-output expectations.",
       "No model binary is committed."
     ],
     "must_not_claim": [
-      "Dense SLM inference works on the 258V.",
-      "Dense SLM answer quality is proven on the 258V.",
+      "Broad dense SLM chat quality is proven on the 258V.",
       "BitNet QK256/I2_S proof is affected.",
       "Arc 140V or Intel NPU execution is proven.",
       "Acceleration or performance is proven."

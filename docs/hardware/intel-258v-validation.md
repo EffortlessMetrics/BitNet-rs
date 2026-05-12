@@ -203,12 +203,12 @@ ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json
 ```
 
 The manifest selects `qwen2.5-0.5b-instruct-q8_0` as the first 258V dense SLM
-CPU smoke candidate. It records the exact GGUF repository, revision, file,
-SHA256, architecture, quantization, tokenizer metadata, prompt template,
-context length, and reference-output expectations inherited from the existing
-dense Qwen evidence. This is a candidate manifest only: it does not commit a
-model binary, run dense SLM inference on the 258V, prove 258V answer quality,
-touch BitNet QK256/I2_S proof, or prove Arc 140V / Intel NPU execution.
+CPU smoke candidate and links the strict CPU answer-smoke receipt below. It
+records the exact GGUF repository, revision, file, SHA256, architecture,
+quantization, tokenizer metadata, prompt template, context length, and
+reference-output expectations inherited from the existing dense Qwen evidence.
+It does not commit a model binary, prove broad 258V SLM answer quality, touch
+BitNet QK256/I2_S proof, or prove Arc 140V / Intel NPU execution.
 
 ### Dense SLM CPU Answer Smoke
 

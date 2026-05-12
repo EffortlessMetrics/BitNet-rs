@@ -83,13 +83,13 @@ post-fix warm-session phase receipts. It supersedes the semantic-debug
 the same claim boundary: no new runtime behavior, no broad answer-quality
 claim, no speedup/sustained-throughput claim, and no Arc/NPU execution claim.
 
-`slm-artifact-manifest.json` pins the first dense SLM candidate for future
-Lunar Lake CPU strict answer smoke work. It records the exact Qwen2.5 0.5B
+`slm-artifact-manifest.json` pins the first dense SLM candidate and links the
+Lunar Lake CPU strict answer-smoke receipt. It records the exact Qwen2.5 0.5B
 Instruct Q8_0 GGUF source, revision, SHA256, architecture, quantization,
 tokenizer metadata, prompt template, context length, and cross-lane reference
-expectations. It does not commit a model binary and does not claim dense SLM
-inference, answer quality, speed, Arc 140V execution, Intel NPU execution, or
-BitNet QK256/I2_S coverage on the 258V.
+expectations. It does not commit a model binary and does not claim broad SLM
+answer quality, speed, Arc 140V execution, Intel NPU execution, or BitNet
+QK256/I2_S coverage on the 258V.
 
 `slm-answer-corpus-qwen25-cpu.json` records the first 258V dense SLM strict CPU
 answer smoke for the pinned Qwen2.5 0.5B Instruct Q8_0 artifact. It uses GGUF
