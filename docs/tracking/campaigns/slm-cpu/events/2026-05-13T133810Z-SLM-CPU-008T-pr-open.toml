@@ -1,0 +1,13 @@
+timestamp = "2026-05-13T13:38:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008T"
+event = "pr_open"
+pr = 4611
+branch = "codex/slm-cpu-008t-first-token-parity"
+head_sha = "b08116917a57e529df5bbf1a9f73d3c9b7c30833"
+actor = "codex"
+
+notes = [
+  "Opened #4611 to select dedicated GGUF output.weight before tied-embedding fallback in the Qwen3 first-token parity candidate.",
+  "The PR includes a regression test for output.weight-only heads and keeps first-token parity pending real i5-8250U artifact refresh.",
+]
