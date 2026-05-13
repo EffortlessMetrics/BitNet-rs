@@ -97,6 +97,17 @@ Lookup material for exact behavior, formats, and APIs.
 | Model artifact status | [model-artifacts/MODEL_COVERAGE_MATRIX.md](model-artifacts/MODEL_COVERAGE_MATRIX.md) |
 | Answer quality gate | [model-artifacts/ANSWER_ARTIFACT_GATE.md](model-artifacts/ANSWER_ARTIFACT_GATE.md) |
 
+### Source-of-truth and claim boundaries
+
+| Area | Entry point |
+| --- | --- |
+| Why a proof lane exists | [proposals/README.md](proposals/README.md) |
+| What must be true | [specs/README.md](specs/README.md) |
+| Durable decisions | [adr/README.md](adr/README.md) |
+| User-facing status and claim tiers | [status/README.md](status/README.md) |
+| Active campaign work state | [tracking/TRACKER_MODEL.md](tracking/TRACKER_MODEL.md) |
+| Proof-convergence plan | [../plans/proof-convergence/README.md](../plans/proof-convergence/README.md) |
+
 ### Development
 
 | Document | Purpose |

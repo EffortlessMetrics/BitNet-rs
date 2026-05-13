@@ -1,0 +1,49 @@
+# Status Documents
+
+Status documents are the user-facing claim map for BitNet-rs. They summarize
+which model families, hardware lanes, backend routes, and proof stages are
+usable, diagnostic, experimental, or unsupported.
+
+Status pages must link to proof. If a claim cannot point to a model artifact,
+hardware receipt, CI lane, policy ledger, or campaign closeout, keep it
+diagnostic, advisory, or planned.
+
+## Source-Of-Truth Role
+
+| Status surface | Owns |
+| --- | --- |
+| Capability matrix | Product claim tier, proof command, proof artifact, claim boundary |
+| Claim boundaries | What a proof does and does not allow the README or CLI docs to say |
+| README summary | Short user entry point, not the final proof map |
+| Receipt/artifact | Evidence for one run, model, backend, or lane |
+
+## Required Claim Boundary
+
+Status documents must preserve BitNet-specific distinctions:
+
+- Dense SLM support is not BitNet or 1-bit proof.
+- BitNet I2_S CPU proof is not CUDA proof.
+- CUDA receipt validation is not coherent answer readiness.
+- Hardware detection is not speed proof.
+- Structural model validity is not answer readiness.
+- Diagnostic receipts are useful evidence but must remain diagnostic until the
+  relevant artifact and answer gates pass.
+
+## Planned Status Surfaces
+
+The proof-convergence lane will add maintained status surfaces such as:
+
+```text
+docs/status/CAPABILITY_MATRIX.md
+docs/status/CLAIM_BOUNDARIES.md
+```
+
+Until those exist, prefer the existing operational authorities:
+
+- `README.md` for high-level user positioning.
+- `ROADMAP.md` for release direction and current limitations.
+- `docs/model-artifacts/ANSWER_ARTIFACT_GATE.md` for answer-readiness.
+- `docs/model-artifacts/MODEL_COVERAGE_MATRIX.md` for model coverage.
+- `docs/hardware/HARDWARE_MATRIX.md` for hardware lane identity.
+- `docs/ci/cost-and-verification-policy.md` for CI economics.
+- `docs/tracking/TRACKER_MODEL.md` for campaign execution state.
