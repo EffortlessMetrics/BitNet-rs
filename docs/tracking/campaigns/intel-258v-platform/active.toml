@@ -2313,3 +2313,50 @@ must_not_claim = [
   "BitNet QK256/I2_S proof is affected.",
   "Dense SLM receipts prove BitNet packed-kernel behavior.",
 ]
+
+[[work_item]]
+id = "SLM-OV258V-002"
+status = "ready"
+branch = "codex/lunar-lake/SLM-OV258V-002-openvino-cpu-preflight"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-OV258V-001"]
+acceptance = "Run the Qwen2.5 OpenVINO CPU LLMPipeline answer smoke when the exported INT4 symmetric IR model and openvino_genai runtime are available, or emit a blocked-before-execution receipt that records the exact missing runtime/export prerequisites without claiming OpenVINO CPU execution, fallback status, answer quality, speedup, Arc/NPU execution, or BitNet QK256/I2_S proof."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-llmpipeline-smoke.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "The OpenVINO CPU LLMPipeline smoke prerequisite state is recorded for the Qwen2.5 dense SLM operating lane.",
+  "OpenVINO Runtime 2026.1 is importable and reports CPU, GPU, and NPU devices on this host.",
+  "If openvino_genai or exported IR model files are missing, the receipt blocks before execution and does not claim generation.",
+]
+must_not_claim = [
+  "OpenVINO CPU LLMPipeline execution works unless generation actually runs.",
+  "OpenVINO CPU fallback_used=false is proven for generation unless generation actually runs.",
+  "Dense SLM answer quality improves.",
+  "OpenVINO CPU speedup or phase performance is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "BitNet QK256/I2_S proof is affected.",
+]
