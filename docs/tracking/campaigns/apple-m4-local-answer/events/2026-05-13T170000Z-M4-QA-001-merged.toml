@@ -1,0 +1,13 @@
+timestamp = "2026-05-13T17:00:00Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-001"
+event = "merged"
+pr = 4618
+merge_sha = "9fa3e532b89c36885c54350700d75a740a93911e"
+actor = "codex"
+
+notes = [
+  "Merged #4618, the Apple M4 CPU/NEON BitNet local-answer proof bridge.",
+  "The merged slice records release-built strict answer-corpus evidence for the accepted Microsoft BitNet I2_S GGUF and external tokenizer with selected_backend=apple-m4-cpu-neon, runtime_api=cpu, fallback_used=false, and all committed corpus cases passed.",
+  "Claim boundaries remain narrow: no full apple-m4-metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, MacBook coverage, broad performance, or BitNet availability through bitnet mac ask/chat/server.",
+]
