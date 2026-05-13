@@ -1,0 +1,14 @@
+timestamp = "2026-05-12T23:59:05Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-011"
+event = "merged"
+pr = 4541
+head_sha = "43a43dadb119e6c5ab658ea39c27eb38b13ca3b4"
+merge_sha = "b34dad337886a6668d51f7067b65f4b8b36dbbcf"
+actor = "codex"
+
+notes = [
+  "Merged the roadmap-depth PR for the live M3 MacBook Air lane.",
+  "The roadmap now separates host proof, dense SLM control, Mac BitNet artifact qualification, and M4 strict-proof handoff tracks.",
+  "No model inference, large artifact download, runtime change, BitNet acceptance, M4 proof, or Apple Silicon performance claim was introduced.",
+]
