@@ -2160,9 +2160,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU258V-032"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/CPU-PARITY-RECEIPT-FALLBACK"
 pr = 4550
+merge_sha = "6b6c1d92ebb99c0cc3ffff4b71c595fbad731b84"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
