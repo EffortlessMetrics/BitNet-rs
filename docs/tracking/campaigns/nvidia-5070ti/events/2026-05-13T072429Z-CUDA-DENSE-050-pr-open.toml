@@ -3,6 +3,7 @@ campaign = "nvidia-5070ti"
 item = "CUDA-DENSE-050"
 event = "pr_open"
 pr = 4589
+head_sha = "364bbed3e636369cad51cb77b51f105717516871"
 branch = "docs/cuda-dense-qwen25-product-audit"
 actor = "codex"
 notes = [
