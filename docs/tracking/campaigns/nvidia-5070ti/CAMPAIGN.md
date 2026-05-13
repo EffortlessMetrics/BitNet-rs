@@ -240,6 +240,19 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-DENSE-050 | merged | Audit Qwen2.5 Q8_0 dense CUDA receipts to distinguish hardware/user-path evidence from validators and contracts. |
 | CUDA-PROD-009 | merged | Harden strict BitNet CUDA ask/chat preflight with `bitnet cuda doctor`, fail-closed strict backend/tokenizer checks, visible receipt paths, and `speedup_claim=false`. |
 | CUDA-PROD-010 | merged | Add a governed BitNet I2_S/QK256 CUDA product benchmark qualification receipt/report for five target profiles; report existing evidence through bench/receipts UX while keeping every speedup claim false. |
+| CUDA-DENSE-051 | ready | Refresh or add the dense Qwen2.5 Q8_0 one-token strict CUDA hardware proof with explicit dense, non-BitNet claim boundaries. |
+| CUDA-DENSE-052 | proposed | Add dense Qwen2.5 Q8_0 short-decode strict CUDA proof after the one-token proof is current. |
+| CUDA-DENSE-053 | proposed | Add dense Qwen2.5 Q8_0 warm-session strict CUDA proof after short decode is current. |
+| CUDA-DENSE-054 | proposed | Add dense Qwen2.5 Q8_0 benchmark qualification after one-token, short-decode, and warm-session receipts are current. |
+| CUDA-MODEL-001 | proposed | Add the Qwen3 0.6B artifact contract as the first generalized dense model onboarding item. |
+| CUDA-MODEL-002 | proposed | Add Qwen3 0.6B CPU answer sanity proof after the artifact contract lands. |
+| CUDA-MODEL-003 | proposed | Add the Qwen3 0.6B CUDA all-layer plan after CPU sanity lands. |
+| CUDA-MODEL-004 | proposed | Add Qwen3 0.6B one-token strict CUDA proof after the all-layer plan lands. |
+| CUDA-MODEL-005 | proposed | Add Qwen3 0.6B short-decode and warm-session strict CUDA proof after one-token CUDA lands. |
+| CUDA-UX-008 | proposed | Add a CUDA model support dashboard sourced from the model coverage matrix. |
+| CUDA-UX-009 | proposed | Add the strict RTX 5070 Ti BitNet CUDA user guide without changing product claims. |
+| CUDA-UX-010 | proposed | Add the 9950X3D + RTX 5070 Ti CUDA quickstart after status and core proof surfaces are current. |
+| CUDA-SERVER-001 | proposed | Add strict CUDA server smoke only after CLI proof and status surfaces are stable. |
 
 ## Review Policy
 
