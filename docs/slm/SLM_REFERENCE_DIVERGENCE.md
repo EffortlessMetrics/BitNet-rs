@@ -174,6 +174,14 @@ Each side must include the usual reference fields plus a `checkpoints` array:
         "stage": "attention.q_proj",
         "dims": [1, 1, 2048],
         "dtype": "F32",
+        "len": 2048,
+        "finite": 2048,
+        "nonfinite": 0,
+        "mean": 0.0,
+        "rms": 1.0,
+        "min": -1.0,
+        "max": 1.0,
+        "checksum": 12.34,
         "sample": [0.01, -0.02, 0.03]
       }
     ]
@@ -186,6 +194,14 @@ Each side must include the usual reference fields plus a `checkpoints` array:
         "stage": "attention.q_proj",
         "dims": [1, 1, 2048],
         "dtype": "F32",
+        "len": 2048,
+        "finite": 2048,
+        "nonfinite": 0,
+        "mean": 0.0,
+        "rms": 1.0,
+        "min": -1.0,
+        "max": 1.0,
+        "checksum": 12.34,
         "sample": [0.01, 0.5, 0.03]
       }
     ]
@@ -197,7 +213,10 @@ The minimum required stages are `decode.input_embedding`,
 `block.attention_norm`, `attention.q_proj`, `attention.k_proj`,
 `attention.v_proj`, `attention.q_rope`, `model.final_norm`, and
 `lm_head.logits`. The validator compares prompt IDs first, then these
-checkpoint summaries, then final generated tokens/logits/text. A checkpoint
+checkpoint summaries, then final generated tokens/logits/text. Each required
+checkpoint must include shape, dtype, element counts, finite counts, summary
+statistics, checksum, and a bounded numeric sample; incomplete checkpoint
+payloads fail validation instead of falling through to final-token comparison. A checkpoint
 mismatch is classified as `shared_transformer_math_checkpoint_values` or
 `shared_transformer_math_checkpoint_shape`; it is still diagnostic evidence,
 not an answer-quality or throughput claim.
@@ -218,4 +237,7 @@ The validator records a `classification` alongside
 
 ## Claim Boundary
 
-This artifact may show whether the first mismatch is in prompt IDs, generated IDs, decoded text, or top-k logits. It does not prove general answer quality, sustained 8250U throughput, server inference, GPU execution, OpenVINO execution, UHD 620 execution, or NPU execution.
+This artifact may show whether the first mismatch is in prompt IDs, required
+checkpoint summaries, generated IDs, decoded text, or top-k logits. It does not
+prove general answer quality, sustained 8250U throughput, server inference, GPU
+execution, OpenVINO execution, UHD 620 execution, or NPU execution.

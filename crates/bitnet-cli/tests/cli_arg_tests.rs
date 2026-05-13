@@ -3774,7 +3774,8 @@ fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract() {
     assert_eq!(receipt["scoring_summary"]["not_run"], 10);
     let kinds: Vec<&str> = receipt["scoring_summary"]["kinds"]
         .as_array()
-        .expect("kinds array")
+        .map(Vec::as_slice)
+        .unwrap_or(&[])
         .iter()
         .filter_map(serde_json::Value::as_str)
         .collect();

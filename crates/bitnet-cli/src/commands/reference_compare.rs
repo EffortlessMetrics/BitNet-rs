@@ -251,6 +251,19 @@ fn validate_checkpoint_side(label: &'static str, side: &Value, failures: &mut Ve
             "bitnet_rs_required_checkpoints"
         });
     }
+    for stage in REQUIRED_QWEN3_CHECKPOINT_STAGES {
+        let Some(checkpoint) = checkpoint_by_stage(side, stage) else {
+            continue;
+        };
+        if !checkpoint_payload_is_complete(checkpoint) {
+            failures.push(if label == "reference" {
+                "reference_checkpoint_payload"
+            } else {
+                "bitnet_rs_checkpoint_payload"
+            });
+            break;
+        }
+    }
 }
 
 fn validate_bitnet_contract(artifact: &Value, failures: &mut Vec<&'static str>) {
@@ -395,6 +408,15 @@ fn first_checkpoint_divergence(reference: &Value, bitnet: &Value) -> Option<Valu
                 bitnet_checkpoint,
             ));
         }
+        if checkpoint_metadata_differ(reference_checkpoint, bitnet_checkpoint) {
+            return Some(divergence(
+                "checkpoint",
+                "shared_transformer_math_checkpoint_values",
+                index,
+                reference_checkpoint,
+                bitnet_checkpoint,
+            ));
+        }
         if checkpoint_values_differ(reference_checkpoint, bitnet_checkpoint) {
             return Some(divergence(
                 "checkpoint",
@@ -415,6 +437,31 @@ fn checkpoint_by_stage<'a>(side: &'a Value, stage: &str) -> Option<&'a Value> {
         .find(|checkpoint| checkpoint["stage"].as_str() == Some(stage))
 }
 
+fn checkpoint_payload_is_complete(checkpoint: &Value) -> bool {
+    checkpoint["stage"].as_str().is_some_and(|stage| !stage.is_empty())
+        && checkpoint
+            .get("dims")
+            .and_then(Value::as_array)
+            .is_some_and(|dims| !dims.is_empty() && dims.iter().all(|dim| dim.as_u64().is_some()))
+        && checkpoint["dtype"].as_str().is_some_and(|dtype| !dtype.is_empty())
+        && checkpoint["len"].as_u64().is_some()
+        && checkpoint["finite"].as_u64().is_some()
+        && checkpoint["nonfinite"].as_u64().is_some()
+        && checkpoint["mean"].as_f64().is_some()
+        && checkpoint["rms"].as_f64().is_some()
+        && checkpoint["min"].as_f64().is_some()
+        && checkpoint["max"].as_f64().is_some()
+        && checkpoint["checksum"].as_f64().is_some()
+        && numeric_array(checkpoint.get("sample")).is_some_and(|sample| !sample.is_empty())
+}
+
+fn checkpoint_metadata_differ(reference: &Value, bitnet: &Value) -> bool {
+    reference["dtype"] != bitnet["dtype"]
+        || reference["len"] != bitnet["len"]
+        || reference["finite"] != bitnet["finite"]
+        || reference["nonfinite"] != bitnet["nonfinite"]
+}
+
 fn checkpoint_values_differ(reference: &Value, bitnet: &Value) -> bool {
     if let Some(max_abs_diff) = bitnet
         .get("max_abs_diff_vs_reference")
@@ -422,6 +469,18 @@ fn checkpoint_values_differ(reference: &Value, bitnet: &Value) -> bool {
         .or_else(|| reference.get("max_abs_diff_vs_bitnet_rs").and_then(Value::as_f64))
     {
         return max_abs_diff > CHECKPOINT_SAMPLE_ATOL;
+    }
+
+    for field in ["mean", "rms", "min", "max", "checksum"] {
+        let Some(reference_value) = reference.get(field).and_then(Value::as_f64) else {
+            return true;
+        };
+        let Some(bitnet_value) = bitnet.get(field).and_then(Value::as_f64) else {
+            return true;
+        };
+        if (reference_value - bitnet_value).abs() > CHECKPOINT_SAMPLE_ATOL {
+            return true;
+        }
     }
 
     match (numeric_array(reference.get("sample")), numeric_array(bitnet.get("sample"))) {
@@ -818,6 +877,71 @@ mod tests {
             report["validation"]["failed_rules"]
                 .as_array()
                 .is_some_and(|failed| failed.iter().any(|rule| rule == "reference_checkpoints"))
+        );
+    }
+
+    #[test]
+    fn reference_divergence_requires_complete_checkpoint_payloads() {
+        let mut input = checkpoint_artifact(&[0.1, 0.2, 0.3]);
+        if let Some(checkpoint) =
+            input["reference"]["checkpoints"].get_mut(0).and_then(Value::as_object_mut)
+        {
+            checkpoint.remove("sample");
+        }
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], false);
+        assert!(report["validation"]["failed_rules"].as_array().is_some_and(|failed| {
+            failed.iter().any(|rule| rule == "reference_checkpoint_payload")
+        }));
+    }
+
+    #[test]
+    fn reference_divergence_records_checkpoint_shape_mismatch() {
+        let mut input = checkpoint_artifact(&[0.1, 0.2, 0.3]);
+        input["bitnet_rs"]["checkpoints"][2]["dims"] = json!([1, 4]);
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "checkpoint");
+        assert_eq!(
+            report["comparison"]["first_divergence"]["classification"],
+            "shared_transformer_math_checkpoint_shape"
+        );
+    }
+
+    #[test]
+    fn reference_divergence_records_checkpoint_checksum_mismatch() {
+        let mut input = checkpoint_artifact(&[0.1, 0.2, 0.3]);
+        input["bitnet_rs"]["checkpoints"][2]["checksum"] = json!(9.0);
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "checkpoint");
+        assert_eq!(
+            report["comparison"]["first_divergence"]["classification"],
+            "shared_transformer_math_checkpoint_values"
+        );
+    }
+
+    #[test]
+    fn reference_divergence_honors_checkpoint_max_abs_diff() {
+        let mut input = checkpoint_artifact(&[0.1, 0.2, 0.3]);
+        input["bitnet_rs"]["checkpoints"][2]["max_abs_diff_vs_reference"] = json!(0.01);
+
+        let report = build_reference_divergence_receipt(Path::new("compare.json"), &input);
+
+        assert_eq!(report["validation"]["passed"], true);
+        assert_eq!(report["comparison"]["passed"], false);
+        assert_eq!(report["comparison"]["first_divergence"]["phase"], "checkpoint");
+        assert_eq!(
+            report["comparison"]["first_divergence"]["classification"],
+            "shared_transformer_math_checkpoint_values"
         );
     }
 
