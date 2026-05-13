@@ -2656,9 +2656,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-PERF-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/CPU-BITNET-PERF-001-i2s-microbench"
 pr = 4607
+merge_sha = "f486dbc7600330da68c1a6806a9f1b50b857e757"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
