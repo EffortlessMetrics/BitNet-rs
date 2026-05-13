@@ -63,6 +63,9 @@ jobs:
         with:
           shared-key: macos-arm64-cpu
 
+      - name: Prefer installed Rust toolchain binaries
+        run: echo "$HOME/.rustup/toolchains/1.95.0-aarch64-apple-darwin/bin" >> "$GITHUB_PATH"
+
       - name: Build core crates (CPU)
         run: |
           cargo build --locked \
@@ -112,6 +115,9 @@ jobs:
         with:
           shared-key: macos-arm64-metal
 
+      - name: Prefer installed Rust toolchain binaries
+        run: echo "$HOME/.rustup/toolchains/1.95.0-aarch64-apple-darwin/bin" >> "$GITHUB_PATH"
+
       - name: Check Metal feature compiles
         run: |
           cargo check --locked \
@@ -144,6 +150,9 @@ jobs:
         with:
           shared-key: macos-arm64-clippy
 
+      - name: Prefer installed Rust toolchain binaries
+        run: echo "$HOME/.rustup/toolchains/1.95.0-aarch64-apple-darwin/bin" >> "$GITHUB_PATH"
+
       - name: Run clippy (CPU, libs only)
         run: |
           cargo clippy --locked \
@@ -170,6 +179,9 @@ jobs:
         with:
           toolchain: "1.95.0"
           components: rustfmt
+
+      - name: Prefer installed Rust toolchain binaries
+        run: echo "$HOME/.rustup/toolchains/1.95.0-aarch64-apple-darwin/bin" >> "$GITHUB_PATH"
 
       - name: Check formatting
         run: cargo fmt --all -- --check
