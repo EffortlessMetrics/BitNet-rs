@@ -1,0 +1,18 @@
+timestamp = "2026-05-13T00:25:40Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-004"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4545
+actor = "codex"
+head_sha = "a391a1e170b31730934f66465170cbc89ff3afa2"
+branch = "codex/lunar-lake/LNL258V-COMPARE-004"
+summary = "Opened LNL258V-COMPARE-004 to refresh the corrected Lunar Lake platform comparison index."
+
+notes = [
+  "The PR refreshes ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json so the BitNet CPU lane points at cpu-reference-bundle-after-semantic-fix.json.",
+  "The dense Qwen SLM CPU lane now links the artifact manifest, clean-provenance answer smoke, aggregate phase receipt, and prefill_512/decode_128 profile receipts.",
+  "Arc 140V and Intel NPU evidence remain separately scoped and do not inherit BitNet CPU or dense SLM CPU proof.",
+  "The index remains discovery-only and does not claim platform performance, acceleration, full Arc/NPU BitNet inference, dense SLM accelerator inference, QK256 accelerator decode, or CPU fallback proof.",
+]
