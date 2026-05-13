@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T18:10:49Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-004"
+event = "merged"
+merge_sha = "9fa3e532b89c36885c54350700d75a740a93911e"
+actor = "codex"
+
+notes = [
+  "Closed M4-QA-004 using the strict local-answer failure-mode coverage committed by #4618 and revalidated after M4-QA-003 landed.",
+  "The answer-corpus CLI tests cover missing model files, missing external tokenizer authority, missing tokenizer files, and fail-closed rejection for unsupported apple-m4-metal and apple-m4-mpsgraph answer-corpus lanes before child execution.",
+  "The answer receipt tests cover hidden fallback rejection, missing generated token IDs, speedup claim rejection, and full-inference acceleration claim rejection.",
+  "The Apple M4 filtered test set covers strict apple-m4-cpu-neon receipt acceptance and local-answer quality rejection for short or degenerate token output.",
+  "Claim boundaries remain narrow: this proves strict failure-mode coverage for the fixed Apple M4 CPU/NEON local-answer proof path only; it does not enable bitnet mac ask/chat/server, prove broad BitNet chat quality, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, or performance claims.",
+]

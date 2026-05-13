@@ -50,7 +50,7 @@
 | apple-m4-local-answer | M4-QA-MODEL-002 | M4-QA-MODEL-001 | merged |
 | apple-m4-local-answer | M4-QA-002 | M4-QA-001 | merged |
 | apple-m4-local-answer | M4-QA-003 | M4-QA-001 | merged |
-| apple-m4-local-answer | M4-QA-004 | M4-QA-001 | proposed |
+| apple-m4-local-answer | M4-QA-004 | M4-QA-001 | merged |
 | apple-m4-local-answer | M4-QA-005 | M4-QA-002, M4-QA-003 | proposed |
 | apple-m4-operational | M4-OP-002 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-003 | M4-OP-001 | merged |
