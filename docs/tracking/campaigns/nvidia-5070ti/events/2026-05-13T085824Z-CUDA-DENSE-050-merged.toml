@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T08:58:24Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-050"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "docs/cuda-dense-qwen25-product-audit"
+pr = 4589
+head_sha = "63279b8e8ab60d081970b207d694674c99a3d062"
+merge_sha = "77e01cbed226f5b7fec9bc9414b5f0723a64bf63"
+summary = "Merged the dense Qwen2.5 Q8_0 CUDA proof-state audit."
+notes = [
+  "PR #4589 added docs/reports/CUDA_DENSE_QWEN25_Q8_PRODUCT_AUDIT.md.",
+  "The audit classified committed dense Qwen receipts as real RTX 5070 Ti hardware-backed one-token, short-decode, warm-session, and benchmark qualification evidence, while keeping direct ask/chat hardware receipt gaps explicit.",
+  "The merge did not add runtime behavior, new receipts, speedup acceptance, server readiness, BitNet QK256 proof, or generated-token claim promotion.",
+]
