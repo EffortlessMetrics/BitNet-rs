@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T23:44:30Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-002"
+event = "pr_open"
+pr = 4660
+head_sha = "8d7f2c4b6f861a55cb372b304f1e231bb8864245"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4660 to add deterministic dense SLM eval scoring and fixture-only tests.",
+  "The seeded corpus dry-run now emits scoring_summary and per-case scoring plans without invoking live models.",
+  "Claim boundaries remain narrow: no live M4 runtime accuracy, broad model quality, broad performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook claim.",
+]
