@@ -3740,6 +3740,60 @@ fn answer_corpus_dry_run_accepts_slm_answer_corpus() {
     assert_eq!(receipt["quality_summary"]["not_run"], 5);
 }
 
+/// `answer-corpus --dry-run` validates the seeded Apple M4 SLM eval scoring contract.
+#[cfg(feature = "full-cli")]
+#[test]
+fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let out = dir.path().join("apple-m4-slm-eval.json");
+    let corpus = workspace_path("ci/quality/apple-m4-slm-eval-seeded-corpus.yaml");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "cpu",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus.to_str().unwrap(),
+            "--json-out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    assert_eq!(receipt["artifact_kind"], "slm_cpu_answer_corpus");
+    assert_eq!(receipt["corpus"]["name"], "apple-m4-slm-eval-seeded-corpus-v1");
+    assert_eq!(receipt["corpus"]["case_count"], 10);
+    assert_eq!(receipt["scoring_summary"]["enabled"], true);
+    assert_eq!(receipt["scoring_summary"]["total"], 10);
+    assert_eq!(receipt["scoring_summary"]["not_run"], 10);
+    let kinds: Vec<&str> = receipt["scoring_summary"]["kinds"]
+        .as_array()
+        .expect("kinds array")
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    for kind in [
+        "exact_match",
+        "json_schema",
+        "normalized_match",
+        "required_forbidden_tokens",
+        "required_keywords",
+    ] {
+        assert!(kinds.contains(&kind), "missing scoring kind `{kind}`");
+    }
+    assert_eq!(receipt["cases"][0]["quality"]["scoring"]["kind"], "exact_match");
+    assert_eq!(receipt["cases"][3]["quality"]["scoring"]["kind"], "json_schema");
+    assert_eq!(receipt["cases"][9]["quality"]["scoring"]["forbidden_tokens"][0], "maybe");
+    assert_eq!(receipt["claim_boundary"]["bounded_slm_answer_smoke_passed"], false);
+    assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+}
+
 /// `reference-compare` validates an external SLM reference divergence artifact.
 #[cfg(feature = "full-cli")]
 #[test]

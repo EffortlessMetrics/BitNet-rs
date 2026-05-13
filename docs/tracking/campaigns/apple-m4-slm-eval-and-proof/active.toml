@@ -72,7 +72,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL-002"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-002-scoring"
 stackable = false
 review_mode = "codex_premerge"
@@ -83,6 +83,9 @@ acceptance = "Add deterministic dense SLM eval scoring for exact, normalized, JS
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval",
+  "cargo test --locked -p bitnet-cli slm_eval_scoring",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- answer-corpus --dry-run --corpus ci/quality/apple-m4-slm-eval-seeded-corpus.yaml --model models/Qwen2.5-0.5B-Instruct-GGUF/qwen2.5-0.5b-instruct-q8_0.gguf --json-out target/apple-m4-slm-eval-and-proof/seeded-corpus-scoring-dry-run.json",
+  "jq -e '.artifact_kind == \"slm_cpu_answer_corpus\" and .corpus.case_count == 10 and .scoring_summary.enabled == true and .scoring_summary.total == 10 and .scoring_summary.not_run == 10' target/apple-m4-slm-eval-and-proof/seeded-corpus-scoring-dry-run.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-and-proof",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",

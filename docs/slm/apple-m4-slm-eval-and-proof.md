@@ -18,8 +18,9 @@ ci/quality/apple-m4-slm-eval-seeded-corpus.yaml
 ```
 
 It is seeded with `424242`, deterministic, and parser-compatible with the
-existing `answer-corpus --dry-run` shape. Runtime model evaluation and stronger
-scorers are intentionally later gates.
+existing `answer-corpus --dry-run` shape. The scoring contract now has
+deterministic fixture support, but runtime model evaluation remains a later
+gate.
 
 ## Proof Plan
 
@@ -50,9 +51,11 @@ comparison.
 - constrained summarization;
 - required and forbidden token instruction following.
 
-The first item only records the corpus and future scoring intent. Later items
-must implement and validate the stronger scorers before the corpus can support
-accuracy-rate claims.
+The corpus records deterministic scoring kinds for exact, normalized,
+schema-style JSON, numeric tolerance, required-keyword, and forbidden-token
+checks. These scorers can validate fixture answers and future generated text,
+but they do not create an accuracy-rate claim until supported-model runtime
+reports are published.
 
 ## Report Target
 
