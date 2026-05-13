@@ -1,6 +1,7 @@
 use bitnet_bench_receipts::validate_strict_cpu_benchmark_receipt_json;
 use bitnet_quantization::i2s_qk256::{
-    QK256_BLOCK, QK256_PACKED_BYTES, QK256_SCALAR_GEMV_KERNEL_ID, gemv_qk256_with_kernel_selection,
+    QK256_BLOCK, QK256_PACKED_BYTES, QK256_SCALAR_GEMM_KERNEL_ID, QK256_SCALAR_GEMV_KERNEL_ID,
+    gemv_qk256_with_kernel_selection, qk256_gemm_scalar,
 };
 use serde_json::json;
 use std::env;
@@ -56,6 +57,26 @@ struct MeasuredProfile {
     fallback_reason: Option<String>,
     rows: usize,
     cols: usize,
+    iterations: u64,
+    wall_time_ms: f64,
+    median_ms: f64,
+    p95_ms: f64,
+    bandwidth_gbps: f64,
+    tokens_per_second: f64,
+}
+
+#[derive(Debug)]
+struct KernelMicrobenchProfile {
+    profile: &'static str,
+    operation: &'static str,
+    execution_phase: &'static str,
+    requested_kernel: &'static str,
+    selected_kernel: &'static str,
+    fallback_used: bool,
+    fallback_reason: Option<String>,
+    rows: usize,
+    cols: usize,
+    tokens: usize,
     iterations: u64,
     wall_time_ms: f64,
     median_ms: f64,
@@ -166,12 +187,14 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
             args.strict,
         )?,
     ];
+    let microbench_profiles = measure_i2s_microbench(args.requested_kernel, args.strict)?;
 
     let selected_kernel = measured
         .first()
         .map(|profile| profile.selected_kernel)
         .unwrap_or(QK256_SCALAR_GEMV_KERNEL_ID);
-    let fallback_used = measured.iter().any(|profile| profile.fallback_used);
+    let fallback_used = measured.iter().any(|profile| profile.fallback_used)
+        || microbench_profiles.iter().any(|profile| profile.fallback_used);
     let cpu_features = cpu_features();
 
     let profiles: Vec<_> = measured
@@ -188,6 +211,33 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
                 "shape": {
                     "rows": profile.rows,
                     "cols": profile.cols,
+                    "iterations": profile.iterations
+                },
+                "wall_time_ms": profile.wall_time_ms,
+                "median_ms": profile.median_ms,
+                "p95_ms": profile.p95_ms,
+                "bandwidth_gbps": profile.bandwidth_gbps,
+                "tokens_per_second": profile.tokens_per_second
+            })
+        })
+        .collect();
+
+    let i2s_microbench_profiles: Vec<_> = microbench_profiles
+        .iter()
+        .map(|profile| {
+            json!({
+                "profile": profile.profile,
+                "operation": profile.operation,
+                "execution_phase": profile.execution_phase,
+                "status": "measured",
+                "requested_kernel": profile.requested_kernel,
+                "selected_kernel": profile.selected_kernel,
+                "fallback_used": profile.fallback_used,
+                "fallback_reason": profile.fallback_reason.as_deref(),
+                "shape": {
+                    "rows": profile.rows,
+                    "cols": profile.cols,
+                    "tokens": profile.tokens,
                     "iterations": profile.iterations
                 },
                 "wall_time_ms": profile.wall_time_ms,
@@ -224,9 +274,11 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
             "strict": true
         },
         "kernel": {
+            "kernel_family": "i2_s_qk256",
             "requested_kernel": args.requested_kernel.unwrap_or("auto"),
             "selected_kernel": selected_kernel,
             "oracle_kernel": QK256_SCALAR_GEMV_KERNEL_ID,
+            "gemm_oracle_kernel": QK256_SCALAR_GEMM_KERNEL_ID,
             "fallback_used": fallback_used,
             "fallback_reason": null,
             "dequantizes_before_compute": false
@@ -246,10 +298,169 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
             "generated_tokens": args.generated_tokens,
             "batch_size": args.batch_size
         },
+        "i2s_microbench": {
+            "work_item": "CPU-BITNET-PERF-001",
+            "artifact_kind": "cpu_bitnet_i2s_microbench",
+            "claim": "i2_s_gemv_gemm_microbench_receipt",
+            "kernel_family": "i2_s_qk256",
+            "quantization": args.quant_format,
+            "speedup_claim": false,
+            "fallback_used": fallback_used,
+            "fallback_reason": null,
+            "profiles": i2s_microbench_profiles,
+            "claim_boundary": [
+                "Records QK256/I2_S GEMV and GEMM microbench timing only.",
+                "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, or QK256 semantic changes."
+            ]
+        },
         "profiles": profiles,
         "profile_order": PROFILE_NAMES,
         "artifact_path": args.receipt_out.as_ref().map(|path| path.display().to_string())
     }))
+}
+
+fn measure_i2s_microbench(
+    requested_kernel: Option<&'static str>,
+    strict: bool,
+) -> Result<Vec<KernelMicrobenchProfile>, Box<dyn Error>> {
+    Ok(vec![
+        measure_gemv_microbench(
+            "i2s_qk256_gemv_decode_microbench",
+            "decode_gemv_micro_kernel",
+            64,
+            1024,
+            64,
+            requested_kernel,
+            strict,
+        )?,
+        measure_gemm_microbench(
+            "i2s_qk256_gemm_prefill_microbench",
+            "prefill_gemm_micro_kernel",
+            16,
+            64,
+            1024,
+            16,
+        )?,
+    ])
+}
+
+fn measure_gemv_microbench(
+    profile: &'static str,
+    execution_phase: &'static str,
+    rows: usize,
+    cols: usize,
+    iterations: u64,
+    requested_kernel: Option<&'static str>,
+    strict: bool,
+) -> Result<KernelMicrobenchProfile, Box<dyn Error>> {
+    let (packed, row_stride) = create_qk256_weights(rows, cols);
+    let activations = create_activation_vector(cols);
+    let mut output = vec![0.0f32; rows];
+    let selection = gemv_qk256_with_kernel_selection(
+        &packed,
+        &activations,
+        &mut output,
+        rows,
+        cols,
+        row_stride,
+        requested_kernel,
+        strict,
+    )?;
+
+    let mut samples = Vec::with_capacity(iterations as usize);
+    let wall_start = Instant::now();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        gemv_qk256_with_kernel_selection(
+            &packed,
+            &activations,
+            &mut output,
+            rows,
+            cols,
+            row_stride,
+            requested_kernel,
+            strict,
+        )?;
+        samples.push(start.elapsed().as_secs_f64() * 1_000.0);
+    }
+    let wall_time_ms = wall_start.elapsed().as_secs_f64() * 1_000.0;
+    samples.sort_by(f64::total_cmp);
+
+    let bytes_per_iteration = packed.len()
+        + activations.len() * std::mem::size_of::<f32>()
+        + output.len() * std::mem::size_of::<f32>();
+    let total_seconds = (wall_time_ms / 1_000.0).max(f64::EPSILON);
+
+    Ok(KernelMicrobenchProfile {
+        profile,
+        operation: "gemv",
+        execution_phase,
+        requested_kernel: selection.requested_kernel.unwrap_or("auto"),
+        selected_kernel: selection.selected_kernel,
+        fallback_used: selection.fallback_used,
+        fallback_reason: selection.fallback_reason,
+        rows,
+        cols,
+        tokens: 1,
+        iterations,
+        wall_time_ms,
+        median_ms: percentile(&samples, 0.50),
+        p95_ms: percentile(&samples, 0.95),
+        bandwidth_gbps: (bytes_per_iteration as f64 * iterations as f64)
+            / total_seconds
+            / 1_000_000_000.0,
+        tokens_per_second: iterations as f64 / total_seconds,
+    })
+}
+
+fn measure_gemm_microbench(
+    profile: &'static str,
+    execution_phase: &'static str,
+    tokens: usize,
+    rows: usize,
+    cols: usize,
+    iterations: u64,
+) -> Result<KernelMicrobenchProfile, Box<dyn Error>> {
+    let (packed, _row_stride) = create_qk256_weights(rows, cols);
+    let activations = create_activation_matrix(tokens, cols);
+    let mut output = vec![0.0f32; tokens * rows];
+    qk256_gemm_scalar(&packed, &activations, &mut output, tokens, rows, cols)?;
+
+    let mut samples = Vec::with_capacity(iterations as usize);
+    let wall_start = Instant::now();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        qk256_gemm_scalar(&packed, &activations, &mut output, tokens, rows, cols)?;
+        samples.push(start.elapsed().as_secs_f64() * 1_000.0);
+    }
+    let wall_time_ms = wall_start.elapsed().as_secs_f64() * 1_000.0;
+    samples.sort_by(f64::total_cmp);
+
+    let bytes_per_iteration = packed.len()
+        + activations.len() * std::mem::size_of::<f32>()
+        + output.len() * std::mem::size_of::<f32>();
+    let total_seconds = (wall_time_ms / 1_000.0).max(f64::EPSILON);
+
+    Ok(KernelMicrobenchProfile {
+        profile,
+        operation: "gemm",
+        execution_phase,
+        requested_kernel: QK256_SCALAR_GEMM_KERNEL_ID,
+        selected_kernel: QK256_SCALAR_GEMM_KERNEL_ID,
+        fallback_used: false,
+        fallback_reason: None,
+        rows,
+        cols,
+        tokens,
+        iterations,
+        wall_time_ms,
+        median_ms: percentile(&samples, 0.50),
+        p95_ms: percentile(&samples, 0.95),
+        bandwidth_gbps: (bytes_per_iteration as f64 * iterations as f64)
+            / total_seconds
+            / 1_000_000_000.0,
+        tokens_per_second: (tokens as f64 * iterations as f64) / total_seconds,
+    })
 }
 
 fn measure_profile(
@@ -342,6 +553,42 @@ fn create_activation_vector(cols: usize) -> Vec<f32> {
             x * (-x * x / 2.0).exp()
         })
         .collect()
+}
+
+fn create_activation_matrix(tokens: usize, cols: usize) -> Vec<f32> {
+    (0..tokens)
+        .flat_map(|token| {
+            create_activation_vector(cols)
+                .into_iter()
+                .enumerate()
+                .map(move |(col, value)| value + ((token + col) % 17) as f32 * 0.0001)
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn receipt_records_i2s_gemv_and_gemm_microbench_profiles() {
+        let receipt = build_receipt(&Args::default()).expect("build receipt");
+        let profiles =
+            receipt["i2s_microbench"]["profiles"].as_array().expect("microbench profiles");
+
+        assert!(profiles.iter().any(|profile| {
+            profile["operation"] == "gemv"
+                && profile["selected_kernel"].as_str().is_some_and(|kernel| {
+                    kernel == QK256_SCALAR_GEMV_KERNEL_ID || kernel == "qk256-avx2-gemv"
+                })
+        }));
+        assert!(profiles.iter().any(|profile| {
+            profile["operation"] == "gemm"
+                && profile["selected_kernel"] == QK256_SCALAR_GEMM_KERNEL_ID
+        }));
+        assert_eq!(receipt["i2s_microbench"]["speedup_claim"], false);
+        assert_eq!(receipt["i2s_microbench"]["fallback_used"], false);
+    }
 }
 
 fn timestamp_label() -> String {

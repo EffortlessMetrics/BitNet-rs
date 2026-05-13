@@ -1997,6 +1997,10 @@ pub fn validate_strict_cpu_benchmark_receipt_json(
         validate_cpu_benchmark_profile(profile, expected)?;
     }
 
+    if receipt.get("i2s_microbench").is_some() {
+        validate_i2s_microbench(require_object(receipt, "i2s_microbench")?)?;
+    }
+
     Ok(())
 }
 
@@ -2052,6 +2056,58 @@ fn expected_cpu_profile_phase(profile: &str) -> &'static str {
         "decode" => "decode_steady_state",
         _ => "unknown",
     }
+}
+
+fn validate_i2s_microbench(microbench: &serde_json::Value) -> Result<(), ReceiptError> {
+    require_string_eq(microbench, "artifact_kind", "cpu_bitnet_i2s_microbench")?;
+    require_string_eq(microbench, "claim", "i2_s_gemv_gemm_microbench_receipt")?;
+    require_string_eq(microbench, "kernel_family", "i2_s_qk256")?;
+    require_bool_eq(microbench, "speedup_claim", false)?;
+    require_bool_eq(microbench, "fallback_used", false)?;
+    require_null(microbench, "fallback_reason")?;
+
+    let profiles = require_array(microbench, "profiles")?;
+    for operation in ["gemv", "gemm"] {
+        let profile = profiles
+            .iter()
+            .find(|entry| {
+                entry.get("operation").and_then(serde_json::Value::as_str) == Some(operation)
+            })
+            .ok_or_else(|| {
+                validation_error(format!("i2s_microbench.profiles missing {operation}"))
+            })?;
+        validate_i2s_microbench_profile(profile, operation)?;
+    }
+
+    Ok(())
+}
+
+fn validate_i2s_microbench_profile(
+    profile: &serde_json::Value,
+    expected_operation: &str,
+) -> Result<(), ReceiptError> {
+    require_non_empty_string(profile, "profile")?;
+    require_string_eq(profile, "operation", expected_operation)?;
+    require_non_empty_string(profile, "execution_phase")?;
+    require_string_eq(profile, "status", "measured")?;
+    require_non_empty_string(profile, "requested_kernel")?;
+    require_non_empty_string(profile, "selected_kernel")?;
+    require_bool_eq(profile, "fallback_used", false)?;
+    require_null(profile, "fallback_reason")?;
+
+    let shape = require_object(profile, "shape")?;
+    require_u64_at_least(shape, "rows", 1)?;
+    require_u64_at_least(shape, "cols", 1)?;
+    require_u64_at_least(shape, "tokens", 1)?;
+    require_u64_at_least(shape, "iterations", 1)?;
+
+    require_non_negative_number(profile, "wall_time_ms")?;
+    require_non_negative_number(profile, "median_ms")?;
+    require_non_negative_number(profile, "p95_ms")?;
+    require_non_negative_number(profile, "bandwidth_gbps")?;
+    require_non_negative_number(profile, "tokens_per_second")?;
+
+    Ok(())
 }
 
 fn require_backend_profile<'a>(
@@ -2684,6 +2740,15 @@ mod tests {
 
         let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
         assert!(err.contains("shape"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cpu_benchmark_rejects_incomplete_i2s_microbench() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["i2s_microbench"]["profiles"] = json!([measured_i2s_microbench_profile("gemv")]);
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("missing gemm"), "unexpected error: {err}");
     }
 
     #[test]
@@ -4037,9 +4102,11 @@ mod tests {
                 "strict": true
             },
             "kernel": {
+                "kernel_family": "i2_s_qk256",
                 "requested_kernel": "qk256-avx2-gemv",
                 "selected_kernel": "qk256-avx2-gemv",
                 "oracle_kernel": "qk256-scalar-gemv",
+                "gemm_oracle_kernel": "qk256-scalar-gemm",
                 "fallback_used": false,
                 "fallback_reason": null,
                 "dequantizes_before_compute": false
@@ -4058,6 +4125,24 @@ mod tests {
                 "prompt_tokens": 512,
                 "generated_tokens": 128,
                 "batch_size": 1
+            },
+            "i2s_microbench": {
+                "work_item": "CPU-BITNET-PERF-001",
+                "artifact_kind": "cpu_bitnet_i2s_microbench",
+                "claim": "i2_s_gemv_gemm_microbench_receipt",
+                "kernel_family": "i2_s_qk256",
+                "quantization": "QK256/I2_S",
+                "speedup_claim": false,
+                "fallback_used": false,
+                "fallback_reason": null,
+                "profiles": [
+                    measured_i2s_microbench_profile("gemv"),
+                    measured_i2s_microbench_profile("gemm")
+                ],
+                "claim_boundary": [
+                    "Records QK256/I2_S GEMV and GEMM microbench timing only.",
+                    "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, or QK256 semantic changes."
+                ]
             },
             "profiles": [
                 measured_cpu_profile("micro"),
@@ -4566,6 +4651,34 @@ mod tests {
                 "rows": 512,
                 "cols": 1024,
                 "iterations": 8
+            },
+            "wall_time_ms": 1.0,
+            "median_ms": 1.0,
+            "p95_ms": 1.0,
+            "bandwidth_gbps": 0.0,
+            "tokens_per_second": 0.0
+        })
+    }
+
+    fn measured_i2s_microbench_profile(operation: &str) -> serde_json::Value {
+        let selected_kernel = match operation {
+            "gemm" => "qk256-scalar-gemm",
+            _ => "qk256-avx2-gemv",
+        };
+        json!({
+            "profile": format!("i2s_qk256_{operation}_microbench"),
+            "operation": operation,
+            "execution_phase": format!("{operation}_micro_kernel"),
+            "status": "measured",
+            "requested_kernel": selected_kernel,
+            "selected_kernel": selected_kernel,
+            "fallback_used": false,
+            "fallback_reason": null,
+            "shape": {
+                "rows": 64,
+                "cols": 1024,
+                "tokens": if operation == "gemm" { 16 } else { 1 },
+                "iterations": 16
             },
             "wall_time_ms": 1.0,
             "median_ms": 1.0,
