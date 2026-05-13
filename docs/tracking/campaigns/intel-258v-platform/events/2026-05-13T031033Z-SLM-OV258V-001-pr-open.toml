@@ -2,12 +2,14 @@ timestamp = "2026-05-13T03:10:33Z"
 campaign = "intel-258v-platform"
 item = "SLM-OV258V-001"
 event = "pr_open"
-source = "codex"
-
-[details]
+from = "ready"
+to = "pr_open"
 pr = 4559
+actor = "codex"
+head_sha = "263eac978d3fa406b9daa0139bbeca56cb5aab79"
 branch = "codex/lunar-lake/SLM-OV258V-001-openvino-ir-manifest"
 summary = "Opened SLM-OV258V-001 to record the Qwen2.5 OpenVINO IR INT4 symmetric export manifest before LLMPipeline smoke work."
+
 notes = [
   "This PR records the export contract and links it to the existing 258V GGUF CPU dense SLM answer and phase baseline.",
   "No OpenVINO CPU, GPU, or NPU execution is claimed.",
