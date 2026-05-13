@@ -1,0 +1,13 @@
+timestamp = "2026-05-13T23:37:20Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started deterministic dense SLM eval scoring for exact, normalized, JSON/schema-style, numeric tolerance, required keyword, and forbidden-token fixture checks.",
+  "Scope is parser/scoring fixtures and dry-run receipts only; no live M4 model run or runtime accuracy claim is included.",
+  "Claim boundaries remain narrow: no broad model quality, broad performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook claim.",
+]

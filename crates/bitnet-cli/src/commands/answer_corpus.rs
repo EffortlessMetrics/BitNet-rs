@@ -4,7 +4,7 @@ use crate::planner_receipts;
 use anyhow::{Context, Result};
 use clap::{Args, ValueEnum};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 use std::{
     collections::BTreeSet,
     ffi::OsString,
@@ -347,6 +347,7 @@ impl AnswerCorpusCommand {
                 "timeout": timed_out,
                 "not_run": not_run,
             },
+            "scoring_summary": scoring_summary(&rows),
             "receipt_quality": {
                 "case_receipt_checker": "answer_receipt_failed_rules",
                 "checked": !self.dry_run,
@@ -509,6 +510,7 @@ impl AnswerCorpusCommand {
         let mut quality = evaluate_quality(
             &answer,
             &case.gate,
+            case.scoring.as_ref(),
             Some(&token_ids),
             min_generated_tokens,
             min_distinct_generated_tokens,
@@ -568,6 +570,7 @@ impl AnswerCorpusCommand {
                 "min_generated_tokens": min_generated_tokens,
                 "min_distinct_generated_tokens": min_distinct_generated_tokens,
                 "gate_kind": case.gate.kind,
+                "scoring": scoring_result_json(quality.scoring.as_ref()),
                 "failed_rules": quality.failed_rules,
             },
             "backend": {
@@ -623,6 +626,7 @@ impl AnswerCorpusCommand {
             "quality": {
                 "passed": false,
                 "failed_rules": ["not_run"],
+                "scoring": scoring_not_run_json(case.scoring.as_ref()),
             }
         })
     }
@@ -653,6 +657,9 @@ impl AnswerCorpus {
         }
         if corpus.cases.is_empty() {
             anyhow::bail!("answer corpus must contain at least one case");
+        }
+        for case in &corpus.cases {
+            validate_answer_scoring(case)?;
         }
         Ok(corpus)
     }
@@ -714,7 +721,35 @@ struct AnswerCase {
     timeout_seconds: Option<u64>,
     min_generated_tokens: Option<usize>,
     min_distinct_generated_tokens: Option<usize>,
+    #[serde(default)]
+    scoring: Option<AnswerScoring>,
     gate: AnswerGate,
+}
+
+#[derive(Debug, Deserialize)]
+struct AnswerScoring {
+    #[serde(default, alias = "planned_kind")]
+    kind: Option<String>,
+    #[serde(default)]
+    expected: Option<String>,
+    #[serde(default)]
+    expected_normalized: Option<String>,
+    #[serde(default)]
+    schema: Option<Value>,
+    #[serde(default)]
+    expected_number: Option<f64>,
+    #[serde(default, alias = "tolerance")]
+    numeric_tolerance: Option<f64>,
+    #[serde(default)]
+    required_keywords: Option<Vec<String>>,
+    #[serde(default)]
+    forbidden_tokens: Option<Vec<String>>,
+}
+
+impl AnswerScoring {
+    fn kind(&self) -> &str {
+        self.kind.as_deref().unwrap_or("unspecified")
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -735,6 +770,15 @@ struct QualityResult {
     mostly_text: bool,
     distinct_generated_tokens: usize,
     failed_rules: Vec<String>,
+    scoring: Option<ScoringResult>,
+}
+
+struct ScoringResult {
+    kind: String,
+    passed: bool,
+    normalized_answer: String,
+    failed_rules: Vec<String>,
+    details: Value,
 }
 
 fn normalize_answer_corpus_device(device: &str) -> String {
@@ -826,6 +870,86 @@ fn corpus_answer_ready_artifact_available(model: &CorpusModel) -> bool {
     model.answer_ready.as_ref().is_some_and(|authority| authority.state == "answer_ready")
 }
 
+fn validate_answer_scoring(case: &AnswerCase) -> Result<()> {
+    let Some(scoring) = &case.scoring else {
+        return Ok(());
+    };
+    match scoring.kind() {
+        "exact_match" | "normalized_match" => {
+            if scoring.expected_answer().is_none() {
+                anyhow::bail!(
+                    "answer corpus case `{}` scoring `{}` requires expected or expected_normalized",
+                    case.id,
+                    scoring.kind()
+                );
+            }
+        }
+        "json_schema" => {
+            if scoring.schema.is_none() {
+                anyhow::bail!(
+                    "answer corpus case `{}` scoring json_schema requires schema",
+                    case.id
+                );
+            }
+        }
+        "numeric_tolerance" => {
+            let has_expected_number = scoring.expected_number.is_some()
+                || scoring.expected_answer().and_then(|value| first_number(value)).is_some();
+            if !has_expected_number {
+                anyhow::bail!(
+                    "answer corpus case `{}` scoring numeric_tolerance requires expected_number or numeric expected text",
+                    case.id
+                );
+            }
+            if scoring.numeric_tolerance.unwrap_or(0.0) < 0.0 {
+                anyhow::bail!(
+                    "answer corpus case `{}` scoring numeric_tolerance cannot be negative",
+                    case.id
+                );
+            }
+        }
+        "required_keywords" => {
+            if scoring.required_keywords.as_ref().is_none_or(Vec::is_empty) {
+                anyhow::bail!(
+                    "answer corpus case `{}` scoring required_keywords requires required_keywords",
+                    case.id
+                );
+            }
+        }
+        "forbidden_tokens" => {
+            if scoring.forbidden_tokens.as_ref().is_none_or(Vec::is_empty) {
+                anyhow::bail!(
+                    "answer corpus case `{}` scoring forbidden_tokens requires forbidden_tokens",
+                    case.id
+                );
+            }
+        }
+        "required_forbidden_tokens" => {
+            if scoring.required_keywords.as_ref().is_none_or(Vec::is_empty)
+                && scoring.forbidden_tokens.as_ref().is_none_or(Vec::is_empty)
+            {
+                anyhow::bail!(
+                    "answer corpus case `{}` scoring required_forbidden_tokens requires required_keywords or forbidden_tokens",
+                    case.id
+                );
+            }
+        }
+        other => {
+            anyhow::bail!(
+                "answer corpus case `{}` has unsupported scoring kind `{other}`",
+                case.id
+            );
+        }
+    }
+    Ok(())
+}
+
+impl AnswerScoring {
+    fn expected_answer(&self) -> Option<&str> {
+        self.expected_normalized.as_deref().or(self.expected.as_deref())
+    }
+}
+
 fn prompt_prefill_receipt(run_receipt: &Value) -> Value {
     let prompt_token_count = run_receipt["tokens"]["prompt"].as_u64().unwrap_or_else(|| {
         run_receipt["tokens"]["prompt_ids"]
@@ -856,6 +980,7 @@ fn effective_default_timeout_seconds(cli: Option<u64>, corpus: Option<u64>) -> u
 fn evaluate_quality(
     answer: &str,
     gate: &AnswerGate,
+    scoring: Option<&AnswerScoring>,
     generated_token_ids: Option<&[u32]>,
     min_generated_tokens: Option<usize>,
     min_distinct_generated_tokens: Option<usize>,
@@ -891,6 +1016,13 @@ fn evaluate_quality(
     if !gate_passed(&normalized, gate) {
         failed_rules.push(format!("gate_{}", gate.kind));
     }
+    let scoring_result = scoring.map(|scoring| evaluate_scoring(&normalized, scoring));
+    if let Some(scoring_result) = &scoring_result
+        && !scoring_result.passed
+    {
+        failed_rules
+            .extend(scoring_result.failed_rules.iter().map(|rule| format!("scoring_{rule}")));
+    }
     if let Some(minimum) = min_generated_tokens
         && generated_token_count < minimum
     {
@@ -911,6 +1043,287 @@ fn evaluate_quality(
         mostly_text,
         distinct_generated_tokens,
         failed_rules,
+        scoring: scoring_result,
+    }
+}
+
+fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
+    let kind = scoring.kind().to_string();
+    let normalized_answer = normalize_scoring_text(answer);
+    let mut failed_rules = Vec::new();
+    let mut details = Map::new();
+    details.insert("kind".to_string(), Value::String(kind.clone()));
+
+    match kind.as_str() {
+        "exact_match" => {
+            let expected = scoring.expected_answer().unwrap_or_default();
+            let observed = normalized_answer.trim();
+            details.insert("expected".to_string(), Value::String(expected.to_string()));
+            details.insert("observed".to_string(), Value::String(observed.to_string()));
+            if observed != expected.trim() {
+                failed_rules.push("exact_match".to_string());
+            }
+        }
+        "normalized_match" => {
+            let expected = scoring.expected_answer().unwrap_or_default();
+            let observed = normalize_match_text(&normalized_answer);
+            let expected_normalized = normalize_match_text(expected);
+            details.insert(
+                "expected_normalized".to_string(),
+                Value::String(expected_normalized.clone()),
+            );
+            details.insert("observed_normalized".to_string(), Value::String(observed.clone()));
+            if observed != expected_normalized {
+                failed_rules.push("normalized_match".to_string());
+            }
+        }
+        "json_schema" => {
+            let schema = scoring.schema.as_ref();
+            let schema_result = schema
+                .and_then(normalized_json_schema)
+                .map(|schema| validate_schema_style_json(&normalized_answer, &schema))
+                .unwrap_or_else(|| SchemaStyleResult {
+                    parsed: false,
+                    failures: vec!["schema_missing_or_invalid".to_string()],
+                });
+            details.insert("parsed_json".to_string(), Value::Bool(schema_result.parsed));
+            if !schema_result.failures.is_empty() {
+                failed_rules.extend(schema_result.failures);
+            }
+        }
+        "numeric_tolerance" => {
+            let expected = scoring
+                .expected_number
+                .or_else(|| scoring.expected_answer().and_then(first_number));
+            let observed = first_number(&normalized_answer);
+            let tolerance = scoring.numeric_tolerance.unwrap_or(0.0);
+            details.insert("expected_number".to_string(), json!(expected));
+            details.insert("observed_number".to_string(), json!(observed));
+            details.insert("numeric_tolerance".to_string(), json!(tolerance));
+            match (expected, observed) {
+                (Some(expected), Some(observed)) if (observed - expected).abs() <= tolerance => {}
+                (Some(_), Some(_)) => failed_rules.push("numeric_tolerance".to_string()),
+                (Some(_), None) => failed_rules.push("numeric_observed_missing".to_string()),
+                (None, _) => failed_rules.push("numeric_expected_missing".to_string()),
+            }
+        }
+        "required_keywords" => {
+            let missing =
+                missing_keywords(&normalized_answer, scoring.required_keywords.as_deref());
+            let has_missing = !missing.is_empty();
+            details.insert("required_keywords_missing".to_string(), json!(missing));
+            if has_missing {
+                failed_rules.push("required_keywords".to_string());
+            }
+        }
+        "forbidden_tokens" => {
+            let observed =
+                observed_forbidden_tokens(&normalized_answer, scoring.forbidden_tokens.as_deref());
+            let has_observed = !observed.is_empty();
+            details.insert("forbidden_tokens_observed".to_string(), json!(observed));
+            if has_observed {
+                failed_rules.push("forbidden_tokens".to_string());
+            }
+        }
+        "required_forbidden_tokens" => {
+            let missing =
+                missing_keywords(&normalized_answer, scoring.required_keywords.as_deref());
+            let observed =
+                observed_forbidden_tokens(&normalized_answer, scoring.forbidden_tokens.as_deref());
+            let has_missing = !missing.is_empty();
+            let has_observed = !observed.is_empty();
+            details.insert("required_keywords_missing".to_string(), json!(missing));
+            details.insert("forbidden_tokens_observed".to_string(), json!(observed));
+            if has_missing {
+                failed_rules.push("required_keywords".to_string());
+            }
+            if has_observed {
+                failed_rules.push("forbidden_tokens".to_string());
+            }
+        }
+        _ => failed_rules.push("unsupported_kind".to_string()),
+    }
+
+    ScoringResult {
+        kind,
+        passed: failed_rules.is_empty(),
+        normalized_answer,
+        failed_rules,
+        details: Value::Object(details),
+    }
+}
+
+fn scoring_result_json(result: Option<&ScoringResult>) -> Value {
+    result.map_or(Value::Null, |result| {
+        json!({
+            "kind": &result.kind,
+            "passed": result.passed,
+            "normalized_answer": &result.normalized_answer,
+            "failed_rules": &result.failed_rules,
+            "details": &result.details,
+        })
+    })
+}
+
+fn scoring_not_run_json(scoring: Option<&AnswerScoring>) -> Value {
+    scoring.map_or(Value::Null, |scoring| {
+        json!({
+            "kind": scoring.kind(),
+            "status": "not_run",
+            "passed": Value::Null,
+            "expected": &scoring.expected,
+            "expected_normalized": &scoring.expected_normalized,
+            "schema": &scoring.schema,
+            "expected_number": scoring.expected_number,
+            "numeric_tolerance": scoring.numeric_tolerance,
+            "required_keywords": &scoring.required_keywords,
+            "forbidden_tokens": &scoring.forbidden_tokens,
+        })
+    })
+}
+
+fn scoring_summary(rows: &[Value]) -> Value {
+    let mut total = 0usize;
+    let mut passed = 0usize;
+    let mut failed = 0usize;
+    let mut not_run = 0usize;
+    let mut kinds = BTreeSet::new();
+    for row in rows {
+        let scoring = &row["quality"]["scoring"];
+        let Some(kind) = scoring["kind"].as_str() else {
+            continue;
+        };
+        total += 1;
+        kinds.insert(kind.to_string());
+        match scoring["passed"].as_bool() {
+            Some(true) => passed += 1,
+            Some(false) => failed += 1,
+            None => not_run += 1,
+        }
+    }
+    json!({
+        "enabled": total > 0,
+        "total": total,
+        "passed": passed,
+        "failed": failed,
+        "not_run": not_run,
+        "kinds": kinds.into_iter().collect::<Vec<_>>(),
+    })
+}
+
+fn normalize_scoring_text(value: &str) -> String {
+    strip_special_markers(value).trim().split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn normalize_match_text(value: &str) -> String {
+    normalize_scoring_text(value)
+        .trim_matches(|ch: char| matches!(ch, '.' | '!' | '?'))
+        .to_ascii_lowercase()
+}
+
+fn first_number(value: &str) -> Option<f64> {
+    value
+        .split(|ch: char| !(ch.is_ascii_digit() || matches!(ch, '.' | '-' | '+')))
+        .filter(|token| !token.is_empty() && !matches!(*token, "." | "-" | "+" | "-." | "+."))
+        .find_map(|token| token.parse::<f64>().ok())
+}
+
+fn missing_keywords(answer: &str, keywords: Option<&[String]>) -> Vec<String> {
+    let answer = answer.to_ascii_lowercase();
+    keywords
+        .unwrap_or_default()
+        .iter()
+        .filter(|keyword| !answer.contains(&keyword.to_ascii_lowercase()))
+        .cloned()
+        .collect()
+}
+
+fn observed_forbidden_tokens(answer: &str, tokens: Option<&[String]>) -> Vec<String> {
+    let answer = answer.to_ascii_lowercase();
+    tokens
+        .unwrap_or_default()
+        .iter()
+        .filter(|token| answer.contains(&token.to_ascii_lowercase()))
+        .cloned()
+        .collect()
+}
+
+fn normalized_json_schema(schema: &Value) -> Option<Value> {
+    match schema {
+        Value::String(schema) => serde_json::from_str(schema).ok(),
+        Value::Object(_) => Some(schema.clone()),
+        _ => None,
+    }
+}
+
+struct SchemaStyleResult {
+    parsed: bool,
+    failures: Vec<String>,
+}
+
+fn validate_schema_style_json(answer: &str, schema: &Value) -> SchemaStyleResult {
+    let Ok(value) = serde_json::from_str::<Value>(answer.trim()) else {
+        return SchemaStyleResult { parsed: false, failures: vec!["json_parse".to_string()] };
+    };
+    let mut failures = Vec::new();
+    if schema["type"].as_str() == Some("object") && !value.is_object() {
+        failures.push("json_type_object".to_string());
+    }
+    if let Some(required) = schema["required"].as_array()
+        && let Some(object) = value.as_object()
+    {
+        for field in required.iter().filter_map(Value::as_str) {
+            if !object.contains_key(field) {
+                failures.push(format!("json_required_{field}"));
+            }
+        }
+    }
+    if schema["additionalProperties"].as_bool() == Some(false)
+        && let (Some(object), Some(properties)) =
+            (value.as_object(), schema["properties"].as_object())
+    {
+        for field in object.keys() {
+            if !properties.contains_key(field) {
+                failures.push(format!("json_additional_{field}"));
+            }
+        }
+    }
+    if let (Some(object), Some(properties)) = (value.as_object(), schema["properties"].as_object())
+    {
+        for (field, field_schema) in properties {
+            let Some(observed) = object.get(field) else {
+                continue;
+            };
+            if let Some(expected_const) = field_schema.get("const")
+                && observed != expected_const
+            {
+                failures.push(format!("json_const_{field}"));
+            }
+            if let Some(expected_type) = field_schema["type"].as_str()
+                && !json_type_matches(observed, expected_type)
+            {
+                failures.push(format!("json_type_{field}_{expected_type}"));
+            }
+            if let Some(enum_values) = field_schema["enum"].as_array()
+                && !enum_values.iter().any(|candidate| candidate == observed)
+            {
+                failures.push(format!("json_enum_{field}"));
+            }
+        }
+    }
+    SchemaStyleResult { parsed: true, failures }
+}
+
+fn json_type_matches(value: &Value, expected_type: &str) -> bool {
+    match expected_type {
+        "array" => value.is_array(),
+        "boolean" => value.is_boolean(),
+        "integer" => value.as_i64().is_some() || value.as_u64().is_some(),
+        "number" => value.is_number(),
+        "object" => value.is_object(),
+        "string" => value.is_string(),
+        "null" => value.is_null(),
+        _ => false,
     }
 }
 
@@ -1536,24 +1949,43 @@ mod tests {
         }
     }
 
+    fn scoring(kind: &str) -> AnswerScoring {
+        AnswerScoring {
+            kind: Some(kind.to_string()),
+            expected: None,
+            expected_normalized: None,
+            schema: None,
+            expected_number: None,
+            numeric_tolerance: None,
+            required_keywords: None,
+            forbidden_tokens: None,
+        }
+    }
+
     #[test]
     fn exact_gate_accepts_trimmed_answer() {
         let gate = AnswerGate { expected: Some("4".to_string()), ..gate("exact_trimmed") };
-        let quality = evaluate_quality(" 4\n", &gate, None, None, None);
+        let quality = evaluate_quality(" 4\n", &gate, None, None, None, None);
         assert!(quality.passed);
     }
 
     #[test]
     fn quality_rejects_raw_special_tokens() {
-        let quality =
-            evaluate_quality("<|start_header_id|>assistant", &gate("readable"), None, None, None);
+        let quality = evaluate_quality(
+            "<|start_header_id|>assistant",
+            &gate("readable"),
+            None,
+            None,
+            None,
+            None,
+        );
         assert!(!quality.passed);
         assert!(quality.failed_rules.contains(&"raw_special_tokens".to_string()));
     }
 
     #[test]
     fn quality_rejects_punctuation_noise() {
-        let quality = evaluate_quality("!!!,,,!!!", &gate("readable"), None, None, None);
+        let quality = evaluate_quality("!!!,,,!!!", &gate("readable"), None, None, None, None);
         assert!(!quality.passed);
         assert!(quality.failed_rules.contains(&"mostly_text".to_string()));
     }
@@ -1561,11 +1993,80 @@ mod tests {
     #[test]
     fn apple_m4_quality_rejects_short_or_degenerate_token_output() {
         let gate = AnswerGate { min_words: Some(2), ..gate("readable") };
-        let quality = evaluate_quality("short answer", &gate, Some(&[7, 7, 7]), Some(4), Some(2));
+        let quality =
+            evaluate_quality("short answer", &gate, None, Some(&[7, 7, 7]), Some(4), Some(2));
         assert!(!quality.passed);
         assert!(quality.failed_rules.contains(&"generated_token_min".to_string()));
         assert!(quality.failed_rules.contains(&"generated_token_variation".to_string()));
         assert_eq!(quality.distinct_generated_tokens, 1);
+    }
+
+    #[test]
+    fn slm_eval_scoring_exact_and_normalized_match_are_deterministic() {
+        let exact =
+            AnswerScoring { expected_normalized: Some("15".to_string()), ..scoring("exact_match") };
+        assert!(evaluate_scoring("15", &exact).passed);
+        assert!(!evaluate_scoring("15.", &exact).passed);
+
+        let normalized = AnswerScoring {
+            expected_normalized: Some("ant, cat, dog".to_string()),
+            ..scoring("normalized_match")
+        };
+        assert!(evaluate_scoring(" Ant,   cat, dog. ", &normalized).passed);
+    }
+
+    #[test]
+    fn slm_eval_scoring_validates_json_schema_style_outputs() {
+        let scoring = AnswerScoring {
+            schema: Some(json!({
+                "type": "object",
+                "required": ["status"],
+                "additionalProperties": false,
+                "properties": {
+                    "status": { "const": "ready", "type": "string" }
+                }
+            })),
+            ..scoring("json_schema")
+        };
+
+        assert!(evaluate_scoring(r#"{"status":"ready"}"#, &scoring).passed);
+        let result = evaluate_scoring(r#"{"status":"ready","extra":true}"#, &scoring);
+        assert!(!result.passed);
+        assert!(result.failed_rules.contains(&"json_additional_extra".to_string()));
+    }
+
+    #[test]
+    fn slm_eval_scoring_supports_numeric_tolerance() {
+        let scoring = AnswerScoring {
+            expected_number: Some(3.14),
+            numeric_tolerance: Some(0.01),
+            ..scoring("numeric_tolerance")
+        };
+
+        assert!(evaluate_scoring("approximately 3.141", &scoring).passed);
+        let result = evaluate_scoring("3.20", &scoring);
+        assert!(!result.passed);
+        assert!(result.failed_rules.contains(&"numeric_tolerance".to_string()));
+    }
+
+    #[test]
+    fn slm_eval_scoring_required_and_forbidden_tokens_affect_quality() {
+        let scoring = AnswerScoring {
+            required_keywords: Some(vec!["ready".to_string()]),
+            forbidden_tokens: Some(vec!["maybe".to_string()]),
+            ..scoring("required_forbidden_tokens")
+        };
+        let gate =
+            AnswerGate { contains_any: Some(vec!["maybe".to_string()]), ..gate("contains_any") };
+        let quality = evaluate_quality("maybe later", &gate, Some(&scoring), None, None, None);
+
+        assert!(!quality.passed);
+        assert!(quality.failed_rules.contains(&"scoring_required_keywords".to_string()));
+        assert!(quality.failed_rules.contains(&"scoring_forbidden_tokens".to_string()));
+        assert_eq!(
+            quality.scoring.as_ref().map(|result| result.kind.as_str()),
+            Some("required_forbidden_tokens")
+        );
     }
 
     #[test]
@@ -1843,6 +2344,7 @@ mod tests {
             timeout_seconds: None,
             min_generated_tokens: None,
             min_distinct_generated_tokens: None,
+            scoring: None,
             gate: gate("exact_trimmed"),
         };
         let run = ChildRun {
@@ -1917,6 +2419,7 @@ mod tests {
             timeout_seconds: None,
             min_generated_tokens: None,
             min_distinct_generated_tokens: None,
+            scoring: None,
             gate: gate("exact_trimmed"),
         };
         let run = ChildRun {

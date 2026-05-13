@@ -145,6 +145,10 @@ pub enum LunarLakeAction {
         #[arg(long, default_value_t = 32)]
         max_new_tokens: usize,
 
+        /// Optional bounded-answer gate: normalized output must contain this text.
+        #[arg(long, value_name = "TEXT")]
+        expect_contains: Option<String>,
+
         /// Output JSON operator ask receipt to file.
         #[arg(long)]
         json_out: Option<PathBuf>,

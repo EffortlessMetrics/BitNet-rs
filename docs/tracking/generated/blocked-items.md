@@ -55,7 +55,7 @@
 | apple-m4-local-answer | M4-QA-005 | M4-QA-002, M4-QA-003 | merged |
 | apple-m4-local-answer | M4-BITNET-ASK-000 | M4-QA-001, M4-QA-002, M4-QA-003, M4-QA-004 | merged |
 | apple-m4-local-answer | M4-BITNET-ASK-001 | M4-BITNET-ASK-000 | merged |
-| apple-m4-local-answer | M4-BITNET-ASK-002 | M4-BITNET-ASK-001 | pr_open |
+| apple-m4-local-answer | M4-BITNET-ASK-002 | M4-BITNET-ASK-001 | merged |
 | apple-m4-operational | M4-OP-002 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-003 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-004 | M4-OP-003 | merged |
@@ -71,6 +71,11 @@
 | apple-m4-slm-answer | SLM-M4-005 | SLM-M4-004 | merged |
 | apple-m4-slm-answer | SLM-M4-006 | SLM-M4-004, SLM-M4-005 | merged |
 | apple-m4-slm-answer | SLM-M4-007 | SLM-M4-005, SLM-M4-006 | merged |
+| apple-m4-slm-eval-and-proof | M4-SLM-EVAL-002 | M4-SLM-EVAL-001 | merged |
+| apple-m4-slm-eval-and-proof | M4-SLM-EVAL-003 | M4-SLM-EVAL-002 | ready |
+| apple-m4-slm-eval-and-proof | M4-SLM-EVAL-004 | M4-SLM-EVAL-003 | ready |
+| apple-m4-slm-eval-and-proof | M4-SLM-EVAL-005 | M4-SLM-EVAL-003 | ready |
+| apple-m4-slm-eval-and-proof | M4-SLM-EVAL-006 | M4-SLM-EVAL-004 | ready |
 | apple-m4-slm-excellence | M4-SLM-EX-002 | M4-SLM-EX-001 | merged |
 | apple-m4-slm-excellence | M4-SLM-EX-003 | M4-SLM-EX-002 | merged |
 | apple-m4-slm-excellence | M4-SLM-EX-004 | M4-SLM-EX-003 | merged |
@@ -186,6 +191,7 @@
 | intel-258v-platform | LNL258V-REG-001 | LNL258V-OP-001 | merged |
 | intel-258v-platform | LNL258V-COMPARE-005 | LNL258V-REG-001 | merged |
 | intel-258v-platform | LNL258V-ASK-001 | LNL258V-COMPARE-005 | merged |
+| intel-258v-platform | LNL258V-ASK-002 | LNL258V-ASK-001 | pr_open |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
@@ -338,6 +344,7 @@
 | slm-cpu | SLM-CPU-008U | SLM-CPU-008T | merged |
 | slm-cpu | SLM-CPU-008V | SLM-CPU-008U | merged |
 | slm-cpu | SLM-CPU-008W | SLM-CPU-008V | merged |
+| slm-cpu | SLM-CPU-008X | SLM-CPU-008W | ready |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | merged |
 | wasm-inference | WASM-002 | WASM-001 | ready |

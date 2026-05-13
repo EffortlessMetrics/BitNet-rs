@@ -1,0 +1,179 @@
+schema: 1
+artifact_kind: slm_answer_corpus
+name: apple-m4-slm-eval-seeded-corpus-v1
+description: Seeded deterministic dense SLM eval corpus spec for Apple M4 proof reports.
+metadata:
+  campaign: apple-m4-slm-eval-and-proof
+  work_item: M4-SLM-EVAL-001
+  seed: 424242
+  generator_policy: deterministic-static-fixture
+  prompt_template: qwen2.5
+  scoring_status: deterministic_fixture_scoring
+  scoring_support:
+    exact_match: deterministic_fixture
+    normalized_match: deterministic_fixture
+    json_schema: deterministic_fixture
+    numeric_tolerance: deterministic_fixture
+    required_keywords: deterministic_fixture
+    forbidden_tokens: deterministic_fixture
+  claim_boundary:
+    runtime_proof: false
+    broad_quality_claim: false
+    broad_performance_claim: false
+    bitnet_evidence: false
+model:
+  repo: Qwen/Qwen2.5-0.5B-Instruct-GGUF
+  file: qwen2.5-0.5b-instruct-q8_0.gguf
+  sha256: ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e
+  family: qwen
+  architecture: qwen2
+  quant_format: Q8_0
+defaults:
+  prompt_template: qwen2.5
+  max_new_tokens: 32
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 180
+  min_generated_tokens: 1
+  min_distinct_generated_tokens: 2
+cases:
+  - id: arithmetic_seed424242_add_07_08
+    category: arithmetic_exact
+    seed_material: "seed=424242 family=arithmetic op=add a=7 b=8"
+    question: "Compute 7 + 8. Answer with only the number."
+    max_new_tokens: 4
+    scoring:
+      kind: exact_match
+      expected_normalized: "15"
+    gate:
+      kind: exact_trimmed
+      expected: "15"
+
+  - id: arithmetic_seed424242_double_12
+    category: arithmetic_exact
+    seed_material: "seed=424242 family=arithmetic op=double n=12"
+    question: "Double 12. Answer with only the number."
+    max_new_tokens: 4
+    scoring:
+      kind: exact_match
+      expected_normalized: "24"
+    gate:
+      kind: exact_trimmed
+      expected: "24"
+
+  - id: fixed_table_seed424242_color_heron
+    category: fixed_table_qa
+    seed_material: "seed=424242 table=item_to_color item=heron"
+    question: "Use this table: kiwi=green, heron=blue, ember=red. What color is heron? Answer with one word."
+    max_new_tokens: 8
+    scoring:
+      kind: exact_match
+      expected_normalized: "blue"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "blue"
+
+  - id: json_seed424242_status_ready
+    category: format_constrained_json
+    seed_material: "seed=424242 format=json key=status value=ready"
+    question: "Return compact JSON with exactly one key named status and value ready."
+    max_new_tokens: 24
+    scoring:
+      kind: json_schema
+      schema: '{"type":"object","required":["status"],"additionalProperties":false,"properties":{"status":{"const":"ready"}}}'
+    gate:
+      kind: starts_with_any
+      starts_with_any:
+        - "{"
+
+  - id: classification_seed424242_invoice_positive
+    category: closed_label_classification
+    seed_material: "seed=424242 labels=positive|negative text=invoice_paid"
+    question: "Classify the sentiment as positive or negative: The invoice was paid on time. Answer with one label."
+    max_new_tokens: 4
+    scoring:
+      kind: exact_match
+      expected_normalized: "positive"
+    gate:
+      kind: exact_trimmed
+      expected: "positive"
+
+  - id: extraction_seed424242_ticket_owner
+    category: synthetic_extraction
+    seed_material: "seed=424242 record=ticket owner=Mira"
+    question: "Extract the owner name from this note: Ticket AX-17 owner is Mira; due date is Friday. Answer with only the owner."
+    max_new_tokens: 8
+    scoring:
+      kind: exact_match
+      expected_normalized: "Mira"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Mira"
+        - "mira"
+
+  - id: ordering_seed424242_animals
+    category: ordering_sorting
+    seed_material: "seed=424242 items=dog,ant,cat"
+    question: "Sort these words alphabetically and separate them with commas: dog, ant, cat."
+    max_new_tokens: 16
+    scoring:
+      kind: normalized_match
+      expected_normalized: "ant, cat, dog"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "ant, cat, dog"
+        - "ant cat dog"
+
+  - id: rewrite_seed424242_cache_sentence
+    category: copy_edit_rewrite
+    seed_material: "seed=424242 rewrite=plain_sentence"
+    question: "Rewrite as a short plain sentence: The model cache is healthy."
+    max_new_tokens: 16
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - cache
+        - healthy
+    gate:
+      kind: contains_any
+      contains_any:
+        - "cache"
+        - "healthy"
+
+  - id: summary_seed424242_keywords
+    category: constrained_summary
+    seed_material: "seed=424242 summary_keywords=fast,safe"
+    question: "Summarize in one short sentence and include the words fast and safe: Rust helps teams build reliable systems software."
+    max_new_tokens: 24
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - fast
+        - safe
+    gate:
+      kind: contains_any
+      contains_any:
+        - "fast"
+        - "safe"
+
+  - id: instruction_seed424242_required_forbidden
+    category: instruction_following_required_forbidden
+    seed_material: "seed=424242 required=ready forbidden=maybe"
+    question: "Answer with the word ready. Do not use the word maybe."
+    max_new_tokens: 8
+    scoring:
+      kind: required_forbidden_tokens
+      required_keywords:
+        - ready
+      forbidden_tokens:
+        - maybe
+    gate:
+      kind: contains_any
+      contains_any:
+        - "ready"
+        - "Ready"

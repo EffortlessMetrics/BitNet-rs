@@ -1,0 +1,278 @@
+id = "apple-m4-slm-eval-and-proof"
+title = "Apple M4 dense SLM eval and proof"
+status = "active"
+
+objective = "Turn the usable Apple M4 dense SLM path into a structured, receipt-backed local model runner proof with seeded quality eval, first-class speed/stability metrics, per-model reports, and lightweight regression economics without broad benchmark claims."
+
+end_state = [
+  "A seeded deterministic dense SLM eval corpus is defined and parser-validated.",
+  "Accuracy scoring supports exact match, normalized match, JSON/schema-style checks, numeric tolerance, required keywords, and forbidden-token checks without relying on open-ended judgment.",
+  "Per-model M4 dense SLM reports record model hash, tokenizer authority, prompt template, backend, fallback status, generated text/token IDs coverage, timing percentiles, memory, and claim boundaries.",
+  "All supported dense M4 model IDs can be evaluated through the same artifact, tokenizer, cache, receipt, and report contract.",
+  "Advisory/nightly/release CI tiers keep live M4 model runs out of generic required PR CI while still producing durable evidence.",
+  "`bitnet mac regression` can compare matching dense SLM eval reports over time.",
+]
+
+hard_constraints = [
+  "This is an M4 Mac mini dense SLM campaign.",
+  "Do not reopen completed apple-m4, apple-m4-operational, apple-m4-slm-answer, apple-m4-productization, apple-m4-slm-performance, apple-m4-slm-excellence, apple-m4-slm-hardening, apple-m4-continuity, or apple-m4-dense-slm-regression campaigns.",
+  "Do not use dense Qwen evidence as BitNet local-answer evidence.",
+  "Do not claim broad model quality or broad Apple Silicon benchmark performance.",
+  "Do not claim full apple-m4-metal inference, QK256 support, Neural Engine execution, MPSGraph model inference, or MacBook evidence.",
+  "Do not add live model downloads, hardware timing runs, or long resident soaks to generic required PR CI.",
+  "Never commit model binaries.",
+]
+
+[[work_item]]
+id = "M4-SLM-EVAL-001"
+status = "merged"
+pr = 4656
+merge_sha = "685fca2271401b234bd53a9f9d032de543509a44"
+branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-001-seeded-corpus"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Define the apple-m4-slm-eval-and-proof campaign and add a seeded, deterministic dense SLM eval corpus spec covering arithmetic, fixed-table QA, JSON-shaped output, closed-label classification, synthetic extraction, ordering/sorting, rewrite, constrained summary, and required/forbidden-token instruction following. Validate the corpus shape with the existing answer-corpus dry-run path, but do not claim runtime accuracy or broad model quality."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- answer-corpus --dry-run --corpus ci/quality/apple-m4-slm-eval-seeded-corpus.yaml --model models/Qwen2.5-0.5B-Instruct-GGUF/qwen2.5-0.5b-instruct-q8_0.gguf --json-out target/apple-m4-slm-eval-and-proof/seeded-corpus-dry-run.json",
+  "jq -e '.artifact_kind == \"slm_cpu_answer_corpus\" and .corpus.case_count == 10 and .quality_summary.not_run == 10 and .quality_summary.failed == 0 and .quality_summary.timeout == 0' target/apple-m4-slm-eval-and-proof/seeded-corpus-dry-run.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-and-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/apple-m4-slm-eval-seeded-corpus.yaml",
+  "docs/slm/apple-m4-slm-eval-and-proof.md",
+  "docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "A seeded deterministic dense SLM eval corpus spec exists and parses through the answer-corpus dry-run path.",
+]
+must_not_claim = [
+  "Runtime dense SLM accuracy is proven by this item.",
+  "Broad model quality is proven.",
+  "Broad M4 performance is proven.",
+  "BitNet local-answer quality is proven.",
+  "Full apple-m4-metal inference works.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-EVAL-002"
+status = "merged"
+pr = 4660
+merge_sha = "d4abc2cbaa2cfb21dc1c3d322af3dcb736a010ea"
+branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-002-scoring"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EVAL-001"]
+acceptance = "Add deterministic dense SLM eval scoring for exact, normalized, JSON/schema-style, numeric tolerance, required keyword, and forbidden-token checks, with fixture tests that do not invoke live models."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval",
+  "cargo test --locked -p bitnet-cli slm_eval_scoring",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- answer-corpus --dry-run --corpus ci/quality/apple-m4-slm-eval-seeded-corpus.yaml --model models/Qwen2.5-0.5B-Instruct-GGUF/qwen2.5-0.5b-instruct-q8_0.gguf --json-out target/apple-m4-slm-eval-and-proof/seeded-corpus-scoring-dry-run.json",
+  "jq -e '.artifact_kind == \"slm_cpu_answer_corpus\" and .corpus.case_count == 10 and .scoring_summary.enabled == true and .scoring_summary.total == 10 and .scoring_summary.not_run == 10' target/apple-m4-slm-eval-and-proof/seeded-corpus-scoring-dry-run.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-and-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "ci/quality/apple-m4-slm-eval-seeded-corpus.yaml",
+  "docs/slm/apple-m4-slm-eval-and-proof.md",
+  "docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Dense SLM eval scoring semantics exist for deterministic fixture receipts.",
+]
+must_not_claim = [
+  "Live M4 model accuracy has run.",
+  "Broad model quality is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-EVAL-003"
+status = "ready"
+branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-003-report-schema"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EVAL-002"]
+acceptance = "Define and validate the per-model Apple M4 dense SLM eval summary report schema with first-class TTFT, input token throughput, output/decode throughput, total wall time, memory, stability, and claim-boundary fields."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-and-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/apple-m4-slm-eval-and-proof.md",
+  "docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Per-model dense SLM eval report schema validation exists.",
+]
+must_not_claim = [
+  "A live supported-model matrix has run.",
+  "Broad M4 performance is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-EVAL-004"
+status = "ready"
+branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-004-supported-model-reports"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EVAL-003"]
+acceptance = "Run and publish per-model Apple M4 dense SLM eval reports for every supported dense model ID under the seeded corpus and report schema, preserving fallback=false and dense-only claim boundaries."
+commands = [
+  "cargo fmt --all -- --check",
+  "Local M4 release eval command for qwen2.5-0.5b-instruct-q8_0",
+  "Local M4 release eval command for qwen2.5-0.5b-instruct-q4_k_m",
+  "Local M4 release eval command for qwen2.5-1.5b-instruct-q4_k_m",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-and-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/apple-m4-slm-eval-and-proof.md",
+  "docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Supported dense M4 models have per-model eval reports for the committed seeded corpus when receipts pass.",
+]
+must_not_claim = [
+  "The reports prove broad model quality.",
+  "The reports prove broad Apple Silicon performance.",
+  "BitNet quality is proven.",
+]
+
+[[work_item]]
+id = "M4-SLM-EVAL-005"
+status = "ready"
+branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-005-ci-tiers"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EVAL-003"]
+acceptance = "Document and wire lightweight Tier 0 parser/schema/report checks for generic PR CI, with advisory/nightly/release M4 tiers defined separately for live model runs."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-and-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/workflows/**",
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/apple-m4-slm-eval-and-proof.md",
+  "docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Dense SLM eval has lightweight generic CI checks and documented live-M4 tiers.",
+]
+must_not_claim = [
+  "Generic PR CI runs live M4 model evaluation.",
+]
+
+[[work_item]]
+id = "M4-SLM-EVAL-006"
+status = "ready"
+branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-006-regression"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-SLM-EVAL-004"]
+acceptance = "Wire `bitnet mac regression` or an adjacent checker to compare matching dense SLM eval summary reports over time with explicit thresholds and no broad benchmark claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_regression",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-and-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/apple-m4-slm-eval-and-proof.md",
+  "docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "models/**",
+]
+may_claim = [
+  "Dense SLM eval report regression comparison exists for matching report schemas.",
+]
+must_not_claim = [
+  "A regression threshold proves broad model quality or broad performance.",
+]

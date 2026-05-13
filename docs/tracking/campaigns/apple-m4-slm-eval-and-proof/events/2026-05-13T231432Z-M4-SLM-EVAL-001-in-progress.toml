@@ -1,0 +1,12 @@
+timestamp = "2026-05-13T23:14:32Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started the Apple M4 dense SLM eval-and-proof campaign with a seeded deterministic corpus spec.",
+  "Scope is corpus shape and tracking only; no live M4 model run, runtime accuracy claim, broad quality claim, broad performance claim, BitNet evidence, full Metal inference, QK256, Neural Engine, or MPSGraph claim.",
+]
