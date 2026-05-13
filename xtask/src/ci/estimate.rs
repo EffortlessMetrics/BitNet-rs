@@ -238,8 +238,8 @@ mod tests {
     }
 
     #[test]
-    fn learned_estimates_ignore_cap_failures() {
-        let dir = tempfile::tempdir().unwrap();
+    fn learned_estimates_ignore_cap_failures() -> Result<()> {
+        let dir = tempfile::tempdir()?;
         let history = dir.path().join("hist.jsonl");
         let lanes = dir.path().join("lanes.toml");
         let out = dir.path().join("estimate.json");
@@ -251,17 +251,16 @@ mod tests {
 {\"lane\":\"m3-live\",\"actual_lem\":12.0,\"conclusion\":\"cancelled\"}
 {\"lane\":\"m3-live\",\"actual_lem\":20.0,\"conclusion\":\"success\"}
 ",
-        )
-        .unwrap();
-        std::fs::write(&lanes, "[lane.m3-live]\nbase_lem = 1\n").unwrap();
+        )?;
+        std::fs::write(&lanes, "[lane.m3-live]\nbase_lem = 1\n")?;
 
-        run(history, lanes, out.clone(), false, 10).unwrap();
-        let report: EstimateReport =
-            serde_json::from_str(&std::fs::read_to_string(out).unwrap()).unwrap();
+        run(history, lanes, out.clone(), false, 10)?;
+        let report: EstimateReport = serde_json::from_str(&std::fs::read_to_string(out)?)?;
         let lane = &report.lanes["m3-live"];
 
         assert_eq!(lane.samples, 2);
         assert!((lane.p50 - 15.0).abs() < 1e-9);
+        Ok(())
     }
 
     #[test]
