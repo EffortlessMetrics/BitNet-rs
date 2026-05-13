@@ -159,6 +159,26 @@ Answer receipts must keep the completed proof invariants intact:
 - answer quality gate passed: `true`
 - speedup claim: `false` unless later benchmark-qualified
 
+## Productization Current-State Ledger
+
+The CUDA productization lane starts from existing receipts. This ledger records
+the claim boundary before new runtime work.
+
+| Lane | Current state | Last real receipt | Next missing proof |
+|---|---|---|---|
+| BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | profile-specific benchmark qualification |
+| Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; audit exact receipt source before further promotion | `ci/hardware/windows-9950x3d-rtx5070ti/**/dense-*.json` | distinguish real hardware/user-path receipts from validators and contracts |
+| Qwen3 0.6B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
+| SmolLM2 360M | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
+| Llama 3.2 1B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
+| Llama 3.2 3B | registered candidate | none | memory envelope, artifact contract, tokenizer/prompt authority |
+| Gemma/Phi small | registered candidate | none | architecture policy, artifact contract, tokenizer/prompt authority |
+
+Allowed claims remain scoped to the receipts listed in this campaign and the
+model coverage matrix. Dense Qwen proof is not BitNet proof. BitNet QK256 proof
+is not dense SLM proof. Generic `cuda` is not RTX 5070 Ti proof unless the
+receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
+
 ## Work Items
 
 | Work item | Status | Notes |
@@ -216,6 +236,8 @@ Answer receipts must keep the completed proof invariants intact:
 | CUDA-DENSE-PERF-006 | merged | Dense Qwen benchmark qualification consumes the H2D model-load envelope while preserving pure-H2D and speedup blockers. |
 | CUDA-UX-006 | merged | `bitnet bench --device cuda --cuda-benchmark-receipt` reports governed CUDA benchmark receipts without simulating CPU fallback or claiming fresh benchmark execution. |
 | CUDA-UX-007 | merged | `bitnet receipts explain` surfaces benchmark qualification profile decisions, transfer timing sources, and blockers for governed CUDA benchmark receipts. |
+| CUDA-PROD-008 | ready | Reconcile the 5070 Ti BitNet and dense proof state before runtime changes. |
+| CUDA-DENSE-050 | planned | Audit Qwen2.5 Q8_0 dense CUDA receipts to distinguish hardware/user-path evidence from validators and contracts. |
 
 ## Review Policy
 
