@@ -39,6 +39,20 @@ BitNet is still not enabled for `bitnet mac chat` or `bitnet mac serve`. If a
 diagnostic-only, candidate, rejected, or unknown model ID is passed to the dense
 Mac commands, the wrapper fails before cache repair guidance and points back to
 `bitnet mac models`.
+
+The first BitNet one-shot ask runtime receipt is:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json
+```
+
+It records the fixed prompt `What is 2+2? Answer briefly.`, text
+`2+2 equals 4.`, 8 generated token IDs, accepted model/tokenizer identity,
+`apple-m4-cpu-neon` routing, `runtime_api=cpu`, `fallback_used=false`,
+`first_token_ms=7536`, `decode_steady_state_tok_s=2.083`, and chat/server
+disabled in the claim boundary. Treat this as a narrow one-shot route proof,
+not broad BitNet chat quality or a performance envelope.
+
 When `bitnet mac ask` starts with a verified model, it prints a compact stderr
 summary covering model ID, quantization, cache root, backend, fallback status,
 receipt path, and short SHA before generation begins.
@@ -212,7 +226,8 @@ thresholds.
 
 This envelope does not claim:
 
-- BitNet local-answer quality;
+- broad BitNet local-answer or chat quality beyond the single committed
+  one-shot ask receipt;
 - QK256 on Apple Silicon;
 - Neural Engine execution;
 - MPSGraph model inference;

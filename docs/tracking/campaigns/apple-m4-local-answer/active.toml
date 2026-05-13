@@ -460,7 +460,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-ASK-001"
-status = "ready"
+status = "pr_open"
+pr = 4647
 branch = "codex/apple-m4-local-answer/M4-BITNET-ASK-001-runtime-receipt"
 stackable = false
 review_mode = "codex_premerge"
@@ -470,8 +471,9 @@ blocked_by = ["M4-BITNET-ASK-000"]
 acceptance = "Prove the user-facing `bitnet mac ask` BitNet route completes through the accepted Microsoft I2_S GGUF and accepted external tokenizer in strict mode, selects apple-m4-cpu-neon, records fallback_used=false, valid UTF-8, non-empty coherent output, generated token IDs, timing receipt fields, and a documented operator command; if the route is too slow, record load, tokenizer, prefill, first-token, decode timing, timeout boundary, and where the delay occurs without claiming success."
 commands = [
   "cargo fmt --all -- --check",
-  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- --device apple-m4-cpu-neon mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --json-out ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json \"What is 2+2? Answer briefly.\"",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- --device apple-m4-cpu-neon mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --max-new-tokens 8 --json-out ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json \"What is 2+2? Answer briefly.\"",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json",
+  "jq -e '.artifact_kind == \"strict_bitnet_cpu_profile\" and .requested_backend == \"apple-m4-cpu-neon\" and .selected_backend == \"apple-m4-cpu-neon\" and .runtime_api == \"cpu\" and .fallback_used == false and .model.sha256 == \"4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162\" and .tokenizer.strict == true and .tokenizer.pretokenizer_authority == \"llama-bpe\" and (.text | type == \"string\" and length > 0) and (.tokens.generated_ids | type == \"array\") and ((.tokens.generated_ids | length) == .tokens.generated) and .mac_bitnet_claim_boundary.chat_enabled == false and .mac_bitnet_claim_boundary.serve_enabled == false and .mac_bitnet_claim_boundary.full_metal_inference_claimed == false' ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json",
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_ask_bitnet",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
@@ -497,7 +499,7 @@ forbidden_paths = [
   "crates/bitnet-kernels/src/metal/**",
 ]
 may_claim = [
-  "The user-facing BitNet one-shot `bitnet mac ask` route completed under strict Apple M4 CPU/NEON routing with receipt-backed text, generated token IDs, timing fields, accepted model/tokenizer identity, and fallback_used=false, once the runtime receipt passes.",
+  "The user-facing BitNet one-shot `bitnet mac ask` route completed for the committed single-prompt Apple M4 CPU/NEON receipt with text `2+2 equals 4.`, generated token IDs, timing fields, accepted model/tokenizer identity, and fallback_used=false.",
 ]
 must_not_claim = [
   "BitNet chat works.",

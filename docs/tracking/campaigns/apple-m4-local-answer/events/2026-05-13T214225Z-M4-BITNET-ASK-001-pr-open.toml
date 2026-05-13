@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T21:42:25Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-001"
+event = "pr_open"
+pr = 4647
+head_sha = "6c2b0b3c579548ef5b7c1ec3aa311a6ad4a5a766"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4647 for the M4-BITNET-ASK-001 user-facing BitNet one-shot ask runtime receipt.",
+  "The PR commits ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json and documents the exact operator command, receipt fields, timings, and claim boundaries.",
+  "Claim boundaries remain narrow: one-shot BitNet `mac ask` receipt only; no BitNet chat/server, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, broad quality, or broad performance claim.",
+]
