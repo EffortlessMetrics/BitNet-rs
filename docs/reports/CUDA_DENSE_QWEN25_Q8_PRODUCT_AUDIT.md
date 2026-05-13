@@ -15,6 +15,12 @@ nvidia-rtx-5070-ti-cuda`, `runtime_api = cuda`, `fallback_used = false`, the
 `dense_regular_llm_cuda` route, CPU/CUDA token or top-k parity evidence, CUDA
 kernel stats, timing, and claim-boundary fields.
 
+`CUDA-DENSE-051` refreshed the one-token proof on 2026-05-13 with a direct
+`dense-gguf-qwen-one-token-strict-cuda` receipt at
+`ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/dense-qwen25-q8-one-token-cuda.json`.
+The refresh preserves the same claim boundary: one deterministic token only,
+no short-decode, chat, server, speedup, full-residency, or BitNet QK256 claim.
+
 The benchmark qualification receipts explicitly keep `speedup_claim = false`
 and `benchmark_qualified_speedup = false`: the reviewed CUDA profiles are
 slower than same-artifact CPU means, and pure host-to-device copy timing remains
@@ -32,7 +38,7 @@ receipts before promoting any broader product statement.
 
 | Surface | Current state | Evidence | Classification | Claim allowed | Must not claim |
 | --- | --- | --- | --- | --- | --- |
-| One-token strict CUDA | Real hardware receipt exists | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json` | hardware/user-path runtime proof command | one deterministic greedy token through `dense_regular_llm_cuda` on RTX 5070 Ti, CPU/CUDA selected-token and top-k rank match | BitNet QK256 proof, chat, speedup, server readiness, full residency |
+| One-token strict CUDA | Real hardware receipt exists and was refreshed | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json`; `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/dense-qwen25-q8-one-token-cuda.json` | hardware/user-path runtime proof command | one deterministic greedy token through `dense_regular_llm_cuda` on RTX 5070 Ti, CPU/CUDA selected-token and top-k rank match | BitNet QK256 proof, chat, speedup, server readiness, full residency |
 | Short decode strict CUDA | Real hardware receipt exists | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json` | hardware/user-path runtime proof command | bounded 8-token deterministic decode through `dense_regular_llm_cuda`, CPU/CUDA generated-token match | broad chat quality, server readiness, speedup, full residency |
 | Warm-session strict CUDA | Real hardware receipt exists | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json` | hardware/user-path runtime proof command | three-turn bounded warm session, model/tokenizer/context loaded once, weights uploaded once, fallback false | broad chat quality, server readiness, global persistence/full residency, speedup |
 | Benchmark baseline | Real baseline receipt exists | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-cuda-benchmark-baseline.json` | measured existing-receipt baseline | one-token, short-decode, and warm-session profile measurements with speedup false | benchmark-qualified speedup |
@@ -45,13 +51,20 @@ receipts before promoting any broader product statement.
 
 Is one-token strict CUDA real hardware execution or validator-only?
 
-Real hardware execution. The one-token receipt is committed at
+Real hardware execution. The original one-token receipt is committed at
 `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json`.
 It records `artifact_kind = dense_gguf_qwen_one_token_strict_cuda_proof`,
 `selected_backend = nvidia-rtx-5070-ti-cuda`, `runtime_api = cuda`,
 `fallback_used = false`, `execution_plan.selected_route =
 dense_regular_llm_cuda`, three kernel-stat entries, CPU selected token `576`,
 CUDA selected token `576`, and matching top-k rank evidence.
+
+The 2026-05-13 refresh at
+`ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/dense-qwen25-q8-one-token-cuda.json`
+uses the dedicated one-token proof command and records CPU selected token
+`22587`, CUDA selected token `22587`, `selected_token_match = true`,
+`quality_gate.passed = true`, three kernel-stat entries, transfer accounting,
+`speedup_claim = false`, and `bitnet_packed_i2s_qk256_proof = false`.
 
 Is short decode real?
 
@@ -88,6 +101,7 @@ and top-k evidence across three turns.
 Which receipts are committed?
 
 - `dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json`
+- `2026-05-13/dense-qwen25-q8-one-token-cuda.json`
 - `dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json`
 - `dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json`
 - `dense-gguf-qwen-cuda-benchmark-baseline.json`
@@ -154,11 +168,13 @@ Must not claim:
 - Dense Qwen has global full-residency proof.
 - A direct committed `bitnet ask` or `bitnet chat` hardware receipt exists under
   `ci/hardware/windows-9950x3d-rtx5070ti`.
+- Crates.io or docs.rs badge readiness changed before publish.
 
 ## Validation
 
 ```powershell
 rtk python -m json.tool ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-one-token-strict-cuda-qwen25-q8.json
+rtk python -m json.tool ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/dense-qwen25-q8-one-token-cuda.json
 rtk python -m json.tool ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-short-decode-strict-cuda-qwen25-q8.json
 rtk python -m json.tool ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-warm-session-strict-cuda-qwen25-q8.json
 rtk python -m json.tool ci/hardware/windows-9950x3d-rtx5070ti/2026-05-09/dense-gguf-qwen-cuda-benchmark-baseline.json

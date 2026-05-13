@@ -28,7 +28,7 @@ thiserror.workspace = true
 bytemuck.workspace = true
 rayon.workspace = true
 log.workspace = true
-cudarc = { version = "0.19.6", optional = true, default-features = false, features = ["std", "driver", "nvrtc", "dynamic-loading", "cuda-12000"] }
+cudarc = { version = "0.19.6", optional = true, default-features = false, features = ["std", "driver", "nvrtc", "dynamic-linking", "cuda-12000"] }
 opencl3 = { version = "0.12", optional = true }
 cc = { version = "1.2.46", optional = true }
 bindgen = { version = "0.72.1", optional = true }

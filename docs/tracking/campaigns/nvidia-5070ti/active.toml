@@ -2050,7 +2050,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-051"
-status = "ready"
+status = "in_progress"
 branch = "cuda/dense-qwen25-one-token-proof"
 stackable = false
 review_mode = "codex_premerge"
@@ -2059,12 +2059,16 @@ human_gate = "on_blocker_only"
 blocked_by = ["CUDA-DENSE-050"]
 acceptance = "Refresh or add the real RTX 5070 Ti Qwen2.5 0.5B Q8_0 one-token strict CUDA proof so the receipt records dense_regular_llm_cuda routing, selected RTX 5070 Ti CUDA backend identity, fallback_used=false, CPU/CUDA selected token IDs, kernel and transfer stats, quality gate result, speedup_claim=false, and bitnet_packed_i2s_qk256_proof=false."
 commands = [
-  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\<date>\\dense-qwen25-q8-one-token-cuda.json",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-one-token-strict-cuda --model <qwen2.5-0.5b-q8_0.gguf> --prompt \"What is 2+2? Answer with only the number.\" --json-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-13\\dense-qwen25-q8-one-token-cuda.json",
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-13\\dense-qwen25-q8-one-token-cuda.json",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
   "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-device-probe/Cargo.toml",
+  "crates/bitnet-kernels/Cargo.toml",
   "crates/bitnet-cli/**",
   "crates/bitnet-receipts-core/**",
   "crates/bitnet-receipts/**",
@@ -2085,6 +2089,7 @@ forbidden_paths = [
 may_claim = [
   "The exact Qwen2.5 0.5B Q8_0 artifact has refreshed one-token strict RTX 5070 Ti CUDA proof after the receipt exists.",
   "The receipt preserves dense_regular_llm_cuda routing, selected RTX 5070 Ti CUDA backend identity, and fallback_used=false.",
+  "BitNet CUDA dependencies use one cudarc link mode with Candle CUDA so the strict proof binary can compile under cpu,cuda,full-cli.",
 ]
 must_not_claim = [
   "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
