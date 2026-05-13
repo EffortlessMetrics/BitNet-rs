@@ -23,6 +23,7 @@ task guides, conceptual explanations, and reference material.
 | Work on kernels, quantization, or backend parity | [Architecture overview](architecture-overview.md) | [Quantization support](reference/quantization-support.md) |
 | Bring up or verify hardware | [Hardware matrix](hardware/HARDWARE_MATRIX.md) | [Benchmark protocol](hardware/BENCHMARK_PROTOCOL.md) |
 | Add code or run local validation | [Build commands](development/build-commands.md) | [Test suite](development/test-suite.md) |
+| Understand badge and PR evidence boundaries | [Verification](VERIFICATION.md) | [RIPR evidence policy](RIPR_EVIDENCE_POLICY.md) |
 
 ## Documentation Map
 

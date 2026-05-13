@@ -108,6 +108,16 @@ reason = "ripr static-exposure analyzer configuration (PR 13)."
 covered_by = ["xtask check-file-policy", ".github/workflows/ripr.yml"]
 
 [[allow]]
+glob = "badges/*.json"
+kind = "generated_badge_endpoint"
+owner = "release/ci"
+surface = "docs"
+classification = "generated"
+reason = "Generated Shields endpoint JSON for public README badges."
+generated_by = "cargo xtask badges"
+covered_by = ["cargo xtask badges --check"]
+
+[[allow]]
 glob = "{Justfile,Makefile,Makefile.ci,Makefile.minimal}"
 kind = "build_runner"
 owner = "release/ci"
