@@ -1,0 +1,18 @@
+timestamp = "2026-05-13T09:36:19Z"
+campaign = "intel-258v-platform"
+item = "SLM-OV258V-006"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4594
+merge_sha = "960994c23180034a0cf2326419f28c56e12caaf4"
+actor = "codex"
+branch = "codex/lunar-lake/SLM-OV258V-006-openvino-phase-runner"
+summary = "Marked SLM-OV258V-006 merged after the Qwen2.5 OpenVINO GenAI CPU/GPU/NPU phase runner and live 258V receipt landed."
+
+notes = [
+  "The merged runner records OpenVINO GenAI PerfMetrics and first streamed text chunk timing for bounded CPU, GPU.0/Arc 140V, and NPU LLMPipeline runs.",
+  "The live receipt preserves fallback_used=false and bounded answer gates for all requested OpenVINO devices.",
+  "The receipt records granular OpenVINO GenAI fields exposed by the runtime and leaves prefill_512, decode_128, and direct generated-token IDs as explicit gaps.",
+  "No OpenVINO speedup, sustained phase performance, native OpenCL proof, native NPU inference outside OpenVINO GenAI, broad dense SLM quality, or BitNet QK256/I2_S proof is claimed.",
+]

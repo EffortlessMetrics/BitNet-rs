@@ -2558,9 +2558,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-OV258V-006"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/SLM-OV258V-006-openvino-phase-runner"
 pr = 4594
+merge_sha = "960994c23180034a0cf2326419f28c56e12caaf4"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
