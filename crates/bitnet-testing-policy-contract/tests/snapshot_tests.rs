@@ -25,5 +25,5 @@ fn drift_check_matches_consistency() {
     let consistent = feature_contract_snapshot().is_consistent();
     let has_drift = drift_check().is_some();
     // drift_check returns Some iff is_consistent() is false
-    insta::assert_snapshot!((consistent == !has_drift).to_string());
+    insta::assert_snapshot!((consistent != has_drift).to_string());
 }

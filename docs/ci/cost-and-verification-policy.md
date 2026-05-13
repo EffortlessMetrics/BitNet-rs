@@ -363,6 +363,13 @@ A useful CI minute either:
 CI minutes spent on duplicated checks, no-op jobs, broad unrelated workflows,
 unnecessary model downloads, or non-blocking confirmation lanes are waste.
 
+Timeouts are cost guardrails, not budget targets. A timeout should catch
+runaway or wedged jobs with enough diagnostic output to act on. It should not
+regularly fire just before a valid lane completes, because that burns nearly
+the full runner budget while discarding the proof. When a lane repeatedly times
+out after useful work has passed, either split the lane, reduce its scope, or
+raise the cap to a value that lets the lane finish with normal variance.
+
 The expected result is a CI system that is **cheaper than conventional broad
 PR validation, but stronger where it matters**.
 
