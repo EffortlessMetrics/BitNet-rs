@@ -2050,7 +2050,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-PROD-008"
-status = "ready"
+status = "merged"
 branch = "docs/cuda-5070ti-proof-reconciliation"
 stackable = true
 review_mode = "codex_premerge"
@@ -2094,7 +2094,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-050"
-status = "proposed"
+status = "in_progress"
 branch = "docs/cuda-dense-qwen25-product-audit"
 stackable = true
 review_mode = "codex_premerge"
