@@ -2772,7 +2772,7 @@ mod tests {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-002-i2s-tiling-matrix.json",
         );
-        validate_strict_cpu_benchmark_receipt_file(&path).unwrap();
+        assert!(validate_strict_cpu_benchmark_receipt_file(&path).is_ok());
     }
 
     #[test]
