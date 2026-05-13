@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T09:06:32Z"
+campaign = "intel-258v-platform"
+item = "SLM-OV258V-006"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 4594
+actor = "codex"
+head_sha = "69ac5b859"
+branch = "codex/lunar-lake/SLM-OV258V-006-openvino-phase-runner"
+summary = "Opened SLM-OV258V-006 to add the Qwen2.5 OpenVINO GenAI phase runner and live CPU/GPU/NPU phase receipt."
+
+notes = [
+  "The PR records OpenVINO GenAI PerfMetrics for CPU, GPU.0/Arc 140V, and NPU LLMPipeline runs on the same 258V machine.",
+  "The receipt records tokenization, TTFT, generate, inference, TPOT, throughput, detokenization, first streamed text chunk, and bounded answer-gate fields exposed by OpenVINO GenAI.",
+  "The claim boundary remains bounded: no speedup, sustained phase performance, generated token ID capture from GenAI internals, prefill_512/decode_128 profiles, native OpenCL proof, native NPU inference outside OpenVINO GenAI, broad dense SLM quality, or BitNet QK256/I2_S proof is claimed.",
+]
