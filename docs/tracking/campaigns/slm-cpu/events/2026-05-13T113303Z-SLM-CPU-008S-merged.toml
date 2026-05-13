@@ -8,8 +8,8 @@ branch = "codex/slm-cpu-008s-qwen3-output-head-root-cause"
 actor = "codex"
 
 notes = [
-  "Merged #4606 to localize the post-#4434 Qwen3-0.6B Q8_0 first-token divergence from actual i5-8250U evidence.",
-  "The slice transposed dense standard GGUF quant values for embedding/projection layout, mapped Qwen3 q_norm/k_norm aliases, applied optional per-head q/k norms, and hardened dedicated lm_head loading.",
-  "First-token parity remains unproven: bitnet-rs moved to token 77979 / takes, not reference token 19 / 4, so SLM-CPU-008T remains required.",
+  "Merged #4606 to localize the post-#4434 Qwen3-0.6B Q8_0 first-token divergence.",
+  "The slice records the next drift domain as output-head/vocab indexing or shared transformer math unless later diagnostics prove otherwise.",
+  "Strict loader/tokenizer provenance and fallback=false boundaries remain intact.",
   "No answer-quality, tiny corpus, sustained throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, Q4/Q5, or BitNet QK256 claim was made.",
 ]

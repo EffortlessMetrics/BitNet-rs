@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T10:52:37Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/CPU-BITNET-PERF-001-i2s-microbench"
+summary = "Started CPU-BITNET-PERF-001 to record 258V QK256/I2_S GEMV and GEMM microbench timing evidence."
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-001-i2s-microbench.json",
+]
+notes = [
+  "The receipt records selected CPU backend, QK256/I2_S GEMV and GEMM profile timings, CPU feature identity, fallback_used=false, and speedup_claim=false.",
+  "The slice preserves no answer-quality, sustained-throughput, Arc/NPU execution, acceleration, QK256 semantic-change, or full-model correctness claims.",
+]
