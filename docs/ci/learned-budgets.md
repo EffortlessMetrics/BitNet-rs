@@ -51,6 +51,11 @@ is to tell us that routing, prerequisite checks, profile size, or cap sizing
 needs work; they should not teach the planner that incomplete runs are cheaper
 than complete runs.
 
+`xtask ci actuals` keeps cancelled and timed-out jobs visible in the per-job
+table, but excludes them from healthy summary totals. `xtask ci estimate` then
+uses only successful history samples for learned p50/p90/p95 estimates. This
+keeps cap failures from training future selected-job caps downward.
+
 For long lanes, prefer fail-fast prerequisite checks and smaller profile
 selection before expensive work starts. Aggregator jobs should have polling
 windows at least as long as the healthy upstream lane they depend on, plus

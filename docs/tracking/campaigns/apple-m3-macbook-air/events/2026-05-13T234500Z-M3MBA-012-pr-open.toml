@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T23:45:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-012"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 4658
+head_sha = "51bda54f2055a3ec29e456074bed1c1100d852d9"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-012-dense-harness-contract"
+summary = "Opened M3MBA-012 for the M3 Air dense SLM harness contract."
+
+notes = [
+  "The PR defines the apple-m3-air-cpu-neon mac validate and receipts-check contract before live dense smoke evidence.",
+  "The PR also keeps timed-out and cancelled CI actuals visible as cap failures while excluding them from healthy learned-runtime samples.",
+  "No live model inference, model binary, M3 performance claim, BitNet local-answer claim, or M4 proof claim is introduced.",
+]

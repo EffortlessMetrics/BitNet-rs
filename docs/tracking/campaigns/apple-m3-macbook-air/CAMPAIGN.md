@@ -60,7 +60,7 @@ artifacts to separate strict proof items.
 | M3MBA-001 | merged | Add the campaign control plane and roadmap linkage for the M3 MacBook Air lane. |
 | M3MBA-002 | merged | Commit the real M3 Air machine-profile receipt with storage, cache, power, thermal, and visibility fields; merged in #4592. |
 | M3MBA-003 | merged | Add or confirm the explicit `apple-m3-air-cpu-neon` receipt label without weakening M4 validation; merged in #4596. |
-| M3MBA-012 | proposed | Specify the dense SLM harness contract before live M3 smoke runs, including `mac validate`, `mac receipts-check`, synthetic CI receipt evidence, and local-only timing boundaries. |
+| M3MBA-012 | in progress | Specify the dense SLM harness contract before live M3 smoke runs, including `mac validate`, `mac receipts-check`, synthetic CI receipt evidence, and local-only timing boundaries. |
 | M3MBA-013 | proposed | Encode the M3 Air CI completion policy so selected long jobs are routed, preflighted, and capped from completed-run evidence instead of ending just before receipts. |
 | M3MBA-004A | proposed | Mirror the known dense Qwen SLM smoke route on M3 Air. |
 | M3MBA-004B | proposed | Run the bounded dense Qwen operator profile only after smoke passes. |

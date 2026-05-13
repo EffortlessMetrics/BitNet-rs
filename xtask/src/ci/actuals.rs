@@ -237,12 +237,12 @@ fn write_summary(actuals: &Actuals, path: &Path) -> Result<()> {
     jobs.sort_by(|a, b| b.actual_lem.total_cmp(&a.actual_lem));
     let total_lem: f64 = jobs
         .iter()
-        .filter(|job| !matches!(job.conclusion.as_str(), "skipped" | "cancelled"))
+        .filter(|job| is_healthy_actual(&job.conclusion))
         .map(|job| job.actual_lem)
         .sum();
     let total_seconds: u64 = jobs
         .iter()
-        .filter(|job| !matches!(job.conclusion.as_str(), "skipped" | "cancelled"))
+        .filter(|job| is_healthy_actual(&job.conclusion))
         .map(|job| job.actual_seconds)
         .sum();
     let mut summary = format!(
@@ -267,6 +267,10 @@ fn write_summary(actuals: &Actuals, path: &Path) -> Result<()> {
         }
     }
     fs::write(path, summary).with_context(|| format!("writing {}", path.display()))
+}
+
+fn is_healthy_actual(conclusion: &str) -> bool {
+    !matches!(conclusion, "skipped" | "cancelled" | "timed_out")
 }
 
 #[cfg(test)]
@@ -353,7 +357,7 @@ mod tests {
     }
 
     #[test]
-    fn summary_excludes_skipped_and_cancelled_totals() {
+    fn summary_excludes_skipped_cancelled_and_timed_out_totals() {
         let dir = tempfile::tempdir().unwrap();
         let output = dir.path().join("summary.md");
         let actuals = Actuals {
@@ -386,12 +390,34 @@ mod tests {
                     cache_hit: false,
                     risk_packs: vec![],
                 },
+                JobActual {
+                    name: "Timed out".into(),
+                    runner: "ubuntu-latest".into(),
+                    estimated_lem: None,
+                    actual_seconds: 1_200,
+                    actual_lem: 20.0,
+                    conclusion: "timed_out".into(),
+                    cache_hit: false,
+                    risk_packs: vec![],
+                },
+                JobActual {
+                    name: "Cancelled".into(),
+                    runner: "ubuntu-latest".into(),
+                    estimated_lem: None,
+                    actual_seconds: 1_800,
+                    actual_lem: 30.0,
+                    conclusion: "cancelled".into(),
+                    cache_hit: false,
+                    risk_packs: vec![],
+                },
             ],
         };
 
         write_summary(&actuals, &output).unwrap();
         let summary = fs::read_to_string(output).unwrap();
         assert!(summary.contains("LEM actual: 1.0"));
-        assert!(summary.contains("Jobs: 2"));
+        assert!(summary.contains("Jobs: 4"));
+        assert!(summary.contains("Timed out"));
+        assert!(summary.contains("Cancelled"));
     }
 }

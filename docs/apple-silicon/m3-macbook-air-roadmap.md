@@ -157,6 +157,76 @@ This order keeps the MacBook useful immediately while preserving the existing
 proof hierarchy: first prove the host, then prove the dense control route, then
 spend disk on BitNet candidates.
 
+## Dense Harness Contract
+
+`M3MBA-012` defines the contract that live M3 dense SLM smoke must satisfy
+before any timing or answer receipt is treated as comparison-grade evidence.
+It is a contract item only: it does not run a model, enable live M3 CI, or
+publish performance results.
+
+The live smoke command for `M3MBA-004A` must use the Mac CLI path and an
+explicit MacBook backend label:
+
+```bash
+cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  mac validate \
+  --profile-set smoke \
+  --backend-label apple-m3-air-cpu-neon \
+  --json-out ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json
+```
+
+The corresponding receipt check must run before the receipt is accepted:
+
+```bash
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  mac receipts-check \
+  ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json \
+  --json
+```
+
+The accepted smoke receipt must record these fields without aliasing the
+MacBook to the M4 Mac mini lane:
+
+| Field | Required value or rule |
+|---|---|
+| Requested backend | `apple-m3-air-cpu-neon` |
+| Selected backend | `apple-m3-air-cpu-neon` |
+| Fallback status | `fallback_used=false` for the accepted dense smoke path |
+| Host identity | M3 Air machine profile path and machine identifier |
+| Model identity | Exact dense Qwen model ID, local file name, size, and SHA256 |
+| Tokenizer authority | Tokenizer source, revision, prompt template, and tokenizer metadata |
+| Power and thermal context | Charger or battery state, thermal state when macOS exposes it, and unavailable fields marked unavailable |
+| Storage context | Cache root plus free space before and after the run |
+| Claim boundary | Dense SLM smoke only; no BitNet, M4, Metal, Neural Engine, MPSGraph, QK256, or broad Apple Silicon claim |
+
+CI for the harness stays synthetic until a labeled, scheduled, manual, release,
+or campaign hardware lane is explicitly selected. Required PR CI may validate:
+
+```text
+receipt schema shape
+backend-label parsing for apple-m3-air-cpu-neon
+mac receipts-check behavior on a no-model synthetic fixture
+campaign tracker status and generated dashboards
+documentation links and command spelling
+```
+
+Required PR CI must not download models, start live M3 timing, or require the
+local MacBook to be online. A synthetic no-model receipt is acceptable only when
+it says `inference_run=false` or otherwise marks itself as fixture evidence; it
+must never be promoted into dense smoke, answer quality, or performance proof.
+
+The first live dense receipt can be merged as either:
+
+| Outcome | Required evidence |
+|---|---|
+| Pass | Receipt-check output, backend identity, fallback status, model/tokenizer identity, power/thermal/storage context, and dense-only claim boundary. |
+| Blocked | A blocker report naming the missing prerequisite, command failure, storage or thermal issue, receipt validation failure, or model/tokenizer authority gap. |
+| Reject | Receipt-check output and report explaining why the dense M3 smoke path is not acceptable for comparison. |
+
+Do not proceed to large BitNet artifact downloads merely because the harness
+contract exists. `M3MBA-004A` must either pass or leave an accepted blocker
+before the lane spends disk on the Microsoft 2B I2_S path.
+
 ## Planning Horizons
 
 The lane should be managed as three review horizons instead of one long

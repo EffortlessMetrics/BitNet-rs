@@ -150,8 +150,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-012"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m3-macbook-air/M3MBA-012-dense-harness-contract"
+pr = 4658
+head_sha = "51bda54f2055a3ec29e456074bed1c1100d852d9"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
