@@ -57,10 +57,10 @@ authority; landing that evidence is still separate from enabling BitNet through
 | M4-QA-ROOT-001 | merged | Evidence shows the current local GGUF also garbles under the reference runner; model artifact validation is now the blocker. |
 | M4-QA-MODEL-001 | merged | Historical Apple-specific evidence rejected the default/missing-pretokenizer prompt path. |
 | M4-QA-MODEL-002 | merged | Satisfied by shared `MODEL-ARTIFACT-007` answer-ready authority for backend gates. |
-| M4-QA-001 | in_progress | Release-built Apple M4 CPU/NEON full shared BitNet answer corpus passed with receipt-quality fields reviewed; closeout still needs campaign checks and PR landing. |
-| M4-QA-002 | proposed | Local repeat-run parity evidence exists; item remains stack-blocked until M4-QA-001 lands. |
-| M4-QA-003 | proposed | Local receipt-quality checks now require generated text, token counts and ID consistency, tokenizer pretokenizer authority, model source/SHA, backend routing/fallback status, and timing fields; item remains stack-blocked until M4-QA-001 lands. |
-| M4-QA-004 | proposed | Local preflight coverage rejects missing model/tokenizer authority before hidden fallback; unsupported Apple Metal/MPSGraph answer-corpus lanes fail closed, and receipt checks reject speedup/full-inference acceleration claims. Item remains stack-blocked until M4-QA-001 lands. |
+| M4-QA-001 | merged | Release-built Apple M4 CPU/NEON full shared BitNet answer corpus passed with receipt-quality fields reviewed; merged in #4618. |
+| M4-QA-002 | proposed | Local repeat-run parity evidence exists; item is unblocked after M4-QA-001. |
+| M4-QA-003 | proposed | Local receipt-quality checks now require generated text, token counts and ID consistency, tokenizer pretokenizer authority, model source/SHA, backend routing/fallback status, and timing fields; item is unblocked after M4-QA-001. |
+| M4-QA-004 | proposed | Local preflight coverage rejects missing model/tokenizer authority before hidden fallback; unsupported Apple Metal/MPSGraph answer-corpus lanes fail closed, and receipt checks reject speedup/full-inference acceleration claims. Item is unblocked after M4-QA-001. |
 | M4-QA-005 | proposed | Local decision recorded: the first eligible Metal route is a prefill projection fixture after CPU/NEON proof, greedy determinism, and receipt-quality gates land; current user-facing local-answer path remains CPU/NEON only. |
 
 ## Review Policy
