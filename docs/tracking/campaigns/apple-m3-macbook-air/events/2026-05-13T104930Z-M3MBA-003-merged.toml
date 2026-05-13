@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T10:49:30Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-003"
+event = "merged"
+pr = 4596
+head_sha = "23d5f06f87b706beb5e625552b532ca4f82b3ad5"
+merge_sha = "8f9fbf8497db650bddb0f9eed9e634684c7a582c"
+actor = "codex"
+
+notes = [
+  "Merged the M3 Air CPU/NEON receipt-label PR.",
+  "The lane now has explicit apple-m3-air-cpu-neon receipt-label evidence without weakening apple-m4-cpu-neon validation.",
+  "No M4 Mac mini performance, BitNet local-answer quality, broad Apple Silicon performance, QK256, Metal inference, Neural Engine, or MPSGraph model-inference claim is introduced.",
+]

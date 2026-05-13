@@ -1308,6 +1308,38 @@ enum GateWhich {
 }
 
 fn main() {
+    let code = run_xtask_main();
+    process::exit(code);
+}
+
+#[cfg(windows)]
+fn run_xtask_main() -> i32 {
+    // The xtask Clap command graph is large enough to overflow the default
+    // Windows process stack in debug builds before subcommands run.
+    let handle = match thread::Builder::new()
+        .name("xtask-main".to_string())
+        .stack_size(32 * 1024 * 1024)
+        .spawn(run_xtask_main_inner)
+    {
+        Ok(handle) => handle,
+        Err(error) => {
+            eprintln!("error: failed to spawn xtask main thread: {error}");
+            return 1;
+        }
+    };
+
+    match handle.join() {
+        Ok(code) => code,
+        Err(panic) => std::panic::resume_unwind(panic),
+    }
+}
+
+#[cfg(not(windows))]
+fn run_xtask_main() -> i32 {
+    run_xtask_main_inner()
+}
+
+fn run_xtask_main_inner() -> i32 {
     let code = match real_main() {
         Ok(()) => EXIT_SUCCESS,
         Err(e) => {
@@ -1315,7 +1347,7 @@ fn main() {
             classify_exit(&e)
         }
     };
-    process::exit(code);
+    code
 }
 
 fn classify_exit(e: &anyhow::Error) -> i32 {

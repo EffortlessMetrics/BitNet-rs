@@ -476,6 +476,8 @@ pub struct MultiHeadAttention {
     k_proj: Linear,
     v_proj: Linear,
     o_proj: Linear,
+    q_norm: Option<LayerNorm>,
+    k_norm: Option<LayerNorm>,
     sub_layernorm: Option<LayerNorm>,
     rope: Option<RotaryEmbedding>,
     layer_idx: usize, // Layer index for QK256 weight name generation
@@ -534,6 +536,18 @@ impl MultiHeadAttention {
         let k_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("k_proj"))?;
         let v_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("v_proj"))?;
         let o_proj = linear_with_optional_bias(q_out, hidden_size, vb.pp("o_proj"))?;
+        let q_norm = optional_layer_norm_with_optional_bias(
+            config.model.norm_type,
+            head_dim,
+            eps_from_config(config),
+            vb.pp("q_norm"),
+        )?;
+        let k_norm = optional_layer_norm_with_optional_bias(
+            config.model.norm_type,
+            head_dim,
+            eps_from_config(config),
+            vb.pp("k_norm"),
+        )?;
         let sub_layernorm = optional_layer_norm_with_optional_bias(
             config.model.norm_type,
             q_out,
@@ -558,6 +572,8 @@ impl MultiHeadAttention {
             k_proj,
             v_proj,
             o_proj,
+            q_norm,
+            k_norm,
             sub_layernorm,
             rope,
             layer_idx,
@@ -642,6 +658,26 @@ impl MultiHeadAttention {
         dbg_stats("Q", &q)?;
         dbg_stats("K", &k)?;
         dbg_stats("V", &v)?;
+
+        let q = if let Some(norm) = &self.q_norm {
+            let normalized = norm.forward(&q)?;
+            if qwen_trace_layer_enabled(self.layer_idx) {
+                qwen_trace_tensor("attention.q_norm", Some(self.layer_idx), &normalized)?;
+            }
+            normalized
+        } else {
+            q
+        };
+
+        let k = if let Some(norm) = &self.k_norm {
+            let normalized = norm.forward(&k)?;
+            if qwen_trace_layer_enabled(self.layer_idx) {
+                qwen_trace_tensor("attention.k_norm", Some(self.layer_idx), &normalized)?;
+            }
+            normalized
+        } else {
+            k
+        };
 
         // GQA diagnostic: log Q/K/V dimensions and norms (once per run)
         if debug_gqa_enabled() {
@@ -1530,17 +1566,32 @@ impl TransformerModel {
                 }
                 (Some(layer), weight, transposed)
             }
-            Err(_) => match vb.get((hidden_size, vocab_size), "lm_head.weight") {
+            Err(err) => match vb.get((vocab_size, hidden_size), "lm_head.weight") {
                 Ok(weight) => {
-                    tracing::info!(
-                        "LM head is stored transposed [hidden, vocab] - using direct matmul path"
+                    tracing::warn!(
+                        "lm_head linear construction failed ({err}); recovered canonical \
+                         lm_head.weight [{}, {}] through direct lookup",
+                        vocab_size,
+                        hidden_size
                     );
-                    (None, Some(weight), true)
+                    let bias = Tensor::zeros(vocab_size, DType::F32, vb.device())?;
+                    (Some(Linear::new(weight.clone(), Some(bias))), Some(weight), false)
                 }
-                Err(_) => {
-                    tracing::info!("lm_head.weight not found, will use tied weights");
-                    (None, None, false)
-                }
+                Err(_) => match vb.get((hidden_size, vocab_size), "lm_head.weight") {
+                    Ok(weight) => {
+                        tracing::info!(
+                            "LM head is stored transposed [hidden, vocab] - using direct matmul path"
+                        );
+                        (None, Some(weight), true)
+                    }
+                    Err(_) => {
+                        tracing::info!(
+                            "lm_head.weight not found after linear construction failed ({err}); \
+                             will use tied weights"
+                        );
+                        (None, None, false)
+                    }
+                },
             },
         };
 
@@ -2395,6 +2446,66 @@ mod tests {
             logits[0][1] > 200.0,
             "second raw QK256 tied logit should come from packed code-2 row, got {}",
             logits[0][1]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn transformer_uses_dedicated_lm_head_when_present() -> Result<()> {
+        let device = Device::Cpu;
+        let mut config = BitNetConfig::default();
+        config.model.hidden_size = 4;
+        config.model.vocab_size = 3;
+        config.model.num_layers = 0;
+        config.model.num_heads = 1;
+        config.model.num_key_value_heads = 1;
+        config.model.intermediate_size = 4;
+        config.model.rms_norm_eps = Some(1e-5);
+        config.model.norm_type = NormType::RmsNorm;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::from_vec(
+                vec![
+                    10.0f32, 0.0, 0.0, 0.0, //
+                    0.0, 10.0, 0.0, 0.0, //
+                    0.0, 0.0, 10.0, 0.0,
+                ],
+                (3, 4),
+                &device,
+            )?,
+        );
+        tensors.insert("final_norm.weight".to_string(), Tensor::ones(4, DType::F32, &device)?);
+        tensors.insert(
+            "lm_head.weight".to_string(),
+            Tensor::from_vec(
+                vec![
+                    0.0f32, 0.0, 0.0, 0.0, //
+                    1.0, 0.0, 0.0, 0.0, //
+                    0.0, 0.0, 0.0, 0.0,
+                ],
+                (3, 4),
+                &device,
+            )?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors(config, vb, HashMap::new())?;
+
+        assert!(model.lm_head.is_some(), "dedicated lm_head.weight must be loaded");
+        assert!(
+            model.embed_tied_weight.is_none(),
+            "explicit lm_head.weight must not fall back to tied embeddings"
+        );
+
+        let hidden = Tensor::from_vec(vec![1.0f32, 0.0, 0.0, 0.0], (1, 4), &device)?;
+        let logits = model.logits(&hidden)?.to_vec2::<f32>()?;
+        assert!(
+            logits[0][1] > logits[0][0],
+            "logits should come from dedicated lm_head, got {:?}",
+            logits[0]
         );
 
         Ok(())

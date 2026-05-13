@@ -374,7 +374,7 @@ fn load_dense_standard_quant_tensor(
         &info.name,
         info.tensor_type,
     )?;
-    let want_shape = dense_standard_quant_shape(info);
+    let (f32_data, want_shape) = dense_standard_quant_values_and_shape(info, f32_data);
     let tensor = Tensor::from_slice(&f32_data, want_shape.as_slice(), candle_device)
         .map_err(|e| BitNetError::Validation(e.to_string()))?;
     log_projection_rms(
@@ -387,24 +387,29 @@ fn load_dense_standard_quant_tensor(
     Ok((tensor, Vec::new(), None))
 }
 
-fn dense_standard_quant_shape(info: &TensorInfo) -> Vec<usize> {
+fn dense_standard_quant_values_and_shape(
+    info: &TensorInfo,
+    f32_data: Vec<f32>,
+) -> (Vec<f32>, Vec<usize>) {
     if (GgufLoader::is_embedding_tensor(&info.name)
         || GgufLoader::is_output_head_tensor(&info.name))
         && GgufLoader::embedding_is_transposed(&info.shape)
     {
         info!(
-            "{} uses GGML [hidden, vocab] dims {:?} -> reshaping token-major data to [vocab, hidden]",
+            "{} uses GGML [hidden, vocab] dims {:?} -> transposing dense quant data to [vocab, hidden]",
             info.name, info.shape
         );
-        vec![info.shape[1], info.shape[0]]
+        let transposed = GgufLoader::transpose_f32_values(&f32_data, &info.shape);
+        (transposed, vec![info.shape[1], info.shape[0]])
     } else if GgufLoader::maybe_transpose_to_out_in(&info.shape, &info.name) {
         debug!(
-            "{:?} projection '{}' uses GGML [in, out] dims {:?} -> reshaping token-major data to [out, in]",
+            "{:?} projection '{}' uses GGML [in, out] dims {:?} -> transposing dense quant data to [out, in]",
             info.tensor_type, info.name, info.shape
         );
-        vec![info.shape[1], info.shape[0]]
+        let transposed = GgufLoader::transpose_f32_values(&f32_data, &info.shape);
+        (transposed, vec![info.shape[1], info.shape[0]])
     } else {
-        info.shape.clone()
+        (f32_data, info.shape.clone())
     }
 }
 
@@ -585,5 +590,40 @@ fn log_projection_rms(
             tensor.dims(),
             rms
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn info(name: &str, shape: &[usize]) -> TensorInfo {
+        TensorInfo {
+            name: name.to_string(),
+            shape: shape.to_vec(),
+            tensor_type: GgufTensorType::Q8_0,
+            offset: 0,
+            size: 0,
+        }
+    }
+
+    #[test]
+    fn dense_standard_quant_transposes_projection_values() {
+        let values = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let (values, shape) =
+            dense_standard_quant_values_and_shape(&info("blk.0.attn_q.weight", &[2, 3]), values);
+
+        assert_eq!(shape, vec![3, 2]);
+        assert_eq!(values, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
+    }
+
+    #[test]
+    fn dense_standard_quant_transposes_hidden_vocab_embedding_values() {
+        let values: Vec<f32> = (0..(2 * 32_768)).map(|value| value as f32).collect();
+        let (values, shape) =
+            dense_standard_quant_values_and_shape(&info("token_embd.weight", &[2, 32_768]), values);
+
+        assert_eq!(shape, vec![32_768, 2]);
+        assert_eq!(&values[..6], &[0.0, 32_768.0, 1.0, 32_769.0, 2.0, 32_770.0]);
     }
 }

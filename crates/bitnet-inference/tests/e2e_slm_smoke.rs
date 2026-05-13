@@ -274,14 +274,14 @@ async fn e2e_mistral_single_token() {
 async fn e2e_bitnet_single_token_regression() {
     let (tokens, _) = generate_from(&BITNET, 1, 0.0, None).await.unwrap();
     assert_eq!(tokens.len(), 1, "BitNet: expected exactly 1 generated token");
-    // Regression guard: architecture defaults must remain LayerNorm + SiLU.
+    // Regression guard: architecture defaults must remain RMSNorm + ReLU2.
     assert!(
         ArchitectureRegistry::is_known("bitnet"),
         "bitnet must stay in the architecture registry"
     );
     let defaults = ArchitectureRegistry::lookup("bitnet").unwrap();
-    assert_eq!(defaults.norm_type, NormType::LayerNorm);
-    assert_eq!(defaults.activation_type, ActivationType::Silu);
+    assert_eq!(defaults.norm_type, NormType::RmsNorm);
+    assert_eq!(defaults.activation_type, ActivationType::Relu2);
 }
 
 // ── Config-level smoke tests ──────────────────────────────────────────────
