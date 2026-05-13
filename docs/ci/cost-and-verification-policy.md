@@ -85,6 +85,31 @@ cap failures, but they should not enter healthy-runtime percentile samples. A
 cancelled or timed-out job did not produce the receipt, test result, or cache
 state that the selected lane was supposed to buy.
 
+### Selected hardware and model lanes
+
+Hardware/model lanes such as the M3 MacBook Air work need an extra distinction:
+ordinary PR CI should not select live downloads, dense SLM timing, or large
+artifact sweeps by default, but an explicitly selected hardware lane should be
+allowed to finish. Ending it shortly before receipt emission pays nearly the
+full cost while preserving none of the evidence.
+
+Selected long lanes should therefore encode:
+
+- preflight gates before downloads, builds, or model execution,
+- one active large artifact per constrained local host unless a storage audit
+  says otherwise,
+- phase artifact upload after profile, download, hash, validation, and receipt
+  steps,
+- timeout caps derived from successful completed runs plus cushion,
+- PR-gate or aggregator waits that are longer than the upstream job cap,
+- timeout and cancellation actuals recorded separately from healthy runtime
+  samples.
+
+If that selected profile is too expensive to let finish, route it to a smaller
+profile, explicit label, manual dispatch, schedule, release gate, or campaign
+receipt lane before it starts. Do not use a near-completion timeout as the
+budget mechanism.
+
 ## Why the budget target is aggressive
 
 Our CI budget target is intentionally aggressive — but **not because we want
