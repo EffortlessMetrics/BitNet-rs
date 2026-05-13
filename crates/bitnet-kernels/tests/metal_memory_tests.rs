@@ -525,7 +525,7 @@ mod tests {
         #[test]
         #[ignore = "requires macOS Metal GPU - run on Apple Silicon hardware"]
         fn max_buffer_size_is_reasonable() {
-            assert!(MAX_BUFFER_SIZE >= 1024 * 1024 * 1024); // ≥ 1 GiB
+            const { assert!(MAX_BUFFER_SIZE >= 1024 * 1024 * 1024) }; // ≥ 1 GiB
             assert_eq!(MAX_BUFFER_SIZE % METAL_BUFFER_ALIGNMENT, 0);
         }
 
