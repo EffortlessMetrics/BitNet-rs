@@ -271,7 +271,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-003"
-status = "proposed"
+status = "merged"
+merge_sha = "9fa3e532b89c36885c54350700d75a740a93911e"
 branch = "codex/apple-m4-local-answer/M4-QA-003-receipt-quality"
 stackable = false
 review_mode = "codex_premerge"
@@ -301,8 +302,18 @@ forbidden_paths = [
   "crates/bitnet-server/**",
   "crates/bitnet-kernels/src/metal/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "The committed Apple M4 CPU/NEON BitNet answer-corpus receipt-quality contract requires and checks generated text, token counts and ID consistency, tokenizer pretokenizer authority, model identity, backend routing, fallback=false, and timing fields for the fixed strict answer corpus.",
+]
+must_not_claim = [
+  "BitNet is selectable through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve`.",
+  "The fixed answer-corpus receipt-quality checks prove broad BitNet chat quality.",
+  "Full apple-m4-metal model inference works.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+  "Broad performance or speedup is proven.",
+]
 
 [[work_item]]
 id = "M4-QA-004"
