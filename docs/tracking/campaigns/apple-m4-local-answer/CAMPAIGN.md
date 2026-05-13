@@ -20,8 +20,10 @@ The model-artifact blocker discovered here is shared, not Apple-only.
 `tokenizer.ggml.pre=llama-bpe` authority and the `bitnetcpp-answer` prompt
 envelope. A local Apple CPU/NEON release receipt now records the strict shared
 answer corpus passing with fallback disabled and explicit artifact/tokenizer
-authority; landing that evidence is still separate from enabling BitNet through
-`bitnet mac ask/chat`.
+authority. #4637 wires that evidence into an explicit one-shot
+`bitnet mac ask` route guarded by accepted GGUF/tokenizer identity and a
+`supported-ask` catalog state. BitNet `mac chat` and `mac serve` remain
+disabled, and a fresh user-route runtime receipt is still a follow-up proof.
 
 ## End State
 
@@ -62,6 +64,8 @@ authority; landing that evidence is still separate from enabling BitNet through
 | M4-QA-003 | merged | Receipt-quality checks from #4618 require generated text, token counts and ID consistency, tokenizer pretokenizer authority, model source/SHA, backend routing/fallback status, and timing fields; the committed Apple M4 CPU/NEON BitNet answer-corpus receipt records those fields for all five passing cases. |
 | M4-QA-004 | merged | Local preflight coverage rejects missing model/tokenizer authority before hidden fallback; unsupported Apple Metal/MPSGraph answer-corpus lanes fail closed, and receipt checks reject hidden fallback plus speedup/full-inference acceleration claims. |
 | M4-QA-005 | merged | Local decision recorded: the first eligible Metal contribution is a prefill projection fixture with CPU-only greedy reference comparison, CPU/Metal phase parity, unchanged generated token IDs and decoded text, and explicit fallback=false phase receipts; current user-facing local-answer path remains CPU/NEON only. |
+| M4-BITNET-ASK-000 | merged | #4637 added an explicit one-shot BitNet `bitnet mac ask` route gated by accepted Microsoft I2_S GGUF and external tokenizer identity, marked BitNet as `supported-ask`, and kept BitNet chat/serve disabled without claiming a fresh runtime smoke. |
+| M4-BITNET-ASK-001 | ready | Prove the user-facing BitNet `bitnet mac ask` route completes with strict Apple M4 CPU/NEON routing, fallback_used=false, valid UTF-8, coherent non-empty output, generated token IDs, timing receipt fields, and documented operator command; if too slow, record where the delay or timeout occurs. |
 
 ## Review Policy
 

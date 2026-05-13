@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T20:42:57Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-000"
+event = "merged"
+pr = 4637
+merge_sha = "d8893da79e2e1a792b8bba7ba6fb14ae7924a2a7"
+actor = "codex"
+
+notes = [
+  "Merged #4637 as the explicit BitNet one-shot `bitnet mac ask` route after CI passed.",
+  "The route is gated by the accepted Microsoft I2_S GGUF identity and external tokenizer SHA, and the model catalog marks BitNet as supported-ask.",
+  "BitNet `mac chat` and `mac serve` remain disabled.",
+  "A local debug smoke reached model/tokenizer load but did not finish within the local run window and produced no receipt, so this merge does not claim a fresh runtime proof.",
+  "Claim boundaries remain narrow: this enables the one-shot route only; it does not prove BitNet chat/server, fresh runtime completion, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, broad quality, or performance.",
+]
