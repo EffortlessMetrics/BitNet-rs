@@ -72,7 +72,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | SLM258V-002 | merged | Run the pinned Qwen2.5 dense SLM candidate through a strict 258V CPU answer smoke with `fallback_used=false`; current #4530 evidence is diagnostic until BitNet I2_S provenance is removed from the dense SLM receipt; merged in #4530. |
 | SLM258V-003 | merged | Separate dense Qwen SLM receipt provenance from BitNet I2_S/QK256 kernel/layout fields and rerun the 258V Qwen2.5 CPU smoke with clean dense SLM provenance; merged in #4535. |
 | SLM258V-004 | merged | Record dense Qwen SLM phase timing receipts on the 258V CPU path, keeping dense SLM phase evidence separate from BitNet QK256/I2_S receipts; merged in #4542. |
-| LNL258V-COMPARE-004 | pr_open | Refresh the same-machine comparison index after the corrected BitNet CPU bundle and dense Qwen SLM CPU answer/phase receipts, preserving independent BitNet CPU, dense SLM CPU, Arc 140V, and NPU claim boundaries; opened in #4545. |
+| LNL258V-COMPARE-004 | merged | Refresh the same-machine comparison index after the corrected BitNet CPU bundle and dense Qwen SLM CPU answer/phase receipts, preserving independent BitNet CPU, dense SLM CPU, Arc 140V, and NPU claim boundaries; merged in #4545. |
 
 ## Review Policy
 
