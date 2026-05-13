@@ -571,10 +571,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn receipt_records_i2s_gemv_and_gemm_microbench_profiles() {
-        let receipt = build_receipt(&Args::default()).expect("build receipt");
-        let profiles =
-            receipt["i2s_microbench"]["profiles"].as_array().expect("microbench profiles");
+    fn receipt_records_i2s_gemv_and_gemm_microbench_profiles() -> Result<(), Box<dyn Error>> {
+        let receipt = build_receipt(&Args::default())?;
+        let profiles = receipt["i2s_microbench"]["profiles"].as_array().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "missing microbench profiles")
+        })?;
 
         assert!(profiles.iter().any(|profile| {
             profile["operation"] == "gemv"
@@ -588,6 +589,7 @@ mod tests {
         }));
         assert_eq!(receipt["i2s_microbench"]["speedup_claim"], false);
         assert_eq!(receipt["i2s_microbench"]["fallback_used"], false);
+        Ok(())
     }
 }
 
