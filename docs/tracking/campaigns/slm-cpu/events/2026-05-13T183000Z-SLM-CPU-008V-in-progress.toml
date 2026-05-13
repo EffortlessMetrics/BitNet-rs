@@ -1,0 +1,23 @@
+timestamp = "2026-05-13T18:30:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008V"
+event = "in_progress"
+branch = "codex/slm-cpu-008v-post-008u-artifact-refresh"
+actor = "codex"
+summary = "Started the post-SLM-CPU-008U real i5-8250U Qwen3 first-token artifact refresh."
+
+artifacts = [
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-original-first-token.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-original-trace.jsonl",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-output-head-audit.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-reference-compare.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-reference-validation.json",
+]
+
+notes = [
+  "The verified Qwen3-0.6B Q8_0 GGUF SHA256 is 9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031.",
+  "The artifact refresh preserves strict real GGUF loading, GGUF tokenizer authority, selected_backend=cpu-rust, and fallback_used=false.",
+  "First-token parity is still not restored: reference generated token 19 / 4, while bitnet-rs generated token 77979 / takes.",
+  "The output-head audit records no dedicated output.weight for this GGUF and selects tied token embeddings as the output policy.",
+  "This item does not claim first-token parity, answer quality, corpus success, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, Q4/Q5 support, or BitNet QK256 changes.",
+]

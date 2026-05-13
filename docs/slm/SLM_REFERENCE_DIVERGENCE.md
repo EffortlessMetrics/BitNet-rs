@@ -145,6 +145,14 @@ reference does not yet include internal checkpoint dumps, the internal first
 drift is recorded as `reference-missing`, not as an attention, MLP, or output
 head root-cause claim.
 
+The post-SLM-CPU-008U i5-8250U refresh keeps the same prompt IDs and strict
+provenance but still diverges: the known-good reference chooses token `19`
+(`4`), while bitnet-rs chooses token `77979` (`takes`). The output-head audit
+for the official `Qwen3-0.6B-Q8_0.gguf` shows no dedicated `output.weight`
+tensor is present; the selected output policy is tied token embeddings. The
+next root-cause pass should therefore focus on tied-head logits or shared
+transformer math rather than another dedicated-output-head layout patch.
+
 ## Divergence Classification
 
 The validator records a `classification` alongside

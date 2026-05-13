@@ -38,7 +38,15 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-005 | merged | Reference divergence artifact schema and validator merged in #3969. |
 | SLM-CPU-006A | merged | First-token divergence classifier, logits alias, and 8250U workflow support merged in #4051. |
 | SLM-CPU-006B | merged | Qwen3-0.6B first-token divergence artifact capture merged in #4096. |
-| SLM-CPU-007 | pr_open | Tracker setup for Qwen3-0.6B Q8_0 first-token logits root-cause is open in #4126. |
+| SLM-CPU-007A | merged | Qwen3 bounded checkpoint probe support merged in #4132. |
+| SLM-CPU-007B | merged | First comparable drift capture merged in #4138. |
+| SLM-CPU-008 | merged | Qwen3 architecture-default parity candidate merged in #4434. |
+| SLM-CPU-008R | merged | Post-#4434 real artifact revalidation merged in #4572; first-token parity remained unproven. |
+| SLM-CPU-008S | merged | Output-head/shared-math root-cause localization merged in #4606. |
+| SLM-CPU-008T | merged | Dedicated output.weight selection candidate merged in #4611. |
+| SLM-CPU-008U | merged | GGUF output.weight layout candidate merged in #4617. |
+| SLM-CPU-008V | in_progress | Post-008U real i5-8250U artifact refresh records whether the output-head layout candidate restores first-token parity. |
+| SLM-CPU-008W | ready | If SLM-CPU-008V still diverges, localize tied-token-embedding logits or shared transformer math before corpus work. |
 
 ## Review Policy
 
