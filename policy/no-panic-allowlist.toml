@@ -1,5 +1,8 @@
 schema_version = "0.4"
 
+[policy]
+mode = "no-new-debt"
+
 # policy/no-panic-allowlist.toml
 #
 # Receipt ledger for panic-family API shapes (`unwrap`, `expect`,
@@ -11,11 +14,10 @@ schema_version = "0.4"
 # `path + family + selector.kind + selector.callee + snippet + count`.
 # The `last_seen` line/column is advisory only.
 #
-# This file is intentionally empty in PR 05. The PR 05 checker runs
-# in advisory mode; PR 10 and PR 11 are the real debt cleanup
-# milestones. After they land, the no-panic checker is promoted to
-# `--fail-on-error` (PR 12) and any new finding either gets a real
-# receipt below or the offending code is fixed.
+# This file remains the human-reviewed exception ledger. The generated
+# baseline in `policy/no-panic-baseline.toml` carries existing exact-counted
+# debt; policy mode `no-new-debt` makes any finding outside the allowlist and
+# baseline fail the checker.
 #
 # Schema reference (see docs/NO_PANIC_POLICY.md):
 #

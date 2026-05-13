@@ -11,13 +11,13 @@ which `xtask` command checks it.
 | `policy/clippy-exceptions.toml`       | Receipted `#[expect(clippy::...)]` exceptions          | `xtask check-clippy-exceptions`       | core/rust      |
 | `policy/clippy-debt.toml`             | Crate/path-scoped Clippy debt blocking promotion       | `xtask check-clippy-exceptions`       | core/rust      |
 | `policy/no-panic-allowlist.toml`      | Receipted panic-family exceptions                      | `xtask check-no-panic-family`         | testing/policy |
-| `policy/no-panic-baseline.toml`       | Generated no-panic no-new-debt baseline (planned)      | `xtask check-no-panic-family`         | testing/policy |
+| `policy/no-panic-baseline.toml`       | Generated no-panic no-new-debt baseline                | `xtask check-no-panic-family`         | testing/policy |
 | `policy/non-rust-allowlist.toml`      | Allowlisted non-Rust files (with owner / reason)       | `xtask check-file-policy`             | release/ci     |
 | `policy/ripr-suppressions.toml`       | Suppressed `ripr` static mutation-exposure findings    | (advisory)                            | testing/oracle |
 
-`policy/no-panic-baseline.toml` is intentionally absent before PR 8 of the
-Rust 1.95 wave. It is listed here as a planned ledger so agents do not create a
-committed baseline before exact counted identity has landed.
+`policy/no-panic-baseline.toml` is generated. Humans should not hand-edit it.
+Use `xtask no-panic baseline` to refresh it after owner-lane burndown; normal
+refreshes may only drop disappeared entries and must refuse new debt.
 
 ## Rust 1.95 planned changes
 
@@ -27,7 +27,7 @@ tightens them in order:
 1. Clippy lints move from staged policy to measured activation.
 2. Clippy test unwrap/expect carveouts are removed.
 3. No-panic allowlist identity becomes exact and counted.
-4. A generated no-new-debt baseline is added after identity hardening.
+4. A generated no-new-debt baseline carries existing exact-counted findings.
 5. The non-Rust allowlist is narrowed without adding broad catch-alls.
 6. `ripr` becomes real advisory static mutation-exposure analysis, while
    mutation testing remains the runtime backstop.
@@ -68,5 +68,6 @@ target/bitnet/reports/no-panic-proposed-allowlist.toml   # advisory
 target/bitnet/reports/no-panic-proposed-baseline.toml    # advisory
 ```
 
-The aggregator never fails the build by itself; each individual
-checker's `--fail-on-error` flag is what gates merges.
+The aggregator never fails the build by itself. Individual checkers gate merges
+through `--fail-on-error` or through their own policy mode; no-panic uses
+`mode = "no-new-debt"`.

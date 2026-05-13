@@ -38,6 +38,12 @@ All notable changes to bitnet-rs will be documented in this file.
     `path + family + selector.kind + selector.callee + snippet + count`.
   - Consumes allowlist counts before optional baseline counts and keeps
     baseline output advisory until the dedicated no-new-debt baseline PR.
+- policy(panic): add no-panic baseline and no-new-debt gate
+  - Adds the generated `policy/no-panic-baseline.toml` and marks it generated
+    in `.gitattributes`.
+  - Sets the no-panic policy mode to `no-new-debt`; refreshes may drop
+    disappeared findings but refuse to absorb new debt unless `--reset` is
+    explicit.
 - policy(ci): require issue metadata on CI whitelist exceptions
   - Replaces placeholder CI whitelist exception issue fields with stable
     tracking keys.

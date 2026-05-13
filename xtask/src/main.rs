@@ -1089,6 +1089,13 @@ enum Cmd {
         blocking_mode: bool,
     },
 
+    /// Manage no-panic policy artifacts.
+    #[command(name = "no-panic")]
+    NoPanic {
+        #[command(subcommand)]
+        command: NoPanicCmd,
+    },
+
     /// Validate `#[expect(clippy::...)]` exception receipts.
     #[command(name = "check-clippy-exceptions")]
     CheckClippyExceptions {
@@ -1241,6 +1248,22 @@ enum CiLaneWhitelistCmd {
         /// Exit non-zero if any error is reported.
         #[arg(long, default_value_t = false)]
         fail_on_error: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum NoPanicCmd {
+    /// Refresh `policy/no-panic-baseline.toml`.
+    Baseline {
+        #[arg(long, default_value = "policy/no-panic-allowlist.toml")]
+        allowlist: PathBuf,
+        #[arg(long, default_value = "policy/no-panic-baseline.toml")]
+        baseline: PathBuf,
+        #[arg(long, default_value = "target/bitnet/reports")]
+        report_dir: PathBuf,
+        /// Replace the baseline with the current scan.
+        #[arg(long, default_value_t = false)]
+        reset: bool,
     },
 }
 
@@ -1611,6 +1634,11 @@ fn real_main() -> Result<()> {
             fail_on_error,
             blocking_mode,
         } => policy::no_panic::run(allowlist, baseline, report_dir, fail_on_error, blocking_mode),
+        Cmd::NoPanic { command } => match command {
+            NoPanicCmd::Baseline { allowlist, baseline, report_dir, reset } => {
+                policy::no_panic::baseline(allowlist, baseline, report_dir, reset)
+            }
+        },
         Cmd::CheckClippyExceptions { exceptions, report_dir, fail_on_error } => {
             policy::clippy::run(exceptions, report_dir, fail_on_error)
         }

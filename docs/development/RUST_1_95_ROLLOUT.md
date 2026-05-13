@@ -267,6 +267,10 @@ git diff --check
 Baseline refresh may drop disappeared entries. It must refuse to absorb new
 debt unless `--reset` is explicit.
 
+PR 8 lands the generated `policy/no-panic-baseline.toml`, marks it generated in
+`.gitattributes`, and sets `policy/no-panic-allowlist.toml` to
+`mode = "no-new-debt"`.
+
 ### PR 9: No-Panic Diagnostics
 
 ```bash
@@ -506,8 +510,8 @@ rollout builds on it without replacing it.
 | Clippy lints ledger | `policy/clippy-lints.toml` | present, 1.94/1.95 staged |
 | Clippy debt | `policy/clippy-debt.toml` | present, placeholder only |
 | Clippy exceptions | `policy/clippy-exceptions.toml` | present, empty |
-| No-panic allowlist | `policy/no-panic-allowlist.toml` | present, empty/advisory |
-| No-panic baseline | `policy/no-panic-baseline.toml` | absent |
+| No-panic allowlist | `policy/no-panic-allowlist.toml` | present, empty, no-new-debt mode |
+| No-panic baseline | `policy/no-panic-baseline.toml` | present, generated |
 | Non-Rust allowlist | `policy/non-rust-allowlist.toml` | present, broad |
 | `ripr` suppressions | `policy/ripr-suppressions.toml` | present |
 | Policy workflow | `.github/workflows/policy.yml` | running policy checks |
