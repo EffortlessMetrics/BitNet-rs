@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "intel_258v_dense_slm_openvino_ir_manifest",
+  "campaign": "intel-258v-platform",
+  "item": "SLM-OV258V-001",
+  "created_utc": "2026-05-13T03:06:27Z",
+  "machine_id": "intel-258v",
+  "proof_stage": "export_contract_recorded",
+  "purpose": "Record the OpenVINO IR INT4 symmetric export contract for the pinned Qwen2.5 dense SLM path before OpenVINO CPU, GPU, or NPU LLMPipeline smoke work.",
+  "source_model": {
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "architecture": "qwen2",
+    "model_family": "qwen",
+    "model_name": "qwen2.5-0.5b-instruct",
+    "tokenizer_family": "qwen2",
+    "context_length": 32768,
+    "source_url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct/tree/7ae557604adf67be50417f59c2c2f167def9a775"
+  },
+  "baseline_cpu_reference": {
+    "role": "existing GGUF CPU baseline for OpenVINO output comparison",
+    "gguf_manifest": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+    "answer_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+    "phase_receipt": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json",
+    "phase_profile_prefill_512": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/prefill_512.json",
+    "phase_profile_decode_128": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/decode_128.json",
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "backend_lane": "dense_slm_cpu",
+    "fallback_used": false,
+    "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quantization": "Q8_0"
+  },
+  "export_contract": {
+    "tool": "optimum-cli export openvino",
+    "command": "optimum-cli export openvino --model Qwen/Qwen2.5-0.5B-Instruct --revision 7ae557604adf67be50417f59c2c2f167def9a775 --weight-format int4 --sym --ratio 1.0 --group-size 128 models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "expected_output_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "format": "openvino_ir",
+    "weight_format": "int4",
+    "symmetric": true,
+    "ratio": 1.0,
+    "group_size": 128,
+    "npu_candidate": true,
+    "model_binary_committed": false,
+    "tokenizer_files_committed": false,
+    "expected_files": [
+      "openvino_model.xml",
+      "openvino_model.bin",
+      "tokenizer.json",
+      "tokenizer_config.json",
+      "generation_config.json"
+    ],
+    "openvino_genai_constraints": {
+      "runtime_family": "openvino_genai_llm_pipeline",
+      "npu_requires_int4_symmetric": true,
+      "generation_mode": "greedy_or_simple_generation_first",
+      "beam_search_supported_on_npu": false,
+      "parallel_sampling_supported_on_npu": false
+    }
+  },
+  "tokenizer": {
+    "source": "hf_tokenizer_export",
+    "tokenizer_family": "qwen2",
+    "prompt_template": "qwen2.5",
+    "chat_template_required": true,
+    "bos_token_id": 151643,
+    "eos_token_id": 151645,
+    "padding_token_id": 151643,
+    "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+  },
+  "planned_receipts": {
+    "openvino_cpu_answer_smoke": "SLM-OV258V-002",
+    "openvino_gpu_arc140v_answer_smoke": "SLM-OV258V-003",
+    "openvino_npu_answer_smoke": "SLM-OV258V-004",
+    "openvino_phase_comparison": "SLM-OV258V-005"
+  },
+  "claim_boundary": {
+    "may_claim": [
+      "The Qwen2.5 dense SLM OpenVINO IR INT4 symmetric export contract is recorded for the Lunar Lake operating lane.",
+      "The export manifest links the OpenVINO IR candidate to the existing 258V GGUF CPU answer and phase baseline.",
+      "No model binary is committed."
+    ],
+    "must_not_claim": [
+      "OpenVINO CPU execution is proven.",
+      "OpenVINO GPU or Arc 140V execution is proven.",
+      "OpenVINO NPU execution is proven.",
+      "fallback_used=false is proven for OpenVINO LLMPipeline.",
+      "Dense SLM answer quality improves.",
+      "CPU, GPU, or NPU speedup is proven.",
+      "BitNet QK256/I2_S proof is affected.",
+      "Dense SLM receipts prove BitNet packed-kernel behavior."
+    ]
+  },
+  "verification": {
+    "manifest_only": true,
+    "reference_paths_exist": true,
+    "execution_not_run": true,
+    "next_action": "Export the model locally, then run SLM-OV258V-002 OpenVINO CPU LLMPipeline answer smoke against this manifest and the GGUF CPU baseline."
+  }
+}

@@ -2262,3 +2262,53 @@ must_not_claim = [
   "BitNet QK256/I2_S proof is affected.",
   "Dense SLM receipts prove BitNet packed-kernel behavior.",
 ]
+
+[[work_item]]
+id = "SLM-OV258V-001"
+status = "pr_open"
+branch = "codex/lunar-lake/SLM-OV258V-001-openvino-ir-manifest"
+pr = 4559
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM258V-005"]
+acceptance = "Record the Qwen2.5 0.5B Instruct OpenVINO IR INT4 symmetric export manifest for the Lunar Lake dense SLM operating lane, linking it to the clean 258V GGUF CPU answer and phase baseline without committing model binaries or claiming OpenVINO CPU/GPU/NPU execution, fallback status, acceleration, speedup, or BitNet QK256/I2_S proof."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "The Qwen2.5 dense SLM OpenVINO IR INT4 symmetric export contract is recorded for the Lunar Lake operating lane.",
+  "The manifest links the OpenVINO IR candidate to the existing 258V GGUF CPU answer and phase baseline.",
+  "No model binary is committed.",
+]
+must_not_claim = [
+  "OpenVINO CPU execution is proven.",
+  "OpenVINO GPU or Arc 140V execution is proven.",
+  "OpenVINO NPU execution is proven.",
+  "OpenVINO fallback_used=false is proven.",
+  "Dense SLM answer quality improves.",
+  "CPU, GPU, or NPU speedup is proven.",
+  "BitNet QK256/I2_S proof is affected.",
+  "Dense SLM receipts prove BitNet packed-kernel behavior.",
+]
