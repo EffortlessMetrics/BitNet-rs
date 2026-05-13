@@ -2987,8 +2987,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ASK-002"
-status = "pr_open"
+status = "merged"
 pr = 4654
+merge_sha = "cedc59f9b66dcaf5ab670e794fa5fe76d8c788a0"
 branch = "codex/lunar-lake/LNL258V-ASK-002-live-operator-ask"
 head_sha = "a1384710f43c9fee2d215e20c3668c297092e1da"
 stackable = false
