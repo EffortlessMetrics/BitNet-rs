@@ -310,6 +310,8 @@ fn dry_run_blk_layer_tensors_all_mapped() {
         "blk.0.attn_k.weight".to_string(),
         "blk.0.attn_v.weight".to_string(),
         "blk.0.attn_output.weight".to_string(),
+        "blk.0.attn_q_norm.weight".to_string(),
+        "blk.0.attn_k_norm.weight".to_string(),
         "blk.0.ffn_gate.weight".to_string(),
         "blk.0.ffn_up.weight".to_string(),
         "blk.0.ffn_down.weight".to_string(),
@@ -320,6 +322,26 @@ fn dry_run_blk_layer_tensors_all_mapped() {
     ];
     let unmapped = dry_run_remap_names(names);
     assert!(unmapped.is_empty(), "Expected all blk tensors mapped, unmapped: {:?}", unmapped);
+}
+
+#[test]
+fn vendor_key_qwen_qk_norm_variants() {
+    assert_eq!(
+        normalize_vendor_key("blk.3.attn_q_norm.weight").as_deref(),
+        Some("layers.3.attention.q_norm.weight")
+    );
+    assert_eq!(
+        normalize_vendor_key("blk.3.attn_k_norm.weight").as_deref(),
+        Some("layers.3.attention.k_norm.weight")
+    );
+    assert_eq!(
+        normalize_vendor_key("model.layers.3.self_attn.q_norm.weight").as_deref(),
+        Some("layers.3.attention.q_norm.weight")
+    );
+    assert_eq!(
+        normalize_vendor_key("model.layers.3.self_attn.k_norm.weight").as_deref(),
+        Some("layers.3.attention.k_norm.weight")
+    );
 }
 
 #[test]

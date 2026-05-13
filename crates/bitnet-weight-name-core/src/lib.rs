@@ -148,6 +148,26 @@ fn re_ffn_norm() -> &'static Regex {
     })
 }
 
+fn normalize_blk_attn_norm(k: &str, source_suffix: &str, canonical: &str) -> Option<String> {
+    let layer = k.strip_prefix("blk.")?.strip_suffix(source_suffix)?;
+    layer
+        .chars()
+        .all(|c| c.is_ascii_digit())
+        .then(|| format!("layers.{layer}.attention.{canonical}.weight"))
+}
+
+fn normalize_llama_attn_norm(k: &str, source_suffix: &str, canonical: &str) -> Option<String> {
+    let layer_path = k.strip_prefix("model.layers.").or_else(|| k.strip_prefix("layers."))?;
+    let attn_suffix = source_suffix.replace(".self_attn.", ".attn.");
+    let layer = layer_path
+        .strip_suffix(source_suffix)
+        .or_else(|| layer_path.strip_suffix(attn_suffix.as_str()))?;
+    layer
+        .chars()
+        .all(|c| c.is_ascii_digit())
+        .then(|| format!("layers.{layer}.attention.{canonical}.weight"))
+}
+
 /// Returns canonical key if `k` matches a known vendor pattern.
 pub fn normalize_vendor_key(k: &str) -> Option<String> {
     macro_rules! cap {
@@ -166,6 +186,10 @@ pub fn normalize_vendor_key(k: &str) -> Option<String> {
         .or_else(|| cap!(re_llama_k_proj, k, "layers.{}.attention.k_proj.weight"))
         .or_else(|| cap!(re_llama_v_proj, k, "layers.{}.attention.v_proj.weight"))
         .or_else(|| cap!(re_llama_o_proj, k, "layers.{}.attention.o_proj.weight"))
+        .or_else(|| normalize_blk_attn_norm(k, ".attn_q_norm.weight", "q_norm"))
+        .or_else(|| normalize_blk_attn_norm(k, ".attn_k_norm.weight", "k_norm"))
+        .or_else(|| normalize_llama_attn_norm(k, ".self_attn.q_norm.weight", "q_norm"))
+        .or_else(|| normalize_llama_attn_norm(k, ".self_attn.k_norm.weight", "k_norm"))
         .or_else(|| cap!(re_blk_ffn_gate, k, "layers.{}.feed_forward.gate_proj.weight"))
         .or_else(|| cap!(re_blk_ffn_up, k, "layers.{}.feed_forward.up_proj.weight"))
         .or_else(|| cap!(re_blk_ffn_down, k, "layers.{}.feed_forward.down_proj.weight"))
@@ -205,6 +229,14 @@ mod tests {
         assert_eq!(
             normalize_vendor_key("layers.2.input_layernorm.weight").as_deref(),
             Some("layers.2.attention_norm.weight")
+        );
+        assert_eq!(
+            normalize_vendor_key("blk.2.attn_q_norm.weight").as_deref(),
+            Some("layers.2.attention.q_norm.weight")
+        );
+        assert_eq!(
+            normalize_vendor_key("model.layers.2.self_attn.k_norm.weight").as_deref(),
+            Some("layers.2.attention.k_norm.weight")
         );
         assert!(normalize_vendor_key("layers.2.input_layernorm.bias").is_none());
     }

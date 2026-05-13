@@ -3,4 +3,4 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
-| apple-m3-macbook-air | M3MBA-003 | #4596 | `codex/apple-m3-macbook-air/M3MBA-003-receipt-label` | Add or confirm the smallest receipt validation path for apple-m3-air-cpu-neon, preserving existing apple-m4-cpu-neon checks and making MacBook timing impossible to label as M4 evidence. |
+| slm-cpu | SLM-CPU-008S | #4606 | `codex/slm-cpu-008s-qwen3-output-head-root-cause` | Use the SLM-CPU-008R post-#4434 artifact and trace to localize the remaining Qwen3-0.6B Q8_0 first-token divergence, prioritizing output head/vocab indexing and shared transformer math. The item must identify the next concrete drift point or add the smallest missing diagnostic needed to do so, while preserving strict loader/tokenizer provenance and fallback=false. No answer-quality, tiny corpus, sustained throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, Q4/Q5 quant expansion, or BitNet QK256 claim is allowed. |

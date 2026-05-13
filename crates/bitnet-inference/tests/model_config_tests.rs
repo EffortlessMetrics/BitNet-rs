@@ -281,8 +281,8 @@ fn architecture_detection_unknown_returns_none() {
 #[test]
 fn architecture_defaults_bitnet() {
     let d = ArchitectureRegistry::lookup("bitnet").unwrap();
-    assert_eq!(d.norm_type, NormType::LayerNorm);
-    assert_eq!(d.activation_type, ActivationType::Silu);
+    assert_eq!(d.norm_type, NormType::RmsNorm);
+    assert_eq!(d.activation_type, ActivationType::Relu2);
     assert_eq!(d.default_context_length, None);
 }
 
@@ -440,8 +440,8 @@ fn slm_bitnet_2b_config() {
 
     // Verify architecture defaults
     let defaults = ArchitectureRegistry::lookup("bitnet").unwrap();
-    assert_eq!(defaults.norm_type, NormType::LayerNorm);
-    assert_eq!(defaults.activation_type, ActivationType::Silu);
+    assert_eq!(defaults.norm_type, NormType::RmsNorm);
+    assert_eq!(defaults.activation_type, ActivationType::Relu2);
 }
 
 #[test]

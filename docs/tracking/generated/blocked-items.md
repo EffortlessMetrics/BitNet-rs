@@ -8,7 +8,7 @@
 | apple-bitnet-artifact-sweep | ABAS-004 | ABAS-001, ABAS-002 | proposed |
 | apple-bitnet-artifact-sweep | ABAS-005 | ABAS-001 | proposed |
 | apple-m3-macbook-air | M3MBA-002 | M3MBA-001 | merged |
-| apple-m3-macbook-air | M3MBA-003 | M3MBA-002 | pr_open |
+| apple-m3-macbook-air | M3MBA-003 | M3MBA-002 | merged |
 | apple-m3-macbook-air | M3MBA-004A | M3MBA-003 | proposed |
 | apple-m3-macbook-air | M3MBA-004B | M3MBA-004A | proposed |
 | apple-m3-macbook-air | M3MBA-005A | M3MBA-004B | proposed |
@@ -308,7 +308,7 @@
 | slm-cpu | SLM-CPU-007B | SLM-CPU-007A | merged |
 | slm-cpu | SLM-CPU-008 | SLM-CPU-007B | merged |
 | slm-cpu | SLM-CPU-008R | SLM-CPU-008 | merged |
-| slm-cpu | SLM-CPU-008S | SLM-CPU-008R | ready |
+| slm-cpu | SLM-CPU-008S | SLM-CPU-008R | pr_open |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | merged |
 | wasm-inference | WASM-002 | WASM-001 | ready |
