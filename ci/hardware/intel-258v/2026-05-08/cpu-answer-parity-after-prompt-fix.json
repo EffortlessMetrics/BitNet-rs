@@ -1,5 +1,25 @@
 {
   "artifact_kind": "bitnet_cpu_answer_parity",
+  "backend": {
+    "fallback_used": false,
+    "lanes": {
+      "avx2": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "scalar": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      }
+    },
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust"
+  },
   "cases": [
     {
       "avx2": {
@@ -334,9 +354,18 @@
     }
   ],
   "claim": "scalar_avx2_full_decode_answer_parity",
+  "fallback_used": false,
   "inputs": {
     "avx2_receipt_path": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-prompt-fix.json",
     "scalar_receipt_path": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-prompt-fix.json"
+  },
+  "kernel": {
+    "avx2_selected_kernels": [
+      "i2_s-avx2-reference"
+    ],
+    "scalar_selected_kernels": [
+      "i2_s-scalar-reference"
+    ]
   },
   "machine": {
     "cpu": null,
@@ -356,7 +385,10 @@
     "GPU or NPU execution is involved."
   ],
   "proof_stage": "full_decode_parity_compared",
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
   "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
   "shared_contract": {
     "failed_rules": [],
     "same_greedy_settings": true,
@@ -371,5 +403,5 @@
     "passed": 5,
     "total": 5
   },
-  "timestamp": "2026-05-12T15:59:13.731480+00:00"
+  "timestamp": "2026-05-13T01:04:43.246158700+00:00"
 }

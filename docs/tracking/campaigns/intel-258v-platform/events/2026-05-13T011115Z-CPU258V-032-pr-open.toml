@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T01:11:15Z"
+campaign = "intel-258v-platform"
+item = "CPU258V-032"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4550
+actor = "codex"
+head_sha = "994f4bc18b4633ede69df36f5abf7289286a0600"
+branch = "codex/lunar-lake/CPU-PARITY-RECEIPT-FALLBACK"
+summary = "Opened CPU258V-032 to harden the 258V post-fix scalar-vs-AVX2 answer-parity receipt identity."
+
+notes = [
+  "The PR adds top-level requested_backend, selected_backend, runtime_api, fallback_used, backend lane, and selected-kernel fields to answer-parity receipts.",
+  "The PR regenerates ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-prompt-fix.json with explicit CPU backend/fallback identity.",
+  "The change is receipt hardening only and does not claim new answer quality, speed, Arc/NPU execution, acceleration, QK256 semantic changes, or full model correctness.",
+]
