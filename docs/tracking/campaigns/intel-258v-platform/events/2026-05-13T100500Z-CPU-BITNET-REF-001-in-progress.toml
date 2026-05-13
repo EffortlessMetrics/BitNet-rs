@@ -1,7 +1,7 @@
 timestamp = "2026-05-13T10:05:00Z"
 campaign = "intel-258v-platform"
 item = "CPU-BITNET-REF-001"
-event = "started"
+event = "in_progress"
 from = "ready"
 to = "in_progress"
 actor = "codex"
