@@ -71,10 +71,10 @@ fn validate_explicit_profile_unit_local_returns_without_panic() {
 #[test]
 fn policy_snapshot_is_compatible_reflects_violations() {
     let snapshot = snapshot_from_env();
-    if snapshot.is_compatible() {
-        if let Some((missing, forbidden)) = snapshot.violations() {
-            assert!(missing.is_empty() && forbidden.is_empty());
-        }
+    if snapshot.is_compatible()
+        && let Some((missing, forbidden)) = snapshot.violations()
+    {
+        assert!(missing.is_empty() && forbidden.is_empty());
     }
 }
 
