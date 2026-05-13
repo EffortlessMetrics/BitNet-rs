@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T09:50:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-003"
+event = "pr_open"
+pr = 4596
+head_sha = "1e18f206bd4fd16c313566d8da836ae75eb52a59"
+branch = "codex/apple-m3-macbook-air/M3MBA-003-receipt-label"
+actor = "codex"
+
+notes = [
+  "Opened PR #4596 for the explicit M3 Air CPU/NEON receipt label.",
+  "The item preserves existing apple-m4-cpu-neon validation while making MacBook timing impossible to label as M4 evidence.",
+  "No BitNet local-answer quality, M4 Mac mini performance, broad Apple Silicon performance, or accelerator claim is introduced.",
+]

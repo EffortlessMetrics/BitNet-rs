@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T10:11:00Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-REF-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 4599
+actor = "codex"
+branch = "codex/lunar-lake/CPU-BITNET-REF-001-reference-boundary"
+summary = "Opened CPU-BITNET-REF-001 to record the external BitNet.cpp generated-text boundary against the corrected 258V CPU reference bundle."
+
+notes = [
+  "The PR adds cpu-bitnet-ref-001-external-boundary.json as a receipt/index artifact.",
+  "The evidence links the corrected CPU reference bundle, external generated-text reference, and instrumentation classifier.",
+  "Direct reference generated-token IDs and first-token logits/top-k remain explicit blockers.",
+  "No generated-token parity, logits parity, broad answer-quality, speed, Arc, NPU, QK256, or full-model correctness claim is added.",
+]
