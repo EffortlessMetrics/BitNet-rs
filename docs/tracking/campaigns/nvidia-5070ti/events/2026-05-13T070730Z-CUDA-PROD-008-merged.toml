@@ -1,0 +1,12 @@
+timestamp = "2026-05-13T07:07:30Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-008"
+event = "merged"
+pr = 4582
+merge_sha = "3746fe568df78c32d75c7a86ae95b73e655047a2"
+actor = "codex"
+notes = [
+  "Merged the 5070 Ti BitNet and dense proof-state reconciliation.",
+  "Recorded the current-state ledger for BitNet official I2_S CUDA, dense Qwen2.5 Q8_0 CUDA, and candidate dense SLM/small LLM rows.",
+  "Kept runtime behavior, receipts, workflows, and product claims unchanged.",
+]

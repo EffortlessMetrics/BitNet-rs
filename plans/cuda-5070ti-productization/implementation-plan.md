@@ -48,7 +48,7 @@ All work items link to:
 | Lane | Current state | Last real receipt | Next missing proof |
 | --- | --- | --- | --- |
 | BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | profile-specific benchmark qualification |
-| Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; audit exact receipt source before further promotion | `ci/hardware/windows-9950x3d-rtx5070ti/**/dense-*.json` | distinguish real hardware/user-path receipts from validators and contracts |
+| Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; real strict runtime receipts and benchmark qualification reviews exist; direct ask/chat hardware receipts not found | `docs/reports/CUDA_DENSE_QWEN25_Q8_PRODUCT_AUDIT.md` | direct ask/chat user-path receipts if required, then server reuse |
 | Qwen3 0.6B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
 | SmolLM2 360M | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
 | Llama 3.2 1B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
@@ -60,7 +60,7 @@ CUDA-PROD-008 and the audit target for CUDA-DENSE-050.
 
 ## Work item: CUDA-PROD-008
 
-Status: ready
+Status: merged
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, `rtx5070ti-cuda-answer-readiness`
 Linked ADRs: BITNET-ADR-0004
@@ -120,7 +120,7 @@ Revert the docs-only reconciliation. Receipts and ledgers stay unchanged.
 
 ## Work item: CUDA-PROD-009
 
-Status: planned
+Status: in progress
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, `rtx5070ti-cuda-answer-readiness`
 Linked ADRs: BITNET-ADR-0004

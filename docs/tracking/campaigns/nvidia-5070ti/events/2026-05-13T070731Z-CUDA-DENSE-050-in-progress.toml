@@ -1,0 +1,9 @@
+timestamp = "2026-05-13T07:07:31Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-050"
+event = "in_progress"
+actor = "codex"
+notes = [
+  "Started the dense Qwen2.5 Q8_0 product audit.",
+  "The audit classifies committed RTX 5070 Ti dense Qwen receipts as hardware/user-path runtime proof, measured benchmark baseline, validator-backed UX, or missing direct user-path receipt.",
+]
