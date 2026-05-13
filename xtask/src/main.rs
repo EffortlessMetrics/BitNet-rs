@@ -1891,16 +1891,8 @@ fn ripr_pr(check: bool) -> Result<()> {
 
     if !check {
         fs::create_dir_all(&out_dir).with_context(|| format!("creating {}", out_dir.display()))?;
-        run_ripr_check_format(
-            &workspace_root,
-            "repo-exposure-json",
-            &out_dir.join("repo-exposure.json"),
-        )?;
-        run_ripr_check_format(
-            &workspace_root,
-            "repo-exposure-md",
-            &out_dir.join("repo-exposure.md"),
-        )?;
+        run_ripr_check_format(&workspace_root, "json", &out_dir.join("repo-exposure.json"))?;
+        run_ripr_check_format(&workspace_root, "github", &out_dir.join("repo-exposure.md"))?;
         println!("ripr-pr: wrote PR evidence under {}", out_dir.display());
     }
 
