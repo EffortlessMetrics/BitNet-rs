@@ -44,17 +44,16 @@ jobs:
         run: |
           if ! timeout 120s cargo xtask ripr-review-comments --base origin/${{ github.base_ref }} --head HEAD; then
             mkdir -p target/ripr/review
-            cat > target/ripr/review/comments.json <<'JSON'
-            {
-              "comments": [],
-              "summary_only": true,
-              "suppressed": [],
-              "warnings": ["ripr review-comments timed out; see EffortlessMetrics/ripr#876"]
-            }
-            JSON
-            cat > target/ripr/review/comments.md <<'MD'
-            RIPR review guidance timed out; see EffortlessMetrics/ripr#876.
-            MD
+            printf '%s\n' \
+              '{' \
+              '  "comments": [],' \
+              '  "summary_only": true,' \
+              '  "suppressed": [],' \
+              '  "warnings": ["ripr review-comments timed out; see EffortlessMetrics/ripr#876"]' \
+              '}' > target/ripr/review/comments.json
+            printf '%s\n' \
+              'RIPR review guidance timed out; see EffortlessMetrics/ripr#876.' \
+              > target/ripr/review/comments.md
           fi
 
       - name: RIPR PR contract
