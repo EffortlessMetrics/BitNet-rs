@@ -44,7 +44,7 @@ pub use external_reference_instrumentation::ExternalReferenceInstrumentationComm
 pub use first_token_divergence::FirstTokenDivergenceCommand;
 pub use inference::InferenceCommand;
 pub use inspect::InspectCommand;
-pub use lunar_lake::LunarLakeCommand;
+pub use lunar_lake::{LunarLakeAction, LunarLakeCommand};
 pub use output_head_logits_audit::OutputHeadLogitsAuditCommand;
 pub use receipts::ReceiptsCommand;
 pub use reference_compare::ReferenceCompareCommand;

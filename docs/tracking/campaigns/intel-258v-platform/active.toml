@@ -2928,3 +2928,58 @@ must_not_claim = [
   "Packed QK256 decode works on Arc or NPU.",
   "Dense SLM OpenVINO receipts prove BitNet QK256/I2_S behavior.",
 ]
+
+[[work_item]]
+id = "LNL258V-ASK-001"
+status = "pr_open"
+pr = 4644
+branch = "codex/lunar-lake/LNL258V-ASK-001-operator-ask"
+head_sha = "1f684e9a63f57aebf249bd39fb95226ed8e1e4fd"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-COMPARE-005"]
+acceptance = "Add a policy-gated `bitnet lunar-lake ask` wrapper for the dense Qwen CPU default route. The command must read the committed operator-readiness receipt before generation, refuse non-default or accelerator routes, run through the CPU/dense-Qwen path with strict tokenizer and loader behavior, emit an operator ask receipt with source run evidence, route reason, answer gate result, timing fields, fallback_used=false, and no broad dense quality, speedup, Arc/NPU execution, acceleration, full BitNet accelerator inference, or BitNet QK256/I2_S claim."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs crates/bitnet-cli/src/commands/mod.rs crates/bitnet-cli/src/main.rs",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -j 1",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,full-cli -j 1 commands::lunar_lake::tests -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake ask --help",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/commands/mod.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/hardware/intel-258v/**",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "The CLI exposes a Lunar Lake ask wrapper for the dense Qwen CPU default route.",
+  "The wrapper enforces the operator-readiness receipt and refuses non-default or accelerator routes before generation.",
+  "The wrapper emits an operator ask receipt that links the source run receipt, selected model, prompt/template, backend/runtime identity, fallback status, route reason, answer gate result, and timing fields.",
+]
+must_not_claim = [
+  "A new live 258V ask receipt is committed.",
+  "Dense SLM broad quality is proven.",
+  "CPU, Arc, or NPU speedup is proven.",
+  "Arc 140V execution or acceleration is proven by the ask wrapper.",
+  "Intel NPU execution or acceleration is proven by the ask wrapper.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+]

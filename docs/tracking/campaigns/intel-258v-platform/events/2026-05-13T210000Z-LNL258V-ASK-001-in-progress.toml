@@ -1,0 +1,20 @@
+timestamp = "2026-05-13T21:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ASK-001"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ASK-001-operator-ask"
+summary = "Started a policy-gated Lunar Lake ask wrapper for the dense Qwen CPU default route."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+]
+
+notes = [
+  "The wrapper is scoped to the existing dense Qwen CPU default route from the operator-readiness receipt.",
+  "The command must refuse non-default or accelerator routes before generation and preserve fallback_used=false CPU route identity.",
+  "No live ask artifact, broad dense SLM quality, speedup, Arc/NPU execution, acceleration, full BitNet accelerator inference, or QK256 accelerator decode claim is made.",
+]

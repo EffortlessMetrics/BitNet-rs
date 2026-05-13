@@ -143,8 +143,9 @@ use commands::{
     DenseGgufQwenWarmSessionStrictCudaCommand, DenseGgufRopeCudaParityCommand,
     DenseGgufSamplingPolicyCommand, DenseQwenCudaAskOptions,
     ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
-    InspectCommand, LunarLakeCommand, OutputHeadLogitsAuditCommand, ReceiptsCommand,
-    ReferenceCompareCommand, ServeCommand, TransformerLayerParityCommand, run_dense_qwen_cuda_ask,
+    InspectCommand, LunarLakeAction, LunarLakeCommand, OutputHeadLogitsAuditCommand,
+    ReceiptsCommand, ReferenceCompareCommand, ServeCommand, TransformerLayerParityCommand,
+    run_dense_qwen_cuda_ask,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -1766,7 +1767,7 @@ async fn async_main() -> Result<()> {
             handle_lunar_lake_probe_command(json_out).await
         }
         #[cfg(feature = "full-cli")]
-        Some(Commands::LunarLake(command)) => command.execute().await,
+        Some(Commands::LunarLake(command)) => handle_lunar_lake_command(command).await,
         Some(Commands::IntelNpuProbe { strict, json_out }) => {
             intel_npu::handle_probe_command(strict, json_out).await
         }
@@ -9489,6 +9490,255 @@ fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) 
     })
 }
 
+#[cfg(feature = "full-cli")]
+async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
+    match command.action {
+        LunarLakeAction::Ask {
+            artifact_root,
+            operator_receipt,
+            route,
+            model,
+            tokenizer,
+            question,
+            question_arg,
+            max_new_tokens,
+            json_out,
+        } => {
+            let question = resolve_ask_question(question, question_arg)?;
+            run_lunar_lake_ask(
+                artifact_root,
+                operator_receipt,
+                route,
+                model,
+                tokenizer,
+                question,
+                max_new_tokens,
+                json_out,
+            )
+            .await
+        }
+        action => LunarLakeCommand { action }.execute().await,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+#[cfg(feature = "full-cli")]
+async fn run_lunar_lake_ask(
+    artifact_root: std::path::PathBuf,
+    operator_receipt: std::path::PathBuf,
+    route_id: String,
+    model: std::path::PathBuf,
+    tokenizer: Option<std::path::PathBuf>,
+    question: String,
+    max_new_tokens: usize,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    if !(1..=128).contains(&max_new_tokens) {
+        anyhow::bail!("lunar-lake ask requires --max-new-tokens in 1..=128");
+    }
+    let route = commands::lunar_lake::load_operator_ask_route(
+        &artifact_root,
+        &operator_receipt,
+        &route_id,
+    )?;
+    let receipt_path = json_out.unwrap_or_else(default_lunar_lake_ask_receipt_path);
+    let source_run_path = source_run_receipt_path(&receipt_path);
+
+    run_simple_generation(
+        "cpu",
+        model,
+        "auto".to_string(),
+        None,
+        tokenizer,
+        question.clone(),
+        max_new_tokens,
+        0.0,
+        0,
+        1.0,
+        1.1,
+        None,
+        false,
+        false,
+        true,
+        true,
+        Some(source_run_path.clone()),
+        false,
+        false,
+        true,
+        true,
+        0,
+        "qwen2.5".to_string(),
+        None,
+        vec!["<|im_end|>".to_string()],
+        Vec::new(),
+        None,
+        10,
+        false,
+        None,
+        None,
+        false,
+        None,
+        false,
+        Some("lunar_lake_ask".to_string()),
+        false,
+    )
+    .await?;
+
+    let source_run_receipt: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&source_run_path).with_context(|| {
+            format!("failed to read run receipt {}", source_run_path.display())
+        })?)
+        .with_context(|| format!("invalid run receipt {}", source_run_path.display()))?;
+    validate_lunar_lake_ask_source_receipt(&source_run_receipt, &route)?;
+
+    let answer = source_run_receipt["text"].as_str().unwrap_or_default();
+    let normalized_answer = normalize_lunar_lake_answer(answer);
+    let answer_gate_passed = !normalized_answer.is_empty();
+    if !answer_gate_passed {
+        anyhow::bail!("lunar-lake ask produced an empty normalized answer");
+    }
+    let operator_receipt_path = if operator_receipt.is_absolute() || operator_receipt.exists() {
+        operator_receipt
+    } else {
+        artifact_root.join(operator_receipt)
+    };
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "lunar_lake_operator_ask",
+        "proof_stage": "operator_default_route_executed",
+        "created_utc": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        "machine_id": "intel-258v",
+        "artifact_root": artifact_root.display().to_string(),
+        "operator_receipt": operator_receipt_path.display().to_string(),
+        "source_run_receipt": source_run_path.display().to_string(),
+        "route": {
+            "route_id": route.route_id,
+            "workload": route.workload,
+            "selected_model": route.selected_model,
+            "selected_backend": route.selected_backend,
+            "runtime_api": route.runtime_api,
+            "selected_kernel_or_runtime": route.selected_kernel_or_runtime,
+            "fallback_policy": route.fallback_policy,
+            "route_reason": route.route_reason,
+            "answer_gate_evidence": route.answer_gate_evidence,
+            "phase_evidence": route.phase_evidence,
+            "acceleration_claim": route.acceleration_claim,
+        },
+        "question": question,
+        "answer": {
+            "text": answer,
+            "normalized_text": normalized_answer,
+            "gate": {
+                "name": "non_empty_bounded_operator_answer",
+                "passed": answer_gate_passed,
+                "broad_quality_claim": false,
+            },
+        },
+        "model": {
+            "path": source_run_receipt["model"]["path"].clone(),
+            "sha256": source_run_receipt["model"]["sha256"].clone(),
+            "family": source_run_receipt["model"]["family"].clone(),
+            "architecture": source_run_receipt["model"]["architecture"].clone(),
+            "quant_format": source_run_receipt["model"]["quant_format"].clone(),
+            "tokenizer": source_run_receipt["model"]["tokenizer"].clone(),
+            "vocab_size": source_run_receipt["model"]["vocab_size"].clone(),
+            "loader_mode": source_run_receipt["model"]["loader_mode"].clone(),
+            "fallback_loader_used": source_run_receipt["model"]["fallback_loader_used"].clone(),
+        },
+        "prompt": {
+            "template": "qwen2.5",
+            "render": source_run_receipt["prompt_render"].clone(),
+            "token_ids": source_run_receipt["tokens"]["prompt_ids"].clone(),
+        },
+        "tokens": {
+            "generated_ids": source_run_receipt["tokens"]["generated_ids"].clone(),
+            "generated_count": source_run_receipt["tokens"]["generated"].clone(),
+            "prompt_count": source_run_receipt["tokens"]["prompt"].clone(),
+        },
+        "backend": {
+            "requested_backend": source_run_receipt["requested_backend"].clone(),
+            "selected_backend": source_run_receipt["selected_backend"].clone(),
+            "runtime_api": source_run_receipt["runtime_api"].clone(),
+            "fallback_used": source_run_receipt["fallback_used"].clone(),
+            "fallback_reason": source_run_receipt["fallback_reason"].clone(),
+            "backend_lane": "dense_slm_cpu",
+            "selected_kernel_or_runtime": source_run_receipt["kernel"]["kernel_id"].clone(),
+        },
+        "dense_slm": source_run_receipt["dense_slm"].clone(),
+        "execution_coverage": source_run_receipt["execution_coverage"].clone(),
+        "timing": source_run_receipt["timing"].clone(),
+        "profile": source_run_receipt["profile"].clone(),
+        "claim_boundary": {
+            "cpu_default_route_only": true,
+            "fallback_used": false,
+            "acceleration_claim": false,
+            "broad_dense_slm_quality_claim": false,
+            "bitnet_qk256_i2s_claim": false,
+            "arc_or_npu_execution_claim": false,
+        },
+        "source_receipt": source_run_receipt,
+    });
+    write_json_output(Some(&receipt_path), &receipt)?;
+    println!("Lunar Lake ask receipt written to {}", receipt_path.display());
+    Ok(())
+}
+
+#[cfg(feature = "full-cli")]
+fn default_lunar_lake_ask_receipt_path() -> std::path::PathBuf {
+    std::path::PathBuf::from("target")
+        .join("bitnet")
+        .join("receipts")
+        .join("lunar-lake")
+        .join("ask-latest.json")
+}
+
+#[cfg(feature = "full-cli")]
+fn source_run_receipt_path(receipt_path: &std::path::Path) -> std::path::PathBuf {
+    let stem = receipt_path.file_stem().and_then(|stem| stem.to_str()).unwrap_or("ask");
+    receipt_path.with_file_name(format!("{stem}-source-run.json"))
+}
+
+#[cfg(feature = "full-cli")]
+fn normalize_lunar_lake_answer(answer: &str) -> String {
+    answer.replace("<|im_end|>", "").replace("<|endoftext|>", "").trim().to_string()
+}
+
+#[cfg(feature = "full-cli")]
+fn validate_lunar_lake_ask_source_receipt(
+    source_run_receipt: &serde_json::Value,
+    route: &commands::lunar_lake::OperatorRoute,
+) -> Result<()> {
+    let requested_backend = source_run_receipt["requested_backend"].as_str().unwrap_or_default();
+    let selected_backend = source_run_receipt["selected_backend"].as_str().unwrap_or_default();
+    let runtime_api = source_run_receipt["runtime_api"].as_str().unwrap_or_default();
+    let fallback_used = source_run_receipt["fallback_used"].as_bool().unwrap_or(true);
+    let selected_kernel = source_run_receipt["kernel"]["kernel_id"].as_str().unwrap_or_default();
+    if requested_backend != "cpu"
+        || selected_backend != route.selected_backend
+        || runtime_api != route.runtime_api
+    {
+        anyhow::bail!(
+            "lunar-lake ask did not preserve the default CPU route: requested_backend={requested_backend}, selected_backend={selected_backend}, runtime_api={runtime_api}"
+        );
+    }
+    if fallback_used {
+        anyhow::bail!("lunar-lake ask source receipt recorded fallback_used=true");
+    }
+    if selected_kernel != route.selected_kernel_or_runtime {
+        anyhow::bail!(
+            "lunar-lake ask selected kernel `{selected_kernel}`, expected `{}`",
+            route.selected_kernel_or_runtime
+        );
+    }
+    if source_run_receipt.get("dense_slm").is_none() {
+        anyhow::bail!("lunar-lake ask source receipt is missing dense_slm provenance");
+    }
+    if source_run_receipt.get("bitnet").is_some() {
+        anyhow::bail!("lunar-lake ask source receipt unexpectedly contains BitNet provenance");
+    }
+    Ok(())
+}
+
 fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static str> {
     if uses_report_only_cuda_benchmark_receipt(command) {
         return Some("warn");
@@ -9496,6 +9746,10 @@ fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static 
 
     match command {
         Some(Commands::Ask { .. }) => Some("warn"),
+        #[cfg(feature = "full-cli")]
+        Some(Commands::LunarLake(cmd)) if matches!(&cmd.action, LunarLakeAction::Ask { .. }) => {
+            Some("warn")
+        }
         #[cfg(feature = "full-cli")]
         Some(Commands::Chat(_)) => Some("warn"),
         Some(Commands::Model(_)) => Some("warn"),
