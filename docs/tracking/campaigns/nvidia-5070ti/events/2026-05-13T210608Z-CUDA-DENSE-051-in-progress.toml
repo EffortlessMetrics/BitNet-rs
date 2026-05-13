@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T21:06:08Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-051"
+event = "in_progress"
+actor = "codex"
+branch = "cuda/dense-qwen25-one-token-proof"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started the dense Qwen2.5 0.5B Q8_0 one-token strict RTX 5070 Ti CUDA proof refresh.",
+  "Scope is the refreshed one-token receipt, tracker/report/plan references, and the minimal cudarc link-mode alignment needed for the cpu,cuda,full-cli proof binary to compile with Candle CUDA.",
+  "The PR must keep speedup_claim=false, bitnet_packed_i2s_qk256_proof=false, short-decode/chat/server readiness unclaimed, and crates.io/docs.rs badge readiness pending until publish.",
+]
