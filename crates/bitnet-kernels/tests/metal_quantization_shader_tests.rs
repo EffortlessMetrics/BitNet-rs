@@ -104,12 +104,14 @@ mod tests {
                 let blk_start = blk * block_size;
                 let blk_end = (blk_start + block_size).min(k);
                 let scale = scales[col * num_blocks + blk];
-                for i in blk_start..blk_end {
+                for (i, activation_value) in
+                    activation.iter().enumerate().take(blk_end).skip(blk_start)
+                {
                     let byte_idx = i / 4;
                     let bit_off = (i % 4) * 2;
                     let bits = (weights_packed[col * packed_k + byte_idx] >> bit_off) & 0x03;
                     let w = decode_i2s(bits) as f32 * scale;
-                    acc += w * activation[i];
+                    acc += w * activation_value;
                 }
             }
             out[col] = acc;
@@ -1113,11 +1115,11 @@ mod tests {
         let weights_packed = pack_i2s_vec(&vals);
         let scales = vec![1.0f32];
 
-        let constant = 3.14f32;
+        let constant = 3.125f32;
         let activation = vec![constant; k];
 
         let result = cpu_i2s_matvec(&weights_packed, &scales, &activation, n, k, block_size);
-        // 16 * 3.14 + 16 * (-3.14) = 0
+        // 16 * constant + 16 * (-constant) = 0
         assert!(
             result[0].abs() < 1e-4,
             "Balanced ±1 with constant input should cancel, got {}",

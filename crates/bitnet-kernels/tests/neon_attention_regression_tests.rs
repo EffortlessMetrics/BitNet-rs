@@ -6,9 +6,7 @@
     clippy::manual_range_contains,
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
-    clippy::cast_precision_loss,
-    unused_imports,
-    dead_code
+    clippy::cast_precision_loss
 )]
 
 const TOLERANCE: f32 = 1e-4;
@@ -238,9 +236,9 @@ mod causal_masking {
         apply_causal_mask(&mut scores, seq_len);
 
         // First token (i=0) should only attend to itself
-        assert_eq!(scores[0 * seq_len], 1.0);
+        assert_eq!(scores[0], 1.0);
         for j in 1..seq_len {
-            assert!(scores[0 * seq_len + j].is_infinite());
+            assert!(scores[j].is_infinite());
         }
     }
 
