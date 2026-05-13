@@ -2207,3 +2207,57 @@ must_not_claim = [
   "QK256 semantics changed.",
   "Full model correctness is proven.",
 ]
+
+[[work_item]]
+id = "SLM258V-005"
+status = "pr_open"
+branch = "codex/lunar-lake/SLM258V-005-receipt-identity"
+pr = 4552
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM258V-004", "CPU258V-032"]
+acceptance = "Harden dense Qwen SLM answer and phase receipts so top-level requested_backend, selected_backend, runtime_api, fallback_used, backend_lane, model_family, model_architecture, quantization, prompt_template, tokenizer_source, and selected_kernel_or_runtime are explicit, while preserving existing child/case backend fields and avoiding new quality, speed, Arc/NPU, acceleration, or BitNet QK256/I2_S claims."
+commands = [
+  "rustfmt --check --config skip_children=true --edition 2024 crates/bitnet-cli/src/commands/answer_corpus.rs crates/bitnet-cli/src/main.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::answer_corpus::tests::slm_answer_aggregate_identity_uses_dense_cpu_lane -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet receipt_identity -- --nocapture",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/prefill_512.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/decode_128.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Dense Qwen SLM answer and phase receipts record top-level backend, runtime API, fallback status, model identity, tokenizer source, prompt template, and selected dense CPU runtime identity.",
+  "Existing child/case backend fields remain intact for dense SLM receipts.",
+]
+must_not_claim = [
+  "New dense SLM quality is proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Acceleration is proven.",
+  "BitNet QK256/I2_S proof is affected.",
+  "Dense SLM receipts prove BitNet packed-kernel behavior.",
+]

@@ -1,6 +1,7 @@
 {
   "artifact_kind": "dense_slm_cpu_phase_warm_session",
   "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-phase-warm-session-qwen25-cpu.json",
+  "backend_lane": "dense_slm_cpu",
   "claim_boundary": {
     "arc140v_claim": false,
     "bitnet_answer_quality_claim": false,
@@ -62,6 +63,10 @@
     "tokenizer": "gguf_metadata",
     "vocab_size": 151936
   },
+  "model_architecture": "qwen2",
+  "model_family": "qwen",
+  "prompt_template": "qwen2.5",
+  "quantization": "Q8_0",
   "profiles": [
     {
       "decode_total_ms": 175.035,
@@ -92,6 +97,7 @@
   "runtime_api": "cpu",
   "schema_version": "1.0.0",
   "selected_backend": "cpu-rust",
+  "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
   "session": {
     "model_loaded_once": true,
     "per_profile_receipt_dir": "ci\\hardware\\intel-258v\\2026-05-08\\slm-phase-warm-session-qwen25-cpu-profiles",
@@ -115,5 +121,6 @@
     "source": "gguf_metadata",
     "strict": true,
     "type": "gguf_metadata"
-  }
+  },
+  "tokenizer_source": "gguf_metadata"
 }

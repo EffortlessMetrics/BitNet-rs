@@ -2,6 +2,7 @@
   "arc140v_claim": false,
   "artifact_kind": "dense_slm_cpu_phase_profile",
   "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-phase-warm-session-qwen25-cpu-profiles\\prefill_512.json",
+  "backend_lane": "dense_slm_cpu",
   "bitnet_qk256_i2s_claim": false,
   "counts": {
     "n_kv": 26,
@@ -92,6 +93,8 @@
     "tokenizer": "gguf_metadata",
     "vocab_size": 151936
   },
+  "model_architecture": "qwen2",
+  "model_family": "qwen",
   "profile": {
     "backend": {
       "fallback_reason": null,
@@ -197,6 +200,8 @@
   },
   "profile_id": "prefill_512",
   "prompt": "benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token benchmark token ",
+  "prompt_template": "qwen2.5",
+  "quantization": "Q8_0",
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
@@ -208,6 +213,7 @@
   "runtime_api": "cpu",
   "schema_version": "1.0.0",
   "selected_backend": "cpu-rust",
+  "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
   "session_artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-phase-warm-session-qwen25-cpu.json",
   "speedup_claim": false,
   "strict_provenance": {
@@ -321,6 +327,7 @@
     "strict": true,
     "type": "gguf_metadata"
   },
+  "tokenizer_source": "gguf_metadata",
   "tokens": {
     "generated": 1,
     "generated_ids": [

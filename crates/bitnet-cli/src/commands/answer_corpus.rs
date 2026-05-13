@@ -174,11 +174,46 @@ impl AnswerCorpusCommand {
                 row["kernel"]["selected_kernel"] == "dense-qwen-cpu-reference"
                     && row["kernel"]["family"] == "dense_qwen"
             });
+        let top_level_selected_backend =
+            aggregate_case_str(&rows, &["backend", "selected_backend"])
+                .unwrap_or(device.as_str())
+                .to_string();
+        let top_level_runtime_api = aggregate_case_str(&rows, &["backend", "runtime_api"])
+            .unwrap_or_else(|| answer_corpus_runtime_api(&device))
+            .to_string();
+        let top_level_fallback_used =
+            rows.iter().any(|row| row["backend"]["fallback_used"].as_bool().unwrap_or(true));
+        let top_level_model_family =
+            corpus.model.family.as_deref().unwrap_or("unknown").to_string();
+        let top_level_model_architecture =
+            corpus.model.architecture.as_deref().unwrap_or("unknown").to_string();
+        let top_level_quantization =
+            corpus.model.quant_format.as_deref().unwrap_or("unknown").to_string();
+        let top_level_tokenizer_source = aggregate_case_str(&rows, &["tokenizer", "source"])
+            .unwrap_or(aggregate_tokenizer)
+            .to_string();
+        let top_level_selected_kernel_or_runtime =
+            aggregate_case_str(&rows, &["kernel", "selected_kernel"])
+                .unwrap_or(&top_level_runtime_api)
+                .to_string();
+        let top_level_backend_lane =
+            answer_corpus_backend_lane(&device, slm_answer_path, &top_level_model_family);
 
         let receipt = json!({
             "schema_version": "1.0.0",
             "artifact_kind": artifact_kind,
             "timestamp": chrono::Utc::now().to_rfc3339(),
+            "requested_backend": device.as_str(),
+            "selected_backend": top_level_selected_backend,
+            "runtime_api": top_level_runtime_api,
+            "fallback_used": top_level_fallback_used,
+            "backend_lane": top_level_backend_lane,
+            "model_family": top_level_model_family,
+            "model_architecture": top_level_model_architecture,
+            "quantization": top_level_quantization,
+            "tokenizer_source": top_level_tokenizer_source,
+            "prompt_template": corpus.defaults.prompt_template.as_str(),
+            "selected_kernel_or_runtime": top_level_selected_kernel_or_runtime,
             "corpus": {
                 "path": self.corpus.display().to_string(),
                 "name": corpus.name,
@@ -202,13 +237,13 @@ impl AnswerCorpusCommand {
             },
             "backend": {
                 "requested_backend": device.as_str(),
-                "selected_backend": device.as_str(),
-                "runtime_api": answer_corpus_runtime_api(&device),
-                "fallback_used": false,
+                "selected_backend": top_level_selected_backend,
+                "runtime_api": top_level_runtime_api,
+                "fallback_used": top_level_fallback_used,
             },
             "execution_plan": aggregate_execution_plan,
-            "prompt_template": {
-                "family": corpus.defaults.prompt_template,
+            "prompt_template_policy": {
+                "family": corpus.defaults.prompt_template.as_str(),
             },
             "generation": {
                 "mode": if corpus.defaults.greedy { "greedy" } else { "sampling" },
@@ -610,6 +645,32 @@ fn answer_corpus_runtime_api(device: &str) -> &'static str {
 
 fn is_cuda_answer_corpus_device(device: &str) -> bool {
     matches!(device, "cuda" | RTX_5070_TI_CUDA)
+}
+
+fn answer_corpus_backend_lane(
+    device: &str,
+    slm_answer_path: bool,
+    model_family: &str,
+) -> &'static str {
+    if slm_answer_path && device == "cpu" && model_family == "qwen" {
+        "dense_slm_cpu"
+    } else if is_cuda_answer_corpus_device(device) {
+        "bitnet_cuda"
+    } else if device == "apple-m4-cpu-neon" {
+        "apple_m4_cpu_neon"
+    } else {
+        "bitnet_cpu"
+    }
+}
+
+fn aggregate_case_str<'a>(rows: &'a [Value], path: &[&str]) -> Option<&'a str> {
+    rows.iter().find_map(|row| {
+        let mut cursor = row;
+        for key in path {
+            cursor = cursor.get(*key)?;
+        }
+        cursor.as_str()
+    })
 }
 
 fn prompt_prefill_receipt(run_receipt: &Value) -> Value {
@@ -1240,6 +1301,31 @@ mod tests {
         assert_eq!(effective_default_timeout_seconds(None, Some(120)), 120);
         assert_eq!(effective_default_timeout_seconds(None, None), 300);
         assert_eq!(effective_default_timeout_seconds(Some(0), Some(300)), 1);
+    }
+
+    #[test]
+    fn slm_answer_aggregate_identity_uses_dense_cpu_lane() {
+        let rows = vec![json!({
+            "backend": {
+                "selected_backend": "cpu-rust",
+                "runtime_api": "cpu",
+                "fallback_used": false,
+            },
+            "kernel": {
+                "selected_kernel": "dense-qwen-cpu-reference",
+            },
+            "tokenizer": {
+                "source": "gguf_metadata",
+            },
+        })];
+
+        assert_eq!(aggregate_case_str(&rows, &["backend", "selected_backend"]), Some("cpu-rust"));
+        assert_eq!(
+            aggregate_case_str(&rows, &["kernel", "selected_kernel"]),
+            Some("dense-qwen-cpu-reference")
+        );
+        assert_eq!(aggregate_case_str(&rows, &["tokenizer", "source"]), Some("gguf_metadata"));
+        assert_eq!(answer_corpus_backend_lane("cpu", true, "qwen"), "dense_slm_cpu");
     }
 
     #[test]

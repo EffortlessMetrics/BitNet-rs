@@ -74,6 +74,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | SLM258V-004 | merged | Record dense Qwen SLM phase timing receipts on the 258V CPU path, keeping dense SLM phase evidence separate from BitNet QK256/I2_S receipts; merged in #4542. |
 | LNL258V-COMPARE-004 | merged | Refresh the same-machine comparison index after the corrected BitNet CPU bundle and dense Qwen SLM CPU answer/phase receipts, preserving independent BitNet CPU, dense SLM CPU, Arc 140V, and NPU claim boundaries; merged in #4545. |
 | CPU258V-032 | merged | Harden the 258V post-fix scalar-vs-AVX2 answer-parity receipt so top-level backend/runtime/fallback/kernel identity is explicit; merged in #4550. |
+| SLM258V-005 | pr_open | Harden dense Qwen SLM answer and phase receipts so top-level backend/runtime/fallback/model identity is explicit before OpenVINO CPU/GPU/NPU acceleration work; open in #4552. |
 
 ## Review Policy
 

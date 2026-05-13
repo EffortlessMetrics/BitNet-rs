@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T02:13:13Z"
+campaign = "intel-258v-platform"
+item = "SLM258V-005"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4552
+actor = "codex"
+head_sha = "e0dd227de9e0a54e8fe3231921a6927556c132bc"
+branch = "codex/lunar-lake/SLM258V-005-receipt-identity"
+summary = "Opened SLM258V-005 to harden dense Qwen SLM receipt identity before OpenVINO acceleration work."
+
+notes = [
+  "The PR adds top-level requested_backend, selected_backend, runtime_api, fallback_used, backend_lane, model_family, model_architecture, quantization, tokenizer_source, prompt_template, and selected_kernel_or_runtime to dense SLM answer and phase receipts.",
+  "Existing child and case backend fields are preserved.",
+  "The change is receipt hardening only and does not claim new dense SLM quality, speed, Arc/NPU execution, acceleration, or BitNet QK256/I2_S proof.",
+]
