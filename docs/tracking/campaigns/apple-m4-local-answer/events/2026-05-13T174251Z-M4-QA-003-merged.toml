@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T17:42:51Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-003"
+event = "merged"
+merge_sha = "9fa3e532b89c36885c54350700d75a740a93911e"
+actor = "codex"
+
+notes = [
+  "Closed M4-QA-003 using the receipt-quality hardening and Apple M4 CPU/NEON BitNet answer-corpus evidence committed by #4618.",
+  "The receipt-quality contract in crates/bitnet-cli/src/commands/answer_corpus.rs requires generated text, prompt/generated/total token counts, prompt/generated token IDs, model repo/file/SHA/family/architecture, tokenizer source/strict/pretokenizer authority, backend routing, fallback=false, real loader/kernel identity, timing fields, and latency.total_ms.",
+  "The committed release receipt ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release.json records receipt_quality.checked=true with those rules and shows all five strict answer-corpus cases passed with fallback_used=false.",
+  "The proof preflight receipt ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/mac-bitnet-proof-receipt-check.json records required_receipt_fields for model source/SHA, tokenizer authority, backend routing, fallback status, generated text/token IDs, timing, and claim_boundary, with result=verified.",
+  "Claim boundaries remain narrow: this proves receipt-quality checks for the fixed Apple M4 CPU/NEON BitNet answer corpus only; it does not enable bitnet mac ask/chat/server, prove broad BitNet chat quality, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, or performance claims.",
+]
