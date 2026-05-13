@@ -2316,9 +2316,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-OV258V-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/SLM-OV258V-002-openvino-cpu-preflight"
 pr = 4565
+merge_sha = "205979b9dc6e4ea08013dfdb005afe623d19f69b"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
