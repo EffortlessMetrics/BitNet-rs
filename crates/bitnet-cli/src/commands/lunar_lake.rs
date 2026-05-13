@@ -6,7 +6,7 @@
 
 use anyhow::{Context, Result, bail};
 use clap::{Args, Subcommand};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -27,6 +27,7 @@ const ARC_OPENCL_PARITY: &str = "arc-140v-opencl-parity.json";
 const NPU_RMSNORM: &str = "npu-bitnet-rmsnorm-subgraph-parity.json";
 const NPU_LINEAR: &str = "npu-bitnet-linear-projection-subgraph-parity.json";
 const NPU_FFN: &str = "npu-bitnet-ffn-subgraph-parity.json";
+const OPERATOR_READINESS: &str = "lunar-lake-operator-readiness.json";
 
 /// Lunar Lake operator commands.
 #[derive(Args, Debug, Clone)]
@@ -55,9 +56,32 @@ pub enum LunarLakeAction {
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
+
+    /// Check the Lunar Lake operator receipt for drift and emit a regression bundle.
+    Regress {
+        /// Artifact root containing the 258V receipts to index.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Operator readiness receipt to verify. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = OPERATOR_READINESS)]
+        operator_receipt: PathBuf,
+
+        /// Output JSON regression bundle to file.
+        #[arg(long)]
+        json_out: Option<PathBuf>,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the regression bundle reports drift.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeOperatorReceipt {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -73,7 +97,7 @@ pub struct LunarLakeOperatorReceipt {
     pub claim_boundary: ClaimBoundary,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OperatorRoute {
     pub route_id: String,
     pub workload: String,
@@ -88,7 +112,7 @@ pub struct OperatorRoute {
     pub acceleration_claim: bool,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EvidenceStatus {
     pub evidence_id: String,
     pub path: String,
@@ -104,7 +128,7 @@ pub struct EvidenceStatus {
     pub issues: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ClaimBoundary {
     pub cpu_is_truth_path: bool,
     pub dense_slm_default_is_cpu_until_speedup_qualified: bool,
@@ -113,6 +137,29 @@ pub struct ClaimBoundary {
     pub npu_bitnet_full_inference_claimed: bool,
     pub qk256_accelerator_decode_claimed: bool,
     pub hidden_fallback_allowed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct LunarLakeRegressionBundle {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub operator_receipt: String,
+    pub regression_passed: bool,
+    pub checks: Vec<RegressionCheck>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: ClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct RegressionCheck {
+    pub check_id: String,
+    pub status: String,
+    pub evidence: Vec<String>,
+    pub notes: Vec<String>,
 }
 
 impl LunarLakeCommand {
@@ -132,6 +179,28 @@ impl LunarLakeCommand {
                 write_or_print_receipt(&receipt, json_out.as_deref())?;
                 if *strict && !receipt.operator_ready {
                     bail!("Lunar Lake operator readiness failed: {}", receipt.gaps.join("; "));
+                }
+                Ok(())
+            }
+            LunarLakeAction::Regress {
+                artifact_root,
+                operator_receipt,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_regression_bundle_with_created_utc(
+                    artifact_root,
+                    operator_receipt,
+                    created_utc,
+                )?;
+                write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
+                if *strict && !receipt.regression_passed {
+                    bail!("Lunar Lake regression bundle failed: {}", receipt.gaps.join("; "));
                 }
                 Ok(())
             }
@@ -280,6 +349,108 @@ pub fn build_operator_readiness_receipt_with_created_utc(
             qk256_accelerator_decode_claimed: false,
             hidden_fallback_allowed: false,
         },
+    })
+}
+
+pub fn build_regression_bundle_with_created_utc(
+    root: &Path,
+    operator_receipt: &Path,
+    created_utc: String,
+) -> Result<LunarLakeRegressionBundle> {
+    let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
+    let bytes = fs::read(&operator_receipt_path)
+        .with_context(|| format!("failed to read {}", operator_receipt_path.display()))?;
+    let operator: LunarLakeOperatorReceipt = serde_json::from_slice(&bytes)
+        .with_context(|| format!("failed to parse {}", operator_receipt_path.display()))?;
+
+    let checks = vec![
+        regression_check(
+            "operator_receipt_ready",
+            operator.operator_ready,
+            vec![OPERATOR_READINESS],
+            if operator.operator_ready {
+                vec!["operator readiness receipt reports operator_ready=true".to_string()]
+            } else {
+                operator.gaps.clone()
+            },
+        ),
+        regression_check(
+            "dense_slm_default_cpu_route",
+            operator.default_route.route_id == "dense_slm_default_cpu"
+                && operator.default_route.selected_backend == "cpu-rust"
+                && operator.default_route.runtime_api == "cpu"
+                && !operator.default_route.acceleration_claim
+                && evidence_ok(&operator.evidence, "dense_slm_cpu_answer")
+                && evidence_ok(&operator.evidence, "dense_slm_cpu_phase"),
+            vec![DENSE_CPU_ANSWER, DENSE_CPU_PHASE],
+            vec![
+                format!("default_route={}", operator.default_route.route_id),
+                format!("selected_backend={}", operator.default_route.selected_backend),
+            ],
+        ),
+        regression_check(
+            "bitnet_cpu_reference_route",
+            route_ok(&operator, "bitnet_reference_cpu")
+                && evidence_ok(&operator.evidence, "bitnet_cpu_reference_bundle")
+                && evidence_ok(&operator.evidence, "bitnet_external_reference_boundary")
+                && evidence_ok(&operator.evidence, "bitnet_i2s_gemv_gemm_microbench")
+                && evidence_ok(&operator.evidence, "bitnet_i2s_tiling_thread_matrix"),
+            vec![BITNET_CPU_BUNDLE, BITNET_REFERENCE, BITNET_PERF_MICRO, BITNET_PERF_TILING],
+            vec!["BitNet remains CPU reference-only in the operator route policy".to_string()],
+        ),
+        regression_check(
+            "openvino_dense_slm_candidates_bounded",
+            route_ok(&operator, "dense_slm_openvino_gpu_candidate")
+                && route_ok(&operator, "dense_slm_openvino_npu_candidate")
+                && evidence_ok(&operator.evidence, "dense_slm_openvino_gpu_arc140v")
+                && evidence_ok(&operator.evidence, "dense_slm_openvino_npu")
+                && evidence_ok(&operator.evidence, "dense_slm_openvino_phase_runner"),
+            vec![DENSE_OV_GPU, DENSE_OV_NPU, DENSE_OV_PHASE],
+            vec!["OpenVINO GPU and NPU remain candidate routes without speedup claims".to_string()],
+        ),
+        regression_check(
+            "arc_npu_bitnet_claim_boundaries",
+            !operator.claim_boundary.arc_bitnet_full_inference_claimed
+                && !operator.claim_boundary.npu_bitnet_full_inference_claimed
+                && !operator.claim_boundary.qk256_accelerator_decode_claimed
+                && evidence_ok(&operator.evidence, "arc140v_native_opencl_parity")
+                && evidence_ok(&operator.evidence, "npu_rmsnorm_static_subgraph")
+                && evidence_ok(&operator.evidence, "npu_linear_static_subgraph")
+                && evidence_ok(&operator.evidence, "npu_ffn_static_subgraph"),
+            vec![ARC_OPENCL_PARITY, NPU_RMSNORM, NPU_LINEAR, NPU_FFN],
+            vec!["Arc and NPU evidence remains bounded to parity/subgraph receipts".to_string()],
+        ),
+        regression_check(
+            "no_hidden_fallback_or_acceleration_claim",
+            !operator.claim_boundary.hidden_fallback_allowed
+                && operator.evidence.iter().all(|item| item.fallback_used == Some(false))
+                && operator.routes.iter().all(|route| !route.acceleration_claim)
+                && operator.evidence.iter().all(|item| item.speedup_claim != Some(true)),
+            vec![OPERATOR_READINESS],
+            vec![
+                "all indexed evidence reports fallback_used=false".to_string(),
+                "all operator routes keep acceleration_claim=false".to_string(),
+            ],
+        ),
+    ];
+    let gaps = checks
+        .iter()
+        .filter(|check| check.status != "passed")
+        .map(|check| format!("{}: {}", check.check_id, check.notes.join(", ")))
+        .collect::<Vec<_>>();
+
+    Ok(LunarLakeRegressionBundle {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_regression_bundle".to_string(),
+        proof_stage: "operator_regression_indexed".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        operator_receipt: path_string(&operator_receipt_path),
+        regression_passed: gaps.is_empty(),
+        checks,
+        gaps,
+        claim_boundary: operator.claim_boundary,
     })
 }
 
@@ -468,6 +639,47 @@ fn write_or_print_receipt(receipt: &LunarLakeOperatorReceipt, path: Option<&Path
         println!("{}", String::from_utf8_lossy(&json));
     }
     Ok(())
+}
+
+fn write_or_print_regression_bundle(
+    receipt: &LunarLakeRegressionBundle,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake regression bundle written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn resolve_receipt_path(root: &Path, path: &Path) -> PathBuf {
+    if path.is_absolute() || path.exists() { path.to_path_buf() } else { root.join(path) }
+}
+
+fn regression_check(
+    check_id: &str,
+    passed: bool,
+    evidence: Vec<&str>,
+    notes: Vec<String>,
+) -> RegressionCheck {
+    RegressionCheck {
+        check_id: check_id.to_string(),
+        status: if passed { "passed" } else { "failed" }.to_string(),
+        evidence: evidence.into_iter().map(ToString::to_string).collect(),
+        notes,
+    }
+}
+
+fn route_ok(operator: &LunarLakeOperatorReceipt, route_id: &str) -> bool {
+    operator.routes.iter().any(|route| route.route_id == route_id && !route.acceleration_claim)
 }
 
 fn fallback_used(json: &Value) -> Option<bool> {
@@ -663,6 +875,53 @@ mod tests {
         )?;
 
         assert_eq!(receipt.created_utc, "2026-05-13T15:36:09Z");
+        Ok(())
+    }
+
+    #[test]
+    fn regression_bundle_passes_with_operator_ready_receipt() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-13T15:36:09Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+
+        let bundle = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-13T16:59:00Z".to_string(),
+        )?;
+
+        assert!(bundle.regression_passed, "{:?}", bundle.gaps);
+        assert_eq!(bundle.artifact_kind, "lunar_lake_regression_bundle");
+        assert!(bundle.checks.iter().any(|check| check.check_id == "dense_slm_default_cpu_route"));
+        assert!(bundle.checks.iter().all(|check| check.status == "passed"));
+        assert!(!bundle.claim_boundary.hidden_fallback_allowed);
+        Ok(())
+    }
+
+    #[test]
+    fn regression_bundle_rejects_operator_fallback() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), true)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-13T15:36:09Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+
+        let bundle = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-13T16:59:00Z".to_string(),
+        )?;
+
+        assert!(!bundle.regression_passed);
+        assert!(
+            bundle.gaps.iter().any(|gap| gap.contains("no_hidden_fallback_or_acceleration_claim"))
+        );
         Ok(())
     }
 

@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_regression_bundle",
+  "proof_stage": "operator_regression_indexed",
+  "created_utc": "2026-05-13T17:05:00Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "regression_passed": true,
+  "checks": [
+    {
+      "check_id": "operator_receipt_ready",
+      "status": "passed",
+      "evidence": [
+        "lunar-lake-operator-readiness.json"
+      ],
+      "notes": [
+        "operator readiness receipt reports operator_ready=true"
+      ]
+    },
+    {
+      "check_id": "dense_slm_default_cpu_route",
+      "status": "passed",
+      "evidence": [
+        "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+        "slm-phase-warm-session-qwen25-cpu.json"
+      ],
+      "notes": [
+        "default_route=dense_slm_default_cpu",
+        "selected_backend=cpu-rust"
+      ]
+    },
+    {
+      "check_id": "bitnet_cpu_reference_route",
+      "status": "passed",
+      "evidence": [
+        "cpu-reference-bundle-after-semantic-fix.json",
+        "cpu-bitnet-ref-001-external-boundary.json",
+        "cpu-bitnet-perf-001-i2s-microbench.json",
+        "cpu-bitnet-perf-002-i2s-tiling-matrix.json"
+      ],
+      "notes": [
+        "BitNet remains CPU reference-only in the operator route policy"
+      ]
+    },
+    {
+      "check_id": "openvino_dense_slm_candidates_bounded",
+      "status": "passed",
+      "evidence": [
+        "slm-openvino-gpu-arc140v-llmpipeline-smoke.json",
+        "slm-openvino-npu-llmpipeline-smoke.json",
+        "slm-openvino-cpu-gpu-npu-phase-runner.json"
+      ],
+      "notes": [
+        "OpenVINO GPU and NPU remain candidate routes without speedup claims"
+      ]
+    },
+    {
+      "check_id": "arc_npu_bitnet_claim_boundaries",
+      "status": "passed",
+      "evidence": [
+        "arc-140v-opencl-parity.json",
+        "npu-bitnet-rmsnorm-subgraph-parity.json",
+        "npu-bitnet-linear-projection-subgraph-parity.json",
+        "npu-bitnet-ffn-subgraph-parity.json"
+      ],
+      "notes": [
+        "Arc and NPU evidence remains bounded to parity/subgraph receipts"
+      ]
+    },
+    {
+      "check_id": "no_hidden_fallback_or_acceleration_claim",
+      "status": "passed",
+      "evidence": [
+        "lunar-lake-operator-readiness.json"
+      ],
+      "notes": [
+        "all indexed evidence reports fallback_used=false",
+        "all operator routes keep acceleration_claim=false"
+      ]
+    }
+  ],
+  "gaps": [],
+  "claim_boundary": {
+    "cpu_is_truth_path": true,
+    "dense_slm_default_is_cpu_until_speedup_qualified": true,
+    "openvino_gpu_npu_are_candidates_not_speedup_claims": true,
+    "arc_bitnet_full_inference_claimed": false,
+    "npu_bitnet_full_inference_claimed": false,
+    "qk256_accelerator_decode_claimed": false,
+    "hidden_fallback_allowed": false
+  }
+}
