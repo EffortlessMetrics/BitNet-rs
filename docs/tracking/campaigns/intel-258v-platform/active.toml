@@ -2721,6 +2721,7 @@ acceptance = "Record a narrow 258V CPU QK256/I2_S tiling/thread candidate matrix
 commands = [
   "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-bench-receipts/src/bin/cpu_benchmark_receipt.rs crates/bitnet-bench-receipts/src/lib.rs",
   "cargo test --locked -p bitnet-bench-receipts --bin cpu_benchmark_receipt receipt_records_i2s_tiling_thread_matrix_when_requested -- --nocapture",
+  "cargo test --locked -p bitnet-bench-receipts --lib committed_lunar_lake_i2s_tiling_matrix_receipt_validates -- --nocapture",
   "cargo test --locked -p bitnet-bench-receipts --lib strict_cpu_benchmark_rejects_i2s_tiling_matrix_speedup_claim -- --nocapture",
   "cargo test --locked -p bitnet-bench-receipts --lib strict_cpu_benchmark_rejects_incomplete_i2s_tiling_matrix -- --nocapture",
   "cargo run --locked -p bitnet-bench-receipts --bin cpu_benchmark_receipt --no-default-features -- --strict --kernel auto --selected-backend intel-258v-cpu-avx2 --model-repo microsoft/bitnet-b1.58-2B-4T-gguf --model-file ggml-model-i2_s.gguf --model-sha256 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162 --quant-format QK256/I2_S --tokenizer-source explicit_llama3_bitnetcpp_answer --prompt-tokens 512 --generated-tokens 128 --batch-size 1 --include-i2s-tiling-matrix --receipt-out ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-002-i2s-tiling-matrix.json",
