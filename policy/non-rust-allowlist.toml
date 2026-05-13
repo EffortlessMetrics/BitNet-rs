@@ -165,6 +165,16 @@ classification = "documentation"
 reason = "Markdown documentation throughout the workspace (design notes, READMEs, plans)."
 covered_by = ["xtask check-file-policy", "markdownlint"]
 
+[[allow]]
+glob = "badges/*.json"
+kind = "generated_badge_endpoint"
+owner = "release/ci"
+surface = "docs"
+classification = "generated"
+reason = "Generated Shields endpoint JSON for public README badges."
+generated_by = "cargo xtask badges"
+covered_by = ["cargo xtask badges --check"]
+
 # ---------------------------------------------------------------------------
 # CI, tooling configuration
 # ---------------------------------------------------------------------------

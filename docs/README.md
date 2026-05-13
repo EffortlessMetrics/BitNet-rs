@@ -80,6 +80,7 @@ Lookup material for exact behavior, formats, and APIs.
 | --- | --- |
 | [reference/quantization-support.md](reference/quantization-support.md) | Supported quantization formats. |
 | [reference/validation-gates.md](reference/validation-gates.md) | Validation gates and thresholds. |
+| [VERIFICATION.md](VERIFICATION.md) | README badge meanings, generated endpoints, and PR evidence boundaries. |
 | [environment-variables.md](environment-variables.md) | Runtime configuration environment variables. |
 | [reference/api-reference.md](reference/api-reference.md) | Public API contracts. |
 | [reference/inference-cli-reference.md](reference/inference-cli-reference.md) | CLI flags, generation options, and receipt paths. |
