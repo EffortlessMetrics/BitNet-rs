@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T23:26:03Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-001"
+event = "merged"
+pr = 4656
+merge_sha = "685fca2271401b234bd53a9f9d032de543509a44"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4656 merged the Apple M4 dense SLM eval-and-proof campaign scaffold and seeded deterministic corpus spec.",
+  "The corpus shape is validated with `answer-corpus --dry-run`; this item does not include live M4 model execution or runtime accuracy evidence.",
+  "Claim boundaries remain narrow: no broad model quality, broad performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook claim.",
+]

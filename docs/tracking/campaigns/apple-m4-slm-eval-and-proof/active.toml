@@ -25,8 +25,9 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-SLM-EVAL-001"
-status = "pr_open"
+status = "merged"
 pr = 4656
+merge_sha = "685fca2271401b234bd53a9f9d032de543509a44"
 branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-001-seeded-corpus"
 stackable = false
 review_mode = "codex_premerge"
