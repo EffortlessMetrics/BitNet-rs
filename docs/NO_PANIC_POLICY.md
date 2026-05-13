@@ -45,18 +45,19 @@ path + family + selector.kind + selector.callee + snippet + count
 
 1. Run `cargo run --no-default-features -p xtask -- check-no-panic-family` locally; this
    reports unallowlisted findings without changing the allowlist.
-2. If a finding is real debt that cannot yet be removed, run
-   `cargo run --no-default-features -p xtask -- no-panic propose` (later PR) — it writes a
-   draft receipt to `target/bitnet/reports/no-panic-proposed-allowlist.toml`
-   for the human to edit and copy in.
+2. If a finding is real debt that cannot yet be removed, inspect
+   `target/bitnet/reports/no-panic-proposed-allowlist.toml`. That file is
+   advisory only; it gives humans exact counted receipt shapes to review.
 3. The real allowlist is `policy/no-panic-allowlist.toml`. Auto-tools
    never write to it; humans review each entry.
-4. The checker also emits
-   `target/bitnet/reports/no-panic-proposed-baseline.toml` after subtracting
-   exact allowlist counts. The committed baseline is still introduced only in
-   the dedicated baseline PR.
-5. CI runs the checker with `--fail-on-error` once the rollout reaches
-   PR 10 / 11 / 12. Until then it runs advisory.
+4. The generated baseline is `policy/no-panic-baseline.toml`. It carries
+   existing exact-counted debt and is marked generated in `.gitattributes`.
+5. Refresh the baseline with
+   `cargo run --no-default-features -p xtask -- no-panic baseline`. A normal
+   refresh may only drop disappeared entries; it refuses to absorb new debt.
+   `--reset` is reserved for the dedicated baseline reset PR.
+6. The allowlist policy mode is `no-new-debt`, so any finding outside the
+   allowlist and baseline fails the checker.
 
 ## Family staging
 
@@ -104,14 +105,14 @@ Any "we panic so the upstream API is simpler" rationale is rejected.
 
 ## Rust 1.95 rollout target state
 
-The following changes are planned as part of the Rust 1.95 / next minor wave.
+The following changes are part of the Rust 1.95 / next minor wave.
 See `docs/development/RUST_1_95_ROLLOUT.md` for the full PR ladder and
 CI economics framing.
 
-Current `main` has the no-panic allowlist present but intentionally empty and
-advisory-style. There is no generated `policy/no-panic-baseline.toml` yet. The
-Rust 1.95 wave now has exact counted identity in the checker; the next step is
-to generate the baseline and switch to no-new-debt mode.
+Current `main` has the no-panic allowlist present, exact counted identity in
+the checker, and a generated `policy/no-panic-baseline.toml`. Policy mode is
+`no-new-debt`: existing findings are consumed by exact allowlist or baseline
+counts, and anything left is new debt.
 
 ### Identity hardening (PR 7)
 
@@ -148,17 +149,23 @@ blocking_mode_ignores_baseline_but_honors_counted_allowlist
 
 ### Baseline and no-new-debt mode (PR 8)
 
-After identity hardening, a generated baseline is created from current `main`
-and the policy mode is set to `no-new-debt`. The baseline file is marked
+After identity hardening, a generated baseline was created from current `main`
+and the policy mode was set to `no-new-debt`. The baseline file is marked
 generated in `.gitattributes` so it collapses in GitHub review:
 
 ```gitattributes
 policy/no-panic-baseline.toml text eol=lf linguist-generated=true
 ```
 
-Baseline refresh may only drop disappeared entries, never absorb new findings.
-Allowlist entries added after baseline generation must be exact-counted and
-explicitly reviewed.
+Baseline refresh may only drop disappeared entries, never absorb new findings:
+
+```bash
+cargo run --locked -p xtask --no-default-features -- no-panic baseline
+```
+
+Use `--reset` only when the PR's explicit purpose is to regenerate the
+baseline. Allowlist entries added after baseline generation must be
+exact-counted and explicitly reviewed.
 
 ### Diagnostic improvements (PR 9)
 

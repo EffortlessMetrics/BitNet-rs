@@ -24,6 +24,8 @@ use std::path::{Path, PathBuf};
 struct Allowlist {
     #[serde(default = "schema_default", skip_serializing_if = "String::is_empty")]
     schema_version: String,
+    #[serde(default, skip_serializing_if = "PolicyConfig::is_default")]
+    policy: PolicyConfig,
     #[serde(default, rename = "allow")]
     entries: Vec<Entry>,
 }
@@ -38,6 +40,22 @@ fn baseline_schema_default() -> String {
 
 fn default_count() -> usize {
     1
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+struct PolicyConfig {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    mode: String,
+}
+
+impl PolicyConfig {
+    fn is_default(&self) -> bool {
+        self.mode.trim().is_empty()
+    }
+
+    fn no_new_debt(&self) -> bool {
+        self.mode.trim() == "no-new-debt"
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -145,6 +163,7 @@ pub struct Report {
     pub findings: usize,
     pub allow_count: usize,
     pub baseline_count: usize,
+    pub policy_mode: String,
 }
 
 pub fn run(
@@ -156,12 +175,14 @@ pub fn run(
 ) -> Result<()> {
     let mode = if blocking_mode { MatchingMode::Blocking } else { MatchingMode::NoNewDebt };
     let report = check(&allowlist_path, &baseline_path, &report_dir, mode)?;
+    let policy_enforces_no_new_debt = report.policy_mode.trim() == "no-new-debt";
     println!(
-        "no-panic: {} findings vs {} allowlist entries and {} baseline entries; {} unallowlisted",
+        "no-panic: {} findings vs {} allowlist entries and {} baseline entries; {} unallowlisted ({})",
         report.findings,
         report.allow_count,
         report.baseline_count,
-        report.errors.len()
+        report.errors.len(),
+        report.policy_mode
     );
     for w in &report.warnings {
         println!("warning: {w}");
@@ -169,9 +190,66 @@ pub fn run(
     for e in &report.errors {
         println!("error: {e}");
     }
-    if fail_on_error && !report.errors.is_empty() {
+    if (fail_on_error || policy_enforces_no_new_debt) && !report.errors.is_empty() {
         bail!("no-panic check failed: {} unallowlisted findings", report.errors.len());
     }
+    Ok(())
+}
+
+pub fn baseline(
+    allowlist_path: PathBuf,
+    baseline_path: PathBuf,
+    report_dir: PathBuf,
+    reset: bool,
+) -> Result<()> {
+    let allowlist = load_allowlist(&allowlist_path)?;
+    let allow_counts = validate_allowlist(&allowlist)?;
+    let findings = scan_workspace()?;
+    let next = synthesize_baseline(&findings, &allow_counts);
+
+    if baseline_path.exists() && !reset {
+        let existing = load_baseline(&baseline_path)?;
+        let existing_counts = validate_baseline(&existing)?;
+        let new_debt = baseline_new_debt(&next, &existing_counts)?;
+        if !new_debt.is_empty() {
+            bail!(
+                "no-panic baseline refresh refused to absorb {} new finding(s); rerun with --reset only in the dedicated baseline reset PR\n{}",
+                new_debt.len(),
+                new_debt.join("\n")
+            );
+        }
+    } else if !baseline_path.exists() && !reset {
+        bail!(
+            "no-panic baseline `{}` is missing; rerun with --reset in the dedicated baseline PR",
+            baseline_path.display()
+        );
+    }
+
+    if let Some(parent) = baseline_path.parent() {
+        fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
+    }
+    let text = toml::to_string_pretty(&next)?;
+    fs::write(&baseline_path, text)
+        .with_context(|| format!("writing {}", baseline_path.display()))?;
+
+    fs::create_dir_all(&report_dir)
+        .with_context(|| format!("creating {}", report_dir.display()))?;
+    fs::write(
+        report_dir.join("no-panic-baseline-refresh.json"),
+        serde_json::to_string_pretty(&serde_json::json!({
+            "schema_version": 1,
+            "reset": reset,
+            "findings": findings.len(),
+            "baseline_entries": next.entries.len(),
+            "baseline_path": baseline_path.display().to_string(),
+        }))?,
+    )?;
+
+    println!(
+        "no-panic baseline: wrote {} entries to {}",
+        next.entries.len(),
+        baseline_path.display()
+    );
     Ok(())
 }
 
@@ -185,9 +263,7 @@ fn check(
 
     // Allowlist may not exist yet on first run.
     let allowlist: Allowlist = if allowlist_path.exists() {
-        let text = fs::read_to_string(allowlist_path)
-            .with_context(|| format!("reading {}", allowlist_path.display()))?;
-        toml::from_str(&text).with_context(|| format!("parsing {}", allowlist_path.display()))?
+        load_allowlist(allowlist_path)?
     } else {
         report.warnings.push(format!(
             "no-panic allowlist `{}` does not exist; running advisory only",
@@ -195,16 +271,13 @@ fn check(
         ));
         Allowlist::default()
     };
+    report.policy_mode =
+        if allowlist.policy.no_new_debt() { "no-new-debt".into() } else { "advisory".into() };
     report.allow_count = allowlist.entries.len();
     let allow_counts = validate_allowlist(&allowlist)?;
 
-    let baseline: Baseline = if baseline_path.exists() {
-        let text = fs::read_to_string(baseline_path)
-            .with_context(|| format!("reading {}", baseline_path.display()))?;
-        toml::from_str(&text).with_context(|| format!("parsing {}", baseline_path.display()))?
-    } else {
-        Baseline::default()
-    };
+    let baseline: Baseline =
+        if baseline_path.exists() { load_baseline(baseline_path)? } else { Baseline::default() };
     report.baseline_count = baseline.entries.len();
     let baseline_counts = validate_baseline(&baseline)?;
 
@@ -229,6 +302,7 @@ fn check(
             MatchingMode::NoNewDebt => "no-new-debt",
             MatchingMode::Blocking => "blocking",
         },
+        "policy_mode": report.policy_mode,
     });
     fs::write(report_dir.join("no-panic.json"), serde_json::to_string_pretty(&json)?)?;
 
@@ -242,6 +316,16 @@ fn check(
     fs::write(report_dir.join("no-panic-proposed-baseline.toml"), proposed_baseline_text)?;
 
     Ok(report)
+}
+
+fn load_allowlist(path: &Path) -> Result<Allowlist> {
+    let text = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))
+}
+
+fn load_baseline(path: &Path) -> Result<Baseline> {
+    let text = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))
 }
 
 fn normalise_path(p: &str) -> String {
@@ -403,8 +487,11 @@ fn match_findings(
 
 fn synthesize_allowlist(findings: &[Finding]) -> Allowlist {
     let buckets = bucket_findings(findings);
-    let mut al =
-        Allowlist { schema_version: "0.4".into(), entries: Vec::with_capacity(buckets.len()) };
+    let mut al = Allowlist {
+        schema_version: "0.4".into(),
+        policy: PolicyConfig::default(),
+        entries: Vec::with_capacity(buckets.len()),
+    };
     for (i, bucket) in buckets.values().enumerate() {
         let f = &bucket.key;
         al.entries.push(Entry {
@@ -456,6 +543,27 @@ fn synthesize_baseline(
     }
 
     baseline
+}
+
+fn baseline_new_debt(
+    next: &Baseline,
+    existing_counts: &BTreeMap<FindingKey, usize>,
+) -> Result<Vec<String>> {
+    let mut debt = Vec::new();
+    for entry in &next.entries {
+        let key = entry.key()?;
+        let existing = existing_counts.get(&key).copied().unwrap_or(0);
+        if entry.count > existing {
+            debt.push(format!(
+                "{} {} gained {} occurrence(s): `{}`",
+                entry.path,
+                entry.family,
+                entry.count - existing,
+                entry.snippet
+            ));
+        }
+    }
+    Ok(debt)
 }
 
 fn scan_workspace() -> Result<Vec<Finding>> {
@@ -560,6 +668,7 @@ mod tests {
     fn allowlist_entry_requires_exact_snippet() -> Result<()> {
         let allowlist = Allowlist {
             schema_version: "0.4".into(),
+            policy: PolicyConfig::default(),
             entries: vec![allow_entry("panic-0001", "crates/x/src/lib.rs", "unwrap", "", 1)],
         };
 
@@ -579,6 +688,7 @@ mod tests {
         ];
         let allowlist = Allowlist {
             schema_version: "0.4".into(),
+            policy: PolicyConfig::default(),
             entries: vec![allow_entry(
                 "panic-0001",
                 "crates/x/src/lib.rs",
@@ -604,6 +714,7 @@ mod tests {
         let findings = vec![finding("crates/x/src/lib.rs", "unwrap", 10, "right.unwrap()")];
         let allowlist = Allowlist {
             schema_version: "0.4".into(),
+            policy: PolicyConfig::default(),
             entries: vec![allow_entry(
                 "panic-0001",
                 "crates/x/src/lib.rs",
@@ -633,6 +744,7 @@ mod tests {
         ];
         let allowlist = Allowlist {
             schema_version: "0.4".into(),
+            policy: PolicyConfig::default(),
             entries: vec![allow_entry(
                 "panic-0001",
                 "crates/x/src/lib.rs",
@@ -652,6 +764,25 @@ mod tests {
     }
 
     #[test]
+    fn baseline_refresh_detects_new_debt() -> Result<()> {
+        let next = Baseline {
+            schema_version: "0.1".into(),
+            entries: vec![baseline_entry("crates/x/src/lib.rs", "unwrap", "foo.unwrap()", 2)],
+        };
+        let existing = Baseline {
+            schema_version: "0.1".into(),
+            entries: vec![baseline_entry("crates/x/src/lib.rs", "unwrap", "foo.unwrap()", 1)],
+        };
+        let existing_counts = validate_baseline(&existing)?;
+
+        let debt = baseline_new_debt(&next, &existing_counts)?;
+
+        assert_eq!(debt.len(), 1);
+        assert!(debt[0].contains("gained 1 occurrence"));
+        Ok(())
+    }
+
+    #[test]
     fn blocking_mode_ignores_baseline_but_honors_counted_allowlist() -> Result<()> {
         let findings = vec![
             finding("crates/x/src/lib.rs", "unwrap", 10, "foo.unwrap()"),
@@ -659,6 +790,7 @@ mod tests {
         ];
         let allowlist = Allowlist {
             schema_version: "0.4".into(),
+            policy: PolicyConfig::default(),
             entries: vec![allow_entry(
                 "panic-0001",
                 "crates/x/src/lib.rs",
@@ -691,6 +823,7 @@ mod tests {
     fn duplicate_allowlist_keys_are_rejected() -> Result<()> {
         let allowlist = Allowlist {
             schema_version: "0.4".into(),
+            policy: PolicyConfig::default(),
             entries: vec![
                 allow_entry("panic-0001", "crates/x/src/lib.rs", "unwrap", "foo.unwrap()", 1),
                 allow_entry("panic-0002", "crates/x/src/lib.rs", "unwrap", "foo.unwrap()", 1),
