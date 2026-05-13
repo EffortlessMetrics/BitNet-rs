@@ -112,13 +112,19 @@ fn check(exceptions_path: &Path, report_dir: &Path) -> Result<Report> {
         }
     }
 
-    let bare_allow = Regex::new(r"#\s*\[\s*allow\s*\(\s*clippy::").unwrap();
+    let bare_allow =
+        Regex::new(r"#\s*\[\s*allow\s*\(\s*clippy::").context("compile bare clippy allow regex")?;
     let expect_re =
         Regex::new(r#"#\s*\[\s*expect\s*\(\s*clippy::([A-Za-z0-9_]+)[^\]]*reason\s*=\s*"([^"]*)""#)
-            .unwrap();
-    let plain_expect = Regex::new(r"#\s*\[\s*expect\s*\(\s*clippy::").unwrap();
+            .context("compile clippy expect-with-reason regex")?;
+    let plain_expect =
+        Regex::new(r"#\s*\[\s*expect\s*\(\s*clippy::").context("compile clippy expect regex")?;
 
-    for entry in walkdir::WalkDir::new(".").into_iter().filter_map(std::result::Result::ok) {
+    for entry in walkdir::WalkDir::new(".")
+        .into_iter()
+        .filter_entry(should_scan_entry)
+        .filter_map(std::result::Result::ok)
+    {
         let p = entry.path();
         if !p.is_file() {
             continue;
@@ -191,6 +197,13 @@ fn check(exceptions_path: &Path, report_dir: &Path) -> Result<Report> {
     Ok(report)
 }
 
+fn should_scan_entry(entry: &walkdir::DirEntry) -> bool {
+    if !entry.file_type().is_dir() {
+        return true;
+    }
+    !matches!(entry.file_name().to_str(), Some(".git" | "target"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -218,5 +231,38 @@ expires = "1999-01-01"
         .unwrap();
         let r = check(&p, &dir).unwrap();
         assert!(r.errors.iter().any(|e| e.contains("expired")), "errors: {:?}", r.errors);
+    }
+
+    #[test]
+    fn prunes_generated_and_vcs_directories() -> Result<()> {
+        let dir = std::env::temp_dir().join(format!("clippy-prune-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("src"))?;
+        fs::create_dir_all(dir.join("target/debug"))?;
+        fs::create_dir_all(dir.join(".git/objects"))?;
+        fs::write(dir.join("src/lib.rs"), "")?;
+        fs::write(dir.join("target/debug/generated.rs"), "")?;
+        fs::write(dir.join(".git/objects/blob.rs"), "")?;
+
+        let files: BTreeSet<String> = walkdir::WalkDir::new(&dir)
+            .into_iter()
+            .filter_entry(should_scan_entry)
+            .filter_map(std::result::Result::ok)
+            .filter(|entry| entry.file_type().is_file())
+            .filter_map(|entry| {
+                entry
+                    .path()
+                    .strip_prefix(&dir)
+                    .ok()
+                    .map(|path| path.to_string_lossy().replace('\\', "/"))
+            })
+            .collect();
+
+        assert!(files.contains("src/lib.rs"), "files: {files:?}");
+        assert!(!files.contains("target/debug/generated.rs"), "files: {files:?}");
+        assert!(!files.contains(".git/objects/blob.rs"), "files: {files:?}");
+
+        let _ = fs::remove_dir_all(&dir);
+        Ok(())
     }
 }
