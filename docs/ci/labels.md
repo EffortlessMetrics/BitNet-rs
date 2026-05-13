@@ -238,6 +238,28 @@ gh pr edit <PR> --add-label lut
 
 ---
 
+## Routed verification labels
+
+The routed CI rollout uses labels to keep expensive proof available without
+putting that proof on every ordinary PR. These labels are part of the rollout
+contract documented in [`routed-verification-rollout.md`](./routed-verification-rollout.md)
+and mirrored in `policy/ci-routed-rollout.toml`.
+
+| Label | Authorizes | Default PR impact |
+| --- | --- | --- |
+| `full-ci` | All relevant expensive/deep lanes for the touched risk surface. | Explicitly opts out of the ordinary budget target. |
+| `ci-budget-ack` | Acknowledges a high estimated LEM plan once budget guard enforcement exists. | Allows high-but-bounded plans that are otherwise warned. |
+| `ci-budget-override` | Overrides the hard budget guard once enforcement exists. | Requires explicit maintainer intent. |
+| `macos` | Apple platform proof. | Runs macOS lanes only by label/main/manual/path-specific routing. |
+| `apple-silicon` | Apple Silicon CPU/NEON proof. | Runs Apple Silicon lanes only by label/main/manual/path-specific routing. |
+| `metal` | Metal compile/proof. | Runs Metal proof for Metal paths or explicit label. |
+| `performance` / `perf` | Performance baseline tracking. | Runs performance lane outside ordinary PR defaults. |
+| `test-telemetry` / `slow-tests` | JUnit and slow-test telemetry. | Runs advisory telemetry outside ordinary PR defaults. |
+| `msrv` / `compatibility` | MSRV compatibility proof. | Runs MSRV for explicit compatibility concern or global-risk paths. |
+| `full-cli` / `feature-matrix` | Expanded feature-matrix proof including full CLI. | Runs `cpu+full-cli` or full feature lanes when relevant. |
+| `gpu-ci` | GPU native compile proof. | Runs GPU compile lanes for GPU risk only. |
+| `coverage` | Codecov/coverage evidence with `rust-cpu` flag. | Runs coverage outside ordinary PR defaults. |
+
 ## Label Matrix
 
 | Label | Workflow | Duration | Blocking on `main` | Blocking on PRs |

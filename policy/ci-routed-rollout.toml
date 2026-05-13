@@ -1,0 +1,365 @@
+schema_version = "1.0"
+policy = "ci-routed-rollout"
+owner = "release/ci"
+status = "planning"
+updated = "2026-05-12"
+doc = "docs/ci/routed-verification-rollout.md"
+
+[north_star]
+default_pr = "cheap Linux-only deterministic crate/risk-scoped proof"
+expensive_lanes = "main, schedule, release, hardware/campaign, manual dispatch, or explicit labels"
+preferred_default_lem = 25
+default_limit_lem = 35
+
+[runner_multipliers]
+linux = 1.0
+windows = 2.0
+macos = 10.0
+gpu_docker = 6.0
+
+[override_labels]
+full_ci = "full-ci"
+budget_override = "ci-budget-override"
+budget_ack = "ci-budget-ack"
+
+[boundaries]
+no_macos_default_pr = true
+no_windows_default_pr = true
+no_docker_model_download_default_pr = true
+no_branch_protection_change_until_pr20 = true
+no_unrelated_runtime_changes = true
+
+[pr_body_sections]
+required = [
+  "Summary",
+  "CI economics",
+  "Verification preserved",
+  "Boundaries",
+  "Validation",
+]
+
+[budget_guard]
+preferred_max_lem = 25
+default_max_lem = 35
+warn_max_lem = 75
+strong_warn_max_lem = 100
+ack_max_lem = 125
+fail_above_lem = 125
+ack_labels = ["ci-budget-ack", "full-ci"]
+override_labels = ["ci-budget-override", "full-ci"]
+
+[ci_plan_schema]
+schema_version = 1
+artifact = "ci-plan.json"
+required_top_level = [
+  "schema_version",
+  "budget",
+  "classification",
+  "selected_lanes",
+  "skipped_lanes",
+  "packages",
+  "risk_packs",
+  "labels",
+]
+
+[[phase]]
+id = 1
+title = "Remove immediate default-cost waste"
+items = [1, 2, 3, 4]
+
+[[phase]]
+id = 2
+title = "Make routing authoritative"
+items = [5, 6, 7]
+
+[[phase]]
+id = 3
+title = "Narrow default Linux proof"
+items = [8, 9, 10]
+
+[[phase]]
+id = 4
+title = "Tighten advisory lanes into honest lanes"
+items = [11, 12]
+
+[[phase]]
+id = 5
+title = "Coverage as measured evidence"
+items = [13, 14]
+
+[[phase]]
+id = 6
+title = "Clippy/no-panic policy as cheap verification density"
+items = [15, 16]
+
+[[phase]]
+id = 7
+title = "Move from visibility to enforcement"
+items = [20]
+
+[[work_item]]
+id = 1
+title = "ci: remove macOS from ordinary PRs"
+phase = 1
+files = [
+  ".github/workflows/macos-arm64.yml",
+  "policy/ci-lanes.toml",
+  "policy/ci-lane-whitelist.toml",
+  "docs/ci/cost-and-verification-policy.md",
+  "docs/ci/labels.md",
+]
+remove_default_lanes = ["macos-14"]
+labels = ["macos", "apple-silicon", "metal", "full-ci"]
+validation = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check",
+  "cargo run --locked -p xtask --no-default-features -- check-file-policy --report-dir target/bitnet/reports --fail-on-error",
+]
+
+[[work_item]]
+id = 2
+title = "ci: move performance smoke off default PRs"
+phase = 1
+files = [
+  ".github/workflows/performance-tracking.yml",
+  "policy/ci-lanes.toml",
+  "policy/ci-lane-whitelist.toml",
+  "docs/ci/cost-and-verification-policy.md",
+]
+remove_default_lanes = ["performance-tracking"]
+labels = ["performance", "perf", "full-ci"]
+validation = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check",
+]
+
+[[work_item]]
+id = 3
+title = "ci: move test telemetry to main and label"
+phase = 1
+files = [
+  ".github/workflows/test-telemetry.yml",
+  "policy/ci-lanes.toml",
+  "policy/ci-lane-whitelist.toml",
+  "docs/ci/cost-and-verification-policy.md",
+]
+remove_default_lanes = ["test-telemetry"]
+labels = ["test-telemetry", "slow-tests", "full-ci"]
+validation = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check",
+]
+
+[[work_item]]
+id = 4
+title = "ci: risk-gate MSRV compatibility"
+phase = 1
+files = [
+  ".github/workflows/compatibility.yml",
+  "policy/ci-lanes.toml",
+  "policy/ci-lane-whitelist.toml",
+  "policy/ci-risk-packs.toml",
+  "docs/ci/cost-and-verification-policy.md",
+]
+remove_default_lanes = ["compatibility-msrv for leaf implementation changes"]
+labels = ["msrv", "compatibility", "full-ci"]
+validation = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check",
+  "cargo check --locked -p bitnet-common -p bitnet-models -p bitnet-tokenizers -p bitnet-quantization -p bitnet-kernels --tests --no-default-features --features cpu",
+]
+
+[[work_item]]
+id = 5
+title = "ci(plan): emit stable routing schema"
+phase = 2
+files = [
+  "xtask/src/ci/plan.rs",
+  "xtask/src/ci/mod.rs",
+  "policy/ci-budget.toml",
+  "policy/ci-lanes.toml",
+  "policy/ci-risk-packs.toml",
+  "docs/ci/pr-plan.md",
+  "tests/fixtures/ci-plan/**",
+]
+validation = [
+  "cargo test -p xtask --no-default-features ci_plan --locked",
+  "cargo run --locked -p xtask --no-default-features -- ci plan --changed-file tests/fixtures/ci-plan/rust.txt --labels-json '[]' --json-out target/ci-plan.json --print",
+  "cargo run --locked -p xtask --no-default-features -- ci plan --changed-file tests/fixtures/ci-plan/docs.txt --labels-json '[]' --json-out target/ci-plan-docs.json --print",
+  "git diff --check",
+]
+
+[[work_item]]
+id = 6
+title = "ci(gate): make PR Gate consume ci plan"
+phase = 2
+files = [
+  ".github/workflows/pr-gate.yml",
+  ".github/workflows/pr-plan.yml",
+  "xtask/src/ci/plan.rs",
+  "docs/ci/pr-gate-success.md",
+]
+validation = [
+  "cargo test -p xtask --no-default-features ci_plan --locked",
+  "git diff --check",
+]
+
+[[work_item]]
+id = 7
+title = "ci: add soft budget guard"
+phase = 2
+files = [
+  "xtask/src/ci/plan.rs",
+  ".github/workflows/pr-plan.yml",
+  ".github/workflows/pr-gate.yml",
+  "docs/ci/cost-and-verification-policy.md",
+]
+validation = [
+  "cargo test -p xtask --no-default-features ci_plan_budget --locked",
+  "git diff --check",
+]
+
+[[work_item]]
+id = 8
+title = "ci-core: broaden no-Rust fast path"
+phase = 3
+files = [
+  ".github/workflows/ci-core.yml",
+  "xtask/src/ci/plan.rs",
+  "docs/ci/cost-and-verification-policy.md",
+]
+validation = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- ci plan --changed-file tests/fixtures/ci-plan/docs.txt --labels-json '[]' --json-out target/ci-plan-docs.json --print",
+]
+
+[[work_item]]
+id = 9
+title = "ci-core: package-select build/test surface"
+phase = 3
+files = [
+  "xtask/src/ci/plan.rs",
+  ".github/workflows/ci-core.yml",
+  "docs/ci/cost-and-verification-policy.md",
+]
+validation = [
+  "cargo test -p xtask --no-default-features ci_plan_packages --locked",
+  "cargo run --locked -p xtask --no-default-features -- ci plan --changed-file tests/fixtures/ci-plan/quantization.txt --labels-json '[]' --json-out target/ci-plan-quant.json --print",
+  "git diff --check",
+]
+
+[[work_item]]
+id = 10
+title = "feature-matrix: reduce ordinary PR feature smoke"
+phase = 3
+files = [
+  ".github/workflows/feature-matrix.yml",
+  "policy/ci-risk-packs.toml",
+  "policy/ci-lanes.toml",
+  "docs/ci/cost-and-verification-policy.md",
+]
+labels = ["full-cli", "feature-matrix", "full-ci"]
+validation = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check",
+]
+
+[[work_item]]
+id = 11
+title = "ci: stop selected gates from swallowing failures"
+phase = 4
+files = [
+  ".github/workflows/validation.yml",
+  ".github/workflows/test-framework.yml",
+  ".github/workflows/compatibility.yml",
+  "docs/ci/cost-and-verification-policy.md",
+  "policy/ci-lanes.toml",
+]
+validation = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check",
+]
+
+[[work_item]]
+id = 12
+title = "gpu-ci: remove duplicate CPU native check"
+phase = 4
+files = [
+  ".github/workflows/gpu-ci-matrix.yml",
+  "policy/ci-lanes.toml",
+  "policy/ci-risk-packs.toml",
+]
+labels = ["gpu-ci", "full-ci"]
+validation = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check",
+]
+
+[[work_item]]
+id = 13
+title = "coverage: keep Codecov lane quiet and policy-declared"
+phase = 5
+files = [
+  ".github/workflows/coverage.yml",
+  "codecov.yml",
+  "README.md",
+  "docs/ci/coverage.md",
+  "policy/ci-lanes.toml",
+  "policy/ci-lane-whitelist.toml",
+]
+labels = ["coverage", "full-ci"]
+validation = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check",
+]
+
+[[work_item]]
+id = 14
+title = "coverage: add coverage receipt and ignored-failure accounting"
+phase = 5
+files = [
+  ".github/workflows/coverage.yml",
+  "docs/ci/coverage.md",
+]
+validation = ["git diff --check"]
+
+[[work_item]]
+id = 15
+title = "policy(clippy): document strict agent lint baseline"
+phase = 6
+files = [
+  "docs/ci/clippy-policy.md",
+  "policy/clippy-lints.toml",
+  "clippy.toml",
+  "Cargo.toml",
+  "docs/ci/cost-and-verification-policy.md",
+]
+validation = [
+  "cargo run --locked -p xtask --no-default-features -- check-lint-policy --report-dir target/bitnet/reports --fail-on-error",
+  "git diff --check",
+]
+
+[[work_item]]
+id = 16
+title = "lint activation slices"
+phase = 6
+families = [
+  "suppression governance",
+  "panic family",
+  "silent failure",
+  "async/concurrency",
+  "numeric",
+]
+validation = ["git diff --check"]
+
+[[work_item]]
+id = 20
+title = "ci: make PR Gate the only required check"
+phase = 7
+files = [
+  ".github/workflows/pr-gate.yml",
+  "docs/ci/pr-gate-success.md",
+  "docs/ci/branch-protection.md",
+]
+branch_protection_change = true
+validation = ["git diff --check"]
