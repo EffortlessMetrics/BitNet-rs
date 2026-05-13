@@ -1239,18 +1239,24 @@ impl TransformerModel {
                 }
                 (Some(layer), weight, transposed)
             }
-            Err(err) => match vb.get((vocab_size, hidden_size), "lm_head.weight") {
+            Err(err) => match vb
+                .get((vocab_size, hidden_size), "lm_head.weight")
+                .or_else(|_| vb.get((vocab_size, hidden_size), "output.weight"))
+            {
                 Ok(weight) => {
                     tracing::warn!(
                         "lm_head linear construction failed ({err}); recovered canonical \
-                         lm_head.weight [{}, {}] through direct lookup",
+                         lm_head/output weight [{}, {}] through direct lookup",
                         vocab_size,
                         hidden_size
                     );
                     let bias = Tensor::zeros(vocab_size, DType::F32, vb.device())?;
                     (Some(Linear::new(weight.clone(), Some(bias))), Some(weight), false)
                 }
-                Err(_) => match vb.get((hidden_size, vocab_size), "lm_head.weight") {
+                Err(_) => match vb
+                    .get((hidden_size, vocab_size), "lm_head.weight")
+                    .or_else(|_| vb.get((hidden_size, vocab_size), "output.weight"))
+                {
                     Ok(weight) => {
                         tracing::info!(
                             "LM head is stored transposed [hidden, vocab] - using direct matmul path"
@@ -1259,7 +1265,7 @@ impl TransformerModel {
                     }
                     Err(_) => {
                         tracing::info!(
-                            "lm_head.weight not found after linear construction failed ({err}); \
+                            "lm_head/output weight not found after linear construction failed ({err}); \
                              will use tied weights"
                         );
                         (None, None, false)
@@ -2178,6 +2184,69 @@ mod tests {
         assert!(
             logits[0][1] > logits[0][0],
             "logits should come from dedicated lm_head, got {:?}",
+            logits[0]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn transformer_uses_dedicated_output_weight_when_present() -> Result<()> {
+        let device = Device::Cpu;
+        let mut config = BitNetConfig::default();
+        config.model.hidden_size = 4;
+        config.model.vocab_size = 3;
+        config.model.num_layers = 0;
+        config.model.num_heads = 1;
+        config.model.num_key_value_heads = 1;
+        config.model.intermediate_size = 4;
+        config.model.rms_norm_eps = Some(1e-5);
+        config.model.norm_type = NormType::RmsNorm;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::from_vec(
+                vec![
+                    10.0f32, 0.0, 0.0, 0.0, //
+                    0.0, 10.0, 0.0, 0.0, //
+                    0.0, 0.0, 10.0, 0.0,
+                ],
+                (3, 4),
+                &device,
+            )?,
+        );
+        tensors.insert("final_norm.weight".to_string(), Tensor::ones(4, DType::F32, &device)?);
+        tensors.insert(
+            "output.weight".to_string(),
+            Tensor::from_vec(
+                vec![
+                    0.0f32, 0.0, 0.0, 0.0, //
+                    0.0, 0.0, 0.0, 0.0, //
+                    1.0, 0.0, 0.0, 0.0,
+                ],
+                (3, 4),
+                &device,
+            )?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors(config, vb, HashMap::new())?;
+
+        assert!(
+            model.lm_head.is_some(),
+            "dedicated GGUF output.weight must be loaded as the lm head"
+        );
+        assert!(
+            model.embed_tied_weight.is_none(),
+            "explicit output.weight must not fall back to tied embeddings"
+        );
+
+        let hidden = Tensor::from_vec(vec![1.0f32, 0.0, 0.0, 0.0], (1, 4), &device)?;
+        let logits = model.logits(&hidden)?.to_vec2::<f32>()?;
+        assert!(
+            logits[0][2] > logits[0][0],
+            "logits should come from dedicated output.weight, got {:?}",
             logits[0]
         );
 
