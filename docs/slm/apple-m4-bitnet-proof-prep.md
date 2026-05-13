@@ -3,8 +3,9 @@
 `M4-CONT-005` prepared the M4 Mac mini side of the BitNet proof path. The same
 command now has two bounded modes: artifact preflight and strict receipt
 validation. Receipt validation can verify a completed Apple M4 BitNet
-`answer-corpus` proof, but it still does not enable BitNet through `bitnet mac
-ask`, `bitnet mac chat`, or `bitnet mac serve`.
+`answer-corpus` proof. BitNet is now limited to explicit one-shot
+`bitnet mac ask` with the accepted GGUF plus external tokenizer; `bitnet mac
+chat` and `bitnet mac serve` remain disabled for BitNet.
 
 ## Command Contract
 

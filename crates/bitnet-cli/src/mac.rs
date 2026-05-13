@@ -4,6 +4,7 @@ use anyhow::{Context, Result, anyhow};
 use bitnet_repl_core::{ReplInput, parse_repl_input};
 use clap::{ArgAction, Args, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::io::{self, BufRead, IsTerminal, Read, Write};
 #[cfg(unix)]
 use std::mem::MaybeUninit;
@@ -110,6 +111,14 @@ enum MacAction {
         /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
         #[arg(long, value_name = "PATH")]
         cache_dir: Option<PathBuf>,
+
+        /// Explicit BitNet GGUF path for the one-shot BitNet ask route.
+        #[arg(long = "model-path", value_name = "PATH")]
+        model_path: Option<PathBuf>,
+
+        /// Explicit tokenizer.json path for the one-shot BitNet ask route.
+        #[arg(long, value_name = "PATH")]
+        tokenizer: Option<PathBuf>,
 
         /// Optional system prompt.
         #[arg(long = "system", value_name = "TEXT")]
@@ -410,7 +419,7 @@ enum MacAction {
         json_out: PathBuf,
     },
 
-    /// Validate M4 BitNet proof inputs without enabling Mac ask/chat routing.
+    /// Validate M4 BitNet proof inputs without enabling BitNet chat/serve routing.
     BitnetProof {
         /// Accepted BitNet GGUF path. This command never downloads model artifacts.
         #[arg(long, value_name = "PATH")]
@@ -534,6 +543,8 @@ impl MacCommand {
                 question_flag,
                 model_id,
                 cache_dir,
+                model_path,
+                tokenizer,
                 system_prompt,
                 max_new_tokens,
                 temperature,
@@ -549,6 +560,8 @@ impl MacCommand {
                 run_ask(
                     &model_id,
                     cache_dir,
+                    model_path,
+                    tokenizer,
                     question,
                     system_prompt,
                     max_new_tokens,
@@ -1053,12 +1066,12 @@ fn run_bitnet_proof_preflight(
 
     if proof_valid {
         println!(
-            "M4 BitNet proof receipt verified; this still does not enable BitNet through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve`. Receipt: {}",
+            "M4 BitNet proof receipt verified; BitNet remains limited to explicit one-shot `bitnet mac ask` and does not enable `bitnet mac chat` or `bitnet mac serve`. Receipt: {}",
             json_out.display()
         );
     } else {
         println!(
-            "M4 BitNet proof preflight passed; this still does not enable BitNet through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve`. Receipt: {}",
+            "M4 BitNet proof preflight passed; BitNet remains limited to explicit one-shot `bitnet mac ask` and does not enable `bitnet mac chat` or `bitnet mac serve`. Receipt: {}",
             json_out.display()
         );
     }
@@ -1320,6 +1333,8 @@ fn run_check(model_id: &str, cache_dir: Option<PathBuf>, json: bool) -> Result<(
 async fn run_ask(
     model_id: &str,
     cache_dir: Option<PathBuf>,
+    model_path: Option<PathBuf>,
+    tokenizer: Option<PathBuf>,
     question: String,
     system_prompt: Option<String>,
     max_new_tokens: usize,
@@ -1331,6 +1346,30 @@ async fn run_ask(
     threads: usize,
     json_out: PathBuf,
 ) -> Result<()> {
+    if model_cache::is_apple_m4_bitnet_artifact_id(model_id) {
+        return run_bitnet_ask(
+            model_id,
+            cache_dir,
+            model_path,
+            tokenizer,
+            question,
+            system_prompt,
+            max_new_tokens,
+            temperature,
+            top_k,
+            top_p,
+            repetition_penalty,
+            seed,
+            threads,
+            json_out,
+        )
+        .await;
+    }
+    if model_path.is_some() || tokenizer.is_some() {
+        anyhow::bail!(
+            "`bitnet mac ask` accepts --model-path/--tokenizer only for the explicit BitNet one-shot route; dense SLM models use --model-id and the verified model cache"
+        );
+    }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     eprintln!("{}", mac_ask_operator_summary_line(&model, &json_out));
     run_one_shot_mac_answer(
@@ -1351,6 +1390,91 @@ async fn run_ask(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn run_bitnet_ask(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    model_path: Option<PathBuf>,
+    tokenizer: Option<PathBuf>,
+    question: String,
+    system_prompt: Option<String>,
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    repetition_penalty: f32,
+    seed: Option<u64>,
+    threads: usize,
+    json_out: PathBuf,
+) -> Result<()> {
+    if temperature != 0.0 || top_p != 1.0 {
+        anyhow::bail!(
+            "BitNet Mac ask is currently scoped to deterministic greedy proof settings; use --temperature 0.0 --top-p 1.0"
+        );
+    }
+    if !matches!(top_k, 0 | 1) {
+        anyhow::bail!("BitNet Mac ask is currently scoped to greedy top-k 0 or 1");
+    }
+    let tokenizer = tokenizer.ok_or_else(|| {
+        anyhow!(
+            "BitNet Mac ask requires explicit tokenizer authority; pass --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json"
+        )
+    })?;
+    if !tokenizer.exists() {
+        anyhow::bail!(
+            "BitNet Mac ask tokenizer is missing at {}; pass the accepted external tokenizer.json",
+            tokenizer.display()
+        );
+    }
+    let tokenizer_sha256 = verify_bitnet_m4_tokenizer(&tokenizer)?;
+    let model = model_cache::verified_apple_m4_bitnet_model(model_id, cache_dir, model_path)?;
+    eprintln!(
+        "{}",
+        mac_bitnet_ask_operator_summary_line(&model, &tokenizer, &tokenizer_sha256, &json_out)
+    );
+    crate::run_simple_generation(
+        APPLE_M4_CPU_NEON,
+        model.path.clone(),
+        "auto".to_string(),
+        None,
+        Some(tokenizer.clone()),
+        question,
+        max_new_tokens,
+        temperature,
+        top_k,
+        top_p,
+        repetition_penalty,
+        seed,
+        false,
+        false,
+        true,
+        true,
+        Some(json_out.clone()),
+        false,
+        false,
+        true,
+        true,
+        threads,
+        BITNET_M4_PROMPT_TEMPLATE.to_string(),
+        system_prompt,
+        vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
+        Vec::new(),
+        None,
+        10,
+        false,
+        None,
+        None,
+        false,
+        None,
+        true,
+        Some("mac_bitnet_ask".to_string()),
+        false,
+    )
+    .await?;
+    annotate_and_validate_bitnet_mac_ask_receipt(&json_out, &model, &tokenizer, &tokenizer_sha256)?;
+    Ok(())
+}
+
 fn mac_ask_operator_summary_line(model: &VerifiedCachedModel, json_out: &Path) -> String {
     let sha = model.sha256.get(..12).unwrap_or(&model.sha256);
     format!(
@@ -1362,6 +1486,53 @@ fn mac_ask_operator_summary_line(model: &VerifiedCachedModel, json_out: &Path) -
         json_out.display(),
         sha
     )
+}
+
+fn mac_bitnet_ask_operator_summary_line(
+    model: &VerifiedCachedModel,
+    tokenizer: &Path,
+    tokenizer_sha256: &str,
+    json_out: &Path,
+) -> String {
+    let sha = model.sha256.get(..12).unwrap_or(&model.sha256);
+    let tokenizer_sha = tokenizer_sha256.get(..12).unwrap_or(tokenizer_sha256);
+    format!(
+        "mac ask bitnet: model={} quant={} model_path={} tokenizer={} tokenizer_sha256={}... backend={} fallback=false receipt={} sha256={}... chat=false serve=false",
+        model.id,
+        model.quantization,
+        model.path.display(),
+        tokenizer.display(),
+        tokenizer_sha,
+        APPLE_M4_CPU_NEON,
+        json_out.display(),
+        sha
+    )
+}
+
+fn verify_bitnet_m4_tokenizer(path: &Path) -> Result<String> {
+    let mut file = std::fs::File::open(path)
+        .with_context(|| format!("failed to open BitNet tokenizer {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 1024 * 1024];
+    loop {
+        let read = file
+            .read(&mut buffer)
+            .with_context(|| format!("failed to read BitNet tokenizer {}", path.display()))?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    let sha256 = format!("{:x}", hasher.finalize());
+    if sha256 != BITNET_M4_EXPECTED_TOKENIZER_SHA256 {
+        anyhow::bail!(
+            "BitNet Mac ask requires tokenizer SHA256 {}; got {} for {}",
+            BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+            sha256,
+            path.display()
+        );
+    }
+    Ok(sha256)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2557,7 +2728,7 @@ fn mac_serve_check_models_result(status: u16, body: &serde_json::Value) -> serde
         "default_model_id": body["catalog"]["default_model_id"],
         "resident_model_id": body["resident_model_id"],
         "generation_executed": body["generation_executed"],
-        "bitnet_blocked": mac_serve_models_catalog_has_blocked_bitnet(body),
+        "bitnet_ask_only": mac_serve_models_catalog_has_bitnet_ask_only(body),
         "disk_available_bytes": body["catalog"]["disk"]["available_bytes"],
         "recommended_first_model_id": body["catalog"]["disk"]["recommended_first_model_id"],
         "recommended_fetch_command": mac_serve_models_catalog_recommended_command(body, "fetch_command"),
@@ -2578,7 +2749,7 @@ fn mac_serve_check_models_catalog_pass(status: u16, body: &serde_json::Value) ->
         && body["catalog"]["disk"]["default_model_headroom_bytes"].as_u64().is_some()
         && mac_serve_models_catalog_has_supported_model(body, model_cache::M4_SLM_RUNTIME_MODEL_ID)
         && mac_serve_models_catalog_has_supported_model(body, "qwen2.5-1.5b-instruct-q4_k_m")
-        && mac_serve_models_catalog_has_blocked_bitnet(body)
+        && mac_serve_models_catalog_has_bitnet_ask_only(body)
         && mac_serve_models_catalog_recommended_commands_are_coherent(body)
 }
 
@@ -2592,23 +2763,26 @@ fn mac_serve_models_catalog_has_supported_model(body: &serde_json::Value, model_
     })
 }
 
-fn mac_serve_models_catalog_has_blocked_bitnet(body: &serde_json::Value) -> bool {
+fn mac_serve_models_catalog_has_bitnet_ask_only(body: &serde_json::Value) -> bool {
     body["catalog"]["rows"].as_array().is_some_and(|rows| {
         rows.iter().any(|row| {
             row["id"].as_str() == Some("microsoft-bitnet-b1.58-2B-4T-i2s")
-                && row["state"].as_str() == Some("blocked")
-                && row["selection"].as_str() == Some("not selectable for M4 local answers")
+                && row["state"].as_str() == Some("supported-ask")
+                && row["mac_ask_enabled"].as_bool() == Some(true)
+                && row["mac_chat_enabled"].as_bool() == Some(false)
                 && row["mac_ask_chat_enabled"].as_bool() == Some(false)
                 && row["mac_serve_enabled"].as_bool() == Some(false)
                 && row["proof_status"].as_str()
-                    == Some("answer-corpus-proof-receipt-check-available-route-disabled")
+                    == Some("answer-corpus-proof-passed-one-shot-ask-explicit-artifact")
                 && row["proof_command"].as_str().is_some_and(|command| {
                     command.contains("mac bitnet-proof")
                         && command.contains("--proof-receipt")
                         && command.contains("bitnet-answer-corpus-full-release.json")
                 })
-                && row["fetch_command"].is_null()
-                && row["recommended_fetch_headroom_bytes"].is_null()
+                && row["fetch_command"]
+                    .as_str()
+                    .is_some_and(|command| command.contains("bitnet model fetch microsoft-bitnet"))
+                && row["recommended_fetch_headroom_bytes"].as_u64().is_some()
         })
     })
 }
@@ -3838,6 +4012,88 @@ fn annotate_and_validate_mac_receipt_silent(
     std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
         .with_context(|| format!("failed to update Mac receipt {}", path.display()))?;
     Ok(summary)
+}
+
+fn annotate_and_validate_bitnet_mac_ask_receipt(
+    path: &Path,
+    model: &VerifiedCachedModel,
+    tokenizer: &Path,
+    tokenizer_sha256: &str,
+) -> Result<()> {
+    let bytes = std::fs::read(path)
+        .with_context(|| format!("failed to read BitNet Mac ask receipt {}", path.display()))?;
+    let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("invalid BitNet Mac ask receipt {}", path.display()))?;
+    let summary = validate_mac_receipt_value(path, &receipt)?;
+    if receipt["model"]["sha256"].as_str() != Some(BITNET_M4_EXPECTED_MODEL_SHA256) {
+        anyhow::bail!("{} does not use the accepted Microsoft BitNet I2_S GGUF", path.display());
+    }
+    if receipt["model"]["family"].as_str() != Some("bitnet")
+        || receipt["loader"]["mode"].as_str()
+            != Some(bitnet_models::GgufLoaderMode::RealGguf.as_str())
+    {
+        anyhow::bail!("{} does not record strict real-GGUF BitNet loading", path.display());
+    }
+    if receipt["tokenizer"]["strict"].as_bool() != Some(true)
+        || receipt["tokenizer"]["pretokenizer_authority"].as_str() != Some("llama-bpe")
+    {
+        anyhow::bail!(
+            "{} does not record strict external llama-bpe tokenizer authority",
+            path.display()
+        );
+    }
+    if receipt["prompt_render"]["template_family"].as_str() != Some(BITNET_M4_PROMPT_TEMPLATE) {
+        anyhow::bail!("{} does not use the BitNet.cpp answer prompt template", path.display());
+    }
+    let Some(object) = receipt.as_object_mut() else {
+        anyhow::bail!("BitNet Mac ask receipt {} is not a JSON object", path.display());
+    };
+    object.insert("operator_command".to_string(), serde_json::json!("mac ask"));
+    object.insert(
+        "model_cache".to_string(),
+        serde_json::json!({
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        }),
+    );
+    object.insert(
+        "mac_bitnet_claim_boundary".to_string(),
+        serde_json::json!({
+            "bitnet_one_shot_mac_ask": true,
+            "answer_corpus_proof_gate": "MODEL-ARTIFACT-007/M4-QA-001",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "tokenizer_path": tokenizer,
+            "tokenizer_sha256": tokenizer_sha256,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+        }),
+    );
+    object.entry("bitnet_quality_claimed".to_string()).or_insert(serde_json::json!(false));
+    object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
+        .with_context(|| format!("failed to update BitNet Mac ask receipt {}", path.display()))?;
+    println!(
+        "Mac BitNet receipt checked: {} ({}, generated_tokens={:?}, chat=false, serve=false)",
+        path.display(),
+        summary.artifact_kind,
+        summary.generated_tokens
+    );
+    Ok(())
 }
 
 fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: bool) -> Result<()> {
@@ -5474,15 +5730,19 @@ mod tests {
         }));
         assert!(rows.iter().any(|row| {
             row["id"] == "microsoft-bitnet-b1.58-2B-4T-i2s"
-                && row["state"] == "blocked"
+                && row["state"] == "supported-ask"
+                && row["mac_ask_enabled"] == true
+                && row["mac_chat_enabled"] == false
                 && row["mac_ask_chat_enabled"] == false
                 && row["mac_serve_enabled"] == false
                 && row["proof_status"]
-                    == "answer-corpus-proof-receipt-check-available-route-disabled"
+                    == "answer-corpus-proof-passed-one-shot-ask-explicit-artifact"
                 && row["proof_command"].as_str().is_some_and(|command| {
                     command.contains("mac bitnet-proof") && command.contains("--proof-receipt")
                 })
-                && row["fetch_command"].is_null()
+                && row["fetch_command"]
+                    .as_str()
+                    .is_some_and(|command| command.contains("bitnet model fetch microsoft-bitnet"))
         }));
         assert_eq!(models["claim_boundary"]["bitnet_quality_claimed"], false);
         Ok(())

@@ -210,6 +210,8 @@ struct AppleM4ModelRow {
     route: String,
     selection: String,
     reason: String,
+    mac_ask_enabled: bool,
+    mac_chat_enabled: bool,
     mac_ask_chat_enabled: bool,
     mac_serve_enabled: bool,
     proof_status: Option<String>,
@@ -279,7 +281,7 @@ const APPLE_M4_POLICY_MODELS: &[AppleM4PolicyModel] = &[
 ];
 
 #[cfg(feature = "full-cli")]
-const APPLE_M4_BITNET_ROUTE_BOUNDARY: &str = "BitNet answer-ready artifact authority and local Apple M4 CPU/NEON answer-corpus proof receipts exist via MODEL-ARTIFACT-007/M4-QA-001 evidence, but BitNet is not selectable through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve` until that user-facing route is wired and separately checked; dense SLM success must not be counted as BitNet Mac UX proof.";
+const APPLE_M4_BITNET_ROUTE_BOUNDARY: &str = "BitNet answer-ready artifact authority and local Apple M4 CPU/NEON answer-corpus proof receipts exist via MODEL-ARTIFACT-007/M4-QA-001 evidence. The BitNet Mac route is limited to one-shot `bitnet mac ask` with an explicit verified GGUF and external tokenizer authority; `bitnet mac chat` and `bitnet mac serve` remain disabled for BitNet, and dense SLM success must not be counted as BitNet Mac UX proof.";
 
 #[cfg(feature = "full-cli")]
 const APPLE_M4_BITNET_PROOF_MODEL_PATH: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
@@ -505,6 +507,66 @@ pub(crate) fn verified_apple_m4_slm_model(
     }
     let result = verify_model(model, &path)?;
     write_cache_metadata(&cache_root, model, &path, &result)?;
+    Ok(VerifiedCachedModel {
+        id: model.id.to_string(),
+        display_name: model.display_name.to_string(),
+        path,
+        cache_root,
+        sha256: model.sha256.to_string(),
+        bytes: model.bytes,
+        architecture: model.architecture.to_string(),
+        quantization: model.quantization.to_string(),
+        tokenizer_model: model.tokenizer_model.to_string(),
+        tokenizer_pre: model.tokenizer_pre.to_string(),
+        chat_template: model.chat_template,
+        support_note: model.support_note.to_string(),
+    })
+}
+
+#[cfg(feature = "full-cli")]
+pub(crate) fn is_apple_m4_bitnet_artifact_id(id: &str) -> bool {
+    find_supported_model(id).is_some_and(|model| model.id == "microsoft-bitnet-b1.58-2B-4T-i2s")
+}
+
+#[cfg(feature = "full-cli")]
+pub(crate) fn verified_apple_m4_bitnet_model(
+    id: &str,
+    cache_dir: Option<PathBuf>,
+    explicit_model_path: Option<PathBuf>,
+) -> Result<VerifiedCachedModel> {
+    let model = find_supported_model(id)
+        .filter(|model| model.id == "microsoft-bitnet-b1.58-2B-4T-i2s")
+        .ok_or_else(|| {
+            anyhow!(
+                "model `{id}` is not the accepted Apple M4 BitNet artifact; use microsoft-bitnet-b1.58-2B-4T-i2s"
+            )
+        })?;
+    let cache_root = resolve_cache_root(cache_dir)?;
+    let cache_path = model_path(&cache_root, model);
+    let path = explicit_model_path.unwrap_or_else(|| cache_path.clone());
+    let result = verify_model(model, &path)?;
+    if !result.passed {
+        let source = if path == cache_path {
+            format!(
+                "run `bitnet model fetch {}` or pass --model-path <accepted-bitnet-gguf>",
+                model.id
+            )
+        } else {
+            "replace --model-path with the accepted Microsoft I2_S GGUF".to_string()
+        };
+        anyhow::bail!(
+            "Apple M4 BitNet ask requires the accepted GGUF for `{}` at {}; expected bytes={}, sha256={}; got bytes={:?}, sha256={:?}. {source}",
+            model.id,
+            path.display(),
+            model.bytes,
+            model.sha256,
+            result.actual_bytes,
+            result.actual_sha256
+        );
+    }
+    if path == cache_path {
+        write_cache_metadata(&cache_root, model, &path, &result)?;
+    }
     Ok(VerifiedCachedModel {
         id: model.id.to_string(),
         display_name: model.display_name.to_string(),
@@ -1233,7 +1295,7 @@ fn apple_m4_model_catalog(cache_dir: Option<PathBuf>) -> Result<AppleM4ModelCata
         cache_root,
         default_model_id: M4_SLM_RUNTIME_MODEL_ID,
         disk,
-        claim_boundary: "default/supported rows are dense Qwen Apple M4 CPU/NEON answer paths only; blocked, diagnostic-only, candidate, and rejected rows are not selectable M4 answer claims and do not prove BitNet local answers",
+        claim_boundary: "default/supported rows are dense Qwen Apple M4 CPU/NEON answer paths; supported-ask BitNet rows are one-shot ask only with explicit GGUF/tokenizer authority; diagnostic-only, candidate, and rejected rows are not selectable M4 answer claims",
         rows,
     })
 }
@@ -1254,11 +1316,11 @@ fn apple_m4_registered_model_row(
         )
     } else if model.apple_m4_cpu_neon_supported {
         ("supported", "explicit --model-id only", "apple-m4-cpu-neon", model.support_note)
-    } else if model.model_contract.is_some() {
+    } else if model.id == "microsoft-bitnet-b1.58-2B-4T-i2s" {
         (
-            "blocked",
-            "not selectable for M4 local answers",
-            "artifact contract only",
+            "supported-ask",
+            "explicit --model-id with --model-path/--tokenizer for one-shot ask only",
+            "apple-m4-cpu-neon bitnet one-shot ask",
             APPLE_M4_BITNET_ROUTE_BOUNDARY,
         )
     } else {
@@ -1270,9 +1332,10 @@ fn apple_m4_registered_model_row(
         )
     };
     let selectable_m4_answer = matches!(state, "default" | "supported");
-    let bitnet_contract_only = state == "blocked" && model.model_contract.is_some();
-    let recommended_fetch_headroom_bytes =
-        selectable_m4_answer.then(|| recommended_fetch_headroom_bytes(model.bytes));
+    let bitnet_ask_only = state == "supported-ask" && model.model_contract.is_some();
+    let bitnet_contract_only = bitnet_ask_only;
+    let recommended_fetch_headroom_bytes = (selectable_m4_answer || bitnet_ask_only)
+        .then(|| recommended_fetch_headroom_bytes(model.bytes));
     let recommended_fetch_headroom =
         recommended_fetch_headroom_bytes.map(|bytes| format_size(bytes, DECIMAL));
     let fits_current_disk = recommended_fetch_headroom_bytes
@@ -1280,7 +1343,7 @@ fn apple_m4_registered_model_row(
     let disk_state = match fits_current_disk {
         Some(true) => Some("enough-headroom".to_string()),
         Some(false) => Some("low-headroom".to_string()),
-        None if selectable_m4_answer => Some("unknown".to_string()),
+        None if selectable_m4_answer || bitnet_ask_only => Some("unknown".to_string()),
         None => None,
     };
 
@@ -1309,10 +1372,12 @@ fn apple_m4_registered_model_row(
         route: route.to_string(),
         selection: selection.to_string(),
         reason: reason.to_string(),
+        mac_ask_enabled: selectable_m4_answer || bitnet_ask_only,
+        mac_chat_enabled: selectable_m4_answer,
         mac_ask_chat_enabled: selectable_m4_answer,
         mac_serve_enabled: selectable_m4_answer,
         proof_status: bitnet_contract_only
-            .then(|| "answer-corpus-proof-receipt-check-available-route-disabled".to_string()),
+            .then(|| "answer-corpus-proof-passed-one-shot-ask-explicit-artifact".to_string()),
         proof_command: bitnet_contract_only.then(apple_m4_bitnet_proof_command),
         proof_receipt_path: bitnet_contract_only
             .then(|| APPLE_M4_BITNET_PROOF_RECEIPT_PATH.to_string()),
@@ -1320,9 +1385,9 @@ fn apple_m4_registered_model_row(
         recommended_fetch_headroom,
         fits_current_disk,
         disk_state,
-        fetch_command: selectable_m4_answer
+        fetch_command: (selectable_m4_answer || bitnet_ask_only)
             .then(|| model_command("fetch", model, Some(cache_root))),
-        verify_command: selectable_m4_answer
+        verify_command: (selectable_m4_answer || bitnet_ask_only)
             .then(|| model_command("verify", model, Some(cache_root))),
     }
 }
@@ -1360,6 +1425,8 @@ fn apple_m4_policy_rows() -> Vec<AppleM4ModelRow> {
             route: "none".to_string(),
             selection: model.selection.to_string(),
             reason: model.reason.to_string(),
+            mac_ask_enabled: false,
+            mac_chat_enabled: false,
             mac_ask_chat_enabled: false,
             mac_serve_enabled: false,
             proof_status: None,
@@ -1484,11 +1551,12 @@ fn apple_m4_state_order(state: &str) -> u8 {
     match state {
         "default" => 0,
         "supported" => 1,
-        "blocked" => 2,
-        "diagnostic-only" => 3,
-        "candidate" => 4,
-        "rejected" => 5,
-        _ => 6,
+        "supported-ask" => 2,
+        "blocked" => 3,
+        "diagnostic-only" => 4,
+        "candidate" => 5,
+        "rejected" => 6,
+        _ => 7,
     }
 }
 
@@ -1498,9 +1566,15 @@ fn apple_m4_slm_supported_model(id: &str) -> Result<&'static SupportedModel> {
         if model.apple_m4_cpu_neon_supported {
             return Ok(model);
         }
-        let state = if model.model_contract.is_some() { "blocked" } else { "not selectable" };
+        let state = if model.id == "microsoft-bitnet-b1.58-2B-4T-i2s" {
+            "supported-ask"
+        } else if model.model_contract.is_some() {
+            "blocked"
+        } else {
+            "not selectable"
+        };
         anyhow::bail!(
-            "model `{}` is {state} for Apple M4 CPU/NEON local answers and cannot be used by `bitnet mac` answer commands. {}\nSelectable Apple M4 models: {}.\nUse `bitnet mac models` for cache/disk guidance. {}",
+            "model `{}` is {state} for Apple M4 CPU/NEON local answers and cannot be used by this dense SLM command. {}\nSelectable dense Apple M4 models: {}.\nUse `bitnet mac models` for cache/disk guidance. {}",
             model.id,
             model.support_note,
             selectable_apple_m4_model_ids(),
@@ -1519,7 +1593,7 @@ fn apple_m4_slm_supported_model(id: &str) -> Result<&'static SupportedModel> {
     }
 
     anyhow::bail!(
-        "unsupported Apple M4 model `{id}`. Selectable Apple M4 models: {}. Use `bitnet mac models` to inspect default/supported/blocked/candidate/rejected states.",
+        "unsupported Apple M4 model `{id}`. Selectable dense Apple M4 models: {}. Use `bitnet mac models` to inspect default/supported/supported-ask/candidate/rejected states.",
         selectable_apple_m4_model_ids()
     )
 }
@@ -1728,7 +1802,7 @@ fn apple_m4_cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> St
         });
     if cache_state_label(status) == "missing" {
         format!(
-            "{base} First-run model selection: run `{models_command}` to inspect default/supported/blocked model states and disk headroom. Disk guidance: {disk_guidance}"
+            "{base} First-run model selection: run `{models_command}` to inspect default/supported/supported-ask model states and disk headroom. Disk guidance: {disk_guidance}"
         )
     } else {
         format!(
@@ -2132,14 +2206,15 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
-    fn apple_m4_slm_supported_model_rejects_blocked_bitnet_artifact() {
+    fn apple_m4_slm_supported_model_rejects_bitnet_for_dense_commands() {
         let error = apple_m4_slm_supported_model("microsoft-bitnet-b1.58-2B-4T-i2s")
-            .expect_err("blocked BitNet artifact");
+            .expect_err("BitNet is not a dense SLM artifact");
         let message = error.to_string();
 
-        assert!(message.contains("blocked for Apple M4 CPU/NEON local answers"));
+        assert!(message.contains("supported-ask for Apple M4 CPU/NEON local answers"));
         assert!(message.contains("MODEL-ARTIFACT-007"));
         assert!(message.contains("M4-QA-001"));
+        assert!(message.contains("one-shot `bitnet mac ask`"));
         assert!(message.contains("bitnet mac models"));
         assert!(message.contains("qwen2.5-0.5b-instruct-q8_0"));
     }

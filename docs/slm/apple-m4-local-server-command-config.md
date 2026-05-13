@@ -201,7 +201,7 @@ receipt under `receipt_dir`. `M4-SERVE-004` exports those receipts through
 `GET /receipts/{id}` after rejecting unsafe IDs and missing receipt files.
 
 `GET /models` exposes the same Mac operator catalog as `bitnet mac models`,
-including default/supported dense Qwen rows, blocked BitNet rows,
+including default/supported dense Qwen rows, the BitNet one-shot ask row,
 candidate/rejected rows, cache state, disk-headroom guidance, and the
 receipt-only BitNet proof bridge command. It does not run generation, does not
 fetch artifacts, and does not expose BitNet as a server completion model.
