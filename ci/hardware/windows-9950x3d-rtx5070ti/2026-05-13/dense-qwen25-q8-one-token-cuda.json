@@ -1,0 +1,416 @@
+{
+  "artifact_kind": "dense_gguf_qwen_one_token_strict_cuda_proof",
+  "artifact_path": "ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-13\\dense-qwen25-q8-one-token-cuda.json",
+  "claim": "dense_gguf_qwen_one_token_strict_cuda_proof_recorded",
+  "claim_boundary": {
+    "bitnet_packed_i2s_qk256_proof": false,
+    "dense_gguf_all_layer_execution_plan_claimed": true,
+    "dense_gguf_attention_score_cuda_parity_claimed": true,
+    "dense_gguf_attention_softmax_cuda_parity_claimed": true,
+    "dense_gguf_attention_v_mix_cuda_parity_claimed": true,
+    "dense_gguf_descriptor_inspection_claimed": true,
+    "dense_gguf_inference_claimed": false,
+    "dense_gguf_linear_cuda_parity_claimed": true,
+    "dense_gguf_linear_fixture_extraction_claimed": true,
+    "dense_gguf_linear_role_sweep_cuda_parity_claimed": true,
+    "dense_gguf_mlp_activation_cuda_parity_claimed": true,
+    "dense_gguf_model_boundary_fixtures_claimed": true,
+    "dense_gguf_norm_cuda_parity_claimed": true,
+    "dense_gguf_one_layer_cpu_reference_claimed": true,
+    "dense_gguf_one_layer_cuda_integrated_parity_claimed": true,
+    "dense_gguf_one_layer_execution_plan_claimed": true,
+    "dense_gguf_one_layer_inference_claimed": false,
+    "dense_gguf_rope_cuda_parity_claimed": true,
+    "dense_regular_llm_cuda_claimed": true,
+    "dense_tensor_residency_claimed": true,
+    "full_cuda_residency_claimed": false,
+    "kv_cache_policy_claimed": true,
+    "persistent_session_residency_claimed": false,
+    "qwen_chat_cuda_claimed": false,
+    "qwen_one_token_cuda_claimed": true,
+    "qwen_short_decode_cuda_claimed": false,
+    "sampling_policy_claimed": true,
+    "server_ready_claimed": false,
+    "speedup_claim": false
+  },
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "nvml_available": true,
+    "nvrtc_version": "12.9",
+    "power_draw_watts": 55.73,
+    "power_limit_watts": 300.0,
+    "temperature_c": 47.0,
+    "vram_bytes": 17094475776
+  },
+  "descriptor_coverage": {
+    "bitnet_packed_marker_found": false,
+    "dense_cuda_route_status": "descriptor_only_quant_bridge_required",
+    "dense_gguf_inference_claimed": false,
+    "full_cuda_residency_claimed": false,
+    "metadata_count": 26,
+    "quantization_families": [
+      "f32",
+      "q8_0"
+    ],
+    "required_roles_present": true,
+    "schema": 1,
+    "source_artifact_kind": "dense_gguf_tensor_descriptor_inspection",
+    "speedup_claim": false,
+    "strict_descriptor_complete": true,
+    "tensor_count": 291
+  },
+  "error": null,
+  "execution_path": {
+    "bitnet_packed_kernel_proof": false,
+    "kernel_family": "dense_qwen_one_token_strict_cuda",
+    "model_class": "dense_regular_llm",
+    "qk256_proof": false,
+    "quantization_family": "dense_gguf_q8_0_f16_qwen_one_token_contract"
+  },
+  "execution_plan": {
+    "bitnet_packed_qk256_cuda": false,
+    "cpu_fallback_ops": 0,
+    "cuda_bitnet_qk256_ops": 0,
+    "cuda_dense_regular_llm_ops": 338,
+    "cuda_ops": 338,
+    "dense_regular_llm_cuda": true,
+    "fallback_used": false,
+    "full_cuda_residency_claimed": false,
+    "mixed_cuda_routes": false,
+    "model_family": "qwen",
+    "planner_version": "cuda-planner-004",
+    "quantization": "dense_gguf_q8_0_f16_qwen_one_token_contract",
+    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+    "runtime_api": "cuda",
+    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+    "selected_route": "dense_regular_llm_cuda",
+    "speedup_claim": false,
+    "strict_cuda_ready": true,
+    "strict_fallback_policy": "reject",
+    "total_ops": 338,
+    "unsupported_ops": 0
+  },
+  "fallback_backend": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "nvidia-rtx-5070-ti-cuda",
+  "kernel_coverage": {
+    "all_required_dense_kernels_executed": true,
+    "bitnet_qk256_kernel_invocations": 0,
+    "cpu_fallback_kernel_invocations": 0,
+    "dense_kernel_invocations": 338,
+    "dense_kernel_launches": 338,
+    "fallback_used": false,
+    "kernels_executed": [
+      "dense_qwen_one_token_cuda_runtime",
+      "dense_qwen_lm_head_cuda",
+      "dense_qwen_logits_transfer_cuda"
+    ],
+    "route": "dense_regular_llm_cuda",
+    "schema": 1
+  },
+  "kernel_stats": [
+    {
+      "cpu_fallback_invocations": 0,
+      "device_to_host_bytes": 607744,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 675710816,
+      "invocations": 336,
+      "kernel_id": "dense_qwen_one_token_cuda_runtime",
+      "kernel_launches": 336,
+      "kernel_time_ms": 11335.0624,
+      "phase": "qwen_one_token_runtime"
+    },
+    {
+      "cpu_fallback_invocations": 0,
+      "device_to_host_bytes": 0,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 0,
+      "invocations": 1,
+      "kernel_id": "dense_qwen_lm_head_cuda",
+      "kernel_launches": 1,
+      "kernel_time_ms": 0.102,
+      "phase": "lm_head"
+    },
+    {
+      "cpu_fallback_invocations": 0,
+      "device_to_host_bytes": 0,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 0,
+      "invocations": 1,
+      "kernel_id": "dense_qwen_logits_transfer_cuda",
+      "kernel_launches": 1,
+      "kernel_time_ms": 0.0,
+      "phase": "logits_transfer"
+    }
+  ],
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "architecture": "qwen2",
+    "artifact_kind": "dense_gguf",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "model_family": "qwen",
+    "path": "C:\\Users\\steven\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+  },
+  "notes": [
+    "CUDA-DENSE-044 proves exactly one deterministic greedy Qwen token through the dense regular-LLM CUDA route.",
+    "This receipt does not claim short decode, chat, server readiness, speedup, persistent residency, full CUDA residency, or BitNet packed I2_S/QK256 proof."
+  ],
+  "one_token_proof": {
+    "bitnet_packed_i2s_qk256_proof": false,
+    "cpu_logits_sha256": "9c96369bab3262a2e65e74aa22db3d099e60fd04b073cc9847bd125c02c87488",
+    "cpu_logits_top_k_sha256": "84203bb3cadcccb6084cd4e575f3d0e3ed538545e43d9e413465746e4dd37836",
+    "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+    "cpu_selected_token_id": 22587,
+    "cpu_top_k": [
+      {
+        "rank": 1,
+        "token_id": 22587,
+        "value": 18.53962516784668
+      },
+      {
+        "rank": 2,
+        "token_id": 106811,
+        "value": 18.481121063232422
+      },
+      {
+        "rank": 3,
+        "token_id": 89787,
+        "value": 18.321815490722656
+      },
+      {
+        "rank": 4,
+        "token_id": 36027,
+        "value": 17.546775817871094
+      },
+      {
+        "rank": 5,
+        "token_id": 135483,
+        "value": 17.335662841796875
+      },
+      {
+        "rank": 6,
+        "token_id": 111291,
+        "value": 17.32440757751465
+      },
+      {
+        "rank": 7,
+        "token_id": 124010,
+        "value": 17.263954162597656
+      },
+      {
+        "rank": 8,
+        "token_id": 10939,
+        "value": 17.193628311157227
+      },
+      {
+        "rank": 9,
+        "token_id": 115771,
+        "value": 17.033464431762695
+      },
+      {
+        "rank": 10,
+        "token_id": 127419,
+        "value": 16.969327926635742
+      }
+    ],
+    "cuda_logits_sha256": "201507fbb34247b1bc377df51309697d1f2a6441385e086b502841dbb8b03b4d",
+    "cuda_logits_top_k_sha256": "84203bb3cadcccb6084cd4e575f3d0e3ed538545e43d9e413465746e4dd37836",
+    "cuda_selected_token_id": 22587,
+    "cuda_target_backend": "nvidia-rtx-5070-ti-cuda",
+    "cuda_top_k": [
+      {
+        "rank": 1,
+        "token_id": 22587,
+        "value": 18.53973388671875
+      },
+      {
+        "rank": 2,
+        "token_id": 106811,
+        "value": 18.481201171875
+      },
+      {
+        "rank": 3,
+        "token_id": 89787,
+        "value": 18.321853637695312
+      },
+      {
+        "rank": 4,
+        "token_id": 36027,
+        "value": 17.546783447265625
+      },
+      {
+        "rank": 5,
+        "token_id": 135483,
+        "value": 17.335674285888672
+      },
+      {
+        "rank": 6,
+        "token_id": 111291,
+        "value": 17.32441520690918
+      },
+      {
+        "rank": 7,
+        "token_id": 124010,
+        "value": 17.26400375366211
+      },
+      {
+        "rank": 8,
+        "token_id": 10939,
+        "value": 17.193641662597656
+      },
+      {
+        "rank": 9,
+        "token_id": 115771,
+        "value": 17.033464431762695
+      },
+      {
+        "rank": 10,
+        "token_id": 127419,
+        "value": 16.969318389892578
+      }
+    ],
+    "decoded_token_text": "Bay",
+    "dense_gguf_inference_claimed": false,
+    "deterministic": true,
+    "fallback_used": false,
+    "full_cuda_residency_claimed": false,
+    "generated_tokens_count": 1,
+    "generation_policy": "greedy",
+    "logits_vector_length": 151936,
+    "model_family": "qwen",
+    "prompt_token_count": 14,
+    "prompt_token_ids_sha256": "97641e5d8ca5c5f67919af7bee720847f5926477903f50f27ae09f4eb7d70939",
+    "proof_scope": "qwen_strict_one_token_greedy_decode",
+    "qwen_chat_cuda_claimed": false,
+    "qwen_one_token_cuda_claimed": true,
+    "qwen_short_decode_cuda_claimed": false,
+    "requested_new_tokens": 1,
+    "schema": 1,
+    "selected_token_match": true,
+    "server_ready_claimed": false,
+    "speedup_claim": false,
+    "top_k_compared": true,
+    "top_k_evidence_recorded": true,
+    "top_k_match": true,
+    "top_k_max_abs_error": 0.0001087188720703125,
+    "top_k_mean_abs_error": 0.00003261566162109375
+  },
+  "parity": {
+    "fixture_id": "qwen2.5-0.5b-instruct-q8_0-one-token-greedy",
+    "kernel_id": "dense_qwen_one_token_cuda_runtime",
+    "max_abs_error": 0.0001087188720703125,
+    "mean_abs_error": 0.00003261566162109375,
+    "passed": true,
+    "reference_backend": "amd-9950x3d-cpu-avx512",
+    "target_backend": "nvidia-rtx-5070-ti-cuda",
+    "tolerance": 0.0001087188720703125,
+    "tolerance_source": "selected-token and top-k-rank equality; numeric drift recorded for top-k logits"
+  },
+  "prerequisite_receipts": {
+    "all_layer_execution_plan_artifact_kind": "dense_gguf_all_layer_execution_plan",
+    "all_layer_execution_plan_claimed": true,
+    "all_layer_execution_plan_receipt_sha256": "73098ba20677b277084c75f287daf4b0ef32d72a9458f4e7406239654b727a85",
+    "all_required_receipts_verified": true,
+    "kv_cache_policy_artifact_kind": "dense_gguf_kv_cache_policy",
+    "kv_cache_policy_claimed": true,
+    "kv_cache_policy_receipt_sha256": "29bb9f2136e4cd39742c8d9bbc398770a6a1f82314d66e8fa0a57f8ebbb8a965",
+    "model_boundary_fixtures_artifact_kind": "dense_gguf_model_boundary_fixtures",
+    "model_boundary_fixtures_claimed": true,
+    "model_boundary_fixtures_receipt_sha256": "70d2bf61e9cbaa067ce3b0c12200cc48ffb2cc89a5032f6fd8864f3f31cb5519",
+    "sampling_policy_artifact_kind": "dense_gguf_sampling_policy",
+    "sampling_policy_claimed": true,
+    "sampling_policy_receipt_sha256": "798e87fc12d86fd8bccaa88704f90fb3086f47ca4bc7984916c8c3bdf07c4263",
+    "schema": 1
+  },
+  "quality_gate": {
+    "answer_ready_claimed": false,
+    "chat_claimed": false,
+    "gate": "qwen_one_token_cuda_parity",
+    "passed": true,
+    "schema": 1,
+    "short_decode_claimed": false
+  },
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "speedup_claim": false,
+  "tensor_residency": {
+    "dense_gguf_inference_claimed": false,
+    "fallback_used": false,
+    "full_cuda_residency_claimed": false,
+    "kv_cache_policy_recorded": true,
+    "model_class": "dense_regular_llm",
+    "per_token_weight_upload": false,
+    "persistent_session_residency_claimed": false,
+    "residency_accounting_recorded": true,
+    "runtime_logits_cuda_resident_before_download": true,
+    "sampling_policy_recorded": true,
+    "schema": 1,
+    "scope": "qwen_one_token_strict_cuda",
+    "transfer_accounting": {
+      "device_to_host_bytes": 607744,
+      "device_to_host_ms": 0.9181,
+      "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+      "host_to_device_bytes": 675710816,
+      "host_to_device_ms": 8071.3571,
+      "host_to_device_ms_includes_non_transfer_overhead": true,
+      "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+      "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+      "kernel_invocations": 338,
+      "kernel_launches": 338,
+      "status": "measured",
+      "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured"
+    },
+    "weights_resident_on_cuda": true,
+    "weights_uploaded_once": true
+  },
+  "timestamp_utc": "2026-05-13T21:03:16Z",
+  "timing": {
+    "cpu_reference_model_load_ms": 4641.510399999999,
+    "cpu_reference_total_ms": 5283.299999999999,
+    "decode_ms": 38.2452,
+    "device_to_host_bytes": 607744,
+    "device_to_host_ms": 0.9181,
+    "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+    "embed_ms": 0.0244,
+    "first_token_ms": 19425.8742,
+    "forward_ms": 23.3968,
+    "host_to_device_bytes": 675710816,
+    "host_to_device_ms": 8071.3571,
+    "host_to_device_ms_includes_non_transfer_overhead": true,
+    "host_to_device_ms_scope": "model_load_wall_clock_envelope",
+    "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+    "kernel_invocations": 338,
+    "kernel_launches": 338,
+    "kernel_time_ms": 11335.0624,
+    "logits_download_ms": 0.9181,
+    "logits_ms": 0.102,
+    "model_load_ms": 8071.3571,
+    "prefill_ms": 11311.5636,
+    "total_ms": 19425.8742,
+    "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured"
+  },
+  "tokenizer_prompt_authority": {
+    "bos_policy": "contract_default_add_bos",
+    "deterministic_prompt": true,
+    "prompt_authority": "contract_authoritative",
+    "prompt_template": "qwen-chat-raw-deterministic",
+    "prompt_token_count": 14,
+    "prompt_token_ids_sha256": "97641e5d8ca5c5f67919af7bee720847f5926477903f50f27ae09f4eb7d70939",
+    "rendered_prompt_bytes": 41,
+    "rendered_prompt_sha256": "c6ab9cb7f04471f4caa93fdc8e264f6e42272346cf1b104d6a7a71d24484fbaf",
+    "schema": 1,
+    "tokenizer_authority": "contract_authoritative"
+  }
+}
