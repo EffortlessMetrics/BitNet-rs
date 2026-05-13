@@ -56,7 +56,7 @@ artifacts to separate strict proof items.
 | Work item | Status | Notes |
 |---|---|---|
 | M3MBA-001 | merged | Add the campaign control plane and roadmap linkage for the M3 MacBook Air lane. |
-| M3MBA-002 | in_progress | Commit the real M3 Air machine-profile receipt with storage, cache, power, thermal, and visibility fields. |
+| M3MBA-002 | pr_open | Commit the real M3 Air machine-profile receipt with storage, cache, power, thermal, and visibility fields. |
 | M3MBA-003 | proposed | Add or confirm the explicit `apple-m3-air-cpu-neon` receipt label without weakening M4 validation. |
 | M3MBA-004A | proposed | Mirror the known dense Qwen SLM smoke route on M3 Air. |
 | M3MBA-004B | proposed | Run the bounded dense Qwen operator profile only after smoke passes. |

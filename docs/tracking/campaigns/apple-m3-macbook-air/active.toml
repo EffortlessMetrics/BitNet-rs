@@ -60,7 +60,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m3-macbook-air/M3MBA-002-machine-profile"
 stackable = false
 review_mode = "codex_premerge"
