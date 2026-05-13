@@ -2265,9 +2265,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-OV258V-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/SLM-OV258V-001-openvino-ir-manifest"
 pr = 4559
+merge_sha = "346438125b50047508a9cd728ad40eb9c28ac264"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
