@@ -65,7 +65,7 @@ disabled, and a fresh user-route runtime receipt is still a follow-up proof.
 | M4-QA-004 | merged | Local preflight coverage rejects missing model/tokenizer authority before hidden fallback; unsupported Apple Metal/MPSGraph answer-corpus lanes fail closed, and receipt checks reject hidden fallback plus speedup/full-inference acceleration claims. |
 | M4-QA-005 | merged | Local decision recorded: the first eligible Metal contribution is a prefill projection fixture with CPU-only greedy reference comparison, CPU/Metal phase parity, unchanged generated token IDs and decoded text, and explicit fallback=false phase receipts; current user-facing local-answer path remains CPU/NEON only. |
 | M4-BITNET-ASK-000 | merged | #4637 added an explicit one-shot BitNet `bitnet mac ask` route gated by accepted Microsoft I2_S GGUF and external tokenizer identity, marked BitNet as `supported-ask`, and kept BitNet chat/serve disabled without claiming a fresh runtime smoke. |
-| M4-BITNET-ASK-001 | in_progress | Local receipt `ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json` proves the user-facing BitNet `bitnet mac ask` route completed one strict Apple M4 CPU/NEON prompt with fallback_used=false, text `2+2 equals 4.`, generated token IDs, accepted model/tokenizer identity, and timing fields; PR review/merge remains open. |
+| M4-BITNET-ASK-001 | merged | Local receipt `ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json` proves the user-facing BitNet `bitnet mac ask` route completed one strict Apple M4 CPU/NEON prompt with fallback_used=false, text `2+2 equals 4.`, generated token IDs, accepted model/tokenizer identity, and timing fields; merged in #4647. |
 
 ## Review Policy
 
