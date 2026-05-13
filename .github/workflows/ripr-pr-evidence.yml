@@ -1,0 +1,83 @@
+name: RIPR PR Evidence
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: ripr-pr-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  ripr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.95.0"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Install ripr
+        run: cargo install ripr --locked
+
+      - name: Fetch base branch
+        if: github.base_ref != ''
+        run: git fetch origin ${{ github.base_ref }}
+
+      - name: RIPR PR evidence
+        run: cargo xtask ripr-pr
+
+      - name: RIPR review guidance
+        run: cargo xtask ripr-review-comments --base origin/${{ github.base_ref }} --head HEAD
+
+      - name: RIPR PR contract
+        if: always()
+        run: cargo xtask ripr-pr --check
+
+      - name: RIPR review contract
+        if: always()
+        run: cargo xtask ripr-review-comments --check
+
+      - name: RIPR summary
+        if: always()
+        run: |
+          {
+            echo "## RIPR"
+            echo
+            if [ -f target/ripr/review/comments.md ]; then
+              cat target/ripr/review/comments.md
+            else
+              echo "No RIPR review guidance produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: RIPR annotations
+        if: always()
+        run: python scripts/ripr-annotations.py
+
+      - name: Upload RIPR PR evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ripr-pr
+          path: target/ripr/pr
+          if-no-files-found: warn
+
+      - name: Upload RIPR review guidance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ripr-review
+          path: target/ripr/review
+          if-no-files-found: warn

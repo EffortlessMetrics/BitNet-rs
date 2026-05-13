@@ -32,33 +32,24 @@ jobs:
         with:
           toolchain: "1.95.0"
 
-      - name: Locate ripr binary
-        id: locate
-        run: |
-          if command -v ripr >/dev/null 2>&1; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "ripr already on PATH"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "ripr binary is not yet provisioned for this runner."
-            echo "PR 13 ships ripr in advisory mode: when the binary is"
-            echo "absent the workflow records that fact and exits 0."
-          fi
+      - name: Install ripr
+        run: cargo install ripr --locked
 
       - name: Run ripr doctor
-        if: steps.locate.outputs.available == 'true'
         run: ripr doctor || true
 
-      - name: Run ripr check (advisory)
-        if: steps.locate.outputs.available == 'true'
+      - name: Run ripr check JSON (advisory)
         run: |
           mkdir -p target/ripr
-          ripr check \
-            --base "origin/${{ github.base_ref }}" \
-            --json target/ripr/ripr.json \
-            --sarif target/ripr/ripr.sarif \
-            --markdown target/ripr/ripr.md \
-            --config ripr.toml || true
+          ripr check --root . --base "origin/${{ github.base_ref }}" --format json > target/ripr/ripr.json || true
+
+      - name: Run ripr check GitHub summary (advisory)
+        run: |
+          ripr check --root . --base "origin/${{ github.base_ref }}" --format github > target/ripr/ripr.md || true
+
+      - name: Run ripr check SARIF (advisory)
+        run: |
+          ripr check --root . --base "origin/${{ github.base_ref }}" --format sarif > target/ripr/ripr.sarif || true
 
       - name: Step summary
         if: always()
@@ -66,11 +57,7 @@ jobs:
           {
             echo "## ripr — static oracle-gap analysis (advisory)"
             echo ""
-            if [ "${{ steps.locate.outputs.available }}" != "true" ]; then
-              echo "_ripr binary not provisioned on this runner; advisory output skipped._"
-              echo ""
-              echo "See \`docs/RIPR_EVIDENCE_POLICY.md\` for the rollout posture."
-            elif [ -f target/ripr/ripr.md ]; then
+            if [ -f target/ripr/ripr.md ]; then
               cat target/ripr/ripr.md
             else
               echo "_ripr produced no markdown report._"

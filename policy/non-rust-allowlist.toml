@@ -120,6 +120,17 @@ covered_by = ["xtask check-file-policy"]
 # Documentation, licensing, governance
 # ---------------------------------------------------------------------------
 
+
+[[allow]]
+glob = "badges/*.json"
+kind = "generated_badge_endpoint"
+owner = "release/ci"
+surface = "docs"
+classification = "generated"
+reason = "Generated Shields endpoint JSON for public README badges."
+generated_by = "cargo xtask badges"
+covered_by = ["cargo xtask badges --check"]
+
 [[allow]]
 glob = "{README.md,CHANGELOG.md,CLAUDE.md,CONTRIBUTING.md,SECURITY.md,COMPATIBILITY.md,CODEOWNERS,CODE_OF_CONDUCT.md,LICENSE,THIRD_PARTY.md,ROADMAP.md}"
 kind = "repo_root_doc"

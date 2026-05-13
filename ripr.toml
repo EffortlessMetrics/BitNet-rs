@@ -1,33 +1,48 @@
 # ripr — static oracle-gap analysis for BitNet-rs
 #
-# ripr asks: does the changed Rust behavior appear gripped by a
-# meaningful test discriminator? It is mutation-testing-lite, run at
-# static-analysis prices. It does not run mutants and does not
-# replace mutation testing.
+# ripr asks whether changed Rust behavior appears gripped by a meaningful test
+# discriminator. It is mutation-testing-lite, run at static-analysis prices. It
+# does not run mutants and does not replace mutation testing.
 #
-# In this rollout (PR 13) ripr runs advisory only: every severity
-# emits an annotation but the workflow never fails the merge.
-# Promotion is later, after baseline behavior is understood.
+# In this rollout ripr remains advisory: the workflow records evidence and
+# guidance but does not fail merges by default.
 
 [analysis]
-mode = "diff"
+mode = "draft"
+include_unchanged_tests = true
 
-[policy]
-# Empty `fail_on` keeps the workflow advisory.
-fail_on = []
+[oracles]
+snapshot_strength = "medium"
+mock_expectation_strength = "medium"
+broad_error_strength = "weak"
 
-[report]
-max_related_tests = 8
-include_context = true
-
-[severity]
-exposed = "notice"
+[severity.findings]
+exposed = "info"
 weakly_exposed = "warning"
 reachable_unrevealed = "warning"
-no_static_path = "notice"
-infection_unknown = "notice"
-propagation_unknown = "notice"
-static_unknown = "notice"
+no_static_path = "warning"
+infection_unknown = "warning"
+propagation_unknown = "note"
+static_unknown = "note"
+
+[severity.seams]
+strongly_gripped = "off"
+weakly_gripped = "warning"
+ungripped = "warning"
+reachable_unrevealed = "warning"
+activation_unknown = "info"
+propagation_unknown = "info"
+observation_unknown = "info"
+discrimination_unknown = "info"
+opaque = "info"
+intentional = "off"
+suppressed = "off"
+
+[lsp]
+seam_diagnostics = true
+
+[reports]
+max_related_tests = 8
 
 [suppressions]
 path = "policy/ripr-suppressions.toml"
