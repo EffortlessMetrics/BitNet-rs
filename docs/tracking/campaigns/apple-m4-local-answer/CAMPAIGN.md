@@ -60,7 +60,7 @@ authority; landing that evidence is still separate from enabling BitNet through
 | M4-QA-001 | merged | Release-built Apple M4 CPU/NEON full shared BitNet answer corpus passed with receipt-quality fields reviewed; merged in #4618. |
 | M4-QA-002 | merged | Repeat-run parity evidence from #4618 shows both Apple M4 CPU/NEON runs used the same answer-ready model, tokenizer, prompt template, greedy settings, and fallback-free backend routing; all five compared cases matched generated token IDs. |
 | M4-QA-003 | merged | Receipt-quality checks from #4618 require generated text, token counts and ID consistency, tokenizer pretokenizer authority, model source/SHA, backend routing/fallback status, and timing fields; the committed Apple M4 CPU/NEON BitNet answer-corpus receipt records those fields for all five passing cases. |
-| M4-QA-004 | proposed | Local preflight coverage rejects missing model/tokenizer authority before hidden fallback; unsupported Apple Metal/MPSGraph answer-corpus lanes fail closed, and receipt checks reject speedup/full-inference acceleration claims. Item is unblocked after M4-QA-001. |
+| M4-QA-004 | merged | Local preflight coverage rejects missing model/tokenizer authority before hidden fallback; unsupported Apple Metal/MPSGraph answer-corpus lanes fail closed, and receipt checks reject hidden fallback plus speedup/full-inference acceleration claims. |
 | M4-QA-005 | proposed | Local decision recorded: the first eligible Metal route is a prefill projection fixture after CPU/NEON proof, greedy determinism, and receipt-quality gates land; current user-facing local-answer path remains CPU/NEON only. |
 
 ## Review Policy

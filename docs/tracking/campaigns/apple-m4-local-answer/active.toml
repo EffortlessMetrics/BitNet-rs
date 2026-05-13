@@ -317,7 +317,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-004"
-status = "proposed"
+status = "merged"
+merge_sha = "9fa3e532b89c36885c54350700d75a740a93911e"
 branch = "codex/apple-m4-local-answer/M4-QA-004-strict-failure-modes"
 stackable = false
 review_mode = "codex_premerge"
@@ -347,8 +348,18 @@ forbidden_paths = [
   "crates/bitnet-server/**",
   "crates/bitnet-kernels/src/metal/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "Strict local-answer failure-mode coverage exists for missing model files, missing tokenizer authority, missing tokenizer files, unsupported Apple Metal/MPSGraph answer-corpus selections, hidden fallback, and speedup/full-inference claim rejection.",
+]
+must_not_claim = [
+  "BitNet is selectable through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve`.",
+  "The strict failure-mode tests prove broad BitNet chat quality.",
+  "Full apple-m4-metal model inference works.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+  "Broad performance or speedup is proven.",
+]
 
 [[work_item]]
 id = "M4-QA-005"
