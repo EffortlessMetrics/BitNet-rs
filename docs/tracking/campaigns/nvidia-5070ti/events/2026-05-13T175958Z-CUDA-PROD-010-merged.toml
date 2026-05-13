@@ -1,0 +1,23 @@
+timestamp = "2026-05-13T17:59:58Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-010"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4616
+merge_sha = "20b0997ea984b65628b77c2d9aeb541a28b7a3de"
+actor = "codex"
+branch = "cuda/bitnet-i2s-benchmark-qualification"
+summary = "Marked CUDA-PROD-010 merged after the BitNet CUDA benchmark qualification review landed."
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/cuda-prod-010-benchmark-qualification.json",
+  "docs/reports/CUDA_PROD_010_BENCHMARK_QUALIFICATION.md",
+]
+
+notes = [
+  "The merged PR adds a governed BitNet I2_S/QK256 CUDA benchmark qualification review for one-token, short-decode, and warm-session product profiles.",
+  "`bitnet bench --device cuda --cuda-benchmark-receipt <path>` can render the committed qualification receipt without running a fresh benchmark.",
+  "`bitnet receipts explain` can summarize the committed benchmark qualification receipt.",
+  "Every profile remains speedup-unqualified; this closeout makes no new CUDA execution, dense SLM proof, server readiness, or speedup claim.",
+]

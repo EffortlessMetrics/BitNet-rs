@@ -2188,10 +2188,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-PROD-010"
-status = "pr_open"
+status = "merged"
 branch = "cuda/bitnet-i2s-benchmark-qualification"
 pr = 4616
-head_sha = "fcb7c903ca02edb1d549a95c5df69d151552a6c5"
+merge_sha = "20b0997ea984b65628b77c2d9aeb541a28b7a3de"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
