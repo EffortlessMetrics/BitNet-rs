@@ -1,0 +1,21 @@
+timestamp = "2026-05-13T14:30:15Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-002"
+event = "merged"
+pr = 4609
+merge_sha = "9bbb45712eff819daffaea61599011626d4f4579"
+branch = "codex/lunar-lake/CPU-BITNET-PERF-002-tiling-matrix"
+actor = "codex"
+
+summary = "Merged CPU-BITNET-PERF-002 with a 258V QK256/I2_S tiling/thread matrix receipt."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-002-i2s-tiling-matrix.json",
+]
+
+notes = [
+  "The merged receipt records a 240-candidate I2_S/QK256 tiling/thread matrix and sampled GEMV/GEMM baseline timings.",
+  "Thread-count candidates are recorded but not applied by this sampled baseline.",
+  "fallback_used=false and speedup_claim=false remain explicit.",
+  "No answer-quality, sustained-throughput, Arc/NPU execution, acceleration, QK256 semantic-change, or full-model correctness claim is made.",
+]
