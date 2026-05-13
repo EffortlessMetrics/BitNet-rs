@@ -2413,9 +2413,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-OV258V-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/SLM-OV258V-003-openvino-gpu-smoke"
 pr = 4584
+merge_sha = "2fa159dde2a4f60485221cab33abfdecc2194410"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
