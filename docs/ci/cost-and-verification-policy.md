@@ -17,6 +17,21 @@ discipline: if verification is too expensive, people avoid running it; if it is
 cheap, deterministic, and well-scoped, it becomes part of the normal
 development loop.
 
+## Routed CI rollout authority
+
+The implementation sequence for this policy is tracked in
+[`docs/ci/routed-ci-rollout.md`](./routed-ci-rollout.md), with a machine-readable
+queue in [`policy/ci-rollout.toml`](../../policy/ci-rollout.toml). That rollout
+sequence is the source of truth for scoped agent PRs that remove default-cost
+waste, make `ci-plan.json` authoritative, and later consolidate branch
+protection around `PR Gate Success`.
+
+The rollout north star is:
+
+> Default PRs get cheap, Linux-only, deterministic, crate/risk-scoped proof.
+> Expensive proof still exists, but only on `main`, schedule, release,
+> hardware/campaign lanes, or explicit labels.
+
 ## Cost target
 
 For ordinary PRs, our operating target is:
@@ -376,6 +391,10 @@ after-the-fact billing concerns. The test rig is part of the machine.
 
 - [`docs/ci/labels.md`](./labels.md) — cost-aware CI labels and what they
   authorize.
+- [`docs/ci/routed-ci-rollout.md`](./routed-ci-rollout.md) — phased
+  implementation specs for the routed CI rollout.
+- [`docs/ci/pr-plan.md`](./pr-plan.md) — stable `ci-plan.json` schema consumed
+  by CI routing workflows.
 - [`docs/development/validation-ci.md`](../development/validation-ci.md) —
   validation lanes and how they integrate with CI.
 - [`docs/development/ci-integration.md`](../development/ci-integration.md) —

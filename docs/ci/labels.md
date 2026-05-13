@@ -9,6 +9,27 @@ BitNet-rs uses GitHub labels to selectively trigger heavy CI workflows. This kee
 > [CI Cost and Verification Policy](./cost-and-verification-policy.md) for
 > the rationale.
 
+## Routing and budget override labels
+
+These labels are consumed by the routed CI rollout and by `xtask ci plan` once
+the planner becomes the routing authority:
+
+| Label | Purpose | Default PR effect |
+| --- | --- | --- |
+| `full-ci` | Request all relevant expensive proof for the touched risk surface. | Authorizes expanded LEM spend and deep lanes. |
+| `ci-budget-ack` | Acknowledge a high-but-below-hard-ceiling budget estimate. | Allows high advisory budget posture to proceed when enforcement is enabled. |
+| `ci-budget-override` | Override the hard budget ceiling for an explicitly scoped reason. | Allows over-ceiling runs when maintainers intentionally accept the spend. |
+| `macos` | Request macOS runner proof. | Enables macOS lanes that are not ordinary PR defaults. |
+| `apple-silicon` | Request Apple Silicon / ARM64 proof. | Enables Apple-specific lanes where available. |
+| `metal` | Request Metal compile or runtime-adjacent proof. | Enables Mac/Metal-specific lanes where available. |
+| `test-telemetry` / `slow-tests` | Request JUnit and slow-test telemetry. | Enables telemetry lanes that are otherwise main/manual/scheduled. |
+| `performance` / `perf` | Request performance tracking. | Enables performance lanes that are otherwise main/manual/scheduled. |
+| `msrv` / `compatibility` | Request compatibility/MSRV proof. | Enables compatibility lanes for risk not caught by ordinary scoped Linux proof. |
+| `full-cli` / `feature-matrix` | Request expanded feature matrix coverage. | Enables `cpu+full-cli` and deeper feature combinations where scoped. |
+
+Labels authorize routed work; they do not make selected blocking failures
+advisory. If a lane is selected as blocking, it must fail honestly.
+
 ## Label-Gated Workflows
 
 These workflows only run when their corresponding label is applied to a PR:
