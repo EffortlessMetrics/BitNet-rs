@@ -363,7 +363,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-005"
-status = "proposed"
+status = "merged"
+merge_sha = "9fa3e532b89c36885c54350700d75a740a93911e"
 branch = "codex/apple-m4-local-answer/M4-QA-005-metal-phase-routing"
 stackable = false
 review_mode = "codex_premerge"
@@ -389,5 +390,16 @@ forbidden_paths = [
   "crates/bitnet-qk256-dispatch/**",
   "crates/bitnet-server/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "The first eligible future Apple M4 BitNet Metal local-answer contribution has been documented as a prefill projection fixture with CPU-only greedy reference comparison, CPU/Metal phase parity, unchanged generated token IDs and decoded text, and explicit fallback=false phase receipts.",
+]
+must_not_claim = [
+  "A BitNet Metal local-answer route is enabled today.",
+  "Full apple-m4-metal model inference works.",
+  "Apple M4 Metal participates in autoregressive BitNet decode.",
+  "BitNet is selectable through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve`.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+  "Broad performance or speedup is proven.",
+]
