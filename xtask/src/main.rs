@@ -1340,14 +1340,13 @@ fn run_xtask_main() -> i32 {
 }
 
 fn run_xtask_main_inner() -> i32 {
-    let code = match real_main() {
+    match real_main() {
         Ok(()) => EXIT_SUCCESS,
         Err(e) => {
             eprintln!("error: {e:#}");
             classify_exit(&e)
         }
-    };
-    code
+    }
 }
 
 fn classify_exit(e: &anyhow::Error) -> i32 {

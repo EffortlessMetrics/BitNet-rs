@@ -6665,28 +6665,26 @@ fn cpu_phase_strict_profile_receipt(
         },
         "speedup_claim": false,
     });
-    if dense_slm_model {
-        if let Some(object) = receipt.as_object_mut() {
-            object.remove("bitnet");
-            object.insert(
-                "dense_slm".to_string(),
-                serde_json::json!({
-                    "model_family": model_family,
-                    "architecture": model_architecture,
-                    "quant_format": model_quant_format,
-                    "kernel_family": kernel_family,
-                    "kernel_id": selected_kernel,
-                    "layout_source": layout_source,
-                    "layout": kernel_layout,
-                    "execution_phase": run.phase,
-                    "provenance": "dense_slm_gguf_cpu_reference",
-                    "claim_scope": "dense SLM CPU phase timing only",
-                }),
-            );
-            object.insert("bitnet_qk256_i2s_claim".to_string(), serde_json::json!(false));
-            object.insert("arc140v_claim".to_string(), serde_json::json!(false));
-            object.insert("intel_npu_claim".to_string(), serde_json::json!(false));
-        }
+    if dense_slm_model && let Some(object) = receipt.as_object_mut() {
+        object.remove("bitnet");
+        object.insert(
+            "dense_slm".to_string(),
+            serde_json::json!({
+                "model_family": model_family,
+                "architecture": model_architecture,
+                "quant_format": model_quant_format,
+                "kernel_family": kernel_family,
+                "kernel_id": selected_kernel,
+                "layout_source": layout_source,
+                "layout": kernel_layout,
+                "execution_phase": run.phase,
+                "provenance": "dense_slm_gguf_cpu_reference",
+                "claim_scope": "dense SLM CPU phase timing only",
+            }),
+        );
+        object.insert("bitnet_qk256_i2s_claim".to_string(), serde_json::json!(false));
+        object.insert("arc140v_claim".to_string(), serde_json::json!(false));
+        object.insert("intel_npu_claim".to_string(), serde_json::json!(false));
     }
     receipt
 }

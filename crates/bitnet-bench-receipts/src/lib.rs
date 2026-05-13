@@ -2774,8 +2774,42 @@ fn is_rtx5070ti_device_name(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use serde_json::{Value, json};
     use std::io::Write;
+
+    fn expect_validation_error(result: Result<(), ReceiptError>) -> Result<String, String> {
+        match result {
+            Ok(()) => Err("expected validation failure".to_string()),
+            Err(err) => Ok(err.to_string()),
+        }
+    }
+
+    fn json_array_mut<'a>(
+        value: &'a mut Value,
+        pointer: &str,
+    ) -> Result<&'a mut Vec<Value>, String> {
+        value
+            .pointer_mut(pointer)
+            .and_then(Value::as_array_mut)
+            .ok_or_else(|| format!("{pointer} must point to an array"))
+    }
+
+    fn json_object_mut<'a>(
+        value: &'a mut Value,
+        pointer: &str,
+    ) -> Result<&'a mut serde_json::Map<String, Value>, String> {
+        value
+            .pointer_mut(pointer)
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| format!("{pointer} must point to an object"))
+    }
+
+    fn value_object_mut<'a>(
+        value: &'a mut Value,
+        name: &str,
+    ) -> Result<&'a mut serde_json::Map<String, Value>, String> {
+        value.as_object_mut().ok_or_else(|| format!("{name} must be an object"))
+    }
 
     fn sample_receipt(name: &str, elapsed_us: u64) -> BenchReceipt {
         BenchReceipt::new(
@@ -3276,82 +3310,87 @@ mod tests {
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_receipt_validates() {
+    fn strict_cuda_benchmark_qualification_receipt_validates() -> Result<(), String> {
         let receipt = sample_strict_cuda_benchmark_qualification_receipt();
-        validate_strict_cuda_benchmark_qualification_receipt_json(&receipt).unwrap();
+        validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .map_err(|err| err.to_string())
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_rejects_speedup_claim() {
+    fn strict_cuda_benchmark_qualification_rejects_speedup_claim() -> Result<(), String> {
         let mut receipt = sample_strict_cuda_benchmark_qualification_receipt();
         receipt["speedup_claim"] = json!(true);
 
-        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
-            .unwrap_err()
-            .to_string();
+        let err = expect_validation_error(
+            validate_strict_cuda_benchmark_qualification_receipt_json(&receipt),
+        )?;
         assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+        Ok(())
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_rejects_accepted_profile() {
+    fn strict_cuda_benchmark_qualification_rejects_accepted_profile() -> Result<(), String> {
         let mut receipt = sample_strict_cuda_benchmark_qualification_receipt();
         receipt["profile_reviews"][0]["decision"] = json!("accepted");
 
-        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
-            .unwrap_err()
-            .to_string();
+        let err = expect_validation_error(
+            validate_strict_cuda_benchmark_qualification_receipt_json(&receipt),
+        )?;
         assert!(err.contains("not_accepted"), "unexpected error: {err}");
+        Ok(())
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_requires_blocked_requirement() {
+    fn strict_cuda_benchmark_qualification_requires_blocked_requirement() -> Result<(), String> {
         let mut receipt = sample_strict_cuda_benchmark_qualification_receipt();
-        for requirement in receipt["qualification_requirements"].as_array_mut().unwrap() {
+        for requirement in json_array_mut(&mut receipt, "/qualification_requirements")? {
             requirement["status"] = json!("passed");
-            requirement.as_object_mut().unwrap().remove("blocker");
+            value_object_mut(requirement, "qualification requirement")?.remove("blocker");
         }
 
-        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
-            .unwrap_err()
-            .to_string();
+        let err = expect_validation_error(
+            validate_strict_cuda_benchmark_qualification_receipt_json(&receipt),
+        )?;
         assert!(err.contains("blocked requirement"), "unexpected error: {err}");
+        Ok(())
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_validates_product_profiles() {
+    fn strict_cuda_benchmark_qualification_validates_product_profiles() -> Result<(), String> {
         let receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
-        validate_strict_cuda_benchmark_qualification_receipt_json(&receipt).unwrap();
+        validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .map_err(|err| err.to_string())
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_rejects_missing_target_profile() {
+    fn strict_cuda_benchmark_qualification_rejects_missing_target_profile() -> Result<(), String> {
         let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
-        receipt["target_profiles"].as_array_mut().unwrap().pop();
+        json_array_mut(&mut receipt, "/target_profiles")?.pop();
 
-        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
-            .unwrap_err()
-            .to_string();
+        let err = expect_validation_error(
+            validate_strict_cuda_benchmark_qualification_receipt_json(&receipt),
+        )?;
         assert!(err.contains("target_profiles"), "unexpected error: {err}");
+        Ok(())
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_rejects_extra_blocked_profile() {
+    fn strict_cuda_benchmark_qualification_rejects_extra_blocked_profile() -> Result<(), String> {
         let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
-        receipt["qualification_decision"]["blocked_profiles"]
-            .as_array_mut()
-            .unwrap()
+        json_array_mut(&mut receipt, "/qualification_decision/blocked_profiles")?
             .push(json!("dense_qwen_short_decode"));
 
-        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
-            .unwrap_err()
-            .to_string();
+        let err = expect_validation_error(
+            validate_strict_cuda_benchmark_qualification_receipt_json(&receipt),
+        )?;
         assert!(err.contains("blocked_profiles"), "unexpected error: {err}");
+        Ok(())
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_rejects_extra_profile_review() {
+    fn strict_cuda_benchmark_qualification_rejects_extra_profile_review() -> Result<(), String> {
         let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
-        receipt["profile_reviews"].as_array_mut().unwrap().push(json!({
+        json_array_mut(&mut receipt, "/profile_reviews")?.push(json!({
             "profile": "dense_qwen_short_decode",
             "decision": "not_accepted",
             "evidence_status": "missing",
@@ -3364,49 +3403,61 @@ mod tests {
             "blockers": ["wrong proof family"]
         }));
 
-        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
-            .unwrap_err()
-            .to_string();
+        let err = expect_validation_error(
+            validate_strict_cuda_benchmark_qualification_receipt_json(&receipt),
+        )?;
         assert!(err.contains("profile_reviews"), "unexpected error: {err}");
+        Ok(())
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_requires_strict_ask_evidence() {
+    fn strict_cuda_benchmark_qualification_requires_strict_ask_evidence() -> Result<(), String> {
         let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
-        receipt["evidence_summary"].as_object_mut().unwrap().remove("strict_ask_math_8");
+        json_object_mut(&mut receipt, "/evidence_summary")?.remove("strict_ask_math_8");
 
-        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
-            .unwrap_err()
-            .to_string();
+        let err = expect_validation_error(
+            validate_strict_cuda_benchmark_qualification_receipt_json(&receipt),
+        )?;
         assert!(err.contains("strict_ask_math_8"), "unexpected error: {err}");
+        Ok(())
     }
 
     #[test]
-    fn strict_cuda_benchmark_qualification_requires_warm_session_receipt_boundary() {
+    fn strict_cuda_benchmark_qualification_requires_warm_session_receipt_boundary()
+    -> Result<(), String> {
         let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
-        receipt["evidence_summary"]["strict_cuda_warm_session_2_turns"]["qk256_weights_uploaded_once"] =
-            json!(false);
+        *receipt
+            .pointer_mut(
+                "/evidence_summary/strict_cuda_warm_session_2_turns/qk256_weights_uploaded_once",
+            )
+            .ok_or_else(|| {
+                "warm-session qk256_weights_uploaded_once field must exist".to_string()
+            })? = json!(false);
 
-        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
-            .unwrap_err()
-            .to_string();
+        let err = expect_validation_error(
+            validate_strict_cuda_benchmark_qualification_receipt_json(&receipt),
+        )?;
         assert!(err.contains("qk256_weights_uploaded_once"), "unexpected error: {err}");
+        Ok(())
     }
 
     #[test]
-    fn committed_strict_cuda_benchmark_qualification_receipt_validates() {
+    fn committed_strict_cuda_benchmark_qualification_receipt_validates() -> Result<(), String> {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json",
         );
-        validate_strict_cuda_benchmark_qualification_receipt_file(&path).unwrap();
+        validate_strict_cuda_benchmark_qualification_receipt_file(&path)
+            .map_err(|err| err.to_string())
     }
 
     #[test]
-    fn committed_strict_cuda_product_benchmark_qualification_receipt_validates() {
+    fn committed_strict_cuda_product_benchmark_qualification_receipt_validates()
+    -> Result<(), String> {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/cuda-prod-010-benchmark-qualification.json",
         );
-        validate_strict_cuda_benchmark_qualification_receipt_file(&path).unwrap();
+        validate_strict_cuda_benchmark_qualification_receipt_file(&path)
+            .map_err(|err| err.to_string())
     }
 
     #[test]

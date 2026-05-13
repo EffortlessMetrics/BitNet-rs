@@ -1415,13 +1415,13 @@ pub async fn run_dense_qwen_cuda_ask(
     };
     short_decode.execute().await?;
 
-    let (source_short_decode_receipt, source_short_decode_sha256) =
-        read_and_validate_receipt(&source_short_decode_path, |receipt| {
-            validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(receipt)
-        })?;
+    let (source_short_decode_receipt, source_short_decode_sha256) = read_and_validate_receipt(
+        &source_short_decode_path,
+        validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
+    )?;
     let (_, warm_session_sha256) = read_and_validate_receipt(
         Path::new(DEFAULT_DENSE_QWEN_WARM_SESSION_PROOF_RECEIPT),
-        |receipt| validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(receipt),
+        validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json,
     )?;
 
     let source_proof = source_short_decode_receipt
@@ -5262,6 +5262,36 @@ fn dense_gguf_sampling_policy_from_reader(
     })
 }
 
+macro_rules! push_cuda_phase {
+    (
+        $phases:expr,
+        $reference:expr,
+        $name:expr,
+        $role:expr,
+        $op_type:expr,
+        $route:expr,
+        $status:expr,
+        $output:expr,
+        $tolerance:expr,
+        $stats:expr $(,)?
+    ) => {
+        push_cuda_phase_impl(
+            $phases,
+            $reference,
+            DenseCudaPhaseInput {
+                name: $name,
+                role: $role,
+                op_type: $op_type,
+                route: $route,
+                status: $status,
+                output: $output,
+                tolerance: $tolerance,
+                stats: $stats,
+            },
+        )
+    };
+}
+
 fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
     reader: &GgufReader<'_>,
     inspection: &DenseGgufDescriptorInspection,
@@ -5306,7 +5336,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
     let mut phases = Vec::new();
 
     let input = deterministic_layer_input(seq_len, hidden_size)?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "deterministic_input",
@@ -5328,7 +5358,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
         &RmsNormConfig::for_shape(hidden_size, seq_len)?
             .with_eps(attention_norm.summary.rmsnorm_eps),
     )?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "attention_norm",
@@ -5351,7 +5381,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
 
     let (q_linear, q_stats) =
         dense_linear_sequence_cuda(device_index, &attention_q, &attention_norm_output, seq_len)?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "attention_q",
@@ -5365,7 +5395,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
     )?;
     let (k_linear, k_stats) =
         dense_linear_sequence_cuda(device_index, &attention_k, &attention_norm_output, seq_len)?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "attention_k",
@@ -5379,7 +5409,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
     )?;
     let (v_linear, v_stats) =
         dense_linear_sequence_cuda(device_index, &attention_v, &attention_norm_output, seq_len)?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "attention_v",
@@ -5410,7 +5440,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
         launch_dense_rope_f32_cuda(device_index, &k_head_major, &mut k_rope, &k_config)?;
     let mut rope_phase_output = q_rope.clone();
     rope_phase_output.extend_from_slice(&k_rope);
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "rope",
@@ -5455,7 +5485,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
             .with_scale(1.0 / (head_dim as f32).sqrt())
             .with_causal(true),
     )?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "attention_scores",
@@ -5483,7 +5513,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
         &mut attention_probabilities,
         &AttentionSoftmaxConfig::for_shape(q_heads, seq_len)?,
     )?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "attention_softmax",
@@ -5513,7 +5543,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
         &mut attention_context,
         &AttentionVMixConfig::for_shape(q_heads, kv_heads, head_dim, seq_len)?,
     )?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "attention_v_mix",
@@ -5542,7 +5572,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
         &attention_context_seq,
         seq_len,
     )?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "attention_output",
@@ -5555,7 +5585,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
         Some(attention_output_stats),
     )?;
     let first_residual = add_same_len(&input, &attention_output_values, "first_residual")?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "first_residual",
@@ -5576,7 +5606,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
         &mut ffn_norm_output,
         &RmsNormConfig::for_shape(hidden_size, seq_len)?.with_eps(ffn_norm.summary.rmsnorm_eps),
     )?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "ffn_norm",
@@ -5599,7 +5629,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
 
     let (mlp_gate_output, mlp_gate_stats) =
         dense_linear_sequence_cuda(device_index, &mlp_gate, &ffn_norm_output, seq_len)?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "mlp_gate",
@@ -5613,7 +5643,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
     )?;
     let (mlp_up_output, mlp_up_stats) =
         dense_linear_sequence_cuda(device_index, &mlp_up, &ffn_norm_output, seq_len)?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "mlp_up",
@@ -5634,7 +5664,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
         &mut mlp_activation,
         &SiluGateConfig::new(mlp_gate_output.len())?,
     )?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "mlp_activation",
@@ -5657,7 +5687,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
 
     let (mlp_down_output, mlp_down_stats) =
         dense_linear_sequence_cuda(device_index, &mlp_down, &mlp_activation, seq_len)?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "mlp_down",
@@ -5670,7 +5700,7 @@ fn dense_gguf_one_layer_cuda_integrated_parity_from_reader(
         Some(mlp_down_stats),
     )?;
     let final_output = add_same_len(&first_residual, &mlp_down_output, "second_residual")?;
-    push_cuda_phase(
+    push_cuda_phase!(
         &mut phases,
         reference,
         "second_residual",
@@ -6149,8 +6179,8 @@ fn dense_linear_sequence_cpu(
         for row in 0..rows {
             let weight_start = row * cols;
             let mut sum = 0.0f32;
-            for col in 0..cols {
-                sum += fixture.weight_values_f32[weight_start + col] * token_input[col];
+            for (col, input_value) in token_input.iter().enumerate() {
+                sum += fixture.weight_values_f32[weight_start + col] * *input_value;
             }
             output.push(sum);
         }
@@ -6507,18 +6537,24 @@ fn dense_linear_sequence_cuda(
     Ok((output, counters))
 }
 
-fn push_cuda_phase(
-    phases: &mut Vec<DenseOneLayerCudaPhase>,
-    reference: &DenseGgufOneLayerCpuReference,
+struct DenseCudaPhaseInput<'a> {
     name: &'static str,
     role: &'static str,
     op_type: &'static str,
     route: &'static str,
     status: &'static str,
-    output: &[f32],
+    output: &'a [f32],
     tolerance: f32,
     stats: Option<DenseOneLayerKernelCounters>,
+}
+
+fn push_cuda_phase_impl(
+    phases: &mut Vec<DenseOneLayerCudaPhase>,
+    reference: &DenseGgufOneLayerCpuReference,
+    input: DenseCudaPhaseInput<'_>,
 ) -> Result<()> {
+    let DenseCudaPhaseInput { name, role, op_type, route, status, output, tolerance, stats } =
+        input;
     let reference_phase = reference
         .phases
         .iter()
@@ -12359,10 +12395,10 @@ fn dense_transformer_layer_indices(
 ) -> Result<Vec<usize>> {
     let mut indices = BTreeSet::new();
     for descriptor in &inspection.descriptors {
-        if dense_block_descriptor_role(descriptor.role) {
-            if let Some(index) = extract_layer_index(&descriptor.name) {
-                indices.insert(index);
-            }
+        if dense_block_descriptor_role(descriptor.role)
+            && let Some(index) = extract_layer_index(&descriptor.name)
+        {
+            indices.insert(index);
         }
     }
     Ok(indices.into_iter().collect())
