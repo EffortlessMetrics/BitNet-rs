@@ -1848,10 +1848,10 @@ fn validate_shields_badge(
         bail!("badge `{}` has unsupported schemaVersion", badge.label);
     }
 
-    if let Some(expected_label) = expected_label {
-        if badge.label != expected_label {
-            bail!("badge label drifted: got `{}`, expected `{expected_label}`", badge.label);
-        }
+    if let Some(expected_label) = expected_label
+        && badge.label != expected_label
+    {
+        bail!("badge label drifted: got `{}`, expected `{expected_label}`", badge.label);
     }
 
     if badge.message.trim().is_empty() {
