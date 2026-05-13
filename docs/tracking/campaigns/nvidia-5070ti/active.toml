@@ -2094,7 +2094,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-050"
-status = "in_progress"
+status = "pr_open"
+pr = 4589
 branch = "docs/cuda-dense-qwen25-product-audit"
 stackable = true
 review_mode = "codex_premerge"

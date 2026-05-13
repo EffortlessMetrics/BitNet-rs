@@ -1,0 +1,12 @@
+timestamp = "2026-05-13T07:24:29Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-050"
+event = "pr_open"
+pr = 4589
+branch = "docs/cuda-dense-qwen25-product-audit"
+actor = "codex"
+notes = [
+  "Opened PR #4589 for the dense Qwen2.5 Q8_0 product audit.",
+  "The audit records real strict CUDA runtime receipts, repeated comparator evidence, and benchmark qualification reviews while keeping speedup false.",
+  "The audit keeps direct ask/chat hardware receipts and server reuse as follow-up evidence gaps.",
+]

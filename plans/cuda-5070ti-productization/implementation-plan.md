@@ -120,7 +120,7 @@ Revert the docs-only reconciliation. Receipts and ledgers stay unchanged.
 
 ## Work item: CUDA-PROD-009
 
-Status: in progress
+Status: pr open
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, `rtx5070ti-cuda-answer-readiness`
 Linked ADRs: BITNET-ADR-0004
