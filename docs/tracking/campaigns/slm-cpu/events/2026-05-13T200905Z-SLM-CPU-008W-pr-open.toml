@@ -1,0 +1,19 @@
+timestamp = "2026-05-13T20:09:05Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008W"
+event = "pr_open"
+pr = 4641
+branch = "codex/slm-cpu-008w-tied-head-shared-math-root-cause"
+head_sha = "fa96681eb060d427ea6969186c411951e4825519"
+actor = "codex"
+
+artifacts = [
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008w-tied-head-audit.json",
+]
+
+notes = [
+  "Opened #4641 to tighten the Qwen3 tied-token-embedding logits audit for the i5-8250U SLM lane.",
+  "The slice records dense SLM run receipts as tied_token_embeddings and lets the audit consume a single strict run receipt with logits_dump.",
+  "The new audit records observed logits length 151936 and no output-head/vocab-index boundary gap; first-token parity remains unproven.",
+  "No answer-quality, corpus success, performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 claim is made.",
+]

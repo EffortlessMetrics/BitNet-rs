@@ -5036,6 +5036,7 @@ async fn run_simple_generation(
         let canonical_bitnet_model = model_repo == "microsoft/bitnet-b1.58-2B-4T-gguf";
         let model_architecture = infer_model_architecture(&model_path);
         let model_family = receipt_model_family(&model_architecture);
+        let dense_slm_model = is_dense_slm_model(model_family, &model_architecture);
         let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
         let model_file =
             model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
@@ -5333,12 +5334,12 @@ async fn run_simple_generation(
                 "context_length": config.model.max_position_embeddings,
                 "tokenizer": tokenizer_label,
                 "vocab_size": tokenizer.vocab_size(),
-                "tie_word_embeddings": if canonical_bitnet_model {
+                "tie_word_embeddings": if canonical_bitnet_model || dense_slm_model {
                     serde_json::json!(true)
                 } else {
                     serde_json::Value::Null
                 },
-                "output_head_tensor": if canonical_bitnet_model {
+                "output_head_tensor": if canonical_bitnet_model || dense_slm_model {
                     "tied_token_embeddings"
                 } else {
                     "output.weight"
