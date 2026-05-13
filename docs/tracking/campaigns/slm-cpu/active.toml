@@ -723,8 +723,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008U"
-status = "pr_open"
+status = "merged"
 pr = 4617
+merge_sha = "edac33c25311d457ed6bfacb1642daaf76b2f8ae"
 branch = "codex/slm-cpu-008u-output-weight-layout"
 stackable = false
 review_mode = "codex_premerge"
