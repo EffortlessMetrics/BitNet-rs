@@ -1,0 +1,13 @@
+timestamp = "2026-05-13T14:33:50Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008T"
+event = "merged"
+pr = 4611
+branch = "codex/slm-cpu-008t-first-token-parity"
+merge_sha = "35be945a7ddaf9f593d8d405a961e08c553fe7fc"
+actor = "codex"
+
+notes = [
+  "Recorded #4611 merged after all CI checks passed.",
+  "The merged slice selects dedicated GGUF output.weight before tied fallback and still requires real i5-8250U artifact refresh before claiming Qwen3 first-token parity.",
+]
