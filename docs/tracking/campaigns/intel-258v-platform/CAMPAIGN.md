@@ -79,7 +79,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | SLM-OV258V-002 | merged | Run the Qwen2.5 OpenVINO CPU LLMPipeline answer smoke when the exported INT4 symmetric IR model and openvino_genai runtime are available, or record a blocked-before-execution receipt with the exact missing prerequisites and no execution claim; merged in #4565. |
 | SLM-OV258V-002A | merged | Refresh the Qwen2.5 OpenVINO CPU LLMPipeline smoke with live CPU execution evidence now that the local OpenVINO GenAI runtime and INT4 symmetric IR export are available; merged in #4571. |
 | SLM-OV258V-003 | merged | Record the Qwen2.5 OpenVINO GPU/Arc 140V LLMPipeline bounded smoke with `fallback_used=false`; merged in #4584. |
-| SLM-OV258V-004 | pr_open | Record the Qwen2.5 OpenVINO NPU / Intel AI Boost LLMPipeline bounded smoke with `fallback_used=false`; open in #4588. |
+| SLM-OV258V-004 | merged | Record the Qwen2.5 OpenVINO NPU / Intel AI Boost LLMPipeline bounded smoke with `fallback_used=false`; merged in #4588. |
 
 ## Review Policy
 

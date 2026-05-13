@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T07:53:00Z"
+campaign = "intel-258v-platform"
+item = "SLM-OV258V-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4588
+merge_sha = "1cf9904d47d85f68bb8db256b83cbb8808428545"
+actor = "codex"
+branch = "codex/lunar-lake/SLM-OV258V-004-openvino-npu-smoke"
+summary = "Marked SLM-OV258V-004 merged after the Qwen2.5 OpenVINO NPU LLMPipeline bounded smoke receipt landed."
+
+notes = [
+  "The merged receipt records OpenVINO GenAI LLMPipeline execution on NPU with resolved Intel(R) AI Boost identity and fallback_used=false.",
+  "The bounded three-case dense SLM smoke passed for math_2_plus_2, capital_france, and rust_sentence.",
+  "The claim boundary remains limited to OpenVINO NPU bounded dense SLM smoke; no OpenVINO GPU/Arc execution, native NPU inference outside OpenVINO GenAI, NPU speedup or sustained phase performance, beam or parallel sampling support, broad dense SLM quality, direct GenAI generated-token ID capture, or BitNet QK256/I2_S proof is claimed.",
+]
