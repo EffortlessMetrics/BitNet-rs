@@ -1,0 +1,19 @@
+timestamp = "2026-05-13T13:00:10Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-002"
+event = "pr_open"
+actor = "codex"
+pr = 4609
+branch = "codex/lunar-lake/CPU-BITNET-PERF-002-tiling-matrix"
+head_sha = "6f46046d2659921b3564b3b0ba29b271330e2274"
+summary = "Opened CPU-BITNET-PERF-002 to add a 258V QK256/I2_S tiling/thread candidate matrix receipt."
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-002-i2s-tiling-matrix.json",
+]
+notes = [
+  "The PR adds an optional i2s_tiling_thread_matrix receipt block behind --include-i2s-tiling-matrix.",
+  "The receipt records a 240-candidate matrix and sampled GEMV/GEMM baseline timings.",
+  "Thread-count candidates are recorded but not applied by this sampled baseline.",
+  "fallback_used=false and speedup_claim=false remain explicit.",
+  "No answer-quality, sustained-throughput, Arc/NPU execution, acceleration, QK256 semantic-change, or full-model correctness claim is made.",
+]
