@@ -479,12 +479,7 @@ fn answer_corpus_evidence(
         });
     };
 
-    let cases = receipt["cases"]
-        .as_array()
-        .map(|items| {
-            items.iter().map(|case| answer_case_evidence(case, tokenizer)).collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+    let cases = answer_evidence_cases(label, receipt, tokenizer);
     let cases_with_topk = cases
         .iter()
         .filter(|case| {
@@ -501,7 +496,7 @@ fn answer_corpus_evidence(
         "label": label,
         "path": path.map(|p| p.display().to_string()),
         "artifact_kind": receipt["artifact_kind"].clone(),
-        "backend": receipt["backend"].clone(),
+        "backend": value_or(&receipt["backend"], &receipt["selected_backend"]),
         "summary": {
             "cases_total": cases.len(),
             "cases_with_first_step_topk": cases_with_topk,
@@ -509,6 +504,31 @@ fn answer_corpus_evidence(
         },
         "cases": cases,
     })
+}
+
+fn answer_evidence_cases(
+    label: &str,
+    receipt: &Value,
+    tokenizer: &(dyn Tokenizer + Send + Sync),
+) -> Vec<Value> {
+    if let Some(items) = receipt["cases"].as_array() {
+        return items.iter().map(|case| answer_case_evidence(case, tokenizer)).collect();
+    }
+
+    if receipt["artifact_kind"].as_str() == Some("inference_result") {
+        let mut case = receipt.clone();
+        case["id"] = value_or(&case["id"], &case["profile"]["id"]);
+        if case["id"].is_null() {
+            case["id"] = Value::String(label.to_string());
+        }
+        case["status"] = value_or(&case["status"], &case["execution"]["status"]);
+        if case["status"].is_null() {
+            case["status"] = Value::String("recorded".to_string());
+        }
+        return vec![answer_case_evidence(&case, tokenizer)];
+    }
+
+    Vec::new()
 }
 
 fn answer_case_evidence(case: &Value, tokenizer: &(dyn Tokenizer + Send + Sync)) -> Value {
@@ -535,7 +555,7 @@ fn answer_case_evidence(case: &Value, tokenizer: &(dyn Tokenizer + Send + Sync))
     json!({
         "id": case["id"].clone(),
         "status": case["status"].clone(),
-        "selected_kernel": case["kernel"]["selected_kernel"].clone(),
+        "selected_kernel": value_or(&case["kernel"]["selected_kernel"], &case["kernel"]["kernel_id"]),
         "model_vocab_size": case["model"]["vocab_size"].clone(),
         "output_head_tensor": case["model"]["output_head_tensor"].clone(),
         "tie_word_embeddings": case["model"]["tie_word_embeddings"].clone(),
@@ -545,6 +565,10 @@ fn answer_case_evidence(case: &Value, tokenizer: &(dyn Tokenizer + Send + Sync))
         "chosen_id": first_step.and_then(|step| step["chosen_id"].as_u64()),
         "first_step_top_logits": top_logits,
     })
+}
+
+fn value_or(primary: &Value, fallback: &Value) -> Value {
+    if primary.is_null() { fallback.clone() } else { primary.clone() }
 }
 
 fn top_logit_entry(item: &Value, tokenizer: &(dyn Tokenizer + Send + Sync)) -> Option<Value> {
@@ -824,6 +848,56 @@ mod tests {
         assert_eq!(scalar["cases"][0]["observed_logits_vector_length"], 50257);
         assert_eq!(scalar["cases"][0]["model_vocab_size_proxy"], 50257);
         assert_eq!(compare_topk_evidence(&scalar, &avx2)["topk_ids_all_match"], true);
+    }
+
+    #[test]
+    fn topk_evidence_reads_single_inference_result_receipts() {
+        let tokenizer = MockTokenizer::new();
+        let receipt = json!({
+            "artifact_kind": "inference_result",
+            "selected_backend": "cpu-rust",
+            "profile": {
+                "id": "default"
+            },
+            "execution": {
+                "status": "recorded"
+            },
+            "model": {
+                "vocab_size": 50257,
+                "output_head_tensor": "tied_token_embeddings",
+                "tie_word_embeddings": true
+            },
+            "kernel": {
+                "kernel_id": "dense-qwen-cpu-reference"
+            },
+            "logits_index_boundary": {
+                "first_step_logits_vector_length": 50257,
+                "observed_logits_vector_length": 50257
+            },
+            "logits_dump": [{
+                "chosen_id": 52,
+                "logits_vector_length": 50257,
+                "top_logits": [
+                    {"token_id": 52, "logit": 1.0},
+                    {"token_id": 53, "logit": 0.5}
+                ]
+            }]
+        });
+
+        let evidence = answer_corpus_evidence("avx2", None, Some(&receipt), &tokenizer);
+
+        assert_eq!(evidence["backend"], "cpu-rust");
+        assert_eq!(evidence["summary"]["cases_total"], 1);
+        assert_eq!(evidence["summary"]["cases_with_first_step_topk"], 1);
+        assert_eq!(evidence["summary"]["observed_logits_vector_lengths"][0], 50257);
+        assert_eq!(evidence["cases"][0]["id"], "default");
+        assert_eq!(evidence["cases"][0]["selected_kernel"], "dense-qwen-cpu-reference");
+        assert_eq!(evidence["cases"][0]["observed_logits_vector_length"], 50257);
+        assert_eq!(
+            evidence["cases"][0]["observed_logits_vector_length_source"],
+            "run_receipt_logits_index_boundary"
+        );
+        assert_eq!(evidence["cases"][0]["first_step_top_logits"][0]["decoded"], "4");
     }
 
     #[test]

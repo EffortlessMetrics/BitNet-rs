@@ -17,10 +17,9 @@
   },
   "classification": {
     "classification": "output_head_logits_index_boundary_has_gaps",
-    "first_mismatch_stage": "logits_index_contract",
+    "first_mismatch_stage": "metadata_gap",
     "notes": [
-      "gguf_metadata_vocab_size_missing",
-      "observed_logits_vector_length_not_available"
+      "gguf_metadata_vocab_size_missing"
     ]
   },
   "fallback_used": false,
@@ -36,9 +35,9 @@
     "expected_logits_vector_length_source": "tokenizer_real_vocab_size",
     "metadata_vocab_matches_tokenizer": null,
     "metadata_vocab_size": null,
-    "model_vocab_size_proxy": null,
-    "observed_logits_vector_length": null,
-    "observed_logits_vector_length_source": "not_available",
+    "model_vocab_size_proxy": 151936,
+    "observed_logits_vector_length": 151936,
+    "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
     "special_tokens": {
       "all_present_ids_within_vocab": true,
       "entries": [
@@ -205,15 +204,102 @@
   "topk_evidence": {
     "avx2": {
       "artifact_kind": "inference_result",
-      "backend": null,
-      "cases": [],
+      "backend": "cpu-rust",
+      "cases": [
+        {
+          "chosen_id": 77979,
+          "first_step_top_logits": [
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 17.115215301513672,
+              "piece": null,
+              "token_id": 77979
+            },
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 16.339262008666992,
+              "piece": null,
+              "token_id": 38683
+            },
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 16.159814834594727,
+              "piece": null,
+              "token_id": 22683
+            },
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 15.836349487304688,
+              "piece": null,
+              "token_id": 140077
+            },
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 15.807455062866211,
+              "piece": null,
+              "token_id": 102046
+            },
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 15.366619110107422,
+              "piece": null,
+              "token_id": 135087
+            },
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 15.04520320892334,
+              "piece": null,
+              "token_id": 104796
+            },
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 15.034399032592773,
+              "piece": null,
+              "token_id": 92038
+            },
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 14.651456832885742,
+              "piece": null,
+              "token_id": 121538
+            },
+            {
+              "decoded": null,
+              "is_special": false,
+              "logit": 14.625834465026855,
+              "piece": null,
+              "token_id": 16213
+            }
+          ],
+          "id": "default",
+          "model_vocab_size": 151936,
+          "model_vocab_size_proxy": 151936,
+          "observed_logits_vector_length": 151936,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "dense-qwen-cpu-reference",
+          "status": "recorded",
+          "tie_word_embeddings": true
+        }
+      ],
       "label": "avx2",
       "path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-post-008u-original-first-token.json",
       "provided": true,
       "summary": {
-        "cases_total": 0,
-        "cases_with_first_step_topk": 0,
-        "observed_logits_vector_lengths": []
+        "cases_total": 1,
+        "cases_with_first_step_topk": 1,
+        "observed_logits_vector_lengths": [
+          151936
+        ]
       }
     },
     "scalar": {
