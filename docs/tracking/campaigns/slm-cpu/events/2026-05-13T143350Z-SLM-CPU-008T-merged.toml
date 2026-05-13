@@ -1,0 +1,12 @@
+timestamp = "2026-05-13T14:33:50Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008T"
+event = "merged"
+pr = 4611
+merge_sha = "35be945a7ddaf9f593d8d405a961e08c553fe7fc"
+actor = "codex"
+
+notes = [
+  "Merged #4611 to select dedicated GGUF output.weight before tied-embedding fallback for the Qwen3 first-token parity candidate.",
+  "The merge does not claim first-token parity; a real i5-8250U artifact refresh remains required before parity or answer-quality claims.",
+]

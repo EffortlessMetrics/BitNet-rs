@@ -1,0 +1,12 @@
+timestamp = "2026-05-13T14:25:45Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-002"
+event = "merged"
+pr = 4609
+merge_sha = "9bbb45712eff819daffaea61599011626d4f4579"
+actor = "codex"
+
+notes = [
+  "Merged #4609 to record the 258V QK256/I2_S tiling/thread candidate matrix receipt with fallback=false and speedup_claim=false.",
+  "The receipt keeps thread-count candidates sampled but not applied and makes no answer-quality, sustained-throughput, Arc/NPU, acceleration, QK256 semantic-change, or full-model claim.",
+]
