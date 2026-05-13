@@ -275,6 +275,13 @@ synthetic receipt checks. Live M3 model runs, large downloads, timing receipts,
 and artifact sweeps are local or scheduled Apple-hardware evidence, not ordinary
 CI requirements.
 
+M3 live and scheduled jobs should fail before expensive work when disk, cache,
+runner, power, thermal, model, tokenizer, or receipt prerequisites are missing.
+Once a bounded M3 profile is intentionally selected, its cap should allow a
+healthy run to finish with cushion. If that is too costly, choose a smaller
+profile, manual evidence, or a scheduled lane rather than cutting the job off
+near completion and spending the same CI again.
+
 ## Claim Boundary
 
 Do not claim:

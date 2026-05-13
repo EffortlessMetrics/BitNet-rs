@@ -44,6 +44,34 @@ For ordinary PRs, our operating target is:
 
 The `$1` mark is a ceiling, not the goal.
 
+## Timeout and cap policy
+
+Timeouts are pathological-run guards, not budget targets. CI cost should be
+controlled by routing, smaller profiles, fail-fast preflight checks, labels,
+manual dispatch, schedules, and campaign lanes. Once an expensive lane is
+intentionally selected, its timeout must give a healthy run enough room to
+produce a result.
+
+Cutting a job off after it has already spent most of its expected runtime is
+usually the worst outcome: the compute has been spent, no receipt or test result
+is produced, and the next attempt repeats the same cost. Treat that as a policy
+failure unless the timeout exposed a real hang or runaway path.
+
+Long hardware, model, SLM, coverage, fuzz, and release lanes should therefore
+follow this order:
+
+- reject irrelevant work before it starts through CI routing,
+- fail fast on missing prerequisites before downloads, builds, or model runs,
+- choose a smaller bounded profile when the full profile is too expensive,
+- size the selected job cap from recent successful runtimes with cushion,
+- keep aggregator polling deadlines at least as long as the healthy upstream
+  lane they are waiting on.
+
+If the selected lane is too expensive to let finish, it should not be selected
+for that event. It should move to a label, schedule, manual dispatch, release
+gate, or campaign receipt lane instead of using a near-completion timeout as a
+cost control.
+
 ## Why the budget target is aggressive
 
 Our CI budget target is intentionally aggressive — but **not because we want

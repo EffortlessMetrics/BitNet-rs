@@ -25,6 +25,13 @@ macos_latest = 10.0
 gpu_docker = 6.0
 external_ai_review = 4.0
 
+[timeout_policy]
+purpose = "prevent pathological hangs, not enforce ordinary PR budget"
+healthy_cap_basis = "recent_success_p95_plus_cushion"
+prefer_routing_over_near_completion_timeout = true
+fail_fast_preflight_required_for_long_lanes = true
+aggregator_deadline_must_cover_upstream_healthy_completion = true
+
 # Bands map (LEM range -> string posture) used by `xtask ci plan`
 # when emitting the markdown summary. Keys are inclusive upper
 # bounds; the lookup is "first matching band wins".
