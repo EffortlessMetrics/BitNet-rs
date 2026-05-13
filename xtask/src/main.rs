@@ -1938,35 +1938,59 @@ fn validate_ripr_pr_contract(workspace_root: &Path) -> Result<()> {
     Ok(())
 }
 
-fn ripr_review_comments(check: bool, base: &str, head: &str) -> Result<()> {
+fn ripr_review_comments(check: bool, base: &str, _head: &str) -> Result<()> {
     let workspace_root = workspace_root_path()?;
     let out_dir = workspace_root.join(RIPR_REVIEW_DIR);
 
     if !check {
         fs::create_dir_all(&out_dir).with_context(|| format!("creating {}", out_dir.display()))?;
-        let out = out_dir.join("comments.json");
-        let ripr_bin = std::env::var("RIPR_BIN").unwrap_or_else(|_| "ripr".to_string());
-        let output = Command::new(&ripr_bin)
-            .arg("review-comments")
-            .arg("--root")
-            .arg(&workspace_root)
-            .arg("--base")
-            .arg(base)
-            .arg("--head")
-            .arg(head)
-            .arg("--out")
-            .arg(&out)
-            .current_dir(&workspace_root)
-            .output()
-            .with_context(|| format!("running {ripr_bin} review-comments"))?;
-
-        if !output.status.success() {
-            bail!("{ripr_bin} review-comments failed: {}", String::from_utf8_lossy(&output.stderr));
-        }
+        run_ripr_check_with_base_format(
+            &workspace_root,
+            base,
+            "json",
+            &out_dir.join("comments.json"),
+        )?;
+        run_ripr_check_with_base_format(
+            &workspace_root,
+            base,
+            "github",
+            &out_dir.join("comments.md"),
+        )?;
         println!("ripr-review-comments: wrote review guidance under {}", out_dir.display());
     }
 
     validate_ripr_review_contract(&workspace_root)
+}
+
+fn run_ripr_check_with_base_format(
+    workspace_root: &Path,
+    base: &str,
+    format: &str,
+    out: &Path,
+) -> Result<()> {
+    let ripr_bin = std::env::var("RIPR_BIN").unwrap_or_else(|_| "ripr".to_string());
+    let mut command = Command::new(&ripr_bin);
+    command
+        .arg("check")
+        .arg("--root")
+        .arg(workspace_root)
+        .arg("--base")
+        .arg(base)
+        .arg("--format")
+        .arg(format);
+    let output = command
+        .current_dir(workspace_root)
+        .output()
+        .with_context(|| format!("running {ripr_bin} check --format {format}"))?;
+
+    if !output.status.success() {
+        bail!(
+            "{ripr_bin} check --format {format} failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    fs::write(out, output.stdout).with_context(|| format!("writing {}", out.display()))
 }
 
 fn validate_ripr_review_contract(workspace_root: &Path) -> Result<()> {
@@ -1978,7 +2002,7 @@ fn validate_ripr_review_contract(workspace_root: &Path) -> Result<()> {
         .with_context(|| format!("reading {}", json_path.display()))?;
     let parsed = serde_json::from_str::<Value>(&json)
         .with_context(|| format!("{} is not valid JSON", json_path.display()))?;
-    for key in ["comments", "summary_only", "suppressed", "warnings"] {
+    for key in ["schema_version", "tool", "mode", "summary", "findings"] {
         if parsed.get(key).is_none() {
             bail!("{} is missing `{key}`", json_path.display());
         }
