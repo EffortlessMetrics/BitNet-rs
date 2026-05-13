@@ -2091,7 +2091,7 @@ forbidden_paths = [
 may_claim = [
   "The exact Qwen2.5 0.5B Q8_0 artifact has refreshed one-token strict RTX 5070 Ti CUDA proof after the receipt exists.",
   "The receipt preserves dense_regular_llm_cuda routing, selected RTX 5070 Ti CUDA backend identity, and fallback_used=false.",
-  "BitNet CUDA dependencies use target-aware cudarc link modes so Windows CUDA proof builds align with Candle while non-Windows advisory lanes do not require CUDA link libraries.",
+  "BitNet CUDA dependencies use cudarc fallback dynamic loading so advisory lanes avoid CUDA link libraries while Candle CUDA builds can still select dynamic-linking without conflicting with dynamic-loading.",
 ]
 must_not_claim = [
   "Dense Qwen proof is BitNet packed I2S/QK256 proof.",

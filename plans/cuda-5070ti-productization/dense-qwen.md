@@ -102,10 +102,11 @@ bitnet_packed_i2s_qk256_proof = false
 cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-one-token-strict-cuda --model <qwen2.5-0.5b-q8_0.gguf> --prompt "What is 2+2? Answer with only the number." --json-out ci\hardware\windows-9950x3d-rtx5070ti\<date>\dense-qwen25-q8-one-token-cuda.json
 ```
 
-On Windows, run this from a Visual Studio x64 developer shell with the CUDA
-toolkit `bin` and `lib\x64` paths present so cudarc and Candle resolve the same
-CUDA dynamic-linking mode. Non-Windows CI keeps cudarc on dynamic loading so
-advisory tracker and ripr lanes do not require CUDA driver libraries.
+Run this from an environment where CUDA toolkit binaries and libraries are on
+the process path. BitNet's own cudarc users use fallback dynamic loading so
+advisory lanes do not require CUDA link libraries, while Candle CUDA selects
+dynamic linking for the full proof build. On Windows, use a Visual Studio x64
+developer shell with CUDA `bin` and `lib\x64` present.
 
 ### Receipt path
 
