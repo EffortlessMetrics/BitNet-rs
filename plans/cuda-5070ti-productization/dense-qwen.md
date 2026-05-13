@@ -104,7 +104,8 @@ cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,
 
 On Windows, run this from a Visual Studio x64 developer shell with the CUDA
 toolkit `bin` and `lib\x64` paths present so cudarc and Candle resolve the same
-CUDA dynamic-linking mode.
+CUDA dynamic-linking mode. Non-Windows CI keeps cudarc on dynamic loading so
+advisory tracker and ripr lanes do not require CUDA driver libraries.
 
 ### Receipt path
 
