@@ -902,6 +902,7 @@ mod tests {
         assert_eq!(evidence["cases"][0]["selected_kernel"], "dense-qwen-cpu-reference");
         assert_eq!(evidence["cases"][0]["kernel_id"], "dense-qwen-cpu-reference");
         assert_eq!(evidence["cases"][0]["text"], "4");
+        assert_eq!(evidence["cases"][0]["chosen_id"], 52);
         assert_eq!(evidence["cases"][0]["observed_logits_vector_length"], 50257);
         assert_eq!(
             evidence["cases"][0]["observed_logits_vector_length_source"],
