@@ -11,6 +11,13 @@ Default pull requests should get cheap, deterministic, crate/risk-scoped proof.
 Expensive proof still exists, but it runs only on `main`, schedules, release
 lanes, hardware/campaign lanes, manual dispatch, or explicit labels.
 
+Routing controls whether a lane runs. It must not control cost by starting an
+expensive lane and then setting a cap just below healthy completion time. If a
+lane is selected, its timeout should be sized as a hang guard with enough
+cushion to produce the receipt or check result. If that is too expensive for
+the event, route the lane elsewhere or select a smaller bounded profile before
+expensive work begins.
+
 The target shape is:
 
 ```text

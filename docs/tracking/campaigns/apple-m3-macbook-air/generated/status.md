@@ -31,4 +31,5 @@
 - Do not claim M4 Mac mini performance, broad Apple Silicon performance, QK256 support, full Apple Metal inference, Neural Engine execution, or MPSGraph model inference from this lane.
 - Do not weaken existing M4 receipt checks to make M3 receipts fit; add the smallest MacBook-specific label or validation path instead.
 - Do not add live model downloads, large artifact sweeps, or hardware timing runs to generic required CI.
+- Do not use near-completion timeouts as M3 lane cost control; route the job away, choose a smaller profile, or cap healthy selected runs with cushion.
 - Never commit model binaries.

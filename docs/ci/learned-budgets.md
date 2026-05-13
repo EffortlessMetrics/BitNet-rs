@@ -18,6 +18,26 @@ flake), so estimating at the median underbudgets ~50 % of PRs. A
 15 % cushion on the p50 still reads "tight but realistic" while
 keeping the planner's headline number close to lived experience.
 
+## Timeout sizing
+
+Learned budgets estimate cost posture. Workflow `timeout-minutes` should be
+sized separately as a completion guard:
+
+```text
+timeout = recent successful p95 wall time + fixed or percentage cushion
+```
+
+Timed-out and cancelled runs are not healthy duration samples. Use them to
+investigate cap sizing, queue behavior, or true hangs; do not let them pull the
+healthy cap downward. A timeout that fires just before the selected lane would
+have produced a receipt wastes the full prior run and should be treated as a
+cap failure, not a normal budget success.
+
+For long lanes, prefer fail-fast prerequisite checks and smaller profile
+selection before expensive work starts. Aggregator jobs should have polling
+windows at least as long as the healthy upstream lane they depend on, plus
+cushion for status propagation.
+
 ## Inputs
 
 | Source                              | Role                                 |
