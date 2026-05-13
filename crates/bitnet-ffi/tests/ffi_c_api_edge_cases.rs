@@ -49,7 +49,7 @@ fn version_contains_semver_pattern() {
 #[test]
 fn init_returns_success() {
     let rc = bitnet_init();
-    assert_eq!(rc, BITNET_SUCCESS as i32);
+    assert_eq!(rc, BITNET_SUCCESS);
     bitnet_cleanup();
 }
 
@@ -57,8 +57,8 @@ fn init_returns_success() {
 fn double_init_is_safe() {
     let rc1 = bitnet_init();
     let rc2 = bitnet_init();
-    assert_eq!(rc1, BITNET_SUCCESS as i32);
-    assert_eq!(rc2, BITNET_SUCCESS as i32);
+    assert_eq!(rc1, BITNET_SUCCESS);
+    assert_eq!(rc2, BITNET_SUCCESS);
     bitnet_cleanup();
 }
 
@@ -145,7 +145,7 @@ fn get_num_threads_returns_positive() {
 #[test]
 fn set_num_threads_roundtrip() {
     let rc = bitnet_set_num_threads(2);
-    assert_eq!(rc, BITNET_SUCCESS as i32);
+    assert_eq!(rc, BITNET_SUCCESS);
     let n = bitnet_get_num_threads();
     assert_eq!(n, 2, "thread count should be 2 after set");
 }
@@ -161,7 +161,7 @@ fn memory_usage_is_sane() {
 #[test]
 fn garbage_collect_returns_success() {
     let rc = bitnet_garbage_collect();
-    assert_eq!(rc, BITNET_SUCCESS as i32);
+    assert_eq!(rc, BITNET_SUCCESS);
 }
 
 #[test]

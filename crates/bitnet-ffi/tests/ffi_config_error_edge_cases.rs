@@ -11,6 +11,8 @@
 //! - Thread-local error state (set/get/clear)
 //! - BitNetCPerformanceMetrics defaults
 
+#![allow(clippy::field_reassign_with_default)]
+
 use bitnet_ffi::config::{BitNetCConfig, BitNetCInferenceConfig, BitNetCPerformanceMetrics};
 use bitnet_ffi::error::{BitNetCError, clear_last_error, get_last_error, set_last_error};
 
