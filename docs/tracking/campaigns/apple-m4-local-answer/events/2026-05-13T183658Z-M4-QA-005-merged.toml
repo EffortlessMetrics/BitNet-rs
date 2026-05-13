@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T18:36:58Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-005"
+event = "merged"
+merge_sha = "9fa3e532b89c36885c54350700d75a740a93911e"
+actor = "codex"
+
+notes = [
+  "Closed M4-QA-005 after M4-QA-002 and M4-QA-003 were recorded merged and the decision-only routing docs were verified.",
+  "docs/hardware/apple-m4-mac-mini-operator-runbook.md keeps the operator local-answer path on apple-m4-cpu-neon and selects the first eligible future Metal contribution as a prefill projection fixture, not a full decode loop.",
+  "docs/specs/apple-m4-mac-mini-roadmap.md requires any later Metal local-answer contribution to compare CPU-only greedy output before and after the Metal phase fixture and record unchanged generated token IDs and decoded text.",
+  "The prior local M4-QA-005 closeout event records required receipt fields for any later Metal contribution: selected apple-m4-metal backend, runtime_api=metal, fallback_used=false, phase_scope=prefill_projection_fixture, full_metal_inference_claimed=false, speedup_claim=false, CPU reference token IDs unchanged, and decoded text unchanged.",
+  "Claim boundaries remain narrow: this is a routing decision only; it does not enable a BitNet Metal local-answer route, bitnet mac ask/chat/server, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, or performance claims.",
+]

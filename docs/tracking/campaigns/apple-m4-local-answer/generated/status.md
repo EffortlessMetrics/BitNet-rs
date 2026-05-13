@@ -16,7 +16,7 @@
 | M4-QA-002 | merged | TBD | `codex/apple-m4-local-answer/M4-QA-002-greedy-determinism` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add deterministic greedy local-answer checks so the same model, prompt, tokenizer, backend, and runtime settings produce stable token IDs and receipt identity. |
 | M4-QA-003 | merged | TBD | `codex/apple-m4-local-answer/M4-QA-003-receipt-quality` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Harden local-answer receipts so generated text, token counts, tokenizer authority, model identity, backend routing, fallback status, and timing fields are present and checked. |
 | M4-QA-004 | merged | TBD | `codex/apple-m4-local-answer/M4-QA-004-strict-failure-modes` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add strict local-answer failure-mode coverage for missing model files, tokenizer authority failures, unsupported Apple backend selections, and attempts to count fallback as acceleration. |
-| M4-QA-005 | proposed | TBD | `codex/apple-m4-local-answer/M4-QA-005-metal-phase-routing` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Decide and document the first safe route for one receipt-backed Apple Metal phase to participate in real generation while preserving CPU fallback visibility and greedy output comparison. |
+| M4-QA-005 | merged | TBD | `codex/apple-m4-local-answer/M4-QA-005-metal-phase-routing` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Decide and document the first safe route for one receipt-backed Apple Metal phase to participate in real generation while preserving CPU fallback visibility and greedy output comparison. |
 
 ## Hard Constraints
 
