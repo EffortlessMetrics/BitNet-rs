@@ -2558,7 +2558,7 @@ fn strict_bitnet_cuda_ask_preflight(
     let receipt_path = receipt_out
         .map(std::path::Path::to_path_buf)
         .or_else(|| strict_ask_default_receipt_path(true, false))
-        .expect("strict CUDA ask has a default receipt path");
+        .ok_or_else(|| anyhow::anyhow!("strict CUDA ask could not resolve a receipt path"))?;
 
     Ok(StrictBitnetCudaAskPreflight {
         tokenizer_source: tokenizer_resolution.source.as_str().to_string(),
@@ -2626,7 +2626,9 @@ fn handle_cuda_doctor_command(
             "note": "pass --model and optional --tokenizer to preflight model/tokenizer authority",
             "qk256_route_ready": "not_checked",
             "default_receipt_path": strict_ask_default_receipt_path(true, false)
-                .expect("strict CUDA ask has a default receipt path")
+                .ok_or_else(|| {
+                    anyhow::anyhow!("cuda doctor could not resolve a default strict CUDA receipt path")
+                })?
                 .display()
                 .to_string()
         })
@@ -11593,18 +11595,16 @@ mod tests {
     }
 
     #[test]
-    fn cuda_doctor_command_accepts_nested_doctor() {
-        std::thread::Builder::new()
+    fn cuda_doctor_command_accepts_nested_doctor() -> Result<()> {
+        let handle = std::thread::Builder::new()
             .name("cuda-doctor-clap-parse".to_string())
             .stack_size(64 * 1024 * 1024)
-            .spawn(|| {
-                Cli::command()
-                    .try_get_matches_from(["bitnet", "cuda", "doctor"])
-                    .expect("cuda doctor should parse");
-            })
-            .expect("spawn clap parse thread")
-            .join()
-            .expect("clap parse thread should not panic");
+            .spawn(|| Cli::command().try_get_matches_from(["bitnet", "cuda", "doctor"]))
+            .map_err(|err| anyhow::anyhow!("spawn clap parse thread: {err}"))?;
+        let parse_result =
+            handle.join().map_err(|_| anyhow::anyhow!("clap parse thread panicked"))?;
+        parse_result.context("cuda doctor should parse")?;
+        Ok(())
     }
 
     #[test]
@@ -11613,42 +11613,52 @@ mod tests {
     }
 
     #[test]
-    fn cuda_doctor_rejects_generic_cuda_backend_before_probe() {
-        let err =
-            validate_strict_cuda_backend_label("cuda", "cuda doctor").unwrap_err().to_string();
+    fn cuda_doctor_rejects_generic_cuda_backend_before_probe() -> Result<()> {
+        let err = match validate_strict_cuda_backend_label("cuda", "cuda doctor") {
+            Ok(()) => anyhow::bail!("cuda doctor accepted generic cuda backend"),
+            Err(err) => err.to_string(),
+        };
 
         assert!(
             err.contains("cuda doctor requires --device nvidia-rtx-5070-ti-cuda"),
             "got: {err}"
         );
         assert!(err.contains("requested backend was cuda"), "got: {err}");
+        Ok(())
     }
 
     #[test]
-    fn ask_strict_cuda_rejects_generic_cuda_backend_before_generation() {
-        let err =
-            validate_strict_cuda_backend_label("cuda", "--strict-cuda").unwrap_err().to_string();
+    fn ask_strict_cuda_rejects_generic_cuda_backend_before_generation() -> Result<()> {
+        let err = match validate_strict_cuda_backend_label("cuda", "--strict-cuda") {
+            Ok(()) => anyhow::bail!("strict CUDA ask accepted generic cuda backend"),
+            Err(err) => err.to_string(),
+        };
 
         assert!(
             err.contains("--strict-cuda requires --device nvidia-rtx-5070-ti-cuda"),
             "got: {err}"
         );
         assert!(err.contains("requested backend was cuda"), "got: {err}");
+        Ok(())
     }
 
     #[test]
-    fn ask_strict_cuda_preflight_rejects_missing_tokenizer_before_generation() {
-        let temp_dir = tempfile::tempdir().expect("temp dir");
+    fn ask_strict_cuda_preflight_rejects_missing_tokenizer_before_generation() -> Result<()> {
+        let temp_dir = tempfile::tempdir().context("temp dir")?;
         let model = temp_dir.path().join("ggml-model-i2_s.gguf");
-        std::fs::write(&model, b"not a real gguf").expect("write model");
+        std::fs::write(&model, b"not a real gguf").context("write model")?;
 
-        let err = strict_bitnet_cuda_ask_preflight(&model, None, None).unwrap_err().to_string();
+        let err = match strict_bitnet_cuda_ask_preflight(&model, None, None) {
+            Ok(_) => anyhow::bail!("strict CUDA ask accepted a model without tokenizer authority"),
+            Err(err) => err.to_string(),
+        };
 
         assert!(
             err.contains("strict CUDA ask requires tokenizer authority before generation"),
             "got: {err}"
         );
         assert!(err.contains("ggml-model-i2_s.gguf"), "got: {err}");
+        Ok(())
     }
 
     #[test]
