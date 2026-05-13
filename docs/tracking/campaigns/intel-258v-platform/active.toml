@@ -2709,9 +2709,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-PERF-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/CPU-BITNET-PERF-002-tiling-matrix"
 pr = 4609
+merge_sha = "9bbb45712eff819daffaea61599011626d4f4579"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
