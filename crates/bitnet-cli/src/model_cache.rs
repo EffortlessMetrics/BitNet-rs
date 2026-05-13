@@ -166,6 +166,126 @@ struct CacheStatus {
     verified: Option<bool>,
 }
 
+#[cfg(feature = "full-cli")]
+#[derive(Debug, Serialize)]
+struct AppleM4ModelCatalog {
+    cache_root: PathBuf,
+    default_model_id: &'static str,
+    disk: AppleM4DiskSummary,
+    claim_boundary: &'static str,
+    rows: Vec<AppleM4ModelRow>,
+}
+
+#[cfg(feature = "full-cli")]
+#[derive(Debug, Serialize)]
+struct AppleM4DiskSummary {
+    probe_path: PathBuf,
+    available_bytes: Option<u64>,
+    available: Option<String>,
+    default_model_headroom_bytes: u64,
+    default_model_headroom: String,
+    smallest_supported_headroom_bytes: u64,
+    smallest_supported_headroom: String,
+    largest_supported_headroom_bytes: u64,
+    largest_supported_headroom: String,
+    low_disk: Option<bool>,
+    recommended_first_model_id: Option<String>,
+    recommendation: String,
+    guidance: String,
+}
+
+#[cfg(feature = "full-cli")]
+#[derive(Debug, Serialize)]
+struct AppleM4ModelRow {
+    id: String,
+    display_name: String,
+    state: String,
+    cache_state: Option<String>,
+    cache_path: Option<PathBuf>,
+    size_bytes: Option<u64>,
+    size: String,
+    quantization: Option<String>,
+    tokenizer_authority: Option<String>,
+    prompt_authority: Option<String>,
+    route: String,
+    selection: String,
+    reason: String,
+    mac_ask_chat_enabled: bool,
+    mac_serve_enabled: bool,
+    proof_status: Option<String>,
+    proof_command: Option<String>,
+    proof_receipt_path: Option<String>,
+    recommended_fetch_headroom_bytes: Option<u64>,
+    recommended_fetch_headroom: Option<String>,
+    fits_current_disk: Option<bool>,
+    disk_state: Option<String>,
+    fetch_command: Option<String>,
+    verify_command: Option<String>,
+}
+
+#[cfg(feature = "full-cli")]
+#[derive(Debug, Clone, Copy)]
+struct AppleM4PolicyModel {
+    id: &'static str,
+    state: &'static str,
+    quantization: &'static str,
+    display_name: &'static str,
+    selection: &'static str,
+    reason: &'static str,
+}
+
+#[cfg(feature = "full-cli")]
+const APPLE_M4_POLICY_MODELS: &[AppleM4PolicyModel] = &[
+    AppleM4PolicyModel {
+        id: "qwen3-0.6b-q8_0",
+        state: "diagnostic-only",
+        quantization: "Q8_0",
+        display_name: "upstream dense Qwen diagnostic artifact",
+        selection: "not selectable",
+        reason: "loader/tokenizer/architecture debugging only; not accepted for M4 local answers.",
+    },
+    AppleM4PolicyModel {
+        id: "qwen-small-instruct-1b-ish",
+        state: "candidate",
+        quantization: "-",
+        display_name: "exact official GGUF required",
+        selection: "not selectable",
+        reason: "candidate family only until exact source, revision, SHA256, tokenizer, reference output, Rust M4 quality, cache, and receipt gates pass.",
+    },
+    AppleM4PolicyModel {
+        id: "small-gemma-phi-smollm-instruct-gguf",
+        state: "candidate",
+        quantization: "-",
+        display_name: "exact trusted GGUF required",
+        selection: "not selectable",
+        reason: "cross-family candidate only; likely needs family-specific tokenizer and prompt-template support before M4 promotion.",
+    },
+    AppleM4PolicyModel {
+        id: "qwen3.5-hybrid-vision-moe-state-space",
+        state: "rejected",
+        quantization: "-",
+        display_name: "outside this lane",
+        selection: "not selectable",
+        reason: "hybrid, vision, MoE, and state-space variants require separate architecture work before reconsideration.",
+    },
+    AppleM4PolicyModel {
+        id: "random-or-unpinned-community-gguf",
+        state: "rejected",
+        quantization: "-",
+        display_name: "untrusted or unpinned",
+        selection: "not selectable",
+        reason: "artifact hygiene failure: source, revision, size, SHA256, tokenizer authority, and prompt authority are missing or ambiguous.",
+    },
+];
+
+#[cfg(feature = "full-cli")]
+const APPLE_M4_BITNET_ROUTE_BOUNDARY: &str = "BitNet answer-ready artifact authority and local Apple M4 CPU/NEON answer-corpus proof receipts exist via MODEL-ARTIFACT-007/M4-QA-001 evidence, but BitNet is not selectable through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve` until that user-facing route is wired and separately checked; dense SLM success must not be counted as BitNet Mac UX proof.";
+
+#[cfg(feature = "full-cli")]
+const APPLE_M4_BITNET_PROOF_MODEL_PATH: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
+#[cfg(feature = "full-cli")]
+const APPLE_M4_BITNET_PROOF_RECEIPT_PATH: &str = "ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json";
+
 #[derive(Debug, Serialize)]
 struct VerifyResult {
     id: String,
@@ -370,14 +490,7 @@ pub(crate) fn verified_apple_m4_slm_model(
     id: &str,
     cache_dir: Option<PathBuf>,
 ) -> Result<VerifiedCachedModel> {
-    let model = supported_model(id)?;
-    if !model.apple_m4_cpu_neon_supported {
-        anyhow::bail!(
-            "model `{}` is not supported for the Rust-native Apple M4 CPU/NEON SLM path: {}",
-            model.id,
-            model.support_note
-        );
-    }
+    let model = apple_m4_slm_supported_model(id)?;
     let cache_root = resolve_cache_root(cache_dir)?;
     let path = model_path(&cache_root, model);
     let status = cache_status(&cache_root, *model, true)?;
@@ -387,7 +500,7 @@ pub(crate) fn verified_apple_m4_slm_model(
             model.id,
             path.display(),
             cache_state_label(&status),
-            cache_repair_guidance(&cache_root, &status)
+            apple_m4_cache_repair_guidance(&cache_root, &status)
         );
     }
     let result = verify_model(model, &path)?;
@@ -464,7 +577,7 @@ pub(crate) fn apple_m4_slm_cache_status_json(
     cache_dir: Option<PathBuf>,
     verify: bool,
 ) -> Result<serde_json::Value> {
-    let model = supported_model(id)?;
+    let model = apple_m4_slm_supported_model(id)?;
     let cache_root = resolve_cache_root(cache_dir)?;
     let status = cache_status(&cache_root, *model, verify)?;
     let ready = cache_ready(&status);
@@ -500,7 +613,7 @@ pub(crate) fn apple_m4_slm_cache_status_json(
         "next_step": if ready {
             serde_json::Value::Null
         } else {
-            serde_json::json!(cache_repair_guidance(&cache_root, &status))
+            serde_json::json!(apple_m4_cache_repair_guidance(&cache_root, &status))
         },
     }))
 }
@@ -1025,6 +1138,407 @@ fn list_models(cache_dir: Option<PathBuf>, json: bool) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "full-cli")]
+pub(crate) fn list_apple_m4_models(cache_dir: Option<PathBuf>, json: bool) -> Result<()> {
+    let catalog = apple_m4_model_catalog(cache_dir)?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&catalog)?);
+        return Ok(());
+    }
+
+    println!("Cache: {}", catalog.cache_root.display());
+    println!("Default model: {}", catalog.default_model_id);
+    let available = catalog.disk.available.as_deref().unwrap_or("unknown");
+    let low_disk = catalog
+        .disk
+        .low_disk
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+    println!(
+        "Disk: available={}, default_fetch_headroom={}, low_disk={}",
+        available, catalog.disk.default_model_headroom, low_disk
+    );
+    println!("Recommendation: {}", catalog.disk.recommendation);
+    println!("{}", apple_m4_model_next_step(&catalog));
+    println!(
+        "{:<42} {:<15} {:<13} {:<10} {:<10} {:<16} Selection",
+        "ID", "State", "Cache", "Quant", "Size", "Disk"
+    );
+    println!("{}", "-".repeat(131));
+    for row in &catalog.rows {
+        println!(
+            "{:<42} {:<15} {:<13} {:<10} {:<10} {:<16} {}",
+            row.id,
+            row.state,
+            row.cache_state.as_deref().unwrap_or("-"),
+            row.quantization.as_deref().unwrap_or("-"),
+            row.size,
+            row.disk_state.as_deref().unwrap_or("-"),
+            row.selection,
+        );
+    }
+    println!("Claim boundary: {}", catalog.claim_boundary);
+    for row in &catalog.rows {
+        if let Some(command) = &row.proof_command {
+            println!("Proof bridge: {} -> {}", row.id, command);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_model_next_step(catalog: &AppleM4ModelCatalog) -> String {
+    let Some(model_id) = catalog.disk.recommended_first_model_id.as_deref() else {
+        return "Next fetch: no supported model has enough disk headroom; prune models or move the cache before fetching."
+            .to_string();
+    };
+    let Some(row) = catalog.rows.iter().find(|row| row.id == model_id) else {
+        return format!(
+            "Next fetch: recommendation refers to `{model_id}`, but it is not in the selectable catalog rows."
+        );
+    };
+    match (&row.fetch_command, &row.verify_command) {
+        (Some(fetch), Some(verify)) => {
+            format!("Next fetch: {fetch}\nNext verify: {verify}")
+        }
+        (Some(fetch), None) => format!("Next fetch: {fetch}"),
+        _ => format!(
+            "Next fetch: `{model_id}` is not selectable; inspect the recommendation before fetching."
+        ),
+    }
+}
+
+#[cfg(feature = "full-cli")]
+pub(crate) fn apple_m4_models_catalog_json(
+    cache_dir: Option<PathBuf>,
+) -> Result<serde_json::Value> {
+    Ok(serde_json::to_value(apple_m4_model_catalog(cache_dir)?)?)
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_model_catalog(cache_dir: Option<PathBuf>) -> Result<AppleM4ModelCatalog> {
+    let cache_root = resolve_cache_root(cache_dir)?;
+    let disk = apple_m4_disk_summary(&cache_root)?;
+    let mut rows = Vec::new();
+
+    for model in SUPPORTED_MODELS {
+        let status = cache_status(&cache_root, *model, false)?;
+        rows.push(apple_m4_registered_model_row(&cache_root, &status, disk.available_bytes));
+    }
+    rows.sort_by_key(|row| apple_m4_state_order(&row.state));
+    rows.extend(apple_m4_policy_rows());
+
+    Ok(AppleM4ModelCatalog {
+        cache_root,
+        default_model_id: M4_SLM_RUNTIME_MODEL_ID,
+        disk,
+        claim_boundary: "default/supported rows are dense Qwen Apple M4 CPU/NEON answer paths only; blocked, diagnostic-only, candidate, and rejected rows are not selectable M4 answer claims and do not prove BitNet local answers",
+        rows,
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_registered_model_row(
+    cache_root: &Path,
+    status: &CacheStatus,
+    available_bytes: Option<u64>,
+) -> AppleM4ModelRow {
+    let model = &status.model;
+    let (state, selection, route, reason) = if model.id == M4_SLM_RUNTIME_MODEL_ID {
+        (
+            "default",
+            "implicit default or explicit --model-id",
+            "apple-m4-cpu-neon",
+            model.support_note,
+        )
+    } else if model.apple_m4_cpu_neon_supported {
+        ("supported", "explicit --model-id only", "apple-m4-cpu-neon", model.support_note)
+    } else if model.model_contract.is_some() {
+        (
+            "blocked",
+            "not selectable for M4 local answers",
+            "artifact contract only",
+            APPLE_M4_BITNET_ROUTE_BOUNDARY,
+        )
+    } else {
+        (
+            "rejected",
+            "not selectable",
+            "none",
+            "Registered artifact is not supported by the Apple M4 dense SLM answer lane.",
+        )
+    };
+    let selectable_m4_answer = matches!(state, "default" | "supported");
+    let bitnet_contract_only = state == "blocked" && model.model_contract.is_some();
+    let recommended_fetch_headroom_bytes =
+        selectable_m4_answer.then(|| recommended_fetch_headroom_bytes(model.bytes));
+    let recommended_fetch_headroom =
+        recommended_fetch_headroom_bytes.map(|bytes| format_size(bytes, DECIMAL));
+    let fits_current_disk = recommended_fetch_headroom_bytes
+        .and_then(|required| available_bytes.map(|available| available >= required));
+    let disk_state = match fits_current_disk {
+        Some(true) => Some("enough-headroom".to_string()),
+        Some(false) => Some("low-headroom".to_string()),
+        None if selectable_m4_answer => Some("unknown".to_string()),
+        None => None,
+    };
+
+    AppleM4ModelRow {
+        id: model.id.to_string(),
+        display_name: model.display_name.to_string(),
+        state: state.to_string(),
+        cache_state: Some(cache_state_label(status).to_string()),
+        cache_path: Some(status.cache_path.clone()),
+        size_bytes: Some(model.bytes),
+        size: format_size(model.bytes, DECIMAL),
+        quantization: Some(model.quantization.to_string()),
+        tokenizer_authority: Some(format!(
+            "tokenizer.ggml.model={}, tokenizer.ggml.pre={}",
+            model.tokenizer_model, model.tokenizer_pre
+        )),
+        prompt_authority: Some(if model.chat_template {
+            QWEN_OR_CONTRACT_PROMPT_AUTHORITY
+                .iter()
+                .find_map(|(id, prompt)| (*id == model.id).then_some(*prompt))
+                .unwrap_or("chat_template")
+                .to_string()
+        } else {
+            "none".to_string()
+        }),
+        route: route.to_string(),
+        selection: selection.to_string(),
+        reason: reason.to_string(),
+        mac_ask_chat_enabled: selectable_m4_answer,
+        mac_serve_enabled: selectable_m4_answer,
+        proof_status: bitnet_contract_only
+            .then(|| "answer-corpus-proof-receipt-check-available-route-disabled".to_string()),
+        proof_command: bitnet_contract_only.then(apple_m4_bitnet_proof_command),
+        proof_receipt_path: bitnet_contract_only
+            .then(|| APPLE_M4_BITNET_PROOF_RECEIPT_PATH.to_string()),
+        recommended_fetch_headroom_bytes,
+        recommended_fetch_headroom,
+        fits_current_disk,
+        disk_state,
+        fetch_command: selectable_m4_answer
+            .then(|| model_command("fetch", model, Some(cache_root))),
+        verify_command: selectable_m4_answer
+            .then(|| model_command("verify", model, Some(cache_root))),
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_bitnet_proof_command() -> String {
+    format!(
+        "bitnet --device apple-m4-cpu-neon mac bitnet-proof --model {APPLE_M4_BITNET_PROOF_MODEL_PATH} --proof-receipt {APPLE_M4_BITNET_PROOF_RECEIPT_PATH} --strict"
+    )
+}
+
+#[cfg(feature = "full-cli")]
+const QWEN_OR_CONTRACT_PROMPT_AUTHORITY: &[(&str, &str)] = &[
+    ("qwen2.5-0.5b-instruct-q8_0", "qwen2.5"),
+    ("qwen2.5-0.5b-instruct-q4_k_m", "qwen2.5"),
+    ("qwen2.5-1.5b-instruct-q4_k_m", "qwen2.5"),
+    ("microsoft-bitnet-b1.58-2B-4T-i2s", "bitnetcpp-answer"),
+];
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_policy_rows() -> Vec<AppleM4ModelRow> {
+    APPLE_M4_POLICY_MODELS
+        .iter()
+        .map(|model| AppleM4ModelRow {
+            id: model.id.to_string(),
+            display_name: model.display_name.to_string(),
+            state: model.state.to_string(),
+            cache_state: None,
+            cache_path: None,
+            size_bytes: None,
+            size: "-".to_string(),
+            quantization: (model.quantization != "-").then(|| model.quantization.to_string()),
+            tokenizer_authority: None,
+            prompt_authority: None,
+            route: "none".to_string(),
+            selection: model.selection.to_string(),
+            reason: model.reason.to_string(),
+            mac_ask_chat_enabled: false,
+            mac_serve_enabled: false,
+            proof_status: None,
+            proof_command: None,
+            proof_receipt_path: None,
+            recommended_fetch_headroom_bytes: None,
+            recommended_fetch_headroom: None,
+            fits_current_disk: None,
+            disk_state: None,
+            fetch_command: None,
+            verify_command: None,
+        })
+        .collect()
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_disk_summary(cache_root: &Path) -> Result<AppleM4DiskSummary> {
+    let probe_path =
+        cache_root.ancestors().find(|path| path.exists()).unwrap_or_else(|| Path::new("."));
+    let available = available_bytes(probe_path);
+    let default_model = supported_model(M4_SLM_RUNTIME_MODEL_ID)?;
+    let supported_models: Vec<_> =
+        SUPPORTED_MODELS.iter().filter(|model| model.apple_m4_cpu_neon_supported).collect();
+    let smallest_model = supported_models
+        .iter()
+        .min_by_key(|model| model.bytes)
+        .copied()
+        .ok_or_else(|| anyhow!("Apple M4 model catalog has no supported dense models"))?;
+    let largest_model = supported_models
+        .iter()
+        .max_by_key(|model| model.bytes)
+        .copied()
+        .ok_or_else(|| anyhow!("Apple M4 model catalog has no supported dense models"))?;
+    let default_model_headroom = recommended_fetch_headroom_bytes(default_model.bytes);
+    let smallest_supported_headroom = recommended_fetch_headroom_bytes(smallest_model.bytes);
+    let largest_supported_headroom = recommended_fetch_headroom_bytes(largest_model.bytes);
+    let (recommended_first_model_id, recommendation) =
+        apple_m4_disk_recommendation(available, default_model, smallest_model, largest_model);
+
+    Ok(AppleM4DiskSummary {
+        probe_path: probe_path.to_path_buf(),
+        available_bytes: available,
+        available: available.map(|bytes| format_size(bytes, DECIMAL)),
+        default_model_headroom_bytes: default_model_headroom,
+        default_model_headroom: format_size(default_model_headroom, DECIMAL),
+        smallest_supported_headroom_bytes: smallest_supported_headroom,
+        smallest_supported_headroom: format_size(smallest_supported_headroom, DECIMAL),
+        largest_supported_headroom_bytes: largest_supported_headroom,
+        largest_supported_headroom: format_size(largest_supported_headroom, DECIMAL),
+        low_disk: available.map(|bytes| bytes < default_model_headroom),
+        recommended_first_model_id,
+        recommendation,
+        guidance: "When low_disk=true, run `bitnet model prune --all` or set BITNET_MODEL_CACHE_DIR / --cache-dir to a larger volume before fetching."
+            .to_string(),
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_disk_recommendation(
+    available: Option<u64>,
+    default_model: &SupportedModel,
+    smallest_model: &SupportedModel,
+    largest_model: &SupportedModel,
+) -> (Option<String>, String) {
+    let default_required = recommended_fetch_headroom_bytes(default_model.bytes);
+    let smallest_required = recommended_fetch_headroom_bytes(smallest_model.bytes);
+    let largest_required = recommended_fetch_headroom_bytes(largest_model.bytes);
+
+    let Some(available) = available else {
+        return (
+            Some(default_model.id.to_string()),
+            format!(
+                "Disk availability is unknown; start with the default `{}` and use `bitnet model verify` after fetch.",
+                default_model.id
+            ),
+        );
+    };
+
+    if available >= largest_required {
+        return (
+            Some(default_model.id.to_string()),
+            format!(
+                "Start with the default `{}`. Current headroom can also fetch explicit-only supported models such as `{}`.",
+                default_model.id, largest_model.id
+            ),
+        );
+    }
+
+    if available >= default_required {
+        return (
+            Some(default_model.id.to_string()),
+            format!(
+                "Start with the default `{}`. Larger explicit-only models may need pruning or a larger cache volume first.",
+                default_model.id
+            ),
+        );
+    }
+
+    if available >= smallest_required {
+        return (
+            Some(smallest_model.id.to_string()),
+            format!(
+                "Disk is tight for the default; fetch storage-conscious `{}` first or move the cache to a larger volume.",
+                smallest_model.id
+            ),
+        );
+    }
+
+    (
+        None,
+        "Disk headroom is below the smallest supported M4 model fetch envelope; prune cached models or set BITNET_MODEL_CACHE_DIR / --cache-dir before fetching."
+            .to_string(),
+    )
+}
+
+fn recommended_fetch_headroom_bytes(expected_bytes: u64) -> u64 {
+    expected_bytes.saturating_mul(2).saturating_add(LOW_DISK_HEADROOM_BYTES)
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_state_order(state: &str) -> u8 {
+    match state {
+        "default" => 0,
+        "supported" => 1,
+        "blocked" => 2,
+        "diagnostic-only" => 3,
+        "candidate" => 4,
+        "rejected" => 5,
+        _ => 6,
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_slm_supported_model(id: &str) -> Result<&'static SupportedModel> {
+    if let Some(model) = find_supported_model(id) {
+        if model.apple_m4_cpu_neon_supported {
+            return Ok(model);
+        }
+        let state = if model.model_contract.is_some() { "blocked" } else { "not selectable" };
+        anyhow::bail!(
+            "model `{}` is {state} for Apple M4 CPU/NEON local answers and cannot be used by `bitnet mac` answer commands. {}\nSelectable Apple M4 models: {}.\nUse `bitnet mac models` for cache/disk guidance. {}",
+            model.id,
+            model.support_note,
+            selectable_apple_m4_model_ids(),
+            APPLE_M4_BITNET_ROUTE_BOUNDARY
+        );
+    }
+
+    if let Some(policy) = find_apple_m4_policy_model(id) {
+        anyhow::bail!(
+            "model `{}` is {} for Apple M4 CPU/NEON local answers and is not selectable. {}\nSelectable Apple M4 models: {}.\nUse `bitnet mac models` for cache/disk guidance before fetching.",
+            policy.id,
+            policy.state,
+            policy.reason,
+            selectable_apple_m4_model_ids()
+        );
+    }
+
+    anyhow::bail!(
+        "unsupported Apple M4 model `{id}`. Selectable Apple M4 models: {}. Use `bitnet mac models` to inspect default/supported/blocked/candidate/rejected states.",
+        selectable_apple_m4_model_ids()
+    )
+}
+
+#[cfg(feature = "full-cli")]
+fn selectable_apple_m4_model_ids() -> String {
+    SUPPORTED_MODELS
+        .iter()
+        .filter(|model| model.apple_m4_cpu_neon_supported)
+        .map(|model| model.id)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+#[cfg(feature = "full-cli")]
+fn find_apple_m4_policy_model(id: &str) -> Option<&'static AppleM4PolicyModel> {
+    APPLE_M4_POLICY_MODELS.iter().find(|model| model.id.eq_ignore_ascii_case(id))
+}
+
 fn prune_models(
     id: Option<String>,
     all: bool,
@@ -1199,6 +1713,27 @@ fn cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> String {
             status.cache_path.display()
         ),
         _ => format!("Cache is ready. Optional check: `{verify}`."),
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> String {
+    let base = cache_repair_guidance(cache_root, status);
+    let models_command = format!("bitnet mac models --cache-dir {}", shellish_path(cache_root));
+    let disk_guidance = apple_m4_disk_summary(cache_root)
+        .map(|summary| summary.recommendation)
+        .unwrap_or_else(|_| {
+            "Disk availability could not be checked; inspect cache state before fetching."
+                .to_string()
+        });
+    if cache_state_label(status) == "missing" {
+        format!(
+            "{base} First-run model selection: run `{models_command}` to inspect default/supported/blocked model states and disk headroom. Disk guidance: {disk_guidance}"
+        )
+    } else {
+        format!(
+            "{base} Inspect current Mac model/cache/disk state with `{models_command}`. Disk guidance: {disk_guidance}"
+        )
     }
 }
 
@@ -1518,7 +2053,7 @@ fn warn_if_low_disk(cache_root: &Path, expected_bytes: u64) {
     let Some(available) = available_bytes(parent) else {
         return;
     };
-    let recommended = expected_bytes.saturating_mul(2).saturating_add(LOW_DISK_HEADROOM_BYTES);
+    let recommended = recommended_fetch_headroom_bytes(expected_bytes);
     if available < recommended {
         eprintln!(
             "warning: low disk headroom for model fetch: available={}, recommended>={}",
@@ -1593,6 +2128,32 @@ mod tests {
 
         assert_eq!(by_alias.id, "microsoft-bitnet-b1.58-2B-4T-i2s");
         assert_eq!(by_case.id, "microsoft-bitnet-b1.58-2B-4T-i2s");
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn apple_m4_slm_supported_model_rejects_blocked_bitnet_artifact() {
+        let error = apple_m4_slm_supported_model("microsoft-bitnet-b1.58-2B-4T-i2s")
+            .expect_err("blocked BitNet artifact");
+        let message = error.to_string();
+
+        assert!(message.contains("blocked for Apple M4 CPU/NEON local answers"));
+        assert!(message.contains("MODEL-ARTIFACT-007"));
+        assert!(message.contains("M4-QA-001"));
+        assert!(message.contains("bitnet mac models"));
+        assert!(message.contains("qwen2.5-0.5b-instruct-q8_0"));
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn apple_m4_slm_supported_model_rejects_policy_only_rows() {
+        let error =
+            apple_m4_slm_supported_model("qwen3-0.6b-q8_0").expect_err("diagnostic-only model");
+        let message = error.to_string();
+
+        assert!(message.contains("diagnostic-only"));
+        assert!(message.contains("not selectable"));
+        assert!(message.contains("bitnet mac models"));
     }
 
     #[test]
@@ -1691,6 +2252,143 @@ mod tests {
         assert_eq!(model.tokenizer_pre, "qwen2");
         assert_eq!(model.quantization, "Q4_K_M");
         assert!(model.support_note.contains("non-default"));
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn apple_m4_disk_recommendation_prefers_default_when_headroom_is_good()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let default = supported_model("qwen2.5-0.5b-instruct-q8_0")?;
+        let smallest = supported_model("qwen2.5-0.5b-instruct-q4_k_m")?;
+        let largest = supported_model("qwen2.5-1.5b-instruct-q4_k_m")?;
+        let available = recommended_fetch_headroom_bytes(largest.bytes);
+
+        let (recommended, guidance) =
+            apple_m4_disk_recommendation(Some(available), default, smallest, largest);
+
+        assert_eq!(recommended.as_deref(), Some(default.id));
+        assert!(guidance.contains(largest.id));
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn apple_m4_disk_recommendation_suggests_q4_when_default_headroom_is_tight()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let default = supported_model("qwen2.5-0.5b-instruct-q8_0")?;
+        let smallest = supported_model("qwen2.5-0.5b-instruct-q4_k_m")?;
+        let largest = supported_model("qwen2.5-1.5b-instruct-q4_k_m")?;
+        let available = recommended_fetch_headroom_bytes(smallest.bytes);
+
+        let (recommended, guidance) =
+            apple_m4_disk_recommendation(Some(available), default, smallest, largest);
+
+        assert_eq!(recommended.as_deref(), Some(smallest.id));
+        assert!(guidance.contains("storage-conscious"));
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn apple_m4_disk_recommendation_blocks_fetch_when_headroom_is_too_low()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let default = supported_model("qwen2.5-0.5b-instruct-q8_0")?;
+        let smallest = supported_model("qwen2.5-0.5b-instruct-q4_k_m")?;
+        let largest = supported_model("qwen2.5-1.5b-instruct-q4_k_m")?;
+        let available = recommended_fetch_headroom_bytes(smallest.bytes).saturating_sub(1);
+
+        let (recommended, guidance) =
+            apple_m4_disk_recommendation(Some(available), default, smallest, largest);
+
+        assert!(recommended.is_none());
+        assert!(guidance.contains("below the smallest supported M4 model"));
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn apple_m4_model_next_step_prints_recommended_fetch_and_verify()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let cache_root = PathBuf::from("/tmp/bitnet-cache");
+        let default = supported_model("qwen2.5-0.5b-instruct-q8_0")?;
+        let disk = AppleM4DiskSummary {
+            probe_path: cache_root.clone(),
+            available_bytes: Some(recommended_fetch_headroom_bytes(default.bytes)),
+            available: Some("2.43 GB".to_string()),
+            default_model_headroom_bytes: recommended_fetch_headroom_bytes(default.bytes),
+            default_model_headroom: "2.43 GB".to_string(),
+            smallest_supported_headroom_bytes: recommended_fetch_headroom_bytes(default.bytes),
+            smallest_supported_headroom: "2.43 GB".to_string(),
+            largest_supported_headroom_bytes: recommended_fetch_headroom_bytes(default.bytes),
+            largest_supported_headroom: "2.43 GB".to_string(),
+            low_disk: Some(false),
+            recommended_first_model_id: Some(default.id.to_string()),
+            recommendation: "start with default".to_string(),
+            guidance: "test guidance".to_string(),
+        };
+        let status = CacheStatus {
+            model: *default,
+            cache_path: model_path(&cache_root, default),
+            metadata_path: metadata_path(&cache_root, default),
+            present: false,
+            cached: false,
+            size_matches: false,
+            metadata_present: false,
+            verified: None,
+        };
+        let row = apple_m4_registered_model_row(&cache_root, &status, disk.available_bytes);
+        let catalog = AppleM4ModelCatalog {
+            cache_root,
+            default_model_id: M4_SLM_RUNTIME_MODEL_ID,
+            disk,
+            claim_boundary: "test",
+            rows: vec![row],
+        };
+
+        let next = apple_m4_model_next_step(&catalog);
+
+        assert!(
+            next.contains("Next fetch: bitnet model fetch qwen2.5-0.5b-instruct-q8_0 --cache-dir")
+        );
+        assert!(
+            next.contains(
+                "Next verify: bitnet model verify qwen2.5-0.5b-instruct-q8_0 --cache-dir"
+            )
+        );
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn apple_m4_model_next_step_blocks_fetch_when_disk_is_too_low() {
+        let cache_root = PathBuf::from("/tmp/bitnet-cache");
+        let disk = AppleM4DiskSummary {
+            probe_path: cache_root.clone(),
+            available_bytes: Some(1),
+            available: Some("1 B".to_string()),
+            default_model_headroom_bytes: 2,
+            default_model_headroom: "2 B".to_string(),
+            smallest_supported_headroom_bytes: 2,
+            smallest_supported_headroom: "2 B".to_string(),
+            largest_supported_headroom_bytes: 2,
+            largest_supported_headroom: "2 B".to_string(),
+            low_disk: Some(true),
+            recommended_first_model_id: None,
+            recommendation: "too low".to_string(),
+            guidance: "test guidance".to_string(),
+        };
+        let catalog = AppleM4ModelCatalog {
+            cache_root,
+            default_model_id: M4_SLM_RUNTIME_MODEL_ID,
+            disk,
+            claim_boundary: "test",
+            rows: Vec::new(),
+        };
+
+        let next = apple_m4_model_next_step(&catalog);
+
+        assert!(next.contains("no supported model has enough disk headroom"));
+        assert!(!next.contains("bitnet model fetch"));
     }
 
     #[test]
@@ -1885,9 +2583,9 @@ mod tests {
     }
 
     #[test]
-    fn cache_state_distinguishes_bad_hash_from_ready() {
+    fn cache_state_distinguishes_bad_hash_from_ready() -> Result<(), Box<dyn std::error::Error>> {
         let root = PathBuf::from("/tmp/bitnet-cache");
-        let model = *supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
+        let model = *supported_model("qwen2.5-0.5b-instruct-q8_0")?;
         let status = CacheStatus {
             model,
             cache_path: model_path(&root, &model),
@@ -1904,6 +2602,7 @@ mod tests {
         let guidance = cache_repair_guidance(&root, &status);
         assert!(guidance.contains("bitnet model prune qwen2.5-0.5b-instruct-q8_0"));
         assert!(guidance.contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+        Ok(())
     }
 
     #[test]
@@ -1927,5 +2626,30 @@ mod tests {
             cache_repair_guidance(&root, &status)
                 .contains("bitnet model verify qwen2.5-0.5b-instruct-q8_0")
         );
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn apple_m4_cache_repair_guidance_adds_first_run_model_selection() {
+        let root = PathBuf::from("/tmp/bitnet-cache");
+        let model = *supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
+        let status = CacheStatus {
+            model,
+            cache_path: model_path(&root, &model),
+            metadata_path: metadata_path(&root, &model),
+            present: false,
+            cached: false,
+            size_matches: false,
+            metadata_present: false,
+            verified: None,
+        };
+
+        let guidance = apple_m4_cache_repair_guidance(&root, &status);
+
+        assert!(guidance.contains("First run"));
+        assert!(guidance.contains("First-run model selection"));
+        assert!(guidance.contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+        assert!(guidance.contains("bitnet mac models --cache-dir /tmp/bitnet-cache"));
+        assert!(guidance.contains("Disk guidance:"));
     }
 }

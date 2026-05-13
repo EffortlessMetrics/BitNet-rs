@@ -10,12 +10,34 @@ supported dense Qwen model family.
 Primary commands:
 
 ```bash
+bitnet mac models
 bitnet mac ask "What is 2+2?"
 bitnet mac chat
 bitnet mac smoke
 bitnet mac doctor
 bitnet mac regression <receipt.json> --baseline <baseline.json>
 ```
+
+`bitnet mac models` is the operator-facing model-selection view. It lists the
+default model, supported explicit-only dense models, cache state, blocked BitNet
+rows, candidate/rejected rows, and disk-headroom guidance without downloading
+artifacts. The text view also prints exact `Next fetch` and `Next verify`
+commands for the recommended first supported model when disk headroom is
+adequate. Blocked BitNet rows include a receipt-only proof bridge command for
+validating a strict `answer-corpus` proof receipt; that bridge does not make
+BitNet selectable through `bitnet mac ask`, `bitnet mac chat`, or
+`bitnet mac serve`.
+If a blocked, diagnostic-only, candidate, rejected, or unknown model ID is passed
+to `bitnet mac ask`, `chat`, `check`, `smoke`, `doctor`, `validate`, or `serve`,
+the wrapper fails before cache repair guidance and points back to
+`bitnet mac models`.
+When `bitnet mac ask` starts with a verified model, it prints a compact stderr
+summary covering model ID, quantization, cache root, backend, fallback status,
+receipt path, and short SHA before generation begins.
+First-run missing-cache failures include both the exact `bitnet model fetch`
+repair command and a `bitnet mac models --cache-dir ...` command with current
+disk guidance, so low-space operators can choose the right supported model
+before fetching.
 
 The default model remains:
 

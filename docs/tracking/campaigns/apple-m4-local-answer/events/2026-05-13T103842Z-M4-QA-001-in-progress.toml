@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T10:38:42Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "blocked"
+new_status = "in_progress"
+
+notes = [
+  "The release-built Apple M4 CPU/NEON full shared BitNet answer corpus passed all five committed cases with the accepted Microsoft I2_S GGUF, external Microsoft tokenizer, bitnetcpp-answer prompt authority, selected_backend=apple-m4-cpu-neon, and fallback_used=false.",
+  "Durable aggregate receipt: ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release.json.",
+  "The older Apple-specific sentence corpus produced coherent text but failed only the previous generated_tokens>=16 minimum after stopping correctly at EOS; M4-QA-001 now follows the shared answer-ready corpus gate and keeps broader UX enablement out of scope.",
+  "Do not claim full Metal inference, QK256 Apple support, Neural Engine execution, broad performance, or BitNet availability through bitnet mac ask/chat from this proof.",
+]

@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T10:04:06Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-MODEL-002"
+event = "merged"
+actor = "codex"
+merge_sha = "e9dcdaa37fb6dfa3700bc506b48311bcb9f3676c"
+previous_status = "blocked"
+new_status = "merged"
+
+notes = [
+  "M4-QA-MODEL-002 is satisfied by the shared MODEL-ARTIFACT-007 gate: the official Microsoft I2_S GGUF is answer_ready for backend gates when paired with external Microsoft tokenizer/pre-tokenizer authority and the bitnetcpp-answer prompt envelope.",
+  "This only unblocks strict Apple M4 CPU/NEON proof attempts; it does not claim Apple M4 local-answer success, QK256 Apple support, Metal inference, Neural Engine execution, or performance.",
+  "M4-QA-001 remains blocked until a strict Apple M4 CPU/NEON run produces coherent generated text, token IDs, fallback=false, timing, and receipt evidence.",
+]

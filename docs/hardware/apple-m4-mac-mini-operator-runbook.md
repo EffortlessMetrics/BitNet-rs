@@ -325,6 +325,42 @@ This proves only the recorded kernel or phase. It does not prove full model
 inference, QK256 on Metal, MPSGraph execution, Neural Engine execution, or
 general performance.
 
+## Local-Answer Metal Routing Decision
+
+`M4-QA-005` does not enable a Metal route today. The operator local-answer path
+remains `apple-m4-cpu-neon` until the CPU/NEON answer proof, greedy
+determinism, and receipt-quality gates have landed together.
+
+The first eligible Metal contribution is a prefill projection fixture, not a
+full decode loop:
+
+```text
+answer_ready BitNet I2_S artifact
+-> CPU/NEON greedy reference run
+-> tiny_metal_i2s_prefill_contribution fixture
+-> CPU/Metal phase parity
+-> second CPU/NEON greedy reference run
+-> unchanged generated token IDs and decoded text
+```
+
+The receipt for any later local-answer Metal contribution must show:
+
+```text
+requested_backend = apple-m4-metal
+selected_backend = apple-m4-metal
+runtime_api = metal
+fallback_used = false
+phase_scope = prefill_projection_fixture
+full_autoregressive_decode = false
+full_metal_inference_claimed = false
+speedup_claim = false
+cpu_reference_tokens_match = true
+```
+
+If the Metal contribution falls back to CPU, changes greedy token IDs, omits the
+phase scope, or lacks a CPU reference receipt, do not count it as M4 local-answer
+Metal routing. Keep the user-facing command on `apple-m4-cpu-neon`.
+
 ## Failure Modes
 
 | Symptom | Meaning | Operator action |
@@ -388,19 +424,45 @@ runner against the Apple M4 CPU/NEON lane:
 cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
   --device apple-m4-cpu-neon \
   answer-corpus \
-  --corpus ci/quality/apple-m4-local-answer-corpus.yaml \
+  --corpus ci/quality/bitnet-answer-corpus.yaml \
   --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
-  --json-out ci/hardware/apple-m4-mac-mini/2026-05-07/local-answer-corpus.json \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  --per-prompt-timeout-seconds 900 \
+  --json-out ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json \
   --fail-on-quality
 ```
 
-This command exercises the real `bitnet run` surface for each prompt. It is a
-CPU/NEON local-answer smoke, not a Metal inference claim.
+This command exercises the real `bitnet run` surface for each prompt using the
+shared `MODEL-ARTIFACT-007` answer-ready artifact authority. It is a CPU/NEON
+local-answer smoke, not a Metal inference claim or a `bitnet mac ask/chat`
+availability claim.
+
+The aggregate receipt must keep that boundary explicit: `model.sha256`,
+`model.answer_ready_artifact_available`, `tokenizer.authority`,
+`backend.fallback_used`, `claim_boundary.backend_quality_gate_passed`, and
+`claim_boundary.diagnostic_only_until_answer_ready_artifact` are the quick
+receipt-quality fields to inspect before citing the run.
+
+After the corpus receipt exists, bridge it into the Mac operator surface with a
+receipt-only check:
+
+```bash
+bitnet mac bitnet-proof \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --proof-receipt ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json \
+  --strict \
+  --json-out ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/mac-bitnet-proof-receipt-check.json
+```
+
+This validates the strict Apple M4 BitNet answer-corpus receipt, including
+case-level backend/fallback, token IDs, tokenizer authority, prompt-prefill, and
+timing fields. It still does not make BitNet selectable through `bitnet mac ask`,
+`bitnet mac chat`, or `bitnet mac serve`.
 
 If this command fails the content gate with non-empty but incoherent text, treat
-that as a real inference-quality blocker. Do not relax the answer gates or count
-the run as a local-answer proof; compare the same model, tokenizer, prompt
-template, and greedy settings against bitnet.cpp/reference behavior first.
+that as a real inference-quality blocker. Do not count the run as a local-answer
+proof; compare the same model, tokenizer, prompt template, and greedy settings
+against the Microsoft BitNet.cpp reference evidence first.
 
 Recommended next campaign ID:
 

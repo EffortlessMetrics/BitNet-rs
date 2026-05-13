@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T12:39:43Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-004"
+event = "closeout"
+actor = "codex"
+previous_status = "proposed"
+new_status = "proposed"
+
+notes = [
+  "Extended strict local-answer failure-mode coverage so answer-corpus child receipt checks reject speedup, full Metal inference, or broad-performance acceleration claims through the speedup_claim_false rule.",
+  "Added an explicit unsupported Apple MPSGraph answer-corpus test alongside the existing unsupported Apple Metal local-answer rejection.",
+  "Updated M4-QA-004 commands to include the focused answer_corpus_ CLI tests and answer_receipt_ receipt-rule tests.",
+  "This is local M4-QA-004 evidence only; M4-QA-004 remains proposed/stack-blocked until M4-QA-001 lands and does not add any backend capability.",
+]

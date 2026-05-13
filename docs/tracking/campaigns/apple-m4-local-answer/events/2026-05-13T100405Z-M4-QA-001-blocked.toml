@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T10:04:05Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-001"
+event = "blocked"
+actor = "codex"
+previous_status = "blocked"
+new_status = "blocked"
+
+notes = [
+  "The shared MODEL-ARTIFACT-007 answer-ready artifact authority is available, so the remaining blocker is no longer M4-QA-MODEL-002.",
+  "A local Apple M4 dry-run of `bitnet answer-corpus --device apple-m4-cpu-neon --corpus ci/quality/bitnet-answer-corpus.yaml --case-id math_2_plus_2` wrote a receipt skeleton with selected_backend=apple-m4-cpu-neon and fallback_used=false.",
+  "The first real debug-built math_2_plus_2 run used the accepted GGUF SHA and external tokenizer SHA but timed out after 300 seconds during prompt_prefill_start before any child receipt or generated token was observed.",
+  "Do not claim Apple M4 BitNet coherent local answers; the next proof attempt should use a release build and preserve timeout/pre-fill evidence if it still fails.",
+]

@@ -3,7 +3,7 @@
 use crate::planner_receipts;
 use anyhow::{Context, Result};
 use clap::{Args, ValueEnum};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     collections::BTreeSet,
@@ -17,6 +17,69 @@ use std::{
 };
 
 const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+const ANSWER_RECEIPT_REQUIRED_CASE_FIELDS: &[&str] = &[
+    "text",
+    "tokens.prompt",
+    "tokens.generated",
+    "tokens.total",
+    "tokens.prompt_ids",
+    "tokens.generated_ids",
+    "model.repo",
+    "model.file",
+    "model.sha256",
+    "model.family",
+    "model.architecture",
+    "tokenizer.source",
+    "tokenizer.strict",
+    "tokenizer.pretokenizer_authority",
+    "requested_backend",
+    "selected_backend",
+    "runtime_api",
+    "fallback_used",
+    "loader.mode",
+    "kernel.kernel_id",
+    "timing.model_load_ms",
+    "timing.tokenizer_load_ms",
+    "timing.tokenize_ms",
+    "timing.prefill_ms",
+    "timing.first_token_ms",
+    "timing.decode_total_ms",
+    "latency.total_ms",
+];
+const ANSWER_RECEIPT_CHECKED_RULES: &[&str] = &[
+    "generated_text_recorded",
+    "prompt_token_count_recorded",
+    "generated_token_count_recorded",
+    "total_token_count_recorded",
+    "prompt_token_ids_recorded",
+    "generated_token_ids_recorded",
+    "prompt_token_count_matches_ids",
+    "generated_token_count_matches_ids",
+    "total_token_count_matches",
+    "model_repo_recorded",
+    "model_file_recorded",
+    "model_sha256_recorded",
+    "model_family_recorded",
+    "model_architecture_recorded",
+    "tokenizer_source_recorded",
+    "tokenizer_strict",
+    "tokenizer_pretokenizer_authority_recorded",
+    "requested_backend",
+    "selected_backend",
+    "runtime_api",
+    "fallback_false",
+    "speedup_claim_false",
+    "loader_real_gguf",
+    "selected_kernel_recorded",
+    "selected_kernel_production",
+    "timing_model_load_ms_recorded",
+    "timing_tokenizer_load_ms_recorded",
+    "timing_tokenize_ms_recorded",
+    "timing_prefill_ms_recorded",
+    "timing_first_token_ms_recorded",
+    "timing_decode_total_ms_recorded",
+    "latency_total_ms_recorded",
+];
 
 /// Run the fixed answer corpus through the existing `bitnet run` surface.
 #[derive(Args, Debug)]
@@ -124,6 +187,9 @@ impl AnswerCorpusCommand {
             self.per_prompt_timeout_seconds,
             corpus.defaults.per_prompt_timeout_seconds,
         );
+        if !self.dry_run {
+            validate_answer_corpus_inputs(self, &corpus)?;
+        }
 
         let receipt_dir = self
             .json_out
@@ -182,7 +248,7 @@ impl AnswerCorpusCommand {
             .unwrap_or_else(|| answer_corpus_runtime_api(&device))
             .to_string();
         let top_level_fallback_used =
-            rows.iter().any(|row| row["backend"]["fallback_used"].as_bool().unwrap_or(true));
+            rows.iter().any(|row| row["backend"]["fallback_used"].as_bool().unwrap_or(false));
         let top_level_model_family =
             corpus.model.family.as_deref().unwrap_or("unknown").to_string();
         let top_level_model_architecture =
@@ -198,6 +264,12 @@ impl AnswerCorpusCommand {
                 .to_string();
         let top_level_backend_lane =
             answer_corpus_backend_lane(&device, slm_answer_path, &top_level_model_family);
+        let answer_ready_artifact_available = corpus_answer_ready_artifact_available(&corpus.model);
+        let backend_quality_gate_passed =
+            total > 0 && passed == total && failed == 0 && timed_out == 0 && not_run == 0;
+        let bitnet_answer_path = corpus.artifact_kind == "bitnet_answer_corpus";
+        let coherent_answer_claimed =
+            bitnet_answer_path && answer_ready_artifact_available && backend_quality_gate_passed;
 
         let receipt = json!({
             "schema_version": "1.0.0",
@@ -234,6 +306,14 @@ impl AnswerCorpusCommand {
                 "fallback_loader_used": false,
                 "tokenizer": aggregate_tokenizer,
                 "tokenizer_path": self.tokenizer.as_ref().map(|path| path.display().to_string()),
+                "answer_ready_artifact_available": answer_ready_artifact_available,
+                "answer_ready": corpus.model.answer_ready,
+            },
+            "tokenizer": {
+                "source": aggregate_tokenizer,
+                "path": self.tokenizer.as_ref().map(|path| path.display().to_string()),
+                "strict": corpus.defaults.strict_loader,
+                "authority": corpus.model.tokenizer_authority,
             },
             "backend": {
                 "requested_backend": device.as_str(),
@@ -267,13 +347,23 @@ impl AnswerCorpusCommand {
                 "timeout": timed_out,
                 "not_run": not_run,
             },
+            "receipt_quality": {
+                "case_receipt_checker": "answer_receipt_failed_rules",
+                "checked": !self.dry_run,
+                "required_case_fields": answer_receipt_required_case_fields(),
+                "checked_rules": answer_receipt_checked_rules(),
+            },
             "claim_boundary": {
                 "slm_answer_path": slm_answer_path,
                 "bounded_slm_answer_smoke_passed": bounded_slm_answer_smoke_passed,
                 "dense_slm_clean_provenance": dense_slm_clean_provenance,
                 "local_answer_path": device.as_str() == "apple-m4-cpu-neon",
-                "diagnostic_only_until_answer_ready_artifact": !bounded_slm_answer_smoke_passed,
-                "coherent_answer_claimed": false,
+                "answer_ready_artifact_available": answer_ready_artifact_available,
+                "backend_quality_gate_passed": backend_quality_gate_passed,
+                "diagnostic_only_until_answer_ready_artifact": (bitnet_answer_path && !answer_ready_artifact_available)
+                    || (slm_answer_path && !bounded_slm_answer_smoke_passed),
+                "coherent_output_observed": coherent_answer_claimed,
+                "coherent_answer_claimed": coherent_answer_claimed,
                 "cuda_answer_corpus": is_cuda_answer_corpus_device(&device),
                 "strict_cuda_answer_claimed": false,
                 "full_metal_inference_claimed": false,
@@ -486,6 +576,9 @@ impl AnswerCorpusCommand {
                 "runtime_api": run_receipt["runtime_api"].clone(),
                 "fallback_used": run_receipt["fallback_used"].clone(),
             },
+            "timing": run_receipt.get("timing").cloned().unwrap_or(Value::Null),
+            "latency": run_receipt.get("latency").cloned().unwrap_or(Value::Null),
+            "throughput": run_receipt.get("throughput").cloned().unwrap_or(Value::Null),
             "execution_plan": run_receipt.get("execution_plan").cloned().unwrap_or(Value::Null),
             "kernel": {
                 "selected_kernel": run_receipt["kernel"]["kernel_id"].clone(),
@@ -577,6 +670,27 @@ struct CorpusModel {
     architecture: Option<String>,
     #[serde(default)]
     quant_format: Option<String>,
+    #[serde(default)]
+    answer_ready: Option<CorpusAnswerReady>,
+    #[serde(default)]
+    tokenizer_authority: Option<CorpusTokenizerAuthority>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct CorpusAnswerReady {
+    state: String,
+    gate: Option<String>,
+    manifest: Option<String>,
+    evidence: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct CorpusTokenizerAuthority {
+    source: String,
+    repo: Option<String>,
+    revision: Option<String>,
+    sha256: Option<String>,
+    ggml_pre: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -673,6 +787,45 @@ fn aggregate_case_str<'a>(rows: &'a [Value], path: &[&str]) -> Option<&'a str> {
     })
 }
 
+fn validate_answer_corpus_inputs(
+    command: &AnswerCorpusCommand,
+    corpus: &AnswerCorpus,
+) -> Result<()> {
+    if !command.model.exists() {
+        anyhow::bail!(
+            "answer-corpus model not found: {}. Strict local-answer proof requires a real model path; hidden fallback is not allowed. Use --dry-run to validate corpus shape without loading a model.",
+            command.model.display()
+        );
+    }
+
+    let requires_external_tokenizer = corpus
+        .model
+        .tokenizer_authority
+        .as_ref()
+        .is_some_and(|authority| authority.source == "external_tokenizer_json");
+
+    if let Some(tokenizer) = &command.tokenizer {
+        if !tokenizer.exists() {
+            anyhow::bail!(
+                "answer-corpus tokenizer not found: {}. Corpus `{}` requires strict tokenizer authority; hidden tokenizer fallback is not allowed.",
+                tokenizer.display(),
+                corpus.name
+            );
+        }
+    } else if requires_external_tokenizer {
+        anyhow::bail!(
+            "answer-corpus requires --tokenizer for corpus `{}` because tokenizer authority source is external_tokenizer_json; hidden tokenizer fallback is not allowed.",
+            corpus.name
+        );
+    }
+
+    Ok(())
+}
+
+fn corpus_answer_ready_artifact_available(model: &CorpusModel) -> bool {
+    model.answer_ready.as_ref().is_some_and(|authority| authority.state == "answer_ready")
+}
+
 fn prompt_prefill_receipt(run_receipt: &Value) -> Value {
     let prompt_token_count = run_receipt["tokens"]["prompt"].as_u64().unwrap_or_else(|| {
         run_receipt["tokens"]["prompt_ids"]
@@ -763,6 +916,28 @@ fn evaluate_quality(
 
 fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> Vec<String> {
     let mut failed = Vec::new();
+    let generated_text = run_receipt["text"].as_str().unwrap_or_default();
+    if generated_text.is_empty() {
+        failed.push("generated_text_recorded".to_string());
+    }
+
+    if !non_empty_str_at(run_receipt, &["model", "repo"]) {
+        failed.push("model_repo_recorded".to_string());
+    }
+    if !non_empty_str_at(run_receipt, &["model", "file"]) {
+        failed.push("model_file_recorded".to_string());
+    }
+    let model_sha256 = run_receipt["model"]["sha256"].as_str().unwrap_or_default();
+    if !is_sha256_hex(model_sha256) {
+        failed.push("model_sha256_recorded".to_string());
+    }
+    if !non_empty_str_at(run_receipt, &["model", "family"]) {
+        failed.push("model_family_recorded".to_string());
+    }
+    if !non_empty_str_at(run_receipt, &["model", "architecture"]) {
+        failed.push("model_architecture_recorded".to_string());
+    }
+
     let requested_backend = run_receipt["requested_backend"].as_str().unwrap_or_default();
     let selected_backend = run_receipt["selected_backend"].as_str().unwrap_or_default();
     let runtime_api = run_receipt["runtime_api"].as_str().unwrap_or_default();
@@ -787,6 +962,17 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
     if fallback_used {
         failed.push("fallback_false".to_string());
     }
+    if truthy_bool_at_any(
+        run_receipt,
+        &[
+            &["speedup_claim"][..],
+            &["claim_boundary", "speedup_claim"][..],
+            &["claim_boundary", "full_metal_inference_claimed"][..],
+            &["claim_boundary", "broad_performance_claimed"][..],
+        ],
+    ) {
+        failed.push("speedup_claim_false".to_string());
+    }
 
     let loader_mode = run_receipt["loader"]["mode"]
         .as_str()
@@ -803,6 +989,13 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
     }
     if !tokenizer_strict {
         failed.push("tokenizer_strict".to_string());
+    }
+    let pretokenizer_authority =
+        run_receipt["tokenizer"]["pretokenizer_authority"].as_str().unwrap_or_default();
+    if pretokenizer_authority.is_empty()
+        || matches!(pretokenizer_authority, "unknown" | "defaulted")
+    {
+        failed.push("tokenizer_pretokenizer_authority_recorded".to_string());
     }
 
     let selected_kernel = run_receipt["kernel"]["kernel_id"].as_str().unwrap_or_default();
@@ -870,11 +1063,55 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
         );
     }
 
-    if !run_receipt["tokens"]["prompt_ids"].is_array() {
+    let prompt_count = u64_at(run_receipt, &["tokens", "prompt"]);
+    let generated_count = u64_at(run_receipt, &["tokens", "generated"]);
+    let total_count = u64_at(run_receipt, &["tokens", "total"]);
+    let prompt_ids = run_receipt["tokens"]["prompt_ids"].as_array();
+    let generated_ids = run_receipt["tokens"]["generated_ids"].as_array();
+    if prompt_count.is_none() {
+        failed.push("prompt_token_count_recorded".to_string());
+    }
+    if generated_count.is_none() {
+        failed.push("generated_token_count_recorded".to_string());
+    }
+    if total_count.is_none() {
+        failed.push("total_token_count_recorded".to_string());
+    }
+    if prompt_ids.is_none() {
         failed.push("prompt_token_ids_recorded".to_string());
     }
-    if generated_token_ids(run_receipt).is_empty() {
+    if generated_ids.is_none_or(Vec::is_empty) {
         failed.push("generated_token_ids_recorded".to_string());
+    }
+    if let (Some(count), Some(ids)) = (prompt_count, prompt_ids)
+        && count != ids.len() as u64
+    {
+        failed.push("prompt_token_count_matches_ids".to_string());
+    }
+    if let (Some(count), Some(ids)) = (generated_count, generated_ids)
+        && count != ids.len() as u64
+    {
+        failed.push("generated_token_count_matches_ids".to_string());
+    }
+    if let (Some(total), Some(prompt), Some(generated)) =
+        (total_count, prompt_count, generated_count)
+        && total != prompt + generated
+    {
+        failed.push("total_token_count_matches".to_string());
+    }
+
+    for (path, rule) in [
+        (&["timing", "model_load_ms"][..], "timing_model_load_ms_recorded"),
+        (&["timing", "tokenizer_load_ms"][..], "timing_tokenizer_load_ms_recorded"),
+        (&["timing", "tokenize_ms"][..], "timing_tokenize_ms_recorded"),
+        (&["timing", "prefill_ms"][..], "timing_prefill_ms_recorded"),
+        (&["timing", "first_token_ms"][..], "timing_first_token_ms_recorded"),
+        (&["timing", "decode_total_ms"][..], "timing_decode_total_ms_recorded"),
+        (&["latency", "total_ms"][..], "latency_total_ms_recorded"),
+    ] {
+        if !number_at(run_receipt, path) {
+            failed.push(rule.to_string());
+        }
     }
     failed
 }
@@ -893,6 +1130,42 @@ fn json_contains_bitnet_dense_forbidden(value: &Value) -> bool {
         }),
         _ => false,
     }
+}
+
+fn answer_receipt_required_case_fields() -> &'static [&'static str] {
+    ANSWER_RECEIPT_REQUIRED_CASE_FIELDS
+}
+
+fn answer_receipt_checked_rules() -> &'static [&'static str] {
+    ANSWER_RECEIPT_CHECKED_RULES
+}
+
+fn non_empty_str_at(value: &Value, path: &[&str]) -> bool {
+    value_at(value, path).and_then(Value::as_str).is_some_and(|text| !text.is_empty())
+}
+
+fn number_at(value: &Value, path: &[&str]) -> bool {
+    value_at(value, path).is_some_and(Value::is_number)
+}
+
+fn u64_at(value: &Value, path: &[&str]) -> Option<u64> {
+    value_at(value, path).and_then(Value::as_u64)
+}
+
+fn truthy_bool_at_any(value: &Value, paths: &[&[&str]]) -> bool {
+    paths.iter().any(|path| value_at(value, path).and_then(Value::as_bool) == Some(true))
+}
+
+fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
+    let mut current = value;
+    for key in path {
+        current = current.get(*key)?;
+    }
+    Some(current)
+}
+
+fn is_sha256_hex(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn aggregate_execution_plan(rows: &[Value], device: &str) -> Value {
@@ -1328,21 +1601,57 @@ mod tests {
         assert_eq!(answer_corpus_backend_lane("cpu", true, "qwen"), "dense_slm_cpu");
     }
 
-    #[test]
-    fn cpu_answer_receipt_accepts_strict_cpu_truth() {
-        let receipt = json!({
-            "requested_backend": "cpu",
-            "selected_backend": "cpu-rust",
-            "runtime_api": "cpu",
+    fn strict_answer_receipt_fixture(
+        requested_backend: &str,
+        selected_backend: &str,
+        runtime_api: &str,
+        kernel_id: &str,
+    ) -> Value {
+        json!({
+            "text": " 4",
+            "requested_backend": requested_backend,
+            "selected_backend": selected_backend,
+            "runtime_api": runtime_api,
             "fallback_used": false,
             "loader": { "mode": "real_gguf" },
-            "tokenizer": { "source": "gguf_metadata", "strict": true },
-            "kernel": { "kernel_id": "i2_s-avx2-reference" },
+            "tokenizer": {
+                "source": "explicit",
+                "strict": true,
+                "pretokenizer_authority": "llama-bpe"
+            },
+            "kernel": { "kernel_id": kernel_id },
             "tokens": {
+                "prompt": 3,
+                "generated": 1,
+                "total": 4,
                 "prompt_ids": [1, 2, 3],
                 "generated_ids": [4]
+            },
+            "model": {
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "file": "ggml-model-i2_s.gguf",
+                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "family": "bitnet",
+                "architecture": "bitnet_b1_58"
+            },
+            "timing": {
+                "model_load_ms": 1.0,
+                "tokenizer_load_ms": 1.0,
+                "tokenize_ms": 1.0,
+                "prefill_ms": 1.0,
+                "first_token_ms": 1,
+                "decode_total_ms": 1.0
+            },
+            "latency": {
+                "total_ms": 2
             }
-        });
+        })
+    }
+
+    #[test]
+    fn cpu_answer_receipt_accepts_strict_cpu_truth() {
+        let receipt =
+            strict_answer_receipt_fixture("cpu", "cpu-rust", "cpu", "i2_s-avx2-reference");
 
         assert!(answer_receipt_failed_rules(&receipt, "cpu").is_empty());
     }
@@ -1350,13 +1659,24 @@ mod tests {
     #[test]
     fn slm_answer_receipt_accepts_dense_qwen_cpu_provenance() {
         let receipt = json!({
+            "text": "4",
             "requested_backend": "cpu",
             "selected_backend": "cpu-rust",
             "runtime_api": "cpu",
             "fallback_used": false,
             "loader": { "mode": "real_gguf" },
-            "tokenizer": { "source": "explicit", "strict": true },
-            "model": { "family": "qwen" },
+            "tokenizer": {
+                "source": "explicit",
+                "strict": true,
+                "pretokenizer_authority": "gguf_metadata"
+            },
+            "model": {
+                "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+                "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+                "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "family": "qwen",
+                "architecture": "qwen2"
+            },
             "dense_slm": {
                 "model_family": "qwen",
                 "kernel_id": "dense-qwen-cpu-reference",
@@ -1374,8 +1694,22 @@ mod tests {
                 "layout": "gguf_dense_q8_0"
             },
             "tokens": {
+                "prompt": 3,
+                "generated": 1,
+                "total": 4,
                 "prompt_ids": [1, 2, 3],
                 "generated_ids": [4]
+            },
+            "timing": {
+                "model_load_ms": 1.0,
+                "tokenizer_load_ms": 1.0,
+                "tokenize_ms": 1.0,
+                "prefill_ms": 1.0,
+                "first_token_ms": 1,
+                "decode_total_ms": 1.0
+            },
+            "latency": {
+                "total_ms": 2
             }
         });
 
@@ -1643,59 +1977,48 @@ mod tests {
 
     #[test]
     fn answer_receipt_accepts_strict_apple_m4_cpu_neon_truth() {
-        let receipt = json!({
-            "requested_backend": "apple-m4-cpu-neon",
-            "selected_backend": "apple-m4-cpu-neon",
-            "runtime_api": "cpu",
-            "fallback_used": false,
-            "loader": { "mode": "real_gguf" },
-            "tokenizer": { "source": "gguf_metadata", "strict": true },
-            "kernel": { "kernel_id": "i2_s-scalar-reference" },
-            "tokens": {
-                "prompt_ids": [1, 2, 3],
-                "ids": [4]
-            }
-        });
+        let receipt = strict_answer_receipt_fixture(
+            "apple-m4-cpu-neon",
+            "apple-m4-cpu-neon",
+            "cpu",
+            "i2_s-scalar-reference",
+        );
 
         assert!(answer_receipt_failed_rules(&receipt, "apple-m4-cpu-neon").is_empty());
     }
 
     #[test]
     fn answer_receipt_accepts_strict_cuda_truth() {
-        let receipt = json!({
+        let mut receipt = strict_answer_receipt_fixture(
+            RTX_5070_TI_CUDA,
+            RTX_5070_TI_CUDA,
+            "cuda",
+            "qk256_gemv_cuda",
+        );
+        receipt["kernel_stats"] = json!([{ "kernel_id": "qk256_gemv_cuda", "invocations": 8 }]);
+        receipt["execution_coverage"] = json!({ "bitnet_linear_layers_cpu_fallback": 0 });
+        receipt["execution_plan"] = json!({
+            "planner_version": "cuda-planner-004",
+            "model_family": "bitnet_b1_58",
+            "quantization": "i2_s_qk256",
+            "selected_route": "bitnet_qk256_cuda",
             "requested_backend": RTX_5070_TI_CUDA,
             "selected_backend": RTX_5070_TI_CUDA,
             "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": false,
+            "bitnet_packed_qk256_cuda": true,
+            "cuda_bitnet_qk256_ops": 8,
+            "cuda_dense_regular_llm_ops": 0,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0,
+            "total_ops": 8,
+            "cuda_ops": 8,
+            "mixed_cuda_routes": false,
             "fallback_used": false,
-            "loader": { "mode": "real_gguf" },
-            "tokenizer": { "source": "gguf_metadata", "strict": true },
-            "kernel": { "kernel_id": "qk256_gemv_cuda" },
-            "kernel_stats": [{ "kernel_id": "qk256_gemv_cuda", "invocations": 8 }],
-            "execution_coverage": { "bitnet_linear_layers_cpu_fallback": 0 },
-            "execution_plan": {
-                "planner_version": "cuda-planner-004",
-                "model_family": "bitnet_b1_58",
-                "quantization": "i2_s_qk256",
-                "selected_route": "bitnet_qk256_cuda",
-                "requested_backend": RTX_5070_TI_CUDA,
-                "selected_backend": RTX_5070_TI_CUDA,
-                "runtime_api": "cuda",
-                "strict_fallback_policy": "reject",
-                "dense_regular_llm_cuda": false,
-                "bitnet_packed_qk256_cuda": true,
-                "cuda_bitnet_qk256_ops": 8,
-                "cuda_dense_regular_llm_ops": 0,
-                "cpu_fallback_ops": 0,
-                "unsupported_ops": 0,
-                "total_ops": 8,
-                "cuda_ops": 8,
-                "mixed_cuda_routes": false,
-                "fallback_used": false,
-                "strict_cuda_ready": true,
-                "speedup_claim": false,
-                "full_cuda_residency_claimed": false
-            },
-            "tokens": { "prompt_ids": [1, 2], "generated_ids": [3] },
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false
         });
 
         assert!(answer_receipt_failed_rules(&receipt, RTX_5070_TI_CUDA).is_empty());
@@ -1703,18 +2026,14 @@ mod tests {
 
     #[test]
     fn cuda_answer_receipt_rejects_missing_execution_plan() {
-        let receipt = json!({
-            "requested_backend": RTX_5070_TI_CUDA,
-            "selected_backend": RTX_5070_TI_CUDA,
-            "runtime_api": "cuda",
-            "fallback_used": false,
-            "loader": { "mode": "real_gguf" },
-            "tokenizer": { "source": "gguf_metadata", "strict": true },
-            "kernel": { "kernel_id": "qk256_gemv_cuda" },
-            "kernel_stats": [{ "kernel_id": "qk256_gemv_cuda", "invocations": 8 }],
-            "execution_coverage": { "bitnet_linear_layers_cpu_fallback": 0 },
-            "tokens": { "prompt_ids": [1, 2], "generated_ids": [3] },
-        });
+        let mut receipt = strict_answer_receipt_fixture(
+            RTX_5070_TI_CUDA,
+            RTX_5070_TI_CUDA,
+            "cuda",
+            "qk256_gemv_cuda",
+        );
+        receipt["kernel_stats"] = json!([{ "kernel_id": "qk256_gemv_cuda", "invocations": 8 }]);
+        receipt["execution_coverage"] = json!({ "bitnet_linear_layers_cpu_fallback": 0 });
 
         let failed = answer_receipt_failed_rules(&receipt, RTX_5070_TI_CUDA);
 
@@ -1736,12 +2055,73 @@ mod tests {
         });
 
         let failed = answer_receipt_failed_rules(&receipt, "cpu");
+        assert!(failed.contains(&"generated_text_recorded".to_string()));
         assert!(failed.contains(&"fallback_false".to_string()));
         assert!(failed.contains(&"loader_real_gguf".to_string()));
+        assert!(failed.contains(&"model_sha256_recorded".to_string()));
         assert!(failed.contains(&"tokenizer_source_recorded".to_string()));
         assert!(failed.contains(&"tokenizer_strict".to_string()));
+        assert!(failed.contains(&"tokenizer_pretokenizer_authority_recorded".to_string()));
         assert!(failed.contains(&"selected_kernel_production".to_string()));
+        assert!(failed.contains(&"prompt_token_count_recorded".to_string()));
+        assert!(failed.contains(&"generated_token_count_recorded".to_string()));
+        assert!(failed.contains(&"total_token_count_recorded".to_string()));
         assert!(failed.contains(&"prompt_token_ids_recorded".to_string()));
         assert!(failed.contains(&"generated_token_ids_recorded".to_string()));
+        assert!(failed.contains(&"timing_decode_total_ms_recorded".to_string()));
+        assert!(failed.contains(&"latency_total_ms_recorded".to_string()));
+    }
+
+    #[test]
+    fn answer_receipt_rejects_speedup_or_full_inference_claims() {
+        let mut receipt =
+            strict_answer_receipt_fixture("cpu", "cpu-rust", "cpu", "i2_s-avx2-reference");
+        receipt["speedup_claim"] = json!(true);
+        receipt["claim_boundary"] = json!({
+            "speedup_claim": true,
+            "full_metal_inference_claimed": true,
+            "broad_performance_claimed": true
+        });
+
+        let failed = answer_receipt_failed_rules(&receipt, "cpu");
+
+        assert!(failed.contains(&"speedup_claim_false".to_string()));
+        assert!(!failed.contains(&"fallback_false".to_string()));
+    }
+
+    #[test]
+    fn answer_receipt_quality_contract_covers_m4_qa_003_fields() {
+        let required_fields = answer_receipt_required_case_fields();
+        for field in [
+            "text",
+            "tokens.prompt",
+            "tokens.generated",
+            "tokens.total",
+            "tokens.prompt_ids",
+            "tokens.generated_ids",
+            "model.repo",
+            "model.file",
+            "model.sha256",
+            "tokenizer.pretokenizer_authority",
+            "requested_backend",
+            "selected_backend",
+            "fallback_used",
+            "timing.decode_total_ms",
+            "latency.total_ms",
+        ] {
+            assert!(required_fields.contains(&field), "missing required receipt field `{field}`");
+        }
+        let checked_rules = answer_receipt_checked_rules();
+        for rule in [
+            "generated_text_recorded",
+            "model_sha256_recorded",
+            "tokenizer_pretokenizer_authority_recorded",
+            "generated_token_count_matches_ids",
+            "timing_decode_total_ms_recorded",
+            "fallback_false",
+            "speedup_claim_false",
+        ] {
+            assert!(checked_rules.contains(&rule), "missing receipt quality rule `{rule}`");
+        }
     }
 }

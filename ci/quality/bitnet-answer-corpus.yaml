@@ -5,6 +5,21 @@ description: Fixed deterministic prompt set for answer-readiness baselines.
 model:
   repo: microsoft/bitnet-b1.58-2B-4T-gguf
   file: ggml-model-i2_s.gguf
+  sha256: 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162
+  family: bitnet
+  architecture: bitnet-b1.58
+  quant_format: I2_S/QK256
+  answer_ready:
+    state: answer_ready
+    gate: MODEL-ARTIFACT-007
+    manifest: ci/model-artifacts/artifact-manifest.toml
+    evidence: docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md
+  tokenizer_authority:
+    source: external_tokenizer_json
+    repo: microsoft/bitnet-b1.58-2B-4T
+    revision: 04c3b9ad9361b824064a1f25ea60a8be9599b127
+    sha256: e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7
+    ggml_pre: llama-bpe
 defaults:
   prompt_template: bitnetcpp-answer
   max_new_tokens: 8

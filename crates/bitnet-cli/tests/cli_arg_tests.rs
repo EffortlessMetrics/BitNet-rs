@@ -303,6 +303,7 @@ fn mac_help_documents_operator_wrappers() {
         .args(["mac", "--help"])
         .assert()
         .success()
+        .stdout(predicate::str::contains("models"))
         .stdout(predicate::str::contains("check"))
         .stdout(predicate::str::contains("ask"))
         .stdout(predicate::str::contains("smoke"))
@@ -310,6 +311,106 @@ fn mac_help_documents_operator_wrappers() {
         .stdout(predicate::str::contains("validate"))
         .stdout(predicate::str::contains("bitnet-proof"))
         .stdout(predicate::str::contains("receipts-check"));
+}
+
+#[test]
+fn mac_models_lists_operator_model_states() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "models", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Default model: qwen2.5-0.5b-instruct-q8_0"))
+        .stdout(predicate::str::contains("Disk:"))
+        .stdout(predicate::str::contains("Recommendation:"))
+        .stdout(predicate::str::contains("Next fetch: bitnet model fetch"))
+        .stdout(predicate::str::contains("Next verify: bitnet model verify"))
+        .stdout(predicate::str::contains("low_disk="))
+        .stdout(predicate::str::contains("qwen2.5-0.5b-instruct-q8_0"))
+        .stdout(predicate::str::contains("default"))
+        .stdout(predicate::str::contains("qwen2.5-0.5b-instruct-q4_k_m"))
+        .stdout(predicate::str::contains("qwen2.5-1.5b-instruct-q4_k_m"))
+        .stdout(predicate::str::contains("supported"))
+        .stdout(predicate::str::contains("microsoft-bitnet-b1.58-2B-4T-i2s"))
+        .stdout(predicate::str::contains("blocked"))
+        .stdout(predicate::str::contains("candidate"))
+        .stdout(predicate::str::contains("rejected"))
+        .stdout(predicate::str::contains("do not prove BitNet local answers"))
+        .stdout(predicate::str::contains("Proof bridge: microsoft-bitnet-b1.58-2B-4T-i2s"))
+        .stdout(predicate::str::contains("mac bitnet-proof --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf"))
+        .stdout(predicate::str::contains("--proof-receipt ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json"));
+    Ok(())
+}
+
+#[test]
+fn mac_models_json_exposes_claim_boundaries_without_fetching()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    let output = bitnet()
+        .args(["mac", "models", "--cache-dir", cache_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output)?;
+
+    assert_eq!(json["default_model_id"], "qwen2.5-0.5b-instruct-q8_0");
+    assert!(
+        json["disk"]["default_model_headroom_bytes"].as_u64().is_some_and(|headroom| headroom > 0)
+    );
+    let recommendation = json["disk"]["recommendation"]
+        .as_str()
+        .ok_or_else(|| std::io::Error::other("disk recommendation"))?;
+    assert!(recommendation.contains("default") || recommendation.contains("Disk"));
+    let claim_boundary =
+        json["claim_boundary"].as_str().ok_or_else(|| std::io::Error::other("claim boundary"))?;
+    assert!(claim_boundary.contains("do not prove BitNet local answers"));
+    let rows = json["rows"].as_array().ok_or_else(|| std::io::Error::other("rows"))?;
+    assert!(rows.iter().any(|row| {
+        row["id"] == "qwen2.5-0.5b-instruct-q8_0"
+            && row["state"] == "default"
+            && row["recommended_fetch_headroom_bytes"].as_u64().is_some()
+    }));
+    assert!(
+        rows.iter().any(|row| {
+            row["id"] == "qwen2.5-1.5b-instruct-q4_k_m" && row["state"] == "supported"
+        })
+    );
+    assert!(rows.iter().any(|row| {
+        row["id"] == "microsoft-bitnet-b1.58-2B-4T-i2s"
+            && row["state"] == "blocked"
+            && row["selection"] == "not selectable for M4 local answers"
+            && row["mac_ask_chat_enabled"] == false
+            && row["mac_serve_enabled"] == false
+            && row["proof_status"] == "answer-corpus-proof-receipt-check-available-route-disabled"
+            && row["proof_command"]
+                .as_str()
+                .is_some_and(|command| command.contains("mac bitnet-proof --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf"))
+            && row["proof_receipt_path"]
+                == "ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json"
+            && row["recommended_fetch_headroom_bytes"].is_null()
+            && row["fetch_command"].is_null()
+    }));
+    assert!(rows.iter().any(|row| row["state"] == "candidate"));
+    assert!(rows.iter().any(|row| row["state"] == "rejected"));
+    Ok(())
+}
+
+#[test]
+fn mac_models_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "models"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac models routes the supported Mac local-answer path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
 }
 
 #[test]
@@ -338,7 +439,9 @@ fn mac_check_missing_cache_points_to_model_fetch() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("First run"))
-        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"))
+        .stderr(predicate::str::contains("bitnet mac models --cache-dir"))
+        .stderr(predicate::str::contains("Disk guidance:"));
 }
 
 #[test]
@@ -358,6 +461,20 @@ fn mac_check_corrupt_cache_points_to_prune_and_fetch() {
         .stderr(predicate::str::contains("Cache repair"))
         .stderr(predicate::str::contains("bitnet model prune qwen2.5-0.5b-instruct-q8_0"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_check_rejects_blocked_bitnet_model_before_cache_guidance() {
+    bitnet()
+        .args(["mac", "check", "--model-id", "microsoft-bitnet-b1.58-2B-4T-i2s"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("blocked for Apple M4 CPU/NEON local answers"))
+        .stderr(predicate::str::contains("MODEL-ARTIFACT-007"))
+        .stderr(predicate::str::contains("M4-QA-001"))
+        .stderr(predicate::str::contains("not selectable through `bitnet mac ask`"))
+        .stderr(predicate::str::contains("bitnet mac models"))
+        .stderr(predicate::str::contains("bitnet model fetch microsoft-bitnet").not());
 }
 
 #[test]
@@ -424,6 +541,8 @@ fn mac_ask_accepts_positional_question_before_cache_lookup() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"))
+        .stderr(predicate::str::contains("bitnet mac models --cache-dir"))
+        .stderr(predicate::str::contains("Disk guidance:"))
         .stderr(predicate::str::contains("unexpected argument").not());
 }
 
@@ -476,6 +595,21 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_ask_rejects_blocked_bitnet_model_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "ask", "What is 2+2?", "--model-id", "microsoft-bitnet-b1.58-2B-4T-i2s"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("blocked for Apple M4 CPU/NEON local answers"))
+        .stderr(predicate::str::contains("M4-QA-001"))
+        .stderr(predicate::str::contains("not selectable through `bitnet mac ask`"))
+        .stderr(predicate::str::contains(
+            "dense SLM success must not be counted as BitNet Mac UX proof",
+        ))
+        .stderr(predicate::str::contains("bitnet model fetch microsoft-bitnet").not());
+}
+
+#[test]
 fn mac_smoke_help_documents_golden_smoke() {
     bitnet()
         .args(["mac", "smoke", "--help"])
@@ -511,6 +645,18 @@ fn mac_smoke_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_smoke_rejects_diagnostic_only_model_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "smoke", "--model-id", "qwen3-0.6b-q8_0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("diagnostic-only"))
+        .stderr(predicate::str::contains("not selectable"))
+        .stderr(predicate::str::contains("bitnet mac models"))
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+}
+
+#[test]
 fn mac_doctor_help_documents_health_verdict() {
     bitnet()
         .args(["mac", "doctor", "--help"])
@@ -522,8 +668,9 @@ fn mac_doctor_help_documents_health_verdict() {
 }
 
 #[test]
-fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let receipt = dir.path().join("doctor.json");
     let cache_str = cache.to_string_lossy().into_owned();
@@ -543,13 +690,13 @@ fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt() {
         .stderr(predicate::str::contains("Mac doctor cannot pass"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
 
-    let receipt_json: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(&receipt).expect("receipt")).expect("receipt json");
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_slm_doctor");
     assert_eq!(receipt_json["result"], "fail");
     assert_eq!(receipt_json["checks"]["cache"]["ready"], false);
     assert_eq!(receipt_json["checks"]["unsupported_backend"]["rejected"], true);
     assert_eq!(receipt_json["mac_claim_boundary"]["bitnet_quality_claimed"], false);
+    Ok(())
 }
 
 #[test]
@@ -795,6 +942,7 @@ fn mac_bitnet_proof_help_documents_blocked_contract() {
         .assert()
         .success()
         .stdout(predicate::str::contains("--accepted-artifact <PATH>"))
+        .stdout(predicate::str::contains("--proof-receipt <PATH>"))
         .stdout(predicate::str::contains("--tokenizer-authority <AUTHORITY>"))
         .stdout(predicate::str::contains("--strict"));
 }
@@ -823,12 +971,13 @@ fn mac_bitnet_proof_missing_inputs_fail_clearly() {
 }
 
 #[test]
-fn mac_bitnet_proof_preflight_accepts_artifact_contract_without_running_model() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_bitnet_proof_preflight_accepts_artifact_contract_without_running_model()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let model = dir.path().join("accepted-bitnet.gguf");
     let accepted = dir.path().join("accepted-artifact.json");
     let receipt = dir.path().join("preflight.json");
-    std::fs::write(&model, b"placeholder gguf").expect("model placeholder");
+    std::fs::write(&model, b"placeholder gguf")?;
     std::fs::write(
         &accepted,
         serde_json::to_vec_pretty(&serde_json::json!({
@@ -840,10 +989,8 @@ fn mac_bitnet_proof_preflight_accepts_artifact_contract_without_running_model() 
                 "authority": "llama-bpe-external"
             },
             "kernel_family": "i2_s"
-        }))
-        .expect("json"),
-    )
-    .expect("accepted artifact");
+        }))?,
+    )?;
     let model_str = model.to_string_lossy().into_owned();
     let accepted_str = accepted.to_string_lossy().into_owned();
     let receipt_str = receipt.to_string_lossy().into_owned();
@@ -864,14 +1011,178 @@ fn mac_bitnet_proof_preflight_accepts_artifact_contract_without_running_model() 
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("preflight passed"));
+        .stdout(predicate::str::contains("preflight passed"))
+        .stdout(predicate::str::contains("does not enable BitNet through `bitnet mac ask`"));
 
-    let receipt_json: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(&receipt).expect("receipt")).expect("receipt json");
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_bitnet_proof_preflight");
     assert_eq!(receipt_json["result"], "ready");
     assert_eq!(receipt_json["proof_executed"], false);
     assert_eq!(receipt_json["claim_boundary"]["bitnet_answer_quality_claimed"], false);
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_proof_validates_answer_corpus_receipt_without_artifact_sweep()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let model = dir.path().join("accepted-bitnet.gguf");
+    let proof = dir.path().join("answer-corpus.json");
+    let receipt = dir.path().join("preflight.json");
+    std::fs::write(&model, b"placeholder gguf")?;
+    std::fs::write(&proof, serde_json::to_vec_pretty(&bitnet_answer_corpus_proof_fixture(true))?)?;
+    let model_str = model.to_string_lossy().into_owned();
+    let proof_str = proof.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-proof",
+            "--model",
+            model_str.as_str(),
+            "--proof-receipt",
+            proof_str.as_str(),
+            "--strict",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("proof receipt verified"))
+        .stdout(predicate::str::contains("does not enable BitNet through `bitnet mac ask`"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["result"], "verified");
+    assert_eq!(receipt_json["proof_executed"], true);
+    assert_eq!(receipt_json["proof_receipt"]["summary"]["valid"], true);
+    assert_eq!(receipt_json["claim_boundary"]["m4_bitnet_answer_corpus_proof_verified"], true);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_answer_corpus_quality_verified"], true);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_answer_quality_claimed"], false);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_mac_ask_chat_enabled"], false);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_mac_serve_enabled"], false);
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_proof_rejects_answer_corpus_receipt_without_timing()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let model = dir.path().join("accepted-bitnet.gguf");
+    let proof = dir.path().join("answer-corpus.json");
+    let receipt = dir.path().join("preflight.json");
+    std::fs::write(&model, b"placeholder gguf")?;
+    std::fs::write(&proof, serde_json::to_vec_pretty(&bitnet_answer_corpus_proof_fixture(false))?)?;
+    let model_str = model.to_string_lossy().into_owned();
+    let proof_str = proof.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-proof",
+            "--model",
+            model_str.as_str(),
+            "--proof-receipt",
+            proof_str.as_str(),
+            "--strict",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("proof receipt is not usable"))
+        .stderr(predicate::str::contains("timing/latency"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["result"], "blocked");
+    assert_eq!(receipt_json["proof_executed"], false);
+    assert_eq!(receipt_json["proof_receipt"]["summary"]["valid"], false);
+    Ok(())
+}
+
+fn bitnet_answer_corpus_proof_fixture(include_timing: bool) -> serde_json::Value {
+    let mut case = serde_json::json!({
+        "id": "math_2_plus_2",
+        "status": "passed",
+        "answer": " 4",
+        "backend": {
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false
+        },
+        "model": {
+            "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+            "family": "bitnet"
+        },
+        "loader": {
+            "mode": "real_gguf"
+        },
+        "tokenizer": {
+            "strict": true,
+            "pretokenizer_authority": "llama-bpe"
+        },
+        "prompt_template": "bitnetcpp-answer",
+        "prompt": {
+            "template_family": "bitnetcpp-answer"
+        },
+        "prompt_prefill": {
+            "exercised": true
+        },
+        "quality": {
+            "passed": true,
+            "non_empty_answer": true
+        },
+        "token_ids": {
+            "generated": [220, 19, 128009]
+        },
+        "tokens": {
+            "generated": 3
+        }
+    });
+    if include_timing {
+        case["timing"] = serde_json::json!({"decode_total_ms": 12.0});
+        case["latency"] = serde_json::json!({"total_ms": 34.0});
+    }
+    serde_json::json!({
+        "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+        "model": {
+            "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+            "answer_ready_artifact_available": true,
+            "answer_ready": {
+                "state": "answer_ready"
+            }
+        },
+        "tokenizer": {
+            "source": "externally_supplied_llama_bpe",
+            "strict": true,
+            "authority": {
+                "source": "external_tokenizer_json",
+                "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+                "ggml_pre": "llama-bpe"
+            }
+        },
+        "quality_summary": {
+            "total": 1,
+            "passed": 1,
+            "failed": 0,
+            "timeout": 0,
+            "not_run": 0
+        },
+        "claim_boundary": {
+            "answer_ready_artifact_available": true,
+            "backend_quality_gate_passed": true,
+            "coherent_output_observed": true,
+            "coherent_answer_claimed": true,
+            "diagnostic_only_until_answer_ready_artifact": false,
+            "full_metal_inference_claimed": false,
+            "neural_engine_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claimed": false
+        },
+        "cases": [case]
+    })
 }
 
 #[test]
@@ -2863,8 +3174,8 @@ fn answer_parity_rejects_mixed_input_modes() {
 /// `answer-corpus --dry-run` validates corpus shape without requiring a model load.
 #[cfg(feature = "full-cli")]
 #[test]
-fn answer_corpus_dry_run_writes_not_run_receipt() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn answer_corpus_dry_run_writes_not_run_receipt() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let corpus = dir.path().join("corpus.yaml");
     let out = dir.path().join("receipt.json");
     std::fs::write(
@@ -2890,8 +3201,9 @@ cases:
       kind: exact_trimmed
       expected: "4"
 "#,
-    )
-    .expect("write corpus");
+    )?;
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
 
     bitnet()
         .args([
@@ -2900,25 +3212,29 @@ cases:
             "--model",
             "missing.gguf",
             "--corpus",
-            corpus.to_str().unwrap(),
+            corpus_str.as_str(),
             "--json-out",
-            out.to_str().unwrap(),
+            out_str.as_str(),
         ])
         .assert()
         .success();
 
-    let receipt: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(out)?)?;
     assert_eq!(receipt["artifact_kind"], "bitnet_cpu_answer_corpus");
     assert_eq!(receipt["quality_summary"]["not_run"], 1);
     assert_eq!(receipt["cases"][0]["status"], "not_run");
+    assert_eq!(receipt["model"]["answer_ready_artifact_available"], false);
+    assert_eq!(receipt["claim_boundary"]["diagnostic_only_until_answer_ready_artifact"], true);
+    assert_eq!(receipt["claim_boundary"]["backend_quality_gate_passed"], false);
+    assert_eq!(receipt["claim_boundary"]["coherent_answer_claimed"], false);
+    Ok(())
 }
 
 /// `answer-corpus --case-id` limits a diagnostic run without changing corpus identity.
 #[cfg(feature = "full-cli")]
 #[test]
-fn answer_corpus_case_id_dry_run_selects_one_case() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn answer_corpus_case_id_dry_run_selects_one_case() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let corpus = dir.path().join("corpus.yaml");
     let out = dir.path().join("receipt.json");
     std::fs::write(
@@ -2949,8 +3265,9 @@ cases:
       kind: contains_any
       contains_any: ["yes", "no"]
 "#,
-    )
-    .expect("write corpus");
+    )?;
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
 
     bitnet()
         .args([
@@ -2961,15 +3278,14 @@ cases:
             "--model",
             "missing.gguf",
             "--corpus",
-            corpus.to_str().unwrap(),
+            corpus_str.as_str(),
             "--json-out",
-            out.to_str().unwrap(),
+            out_str.as_str(),
         ])
         .assert()
         .success();
 
-    let receipt: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(out)?)?;
     assert_eq!(receipt["corpus"]["case_count"], 2);
     assert_eq!(receipt["corpus"]["selected_case_count"], 1);
     assert_eq!(receipt["corpus"]["selected_case_ids"][0], "word");
@@ -2977,13 +3293,14 @@ cases:
     assert_eq!(receipt["quality_summary"]["not_run"], 1);
     assert_eq!(receipt["cases"][0]["id"], "word");
     assert_eq!(receipt["cases"][0]["status"], "not_run");
+    Ok(())
 }
 
 /// `answer-corpus --case-id` fails early for unknown case IDs.
 #[cfg(feature = "full-cli")]
 #[test]
-fn answer_corpus_case_id_rejects_missing_case() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn answer_corpus_case_id_rejects_missing_case() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let corpus = dir.path().join("corpus.yaml");
     std::fs::write(
         &corpus,
@@ -3008,8 +3325,8 @@ cases:
       kind: exact_trimmed
       expected: "4"
 "#,
-    )
-    .expect("write corpus");
+    )?;
+    let corpus_str = corpus.to_string_lossy().into_owned();
 
     bitnet()
         .args([
@@ -3020,11 +3337,202 @@ cases:
             "--model",
             "missing.gguf",
             "--corpus",
-            corpus.to_str().unwrap(),
+            corpus_str.as_str(),
         ])
         .assert()
         .failure()
         .stderr(predicate::str::contains("answer-corpus --case-id not found: missing"));
+    Ok(())
+}
+
+/// `answer-corpus` fails before child execution when the model path is missing.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_rejects_missing_model_before_child_run() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let corpus = dir.path().join("corpus.yaml");
+    let tokenizer = dir.path().join("tokenizer.json");
+    let out = dir.path().join("receipt.json");
+    std::fs::write(&tokenizer, "{}")?;
+    std::fs::write(
+        &corpus,
+        r#"schema: 1
+artifact_kind: bitnet_answer_corpus
+name: strict-failure-corpus
+description: test
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  file: ggml-model-i2_s.gguf
+  tokenizer_authority:
+    source: external_tokenizer_json
+defaults:
+  prompt_template: bitnetcpp-answer
+  max_new_tokens: 4
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+cases:
+  - id: math
+    question: "What is 2+2?"
+    gate:
+      kind: exact_trimmed
+      expected: "4"
+"#,
+    )?;
+    let missing_model = dir.path().join("missing.gguf").to_string_lossy().into_owned();
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            missing_model.as_str(),
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--corpus",
+            corpus_str.as_str(),
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("answer-corpus model not found"))
+        .stderr(predicate::str::contains("hidden fallback is not allowed"))
+        .stderr(predicate::str::contains("--dry-run"));
+    assert!(!out.exists(), "preflight failure should not write a proof receipt");
+    Ok(())
+}
+
+/// `answer-corpus` requires explicit tokenizer authority for the shared BitNet corpus.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_requires_external_tokenizer_authority_before_child_run()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let model = dir.path().join("model.gguf");
+    let corpus = dir.path().join("corpus.yaml");
+    let out = dir.path().join("receipt.json");
+    std::fs::write(&model, b"GGUF\x03\x00\x00\x00")?;
+    std::fs::write(
+        &corpus,
+        r#"schema: 1
+artifact_kind: bitnet_answer_corpus
+name: strict-tokenizer-corpus
+description: test
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  file: ggml-model-i2_s.gguf
+  tokenizer_authority:
+    source: external_tokenizer_json
+defaults:
+  prompt_template: bitnetcpp-answer
+  max_new_tokens: 4
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+cases:
+  - id: math
+    question: "What is 2+2?"
+    gate:
+      kind: exact_trimmed
+      expected: "4"
+"#,
+    )?;
+    let model_str = model.to_string_lossy().into_owned();
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            model_str.as_str(),
+            "--corpus",
+            corpus_str.as_str(),
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("requires --tokenizer"))
+        .stderr(predicate::str::contains("external_tokenizer_json"))
+        .stderr(predicate::str::contains("hidden tokenizer fallback is not allowed"));
+    assert!(!out.exists(), "preflight failure should not write a proof receipt");
+    Ok(())
+}
+
+/// `answer-corpus` rejects an explicit tokenizer path that cannot provide authority.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_rejects_missing_tokenizer_before_child_run()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let model = dir.path().join("model.gguf");
+    let corpus = dir.path().join("corpus.yaml");
+    let out = dir.path().join("receipt.json");
+    std::fs::write(&model, b"GGUF\x03\x00\x00\x00")?;
+    std::fs::write(
+        &corpus,
+        r#"schema: 1
+artifact_kind: bitnet_answer_corpus
+name: missing-tokenizer-corpus
+description: test
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  file: ggml-model-i2_s.gguf
+  tokenizer_authority:
+    source: external_tokenizer_json
+defaults:
+  prompt_template: bitnetcpp-answer
+  max_new_tokens: 4
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+cases:
+  - id: math
+    question: "What is 2+2?"
+    gate:
+      kind: exact_trimmed
+      expected: "4"
+"#,
+    )?;
+    let model_str = model.to_string_lossy().into_owned();
+    let missing_tokenizer =
+        dir.path().join("missing-tokenizer.json").to_string_lossy().into_owned();
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            model_str.as_str(),
+            "--tokenizer",
+            missing_tokenizer.as_str(),
+            "--corpus",
+            corpus_str.as_str(),
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("answer-corpus tokenizer not found"))
+        .stderr(predicate::str::contains("strict tokenizer authority"))
+        .stderr(predicate::str::contains("hidden tokenizer fallback is not allowed"));
+    assert!(!out.exists(), "preflight failure should not write a proof receipt");
+    Ok(())
 }
 
 /// `answer-corpus --dry-run` accepts the SLM corpus and preserves model identity.
@@ -3174,10 +3682,13 @@ fn output_head_logits_audit_help_lists_boundary_inputs() {
 /// `answer-corpus` can target the Apple M4 CPU/NEON local-answer lane.
 #[cfg(feature = "full-cli")]
 #[test]
-fn answer_corpus_dry_run_accepts_apple_m4_cpu_neon_lane() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn answer_corpus_dry_run_accepts_apple_m4_cpu_neon_lane() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
     let out = dir.path().join("apple-m4-local-answer.json");
     let corpus = workspace_path("ci/quality/apple-m4-local-answer-corpus.yaml");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
 
     bitnet()
         .args([
@@ -3188,23 +3699,59 @@ fn answer_corpus_dry_run_accepts_apple_m4_cpu_neon_lane() {
             "--model",
             "missing.gguf",
             "--corpus",
-            corpus.to_str().unwrap(),
+            corpus_str.as_str(),
             "--json-out",
-            out.to_str().unwrap(),
+            out_str.as_str(),
         ])
         .assert()
         .success();
 
-    let receipt: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(out).expect("read receipt")).expect("json receipt");
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(out)?)?;
     assert_eq!(receipt["artifact_kind"], "bitnet_apple_m4_local_answer_corpus");
     assert_eq!(receipt["backend"]["requested_backend"], "apple-m4-cpu-neon");
     assert_eq!(receipt["backend"]["selected_backend"], "apple-m4-cpu-neon");
     assert_eq!(receipt["backend"]["runtime_api"], "cpu");
     assert_eq!(receipt["backend"]["fallback_used"], false);
+    assert_eq!(receipt["model"]["answer_ready_artifact_available"], false);
     assert_eq!(receipt["claim_boundary"]["local_answer_path"], true);
+    assert_eq!(receipt["claim_boundary"]["diagnostic_only_until_answer_ready_artifact"], true);
+    assert_eq!(receipt["claim_boundary"]["backend_quality_gate_passed"], false);
     assert_eq!(receipt["claim_boundary"]["full_metal_inference_claimed"], false);
     assert_eq!(receipt["quality_summary"]["not_run"], 3);
+    assert_eq!(receipt["receipt_quality"]["case_receipt_checker"], "answer_receipt_failed_rules");
+    assert_eq!(receipt["receipt_quality"]["checked"], false);
+    let required_fields: Vec<&str> = receipt["receipt_quality"]["required_case_fields"]
+        .as_array()
+        .ok_or_else(|| std::io::Error::other("required fields array"))?
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    for field in [
+        "text",
+        "tokens.generated",
+        "model.sha256",
+        "tokenizer.pretokenizer_authority",
+        "fallback_used",
+        "timing.decode_total_ms",
+    ] {
+        assert!(required_fields.contains(&field), "missing receipt field contract `{field}`");
+    }
+    let checked_rules: Vec<&str> = receipt["receipt_quality"]["checked_rules"]
+        .as_array()
+        .ok_or_else(|| std::io::Error::other("checked rules array"))?
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    for rule in [
+        "generated_text_recorded",
+        "model_sha256_recorded",
+        "tokenizer_pretokenizer_authority_recorded",
+        "fallback_false",
+        "timing_decode_total_ms_recorded",
+    ] {
+        assert!(checked_rules.contains(&rule), "missing receipt quality rule `{rule}`");
+    }
+    Ok(())
 }
 
 /// `answer-corpus` can target the RTX 5070 Ti CUDA diagnostic lane.
@@ -3238,7 +3785,18 @@ fn answer_corpus_dry_run_accepts_rtx5070ti_cuda_lane() {
     assert_eq!(receipt["backend"]["selected_backend"], "nvidia-rtx-5070-ti-cuda");
     assert_eq!(receipt["backend"]["runtime_api"], "cuda");
     assert_eq!(receipt["backend"]["fallback_used"], false);
+    assert_eq!(receipt["model"]["answer_ready_artifact_available"], true);
+    assert_eq!(receipt["model"]["answer_ready"]["gate"], "MODEL-ARTIFACT-007");
+    assert_eq!(receipt["tokenizer"]["source"], "externally_supplied_llama_bpe");
+    assert_eq!(receipt["tokenizer"]["strict"], true);
+    assert_eq!(
+        receipt["tokenizer"]["authority"]["sha256"],
+        "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+    );
     assert_eq!(receipt["claim_boundary"]["cuda_answer_corpus"], true);
+    assert_eq!(receipt["claim_boundary"]["answer_ready_artifact_available"], true);
+    assert_eq!(receipt["claim_boundary"]["diagnostic_only_until_answer_ready_artifact"], false);
+    assert_eq!(receipt["claim_boundary"]["backend_quality_gate_passed"], false);
     assert_eq!(receipt["claim_boundary"]["strict_cuda_answer_claimed"], false);
     assert_eq!(receipt["claim_boundary"]["coherent_answer_claimed"], false);
     assert_eq!(receipt["quality_summary"]["not_run"], 5);
@@ -3256,6 +3814,30 @@ fn answer_corpus_rejects_apple_m4_metal_lane() {
             "--dry-run",
             "--device",
             "apple-m4-metal",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "only accepts --device cpu, --device apple-m4-cpu-neon, --device cuda",
+        ));
+}
+
+/// `answer-corpus` must not treat Apple MPSGraph as the local-answer path.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_rejects_apple_m4_mpsgraph_lane() {
+    let corpus = workspace_path("ci/quality/apple-m4-local-answer-corpus.yaml");
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-mpsgraph",
             "--model",
             "missing.gguf",
             "--corpus",

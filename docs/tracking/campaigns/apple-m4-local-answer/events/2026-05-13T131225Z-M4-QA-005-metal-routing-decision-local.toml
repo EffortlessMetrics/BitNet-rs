@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T13:12:25Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-005"
+event = "closeout"
+actor = "codex"
+previous_status = "proposed"
+new_status = "proposed"
+
+notes = [
+  "Recorded the local Metal routing decision: keep user-facing local-answer routing on apple-m4-cpu-neon until CPU proof, greedy determinism, and receipt-quality gates have landed together.",
+  "Selected the first eligible Metal contribution shape as a prefill projection fixture, not full Metal inference and not an autoregressive decode loop.",
+  "Documented receipt requirements for any later Metal local-answer contribution: selected apple-m4-metal backend, runtime_api=metal, fallback_used=false, phase_scope=prefill_projection_fixture, full_metal_inference_claimed=false, speedup_claim=false, CPU reference token IDs unchanged, and decoded text unchanged.",
+  "This is a decision boundary only; M4-QA-005 remains proposed/stack-blocked by M4-QA-002 and M4-QA-003 and does not enable a Metal local-answer route.",
+]

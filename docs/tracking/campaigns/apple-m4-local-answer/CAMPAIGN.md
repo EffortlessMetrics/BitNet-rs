@@ -14,10 +14,14 @@ The `apple-m4` proof campaign and `apple-m4-operational` campaign are complete. 
 
 This campaign starts the selected next frontier: CPU/NEON local-answer usability first. Metal subgraph expansion comes after the CPU/NEON answer path is quality-gated, and Apple QK256 investigation remains last.
 
-The model-artifact blocker discovered here is shared, not Apple-only. Coherent
-local-answer claims require an `answer_ready` artifact under
-`docs/model-artifacts/ANSWER_ARTIFACT_GATE.md`; until then, Apple CPU/NEON runs
-against rejected artifacts remain diagnostic-only.
+The model-artifact blocker discovered here is shared, not Apple-only.
+`MODEL-ARTIFACT-007` now records the official Microsoft I2_S GGUF as
+`answer_ready` for backend gates when paired with external
+`tokenizer.ggml.pre=llama-bpe` authority and the `bitnetcpp-answer` prompt
+envelope. A local Apple CPU/NEON release receipt now records the strict shared
+answer corpus passing with fallback disabled and explicit artifact/tokenizer
+authority; landing that evidence is still separate from enabling BitNet through
+`bitnet mac ask/chat`.
 
 ## End State
 
@@ -51,13 +55,13 @@ against rejected artifacts remain diagnostic-only.
 | Work item | Status | Notes |
 |---|---|---|
 | M4-QA-ROOT-001 | merged | Evidence shows the current local GGUF also garbles under the reference runner; model artifact validation is now the blocker. |
-| M4-QA-MODEL-001 | in_progress | Validate the current supported local-answer model artifact and reject it for answer-quality use if reference output remains non-coherent. |
-| M4-QA-MODEL-002 | blocked | Acquire or regenerate a known-good supported artifact before local-answer smoke coverage can claim coherent output; shared successor is `MODEL-ARTIFACT-002`. |
-| M4-QA-001 | blocked | Add multi-prompt CPU/NEON local-answer smoke suite; blocked until the supported model artifact is reference-validated for coherent short answers. |
-| M4-QA-002 | proposed | Add greedy determinism checks for local answers. |
-| M4-QA-003 | proposed | Harden local-answer receipt quality fields. |
-| M4-QA-004 | proposed | Add strict failure-mode coverage for local-answer operator errors. |
-| M4-QA-005 | proposed | Decide when and how one receipt-backed Metal phase can join real generation. |
+| M4-QA-MODEL-001 | merged | Historical Apple-specific evidence rejected the default/missing-pretokenizer prompt path. |
+| M4-QA-MODEL-002 | merged | Satisfied by shared `MODEL-ARTIFACT-007` answer-ready authority for backend gates. |
+| M4-QA-001 | in_progress | Release-built Apple M4 CPU/NEON full shared BitNet answer corpus passed with receipt-quality fields reviewed; closeout still needs campaign checks and PR landing. |
+| M4-QA-002 | proposed | Local repeat-run parity evidence exists; item remains stack-blocked until M4-QA-001 lands. |
+| M4-QA-003 | proposed | Local receipt-quality checks now require generated text, token counts and ID consistency, tokenizer pretokenizer authority, model source/SHA, backend routing/fallback status, and timing fields; item remains stack-blocked until M4-QA-001 lands. |
+| M4-QA-004 | proposed | Local preflight coverage rejects missing model/tokenizer authority before hidden fallback; unsupported Apple Metal/MPSGraph answer-corpus lanes fail closed, and receipt checks reject speedup/full-inference acceleration claims. Item remains stack-blocked until M4-QA-001 lands. |
+| M4-QA-005 | proposed | Local decision recorded: the first eligible Metal route is a prefill projection fixture after CPU/NEON proof, greedy determinism, and receipt-quality gates land; current user-facing local-answer path remains CPU/NEON only. |
 
 ## Review Policy
 

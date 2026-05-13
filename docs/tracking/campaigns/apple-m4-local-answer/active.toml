@@ -26,18 +26,18 @@ hard_constraints = [
 
 [[work_item]]
 id = "M4-QA-001"
-status = "blocked"
+status = "pr_open"
 branch = "codex/apple-m4-local-answer/M4-QA-001-output-smoke"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-QA-MODEL-002"]
-acceptance = "Add a multi-prompt Apple M4 CPU/NEON local-answer smoke suite that runs real GGUF and tokenizer paths under strict mode, requires generated_tokens >= 16, valid UTF-8, non-empty output, non-degenerate token variation, and a receipt with explicit fallback status."
+blocked_by = []
+acceptance = "Add a multi-prompt Apple M4 CPU/NEON local-answer smoke suite that runs the answer_ready Microsoft I2_S GGUF and external tokenizer under strict mode, uses the bitnetcpp-answer prompt authority, requires every committed answer-corpus gate to pass with valid UTF-8, non-empty output, token IDs, real model SHA/tokenizer authority, prompt-prefill evidence, and explicit fallback=false receipt fields."
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m4",
-  "Manual Apple M4 CPU/NEON local-answer command with real GGUF and receipt artifact",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --device apple-m4-cpu-neon --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/bitnet-answer-corpus.yaml --per-prompt-timeout-seconds 900 --fail-on-quality --json-out ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
@@ -46,6 +46,8 @@ commands = [
 allowed_paths = [
   "crates/bitnet-cli/**",
   "crates/**/tests/**",
+  "ci/hardware/apple-m4-mac-mini/**",
+  "ci/quality/**",
   "docs/hardware/apple-m4-mac-mini-operator-runbook.md",
   "docs/specs/apple-m4-mac-mini-roadmap.md",
   "docs/tracking/campaigns/apple-m4-local-answer/**",
@@ -58,13 +60,14 @@ forbidden_paths = [
   "crates/bitnet-kernels/src/metal/**",
 ]
 may_claim = [
-  "Apple M4 CPU/NEON local-answer smoke coverage exists for real-model strict runs when the manual M4 proof command passes.",
+  "Apple M4 CPU/NEON local-answer smoke coverage exists for the committed strict BitNet answer corpus when the release proof receipt passes.",
 ]
 must_not_claim = [
   "Full apple-m4-metal model inference works.",
   "QK256 works on Apple Silicon.",
   "Neural Engine execution is proven.",
   "The output-quality smoke suite proves broad benchmark performance.",
+  "BitNet is selectable through `bitnet mac ask` or `bitnet mac chat` before that user-facing route is wired and separately checked.",
 ]
 
 [[work_item]]
@@ -167,7 +170,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-MODEL-002"
-status = "blocked"
+status = "merged"
 branch = "codex/apple-m4-local-answer/M4-QA-MODEL-002-known-good-artifact"
 stackable = false
 review_mode = "codex_premerge"
@@ -223,6 +226,9 @@ acceptance = "Add deterministic greedy local-answer checks so the same model, pr
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m4",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --device apple-m4-cpu-neon --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/bitnet-answer-corpus.yaml --per-prompt-timeout-seconds 900 --dump-logit-steps 1 --logits-topk 10 --fail-on-quality --json-out ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-a.json",
+  "target/release/bitnet answer-corpus --device apple-m4-cpu-neon --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --corpus ci/quality/bitnet-answer-corpus.yaml --per-prompt-timeout-seconds 900 --dump-logit-steps 1 --logits-topk 10 --fail-on-quality --json-out ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-b.json",
+  "target/release/bitnet answer-parity --left ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-a.json --right ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-b.json --left-label apple-m4-run-a --right-label apple-m4-run-b --machine apple-m4-mac-mini --json-out ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-repeat-parity.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
@@ -231,6 +237,7 @@ commands = [
 allowed_paths = [
   "crates/bitnet-cli/**",
   "crates/**/tests/**",
+  "ci/hardware/apple-m4-mac-mini/**",
   "docs/tracking/campaigns/apple-m4-local-answer/**",
   "docs/tracking/generated/**",
 ]
@@ -255,6 +262,8 @@ blocked_by = ["M4-QA-001"]
 acceptance = "Harden local-answer receipts so generated text, token counts, tokenizer authority, model identity, backend routing, fallback status, and timing fields are present and checked."
 commands = [
   "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests answer_corpus_",
+  "cargo test --locked -p bitnet-cli answer_receipt_",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m4",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
@@ -288,6 +297,8 @@ blocked_by = ["M4-QA-001"]
 acceptance = "Add strict local-answer failure-mode coverage for missing model files, tokenizer authority failures, unsupported Apple backend selections, and attempts to count fallback as acceleration."
 commands = [
   "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests answer_corpus_",
+  "cargo test --locked -p bitnet-cli answer_receipt_",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple_m4",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",

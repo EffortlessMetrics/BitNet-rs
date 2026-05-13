@@ -1,8 +1,8 @@
 # Apple M4 Local Server Command And Config Contract
 
-Status: command/config contract, health/readiness endpoints, the first
-streaming local completion endpoint, HTTP export for per-request receipts, and
-operator readiness checking.
+Status: command/config contract, health/readiness endpoints, model catalog
+endpoint, the first streaming local completion endpoint, HTTP export for
+per-request receipts, and operator readiness checking.
 
 The Apple M4 local server should expose the already working dense SLM Mac
 appliance as a loopback service while preserving the same model-cache,
@@ -27,7 +27,8 @@ bitnet mac serve \
 
 `bitnet mac serve` is the Mac appliance wrapper. It should resolve the supported
 model through the same cache and model matrix used by the other `bitnet mac`
-commands.
+commands. Startup prints the loopback URL and the primary operator endpoints:
+`/health`, `/models`, and `/ready`.
 
 The lower-level generic form may be added later, but it must preserve the same
 strict fields:
@@ -95,7 +96,11 @@ bitnet mac serve-check \
 ```
 
 `serve-check` writes a compact operator receipt and does not claim production
-uptime, full OpenAI compatibility, BitNet quality, or full Metal inference.
+uptime, full OpenAI compatibility, BitNet quality, or full Metal inference. The
+default check verifies `/ready` and `/models`; `--completion` additionally
+checks one completion and receipt export. The `/models` check records the
+recommended first model ID plus exact fetch/verify commands when disk headroom
+allows a supported model fetch.
 
 ## Config File Shape
 
@@ -170,15 +175,15 @@ Failures must be explicit and operator-actionable:
 | Non-loopback host | Allow only when explicitly configured; warn that this is local-service scope. |
 | Receipt directory unwritable | Refuse to start unless `--receipt-mode off` is explicitly supported later. |
 
-## Endpoint Contract For Later Items
+## Endpoint Contract
 
-`M4-SERVE-001` does not implement endpoints. Later items should use this
-contract:
+The current local server surface is:
 
 | Endpoint | First item | Purpose |
 |---|---|---|
 | `GET /health` | `M4-SERVE-002` | Implemented as process health and cheap server status. |
 | `GET /health/live` | `M4-SERVE-002` | Implemented as a liveness alias for `/health`. |
+| `GET /models` | `M4-UX-001` | Implemented as a no-generation, no-download model catalog with cache and disk guidance. |
 | `GET /ready` | `M4-SERVE-002` | Implemented with model-cache, tokenizer, backend, fallback, disk, and receipt readiness. |
 | `GET /health/ready` | `M4-SERVE-002` | Implemented as a readiness alias for `/ready`. |
 | `POST /v1/chat/completions` | `M4-SERVE-003` | Implemented as a streaming dense SLM completion surface with per-request receipts. |
@@ -194,6 +199,12 @@ receipts are tested.
 completion requests through that resident state, and writes a strict per-request
 receipt under `receipt_dir`. `M4-SERVE-004` exports those receipts through
 `GET /receipts/{id}` after rejecting unsafe IDs and missing receipt files.
+
+`GET /models` exposes the same Mac operator catalog as `bitnet mac models`,
+including default/supported dense Qwen rows, blocked BitNet rows,
+candidate/rejected rows, cache state, disk-headroom guidance, and the
+receipt-only BitNet proof bridge command. It does not run generation, does not
+fetch artifacts, and does not expose BitNet as a server completion model.
 
 `M4-SERVE-002` does not run generation. Readiness reports whether startup
 verified the supported model cache, tokenizer authority, `apple-m4-cpu-neon`
@@ -224,8 +235,8 @@ receipt directory is available.
 ## Claim Boundary
 
 This contract may claim only that the M4 local server command/config surface,
-initial health/readiness endpoint slice, first local completion endpoint, and
-receipt export endpoint are defined.
+initial health/readiness endpoint slice, model catalog endpoint, first local
+completion endpoint, and receipt export endpoint are defined.
 
 It must not claim:
 

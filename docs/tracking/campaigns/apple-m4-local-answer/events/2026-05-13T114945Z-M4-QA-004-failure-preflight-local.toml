@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T11:49:45Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-004"
+event = "closeout"
+actor = "codex"
+previous_status = "proposed"
+new_status = "proposed"
+
+notes = [
+  "Added answer-corpus preflight failures for non-dry-run local-answer attempts when the model path is missing, the corpus requires external_tokenizer_json authority but --tokenizer is omitted, or an explicit tokenizer path is missing.",
+  "Dry runs still validate corpus shape without requiring local model/tokenizer files.",
+  "The targeted test command `cargo test -p bitnet-cli --test cli_arg_tests answer_corpus_` passed 11 tests, including the new missing model, required external tokenizer, missing tokenizer, and unsupported apple-m4-metal answer-corpus cases.",
+  "The failure messages explicitly say hidden fallback or hidden tokenizer fallback is not allowed.",
+  "This is local M4-QA-004 evidence only; M4-QA-004 remains proposed/stack-blocked until M4-QA-001 lands and does not add any backend capability.",
+]
