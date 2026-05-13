@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T04:06:03Z"
+campaign = "intel-258v-platform"
+item = "SLM-OV258V-002"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4565
+actor = "codex"
+head_sha = "dcbaa2c7b99fdde16aed4d7f5ee5c1060c3c3cd4"
+branch = "codex/lunar-lake/SLM-OV258V-002-openvino-cpu-preflight"
+summary = "Opened SLM-OV258V-002 to record the OpenVINO CPU LLMPipeline smoke prerequisite state for Qwen2.5."
+
+notes = [
+  "The receipt is blocked before execution because openvino_genai and the exported OpenVINO IR model are absent from this local environment.",
+  "OpenVINO Runtime 2026.1 imports and reports CPU, GPU, and NPU devices.",
+  "No OpenVINO CPU generation, generation fallback status, answer quality, speedup, Arc/NPU execution, acceleration, or BitNet QK256/I2_S proof is claimed.",
+]

@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "intel_258v_dense_slm_openvino_cpu_llmpipeline_smoke",
+  "campaign": "intel-258v-platform",
+  "item": "SLM-OV258V-002",
+  "created_utc": "2026-05-13T04:04:12Z",
+  "machine_id": "intel-258v",
+  "proof_stage": "blocked_before_execution",
+  "requested_backend": "openvino-cpu",
+  "selected_backend": null,
+  "runtime_api": "openvino_genai",
+  "runtime_device": "CPU",
+  "backend_lane": "dense_slm_openvino_cpu",
+  "fallback_used": false,
+  "fallback_status": "no_fallback_attempted_because_llmpipeline_execution_did_not_start",
+  "model_family": "qwen",
+  "model_architecture": "qwen2",
+  "quantization": "INT4_SYM",
+  "prompt_template": "qwen2.5",
+  "tokenizer_source": "hf_tokenizer_export",
+  "selected_kernel_or_runtime": null,
+  "baseline_cpu_reference": {
+    "openvino_ir_manifest": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+    "gguf_manifest": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+    "answer_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+    "phase_receipt": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json"
+  },
+  "expected_model": {
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "expected_output_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "expected_model_xml": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
+    "expected_model_bin": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
+    "model_dir_exists": false,
+    "model_xml_exists": false,
+    "model_bin_exists": false,
+    "model_binary_committed": false
+  },
+  "environment": {
+    "python": "C:/Python314/python.exe",
+    "openvino": {
+      "available": true,
+      "version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+      "available_devices": [
+        "CPU",
+        "GPU",
+        "NPU"
+      ]
+    },
+    "openvino_genai": {
+      "available": false,
+      "error": "ModuleNotFoundError: No module named 'openvino_genai'"
+    },
+    "optimum": {
+      "available": false,
+      "error": "ModuleNotFoundError: No module named 'optimum'"
+    },
+    "transformers": {
+      "available": false,
+      "error": "ModuleNotFoundError: No module named 'transformers'"
+    }
+  },
+  "blocked_by": [
+    "openvino_genai Python module is not installed in the active Python environment.",
+    "The exported OpenVINO IR model directory is absent.",
+    "optimum and transformers are absent, so this host cannot export the Qwen2.5 source model in-place."
+  ],
+  "attempted_actions": [
+    "Verified OpenVINO Python runtime import and available devices.",
+    "Checked for openvino_genai, optimum, and transformers Python modules.",
+    "Checked for the expected exported OpenVINO IR model directory and model files."
+  ],
+  "not_attempted": [
+    "OpenVINO GenAI LLMPipeline creation.",
+    "OpenVINO CPU text generation.",
+    "Answer-gate comparison against the GGUF CPU baseline.",
+    "Phase timing."
+  ],
+  "next_action": {
+    "export_command": "optimum-cli export openvino --model Qwen/Qwen2.5-0.5B-Instruct --revision 7ae557604adf67be50417f59c2c2f167def9a775 --weight-format int4 --sym --ratio 1.0 --group-size 128 models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "run_after_export": "Create an OpenVINO GenAI LLMPipeline on device CPU, run the bounded Qwen2.5 answer corpus, and compare generated IDs/text to the existing GGUF CPU baseline."
+  },
+  "claim_boundary": {
+    "may_claim": [
+      "OpenVINO Runtime 2026.1 is importable on this host and reports CPU, GPU, and NPU devices.",
+      "The OpenVINO CPU LLMPipeline smoke is blocked before execution by missing openvino_genai and missing exported IR model files.",
+      "No model binary is committed."
+    ],
+    "must_not_claim": [
+      "OpenVINO CPU LLMPipeline execution works.",
+      "OpenVINO CPU selected the model or generated text.",
+      "OpenVINO CPU fallback_used=false is proven for generation.",
+      "Dense SLM answer quality improves.",
+      "OpenVINO CPU speedup or phase performance is proven.",
+      "Arc 140V or Intel NPU execution is proven.",
+      "BitNet QK256/I2_S proof is affected."
+    ]
+  }
+}
