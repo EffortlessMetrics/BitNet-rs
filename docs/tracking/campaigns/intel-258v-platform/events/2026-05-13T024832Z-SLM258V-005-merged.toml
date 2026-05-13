@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T02:48:32Z"
+campaign = "intel-258v-platform"
+item = "SLM258V-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4552
+actor = "codex"
+merge_sha = "8fe66d4d5fb05bc49ff289507909dd0ac0899713"
+branch = "codex/lunar-lake/SLM258V-005-receipt-identity"
+summary = "Marked SLM258V-005 merged after dense Qwen SLM receipt identity hardening landed."
+
+notes = [
+  "The merged PR adds top-level backend, runtime API, fallback status, model identity, tokenizer source, prompt template, and selected dense CPU runtime fields to dense SLM answer and phase receipts.",
+  "The merged PR preserves existing child and case backend fields.",
+  "The claim boundary remains receipt hardening only: no new dense SLM quality, speed, Arc/NPU execution, acceleration, or BitNet QK256/I2_S proof.",
+]
