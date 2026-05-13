@@ -8,7 +8,7 @@
 | apple-bitnet-artifact-sweep | ABAS-004 | ABAS-001, ABAS-002 | proposed |
 | apple-bitnet-artifact-sweep | ABAS-005 | ABAS-001 | proposed |
 | apple-m3-macbook-air | M3MBA-002 | M3MBA-001 | merged |
-| apple-m3-macbook-air | M3MBA-003 | M3MBA-002 | pr_open |
+| apple-m3-macbook-air | M3MBA-003 | M3MBA-002 | in_progress |
 | apple-m3-macbook-air | M3MBA-004A | M3MBA-003 | proposed |
 | apple-m3-macbook-air | M3MBA-004B | M3MBA-004A | proposed |
 | apple-m3-macbook-air | M3MBA-005A | M3MBA-004B | proposed |
@@ -175,7 +175,6 @@
 | intel-258v-platform | SLM-OV258V-004 | SLM-OV258V-003 | merged |
 | intel-258v-platform | SLM-OV258V-005 | SLM-OV258V-004 | merged |
 | intel-258v-platform | SLM-OV258V-006 | SLM-OV258V-005 | merged |
-| intel-258v-platform | CPU-BITNET-REF-001 | CPU258V-031 | pr_open |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |

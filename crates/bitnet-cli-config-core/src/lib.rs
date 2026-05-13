@@ -32,17 +32,22 @@ pub const SUPPORTED_DEVICE_LABELS: &[&str] = &[
     "apple-m4-metal",
     "apple-m4-mpsgraph",
     "apple-m4-cpu-neon",
+    "apple-m3-air-cpu-neon",
     "auto",
 ];
 
 /// Stable help text for supported package-level device/backend labels.
-pub const SUPPORTED_DEVICE_LABELS_TEXT: &str = "cpu, cuda, gpu, vulkan, opencl, ocl, hip, rocm, oneapi, npu, npu:<index>, intel-npu, intel-npu:<index>, openvino-npu, intel-npu-openvino, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto";
+pub const SUPPORTED_DEVICE_LABELS_TEXT: &str = "cpu, cuda, gpu, vulkan, opencl, ocl, hip, rocm, oneapi, npu, npu:<index>, intel-npu, intel-npu:<index>, openvino-npu, intel-npu-openvino, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-cpu-neon, auto";
 
 /// Stable help text for Apple M4 proof-lane labels.
 pub const APPLE_M4_DEVICE_LABELS_TEXT: &str = "apple-m4-metal = native Metal proof lane, apple-m4-mpsgraph = MPSGraph graph/reference lane, apple-m4-cpu-neon = Apple CPU/NEON fallback/parity lane";
 
+/// Stable help text for Apple M3 MacBook Air proof-lane labels.
+pub const APPLE_M3_AIR_DEVICE_LABELS_TEXT: &str =
+    "apple-m3-air-cpu-neon = M3 MacBook Air Apple CPU/NEON lane";
+
 /// Top-level `--device` help for package-level backend labels.
-pub const DEVICE_HELP: &str = "Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes";
+pub const DEVICE_HELP: &str = "Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes";
 
 /// Help for legacy full-cli commands that do not emit Apple proof receipts.
 pub const LEGACY_RUNTIME_DEVICE_HELP: &str = "Device for this legacy command (cpu, cuda/gpu aliases, auto). Use `bitnet run` for receipt-backed Apple M4 labels";
@@ -53,14 +58,14 @@ pub const LEGACY_RUNTIME_DEVICE_LABELS_TEXT: &str = "cpu, cuda, gpu, vulkan, ope
 /// Build a consistent invalid package-level device label error.
 pub fn invalid_device_message(device: &str) -> String {
     format!(
-        "Invalid device: {device}. Must be one of: {SUPPORTED_DEVICE_LABELS_TEXT}. Apple M4 labels are distinct proof lanes: {APPLE_M4_DEVICE_LABELS_TEXT}. On unavailable or non-M4 hosts, strict mode fails and non-strict receipt paths must record fallback_used and fallback_reason."
+        "Invalid device: {device}. Must be one of: {SUPPORTED_DEVICE_LABELS_TEXT}. Apple M4 labels are distinct proof lanes: {APPLE_M4_DEVICE_LABELS_TEXT}. Apple M3 Air labels are distinct proof lanes: {APPLE_M3_AIR_DEVICE_LABELS_TEXT}. On unavailable or non-matching Apple hosts, strict mode fails and non-strict receipt paths must record fallback_used and fallback_reason."
     )
 }
 
 /// Build a consistent error for legacy commands that do not support a proof lane.
 pub fn unsupported_legacy_command_device_message(command: &str, device: &str) -> String {
     format!(
-        "{command} does not support device label '{device}'. This legacy command currently supports: {LEGACY_RUNTIME_DEVICE_LABELS_TEXT}. Use `bitnet run` for receipt-backed Apple M4 labels ({APPLE_M4_DEVICE_LABELS_TEXT}); CPU fallback cannot count as Metal execution."
+        "{command} does not support device label '{device}'. This legacy command currently supports: {LEGACY_RUNTIME_DEVICE_LABELS_TEXT}. Use `bitnet run` for receipt-backed Apple proof labels ({APPLE_M4_DEVICE_LABELS_TEXT}; {APPLE_M3_AIR_DEVICE_LABELS_TEXT}); CPU fallback cannot count as Metal execution."
     )
 }
 
@@ -245,6 +250,7 @@ pub fn is_supported_device_label(label: &str) -> bool {
             | "apple-m4-metal"
             | "apple-m4-mpsgraph"
             | "apple-m4-cpu-neon"
+            | "apple-m3-air-cpu-neon"
             | "auto"
     ) || label.strip_prefix("npu:").is_some_and(|index| index.parse::<usize>().is_ok())
         || label.strip_prefix("intel-npu:").is_some_and(|index| index.parse::<usize>().is_ok())
@@ -303,8 +309,8 @@ impl ConfigBuilder {
 #[cfg(test)]
 mod tests {
     use super::{
-        APPLE_M4_DEVICE_LABELS_TEXT, CliConfig, ConfigBuilder, SUPPORTED_DEVICE_LABELS,
-        invalid_device_message,
+        APPLE_M3_AIR_DEVICE_LABELS_TEXT, APPLE_M4_DEVICE_LABELS_TEXT, CliConfig, ConfigBuilder,
+        SUPPORTED_DEVICE_LABELS, invalid_device_message,
     };
 
     #[test]
@@ -350,11 +356,21 @@ mod tests {
     }
 
     #[test]
+    fn validates_apple_m3_air_label_without_aliasing() {
+        let config = CliConfig {
+            default_device: "apple-m3-air-cpu-neon".to_string(),
+            ..CliConfig::default()
+        };
+        config.validate().unwrap();
+    }
+
+    #[test]
     fn invalid_device_message_describes_apple_m4_boundaries() {
         let message = invalid_device_message("quantum");
         assert!(message.contains("npu:<index>"), "got: {message}");
         assert!(message.contains("intel-npu-openvino"), "got: {message}");
         assert!(message.contains(APPLE_M4_DEVICE_LABELS_TEXT), "got: {message}");
+        assert!(message.contains(APPLE_M3_AIR_DEVICE_LABELS_TEXT), "got: {message}");
         assert!(message.contains("strict mode fails"), "got: {message}");
         assert!(message.contains("fallback_used"), "got: {message}");
     }

@@ -33,6 +33,8 @@ pub enum DeviceConfig {
     AppleM4MpsGraph,
     /// Preserve the Apple M4 CPU/NEON fallback/parity backend identity.
     AppleM4CpuNeon,
+    /// Preserve the Apple M3 MacBook Air CPU/NEON backend identity.
+    AppleM3AirCpuNeon,
 }
 
 impl FromStr for DeviceConfig {
@@ -52,6 +54,7 @@ impl FromStr for DeviceConfig {
             "apple-m4-metal" => Ok(DeviceConfig::AppleM4Metal),
             "apple-m4-mpsgraph" => Ok(DeviceConfig::AppleM4MpsGraph),
             "apple-m4-cpu-neon" => Ok(DeviceConfig::AppleM4CpuNeon),
+            "apple-m3-air-cpu-neon" => Ok(DeviceConfig::AppleM3AirCpuNeon),
             s if s.starts_with("gpu:") => Ok(DeviceConfig::Gpu(s[4..].parse::<usize>()?)),
             s if s.starts_with("cuda:") => Ok(DeviceConfig::Gpu(s[5..].parse::<usize>()?)),
             s if s.starts_with("vulkan:") => Ok(DeviceConfig::Gpu(s[7..].parse::<usize>()?)),
@@ -91,7 +94,7 @@ impl DeviceConfig {
             DeviceConfig::Metal | DeviceConfig::AppleM4Metal => Device::Metal,
             // MPSGraph is a separate proof label; runtime execution is introduced in a later item.
             DeviceConfig::MpsGraph | DeviceConfig::AppleM4MpsGraph => Device::Cpu,
-            DeviceConfig::AppleM4CpuNeon => Device::Cpu,
+            DeviceConfig::AppleM4CpuNeon | DeviceConfig::AppleM3AirCpuNeon => Device::Cpu,
         }
     }
 
@@ -111,6 +114,7 @@ impl DeviceConfig {
             DeviceConfig::AppleM4Metal => BackendRequest::AppleM4Metal,
             DeviceConfig::AppleM4MpsGraph => BackendRequest::AppleM4MpsGraph,
             DeviceConfig::AppleM4CpuNeon => BackendRequest::AppleM4CpuNeon,
+            DeviceConfig::AppleM3AirCpuNeon => BackendRequest::AppleM3AirCpuNeon,
         }
     }
 
@@ -158,6 +162,10 @@ mod tests {
             "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap(),
             DeviceConfig::AppleM4CpuNeon
         );
+        assert_eq!(
+            "apple-m3-air-cpu-neon".parse::<DeviceConfig>().unwrap(),
+            DeviceConfig::AppleM3AirCpuNeon
+        );
     }
 
     #[test]
@@ -176,12 +184,16 @@ mod tests {
         let mpsgraph = "mpsgraph".parse::<DeviceConfig>().unwrap();
         let apple_mpsgraph = "apple-m4-mpsgraph".parse::<DeviceConfig>().unwrap();
         let apple_cpu = "apple-m4-cpu-neon".parse::<DeviceConfig>().unwrap();
+        let apple_m3_air_cpu = "apple-m3-air-cpu-neon".parse::<DeviceConfig>().unwrap();
 
         assert_eq!(metal.backend_label(), "metal");
         assert_eq!(apple_metal.backend_label(), "apple-m4-metal");
         assert_eq!(mpsgraph.backend_label(), "mpsgraph");
         assert_eq!(apple_mpsgraph.backend_label(), "apple-m4-mpsgraph");
         assert_eq!(apple_cpu.backend_label(), "apple-m4-cpu-neon");
+        assert_eq!(apple_m3_air_cpu.backend_label(), "apple-m3-air-cpu-neon");
+        assert_ne!(apple_m3_air_cpu.backend_label(), apple_cpu.backend_label());
+        assert_eq!(apple_m3_air_cpu.resolve(), bitnet_common::Device::Cpu);
     }
 
     #[test]
