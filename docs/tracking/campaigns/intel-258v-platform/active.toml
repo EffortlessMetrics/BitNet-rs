@@ -2115,3 +2115,43 @@ must_not_claim = [
   "Arc 140V or Intel NPU execution is proven.",
   "Acceleration or sustained performance is proven.",
 ]
+
+[[work_item]]
+id = "LNL258V-COMPARE-004"
+status = "ready"
+branch = "codex/lunar-lake/LNL258V-COMPARE-004"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-031", "SLM258V-004", "LNL258V-COMPARE-002"]
+acceptance = "Refresh the Lunar Lake same-machine comparison index after the corrected BitNet CPU reference bundle and dense Qwen SLM CPU answer/phase receipts, preserving independent BitNet CPU, dense SLM CPU, Arc 140V, and NPU lane claims, fallback status, and no platform performance or acceleration claims."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json",
+  "Parse ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json and verify all referenced ci/hardware paths exist",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+]
+may_claim = [
+  "The Lunar Lake comparison index links the corrected BitNet CPU reference bundle, dense Qwen SLM CPU answer/phase receipts, and independently scoped Arc/NPU receipts by path, backend identity, runtime API, proof stage, and fallback status.",
+  "Dense SLM CPU receipts are indexed separately from BitNet QK256/I2_S receipts.",
+]
+must_not_claim = [
+  "The comparison index proves CPU, dense SLM, Arc 140V, or Intel NPU performance.",
+  "The comparison index proves full BitNet inference on Arc 140V or Intel NPU.",
+  "The comparison index proves dense SLM inference on Arc 140V or Intel NPU.",
+  "The comparison index proves acceleration.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "CPU fallback satisfies Arc 140V or Intel NPU proof.",
+]

@@ -160,19 +160,19 @@ has no divergence. These receipts still do not claim broad chat quality, CPU
 speed, Arc 140V execution, Intel NPU execution, QK256 changes, or full model
 correctness.
 
-`platform-comparison-index.json` links independently scoped CPU, Arc 140V, and
-Intel NPU artifacts from the same Lunar Lake laptop. It is an index only: it may
-record artifact paths, backend identity, runtime API, proof stage, and fallback
-status, but it must not merge CPU, GPU, or NPU claims or introduce performance,
-BitNet inference, QK256 decode, or acceleration claims.
+`platform-comparison-index.json` links independently scoped corrected BitNet CPU,
+dense SLM CPU, Arc 140V, and Intel NPU artifacts from the same Lunar Lake
+laptop. It is an index only: it may record artifact paths, backend identity,
+runtime API, proof stage, and fallback status, but it must not merge BitNet,
+dense SLM, GPU, or NPU claims or introduce performance, accelerator inference,
+QK256 decode, or acceleration claims.
 
-`cpu-reference-bundle.json` is the current 258V CPU evidence index for
-accelerator comparison. It supersedes the post-mechanics bundle by linking the
-prompt/token authority audit, external prompt/token parity, external
-first-token boundary, first-token divergence classifier, QK256/I8_S semantic
-audit, output-head/logits-index audit, observed logits evidence, and
-transformer-layer parity ladder. It is a CPU reference index only and must not
-claim new answer quality, CPU speed, Arc 140V execution, Intel NPU execution,
+`cpu-reference-bundle-after-semantic-fix.json` is the current 258V BitNet CPU
+evidence index for future accelerator comparison. It supersedes the
+semantic-debug `cpu-reference-bundle.json` by linking the prompt-policy fix,
+post-fix prompt/token parity, post-fix answer corpus, scalar/AVX2 parity, and
+post-fix phase receipts. It is a CPU reference index only and must not claim
+broad answer quality, CPU speed, Arc 140V execution, Intel NPU execution,
 external first-token logits parity, or full model correctness.
 
 `cpu-semantic-diagnosis.json` turns the CPU reference bundle into a
