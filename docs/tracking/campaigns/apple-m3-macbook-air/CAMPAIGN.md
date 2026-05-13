@@ -49,6 +49,8 @@ artifacts to separate strict proof items.
   smallest MacBook-specific label or validation path instead.
 - Do not add live model downloads, large artifact sweeps, or hardware timing
   runs to generic required CI.
+- Do not use near-completion timeouts as M3 lane cost control; route the job
+  away, choose a smaller profile, or cap healthy selected runs with cushion.
 - Never commit model binaries.
 
 ## Work Items
@@ -68,7 +70,7 @@ artifacts to separate strict proof items.
 | M3MBA-008 | proposed | Hand accepted artifacts to separate M4 strict-proof items without claiming proof in this lane. |
 | M3MBA-009 | proposed | Synthesize M3 dense SLM behavior against M4 and SLM CPU evidence after dense smoke/operator evidence exists. |
 | M3MBA-010 | proposed | Audit MacBook model-cache retention and cleanup after the first large BitNet download. |
-| M3MBA-011 | in_progress | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
+| M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
 
 ## Phase Roadmap
 

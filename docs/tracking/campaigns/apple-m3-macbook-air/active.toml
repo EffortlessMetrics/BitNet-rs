@@ -73,6 +73,7 @@ commands = [
   "sysctl -n machdep.cpu.brand_string hw.memsize hw.physicalcpu hw.perflevel0.physicalcpu hw.perflevel1.physicalcpu",
   "system_profiler SPHardwareDataType SPDisplaysDataType SPPowerDataType",
   "df -k . \"$HOME/Library/Caches\"",
+  "jq -e '.artifact_kind == \"apple_silicon_macbook_machine_profile\" and .claim_boundary.inference_run == false and .model_cache.model_binaries_committed == false and .storage.large_artifact_sweep_allowed == true' ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/machine-profile.json",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
