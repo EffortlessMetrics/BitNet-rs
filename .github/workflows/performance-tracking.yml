@@ -26,7 +26,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -430,6 +430,7 @@ jobs:
     needs: performance-benchmark
     if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
 
     steps:
     - name: Checkout repository

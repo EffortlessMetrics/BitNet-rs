@@ -85,6 +85,20 @@ cap failures, but they should not enter healthy-runtime percentile samples. A
 cancelled or timed-out job did not produce the receipt, test result, or cache
 state that the selected lane was supposed to buy.
 
+Workflows that mix PR triggers with scheduled or manual long lanes should use
+PR-only cancellation:
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+```
+
+This keeps superseded PR pushes cheap while allowing selected schedule/manual
+lanes to finish once they have started. Workflows that have no PR trigger, such
+as cache warmers, should normally use `cancel-in-progress: false` unless the
+workflow is explicitly designed to discard partial work.
+
 ### Selected hardware and model lanes
 
 Hardware/model lanes such as the M3 MacBook Air work need an extra distinction:
