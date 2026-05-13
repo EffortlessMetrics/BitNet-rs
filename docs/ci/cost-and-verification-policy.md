@@ -29,6 +29,17 @@ For ordinary PRs, our operating target is:
 
 The `$1` mark is a ceiling, not the goal.
 
+## Routed verification rollout
+
+The implementation plan for making this cost model the default is documented in
+`docs/ci/routed-verification-rollout.md`, with the stable PR body template in
+`docs/ci/routed-verification-pr-template.md`, the planner contract in
+`docs/ci/ci-plan-schema.md`, and the machine-readable work queue in
+`policy/ci-routing-rollout.toml`. That rollout is intentionally sequenced:
+first remove immediate default-cost waste, then make `ci-plan.json` the routing
+authority, then narrow Linux proof by package/risk, then consolidate branch
+protection behind `PR Gate Success` only after the routing has proven stable.
+
 ## Why the budget target is aggressive
 
 Our CI budget target is intentionally aggressive — but **not because we want

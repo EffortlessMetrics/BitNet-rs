@@ -49,6 +49,18 @@ view is the whitelist itself, validated by `xtask ci-lane-whitelist check`.
 | `policy.yml` (PR 02 / 03)         | `strict-policy`                                     | Frontdoor blocking, very cheap      |
 | `ripr.yml` (PR 13)                | `ripr-advisory`                                     | Frontdoor advisory                  |
 
+## Routed verification rollout specs
+
+The next CI economics implementation sequence is specified in:
+
+* `docs/ci/routed-verification-rollout.md` — human-readable phased rollout and
+  work-item acceptance criteria.
+* `docs/ci/routed-verification-pr-template.md` — required PR body shape for
+  rollout changes.
+* `docs/ci/ci-plan-schema.md` — stable `ci-plan.json` schema that PR Gate and
+  workflows will consume.
+* `policy/ci-routing-rollout.toml` — compact machine-readable queue for agents.
+
 ## Backlog
 
 The whitelist intentionally covers the highest-signal lanes first.

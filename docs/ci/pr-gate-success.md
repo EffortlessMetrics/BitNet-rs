@@ -1,5 +1,11 @@
 # PR Gate Success
 
+> Routing note: the current PR Gate behavior is documented below. The planned
+> migration to make PR Gate consume `ci-plan.json` is specified in
+> `docs/ci/routed-verification-rollout.md` and `docs/ci/ci-plan-schema.md`.
+> Until that work lands, this document describes the existing aggregator
+> posture and the intended branch-protection destination.
+
 `PR Gate Success` is the single required check that branch
 protection should gate merges on. It is the deliverable of PR 19 in
 the strict policy / CI economics rollout.
