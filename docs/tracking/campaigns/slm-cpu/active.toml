@@ -675,8 +675,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008T"
-status = "pr_open"
+status = "merged"
 pr = 4611
+merge_sha = "35be945a7ddaf9f593d8d405a961e08c553fe7fc"
 branch = "codex/slm-cpu-008t-first-token-parity"
 stackable = false
 review_mode = "codex_premerge"
