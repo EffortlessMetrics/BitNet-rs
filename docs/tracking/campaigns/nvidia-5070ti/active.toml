@@ -2138,10 +2138,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-PROD-009"
-status = "pr_open"
+status = "merged"
 branch = "cuda/bitnet-strict-preflight"
 pr = 4604
 head_sha = "c83cd67e7f8f03a2aef9acfb785f0ef7f420b126"
+merge_sha = "2bb701f867771eb31c4333606bfad4157932831c"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
