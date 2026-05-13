@@ -102,9 +102,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-003-receipt-label"
 pr = 4596
+head_sha = "23d5f06f87b706beb5e625552b532ca4f82b3ad5"
+merge_sha = "8f9fbf8497db650bddb0f9eed9e634684c7a582c"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
