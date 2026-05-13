@@ -1,8 +1,8 @@
 {
-  "schema": 1,
+  "schema": 2,
   "artifact_kind": "lunar_lake_platform_comparison_index",
   "machine_id": "intel-258v",
-  "captured_at_utc": "2026-05-09T23:57:22Z",
+  "captured_at_utc": "2026-05-13T00:20:49Z",
   "proof_stage": "comparison_indexed",
   "comparison_scope": "same_machine_artifact_index",
   "artifact_dates": [
@@ -13,23 +13,31 @@
   "source_artifacts": {
     "platform_probe": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
     "platform_probe_cli": "ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json",
-    "cpu_strict_decode_smoke": "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
-    "cpu_phase_warm_session": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
-    "cpu_phase_prefill_512": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json",
-    "cpu_phase_decode_128": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/decode_128.json",
-    "cpu_answer_corpus_scalar": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json",
-    "cpu_answer_corpus_avx2": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
-    "cpu_answer_parity": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
-    "cpu_reference_bundle": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
-    "cpu_reference_bundle_superseded": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json",
-    "cpu_prompt_authority_audit": "ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json",
-    "cpu_hf_prompt_token_reference_parity": "ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity.json",
-    "cpu_external_first_token_reference": "ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json",
-    "cpu_first_token_divergence_classifier": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json",
-    "cpu_qk256_i8s_semantic_audit": "ci/hardware/intel-258v/2026-05-08/cpu-qk256-i8s-semantic-audit.json",
-    "cpu_output_head_logits_index_audit": "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
-    "cpu_transformer_layer_parity": "ci/hardware/intel-258v/2026-05-08/transformer-layer-parity.json",
+    "bitnet_cpu_reference_bundle": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+    "bitnet_cpu_reference_bundle_superseded": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
+    "bitnet_cpu_reference_bundle_post_mechanics": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json",
+    "bitnet_cpu_semantic_diagnosis": "ci/hardware/intel-258v/2026-05-08/cpu-semantic-diagnosis.json",
+    "bitnet_cpu_prompt_token_reference_parity_after_fix": "ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity-after-prompt-fix.json",
+    "bitnet_cpu_answer_corpus_scalar_after_fix": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-prompt-fix.json",
+    "bitnet_cpu_answer_corpus_avx2_after_fix": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-prompt-fix.json",
+    "bitnet_cpu_answer_parity_after_fix": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-prompt-fix.json",
+    "bitnet_cpu_phase_warm_session_after_fix": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix.json",
+    "bitnet_cpu_phase_prefill_512_after_fix": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/prefill_512.json",
+    "bitnet_cpu_phase_decode_128_after_fix": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/decode_128.json",
+    "bitnet_cpu_prompt_authority_audit": "ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json",
+    "bitnet_cpu_external_first_token_reference": "ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json",
+    "bitnet_cpu_first_token_divergence_classifier": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json",
+    "bitnet_cpu_qk256_i8s_semantic_audit": "ci/hardware/intel-258v/2026-05-08/cpu-qk256-i8s-semantic-audit.json",
+    "bitnet_cpu_output_head_logits_index_audit": "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
+    "bitnet_cpu_transformer_layer_parity": "ci/hardware/intel-258v/2026-05-08/transformer-layer-parity.json",
+    "dense_slm_artifact_manifest": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+    "dense_slm_answer_corpus_clean_provenance": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+    "dense_slm_answer_corpus_diagnostic": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu.json",
+    "dense_slm_phase_warm_session": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json",
+    "dense_slm_phase_prefill_512": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/prefill_512.json",
+    "dense_slm_phase_decode_128": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/decode_128.json",
     "arc140v_runtime_probe": "ci/hardware/intel-258v/2026-05-06/arc-140v-runtime-probe.json",
+    "arc140v_level_zero_visibility": "ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json",
     "arc140v_openvino_gpu_smoke": "ci/hardware/intel-258v/2026-05-08/arc-140v-openvino-gpu-smoke.json",
     "arc140v_opencl_smoke": "ci/hardware/intel-258v/2026-05-07/arc-140v-opencl-smoke.json",
     "arc140v_opencl_cpu_parity": "ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json",
@@ -44,54 +52,84 @@
   "lanes": {
     "cpu": {
       "proof_label": "intel-258v-cpu-avx2",
-      "role": "BitNet CPU reference plate",
+      "role": "BitNet CPU corrected reference plate",
       "runtime_api": "cpu",
       "requested_backend": "cpu",
       "selected_backend": "cpu-rust",
       "proof_stages": [
-        "strict_decode_smoke",
-        "phase_timing_recorded",
-        "full_answer_corpus_passed",
+        "corrected_cpu_reference_bundled",
+        "metadata_prompt_policy_fixed",
+        "fixed_tiny_corpus_passed",
         "scalar_vs_avx2_parity_passed",
-        "semantic_debug_ladder_recorded",
-        "transformer_layer_ladder_recorded"
+        "phase_timing_recorded",
+        "semantic_debug_ladder_recorded"
       ],
       "fallback_used": false,
-      "primary_artifact": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
+      "primary_artifact": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
       "supporting_artifacts": [
-        "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-post-mechanics.json",
-        "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-bitnetcpp-template-full-post-mechanics.json",
-        "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-bitnetcpp-template-full-post-mechanics.json",
-        "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics.json",
-        "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
-        "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json",
-        "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/decode_128.json",
-        "ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json",
-        "ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity.json",
-        "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-semantic-diagnosis.json",
+        "ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity-after-prompt-fix.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-prompt-fix.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-prompt-fix.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-prompt-fix.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/prefill_512.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/decode_128.json",
         "ci/hardware/intel-258v/2026-05-08/cpu-qk256-i8s-semantic-audit.json",
         "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
         "ci/hardware/intel-258v/2026-05-08/transformer-layer-parity.json"
       ],
-      "claim_allowed": "The 258V CPU reference bundle links strict real-GGUF receipts, phase timing receipts, full fixed-corpus scalar-vs-AVX2 answer parity, and the semantic-debug ladder through transformer-layer parity for later accelerator comparisons.",
+      "claim_allowed": "The corrected 258V BitNet CPU reference bundle links the prompt-policy fix, fixed-corpus scalar and AVX2 answer passes, scalar-vs-AVX2 parity, corrected warm-session phase receipts, and semantic-debug ladder for future accelerator comparisons.",
       "claims_not_allowed": [
-        "General chat quality is proven.",
-        "Sustained throughput is proven.",
-        "A CPU speedup is proven.",
+        "General BitNet chat quality is proven.",
+        "Sustained throughput or a CPU speedup is proven.",
+        "External first-token logits parity is proven.",
         "Arc 140V or Intel NPU execution is implied by CPU evidence."
+      ]
+    },
+    "dense_slm_cpu": {
+      "proof_label": "intel-258v-dense-slm-cpu",
+      "role": "Dense Qwen SLM CPU operating path",
+      "runtime_api": "cpu",
+      "requested_backend": "cpu",
+      "selected_backend": "cpu-rust",
+      "model_family": "qwen",
+      "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+      "proof_stages": [
+        "artifact_manifest_recorded",
+        "bounded_answer_smoke_passed",
+        "clean_dense_slm_provenance_recorded",
+        "phase_timing_recorded"
+      ],
+      "fallback_used": false,
+      "primary_artifact": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+      "supporting_artifacts": [
+        "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+        "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json",
+        "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/prefill_512.json",
+        "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/decode_128.json"
+      ],
+      "claim_allowed": "The pinned Qwen2.5 Q8_0 dense SLM artifact has 258V CPU answer-smoke and phase-timing receipts with clean dense SLM provenance and fallback_used=false.",
+      "claims_not_allowed": [
+        "Broad dense SLM chat quality is proven.",
+        "Dense SLM speedup or sustained performance is proven.",
+        "Dense SLM receipts are BitNet QK256/I2_S proof.",
+        "Arc 140V or Intel NPU dense SLM execution is proven."
       ]
     },
     "arc140v": {
       "proof_label": "intel-arc-140v-opencl",
-      "role": "Integrated GPU native OpenCL parity lane",
+      "role": "Integrated GPU visibility and native OpenCL parity lane",
       "runtime_api": "opencl",
       "requested_backend": "intel-arc-140v",
       "selected_backend": "intel-arc-140v-opencl",
       "proof_stages": [
         "runtime_detected",
+        "level_zero_loader_visible",
         "openvino_gpu_smoke_tested",
         "kernel_smoke_tested",
-        "parity_tested"
+        "native_opencl_parity_tested"
       ],
       "fallback_used": false,
       "primary_artifact": "ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json",
@@ -100,21 +138,21 @@
         "ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json",
         "ci/hardware/intel-258v/2026-05-08/arc-140v-openvino-gpu-smoke.json",
         "ci/hardware/intel-258v/2026-05-07/arc-140v-opencl-smoke.json",
-        "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json"
+        "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json"
       ],
-      "claim_allowed": "Arc 140V Level Zero loader visibility, OpenVINO GPU tiny static graph execution, and native OpenCL vector-add CPU-reference parity are recorded independently with fallback_used=false.",
+      "claim_allowed": "Arc 140V runtime identity, Level Zero loader visibility, OpenVINO GPU tiny static graph smoke, and one native OpenCL vector-add CPU-reference parity receipt are recorded independently with fallback_used=false.",
       "claims_not_allowed": [
         "BitNet inference works on Arc 140V.",
-        "Arc 140V accelerates BitNet.",
+        "Dense SLM inference works on Arc 140V.",
+        "Arc 140V accelerates BitNet or dense SLMs.",
         "Packed BitNet QK256 decode works on Arc 140V.",
-        "OpenVINO GPU.0 smoke proves native OpenCL BitNet kernels.",
         "OpenVINO GPU smoke proves native OpenCL BitNet kernels.",
         "CPU fallback satisfies Arc 140V proof."
       ]
     },
     "npu": {
       "proof_label": "intel-npu-openvino",
-      "role": "Intel NPU OpenVINO graph and selected subgraph parity lane",
+      "role": "Intel NPU OpenVINO graph and selected static subgraph parity lane",
       "runtime_api": "openvino",
       "requested_backend": "intel-npu",
       "selected_backend": "intel-npu-openvino",
@@ -133,14 +171,15 @@
         "ci/hardware/intel-258v/2026-05-08/npu-openvino-tiny-graph-smoke.json",
         "ci/hardware/intel-258v/2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
         "ci/hardware/intel-258v/2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
-        "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
-        "ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json"
+        "ci/hardware/intel-258v/2026-05-08/npu-openvino-llamacpp-gguf-reference.json",
+        "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json"
       ],
       "claim_allowed": "OpenVINO 2026.1 sees Intel AI Boost NPU on the 258V, executes the recorded tiny static graph on NPU, and executes the recorded RMSNorm, linear-projection, and FFN/ReLU2 static BitNet-shaped subgraphs on NPU with CPU reference parity.",
       "claims_not_allowed": [
         "Full BitNet inference works on Intel NPU.",
         "Native bitnet-rs NPU inference works.",
         "Intel NPU accelerates BitNet.",
+        "Dense SLM inference works on Intel NPU.",
         "Packed BitNet QK256 decode works on Intel NPU.",
         "CPU fallback satisfies NPU proof."
       ]
@@ -149,32 +188,37 @@
   "comparison_policy": {
     "same_machine": true,
     "same_date_required": false,
+    "cpu_is_reference_plate": true,
+    "bitnet_and_dense_slm_receipts_are_separate": true,
     "performance_comparison_allowed": false,
     "cross_lane_parity_allowed": false,
     "requires_independent_lane_receipts": true,
+    "accelerator_bitnet_claims_require_corrected_cpu_reference": true,
     "notes": [
       "This index links independently scoped receipts from the same Lunar Lake laptop.",
-      "It does not normalize timings across CPU, Arc 140V, and NPU lanes.",
+      "It does not normalize timings across BitNet CPU, dense SLM CPU, Arc 140V, and NPU lanes.",
       "A lane claim is allowed only when the cited lane artifact independently proves it.",
-      "The 2026-05-08 CLI platform probe records OpenVINO CPU/GPU/NPU visibility and Level Zero loader visibility for Arc 140V through ze_loader.dll device ID 0x64A0."
+      "The 2026-05-08 CLI platform probe records OpenVINO CPU/GPU/NPU visibility and Level Zero loader visibility for Arc 140V through ze_loader.dll device ID 0x64A0.",
+      "Existing Arc 140V and NPU selected parity receipts were not rerun by this index refresh; future BitNet-adjacent accelerator work should cite the corrected CPU reference bundle."
     ]
   },
   "fallback_used": false,
   "may_claim": [
-    "The repository has a same-machine 258V comparison index linking CPU, Arc 140V, and Intel NPU artifacts by path, backend identity, proof stage, and fallback status.",
-    "The refreshed 2026-05-08 CLI platform probe records OpenVINO CPU/GPU/NPU visibility and Level Zero loader visibility for Arc 140V on the same Lunar Lake laptop.",
-    "The refreshed 258V CPU reference plate is available for later accelerator comparisons and includes semantic-debug evidence through transformer-layer parity.",
-    "Arc 140V and Intel NPU evidence remain separately scoped and do not inherit CPU proof.",
-    "Arc 140V native OpenCL evidence includes isolated vector-add CPU-reference parity.",
-    "Arc 140V OpenVINO GPU evidence includes a tiny static GPU graph smoke receipt with Arc 140V identity and fallback_used=false.",
-    "Intel NPU live OpenVINO evidence includes runtime visibility, tiny static graph smoke, and selected static BitNet-shaped RMSNorm, linear-projection, and FFN/ReLU2 subgraph parity receipts."
+    "The repository has a refreshed same-machine 258V comparison index linking corrected BitNet CPU, dense SLM CPU, Arc 140V, and Intel NPU artifacts by path, backend identity, proof stage, runtime API, and fallback status.",
+    "The corrected BitNet CPU reference bundle is the current 258V CPU evidence index for future accelerator comparisons.",
+    "The dense Qwen SLM CPU path now has separate manifest, answer-smoke, and phase receipts with clean dense SLM provenance.",
+    "Arc 140V and Intel NPU evidence remain separately scoped and do not inherit CPU or dense SLM proof.",
+    "Arc 140V native OpenCL evidence includes isolated vector-add CPU-reference parity and Level Zero visibility.",
+    "Intel NPU evidence includes runtime visibility, tiny static graph smoke, and selected static BitNet-shaped RMSNorm, linear-projection, and FFN/ReLU2 subgraph parity receipts."
   ],
   "must_not_claim": [
-    "CPU, Arc 140V, and Intel NPU performance are comparable from this index.",
+    "CPU, dense SLM, Arc 140V, and Intel NPU performance are comparable from this index.",
     "Arc 140V runs BitNet.",
     "Intel NPU runs BitNet.",
-    "Any accelerator accelerates BitNet.",
+    "Arc 140V or Intel NPU runs the dense SLM path.",
+    "Any accelerator accelerates BitNet or dense SLMs.",
     "CPU fallback satisfies Arc 140V or Intel NPU proof.",
-    "Full platform BitNet inference is proven."
+    "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+    "Full platform local inference is proven."
   ]
 }

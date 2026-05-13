@@ -105,7 +105,7 @@ The bundle must keep each lane independently addressable:
 | `arc-140v-runtime-probe.json` | `runtime_detected` | Arc 140V OpenCL, Level Zero, OpenVINO `GPU.0`, exact device identity | No OpenCL kernel execution claim |
 | `arc-140v-openvino-gpu-smoke.json` | `kernel_smoke_tested` | Tiny static OpenVINO `GPU.0` graph execution with Arc 140V identity and CPU expected-output comparison | No native OpenCL, BitNet, QK256, or acceleration claim |
 | `npu-openvino-runtime-probe.json` | `runtime_detected` | OS NPU evidence, OpenVINO `NPU`, driver/compiler/memory properties | No graph execution claim |
-| `platform-comparison-index.json` | index only | Links CPU, Arc 140V, and NPU artifacts from the same machine/date | No independent proof claim |
+| `platform-comparison-index.json` | index only | Links corrected BitNet CPU, dense SLM CPU, Arc 140V, and NPU artifacts from the same machine/date | No independent proof claim |
 
 The comparison index should preserve artifact paths and lane identities so later
 CPU, GPU, and NPU receipts can be compared without inferring cross-lane proof:
@@ -136,27 +136,27 @@ graph execution, parity, or benchmark performance.
 
 ### Current Comparison Index
 
-`CPU258V-026` refreshes the same-machine comparison index after the 258V CPU
-reference bundle gained semantic-debug evidence through transformer-layer
-parity, while preserving the selected NPU FFN/ReLU2 subgraph parity and Arc
-140V native OpenCL CPU/iGPU parity receipts:
+`LNL258V-COMPARE-004` refreshes the same-machine comparison index after the
+corrected BitNet CPU reference bundle and dense Qwen SLM CPU receipts landed,
+while preserving the selected NPU FFN/ReLU2 subgraph parity and Arc 140V native
+OpenCL CPU/iGPU parity receipts:
 
 ```text
 ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
 ```
 
-The index links the CPU reference bundle, CPU full-corpus scalar-vs-AVX2 parity
-receipts, CPU warm phase receipts, Arc 140V OpenVINO GPU smoke and native
-OpenCL CPU-reference parity, and the NPU OpenVINO
-runtime/smoke/RMSNorm/linear/FFN selected subgraph parity receipts. It is not a
-proof artifact by itself. A lane claim is allowed only when the cited lane
-artifact independently proves it.
+The index links the corrected BitNet CPU reference bundle, post-fix BitNet
+answer/parity/phase receipts, the dense Qwen SLM manifest plus answer/phase
+receipts, Arc 140V OpenVINO GPU smoke and native OpenCL CPU-reference parity,
+and the NPU OpenVINO runtime/smoke/RMSNorm/linear/FFN selected subgraph parity
+receipts. It is not a proof artifact by itself. A lane claim is allowed only
+when the cited lane artifact independently proves it.
 
 The comparison index may claim that the repository has a same-machine artifact
-map for CPU, Arc 140V, and Intel NPU receipts. It must not claim cross-lane
-performance comparability, Arc 140V BitNet inference, Intel NPU BitNet
-inference, QK256 accelerator decode, acceleration, or CPU fallback as
-accelerator proof.
+map for corrected BitNet CPU, dense SLM CPU, Arc 140V, and Intel NPU receipts.
+It must not claim cross-lane performance comparability, Arc 140V BitNet
+inference, Intel NPU BitNet inference, dense SLM inference on accelerators,
+QK256 accelerator decode, acceleration, or CPU fallback as accelerator proof.
 
 ### CPU Phase Receipts After Prompt Fix
 
@@ -560,15 +560,15 @@ The current Lunar Lake comparison index is:
 ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json
 ```
 
-It points at the current 258V CPU reference bundle, CPU full-corpus parity
-receipts, warm CPU phase receipts, semantic-debug ladder receipts through
-transformer-layer parity, the Arc 140V native OpenCL CPU/iGPU parity receipt,
-the live OpenVINO NPU runtime/smoke/RMSNorm/linear/FFN selected subgraph parity
-receipts, and the NPU OpenVINO llama.cpp GGUF reference blocker receipt. This
-makes the available CPU, GPU, and NPU evidence discoverable from one artifact
+It points at the corrected 258V BitNet CPU reference bundle, post-fix BitNet
+answer/parity/phase receipts, the dense Qwen SLM manifest plus answer/phase
+receipts, the Arc 140V native OpenCL CPU/iGPU parity receipt, the live OpenVINO
+NPU runtime/smoke/RMSNorm/linear/FFN selected subgraph parity receipts, and the
+NPU OpenVINO llama.cpp GGUF reference blocker receipt. This makes the available
+BitNet CPU, dense SLM CPU, GPU, and NPU evidence discoverable from one artifact
 while preserving separate proof boundaries. It is not a cross-device
 performance comparison and does not imply that Arc 140V or Intel NPU run full
-BitNet inference.
+BitNet or dense SLM inference.
 
 ## Windows PowerShell Bundle
 
