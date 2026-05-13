@@ -8,8 +8,8 @@
 
 <p align="center">
   <a href="https://github.com/EffortlessMetrics/BitNet-rs/releases"><img src="https://img.shields.io/github/v/release/EffortlessMetrics/BitNet-rs?sort=semver&label=release" alt="GitHub release" /></a>
-  <a href="https://crates.io/crates/bitnet"><img src="https://img.shields.io/crates/d/bitnet.svg?label=crates.io%20downloads" alt="crates.io downloads" /></a>
-  <a href="https://docs.rs/bitnet"><img src="https://docs.rs/bitnet/badge.svg" alt="docs.rs" /></a>
+  <img src="https://img.shields.io/badge/crates.io-pending-lightgrey.svg" alt="crates.io pending" />
+  <img src="https://img.shields.io/badge/docs.rs-pending-lightgrey.svg" alt="docs.rs pending" />
 </p>
 
 <p align="center">

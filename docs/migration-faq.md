@@ -367,4 +367,4 @@ model_manager.route_traffic("model_v2", 0.1)?; // 10% traffic
 
 ---
 
-**Still have questions?** Visit our [GitHub Discussions](https://github.com/microsoft/BitNet/discussions) or check our [comprehensive documentation](https://docs.rs/bitnet) for more detailed information.
+**Still have questions?** Open a [BitNet-rs issue](https://github.com/EffortlessMetrics/BitNet-rs/issues) or check the [repository documentation](README.md) for more detailed information.

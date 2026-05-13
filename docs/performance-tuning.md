@@ -739,6 +739,6 @@ scaler.monitor(&model).await?;
 
 For performance-specific questions:
 
-- **Performance Issues:** https://github.com/microsoft/BitNet/issues/new
-- **Optimization Help:** [GitHub Discussions](https://github.com/microsoft/BitNet/discussions)
-- **Community Support:** [GitHub Discussions](https://github.com/microsoft/BitNet/discussions)
+- **Performance Issues:** https://github.com/EffortlessMetrics/BitNet-rs/issues/new
+- **Optimization Help:** [GitHub Issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)
+- **Community Support:** [GitHub Issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)

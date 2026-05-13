@@ -344,4 +344,4 @@ Contact: migration-support@bitnet-rs.com
 
 ---
 
-**Ready to migrate?** Start with our [Quick Start Guide](getting-started.md) or visit our [GitHub Discussions](https://github.com/microsoft/BitNet/discussions) for migration support.
+**Ready to migrate?** Start with our [Quick Start Guide](../getting-started.md) or open a [BitNet-rs issue](https://github.com/EffortlessMetrics/BitNet-rs/issues) for migration support.

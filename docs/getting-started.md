@@ -362,5 +362,5 @@ bitnet-cli benchmark --model model.gguf --monitor-memory
 ## Getting Help
 
 - [GitHub Issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)
-- [Documentation](https://docs.rs/bitnet)
-- [Microsoft BitNet Repository](https://github.com/microsoft/BitNet)
+- [Documentation](README.md)
+- [Microsoft BitNet Reference Repository](https://github.com/microsoft/BitNet)

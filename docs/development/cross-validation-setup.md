@@ -592,4 +592,4 @@ cargo test --no-default-features --features "cpu,crossval"
 
 ---
 
-**Need help?** Visit our [GitHub Discussions](https://github.com/microsoft/BitNet/discussions) or check the [troubleshooting guide](../troubleshooting/troubleshooting.md) for more assistance with cross-validation setup.
+**Need help?** Open a [BitNet-rs issue](https://github.com/EffortlessMetrics/BitNet-rs/issues) or check the [troubleshooting guide](../troubleshooting/troubleshooting.md) for more assistance with cross-validation setup.
