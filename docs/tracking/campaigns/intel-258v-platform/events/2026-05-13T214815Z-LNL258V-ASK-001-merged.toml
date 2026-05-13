@@ -1,0 +1,20 @@
+timestamp = "2026-05-13T21:48:15Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ASK-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4644
+merge_sha = "3edc5cb5959711f1fbfac67c766db3912e82de61"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ASK-001-operator-ask"
+summary = "Marked LNL258V-ASK-001 merged after the Lunar Lake dense Qwen CPU default ask wrapper landed."
+
+artifacts = []
+
+notes = [
+  "The merged wrapper enforces the committed operator-readiness receipt before generation and supports only the dense Qwen CPU default route.",
+  "The wrapper writes an operator ask receipt with source run evidence, route reason, answer gate result, backend/runtime identity, timing fields, and fallback_used=false.",
+  "No live 258V ask receipt is committed by this closeout.",
+  "No broad dense SLM quality, speedup, Arc/NPU execution, acceleration, full BitNet accelerator inference, or BitNet QK256/I2_S claim is made.",
+]

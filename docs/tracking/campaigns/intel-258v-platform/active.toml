@@ -2931,10 +2931,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ASK-001"
-status = "pr_open"
+status = "merged"
 pr = 4644
+merge_sha = "3edc5cb5959711f1fbfac67c766db3912e82de61"
 branch = "codex/lunar-lake/LNL258V-ASK-001-operator-ask"
-head_sha = "1f684e9a63f57aebf249bd39fb95226ed8e1e4fd"
+head_sha = "f651392cb01965151e3b3b84bb53f3505997b3b2"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
