@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T09:31:21Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 4596
+head_sha = "a4e715dc8ab0ad8f4cab09de0510d72b3dcddd73"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-003-receipt-label"
+summary = "Opened M3MBA-003 for explicit M3 MacBook Air CPU/NEON receipt label support."
+
+notes = [
+  "The PR adds apple-m3-air-cpu-neon as a distinct label in config parsing, device config, backend request identity, and receipt validation.",
+  "The label remains separate from apple-m4-cpu-neon so M3 Air timing cannot be labeled as M4 Mac mini evidence.",
+  "No model inference, performance claim, BitNet local-answer claim, or M4 proof claim is introduced.",
+]

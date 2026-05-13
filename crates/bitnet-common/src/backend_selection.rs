@@ -72,6 +72,8 @@ pub enum BackendRequest {
     AppleM4MpsGraph,
     /// Require the Apple M4 CPU/NEON fallback/parity lane.
     AppleM4CpuNeon,
+    /// Require the Apple M3 MacBook Air CPU/NEON lane.
+    AppleM3AirCpuNeon,
 }
 
 impl BackendRequest {
@@ -93,6 +95,7 @@ impl BackendRequest {
             "apple-m4-metal" => Some(BackendRequest::AppleM4Metal),
             "apple-m4-mpsgraph" => Some(BackendRequest::AppleM4MpsGraph),
             "apple-m4-cpu-neon" => Some(BackendRequest::AppleM4CpuNeon),
+            "apple-m3-air-cpu-neon" => Some(BackendRequest::AppleM3AirCpuNeon),
             _ => None,
         }
     }
@@ -116,6 +119,7 @@ impl fmt::Display for BackendRequest {
             BackendRequest::AppleM4Metal => write!(f, "apple-m4-metal"),
             BackendRequest::AppleM4MpsGraph => write!(f, "apple-m4-mpsgraph"),
             BackendRequest::AppleM4CpuNeon => write!(f, "apple-m4-cpu-neon"),
+            BackendRequest::AppleM3AirCpuNeon => write!(f, "apple-m3-air-cpu-neon"),
         }
     }
 }
@@ -158,6 +162,9 @@ impl BackendSelectionResult {
             (BackendRequest::AppleM4CpuNeon, KernelBackend::CpuRust) => {
                 "apple-m4-cpu-neon".to_string()
             }
+            (BackendRequest::AppleM3AirCpuNeon, KernelBackend::CpuRust) => {
+                "apple-m3-air-cpu-neon".to_string()
+            }
             (BackendRequest::NvidiaRtx5070TiCuda, KernelBackend::Cuda) => {
                 "nvidia-rtx-5070-ti-cuda".to_string()
             }
@@ -195,7 +202,10 @@ impl BackendSelectionResult {
             | BackendRequest::MpsGraph
             | BackendRequest::AppleM4Metal
             | BackendRequest::AppleM4MpsGraph
-            | BackendRequest::AppleM4CpuNeon => self.requested_backend() != self.selected_backend(),
+            | BackendRequest::AppleM4CpuNeon
+            | BackendRequest::AppleM3AirCpuNeon => {
+                self.requested_backend() != self.selected_backend()
+            }
         }
     }
 
@@ -345,12 +355,12 @@ pub fn select_backend(
                 available: detected.clone(),
             });
         }
-        BackendRequest::AppleM4CpuNeon => {
+        BackendRequest::AppleM4CpuNeon | BackendRequest::AppleM3AirCpuNeon => {
             if caps.cpu_rust
                 && matches!(caps.simd_level, crate::kernel_registry::SimdLevel::Neon)
                 && cfg!(all(target_os = "macos", target_arch = "aarch64"))
             {
-                (KernelBackend::CpuRust, "Apple M4 CPU/NEON lane requested".to_string())
+                (KernelBackend::CpuRust, format!("{request} lane requested"))
             } else {
                 return Err(BackendSelectionError::RequestedUnavailable {
                     requested: request,
@@ -519,6 +529,14 @@ mod tests {
             BackendRequest::from_label("apple-m4-cpu-neon"),
             Some(BackendRequest::AppleM4CpuNeon)
         );
+        assert_eq!(
+            BackendRequest::from_label("apple-m3-air-cpu-neon"),
+            Some(BackendRequest::AppleM3AirCpuNeon)
+        );
+        assert_ne!(
+            BackendRequest::from_label("apple-m3-air-cpu-neon"),
+            Some(BackendRequest::AppleM4CpuNeon)
+        );
     }
 
     #[test]
@@ -589,6 +607,19 @@ mod tests {
         let err = select_backend(BackendRequest::AppleM4Metal, &cpu_only_caps()).unwrap_err();
         assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
         assert!(err.to_string().contains("apple-m4-metal"));
+    }
+
+    #[test]
+    fn apple_m3_air_cpu_neon_request_is_distinct_from_m4_cpu_neon() {
+        assert_eq!(BackendRequest::AppleM3AirCpuNeon.to_string(), "apple-m3-air-cpu-neon");
+        assert_ne!(
+            BackendRequest::AppleM3AirCpuNeon.to_string(),
+            BackendRequest::AppleM4CpuNeon.to_string()
+        );
+
+        let err = select_backend(BackendRequest::AppleM3AirCpuNeon, &cpu_only_caps()).unwrap_err();
+        assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+        assert!(err.to_string().contains("apple-m3-air-cpu-neon"));
     }
 
     #[test]

@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T09:25:46Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-003"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-003-receipt-label"
+summary = "Started explicit M3 MacBook Air CPU/NEON receipt label support."
+
+notes = [
+  "The implementation adds the distinct apple-m3-air-cpu-neon label without aliasing it to apple-m4-cpu-neon.",
+  "The change is limited to label parsing, config, backend identity preservation, and receipt validation; it does not run models or claim M3 Air performance.",
+]
