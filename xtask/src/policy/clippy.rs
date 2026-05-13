@@ -60,7 +60,11 @@ pub fn run(exceptions_path: PathBuf, report_dir: PathBuf, fail_on_error: bool) -
         println!("warning: {w}");
     }
     for e in &report.errors {
-        println!("error: {e}");
+        if fail_on_error {
+            println!("error: {e}");
+        } else {
+            println!("advisory: {e}");
+        }
     }
     if fail_on_error && !report.errors.is_empty() {
         bail!("clippy-exceptions check failed: {} errors", report.errors.len());
