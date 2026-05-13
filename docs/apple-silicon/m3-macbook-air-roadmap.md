@@ -4,7 +4,7 @@ The M3 MacBook Air lane is the live Apple Silicon MacBook lane for larger
 artifact sweeps and dense SLM cross-checks. It is separate from the completed
 M4 Mac mini product and performance campaigns.
 
-Provisional host facts from the active runner:
+Committed host facts from `M3MBA-002`:
 
 ```text
 machine = MacBook Air
@@ -14,14 +14,13 @@ cpu_cores = 8
 performance_cores = 4
 efficiency_cores = 4
 memory = 16 GB
-available_repo_volume_space = about 99 GiB on 2026-05-12
+available_repo_volume_space = about 59 GiB on 2026-05-13
+receipt = ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/machine-profile.json
 ```
 
 These facts make the machine suitable for storage-conscious BitNet artifact
-qualification and dense SLM Apple CPU/NEON cross-checks, but `M3MBA-002` owns
-the authoritative committed machine-profile receipt. Until that receipt lands,
-these facts are planning context only. They do not create M4 Mac mini
-performance evidence and do not prove BitNet local-answer quality.
+qualification and dense SLM Apple CPU/NEON cross-checks. They do not create
+M4 Mac mini performance evidence and do not prove BitNet local-answer quality.
 
 The campaign-local tracker for this lane is:
 
@@ -673,7 +672,7 @@ work.
 
 1. Land `M3MBA-001` so the campaign tracker, generated status, and roadmap link
    become the lane control plane.
-2. Run `M3MBA-002` to generate a real M3 Air machine-profile receipt under
+2. Merge `M3MBA-002` with the real M3 Air machine-profile receipt under
    `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/`.
 3. Run `M3MBA-003` to add or confirm the `apple-m3-air-cpu-neon` receipt label
    before model timing is recorded.

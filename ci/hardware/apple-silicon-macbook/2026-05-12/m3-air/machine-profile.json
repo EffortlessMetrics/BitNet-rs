@@ -1,0 +1,79 @@
+{
+  "artifact_kind": "apple_silicon_macbook_machine_profile",
+  "schema_version": "1.0.0",
+  "timestamp": "2026-05-13T08:11:14Z",
+  "machine": {
+    "machine_id": "apple-m3-macbook-air-local",
+    "hardware_model": "MacBook Air Mac15,13",
+    "chip": "Apple M3",
+    "cpu_brand": "Apple M3",
+    "cpu_arch": "arm64",
+    "physical_cores": 8,
+    "logical_cores": 8,
+    "performance_cores": 4,
+    "efficiency_cores": 4,
+    "fanless_chassis": true,
+    "memory_bytes": 17179869184,
+    "macos_version": "macOS 26.3.1 (25D2128)",
+    "kernel_version": "Darwin 25.3.0"
+  },
+  "storage": {
+    "volume": "/System/Volumes/Data",
+    "available_bytes": 63294865408,
+    "total_bytes": 494384795648,
+    "low_disk_threshold_bytes": 8589934592,
+    "preferred_free_floor_bytes": 26843545600,
+    "large_artifact_sweep_allowed": true
+  },
+  "model_cache": {
+    "cache_root": "~/.cache/bitnet-rs/models",
+    "cache_root_exists": false,
+    "cache_available_bytes": 63294865408,
+    "model_binaries_committed": false
+  },
+  "backend_availability": {
+    "cpu_neon": {
+      "visible": true,
+      "probe_source": "sysctl hw.optional.neon=1 and hw.optional.arm.FEAT_DotProd=1",
+      "selected_device": "arm64-neon",
+      "notes": [
+        "This is CPU/NEON visibility only; M3MBA-003 owns the explicit apple-m3-air-cpu-neon receipt label."
+      ]
+    },
+    "metal": {
+      "visible": true,
+      "probe_source": "system_profiler SPDisplaysDataType reported Apple M3 GPU with Metal 4 support and /System/Library/Frameworks/Metal.framework exists",
+      "selected_device": "Apple M3 GPU",
+      "notes": [
+        "Metal visibility is not a full Apple Metal model inference claim."
+      ]
+    },
+    "mpsgraph": {
+      "visible": true,
+      "probe_source": "/System/Library/Frameworks/MetalPerformanceShadersGraph.framework exists",
+      "selected_device": null,
+      "notes": [
+        "MPSGraph framework visibility is not Neural Engine proof or MPSGraph model inference evidence."
+      ]
+    }
+  },
+  "thermal": {
+    "state": "not_available",
+    "source": "pmset -g therm reported no thermal, performance, or CPU power warning level"
+  },
+  "power": {
+    "source": "ac",
+    "low_power_mode": false,
+    "charger_attached": true,
+    "battery_percent": 100
+  },
+  "claim_boundary": {
+    "inference_run": false,
+    "dense_slm_quality_claim": false,
+    "bitnet_quality_claim": false,
+    "full_metal_inference_claim": false,
+    "neural_engine_claim": false,
+    "qk256_claim": false,
+    "broad_performance_claim": false
+  }
+}
