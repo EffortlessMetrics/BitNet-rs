@@ -2876,8 +2876,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-COMPARE-005"
-status = "pr_open"
+status = "merged"
 pr = 4635
+merge_sha = "859f93e38477f59df1c46a635a6e53d73e9a1393"
 branch = "codex/lunar-lake/LNL258V-COMPARE-005-cli-compare"
 head_sha = "03f43246ef8f8695ac2773f33d345a618f254ff4"
 stackable = false
