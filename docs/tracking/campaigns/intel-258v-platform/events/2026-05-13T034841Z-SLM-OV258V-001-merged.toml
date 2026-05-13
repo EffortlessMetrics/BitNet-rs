@@ -1,0 +1,16 @@
+timestamp = "2026-05-13T03:48:41Z"
+campaign = "intel-258v-platform"
+item = "SLM-OV258V-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4559
+actor = "codex"
+merge_sha = "346438125b50047508a9cd728ad40eb9c28ac264"
+branch = "codex/lunar-lake/SLM-OV258V-001-openvino-ir-manifest"
+summary = "Marked SLM-OV258V-001 merged after the Qwen2.5 OpenVINO IR INT4 symmetric export manifest landed."
+
+notes = [
+  "The manifest records an export contract and links the OpenVINO IR candidate to the existing 258V GGUF CPU dense SLM answer and phase baseline.",
+  "No OpenVINO CPU, GPU, or NPU execution, fallback_used=false, speedup, acceleration, answer-quality improvement, or BitNet QK256/I2_S proof is claimed.",
+]
