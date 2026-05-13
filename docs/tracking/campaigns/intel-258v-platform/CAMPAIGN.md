@@ -89,6 +89,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 
 | LNL258V-REG-001 | merged | Add a Lunar Lake local regression bundle that checks the operator-readiness receipt for dense CPU default routing, BitNet CPU reference routing, bounded OpenVINO GPU/NPU candidates, Arc/NPU claim boundaries, no hidden fallback, and no acceleration claim without running inference; merged in #4624. |
 | LNL258V-COMPARE-005 | merged | Add a Lunar Lake operator comparison command that reads the committed operator-readiness and regression-bundle receipts, indexes route evidence readiness and claim boundaries, and emits a comparison artifact without running inference or claiming acceleration; merged in #4635. |
+| LNL258V-ASK-001 | pr_open | Add a policy-gated `bitnet lunar-lake ask` wrapper for the dense Qwen CPU default route. It must enforce the operator-readiness receipt before generation, preserve no-fallback CPU route identity, write an operator ask receipt with source run evidence, and make no broad quality, speedup, Arc/NPU execution, acceleration, or BitNet QK256/I2_S claim; opened in #4644. |
 
 ## Review Policy
 
