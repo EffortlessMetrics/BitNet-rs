@@ -7541,7 +7541,7 @@ mod badge_tests {
             color: "brightgreen".to_string(),
         };
 
-        validate_shields_badge(&badge, Some("ripr+")).unwrap();
+        assert!(validate_shields_badge(&badge, Some("ripr+")).is_ok());
     }
 
     #[test]
