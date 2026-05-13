@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T13:08:45Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-009"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4604
+head_sha = "c83cd67e7f8f03a2aef9acfb785f0ef7f420b126"
+merge_sha = "2bb701f867771eb31c4333606bfad4157932831c"
+branch = "cuda/bitnet-strict-preflight"
+summary = "Merged strict RTX 5070 Ti CUDA user preflight hardening."
+notes = [
+  "The merged PR adds `bitnet cuda doctor` as a strict CUDA preflight surface.",
+  "Strict BitNet CUDA ask/chat preflight remains fail-closed before generation.",
+  "Claim boundaries remain unchanged: no new CUDA generation proof, no dense SLM proof, no server readiness, and no speedup qualification.",
+]
