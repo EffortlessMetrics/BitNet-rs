@@ -1056,11 +1056,48 @@ fn mac_bitnet_proof_validates_answer_corpus_receipt_without_artifact_sweep()
     assert_eq!(receipt_json["result"], "verified");
     assert_eq!(receipt_json["proof_executed"], true);
     assert_eq!(receipt_json["proof_receipt"]["summary"]["valid"], true);
+    assert_eq!(receipt_json["tokenizer"]["authority"]["source"], "external_tokenizer_json");
+    assert_eq!(receipt_json["tokenizer"]["authority"]["ggml_pre"], "llama-bpe");
     assert_eq!(receipt_json["claim_boundary"]["m4_bitnet_answer_corpus_proof_verified"], true);
     assert_eq!(receipt_json["claim_boundary"]["bitnet_answer_corpus_quality_verified"], true);
     assert_eq!(receipt_json["claim_boundary"]["bitnet_answer_quality_claimed"], false);
     assert_eq!(receipt_json["claim_boundary"]["bitnet_mac_ask_chat_enabled"], false);
     assert_eq!(receipt_json["claim_boundary"]["bitnet_mac_serve_enabled"], false);
+    Ok(())
+}
+
+#[test]
+fn mac_bitnet_proof_receipt_does_not_require_local_model() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let model = dir.path().join("missing-after-proof.gguf");
+    let proof = dir.path().join("answer-corpus.json");
+    let receipt = dir.path().join("preflight.json");
+    std::fs::write(&proof, serde_json::to_vec_pretty(&bitnet_answer_corpus_proof_fixture(true))?)?;
+    let model_str = model.to_string_lossy().into_owned();
+    let proof_str = proof.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-proof",
+            "--model",
+            model_str.as_str(),
+            "--proof-receipt",
+            proof_str.as_str(),
+            "--strict",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("proof receipt verified"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["result"], "verified");
+    assert_eq!(receipt_json["model"]["exists"], false);
+    assert_eq!(receipt_json["tokenizer"]["authority"]["source"], "external_tokenizer_json");
     Ok(())
 }
 
