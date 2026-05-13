@@ -1,0 +1,22 @@
+timestamp = "2026-05-13T19:21:59Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008V"
+event = "merged"
+pr = 4633
+merge_sha = "45db888b376ffd85a3be3cdc56af2fb3cbb0a8b0"
+actor = "codex"
+summary = "Merged the post-SLM-CPU-008U real i5-8250U Qwen3 first-token artifact refresh."
+
+artifacts = [
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-original-first-token.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-original-trace.jsonl",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-output-head-audit.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-reference-compare.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008u-reference-validation.json",
+]
+
+notes = [
+  "First-token parity remains unproven after SLM-CPU-008U: reference generated token 19 / 4, while bitnet-rs generated token 77979 / takes.",
+  "The output-head audit records no dedicated output.weight for this GGUF and selects tied token embeddings as the output policy.",
+  "SLM-CPU-008W is the next ready root-cause item for tied-head logits or shared transformer math.",
+]

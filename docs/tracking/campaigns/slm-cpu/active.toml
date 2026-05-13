@@ -772,7 +772,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008V"
-status = "in_progress"
+status = "merged"
+pr = 4633
+merge_sha = "45db888b376ffd85a3be3cdc56af2fb3cbb0a8b0"
 branch = "codex/slm-cpu-008v-post-008u-artifact-refresh"
 stackable = false
 review_mode = "codex_premerge"
