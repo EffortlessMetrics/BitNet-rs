@@ -2098,7 +2098,7 @@ must_not_claim = [
   "Dense Qwen speedup is accepted.",
   "Short decode, warm-session chat, or server readiness is proven.",
   "General dense GGUF CUDA inference is complete.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2142,7 +2142,7 @@ must_not_claim = [
   "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
   "Broad chat quality, server readiness, or speedup is accepted.",
   "General dense GGUF CUDA inference is complete.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2186,7 +2186,7 @@ must_not_claim = [
   "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
   "Full CUDA residency or speedup is accepted without receipt evidence.",
   "Server readiness is proven.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2232,7 +2232,7 @@ must_not_claim = [
   "Any global dense CUDA speedup claim.",
   "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
   "Server readiness is proven.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2267,7 +2267,7 @@ may_claim = [
 must_not_claim = [
   "Qwen3 CPU answer readiness, CUDA proof, speedup, or server readiness exists.",
   "Qwen3 proof inherits Qwen2.5 evidence.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2304,7 +2304,7 @@ may_claim = [
 must_not_claim = [
   "Qwen3 CUDA proof, speedup, or server readiness exists.",
   "Qwen3 proof inherits Qwen2.5 evidence.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2345,7 +2345,7 @@ may_claim = [
 must_not_claim = [
   "Qwen3 one-token CUDA execution, answer quality, speedup, or server readiness exists.",
   "Qwen3 proof inherits Qwen2.5 evidence.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2386,7 +2386,7 @@ may_claim = [
 must_not_claim = [
   "Qwen3 short-decode, warm-session, speedup, or server readiness exists.",
   "Qwen3 proof inherits Qwen2.5 evidence.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2427,7 +2427,7 @@ may_claim = [
 must_not_claim = [
   "Qwen3 speedup or server readiness exists.",
   "Qwen3 proof inherits Qwen2.5 evidence.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2465,7 +2465,7 @@ may_claim = [
 ]
 must_not_claim = [
   "Status output creates new model, CUDA, answer, speed, or server proof.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2499,7 +2499,7 @@ may_claim = [
 ]
 must_not_claim = [
   "Broad chat quality, server readiness, global speedup, or dense CUDA proof changed.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2533,7 +2533,7 @@ may_claim = [
 ]
 must_not_claim = [
   "The quickstart creates new model, CUDA, answer, speed, or server proof.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
@@ -2576,7 +2576,7 @@ must_not_claim = [
   "Production server readiness exists.",
   "Server proof creates a global CUDA speedup or answer-quality claim.",
   "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
-  "Crates.io or docs.rs badge readiness changed.",
+  "Crates.io or docs.rs badges are promoted from pending before publish.",
 ]
 
 [[work_item]]
