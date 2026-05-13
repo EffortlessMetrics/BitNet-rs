@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T23:08:34Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-002"
+event = "merged"
+pr = 4651
+merge_sha = "e874ca85d92183d4131ab11a94d53688b1ab3a48"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4651 merged the one-shot `bitnet mac ask` operator progress/status UX.",
+  "The route now exposes `--progress` milestones on stderr and `--quiet` suppression for operator status/progress lines while preserving stdout generation behavior.",
+  "Claim boundaries remain narrow: no BitNet chat/server enablement, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, broad BitNet quality, or broad BitNet performance claim.",
+]
