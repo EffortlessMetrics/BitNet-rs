@@ -11,6 +11,10 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 const PROFILE_NAMES: [&str; 5] = ["micro", "layer", "prefill", "first_token", "decode"];
+const TILING_PARALLELISM_DEGREES: [usize; 3] = [2, 4, 8];
+const TILING_ROW_BLOCKS: [usize; 4] = [2, 4, 8, 16];
+const TILING_COL_BLOCKS: [usize; 4] = [64, 128, 256, 512];
+const TILING_THREAD_COUNTS: [usize; 5] = [1, 2, 4, 6, 8];
 
 #[derive(Debug)]
 struct Args {
@@ -26,6 +30,7 @@ struct Args {
     prompt_tokens: u64,
     generated_tokens: u64,
     batch_size: u64,
+    include_i2s_tiling_matrix: bool,
 }
 
 impl Default for Args {
@@ -43,6 +48,7 @@ impl Default for Args {
             prompt_tokens: 32,
             generated_tokens: 8,
             batch_size: 1,
+            include_i2s_tiling_matrix: false,
         }
     }
 }
@@ -83,6 +89,20 @@ struct KernelMicrobenchProfile {
     p95_ms: f64,
     bandwidth_gbps: f64,
     tokens_per_second: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct TilingCandidate {
+    parallelism_degree: usize,
+    row_block: usize,
+    col_block: usize,
+    thread_count: usize,
+}
+
+#[derive(Debug)]
+struct TilingMatrixRun {
+    candidate: TilingCandidate,
+    profile: KernelMicrobenchProfile,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -129,6 +149,7 @@ fn parse_args() -> Result<Args, Box<dyn Error>> {
             "--prompt-tokens" => args.prompt_tokens = next_value(&mut iter, &arg)?.parse()?,
             "--generated-tokens" => args.generated_tokens = next_value(&mut iter, &arg)?.parse()?,
             "--batch-size" => args.batch_size = next_value(&mut iter, &arg)?.parse()?,
+            "--include-i2s-tiling-matrix" => args.include_i2s_tiling_matrix = true,
             "--help" | "-h" => {
                 print_help();
                 std::process::exit(0);
@@ -151,7 +172,7 @@ fn print_help() {
     println!(
         "Usage: cpu_benchmark_receipt [--receipt-out PATH] [--kernel auto|qk256-scalar-gemv|qk256-avx2-gemv] [--strict]\n\
          Options: --model-repo, --model-file, --model-sha256, --quant-format, --tokenizer-source,\n\
-         --selected-backend, --prompt-tokens, --generated-tokens, --batch-size"
+         --selected-backend, --prompt-tokens, --generated-tokens, --batch-size, --include-i2s-tiling-matrix"
     );
 }
 
@@ -188,13 +209,19 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
         )?,
     ];
     let microbench_profiles = measure_i2s_microbench(args.requested_kernel, args.strict)?;
+    let tiling_matrix_runs = if args.include_i2s_tiling_matrix {
+        measure_i2s_tiling_thread_matrix(args.requested_kernel, args.strict)?
+    } else {
+        Vec::new()
+    };
 
     let selected_kernel = measured
         .first()
         .map(|profile| profile.selected_kernel)
         .unwrap_or(QK256_SCALAR_GEMV_KERNEL_ID);
     let fallback_used = measured.iter().any(|profile| profile.fallback_used)
-        || microbench_profiles.iter().any(|profile| profile.fallback_used);
+        || microbench_profiles.iter().any(|profile| profile.fallback_used)
+        || tiling_matrix_runs.iter().any(|run| run.profile.fallback_used);
     let cpu_features = cpu_features();
 
     let profiles: Vec<_> = measured
@@ -248,6 +275,11 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
             })
         })
         .collect();
+    let i2s_tiling_thread_matrix = if args.include_i2s_tiling_matrix {
+        Some(build_i2s_tiling_thread_matrix(&tiling_matrix_runs, args.quant_format.as_str()))
+    } else {
+        None
+    };
 
     Ok(json!({
         "schema": 1,
@@ -313,10 +345,129 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
                 "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, or QK256 semantic changes."
             ]
         },
+        "i2s_tiling_thread_matrix": i2s_tiling_thread_matrix,
         "profiles": profiles,
         "profile_order": PROFILE_NAMES,
         "artifact_path": args.receipt_out.as_ref().map(|path| path.display().to_string())
     }))
+}
+
+fn build_i2s_tiling_thread_matrix(
+    runs: &[TilingMatrixRun],
+    quant_format: &str,
+) -> serde_json::Value {
+    let measured_runs: Vec<_> = runs
+        .iter()
+        .map(|run| {
+            let profile = &run.profile;
+            json!({
+                "profile": profile.profile,
+                "operation": profile.operation,
+                "execution_phase": profile.execution_phase,
+                "status": "measured",
+                "candidate": {
+                    "parallelism_degree": run.candidate.parallelism_degree,
+                    "row_block": run.candidate.row_block,
+                    "col_block": run.candidate.col_block,
+                    "thread_count": run.candidate.thread_count,
+                    "thread_count_applied": false,
+                    "thread_count_policy": "recorded_not_applied",
+                    "thread_count_note": "Current QK256/I2_S CPU microbench records thread-count candidates; worker-thread scheduling is a later tuning step."
+                },
+                "requested_kernel": profile.requested_kernel,
+                "selected_kernel": profile.selected_kernel,
+                "fallback_used": profile.fallback_used,
+                "fallback_reason": profile.fallback_reason.as_deref(),
+                "shape": {
+                    "rows": profile.rows,
+                    "cols": profile.cols,
+                    "tokens": profile.tokens,
+                    "iterations": profile.iterations,
+                    "cols_rounded_to_qk256_block": profile.cols != run.candidate.col_block
+                },
+                "wall_time_ms": profile.wall_time_ms,
+                "median_ms": profile.median_ms,
+                "p95_ms": profile.p95_ms,
+                "bandwidth_gbps": profile.bandwidth_gbps,
+                "tokens_per_second": profile.tokens_per_second,
+                "speedup_claim": false
+            })
+        })
+        .collect();
+    json!({
+        "work_item": "CPU-BITNET-PERF-002",
+        "artifact_kind": "cpu_bitnet_i2s_tiling_thread_matrix",
+        "claim": "i2_s_tiling_thread_matrix_receipt",
+        "kernel_family": "i2_s_qk256",
+        "quantization": quant_format,
+        "speedup_claim": false,
+        "fallback_used": runs.iter().any(|run| run.profile.fallback_used),
+        "fallback_reason": null,
+        "candidate_grid": {
+            "parallelism_degrees": TILING_PARALLELISM_DEGREES,
+            "row_blocks": TILING_ROW_BLOCKS,
+            "col_blocks": TILING_COL_BLOCKS,
+            "thread_counts": TILING_THREAD_COUNTS,
+            "candidate_count": TILING_PARALLELISM_DEGREES.len()
+                * TILING_ROW_BLOCKS.len()
+                * TILING_COL_BLOCKS.len()
+                * TILING_THREAD_COUNTS.len()
+        },
+        "coverage": {
+            "status": "sampled_baseline",
+            "measured_candidate_count": measured_runs.len(),
+            "full_matrix_candidate_count": TILING_PARALLELISM_DEGREES.len()
+                * TILING_ROW_BLOCKS.len()
+                * TILING_COL_BLOCKS.len()
+                * TILING_THREAD_COUNTS.len(),
+            "thread_counts_recorded_not_applied": true,
+            "reason": "This receipt captures the Lunar Lake tiling/thread search surface and sampled QK256/I2_S timings without upgrading any profile to a speedup claim."
+        },
+        "measured_runs": measured_runs,
+        "claim_boundary": [
+            "Records a Lunar Lake QK256/I2_S tiling/thread candidate matrix and sampled GEMV/GEMM timings.",
+            "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, QK256 semantic changes, or full model correctness."
+        ]
+    })
+}
+
+fn measure_i2s_tiling_thread_matrix(
+    requested_kernel: Option<&'static str>,
+    strict: bool,
+) -> Result<Vec<TilingMatrixRun>, Box<dyn Error>> {
+    let candidates = [
+        TilingCandidate { parallelism_degree: 2, row_block: 2, col_block: 64, thread_count: 1 },
+        TilingCandidate { parallelism_degree: 4, row_block: 4, col_block: 128, thread_count: 2 },
+        TilingCandidate { parallelism_degree: 8, row_block: 8, col_block: 256, thread_count: 4 },
+        TilingCandidate { parallelism_degree: 8, row_block: 16, col_block: 512, thread_count: 8 },
+    ];
+    let mut runs = Vec::with_capacity(candidates.len() * 2);
+    for candidate in candidates {
+        runs.push(TilingMatrixRun {
+            candidate,
+            profile: measure_gemv_microbench(
+                "i2s_qk256_tiling_matrix_gemv",
+                "decode_gemv_tiling_sample",
+                candidate.parallelism_degree * candidate.row_block,
+                candidate.col_block.max(QK256_BLOCK),
+                8,
+                requested_kernel,
+                strict,
+            )?,
+        });
+        runs.push(TilingMatrixRun {
+            candidate,
+            profile: measure_gemm_microbench(
+                "i2s_qk256_tiling_matrix_gemm",
+                "prefill_gemm_tiling_sample",
+                candidate.parallelism_degree,
+                candidate.parallelism_degree * candidate.row_block,
+                candidate.col_block.max(QK256_BLOCK),
+                4,
+            )?,
+        });
+    }
+    Ok(runs)
 }
 
 fn measure_i2s_microbench(
@@ -589,6 +740,24 @@ mod tests {
         }));
         assert_eq!(receipt["i2s_microbench"]["speedup_claim"], false);
         assert_eq!(receipt["i2s_microbench"]["fallback_used"], false);
+        Ok(())
+    }
+
+    #[test]
+    fn receipt_records_i2s_tiling_thread_matrix_when_requested() -> Result<(), Box<dyn Error>> {
+        let receipt = build_receipt(&Args { include_i2s_tiling_matrix: true, ..Args::default() })?;
+        let matrix = receipt["i2s_tiling_thread_matrix"].as_object().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "missing tiling matrix")
+        })?;
+        let measured_runs = matrix["measured_runs"].as_array().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "missing tiling measured runs")
+        })?;
+
+        assert_eq!(matrix["work_item"], "CPU-BITNET-PERF-002");
+        assert_eq!(matrix["speedup_claim"], false);
+        assert_eq!(matrix["fallback_used"], false);
+        assert!(measured_runs.iter().any(|run| run["operation"] == "gemv"));
+        assert!(measured_runs.iter().any(|run| run["operation"] == "gemm"));
         Ok(())
     }
 }

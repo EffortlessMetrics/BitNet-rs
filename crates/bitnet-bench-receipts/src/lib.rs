@@ -2000,6 +2000,9 @@ pub fn validate_strict_cpu_benchmark_receipt_json(
     if receipt.get("i2s_microbench").is_some() {
         validate_i2s_microbench(require_object(receipt, "i2s_microbench")?)?;
     }
+    if receipt.get("i2s_tiling_thread_matrix").is_some_and(|value| !value.is_null()) {
+        validate_i2s_tiling_thread_matrix(require_object(receipt, "i2s_tiling_thread_matrix")?)?;
+    }
 
     Ok(())
 }
@@ -2106,6 +2109,87 @@ fn validate_i2s_microbench_profile(
     require_non_negative_number(profile, "p95_ms")?;
     require_non_negative_number(profile, "bandwidth_gbps")?;
     require_non_negative_number(profile, "tokens_per_second")?;
+
+    Ok(())
+}
+
+fn validate_i2s_tiling_thread_matrix(matrix: &serde_json::Value) -> Result<(), ReceiptError> {
+    require_string_eq(matrix, "artifact_kind", "cpu_bitnet_i2s_tiling_thread_matrix")?;
+    require_string_eq(matrix, "claim", "i2_s_tiling_thread_matrix_receipt")?;
+    require_string_eq(matrix, "kernel_family", "i2_s_qk256")?;
+    require_bool_eq(matrix, "speedup_claim", false)?;
+    require_bool_eq(matrix, "fallback_used", false)?;
+    require_null(matrix, "fallback_reason")?;
+
+    let candidate_grid = require_object(matrix, "candidate_grid")?;
+    for field in ["parallelism_degrees", "row_blocks", "col_blocks", "thread_counts"] {
+        let values = require_array(candidate_grid, field)?;
+        if values.is_empty() {
+            return Err(validation_error(format!("candidate_grid.{field} must not be empty")));
+        }
+    }
+    require_u64_at_least(candidate_grid, "candidate_count", 1)?;
+
+    let coverage = require_object(matrix, "coverage")?;
+    require_string_eq(coverage, "status", "sampled_baseline")?;
+    require_u64_at_least(coverage, "measured_candidate_count", 1)?;
+    require_u64_at_least(coverage, "full_matrix_candidate_count", 1)?;
+    require_bool_eq(coverage, "thread_counts_recorded_not_applied", true)?;
+    require_non_empty_string(coverage, "reason")?;
+
+    let runs = require_array(matrix, "measured_runs")?;
+    let mut has_gemv = false;
+    let mut has_gemm = false;
+    for run in runs {
+        validate_i2s_tiling_matrix_run(run)?;
+        match require_string(run, "operation")? {
+            "gemv" => has_gemv = true,
+            "gemm" => has_gemm = true,
+            other => return Err(validation_error(format!("unexpected tiling operation {other}"))),
+        }
+    }
+    if !has_gemv {
+        return Err(validation_error("i2s_tiling_thread_matrix missing gemv run"));
+    }
+    if !has_gemm {
+        return Err(validation_error("i2s_tiling_thread_matrix missing gemm run"));
+    }
+
+    Ok(())
+}
+
+fn validate_i2s_tiling_matrix_run(run: &serde_json::Value) -> Result<(), ReceiptError> {
+    require_non_empty_string(run, "profile")?;
+    require_non_empty_string(run, "operation")?;
+    require_non_empty_string(run, "execution_phase")?;
+    require_string_eq(run, "status", "measured")?;
+    require_non_empty_string(run, "requested_kernel")?;
+    require_non_empty_string(run, "selected_kernel")?;
+    require_bool_eq(run, "fallback_used", false)?;
+    require_null(run, "fallback_reason")?;
+    require_bool_eq(run, "speedup_claim", false)?;
+
+    let candidate = require_object(run, "candidate")?;
+    require_u64_at_least(candidate, "parallelism_degree", 1)?;
+    require_u64_at_least(candidate, "row_block", 1)?;
+    require_u64_at_least(candidate, "col_block", 1)?;
+    require_u64_at_least(candidate, "thread_count", 1)?;
+    require_bool_eq(candidate, "thread_count_applied", false)?;
+    require_string_eq(candidate, "thread_count_policy", "recorded_not_applied")?;
+    require_non_empty_string(candidate, "thread_count_note")?;
+
+    let shape = require_object(run, "shape")?;
+    require_u64_at_least(shape, "rows", 1)?;
+    require_u64_at_least(shape, "cols", 1)?;
+    require_u64_at_least(shape, "tokens", 1)?;
+    require_u64_at_least(shape, "iterations", 1)?;
+    require_bool(shape, "cols_rounded_to_qk256_block")?;
+
+    require_non_negative_number(run, "wall_time_ms")?;
+    require_non_negative_number(run, "median_ms")?;
+    require_non_negative_number(run, "p95_ms")?;
+    require_non_negative_number(run, "bandwidth_gbps")?;
+    require_non_negative_number(run, "tokens_per_second")?;
 
     Ok(())
 }
@@ -2684,6 +2768,18 @@ mod tests {
     }
 
     #[test]
+    fn committed_lunar_lake_i2s_tiling_matrix_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-002-i2s-tiling-matrix.json",
+        );
+        let result = validate_strict_cpu_benchmark_receipt_file(&path);
+        assert!(
+            result.is_ok(),
+            "committed Lunar Lake tiling matrix receipt should validate: {result:?}"
+        );
+    }
+
+    #[test]
     fn strict_cpu_benchmark_rejects_missing_decode_profile() {
         let mut receipt = sample_cpu_benchmark_receipt();
         receipt["profiles"] = json!([
@@ -2746,6 +2842,25 @@ mod tests {
     fn strict_cpu_benchmark_rejects_incomplete_i2s_microbench() {
         let mut receipt = sample_cpu_benchmark_receipt();
         receipt["i2s_microbench"]["profiles"] = json!([measured_i2s_microbench_profile("gemv")]);
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("missing gemm"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cpu_benchmark_rejects_i2s_tiling_matrix_speedup_claim() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["i2s_tiling_thread_matrix"]["speedup_claim"] = json!(true);
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cpu_benchmark_rejects_incomplete_i2s_tiling_matrix() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["i2s_tiling_thread_matrix"]["measured_runs"] =
+            json!([measured_i2s_tiling_matrix_run("gemv")]);
 
         let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
         assert!(err.contains("missing gemm"), "unexpected error: {err}");
@@ -4144,6 +4259,38 @@ mod tests {
                     "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, or QK256 semantic changes."
                 ]
             },
+            "i2s_tiling_thread_matrix": {
+                "work_item": "CPU-BITNET-PERF-002",
+                "artifact_kind": "cpu_bitnet_i2s_tiling_thread_matrix",
+                "claim": "i2_s_tiling_thread_matrix_receipt",
+                "kernel_family": "i2_s_qk256",
+                "quantization": "QK256/I2_S",
+                "speedup_claim": false,
+                "fallback_used": false,
+                "fallback_reason": null,
+                "candidate_grid": {
+                    "parallelism_degrees": [2, 4, 8],
+                    "row_blocks": [2, 4, 8, 16],
+                    "col_blocks": [64, 128, 256, 512],
+                    "thread_counts": [1, 2, 4, 6, 8],
+                    "candidate_count": 240
+                },
+                "coverage": {
+                    "status": "sampled_baseline",
+                    "measured_candidate_count": 2,
+                    "full_matrix_candidate_count": 240,
+                    "thread_counts_recorded_not_applied": true,
+                    "reason": "Sample fixture records candidate coverage without upgrading any profile to a speedup claim."
+                },
+                "measured_runs": [
+                    measured_i2s_tiling_matrix_run("gemv"),
+                    measured_i2s_tiling_matrix_run("gemm")
+                ],
+                "claim_boundary": [
+                    "Records a Lunar Lake QK256/I2_S tiling/thread candidate matrix and sampled GEMV/GEMM timings.",
+                    "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, QK256 semantic changes, or full model correctness."
+                ]
+            },
             "profiles": [
                 measured_cpu_profile("micro"),
                 measured_cpu_profile("layer"),
@@ -4685,6 +4832,45 @@ mod tests {
             "p95_ms": 1.0,
             "bandwidth_gbps": 0.0,
             "tokens_per_second": 0.0
+        })
+    }
+
+    fn measured_i2s_tiling_matrix_run(operation: &str) -> serde_json::Value {
+        let selected_kernel = match operation {
+            "gemm" => "qk256-scalar-gemm",
+            _ => "qk256-avx2-gemv",
+        };
+        json!({
+            "profile": format!("i2s_qk256_tiling_matrix_{operation}"),
+            "operation": operation,
+            "execution_phase": format!("{operation}_tiling_sample"),
+            "status": "measured",
+            "candidate": {
+                "parallelism_degree": 4,
+                "row_block": 4,
+                "col_block": 128,
+                "thread_count": 2,
+                "thread_count_applied": false,
+                "thread_count_policy": "recorded_not_applied",
+                "thread_count_note": "Thread count is recorded as a search candidate in this fixture."
+            },
+            "requested_kernel": selected_kernel,
+            "selected_kernel": selected_kernel,
+            "fallback_used": false,
+            "fallback_reason": null,
+            "shape": {
+                "rows": 16,
+                "cols": 256,
+                "tokens": if operation == "gemm" { 4 } else { 1 },
+                "iterations": 4,
+                "cols_rounded_to_qk256_block": true
+            },
+            "wall_time_ms": 1.0,
+            "median_ms": 1.0,
+            "p95_ms": 1.0,
+            "bandwidth_gbps": 0.0,
+            "tokens_per_second": 0.0,
+            "speedup_claim": false
         })
     }
 

@@ -1,0 +1,16 @@
+timestamp = "2026-05-13T12:48:25Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-002"
+event = "in_progress"
+branch = "codex/lunar-lake/CPU-BITNET-PERF-002-tiling-matrix"
+actor = "codex"
+
+summary = "Started CPU-BITNET-PERF-002 to record a 258V QK256/I2_S tiling/thread candidate matrix receipt."
+
+notes = [
+  "The receipt extends the CPU benchmark path with an optional i2s_tiling_thread_matrix block.",
+  "The candidate grid records parallelism degree, row-block, col-block, and thread-count candidates with sampled GEMV/GEMM timing runs.",
+  "Thread-count candidates are recorded but not applied by this sampled baseline; worker-thread scheduling remains a later tuning step.",
+  "fallback_used=false and speedup_claim=false remain explicit.",
+  "No answer-quality, sustained-throughput, Arc/NPU execution, acceleration, QK256 semantic-change, or full-model correctness claim is made.",
+]
