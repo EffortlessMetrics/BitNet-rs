@@ -52,6 +52,7 @@ mod model_info;
 mod model_registry;
 mod policy;
 mod quality_gates;
+mod ripr;
 mod tokenizers;
 mod trace_diff;
 
@@ -1135,6 +1136,30 @@ enum Cmd {
         command: CiCmd,
     },
 
+    /// Regenerate or verify public Shields endpoint badge JSON.
+    #[command(name = "badges")]
+    Badges {
+        /// Check committed badge endpoints for drift instead of updating badges/.
+        #[arg(long, default_value_t = false)]
+        check: bool,
+    },
+
+    /// Produce PR-scoped RIPR exposure evidence under target/ripr/pr/.
+    #[command(name = "ripr-pr")]
+    RiprPr {
+        /// Verify the existing PR evidence output contract.
+        #[arg(long, default_value_t = false)]
+        check: bool,
+    },
+
+    /// Produce RIPR review guidance under target/ripr/review/.
+    #[command(name = "ripr-review-comments")]
+    RiprReviewComments {
+        /// Verify the existing review-guidance output contract.
+        #[arg(long, default_value_t = false)]
+        check: bool,
+    },
+
     /// Lint GitHub workflow files for YAML syntax issues (duplicate keys, etc).
     #[command(name = "lint-workflows")]
     LintWorkflows,
@@ -1646,6 +1671,9 @@ fn real_main() -> Result<()> {
             policy::clippy_lints::run(lints, debt, manifest, report_dir, fail_on_error)
         }
         Cmd::PolicyReport { report_dir } => run_policy_report(report_dir),
+        Cmd::Badges { check } => ripr::badges(check),
+        Cmd::RiprPr { check } => ripr::ripr_pr(check),
+        Cmd::RiprReviewComments { check } => ripr::ripr_review_comments(check),
         Cmd::LintWorkflows => xtask::lint_workflows::lint_workflows(),
         Cmd::Ci { command } => match command {
             CiCmd::Actuals {

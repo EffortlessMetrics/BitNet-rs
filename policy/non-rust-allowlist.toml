@@ -116,6 +116,17 @@ classification = "config"
 reason = "Make / Just task runners used by the development environment."
 covered_by = ["xtask check-file-policy"]
 
+
+[[allow]]
+glob = "badges/*.json"
+kind = "generated_badge_endpoint"
+owner = "release/ci"
+surface = "docs"
+classification = "generated"
+reason = "Generated Shields endpoint JSON for public README badges."
+generated_by = "cargo xtask badges"
+covered_by = ["cargo xtask badges --check"]
+
 # ---------------------------------------------------------------------------
 # Documentation, licensing, governance
 # ---------------------------------------------------------------------------

@@ -26,6 +26,8 @@ task guides, conceptual explanations, and reference material.
 
 ## Documentation Map
 
+- [VERIFICATION.md](VERIFICATION.md) — README badge meanings, generated endpoints, and PR evidence boundaries
+
 ### [Tutorials](tutorials/) — learning by doing
 
 Step-by-step paths for first-time or infrequent workflows.
