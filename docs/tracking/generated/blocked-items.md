@@ -249,6 +249,19 @@
 | nvidia-5070ti | CUDA-DENSE-011 | CUDA-DENSE-010 | merged |
 | nvidia-5070ti | CUDA-DENSE-012 | CUDA-DENSE-011 | merged |
 | nvidia-5070ti | CUDA-DENSE-013 | CUDA-DENSE-012, CUDA-PLANNER-004 | merged |
+| nvidia-5070ti | CUDA-DENSE-051 | CUDA-DENSE-050 | ready |
+| nvidia-5070ti | CUDA-DENSE-052 | CUDA-DENSE-051 | proposed |
+| nvidia-5070ti | CUDA-DENSE-053 | CUDA-DENSE-052 | proposed |
+| nvidia-5070ti | CUDA-DENSE-054 | CUDA-DENSE-051, CUDA-DENSE-052, CUDA-DENSE-053 | proposed |
+| nvidia-5070ti | CUDA-MODEL-001 | CUDA-DENSE-054 | proposed |
+| nvidia-5070ti | CUDA-MODEL-002 | CUDA-MODEL-001 | proposed |
+| nvidia-5070ti | CUDA-MODEL-003 | CUDA-MODEL-002 | proposed |
+| nvidia-5070ti | CUDA-MODEL-004 | CUDA-MODEL-003 | proposed |
+| nvidia-5070ti | CUDA-MODEL-005 | CUDA-MODEL-004 | proposed |
+| nvidia-5070ti | CUDA-UX-008 | CUDA-DENSE-054 | proposed |
+| nvidia-5070ti | CUDA-UX-009 | CUDA-PROD-010 | proposed |
+| nvidia-5070ti | CUDA-UX-010 | CUDA-UX-008, CUDA-UX-009 | proposed |
+| nvidia-5070ti | CUDA-SERVER-001 | CUDA-UX-008, CUDA-DENSE-054 | proposed |
 | nvidia-5070ti | CUDA-DENSE-050 | CUDA-PROD-008 | merged |
 | nvidia-5070ti | CUDA-PROD-009 | CUDA-PROD-008 | merged |
 | nvidia-5070ti | CUDA-PROD-010 | CUDA-BITNET-PERF-004, CUDA-UX-006, CUDA-UX-007 | merged |
