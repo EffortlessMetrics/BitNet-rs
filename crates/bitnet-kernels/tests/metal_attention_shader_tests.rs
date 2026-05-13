@@ -673,8 +673,8 @@ fn test_metal_attention_buffer_alignment_256() {
 #[ignore = "requires Metal GPU - run on macOS with Apple Silicon"]
 fn test_metal_attention_threadgroup_memory_sizing() {
     // Threadgroup memory for softmax reduction: one f32 per thread.
-    let threadgroup_size: u32 = 256;
-    let tg_mem_bytes = threadgroup_size as usize * 4; // f32
+    let threadgroup_size: usize = 256;
+    let tg_mem_bytes = threadgroup_size * 4; // f32
     assert!(tg_mem_bytes <= 32768, "exceeds 32 KB threadgroup limit");
 
     // For tiled attention: tile of scores in threadgroup.
