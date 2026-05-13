@@ -1253,23 +1253,34 @@ impl TransformerModel {
                     let bias = Tensor::zeros(vocab_size, DType::F32, vb.device())?;
                     (Some(Linear::new(weight.clone(), Some(bias))), Some(weight), false)
                 }
-                Err(_) => match vb
-                    .get((hidden_size, vocab_size), "lm_head.weight")
-                    .or_else(|_| vb.get((hidden_size, vocab_size), "output.weight"))
-                {
+                Err(_) => match vb.get((hidden_size, vocab_size), "lm_head.weight") {
                     Ok(weight) => {
                         tracing::info!(
                             "LM head is stored transposed [hidden, vocab] - using direct matmul path"
                         );
                         (None, Some(weight), true)
                     }
-                    Err(_) => {
-                        tracing::info!(
-                            "lm_head/output weight not found after linear construction failed ({err}); \
-                             will use tied weights"
-                        );
-                        (None, None, false)
-                    }
+                    Err(_) => match vb.get((hidden_size, vocab_size), "output.weight") {
+                        Ok(weight) => {
+                            tracing::warn!(
+                                "lm_head linear construction failed ({err}); recovered GGUF \
+                                 output.weight with hidden/vocab dims by reshaping to token-major \
+                                 [{}, {}] without transposing values",
+                                vocab_size,
+                                hidden_size
+                            );
+                            let weight = weight.reshape((vocab_size, hidden_size))?;
+                            let bias = Tensor::zeros(vocab_size, DType::F32, vb.device())?;
+                            (Some(Linear::new(weight.clone(), Some(bias))), Some(weight), false)
+                        }
+                        Err(_) => {
+                            tracing::info!(
+                                "lm_head/output weight not found after linear construction failed ({err}); \
+                                 will use tied weights"
+                            );
+                            (None, None, false)
+                        }
+                    },
                 },
             },
         };
@@ -2249,6 +2260,165 @@ mod tests {
             "logits should come from dedicated output.weight, got {:?}",
             logits[0]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn transformer_reshapes_gguf_output_weight_hidden_vocab_without_transpose() -> Result<()> {
+        let device = Device::Cpu;
+        let mut config = BitNetConfig::default();
+        config.model.hidden_size = 4;
+        config.model.vocab_size = 3;
+        config.model.num_layers = 0;
+        config.model.num_heads = 1;
+        config.model.num_key_value_heads = 1;
+        config.model.intermediate_size = 4;
+        config.model.rms_norm_eps = Some(1e-5);
+        config.model.norm_type = NormType::RmsNorm;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::from_vec(
+                vec![
+                    10.0f32, 0.0, 0.0, 0.0, //
+                    0.0, 10.0, 0.0, 0.0, //
+                    0.0, 0.0, 10.0, 0.0,
+                ],
+                (3, 4),
+                &device,
+            )?,
+        );
+        tensors.insert("final_norm.weight".to_string(), Tensor::ones(4, DType::F32, &device)?);
+        tensors.insert(
+            "output.weight".to_string(),
+            Tensor::from_vec(
+                vec![
+                    0.0f32, 0.0, 0.0, 0.0, //
+                    0.0, 0.0, 0.0, 0.0, //
+                    1.0, 0.0, 0.0, 0.0,
+                ],
+                (4, 3),
+                &device,
+            )?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors(config, vb, HashMap::new())?;
+
+        assert!(
+            model.lm_head.is_some(),
+            "GGUF output.weight with hidden/vocab dims must be reshaped into a dedicated lm head"
+        );
+        assert!(
+            !model.lm_head_transposed,
+            "GGUF output.weight hidden/vocab dims are token-major storage, not a transposed head"
+        );
+        assert!(
+            model.embed_tied_weight.is_none(),
+            "explicit output.weight must not fall back to tied embeddings"
+        );
+        assert_eq!(
+            model.lm_head_weight.as_ref().map(|weight| weight.dims().to_vec()),
+            Some(vec![3, 4]),
+            "reshaped output.weight should be stored as [vocab, hidden]"
+        );
+
+        let hidden = Tensor::from_vec(vec![1.0f32, 0.0, 0.0, 0.0], (1, 4), &device)?;
+        let logits = model.logits(&hidden)?.to_vec2::<f32>()?;
+        assert_eq!(logits, vec![vec![0.0, 0.0, 1.0]]);
+        assert!(
+            logits[0][2] > logits[0][0],
+            "hidden/vocab output.weight must be reshaped without transposing values, got {:?}",
+            logits[0]
+        );
+
+        let hidden = Tensor::from_vec(
+            vec![
+                1.0f32, 0.0, 0.0, 0.0, //
+                0.0, 0.0, 1.0, 0.0,
+            ],
+            (1, 2, 4),
+            &device,
+        )?;
+        let logits = model.logits(&hidden)?.to_vec3::<f32>()?;
+        assert_eq!(logits, vec![vec![vec![0.0, 0.0, 1.0], vec![0.0, 0.0, 0.0]]]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn transformer_keeps_hidden_vocab_lm_head_transposed() -> Result<()> {
+        let device = Device::Cpu;
+        let mut config = BitNetConfig::default();
+        config.model.hidden_size = 4;
+        config.model.vocab_size = 3;
+        config.model.num_layers = 0;
+        config.model.num_heads = 1;
+        config.model.num_key_value_heads = 1;
+        config.model.intermediate_size = 4;
+        config.model.rms_norm_eps = Some(1e-5);
+        config.model.norm_type = NormType::RmsNorm;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::from_vec(
+                vec![
+                    10.0f32, 0.0, 0.0, 0.0, //
+                    0.0, 10.0, 0.0, 0.0, //
+                    0.0, 0.0, 10.0, 0.0,
+                ],
+                (3, 4),
+                &device,
+            )?,
+        );
+        tensors.insert("final_norm.weight".to_string(), Tensor::ones(4, DType::F32, &device)?);
+        tensors.insert(
+            "lm_head.weight".to_string(),
+            Tensor::from_vec(
+                vec![
+                    0.0f32, 1.0, 0.0, //
+                    0.0, 0.0, 0.0, //
+                    0.0, 0.0, 0.0, //
+                    0.0, 0.0, 0.0,
+                ],
+                (4, 3),
+                &device,
+            )?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors(config, vb, HashMap::new())?;
+
+        assert!(
+            model.lm_head.is_none(),
+            "hidden/vocab lm_head.weight should use direct matmul, not Linear"
+        );
+        assert!(
+            model.lm_head_transposed,
+            "hidden/vocab lm_head.weight must remain marked as a true transposed head"
+        );
+        assert_eq!(
+            model.lm_head_weight.as_ref().map(|weight| weight.dims().to_vec()),
+            Some(vec![4, 3])
+        );
+
+        let hidden = Tensor::from_vec(vec![1.0f32, 0.0, 0.0, 0.0], (1, 4), &device)?;
+        let logits = model.logits(&hidden)?.to_vec2::<f32>()?;
+        assert_eq!(logits, vec![vec![0.0, 1.0, 0.0]]);
+
+        let hidden = Tensor::from_vec(
+            vec![
+                1.0f32, 0.0, 0.0, 0.0, //
+                0.0, 1.0, 0.0, 0.0,
+            ],
+            (1, 2, 4),
+            &device,
+        )?;
+        let logits = model.logits(&hidden)?.to_vec3::<f32>()?;
+        assert_eq!(logits, vec![vec![vec![0.0, 1.0, 0.0], vec![0.0, 0.0, 0.0]]]);
 
         Ok(())
     }
