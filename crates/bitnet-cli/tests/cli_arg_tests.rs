@@ -3780,6 +3780,7 @@ fn output_head_logits_audit_help_lists_boundary_inputs() {
         .assert()
         .success()
         .stdout(predicate::str::contains("--model"))
+        .stdout(predicate::str::contains("--machine-id"))
         .stdout(predicate::str::contains("--tokenizer"))
         .stdout(predicate::str::contains("--prompt-audit"))
         .stdout(predicate::str::contains("--scalar-answer-corpus"))

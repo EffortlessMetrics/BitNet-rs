@@ -1,4 +1,4 @@
-//! Output-head and logits-index audit for Lunar Lake BitNet CPU proof.
+//! Output-head and logits-index audit for CPU proof lanes.
 
 use anyhow::{Context, Result};
 use bitnet_models::formats::gguf::{GgufReader, TensorInfo};
@@ -38,12 +38,16 @@ const RAW_QK256_TIED_CANDIDATES: &[&str] = &[
     "tok_embeddings.weight.qk256_qs",
 ];
 
-/// Audit the output-head/tied-head/logits-index boundary for 258V CPU proof.
+/// Audit the output-head/tied-head/logits-index boundary for a CPU proof lane.
 #[derive(Args, Debug)]
 pub struct OutputHeadLogitsAuditCommand {
     /// GGUF model to inspect.
     #[arg(long, value_name = "PATH")]
     pub model: PathBuf,
+
+    /// Machine/profile identifier for the emitted artifact.
+    #[arg(long, default_value = "intel-258v")]
+    pub machine_id: String,
 
     /// Explicit tokenizer path used by the CPU receipts.
     #[arg(long, value_name = "PATH")]
@@ -93,6 +97,7 @@ impl OutputHeadLogitsAuditCommand {
 
         let receipt = build_output_head_logits_audit_receipt(
             &self.model,
+            &self.machine_id,
             &model_sha256,
             tokenizer_source,
             tokenizer_path.as_deref(),
@@ -149,6 +154,7 @@ fn compute_sha256_file(path: &Path) -> Result<String> {
 #[allow(clippy::too_many_arguments)]
 fn build_output_head_logits_audit_receipt(
     model_path: &Path,
+    machine_id: &str,
     model_sha256: &str,
     tokenizer_source: bitnet_tokenizers::auto::TokenizerSource,
     tokenizer_path: Option<&Path>,
@@ -206,10 +212,10 @@ fn build_output_head_logits_audit_receipt(
     json!({
         "schema_version": "1.0.0",
         "artifact_kind": "bitnet_output_head_logits_index_audit",
-        "machine_id": "intel-258v",
+        "machine_id": machine_id,
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "proof_stage": "output_head_logits_index_audited",
-        "claim": "cpu258v_output_head_logits_index_boundary",
+        "claim": output_head_audit_claim(machine_id),
         "inputs": {
             "model": model_path.display().to_string(),
             "tokenizer": tokenizer_path.map(|path| path.display().to_string()),
@@ -273,7 +279,7 @@ fn build_output_head_logits_audit_receipt(
         "fallback_used": false,
         "claim_boundary": {
             "may_claim": [
-                "The 258V CPU output-head or tied-head tensor boundary is recorded from GGUF metadata.",
+                "The CPU output-head or tied-head tensor boundary is recorded from GGUF metadata.",
                 "The tokenizer/logits index contract is audited against vocab and special-token IDs.",
                 "Existing scalar and AVX2 first-step top-k token IDs can be decoded and compared when supplied."
             ],
@@ -286,6 +292,14 @@ fn build_output_head_logits_audit_receipt(
             ]
         }
     })
+}
+
+fn output_head_audit_claim(machine_id: &str) -> &'static str {
+    if machine_id == "intel-258v" {
+        "cpu258v_output_head_logits_index_boundary"
+    } else {
+        "cpu_output_head_logits_index_boundary"
+    }
 }
 
 fn tensor_descriptor(gguf: &GgufReader<'_>, name: &str) -> Option<Value> {
@@ -757,6 +771,18 @@ mod tests {
         assert_eq!(
             tied_output_policy(None, None, Some("token_embd.weight")),
             "tied_token_embeddings"
+        );
+    }
+
+    #[test]
+    fn output_head_audit_claim_preserves_258v_default_and_generalizes_other_lanes() {
+        assert_eq!(
+            output_head_audit_claim("intel-258v"),
+            "cpu258v_output_head_logits_index_boundary"
+        );
+        assert_eq!(
+            output_head_audit_claim("intel-i5-8250u-cpu-avx2"),
+            "cpu_output_head_logits_index_boundary"
         );
     }
 
