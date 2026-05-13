@@ -37,9 +37,9 @@ fn is_cuda_benchmark_device_label(label: &str) -> bool {
 /// Benchmark command arguments
 #[derive(Args, Debug)]
 pub struct BenchmarkCommand {
-    /// Path to the model file
+    /// Path to the model file; optional when reporting a governed CUDA benchmark receipt
     #[arg(short, long, value_name = "PATH")]
-    pub model: PathBuf,
+    pub model: Option<PathBuf>,
 
     #[arg(short, long, value_name = "DEVICE", help = BENCHMARK_DEVICE_HELP)]
     pub device: Option<String>,
@@ -221,7 +221,8 @@ impl BenchmarkCommand {
             anyhow::bail!("{}", unsupported_benchmark_device_message(device_label));
         }
 
-        info!("Starting benchmark for model: {}", self.model.display());
+        let model_path = self.model_path()?;
+        info!("Starting benchmark for model: {}", model_path.display());
 
         // Load model and tokenizer
         let (mut engine, _tokenizer) = self.load_model_and_tokenizer(config).await?;
@@ -247,9 +248,12 @@ impl BenchmarkCommand {
 
     /// Validate command arguments
     fn validate_args(&self) -> Result<()> {
-        // Check model file exists
-        if !self.model.exists() {
-            anyhow::bail!("Model file does not exist: {}", self.model.display());
+        if let Some(model) = &self.model {
+            if !model.exists() {
+                anyhow::bail!("Model file does not exist: {}", model.display());
+            }
+        } else if self.cuda_benchmark_receipt.is_none() {
+            anyhow::bail!("--model <PATH> is required unless --cuda-benchmark-receipt is provided");
         }
 
         // Validate format
@@ -282,6 +286,12 @@ impl BenchmarkCommand {
 
     fn requested_device_label<'a>(&'a self, config: &'a CliConfig) -> &'a str {
         self.device.as_deref().unwrap_or(config.default_device.as_str())
+    }
+
+    fn model_path(&self) -> Result<&Path> {
+        self.model
+            .as_deref()
+            .context("--model <PATH> is required unless --cuda-benchmark-receipt is provided")
     }
 
     async fn execute_cuda_benchmark_receipt_report(&self, config: &CliConfig) -> Result<()> {
@@ -318,9 +328,10 @@ impl BenchmarkCommand {
 
         // Load model
         let loader = ModelLoader::new(bitnet_common::Device::from(&device));
+        let model_path = self.model_path()?;
         let model = loader
-            .load(&self.model)
-            .with_context(|| format!("Failed to load model: {}", self.model.display()))?;
+            .load(model_path)
+            .with_context(|| format!("Failed to load model: {}", model_path.display()))?;
 
         // Load tokenizer
         let tokenizer =
@@ -391,7 +402,7 @@ impl BenchmarkCommand {
         let summary = self.calculate_summary(&all_results, start_time.elapsed());
 
         Ok(BenchmarkResults {
-            model_path: self.model.display().to_string(),
+            model_path: self.model_path()?.display().to_string(),
             device: self.device.clone().unwrap_or_else(|| "cpu".to_string()),
             timestamp: chrono::Utc::now().to_rfc3339(),
             system_info: self.get_system_info(),
@@ -611,7 +622,7 @@ impl BenchmarkCommand {
         println!("{} Flamegraph generation not yet implemented", style("⚠").yellow());
         println!("  To generate flamegraphs, use:");
         println!("  cargo install flamegraph");
-        println!("  sudo flamegraph -- bitnet benchmark --model {}", self.model.display());
+        println!("  sudo flamegraph -- bitnet benchmark --model {}", self.model_path()?.display());
 
         Ok(())
     }

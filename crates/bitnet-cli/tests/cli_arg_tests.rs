@@ -3049,11 +3049,91 @@ fn bench_cuda_device_fails_closed_without_cpu_fallback() {
 #[test]
 fn bench_cuda_device_reports_governed_benchmark_receipt() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let model = dir.path().join("placeholder.gguf");
-    std::fs::write(&model, b"placeholder").expect("write model placeholder");
     let receipt = dir.path().join("dense-qwen-benchmark-qualification.json");
+    write_governed_cuda_benchmark_receipt(&receipt);
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["bench", "--device", "cuda", "--cuda-benchmark-receipt", receipt_str.as_str()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("CUDA Benchmark Receipt Report"))
+        .stdout(predicate::str::contains("dense_gguf_qwen_benchmark_qualification_review"))
+        .stdout(predicate::str::contains("Route: dense_regular_llm_cuda"))
+        .stdout(predicate::str::contains("Fallback: false"))
+        .stdout(predicate::str::contains("Speedup claim: false"))
+        .stdout(predicate::str::contains("Benchmark-qualified speedup: false"))
+        .stdout(predicate::str::contains("one_token"))
+        .stdout(predicate::str::contains(
+            "Claim boundary: receipt-backed CUDA benchmark report only",
+        ));
+}
+
+/// Governed CUDA benchmark receipt reports support machine-readable JSON output.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_cuda_benchmark_receipt_reports_json() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt = dir.path().join("dense-qwen-benchmark-qualification.json");
+    write_governed_cuda_benchmark_receipt(&receipt);
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    let output = bitnet()
+        .args([
+            "bench",
+            "--device",
+            "cuda",
+            "--cuda-benchmark-receipt",
+            receipt_str.as_str(),
+            "--format",
+            "json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let report: serde_json::Value = serde_json::from_slice(&output).expect("json report");
+
+    assert_eq!(report["artifact_kind"], "dense_gguf_qwen_benchmark_qualification_review");
+    assert_eq!(report["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+    assert_eq!(report["runtime_api"], "cuda");
+    assert_eq!(report["fallback_used"], false);
+    assert_eq!(report["speedup_claim"], false);
+    assert_eq!(report["benchmark_qualified_speedup"], false);
+    assert_eq!(report["profiles"][0]["profile"], "one_token");
+}
+
+/// Governed CUDA benchmark receipt reports support profile CSV output.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_cuda_benchmark_receipt_reports_csv() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt = dir.path().join("dense-qwen-benchmark-qualification.json");
+    write_governed_cuda_benchmark_receipt(&receipt);
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "bench",
+            "--device",
+            "cuda",
+            "--cuda-benchmark-receipt",
+            receipt_str.as_str(),
+            "--format",
+            "csv",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("profile,decision,cpu_total_ms_mean,cuda_total_ms_mean"))
+        .stdout(predicate::str::contains("one_token,not_accepted,1.000000,2.000000"))
+        .stdout(predicate::str::contains("CUDA Benchmark Receipt Report").not());
+}
+
+#[cfg(feature = "full-cli")]
+fn write_governed_cuda_benchmark_receipt(path: &std::path::Path) {
     std::fs::write(
-        &receipt,
+        path,
         r#"{
   "artifact_kind": "dense_gguf_qwen_benchmark_qualification_review",
   "claim": "dense_gguf_qwen_benchmark_qualification_review",
@@ -3096,31 +3176,17 @@ fn bench_cuda_device_reports_governed_benchmark_receipt() {
 }"#,
     )
     .expect("write receipt");
-    let model_str = model.to_string_lossy().into_owned();
-    let receipt_str = receipt.to_string_lossy().into_owned();
+}
 
-    bitnet()
-        .args([
-            "bench",
-            "--model",
-            model_str.as_str(),
-            "--device",
-            "cuda",
-            "--cuda-benchmark-receipt",
-            receipt_str.as_str(),
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("CUDA Benchmark Receipt Report"))
-        .stdout(predicate::str::contains("dense_gguf_qwen_benchmark_qualification_review"))
-        .stdout(predicate::str::contains("Route: dense_regular_llm_cuda"))
-        .stdout(predicate::str::contains("Fallback: false"))
-        .stdout(predicate::str::contains("Speedup claim: false"))
-        .stdout(predicate::str::contains("Benchmark-qualified speedup: false"))
-        .stdout(predicate::str::contains("one_token"))
-        .stdout(predicate::str::contains(
-            "Claim boundary: receipt-backed CUDA benchmark report only",
-        ));
+/// `--model` is still required for legacy benchmark execution.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_legacy_requires_model_without_cuda_benchmark_receipt() {
+    bitnet().args(["bench", "--device", "cpu"]).assert().failure().stderr(
+        predicate::str::contains(
+            "--model <PATH> is required unless --cuda-benchmark-receipt is provided",
+        ),
+    );
 }
 
 /// A CUDA benchmark receipt must not be accepted while the requested device is CPU.

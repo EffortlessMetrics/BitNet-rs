@@ -980,18 +980,27 @@ pub fn validate_strict_cuda_benchmark_qualification_receipt_json(
     }
 
     let evidence = require_object(receipt, "evidence_summary")?;
-    let strict_ask = require_object(evidence, "strict_ask_math_8")?;
-    require_u64_at_least(strict_ask, "runs_per_backend", 2)?;
-    require_bool_eq(strict_ask, "cpu_cuda_answer_match", true)?;
-    require_bool_eq(strict_ask, "fallback_free", true)?;
-    require_non_negative_number(strict_ask, "observed_median_cpu_total_ms_div_cuda_total_ms")?;
-    require_bool_eq(strict_ask, "speedup_claim", false)?;
-    let warm_session = require_object(evidence, "strict_cuda_warm_session_2_turns")?;
-    require_u64_at_least(warm_session, "cuda_runs", 2)?;
-    require_bool_eq(warm_session, "fallback_free", true)?;
-    require_bool_eq(warm_session, "model_tokenizer_context_loaded_once", true)?;
-    require_bool_eq(warm_session, "qk256_weights_uploaded_once", true)?;
-    require_bool_eq(warm_session, "speedup_claim", false)?;
+    if receipt.get("target_profiles").is_some() {
+        validate_strict_cuda_product_qualification_profiles(
+            receipt,
+            decision,
+            profile_reviews,
+            evidence,
+        )?;
+    } else {
+        let strict_ask = require_object(evidence, "strict_ask_math_8")?;
+        require_u64_at_least(strict_ask, "runs_per_backend", 2)?;
+        require_bool_eq(strict_ask, "cpu_cuda_answer_match", true)?;
+        require_bool_eq(strict_ask, "fallback_free", true)?;
+        require_non_negative_number(strict_ask, "observed_median_cpu_total_ms_div_cuda_total_ms")?;
+        require_bool_eq(strict_ask, "speedup_claim", false)?;
+        let warm_session = require_object(evidence, "strict_cuda_warm_session_2_turns")?;
+        require_u64_at_least(warm_session, "cuda_runs", 2)?;
+        require_bool_eq(warm_session, "fallback_free", true)?;
+        require_bool_eq(warm_session, "model_tokenizer_context_loaded_once", true)?;
+        require_bool_eq(warm_session, "qk256_weights_uploaded_once", true)?;
+        require_bool_eq(warm_session, "speedup_claim", false)?;
+    }
 
     let cuda = require_object(receipt, "cuda")?;
     require_bool_eq(cuda, "available", true)?;
@@ -1798,14 +1807,159 @@ fn validate_qualification_profile_review(profile: &serde_json::Value) -> Result<
     }
     require_bool_eq(profile, "speedup_claim_allowed", false)?;
     require_bool_eq(profile, "benchmark_qualified_speedup", false)?;
-    require_bool_eq(profile, "fallback_free", true)?;
-    require_bool_eq(profile, "quality_passed", true)?;
+    let evidence_status =
+        profile.get("evidence_status").and_then(serde_json::Value::as_str).unwrap_or("reviewed");
+    match evidence_status {
+        "reviewed" | "baseline_only" | "single_run_baseline" => {
+            require_bool_eq(profile, "fallback_free", true)?;
+            require_bool_eq(profile, "quality_passed", true)?;
+        }
+        "missing" => {
+            require_bool_eq(profile, "fallback_free", false)?;
+            require_bool_eq(profile, "quality_passed", false)?;
+        }
+        other => {
+            return Err(validation_error(format!(
+                "profile review evidence_status must be reviewed, baseline_only, single_run_baseline, or missing; got {other}"
+            )));
+        }
+    }
     require_bool_eq(profile, "dense_cuda_evidence_used", false)?;
     require_non_empty_string(profile, "reason")?;
     let blockers = require_array(profile, "blockers")?;
     if blockers.is_empty() {
         return Err(validation_error("profile_review.blockers must not be empty"));
     }
+    Ok(())
+}
+
+fn validate_strict_cuda_product_qualification_profiles(
+    receipt: &serde_json::Value,
+    decision: &serde_json::Value,
+    profile_reviews: &[serde_json::Value],
+    evidence: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    const EXPECTED: [&str; 5] = [
+        "one_token",
+        "short_decode_8",
+        "short_decode_32",
+        "warm_session_3_turns",
+        "warm_session_10_turns",
+    ];
+
+    let target_profiles = require_array(receipt, "target_profiles")?;
+    if target_profiles.len() != EXPECTED.len() {
+        return Err(validation_error(format!(
+            "target_profiles must contain exactly {} profiles",
+            EXPECTED.len()
+        )));
+    }
+
+    let mut seen = std::collections::BTreeSet::new();
+    for value in target_profiles {
+        let Some(profile) = value.as_str() else {
+            return Err(validation_error("target_profiles entries must be strings"));
+        };
+        if !EXPECTED.contains(&profile) {
+            return Err(validation_error(format!("unexpected target profile {profile}")));
+        }
+        if !seen.insert(profile.to_string()) {
+            return Err(validation_error(format!("duplicate target profile {profile}")));
+        }
+    }
+
+    if profile_reviews.len() != EXPECTED.len() {
+        return Err(validation_error(format!(
+            "profile_reviews must contain exactly {} product profiles",
+            EXPECTED.len()
+        )));
+    }
+
+    let blocked_profiles = require_array(decision, "blocked_profiles")?;
+    if blocked_profiles.len() != EXPECTED.len() {
+        return Err(validation_error(format!(
+            "blocked_profiles must contain exactly {} product profiles",
+            EXPECTED.len()
+        )));
+    }
+
+    let mut seen_blocked = std::collections::BTreeSet::new();
+    for value in blocked_profiles {
+        let Some(profile) = value.as_str() else {
+            return Err(validation_error("blocked_profiles entries must be strings"));
+        };
+        if !EXPECTED.contains(&profile) {
+            return Err(validation_error(format!("unexpected blocked profile {profile}")));
+        }
+        if !seen_blocked.insert(profile.to_string()) {
+            return Err(validation_error(format!("duplicate blocked profile {profile}")));
+        }
+    }
+
+    let strict_ask = require_object(evidence, "strict_ask_math_8")?;
+    require_u64_at_least(strict_ask, "runs_per_backend", 2)?;
+    require_bool_eq(strict_ask, "cpu_cuda_answer_match", true)?;
+    require_bool_eq(strict_ask, "fallback_free", true)?;
+    require_non_negative_number(strict_ask, "cpu_avx512_median_total_ms")?;
+    require_non_negative_number(strict_ask, "cuda_median_total_ms")?;
+    require_non_negative_number(strict_ask, "observed_median_cpu_total_ms_div_cuda_total_ms")?;
+    require_non_negative_number(strict_ask, "qk256_kernel_time_ms")?;
+    require_bool_eq(strict_ask, "speedup_claim", false)?;
+
+    let warm_session = require_object(evidence, "strict_cuda_warm_session_2_turns")?;
+    require_u64_at_least(warm_session, "cuda_runs", 2)?;
+    require_bool_eq(warm_session, "fallback_free", true)?;
+    require_bool_eq(warm_session, "model_tokenizer_context_loaded_once", true)?;
+    require_bool_eq(warm_session, "qk256_weights_uploaded_once", true)?;
+    require_non_negative_number(warm_session, "cuda_median_kernel_time_ms")?;
+    require_non_negative_number(warm_session, "cuda_median_total_session_ms")?;
+    require_bool_eq(warm_session, "speedup_claim", false)?;
+
+    for expected in EXPECTED {
+        require_string_array_contains(blocked_profiles, expected, "blocked_profiles")?;
+
+        let review = find_object_by_string_field(profile_reviews, "profile", expected)
+            .ok_or_else(|| validation_error(format!("profile_reviews missing {expected}")))?;
+        require_string_eq(review, "decision", "not_accepted")?;
+        require_bool_eq(review, "speedup_claim_allowed", false)?;
+        require_bool_eq(review, "benchmark_qualified_speedup", false)?;
+        require_bool_eq(review, "dense_cuda_evidence_used", false)?;
+
+        let evidence_entry = require_object(evidence, expected)?;
+        require_string_eq(evidence_entry, "profile", expected)?;
+        require_string_eq(evidence_entry, "decision", "not_accepted")?;
+        require_bool_eq(evidence_entry, "speedup_claim", false)?;
+        require_bool_eq(evidence_entry, "benchmark_qualified_speedup", false)?;
+        require_non_empty_string(evidence_entry, "evidence_status")?;
+        require_non_empty_string(evidence_entry, "reason")?;
+        let blockers = require_array(evidence_entry, "blockers")?;
+        if blockers.is_empty() {
+            return Err(validation_error(format!(
+                "evidence_summary.{expected}.blockers must not be empty"
+            )));
+        }
+
+        if expected == "short_decode_8" {
+            require_string_eq(evidence_entry, "evidence_status", "single_run_baseline")?;
+            require_bool_eq(evidence_entry, "fallback_free", true)?;
+            require_bool_eq(evidence_entry, "quality_passed", true)?;
+            require_bool_eq(evidence_entry, "cpu_cuda_output_match", true)?;
+            require_non_negative_number(evidence_entry, "cpu_total_ms")?;
+            require_non_negative_number(evidence_entry, "cuda_total_ms")?;
+            require_non_negative_number(evidence_entry, "observed_cpu_total_ms_div_cuda_total_ms")?;
+        } else {
+            require_string_eq(evidence_entry, "evidence_status", "missing")?;
+            require_bool_eq(evidence_entry, "fallback_free", false)?;
+            require_bool_eq(evidence_entry, "quality_passed", false)?;
+        }
+    }
+
+    let policy = require_object(receipt, "benchmark_policy")?;
+    require_bool_eq(policy, "profile_specific_decisions_only", true)?;
+    require_bool_eq(policy, "global_speedup_claim", false)?;
+    require_bool_eq(policy, "dense_cuda_evidence_used", false)?;
+    require_bool_eq(policy, "bitnet_packed_i2s_qk256_only", true)?;
+
     Ok(())
 }
 
@@ -2458,6 +2612,27 @@ fn require_array<'a>(
         .get(field)
         .and_then(serde_json::Value::as_array)
         .ok_or_else(|| validation_error(format!("{field} must be an array")))
+}
+
+fn require_string_array_contains(
+    values: &[serde_json::Value],
+    expected: &str,
+    field: &str,
+) -> Result<(), ReceiptError> {
+    if values.iter().any(|value| value.as_str() == Some(expected)) {
+        return Ok(());
+    }
+    Err(validation_error(format!("{field} must include {expected}")))
+}
+
+fn find_object_by_string_field<'a>(
+    values: &'a [serde_json::Value],
+    field: &str,
+    expected: &str,
+) -> Option<&'a serde_json::Value> {
+    values
+        .iter()
+        .find(|value| value.get(field).and_then(serde_json::Value::as_str) == Some(expected))
 }
 
 fn require_string<'a>(value: &'a serde_json::Value, field: &str) -> Result<&'a str, ReceiptError> {
@@ -3143,9 +3318,93 @@ mod tests {
     }
 
     #[test]
+    fn strict_cuda_benchmark_qualification_validates_product_profiles() {
+        let receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
+        validate_strict_cuda_benchmark_qualification_receipt_json(&receipt).unwrap();
+    }
+
+    #[test]
+    fn strict_cuda_benchmark_qualification_rejects_missing_target_profile() {
+        let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
+        receipt["target_profiles"].as_array_mut().unwrap().pop();
+
+        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("target_profiles"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_benchmark_qualification_rejects_extra_blocked_profile() {
+        let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
+        receipt["qualification_decision"]["blocked_profiles"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!("dense_qwen_short_decode"));
+
+        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("blocked_profiles"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_benchmark_qualification_rejects_extra_profile_review() {
+        let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
+        receipt["profile_reviews"].as_array_mut().unwrap().push(json!({
+            "profile": "dense_qwen_short_decode",
+            "decision": "not_accepted",
+            "evidence_status": "missing",
+            "speedup_claim_allowed": false,
+            "benchmark_qualified_speedup": false,
+            "fallback_free": false,
+            "quality_passed": false,
+            "dense_cuda_evidence_used": false,
+            "reason": "Dense evidence is out of scope for BitNet QK256 qualification.",
+            "blockers": ["wrong proof family"]
+        }));
+
+        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("profile_reviews"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_benchmark_qualification_requires_strict_ask_evidence() {
+        let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
+        receipt["evidence_summary"].as_object_mut().unwrap().remove("strict_ask_math_8");
+
+        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("strict_ask_math_8"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cuda_benchmark_qualification_requires_warm_session_receipt_boundary() {
+        let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
+        receipt["evidence_summary"]["strict_cuda_warm_session_2_turns"]["qk256_weights_uploaded_once"] =
+            json!(false);
+
+        let err = validate_strict_cuda_benchmark_qualification_receipt_json(&receipt)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("qk256_weights_uploaded_once"), "unexpected error: {err}");
+    }
+
+    #[test]
     fn committed_strict_cuda_benchmark_qualification_receipt_validates() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json",
+        );
+        validate_strict_cuda_benchmark_qualification_receipt_file(&path).unwrap();
+    }
+
+    #[test]
+    fn committed_strict_cuda_product_benchmark_qualification_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/cuda-prod-010-benchmark-qualification.json",
         );
         validate_strict_cuda_benchmark_qualification_receipt_file(&path).unwrap();
     }
@@ -4188,6 +4447,113 @@ mod tests {
                 "This review does not claim broad chat quality, production server readiness, or full CUDA residency."
             ],
             "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json"
+        })
+    }
+
+    fn sample_strict_cuda_product_benchmark_qualification_receipt() -> serde_json::Value {
+        let mut receipt = sample_strict_cuda_benchmark_qualification_receipt();
+        let strict_ask_evidence = receipt["evidence_summary"]["strict_ask_math_8"].clone();
+        let warm_session_evidence =
+            receipt["evidence_summary"]["strict_cuda_warm_session_2_turns"].clone();
+        receipt["target_profiles"] = json!([
+            "one_token",
+            "short_decode_8",
+            "short_decode_32",
+            "warm_session_3_turns",
+            "warm_session_10_turns"
+        ]);
+        receipt["benchmark_policy"] = json!({
+            "profile_specific_decisions_only": true,
+            "global_speedup_claim": false,
+            "dense_cuda_evidence_used": false,
+            "bitnet_packed_i2s_qk256_only": true
+        });
+        receipt["qualification_decision"]["blocked_profiles"] = json!([
+            "one_token",
+            "short_decode_8",
+            "short_decode_32",
+            "warm_session_3_turns",
+            "warm_session_10_turns"
+        ]);
+        receipt["profile_reviews"] = json!([
+            strict_cuda_product_profile_review("one_token", "missing"),
+            strict_cuda_product_profile_review("short_decode_8", "single_run_baseline"),
+            strict_cuda_product_profile_review("short_decode_32", "missing"),
+            strict_cuda_product_profile_review("warm_session_3_turns", "missing"),
+            strict_cuda_product_profile_review("warm_session_10_turns", "missing")
+        ]);
+        receipt["evidence_summary"] = json!({
+            "strict_ask_math_8": strict_ask_evidence,
+            "strict_cuda_warm_session_2_turns": warm_session_evidence,
+            "one_token": strict_cuda_product_missing_evidence("one_token"),
+            "short_decode_8": {
+                "profile": "short_decode_8",
+                "decision": "not_accepted",
+                "evidence_status": "single_run_baseline",
+                "fallback_free": true,
+                "quality_passed": true,
+                "cpu_cuda_output_match": true,
+                "cpu_total_ms": 147593.0,
+                "cuda_total_ms": 1866.0,
+                "observed_cpu_total_ms_div_cuda_total_ms": 79.09592711682744,
+                "speedup_claim": false,
+                "benchmark_qualified_speedup": false,
+                "reason": "One short-decode CPU/CUDA baseline exists, but profile-specific speedup remains blocked until repeated governed profile evidence and transfer timing are reviewed.",
+                "blockers": [
+                    "profile is not repeated",
+                    "transfer timing is incomplete",
+                    "no profile-specific speedup threshold has been accepted"
+                ]
+            },
+            "short_decode_32": strict_cuda_product_missing_evidence("short_decode_32"),
+            "warm_session_3_turns": strict_cuda_product_missing_evidence("warm_session_3_turns"),
+            "warm_session_10_turns": strict_cuda_product_missing_evidence("warm_session_10_turns")
+        });
+        receipt
+    }
+
+    fn strict_cuda_product_profile_review(
+        profile: &str,
+        evidence_status: &str,
+    ) -> serde_json::Value {
+        let has_evidence = evidence_status != "missing";
+        json!({
+            "profile": profile,
+            "decision": "not_accepted",
+            "evidence_status": evidence_status,
+            "speedup_claim_allowed": false,
+            "benchmark_qualified_speedup": false,
+            "fallback_free": has_evidence,
+            "quality_passed": has_evidence,
+            "dense_cuda_evidence_used": false,
+            "reason": if has_evidence {
+                "Profile evidence exists but remains baseline-only until repeated governed proof and transfer timing are complete."
+            } else {
+                "Required product benchmark profile evidence is not committed yet."
+            },
+            "blockers": if has_evidence {
+                json!([
+                    "profile is not repeated",
+                    "transfer timing is incomplete",
+                    "no profile-specific speedup threshold has been accepted"
+                ])
+            } else {
+                json!(["profile receipt missing"])
+            }
+        })
+    }
+
+    fn strict_cuda_product_missing_evidence(profile: &str) -> serde_json::Value {
+        json!({
+            "profile": profile,
+            "decision": "not_accepted",
+            "evidence_status": "missing",
+            "fallback_free": false,
+            "quality_passed": false,
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "reason": "Required product benchmark profile evidence is not committed yet.",
+            "blockers": ["profile receipt missing"]
         })
     }
 

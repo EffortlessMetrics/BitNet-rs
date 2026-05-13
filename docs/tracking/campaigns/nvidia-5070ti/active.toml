@@ -2187,6 +2187,70 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-PROD-010"
+status = "in_progress"
+branch = "cuda/bitnet-i2s-benchmark-qualification"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-BITNET-PERF-004", "CUDA-UX-006", "CUDA-UX-007"]
+acceptance = "Add a governed BitNet I2_S/QK256 CUDA product benchmark qualification receipt and report for the five target user profiles, wire report-only bench output for text/json/csv against that receipt, preserve receipts explain coverage, and keep every profile speedup-unqualified until fresh profile-specific benchmark evidence exists."
+commands = [
+  "cargo run --locked -p bitnet-bench-receipts --bin strict_cuda_benchmark_qualification_receipt --no-default-features -- --receipt-out ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-13\\cuda-prod-010-benchmark-qualification.json",
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-13\\cuda-prod-010-benchmark-qualification.json",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features",
+  "cargo test --locked -p bitnet-cli --no-default-features --features full-cli --test cli_arg_tests bench_",
+  "cargo test --locked -p bitnet-cli --no-default-features --features full-cli report_only_cuda_benchmark_receipt_skips_startup_backend_selection",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo fmt -p bitnet-cli -p bitnet-bench-receipts -- --check",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- bench --device cuda --cuda-benchmark-receipt ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-13\\cuda-prod-010-benchmark-qualification.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-13\\cuda-prod-010-benchmark-qualification.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-cli/src/commands/benchmark.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "crates/bitnet-device-probe/Cargo.toml",
+  "crates/bitnet-kernels/Cargo.toml",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/cuda-prod-010-benchmark-qualification.json",
+  "docs/reports/CUDA_PROD_010_BENCHMARK_QUALIFICATION.md",
+  "docs/tracking/campaigns/nvidia-5070ti/CAMPAIGN.md",
+  "docs/tracking/campaigns/nvidia-5070ti/active.toml",
+  "docs/tracking/campaigns/nvidia-5070ti/events/2026-05-13T145025Z-CUDA-PROD-010-in-progress.toml",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/**",
+  "crates/bitnet-device-probe/src/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "ci/model-artifacts/**",
+  "docs/tracking/generated/**",
+  "docs/tracking/campaigns/nvidia-5070ti/generated/**",
+  "dense CUDA runtime proof changes",
+  "server runtime behavior",
+]
+may_claim = [
+  "A governed BitNet I2_S/QK256 CUDA benchmark qualification review exists for the five target product profiles.",
+  "`bitnet bench --device cuda --cuda-benchmark-receipt <path>` can report the committed qualification receipt in text, JSON, and CSV without running a fresh benchmark.",
+  "`bitnet receipts explain` can summarize the committed BitNet CUDA benchmark qualification receipt.",
+  "No benchmark profile is accepted for a speedup claim.",
+]
+must_not_claim = [
+  "A fresh CUDA benchmark was executed by the report-only bench path.",
+  "CUDA speedup is accepted for any profile.",
+  "Dense regular LLM CUDA proof changed or proves BitNet packed I2_S/QK256 behavior.",
+  "Server readiness exists.",
+  "Full CUDA feature validation is green in the local Windows environment.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-PERF-001"
 status = "merged"
 branch = "codex/cuda-dense-perf-001-baseline"
