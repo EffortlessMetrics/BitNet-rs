@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T00:06:22Z"
+campaign = "intel-258v-platform"
+item = "SLM258V-004"
+event = "merged"
+pr = 4542
+actor = "codex"
+merge_sha = "40c26b089580176f33420248c839855ea8500355"
+summary = "Merged SLM258V-004, recording dense Qwen SLM CPU phase receipts on the 258V."
+notes = [
+  "The merged artifacts include an aggregate dense SLM CPU phase receipt plus prefill_512 and decode_128 profile receipts.",
+  "The receipts record dense-qwen-cpu-reference, gguf_dense_q8_0, selected_backend=cpu-rust, and fallback_used=false.",
+  "The dense profile receipts omit top-level BitNet I2_S/QK256 provenance.",
+  "Broad dense SLM chat quality, speedup, sustained performance, BitNet QK256/I2_S behavior, Arc 140V execution, Intel NPU execution, and acceleration remain unclaimed.",
+]
