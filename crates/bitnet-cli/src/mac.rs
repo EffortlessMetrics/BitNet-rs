@@ -155,6 +155,14 @@ enum MacAction {
         /// Output strict Mac answer receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_ASK_DEFAULT_RECEIPT)]
         json_out: PathBuf,
+
+        /// Emit operator progress lines to stderr while keeping generated text on stdout.
+        #[arg(long, default_value_t = false)]
+        progress: bool,
+
+        /// Suppress Mac ask status/progress lines; generated text still uses stdout.
+        #[arg(long, default_value_t = false)]
+        quiet: bool,
     },
 
     /// Run a compact Apple M4 dense-SLM health smoke with cache and receipt checks.
@@ -554,6 +562,8 @@ impl MacCommand {
                 seed,
                 threads,
                 json_out,
+                progress,
+                quiet,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac ask")?;
                 let question = resolve_mac_question(question, question_flag)?;
@@ -572,6 +582,8 @@ impl MacCommand {
                     seed,
                     threads,
                     json_out,
+                    progress,
+                    quiet,
                 )
                 .await
             }
@@ -1345,6 +1357,8 @@ async fn run_ask(
     seed: Option<u64>,
     threads: usize,
     json_out: PathBuf,
+    progress: bool,
+    quiet: bool,
 ) -> Result<()> {
     if model_cache::is_apple_m4_bitnet_artifact_id(model_id) {
         return run_bitnet_ask(
@@ -1362,6 +1376,8 @@ async fn run_ask(
             seed,
             threads,
             json_out,
+            progress,
+            quiet,
         )
         .await;
     }
@@ -1371,7 +1387,10 @@ async fn run_ask(
         );
     }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
-    eprintln!("{}", mac_ask_operator_summary_line(&model, &json_out));
+    let progress_enabled = progress && !quiet;
+    if !quiet {
+        eprintln!("{}", mac_ask_operator_summary_line(&model, &json_out));
+    }
     run_one_shot_mac_answer(
         &model,
         question,
@@ -1385,6 +1404,7 @@ async fn run_ask(
         threads,
         json_out,
         "mac ask",
+        progress_enabled,
     )
     .await?;
     Ok(())
@@ -1406,7 +1426,10 @@ async fn run_bitnet_ask(
     seed: Option<u64>,
     threads: usize,
     json_out: PathBuf,
+    progress: bool,
+    quiet: bool,
 ) -> Result<()> {
+    let progress_enabled = progress && !quiet;
     if temperature != 0.0 || top_p != 1.0 {
         anyhow::bail!(
             "BitNet Mac ask is currently scoped to deterministic greedy proof settings; use --temperature 0.0 --top-p 1.0"
@@ -1420,6 +1443,9 @@ async fn run_bitnet_ask(
             "BitNet Mac ask requires explicit tokenizer authority; pass --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json"
         )
     })?;
+    mac_ask_progress(progress_enabled, "tokenizer_verify_start", || {
+        format!("path={}", tokenizer.display())
+    });
     if !tokenizer.exists() {
         anyhow::bail!(
             "BitNet Mac ask tokenizer is missing at {}; pass the accepted external tokenizer.json",
@@ -1427,11 +1453,26 @@ async fn run_bitnet_ask(
         );
     }
     let tokenizer_sha256 = verify_bitnet_m4_tokenizer(&tokenizer)?;
+    mac_ask_progress(progress_enabled, "tokenizer_verify_complete", || {
+        format!("sha256={}...", short_sha(&tokenizer_sha256))
+    });
+    mac_ask_progress(progress_enabled, "model_verify_start", || format!("model_id={model_id}"));
     let model = model_cache::verified_apple_m4_bitnet_model(model_id, cache_dir, model_path)?;
-    eprintln!(
-        "{}",
-        mac_bitnet_ask_operator_summary_line(&model, &tokenizer, &tokenizer_sha256, &json_out)
-    );
+    mac_ask_progress(progress_enabled, "model_verify_complete", || {
+        format!("path={} sha256={}...", model.path.display(), short_sha(&model.sha256))
+    });
+    if !quiet {
+        eprintln!(
+            "{}",
+            mac_bitnet_ask_operator_summary_line(&model, &tokenizer, &tokenizer_sha256, &json_out)
+        );
+    }
+    mac_ask_progress(progress_enabled, "generation_start", || {
+        format!(
+            "max_new_tokens={max_new_tokens} receipt={} timing_fields=model_load_ms,tokenizer_load_ms,prefill_ms,first_token_ms,decode_total_ms",
+            json_out.display()
+        )
+    });
     crate::run_simple_generation(
         APPLE_M4_CPU_NEON,
         model.path.clone(),
@@ -1469,10 +1510,27 @@ async fn run_bitnet_ask(
         true,
         Some("mac_bitnet_ask".to_string()),
         false,
+        progress_enabled,
     )
     .await?;
     annotate_and_validate_bitnet_mac_ask_receipt(&json_out, &model, &tokenizer, &tokenizer_sha256)?;
+    mac_ask_progress(progress_enabled, "receipt_validated", || {
+        format!("path={} chat=false serve=false", json_out.display())
+    });
     Ok(())
+}
+
+fn mac_ask_progress<F>(enabled: bool, stage: &str, details: F)
+where
+    F: FnOnce() -> String,
+{
+    if enabled {
+        eprintln!("mac ask progress: {stage} {}", details());
+    }
+}
+
+fn short_sha(sha256: &str) -> &str {
+    sha256.get(..12).unwrap_or(sha256)
 }
 
 fn mac_ask_operator_summary_line(model: &VerifiedCachedModel, json_out: &Path) -> String {
@@ -1549,6 +1607,7 @@ async fn run_one_shot_mac_answer(
     threads: usize,
     json_out: PathBuf,
     operator_command: &str,
+    progress: bool,
 ) -> Result<ReceiptCheckSummary> {
     crate::run_simple_generation(
         APPLE_M4_CPU_NEON,
@@ -1587,6 +1646,7 @@ async fn run_one_shot_mac_answer(
         false,
         Some("mac_ask".to_string()),
         false,
+        progress,
     )
     .await?;
     annotate_and_validate_mac_receipt(&json_out, model, operator_command)?;
@@ -1630,6 +1690,7 @@ async fn run_smoke(
         threads,
         answer_receipt_path.clone(),
         "mac smoke",
+        false,
     )
     .await?;
     let answer_receipt = read_json_receipt(&answer_receipt_path)?;

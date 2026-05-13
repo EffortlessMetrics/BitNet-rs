@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T23:00:44Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-002"
+event = "pr_open"
+pr = 4651
+head_sha = "0682906fb4d030a408862ac7c3043e82ec5a7c48"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4651 for M4-BITNET-ASK-002 operator progress/status UX on one-shot `bitnet mac ask`.",
+  "The PR adds `--progress` stderr milestones, `--quiet` suppression for operator status/progress lines, and keeps generated text on stdout.",
+  "Claim boundaries remain narrow: no BitNet chat/server enablement, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, broad BitNet quality, or broad BitNet performance claim.",
+]
