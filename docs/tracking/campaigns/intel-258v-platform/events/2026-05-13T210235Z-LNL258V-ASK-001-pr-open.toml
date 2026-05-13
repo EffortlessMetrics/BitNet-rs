@@ -1,0 +1,23 @@
+timestamp = "2026-05-13T21:02:35Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ASK-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4644
+branch = "codex/lunar-lake/LNL258V-ASK-001-operator-ask"
+head_sha = "1f684e9a63f57aebf249bd39fb95226ed8e1e4fd"
+summary = "Opened the Lunar Lake default ask wrapper PR."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4644",
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+]
+
+notes = [
+  "The PR adds `bitnet lunar-lake ask` for the dense Qwen CPU default route only.",
+  "The wrapper reads the operator-readiness receipt before generation, rejects non-default or accelerator routes, and writes an operator ask receipt linked to the source run receipt.",
+  "No live ask artifact, broad dense SLM quality, speedup, Arc/NPU execution, acceleration, full BitNet accelerator inference, or QK256 accelerator decode claim is made.",
+]

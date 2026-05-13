@@ -825,8 +825,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008W"
-status = "pr_open"
+status = "merged"
 pr = 4641
+merge_sha = "08530ef97765b99bd89d2526c5dfd1714caa0583"
 branch = "codex/slm-cpu-008w-tied-head-shared-math-root-cause"
 stackable = false
 review_mode = "codex_premerge"

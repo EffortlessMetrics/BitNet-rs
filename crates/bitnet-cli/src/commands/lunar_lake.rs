@@ -30,6 +30,7 @@ const NPU_LINEAR: &str = "npu-bitnet-linear-projection-subgraph-parity.json";
 const NPU_FFN: &str = "npu-bitnet-ffn-subgraph-parity.json";
 const OPERATOR_READINESS: &str = "lunar-lake-operator-readiness.json";
 const REGRESSION_BUNDLE: &str = "lunar-lake-regression-bundle.json";
+pub const DEFAULT_ASK_ROUTE: &str = "dense_slm_default_cpu";
 
 /// Lunar Lake operator commands.
 #[derive(Args, Debug, Clone)]
@@ -107,6 +108,46 @@ pub enum LunarLakeAction {
         /// Fail when the comparison receipt reports drift.
         #[arg(long, default_value_t = false)]
         strict: bool,
+    },
+
+    /// Ask through the evidence-backed Lunar Lake default route.
+    Ask {
+        /// Artifact root containing the 258V receipts to index.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Operator readiness receipt to enforce before generation.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = OPERATOR_READINESS)]
+        operator_receipt: PathBuf,
+
+        /// Operator route to execute. Only dense_slm_default_cpu is supported initially.
+        #[arg(long, default_value = DEFAULT_ASK_ROUTE)]
+        route: String,
+
+        /// Dense Qwen GGUF model path.
+        #[arg(long)]
+        model: PathBuf,
+
+        /// Optional explicit tokenizer path.
+        #[arg(long)]
+        tokenizer: Option<PathBuf>,
+
+        /// User question to answer.
+        #[arg(long, value_name = "TEXT", conflicts_with = "question_arg")]
+        question: Option<String>,
+
+        /// User question to answer (positional form).
+        #[arg(value_name = "QUESTION")]
+        question_arg: Option<String>,
+
+        /// Maximum new tokens to generate. The Lunar Lake default ask path is bounded.
+        #[arg(long, default_value_t = 32)]
+        max_new_tokens: usize,
+
+        /// Output JSON operator ask receipt to file.
+        #[arg(long)]
+        json_out: Option<PathBuf>,
     },
 }
 
@@ -295,6 +336,9 @@ impl LunarLakeCommand {
                     bail!("Lunar Lake comparison failed: {}", receipt.gaps.join("; "));
                 }
                 Ok(())
+            }
+            LunarLakeAction::Ask { .. } => {
+                bail!("lunar-lake ask must be handled by the CLI runtime")
             }
         }
     }
@@ -608,6 +652,80 @@ pub fn build_comparison_receipt_with_created_utc(
         gaps,
         claim_boundary: operator.claim_boundary,
     })
+}
+
+pub fn load_operator_ask_route(
+    root: &Path,
+    operator_receipt: &Path,
+    route_id: &str,
+) -> Result<OperatorRoute> {
+    let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
+    let operator: LunarLakeOperatorReceipt = read_json_receipt(&operator_receipt_path)?;
+    if !operator.operator_ready {
+        bail!("Lunar Lake operator receipt is not ready: {}", operator.gaps.join("; "));
+    }
+    if operator.machine_id != "intel-258v" {
+        bail!("Lunar Lake ask requires machine_id=intel-258v; got {}", operator.machine_id);
+    }
+    if operator.claim_boundary.hidden_fallback_allowed {
+        bail!("Lunar Lake ask refuses receipts that allow hidden fallback");
+    }
+    if operator.claim_boundary.arc_bitnet_full_inference_claimed
+        || operator.claim_boundary.npu_bitnet_full_inference_claimed
+        || operator.claim_boundary.qk256_accelerator_decode_claimed
+    {
+        bail!("Lunar Lake ask refuses receipts with accelerator BitNet/QK256 claims");
+    }
+
+    let route = operator
+        .routes
+        .iter()
+        .find(|route| route.route_id == route_id)
+        .with_context(|| format!("operator route `{route_id}` not found"))?;
+    if route.route_id != DEFAULT_ASK_ROUTE {
+        bail!(
+            "Lunar Lake ask currently supports only route `{DEFAULT_ASK_ROUTE}`; got `{}`",
+            route.route_id
+        );
+    }
+    if route.workload != "ask" {
+        bail!("Lunar Lake ask route has unexpected workload `{}`", route.workload);
+    }
+    if route.selected_backend != "cpu-rust" || route.runtime_api != "cpu" {
+        bail!(
+            "Lunar Lake ask default route must select cpu-rust/cpu; got {}/{}",
+            route.selected_backend,
+            route.runtime_api
+        );
+    }
+    if route.selected_kernel_or_runtime != "dense-qwen-cpu-reference" {
+        bail!(
+            "Lunar Lake ask default route must use dense-qwen-cpu-reference; got {}",
+            route.selected_kernel_or_runtime
+        );
+    }
+    if route.fallback_policy != "strict_no_fallback" {
+        bail!(
+            "Lunar Lake ask default route must be strict_no_fallback; got {}",
+            route.fallback_policy
+        );
+    }
+    if route.acceleration_claim {
+        bail!("Lunar Lake ask default route must not claim acceleration");
+    }
+    for evidence_file in [&route.answer_gate_evidence, &route.phase_evidence].into_iter().flatten()
+    {
+        let evidence = evidence_for_file(&operator.evidence, evidence_file)
+            .with_context(|| format!("route evidence `{evidence_file}` not indexed"))?;
+        if !evidence.present || !evidence.issues.is_empty() {
+            bail!("route evidence `{evidence_file}` is not ready: {}", evidence.issues.join("; "));
+        }
+        if evidence.fallback_used != Some(false) {
+            bail!("route evidence `{evidence_file}` does not prove fallback_used=false");
+        }
+    }
+
+    Ok(route.clone())
 }
 
 fn normalize_created_utc(created_utc: &str) -> Result<String> {
@@ -1239,6 +1357,67 @@ mod tests {
 
         assert!(!comparison.comparison_ready);
         assert!(comparison.gaps.iter().any(|gap| gap.contains("regression bundle failed")));
+        Ok(())
+    }
+
+    #[test]
+    fn ask_route_loads_dense_cpu_default_only() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-13T15:36:09Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+
+        let route =
+            load_operator_ask_route(temp.path(), Path::new(OPERATOR_READINESS), DEFAULT_ASK_ROUTE)?;
+
+        assert_eq!(route.route_id, DEFAULT_ASK_ROUTE);
+        assert_eq!(route.selected_backend, "cpu-rust");
+        assert_eq!(route.runtime_api, "cpu");
+        assert!(!route.acceleration_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn ask_route_rejects_openvino_candidate() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-13T15:36:09Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+
+        let err = load_operator_ask_route(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "dense_slm_openvino_gpu_candidate",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("supports only route"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn ask_route_rejects_fallback_evidence() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), true)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-13T15:36:09Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+
+        let err =
+            load_operator_ask_route(temp.path(), Path::new(OPERATOR_READINESS), DEFAULT_ASK_ROUTE)
+                .unwrap_err()
+                .to_string();
+
+        assert!(err.contains("not ready") || err.contains("fallback"), "got: {err}");
         Ok(())
     }
 

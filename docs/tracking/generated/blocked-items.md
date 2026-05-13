@@ -10,7 +10,8 @@
 | apple-m3-macbook-air | M3MBA-002 | M3MBA-001 | merged |
 | apple-m3-macbook-air | M3MBA-003 | M3MBA-002 | merged |
 | apple-m3-macbook-air | M3MBA-012 | M3MBA-003 | proposed |
-| apple-m3-macbook-air | M3MBA-004A | M3MBA-012 | proposed |
+| apple-m3-macbook-air | M3MBA-013 | M3MBA-012 | proposed |
+| apple-m3-macbook-air | M3MBA-004A | M3MBA-013 | proposed |
 | apple-m3-macbook-air | M3MBA-004B | M3MBA-004A | proposed |
 | apple-m3-macbook-air | M3MBA-005A | M3MBA-004B | proposed |
 | apple-m3-macbook-air | M3MBA-005B | M3MBA-005A | proposed |
@@ -183,6 +184,7 @@
 | intel-258v-platform | LNL258V-OP-001 | SLM-OV258V-006, CPU-BITNET-PERF-002 | merged |
 | intel-258v-platform | LNL258V-REG-001 | LNL258V-OP-001 | merged |
 | intel-258v-platform | LNL258V-COMPARE-005 | LNL258V-REG-001 | merged |
+| intel-258v-platform | LNL258V-ASK-001 | LNL258V-COMPARE-005 | pr_open |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
@@ -334,7 +336,7 @@
 | slm-cpu | SLM-CPU-008T | SLM-CPU-008S | merged |
 | slm-cpu | SLM-CPU-008U | SLM-CPU-008T | merged |
 | slm-cpu | SLM-CPU-008V | SLM-CPU-008U | merged |
-| slm-cpu | SLM-CPU-008W | SLM-CPU-008V | pr_open |
+| slm-cpu | SLM-CPU-008W | SLM-CPU-008V | merged |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | merged |
 | wasm-inference | WASM-002 | WASM-001 | ready |

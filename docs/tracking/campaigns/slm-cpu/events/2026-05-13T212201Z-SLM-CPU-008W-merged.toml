@@ -1,0 +1,18 @@
+timestamp = "2026-05-13T21:22:01Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008W"
+event = "merged"
+pr = 4641
+merge_sha = "08530ef97765b99bd89d2526c5dfd1714caa0583"
+actor = "codex"
+summary = "Merged the Qwen3 tied-token-embedding logits audit for the i5-8250U SLM lane."
+
+artifacts = [
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-post-008w-tied-head-audit.json",
+]
+
+notes = [
+  "The audit records tied_token_embeddings as the dense SLM output policy and observes logits vector length 151936 against tokenizer real vocab size 151936.",
+  "No dedicated output.weight head is selected for the official Qwen3 GGUF; the remaining boundary evidence is still classified as a metadata gap, and first-token parity remains unproven.",
+  "No answer-quality, corpus success, performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 claim is made.",
+]
