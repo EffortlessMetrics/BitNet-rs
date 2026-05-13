@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 58
 expression: help
 ---
 BitNet-rs CLI - one-shot generation and chat with strict receipts
@@ -63,6 +64,8 @@ Commands:
           Ask one question using the answer-readiness generation path
   model
           Fetch, verify, list, and prune supported local model artifacts
+  cuda
+          RTX 5070 Ti CUDA proof-lane utilities
   mac
           Mac-oriented SLM check, ask, validate, and receipt-check wrappers
   tokenize
@@ -107,6 +110,12 @@ Commands:
           Emit dense GGUF KV-cache policy receipts for the strict CUDA lane
   dense-gguf-sampling-policy
           Emit dense GGUF logits-transfer and sampling policy receipts
+  dense-gguf-qwen-one-token-strict-cuda
+          Run dense Qwen one-token strict CUDA proof and emit a governed receipt
+  dense-gguf-qwen-short-decode-strict-cuda
+          Run dense Qwen short-decode strict CUDA proof and emit a governed receipt
+  dense-gguf-qwen-warm-session-strict-cuda
+          Run dense Qwen warm-session strict CUDA proof and emit a governed receipt
   dense-gguf-norm-fixture
           Extract dense GGUF RMSNorm fixtures and emit a CPU-reference receipt
   dense-gguf-norm-cuda-parity

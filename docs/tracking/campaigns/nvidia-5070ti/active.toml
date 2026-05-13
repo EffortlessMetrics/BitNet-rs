@@ -2137,6 +2137,55 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-PROD-009"
+status = "pr_open"
+branch = "cuda/bitnet-strict-preflight"
+pr = 4604
+head_sha = "c83cd67e7f8f03a2aef9acfb785f0ef7f420b126"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-PROD-008"]
+acceptance = "Harden strict BitNet CUDA user preflight with `bitnet cuda doctor`, fail-closed strict backend/tokenizer checks before generation, default strict receipt path visibility, and preserved speedup_claim=false."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli cuda_doctor",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli ask_strict",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/tests/snapshots/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  ".github/workflows/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+]
+may_claim = [
+  "`bitnet cuda doctor` exists as a strict RTX 5070 Ti CUDA preflight surface.",
+  "Strict BitNet CUDA ask rejects generic `cuda` before generation.",
+  "Strict BitNet CUDA ask resolves tokenizer authority before generation.",
+  "The strict CUDA preflight preserves speedup_claim=false.",
+]
+must_not_claim = [
+  "New CUDA generation proof exists.",
+  "QK256 kernels executed in this PR.",
+  "BitNet answer quality improved.",
+  "Dense SLM CUDA proof changed.",
+  "Server readiness exists.",
+  "CUDA speedup is accepted.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-PERF-001"
 status = "merged"
 branch = "codex/cuda-dense-perf-001-baseline"
