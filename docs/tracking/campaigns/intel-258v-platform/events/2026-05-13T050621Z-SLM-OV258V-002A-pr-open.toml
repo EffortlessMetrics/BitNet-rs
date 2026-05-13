@@ -1,0 +1,18 @@
+timestamp = "2026-05-13T05:06:21Z"
+campaign = "intel-258v-platform"
+item = "SLM-OV258V-002A"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4571
+actor = "codex"
+head_sha = "6508e23661a9472fc99232f398c77bce158afcd4"
+branch = "codex/lunar-lake/SLM-OV258V-002A-openvino-cpu-smoke"
+summary = "Opened SLM-OV258V-002A to refresh the OpenVINO CPU LLMPipeline smoke with live Qwen2.5 execution evidence."
+
+notes = [
+  "The local .venv now has OpenVINO GenAI, Optimum Intel, Transformers, and NNCF, and the Qwen2.5 INT4 symmetric IR export exists under ignored models/.",
+  "OpenVINO GenAI 2026.1 LLMPipeline constructed on CPU and generated text for math_2_plus_2, capital_france, and rust_sentence with 3/3 bounded gates passing.",
+  "The receipt records selected_backend=openvino-cpu, runtime_api=openvino_genai, runtime_device=CPU, fallback_used=false, and conservative generated-token evidence boundaries.",
+  "No OpenVINO GPU/Arc execution, NPU execution, speedup, broad dense SLM quality, direct GenAI generated-token ID capture, or BitNet QK256/I2_S proof is claimed.",
+]
