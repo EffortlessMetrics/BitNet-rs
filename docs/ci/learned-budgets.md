@@ -27,11 +27,29 @@ sized separately as a completion guard:
 timeout = recent successful p95 wall time + fixed or percentage cushion
 ```
 
+The active policy file encodes both cushions:
+
+```text
+minimum_completion_cushion_percent = 20
+minimum_completion_cushion_minutes = 10
+```
+
+Use whichever cushion is larger for selected long lanes unless the workflow has
+a stronger lane-specific reason. This is deliberately separate from LEM budget:
+budget decides whether to route a lane onto a PR, while timeout decides whether
+an already-selected lane gets enough room to finish.
+
 Timed-out and cancelled runs are not healthy duration samples. Use them to
 investigate cap sizing, queue behavior, or true hangs; do not let them pull the
 healthy cap downward. A timeout that fires just before the selected lane would
 have produced a receipt wastes the full prior run and should be treated as a
 cap failure, not a normal budget success.
+
+For actuals collection, timeout and cancellation records should be retained as
+cap-failure events, but excluded from successful-runtime percentiles. Their job
+is to tell us that routing, prerequisite checks, profile size, or cap sizing
+needs work; they should not teach the planner that incomplete runs are cheaper
+than complete runs.
 
 For long lanes, prefer fail-fast prerequisite checks and smaller profile
 selection before expensive work starts. Aggregator jobs should have polling

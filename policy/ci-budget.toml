@@ -31,6 +31,10 @@ healthy_cap_basis = "recent_success_p95_plus_cushion"
 prefer_routing_over_near_completion_timeout = true
 fail_fast_preflight_required_for_long_lanes = true
 aggregator_deadline_must_cover_upstream_healthy_completion = true
+minimum_completion_cushion_percent = 20
+minimum_completion_cushion_minutes = 10
+timeout_or_cancelled_counts_as_cap_failure = true
+exclude_timeout_and_cancelled_from_healthy_samples = true
 
 # Bands map (LEM range -> string posture) used by `xtask ci plan`
 # when emitting the markdown summary. Keys are inclusive upper
