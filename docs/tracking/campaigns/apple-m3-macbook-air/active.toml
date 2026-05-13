@@ -185,6 +185,45 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M3MBA-013"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-013-ci-completion-policy"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-012"]
+acceptance = "Encode the M3 Air CI completion policy in the campaign and shared CI docs so selected long hardware/model jobs are routed, preflighted, and capped from healthy completed runtimes with cushion instead of being ended just before receipt emission."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "docs/ci/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+  "policy/ci-budget.toml",
+  "policy/ci-routed-rollout.toml",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air lane has an explicit CI completion policy for selected long jobs.",
+]
+must_not_claim = [
+  "Live M3 model CI has been enabled.",
+  "Any M3 Air model inference was run.",
+  "Long job caps prove performance.",
+]
+
+[[work_item]]
 id = "M3MBA-004A"
 status = "proposed"
 branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
@@ -192,7 +231,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M3MBA-012"]
+blocked_by = ["M3MBA-013"]
 acceptance = "Run the dense Qwen2.5 0.5B Mac smoke path on M3 Air with the known model hash, tokenizer metadata, deterministic settings, exact requested/selected backend label identity, fallback status, power and thermal context, storage before/after, receipts-check output, and dense-only claim boundary."
 commands = [
   "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set smoke --backend-label apple-m3-air-cpu-neon --quiet",
