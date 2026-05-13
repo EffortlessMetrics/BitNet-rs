@@ -1,0 +1,12 @@
+timestamp = "2026-05-13T13:24:42Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008T"
+event = "in_progress"
+branch = "codex/slm-cpu-008t-first-token-parity"
+actor = "codex"
+
+notes = [
+  "Started the first-token parity candidate after SLM-CPU-008S localized the post-008 failure to output-head/vocab-indexing-or-shared-transformer-math.",
+  "The post-008 artifact records output_head_tensor = output.weight while the transformer trace recorded lm_head_present=false and tied-embedding fallback, so this slice makes output.weight a dedicated lm-head candidate before tied fallback.",
+  "The slice must be followed by a real i5-8250U artifact refresh before claiming Qwen3 first-token parity or answer quality.",
+]
