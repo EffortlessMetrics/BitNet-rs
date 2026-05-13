@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T12:11:08Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-001"
+event = "merged"
+pr = 4607
+merge_sha = "f486dbc7600330da68c1a6806a9f1b50b857e757"
+branch = "codex/lunar-lake/CPU-BITNET-PERF-001-i2s-microbench"
+actor = "codex"
+
+summary = "Merged CPU-BITNET-PERF-001 with 258V QK256/I2_S GEMV and GEMM microbench timing evidence."
+
+notes = [
+  "The receipt records QK256/I2_S GEMV and GEMM microbench timing profiles on the 258V CPU path.",
+  "The evidence records requested/selected CPU backend, selected QK256 kernel identity, model hash, tokenizer source, CPU features, and fallback_used=false.",
+  "speedup_claim=false remains explicit for all recorded profiles.",
+  "No broad BitNet answer quality, sustained decode throughput, Arc/NPU execution, acceleration, QK256 semantic change, or full model correctness claim was made.",
+]
