@@ -71,7 +71,7 @@
 | apple-m4-slm-answer | SLM-M4-005 | SLM-M4-004 | merged |
 | apple-m4-slm-answer | SLM-M4-006 | SLM-M4-004, SLM-M4-005 | merged |
 | apple-m4-slm-answer | SLM-M4-007 | SLM-M4-005, SLM-M4-006 | merged |
-| apple-m4-slm-eval-and-proof | M4-SLM-EVAL-002 | M4-SLM-EVAL-001 | pr_open |
+| apple-m4-slm-eval-and-proof | M4-SLM-EVAL-002 | M4-SLM-EVAL-001 | merged |
 | apple-m4-slm-eval-and-proof | M4-SLM-EVAL-003 | M4-SLM-EVAL-002 | ready |
 | apple-m4-slm-eval-and-proof | M4-SLM-EVAL-004 | M4-SLM-EVAL-003 | ready |
 | apple-m4-slm-eval-and-proof | M4-SLM-EVAL-005 | M4-SLM-EVAL-003 | ready |

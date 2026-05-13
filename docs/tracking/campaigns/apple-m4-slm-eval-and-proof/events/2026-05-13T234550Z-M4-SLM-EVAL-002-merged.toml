@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T23:45:50Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-002"
+event = "merged"
+pr = 4660
+merge_sha = "d4abc2cbaa2cfb21dc1c3d322af3dcb736a010ea"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4660 merged deterministic dense SLM eval scoring and fixture-only tests.",
+  "The seeded corpus dry-run emits scoring_summary and per-case scoring plans without live model execution.",
+  "Claim boundaries remain narrow: no live M4 runtime accuracy, broad model quality, broad performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook claim.",
+]
