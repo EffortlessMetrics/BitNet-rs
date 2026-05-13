@@ -236603,3 +236603,236 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = "tmp.path().to_str().unwrap(),"
+
+[[baseline]]
+path = "crates/bitnet-bdd-grid-core/tests/bdd_grid_edge_cases.rs"
+family = "unwrap"
+snippet = "ExecutionEnvironment::from_str(\"PRODUCTION\").unwrap(),"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "ExecutionEnvironment::from_str(\"PRODUCTION\").unwrap(),"
+
+
+[[baseline]]
+path = "crates/bitnet-bdd-grid-core/tests/bdd_grid_edge_cases.rs"
+family = "unwrap"
+snippet = "assert_eq!(ExecutionEnvironment::from_str(\"CI\").unwrap(), ExecutionEnvironment::Ci);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(ExecutionEnvironment::from_str(\"CI\").unwrap(), ExecutionEnvironment::Ci);"
+
+
+[[baseline]]
+path = "crates/bitnet-bdd-grid-core/tests/bdd_grid_edge_cases.rs"
+family = "unwrap"
+snippet = "assert_eq!(TestingScenario::from_str(\"Smoke\").unwrap(), TestingScenario::Smoke);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(TestingScenario::from_str(\"Smoke\").unwrap(), TestingScenario::Smoke);"
+
+
+[[baseline]]
+path = "crates/bitnet-bdd-grid-core/tests/bdd_grid_edge_cases.rs"
+family = "unwrap"
+snippet = "assert_eq!(TestingScenario::from_str(\"UNIT\").unwrap(), TestingScenario::Unit);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(TestingScenario::from_str(\"UNIT\").unwrap(), TestingScenario::Unit);"
+
+
+[[baseline]]
+path = "crates/bitnet-gpu-hal/src/prompt_processing.rs"
+family = "unwrap"
+snippet = "let result = engine.process_single(\"hi\").unwrap();"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let result = engine.process_single(\"hi\").unwrap();"
+
+
+[[baseline]]
+path = "crates/bitnet-prompt-templates/tests/prompt_templates_edge_cases.rs"
+family = "unwrap"
+snippet = "assert_eq!(TemplateType::from_str(\"Instruct\").unwrap(), TemplateType::Instruct);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(TemplateType::from_str(\"Instruct\").unwrap(), TemplateType::Instruct);"
+
+
+[[baseline]]
+path = "crates/bitnet-prompt-templates/tests/prompt_templates_edge_cases.rs"
+family = "unwrap"
+snippet = "assert_eq!(TemplateType::from_str(\"RAW\").unwrap(), TemplateType::Raw);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(TemplateType::from_str(\"RAW\").unwrap(), TemplateType::Raw);"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/config_builder_edge_cases.rs"
+family = "unwrap"
+snippet = "assert_eq!(\"AUTO\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(\"AUTO\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/config_builder_edge_cases.rs"
+family = "unwrap"
+snippet = "assert_eq!(\"Auto\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(\"Auto\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/config_builder_edge_cases.rs"
+family = "unwrap"
+snippet = "assert_eq!(\"CPU\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(\"CPU\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/device_config_test.rs"
+family = "unwrap"
+snippet = "assert_eq!(\"AUTO\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(\"AUTO\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/device_config_test.rs"
+family = "unwrap"
+snippet = "assert_eq!(\"CPU\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(\"CPU\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/device_config_test.rs"
+family = "unwrap"
+snippet = "assert_eq!(\"GPU\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(\"GPU\".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/server_config_batch_edge_cases.rs"
+family = "unwrap"
+snippet = "let dc: DeviceConfig = \"AUTO\".parse().unwrap();"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let dc: DeviceConfig = \"AUTO\".parse().unwrap();"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/server_config_edge_cases.rs"
+family = "unwrap"
+snippet = "let dc: DeviceConfig = \"AUTO\".parse().unwrap();"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let dc: DeviceConfig = \"AUTO\".parse().unwrap();"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/server_config_edge_cases.rs"
+family = "unwrap"
+snippet = "let dc: DeviceConfig = \"CPU\".parse().unwrap();"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let dc: DeviceConfig = \"CPU\".parse().unwrap();"
+
+
+[[baseline]]
+path = "crates/bitnet-server/tests/server_config_edge_cases.rs"
+family = "unwrap"
+snippet = "let dc: DeviceConfig = \"GPU\".parse().unwrap();"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let dc: DeviceConfig = \"GPU\".parse().unwrap();"
+
+
+[[baseline]]
+path = "xtask/src/tokenizers.rs"
+family = "unwrap"
+snippet = "assert_eq!(TokenizerSource::from_str(\"OFFICIAL\").unwrap(), TokenizerSource::Official);"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "assert_eq!(TokenizerSource::from_str(\"OFFICIAL\").unwrap(), TokenizerSource::Official);"
