@@ -1,0 +1,437 @@
+{
+  "artifact_kind": "bitnet_answer_corpus_parity",
+  "cases": [
+    {
+      "failed_rules": [],
+      "id": "capital_france",
+      "left": {
+        "answer": " Paris",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          12366,
+          128009
+        ],
+        "label": "apple-m4-run-a",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      },
+      "passed": true,
+      "right": {
+        "answer": " Paris",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          12366,
+          128009
+        ],
+        "label": "apple-m4-run-b",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [],
+      "id": "math_2_plus_2",
+      "left": {
+        "answer": " 4",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          220,
+          19,
+          128009
+        ],
+        "label": "apple-m4-run-a",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      },
+      "passed": true,
+      "right": {
+        "answer": " 4",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          220,
+          19,
+          128009
+        ],
+        "label": "apple-m4-run-b",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [],
+      "id": "repeat_colors",
+      "left": {
+        "answer": " red blue green",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          2579,
+          6437,
+          6307,
+          128009
+        ],
+        "label": "apple-m4-run-a",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      },
+      "passed": true,
+      "right": {
+        "answer": " red blue green",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          2579,
+          6437,
+          6307,
+          128009
+        ],
+        "label": "apple-m4-run-b",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [],
+      "id": "say_ok",
+      "left": {
+        "answer": " OK",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          10619,
+          128009
+        ],
+        "label": "apple-m4-run-a",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      },
+      "passed": true,
+      "right": {
+        "answer": " OK",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          10619,
+          128009
+        ],
+        "label": "apple-m4-run-b",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [],
+      "id": "yes_no_water",
+      "left": {
+        "answer": " Yes.",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          7566,
+          13,
+          128009
+        ],
+        "label": "apple-m4-run-a",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      },
+      "passed": true,
+      "right": {
+        "answer": " Yes.",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "apple-m4-cpu-neon",
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        "generated_token_ids": [
+          7566,
+          13,
+          128009
+        ],
+        "label": "apple-m4-run-b",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    }
+  ],
+  "claim": "full_decode_answer_parity_diagnostic",
+  "inputs": {
+    "left_label": "apple-m4-run-a",
+    "left_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-a.json",
+    "right_label": "apple-m4-run-b",
+    "right_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-b.json"
+  },
+  "machine": {
+    "cpu": null,
+    "machine_id": "apple-m4-mac-mini",
+    "memory": null,
+    "platform_artifact": null,
+    "power": null
+  },
+  "may_claim": [
+    "Full-decode answer parity can be audited for the compared receipts.",
+    "First divergence evidence can separate backend issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
+  ],
+  "must_not_claim": [
+    "General chat quality is proven.",
+    "Sustained throughput is proven.",
+    "Server inference is complete.",
+    "A backend is answer-ready when the compared model artifact is not answer-ready."
+  ],
+  "proof_stage": "full_decode_parity_compared",
+  "schema_version": "1.0.0",
+  "shared_contract": {
+    "failed_rules": [],
+    "same_greedy_settings": true,
+    "same_prompt_template": true,
+    "same_real_gguf": true,
+    "same_tokenizer": true
+  },
+  "speedup_claim": false,
+  "summary": {
+    "failed": 0,
+    "first_divergence": null,
+    "passed": 5,
+    "total": 5
+  },
+  "timestamp": "2026-05-13T11:31:41.215607+00:00"
+}

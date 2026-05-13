@@ -61,6 +61,7 @@ qwen2.5-1.5b-instruct-q4_k_m  Rust-native Apple M4 CPU/NEON larger Qwen artifact
 Useful commands:
 
 ```bash
+bitnet mac models
 bitnet model list
 bitnet model fetch qwen2.5-0.5b-instruct-q8_0
 bitnet model verify qwen2.5-0.5b-instruct-q8_0
@@ -78,8 +79,22 @@ bitnet mac ask "What is 2+2? Answer briefly." \
   --model-id qwen2.5-1.5b-instruct-q4_k_m
 ```
 
-Cache metadata records source repository, revision, filename, SHA256, size, quantization, tokenizer metadata, chat-template presence, and Apple M4 CPU/NEON support status. Fetch warns on low disk headroom and honors `--offline` / `BITNET_OFFLINE`.
-`bitnet model list` is a quick cache inventory; use `bitnet model verify <id>` or `bitnet mac check` when SHA integrity matters.
+Cache metadata records source repository, revision, filename, SHA256, size,
+quantization, tokenizer metadata, chat-template presence, and Apple M4 CPU/NEON
+support status. Fetch warns on low disk headroom and honors `--offline` /
+`BITNET_OFFLINE`.
+`bitnet mac models` is the Mac operator view for default, supported,
+blocked, candidate, and rejected model states plus disk-headroom guidance for
+first fetches. Its text output prints exact `Next fetch` and `Next verify`
+commands for the recommended first supported model when disk headroom is
+adequate. Blocked BitNet rows also print a receipt-only `bitnet mac
+bitnet-proof --proof-receipt ...` bridge command so operators can validate the
+strict BitNet answer-corpus proof without treating BitNet as an enabled Mac
+ask/chat/server route. `bitnet model list` is the lower-level cache inventory; use `bitnet
+model verify <id>` or `bitnet mac check` when SHA integrity matters.
+Mac answer/service wrappers reject blocked BitNet, diagnostic-only, candidate,
+rejected, and unknown model IDs before cache repair guidance, so operators are
+not pointed at a fetch command for a non-selectable M4 answer model.
 
 First-run and repair guidance is intentionally explicit:
 
@@ -94,6 +109,12 @@ bitnet model verify qwen2.5-0.5b-instruct-q8_0
 bitnet model prune qwen2.5-0.5b-instruct-q8_0
 bitnet model fetch qwen2.5-0.5b-instruct-q8_0
 ```
+
+When a Mac wrapper finds a missing model cache, the failure includes both the
+exact `bitnet model fetch <id>` repair command and a
+`bitnet mac models --cache-dir ...` command with disk guidance. Operators should
+use the model view first on low-space machines before choosing between the
+default Q8_0 model and storage-conscious Q4_K_M support.
 
 Offline mode cannot repair a missing or corrupt cache. Pre-seed the GGUF file and run `bitnet model verify qwen2.5-0.5b-instruct-q8_0`, or disable offline mode and fetch the supported artifact. On low-disk systems, prune unused cached models or set `BITNET_MODEL_CACHE_DIR` / `--cache-dir` to a larger volume before fetching.
 
@@ -112,6 +133,11 @@ Ask one question through the supported Mac wrapper:
 bitnet mac ask "What is 2+2? Answer briefly." \
   --json-out target/apple-m4-productization/mac-ask.json
 ```
+
+Before generation, `bitnet mac ask` prints a compact operator summary on stderr
+with the selected model ID, quantization, verified cache root, backend,
+fallback status, receipt path, and short model SHA. The summary is metadata
+only; the strict answer receipt remains the authority for proof.
 
 The older flag form is kept for scripts:
 

@@ -1,8 +1,10 @@
 # Apple M4 BitNet Proof Prep
 
-`M4-CONT-005` prepares the M4 Mac mini side of the BitNet proof path. It does
-not accept a BitNet artifact, run BitNet generation, or prove BitNet answer
-quality.
+`M4-CONT-005` prepared the M4 Mac mini side of the BitNet proof path. The same
+command now has two bounded modes: artifact preflight and strict receipt
+validation. Receipt validation can verify a completed Apple M4 BitNet
+`answer-corpus` proof, but it still does not enable BitNet through `bitnet mac
+ask`, `bitnet mac chat`, or `bitnet mac serve`.
 
 ## Command Contract
 
@@ -22,6 +24,20 @@ bitnet mac bitnet-proof \
 In this continuity item the command is a preflight and contract checker. It
 writes an `apple_m4_bitnet_proof_preflight` receipt and fails clearly when the
 artifact is missing, not accepted, or missing tokenizer authority.
+
+After the strict Apple M4 answer-corpus proof exists, use the receipt bridge:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac bitnet-proof \
+  --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --proof-receipt ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json \
+  --strict \
+  --json-out ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/mac-bitnet-proof-receipt-check.json
+```
+
+The bridge validates model SHA, strict external llama-bpe tokenizer authority,
+all-passed corpus quality, per-case `apple-m4-cpu-neon` backend/fallback fields,
+generated token IDs, prompt-prefill evidence, and timing/latency fields.
 
 ## Accepted Artifact Input
 

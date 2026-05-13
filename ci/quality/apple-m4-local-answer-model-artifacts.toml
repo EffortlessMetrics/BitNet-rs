@@ -14,6 +14,26 @@ notes = [
   "Artifacts that fail reference-runner prompt-suite output quality must not unblock M4-QA-001.",
 ]
 
+[shared_answer_ready_artifact]
+status = "available_for_backend_gate"
+source_gate = "MODEL-ARTIFACT-007"
+manifest = "ci/model-artifacts/artifact-manifest.toml"
+candidate_manifest = "ci/model-artifacts/candidate-artifacts.toml"
+tokenizer_authority = "ci/model-artifacts/tokenizer-authority.toml"
+prompt_suite = "ci/quality/bitnet-answer-corpus.yaml"
+reference_runner_evidence = "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md"
+id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
+repo = "microsoft/bitnet-b1.58-2B-4T-gguf"
+repo_revision = "a1f2f1c765812aa8af3f6eda4a313707064bba15"
+file = "ggml-model-i2_s.gguf"
+sha256 = "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+tokenizer_repo = "microsoft/bitnet-b1.58-2B-4T"
+tokenizer_revision = "04c3b9ad9361b824064a1f25ea60a8be9599b127"
+tokenizer_json_sha256 = "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+pretokenizer_compatibility_decision = "tokenizer.ggml.pre=llama-bpe"
+prompt_template = "bitnetcpp-answer"
+claim_boundary = "This satisfies the shared artifact gate for downstream backend proof attempts only. It does not prove Apple M4 CPU/NEON local answers until M4-QA-001 produces strict coherent-output receipts."
+
 [[artifact]]
 id = "microsoft_bitnet_b158_2b_4t_gguf_i2s_current"
 status = "rejected_for_local_answer"
@@ -32,6 +52,8 @@ reference_runner = "llama-cli via local BitNet.cpp checkout"
 reference_runner_mode = "cpu, greedy temperature 0.0, 16 generated tokens"
 metadata_warning = "llm_load_vocab: missing pre-tokenizer type, using: 'default'"
 rejection_reason = "The artifact is structurally valid but lacks tokenizer pre-tokenizer metadata and fails all three local-answer prompt-suite gates under the reference runner."
+superseded_by = "shared_answer_ready_artifact"
+superseded_reason = "Historical Apple-specific llama3-chat/default-pretokenizer evidence remains useful rejection evidence, but MODEL-ARTIFACT-007 later promoted the same GGUF for backend gates when external tokenizer.ggml.pre=llama-bpe authority and the bitnetcpp-answer prompt envelope are supplied."
 
   [[artifact.prompt_result]]
   id = "math_sentence"

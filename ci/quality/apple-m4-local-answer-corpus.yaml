@@ -5,6 +5,10 @@ description: Fixed deterministic prompt set for Apple M4 CPU/NEON local-answer s
 model:
   repo: microsoft/bitnet-b1.58-2B-4T-gguf
   file: ggml-model-i2_s.gguf
+  sha256: 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162
+  family: bitnet
+  architecture: bitnet-b1.58
+  quant_format: I2_S
 defaults:
   prompt_template: llama3-chat
   max_new_tokens: 16

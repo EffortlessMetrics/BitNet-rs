@@ -1,0 +1,83 @@
+{
+  "accepted_artifact": {
+    "path": null,
+    "summary": null
+  },
+  "artifact_kind": "apple_m4_bitnet_proof_preflight",
+  "blockers": [],
+  "claim_boundary": {
+    "artifact_accepted_by_this_item": false,
+    "bitnet_answer_corpus_quality_verified": true,
+    "bitnet_answer_quality_claimed": false,
+    "bitnet_mac_ask_chat_enabled": false,
+    "bitnet_mac_serve_enabled": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "m4_bitnet_answer_corpus_proof_verified": true,
+    "m4_bitnet_proof_prepared": true,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false
+  },
+  "fallback_used": false,
+  "generation": {
+    "deterministic": true,
+    "greedy": true,
+    "max_new_tokens": 16,
+    "prompt": "What is 2+2? Answer briefly.",
+    "temperature": 0.0
+  },
+  "model": {
+    "exists": true,
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "required": "accepted BitNet GGUF from apple-bitnet-artifact-sweep"
+  },
+  "proof_executed": true,
+  "proof_receipt": {
+    "path": "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release.json",
+    "summary": {
+      "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+      "case_count": 5,
+      "fallback_used": false,
+      "generated_tokens": 14,
+      "mac_route_enabled": false,
+      "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release.json",
+      "prompt_template": "bitnetcpp-answer",
+      "quality_summary": {
+        "failed": 0,
+        "not_run": 0,
+        "passed": 5,
+        "timeout": 0,
+        "total": 5
+      },
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon",
+      "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "valid": true
+    }
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "required_receipt_fields": [
+    "model.source",
+    "model.sha256",
+    "tokenizer.authority",
+    "kernel_family",
+    "requested_backend",
+    "selected_backend",
+    "runtime_api",
+    "fallback_used",
+    "generation.text",
+    "generation.generated_token_ids",
+    "timing",
+    "claim_boundary"
+  ],
+  "result": "verified",
+  "runtime_api": "cpu",
+  "schema_version": 1,
+  "selected_backend": "apple-m4-cpu-neon",
+  "tokenizer": {
+    "authority": null,
+    "required": true
+  }
+}

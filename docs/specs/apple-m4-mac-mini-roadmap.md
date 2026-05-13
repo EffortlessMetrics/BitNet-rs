@@ -698,11 +698,15 @@ inspectable. The next campaign should make it quality-gated:
 
 1. Multi-token CPU/NEON local-answer smoke prompts. The first command uses
    `answer-corpus --device apple-m4-cpu-neon` with
-   `ci/quality/apple-m4-local-answer-corpus.yaml`, strict real-model loading,
-   valid-text gates, minimum generated-token checks, token-variation checks,
-   and explicit fallback receipt fields. If the strict run generates
-   non-coherent text, the local-answer lane is blocked on reference parity or
-   model-artifact validation rather than a weaker quality gate.
+   `ci/quality/bitnet-answer-corpus.yaml`, the shared `MODEL-ARTIFACT-007`
+   tokenizer and `bitnetcpp-answer` prompt authority, strict real-model loading,
+   valid-text gates, token IDs, prompt-prefill evidence, model SHA, and explicit
+   fallback receipt fields. If the strict run generates non-coherent text, the
+   local-answer lane is blocked on Apple backend parity rather than a weaker
+   quality gate. `bitnet mac bitnet-proof --proof-receipt <answer-corpus.json>
+   --strict` is the Mac-facing receipt bridge for this proof; it validates the
+   strict answer-corpus receipt and records that BitNet still is not enabled
+   through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve`.
 2. Greedy determinism for fixed prompt/model/settings.
 3. Receipt checks for output text validity, token counts, model/tokenizer
    identity, backend identity, and fallback status.
@@ -710,6 +714,46 @@ inspectable. The next campaign should make it quality-gated:
    Metal inference requests, and non-M4 Apple labels.
 5. A later decision on routing one receipt-backed Metal phase into real
    generation without changing greedy CPU reference output.
+
+For `M4-QA-005`, the decision is deliberately phase-scoped: the first eligible
+Metal local-answer contribution is a prefill projection fixture, not full Metal
+inference and not an autoregressive decode loop. It may only follow landed
+CPU/NEON proof, greedy determinism, and receipt-quality gates. The route must
+compare CPU-only greedy output before and after the Metal phase fixture and must
+record unchanged generated token IDs and decoded text.
+
+The required routing receipt fields are:
+
+```json
+{
+  "requested_backend": "apple-m4-metal",
+  "selected_backend": "apple-m4-metal",
+  "runtime_api": "metal",
+  "fallback_used": false,
+  "bitnet": {
+    "kernel_family": "i2_s",
+    "execution_phase": "prefill",
+    "phase_scope": "prefill_projection_fixture"
+  },
+  "phase": {
+    "full_autoregressive_decode": false
+  },
+  "claim_boundary": {
+    "full_metal_inference_claimed": false,
+    "speedup_claim": false
+  },
+  "parity": {
+    "reference_backend": "apple-m4-cpu-neon",
+    "target_backend": "apple-m4-metal",
+    "cpu_reference_tokens_match": true,
+    "decoded_text_match": true
+  }
+}
+```
+
+Any CPU fallback, token-ID drift, missing phase scope, or missing CPU reference
+receipt blocks the route. Until that receipt exists, `apple-m4-cpu-neon` remains
+the only local-answer path.
 
 Metal subgraph expansion should follow that CPU/NEON usability campaign. QK256
 on Apple Silicon should remain last until I2_S/TL1 Apple receipts, phase

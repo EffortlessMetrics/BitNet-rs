@@ -34,6 +34,11 @@ const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpu
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
 const MAC_SMOKE_EXPECTED_FRAGMENT: &str = "4";
 const QWEN_PROMPT_TEMPLATE: &str = "qwen2.5";
+const BITNET_M4_EXPECTED_MODEL_SHA256: &str =
+    "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162";
+const BITNET_M4_EXPECTED_TOKENIZER_SHA256: &str =
+    "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7";
+const BITNET_M4_PROMPT_TEMPLATE: &str = "bitnetcpp-answer";
 const LOW_DISK_HEADROOM_BYTES: u64 = 1_073_741_824;
 const OPERATOR_PROFILE_TOKENS: &[usize] = &[16, 32, 64];
 const PERFORMANCE_PROFILE_TOKENS: &[usize] = &[16, 32, 64, 128];
@@ -62,6 +67,17 @@ pub struct MacCommand {
 
 #[derive(Debug, Subcommand)]
 enum MacAction {
+    /// List Apple M4 model states, cache status, and selection guidance.
+    Models {
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Emit JSON instead of text.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
     /// Check the cached Apple M4 SLM model artifact and routing boundary.
     Check {
         /// Supported model id. Defaults to the validated Apple M4 SLM runtime artifact.
@@ -394,7 +410,7 @@ enum MacAction {
         json_out: PathBuf,
     },
 
-    /// Validate the blocked M4 BitNet proof inputs and receipt contract.
+    /// Validate M4 BitNet proof inputs without enabling Mac ask/chat routing.
     BitnetProof {
         /// Accepted BitNet GGUF path. This command never downloads model artifacts.
         #[arg(long, value_name = "PATH")]
@@ -407,6 +423,10 @@ enum MacAction {
         /// Receipt from the artifact sweep proving this BitNet artifact is accepted.
         #[arg(long = "accepted-artifact", value_name = "PATH")]
         accepted_artifact: Option<PathBuf>,
+
+        /// Strict Apple M4 answer-corpus proof receipt to validate.
+        #[arg(long = "proof-receipt", value_name = "PATH")]
+        proof_receipt: Option<PathBuf>,
 
         /// Deterministic proof prompt to be used by the later strict proof item.
         #[arg(long, default_value = "What is 2+2? Answer briefly.")]
@@ -501,6 +521,10 @@ impl MacCommand {
 
     pub async fn execute(self, explicit_device_label: Option<&str>) -> Result<()> {
         match self.action {
+            MacAction::Models { cache_dir, json } => {
+                ensure_supported_mac_device(explicit_device_label, "mac models")?;
+                model_cache::list_apple_m4_models(cache_dir, json)
+            }
             MacAction::Check { model_id, cache_dir, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac check")?;
                 run_check(&model_id, cache_dir, json)
@@ -677,6 +701,7 @@ impl MacCommand {
                 model,
                 tokenizer_authority,
                 accepted_artifact,
+                proof_receipt,
                 prompt,
                 max_new_tokens,
                 strict,
@@ -687,6 +712,7 @@ impl MacCommand {
                     model,
                     tokenizer_authority,
                     accepted_artifact,
+                    proof_receipt,
                     prompt,
                     max_new_tokens,
                     strict,
@@ -837,6 +863,7 @@ fn run_bitnet_proof_preflight(
     model: PathBuf,
     tokenizer_authority: Option<String>,
     accepted_artifact: Option<PathBuf>,
+    proof_receipt: Option<PathBuf>,
     prompt: String,
     max_new_tokens: usize,
     strict: bool,
@@ -844,6 +871,27 @@ fn run_bitnet_proof_preflight(
 ) -> Result<()> {
     let tokenizer_authority = tokenizer_authority.map(|value| value.trim().to_string());
     let tokenizer_authority = tokenizer_authority.filter(|value| !value.is_empty());
+    let proof_summary = match proof_receipt.as_deref() {
+        Some(path) if path.exists() => {
+            validate_bitnet_local_answer_proof_receipt(path, tokenizer_authority.as_deref())
+                .map(Some)
+                .unwrap_or_else(|error| {
+                    Some(serde_json::json!({
+                        "path": path,
+                        "valid": false,
+                        "error": error.to_string(),
+                    }))
+                })
+        }
+        Some(path) => Some(serde_json::json!({
+            "path": path,
+            "valid": false,
+            "error": "proof receipt is missing",
+        })),
+        None => None,
+    };
+    let proof_valid =
+        proof_summary.as_ref().and_then(|summary| summary["valid"].as_bool()) == Some(true);
     let artifact_summary = match accepted_artifact.as_deref() {
         Some(path) if path.exists() => {
             validate_bitnet_accepted_artifact_receipt(path, tokenizer_authority.as_deref())
@@ -870,9 +918,9 @@ fn run_bitnet_proof_preflight(
             "pass --strict so hidden loader/tokenizer fallback cannot count as proof".to_string(),
         );
     }
-    if tokenizer_authority.is_none() {
+    if tokenizer_authority.is_none() && !proof_valid {
         blockers.push(
-            "pass --tokenizer-authority from the accepted BitNet artifact sweep receipt"
+            "pass --tokenizer-authority from the accepted BitNet artifact sweep receipt or pass --proof-receipt with tokenizer authority"
                 .to_string(),
         );
     }
@@ -882,20 +930,32 @@ fn run_bitnet_proof_preflight(
             model.display()
         ));
     }
-    match (&accepted_artifact, &artifact_summary) {
-        (None, _) => blockers.push(
-            "pass --accepted-artifact <receipt.json> from the MacBook/artifact sweep".to_string(),
-        ),
-        (Some(_), Some(summary))
-            if summary.get("valid").and_then(|value| value.as_bool()) != Some(true) =>
-        {
-            let reason = summary
-                .get("error")
-                .and_then(|value| value.as_str())
-                .unwrap_or("accepted artifact receipt did not validate");
-            blockers.push(format!("accepted artifact receipt is not usable: {reason}"));
+    if !proof_valid {
+        match (&accepted_artifact, &artifact_summary) {
+            (None, _) => blockers.push(
+                "pass --accepted-artifact <receipt.json> from the MacBook/artifact sweep or --proof-receipt <answer-corpus.json>"
+                    .to_string(),
+            ),
+            (Some(_), Some(summary))
+                if summary.get("valid").and_then(|value| value.as_bool()) != Some(true) =>
+            {
+                let reason = summary
+                    .get("error")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("accepted artifact receipt did not validate");
+                blockers.push(format!("accepted artifact receipt is not usable: {reason}"));
+            }
+            _ => {}
         }
-        _ => {}
+    }
+    if let Some(summary) = &proof_summary
+        && summary.get("valid").and_then(|value| value.as_bool()) != Some(true)
+    {
+        let reason = summary
+            .get("error")
+            .and_then(|value| value.as_str())
+            .unwrap_or("proof receipt did not validate");
+        blockers.push(format!("proof receipt is not usable: {reason}"));
     }
     if prompt.trim().is_empty() {
         blockers.push("proof prompt must not be empty".to_string());
@@ -904,12 +964,18 @@ fn run_bitnet_proof_preflight(
         blockers.push("max-new-tokens must be greater than zero".to_string());
     }
 
-    let result = if blockers.is_empty() { "ready" } else { "blocked" };
+    let result = if !blockers.is_empty() {
+        "blocked"
+    } else if proof_valid {
+        "verified"
+    } else {
+        "ready"
+    };
     let receipt = serde_json::json!({
         "artifact_kind": "apple_m4_bitnet_proof_preflight",
         "schema_version": 1,
         "result": result,
-        "proof_executed": false,
+        "proof_executed": proof_valid,
         "requested_backend": APPLE_M4_CPU_NEON,
         "selected_backend": APPLE_M4_CPU_NEON,
         "runtime_api": "cpu",
@@ -926,6 +992,10 @@ fn run_bitnet_proof_preflight(
         "accepted_artifact": {
             "path": accepted_artifact,
             "summary": artifact_summary,
+        },
+        "proof_receipt": {
+            "path": proof_receipt,
+            "summary": proof_summary,
         },
         "generation": {
             "prompt": prompt,
@@ -950,7 +1020,11 @@ fn run_bitnet_proof_preflight(
         ],
         "claim_boundary": {
             "m4_bitnet_proof_prepared": true,
+            "m4_bitnet_answer_corpus_proof_verified": proof_valid,
+            "bitnet_answer_corpus_quality_verified": proof_valid,
             "bitnet_answer_quality_claimed": false,
+            "bitnet_mac_ask_chat_enabled": false,
+            "bitnet_mac_serve_enabled": false,
             "artifact_accepted_by_this_item": false,
             "full_metal_inference_claimed": false,
             "qk256_apple_claimed": false,
@@ -972,11 +1046,195 @@ fn run_bitnet_proof_preflight(
         anyhow::bail!("M4 BitNet proof is blocked: {blockers}");
     }
 
-    println!(
-        "M4 BitNet proof preflight passed; proof execution remains in the future strict BitNet proof item. Receipt: {}",
-        json_out.display()
-    );
+    if proof_valid {
+        println!(
+            "M4 BitNet proof receipt verified; this still does not enable BitNet through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve`. Receipt: {}",
+            json_out.display()
+        );
+    } else {
+        println!(
+            "M4 BitNet proof preflight passed; this still does not enable BitNet through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve`. Receipt: {}",
+            json_out.display()
+        );
+    }
     Ok(())
+}
+
+fn validate_bitnet_local_answer_proof_receipt(
+    path: &Path,
+    expected_tokenizer_authority: Option<&str>,
+) -> Result<serde_json::Value> {
+    let receipt = read_json_receipt(path)?;
+    if receipt["artifact_kind"].as_str() != Some("bitnet_apple_m4_local_answer_corpus") {
+        anyhow::bail!("proof receipt artifact_kind must be bitnet_apple_m4_local_answer_corpus");
+    }
+    if receipt["model"]["sha256"].as_str() != Some(BITNET_M4_EXPECTED_MODEL_SHA256) {
+        anyhow::bail!("proof receipt model.sha256 does not match accepted Microsoft I2_S artifact");
+    }
+    if receipt["model"]["answer_ready_artifact_available"].as_bool() != Some(true)
+        || receipt["model"]["answer_ready"]["state"].as_str() != Some("answer_ready")
+    {
+        anyhow::bail!("proof receipt does not record an answer_ready model artifact");
+    }
+    let tokenizer_authority = &receipt["tokenizer"]["authority"];
+    if tokenizer_authority["source"].as_str() != Some("external_tokenizer_json")
+        || tokenizer_authority["sha256"].as_str() != Some(BITNET_M4_EXPECTED_TOKENIZER_SHA256)
+        || tokenizer_authority["ggml_pre"].as_str() != Some("llama-bpe")
+        || receipt["tokenizer"]["strict"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "proof receipt tokenizer authority is not the strict external llama-bpe authority"
+        );
+    }
+    if let Some(expected) = expected_tokenizer_authority {
+        let accepted_aliases = [
+            "external_tokenizer_json",
+            "externally_supplied_llama_bpe",
+            "llama-bpe",
+            "llama-bpe-external",
+        ];
+        if expected != tokenizer_authority["source"].as_str().unwrap_or_default()
+            && expected != receipt["tokenizer"]["source"].as_str().unwrap_or_default()
+            && expected != tokenizer_authority["ggml_pre"].as_str().unwrap_or_default()
+            && !accepted_aliases.contains(&expected)
+        {
+            anyhow::bail!(
+                "tokenizer authority mismatch: proof receipt does not match `{expected}`"
+            );
+        }
+    }
+
+    let quality_summary = &receipt["quality_summary"];
+    let total = quality_summary["total"].as_u64().unwrap_or(0);
+    let passed = quality_summary["passed"].as_u64().unwrap_or(0);
+    if total == 0
+        || passed != total
+        || quality_summary["failed"].as_u64().unwrap_or(1) != 0
+        || quality_summary["timeout"].as_u64().unwrap_or(1) != 0
+        || quality_summary["not_run"].as_u64().unwrap_or(1) != 0
+    {
+        anyhow::bail!("proof receipt quality_summary is not an all-passed answer corpus");
+    }
+
+    let claim_boundary = &receipt["claim_boundary"];
+    for (path_name, expected) in [
+        ("answer_ready_artifact_available", true),
+        ("backend_quality_gate_passed", true),
+        ("coherent_output_observed", true),
+        ("coherent_answer_claimed", true),
+    ] {
+        if claim_boundary[path_name].as_bool() != Some(expected) {
+            anyhow::bail!("proof receipt claim_boundary.{path_name} must be {expected}");
+        }
+    }
+    for path_name in [
+        "diagnostic_only_until_answer_ready_artifact",
+        "full_metal_inference_claimed",
+        "neural_engine_claimed",
+        "qk256_apple_claimed",
+        "broad_performance_claimed",
+    ] {
+        if claim_boundary[path_name].as_bool() != Some(false) {
+            anyhow::bail!("proof receipt claim_boundary.{path_name} must be false");
+        }
+    }
+
+    let cases = receipt["cases"]
+        .as_array()
+        .ok_or_else(|| anyhow!("proof receipt cases must be an array"))?;
+    if cases.is_empty() {
+        anyhow::bail!("proof receipt must contain at least one case");
+    }
+    let mut generated_tokens = 0_u64;
+    for (index, case) in cases.iter().enumerate() {
+        let case_label = case["id"].as_str().unwrap_or("<unknown>");
+        if case["status"].as_str() != Some("passed")
+            || case["quality"]["passed"].as_bool() != Some(true)
+            || case["quality"]["non_empty_answer"].as_bool() != Some(true)
+        {
+            anyhow::bail!("proof receipt case {index} ({case_label}) did not pass quality");
+        }
+        if case["answer"].as_str().unwrap_or_default().trim().is_empty() {
+            anyhow::bail!("proof receipt case {index} ({case_label}) has empty answer text");
+        }
+        if case["backend"]["requested_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+            || case["backend"]["selected_backend"].as_str() != Some(APPLE_M4_CPU_NEON)
+            || case["backend"]["runtime_api"].as_str() != Some("cpu")
+            || case["backend"]["fallback_used"].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "proof receipt case {index} ({case_label}) backend/fallback fields are not strict apple-m4-cpu-neon"
+            );
+        }
+        if case["model"]["sha256"].as_str() != Some(BITNET_M4_EXPECTED_MODEL_SHA256)
+            || case["model"]["family"].as_str() != Some("bitnet")
+            || case["loader"]["mode"].as_str() != Some("real_gguf")
+        {
+            anyhow::bail!(
+                "proof receipt case {index} ({case_label}) model/loader identity is not strict BitNet real GGUF"
+            );
+        }
+        if case["tokenizer"]["strict"].as_bool() != Some(true)
+            || case["tokenizer"]["pretokenizer_authority"].as_str() != Some("llama-bpe")
+        {
+            anyhow::bail!(
+                "proof receipt case {index} ({case_label}) tokenizer authority is not strict llama-bpe"
+            );
+        }
+        if case["prompt_template"].as_str() != Some(BITNET_M4_PROMPT_TEMPLATE)
+            || case["prompt"]["template_family"].as_str() != Some(BITNET_M4_PROMPT_TEMPLATE)
+            || case["prompt_prefill"]["exercised"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "proof receipt case {index} ({case_label}) prompt/template/prefill evidence is incomplete"
+            );
+        }
+        let token_ids = case["token_ids"]["generated"].as_array().ok_or_else(|| {
+            anyhow!("proof receipt case {index} ({case_label}) is missing generated token IDs")
+        })?;
+        if token_ids.is_empty() {
+            anyhow::bail!("proof receipt case {index} ({case_label}) has no generated token IDs");
+        }
+        let case_generated_tokens = case["tokens"]["generated"].as_u64().unwrap_or(0);
+        if case_generated_tokens == 0 || case_generated_tokens as usize != token_ids.len() {
+            anyhow::bail!(
+                "proof receipt case {index} ({case_label}) token count does not match generated token IDs"
+            );
+        }
+        generated_tokens = generated_tokens.saturating_add(case_generated_tokens);
+        for path_name in [&["timing", "decode_total_ms"][..], &["latency", "total_ms"][..]] {
+            if !json_number_at(case, path_name) {
+                anyhow::bail!(
+                    "proof receipt case {index} ({case_label}) is missing timing/latency fields"
+                );
+            }
+        }
+    }
+
+    Ok(serde_json::json!({
+        "path": path,
+        "valid": true,
+        "artifact_kind": receipt["artifact_kind"],
+        "case_count": cases.len(),
+        "generated_tokens": generated_tokens,
+        "quality_summary": quality_summary,
+        "model_sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+        "tokenizer_sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+        "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "mac_route_enabled": false,
+    }))
+}
+
+fn json_number_at(value: &serde_json::Value, path: &[&str]) -> bool {
+    let mut current = value;
+    for key in path {
+        current = &current[*key];
+    }
+    current.is_number()
 }
 
 fn validate_bitnet_accepted_artifact_receipt(
@@ -1068,6 +1326,7 @@ async fn run_ask(
     json_out: PathBuf,
 ) -> Result<()> {
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    eprintln!("{}", mac_ask_operator_summary_line(&model, &json_out));
     run_one_shot_mac_answer(
         &model,
         question,
@@ -1084,6 +1343,19 @@ async fn run_ask(
     )
     .await?;
     Ok(())
+}
+
+fn mac_ask_operator_summary_line(model: &VerifiedCachedModel, json_out: &Path) -> String {
+    let sha = model.sha256.get(..12).unwrap_or(&model.sha256);
+    format!(
+        "mac ask: model={} quant={} cache=verified cache_root={} backend={} fallback=false receipt={} sha256={}...",
+        model.id,
+        model.quantization,
+        model.cache_root.display(),
+        APPLE_M4_CPU_NEON,
+        json_out.display(),
+        sha
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1440,7 +1712,7 @@ async fn run_mac_serve(
         .with_context(|| format!("failed to bind M4 local server to {address}"))?;
     let local_addr =
         listener.local_addr().map(|addr| addr.to_string()).unwrap_or_else(|_| address.clone());
-    eprintln!("bitnet mac serve listening on http://{local_addr} (health: /health, ready: /ready)");
+    eprintln!("{}", mac_serve_listening_line(&local_addr));
     loop {
         tokio::select! {
             accepted = listener.accept() => {
@@ -1505,6 +1777,12 @@ impl MacServeState {
     fn uptime_seconds(&self) -> u64 {
         self.started_at.elapsed().as_secs()
     }
+}
+
+fn mac_serve_listening_line(local_addr: &str) -> String {
+    format!(
+        "bitnet mac serve listening on http://{local_addr} (health: /health, models: /models, ready: /ready)"
+    )
 }
 
 struct MacServeGenerator {
@@ -2004,6 +2282,18 @@ fn mac_serve_http_response(
     }
     match path {
         "/" | "/health" | "/health/live" => (200, "OK", mac_serve_health_json(state)),
+        "/models" => match mac_serve_models_json(state) {
+            Ok(body) => (200, "OK", body),
+            Err(error) => (
+                500,
+                "Internal Server Error",
+                serde_json::json!({
+                    "status": "error",
+                    "error": "models_catalog_failed",
+                    "message": error.to_string(),
+                }),
+            ),
+        },
         "/ready" | "/health/ready" => {
             let ready = mac_serve_ready_json(state);
             let status = if ready["ready"].as_bool() == Some(true) { 200 } else { 503 };
@@ -2016,7 +2306,7 @@ fn mac_serve_http_response(
             serde_json::json!({
                 "status": "error",
                 "error": "not_found",
-                "available_endpoints": ["/health", "/health/live", "/ready", "/health/ready", "/v1/chat/completions", "/receipts/{id}"],
+                "available_endpoints": ["/health", "/health/live", "/models", "/ready", "/health/ready", "/v1/chat/completions", "/receipts/{id}"],
             }),
         ),
     }
@@ -2098,6 +2388,10 @@ fn run_mac_serve_check(
         && ready_json["ready"].as_bool() == Some(true)
         && ready_json["backend"]["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
         && ready_json["backend"]["fallback_used"].as_bool() == Some(false);
+    let models_response = mac_serve_check_http_json(&base, "GET", "/models", None)?;
+    let models_json = models_response.body.clone();
+    let models_pass = mac_serve_check_models_catalog_pass(models_response.status, &models_json);
+    let models_result = mac_serve_check_models_result(models_response.status, &models_json);
 
     let mut completion_result = serde_json::json!({
         "executed": false,
@@ -2157,7 +2451,7 @@ fn run_mac_serve_check(
 
     let completion_pass = completion_result["passed"].as_bool().unwrap_or(!completion);
     let receipt_export_pass = receipt_export_result["passed"].as_bool().unwrap_or(!completion);
-    let passed = ready_pass && completion_pass && receipt_export_pass;
+    let passed = ready_pass && models_pass && completion_pass && receipt_export_pass;
     let receipt = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "bitnet_apple_m4_local_server_check",
@@ -2167,6 +2461,7 @@ fn run_mac_serve_check(
         "server": {
             "url": url,
             "ready_endpoint": "/ready",
+            "models_endpoint": "/models",
             "completion_endpoint": "/v1/chat/completions",
             "receipt_export_endpoint": "/receipts/{id}",
         },
@@ -2179,11 +2474,13 @@ fn run_mac_serve_check(
                 "selected_backend": ready_json["backend"]["selected_backend"],
                 "fallback_used": ready_json["backend"]["fallback_used"],
             },
+            "models": models_result,
             "completion": completion_result,
             "receipt_export": receipt_export_result,
         },
         "claim_boundary": {
             "server_readiness_checked": true,
+            "model_catalog_checked": true,
             "completion_probe_executed": completion,
             "receipt_export_checked": completion,
             "production_readiness_claimed": false,
@@ -2237,6 +2534,100 @@ impl MacServeCheckEndpoint {
 struct MacServeCheckHttpResponse {
     status: u16,
     body: serde_json::Value,
+}
+
+fn mac_serve_check_models_result(status: u16, body: &serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "executed": true,
+        "status": status,
+        "passed": mac_serve_check_models_catalog_pass(status, body),
+        "artifact_kind": body["artifact_kind"],
+        "default_model_id": body["catalog"]["default_model_id"],
+        "resident_model_id": body["resident_model_id"],
+        "generation_executed": body["generation_executed"],
+        "bitnet_blocked": mac_serve_models_catalog_has_blocked_bitnet(body),
+        "disk_available_bytes": body["catalog"]["disk"]["available_bytes"],
+        "recommended_first_model_id": body["catalog"]["disk"]["recommended_first_model_id"],
+        "recommended_fetch_command": mac_serve_models_catalog_recommended_command(body, "fetch_command"),
+        "recommended_verify_command": mac_serve_models_catalog_recommended_command(body, "verify_command"),
+    })
+}
+
+fn mac_serve_check_models_catalog_pass(status: u16, body: &serde_json::Value) -> bool {
+    status == 200
+        && body["artifact_kind"].as_str() == Some("bitnet_apple_m4_local_server_models")
+        && body["status"].as_str() == Some("ok")
+        && body["resident_model_id"].as_str().is_some()
+        && body["generation_executed"].as_bool() == Some(false)
+        && body["claim_boundary"]["bitnet_quality_claimed"].as_bool() == Some(false)
+        && body["claim_boundary"]["full_metal_inference_claimed"].as_bool() == Some(false)
+        && body["catalog"]["default_model_id"].as_str()
+            == Some(model_cache::M4_SLM_RUNTIME_MODEL_ID)
+        && body["catalog"]["disk"]["default_model_headroom_bytes"].as_u64().is_some()
+        && mac_serve_models_catalog_has_supported_model(body, model_cache::M4_SLM_RUNTIME_MODEL_ID)
+        && mac_serve_models_catalog_has_supported_model(body, "qwen2.5-1.5b-instruct-q4_k_m")
+        && mac_serve_models_catalog_has_blocked_bitnet(body)
+        && mac_serve_models_catalog_recommended_commands_are_coherent(body)
+}
+
+fn mac_serve_models_catalog_has_supported_model(body: &serde_json::Value, model_id: &str) -> bool {
+    body["catalog"]["rows"].as_array().is_some_and(|rows| {
+        rows.iter().any(|row| {
+            row["id"].as_str() == Some(model_id)
+                && matches!(row["state"].as_str(), Some("default" | "supported"))
+                && row["fetch_command"].as_str().is_some()
+        })
+    })
+}
+
+fn mac_serve_models_catalog_has_blocked_bitnet(body: &serde_json::Value) -> bool {
+    body["catalog"]["rows"].as_array().is_some_and(|rows| {
+        rows.iter().any(|row| {
+            row["id"].as_str() == Some("microsoft-bitnet-b1.58-2B-4T-i2s")
+                && row["state"].as_str() == Some("blocked")
+                && row["selection"].as_str() == Some("not selectable for M4 local answers")
+                && row["mac_ask_chat_enabled"].as_bool() == Some(false)
+                && row["mac_serve_enabled"].as_bool() == Some(false)
+                && row["proof_status"].as_str()
+                    == Some("answer-corpus-proof-receipt-check-available-route-disabled")
+                && row["proof_command"].as_str().is_some_and(|command| {
+                    command.contains("mac bitnet-proof")
+                        && command.contains("--proof-receipt")
+                        && command.contains("bitnet-answer-corpus-full-release.json")
+                })
+                && row["fetch_command"].is_null()
+                && row["recommended_fetch_headroom_bytes"].is_null()
+        })
+    })
+}
+
+fn mac_serve_models_catalog_recommended_commands_are_coherent(body: &serde_json::Value) -> bool {
+    let Some(model_id) = body["catalog"]["disk"]["recommended_first_model_id"].as_str() else {
+        return true;
+    };
+    body["catalog"]["rows"].as_array().is_some_and(|rows| {
+        rows.iter().any(|row| {
+            row["id"].as_str() == Some(model_id)
+                && matches!(row["state"].as_str(), Some("default" | "supported"))
+                && row["fetch_command"].as_str().is_some()
+                && row["verify_command"].as_str().is_some()
+        })
+    })
+}
+
+fn mac_serve_models_catalog_recommended_command(
+    body: &serde_json::Value,
+    command_key: &str,
+) -> serde_json::Value {
+    let Some(model_id) = body["catalog"]["disk"]["recommended_first_model_id"].as_str() else {
+        return serde_json::Value::Null;
+    };
+    body["catalog"]["rows"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(model_id)))
+        .and_then(|row| row[command_key].as_str())
+        .map(serde_json::Value::from)
+        .unwrap_or(serde_json::Value::Null)
 }
 
 fn mac_serve_check_http_json(
@@ -2460,12 +2851,26 @@ fn mac_serve_health_json(state: &MacServeState) -> serde_json::Value {
         "generation_executed": false,
         "endpoints": {
             "health": "/health",
+            "models": "/models",
             "ready": "/ready",
             "completions": "/v1/chat/completions",
             "receipts": "/receipts/{id}",
         },
         "claim_boundary": mac_serve_claim_boundary_json(),
     })
+}
+
+fn mac_serve_models_json(state: &MacServeState) -> Result<serde_json::Value> {
+    let catalog = model_cache::apple_m4_models_catalog_json(Some(state.model.cache_root.clone()))?;
+    Ok(serde_json::json!({
+        "artifact_kind": "bitnet_apple_m4_local_server_models",
+        "status": "ok",
+        "server": mac_serve_server_json(state),
+        "resident_model_id": &state.model.id,
+        "generation_executed": false,
+        "catalog": catalog,
+        "claim_boundary": mac_serve_claim_boundary_json(),
+    }))
 }
 
 fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
@@ -4973,10 +5378,10 @@ mod tests {
         }
     }
 
-    fn test_state() -> (tempfile::TempDir, MacServeState) {
-        let temp = tempfile::tempdir().expect("tempdir");
+    fn test_state() -> Result<(tempfile::TempDir, MacServeState), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
         let receipt_dir = temp.path().join("receipts");
-        std::fs::create_dir_all(&receipt_dir).expect("receipt dir");
+        std::fs::create_dir_all(&receipt_dir)?;
         let state = MacServeState::new(
             test_verified_model(temp.path()),
             "127.0.0.1".to_string(),
@@ -4993,12 +5398,13 @@ mod tests {
             receipt_dir,
             None,
         );
-        (temp, state)
+        Ok((temp, state))
     }
 
     #[test]
-    fn mac_serve_ready_json_records_cache_backend_and_no_generation() {
-        let (_temp, state) = test_state();
+    fn mac_serve_ready_json_records_cache_backend_and_no_generation()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
         let ready = mac_serve_ready_json(&state);
 
         assert_eq!(ready["artifact_kind"], "bitnet_apple_m4_local_server_ready");
@@ -5011,11 +5417,13 @@ mod tests {
         assert_eq!(ready["claim_boundary"]["generation_endpoint_implemented"], true);
         assert_eq!(ready["claim_boundary"]["bitnet_quality_claimed"], false);
         assert_eq!(ready["claim_boundary"]["full_metal_inference_claimed"], false);
+        Ok(())
     }
 
     #[test]
-    fn mac_serve_http_ready_and_health_routes_are_json_no_generation() {
-        let (_temp, state) = test_state();
+    fn mac_serve_http_ready_and_health_routes_are_json_no_generation()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
 
         let (status, reason, health) =
             mac_serve_http_response("GET /health HTTP/1.1\r\n\r\n", &state);
@@ -5029,6 +5437,117 @@ mod tests {
         assert_eq!(ready["artifact_kind"], "bitnet_apple_m4_local_server_ready");
         assert_eq!(ready["ready"], true);
         assert_eq!(ready["checks"]["generation"]["checked"], false);
+        Ok(())
+    }
+
+    #[test]
+    fn mac_serve_http_models_route_reports_catalog_no_generation()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
+
+        let (status, reason, models) =
+            mac_serve_http_response("GET /models HTTP/1.1\r\n\r\n", &state);
+
+        assert_eq!((status, reason), (200, "OK"));
+        assert_eq!(models["artifact_kind"], "bitnet_apple_m4_local_server_models");
+        assert_eq!(models["generation_executed"], false);
+        assert_eq!(models["resident_model_id"], "qwen2.5-0.5b-instruct-q8_0");
+        assert_eq!(models["catalog"]["default_model_id"], "qwen2.5-0.5b-instruct-q8_0");
+        assert!(models["catalog"]["disk"]["default_model_headroom_bytes"].as_u64().is_some());
+        let rows = models["catalog"]["rows"]
+            .as_array()
+            .ok_or_else(|| std::io::Error::other("model rows"))?;
+        assert!(rows.iter().any(|row| {
+            row["id"] == "qwen2.5-1.5b-instruct-q4_k_m" && row["state"] == "supported"
+        }));
+        assert!(rows.iter().any(|row| {
+            row["id"] == "microsoft-bitnet-b1.58-2B-4T-i2s"
+                && row["state"] == "blocked"
+                && row["mac_ask_chat_enabled"] == false
+                && row["mac_serve_enabled"] == false
+                && row["proof_status"]
+                    == "answer-corpus-proof-receipt-check-available-route-disabled"
+                && row["proof_command"].as_str().is_some_and(|command| {
+                    command.contains("mac bitnet-proof") && command.contains("--proof-receipt")
+                })
+                && row["fetch_command"].is_null()
+        }));
+        assert_eq!(models["claim_boundary"]["bitnet_quality_claimed"], false);
+        Ok(())
+    }
+
+    #[test]
+    fn mac_serve_check_models_catalog_pass_requires_operator_catalog_shape()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
+        let models = mac_serve_models_json(&state)?;
+
+        assert!(mac_serve_check_models_catalog_pass(200, &models));
+        assert!(!mac_serve_check_models_catalog_pass(503, &models));
+
+        let mut generated = models.clone();
+        generated["generation_executed"] = serde_json::Value::Bool(true);
+        assert!(!mac_serve_check_models_catalog_pass(200, &generated));
+
+        let mut missing_bitnet_gate = models.clone();
+        missing_bitnet_gate["catalog"]["rows"]
+            .as_array_mut()
+            .ok_or_else(|| std::io::Error::other("model rows"))?
+            .retain(|row| row["id"].as_str() != Some("microsoft-bitnet-b1.58-2B-4T-i2s"));
+        assert!(!mac_serve_check_models_catalog_pass(200, &missing_bitnet_gate));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_serve_check_models_result_records_recommended_commands()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
+        let models = mac_serve_models_json(&state)?;
+
+        let result = mac_serve_check_models_result(200, &models);
+
+        assert_eq!(result["passed"], true);
+        assert_eq!(result["recommended_first_model_id"], "qwen2.5-0.5b-instruct-q8_0");
+        assert!(
+            result["recommended_fetch_command"]
+                .as_str()
+                .ok_or_else(|| std::io::Error::other("fetch command"))?
+                .contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0")
+        );
+        assert!(
+            result["recommended_verify_command"]
+                .as_str()
+                .ok_or_else(|| std::io::Error::other("verify command"))?
+                .contains("bitnet model verify qwen2.5-0.5b-instruct-q8_0")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn mac_ask_operator_summary_line_reports_model_cache_backend_and_receipt() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let model = test_verified_model(temp.path());
+        let receipt = temp.path().join("mac-ask.json");
+        let summary = mac_ask_operator_summary_line(&model, &receipt);
+
+        assert!(summary.contains("mac ask: model=qwen2.5-0.5b-instruct-q8_0"));
+        assert!(summary.contains("quant=Q8_0"));
+        assert!(summary.contains("cache=verified"));
+        assert!(summary.contains(&format!("cache_root={}", temp.path().display())));
+        assert!(summary.contains("backend=apple-m4-cpu-neon"));
+        assert!(summary.contains("fallback=false"));
+        assert!(summary.contains(&format!("receipt={}", receipt.display())));
+        assert!(summary.contains("sha256=ca59ca7f13d0"));
+    }
+
+    #[test]
+    fn mac_serve_listening_line_advertises_model_catalog_endpoint() {
+        let line = mac_serve_listening_line("127.0.0.1:8080");
+
+        assert_eq!(
+            line,
+            "bitnet mac serve listening on http://127.0.0.1:8080 (health: /health, models: /models, ready: /ready)"
+        );
     }
 
     #[test]
@@ -5071,8 +5590,9 @@ mod tests {
     }
 
     #[test]
-    fn mac_serve_http_rejects_unknown_paths_and_methods() {
-        let (_temp, state) = test_state();
+    fn mac_serve_http_rejects_unknown_paths_and_methods() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let (_temp, state) = test_state()?;
 
         let (status, reason, body) =
             mac_serve_http_response("POST /ready HTTP/1.1\r\n\r\n", &state);
@@ -5083,11 +5603,13 @@ mod tests {
             mac_serve_http_response("GET /v1/chat/completions HTTP/1.1\r\n\r\n", &state);
         assert_eq!((status, reason), (404, "Not Found"));
         assert_eq!(body["error"], "not_found");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn mac_serve_receipt_endpoint_exports_existing_receipt() {
-        let (_temp, state) = test_state();
+    async fn mac_serve_receipt_endpoint_exports_existing_receipt()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
         let receipt_path = state.receipt_dir.join("m4srv-test.json");
         std::fs::write(
             &receipt_path,
@@ -5111,11 +5633,13 @@ mod tests {
         assert_eq!(body["request_id"], "m4srv-test");
         assert_eq!(body["selected_backend"], APPLE_M4_CPU_NEON);
         assert_eq!(body["fallback_used"], false);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn mac_serve_receipt_endpoint_rejects_unsafe_or_missing_receipts() {
-        let (_temp, state) = test_state();
+    async fn mac_serve_receipt_endpoint_rejects_unsafe_or_missing_receipts()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
 
         let unsafe_reply = mac_serve_http_reply("GET /receipts/../secret HTTP/1.1\r\n\r\n", &state)
             .await
@@ -5133,11 +5657,13 @@ mod tests {
         let missing_body: serde_json::Value =
             serde_json::from_slice(&missing_reply.body).expect("json body");
         assert_eq!(missing_body["error"], "receipt_not_found");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn mac_serve_completion_endpoint_reports_unavailable_without_generator() {
-        let (_temp, state) = test_state();
+    async fn mac_serve_completion_endpoint_reports_unavailable_without_generator()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
         let request = concat!(
             "POST /v1/chat/completions HTTP/1.1\r\n",
             "content-type: application/json\r\n",
@@ -5150,11 +5676,13 @@ mod tests {
         assert_eq!(reply.content_type, "application/json");
         let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
         assert_eq!(body["error"], "generation_unavailable");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn mac_serve_completion_endpoint_rejects_invalid_json() {
-        let (_temp, state) = test_state();
+    async fn mac_serve_completion_endpoint_rejects_invalid_json()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
         let request = concat!(
             "POST /v1/chat/completions HTTP/1.1\r\n",
             "content-type: application/json\r\n",
@@ -5167,11 +5695,13 @@ mod tests {
         assert_eq!(reply.status, 400);
         let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
         assert_eq!(body["error"], "invalid_completion_request");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn mac_serve_completion_endpoint_rejects_wrong_model_id() {
-        let (_temp, state) = test_state();
+    async fn mac_serve_completion_endpoint_rejects_wrong_model_id()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
         let request = concat!(
             "POST /v1/chat/completions HTTP/1.1\r\n",
             "content-type: application/json\r\n",
@@ -5183,6 +5713,7 @@ mod tests {
         assert_eq!(reply.status, 400);
         let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
         assert_eq!(body["error"], "unsupported_model");
+        Ok(())
     }
 
     #[test]

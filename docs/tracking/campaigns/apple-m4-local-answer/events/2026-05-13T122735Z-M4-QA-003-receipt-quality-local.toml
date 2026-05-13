@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T12:27:35Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-003"
+event = "closeout"
+actor = "codex"
+previous_status = "proposed"
+new_status = "proposed"
+
+notes = [
+  "Hardened answer-corpus receipt checks so child receipts must record generated text, model repo/file/SHA/family/architecture, tokenizer source/strict/pretokenizer authority, backend routing, fallback=false, token counts and token IDs with count consistency, and timing/latency fields.",
+  "Aggregate answer-corpus receipts now publish a receipt_quality contract that lists the required child receipt fields and rule IDs enforced by answer_receipt_failed_rules.",
+  "Aggregate case rows now carry timing, latency, and throughput fields from the child run receipt for receipt-quality review.",
+  "This is local M4-QA-003 evidence only; M4-QA-003 remains proposed/stack-blocked until M4-QA-001 lands and does not enable bitnet mac ask/chat, full Metal inference, Apple QK256, Neural Engine, or broad performance claims.",
+]

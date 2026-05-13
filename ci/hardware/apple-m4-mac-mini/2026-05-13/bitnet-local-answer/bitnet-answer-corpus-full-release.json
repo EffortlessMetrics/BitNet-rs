@@ -1,0 +1,972 @@
+{
+  "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon"
+  },
+  "backend_lane": "apple_m4_cpu_neon",
+  "cases": [
+    {
+      "answer": "4",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "execution_plan": null,
+      "id": "math_2_plus_2",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-scalar-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 13455,
+        "decode_first_ms": 13455,
+        "total_ms": 14149
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 128256,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S/QK256",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 20
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_sha256": "fdfb3169fb3510d9680ac79d36adfa5b70afe759da55db1e52445165fad18a0f",
+        "rendered_text": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant: ",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 20,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 20,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 2,
+        "failed_rules": [],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 2,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "What is 2+2? Answer with only the number.",
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release-runs/math_2_plus_2.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 2,
+        "tokens_per_second": 0.14135274577708673
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 1.442,
+        "decode_total_ms": 1623.404,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 929.88,
+        "first_token_ms": 13455,
+        "host_to_device_bytes": null,
+        "model_load_ms": 5534.992,
+        "prefill_ms": 12525.708,
+        "sampling_ms_per_token": 0.095,
+        "tokenize_ms": 0.408,
+        "tokenizer_load_ms": 283.926
+      },
+      "token_ids": {
+        "generated": [
+          19,
+          128009
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 2,
+        "generated_ids": [
+          19,
+          128009
+        ],
+        "ids": [
+          19,
+          128009
+        ],
+        "prompt": 20,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "total": 22
+      }
+    },
+    {
+      "answer": "Paris",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "execution_plan": null,
+      "id": "capital_france",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-scalar-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 12701,
+        "decode_first_ms": 12701,
+        "total_ms": 13408
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 128256,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S/QK256",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 19
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_sha256": "03de2eb937828a3a15ae00c253e707f57cc78263a068f758db49326c0ab1e0a0",
+        "rendered_text": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant: ",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 19,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 19,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 2,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "generated_tokens": 2,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "What is the capital of France? Answer with one word.",
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release-runs/capital_france.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 2,
+        "tokens_per_second": 0.14916467780429596
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 1.415,
+        "decode_total_ms": 1447.245,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 740.525,
+        "first_token_ms": 12701,
+        "host_to_device_bytes": null,
+        "model_load_ms": 4554.699,
+        "prefill_ms": 11961.272,
+        "sampling_ms_per_token": 0.077,
+        "tokenize_ms": 0.283,
+        "tokenizer_load_ms": 197.441
+      },
+      "token_ids": {
+        "generated": [
+          60704,
+          128009
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 2,
+        "generated_ids": [
+          60704,
+          128009
+        ],
+        "ids": [
+          60704,
+          128009
+        ],
+        "prompt": 19,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "total": 21
+      }
+    },
+    {
+      "answer": "red blue green",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "execution_plan": null,
+      "id": "repeat_colors",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-scalar-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 8937,
+        "decode_first_ms": 8937,
+        "total_ms": 11073
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 128256,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S/QK256",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 13
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_sha256": "7230179ec229a86a78adbf43a41ffd6815f75251ccbe24765468119275597598",
+        "rendered_text": "User: Repeat exactly: red blue green<|eot_id|>Assistant: ",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 13,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 13,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [],
+        "gate_kind": "contains_any",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "Repeat exactly: red blue green",
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release-runs/repeat_colors.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 4,
+        "tokens_per_second": 0.36123904994129863
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 1.405,
+        "decode_total_ms": 2870.958,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 735.202,
+        "first_token_ms": 8937,
+        "host_to_device_bytes": null,
+        "model_load_ms": 4585.368,
+        "prefill_ms": 8202.307,
+        "sampling_ms_per_token": 0.082,
+        "tokenize_ms": 0.264,
+        "tokenizer_load_ms": 199.352
+      },
+      "token_ids": {
+        "generated": [
+          1171,
+          6437,
+          6307,
+          128009
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          1171,
+          6437,
+          6307,
+          128009
+        ],
+        "ids": [
+          1171,
+          6437,
+          6307,
+          128009
+        ],
+        "prompt": 13,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "total": 17
+      }
+    },
+    {
+      "answer": "OK",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "execution_plan": null,
+      "id": "say_ok",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-scalar-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 7419,
+        "decode_first_ms": 7419,
+        "total_ms": 8126
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 128256,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S/QK256",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 11
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_sha256": "efd06ab886271df1e56c5495c0eb092b20af0b7338997c24672aaf6330b58332",
+        "rendered_text": "User: Say exactly: OK<|eot_id|>Assistant: ",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 11,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 11,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 2,
+        "failed_rules": [],
+        "gate_kind": "exact_trimmed",
+        "generated_tokens": 2,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "Say exactly: OK",
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release-runs/say_ok.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 2,
+        "tokens_per_second": 0.24612355402412012
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 1.413,
+        "decode_total_ms": 1431.595,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 724.023,
+        "first_token_ms": 7419,
+        "host_to_device_bytes": null,
+        "model_load_ms": 4708.489,
+        "prefill_ms": 6694.601,
+        "sampling_ms_per_token": 0.077,
+        "tokenize_ms": 0.288,
+        "tokenizer_load_ms": 208.971
+      },
+      "token_ids": {
+        "generated": [
+          4012,
+          128009
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 2,
+        "generated_ids": [
+          4012,
+          128009
+        ],
+        "ids": [
+          4012,
+          128009
+        ],
+        "prompt": 11,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "total": 13
+      }
+    },
+    {
+      "answer": "No. Water is",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "execution_plan": null,
+      "id": "yes_no_water",
+      "kernel": {
+        "family": "i2_s",
+        "selected_kernel": "i2_s-scalar-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 10790,
+        "decode_first_ms": 10790,
+        "total_ms": 12924
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 128256,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S/QK256",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 16
+      },
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "rendered_sha256": "e74eb9e61dbcce7b89aad616cf7c63c5754b8573d667e635af1b0686df991775",
+        "rendered_text": "User: Answer yes or no: is water wet?<|eot_id|>Assistant: ",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_prefill": {
+        "decode_start_position": 16,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 16,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [],
+        "gate_kind": "starts_with_any",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": null,
+        "min_generated_tokens": null,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true
+      },
+      "question": "Answer yes or no: is water wet?",
+      "run_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release-runs/yes_no_water.json",
+      "status": "passed",
+      "throughput": {
+        "decoded_tokens": 4,
+        "tokens_per_second": 0.30950170225936247
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 1.406,
+        "decode_total_ms": 2875.351,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 741.363,
+        "first_token_ms": 10790,
+        "host_to_device_bytes": null,
+        "model_load_ms": 4564.173,
+        "prefill_ms": 10048.653,
+        "sampling_ms_per_token": 0.082,
+        "tokenize_ms": 0.26,
+        "tokenizer_load_ms": 198.079
+      },
+      "token_ids": {
+        "generated": [
+          2822,
+          13,
+          10164,
+          374
+        ],
+        "prompt": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          2822,
+          13,
+          10164,
+          374
+        ],
+        "ids": [
+          2822,
+          13,
+          10164,
+          374
+        ],
+        "prompt": 16,
+        "prompt_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "total": 20
+      }
+    }
+  ],
+  "claim_boundary": {
+    "answer_ready_artifact_available": true,
+    "backend_quality_gate_passed": true,
+    "bounded_slm_answer_smoke_passed": false,
+    "broad_performance_claimed": false,
+    "coherent_answer_claimed": true,
+    "coherent_output_observed": true,
+    "cuda_answer_corpus": false,
+    "dense_slm_clean_provenance": false,
+    "diagnostic_only_until_answer_ready_artifact": false,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": true,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_answer_path": false,
+    "strict_cuda_answer_claimed": false
+  },
+  "corpus": {
+    "case_count": 5,
+    "description": "Fixed deterministic prompt set for answer-readiness baselines.",
+    "name": "strict-bitnet-answer-corpus-v1",
+    "path": "ci/quality/bitnet-answer-corpus.yaml",
+    "selected_case_count": 5,
+    "selected_case_ids": [
+      "math_2_plus_2",
+      "capital_france",
+      "repeat_colors",
+      "say_ok",
+      "yes_no_water"
+    ]
+  },
+  "execution_plan": null,
+  "fallback_used": false,
+  "generation": {
+    "default_max_new_tokens": 8,
+    "deterministic": true,
+    "logits_dump_steps": null,
+    "logits_topk": null,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 900,
+    "requested_cpu_kernel": null,
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "answer_ready": {
+      "evidence": "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md",
+      "gate": "MODEL-ARTIFACT-007",
+      "manifest": "ci/model-artifacts/artifact-manifest.toml",
+      "state": "answer_ready"
+    },
+    "answer_ready_artifact_available": true,
+    "architecture": "bitnet-b1.58",
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "loader_mode": "real_gguf",
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "quant_format": "I2_S/QK256",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tokenizer": "externally_supplied_llama_bpe",
+    "tokenizer_path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json"
+  },
+  "model_architecture": "bitnet-b1.58",
+  "model_family": "bitnet",
+  "prompt_template": "bitnetcpp-answer",
+  "prompt_template_policy": {
+    "family": "bitnetcpp-answer"
+  },
+  "quality_summary": {
+    "failed": 0,
+    "not_run": 0,
+    "passed": 5,
+    "timeout": 0,
+    "total": 5
+  },
+  "quantization": "I2_S/QK256",
+  "receipt_quality": {
+    "case_receipt_checker": "answer_receipt_failed_rules",
+    "checked": true,
+    "checked_rules": [
+      "generated_text_recorded",
+      "prompt_token_count_recorded",
+      "generated_token_count_recorded",
+      "total_token_count_recorded",
+      "prompt_token_ids_recorded",
+      "generated_token_ids_recorded",
+      "prompt_token_count_matches_ids",
+      "generated_token_count_matches_ids",
+      "total_token_count_matches",
+      "model_repo_recorded",
+      "model_file_recorded",
+      "model_sha256_recorded",
+      "model_family_recorded",
+      "model_architecture_recorded",
+      "tokenizer_source_recorded",
+      "tokenizer_strict",
+      "tokenizer_pretokenizer_authority_recorded",
+      "requested_backend",
+      "selected_backend",
+      "runtime_api",
+      "fallback_false",
+      "speedup_claim_false",
+      "loader_real_gguf",
+      "selected_kernel_recorded",
+      "selected_kernel_production",
+      "timing_model_load_ms_recorded",
+      "timing_tokenizer_load_ms_recorded",
+      "timing_tokenize_ms_recorded",
+      "timing_prefill_ms_recorded",
+      "timing_first_token_ms_recorded",
+      "timing_decode_total_ms_recorded",
+      "latency_total_ms_recorded"
+    ],
+    "required_case_fields": [
+      "text",
+      "tokens.prompt",
+      "tokens.generated",
+      "tokens.total",
+      "tokens.prompt_ids",
+      "tokens.generated_ids",
+      "model.repo",
+      "model.file",
+      "model.sha256",
+      "model.family",
+      "model.architecture",
+      "tokenizer.source",
+      "tokenizer.strict",
+      "tokenizer.pretokenizer_authority",
+      "requested_backend",
+      "selected_backend",
+      "runtime_api",
+      "fallback_used",
+      "loader.mode",
+      "kernel.kernel_id",
+      "timing.model_load_ms",
+      "timing.tokenizer_load_ms",
+      "timing.tokenize_ms",
+      "timing.prefill_ms",
+      "timing.first_token_ms",
+      "timing.decode_total_ms",
+      "latency.total_ms"
+    ]
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "selected_kernel_or_runtime": "i2_s-scalar-reference",
+  "speedup_claim": false,
+  "timestamp": "2026-05-13T15:28:28.642891+00:00",
+  "tokenizer": {
+    "authority": {
+      "ggml_pre": "llama-bpe",
+      "repo": "microsoft/bitnet-b1.58-2B-4T",
+      "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "source": "external_tokenizer_json"
+    },
+    "path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+    "source": "externally_supplied_llama_bpe",
+    "strict": true
+  },
+  "tokenizer_source": "explicit"
+}

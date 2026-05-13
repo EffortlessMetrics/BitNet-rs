@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T11:15:56Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-001"
+event = "closeout"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "in_progress"
+
+notes = [
+  "Regenerated the release-built Apple M4 CPU/NEON shared BitNet answer-corpus receipt after adding explicit answer-ready artifact and tokenizer authority receipt fields.",
+  "Durable aggregate receipt: ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-full-release.json.",
+  "The aggregate receipt records quality_summary passed=5 failed=0 timeout=0 not_run=0, selected_backend=apple-m4-cpu-neon, runtime_api=cpu, fallback_used=false, model sha256=4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162, tokenizer sha256=e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7, answer_ready_artifact_available=true, backend_quality_gate_passed=true, and diagnostic_only_until_answer_ready_artifact=false.",
+  "The five generated answers remain short and coherent with token IDs recorded: math_2_plus_2=` 4`, capital_france=` Paris`, repeat_colors=` red blue green`, say_ok=` OK`, yes_no_water=` Yes.`.",
+  "This is local evidence for the strict answer-corpus route only; do not claim BitNet availability through bitnet mac ask/chat, full Metal inference, QK256 Apple support, Neural Engine execution, or broad performance.",
+]

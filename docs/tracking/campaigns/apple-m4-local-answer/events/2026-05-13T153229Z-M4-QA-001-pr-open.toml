@@ -1,0 +1,13 @@
+timestamp = "2026-05-13T15:32:29Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-001"
+event = "pr_open"
+pr = 4618
+head_sha = "ad9981089987e62ca5d53ccc4ff71bc25795d33e"
+actor = "codex"
+
+notes = [
+  "Opened draft PR #4618 for the synced Apple M4 BitNet local-answer proof bridge on current main.",
+  "The PR carries the refreshed release answer-corpus receipt, proof-receipt validation bridge, model catalog proof metadata, and explicit mac ask/chat/server disablement for BitNet.",
+  "Claim boundaries remain narrow: no full Metal inference, Apple QK256, Neural Engine, MPSGraph inference, MacBook coverage, broad performance, or BitNet mac ask/chat/server enablement.",
+]

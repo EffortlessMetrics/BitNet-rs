@@ -129,6 +129,12 @@ fn mac_help() {
 }
 
 #[test]
+fn mac_models_help() {
+    let help = bitnet_stdout(&["mac", "models", "--help"]);
+    assert_snapshot!("mac_models_help", help);
+}
+
+#[test]
 fn mac_check_help() {
     let help = bitnet_stdout(&["mac", "check", "--help"]);
     assert_snapshot!("mac_check_help", help);

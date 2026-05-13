@@ -220,7 +220,7 @@ record all of the following:
 
 ## Current Supported Set
 
-The supported M4 dense SLM set currently contains two models:
+The supported M4 dense SLM set currently contains three models:
 
 ```text
 qwen2.5-0.5b-instruct-q8_0

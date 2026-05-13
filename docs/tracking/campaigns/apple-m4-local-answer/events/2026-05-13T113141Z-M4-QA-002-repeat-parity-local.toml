@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T11:31:41Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-002"
+event = "closeout"
+actor = "codex"
+previous_status = "proposed"
+new_status = "proposed"
+
+notes = [
+  "Collected local greedy determinism evidence after the M4-QA-001 release proof by running the shared BitNet answer corpus twice on apple-m4-cpu-neon with the accepted Microsoft I2_S GGUF, external Microsoft tokenizer, bitnetcpp-answer prompt authority, deterministic greedy settings, and dump_logit_steps=1.",
+  "Run A receipt: ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-a.json.",
+  "Run B receipt: ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-b.json.",
+  "Parity receipt: ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-repeat-parity.json.",
+  "The parity receipt records summary passed=5 failed=0, no first_divergence, same_real_gguf=true, same_tokenizer=true, same_prompt_template=true, and same_greedy_settings=true.",
+  "Every case matched generated token IDs, decoded text, selected kernel i2_s-scalar-reference, and one top-k logits dump step across the two runs.",
+  "This is local M4-QA-002 evidence only; M4-QA-002 remains proposed/stack-blocked until M4-QA-001 lands, and it does not claim server inference, sustained throughput, full Metal inference, QK256 Apple support, or Neural Engine execution.",
+]
