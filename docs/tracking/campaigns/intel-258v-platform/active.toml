@@ -2075,8 +2075,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM258V-004"
-status = "ready"
+status = "pr_open"
 branch = "codex/lunar-lake/SLM258V-004-dense-slm-phase-receipts"
+pr = 4542
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

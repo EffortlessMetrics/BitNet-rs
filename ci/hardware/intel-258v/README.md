@@ -34,6 +34,9 @@ ci/hardware/intel-258v/<date>/cpu-semantic-diagnosis.json
 ci/hardware/intel-258v/<date>/slm-artifact-manifest.json
 ci/hardware/intel-258v/<date>/slm-answer-corpus-qwen25-cpu.json
 ci/hardware/intel-258v/<date>/slm-answer-corpus-qwen25-cpu-clean-provenance.json
+ci/hardware/intel-258v/<date>/slm-phase-warm-session-qwen25-cpu.json
+ci/hardware/intel-258v/<date>/slm-phase-warm-session-qwen25-cpu-profiles/prefill_512.json
+ci/hardware/intel-258v/<date>/slm-phase-warm-session-qwen25-cpu-profiles/decode_128.json
 ci/hardware/intel-258v/<date>/npu-openvino-runtime-probe.json
 ci/hardware/intel-258v/<date>/npu-openvino-tiny-graph-smoke.json
 ci/hardware/intel-258v/<date>/npu-bitnet-rmsnorm-subgraph-parity.json
@@ -108,6 +111,16 @@ packed-kernel receipt fields. Its child receipts record
 I2_S/QK256 child receipt provenance. It is a bounded dense SLM CPU answer-smoke
 receipt only; it does not claim broad chat quality, speed, Arc/NPU execution, or
 BitNet QK256/I2_S proof.
+
+`slm-phase-warm-session-qwen25-cpu.json` records the first dense Qwen SLM CPU
+phase timing run on the 258V. It loads the pinned Qwen2.5 Q8_0 GGUF and
+tokenizer once, writes per-profile receipts under
+`slm-phase-warm-session-qwen25-cpu-profiles/`, and records
+`dense-qwen-cpu-reference`, `gguf_dense_q8_0`, `selected_backend=cpu-rust`, and
+`fallback_used=false`. The profile receipts omit top-level BitNet I2_S/QK256
+provenance and remain dense SLM CPU phase timing evidence only; they do not
+claim broad SLM chat quality, speedup, sustained performance, Arc execution, or
+NPU execution.
 
 `cpu-answer-corpus-avx2-bitnetcpp-template.json` records the first 258V AVX2
 attempt to refresh answer-corpus evidence with the BitNet.cpp answer-ready

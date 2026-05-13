@@ -1,0 +1,17 @@
+timestamp = "2026-05-12T23:48:34Z"
+campaign = "intel-258v-platform"
+item = "SLM258V-004"
+event = "pr_open"
+pr = 4542
+actor = "codex"
+head_sha = "da45e938fd372fb0fa76db99ea8a7d2351c28123"
+summary = "Opened SLM258V-004 to record dense Qwen SLM CPU phase receipts on the 258V."
+notes = [
+  "The PR records a dense Qwen aggregate phase receipt plus prefill_512 and decode_128 profile receipts.",
+  "The dense SLM phase receipts record dense-qwen-cpu-reference, gguf_dense_q8_0, selected_backend=cpu-rust, and fallback_used=false.",
+  "The profile receipts omit top-level BitNet I2_S/QK256 provenance.",
+]
+details = [
+  "This is dense SLM CPU phase timing evidence only.",
+  "The PR does not claim broad dense SLM chat quality, speedup, sustained performance, BitNet QK256/I2_S behavior, Arc 140V execution, Intel NPU execution, or acceleration.",
+]

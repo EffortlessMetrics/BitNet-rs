@@ -246,6 +246,25 @@ instead of BitNet I2_S/QK256 provenance. It remains a bounded dense SLM CPU
 answer-smoke receipt only; it does not prove broad SLM chat quality, speed,
 Arc/NPU execution, or BitNet QK256/I2_S proof.
 
+### Dense SLM CPU Phase Receipts
+
+`SLM258V-004` records dense Qwen SLM CPU phase timing receipts on the 258V:
+
+```text
+ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json
+ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/prefill_512.json
+ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu-profiles/decode_128.json
+```
+
+The release-built run uses the pinned Qwen2.5 Q8_0 GGUF artifact, strict loader
+and tokenizer resolution, the `qwen2.5` prompt template, `selected_backend=cpu-rust`,
+and `fallback_used=false`. The aggregate and per-profile receipts record
+`dense-qwen-cpu-reference`, `gguf_dense_q8_0`, and `dense_slm` provenance while
+omitting top-level BitNet I2_S/QK256 provenance from the dense profile receipts.
+This is dense SLM CPU phase timing evidence only; it does not prove broad SLM
+chat quality, speedup, sustained performance, BitNet QK256/I2_S behavior, Arc
+140V execution, or Intel NPU execution.
+
 The 2026-05-08 CLI platform probe refresh is:
 
 ```text
