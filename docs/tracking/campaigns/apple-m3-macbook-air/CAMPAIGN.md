@@ -49,6 +49,8 @@ artifacts to separate strict proof items.
   smallest MacBook-specific label or validation path instead.
 - Do not add live model downloads, large artifact sweeps, or hardware timing
   runs to generic required CI.
+- Do not use near-completion timeouts as M3 lane cost control; route the job
+  away, choose a smaller profile, or cap healthy selected runs with cushion.
 - Never commit model binaries.
 
 ## Work Items
@@ -56,7 +58,7 @@ artifacts to separate strict proof items.
 | Work item | Status | Notes |
 |---|---|---|
 | M3MBA-001 | merged | Add the campaign control plane and roadmap linkage for the M3 MacBook Air lane. |
-| M3MBA-002 | proposed | Commit the real M3 Air machine-profile receipt with storage, cache, power, thermal, and visibility fields. |
+| M3MBA-002 | pr_open | Commit the real M3 Air machine-profile receipt with storage, cache, power, thermal, and visibility fields. |
 | M3MBA-003 | proposed | Add or confirm the explicit `apple-m3-air-cpu-neon` receipt label without weakening M4 validation. |
 | M3MBA-004A | proposed | Mirror the known dense Qwen SLM smoke route on M3 Air. |
 | M3MBA-004B | proposed | Run the bounded dense Qwen operator profile only after smoke passes. |
@@ -68,7 +70,7 @@ artifacts to separate strict proof items.
 | M3MBA-008 | proposed | Hand accepted artifacts to separate M4 strict-proof items without claiming proof in this lane. |
 | M3MBA-009 | proposed | Synthesize M3 dense SLM behavior against M4 and SLM CPU evidence after dense smoke/operator evidence exists. |
 | M3MBA-010 | proposed | Audit MacBook model-cache retention and cleanup after the first large BitNet download. |
-| M3MBA-011 | in_progress | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
+| M3MBA-011 | merged | Deepen the M3 Air roadmap into operating horizons, stop/go gates, parallel lanes, and local resource budgets. |
 
 ## Phase Roadmap
 

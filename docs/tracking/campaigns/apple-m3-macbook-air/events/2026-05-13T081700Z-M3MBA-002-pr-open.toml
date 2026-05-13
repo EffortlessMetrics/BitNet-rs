@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T08:17:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-002"
+event = "pr_open"
+pr = 4592
+head_sha = "156dda6768124359d0ae014bc5e4d44f241746af"
+branch = "codex/apple-m3-macbook-air/M3MBA-002-machine-profile"
+actor = "codex"
+
+notes = [
+  "Opened PR #4592 for the real M3 MacBook Air machine-profile receipt.",
+  "The PR records sanitized host, storage, cache, power, thermal-warning, CPU/NEON, Metal, and MPSGraph visibility facts with inference_run=false.",
+  "No model inference, large artifact download, BitNet acceptance, M4 Mac mini performance claim, or broad Apple Silicon performance claim is introduced.",
+]

@@ -1,0 +1,12 @@
+timestamp = "2026-05-13T08:11:14Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-002"
+event = "in_progress"
+branch = "codex/apple-m3-macbook-air/M3MBA-002-machine-profile"
+actor = "codex"
+
+notes = [
+  "Started the real M3 MacBook Air machine-profile item.",
+  "Collected sanitized host, storage, cache, power, thermal-warning, CPU/NEON, Metal, and MPSGraph visibility facts with inference_run=false.",
+  "No model inference, large artifact download, runtime change, BitNet acceptance, M4 Mac mini performance claim, or broad Apple Silicon performance claim is introduced.",
+]
