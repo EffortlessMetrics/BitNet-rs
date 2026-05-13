@@ -103,6 +103,8 @@ pub fn build_cli() -> clap::Command {
 
 /// CLI interface version (SemVer for CLI surface compatibility)
 const INTERFACE_VERSION: &str = "1.0.0";
+const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+const BITNET_CPP_ANSWER_TEMPLATE: &str = "bitnetcpp-answer";
 
 fn bitnet_version() -> &'static str {
     use std::sync::OnceLock;
@@ -477,6 +479,12 @@ enum Commands {
 
     /// Fetch, verify, list, and prune supported local model artifacts
     Model(ModelCommand),
+
+    /// RTX 5070 Ti CUDA proof-lane utilities
+    Cuda {
+        #[command(subcommand)]
+        action: CudaAction,
+    },
 
     #[cfg(feature = "full-cli")]
     /// Mac-oriented SLM check, ask, validate, and receipt-check wrappers
@@ -1225,6 +1233,24 @@ enum ValidateAction {
 }
 
 #[derive(Subcommand)]
+enum CudaAction {
+    /// Preflight strict RTX 5070 Ti CUDA user commands without generation
+    Doctor {
+        /// Optional BitNet GGUF model path to preflight for strict ask/chat
+        #[arg(long)]
+        model: Option<std::path::PathBuf>,
+
+        /// Optional explicit tokenizer path used as tokenizer authority
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+
+        /// Output the CUDA doctor preflight receipt to a JSON file
+        #[arg(long, value_name = "PATH")]
+        json_out: Option<std::path::PathBuf>,
+    },
+}
+
+#[derive(Subcommand)]
 enum ConfigAction {
     /// Show current configuration
     Show,
@@ -1327,7 +1353,6 @@ async fn async_main() -> Result<()> {
 
     let requested_backend_label =
         cli.device.clone().unwrap_or_else(|| config.default_device.clone());
-    #[cfg(feature = "full-cli")]
     let explicit_device_label = cli.device.clone();
 
     // Report backend selection at startup so logs and receipts are deterministic.
@@ -1470,6 +1495,9 @@ async fn async_main() -> Result<()> {
             .await
         }
         Some(Commands::Model(cmd)) => cmd.execute().await,
+        Some(Commands::Cuda { action }) => {
+            handle_cuda_command(action, explicit_device_label.as_deref())
+        }
         #[cfg(feature = "full-cli")]
         Some(Commands::Mac(cmd)) => cmd.execute(explicit_device_label.as_deref()).await,
         #[cfg(feature = "full-cli")]
@@ -2464,6 +2492,242 @@ async fn handle_device_smoke_command(
     }
 
     Ok(())
+}
+
+fn handle_cuda_command(action: CudaAction, explicit_device_label: Option<&str>) -> Result<()> {
+    match action {
+        CudaAction::Doctor { model, tokenizer, json_out } => {
+            handle_cuda_doctor_command(explicit_device_label, model, tokenizer, json_out)
+        }
+    }
+}
+
+fn effective_cuda_doctor_backend(explicit_device_label: Option<&str>) -> &str {
+    explicit_device_label.unwrap_or(RTX_5070_TI_CUDA)
+}
+
+fn validate_strict_cuda_backend_label(requested_backend_label: &str, context: &str) -> Result<()> {
+    if requested_backend_label != RTX_5070_TI_CUDA {
+        anyhow::bail!(
+            "{context} requires --device {RTX_5070_TI_CUDA}; requested backend was {requested_backend_label}"
+        );
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
+struct StrictBitnetCudaAskPreflight {
+    tokenizer_source: String,
+    tokenizer_path: Option<std::path::PathBuf>,
+    receipt_path: std::path::PathBuf,
+}
+
+fn strict_bitnet_cuda_ask_preflight(
+    model_path: &std::path::Path,
+    tokenizer_path: Option<&std::path::Path>,
+    receipt_out: Option<&std::path::Path>,
+) -> Result<StrictBitnetCudaAskPreflight> {
+    if !model_path.exists() {
+        anyhow::bail!(
+            "strict CUDA ask requires a model artifact before generation; model path does not exist: {}",
+            model_path.display()
+        );
+    }
+    if model_path.is_dir() {
+        anyhow::bail!(
+            "strict CUDA ask requires a BitNet GGUF model file before generation; got directory: {}",
+            model_path.display()
+        );
+    }
+    if model_path.extension().and_then(|ext| ext.to_str()) != Some("gguf") {
+        anyhow::bail!(
+            "strict CUDA ask requires a BitNet GGUF model file before generation; got: {}",
+            model_path.display()
+        );
+    }
+
+    let tokenizer_resolution =
+        bitnet_tokenizers::auto::resolve_tokenizer(model_path, tokenizer_path, true).with_context(
+            || {
+                format!(
+                    "strict CUDA ask requires tokenizer authority before generation for {}",
+                    model_path.display()
+                )
+            },
+        )?;
+    let receipt_path = receipt_out
+        .map(std::path::Path::to_path_buf)
+        .or_else(|| strict_ask_default_receipt_path(true, false))
+        .expect("strict CUDA ask has a default receipt path");
+
+    Ok(StrictBitnetCudaAskPreflight {
+        tokenizer_source: tokenizer_resolution.source.as_str().to_string(),
+        tokenizer_path: tokenizer_resolution.path,
+        receipt_path,
+    })
+}
+
+fn handle_cuda_doctor_command(
+    explicit_device_label: Option<&str>,
+    model: Option<std::path::PathBuf>,
+    tokenizer: Option<std::path::PathBuf>,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    let requested_backend = effective_cuda_doctor_backend(explicit_device_label);
+    validate_strict_cuda_backend_label(requested_backend, "cuda doctor")?;
+
+    let backend_identity = resolve_run_backend_identity(requested_backend, true)?;
+    if backend_identity.selected_backend.as_str() != RTX_5070_TI_CUDA
+        || backend_identity.runtime_api.as_str() != "cuda"
+        || backend_identity.fallback_used
+    {
+        anyhow::bail!(
+            "cuda doctor requires strict RTX 5070 Ti CUDA routing; requested_backend={}, selected_backend={}, runtime_api={}, fallback_used={}, fallback_reason={:?}",
+            backend_identity.requested_backend,
+            backend_identity.selected_backend,
+            backend_identity.runtime_api,
+            backend_identity.fallback_used,
+            backend_identity.fallback_reason
+        );
+    }
+
+    let mut cuda_probe = bitnet_device_probe::probe_nvidia_cuda(Some(0));
+    if cuda_probe.available
+        && let Some(error) = validate_rtx_5070_ti_identity(&cuda_probe)
+    {
+        cuda_probe.available = false;
+        cuda_probe.failure_reason = Some(error);
+    }
+    if !cuda_probe.available {
+        let reason = cuda_probe
+            .failure_reason
+            .clone()
+            .unwrap_or_else(|| "requested RTX 5070 Ti CUDA device is unavailable".to_string());
+        anyhow::bail!("{reason}");
+    }
+
+    let model_preflight = if let Some(model_path) = model.as_ref() {
+        let preflight = strict_bitnet_cuda_ask_preflight(model_path, tokenizer.as_deref(), None)?;
+        serde_json::json!({
+            "status": "preflight_ready",
+            "path": model_path.display().to_string(),
+            "format": "gguf",
+            "tokenizer_authority": {
+                "source": preflight.tokenizer_source,
+                "path": preflight.tokenizer_path.as_ref().map(|path| path.display().to_string()),
+                "strict": true
+            },
+            "qk256_route_ready": "pending_generation_receipt_validation",
+            "default_receipt_path": preflight.receipt_path.display().to_string()
+        })
+    } else {
+        serde_json::json!({
+            "status": "not_checked",
+            "note": "pass --model and optional --tokenizer to preflight model/tokenizer authority",
+            "qk256_route_ready": "not_checked",
+            "default_receipt_path": strict_ask_default_receipt_path(true, false)
+                .expect("strict CUDA ask has a default receipt path")
+                .display()
+                .to_string()
+        })
+    };
+
+    let artifact_path = json_out.as_ref().map(|path| path.display().to_string());
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_cuda_doctor",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": RTX_5070_TI_CUDA,
+        "requested_backend": backend_identity.requested_backend,
+        "selected_backend": backend_identity.selected_backend,
+        "runtime_api": backend_identity.runtime_api,
+        "fallback_used": backend_identity.fallback_used,
+        "fallback_reason": backend_identity.fallback_reason,
+        "cuda": {
+            "available": cuda_probe.available,
+            "device_count": cuda_probe.device_count,
+            "device_index": cuda_probe.selected_device_index,
+            "device_name": cuda_probe.selected_device_name,
+            "compute_capability": cuda_probe.compute_capability,
+            "driver_version": cuda_probe.driver_version,
+            "cuda_runtime_version": cuda_probe.cuda_runtime_version,
+            "cuda_toolkit_version": cuda_probe.cuda_toolkit_version,
+            "nvrtc_version": cuda_probe.nvrtc_version,
+            "nvml_available": cuda_probe.nvml_available,
+            "vram_bytes": cuda_probe.vram_bytes,
+            "power_limit_watts": cuda_probe.power_limit_watts,
+            "power_draw_watts": cuda_probe.power_draw_watts,
+            "temperature_c": cuda_probe.temperature_c,
+        },
+        "model_preflight": model_preflight,
+        "prompt_template_authority": {
+            "family": BITNET_CPP_ANSWER_TEMPLATE,
+            "source": "strict_cuda_bitnet_answer_path"
+        },
+        "strict_execution_policy": {
+            "cpu_fallback_allowed": false,
+            "fallback_used": false,
+            "generic_cuda_proof_allowed": false
+        },
+        "speedup_claim": false,
+        "claim_allowed": "The RTX 5070 Ti CUDA strict preflight passed; model answer quality and speed still require ask/chat/bench receipts.",
+        "claims_not_allowed": [
+            "QK256 kernels executed",
+            "coherent BitNet local answer passed",
+            "dense SLM CUDA proof",
+            "server readiness",
+            "profile-qualified speedup"
+        ],
+        "artifact_path": artifact_path,
+    });
+
+    if let Some(path) = json_out.as_ref() {
+        write_json_output(Some(path), &receipt)?;
+    }
+    print_cuda_doctor_summary(&receipt, json_out.as_deref());
+
+    Ok(())
+}
+
+fn print_cuda_doctor_summary(receipt: &serde_json::Value, json_out: Option<&std::path::Path>) {
+    println!("CUDA doctor:");
+    println!("  requested_backend: {}", receipt["requested_backend"].as_str().unwrap_or(""));
+    println!("  selected_backend: {}", receipt["selected_backend"].as_str().unwrap_or(""));
+    println!("  runtime_api: {}", receipt["runtime_api"].as_str().unwrap_or(""));
+    println!("  fallback_used: {}", receipt["fallback_used"].as_bool().unwrap_or(true));
+    println!(
+        "  tokenizer_authority: {}",
+        receipt
+            .pointer("/model_preflight/tokenizer_authority/source")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("not_checked")
+    );
+    println!(
+        "  prompt_template_authority: {}",
+        receipt
+            .pointer("/prompt_template_authority/family")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("")
+    );
+    println!(
+        "  qk256_route_ready: {}",
+        receipt
+            .pointer("/model_preflight/qk256_route_ready")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("not_checked")
+    );
+    println!("  speedup_claim: {}", receipt["speedup_claim"].as_bool().unwrap_or(false));
+    println!(
+        "  default_receipt_path: {}",
+        receipt
+            .pointer("/model_preflight/default_receipt_path")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("")
+    );
+    if let Some(path) = json_out {
+        println!("  doctor_receipt: {}", path.display());
+    }
 }
 
 fn build_lunar_lake_probe_receipt(
@@ -9349,15 +9613,11 @@ async fn run_ask_generation(
     strict_cpu: bool,
     receipt_out: Option<std::path::PathBuf>,
 ) -> Result<()> {
-    const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
-    const BITNET_CPP_ANSWER_TEMPLATE: &str = "bitnetcpp-answer";
     if strict_cuda && strict_cpu {
         anyhow::bail!("--strict-cuda and --strict-cpu are mutually exclusive");
     }
-    if strict_cuda && requested_backend_label != RTX_5070_TI_CUDA {
-        anyhow::bail!(
-            "--strict-cuda requires --device {RTX_5070_TI_CUDA}; requested backend was {requested_backend_label}"
-        );
+    if strict_cuda {
+        validate_strict_cuda_backend_label(requested_backend_label, "--strict-cuda")?;
     }
     if strict_cpu && requested_backend_label != "cpu" {
         anyhow::bail!(
@@ -9410,6 +9670,15 @@ async fn run_ask_generation(
         print_strict_ask_proof_summary(&outcome.receipt, &outcome.receipt_path);
         return Ok(());
     }
+    let effective_receipt_out =
+        receipt_out.clone().or_else(|| strict_ask_default_receipt_path(strict_cuda, strict_cpu));
+    if strict_cuda {
+        strict_bitnet_cuda_ask_preflight(
+            &model,
+            tokenizer.as_deref(),
+            effective_receipt_out.as_deref(),
+        )?;
+    }
     if strict_cuda && let Some(cuda_bin) = ensure_strict_cuda_runtime_libraries_visible()? {
         debug!(
             "added CUDA Toolkit bin directory to process PATH for strict CUDA ask: {}",
@@ -9417,8 +9686,6 @@ async fn run_ask_generation(
         );
     }
 
-    let effective_receipt_out =
-        receipt_out.clone().or_else(|| strict_ask_default_receipt_path(strict_cuda, strict_cpu));
     let question_for_receipt = question.clone();
     let system_prompt_for_receipt = system_prompt.clone();
     run_simple_generation(
@@ -11323,6 +11590,65 @@ mod tests {
                 .join("cuda-answer-readiness")
                 .join("strict-cpu-ask-latest.json")
         );
+    }
+
+    #[test]
+    fn cuda_doctor_command_accepts_nested_doctor() {
+        std::thread::Builder::new()
+            .name("cuda-doctor-clap-parse".to_string())
+            .stack_size(64 * 1024 * 1024)
+            .spawn(|| {
+                Cli::command()
+                    .try_get_matches_from(["bitnet", "cuda", "doctor"])
+                    .expect("cuda doctor should parse");
+            })
+            .expect("spawn clap parse thread")
+            .join()
+            .expect("clap parse thread should not panic");
+    }
+
+    #[test]
+    fn cuda_doctor_defaults_to_rtx5070ti_backend_without_global_device() {
+        assert_eq!(effective_cuda_doctor_backend(None), RTX_5070_TI_CUDA);
+    }
+
+    #[test]
+    fn cuda_doctor_rejects_generic_cuda_backend_before_probe() {
+        let err =
+            validate_strict_cuda_backend_label("cuda", "cuda doctor").unwrap_err().to_string();
+
+        assert!(
+            err.contains("cuda doctor requires --device nvidia-rtx-5070-ti-cuda"),
+            "got: {err}"
+        );
+        assert!(err.contains("requested backend was cuda"), "got: {err}");
+    }
+
+    #[test]
+    fn ask_strict_cuda_rejects_generic_cuda_backend_before_generation() {
+        let err =
+            validate_strict_cuda_backend_label("cuda", "--strict-cuda").unwrap_err().to_string();
+
+        assert!(
+            err.contains("--strict-cuda requires --device nvidia-rtx-5070-ti-cuda"),
+            "got: {err}"
+        );
+        assert!(err.contains("requested backend was cuda"), "got: {err}");
+    }
+
+    #[test]
+    fn ask_strict_cuda_preflight_rejects_missing_tokenizer_before_generation() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let model = temp_dir.path().join("ggml-model-i2_s.gguf");
+        std::fs::write(&model, b"not a real gguf").expect("write model");
+
+        let err = strict_bitnet_cuda_ask_preflight(&model, None, None).unwrap_err().to_string();
+
+        assert!(
+            err.contains("strict CUDA ask requires tokenizer authority before generation"),
+            "got: {err}"
+        );
+        assert!(err.contains("ggml-model-i2_s.gguf"), "got: {err}");
     }
 
     #[test]
