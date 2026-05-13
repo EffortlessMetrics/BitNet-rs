@@ -1,0 +1,22 @@
+timestamp = "2026-05-13T19:11:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-005"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4635
+branch = "codex/lunar-lake/LNL258V-COMPARE-005-cli-compare"
+head_sha = "03f43246ef8f8695ac2773f33d345a618f254ff4"
+summary = "Opened the Lunar Lake operator comparison command PR."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4635",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The PR adds `bitnet lunar-lake compare` over the committed operator-readiness and regression-bundle receipts.",
+  "The comparison receipt reports dense Qwen CPU default routing, BitNet CPU reference routing, OpenVINO GPU/NPU candidate routing, route evidence readiness, fallback status, and claim boundaries.",
+  "No inference is run and no broad dense SLM quality, speedup, Arc/NPU acceleration, full BitNet accelerator inference, or QK256 accelerator decode claim is made.",
+]
