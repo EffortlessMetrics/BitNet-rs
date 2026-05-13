@@ -2094,8 +2094,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-050"
-status = "in_progress"
+status = "merged"
 branch = "docs/cuda-dense-qwen25-product-audit"
+pr = 4589
+head_sha = "63279b8e8ab60d081970b207d694674c99a3d062"
+merge_sha = "77e01cbed226f5b7fec9bc9414b5f0723a64bf63"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
