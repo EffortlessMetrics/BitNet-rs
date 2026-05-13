@@ -1,0 +1,16 @@
+timestamp = "2026-05-13T14:57:26Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-010"
+event = "pr_open"
+actor = "codex"
+branch = "cuda/bitnet-i2s-benchmark-qualification"
+pr = 4616
+head_sha = "fcb7c903ca02edb1d549a95c5df69d151552a6c5"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened draft PR #4616 for the governed BitNet I2_S/QK256 CUDA product benchmark qualification review.",
+  "The PR adds a receipt generator, validator hardening, committed qualification receipt, user-facing bench/receipts report paths, and tracker metadata.",
+  "Every target product profile remains speedup-unqualified; dense CUDA proof, server readiness, kernel math, tokenizer behavior, loader behavior, transformer behavior, and generated dashboards remain out of scope.",
+]

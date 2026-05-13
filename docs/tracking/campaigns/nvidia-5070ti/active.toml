@@ -2188,8 +2188,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-PROD-010"
-status = "in_progress"
+status = "pr_open"
 branch = "cuda/bitnet-i2s-benchmark-qualification"
+pr = 4616
+head_sha = "fcb7c903ca02edb1d549a95c5df69d151552a6c5"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -2221,6 +2223,7 @@ allowed_paths = [
   "docs/tracking/campaigns/nvidia-5070ti/CAMPAIGN.md",
   "docs/tracking/campaigns/nvidia-5070ti/active.toml",
   "docs/tracking/campaigns/nvidia-5070ti/events/2026-05-13T145025Z-CUDA-PROD-010-in-progress.toml",
+  "docs/tracking/campaigns/nvidia-5070ti/events/2026-05-13T145726Z-CUDA-PROD-010-pr-open.toml",
 ]
 forbidden_paths = [
   "crates/bitnet-server/**",
