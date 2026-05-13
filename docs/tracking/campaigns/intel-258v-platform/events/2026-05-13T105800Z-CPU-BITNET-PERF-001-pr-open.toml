@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T10:58:00Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-001"
+event = "pr_open"
+actor = "codex"
+pr = 4607
+branch = "codex/lunar-lake/CPU-BITNET-PERF-001-i2s-microbench"
+summary = "Opened CPU-BITNET-PERF-001 to add 258V QK256/I2_S GEMV and GEMM microbench timing evidence."
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-001-i2s-microbench.json",
+]
+notes = [
+  "The PR extends the existing CPU benchmark receipt with an optional validated i2s_microbench block.",
+  "The claim boundary remains timing evidence only: no answer quality, sustained throughput, Arc/NPU execution, acceleration, QK256 semantic-change, or full-model correctness claims.",
+]
