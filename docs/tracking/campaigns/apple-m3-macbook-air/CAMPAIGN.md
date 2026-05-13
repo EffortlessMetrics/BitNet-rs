@@ -58,8 +58,8 @@ artifacts to separate strict proof items.
 | Work item | Status | Notes |
 |---|---|---|
 | M3MBA-001 | merged | Add the campaign control plane and roadmap linkage for the M3 MacBook Air lane. |
-| M3MBA-002 | merged | Commit the real M3 Air machine-profile receipt with storage, cache, power, thermal, and visibility fields. |
-| M3MBA-003 | pr_open | Add or confirm the explicit `apple-m3-air-cpu-neon` receipt label without weakening M4 validation. |
+| M3MBA-002 | merged | Commit the real M3 Air machine-profile receipt with storage, cache, power, thermal, and visibility fields; merged in #4592. |
+| M3MBA-003 | pr_open | Add or confirm the explicit `apple-m3-air-cpu-neon` receipt label without weakening M4 validation; open in #4596. |
 | M3MBA-004A | proposed | Mirror the known dense Qwen SLM smoke route on M3 Air. |
 | M3MBA-004B | proposed | Run the bounded dense Qwen operator profile only after smoke passes. |
 | M3MBA-005A | proposed | Record official Microsoft 2B I2_S artifact identity, source revision, size, hash, and storage context. |
@@ -278,11 +278,12 @@ and artifact sweeps are local or scheduled Apple-hardware evidence, not ordinary
 CI requirements.
 
 M3 live and scheduled jobs should fail before expensive work when disk, cache,
-runner, power, thermal, model, tokenizer, or receipt prerequisites are missing.
-Once a bounded M3 profile is intentionally selected, its cap should allow a
-healthy run to finish with cushion. If that is too costly, choose a smaller
-profile, manual evidence, or a scheduled lane rather than cutting the job off
-near completion and spending the same CI again.
+runner, power, thermal, model, tokenizer, or receipt prerequisites are missing,
+and should upload phase artifacts even when a later phase fails. Once a bounded
+M3 profile is intentionally selected, its cap should allow a healthy run to
+finish with cushion. If that is too costly, choose a smaller profile, manual
+evidence, or a scheduled lane rather than cutting the job off near completion
+and spending the same CI again.
 
 ## Claim Boundary
 
