@@ -1,0 +1,12 @@
+timestamp = "2026-05-13T14:54:39Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008U"
+event = "in_progress"
+branch = "codex/slm-cpu-008u-output-weight-layout"
+actor = "codex"
+
+notes = [
+  "Started the follow-up Qwen3 output-head layout slice after SLM-CPU-008T selected dedicated GGUF output.weight before tied fallback.",
+  "The Apple M4 Qwen parity note identifies GGUF output.weight hidden/vocab dimensions as token-major storage that must be reshaped to vocab/hidden without transposing values.",
+  "This slice preserves the claim boundary: first-token parity still requires a real i5-8250U artifact refresh before claiming token 19 / 4.",
+]
