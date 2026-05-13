@@ -48,10 +48,11 @@ on:
       - 'Cargo.lock'
       - '.github/workflows/crossval.yml'
 
-# Cancel in-progress runs for same PR/branch
+# Preserve started cross-validation runs; the lane is selected explicitly by
+# label, schedule, or manual dispatch and should produce evidence once started.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always

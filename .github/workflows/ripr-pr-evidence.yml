@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: ripr-pr-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 jobs:
   ripr:

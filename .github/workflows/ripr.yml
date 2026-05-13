@@ -12,7 +12,7 @@ on:
 
 concurrency:
   group: ripr-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 jobs:
   ripr-advisory:
