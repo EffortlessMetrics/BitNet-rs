@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T23:23:05Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-001"
+event = "pr_open"
+pr = 4656
+head_sha = "1203b6e000cedb6c3edfff23cc399a12162c3154"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4656 to add the Apple M4 dense SLM eval-and-proof campaign and seeded corpus spec.",
+  "The corpus shape is validated with `answer-corpus --dry-run`; no live M4 model run or runtime accuracy claim is included.",
+  "Claim boundaries remain narrow: no broad model quality, broad performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook claim.",
+]
