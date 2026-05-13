@@ -150,6 +150,79 @@ tokenizer_decode
   -> byte fallback, special-token filtering, UTF-8 cleanup.
 ```
 
+## Post-008 Artifact Revalidation
+
+`SLM-CPU-008` landed the Qwen3 architecture-default fix in #4434. That merge
+did not include a fresh real-model i5-8250U artifact because the verified GGUF
+was not present in that worktree/cache. Before advancing to the tiny answer
+corpus, run `SLM-CPU-008R` to verify the post-#4434 runtime against the actual
+Qwen3-0.6B Q8_0 artifact.
+
+Original prompt policy:
+
+```powershell
+$env:BITNET_STRICT_MODE = "1"
+$env:BITNET_DISABLE_MINIMAL_LOADER = "1"
+$env:RAYON_NUM_THREADS = "8"
+
+cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli" -- `
+  --device cpu `
+  run `
+  --model models\slm\Qwen3-0.6B-Q8_0.gguf `
+  --prompt-template qwen `
+  --prompt "What is 2+2? Answer with only the number." `
+  --max-new-tokens 1 `
+  --temperature 0.0 `
+  --greedy `
+  --deterministic `
+  --strict-loader `
+  --strict-tokenizer `
+  --logits-dump-steps 1 `
+  --logits-topk 10 `
+  --assert-greedy `
+  --qwen-trace-jsonl ci\slm-cpu\intel-i5-8250u\2026-05-07\qwen3-post-008-original-trace.jsonl `
+  --qwen-trace-layer 0 `
+  --json-out ci\slm-cpu\intel-i5-8250u\2026-05-07\qwen3-post-008-original-first-token.json
+```
+
+No-thinking prompt policy:
+
+The post-#4434 `run` command does not currently expose a `--no-think` flag. If
+a later prompt-control slice adds that flag, run the same artifact protocol with
+the no-thinking rendered prompt and refresh the known-good reference first:
+
+```powershell
+cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli" -- `
+  --device cpu `
+  run `
+  --model models\slm\Qwen3-0.6B-Q8_0.gguf `
+  --prompt-template qwen `
+  --no-think `
+  --prompt "What is 2+2? Answer with only the number." `
+  --max-new-tokens 1 `
+  --temperature 0.0 `
+  --greedy `
+  --deterministic `
+  --strict-loader `
+  --strict-tokenizer `
+  --logits-dump-steps 1 `
+  --logits-topk 10 `
+  --assert-greedy `
+  --json-out ci\slm-cpu\intel-i5-8250u\2026-05-07\qwen3-post-008-no-think-first-token.json
+```
+
+For either policy, record the model SHA, rendered prompt, prompt IDs,
+generated IDs, decoded text, chosen token, first-step top-k, selected backend,
+kernel/backend provenance, tokenizer source, and `fallback_used = false`.
+Validate the result with `reference-compare`. Do not judge `--no-think` against
+the older SLM-CPU-006B reference unless the known-good reference was regenerated
+from the exact no-thinking rendered prompt and BOS policy.
+
+If the original prompt now emits token `19` / `4`, first-token parity is
+revalidated and the lane can move to the tiny corpus. If either policy still
+diverges, keep the artifact as the next root-cause input. This revalidation is
+not an answer-quality or throughput claim.
+
 ## Observed Qwen3 Q8_0 Boundary
 
 On the i5-8250U, the official `Qwen3-0.6B-Q8_0.gguf` artifact verifies against the pinned SHA256 and reaches the strict CPU loader with `selected_backend = cpu-rust` and `fallback_used = false`.

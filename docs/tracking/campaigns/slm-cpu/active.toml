@@ -578,3 +578,44 @@ must_not_claim = [
   "Qwen3.5 or hybrid Qwen architecture support is in scope.",
   "BitNet QK256/I2_S kernels are modified.",
 ]
+
+[[work_item]]
+id = "SLM-CPU-008R"
+status = "in_progress"
+branch = "codex/slm-cpu-008r-post008-artifact-revalidation"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-008"]
+acceptance = "Run the verified Qwen3-0.6B Q8_0 GGUF on the actual i5-8250U after #4434 and record whether first-token parity is actually achieved with real GGUF, strict tokenizer from GGUF metadata, selected_backend=cpu-rust, fallback_used=false, rendered prompt, prompt IDs, generated IDs, first-step top-k, and reference comparison. This is an artifact revalidation item only and must not claim answer quality, sustained throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, quant expansion, or BitNet QK256 changes."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Post-#4434 first-token parity has been revalidated on the actual i5-8250U artifact after merge.",
+  "The post-#4434 artifact records strict loader/tokenizer provenance, prompt IDs, generated IDs, top-k, selected CPU backend, and fallback=false.",
+]
+must_not_claim = [
+  "Qwen answer quality is proven.",
+  "Qwen3 tiny answer corpus is green.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "Q4/Q5 quant expansion is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
