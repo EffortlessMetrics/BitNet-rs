@@ -335,10 +335,10 @@ fn mac_models_lists_operator_model_states() -> Result<(), Box<dyn std::error::Er
         .stdout(predicate::str::contains("qwen2.5-1.5b-instruct-q4_k_m"))
         .stdout(predicate::str::contains("supported"))
         .stdout(predicate::str::contains("microsoft-bitnet-b1.58-2B-4T-i2s"))
-        .stdout(predicate::str::contains("blocked"))
+        .stdout(predicate::str::contains("supported-ask"))
         .stdout(predicate::str::contains("candidate"))
         .stdout(predicate::str::contains("rejected"))
-        .stdout(predicate::str::contains("do not prove BitNet local answers"))
+        .stdout(predicate::str::contains("one-shot ask only"))
         .stdout(predicate::str::contains("Proof bridge: microsoft-bitnet-b1.58-2B-4T-i2s"))
         .stdout(predicate::str::contains("mac bitnet-proof --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf"))
         .stdout(predicate::str::contains("--proof-receipt ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json"));
@@ -371,7 +371,7 @@ fn mac_models_json_exposes_claim_boundaries_without_fetching()
     assert!(recommendation.contains("default") || recommendation.contains("Disk"));
     let claim_boundary =
         json["claim_boundary"].as_str().ok_or_else(|| std::io::Error::other("claim boundary"))?;
-    assert!(claim_boundary.contains("do not prove BitNet local answers"));
+    assert!(claim_boundary.contains("one-shot ask only"));
     let rows = json["rows"].as_array().ok_or_else(|| std::io::Error::other("rows"))?;
     assert!(rows.iter().any(|row| {
         row["id"] == "qwen2.5-0.5b-instruct-q8_0"
@@ -385,18 +385,21 @@ fn mac_models_json_exposes_claim_boundaries_without_fetching()
     );
     assert!(rows.iter().any(|row| {
         row["id"] == "microsoft-bitnet-b1.58-2B-4T-i2s"
-            && row["state"] == "blocked"
-            && row["selection"] == "not selectable for M4 local answers"
+            && row["state"] == "supported-ask"
+            && row["selection"]
+                == "explicit --model-id with --model-path/--tokenizer for one-shot ask only"
+            && row["mac_ask_enabled"] == true
+            && row["mac_chat_enabled"] == false
             && row["mac_ask_chat_enabled"] == false
             && row["mac_serve_enabled"] == false
-            && row["proof_status"] == "answer-corpus-proof-receipt-check-available-route-disabled"
+            && row["proof_status"] == "answer-corpus-proof-passed-one-shot-ask-explicit-artifact"
             && row["proof_command"]
                 .as_str()
                 .is_some_and(|command| command.contains("mac bitnet-proof --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf"))
             && row["proof_receipt_path"]
                 == "ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json"
-            && row["recommended_fetch_headroom_bytes"].is_null()
-            && row["fetch_command"].is_null()
+            && row["recommended_fetch_headroom_bytes"].as_u64().is_some()
+            && row["fetch_command"].as_str().is_some_and(|command| command.contains("bitnet model fetch microsoft-bitnet"))
     }));
     assert!(rows.iter().any(|row| row["state"] == "candidate"));
     assert!(rows.iter().any(|row| row["state"] == "rejected"));
@@ -470,10 +473,10 @@ fn mac_check_rejects_blocked_bitnet_model_before_cache_guidance() {
         .args(["mac", "check", "--model-id", "microsoft-bitnet-b1.58-2B-4T-i2s"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("blocked for Apple M4 CPU/NEON local answers"))
+        .stderr(predicate::str::contains("supported-ask for Apple M4 CPU/NEON local answers"))
         .stderr(predicate::str::contains("MODEL-ARTIFACT-007"))
         .stderr(predicate::str::contains("M4-QA-001"))
-        .stderr(predicate::str::contains("not selectable through `bitnet mac ask`"))
+        .stderr(predicate::str::contains("one-shot `bitnet mac ask`"))
         .stderr(predicate::str::contains("bitnet mac models"))
         .stderr(predicate::str::contains("bitnet model fetch microsoft-bitnet").not());
 }
@@ -596,18 +599,62 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
-fn mac_ask_rejects_blocked_bitnet_model_before_cache_lookup() {
+fn mac_ask_bitnet_requires_explicit_tokenizer_before_cache_lookup() {
     bitnet()
         .args(["mac", "ask", "What is 2+2?", "--model-id", "microsoft-bitnet-b1.58-2B-4T-i2s"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("blocked for Apple M4 CPU/NEON local answers"))
-        .stderr(predicate::str::contains("M4-QA-001"))
-        .stderr(predicate::str::contains("not selectable through `bitnet mac ask`"))
+        .stderr(predicate::str::contains("requires explicit tokenizer authority"))
         .stderr(predicate::str::contains(
-            "dense SLM success must not be counted as BitNet Mac UX proof",
+            "--tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
         ))
         .stderr(predicate::str::contains("bitnet model fetch microsoft-bitnet").not());
+}
+
+#[test]
+fn mac_ask_bitnet_rejects_wrong_tokenizer_sha_before_model_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let tokenizer = dir.path().join("tokenizer.json");
+    std::fs::write(&tokenizer, b"{\"not\":\"the accepted tokenizer\"}")?;
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "ask",
+            "What is 2+2?",
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("requires tokenizer SHA256"))
+        .stderr(predicate::str::contains("accepted GGUF").not());
+    Ok(())
+}
+
+#[test]
+fn mac_ask_rejects_dense_model_path_tokenizer_overrides() {
+    bitnet()
+        .args([
+            "mac",
+            "ask",
+            "What is 2+2?",
+            "--model-path",
+            "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+            "--tokenizer",
+            "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "--model-path/--tokenizer only for the explicit BitNet one-shot route",
+        ));
 }
 
 #[test]
@@ -1013,7 +1060,9 @@ fn mac_bitnet_proof_preflight_accepts_artifact_contract_without_running_model()
         .assert()
         .success()
         .stdout(predicate::str::contains("preflight passed"))
-        .stdout(predicate::str::contains("does not enable BitNet through `bitnet mac ask`"));
+        .stdout(predicate::str::contains(
+            "does not enable `bitnet mac chat` or `bitnet mac serve`",
+        ));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_bitnet_proof_preflight");
@@ -1051,7 +1100,9 @@ fn mac_bitnet_proof_validates_answer_corpus_receipt_without_artifact_sweep()
         .assert()
         .success()
         .stdout(predicate::str::contains("proof receipt verified"))
-        .stdout(predicate::str::contains("does not enable BitNet through `bitnet mac ask`"));
+        .stdout(predicate::str::contains(
+            "does not enable `bitnet mac chat` or `bitnet mac serve`",
+        ));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["result"], "verified");

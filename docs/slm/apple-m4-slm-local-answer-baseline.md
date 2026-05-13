@@ -12,7 +12,9 @@ prompt in
 -> intelligible text out
 ```
 
-This is the current user-facing Mac path. It is separate from the blocked BitNet local-answer lane and from future Metal acceleration work.
+This is the dense SLM user-facing Mac path. BitNet has a separate explicit
+one-shot ask route after the strict answer-corpus proof, and remains separate
+from dense SLM chat/server and future Metal acceleration work.
 
 For the broader validation graph that separates dense SLM UX evidence from
 BitNet / 1-bit model evidence, see
@@ -87,14 +89,15 @@ support status. Fetch warns on low disk headroom and honors `--offline` /
 blocked, candidate, and rejected model states plus disk-headroom guidance for
 first fetches. Its text output prints exact `Next fetch` and `Next verify`
 commands for the recommended first supported model when disk headroom is
-adequate. Blocked BitNet rows also print a receipt-only `bitnet mac
+adequate. The BitNet row also prints a receipt-only `bitnet mac
 bitnet-proof --proof-receipt ...` bridge command so operators can validate the
-strict BitNet answer-corpus proof without treating BitNet as an enabled Mac
-ask/chat/server route. `bitnet model list` is the lower-level cache inventory; use `bitnet
+strict BitNet answer-corpus proof. BitNet is limited to explicit one-shot
+`bitnet mac ask` with verified GGUF/tokenizer authority; it is not an enabled
+Mac chat/server route. `bitnet model list` is the lower-level cache inventory; use `bitnet
 model verify <id>` or `bitnet mac check` when SHA integrity matters.
-Mac answer/service wrappers reject blocked BitNet, diagnostic-only, candidate,
-rejected, and unknown model IDs before cache repair guidance, so operators are
-not pointed at a fetch command for a non-selectable M4 answer model.
+Dense Mac answer/service wrappers reject diagnostic-only, candidate, rejected,
+and unknown model IDs before cache repair guidance, so operators are not pointed
+at a fetch command for a non-selectable M4 answer model.
 
 First-run and repair guidance is intentionally explicit:
 

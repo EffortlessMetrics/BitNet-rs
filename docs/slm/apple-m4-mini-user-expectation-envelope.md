@@ -19,17 +19,25 @@ bitnet mac regression <receipt.json> --baseline <baseline.json>
 ```
 
 `bitnet mac models` is the operator-facing model-selection view. It lists the
-default model, supported explicit-only dense models, cache state, blocked BitNet
-rows, candidate/rejected rows, and disk-headroom guidance without downloading
-artifacts. The text view also prints exact `Next fetch` and `Next verify`
-commands for the recommended first supported model when disk headroom is
-adequate. Blocked BitNet rows include a receipt-only proof bridge command for
-validating a strict `answer-corpus` proof receipt; that bridge does not make
-BitNet selectable through `bitnet mac ask`, `bitnet mac chat`, or
-`bitnet mac serve`.
-If a blocked, diagnostic-only, candidate, rejected, or unknown model ID is passed
-to `bitnet mac ask`, `chat`, `check`, `smoke`, `doctor`, `validate`, or `serve`,
-the wrapper fails before cache repair guidance and points back to
+default model, supported explicit-only dense models, cache state, the BitNet
+one-shot ask row, candidate/rejected rows, and disk-headroom guidance without
+downloading artifacts. The text view also prints exact `Next fetch` and
+`Next verify` commands for the recommended first supported model when disk
+headroom is adequate. The BitNet row includes a receipt bridge command for
+validating a strict `answer-corpus` proof receipt and is limited to explicit
+one-shot ask with a verified GGUF plus external tokenizer:
+
+```bash
+bitnet mac ask \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  "What is 2+2? Answer with only the number."
+```
+
+BitNet is still not enabled for `bitnet mac chat` or `bitnet mac serve`. If a
+diagnostic-only, candidate, rejected, or unknown model ID is passed to the dense
+Mac commands, the wrapper fails before cache repair guidance and points back to
 `bitnet mac models`.
 When `bitnet mac ask` starts with a verified model, it prints a compact stderr
 summary covering model ID, quantization, cache root, backend, fallback status,

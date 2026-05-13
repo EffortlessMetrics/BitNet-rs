@@ -456,8 +456,18 @@ bitnet mac bitnet-proof \
 
 This validates the strict Apple M4 BitNet answer-corpus receipt, including
 case-level backend/fallback, token IDs, tokenizer authority, prompt-prefill, and
-timing fields. It still does not make BitNet selectable through `bitnet mac ask`,
-`bitnet mac chat`, or `bitnet mac serve`.
+timing fields. BitNet is now limited to explicit one-shot ask with the verified
+GGUF and external tokenizer:
+
+```bash
+bitnet mac ask \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  "What is 2+2? Answer with only the number."
+```
+
+This does not enable BitNet through `bitnet mac chat` or `bitnet mac serve`.
 
 If this command fails the content gate with non-empty but incoherent text, treat
 that as a real inference-quality blocker. Do not count the run as a local-answer
