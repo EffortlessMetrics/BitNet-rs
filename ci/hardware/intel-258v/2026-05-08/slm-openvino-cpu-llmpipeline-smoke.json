@@ -3,43 +3,108 @@
   "artifact_kind": "intel_258v_dense_slm_openvino_cpu_llmpipeline_smoke",
   "campaign": "intel-258v-platform",
   "item": "SLM-OV258V-002",
-  "created_utc": "2026-05-13T04:04:12Z",
+  "created_utc": "2026-05-13T05:04:46Z",
   "machine_id": "intel-258v",
-  "proof_stage": "blocked_before_execution",
+  "proof_stage": "answer_smoke_tested",
   "requested_backend": "openvino-cpu",
-  "selected_backend": null,
+  "selected_backend": "openvino-cpu",
   "runtime_api": "openvino_genai",
   "runtime_device": "CPU",
   "backend_lane": "dense_slm_openvino_cpu",
   "fallback_used": false,
-  "fallback_status": "no_fallback_attempted_because_llmpipeline_execution_did_not_start",
+  "fallback_status": "no_fallback_used_cpu_device_requested_and_llmpipeline_constructed_for_cpu",
   "model_family": "qwen",
   "model_architecture": "qwen2",
   "quantization": "INT4_SYM",
   "prompt_template": "qwen2.5",
   "tokenizer_source": "hf_tokenizer_export",
-  "selected_kernel_or_runtime": null,
+  "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
   "baseline_cpu_reference": {
     "openvino_ir_manifest": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+    "previous_preflight_pr": 4565,
+    "previous_preflight_merge_sha": "205979b9dc6e4ea08013dfdb005afe623d19f69b",
     "gguf_manifest": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
     "answer_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
     "phase_receipt": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json"
   },
-  "expected_model": {
+  "model": {
     "repo": "Qwen/Qwen2.5-0.5B-Instruct",
-    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
-    "expected_output_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
-    "expected_model_xml": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
-    "expected_model_bin": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
-    "model_dir_exists": false,
-    "model_xml_exists": false,
-    "model_bin_exists": false,
-    "model_binary_committed": false
+    "revision_requested_in_manifest": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "export_source": "huggingface_model_id_current_revision_because_installed_optimum_cli_has_no_revision_flag",
+    "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "model_binary_committed": false,
+    "files": {
+      "openvino_model_xml": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
+        "exists": true,
+        "bytes": 2167169,
+        "sha256": "92079df4e311238df5a3cd94848fc84730eefbce08e59f053d8a0aeaa7fb39f4"
+      },
+      "openvino_model_bin": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
+        "exists": true,
+        "bytes": 321326157,
+        "sha256": "a15e9535aaf4c8286b7b45f0490dca593cc751450c3b832416ad377bb190b2a9"
+      },
+      "openvino_tokenizer_xml": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.xml",
+        "exists": true,
+        "bytes": 27536,
+        "sha256": "779af8438ed2689107ba0bacc939e81734085d3e1a3dbf403402d2ccc982fe1b"
+      },
+      "openvino_tokenizer_bin": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.bin",
+        "exists": true,
+        "bytes": 5588603,
+        "sha256": "651d8b86c94c40710919f6089189a748ebf4ad1b0f0da728440454d14379b078"
+      },
+      "openvino_detokenizer_xml": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.xml",
+        "exists": true,
+        "bytes": 10030,
+        "sha256": "a1d28ba5b537fd7a07771e2b019fbdbd29f8d3e57f3b928e6827dd5a1aff813d"
+      },
+      "openvino_detokenizer_bin": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.bin",
+        "exists": true,
+        "bytes": 2189639,
+        "sha256": "3ca47601554a3b871c1e45e8f31aa6e17d726365c075fb430d1a2089484ae8d6"
+      },
+      "tokenizer_json": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer.json",
+        "exists": true,
+        "bytes": 11421896,
+        "sha256": "9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa"
+      },
+      "tokenizer_config_json": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer_config.json",
+        "exists": true,
+        "bytes": 4893,
+        "sha256": "5fd4cea2574beb6b70ba31582179880d331b723f5b5119ee67c29d45b983f7be"
+      },
+      "generation_config_json": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/generation_config.json",
+        "exists": true,
+        "bytes": 256,
+        "sha256": "b017173db4a82cfc6dc6e4368aee7f8f4eceeb380cdae840528833be24ac45c8"
+      },
+      "chat_template_jinja": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/chat_template.jinja",
+        "exists": true,
+        "bytes": 2561,
+        "sha256": "8aa40ce145adb73cb3a75194dc0224702a95850ec5275cabb728496bbd749fc6"
+      }
+    },
+    "export_command_run": ".\\.venv\\Scripts\\optimum-cli.exe export openvino -m Qwen/Qwen2.5-0.5B-Instruct --weight-format int4 --sym --ratio 1.0 --group-size 128 models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "export_notes": [
+      "The installed optimum-cli export openvino parser does not accept --revision, so this local execution used the model id directly.",
+      "The export completed with NNCF weight compression: 168/169 ratio-defining layers int4_sym group size 128 and one parameter group retained as int8_asym backup.",
+      "The exported model/tokenizer files live under ignored top-level models/ and are not committed."
+    ]
   },
   "environment": {
-    "python": "C:/Python314/python.exe",
+    "python": ".venv/Scripts/python.exe",
     "openvino": {
-      "available": true,
       "version": "2026.1.0-21367-63e31528c62-releases/2026/1",
       "available_devices": [
         "CPU",
@@ -48,52 +113,306 @@
       ]
     },
     "openvino_genai": {
-      "available": false,
-      "error": "ModuleNotFoundError: No module named 'openvino_genai'"
-    },
-    "optimum": {
-      "available": false,
-      "error": "ModuleNotFoundError: No module named 'optimum'"
+      "version": "2026.1.0.0-2957-1dabb8c2255"
     },
     "transformers": {
-      "available": false,
-      "error": "ModuleNotFoundError: No module named 'transformers'"
-    }
+      "tokenizer_loaded_from_export_dir": true,
+      "retokenization_warning_observed": "Transformers emitted a tokenizer regex warning while loading the exported tokenizer for prompt/output ID evidence; generated-token claims remain conservative and OpenVINO GenAI internal generated token IDs are not claimed."
+    },
+    "nncf_required_for_export": true
   },
-  "blocked_by": [
-    "openvino_genai Python module is not installed in the active Python environment.",
-    "The exported OpenVINO IR model directory is absent.",
-    "optimum and transformers are absent, so this host cannot export the Qwen2.5 source model in-place."
-  ],
-  "attempted_actions": [
-    "Verified OpenVINO Python runtime import and available devices.",
-    "Checked for openvino_genai, optimum, and transformers Python modules.",
-    "Checked for the expected exported OpenVINO IR model directory and model files."
-  ],
-  "not_attempted": [
-    "OpenVINO GenAI LLMPipeline creation.",
-    "OpenVINO CPU text generation.",
-    "Answer-gate comparison against the GGUF CPU baseline.",
-    "Phase timing."
-  ],
-  "next_action": {
-    "export_command": "optimum-cli export openvino --model Qwen/Qwen2.5-0.5B-Instruct --revision 7ae557604adf67be50417f59c2c2f167def9a775 --weight-format int4 --sym --ratio 1.0 --group-size 128 models/openvino/qwen2.5-0.5b-instruct-int4-sym",
-    "run_after_export": "Create an OpenVINO GenAI LLMPipeline on device CPU, run the bounded Qwen2.5 answer corpus, and compare generated IDs/text to the existing GGUF CPU baseline."
+  "generation": {
+    "cases_total": 3,
+    "passed": 3,
+    "failed": 0,
+    "quality_gate_scope": "bounded_three_case_dense_slm_smoke_only",
+    "cases": [
+      {
+        "id": "math_2_plus_2",
+        "question": "What is 2+2? Answer briefly.",
+        "prompt_template": "qwen2.5",
+        "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+        "prompt_token_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          1207,
+          16948,
+          11,
+          3465,
+          553,
+          54364,
+          14817,
+          13,
+          1446,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          3838,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          21806,
+          26753,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ],
+        "max_new_tokens": 8,
+        "greedy": true,
+        "generation_config": {
+          "do_sample": false,
+          "num_beams": 1,
+          "apply_chat_template": true,
+          "max_new_tokens": 8
+        },
+        "generated_text": "2+2 equals 4.",
+        "generated_token_ids_available": false,
+        "decoded_text_retokenized_token_ids": [
+          17,
+          10,
+          17,
+          16819,
+          220,
+          19,
+          13
+        ],
+        "elapsed_ms": 1354.64,
+        "answer_gate": {
+          "kind": "contains_any",
+          "contains_any": [
+            "4",
+            "four"
+          ],
+          "matched": [
+            "4"
+          ],
+          "passed": true
+        },
+        "fallback_used": false,
+        "selected_backend": "openvino-cpu",
+        "runtime_api": "openvino_genai",
+        "runtime_device": "CPU"
+      },
+      {
+        "id": "capital_france",
+        "question": "Name the capital of France.",
+        "prompt_template": "qwen2.5",
+        "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+        "prompt_token_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          1207,
+          16948,
+          11,
+          3465,
+          553,
+          54364,
+          14817,
+          13,
+          1446,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          675,
+          279,
+          6722,
+          315,
+          9625,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ],
+        "max_new_tokens": 8,
+        "greedy": true,
+        "generation_config": {
+          "do_sample": false,
+          "num_beams": 1,
+          "apply_chat_template": true,
+          "max_new_tokens": 8
+        },
+        "generated_text": "The capital of France is Paris.",
+        "generated_token_ids_available": false,
+        "decoded_text_retokenized_token_ids": [
+          785,
+          6722,
+          315,
+          9625,
+          374,
+          12095,
+          13
+        ],
+        "elapsed_ms": 163.678,
+        "answer_gate": {
+          "kind": "contains_any",
+          "contains_any": [
+            "Paris",
+            "paris"
+          ],
+          "matched": [
+            "Paris"
+          ],
+          "passed": true
+        },
+        "fallback_used": false,
+        "selected_backend": "openvino-cpu",
+        "runtime_api": "openvino_genai",
+        "runtime_device": "CPU"
+      },
+      {
+        "id": "rust_sentence",
+        "question": "Write one short sentence about Rust.",
+        "prompt_template": "qwen2.5",
+        "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+        "prompt_token_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          1207,
+          16948,
+          11,
+          3465,
+          553,
+          54364,
+          14817,
+          13,
+          1446,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          7985,
+          825,
+          2805,
+          11652,
+          911,
+          33789,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ],
+        "max_new_tokens": 16,
+        "greedy": true,
+        "generation_config": {
+          "do_sample": false,
+          "num_beams": 1,
+          "apply_chat_template": true,
+          "max_new_tokens": 16
+        },
+        "generated_text": "Rust is a powerful, safe, and efficient programming language designed to be highly",
+        "generated_token_ids_available": false,
+        "decoded_text_retokenized_token_ids": [
+          49,
+          590,
+          374,
+          264,
+          7988,
+          11,
+          6092,
+          11,
+          323,
+          11050,
+          15473,
+          4128,
+          6188,
+          311,
+          387,
+          7548
+        ],
+        "elapsed_ms": 257.891,
+        "answer_gate": {
+          "kind": "contains_any",
+          "contains_any": [
+            "Rust",
+            "rust",
+            "programming",
+            "language",
+            "safety",
+            "efficient"
+          ],
+          "matched": [
+            "Rust",
+            "programming",
+            "language",
+            "efficient"
+          ],
+          "passed": true
+        },
+        "fallback_used": false,
+        "selected_backend": "openvino-cpu",
+        "runtime_api": "openvino_genai",
+        "runtime_device": "CPU"
+      }
+    ]
+  },
+  "timing": {
+    "pipeline_load_ms": 2568.457,
+    "case_elapsed_ms_sum": 1776.209,
+    "timing_is_smoke_level": true,
+    "speedup_claimed": false
+  },
+  "verification": {
+    "llmpipeline_constructed": true,
+    "generation_ran": true,
+    "all_answer_gates_passed": true,
+    "fallback_used": false,
+    "generated_token_ids_available_from_pipeline": false,
+    "decoded_text_retokenized_ids_recorded": true
   },
   "claim_boundary": {
     "may_claim": [
-      "OpenVINO Runtime 2026.1 is importable on this host and reports CPU, GPU, and NPU devices.",
-      "The OpenVINO CPU LLMPipeline smoke is blocked before execution by missing openvino_genai and missing exported IR model files.",
+      "Qwen2.5 OpenVINO IR INT4 symmetric model files were exported locally under an ignored models/ path.",
+      "OpenVINO GenAI 2026.1 LLMPipeline constructed on CPU and generated text for the bounded three-case Qwen2.5 dense SLM smoke.",
+      "The bounded answer gates passed with fallback_used=false for the CPU LLMPipeline smoke.",
       "No model binary is committed."
     ],
     "must_not_claim": [
-      "OpenVINO CPU LLMPipeline execution works.",
-      "OpenVINO CPU selected the model or generated text.",
-      "OpenVINO CPU fallback_used=false is proven for generation.",
-      "Dense SLM answer quality improves.",
-      "OpenVINO CPU speedup or phase performance is proven.",
-      "Arc 140V or Intel NPU execution is proven.",
-      "BitNet QK256/I2_S proof is affected."
+      "OpenVINO GPU or Arc 140V execution is proven.",
+      "OpenVINO NPU execution is proven.",
+      "Dense SLM broad answer quality is proven.",
+      "OpenVINO CPU speedup or sustained phase performance is proven.",
+      "BitNet QK256/I2_S proof is affected.",
+      "Dense SLM receipts prove BitNet packed-kernel behavior.",
+      "Generated token IDs are captured directly from OpenVINO GenAI internals."
     ]
   }
 }
