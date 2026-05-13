@@ -1,0 +1,20 @@
+timestamp = "2026-05-13T22:22:14Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4647
+merge_sha = "8a0d463ba0e5be69d5c382a050e0d8a034f7fd38"
+actor = "codex"
+branch = "codex/apple-m4-local-answer/M4-BITNET-ASK-001-runtime-receipt"
+summary = "Marked M4-BITNET-ASK-001 merged after the Apple M4 BitNet ask runtime receipt landed."
+
+artifacts = [
+  "ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json",
+]
+
+notes = [
+  "The merged receipt proves one strict Apple M4 CPU/NEON BitNet mac ask route with fallback_used=false and accepted model/tokenizer identity.",
+  "No BitNet chat, serve, Metal full inference, Neural Engine, MPSGraph, QK256 Apple Silicon, broad quality, or speedup claim is made.",
+]
