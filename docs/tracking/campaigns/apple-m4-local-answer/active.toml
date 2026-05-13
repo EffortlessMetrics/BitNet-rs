@@ -217,7 +217,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-QA-002"
-status = "proposed"
+status = "merged"
+merge_sha = "9fa3e532b89c36885c54350700d75a740a93911e"
 branch = "codex/apple-m4-local-answer/M4-QA-002-greedy-determinism"
 stackable = false
 review_mode = "codex_premerge"
@@ -249,8 +250,18 @@ forbidden_paths = [
   "crates/bitnet-server/**",
   "crates/bitnet-kernels/src/metal/**",
 ]
-may_claim = []
-must_not_claim = []
+may_claim = [
+  "Greedy repeat parity passed for the committed five-case Apple M4 CPU/NEON BitNet answer corpus under fixed model, tokenizer, prompt template, backend, and runtime settings.",
+]
+must_not_claim = [
+  "General BitNet chat quality is proven.",
+  "BitNet is selectable through `bitnet mac ask`, `bitnet mac chat`, or `bitnet mac serve`.",
+  "Full apple-m4-metal model inference works.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+  "MacBook coverage or broad performance is proven.",
+]
 
 [[work_item]]
 id = "M4-QA-003"

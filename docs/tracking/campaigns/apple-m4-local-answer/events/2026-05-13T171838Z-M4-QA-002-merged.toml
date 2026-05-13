@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T17:18:38Z"
+campaign = "apple-m4-local-answer"
+item = "M4-QA-002"
+event = "merged"
+merge_sha = "9fa3e532b89c36885c54350700d75a740a93911e"
+actor = "codex"
+
+notes = [
+  "Closed M4-QA-002 using the repeat-run parity evidence committed by #4618 after M4-QA-001 landed and was recorded merged.",
+  "Run A receipt: ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-a.json.",
+  "Run B receipt: ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-determinism-b.json.",
+  "Parity receipt: ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-local-answer/bitnet-answer-corpus-repeat-parity.json.",
+  "The parity receipt records total=5, passed=5, failed=0, first_divergence=null, same_real_gguf=true, same_tokenizer=true, same_prompt_template=true, same_greedy_settings=true, and per-case matching generated token IDs with fallback_used=false.",
+  "Claim boundaries remain narrow: this proves deterministic repeat parity for the fixed Apple M4 CPU/NEON BitNet answer corpus only; it does not enable bitnet mac ask/chat/server, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, MacBook coverage, broad quality, or performance claims.",
+]
