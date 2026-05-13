@@ -17,6 +17,20 @@ discipline: if verification is too expensive, people avoid running it; if it is
 cheap, deterministic, and well-scoped, it becomes part of the normal
 development loop.
 
+
+## Routed CI rollout
+
+The active implementation playbook for turning this policy into small,
+reviewable workflow changes is `docs/ci/routed-ci-rollout.md`. That rollout is
+the source of truth for agent work-item order, required PR body sections,
+per-PR scope files, validation commands, and acceptance criteria.
+
+The rollout keeps the policy north star explicit: ordinary PRs receive
+Linux-only deterministic proof scoped to changed crates and risk, while macOS,
+Windows, Docker, model-download, hardware, broad performance, coverage, and
+release-strength validation remain available on `main`, schedules, manual
+dispatch, campaign/hardware lanes, or explicit labels.
+
 ## Cost target
 
 For ordinary PRs, our operating target is:

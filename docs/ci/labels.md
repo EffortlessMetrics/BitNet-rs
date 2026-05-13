@@ -282,3 +282,27 @@ gh pr edit <PR> --add-label lut
 <\!-- ci: trigger core checks for PR template change -->
 
 <\!-- ci: trigger core checks for dependabot.yml change -->
+
+## Routed CI rollout labels
+
+The routed CI rollout keeps ordinary PRs Linux-only by default. Use these labels
+to opt into lanes that are intentionally not part of the default PR budget:
+
+| Label | Enables | Notes |
+| --- | --- | --- |
+| `full-ci` | All relevant expanded proof for the PR risk | Also acts as a budget override. |
+| `ci-budget-ack` | Acknowledges high-but-below-hard-ceiling LEM estimates | Intended for 101-125 LEM once budget guard enforcement lands. |
+| `ci-budget-override` | Overrides estimates above the hard ceiling | Maintainer-owned escape hatch for exceptional PRs. |
+| `macos` | macOS proof | Not run for ordinary PRs. |
+| `apple-silicon` | Apple Silicon proof | Use for Apple-specific platform changes. |
+| `metal` | Metal compile or Apple GPU proof | Use for Metal-specific paths. |
+| `performance` / `perf` | Performance baseline tracking | Off ordinary PRs. |
+| `test-telemetry` / `slow-tests` | JUnit and slow-test telemetry | Advisory and off ordinary PRs. |
+| `msrv` / `compatibility` | MSRV compatibility | Also selected by manifest/toolchain/public API risk. |
+| `full-cli` / `feature-matrix` | Expanded feature matrix, including `cpu+full-cli` | Risk-selected after the rollout. |
+| `gpu-ci` | GPU native compile checks | Docker remains label/main/manual only. |
+| `docker` | GPU Docker proof when combined with GPU/full-CI risk | Never ordinary PR default. |
+| `coverage` | Rust CPU coverage lane | Execution-surface evidence only. |
+
+See `docs/ci/routed-ci-rollout.md` for the rollout queue and exact acceptance
+criteria for each lane migration.

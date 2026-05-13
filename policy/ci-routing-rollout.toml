@@ -1,0 +1,144 @@
+schema_version = "1.0"
+policy = "ci-routing-rollout"
+owner = "release/ci"
+status = "active"
+updated = "2026-05-12"
+
+[goals]
+north_star = "Default PRs get cheap, Linux-only, deterministic, crate/risk-scoped proof. Expensive proof remains available on main, schedules, release, hardware/campaign lanes, or explicit labels."
+preferred_default_lem = 25
+default_limit_lem = 35
+ordinary_rust_target_lem = "25-34"
+docs_tracking_target_lem = "3-8"
+manifest_toolchain_target_lem = "35-50+"
+
+[runner_multipliers]
+linux = 1
+windows = 2
+macos = 10
+gpu_docker = 6
+
+[override_labels]
+full_ci = "full-ci"
+budget_ack = "ci-budget-ack"
+budget_override = "ci-budget-override"
+
+[[work_item]]
+order = 1
+title = "ci: remove macOS from ordinary PRs"
+phase = "immediate_default_cost_waste"
+files = [".github/workflows/macos-arm64.yml", "policy/ci-lanes.toml", "policy/ci-lane-whitelist.toml", "docs/ci/cost-and-verification-policy.md", "docs/ci/labels.md"]
+removed_from_default = ["macos-14 broad PR jobs"]
+still_available_by = ["push:main", "workflow_dispatch", "merge_group if required", "labels:macos,apple-silicon,metal,full-ci", "Mac/Metal-specific paths"]
+validation = ["git diff --check", "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check", "cargo run --locked -p xtask --no-default-features -- check-file-policy --report-dir target/bitnet/reports --fail-on-error"]
+
+[[work_item]]
+order = 2
+title = "ci: move performance smoke off default PRs"
+phase = "immediate_default_cost_waste"
+files = [".github/workflows/performance-tracking.yml", "policy/ci-lanes.toml", "policy/ci-lane-whitelist.toml", "docs/ci/cost-and-verification-policy.md"]
+removed_from_default = ["Performance Baseline Tracking workspace smoke"]
+still_available_by = ["push:main", "schedule", "workflow_dispatch", "labels:performance,perf,full-ci"]
+validation = ["git diff --check", "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check"]
+
+[[work_item]]
+order = 3
+title = "ci: move test telemetry to main and label"
+phase = "immediate_default_cost_waste"
+files = [".github/workflows/test-telemetry.yml", "policy/ci-lanes.toml", "policy/ci-lane-whitelist.toml", "docs/ci/cost-and-verification-policy.md"]
+removed_from_default = ["Test Telemetry 18 LEM advisory lane"]
+still_available_by = ["push:main", "workflow_dispatch", "optional schedule", "labels:test-telemetry,slow-tests,full-ci"]
+validation = ["git diff --check", "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check"]
+
+[[work_item]]
+order = 4
+title = "ci: risk-gate MSRV compatibility"
+phase = "immediate_default_cost_waste"
+files = [".github/workflows/compatibility.yml", "policy/ci-lanes.toml", "policy/ci-lane-whitelist.toml", "policy/ci-risk-packs.toml", "docs/ci/cost-and-verification-policy.md"]
+removed_from_default = ["MSRV for leaf implementation PRs"]
+still_available_by = ["manifest/toolchain/dependency/public API risk", "push:main", "workflow_dispatch", "labels:msrv,compatibility,full-ci"]
+validation = ["git diff --check", "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check", "cargo check --locked -p bitnet-common -p bitnet-models -p bitnet-tokenizers -p bitnet-quantization -p bitnet-kernels --tests --no-default-features --features cpu"]
+
+[[work_item]]
+order = 5
+title = "ci(plan): emit stable routing schema"
+phase = "authoritative_routing"
+files = ["xtask/src/ci/plan.rs", "xtask/src/ci/mod.rs", "policy/ci-budget.toml", "policy/ci-lanes.toml", "policy/ci-risk-packs.toml", "docs/ci/pr-plan.md", "tests/fixtures/ci-plan/**"]
+validation = ["cargo test -p xtask --no-default-features ci_plan --locked", "cargo run --locked -p xtask --no-default-features -- ci plan --changed-file tests/fixtures/ci-plan/rust.txt --labels-json '[]' --json-out target/ci-plan.json --print", "cargo run --locked -p xtask --no-default-features -- ci plan --changed-file tests/fixtures/ci-plan/docs.txt --labels-json '[]' --json-out target/ci-plan-docs.json --print", "git diff --check"]
+
+[[work_item]]
+order = 6
+title = "ci(gate): make PR Gate consume ci plan"
+phase = "authoritative_routing"
+files = [".github/workflows/pr-gate.yml", ".github/workflows/pr-plan.yml", "xtask/src/ci/plan.rs", "docs/ci/pr-gate-success.md"]
+validation = ["cargo test -p xtask --no-default-features ci_plan --locked", "git diff --check"]
+
+[[work_item]]
+order = 7
+title = "ci: add soft budget guard"
+phase = "authoritative_routing"
+files = ["xtask/src/ci/plan.rs", ".github/workflows/pr-plan.yml", ".github/workflows/pr-gate.yml", "docs/ci/cost-and-verification-policy.md"]
+validation = ["cargo test -p xtask --no-default-features ci_plan_budget --locked", "git diff --check"]
+
+[[work_item]]
+order = 8
+title = "ci-core: broaden no-Rust fast path"
+phase = "narrow_default_linux_proof"
+files = [".github/workflows/ci-core.yml", "xtask/src/ci/plan.rs", "docs/ci/cost-and-verification-policy.md"]
+validation = ["git diff --check", "cargo run --locked -p xtask --no-default-features -- ci plan --changed-file tests/fixtures/ci-plan/docs.txt --labels-json '[]' --json-out target/ci-plan-docs.json --print"]
+
+[[work_item]]
+order = 9
+title = "ci-core: package-select build/test surface"
+phase = "narrow_default_linux_proof"
+files = ["xtask/src/ci/plan.rs", ".github/workflows/ci-core.yml", "docs/ci/cost-and-verification-policy.md"]
+validation = ["cargo test -p xtask --no-default-features ci_plan_packages --locked", "cargo run --locked -p xtask --no-default-features -- ci plan --changed-file tests/fixtures/ci-plan/quantization.txt --labels-json '[]' --json-out target/ci-plan-quant.json --print", "git diff --check"]
+
+[[work_item]]
+order = 10
+title = "feature-matrix: reduce ordinary PR feature smoke"
+phase = "narrow_default_linux_proof"
+files = [".github/workflows/feature-matrix.yml", "policy/ci-risk-packs.toml", "policy/ci-lanes.toml", "docs/ci/cost-and-verification-policy.md"]
+validation = ["git diff --check", "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check"]
+
+[[work_item]]
+order = 11
+title = "ci: stop selected gates from swallowing failures"
+phase = "honest_advisory_lanes"
+files = [".github/workflows/validation.yml", ".github/workflows/test-framework.yml", ".github/workflows/compatibility.yml", "docs/ci/cost-and-verification-policy.md", "policy/ci-lanes.toml"]
+validation = ["git diff --check", "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check"]
+
+[[work_item]]
+order = 12
+title = "gpu-ci: remove duplicate CPU native check"
+phase = "honest_advisory_lanes"
+files = [".github/workflows/gpu-ci-matrix.yml", "policy/ci-lanes.toml", "policy/ci-risk-packs.toml"]
+validation = ["git diff --check", "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check"]
+
+[[work_item]]
+order = 13
+title = "coverage: keep Codecov lane quiet and policy-declared"
+phase = "coverage_as_measured_evidence"
+files = [".github/workflows/coverage.yml", "codecov.yml", "README.md", "docs/ci/coverage.md", "policy/ci-lanes.toml", "policy/ci-lane-whitelist.toml"]
+validation = ["git diff --check", "cargo run --locked -p xtask --no-default-features -- ci-lane-whitelist check"]
+
+[[work_item]]
+order = 14
+title = "coverage: add coverage receipt and ignored-failure accounting"
+phase = "coverage_as_measured_evidence"
+files = [".github/workflows/coverage.yml", "docs/ci/coverage.md"]
+validation = ["git diff --check"]
+
+[[work_item]]
+order = 15
+title = "policy(clippy): document strict agent lint baseline"
+phase = "cheap_verification_density"
+files = ["docs/ci/clippy-policy.md", "policy/clippy-lints.toml", "clippy.toml", "Cargo.toml", "docs/ci/cost-and-verification-policy.md"]
+validation = ["cargo run --locked -p xtask --no-default-features -- check-lint-policy --report-dir target/bitnet/reports --fail-on-error", "git diff --check"]
+
+[[work_item]]
+order = 20
+title = "ci: make PR Gate the only required check"
+phase = "required_check_consolidation"
+files = [".github/workflows/pr-gate.yml", "docs/ci/pr-gate-success.md", "docs/ci/branch-protection.md"]
+validation = ["git diff --check"]
