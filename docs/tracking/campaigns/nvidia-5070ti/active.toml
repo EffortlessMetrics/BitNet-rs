@@ -2049,6 +2049,91 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-PROD-008"
+status = "ready"
+branch = "docs/cuda-5070ti-proof-reconciliation"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Reconcile the 5070 Ti BitNet and dense proof state before runtime changes, including current state, last real receipt, next missing proof, and claim boundaries."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/tracking/campaigns/nvidia-5070ti/CAMPAIGN.md",
+  "docs/tracking/campaigns/nvidia-5070ti/active.toml",
+  "plans/cuda-5070ti-productization/**",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+]
+forbidden_paths = [
+  "crates/**",
+  ".github/workflows/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/artifact-manifest.toml",
+  "ci/model-artifacts/tokenizer-authority.toml",
+  "docs/tracking/generated/**",
+]
+may_claim = [
+  "The CUDA 5070 Ti productization current-state ledger is reconciled against existing source-of-truth docs.",
+  "The next BitNet proof is profile-specific benchmark qualification.",
+  "The next dense Qwen proof is a receipt-source audit before further promotion.",
+]
+must_not_claim = [
+  "Runtime behavior changed.",
+  "New CUDA execution proof exists.",
+  "New model answer readiness exists.",
+  "Dense Qwen proof is BitNet proof.",
+  "BitNet QK256 proof is dense SLM proof.",
+  "CUDA speedup is accepted.",
+  "Generated dashboards were hand-edited.",
+]
+
+[[work_item]]
+id = "CUDA-DENSE-050"
+status = "planned"
+branch = "docs/cuda-dense-qwen25-product-audit"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-PROD-008"]
+acceptance = "Audit Qwen2.5 0.5B Q8_0 dense CUDA receipts to distinguish real hardware/user-path evidence from validators and contracts before new dense runtime work."
+commands = [
+  "python -m json.tool <each committed dense qwen receipt>",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/reports/CUDA_DENSE_QWEN25_Q8_PRODUCT_AUDIT.md",
+  "docs/tracking/campaigns/nvidia-5070ti/CAMPAIGN.md",
+  "docs/tracking/campaigns/nvidia-5070ti/active.toml",
+  "plans/cuda-5070ti-productization/**",
+]
+forbidden_paths = [
+  "crates/**",
+  ".github/workflows/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "docs/tracking/generated/**",
+]
+may_claim = [
+  "The dense Qwen current proof state has been audited.",
+  "Committed dense Qwen receipts are classified as hardware/user-path evidence, validator evidence, contract evidence, or synthetic fixtures.",
+]
+must_not_claim = [
+  "Runtime behavior changed.",
+  "New dense CUDA proof exists.",
+  "Dense Qwen proof is BitNet proof.",
+  "Dense Qwen speedup is accepted.",
+  "Server readiness exists.",
+  "Generated dashboards were hand-edited.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-PERF-001"
 status = "merged"
 branch = "codex/cuda-dense-perf-001-baseline"

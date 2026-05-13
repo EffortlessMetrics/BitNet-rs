@@ -43,6 +43,21 @@ All work items link to:
 - Receipt root:
   `ci/hardware/windows-9950x3d-rtx5070ti/**`
 
+## Current-State Ledger
+
+| Lane | Current state | Last real receipt | Next missing proof |
+| --- | --- | --- | --- |
+| BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | profile-specific benchmark qualification |
+| Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; audit exact receipt source before further promotion | `ci/hardware/windows-9950x3d-rtx5070ti/**/dense-*.json` | distinguish real hardware/user-path receipts from validators and contracts |
+| Qwen3 0.6B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
+| SmolLM2 360M | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
+| Llama 3.2 1B | registered candidate | none | artifact contract, tokenizer/prompt authority, CPU sanity |
+| Llama 3.2 3B | registered candidate | none | memory envelope, artifact contract, tokenizer/prompt authority |
+| Gemma/Phi small | registered candidate | none | architecture policy, artifact contract, tokenizer/prompt authority |
+
+This ledger does not promote claims. It records the reconciliation target for
+CUDA-PROD-008 and the audit target for CUDA-DENSE-050.
+
 ## Work item: CUDA-PROD-008
 
 Status: ready
