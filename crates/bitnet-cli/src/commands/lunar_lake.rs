@@ -47,6 +47,10 @@ pub enum LunarLakeAction {
         #[arg(long)]
         json_out: Option<PathBuf>,
 
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
         /// Fail when required operator evidence is missing or fallback is observed.
         #[arg(long, default_value_t = false)]
         strict: bool,
@@ -114,8 +118,17 @@ pub struct ClaimBoundary {
 impl LunarLakeCommand {
     pub async fn execute(&self) -> Result<()> {
         match &self.action {
-            LunarLakeAction::Validate { artifact_root, json_out, strict } => {
-                let receipt = build_operator_readiness_receipt(artifact_root)?;
+            LunarLakeAction::Validate { artifact_root, json_out, created_utc, strict } => {
+                let receipt = match created_utc {
+                    Some(created_utc) => {
+                        let created_utc = normalize_created_utc(created_utc)?;
+                        build_operator_readiness_receipt_with_created_utc(
+                            artifact_root,
+                            created_utc,
+                        )?
+                    }
+                    None => build_operator_readiness_receipt(artifact_root)?,
+                };
                 write_or_print_receipt(&receipt, json_out.as_deref())?;
                 if *strict && !receipt.operator_ready {
                     bail!("Lunar Lake operator readiness failed: {}", receipt.gaps.join("; "));
@@ -127,6 +140,16 @@ impl LunarLakeCommand {
 }
 
 pub fn build_operator_readiness_receipt(root: &Path) -> Result<LunarLakeOperatorReceipt> {
+    build_operator_readiness_receipt_with_created_utc(
+        root,
+        chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    )
+}
+
+pub fn build_operator_readiness_receipt_with_created_utc(
+    root: &Path,
+    created_utc: String,
+) -> Result<LunarLakeOperatorReceipt> {
     let evidence = vec![
         inspect_receipt(
             root,
@@ -240,7 +263,7 @@ pub fn build_operator_readiness_receipt(root: &Path) -> Result<LunarLakeOperator
         schema_version: "1.0.0".to_string(),
         artifact_kind: "lunar_lake_operator_readiness".to_string(),
         proof_stage: "operator_routes_indexed".to_string(),
-        created_utc: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        created_utc,
         machine_id: "intel-258v".to_string(),
         artifact_root: path_string(root),
         operator_ready: gaps.is_empty(),
@@ -258,6 +281,12 @@ pub fn build_operator_readiness_receipt(root: &Path) -> Result<LunarLakeOperator
             hidden_fallback_allowed: false,
         },
     })
+}
+
+fn normalize_created_utc(created_utc: &str) -> Result<String> {
+    let timestamp = chrono::DateTime::parse_from_rfc3339(created_utc)
+        .with_context(|| format!("invalid --created-utc timestamp `{created_utc}`"))?;
+    Ok(timestamp.with_timezone(&chrono::Utc).to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -620,6 +649,20 @@ mod tests {
 
         assert!(!receipt.operator_ready);
         assert!(receipt.gaps.iter().any(|gap| gap.contains("fallback_used=true")));
+        Ok(())
+    }
+
+    #[test]
+    fn operator_readiness_accepts_reproducible_timestamp() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+
+        let receipt = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            normalize_created_utc("2026-05-13T11:36:09-04:00")?,
+        )?;
+
+        assert_eq!(receipt.created_utc, "2026-05-13T15:36:09Z");
         Ok(())
     }
 

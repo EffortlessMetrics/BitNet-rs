@@ -2778,8 +2778,8 @@ commands = [
   "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs crates/bitnet-cli/src/commands/mod.rs crates/bitnet-cli/src/main.rs",
   "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -j 2",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -j 1 commands::lunar_lake::tests -- --nocapture",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake validate --artifact-root ci/hardware/intel-258v/2026-05-08 --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json --strict",
-  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake validate --artifact-root ci/hardware/intel-258v/2026-05-08 --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json --created-utc 2026-05-13T15:36:09Z --strict",
+  "python3 -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
   "git diff --check",
 ]
 allowed_paths = [
