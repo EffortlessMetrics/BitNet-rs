@@ -1,0 +1,18 @@
+timestamp = "2026-05-13T07:19:32Z"
+campaign = "intel-258v-platform"
+item = "SLM-OV258V-004"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4588
+actor = "codex"
+head_sha = "85720ec1f151fbfc3e70d945c85ff49e7ee9bbc2"
+branch = "codex/lunar-lake/SLM-OV258V-004-openvino-npu-smoke"
+summary = "Opened SLM-OV258V-004 to record a Qwen2.5 OpenVINO NPU LLMPipeline bounded smoke on Intel AI Boost."
+
+notes = [
+  "The local .venv has OpenVINO GenAI 2026.1 and the Qwen2.5 INT4 symmetric IR export exists under ignored models/.",
+  "OpenVINO GenAI LLMPipeline constructed on NPU and resolved Intel(R) AI Boost identity with fallback_used=false.",
+  "The bounded dense SLM smoke passed for math_2_plus_2, capital_france, and rust_sentence.",
+  "No OpenVINO GPU/Arc execution, native NPU inference outside OpenVINO GenAI, NPU speedup or sustained phase performance, beam or parallel sampling support, broad dense SLM quality, direct GenAI generated-token ID capture, or BitNet QK256/I2_S proof is claimed.",
+]
