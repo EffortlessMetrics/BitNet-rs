@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T20:43:00Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-001"
+event = "closeout"
+actor = "codex"
+previous_status = "proposed"
+new_status = "ready"
+
+notes = [
+  "Queued the next BitNet user-route proof after #4637 landed.",
+  "The next PR should prove the user-facing `bitnet mac ask` command completes with accepted Microsoft I2_S GGUF and external tokenizer identity, strict apple-m4-cpu-neon routing, fallback_used=false, valid UTF-8, coherent non-empty output, generated token IDs, and timing receipt fields.",
+  "If the run is too slow, the work should record load, tokenizer, prefill, first-token, decode timing, timeout boundary, and where the delay occurs rather than hiding the failure or claiming success.",
+  "BitNet chat, BitNet serve, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, broad quality, and performance claims remain out of scope.",
+]
