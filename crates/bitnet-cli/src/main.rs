@@ -3302,7 +3302,7 @@ fn write_json_output_silent(path: &std::path::Path, value: &serde_json::Value) -
     Ok(())
 }
 
-fn answer_corpus_child_phase(phase: &str, details: serde_json::Value) {
+pub(crate) fn answer_corpus_child_phase(phase: &str, details: serde_json::Value) {
     let Some(path) = std::env::var_os("BITNET_ANSWER_CORPUS_CHILD_PHASE_PATH") else {
         return;
     };
@@ -3458,7 +3458,7 @@ fn detect_loader_mode_for_path(path: &std::path::Path, is_hf_directory: bool) ->
 }
 
 #[derive(Debug, Clone)]
-struct RunBackendIdentity {
+pub(crate) struct RunBackendIdentity {
     requested_backend: String,
     selected_backend: String,
     runtime_api: String,
@@ -3466,7 +3466,7 @@ struct RunBackendIdentity {
     fallback_reason: Option<String>,
 }
 
-fn resolve_run_backend_identity(
+pub(crate) fn resolve_run_backend_identity(
     requested_backend_label: &str,
     strict_backend: bool,
 ) -> Result<RunBackendIdentity> {
@@ -3994,7 +3994,7 @@ fn qwen_trace_prompt_id_override() -> Result<Option<Vec<u32>>> {
     Ok(Some(ids))
 }
 
-fn nvidia_smi_memory_used_bytes(device_index: Option<usize>) -> Option<u64> {
+pub(crate) fn nvidia_smi_memory_used_bytes(device_index: Option<usize>) -> Option<u64> {
     let mut command = std::process::Command::new("nvidia-smi");
     let index_arg;
     if let Some(index) = device_index {
@@ -4151,63 +4151,15 @@ async fn run_simple_generation(
     // Override temperature if greedy mode
     let temperature = if greedy { 0.0 } else { temperature };
 
-    let strict_backend = strict_loader
-        || std::env::var("BITNET_STRICT_MODE")
-            .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
-            .unwrap_or(false);
-    answer_corpus_child_phase(
-        "backend_select_start",
-        serde_json::json!({
-            "requested_backend": requested_backend_label,
-            "strict_backend": strict_backend,
-        }),
-    );
-    let backend_identity = resolve_run_backend_identity(requested_backend_label, strict_backend)?;
-    answer_corpus_child_phase(
-        "backend_select_complete",
-        serde_json::json!({
-            "requested_backend": backend_identity.requested_backend.as_str(),
-            "selected_backend": backend_identity.selected_backend.as_str(),
-            "runtime_api": backend_identity.runtime_api.as_str(),
-            "fallback_used": backend_identity.fallback_used,
-            "fallback_reason": backend_identity.fallback_reason.as_deref(),
-        }),
-    );
-    bitnet_qk256_dispatch::reset_qk256_dispatch_coverage();
-    let strict_cuda_backend_selected = strict_backend
-        && backend_identity.selected_backend.as_str() == "nvidia-rtx-5070-ti-cuda"
-        && backend_identity.runtime_api.as_str() == "cuda"
-        && !backend_identity.fallback_used;
-    if strict_cuda_backend_selected {
-        answer_corpus_child_phase(
-            "cuda_runtime_libraries_start",
-            serde_json::json!({
-                "selected_backend": backend_identity.selected_backend.as_str(),
-                "runtime_api": backend_identity.runtime_api.as_str(),
-            }),
-        );
-        let cuda_bin = ensure_strict_cuda_runtime_libraries_visible()?;
-        answer_corpus_child_phase(
-            "cuda_runtime_libraries_complete",
-            serde_json::json!({
-                "added_cuda_toolkit_bin": cuda_bin.as_ref().map(|path| path.display().to_string()),
-            }),
-        );
-        if let Some(cuda_bin) = cuda_bin {
-            debug!(
-                "added CUDA Toolkit bin directory to process PATH for strict CUDA run: {}",
-                cuda_bin.display()
-            );
-        }
-    }
-    let cuda_memory_before_bytes =
-        strict_cuda_backend_selected.then(|| nvidia_smi_memory_used_bytes(Some(0))).flatten();
-    simple_generation::environment::apply_backend_identity_env(
-        backend_identity.requested_backend.as_str(),
-        backend_identity.selected_backend.as_str(),
-        backend_identity.runtime_api.as_str(),
+    let simple_generation::backend::GenerationBackendSetup {
+        identity: backend_identity,
+        strict_backend,
         strict_cuda_backend_selected,
-    );
+        cuda_memory_before_bytes,
+    } = simple_generation::backend::prepare_generation_backend(
+        requested_backend_label,
+        strict_loader,
+    )?;
 
     let template_type = simple_generation::prompt::parse_prompt_template(&prompt_template)?;
 
@@ -4357,67 +4309,13 @@ async fn run_simple_generation(
             "has_tokenizer_path": tokenizer_path.is_some(),
         }),
     );
-    let tokenizer_resolution = match bitnet_tokenizers::auto::resolve_tokenizer(
+    let tokenizer_resolution = simple_generation::tokenizer::load_generation_tokenizer(
         &model_path,
         tokenizer_path.as_deref(),
+        is_hf_directory,
         effective_strict_tokenizer,
-    ) {
-        Ok(resolution) => {
-            match resolution.source {
-                bitnet_tokenizers::auto::TokenizerSource::Explicit
-                | bitnet_tokenizers::auto::TokenizerSource::Sibling => {
-                    if let Some(path) = &resolution.path {
-                        println!("Loading tokenizer from: {}", path.display());
-                    }
-                }
-                bitnet_tokenizers::auto::TokenizerSource::GgufMetadata => {
-                    println!("Successfully loaded tokenizer from GGUF metadata");
-                }
-                bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback => {}
-            }
-            resolution
-        }
-        Err(e) => {
-            answer_corpus_child_phase(
-                "tokenizer_load_error",
-                serde_json::json!({
-                    "strict_tokenizer": effective_strict_tokenizer,
-                    "allow_mock": allow_mock,
-                    "error": e.to_string(),
-                }),
-            );
-            if effective_strict_tokenizer {
-                eprintln!("Strict tokenizer failed: {e}");
-                std::process::exit(EXIT_STRICT_TOKENIZER);
-            }
-            if !allow_mock {
-                let model_dir = if is_hf_directory {
-                    model_path.as_path()
-                } else {
-                    model_path.parent().unwrap_or_else(|| std::path::Path::new("."))
-                };
-                anyhow::bail!(
-                    "{e}\n\
-                     \n\
-                     No tokenizer found. Solutions:\n\
-                     1. Download tokenizer:\n\
-                        cargo run -p xtask -- tokenizer --into {}\n\
-                     2. Provide explicit tokenizer path:\n\
-                        --tokenizer /path/to/tokenizer.json\n\
-                     3. Use mock tokenizer for testing only:\n\
-                        --allow-mock",
-                    model_dir.display()
-                );
-            }
-            println!("Warning: Using mock tokenizer due to: {e}");
-            bitnet_tokenizers::auto::TokenizerResolution {
-                tokenizer: std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new()),
-                source: bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback,
-                strict: false,
-                path: None,
-            }
-        }
-    };
+        allow_mock,
+    )?;
     let tokenizer_load_ms = elapsed_ms(tokenizer_load_start);
     let tokenizer_source = tokenizer_resolution.source;
     let tokenizer_strict = tokenizer_resolution.strict;
@@ -10018,7 +9916,7 @@ fn validate_strict_cpu_answer_quality(answer_receipt: &serde_json::Value) -> Res
     )
 }
 
-fn ensure_strict_cuda_runtime_libraries_visible() -> Result<Option<std::path::PathBuf>> {
+pub(crate) fn ensure_strict_cuda_runtime_libraries_visible() -> Result<Option<std::path::PathBuf>> {
     #[cfg(all(feature = "cuda", target_os = "windows"))]
     {
         ensure_windows_cuda_toolkit_bin_on_path()

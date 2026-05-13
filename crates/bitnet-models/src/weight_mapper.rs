@@ -300,6 +300,8 @@ fn map_tensor_name(name: &str) -> Option<String> {
 
                 // Attention normalization - use attention_norm prefix
                 "attn_norm.weight" => "attention_norm.weight",
+                "attn_q_norm.weight" => "attention.q_norm.weight",
+                "attn_k_norm.weight" => "attention.k_norm.weight",
                 "attn_sub_norm.weight" => "attention.sub_layernorm.weight", // BitNet specific
 
                 // Feed-forward weights - map to feed_forward.* (not mlp.*)
@@ -340,6 +342,8 @@ fn map_tensor_name(name: &str) -> Option<String> {
 
                 // Normalization - map to expected names
                 "attention_norm.weight" | "input_layernorm.weight" => "attention_norm.weight",
+                "self_attn.q_norm.weight" | "attention.q_norm.weight" => "attention.q_norm.weight",
+                "self_attn.k_norm.weight" | "attention.k_norm.weight" => "attention.k_norm.weight",
                 "ffn_norm.weight" | "post_attention_layernorm.weight" => {
                     "post_attention_layernorm.weight"
                 }

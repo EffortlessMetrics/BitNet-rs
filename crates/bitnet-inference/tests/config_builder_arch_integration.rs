@@ -65,8 +65,8 @@ fn bitnet_config_with_deterministic_preset() {
     let inference =
         InferenceConfigBuilder::new().preset(InferencePreset::Deterministic).build().unwrap();
 
-    assert_eq!(model.norm_type, NormType::LayerNorm);
-    assert_eq!(model.activation_type, ActivationType::Silu);
+    assert_eq!(model.norm_type, NormType::RmsNorm);
+    assert_eq!(model.activation_type, ActivationType::Relu2);
     assert_eq!(inference.sampling.temperature, 0.0);
     assert_eq!(inference.sampling.seed, Some(42));
 }
