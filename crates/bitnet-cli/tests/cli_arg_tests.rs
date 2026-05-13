@@ -531,17 +531,27 @@ fn mac_ask_help_documents_positional_question() {
         .assert()
         .success()
         .stdout(predicate::str::contains("[QUESTION]"))
-        .stdout(predicate::str::contains("--question <QUESTION>"));
+        .stdout(predicate::str::contains("--question <QUESTION>"))
+        .stdout(predicate::str::contains("--progress"))
+        .stdout(predicate::str::contains("--quiet"));
 }
 
 #[test]
-fn mac_ask_accepts_positional_question_before_cache_lookup() {
+fn mac_ask_accepts_positional_question_and_progress_flags_before_cache_lookup() {
     let dir = tempfile::tempdir().expect("tempdir");
     let cache = dir.path().join("models");
     let cache_str = cache.to_string_lossy().into_owned();
 
     bitnet()
-        .args(["mac", "ask", "What is 2+2? Answer briefly.", "--cache-dir", cache_str.as_str()])
+        .args([
+            "mac",
+            "ask",
+            "What is 2+2? Answer briefly.",
+            "--progress",
+            "--quiet",
+            "--cache-dir",
+            cache_str.as_str(),
+        ])
         .assert()
         .failure()
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"))
