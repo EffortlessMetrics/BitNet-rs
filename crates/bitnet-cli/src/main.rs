@@ -143,8 +143,8 @@ use commands::{
     DenseGgufQwenWarmSessionStrictCudaCommand, DenseGgufRopeCudaParityCommand,
     DenseGgufSamplingPolicyCommand, DenseQwenCudaAskOptions,
     ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
-    InspectCommand, OutputHeadLogitsAuditCommand, ReceiptsCommand, ReferenceCompareCommand,
-    ServeCommand, TransformerLayerParityCommand, run_dense_qwen_cuda_ask,
+    InspectCommand, LunarLakeCommand, OutputHeadLogitsAuditCommand, ReceiptsCommand,
+    ReferenceCompareCommand, ServeCommand, TransformerLayerParityCommand, run_dense_qwen_cuda_ask,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -1036,6 +1036,11 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
+    #[cfg(feature = "full-cli")]
+    /// Validate Lunar Lake operator readiness and route policy from receipts
+    #[command(name = "lunar-lake")]
+    LunarLake(LunarLakeCommand),
+
     /// Probe Intel NPU OpenVINO runtime visibility without compiling graphs
     IntelNpuProbe {
         /// Require OpenVINO to report an NPU runtime device
@@ -1760,6 +1765,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::LunarLakeProbe { json_out }) => {
             handle_lunar_lake_probe_command(json_out).await
         }
+        #[cfg(feature = "full-cli")]
+        Some(Commands::LunarLake(command)) => command.execute().await,
         Some(Commands::IntelNpuProbe { strict, json_out }) => {
             intel_npu::handle_probe_command(strict, json_out).await
         }

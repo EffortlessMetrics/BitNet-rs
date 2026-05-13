@@ -2762,3 +2762,58 @@ must_not_claim = [
   "QK256/I2_S semantics are changed or newly corrected.",
   "Full model correctness is proven by tiling/thread matrix timing.",
 ]
+
+[[work_item]]
+id = "LNL258V-OP-001"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-OP-001-operator-readiness"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-OV258V-006", "CPU-BITNET-PERF-002"]
+acceptance = "Add a Lunar Lake operator readiness command that reads the committed 258V artifact bundle, emits an explicit route-policy/readiness receipt with dense Qwen CPU as the default ask path, BitNet CPU as the strict reference path, OpenVINO GPU/NPU as dense SLM candidates, fallback_used=false evidence, answer-gate evidence, phase evidence, route reasons, and strict claim boundaries without running new inference or claiming speedup, Arc/NPU acceleration, full BitNet inference on accelerators, or QK256 accelerator decode."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs crates/bitnet-cli/src/commands/mod.rs crates/bitnet-cli/src/main.rs",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -j 2",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -j 1 commands::lunar_lake::tests -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake validate --artifact-root ci/hardware/intel-258v/2026-05-08 --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json --strict",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/commands/mod.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "The CLI can emit a Lunar Lake operator readiness receipt from existing 258V artifacts.",
+  "The receipt records dense Qwen CPU as the default ask route with strict no-fallback policy.",
+  "The receipt records BitNet CPU as the strict reference route and OpenVINO GPU/NPU as dense SLM candidate routes.",
+  "The receipt records route reasons, answer-gate evidence, phase evidence, fallback status, and claim boundaries.",
+]
+must_not_claim = [
+  "New inference execution is performed by the operator readiness command.",
+  "Dense SLM broad quality is proven.",
+  "CPU, Arc, or NPU speedup is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM OpenVINO receipts prove BitNet QK256/I2_S behavior.",
+]

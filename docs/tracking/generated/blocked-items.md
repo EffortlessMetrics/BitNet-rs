@@ -179,6 +179,7 @@
 | intel-258v-platform | CPU-BITNET-REF-001 | CPU258V-031 | merged |
 | intel-258v-platform | CPU-BITNET-PERF-001 | CPU-BITNET-REF-001 | merged |
 | intel-258v-platform | CPU-BITNET-PERF-002 | CPU-BITNET-PERF-001 | merged |
+| intel-258v-platform | LNL258V-OP-001 | SLM-OV258V-006, CPU-BITNET-PERF-002 | in_progress |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |

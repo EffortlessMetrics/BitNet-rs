@@ -85,6 +85,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | CPU-BITNET-REF-001 | merged | Record the external Microsoft BitNet.cpp generated-text boundary against the corrected 258V CPU reference bundle while preserving generated-token/logit gaps; merged in #4599. |
 | CPU-BITNET-PERF-001 | merged | Recorded 258V QK256/I2_S GEMV and GEMM microbench timing receipts with fallback=false and speedup_claim=false in #4607. No answer-quality, sustained-throughput, Arc/NPU, acceleration, QK256 semantic-change, or full-model claims. |
 | CPU-BITNET-PERF-002 | merged | #4609 merged with SHA 9bbb45712eff819daffaea61599011626d4f4579, recording a 258V QK256/I2_S tiling/thread candidate matrix with sampled GEMV/GEMM timings, fallback=false, speedup_claim=false, and explicit thread-count-not-applied status. No answer-quality, sustained-throughput, Arc/NPU, acceleration, QK256 semantic-change, or full-model claims. |
+| LNL258V-OP-001 | in_progress | Add a Lunar Lake operator readiness command that indexes existing CPU, dense SLM OpenVINO, Arc, and NPU receipts into explicit route reasons without running inference or claiming acceleration. |
 
 ## Review Policy
 
