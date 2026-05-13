@@ -14,7 +14,7 @@
 | apple-m3-macbook-air | M3MBA-005A | M3MBA-004B | proposed |
 | apple-m3-macbook-air | M3MBA-005B | M3MBA-005A | proposed |
 | apple-m3-macbook-air | M3MBA-005C | M3MBA-005B | proposed |
-| apple-m3-macbook-air | M3MBA-011 | M3MBA-001 | in_progress |
+| apple-m3-macbook-air | M3MBA-011 | M3MBA-001 | merged |
 | apple-m3-macbook-air | M3MBA-006 | M3MBA-005C, M3MBA-010 | proposed |
 | apple-m3-macbook-air | M3MBA-007 | M3MBA-005C, M3MBA-010 | proposed |
 | apple-m3-macbook-air | M3MBA-008 | M3MBA-005C, M3MBA-006, M3MBA-007 | proposed |
