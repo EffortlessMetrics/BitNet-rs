@@ -1,0 +1,311 @@
+{
+  "artifact_kind": "strict_cuda_benchmark_qualification_review",
+  "artifact_path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/cuda-prod-010-benchmark-qualification.json",
+  "benchmark_policy": {
+    "bitnet_packed_i2s_qk256_only": true,
+    "dense_cuda_evidence_used": false,
+    "global_speedup_claim": false,
+    "profile_specific_decisions_only": true
+  },
+  "benchmark_qualified_speedup": false,
+  "claim": "strict_cuda_benchmark_qualification_review",
+  "claim_boundaries": [
+    "speedup_claim=false; no BitNet QK256 product benchmark profile is accepted by this receipt.",
+    "Profile decisions are explicit and profile-specific; this receipt makes no global CUDA speed claim.",
+    "Dense regular-LLM CUDA evidence is excluded and cannot satisfy BitNet packed I2S/QK256 proof.",
+    "Generic cuda, WGPU, Vulkan, CPU fallback, or hardware visibility cannot satisfy strict RTX 5070 Ti CUDA benchmark qualification."
+  ],
+  "cuda": {
+    "available": true,
+    "compute_capability": "12.0",
+    "cuda_runtime_version": "12.9",
+    "cuda_toolkit_version": "12.9",
+    "device_count": 1,
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5070 Ti",
+    "driver_version": "591.86",
+    "memory_hwm_bytes": 10078912512,
+    "nvrtc_version": "12.9",
+    "vram_bytes": 17094475776
+  },
+  "evidence_summary": {
+    "one_token": {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile receipt missing"
+      ],
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "fallback_free": false,
+      "profile": "one_token",
+      "quality_passed": false,
+      "reason": "Required product benchmark profile evidence is not committed yet.",
+      "speedup_claim": false
+    },
+    "short_decode_32": {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile receipt missing"
+      ],
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "fallback_free": false,
+      "profile": "short_decode_32",
+      "quality_passed": false,
+      "reason": "Required product benchmark profile evidence is not committed yet.",
+      "speedup_claim": false
+    },
+    "short_decode_8": {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile is not repeated",
+        "transfer timing is incomplete",
+        "no profile-specific speedup threshold has been accepted"
+      ],
+      "cpu_cuda_output_match": true,
+      "cpu_total_ms": 147593.0,
+      "cuda_total_ms": 1866.0,
+      "decision": "not_accepted",
+      "evidence_status": "single_run_baseline",
+      "fallback_free": true,
+      "observed_cpu_total_ms_div_cuda_total_ms": 79.09592711682744,
+      "profile": "short_decode_8",
+      "quality_passed": true,
+      "reason": "The short_decode_8 CPU/CUDA baseline is useful, but speedup remains blocked until repeated governed profile evidence and transfer timing are complete.",
+      "speedup_claim": false
+    },
+    "strict_ask_math_8": {
+      "cpu_avx512_median_total_ms": 18797.0,
+      "cpu_cuda_answer_match": true,
+      "cuda_median_total_ms": 2136.0,
+      "device_to_host_bytes": 172247040,
+      "fallback_free": true,
+      "host_to_device_bytes": 168376320,
+      "observed_median_cpu_total_ms_div_cuda_total_ms": 8.800093632958802,
+      "qk256_kernel_time_ms": 2977.406,
+      "runs_per_backend": 3,
+      "speedup_claim": false
+    },
+    "strict_cuda_warm_session_2_turns": {
+      "cuda_median_generated_tokens_per_second": 1.368439700077827,
+      "cuda_median_kernel_time_ms": 2036.619,
+      "cuda_median_total_session_ms": 8038.352,
+      "cuda_runs": 3,
+      "fallback_free": true,
+      "model_tokenizer_context_loaded_once": true,
+      "qk256_weights_uploaded_once": true,
+      "speedup_claim": false,
+      "turns_per_run": 2
+    },
+    "warm_session_10_turns": {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile receipt missing"
+      ],
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "fallback_free": false,
+      "profile": "warm_session_10_turns",
+      "quality_passed": false,
+      "reason": "Required product benchmark profile evidence is not committed yet.",
+      "speedup_claim": false
+    },
+    "warm_session_3_turns": {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile receipt missing"
+      ],
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "fallback_free": false,
+      "profile": "warm_session_3_turns",
+      "quality_passed": false,
+      "reason": "Required product benchmark profile evidence is not committed yet.",
+      "speedup_claim": false
+    }
+  },
+  "fallback_used": false,
+  "full_cuda_residency_claimed": false,
+  "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "fallback_loader_used": false,
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "strict_real_gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "profile_reviews": [
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile receipt missing"
+      ],
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": false,
+      "evidence_status": "missing",
+      "fallback_free": false,
+      "profile": "one_token",
+      "quality_passed": false,
+      "reason": "Required product benchmark profile evidence is not committed yet.",
+      "speedup_claim_allowed": false
+    },
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile is not repeated",
+        "transfer timing is incomplete",
+        "no profile-specific speedup threshold has been accepted"
+      ],
+      "cpu_total_ms": 147593.0,
+      "cuda_total_ms": 1866.0,
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": false,
+      "evidence_status": "single_run_baseline",
+      "fallback_free": true,
+      "observed_cpu_total_ms_div_cuda_total_ms": 79.09592711682744,
+      "profile": "short_decode_8",
+      "quality_passed": true,
+      "reason": "A single short_decode_8 CPU/CUDA baseline exists, but governed speedup requires repeated profile evidence, complete transfer timing, and an accepted profile-specific threshold.",
+      "speedup_claim_allowed": false
+    },
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile receipt missing"
+      ],
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": false,
+      "evidence_status": "missing",
+      "fallback_free": false,
+      "profile": "short_decode_32",
+      "quality_passed": false,
+      "reason": "Required product benchmark profile evidence is not committed yet.",
+      "speedup_claim_allowed": false
+    },
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile receipt missing"
+      ],
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": false,
+      "evidence_status": "missing",
+      "fallback_free": false,
+      "profile": "warm_session_3_turns",
+      "quality_passed": false,
+      "reason": "Required product benchmark profile evidence is not committed yet.",
+      "speedup_claim_allowed": false
+    },
+    {
+      "benchmark_qualified_speedup": false,
+      "blockers": [
+        "profile receipt missing"
+      ],
+      "decision": "not_accepted",
+      "dense_cuda_evidence_used": false,
+      "evidence_status": "missing",
+      "fallback_free": false,
+      "profile": "warm_session_10_turns",
+      "quality_passed": false,
+      "reason": "Required product benchmark profile evidence is not committed yet.",
+      "speedup_claim_allowed": false
+    }
+  ],
+  "prompt_template": {
+    "family": "bitnetcpp-answer",
+    "rendered_sha256": "dee5b2fff5b96df948252b7a589ab7ea1a6b6a10ed1b2d9ed70a63ebbde554f3"
+  },
+  "proof_input_hashes": {
+    "previous_qualification_review": {
+      "artifact_kind": "strict_cuda_benchmark_qualification_review",
+      "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json",
+      "sha256": "31aee8296d0c063071917cba5b1738f3ebd3a6e0d148c16dabec8cc96175b41b"
+    },
+    "short_decode_8_benchmark_receipt": {
+      "artifact_kind": "strict_bitnet_cuda_benchmark",
+      "path": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json",
+      "sha256": "6302e62e0c7484bbf7d43f36c1f2e58b2f4eb4fed3fd9ff44301ca0022dd34c9"
+    }
+  },
+  "proof_inputs": {
+    "answer_path_baseline_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-prod-004-answer-path-benchmark.json",
+    "cpu_cuda_answer_parity_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cpu-avx512-vs-cuda-answer-parity.json",
+    "previous_qualification_review": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json",
+    "repeated_strict_ask_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-002-repeated-strict-ask.json",
+    "short_decode_8_benchmark_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json",
+    "warm_session_benchmark_receipt": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json"
+  },
+  "qualification_decision": {
+    "accepted_profiles": [],
+    "benchmark_qualified_speedup": false,
+    "blocked_profiles": [
+      "one_token",
+      "short_decode_8",
+      "short_decode_32",
+      "warm_session_3_turns",
+      "warm_session_10_turns"
+    ],
+    "reason": "The official BitNet I2_S/QK256 CUDA path has strong strict-execution evidence, but the product benchmark profile set is not yet governed enough to accept any speedup claim.",
+    "speedup_claim_allowed": false,
+    "status": "not_accepted"
+  },
+  "qualification_requirements": [
+    {
+      "description": "Official Microsoft I2_S GGUF, explicit tokenizer authority, BitNet answer prompt template, deterministic policy, and fallback-free CPU/CUDA route.",
+      "id": "same_model_tokenizer_prompt_policy",
+      "status": "passed"
+    },
+    {
+      "description": "A same-model CPU AVX-512 and RTX 5070 Ti CUDA short_decode_8 baseline exists.",
+      "id": "short_decode_8_cpu_cuda_baseline",
+      "status": "passed"
+    },
+    {
+      "blocker": "Only short_decode_8 has a committed CPU/CUDA baseline, and it is not a repeated governed profile set.",
+      "description": "Each target profile has repeated same-artifact CPU/CUDA measurements.",
+      "id": "target_profile_repetitions",
+      "status": "blocked"
+    },
+    {
+      "blocker": "one_token, short_decode_32, warm_session_3_turns, and warm_session_10_turns product benchmark receipts are not committed.",
+      "description": "one_token, short_decode_8, short_decode_32, warm_session_3_turns, and warm_session_10_turns are all covered.",
+      "id": "target_profile_coverage",
+      "status": "blocked"
+    },
+    {
+      "blocker": "Current BitNet QK256 benchmark receipts do not record complete H2D/D2H timing for every target profile.",
+      "description": "Host/device transfer timing is measured, not only byte counters.",
+      "id": "transfer_timing",
+      "status": "blocked"
+    },
+    {
+      "blocker": "No BitNet QK256 product profile threshold is accepted by this review.",
+      "description": "Profile-specific speedup acceptance thresholds are reviewed before benchmark_qualified_speedup can become true.",
+      "id": "profile_specific_speedup_thresholds",
+      "status": "blocked"
+    }
+  ],
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "speedup_claim": false,
+  "target_profiles": [
+    "one_token",
+    "short_decode_8",
+    "short_decode_32",
+    "warm_session_3_turns",
+    "warm_session_10_turns"
+  ],
+  "timestamp_utc": "2026-05-13T14:31:18Z",
+  "tokenizer": {
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  }
+}

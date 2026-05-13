@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T14:50:25Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-010"
+event = "in_progress"
+actor = "codex"
+branch = "cuda/bitnet-i2s-benchmark-qualification"
+previous_status = "proposed"
+new_status = "in_progress"
+
+notes = [
+  "Started governed BitNet I2_S/QK256 CUDA product benchmark qualification for the five target user profiles.",
+  "Scope is qualification receipt generation, validators, report-only bench output, receipts explain coverage, committed receipt/report evidence, and tracker metadata.",
+  "The PR must keep speedup_claim=false and benchmark_qualified_speedup=false for every profile until fresh profile-specific benchmark evidence justifies an upgrade.",
+  "Dense regular LLM CUDA proof, CUDA kernel math, server behavior, tokenizer behavior, model loader behavior, transformer behavior, and generated dashboards are out of scope.",
+]

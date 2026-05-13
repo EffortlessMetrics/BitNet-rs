@@ -1361,7 +1361,7 @@ async fn async_main() -> Result<()> {
     let explicit_device_label = cli.device.clone();
 
     // Report backend selection at startup so logs and receipts are deterministic.
-    {
+    if !uses_report_only_cuda_benchmark_receipt(cli.command.as_ref()) {
         use bitnet_common::{BackendRequest, select_backend};
         use bitnet_kernels::device_features::current_kernel_capabilities;
 
@@ -6665,28 +6665,26 @@ fn cpu_phase_strict_profile_receipt(
         },
         "speedup_claim": false,
     });
-    if dense_slm_model {
-        if let Some(object) = receipt.as_object_mut() {
-            object.remove("bitnet");
-            object.insert(
-                "dense_slm".to_string(),
-                serde_json::json!({
-                    "model_family": model_family,
-                    "architecture": model_architecture,
-                    "quant_format": model_quant_format,
-                    "kernel_family": kernel_family,
-                    "kernel_id": selected_kernel,
-                    "layout_source": layout_source,
-                    "layout": kernel_layout,
-                    "execution_phase": run.phase,
-                    "provenance": "dense_slm_gguf_cpu_reference",
-                    "claim_scope": "dense SLM CPU phase timing only",
-                }),
-            );
-            object.insert("bitnet_qk256_i2s_claim".to_string(), serde_json::json!(false));
-            object.insert("arc140v_claim".to_string(), serde_json::json!(false));
-            object.insert("intel_npu_claim".to_string(), serde_json::json!(false));
-        }
+    if dense_slm_model && let Some(object) = receipt.as_object_mut() {
+        object.remove("bitnet");
+        object.insert(
+            "dense_slm".to_string(),
+            serde_json::json!({
+                "model_family": model_family,
+                "architecture": model_architecture,
+                "quant_format": model_quant_format,
+                "kernel_family": kernel_family,
+                "kernel_id": selected_kernel,
+                "layout_source": layout_source,
+                "layout": kernel_layout,
+                "execution_phase": run.phase,
+                "provenance": "dense_slm_gguf_cpu_reference",
+                "claim_scope": "dense SLM CPU phase timing only",
+            }),
+        );
+        object.insert("bitnet_qk256_i2s_claim".to_string(), serde_json::json!(false));
+        object.insert("arc140v_claim".to_string(), serde_json::json!(false));
+        object.insert("intel_npu_claim".to_string(), serde_json::json!(false));
     }
     receipt
 }
@@ -9492,6 +9490,10 @@ fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) 
 }
 
 fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static str> {
+    if uses_report_only_cuda_benchmark_receipt(command) {
+        return Some("warn");
+    }
+
     match command {
         Some(Commands::Ask { .. }) => Some("warn"),
         #[cfg(feature = "full-cli")]
@@ -9503,6 +9505,16 @@ fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static 
         Some(Commands::Mac(cmd)) => cmd.default_log_level(),
         _ => None,
     }
+}
+
+fn uses_report_only_cuda_benchmark_receipt(command: Option<&Commands>) -> bool {
+    #[cfg(feature = "cli-bench")]
+    if let Some(Commands::Benchmark(cmd)) = command {
+        return cmd.cuda_benchmark_receipt.is_some();
+    }
+
+    let _ = command;
+    false
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -11641,6 +11653,48 @@ mod tests {
             )))),
             Some("warn")
         );
+    }
+
+    #[test]
+    #[cfg(feature = "cli-bench")]
+    fn report_only_cuda_benchmark_receipt_skips_startup_backend_selection() {
+        let report_command = Commands::Benchmark(BenchmarkCommand {
+            model: None,
+            device: Some("cuda".to_string()),
+            iterations: 10,
+            warmup: 3,
+            prompt_length: 128,
+            generation_length: 256,
+            compare_python: false,
+            flamegraph: false,
+            format: "text".to_string(),
+            output: None,
+            cuda_benchmark_receipt: Some(std::path::PathBuf::from("receipt.json")),
+            memory_profile: false,
+            batch_sizes: vec![1, 4, 8],
+            sequence_lengths: vec![128, 512, 1024],
+        });
+        let legacy_command = Commands::Benchmark(BenchmarkCommand {
+            model: Some(std::path::PathBuf::from("model.gguf")),
+            device: Some("cuda".to_string()),
+            iterations: 10,
+            warmup: 3,
+            prompt_length: 128,
+            generation_length: 256,
+            compare_python: false,
+            flamegraph: false,
+            format: "text".to_string(),
+            output: None,
+            cuda_benchmark_receipt: None,
+            memory_profile: false,
+            batch_sizes: vec![1, 4, 8],
+            sequence_lengths: vec![128, 512, 1024],
+        });
+
+        assert!(uses_report_only_cuda_benchmark_receipt(Some(&report_command)));
+        assert_eq!(default_log_level_for_command(Some(&report_command)), Some("warn"));
+        assert!(!uses_report_only_cuda_benchmark_receipt(Some(&legacy_command)));
+        assert!(!uses_report_only_cuda_benchmark_receipt(None));
     }
 
     #[test]

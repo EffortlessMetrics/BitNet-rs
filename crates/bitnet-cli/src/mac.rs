@@ -595,12 +595,12 @@ impl MacCommand {
                     repetition_penalty,
                     seed,
                 };
+                let endpoint = MacServeEndpoint { host, port };
                 run_mac_serve(
                     model_id,
                     cache_dir,
                     device,
-                    host,
-                    port,
+                    endpoint,
                     strict,
                     stream,
                     defaults,
@@ -1666,17 +1666,23 @@ struct MacServeGenerationDefaults {
     seed: Option<u64>,
 }
 
+#[derive(Clone, Debug)]
+struct MacServeEndpoint {
+    host: String,
+    port: u16,
+}
+
 async fn run_mac_serve(
     model_id: String,
     cache_dir: Option<PathBuf>,
     device: String,
-    host: String,
-    port: u16,
+    endpoint: MacServeEndpoint,
     strict: bool,
     stream: bool,
     defaults: MacServeGenerationDefaults,
     receipt_dir: PathBuf,
 ) -> Result<()> {
+    let MacServeEndpoint { host, port } = endpoint;
     if !strict {
         anyhow::bail!("mac serve requires strict mode; hidden fallback is not allowed");
     }
