@@ -1,0 +1,98 @@
+name: RIPR PR Evidence
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: ripr-pr-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  ripr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.95.0"
+
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          cache-on-failure: true
+
+      - name: Install ripr
+        run: cargo install ripr --locked
+
+      - name: Fetch base branch
+        if: github.base_ref != ''
+        run: git fetch origin ${{ github.base_ref }}
+
+      - name: RIPR PR evidence
+        env:
+          RIPR_BASE: origin/${{ github.base_ref }}
+        run: cargo xtask ripr-pr
+
+      - name: RIPR review guidance
+        run: |
+          if ! timeout 120s cargo xtask ripr-review-comments --base origin/${{ github.base_ref }} --head HEAD; then
+            mkdir -p target/ripr/review
+            printf '%s\n' \
+              '{' \
+              '  "comments": [],' \
+              '  "summary_only": true,' \
+              '  "suppressed": [],' \
+              '  "warnings": ["ripr review-comments timed out; see EffortlessMetrics/ripr#876"]' \
+              '}' > target/ripr/review/comments.json
+            printf '%s\n' \
+              'RIPR review guidance timed out; see EffortlessMetrics/ripr#876.' \
+              > target/ripr/review/comments.md
+          fi
+
+      - name: RIPR PR contract
+        if: always()
+        run: cargo xtask ripr-pr --check
+
+      - name: RIPR review contract
+        if: always()
+        run: cargo xtask ripr-review-comments --check
+
+      - name: RIPR summary
+        if: always()
+        run: |
+          {
+            echo "## RIPR"
+            echo
+            if [ -f target/ripr/review/comments.md ]; then
+              cat target/ripr/review/comments.md
+            else
+              echo "No RIPR review guidance produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: RIPR annotations
+        if: always()
+        run: python scripts/ripr-annotations.py
+
+      - name: Upload RIPR PR evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: ripr-pr
+          path: target/ripr/pr
+          if-no-files-found: warn
+
+      - name: Upload RIPR review guidance
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: ripr-review
+          path: target/ripr/review
+          if-no-files-found: warn
