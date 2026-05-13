@@ -2605,3 +2605,49 @@ must_not_claim = [
   "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
   "Broad dense SLM quality is proven beyond bounded answer gates.",
 ]
+
+[[work_item]]
+id = "CPU-BITNET-REF-001"
+status = "in_progress"
+branch = "codex/lunar-lake/CPU-BITNET-REF-001-reference-boundary"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-031"]
+acceptance = "Record a narrow 258V BitNet CPU external reference boundary that links the corrected CPU reference bundle, external BitNet.cpp generated-text reference, and instrumentation classifier, preserving missing generated-token/logit fields as blockers without claiming generated-token parity, first-token logits parity, answer quality, speed, Arc, NPU, QK256 changes, or full model correctness."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-bitnet-ref-001-external-boundary.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "The corrected 258V BitNet CPU reference bundle is linked to the external Microsoft BitNet.cpp generated-text boundary.",
+  "The external reference generated text, prompt-token evidence path, and missing generated-token/logit fields are indexed in one receipt.",
+  "The next evidence blocker is direct reference generated-token IDs and first-token logits/top-k.",
+]
+must_not_claim = [
+  "BitNet-rs generated-token-ID parity against BitNet.cpp is proven.",
+  "BitNet-rs first-token logits parity against BitNet.cpp is proven.",
+  "Broad BitNet answer quality is proven.",
+  "CPU speedup or sustained performance is proven.",
+  "Arc 140V execution or acceleration is involved.",
+  "Intel NPU execution or acceleration is involved.",
+  "QK256/I2_S kernel behavior is changed or newly proven by this receipt.",
+]
