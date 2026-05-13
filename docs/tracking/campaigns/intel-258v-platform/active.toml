@@ -2157,3 +2157,52 @@ must_not_claim = [
   "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
   "CPU fallback satisfies Arc 140V or Intel NPU proof.",
 ]
+
+[[work_item]]
+id = "CPU258V-032"
+status = "pr_open"
+branch = "codex/lunar-lake/CPU-PARITY-RECEIPT-FALLBACK"
+pr = 4550
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU258V-031", "LNL258V-COMPARE-004"]
+acceptance = "Harden the 258V post-fix scalar-vs-AVX2 answer-parity receipt so top-level requested_backend, selected_backend, runtime_api, fallback_used, and selected kernel identity are explicit, while preserving the no answer-quality, speed, Arc/NPU execution, acceleration, QK256 change, or full-model-correctness claim boundary."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::answer_parity::tests -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-parity --scalar ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-prompt-fix.json --avx2 ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-prompt-fix.json --json-out ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-prompt-fix.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-prompt-fix.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+  "ci/hardware/intel-258v/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The 258V post-fix scalar-vs-AVX2 answer-parity receipt records top-level backend, runtime API, fallback status, and selected kernel identity for the compared CPU lanes.",
+  "The hardened answer-parity receipt can be consumed by the corrected CPU reference bundle and Lunar Lake comparison index as explicit CPU parity evidence.",
+]
+must_not_claim = [
+  "New BitNet answer quality is proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V or Intel NPU execution is proven.",
+  "Acceleration is proven.",
+  "QK256 semantics changed.",
+  "Full model correctness is proven.",
+]

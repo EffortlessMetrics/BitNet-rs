@@ -199,6 +199,8 @@ fn build_answer_parity_receipt(
 
     let passed = cases.iter().filter(|case| case["passed"] == true).count();
     let failed = cases.len().saturating_sub(passed) + usize::from(!shared_failures.is_empty());
+    let backend = parity_backend_summary(left, right, left_label, right_label, legacy_scalar_avx2);
+    let kernel = parity_kernel_summary(left, right, left_label, right_label, legacy_scalar_avx2);
 
     let inputs = if legacy_scalar_avx2 {
         json!({
@@ -249,6 +251,12 @@ fn build_answer_parity_receipt(
         },
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "proof_stage": "full_decode_parity_compared",
+        "requested_backend": backend["requested_backend"],
+        "selected_backend": backend["selected_backend"],
+        "runtime_api": backend["runtime_api"],
+        "fallback_used": backend["fallback_used"],
+        "backend": backend,
+        "kernel": kernel,
         "claim": if legacy_scalar_avx2 {
             "scalar_avx2_full_decode_answer_parity"
         } else {
@@ -280,6 +288,142 @@ fn build_answer_parity_receipt(
         "may_claim": may_claim,
         "must_not_claim": must_not_claim,
     })
+}
+
+fn parity_backend_summary(
+    left: &Value,
+    right: &Value,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
+) -> Value {
+    let left_backend = receipt_backend_identity(left);
+    let right_backend = receipt_backend_identity(right);
+    let fallback_used = left_backend["fallback_used"].as_bool().unwrap_or(true)
+        || right_backend["fallback_used"].as_bool().unwrap_or(true);
+    let lane_labels = if legacy_scalar_avx2 {
+        json!({
+            "scalar": left_backend,
+            "avx2": right_backend,
+        })
+    } else {
+        json!({
+            "left": {
+                "label": left_label,
+                "backend": left_backend,
+            },
+            "right": {
+                "label": right_label,
+                "backend": right_backend,
+            },
+        })
+    };
+
+    json!({
+        "requested_backend": common_or_mixed(
+            left_backend["requested_backend"].as_str(),
+            right_backend["requested_backend"].as_str(),
+        ),
+        "selected_backend": common_or_mixed(
+            left_backend["selected_backend"].as_str(),
+            right_backend["selected_backend"].as_str(),
+        ),
+        "runtime_api": common_or_mixed(
+            left_backend["runtime_api"].as_str(),
+            right_backend["runtime_api"].as_str(),
+        ),
+        "fallback_used": fallback_used,
+        "lanes": lane_labels,
+    })
+}
+
+fn receipt_backend_identity(receipt: &Value) -> Value {
+    json!({
+        "requested_backend": backend_str(receipt, "requested_backend").unwrap_or("unknown"),
+        "selected_backend": backend_str(receipt, "selected_backend").unwrap_or("unknown"),
+        "runtime_api": backend_str(receipt, "runtime_api").unwrap_or("unknown"),
+        "fallback_used": receipt_fallback_used(receipt).unwrap_or(true),
+    })
+}
+
+fn backend_str<'a>(receipt: &'a Value, field: &str) -> Option<&'a str> {
+    first_case_backend_field(receipt, field)
+        .and_then(Value::as_str)
+        .or_else(|| receipt["backend"][field].as_str())
+        .or_else(|| receipt[field].as_str())
+}
+
+fn first_case_backend_field<'a>(receipt: &'a Value, field: &str) -> Option<&'a Value> {
+    receipt["cases"].as_array()?.iter().find_map(|case| case["backend"].get(field))
+}
+
+fn receipt_fallback_used(receipt: &Value) -> Option<bool> {
+    let mut saw_evidence = false;
+    let mut fallback_used = false;
+    for candidate in [
+        receipt.get("fallback_used"),
+        receipt.get("backend").and_then(|backend| backend.get("fallback_used")),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if let Some(value) = candidate.as_bool() {
+            saw_evidence = true;
+            fallback_used |= value;
+        }
+    }
+    for case in receipt["cases"].as_array().into_iter().flatten() {
+        if let Some(value) = case["backend"]["fallback_used"].as_bool() {
+            saw_evidence = true;
+            fallback_used |= value;
+        }
+    }
+    saw_evidence.then_some(fallback_used)
+}
+
+fn common_or_mixed(left: Option<&str>, right: Option<&str>) -> Value {
+    match (left, right) {
+        (Some(left), Some(right)) if left == right && !left.is_empty() => json!(left),
+        (None, None) => json!("unknown"),
+        _ => json!("mixed"),
+    }
+}
+
+fn parity_kernel_summary(
+    left: &Value,
+    right: &Value,
+    left_label: &str,
+    right_label: &str,
+    legacy_scalar_avx2: bool,
+) -> Value {
+    let left_kernels = selected_kernels(left);
+    let right_kernels = selected_kernels(right);
+    if legacy_scalar_avx2 {
+        json!({
+            "scalar_selected_kernels": left_kernels,
+            "avx2_selected_kernels": right_kernels,
+        })
+    } else {
+        json!({
+            "left_label": left_label,
+            "right_label": right_label,
+            "left_selected_kernels": left_kernels,
+            "right_selected_kernels": right_kernels,
+        })
+    }
+}
+
+fn selected_kernels(receipt: &Value) -> Vec<String> {
+    receipt["cases"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|case| case["kernel"]["selected_kernel"].as_str())
+        .filter(|kernel| !kernel.is_empty())
+        .map(str::to_string)
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
 }
 
 fn compare_top_level_contract(
@@ -1148,6 +1292,15 @@ mod tests {
         assert_eq!(report["claim"], "scalar_avx2_full_decode_answer_parity");
         assert_eq!(report["inputs"]["scalar_receipt_path"], "scalar.json");
         assert!(report["inputs"]["left_receipt_path"].is_null());
+        assert_eq!(report["requested_backend"], "cpu");
+        assert_eq!(report["selected_backend"], "cpu-rust");
+        assert_eq!(report["runtime_api"], "cpu");
+        assert_eq!(report["fallback_used"], false);
+        assert_eq!(report["backend"]["fallback_used"], false);
+        assert_eq!(report["backend"]["lanes"]["scalar"]["selected_backend"], "cpu-rust");
+        assert_eq!(report["backend"]["lanes"]["avx2"]["selected_backend"], "cpu-rust");
+        assert_eq!(report["kernel"]["scalar_selected_kernels"], json!(["i2_s-scalar-reference"]));
+        assert_eq!(report["kernel"]["avx2_selected_kernels"], json!(["i2_s-avx2-reference"]));
         assert_eq!(report["summary"]["failed"], 0);
         assert_eq!(report["cases"][0]["passed"], true);
         assert!(report["cases"][0]["left"].is_null());
@@ -1225,6 +1378,14 @@ mod tests {
         assert_eq!(report["summary"]["failed"], 0);
         assert_eq!(report["inputs"]["left_label"], "scalar");
         assert_eq!(report["inputs"]["right_label"], "cuda");
+        assert_eq!(report["requested_backend"], "mixed");
+        assert_eq!(report["selected_backend"], "mixed");
+        assert_eq!(report["runtime_api"], "mixed");
+        assert_eq!(report["fallback_used"], false);
+        assert_eq!(report["backend"]["lanes"]["left"]["label"], "scalar");
+        assert_eq!(report["backend"]["lanes"]["right"]["label"], "cuda");
+        assert_eq!(report["kernel"]["left_selected_kernels"], json!(["i2_s-scalar-reference"]));
+        assert_eq!(report["kernel"]["right_selected_kernels"], json!(["qk256_gemv_cuda"]));
         assert_eq!(report["cases"][0]["passed"], true);
         assert_eq!(report["cases"][0]["right"]["selected_kernel"], "qk256_gemv_cuda");
         assert!(report["cases"][0]["scalar"].is_null());
