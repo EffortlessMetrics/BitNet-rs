@@ -224,6 +224,7 @@
 | nvidia-5070ti | CUDA-PROD-002 | CUDA-PROD-001 | merged |
 | nvidia-5070ti | CUDA-PROD-003 | CUDA-PROD-002 | merged |
 | nvidia-5070ti | CUDA-PROD-004 | CUDA-PROD-003 | merged |
+| nvidia-5070ti | CUDA-PROD-009 | CUDA-PROD-008 | pr_open |
 | nvidia-5070ti | CUDA-BITNET-PERF-002 | CUDA-PROD-004 | merged |
 | nvidia-5070ti | CUDA-BITNET-PERF-003 | CUDA-BITNET-PERF-002, CUDA-PROD-002, CUDA-PROD-003 | merged |
 | nvidia-5070ti | CUDA-BITNET-PERF-004 | CUDA-BITNET-PERF-002, CUDA-BITNET-PERF-003 | merged |

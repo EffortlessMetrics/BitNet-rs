@@ -1,0 +1,16 @@
+timestamp = "2026-05-13T10:18:31Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-PROD-009"
+event = "pr_open"
+from = "planned"
+to = "pr_open"
+actor = "codex"
+pr = 4604
+head_sha = "c83cd67e7f8f03a2aef9acfb785f0ef7f420b126"
+branch = "cuda/bitnet-strict-preflight"
+summary = "Open PR #4604 for strict RTX 5070 Ti CUDA user preflight hardening."
+notes = [
+  "The PR adds `bitnet cuda doctor` as a pre-generation strict CUDA preflight surface.",
+  "Strict BitNet CUDA ask rejects generic `cuda` and resolves tokenizer authority before generation.",
+  "The PR preserves claim boundaries: no new CUDA generation receipt, no dense SLM proof, no server readiness, and no speedup qualification.",
+]

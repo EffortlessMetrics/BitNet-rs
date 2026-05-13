@@ -238,6 +238,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-UX-007 | merged | `bitnet receipts explain` surfaces benchmark qualification profile decisions, transfer timing sources, and blockers for governed CUDA benchmark receipts. |
 | CUDA-PROD-008 | merged | Reconcile the 5070 Ti BitNet and dense proof state before runtime changes. |
 | CUDA-DENSE-050 | merged | Audit Qwen2.5 Q8_0 dense CUDA receipts to distinguish hardware/user-path evidence from validators and contracts. |
+| CUDA-PROD-009 | pr_open | Harden strict BitNet CUDA ask/chat preflight with `bitnet cuda doctor`, fail-closed strict backend/tokenizer checks, visible receipt paths, and `speedup_claim=false`. |
 
 ## Review Policy
 
