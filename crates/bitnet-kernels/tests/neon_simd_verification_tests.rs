@@ -6,12 +6,7 @@
 //! the outputs. They cover vector arithmetic, comparisons, load/store,
 //! reductions, and integer operations relevant to 2-bit quantization.
 #![cfg(all(feature = "cpu", target_arch = "aarch64"))]
-#![allow(
-    clippy::undocumented_unsafe_blocks,
-    clippy::float_cmp,
-    clippy::needless_range_loop,
-    unused_unsafe
-)]
+#![allow(clippy::undocumented_unsafe_blocks, clippy::float_cmp, clippy::needless_range_loop)]
 
 #[cfg(test)]
 mod tests {
