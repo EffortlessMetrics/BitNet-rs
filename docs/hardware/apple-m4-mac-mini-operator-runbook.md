@@ -464,10 +464,16 @@ bitnet mac ask \
   --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
   --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
-  "What is 2+2? Answer with only the number."
+  --max-new-tokens 8 \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json \
+  "What is 2+2? Answer briefly."
 ```
 
-This does not enable BitNet through `bitnet mac chat` or `bitnet mac serve`.
+The committed `M4-BITNET-ASK-001` receipt for that user-facing route records
+text `2+2 equals 4.`, generated token IDs, accepted GGUF/tokenizer identity,
+`selected_backend=apple-m4-cpu-neon`, `runtime_api=cpu`, `fallback_used=false`,
+and timing fields. This does not enable BitNet through `bitnet mac chat` or
+`bitnet mac serve`.
 
 If this command fails the content gate with non-empty but incoherent text, treat
 that as a real inference-quality blocker. Do not count the run as a local-answer

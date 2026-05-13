@@ -706,8 +706,11 @@ inspectable. The next campaign should make it quality-gated:
    quality gate. `bitnet mac bitnet-proof --proof-receipt <answer-corpus.json>
    --strict` is the Mac-facing receipt bridge for this proof; it validates the
    strict answer-corpus receipt. BitNet is limited to explicit one-shot
-   `bitnet mac ask` with the accepted GGUF plus external tokenizer, and remains
-   disabled for `bitnet mac chat` and `bitnet mac serve`.
+   `bitnet mac ask` with the accepted GGUF plus external tokenizer.
+   `M4-BITNET-ASK-001` adds one committed user-route receipt for that path with
+   text `2+2 equals 4.`, generated token IDs, accepted model/tokenizer identity,
+   `fallback_used=false`, and timing fields. BitNet remains disabled for
+   `bitnet mac chat` and `bitnet mac serve`.
 2. Greedy determinism for fixed prompt/model/settings.
 3. Receipt checks for output text validity, token counts, model/tokenizer
    identity, backend identity, and fallback status.

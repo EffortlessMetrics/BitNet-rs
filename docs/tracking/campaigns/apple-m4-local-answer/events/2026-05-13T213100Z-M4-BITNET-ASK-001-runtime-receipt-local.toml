@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T21:31:00Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-001"
+event = "closeout"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Ran the user-facing `bitnet --device apple-m4-cpu-neon mac ask` route with the accepted Microsoft I2_S GGUF and accepted external tokenizer.",
+  "The committed receipt is ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json.",
+  "The route generated `2+2 equals 4.` with 8 generated token IDs, selected apple-m4-cpu-neon, recorded runtime_api=cpu, fallback_used=false, strict llama-bpe tokenizer authority, model SHA 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162, and tokenizer SHA e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7.",
+  "Timing fields in the receipt include model_load_ms=4459.083, tokenizer_load_ms=178.805, prompt_tokenize_ms=0.202, prefill_ms=7015.247, first_token_ms=7536, first_token_decode_ms=521.519, decode_total_ms=3881.495, decode_steady_state_tok_s=2.083, and total wall latency 10896 ms.",
+  "Claim boundaries remain narrow: this proves one single-prompt BitNet one-shot `mac ask` runtime receipt only; it does not enable BitNet chat, BitNet serve, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, broad quality, or broad performance claims.",
+]

@@ -40,6 +40,49 @@ The bridge validates model SHA, strict external llama-bpe tokenizer authority,
 all-passed corpus quality, per-case `apple-m4-cpu-neon` backend/fallback fields,
 generated token IDs, prompt-prefill evidence, and timing/latency fields.
 
+## One-Shot Ask Runtime Receipt
+
+`M4-BITNET-ASK-001` adds the first user-facing one-shot runtime receipt for the
+explicit BitNet `mac ask` route:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac ask \
+  --model-id microsoft-bitnet-b1.58-2B-4T-i2s \
+  --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \
+  --max-new-tokens 8 \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json \
+  "What is 2+2? Answer briefly."
+```
+
+Receipt:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json
+```
+
+The receipt records `artifact_kind=strict_bitnet_cpu_profile`, text
+`2+2 equals 4.`, generated token IDs under `tokens.generated_ids`, accepted
+model SHA `4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`,
+strict external `llama-bpe` tokenizer authority, `requested_backend` and
+`selected_backend` equal to `apple-m4-cpu-neon`, `runtime_api=cpu`,
+`fallback_used=false`, and explicit BitNet chat/server disablement in
+`mac_bitnet_claim_boundary`.
+
+Timing from that receipt:
+
+```text
+model_load_ms = 4459.083
+tokenizer_load_ms = 178.805
+prompt_tokenize_ms = 0.202
+prefill_ms = 7015.247
+first_token_ms = 7536
+first_token_decode_ms = 521.519
+decode_total_ms = 3881.495
+decode_steady_state_tok_s = 2.083
+total_wall_ms = 10896
+```
+
 ## Accepted Artifact Input
 
 The `--accepted-artifact` receipt must come from the Apple BitNet artifact
@@ -101,10 +144,12 @@ Allowed now:
 
 - The M4 BitNet proof command shape and receipt contract are prepared.
 - Missing or unaccepted artifacts fail before proof execution.
+- The explicit BitNet one-shot `bitnet mac ask` route has one committed
+  Apple M4 CPU/NEON runtime receipt for the fixed short prompt above.
 
 Not allowed now:
 
-- BitNet local-answer quality works on M4.
-- The artifact is accepted by M4 continuity work.
+- Broad BitNet local-answer or chat quality works on M4.
+- BitNet `mac chat` or `mac serve` works.
 - Apple Metal BitNet inference works.
 - QK256 works on Apple Silicon.
