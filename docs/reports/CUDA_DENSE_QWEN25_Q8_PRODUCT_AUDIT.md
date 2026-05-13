@@ -168,7 +168,7 @@ Must not claim:
 - Dense Qwen has global full-residency proof.
 - A direct committed `bitnet ask` or `bitnet chat` hardware receipt exists under
   `ci/hardware/windows-9950x3d-rtx5070ti`.
-- Crates.io or docs.rs badge readiness changed before publish.
+- Crates.io or docs.rs badges are promoted from pending before publish.
 
 ## Validation
 
