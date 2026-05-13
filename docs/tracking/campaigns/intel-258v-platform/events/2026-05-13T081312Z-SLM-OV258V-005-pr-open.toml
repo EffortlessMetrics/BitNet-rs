@@ -1,0 +1,18 @@
+timestamp = "2026-05-13T08:13:12Z"
+campaign = "intel-258v-platform"
+item = "SLM-OV258V-005"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+pr = 4591
+actor = "codex"
+head_sha = "e06fefcd88d136af81ec2138f048bbe75e172fff"
+branch = "codex/lunar-lake/SLM-OV258V-005-phase-comparison"
+summary = "Opened SLM-OV258V-005 to compare available Qwen2.5 GGUF CPU and OpenVINO CPU/GPU/NPU timing and answer-gate fields."
+
+notes = [
+  "The comparison artifact indexes the existing GGUF CPU answer/phase receipts and the OpenVINO CPU, GPU/Arc 140V, and NPU LLMPipeline smoke receipts.",
+  "All indexed bounded answer gates pass and fallback_used=false is preserved from the source receipts.",
+  "OpenVINO receipts only expose pipeline load and per-case elapsed smoke timings, so tokenize/prefill/first-token/decode_128 splits are recorded as gaps rather than inferred.",
+  "No OpenVINO speedup, sustained phase performance, native OpenCL proof, native NPU inference outside OpenVINO GenAI, broad dense SLM quality, direct GenAI generated-token ID capture, or BitNet QK256/I2_S proof is claimed.",
+]

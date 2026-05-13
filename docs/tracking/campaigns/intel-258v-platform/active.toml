@@ -2507,3 +2507,50 @@ must_not_claim = [
   "Dense SLM receipts prove BitNet packed-kernel behavior.",
   "Generated token IDs are captured directly from OpenVINO GenAI internals.",
 ]
+
+[[work_item]]
+id = "SLM-OV258V-005"
+status = "pr_open"
+branch = "codex/lunar-lake/SLM-OV258V-005-phase-comparison"
+pr = 4591
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-OV258V-004"]
+acceptance = "Record a same-machine Qwen2.5 dense SLM comparison artifact across the GGUF CPU phase/answer receipts and OpenVINO CPU, GPU/Arc 140V, and NPU LLMPipeline smoke receipts, indexing answer gates, fallback status, available load/generation timing fields, and explicit phase-coverage gaps without claiming OpenVINO speedup, sustained phase performance, OpenVINO tokenize/prefill/first-token/decode_128 splits, native OpenCL proof, native NPU inference outside OpenVINO GenAI, broad dense SLM quality, generated token IDs from GenAI internals, or BitNet QK256/I2_S proof."
+commands = [
+  ".venv/Scripts/python.exe -m json.tool ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "Qwen2.5 dense SLM GGUF CPU, OpenVINO CPU, OpenVINO GPU/Arc 140V, and OpenVINO NPU receipts are indexed in one same-machine comparison artifact.",
+  "All indexed bounded answer gates pass with fallback_used=false in their source receipts.",
+  "Available timing fields are recorded with explicit phase coverage gaps.",
+]
+must_not_claim = [
+  "OpenVINO CPU/GPU/NPU speedup or sustained phase performance is proven.",
+  "OpenVINO GenAI tokenize/prefill/first-token/decode_128 splits are measured for CPU/GPU/NPU.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Broad dense SLM quality is proven beyond bounded answer gates.",
+  "Generated token IDs are captured directly from OpenVINO GenAI internals.",
+]

@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+  "campaign": "intel-258v-platform",
+  "item": "SLM-OV258V-005",
+  "created_utc": "2026-05-13T08:12:06Z",
+  "machine_id": "intel-258v",
+  "proof_stage": "phase_indexed",
+  "comparison_scope": "same_machine_qwen2_5_dense_slm_available_receipt_fields_only",
+  "model": {
+    "dense_slm": true,
+    "model_family": "qwen2.5",
+    "model_architecture": "qwen2",
+    "gguf_quantization": "Q8_0",
+    "openvino_quantization": "openvino_int4_symmetric_export",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct"
+  },
+  "source_receipts": {
+    "gguf_cpu_answer": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+    "gguf_cpu_phase": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json",
+    "openvino_ir_manifest": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+    "openvino_cpu": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-llmpipeline-smoke.json",
+    "openvino_gpu": "ci/hardware/intel-258v/2026-05-08/slm-openvino-gpu-arc140v-llmpipeline-smoke.json",
+    "openvino_npu": "ci/hardware/intel-258v/2026-05-08/slm-openvino-npu-llmpipeline-smoke.json"
+  },
+  "gguf_cpu_reference": {
+    "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json",
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "runtime_device": "CPU",
+    "backend_lane": "dense_slm_cpu",
+    "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
+    "fallback_used": false,
+    "answer_gate": {
+      "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+      "cases_total": 3,
+      "passed": 3,
+      "failed": 0,
+      "case_outputs": {
+        "math_2_plus_2": "\n2+2 equals 4.",
+        "capital_france": "\nThe capital of France is Paris.",
+        "rust_sentence": " Rust is a powerful, versatile programming language that has gained popularity in recent years for"
+      }
+    },
+    "timing": {
+      "model_load_ms": 4128.877,
+      "tokenizer_load_ms": 280.941,
+      "total_session_ms": 89780.225,
+      "prefill_512": {
+        "decode_total_ms": 175.035,
+        "fallback_used": false,
+        "first_token_decode_ms": 175.035,
+        "generated_tokens": 1,
+        "phase": "prefill",
+        "prefill_ms": 63420.772,
+        "prefill_tokens": 540,
+        "profile": "prefill_512",
+        "prompt_tokens": 541,
+        "receipt_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-phase-warm-session-qwen25-cpu-profiles\\prefill_512.json"
+      },
+      "decode_128": {
+        "decode_total_ms": 16931.925,
+        "fallback_used": false,
+        "first_token_decode_ms": 127.352,
+        "generated_tokens": 128,
+        "phase": "decode",
+        "prefill_ms": 3539.626,
+        "prefill_tokens": 36,
+        "profile": "decode_128",
+        "prompt_tokens": 37,
+        "receipt_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-phase-warm-session-qwen25-cpu-profiles\\decode_128.json"
+      }
+    },
+    "phase_coverage": {
+      "model_load_ms": "measured",
+      "tokenize_ms": "measured_tokenizer_load_ms",
+      "prefill_512": "measured",
+      "first_token": "measured_as_first_token_decode_ms_in_profiles",
+      "decode_128": "measured",
+      "total_generation": "measured_in_profile_receipts"
+    }
+  },
+  "openvino_paths": {
+    "cpu": {
+      "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-llmpipeline-smoke.json",
+      "requested_backend": "openvino-cpu",
+      "selected_backend": "openvino-cpu",
+      "runtime_api": "openvino_genai",
+      "runtime_device": "CPU",
+      "resolved_device": null,
+      "backend_lane": "dense_slm_openvino_cpu",
+      "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
+      "fallback_used": false,
+      "answer_gate": {
+        "cases_total": 3,
+        "passed": 3,
+        "failed": 0,
+        "scope": "bounded_three_case_dense_slm_smoke_only"
+      },
+      "timing": {
+        "pipeline_load_ms": 2568.457,
+        "case_elapsed_ms_sum": 1776.209,
+        "per_case_elapsed_ms": {
+          "math_2_plus_2": 1354.64,
+          "capital_france": 163.678,
+          "rust_sentence": 257.891
+        },
+        "timing_is_smoke_level": true,
+        "speedup_claimed": false
+      },
+      "phase_coverage": {
+        "model_or_pipeline_load_ms": "measured_pipeline_load_ms",
+        "tokenize_ms": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "prefill_512": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "first_token": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "decode_128": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "total_generation": "case_elapsed_ms_sum_smoke_level"
+      },
+      "case_outputs": {
+        "math_2_plus_2": "2+2 equals 4.",
+        "capital_france": "The capital of France is Paris.",
+        "rust_sentence": "Rust is a powerful, safe, and efficient programming language designed to be highly"
+      }
+    },
+    "gpu_arc140v": {
+      "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-gpu-arc140v-llmpipeline-smoke.json",
+      "requested_backend": "openvino-gpu",
+      "selected_backend": "openvino-gpu",
+      "runtime_api": "openvino_genai",
+      "runtime_device": "GPU.0",
+      "resolved_device": "Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)",
+      "backend_lane": "dense_slm_openvino_gpu_arc140v",
+      "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+      "fallback_used": false,
+      "answer_gate": {
+        "cases_total": 3,
+        "passed": 3,
+        "failed": 0,
+        "scope": "bounded_three_case_dense_slm_smoke_only"
+      },
+      "timing": {
+        "pipeline_load_ms": 4097.477,
+        "case_elapsed_ms_sum": 1310.697,
+        "per_case_elapsed_ms": {
+          "math_2_plus_2": 567.676,
+          "capital_france": 398.13,
+          "rust_sentence": 344.891
+        },
+        "timing_is_smoke_level": true,
+        "speedup_claimed": false
+      },
+      "phase_coverage": {
+        "model_or_pipeline_load_ms": "measured_pipeline_load_ms",
+        "tokenize_ms": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "prefill_512": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "first_token": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "decode_128": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "total_generation": "case_elapsed_ms_sum_smoke_level"
+      },
+      "case_outputs": {
+        "math_2_plus_2": "2+2 equals 4.",
+        "capital_france": "The capital of France is Paris.",
+        "rust_sentence": "Rust is a powerful, safe, and efficient programming language designed to be used"
+      }
+    },
+    "npu": {
+      "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-npu-llmpipeline-smoke.json",
+      "requested_backend": "openvino-npu",
+      "selected_backend": "openvino-npu",
+      "runtime_api": "openvino_genai",
+      "runtime_device": "NPU",
+      "resolved_device": "Intel(R) AI Boost",
+      "backend_lane": "dense_slm_openvino_npu",
+      "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+      "fallback_used": false,
+      "answer_gate": {
+        "cases_total": 3,
+        "passed": 3,
+        "failed": 0,
+        "scope": "bounded_three_case_dense_slm_smoke_only"
+      },
+      "timing": {
+        "pipeline_load_ms": 35469.77,
+        "case_elapsed_ms_sum": 2116.417,
+        "per_case_elapsed_ms": {
+          "math_2_plus_2": 882.187,
+          "capital_france": 526.28,
+          "rust_sentence": 707.95
+        },
+        "timing_is_smoke_level": true,
+        "speedup_claimed": false
+      },
+      "phase_coverage": {
+        "model_or_pipeline_load_ms": "measured_pipeline_load_ms",
+        "tokenize_ms": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "prefill_512": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "first_token": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "decode_128": "not_exposed_by_current_openvino_genai_smoke_receipt",
+        "total_generation": "case_elapsed_ms_sum_smoke_level"
+      },
+      "case_outputs": {
+        "math_2_plus_2": "2 + 2 equals 4.",
+        "capital_france": "The capital of France is Paris.",
+        "rust_sentence": "Rust is an open-source programming language designed to be safe"
+      }
+    }
+  },
+  "normalized_available_metrics": {
+    "answer_gate_passed_all_paths": true,
+    "fallback_used_any_path": false,
+    "openvino_pipeline_load_ms": {
+      "cpu": 2568.457,
+      "gpu_arc140v": 4097.477,
+      "npu": 35469.77
+    },
+    "openvino_case_elapsed_ms_sum": {
+      "cpu": 1776.209,
+      "gpu_arc140v": 1310.697,
+      "npu": 2116.417
+    }
+  },
+  "known_gaps": [
+    "OpenVINO CPU/GPU/NPU smoke receipts expose pipeline load and per-case elapsed times, not tokenize/prefill/first-token/decode_128 phase splits.",
+    "OpenVINO GenAI internal generated token IDs are not captured directly; decoded output is retokenized for conservative evidence only.",
+    "The comparison does not normalize GGUF Q8_0 CPU and OpenVINO INT4 symmetric IR as identical artifacts; it indexes the operating paths and their receipt boundaries.",
+    "No speedup, sustained throughput, or accelerator advantage claim is made from this comparison artifact."
+  ],
+  "recommended_next": [
+    "Add an OpenVINO phase runner with first-text-chunk or first-token instrumentation before making phase-speed comparisons.",
+    "Use this artifact as the dense SLM route-evidence index for a policy-only Lunar Lake router."
+  ],
+  "claim_boundary": {
+    "may_claim": [
+      "Qwen2.5 dense SLM GGUF CPU, OpenVINO CPU, OpenVINO GPU/Arc 140V, and OpenVINO NPU smoke/phase receipts are indexed in one same-machine comparison artifact.",
+      "All indexed answer gates pass with fallback_used=false in their source receipts.",
+      "Available timing fields from each source receipt are recorded with explicit coverage gaps."
+    ],
+    "must_not_claim": [
+      "OpenVINO CPU/GPU/NPU speedup or sustained phase performance is proven.",
+      "OpenVINO GenAI tokenize/prefill/first-token/decode_128 splits are measured for CPU/GPU/NPU.",
+      "OpenVINO GPU evidence proves native OpenCL execution.",
+      "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+      "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+      "Broad dense SLM quality is proven beyond bounded answer gates.",
+      "Generated token IDs are captured directly from OpenVINO GenAI internals."
+    ]
+  }
+}
