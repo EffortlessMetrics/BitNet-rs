@@ -1,10 +1,11 @@
 {
   "artifact_kind": "slm_cpu_answer_corpus",
+  "backend_lane": "dense_slm_cpu",
   "backend": {
     "fallback_used": false,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
-    "selected_backend": "cpu"
+    "selected_backend": "cpu-rust"
   },
   "cases": [
     {
@@ -633,6 +634,7 @@
     ]
   },
   "execution_plan": null,
+  "fallback_used": false,
   "generation": {
     "default_max_new_tokens": 16,
     "deterministic": true,
@@ -657,9 +659,13 @@
     "tokenizer": "gguf_metadata",
     "tokenizer_path": null
   },
-  "prompt_template": {
+  "model_architecture": "qwen2",
+  "model_family": "qwen",
+  "prompt_template": "qwen2.5",
+  "prompt_template_policy": {
     "family": "qwen2.5"
   },
+  "quantization": "Q8_0",
   "quality_summary": {
     "failed": 0,
     "not_run": 0,
@@ -667,7 +673,12 @@
     "timeout": 0,
     "total": 3
   },
+  "requested_backend": "cpu",
   "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
+  "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
   "speedup_claim": false,
+  "runtime_api": "cpu",
+  "tokenizer_source": "gguf_metadata",
   "timestamp": "2026-05-12T21:48:18.738703300+00:00"
 }
