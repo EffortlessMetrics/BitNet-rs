@@ -5,14 +5,13 @@ use bitnet_startup_contract_guard::StartupContractGuard;
 fn startup_contract_guard_component_labels() {
     // Regression: component label strings must stay stable
     insta::assert_snapshot!({
-        let labels = [
+        [
             RuntimeComponent::Cli.label(),
             RuntimeComponent::Server.label(),
             RuntimeComponent::Test.label(),
             RuntimeComponent::Custom.label(),
         ]
-        .join("\n");
-        labels
+        .join("\n")
     });
 }
 
