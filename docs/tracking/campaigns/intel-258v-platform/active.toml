@@ -2765,9 +2765,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-001"
-status = "pr_open"
-branch = "codex/lunar-lake/LNL258V-OP-001-operator-readiness"
+status = "merged"
 pr = 4620
+merge_sha = "293d22d8d25c51452f7e2fcea0c10fbda81e1c91"
+branch = "codex/lunar-lake/LNL258V-OP-001-operator-readiness"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

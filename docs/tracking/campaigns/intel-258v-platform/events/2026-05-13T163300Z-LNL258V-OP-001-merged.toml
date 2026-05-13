@@ -1,0 +1,21 @@
+timestamp = "2026-05-13T16:33:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-001"
+event = "merged"
+pr = 4620
+merge_sha = "293d22d8d25c51452f7e2fcea0c10fbda81e1c91"
+branch = "codex/lunar-lake/LNL258V-OP-001-operator-readiness"
+actor = "codex"
+
+summary = "Merged the Lunar Lake operator readiness route-policy receipt PR."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+]
+
+notes = [
+  "The merged command reads the committed 258V artifact bundle and emits an explicit operator readiness route-policy receipt.",
+  "Dense Qwen CPU is recorded as the default ask route and BitNet CPU as the strict reference route.",
+  "OpenVINO GPU and NPU remain candidate dense SLM routes only.",
+  "The merge does not run new inference or claim speedup, Arc/NPU acceleration, full accelerator BitNet inference, or QK256 accelerator decode.",
+]
