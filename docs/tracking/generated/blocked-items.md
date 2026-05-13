@@ -176,6 +176,7 @@
 | intel-258v-platform | SLM-OV258V-005 | SLM-OV258V-004 | merged |
 | intel-258v-platform | SLM-OV258V-006 | SLM-OV258V-005 | merged |
 | intel-258v-platform | CPU-BITNET-REF-001 | CPU258V-031 | merged |
+| intel-258v-platform | CPU-BITNET-PERF-001 | CPU-BITNET-REF-001 | pr_open |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
@@ -308,7 +309,7 @@
 | slm-cpu | SLM-CPU-007B | SLM-CPU-007A | merged |
 | slm-cpu | SLM-CPU-008 | SLM-CPU-007B | merged |
 | slm-cpu | SLM-CPU-008R | SLM-CPU-008 | merged |
-| slm-cpu | SLM-CPU-008S | SLM-CPU-008R | pr_open |
+| slm-cpu | SLM-CPU-008S | SLM-CPU-008R | merged |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | merged |
 | wasm-inference | WASM-002 | WASM-001 | ready |

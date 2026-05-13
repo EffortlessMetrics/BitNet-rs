@@ -83,6 +83,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | SLM-OV258V-005 | merged | Compare available Qwen2.5 GGUF CPU and OpenVINO CPU/GPU/NPU answer-gate, fallback, and timing fields while recording granular OpenVINO phase gaps; merged in #4591. |
 | SLM-OV258V-006 | merged | Add a Qwen2.5 OpenVINO GenAI phase runner for CPU, GPU.0/Arc 140V, and NPU PerfMetrics plus first streamed text chunk timing; merged in #4594. |
 | CPU-BITNET-REF-001 | merged | Record the external Microsoft BitNet.cpp generated-text boundary against the corrected 258V CPU reference bundle while preserving generated-token/logit gaps; merged in #4599. |
+| CPU-BITNET-PERF-001 | pr_open | Record 258V QK256/I2_S GEMV and GEMM microbench timing receipts with fallback=false and speedup_claim=false; open in #4607. No answer-quality, sustained-throughput, Arc/NPU, acceleration, QK256 semantic-change, or full-model claims. |
 
 ## Review Policy
 
