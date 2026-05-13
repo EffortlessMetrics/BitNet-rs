@@ -2510,9 +2510,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-OV258V-005"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/SLM-OV258V-005-phase-comparison"
 pr = 4591
+merge_sha = "758be06bd5d9d1cf4880550423e5459e1c928970"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
