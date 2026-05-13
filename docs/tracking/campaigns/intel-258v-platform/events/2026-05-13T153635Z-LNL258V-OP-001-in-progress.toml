@@ -1,0 +1,15 @@
+timestamp = "2026-05-13T15:36:35Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-001"
+event = "in_progress"
+branch = "codex/lunar-lake/LNL258V-OP-001-operator-readiness"
+actor = "codex"
+
+summary = "Started the first Lunar Lake operator readiness command slice."
+
+notes = [
+  "The slice reads existing 258V artifacts and emits a route-policy/readiness receipt.",
+  "Dense Qwen CPU remains the default ask route until accelerator speedup is benchmark-qualified.",
+  "OpenVINO GPU and NPU are recorded as dense SLM candidate routes only.",
+  "No new inference, speedup, Arc/NPU acceleration, full accelerator BitNet inference, or packed QK256 accelerator decode claim is made.",
+]
