@@ -72,6 +72,19 @@ for that event. It should move to a label, schedule, manual dispatch, release
 gate, or campaign receipt lane instead of using a near-completion timeout as a
 cost control.
 
+The machine-readable policy lives in `policy/ci-budget.toml`. Long selected
+lanes should use the larger of the configured minimum completion cushions:
+
+```text
+minimum_completion_cushion_percent = 20
+minimum_completion_cushion_minutes = 10
+```
+
+Timeout and cancellation records should remain visible in actuals reporting as
+cap failures, but they should not enter healthy-runtime percentile samples. A
+cancelled or timed-out job did not produce the receipt, test result, or cache
+state that the selected lane was supposed to buy.
+
 ## Why the budget target is aggressive
 
 Our CI budget target is intentionally aggressive — but **not because we want

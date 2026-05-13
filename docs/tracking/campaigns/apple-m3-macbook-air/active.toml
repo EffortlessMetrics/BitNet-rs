@@ -149,6 +149,42 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M3MBA-012"
+status = "proposed"
+branch = "codex/apple-m3-macbook-air/M3MBA-012-dense-harness-contract"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-003"]
+acceptance = "Define the M3 Air dense SLM harness contract before live smoke runs, including how mac validate and mac receipts-check accept apple-m3-air-cpu-neon without reusing M4 labels, the synthetic no-model receipt fixture needed for CI, and the local-only boundary for smoke/operator timing receipts."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "The M3 Air dense SLM harness contract is specified before live smoke evidence starts.",
+]
+must_not_claim = [
+  "M3 Air dense smoke ran.",
+  "Runtime support for M3 dense receipts has been implemented.",
+  "M3 Air evidence proves BitNet behavior or M4 performance.",
+]
+
+[[work_item]]
 id = "M3MBA-004A"
 status = "proposed"
 branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
@@ -156,7 +192,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M3MBA-003"]
+blocked_by = ["M3MBA-012"]
 acceptance = "Run the dense Qwen2.5 0.5B Mac smoke path on M3 Air with the known model hash, tokenizer metadata, deterministic settings, exact requested/selected backend label identity, fallback status, power and thermal context, storage before/after, receipts-check output, and dense-only claim boundary."
 commands = [
   "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set smoke --backend-label apple-m3-air-cpu-neon --quiet",

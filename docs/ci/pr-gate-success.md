@@ -65,13 +65,15 @@ fire on the same `pull_request` event. Two patterns are common:
 | Pattern        | Trade-off                                           |
 | -------------- | --------------------------------------------------- |
 | `workflow_run` | Loses the "single check on the PR head" UX         |
-| Checks-API poll | Single check; pays a polling job (~35 min budget)  |
+| Checks-API poll | Single check; pays a polling job when upstream lanes are slow |
 
 This PR uses the Checks-API poll pattern because branch protection
 wants a single required check that returns a single conclusion on
-the PR head. The poll uses a 35-minute deadline (70 × 30 s); most
+the PR head. The poll uses a 55-minute deadline (110 × 30 s); most
 default PRs converge in 10–15 minutes, while slower CI Core runs
-still have enough room for their final rollup job.
+still have enough room for their final rollup job. The aggregator
+deadline must exceed the healthy cap of any selected upstream lane
+plus rollup and status propagation cushion.
 
 ## Failure modes
 
@@ -81,7 +83,7 @@ still have enough room for their final rollup job.
 | Any `failure`             | `failure`                              |
 | Any `cancelled`/`timed_out`| `failure`                             |
 | Required lane `skipped`   | `failure` (required lanes must run)    |
-| Pending after 35 minutes  | `failure` (timeout)                    |
+| Pending after 55 minutes  | `failure` (timeout)                    |
 
 Optional lanes (none today) would be allowed to be `skipped`. The
 right place to encode "lane X is conditionally required when paths
