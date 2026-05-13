@@ -3657,6 +3657,24 @@ fn dense_slm_kernel_id(model_family: &str, model_architecture: &str) -> Option<&
     is_dense_slm_model(model_family, model_architecture).then_some("dense-qwen-cpu-reference")
 }
 
+fn model_output_head_identity(
+    canonical_bitnet_model: bool,
+    dense_slm_model: bool,
+    model_architecture: &str,
+) -> (serde_json::Value, &'static str) {
+    if canonical_bitnet_model {
+        return (serde_json::json!(true), "tied_token_embeddings");
+    }
+    if dense_slm_model {
+        return match model_architecture {
+            "qwen3" => (serde_json::json!(true), "tied_token_embeddings"),
+            "qwen2" => (serde_json::json!(false), "output.weight"),
+            _ => (serde_json::Value::Null, "unknown_dense_output_head"),
+        };
+    }
+    (serde_json::Value::Null, "output.weight")
+}
+
 fn uses_dense_slm_cpu_reference(
     requested_backend: &str,
     selected_backend: &str,
@@ -5105,6 +5123,11 @@ async fn run_simple_generation(
         let model_architecture = infer_model_architecture(&model_path);
         let model_family = receipt_model_family(&model_architecture);
         let dense_slm_model = is_dense_slm_model(model_family, &model_architecture);
+        let (tie_word_embeddings, output_head_tensor) = model_output_head_identity(
+            canonical_bitnet_model,
+            dense_slm_model,
+            &model_architecture,
+        );
         let model_format_label = receipt_model_format(&model_path, &model_format, is_hf_directory);
         let model_file =
             model_path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
@@ -5402,16 +5425,8 @@ async fn run_simple_generation(
                 "context_length": config.model.max_position_embeddings,
                 "tokenizer": tokenizer_label,
                 "vocab_size": tokenizer.vocab_size(),
-                "tie_word_embeddings": if canonical_bitnet_model || dense_slm_model {
-                    serde_json::json!(true)
-                } else {
-                    serde_json::Value::Null
-                },
-                "output_head_tensor": if canonical_bitnet_model || dense_slm_model {
-                    "tied_token_embeddings"
-                } else {
-                    "output.weight"
-                },
+                "tie_word_embeddings": tie_word_embeddings,
+                "output_head_tensor": output_head_tensor,
                 "loader_mode": loader_mode,
                 "fallback_loader_used": loader_mode != bitnet_models::GgufLoaderMode::RealGguf.as_str(),
             },
@@ -9570,6 +9585,7 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
             question,
             question_arg,
             max_new_tokens,
+            expect_contains,
             json_out,
         } => {
             let question = resolve_ask_question(question, question_arg)?;
@@ -9581,6 +9597,7 @@ async fn handle_lunar_lake_command(command: LunarLakeCommand) -> Result<()> {
                 tokenizer,
                 question,
                 max_new_tokens,
+                expect_contains,
                 json_out,
             )
             .await
@@ -9599,6 +9616,7 @@ async fn run_lunar_lake_ask(
     tokenizer: Option<std::path::PathBuf>,
     question: String,
     max_new_tokens: usize,
+    expect_contains: Option<String>,
     json_out: Option<std::path::PathBuf>,
 ) -> Result<()> {
     if !(1..=128).contains(&max_new_tokens) {
@@ -9662,8 +9680,15 @@ async fn run_lunar_lake_ask(
 
     let answer = source_run_receipt["text"].as_str().unwrap_or_default();
     let normalized_answer = normalize_lunar_lake_answer(answer);
-    let answer_gate_passed = !normalized_answer.is_empty();
+    let answer_gate =
+        evaluate_lunar_lake_answer_gate(&normalized_answer, expect_contains.as_deref());
+    let answer_gate_passed = answer_gate.passed;
     if !answer_gate_passed {
+        if let Some(expected) = expect_contains.as_deref() {
+            anyhow::bail!(
+                "lunar-lake ask answer gate failed: normalized answer did not contain `{expected}`"
+            );
+        }
         anyhow::bail!("lunar-lake ask produced an empty normalized answer");
     }
     let operator_receipt_path = if operator_receipt.is_absolute() || operator_receipt.exists() {
@@ -9698,8 +9723,10 @@ async fn run_lunar_lake_ask(
             "text": answer,
             "normalized_text": normalized_answer,
             "gate": {
-                "name": "non_empty_bounded_operator_answer",
+                "name": answer_gate.name,
                 "passed": answer_gate_passed,
+                "expected_contains": expect_contains,
+                "failed_rules": answer_gate.failed_rules,
                 "broad_quality_claim": false,
             },
         },
@@ -9770,6 +9797,39 @@ fn source_run_receipt_path(receipt_path: &std::path::Path) -> std::path::PathBuf
 #[cfg(feature = "full-cli")]
 fn normalize_lunar_lake_answer(answer: &str) -> String {
     answer.replace("<|im_end|>", "").replace("<|endoftext|>", "").trim().to_string()
+}
+
+#[cfg(feature = "full-cli")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LunarLakeAnswerGate {
+    name: &'static str,
+    passed: bool,
+    failed_rules: Vec<&'static str>,
+}
+
+#[cfg(feature = "full-cli")]
+fn evaluate_lunar_lake_answer_gate(
+    normalized_answer: &str,
+    expect_contains: Option<&str>,
+) -> LunarLakeAnswerGate {
+    let mut failed_rules = Vec::new();
+    if normalized_answer.is_empty() {
+        failed_rules.push("empty_answer");
+    }
+    if let Some(expected) = expect_contains
+        && !normalized_answer.contains(expected)
+    {
+        failed_rules.push("expected_contains");
+    }
+    LunarLakeAnswerGate {
+        name: if expect_contains.is_some() {
+            "contains_bounded_operator_answer"
+        } else {
+            "non_empty_bounded_operator_answer"
+        },
+        passed: failed_rules.is_empty(),
+        failed_rules,
+    }
 }
 
 #[cfg(feature = "full-cli")]
@@ -12339,6 +12399,54 @@ mod tests {
         assert_eq!(dense_slm_quant_format(path), "Q8_0");
         assert_eq!(dense_slm_layout_source(path), "gguf_dense_q8_0_reference");
         assert_eq!(dense_slm_kernel_layout(path), "gguf_dense_q8_0");
+    }
+
+    #[test]
+    fn qwen25_receipt_identity_keeps_dedicated_output_head() {
+        let path = std::path::Path::new(
+            "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+        );
+        let architecture = infer_model_architecture(path);
+        let family = receipt_model_family(&architecture);
+        let (tie_word_embeddings, output_head_tensor) = model_output_head_identity(
+            false,
+            is_dense_slm_model(family, &architecture),
+            &architecture,
+        );
+
+        assert_eq!(architecture, "qwen2");
+        assert_eq!(family, "qwen");
+        assert_eq!(tie_word_embeddings, serde_json::json!(false));
+        assert_eq!(output_head_tensor, "output.weight");
+    }
+
+    #[test]
+    fn qwen3_receipt_identity_keeps_tied_embedding_head() {
+        let path = std::path::Path::new("models/slm/Qwen3-0.6B-Q8_0.gguf");
+        let architecture = infer_model_architecture(path);
+        let family = receipt_model_family(&architecture);
+        let (tie_word_embeddings, output_head_tensor) = model_output_head_identity(
+            false,
+            is_dense_slm_model(family, &architecture),
+            &architecture,
+        );
+
+        assert_eq!(architecture, "qwen3");
+        assert_eq!(tie_word_embeddings, serde_json::json!(true));
+        assert_eq!(output_head_tensor, "tied_token_embeddings");
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_answer_gate_can_require_expected_text() {
+        let passed = evaluate_lunar_lake_answer_gate("2+2 equals 4.", Some("4"));
+        assert!(passed.passed);
+        assert_eq!(passed.name, "contains_bounded_operator_answer");
+        assert!(passed.failed_rules.is_empty());
+
+        let failed = evaluate_lunar_lake_answer_gate("not the expected answer", Some("4"));
+        assert!(!failed.passed);
+        assert_eq!(failed.failed_rules, vec!["expected_contains"]);
     }
 
     #[test]
