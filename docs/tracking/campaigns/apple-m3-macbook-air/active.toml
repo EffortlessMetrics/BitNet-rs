@@ -60,7 +60,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-002"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-002-machine-profile"
 stackable = false
 review_mode = "codex_premerge"
@@ -100,7 +100,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-003"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m3-macbook-air/M3MBA-003-receipt-label"
 stackable = false
 review_mode = "codex_premerge"

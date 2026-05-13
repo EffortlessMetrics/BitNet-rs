@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "bitnet_cpu_external_reference_boundary",
+  "item": "CPU-BITNET-REF-001",
+  "machine_id": "intel-258v",
+  "proof_stage": "external_reference_boundary_indexed",
+  "created_utc": "2026-05-13T10:05:00Z",
+  "inputs": {
+    "external_reference": "ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json",
+    "instrumentation": "ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json",
+    "cpu_reference_bundle": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+    "model_artifact_report": "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md"
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "architecture": "bitnet_b1_58",
+    "quantization": "QK256/I2_S",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "tokenizer": {
+    "source_repo": "microsoft/bitnet-b1.58-2B-4T",
+    "source_revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+    "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "family": "llama3",
+    "vocab_size": 128256,
+    "pretokenizer_authority": "externally_supplied_llama_bpe",
+    "override_kv": "tokenizer.ggml.pre=str:llama-bpe",
+    "bos_token_id": 128000,
+    "eos_token_id": 128009
+  },
+  "reference": {
+    "runner": "Microsoft BitNet.cpp / llama-cli",
+    "bitnet_cpp_commit": "01eb415772c342d9f20dc42772f1583ae1e5b102",
+    "llama_cpp_submodule_commit": "1f86f058de0c3f4098dedae2ae8653c335c868a1",
+    "llama_cli_version": "3962 (1f86f058)",
+    "command_shape": "llama-cli.exe -m <ggml-model-i2_s.gguf> --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -ngl 0 -t 8 -c 4096 -n <max_new_tokens> --temp 0 --top-k 1 --top-p 1 --min-p 0 --seed 42 --no-display-prompt --no-warmup -p \"User: <question><|eot_id|>Assistant:\"",
+    "prompt_mode": "bitnet_cpp_answer_ready_prompt_argument",
+    "generated_text_available": true,
+    "generated_token_ids_available": false,
+    "first_generated_token_id_available": false,
+    "first_token_topk_logits_available": false,
+    "logits_available": false,
+    "missing_logits_status": "reference report does not expose logits or top-k; do not infer logits parity"
+  },
+  "cpu_reference": {
+    "bundle": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+    "prompt_policy": "metadata_authoritative_bitnetcpp_answer_after_prompt_fix",
+    "prompt_token_parity_after_fix": "pass",
+    "answer_corpus_scope": "fixed_tiny_corpus_only",
+    "scalar_avx2_parity_after_fix": "pass",
+    "fallback_used": false
+  },
+  "summary": {
+    "boundary_classification": "reference_runner_requires_instrumentation",
+    "cases_total": 4,
+    "cases_with_reference_generated_text": 4,
+    "cases_with_reference_generated_token_ids": 0,
+    "cases_with_reference_first_token_topk_logits": 0,
+    "first_divergence_stage": "reference_instrumentation",
+    "next_required_evidence": "capture direct reference generated-token IDs and first-token logits/top-k, or patch/script the reference runner to expose them without text re-tokenization"
+  },
+  "case_boundaries": [
+    {
+      "case_id": "math_2_plus_2",
+      "reference_generated_text": "4",
+      "prompt_token_ids_recorded": true,
+      "generated_token_ids_available": false,
+      "logits_available": false
+    },
+    {
+      "case_id": "say_ok",
+      "reference_generated_text": "OK",
+      "prompt_token_ids_recorded": true,
+      "generated_token_ids_available": false,
+      "logits_available": false
+    },
+    {
+      "case_id": "capital_france",
+      "reference_generated_text": "Paris",
+      "prompt_token_ids_recorded": true,
+      "generated_token_ids_available": false,
+      "logits_available": false
+    },
+    {
+      "case_id": "yes_no_water",
+      "reference_generated_text": "No. Water is",
+      "prompt_token_ids_recorded": true,
+      "generated_token_ids_available": false,
+      "logits_available": false
+    }
+  ],
+  "validation": {
+    "passed": true,
+    "failed_rules": []
+  },
+  "fallback_used": false,
+  "claim_boundary": {
+    "may_claim": [
+      "The corrected 258V BitNet CPU reference bundle is linked to the external Microsoft BitNet.cpp generated-text boundary.",
+      "The external reference generated text, prompt-token evidence path, and missing generated-token/logit fields are indexed in one receipt.",
+      "The next evidence blocker is direct reference generated-token IDs and first-token logits/top-k."
+    ],
+    "must_not_claim": [
+      "BitNet-rs generated-token-ID parity against BitNet.cpp is proven.",
+      "BitNet-rs first-token logits parity against BitNet.cpp is proven.",
+      "Broad BitNet answer quality is proven.",
+      "CPU speedup or sustained performance is proven.",
+      "Arc 140V execution or acceleration is involved.",
+      "Intel NPU execution or acceleration is involved.",
+      "QK256/I2_S kernel behavior is changed or newly proven by this receipt."
+    ]
+  }
+}

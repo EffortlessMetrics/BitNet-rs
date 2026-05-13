@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T09:11:22Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-002"
+event = "merged"
+pr = 4592
+head_sha = "3efd1a5ede5b881c6be214fef73846f6ef279362"
+merge_sha = "52c37076de1c7e716e8335be60069df255ecb230"
+actor = "codex"
+
+notes = [
+  "Merged the M3 MacBook Air machine-profile receipt.",
+  "The receipt records host, storage, cache, power, thermal-warning, CPU/NEON, Metal, and MPSGraph visibility facts with inference_run=false.",
+  "No model inference, large artifact download, BitNet acceptance, M4 Mac mini performance claim, or broad Apple Silicon performance claim is introduced.",
+]
