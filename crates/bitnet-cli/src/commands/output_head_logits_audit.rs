@@ -497,6 +497,8 @@ fn answer_corpus_evidence(
         "path": path.map(|p| p.display().to_string()),
         "artifact_kind": receipt["artifact_kind"].clone(),
         "backend": value_or(&receipt["backend"], &receipt["selected_backend"]),
+        "selected_backend": receipt["selected_backend"].clone(),
+        "runtime_api": receipt["runtime_api"].clone(),
         "summary": {
             "cases_total": cases.len(),
             "cases_with_first_step_topk": cases_with_topk,
@@ -556,9 +558,11 @@ fn answer_case_evidence(case: &Value, tokenizer: &(dyn Tokenizer + Send + Sync))
         "id": case["id"].clone(),
         "status": case["status"].clone(),
         "selected_kernel": value_or(&case["kernel"]["selected_kernel"], &case["kernel"]["kernel_id"]),
+        "kernel_id": case["kernel"]["kernel_id"].clone(),
         "model_vocab_size": case["model"]["vocab_size"].clone(),
         "output_head_tensor": case["model"]["output_head_tensor"].clone(),
         "tie_word_embeddings": case["model"]["tie_word_embeddings"].clone(),
+        "text": case["text"].clone(),
         "observed_logits_vector_length": observed_length,
         "model_vocab_size_proxy": model_vocab_size_proxy,
         "observed_logits_vector_length_source": observed_length_source,
@@ -856,6 +860,8 @@ mod tests {
         let receipt = json!({
             "artifact_kind": "inference_result",
             "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "text": "4",
             "profile": {
                 "id": "default"
             },
@@ -887,11 +893,15 @@ mod tests {
         let evidence = answer_corpus_evidence("avx2", None, Some(&receipt), &tokenizer);
 
         assert_eq!(evidence["backend"], "cpu-rust");
+        assert_eq!(evidence["selected_backend"], "cpu-rust");
+        assert_eq!(evidence["runtime_api"], "cpu");
         assert_eq!(evidence["summary"]["cases_total"], 1);
         assert_eq!(evidence["summary"]["cases_with_first_step_topk"], 1);
         assert_eq!(evidence["summary"]["observed_logits_vector_lengths"][0], 50257);
         assert_eq!(evidence["cases"][0]["id"], "default");
         assert_eq!(evidence["cases"][0]["selected_kernel"], "dense-qwen-cpu-reference");
+        assert_eq!(evidence["cases"][0]["kernel_id"], "dense-qwen-cpu-reference");
+        assert_eq!(evidence["cases"][0]["text"], "4");
         assert_eq!(evidence["cases"][0]["observed_logits_vector_length"], 50257);
         assert_eq!(
             evidence["cases"][0]["observed_logits_vector_length_source"],

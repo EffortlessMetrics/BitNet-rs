@@ -1,0 +1,323 @@
+{
+  "artifact_kind": "bitnet_output_head_logits_index_audit",
+  "claim": "cpu_output_head_logits_index_boundary",
+  "claim_boundary": {
+    "may_claim": [
+      "The CPU output-head or tied-head tensor boundary is recorded from GGUF metadata.",
+      "The tokenizer/logits index contract is audited against vocab and special-token IDs.",
+      "Existing scalar and AVX2 first-step top-k token IDs can be decoded and compared when supplied."
+    ],
+    "must_not_claim": [
+      "BitNet answer quality is newly proven.",
+      "First-token logits parity with the external reference is proven.",
+      "CPU speed or sustained throughput is proven.",
+      "Arc 140V or Intel NPU execution is proven.",
+      "Full model correctness is proven."
+    ]
+  },
+  "classification": {
+    "classification": "output_head_logits_index_boundary_has_gaps",
+    "first_mismatch_stage": "metadata_gap",
+    "notes": [
+      "gguf_metadata_vocab_size_missing"
+    ]
+  },
+  "fallback_used": false,
+  "inputs": {
+    "avx2_answer_corpus": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-post-008u-original-first-token.json",
+    "model": "C:\\Code\\Rust\\BitNet-rs\\models\\slm\\Qwen3-0.6B-Q8_0.gguf",
+    "prompt_audit": null,
+    "scalar_answer_corpus": null,
+    "tokenizer": "C:\\Code\\Rust\\BitNet-rs\\models\\slm\\Qwen3-0.6B-Q8_0.gguf"
+  },
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 151936,
+    "expected_logits_vector_length_source": "tokenizer_real_vocab_size",
+    "metadata_vocab_matches_tokenizer": null,
+    "metadata_vocab_size": null,
+    "model_vocab_size_proxy": 151936,
+    "observed_logits_vector_length": 151936,
+    "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
+    "special_tokens": {
+      "all_present_ids_within_vocab": true,
+      "entries": [
+        {
+          "decoded": "<|endoftext|>",
+          "name": "bos",
+          "piece": "<|endoftext|>",
+          "token_id": 151643,
+          "within_vocab": true
+        },
+        {
+          "decoded": "<|im_end|>",
+          "name": "eos",
+          "piece": "<|im_end|>",
+          "token_id": 151645,
+          "within_vocab": true
+        },
+        {
+          "decoded": null,
+          "name": "pad",
+          "piece": null,
+          "token_id": null,
+          "within_vocab": null
+        },
+        {
+          "decoded": null,
+          "name": "eot",
+          "piece": null,
+          "token_id": null,
+          "within_vocab": null
+        },
+        {
+          "decoded": "<|im_end|>",
+          "name": "end_of_text",
+          "piece": "<|im_end|>",
+          "token_id": 151645,
+          "within_vocab": true
+        }
+      ]
+    },
+    "tokenizer_real_vocab_size": 151936
+  },
+  "machine_id": "intel-i5-8250u-cpu-avx2",
+  "model": {
+    "gguf_architecture": "qwen3",
+    "gguf_name": "Qwen3 0.6B Instruct",
+    "metadata_hidden_size": 1024,
+    "metadata_vocab_size": null,
+    "n_kv": 28,
+    "n_tensors": 310,
+    "path": "C:\\Code\\Rust\\BitNet-rs\\models\\slm\\Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+  },
+  "prompt_authority": {
+    "provided": false
+  },
+  "proof_stage": "output_head_logits_index_audited",
+  "schema_version": "1.0.0",
+  "tensor_boundary": {
+    "embedding_candidates": [
+      {
+        "name": "token_embd.weight",
+        "offset": 4096,
+        "present": true,
+        "shape": [
+          1024,
+          151936
+        ],
+        "size_bytes": 165306368,
+        "tensor_type": "Q8_0"
+      },
+      {
+        "name": "tok_embeddings.weight",
+        "present": false
+      },
+      {
+        "name": "model.tok_embeddings.weight",
+        "present": false
+      },
+      {
+        "name": "model.embed_tokens.weight",
+        "present": false
+      },
+      {
+        "name": "embed_tokens.weight",
+        "present": false
+      },
+      {
+        "name": "transformer.wte.weight",
+        "present": false
+      }
+    ],
+    "output_head_candidates": [
+      {
+        "name": "output.weight",
+        "present": false
+      },
+      {
+        "name": "lm_head.weight",
+        "present": false
+      },
+      {
+        "name": "model.lm_head.weight",
+        "present": false
+      },
+      {
+        "name": "transformer.lm_head.weight",
+        "present": false
+      },
+      {
+        "name": "language_model_head.weight",
+        "present": false
+      },
+      {
+        "name": "head.weight",
+        "present": false
+      },
+      {
+        "name": "generator.weight",
+        "present": false
+      }
+    ],
+    "output_orientation": null,
+    "raw_qk256_tied_candidate": null,
+    "raw_qk256_tied_candidates": [
+      {
+        "name": "embed_tokens.weight.qk256_qs",
+        "present": false
+      },
+      {
+        "name": "token_embd.weight.qk256_qs",
+        "present": false
+      },
+      {
+        "name": "tok_embeddings.weight.qk256_qs",
+        "present": false
+      }
+    ],
+    "selected_embedding": {
+      "name": "token_embd.weight",
+      "offset": 4096,
+      "shape": [
+        1024,
+        151936
+      ],
+      "size_bytes": 165306368,
+      "tensor_type": "Q8_0"
+    },
+    "selected_output_head": null,
+    "tied_output_policy": "tied_token_embeddings"
+  },
+  "timestamp": "2026-05-13T20:05:59.646101500+00:00",
+  "tokenizer": {
+    "bos_token_id": 151643,
+    "end_of_text_token_id": 151645,
+    "eos_token_id": 151645,
+    "eot_token_id": null,
+    "pad_token_id": null,
+    "path": "C:\\Code\\Rust\\BitNet-rs\\models\\slm\\Qwen3-0.6B-Q8_0.gguf",
+    "real_vocab_size": 151936,
+    "source": "gguf_metadata",
+    "vocab_size": 151936
+  },
+  "topk_evidence": {
+    "avx2": {
+      "artifact_kind": "inference_result",
+      "backend": "cpu-rust",
+      "cases": [
+        {
+          "chosen_id": 77979,
+          "first_step_top_logits": [
+            {
+              "decoded": "takes",
+              "is_special": false,
+              "logit": 17.115215301513672,
+              "piece": "takes",
+              "token_id": 77979
+            },
+            {
+              "decoded": " Une",
+              "is_special": false,
+              "logit": 16.339262008666992,
+              "piece": "ĠUne",
+              "token_id": 38683
+            },
+            {
+              "decoded": " retry",
+              "is_special": false,
+              "logit": 16.159814834594727,
+              "piece": "Ġretry",
+              "token_id": 22683
+            },
+            {
+              "decoded": "ظاهرة",
+              "is_special": false,
+              "logit": 15.836349487304688,
+              "piece": "Ø¸Ø§ÙĩØ±Ø©",
+              "token_id": 140077
+            },
+            {
+              "decoded": "到底",
+              "is_special": false,
+              "logit": 15.807455062866213,
+              "piece": "åĪ°åºķ",
+              "token_id": 102046
+            },
+            {
+              "decoded": " النفس",
+              "is_special": false,
+              "logit": 15.366619110107422,
+              "piece": "ĠØ§ÙĦÙĨÙģØ³",
+              "token_id": 135087
+            },
+            {
+              "decoded": "的行为",
+              "is_special": false,
+              "logit": 15.04520320892334,
+              "piece": "çļĦè¡Įä¸º",
+              "token_id": 104796
+            },
+            {
+              "decoded": " pickups",
+              "is_special": false,
+              "logit": 15.034399032592772,
+              "piece": "Ġpickups",
+              "token_id": 92038
+            },
+            {
+              "decoded": "缦",
+              "is_special": false,
+              "logit": 14.651456832885742,
+              "piece": "ç¼¦",
+              "token_id": 121538
+            },
+            {
+              "decoded": "rotate",
+              "is_special": false,
+              "logit": 14.625834465026855,
+              "piece": "rotate",
+              "token_id": 16213
+            }
+          ],
+          "id": "default",
+          "kernel_id": "dense-qwen-cpu-reference",
+          "model_vocab_size": 151936,
+          "model_vocab_size_proxy": 151936,
+          "observed_logits_vector_length": 151936,
+          "observed_logits_vector_length_source": "run_receipt_logits_index_boundary",
+          "output_head_tensor": "tied_token_embeddings",
+          "selected_kernel": "dense-qwen-cpu-reference",
+          "status": "recorded",
+          "text": "takes",
+          "tie_word_embeddings": true
+        }
+      ],
+      "label": "avx2",
+      "path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-post-008u-original-first-token.json",
+      "provided": true,
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust",
+      "summary": {
+        "cases_total": 1,
+        "cases_with_first_step_topk": 1,
+        "observed_logits_vector_lengths": [
+          151936
+        ]
+      }
+    },
+    "scalar": {
+      "label": "scalar",
+      "path": null,
+      "provided": false
+    },
+    "scalar_avx2_comparison": {
+      "available": false,
+      "reason": "scalar_or_avx2_answer_corpus_not_supplied"
+    }
+  },
+  "validation": {
+    "failed_rules": [],
+    "passed": true
+  }
+}
