@@ -155,10 +155,11 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-003"]
-acceptance = "Run the dense Qwen2.5 0.5B Mac smoke path on M3 Air with the known model hash, tokenizer metadata, deterministic settings, explicit backend label, fallback status, power and thermal context, storage before/after, receipts-check output, and dense-only claim boundary."
+acceptance = "Run the dense Qwen2.5 0.5B Mac smoke path on M3 Air with the known model hash, tokenizer metadata, deterministic settings, exact requested/selected backend label identity, fallback status, power and thermal context, storage before/after, receipts-check output, and dense-only claim boundary."
 commands = [
   "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set smoke --backend-label apple-m3-air-cpu-neon --quiet",
   "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check <receipt> --json",
+  "jq -e '.strict_provenance.requested_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.selected_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.fallback_used == false' <receipt>",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
@@ -195,10 +196,11 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-004A"]
-acceptance = "Run the dense Qwen2.5 0.5B bounded operator profile only after smoke passes, recording allocation-audit context, power and thermal context, repeat count, token budget, storage before/after, receipts-check output, fallback status, and whether the result is comparison-grade or diagnostic-only."
+acceptance = "Run the dense Qwen2.5 0.5B bounded operator profile only after smoke passes, recording allocation-audit context, power and thermal context, repeat count, token budget, storage before/after, receipts-check output, exact requested/selected backend label identity, fallback status, and whether the result is comparison-grade or diagnostic-only."
 commands = [
   "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set operator --backend-label apple-m3-air-cpu-neon --allocation-audit --quiet",
   "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check <receipt> --json",
+  "jq -e '.strict_provenance.requested_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.selected_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.fallback_used == false' <receipt>",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
