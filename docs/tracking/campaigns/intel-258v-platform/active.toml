@@ -2608,9 +2608,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-REF-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/CPU-BITNET-REF-001-reference-boundary"
 pr = 4599
+merge_sha = "3b8131b79e30a69d492a549df10bb222924252a5"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

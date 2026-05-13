@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T10:24:08Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-REF-001"
+event = "merged"
+pr = 4599
+head_sha = "4d46f3d8e25816e29dcf1c79181022d2d80366dd"
+merge_sha = "3b8131b79e30a69d492a549df10bb222924252a5"
+actor = "codex"
+
+notes = [
+  "Merged the 258V BitNet CPU external reference boundary.",
+  "The receipt links the corrected CPU reference bundle, external BitNet.cpp generated-text reference, and instrumentation classifier.",
+  "Generated-token parity, first-token logits parity, answer quality, speed, Arc, NPU, QK256 changes, and full model correctness remain explicit non-claims.",
+]
