@@ -2555,3 +2555,52 @@ must_not_claim = [
   "Broad dense SLM quality is proven beyond bounded answer gates.",
   "Generated token IDs are captured directly from OpenVINO GenAI internals.",
 ]
+
+[[work_item]]
+id = "SLM-OV258V-006"
+status = "pr_open"
+branch = "codex/lunar-lake/SLM-OV258V-006-openvino-phase-runner"
+pr = 4594
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-OV258V-005"]
+acceptance = "Add a Qwen2.5 OpenVINO GenAI phase runner that records CPU, GPU.0/Arc 140V, and NPU LLMPipeline PerfMetrics plus first streamed text chunk timing for bounded prompts, preserving fallback=false and explicit gaps for prefill_512, decode_128, direct generated-token IDs, speedup, sustained performance, native OpenCL proof, native NPU inference outside OpenVINO GenAI, and BitNet QK256/I2_S proof."
+commands = [
+  ".venv/Scripts/python.exe scripts/openvino_genai_phase_receipt.py --model-dir models/openvino/qwen2.5-0.5b-instruct-int4-sym --json-out ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-runner.json --devices CPU GPU.0 NPU",
+  ".venv/Scripts/python.exe -m json.tool ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-runner.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "scripts/openvino_genai_phase_receipt.py",
+  "ci/hardware/intel-258v/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "OpenVINO GenAI PerfMetrics are recorded for bounded Qwen2.5 CPU, GPU.0/Arc 140V, and NPU LLMPipeline runs on the same 258V machine.",
+  "The receipt records tokenization, TTFT, generate, inference, TPOT, throughput, detokenization, first streamed text chunk, and bounded answer-gate fields exposed by the current OpenVINO GenAI API.",
+  "The bounded answer gates passed with fallback_used=false for all requested OpenVINO devices.",
+]
+must_not_claim = [
+  "OpenVINO CPU/GPU/NPU speedup or sustained phase performance is proven.",
+  "OpenVINO GenAI generated token IDs are captured directly from pipeline internals.",
+  "prefill_512 or decode_128 phase profiles are measured.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Broad dense SLM quality is proven beyond bounded answer gates.",
+]
