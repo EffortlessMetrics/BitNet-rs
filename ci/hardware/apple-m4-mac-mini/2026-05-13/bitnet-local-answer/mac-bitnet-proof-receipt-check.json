@@ -27,7 +27,7 @@
     "temperature": 0.0
   },
   "model": {
-    "exists": true,
+    "exists": false,
     "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
     "required": "accepted BitNet GGUF from apple-bitnet-artifact-sweep"
   },
@@ -53,6 +53,13 @@
       "requested_backend": "apple-m4-cpu-neon",
       "runtime_api": "cpu",
       "selected_backend": "apple-m4-cpu-neon",
+      "tokenizer_authority": {
+        "ggml_pre": "llama-bpe",
+        "repo": "microsoft/bitnet-b1.58-2B-4T",
+        "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+        "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+        "source": "external_tokenizer_json"
+      },
       "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
       "valid": true
     }
@@ -77,7 +84,13 @@
   "schema_version": 1,
   "selected_backend": "apple-m4-cpu-neon",
   "tokenizer": {
-    "authority": null,
+    "authority": {
+      "ggml_pre": "llama-bpe",
+      "repo": "microsoft/bitnet-b1.58-2B-4T",
+      "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "source": "external_tokenizer_json"
+    },
     "required": true
   }
 }

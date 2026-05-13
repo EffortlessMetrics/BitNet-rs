@@ -924,7 +924,8 @@ fn run_bitnet_proof_preflight(
                 .to_string(),
         );
     }
-    if !model.exists() {
+    let local_model_exists = model.exists();
+    if !local_model_exists && !proof_valid {
         blockers.push(format!(
             "accepted BitNet GGUF is missing at {}; this M4 command never downloads artifacts",
             model.display()
@@ -971,6 +972,10 @@ fn run_bitnet_proof_preflight(
     } else {
         "ready"
     };
+    let receipt_tokenizer_authority =
+        tokenizer_authority.as_ref().map(|authority| serde_json::json!(authority)).or_else(|| {
+            proof_summary.as_ref().and_then(|summary| summary.get("tokenizer_authority")).cloned()
+        });
     let receipt = serde_json::json!({
         "artifact_kind": "apple_m4_bitnet_proof_preflight",
         "schema_version": 1,
@@ -982,11 +987,11 @@ fn run_bitnet_proof_preflight(
         "fallback_used": false,
         "model": {
             "path": model,
-            "exists": model.exists(),
+            "exists": local_model_exists,
             "required": "accepted BitNet GGUF from apple-bitnet-artifact-sweep",
         },
         "tokenizer": {
-            "authority": tokenizer_authority,
+            "authority": receipt_tokenizer_authority,
             "required": true,
         },
         "accepted_artifact": {
@@ -1220,6 +1225,7 @@ fn validate_bitnet_local_answer_proof_receipt(
         "quality_summary": quality_summary,
         "model_sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
         "tokenizer_sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+        "tokenizer_authority": tokenizer_authority,
         "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
         "requested_backend": APPLE_M4_CPU_NEON,
         "selected_backend": APPLE_M4_CPU_NEON,
