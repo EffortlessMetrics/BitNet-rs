@@ -1901,10 +1901,14 @@ fn ripr_pr(check: bool) -> Result<()> {
 
 fn run_ripr_check_format(workspace_root: &Path, format: &str, out: &Path) -> Result<()> {
     let ripr_bin = std::env::var("RIPR_BIN").unwrap_or_else(|_| "ripr".to_string());
-    let output = Command::new(&ripr_bin)
-        .arg("check")
-        .arg("--root")
-        .arg(workspace_root)
+    let mut command = Command::new(&ripr_bin);
+    command.arg("check").arg("--root").arg(workspace_root);
+    if let Ok(base) = std::env::var("RIPR_BASE")
+        && !base.trim().is_empty()
+    {
+        command.arg("--base").arg(base);
+    }
+    let output = command
         .arg("--format")
         .arg(format)
         .current_dir(workspace_root)

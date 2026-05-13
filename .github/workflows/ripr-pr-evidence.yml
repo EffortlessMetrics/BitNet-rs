@@ -36,6 +36,8 @@ jobs:
         run: git fetch origin ${{ github.base_ref }}
 
       - name: RIPR PR evidence
+        env:
+          RIPR_BASE: origin/${{ github.base_ref }}
         run: cargo xtask ripr-pr
 
       - name: RIPR review guidance
