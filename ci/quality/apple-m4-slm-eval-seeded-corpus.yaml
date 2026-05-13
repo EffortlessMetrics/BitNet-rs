@@ -8,14 +8,14 @@ metadata:
   seed: 424242
   generator_policy: deterministic-static-fixture
   prompt_template: qwen2.5
-  scoring_status: spec_only
-  future_scoring:
-    exact_match: planned
-    normalized_match: planned
-    json_schema: planned
-    numeric_tolerance: planned
-    required_keywords: planned
-    forbidden_tokens: planned
+  scoring_status: deterministic_fixture_scoring
+  scoring_support:
+    exact_match: deterministic_fixture
+    normalized_match: deterministic_fixture
+    json_schema: deterministic_fixture
+    numeric_tolerance: deterministic_fixture
+    required_keywords: deterministic_fixture
+    forbidden_tokens: deterministic_fixture
   claim_boundary:
     runtime_proof: false
     broad_quality_claim: false
@@ -45,7 +45,7 @@ cases:
     question: "Compute 7 + 8. Answer with only the number."
     max_new_tokens: 4
     scoring:
-      planned_kind: exact_match
+      kind: exact_match
       expected_normalized: "15"
     gate:
       kind: exact_trimmed
@@ -57,7 +57,7 @@ cases:
     question: "Double 12. Answer with only the number."
     max_new_tokens: 4
     scoring:
-      planned_kind: exact_match
+      kind: exact_match
       expected_normalized: "24"
     gate:
       kind: exact_trimmed
@@ -69,7 +69,7 @@ cases:
     question: "Use this table: kiwi=green, heron=blue, ember=red. What color is heron? Answer with one word."
     max_new_tokens: 8
     scoring:
-      planned_kind: exact_match
+      kind: exact_match
       expected_normalized: "blue"
     gate:
       kind: contains_any
@@ -82,7 +82,7 @@ cases:
     question: "Return compact JSON with exactly one key named status and value ready."
     max_new_tokens: 24
     scoring:
-      planned_kind: json_schema
+      kind: json_schema
       schema: '{"type":"object","required":["status"],"additionalProperties":false,"properties":{"status":{"const":"ready"}}}'
     gate:
       kind: starts_with_any
@@ -95,7 +95,7 @@ cases:
     question: "Classify the sentiment as positive or negative: The invoice was paid on time. Answer with one label."
     max_new_tokens: 4
     scoring:
-      planned_kind: exact_match
+      kind: exact_match
       expected_normalized: "positive"
     gate:
       kind: exact_trimmed
@@ -107,7 +107,7 @@ cases:
     question: "Extract the owner name from this note: Ticket AX-17 owner is Mira; due date is Friday. Answer with only the owner."
     max_new_tokens: 8
     scoring:
-      planned_kind: exact_match
+      kind: exact_match
       expected_normalized: "Mira"
     gate:
       kind: contains_any
@@ -121,7 +121,7 @@ cases:
     question: "Sort these words alphabetically and separate them with commas: dog, ant, cat."
     max_new_tokens: 16
     scoring:
-      planned_kind: normalized_match
+      kind: normalized_match
       expected_normalized: "ant, cat, dog"
     gate:
       kind: contains_any
@@ -135,7 +135,7 @@ cases:
     question: "Rewrite as a short plain sentence: The model cache is healthy."
     max_new_tokens: 16
     scoring:
-      planned_kind: required_keywords
+      kind: required_keywords
       required_keywords:
         - cache
         - healthy
@@ -151,7 +151,7 @@ cases:
     question: "Summarize in one short sentence and include the words fast and safe: Rust helps teams build reliable systems software."
     max_new_tokens: 24
     scoring:
-      planned_kind: required_keywords
+      kind: required_keywords
       required_keywords:
         - fast
         - safe
@@ -167,7 +167,7 @@ cases:
     question: "Answer with the word ready. Do not use the word maybe."
     max_new_tokens: 8
     scoring:
-      planned_kind: required_forbidden_tokens
+      kind: required_forbidden_tokens
       required_keywords:
         - ready
       forbidden_tokens:
