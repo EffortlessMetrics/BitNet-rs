@@ -237,7 +237,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-UX-006 | merged | `bitnet bench --device cuda --cuda-benchmark-receipt` reports governed CUDA benchmark receipts without simulating CPU fallback or claiming fresh benchmark execution. |
 | CUDA-UX-007 | merged | `bitnet receipts explain` surfaces benchmark qualification profile decisions, transfer timing sources, and blockers for governed CUDA benchmark receipts. |
 | CUDA-PROD-008 | merged | Reconcile the 5070 Ti BitNet and dense proof state before runtime changes. |
-| CUDA-DENSE-050 | pr open | Audit Qwen2.5 Q8_0 dense CUDA receipts to distinguish hardware/user-path evidence from validators and contracts. |
+| CUDA-DENSE-050 | in progress | Audit Qwen2.5 Q8_0 dense CUDA receipts to distinguish hardware/user-path evidence from validators and contracts. |
 
 ## Review Policy
 
