@@ -361,7 +361,7 @@ mod tests {
             default_device: "apple-m3-air-cpu-neon".to_string(),
             ..CliConfig::default()
         };
-        config.validate().unwrap();
+        assert!(config.validate().is_ok());
     }
 
     #[test]
