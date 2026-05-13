@@ -1466,6 +1466,7 @@ async fn async_main() -> Result<()> {
                 no_warnings,
                 profile_id,
                 allocation_audit,
+                false,
             )
             .await
         }
@@ -4069,6 +4070,15 @@ fn read_strict_reference_receipt(
     Ok(Some(StrictReferenceReceipt { artifact_path, generated_token_id, top1_token_id }))
 }
 
+fn simple_generation_operator_progress<F>(enabled: bool, stage: &str, details: F)
+where
+    F: FnOnce() -> String,
+{
+    if enabled {
+        eprintln!("generation progress: {stage} {}", details());
+    }
+}
+
 /// Run text generation with sampling
 #[allow(clippy::too_many_arguments)]
 async fn run_simple_generation(
@@ -4108,6 +4118,7 @@ async fn run_simple_generation(
     no_warnings: bool,
     profile_id: Option<String>,
     allocation_audit: bool,
+    operator_progress: bool,
 ) -> Result<()> {
     use bitnet_common::Device;
     use bitnet_models::{Model, transformer::KVCache};
@@ -4216,6 +4227,9 @@ async fn run_simple_generation(
             "is_hf_directory": is_hf_directory,
         }),
     );
+    simple_generation_operator_progress(operator_progress, "model_load_start", || {
+        format!("path={}", model_path.display())
+    });
 
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
@@ -4234,6 +4248,9 @@ async fn run_simple_generation(
                     "error": e.to_string(),
                 }),
             );
+            simple_generation_operator_progress(operator_progress, "model_load_error", || {
+                format!("allow_mock={allow_mock} error={e}")
+            });
             if !allow_mock {
                 anyhow::bail!(
                     "Failed to load real model: {e}\n\
@@ -4301,6 +4318,9 @@ async fn run_simple_generation(
             "model_load_ms": rounded_ms(model_load_ms),
         }),
     );
+    simple_generation_operator_progress(operator_progress, "model_load_complete", || {
+        format!("loader_mode={loader_mode} model_load_ms={:.3}", rounded_ms(model_load_ms))
+    });
 
     // Load tokenizer with deterministic CPU-BITNET authority.
     // Priority: explicit path -> GGUF metadata -> sibling tokenizer asset.
@@ -4317,6 +4337,13 @@ async fn run_simple_generation(
             "has_tokenizer_path": tokenizer_path.is_some(),
         }),
     );
+    simple_generation_operator_progress(operator_progress, "tokenizer_load_start", || {
+        format!(
+            "strict_tokenizer={} explicit_path={}",
+            effective_strict_tokenizer,
+            tokenizer_path.is_some()
+        )
+    });
     let tokenizer_resolution = simple_generation::tokenizer::load_generation_tokenizer(
         &model_path,
         tokenizer_path.as_deref(),
@@ -4336,6 +4363,14 @@ async fn run_simple_generation(
             "tokenizer_load_ms": rounded_ms(tokenizer_load_ms),
         }),
     );
+    simple_generation_operator_progress(operator_progress, "tokenizer_load_complete", || {
+        format!(
+            "source={} strict={} tokenizer_load_ms={:.3}",
+            tokenizer_source.as_str(),
+            tokenizer_strict,
+            rounded_ms(tokenizer_load_ms)
+        )
+    });
 
     let template_type = simple_generation::prompt::resolve_prompt_template(
         &prompt_template,
@@ -4407,6 +4442,13 @@ async fn run_simple_generation(
             "prompt_tokenize_ms": rounded_ms(prompt_tokenize_ms),
         }),
     );
+    simple_generation_operator_progress(operator_progress, "prompt_tokenize_complete", || {
+        format!(
+            "prompt_tokens={} prompt_tokenize_ms={:.3}",
+            tokens.len(),
+            rounded_ms(prompt_tokenize_ms)
+        )
+    });
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
     qwen_trace_write(serde_json::json!({
         "kind": "qwen_trace_prompt",
@@ -4514,6 +4556,13 @@ async fn run_simple_generation(
             "strict_cuda_backend_selected": strict_cuda_backend_selected,
         }),
     );
+    simple_generation_operator_progress(operator_progress, "prompt_prefill_start", || {
+        format!(
+            "prompt_tokens={} prefill_prefix_tokens={}",
+            tokens.len(),
+            tokens.len().saturating_sub(1)
+        )
+    });
     if tokens.len() > 1 {
         for token in &tokens[..tokens.len() - 1] {
             let step_start = std::time::Instant::now();
@@ -4575,6 +4624,9 @@ async fn run_simple_generation(
             "prefill_ms": rounded_ms(prefill_ms),
         }),
     );
+    simple_generation_operator_progress(operator_progress, "prompt_prefill_complete", || {
+        format!("prefill_tokens={prefill_token_count} prefill_ms={:.3}", rounded_ms(prefill_ms))
+    });
 
     // Track logits dump if requested
     let mut logits_dump: Vec<LogitStep> = Vec::new();
@@ -4616,6 +4668,9 @@ async fn run_simple_generation(
     let mut logits_step_allocs = Vec::with_capacity(max_new_tokens);
     let mut sample_step_allocs = Vec::with_capacity(max_new_tokens);
     let mut token_decode_step_allocs = Vec::with_capacity(max_new_tokens);
+    simple_generation_operator_progress(operator_progress, "decode_start", || {
+        format!("max_new_tokens={max_new_tokens}")
+    });
     for step_idx in 0..max_new_tokens {
         let qwen_trace_this_step = qwen_trace_enabled() && step_idx == 0;
         if step_idx == 0 {
@@ -4872,7 +4927,11 @@ async fn run_simple_generation(
 
         // Track first token time
         if first_token_ms.is_none() {
-            first_token_ms = Some(start_time.elapsed().as_millis() as u64);
+            let ttft_ms = start_time.elapsed().as_millis() as u64;
+            first_token_ms = Some(ttft_ms);
+            simple_generation_operator_progress(operator_progress, "first_token", || {
+                format!("token_id={next_token} ttft_ms={ttft_ms}")
+            });
         }
 
         // Decode and print the new token
@@ -4953,6 +5012,14 @@ async fn run_simple_generation(
     } else {
         0.0
     };
+    simple_generation_operator_progress(operator_progress, "generation_complete", || {
+        format!(
+            "generated_tokens={} total_ms={} tok_s={:.3}",
+            generated_tokens.len(),
+            total_ms,
+            tok_per_sec
+        )
+    });
 
     println!("\n\nGeneration complete!");
     println!(
@@ -9582,6 +9649,7 @@ async fn run_lunar_lake_ask(
         false,
         Some("lunar_lake_ask".to_string()),
         false,
+        false,
     )
     .await?;
 
@@ -9898,6 +9966,7 @@ async fn run_ask_generation(
         None,
         false,
         Some("ask".to_string()),
+        false,
         false,
     )
     .await?;

@@ -56,6 +56,11 @@ not broad BitNet chat quality or a performance envelope.
 When `bitnet mac ask` starts with a verified model, it prints a compact stderr
 summary covering model ID, quantization, cache root, backend, fallback status,
 receipt path, and short SHA before generation begins.
+For slow one-shot runs, pass `--progress` to emit stderr milestones for
+tokenizer/model verification, model load, tokenizer load, prompt tokenization,
+prefill, first token, decode completion, and receipt validation while generated
+text remains on stdout. Pass `--quiet` when scripts need to suppress operator
+stderr status and progress lines.
 First-run missing-cache failures include both the exact `bitnet model fetch`
 repair command and a `bitnet mac models --cache-dir ...` command with current
 disk guidance, so low-space operators can choose the right supported model

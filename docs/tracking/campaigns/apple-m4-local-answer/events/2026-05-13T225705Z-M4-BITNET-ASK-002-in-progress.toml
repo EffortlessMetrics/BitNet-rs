@@ -1,0 +1,13 @@
+timestamp = "2026-05-13T22:57:05Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started M4-BITNET-ASK-002 to add explicit progress/status UX for slow one-shot `bitnet mac ask` runs.",
+  "Scope is operator-visible stderr milestones plus `--quiet` suppression; generated text remains on stdout.",
+  "Claim boundaries remain narrow: no BitNet chat/server enablement, full Metal inference, Apple QK256 support, Neural Engine execution, MPSGraph inference, broad BitNet quality, or broad BitNet performance claim.",
+]
