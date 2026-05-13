@@ -17,6 +17,21 @@ discipline: if verification is too expensive, people avoid running it; if it is
 cheap, deterministic, and well-scoped, it becomes part of the normal
 development loop.
 
+## Routed verification rollout
+
+The active implementation map for the sub-$0.50 ordinary-PR target lives in
+[`docs/ci/routed-verification-rollout.md`](./routed-verification-rollout.md).
+That document is the agent-ready rollout spec for turning CI into a routed
+verification system: ordinary PRs get Linux-only crate/risk-scoped proof, while
+macOS, Windows, Docker, model downloads, coverage, performance, hardware, and
+other expensive proof are preserved on `main`, schedules, release/campaign
+lanes, manual dispatch, or explicit labels. The companion machine-readable
+queue is `policy/ci-routed-rollout.toml`.
+
+Rollout PRs must use the PR body sections from the rollout document so every
+change records default LEM before/after, lanes removed from default, preserved
+verification, boundaries, and validation.
+
 ## Cost target
 
 For ordinary PRs, our operating target is:
