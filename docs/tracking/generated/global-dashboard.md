@@ -9,7 +9,7 @@
 | apple-m4 | M4-018 | #3826 | merged | none | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
 | apple-m4-continuity | M4-CONT-005 | #4270 | merged | none | This is an M4 Mac mini local campaign; do not execute MacBook artifact sweeps or MacBook receipts here. |
 | apple-m4-dense-slm-regression | M4-SLM-REG-005 | #4198 | merged | none | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
-| apple-m4-local-answer | M4-BITNET-ASK-001 | TBD | ready | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
+| apple-m4-local-answer | M4-BITNET-ASK-001 | #4647 | pr_open | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-local-server | M4-SERVE-005 | #4374 | merged | none | This is an M4 Mac mini dense SLM service campaign. |
 | apple-m4-operational | M4-OP-006 | #3882 | merged | none | Do not reopen the completed apple-m4 proof campaign. |
 | apple-m4-productization | M4-PROD-005 | #4034 | merged | none | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
