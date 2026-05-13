@@ -26,7 +26,7 @@ pollster = { version = "0.4", optional = true }
 cudarc = { version = "0.19.6", optional = true, default-features = false, features = ["std", "driver", "dynamic-linking", "cuda-12000"] }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
-cudarc = { version = "0.19.6", optional = true, default-features = false, features = ["std", "driver", "dynamic-loading", "cuda-12000"] }
+cudarc = { version = "0.19.6", optional = true, default-features = false, features = ["std", "driver", "fallback-dynamic-loading", "cuda-12000"] }
 
 [dev-dependencies]
 temp-env.workspace = true
