@@ -1,0 +1,1268 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "intel_258v_dense_slm_openvino_phase_runner",
+  "campaign": "intel-258v-platform",
+  "item": "SLM-OV258V-006",
+  "created_utc": "2026-05-13T09:01:50Z",
+  "machine_id": "intel-258v",
+  "proof_stage": "phase_measured",
+  "comparison_scope": "same_machine_qwen2_5_openvino_genai_perf_metrics_and_streamer_timing",
+  "requested_backend": "openvino-cpu-gpu-npu",
+  "selected_backend": "openvino-cpu-gpu-npu",
+  "runtime_api": "openvino_genai",
+  "fallback_used": false,
+  "backend_lane": "dense_slm_openvino_phase_runner",
+  "model_family": "qwen",
+  "model_architecture": "qwen2",
+  "quantization": "INT4_SYM",
+  "prompt_template": "qwen2.5",
+  "tokenizer_source": "hf_tokenizer_export",
+  "paths": {
+    "openvino_ir_manifest": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+    "gguf_cpu_answer": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+    "gguf_cpu_phase": "ci/hardware/intel-258v/2026-05-08/slm-phase-warm-session-qwen25-cpu.json",
+    "prior_phase_comparison": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-comparison.json"
+  },
+  "model": {
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "model_binary_committed": false,
+    "files": {
+      "openvino_model.xml": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
+        "exists": true,
+        "bytes": 2167169,
+        "sha256": "92079df4e311238df5a3cd94848fc84730eefbce08e59f053d8a0aeaa7fb39f4"
+      },
+      "openvino_model.bin": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
+        "exists": true,
+        "bytes": 321326157,
+        "sha256": "a15e9535aaf4c8286b7b45f0490dca593cc751450c3b832416ad377bb190b2a9"
+      },
+      "openvino_tokenizer.xml": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.xml",
+        "exists": true,
+        "bytes": 27536,
+        "sha256": "779af8438ed2689107ba0bacc939e81734085d3e1a3dbf403402d2ccc982fe1b"
+      },
+      "openvino_tokenizer.bin": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.bin",
+        "exists": true,
+        "bytes": 5588603,
+        "sha256": "651d8b86c94c40710919f6089189a748ebf4ad1b0f0da728440454d14379b078"
+      },
+      "openvino_detokenizer.xml": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.xml",
+        "exists": true,
+        "bytes": 10030,
+        "sha256": "a1d28ba5b537fd7a07771e2b019fbdbd29f8d3e57f3b928e6827dd5a1aff813d"
+      },
+      "openvino_detokenizer.bin": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.bin",
+        "exists": true,
+        "bytes": 2189639,
+        "sha256": "3ca47601554a3b871c1e45e8f31aa6e17d726365c075fb430d1a2089484ae8d6"
+      },
+      "tokenizer.json": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer.json",
+        "exists": true,
+        "bytes": 11421896,
+        "sha256": "9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa"
+      },
+      "tokenizer_config.json": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer_config.json",
+        "exists": true,
+        "bytes": 4893,
+        "sha256": "5fd4cea2574beb6b70ba31582179880d331b723f5b5119ee67c29d45b983f7be"
+      },
+      "generation_config.json": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/generation_config.json",
+        "exists": true,
+        "bytes": 256,
+        "sha256": "b017173db4a82cfc6dc6e4368aee7f8f4eceeb380cdae840528833be24ac45c8"
+      },
+      "chat_template.jinja": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/chat_template.jinja",
+        "exists": true,
+        "bytes": 2561,
+        "sha256": "8aa40ce145adb73cb3a75194dc0224702a95850ec5275cabb728496bbd749fc6"
+      }
+    }
+  },
+  "environment": {
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "openvino": {
+      "version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+      "available_devices": [
+        "CPU",
+        "GPU",
+        "NPU"
+      ]
+    },
+    "openvino_genai": {
+      "version": "2026.1.0.0-2957-1dabb8c2255"
+    },
+    "transformers": {
+      "tokenizer_loaded_from_export_dir": true,
+      "generated_token_ids_available_from_pipeline": false
+    }
+  },
+  "generation": {
+    "devices_total": 3,
+    "all_answer_gates_passed": true,
+    "quality_gate_scope": "bounded_three_case_dense_slm_smoke_only",
+    "devices": [
+      {
+        "requested_backend": "openvino-cpu",
+        "selected_backend": "openvino-cpu",
+        "runtime_api": "openvino_genai",
+        "runtime_device": "CPU",
+        "resolved_device": "Intel(R) Core(TM) Ultra 7 258V",
+        "backend_lane": "dense_slm_openvino_cpu",
+        "fallback_used": false,
+        "fallback_status": "no_fallback_used_cpu_device_requested_and_llmpipeline_constructed",
+        "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
+        "pipeline_construct_wall_ms": 2842.1813000459224,
+        "cases_total": 3,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "id": "math_2_plus_2",
+            "question": "What is 2+2? Answer briefly.",
+            "prompt_template": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              3838,
+              374,
+              220,
+              17,
+              10,
+              17,
+              30,
+              21806,
+              26753,
+              13,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 39,
+            "max_new_tokens": 8,
+            "greedy": true,
+            "generation_config": {
+              "do_sample": false,
+              "num_beams": 1,
+              "apply_chat_template": true,
+              "max_new_tokens": 8
+            },
+            "generated_text": "2 + 2 equals 4.",
+            "generated_token_ids_available_from_pipeline": false,
+            "generation_wall_ms": 1248.403299949132,
+            "first_streamed_text_chunk_ms": 1187.931399908848,
+            "first_streamed_text_chunk": "2",
+            "streamed_chunks_count": 7,
+            "streamed_text": "2 + 2 equals 4.",
+            "openvino_perf_metrics": {
+              "load_time_ms": 2785.0,
+              "tokenization": {
+                "mean_ms": 12.461999893188477,
+                "std_ms": 0.0
+              },
+              "generate": {
+                "mean_ms": 1248.196044921875,
+                "std_ms": 0.0
+              },
+              "inference": {
+                "mean_ms": 1230.6490478515625,
+                "std_ms": 0.0
+              },
+              "time_to_first_token": {
+                "mean_ms": 1153.2188720703125,
+                "std_ms": 0.0
+              },
+              "time_per_output_token": {
+                "mean_ms": 13.364985466003418,
+                "std_ms": 3.108682155609131
+              },
+              "inter_token_latency": {
+                "mean_ms": 154.2288818359375,
+                "std_ms": 372.7383728027344
+              },
+              "throughput": {
+                "mean_ms": 74.82238006591797,
+                "std_ms": 17.403610229492188
+              },
+              "detokenization": {
+                "mean_ms": 0.14239999651908875,
+                "std_ms": 0.0
+              },
+              "num_input_tokens": 39,
+              "num_generated_tokens": 8
+            },
+            "answer_gate": {
+              "kind": "contains_any",
+              "contains_any": [
+                "4",
+                "four"
+              ],
+              "matched": [
+                "4"
+              ],
+              "passed": true
+            },
+            "fallback_used": false,
+            "selected_backend": "openvino-cpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "CPU"
+          },
+          {
+            "id": "capital_france",
+            "question": "Name the capital of France.",
+            "prompt_template": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              675,
+              279,
+              6722,
+              315,
+              9625,
+              13,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 35,
+            "max_new_tokens": 8,
+            "greedy": true,
+            "generation_config": {
+              "do_sample": false,
+              "num_beams": 1,
+              "apply_chat_template": true,
+              "max_new_tokens": 8
+            },
+            "generated_text": "The capital of France is Paris.",
+            "generated_token_ids_available_from_pipeline": false,
+            "generation_wall_ms": 198.206500033848,
+            "first_streamed_text_chunk_ms": 136.67040003929287,
+            "first_streamed_text_chunk": "The",
+            "streamed_chunks_count": 7,
+            "streamed_text": "The capital of France is Paris.",
+            "openvino_perf_metrics": {
+              "load_time_ms": 2785.0,
+              "tokenization": {
+                "mean_ms": 12.442000389099121,
+                "std_ms": 0.0
+              },
+              "generate": {
+                "mean_ms": 198.10499572753906,
+                "std_ms": 0.0
+              },
+              "inference": {
+                "mean_ms": 181.42100524902344,
+                "std_ms": 0.0
+              },
+              "time_to_first_token": {
+                "mean_ms": 108.14169311523438,
+                "std_ms": 0.0
+              },
+              "time_per_output_token": {
+                "mean_ms": 12.63144302368164,
+                "std_ms": 1.4686050415039062
+              },
+              "inter_token_latency": {
+                "mean_ms": 22.979124069213867,
+                "std_ms": 27.44883918762207
+              },
+              "throughput": {
+                "mean_ms": 79.16751861572266,
+                "std_ms": 9.204475402832031
+              },
+              "detokenization": {
+                "mean_ms": 0.2281000018119812,
+                "std_ms": 0.0
+              },
+              "num_input_tokens": 35,
+              "num_generated_tokens": 8
+            },
+            "answer_gate": {
+              "kind": "contains_any",
+              "contains_any": [
+                "Paris",
+                "paris"
+              ],
+              "matched": [
+                "Paris"
+              ],
+              "passed": true
+            },
+            "fallback_used": false,
+            "selected_backend": "openvino-cpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "CPU"
+          },
+          {
+            "id": "rust_sentence",
+            "question": "Write one short sentence about Rust.",
+            "prompt_template": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              7985,
+              825,
+              2805,
+              11652,
+              911,
+              33789,
+              13,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 36,
+            "max_new_tokens": 16,
+            "greedy": true,
+            "generation_config": {
+              "do_sample": false,
+              "num_beams": 1,
+              "apply_chat_template": true,
+              "max_new_tokens": 16
+            },
+            "generated_text": "Rust is an open-source programming language that emphasizes safety and reliability through static type",
+            "generated_token_ids_available_from_pipeline": false,
+            "generation_wall_ms": 308.05209989193827,
+            "first_streamed_text_chunk_ms": 160.50389991141856,
+            "first_streamed_text_chunk": "R",
+            "streamed_chunks_count": 15,
+            "streamed_text": "Rust is an open-source programming language that emphasizes safety and reliability through static type",
+            "openvino_perf_metrics": {
+              "load_time_ms": 2785.0,
+              "tokenization": {
+                "mean_ms": 13.664999961853027,
+                "std_ms": 0.0
+              },
+              "generate": {
+                "mean_ms": 307.97198486328125,
+                "std_ms": 0.0
+              },
+              "inference": {
+                "mean_ms": 287.3039855957031,
+                "std_ms": 0.0
+              },
+              "time_to_first_token": {
+                "mean_ms": 130.30419921875,
+                "std_ms": 0.0
+              },
+              "time_per_output_token": {
+                "mean_ms": 11.757780075073242,
+                "std_ms": 1.6714489459991455
+              },
+              "inter_token_latency": {
+                "mean_ms": 18.282188415527344,
+                "std_ms": 25.373947143554688
+              },
+              "throughput": {
+                "mean_ms": 85.0500717163086,
+                "std_ms": 12.090450286865234
+              },
+              "detokenization": {
+                "mean_ms": 0.1420000046491623,
+                "std_ms": 0.0
+              },
+              "num_input_tokens": 36,
+              "num_generated_tokens": 16
+            },
+            "answer_gate": {
+              "kind": "contains_any",
+              "contains_any": [
+                "Rust",
+                "rust",
+                "programming",
+                "language",
+                "safe",
+                "efficient"
+              ],
+              "matched": [
+                "Rust",
+                "programming",
+                "language",
+                "safe"
+              ],
+              "passed": true
+            },
+            "fallback_used": false,
+            "selected_backend": "openvino-cpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "CPU"
+          }
+        ],
+        "phase_coverage": {
+          "pipeline_construct_wall_ms": "measured_by_runner",
+          "tokenization_duration": "openvino_genai_perf_metrics",
+          "time_to_first_token": "openvino_genai_perf_metrics",
+          "first_streamed_text_chunk": "measured_by_streamer_callback",
+          "generate_duration": "openvino_genai_perf_metrics",
+          "inference_duration": "openvino_genai_perf_metrics",
+          "time_per_output_token": "openvino_genai_perf_metrics",
+          "detokenization_duration": "openvino_genai_perf_metrics",
+          "decode_128": "not_measured_small_bounded_smoke_only",
+          "prefill_512": "not_measured_small_bounded_smoke_only"
+        }
+      },
+      {
+        "requested_backend": "openvino-gpu",
+        "selected_backend": "openvino-gpu",
+        "runtime_api": "openvino_genai",
+        "runtime_device": "GPU.0",
+        "resolved_device": "Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)",
+        "backend_lane": "dense_slm_openvino_gpu_arc140v",
+        "fallback_used": false,
+        "fallback_status": "no_fallback_used_gpu0_device_requested_and_llmpipeline_constructed",
+        "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+        "pipeline_construct_wall_ms": 4770.43519995641,
+        "cases_total": 3,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "id": "math_2_plus_2",
+            "question": "What is 2+2? Answer briefly.",
+            "prompt_template": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              3838,
+              374,
+              220,
+              17,
+              10,
+              17,
+              30,
+              21806,
+              26753,
+              13,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 39,
+            "max_new_tokens": 8,
+            "greedy": true,
+            "generation_config": {
+              "do_sample": false,
+              "num_beams": 1,
+              "apply_chat_template": true,
+              "max_new_tokens": 8
+            },
+            "generated_text": "2 + 2 equals 4.",
+            "generated_token_ids_available_from_pipeline": false,
+            "generation_wall_ms": 712.0398000115529,
+            "first_streamed_text_chunk_ms": 626.8055000109598,
+            "first_streamed_text_chunk": "2",
+            "streamed_chunks_count": 7,
+            "streamed_text": "2 + 2 equals 4.",
+            "openvino_perf_metrics": {
+              "load_time_ms": 4770.0,
+              "tokenization": {
+                "mean_ms": 14.821000099182129,
+                "std_ms": 0.0
+              },
+              "generate": {
+                "mean_ms": 711.8980102539062,
+                "std_ms": 0.0
+              },
+              "inference": {
+                "mean_ms": 689.4650268554688,
+                "std_ms": 0.0
+              },
+              "time_to_first_token": {
+                "mean_ms": 421.477783203125,
+                "std_ms": 0.0
+              },
+              "time_per_output_token": {
+                "mean_ms": 41.28551483154297,
+                "std_ms": 60.93729782104492
+              },
+              "inter_token_latency": {
+                "mean_ms": 86.84525299072266,
+                "std_ms": 133.5608673095703
+              },
+              "throughput": {
+                "mean_ms": 24.22157096862793,
+                "std_ms": 35.7509651184082
+              },
+              "detokenization": {
+                "mean_ms": 0.23919999599456787,
+                "std_ms": 0.0
+              },
+              "num_input_tokens": 39,
+              "num_generated_tokens": 8
+            },
+            "answer_gate": {
+              "kind": "contains_any",
+              "contains_any": [
+                "4",
+                "four"
+              ],
+              "matched": [
+                "4"
+              ],
+              "passed": true
+            },
+            "fallback_used": false,
+            "selected_backend": "openvino-gpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "GPU.0"
+          },
+          {
+            "id": "capital_france",
+            "question": "Name the capital of France.",
+            "prompt_template": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              675,
+              279,
+              6722,
+              315,
+              9625,
+              13,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 35,
+            "max_new_tokens": 8,
+            "greedy": true,
+            "generation_config": {
+              "do_sample": false,
+              "num_beams": 1,
+              "apply_chat_template": true,
+              "max_new_tokens": 8
+            },
+            "generated_text": "The capital of France is Paris.",
+            "generated_token_ids_available_from_pipeline": false,
+            "generation_wall_ms": 452.6363998884335,
+            "first_streamed_text_chunk_ms": 372.302099945955,
+            "first_streamed_text_chunk": "The",
+            "streamed_chunks_count": 7,
+            "streamed_text": "The capital of France is Paris.",
+            "openvino_perf_metrics": {
+              "load_time_ms": 4770.0,
+              "tokenization": {
+                "mean_ms": 16.746000289916992,
+                "std_ms": 0.0
+              },
+              "generate": {
+                "mean_ms": 452.53399658203125,
+                "std_ms": 0.0
+              },
+              "inference": {
+                "mean_ms": 431.0299987792969,
+                "std_ms": 0.0
+              },
+              "time_to_first_token": {
+                "mean_ms": 298.4503173828125,
+                "std_ms": 0.0
+              },
+              "time_per_output_token": {
+                "mean_ms": 21.753557205200195,
+                "std_ms": 14.465767860412598
+              },
+              "inter_token_latency": {
+                "mean_ms": 54.18487548828125,
+                "std_ms": 86.97917938232422
+              },
+              "throughput": {
+                "mean_ms": 45.9694938659668,
+                "std_ms": 30.56897735595703
+              },
+              "detokenization": {
+                "mean_ms": 0.5092000365257263,
+                "std_ms": 0.0
+              },
+              "num_input_tokens": 35,
+              "num_generated_tokens": 8
+            },
+            "answer_gate": {
+              "kind": "contains_any",
+              "contains_any": [
+                "Paris",
+                "paris"
+              ],
+              "matched": [
+                "Paris"
+              ],
+              "passed": true
+            },
+            "fallback_used": false,
+            "selected_backend": "openvino-gpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "GPU.0"
+          },
+          {
+            "id": "rust_sentence",
+            "question": "Write one short sentence about Rust.",
+            "prompt_template": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              7985,
+              825,
+              2805,
+              11652,
+              911,
+              33789,
+              13,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 36,
+            "max_new_tokens": 16,
+            "greedy": true,
+            "generation_config": {
+              "do_sample": false,
+              "num_beams": 1,
+              "apply_chat_template": true,
+              "max_new_tokens": 16
+            },
+            "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+            "generated_token_ids_available_from_pipeline": false,
+            "generation_wall_ms": 357.6502000214532,
+            "first_streamed_text_chunk_ms": 165.94009997788817,
+            "first_streamed_text_chunk": "R",
+            "streamed_chunks_count": 15,
+            "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+            "openvino_perf_metrics": {
+              "load_time_ms": 4770.0,
+              "tokenization": {
+                "mean_ms": 20.86400032043457,
+                "std_ms": 0.0
+              },
+              "generate": {
+                "mean_ms": 357.5849914550781,
+                "std_ms": 0.0
+              },
+              "inference": {
+                "mean_ms": 323.10699462890625,
+                "std_ms": 0.0
+              },
+              "time_to_first_token": {
+                "mean_ms": 86.26219940185547,
+                "std_ms": 0.0
+              },
+              "time_per_output_token": {
+                "mean_ms": 17.999540328979492,
+                "std_ms": 13.245375633239746
+              },
+              "inter_token_latency": {
+                "mean_ms": 20.89987564086914,
+                "std_ms": 17.17641258239746
+              },
+              "throughput": {
+                "mean_ms": 55.55697250366211,
+                "std_ms": 40.882877349853516
+              },
+              "detokenization": {
+                "mean_ms": 0.15619999170303345,
+                "std_ms": 0.0
+              },
+              "num_input_tokens": 36,
+              "num_generated_tokens": 16
+            },
+            "answer_gate": {
+              "kind": "contains_any",
+              "contains_any": [
+                "Rust",
+                "rust",
+                "programming",
+                "language",
+                "safe",
+                "efficient"
+              ],
+              "matched": [
+                "Rust",
+                "programming",
+                "language",
+                "safe",
+                "efficient"
+              ],
+              "passed": true
+            },
+            "fallback_used": false,
+            "selected_backend": "openvino-gpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "GPU.0"
+          }
+        ],
+        "phase_coverage": {
+          "pipeline_construct_wall_ms": "measured_by_runner",
+          "tokenization_duration": "openvino_genai_perf_metrics",
+          "time_to_first_token": "openvino_genai_perf_metrics",
+          "first_streamed_text_chunk": "measured_by_streamer_callback",
+          "generate_duration": "openvino_genai_perf_metrics",
+          "inference_duration": "openvino_genai_perf_metrics",
+          "time_per_output_token": "openvino_genai_perf_metrics",
+          "detokenization_duration": "openvino_genai_perf_metrics",
+          "decode_128": "not_measured_small_bounded_smoke_only",
+          "prefill_512": "not_measured_small_bounded_smoke_only"
+        }
+      },
+      {
+        "requested_backend": "openvino-npu",
+        "selected_backend": "openvino-npu",
+        "runtime_api": "openvino_genai",
+        "runtime_device": "NPU",
+        "resolved_device": "Intel(R) AI Boost",
+        "backend_lane": "dense_slm_openvino_npu",
+        "fallback_used": false,
+        "fallback_status": "no_fallback_used_npu_device_requested_and_llmpipeline_constructed",
+        "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+        "pipeline_construct_wall_ms": 37652.005700045265,
+        "cases_total": 3,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "id": "math_2_plus_2",
+            "question": "What is 2+2? Answer briefly.",
+            "prompt_template": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              3838,
+              374,
+              220,
+              17,
+              10,
+              17,
+              30,
+              21806,
+              26753,
+              13,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 39,
+            "max_new_tokens": 8,
+            "greedy": true,
+            "generation_config": {
+              "do_sample": false,
+              "num_beams": 1,
+              "apply_chat_template": true,
+              "max_new_tokens": 8
+            },
+            "generated_text": "2 + 2 equals 4.",
+            "generated_token_ids_available_from_pipeline": false,
+            "generation_wall_ms": 1027.3085999069735,
+            "first_streamed_text_chunk_ms": 795.3330999007449,
+            "first_streamed_text_chunk": "2",
+            "streamed_chunks_count": 7,
+            "streamed_text": "2 + 2 equals 4.",
+            "openvino_perf_metrics": {
+              "load_time_ms": 37651.0,
+              "tokenization": {
+                "mean_ms": 21.558000564575195,
+                "std_ms": 0.0
+              },
+              "generate": {
+                "mean_ms": 1027.074951171875,
+                "std_ms": 0.0
+              },
+              "inference": {
+                "mean_ms": 1002.2449951171875,
+                "std_ms": 0.0
+              },
+              "time_to_first_token": {
+                "mean_ms": 479.6322021484375,
+                "std_ms": 0.0
+              },
+              "time_per_output_token": {
+                "mean_ms": 78.10657501220703,
+                "std_ms": 60.86876678466797
+              },
+              "inter_token_latency": {
+                "mean_ms": 125.28062438964844,
+                "std_ms": 137.90011596679688
+              },
+              "throughput": {
+                "mean_ms": 12.803019523620605,
+                "std_ms": 9.97744369506836
+              },
+              "detokenization": {
+                "mean_ms": 0.08500000089406967,
+                "std_ms": 0.0
+              },
+              "num_input_tokens": 39,
+              "num_generated_tokens": 8
+            },
+            "answer_gate": {
+              "kind": "contains_any",
+              "contains_any": [
+                "4",
+                "four"
+              ],
+              "matched": [
+                "4"
+              ],
+              "passed": true
+            },
+            "fallback_used": false,
+            "selected_backend": "openvino-npu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "NPU"
+          },
+          {
+            "id": "capital_france",
+            "question": "Name the capital of France.",
+            "prompt_template": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              675,
+              279,
+              6722,
+              315,
+              9625,
+              13,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 35,
+            "max_new_tokens": 8,
+            "greedy": true,
+            "generation_config": {
+              "do_sample": false,
+              "num_beams": 1,
+              "apply_chat_template": true,
+              "max_new_tokens": 8
+            },
+            "generated_text": "The capital of France is Paris.",
+            "generated_token_ids_available_from_pipeline": false,
+            "generation_wall_ms": 567.1795000089332,
+            "first_streamed_text_chunk_ms": 341.8585000326857,
+            "first_streamed_text_chunk": "The",
+            "streamed_chunks_count": 7,
+            "streamed_text": "The capital of France is Paris.",
+            "openvino_perf_metrics": {
+              "load_time_ms": 37651.0,
+              "tokenization": {
+                "mean_ms": 12.743000030517578,
+                "std_ms": 0.0
+              },
+              "generate": {
+                "mean_ms": 567.0599975585938,
+                "std_ms": 0.0
+              },
+              "inference": {
+                "mean_ms": 550.8599853515625,
+                "std_ms": 0.0
+              },
+              "time_to_first_token": {
+                "mean_ms": 247.9385986328125,
+                "std_ms": 0.0
+              },
+              "time_per_output_token": {
+                "mean_ms": 45.445030212402344,
+                "std_ms": 0.8381205797195435
+              },
+              "inter_token_latency": {
+                "mean_ms": 68.85749816894531,
+                "std_ms": 62.700687408447266
+              },
+              "throughput": {
+                "mean_ms": 22.004606246948242,
+                "std_ms": 0.4058202803134918
+              },
+              "detokenization": {
+                "mean_ms": 0.0989999994635582,
+                "std_ms": 0.0
+              },
+              "num_input_tokens": 35,
+              "num_generated_tokens": 8
+            },
+            "answer_gate": {
+              "kind": "contains_any",
+              "contains_any": [
+                "Paris",
+                "paris"
+              ],
+              "matched": [
+                "Paris"
+              ],
+              "passed": true
+            },
+            "fallback_used": false,
+            "selected_backend": "openvino-npu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "NPU"
+          },
+          {
+            "id": "rust_sentence",
+            "question": "Write one short sentence about Rust.",
+            "prompt_template": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              7985,
+              825,
+              2805,
+              11652,
+              911,
+              33789,
+              13,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 36,
+            "max_new_tokens": 16,
+            "greedy": true,
+            "generation_config": {
+              "do_sample": false,
+              "num_beams": 1,
+              "apply_chat_template": true,
+              "max_new_tokens": 16
+            },
+            "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+            "generated_token_ids_available_from_pipeline": false,
+            "generation_wall_ms": 974.5974000543356,
+            "first_streamed_text_chunk_ms": 341.01560001727194,
+            "first_streamed_text_chunk": "R",
+            "streamed_chunks_count": 15,
+            "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+            "openvino_perf_metrics": {
+              "load_time_ms": 37651.0,
+              "tokenization": {
+                "mean_ms": 15.75100040435791,
+                "std_ms": 0.0
+              },
+              "generate": {
+                "mean_ms": 974.5,
+                "std_ms": 0.0
+              },
+              "inference": {
+                "mean_ms": 952.7540283203125,
+                "std_ms": 0.0
+              },
+              "time_to_first_token": {
+                "mean_ms": 249.49949645996094,
+                "std_ms": 0.0
+              },
+              "time_per_output_token": {
+                "mean_ms": 48.25979232788086,
+                "std_ms": 2.750675916671753
+              },
+              "inter_token_latency": {
+                "mean_ms": 59.54712677001953,
+                "std_ms": 44.937095642089844
+              },
+              "throughput": {
+                "mean_ms": 20.72118377685547,
+                "std_ms": 1.1810506582260132
+              },
+              "detokenization": {
+                "mean_ms": 0.24500000476837158,
+                "std_ms": 0.0
+              },
+              "num_input_tokens": 36,
+              "num_generated_tokens": 16
+            },
+            "answer_gate": {
+              "kind": "contains_any",
+              "contains_any": [
+                "Rust",
+                "rust",
+                "programming",
+                "language",
+                "safe",
+                "efficient"
+              ],
+              "matched": [
+                "Rust",
+                "programming",
+                "language",
+                "safe",
+                "efficient"
+              ],
+              "passed": true
+            },
+            "fallback_used": false,
+            "selected_backend": "openvino-npu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "NPU"
+          }
+        ],
+        "phase_coverage": {
+          "pipeline_construct_wall_ms": "measured_by_runner",
+          "tokenization_duration": "openvino_genai_perf_metrics",
+          "time_to_first_token": "openvino_genai_perf_metrics",
+          "first_streamed_text_chunk": "measured_by_streamer_callback",
+          "generate_duration": "openvino_genai_perf_metrics",
+          "inference_duration": "openvino_genai_perf_metrics",
+          "time_per_output_token": "openvino_genai_perf_metrics",
+          "detokenization_duration": "openvino_genai_perf_metrics",
+          "decode_128": "not_measured_small_bounded_smoke_only",
+          "prefill_512": "not_measured_small_bounded_smoke_only"
+        }
+      }
+    ]
+  },
+  "verification": {
+    "llmpipeline_constructed_for_all_devices": true,
+    "generation_ran_for_all_devices": true,
+    "all_answer_gates_passed": true,
+    "fallback_used": false,
+    "openvino_perf_metrics_recorded": true,
+    "streamer_first_text_chunk_recorded": true,
+    "generated_token_ids_available_from_pipeline": false
+  },
+  "claim_boundary": {
+    "may_claim": [
+      "OpenVINO GenAI PerfMetrics are recorded for bounded Qwen2.5 CPU, GPU.0/Arc 140V, and NPU LLMPipeline runs on the same 258V machine.",
+      "The receipt records tokenization, TTFT, generate, inference, TPOT, throughput, detokenization, first streamed text chunk, and bounded answer-gate fields exposed by the current OpenVINO GenAI API.",
+      "The bounded answer gates passed with fallback_used=false for all requested OpenVINO devices."
+    ],
+    "must_not_claim": [
+      "OpenVINO CPU/GPU/NPU speedup or sustained phase performance is proven.",
+      "OpenVINO GenAI generated token IDs are captured directly from pipeline internals.",
+      "prefill_512 or decode_128 phase profiles are measured.",
+      "OpenVINO GPU evidence proves native OpenCL execution.",
+      "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+      "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+      "Broad dense SLM quality is proven beyond bounded answer gates."
+    ]
+  }
+}
