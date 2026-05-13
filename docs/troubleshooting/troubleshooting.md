@@ -946,14 +946,14 @@ When reporting issues, include:
 - Steps to reproduce
 - Debug information collected above
 
-**GitHub Issues:** https://github.com/microsoft/BitNet/issues
-**Community Support:** [GitHub Discussions](https://github.com/microsoft/BitNet/discussions)
+**GitHub Issues:** https://github.com/EffortlessMetrics/BitNet-rs/issues
+**Community Support:** [GitHub Issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)
 
 ### 4. Community Resources
 
-- **Documentation:** https://docs.rs/bitnet
-- **Examples:** https://github.com/microsoft/BitNet/tree/main/examples
-- **FAQ:** https://github.com/microsoft/BitNet/discussions/categories/q-a
+- **Documentation:** [BitNet-rs docs](../README.md)
+- **Examples:** [BitNet-rs examples](../examples/)
+- **FAQ:** [BitNet-rs issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)
 - **Performance Tips:** [Performance Tuning Guide](../performance-tuning.md)
 
 ## Emergency Procedures

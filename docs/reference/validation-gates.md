@@ -1598,6 +1598,6 @@ output.weight                       (not validated)
 ---
 
 For questions or issues, see:
-- **GitHub Issues**: [BitNet-rs/issues](https://github.com/microsoft/BitNet/issues)
+- **GitHub Issues**: [BitNet-rs/issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)
 - **Documentation Index**: `docs/` directory
 - **Source Code**: `crates/bitnet-cli/src/ln_rules.rs`

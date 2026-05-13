@@ -431,6 +431,6 @@ If you're still experiencing issues:
    echo "Environment: $(env | grep BITNET_)"
    ```
 
-4. **Community Support**: Join the discussion in GitHub Discussions
+4. **Community Support**: Open a BitNet-rs GitHub issue
 
 Remember: Most tokenizer issues are configuration or environment related. This guide covers 95% of common problems you'll encounter in production deployments.

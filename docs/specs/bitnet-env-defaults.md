@@ -1051,7 +1051,7 @@ fn test_macos_dyld_export() {
 **Scope**: Early adopters and active contributors
 
 1. Merge to `main` with feature flag (opt-in via env var)
-2. Announce in Discord/GitHub Discussions for beta testers
+2. Announce in the active release channel for beta testers
 3. Collect feedback on edge cases and platform-specific issues
 4. Iterate on documentation based on feedback
 

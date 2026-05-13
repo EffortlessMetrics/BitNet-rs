@@ -388,6 +388,6 @@ models/clean/
 ---
 
 For questions or issues, see:
-- **GitHub Issues**: [BitNet-rs/issues](https://github.com/microsoft/BitNet/issues)
+- **GitHub Issues**: [BitNet-rs/issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)
 - **Documentation**: `docs/` directory
 - **Development Guide**: `docs/development/build-commands.md`

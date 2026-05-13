@@ -1185,6 +1185,6 @@ See [Workflow 3](#workflow-3-validate-custom-architecture) for detailed custom p
 ---
 
 For questions or issues, see:
-- **GitHub Issues**: [BitNet-rs/issues](https://github.com/microsoft/BitNet/issues)
+- **GitHub Issues**: [BitNet-rs/issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)
 - **Documentation Index**: `docs/` directory
 - **Quick Reference**: [CLAUDE.md](../../CLAUDE.md)

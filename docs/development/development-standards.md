@@ -240,7 +240,7 @@ missing_errors_doc = "allow"
 
 ### Getting Help
 
-- File issues at: https://github.com/microsoft/BitNet/issues
+- File issues at: https://github.com/EffortlessMetrics/BitNet-rs/issues
 - Check CI logs for detailed error messages
 - Run individual checks locally before pushing
 

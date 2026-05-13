@@ -455,7 +455,7 @@ When reporting performance issues, include:
 5. **Performance diagnostics:** Output from commands above
 6. **Receipt artifact:** `ci/inference.json` contents
 
-**GitHub Issues:** https://github.com/microsoft/BitNet/issues
+**GitHub Issues:** https://github.com/EffortlessMetrics/BitNet-rs/issues
 
 ## Summary
 
