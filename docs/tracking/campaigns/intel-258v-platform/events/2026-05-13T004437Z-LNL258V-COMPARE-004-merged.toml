@@ -1,0 +1,17 @@
+timestamp = "2026-05-13T00:44:37Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-COMPARE-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+pr = 4545
+merge_sha = "b834323fd5331a2af0ba99a9cb516b02f7cabeef"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-COMPARE-004"
+summary = "Merged LNL258V-COMPARE-004, refreshing the corrected Lunar Lake platform comparison index."
+
+notes = [
+  "Merged #4545, refreshing ci/hardware/intel-258v/2026-05-08/platform-comparison-index.json.",
+  "The refreshed index links the corrected BitNet CPU reference bundle, dense Qwen SLM CPU manifest/answer/phase receipts, Arc 140V visibility/OpenCL parity receipts, and Intel NPU OpenVINO subgraph receipts.",
+  "The merged work does not claim platform performance, accelerator inference, acceleration, dense SLM accelerator execution, QK256 accelerator decode, or CPU fallback as accelerator proof.",
+]
