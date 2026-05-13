@@ -303,12 +303,10 @@ fn inspect_receipt(
     let speedup_claim = bool_at_any(&json, &["speedup_claim", "claim_boundary.speedup_claim"]);
 
     let mut issues = Vec::new();
-    if fallback_used != Some(false) {
-        issues.push(match fallback_used {
-            Some(true) => "fallback_used=true".to_string(),
-            None => "fallback status missing".to_string(),
-            Some(false) => unreachable!(),
-        });
+    match fallback_used {
+        Some(false) => {}
+        Some(true) => issues.push("fallback_used=true".to_string()),
+        None => issues.push("fallback status missing".to_string()),
     }
     match expectation {
         EvidenceExpectation::Present => {}
