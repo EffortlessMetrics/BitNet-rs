@@ -1,0 +1,18 @@
+timestamp = "2026-05-13T17:54:25Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-REG-001"
+event = "merged"
+pr = 4624
+merge_sha = "37c49790adccb0168ee1445f8a4720f0b63ed919"
+branch = "codex/lunar-lake/LNL258V-REG-001-local-regression"
+actor = "codex"
+summary = "Merged LNL258V-REG-001 to add the Lunar Lake local regression bundle command and committed 258V bundle receipt."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle.json",
+]
+
+notes = [
+  "The bundle reads the committed operator-readiness receipt and checks dense Qwen CPU default routing, BitNet CPU reference routing, bounded OpenVINO GPU/NPU candidate routing, Arc/NPU claim boundaries, hidden fallback status, and acceleration-claim boundaries.",
+  "This merge does not run new inference or claim speedup, broad answer quality, Arc/NPU acceleration, full BitNet inference on accelerators, or QK256 accelerator decode.",
+]
