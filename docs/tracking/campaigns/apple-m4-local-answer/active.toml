@@ -857,10 +857,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-WARM-002"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-local-answer/M4-BITNET-WARM-002-catalog-readiness"
 pr = 4705
-head_sha = "52ad2bdc6281da719839c4908d7da2e7adbc51d7"
+head_sha = "715252ea8f8cb41128f045e70b5242904bde15ed"
+merge_sha = "0cb4a1cdd73e7ec4cccdb92054e101a9feb37ce0"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
