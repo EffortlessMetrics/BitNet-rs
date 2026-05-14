@@ -277,10 +277,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-004A"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
 pr = 4775
-head_sha = "33bd49fb78c5239d0d18ca3ae63aaa9185a45103"
+head_sha = "0538db9ab59a076d9a36c4cb47593d2e95e9879c"
+merge_sha = "3881e754e8b1ffe4bdd0d5808fcc836a058ae006"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
