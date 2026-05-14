@@ -703,3 +703,50 @@ must_not_claim = [
   "MPSGraph inference is proven.",
   "Broad BitNet chat quality or performance is proven.",
 ]
+
+[[work_item]]
+id = "M4-BITNET-ASK-006"
+status = "pr_open"
+pr = 4691
+branch = "codex/apple-m4-local-answer/M4-BITNET-ASK-006-bitnet-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-ASK-005"]
+acceptance = "Add `bitnet mac smoke --model-family bitnet` as a narrow one-shot BitNet ask smoke that defaults to the accepted Microsoft I2_S model id and external tokenizer path, preserves explicit --model-path/--tokenizer overrides only for BitNet, writes a compact aggregate smoke receipt after a successful one-shot answer, leaves durable BitNet ask failure receipts on setup failures, and keeps BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, broad quality, and performance claims disabled."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_smoke",
+  "cargo test --locked -p bitnet-cli --test cli_snapshot_tests mac_smoke_help",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = [
+  "`bitnet mac smoke --model-family bitnet` runs the explicit one-shot BitNet ask route when accepted artifacts are available and leaves setup failure receipts when they are not.",
+]
+must_not_claim = [
+  "BitNet chat works.",
+  "BitNet serve works.",
+  "Full apple-m4-metal model inference works.",
+  "Apple M4 Metal participates in autoregressive BitNet decode.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+  "Broad BitNet chat quality or performance is proven.",
+]

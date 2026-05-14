@@ -1,0 +1,14 @@
+timestamp = "2026-05-14T03:53:36Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-006"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started `bitnet mac smoke --model-family bitnet` as a narrow one-shot ask smoke surface.",
+  "The item defaults to the accepted Microsoft I2_S BitNet model id and accepted external tokenizer path while preserving explicit BitNet artifact overrides.",
+  "Setup failures must keep durable BitNet ask failure receipts and repair guidance; successful runs write a compact smoke aggregate receipt.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and performance claims remain disabled.",
+]

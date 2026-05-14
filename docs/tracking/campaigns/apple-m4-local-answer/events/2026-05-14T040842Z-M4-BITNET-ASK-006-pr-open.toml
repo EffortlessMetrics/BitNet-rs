@@ -1,0 +1,16 @@
+timestamp = "2026-05-14T04:08:42Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-006"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 4691
+head_sha = "836a9ddddfe44e04c007e3a16351951623451339"
+
+notes = [
+  "Opened PR #4691 for `bitnet mac smoke --model-family bitnet`.",
+  "The PR reuses the explicit one-shot BitNet ask route, defaults to the accepted model id and external tokenizer path, and writes a compact smoke aggregate receipt on success.",
+  "Setup failures keep durable BitNet ask failure receipts and repair guidance.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and performance claims remain disabled.",
+]

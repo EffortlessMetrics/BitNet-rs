@@ -61,6 +61,14 @@ enum MacValidateProfileSet {
     Performance,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum MacSmokeModelFamily {
+    /// Run the dense Qwen SLM golden smoke path.
+    DenseSlm,
+    /// Run the explicit BitNet one-shot ask smoke path.
+    Bitnet,
+}
+
 /// Run Apple M4 local operator flows with strict receipts.
 #[derive(Debug, Args)]
 pub struct MacCommand {
@@ -167,8 +175,12 @@ enum MacAction {
         quiet: bool,
     },
 
-    /// Run a compact Apple M4 dense-SLM health smoke with cache and receipt checks.
+    /// Run a compact Apple M4 model-family health smoke with cache and receipt checks.
     Smoke {
+        /// Model family to smoke. BitNet remains one-shot ask only.
+        #[arg(long, value_enum, default_value_t = MacSmokeModelFamily::DenseSlm)]
+        model_family: MacSmokeModelFamily,
+
         /// Supported model id. Defaults to the validated Apple M4 SLM runtime artifact.
         #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
         model_id: String,
@@ -176,6 +188,14 @@ enum MacAction {
         /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
         #[arg(long, value_name = "PATH")]
         cache_dir: Option<PathBuf>,
+
+        /// Explicit BitNet GGUF path. Only accepted with --model-family bitnet.
+        #[arg(long, value_name = "PATH")]
+        model_path: Option<PathBuf>,
+
+        /// Explicit BitNet tokenizer path. Only accepted with --model-family bitnet.
+        #[arg(long, value_name = "PATH")]
+        tokenizer: Option<PathBuf>,
 
         /// Maximum new tokens for the fixed smoke prompt.
         #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 4)]
@@ -589,9 +609,28 @@ impl MacCommand {
                 )
                 .await
             }
-            MacAction::Smoke { model_id, cache_dir, max_new_tokens, threads, json_out } => {
+            MacAction::Smoke {
+                model_family,
+                model_id,
+                cache_dir,
+                model_path,
+                tokenizer,
+                max_new_tokens,
+                threads,
+                json_out,
+            } => {
                 ensure_supported_mac_device(explicit_device_label, "mac smoke")?;
-                run_smoke(&model_id, cache_dir, max_new_tokens, threads, json_out).await
+                run_smoke(
+                    model_family,
+                    &model_id,
+                    cache_dir,
+                    model_path,
+                    tokenizer,
+                    max_new_tokens,
+                    threads,
+                    json_out,
+                )
+                .await
             }
             MacAction::Doctor { model_id, cache_dir, max_new_tokens, threads, json_out } => {
                 ensure_supported_mac_device(explicit_device_label, "mac doctor")?;
@@ -1906,12 +1945,32 @@ async fn run_one_shot_mac_answer(
 }
 
 async fn run_smoke(
+    model_family: MacSmokeModelFamily,
     model_id: &str,
     cache_dir: Option<PathBuf>,
+    model_path: Option<PathBuf>,
+    tokenizer: Option<PathBuf>,
     max_new_tokens: usize,
     threads: usize,
     json_out: PathBuf,
 ) -> Result<()> {
+    if model_family == MacSmokeModelFamily::Bitnet {
+        return run_bitnet_smoke(
+            model_id,
+            cache_dir,
+            model_path,
+            tokenizer,
+            max_new_tokens,
+            threads,
+            json_out,
+        )
+        .await;
+    }
+    if model_path.is_some() || tokenizer.is_some() {
+        anyhow::bail!(
+            "`bitnet mac smoke` accepts --model-path/--tokenizer only with --model-family bitnet; dense SLM smoke uses --model-id and the verified model cache"
+        );
+    }
     let cache_status =
         model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), false)?;
     if !cache_status["ready"].as_bool().unwrap_or(false) {
@@ -2033,6 +2092,120 @@ async fn run_smoke(
     Ok(())
 }
 
+async fn run_bitnet_smoke(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    model_path: Option<PathBuf>,
+    tokenizer: Option<PathBuf>,
+    max_new_tokens: usize,
+    threads: usize,
+    json_out: PathBuf,
+) -> Result<()> {
+    let model_id = if model_id == model_cache::M4_SLM_RUNTIME_MODEL_ID {
+        BITNET_M4_MODEL_ID
+    } else {
+        model_id
+    };
+    if !model_cache::is_apple_m4_bitnet_artifact_id(model_id) {
+        anyhow::bail!(
+            "`bitnet mac smoke --model-family bitnet` only supports {BITNET_M4_MODEL_ID}; got `{model_id}`"
+        );
+    }
+    let tokenizer = tokenizer.unwrap_or_else(|| PathBuf::from(BITNET_M4_DEFAULT_TOKENIZER_PATH));
+    if let Some(parent) = json_out.parent().filter(|parent| !parent.as_os_str().is_empty()) {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+
+    let answer_receipt_path = sibling_receipt_path(&json_out, "answer");
+    run_bitnet_ask(
+        model_id,
+        cache_dir.clone(),
+        model_path,
+        Some(tokenizer.clone()),
+        MAC_SMOKE_PROMPT.to_string(),
+        None,
+        max_new_tokens,
+        0.0,
+        1,
+        1.0,
+        1.1,
+        None,
+        threads,
+        answer_receipt_path.clone(),
+        false,
+        true,
+    )
+    .await?;
+
+    let answer_receipt = read_json_receipt(&answer_receipt_path)?;
+    let answer_summary = validate_mac_receipt_value(&answer_receipt_path, &answer_receipt)?;
+    let text = answer_receipt["text"].as_str().unwrap_or_default().trim().to_string();
+    let answer_contains_expected = text.contains(MAC_SMOKE_EXPECTED_FRAGMENT);
+    if !answer_contains_expected {
+        anyhow::bail!(
+            "Apple M4 BitNet one-shot smoke expected the fixed prompt to contain `{MAC_SMOKE_EXPECTED_FRAGMENT}`, got {text:?}"
+        );
+    }
+
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_mac_smoke",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "operator_command": "mac smoke --model-family bitnet",
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "model_family": "bitnet",
+        "model_id": model_id,
+        "prompt": MAC_SMOKE_PROMPT,
+        "expected_text_fragment": MAC_SMOKE_EXPECTED_FRAGMENT,
+        "expected_text_fragment_found": answer_contains_expected,
+        "text": text,
+        "tokens": answer_receipt["tokens"].clone(),
+        "model": answer_receipt["model"].clone(),
+        "tokenizer": answer_receipt["tokenizer"].clone(),
+        "quality": answer_receipt["quality"].clone(),
+        "timing": answer_receipt["timing"].clone(),
+        "answer_receipt": {
+            "path": answer_receipt_path.display().to_string(),
+            "artifact_kind": answer_summary.artifact_kind,
+            "prompt_count": answer_summary.prompt_count,
+            "generated_tokens": answer_summary.generated_tokens,
+            "validated": answer_summary.passed,
+        },
+        "cache_health": bitnet_mac_ask_readiness_json(cache_dir),
+        "mac_bitnet_claim_boundary": {
+            "bitnet_one_shot_mac_ask": true,
+            "bitnet_mac_smoke": true,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        },
+        "bitnet_quality_claimed": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+        "memory": memory_receipt_json(),
+    });
+    validate_mac_receipt_value(&json_out, &aggregate)?;
+    std::fs::write(&json_out, serde_json::to_vec_pretty(&aggregate)?)
+        .with_context(|| format!("failed to write {}", json_out.display()))?;
+    println!(
+        "Mac BitNet one-shot smoke passed: {} (answer receipt: {}, chat=false, serve=false)",
+        json_out.display(),
+        answer_receipt_path.display()
+    );
+    Ok(())
+}
+
 async fn run_doctor(
     model_id: &str,
     cache_dir: Option<PathBuf>,
@@ -2065,8 +2238,11 @@ async fn run_doctor(
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     let smoke_receipt_path = sibling_receipt_path(&json_out, "smoke");
     run_smoke(
+        MacSmokeModelFamily::DenseSlm,
         &model.id,
         Some(model.cache_root.clone()),
+        None,
+        None,
         max_new_tokens,
         threads,
         smoke_receipt_path.clone(),

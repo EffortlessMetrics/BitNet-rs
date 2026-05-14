@@ -1,30 +1,63 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
-assertion_line: 139
+assertion_line: 152
 expression: help
 ---
-Run a compact Apple M4 dense-SLM health smoke with cache and receipt checks
+Run a compact Apple M4 model-family health smoke with cache and receipt checks
 
 Usage: bitnet mac smoke [OPTIONS]
 
 Options:
   -c, --config <PATH>
           Configuration file path
+
+      --model-family <MODEL_FAMILY>
+          Model family to smoke. BitNet remains one-shot ask only
+
+          Possible values:
+          - dense-slm: Run the dense Qwen SLM golden smoke path
+          - bitnet:    Run the explicit BitNet one-shot ask smoke path
+
+          [default: dense-slm]
+
+  -d, --device <DEVICE>
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
+
       --model-id <MODEL_ID>
-          Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
+          Supported model id. Defaults to the validated Apple M4 SLM runtime artifact
+
+          [default: qwen2.5-0.5b-instruct-q8_0]
+
       --cache-dir <PATH>
           Override model cache root. Defaults to ~/.cache/bitnet-rs/models
-  -d, --device <DEVICE>
-          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+
       --log-level <LEVEL>
           Log level (trace, debug, info, warn, error)
-      --max-new-tokens <MAX_NEW_TOKENS>
-          Maximum new tokens for the fixed smoke prompt [default: 4] [aliases: --max-tokens, --n-predict]
-      --threads <THREADS>
-          Number of CPU threads to use (0 = all cores; deterministic mode may override) [default: 0]
+
+      --model-path <PATH>
+          Explicit BitNet GGUF path. Only accepted with --model-family bitnet
+
       --batch-size <SIZE>
           Batch size for processing
+
+      --tokenizer <PATH>
+          Explicit BitNet tokenizer path. Only accepted with --model-family bitnet
+
+      --max-new-tokens <MAX_NEW_TOKENS>
+          Maximum new tokens for the fixed smoke prompt
+
+          [default: 4]
+          [aliases: --max-tokens, --n-predict]
+
+      --threads <THREADS>
+          Number of CPU threads to use (0 = all cores; deterministic mode may override)
+
+          [default: 0]
+
       --json-out <PATH>
-          Output aggregate golden smoke receipt [default: target/apple-m4-continuity/mac-smoke.json]
+          Output aggregate golden smoke receipt
+
+          [default: target/apple-m4-continuity/mac-smoke.json]
+
   -h, --help
-          Print help
+          Print help (see a summary with '-h')
