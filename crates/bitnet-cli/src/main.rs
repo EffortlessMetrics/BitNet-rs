@@ -1810,6 +1810,7 @@ async fn run_simple_generation(
 
     // Track generated tokens for repetition penalty
     let mut generated_tokens = Vec::new();
+    bitnet_qk256_dispatch::reset_qk256_dispatch_counters();
 
     // Track logits dump if requested
     let mut logits_dump: Vec<LogitStep> = Vec::new();
@@ -2042,6 +2043,7 @@ async fn run_simple_generation(
     } else {
         0.0
     };
+    let qk256_dispatch = bitnet_qk256_dispatch::qk256_dispatch_counters();
 
     println!("\n\nGeneration complete!");
     println!(
@@ -2154,6 +2156,17 @@ async fn run_simple_generation(
                     "claimable": false,
                 },
                 "route_declared": proof_kernel_route.is_some(),
+                "qk256_dispatch": {
+                    "cpu_calls": qk256_dispatch.cpu_calls,
+                    "cpu_successes": qk256_dispatch.cpu_successes,
+                    "cpu_input_rows": qk256_dispatch.cpu_input_rows,
+                    "opencl_calls": qk256_dispatch.opencl_calls,
+                    "opencl_successes": qk256_dispatch.opencl_successes,
+                    "opencl_input_rows": qk256_dispatch.opencl_input_rows,
+                    "a770_qk256_opencl_used": qk256_dispatch.opencl_successes > 0,
+                    "diagnostic_only": true,
+                    "claimable": false,
+                },
                 "backend_claimable": false,
                 "not_claims": critical_not_claims(),
             },

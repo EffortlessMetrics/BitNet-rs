@@ -7,9 +7,47 @@ pub use opencl::{QK256_OPENCL_KERNEL_NAME, QK256_OPENCL_KERNEL_SRC, gemm_qk256_o
 use bitnet_common::{BitNetError, KernelError, Result};
 use bitnet_qk256_layout_core::{parse_input_shape, parse_qk256_layout, validate_input_cols};
 use candle_core::Tensor;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 const NOT_CLAIMED_OPENCL_QK256: &[&str] =
     &["a770_qk256_opencl_execution", "a770_qk256_opencl_performance", "a770_full_device_residency"];
+
+static CPU_CALLS: AtomicU64 = AtomicU64::new(0);
+static CPU_SUCCESSES: AtomicU64 = AtomicU64::new(0);
+static CPU_INPUT_ROWS: AtomicU64 = AtomicU64::new(0);
+static OPENCL_CALLS: AtomicU64 = AtomicU64::new(0);
+static OPENCL_SUCCESSES: AtomicU64 = AtomicU64::new(0);
+static OPENCL_INPUT_ROWS: AtomicU64 = AtomicU64::new(0);
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Qk256DispatchCounters {
+    pub cpu_calls: u64,
+    pub cpu_successes: u64,
+    pub cpu_input_rows: u64,
+    pub opencl_calls: u64,
+    pub opencl_successes: u64,
+    pub opencl_input_rows: u64,
+}
+
+pub fn qk256_dispatch_counters() -> Qk256DispatchCounters {
+    Qk256DispatchCounters {
+        cpu_calls: CPU_CALLS.load(Ordering::Relaxed),
+        cpu_successes: CPU_SUCCESSES.load(Ordering::Relaxed),
+        cpu_input_rows: CPU_INPUT_ROWS.load(Ordering::Relaxed),
+        opencl_calls: OPENCL_CALLS.load(Ordering::Relaxed),
+        opencl_successes: OPENCL_SUCCESSES.load(Ordering::Relaxed),
+        opencl_input_rows: OPENCL_INPUT_ROWS.load(Ordering::Relaxed),
+    }
+}
+
+pub fn reset_qk256_dispatch_counters() {
+    CPU_CALLS.store(0, Ordering::Relaxed);
+    CPU_SUCCESSES.store(0, Ordering::Relaxed);
+    CPU_INPUT_ROWS.store(0, Ordering::Relaxed);
+    OPENCL_CALLS.store(0, Ordering::Relaxed);
+    OPENCL_SUCCESSES.store(0, Ordering::Relaxed);
+    OPENCL_INPUT_ROWS.store(0, Ordering::Relaxed);
+}
 
 /// Describes which QK256 runtime is currently used by this dispatch crate.
 ///
@@ -118,6 +156,8 @@ pub fn forward_qk256_with_backend(
 
     match backend {
         Qk256DispatchBackend::Cpu => {
+            CPU_CALLS.fetch_add(1, Ordering::Relaxed);
+            CPU_INPUT_ROWS.fetch_add(input_rows as u64, Ordering::Relaxed);
             for (i, input_row) in input_vec.iter().enumerate() {
                 let start = i * layout.rows;
                 let end = start + layout.rows;
@@ -136,8 +176,11 @@ pub fn forward_qk256_with_backend(
                     ))
                 })?;
             }
+            CPU_SUCCESSES.fetch_add(1, Ordering::Relaxed);
         }
         Qk256DispatchBackend::OpenCl => {
+            OPENCL_CALLS.fetch_add(1, Ordering::Relaxed);
+            OPENCL_INPUT_ROWS.fetch_add(input_rows as u64, Ordering::Relaxed);
             run_opencl_qk256(
                 &flat_bytes,
                 &input_vec,
@@ -147,6 +190,7 @@ pub fn forward_qk256_with_backend(
                 layout.row_stride_bytes,
                 weight_name,
             )?;
+            OPENCL_SUCCESSES.fetch_add(1, Ordering::Relaxed);
         }
     }
 
