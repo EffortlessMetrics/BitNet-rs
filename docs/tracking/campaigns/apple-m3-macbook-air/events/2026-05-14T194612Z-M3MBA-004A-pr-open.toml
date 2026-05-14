@@ -1,0 +1,14 @@
+timestamp = "2026-05-14T19:46:12Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-004A"
+event = "pr_open"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
+pr = 4775
+head_sha = "33bd49fb78c5239d0d18ca3ae63aaa9185a45103"
+summary = "Opened the live M3 Air dense Qwen smoke evidence PR."
+
+notes = [
+  "The PR records the M3 Air dense Qwen2.5 0.5B smoke receipt, receipt-check output, host context, model/tokenizer identity, fallback-free backend identity, and dense-only claim boundary.",
+  "The live smoke exposed and fixes M3 receipt-check/annotation paths that still assumed apple-m4-cpu-neon for warm-session prompt backends and mac_claim_boundary requested_backend.",
+]
