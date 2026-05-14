@@ -4,7 +4,9 @@ Date: 2026-05-14
 
 ## Summary
 
-CUDA-DENSE-052 is blocked from product promotion.
+CUDA-DENSE-052 was blocked from product promotion by this diagnostic receipt.
+It is now superseded by the current-source proof receipt recorded in
+`docs/reports/CUDA_DENSE_052_SHORT_DECODE_CURRENT_SOURCE_PROOF.md`.
 
 The diagnostic run produced a real RTX 5070 Ti CUDA short-decode receipt for the
 exact Qwen2.5 0.5B Q8_0 artifact. The receipt proves fallback-free execution and
@@ -73,6 +75,7 @@ It must not claim:
 
 ## Next Step
 
-Root-cause the decoded-output quality before promoting CUDA-DENSE-052. The likely
-fault domain is the dense Qwen prompt/tokenizer/runtime path, not CUDA fallback:
-the diagnostic receipt already records fallback-free CPU/CUDA token equality.
+Use the current-source proof receipt, not this stale-binary diagnostic, for
+CUDA-DENSE-052 promotion. This diagnostic remains useful only as evidence that
+CPU/CUDA token parity held even when the stale binary produced unacceptable
+decoded text.

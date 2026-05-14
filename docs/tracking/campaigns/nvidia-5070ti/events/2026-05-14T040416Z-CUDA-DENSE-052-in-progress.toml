@@ -1,0 +1,21 @@
+timestamp = "2026-05-14T04:04:16Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-052"
+event = "in_progress"
+actor = "codex"
+previous_status = "blocked"
+new_status = "in_progress"
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-short-decode-current-source.json",
+  "docs/reports/CUDA_DENSE_052_SHORT_DECODE_CURRENT_SOURCE_PROOF.md",
+  "docs/reports/CUDA_DENSE_052_SHORT_DECODE_BLOCKER.md",
+]
+
+notes = [
+  "A current-source Qwen2.5 0.5B Q8_0 short-decode run selected nvidia-rtx-5070-ti-cuda, used route dense_regular_llm_cuda, and recorded fallback_used=false.",
+  "CPU and CUDA generated token IDs matched for the recorded 8-token greedy decode: [576, 4226, 374, 220, 19, 13, 3555, 374].",
+  "The decoded text is bounded and user-readable: `The answer is 4. What is`.",
+  "The earlier same-day diagnostic receipt is retained as stale-binary evidence only and must not be used for product promotion.",
+  "The proof refresh keeps speedup, server readiness, general dense GGUF CUDA readiness, full CUDA residency, and BitNet packed I2_S/QK256 claims false.",
+]
