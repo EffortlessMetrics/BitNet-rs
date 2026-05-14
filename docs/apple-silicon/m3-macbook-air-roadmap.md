@@ -171,7 +171,7 @@ explicit MacBook backend label:
 cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
   mac validate \
   --profile-set smoke \
-  --backend-label apple-m3-air-cpu-neon \
+  --device apple-m3-air-cpu-neon \
   --json-out ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json
 ```
 
@@ -264,8 +264,15 @@ evidence. They should be retained in CI actuals and excluded from healthy
 runtime percentiles so future caps are based on completed runs, not incomplete
 ones.
 
-`M3MBA-013` owns the concrete implementation pass for this rule. It should leave
-reviewers with a selected-job checklist:
+`M3MBA-013` owns the concrete implementation pass for this rule. It adds the
+manual-only `Apple M3 Air Dense SLM Evidence (staged)` workflow as the first
+selected M3 hardware lane. A disabled dispatch writes only the staged status;
+an enabled dispatch requires the provisioned self-hosted M3 Air runner, preserves
+started runs with `cancel-in-progress: false`, performs disk preflight before
+model work, writes phase artifacts under `target/apple-m3-air-dense-slm/`, and
+uploads the artifact directory even if a late validation step fails.
+
+Reviewers should use this selected-job checklist:
 
 ```text
 1. classify the diff before selecting any live model, artifact, or timing job
@@ -283,6 +290,13 @@ reviewers with a selected-job checklist:
 8. record timeout and cancellation as cap-failure actuals, excluded from healthy
    runtime percentiles
 ```
+
+The staged workflow is intentionally not an ordinary PR trigger. It is a manual
+or campaign lane for `M3MBA-004A` and `M3MBA-004B` evidence after `M3MBA-012`
+lands. If a future labeled or scheduled variant is added, it must keep the same
+completion posture: preflight before expensive work, selected runs allowed to
+finish, phase evidence retained, and timeout caps based on successful completed
+runs plus cushion.
 
 If these rules make a live M3 job too expensive for ordinary PR CI, the correct
 design is to route it to a manual, labeled, scheduled, release, or campaign lane.

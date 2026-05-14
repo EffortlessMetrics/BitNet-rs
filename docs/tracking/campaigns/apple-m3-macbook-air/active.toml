@@ -188,22 +188,24 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-013"
-status = "proposed"
-branch = "codex/apple-m3-macbook-air/M3MBA-013-ci-completion-policy"
+status = "in_progress"
+branch = "codex/apple-m3-macbook-air/M3MBA-013-ci-completion-workflow"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-012"]
-acceptance = "Encode the M3 Air CI completion policy in the campaign and shared CI docs so selected long hardware/model jobs are routed, preflighted, and capped from healthy completed runtimes with cushion instead of being ended just before receipt emission."
+acceptance = "Encode the M3 Air CI completion policy in the campaign and shared CI docs, and add a staged manual M3 Air dense SLM workflow so selected long hardware/model jobs are routed, preflighted, artifact-retaining, and capped from healthy completed runtimes with cushion instead of being ended just before receipt emission."
 commands = [
   "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- lint-workflows",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
+  ".github/workflows/apple-m3-air-dense-slm.yml",
   "docs/apple-silicon/**",
   "docs/ci/**",
   "docs/tracking/campaigns/apple-m3-macbook-air/**",
@@ -217,7 +219,7 @@ forbidden_paths = [
   "models/**",
 ]
 may_claim = [
-  "The M3 Air lane has an explicit CI completion policy for selected long jobs.",
+  "The M3 Air lane has an explicit CI completion policy and staged manual workflow for selected long jobs.",
 ]
 must_not_claim = [
   "Live M3 model CI has been enabled.",

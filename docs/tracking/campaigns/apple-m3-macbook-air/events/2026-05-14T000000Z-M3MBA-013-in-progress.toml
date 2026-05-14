@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T00:00:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-013"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-013-ci-completion-workflow"
+summary = "Started the M3 Air selected long-job completion workflow item."
+
+notes = [
+  "The item encodes the M3 Air CI completion policy with a staged manual dense SLM workflow.",
+  "The workflow is not an ordinary PR trigger, preserves started runs, preflights disk before model work, and uploads phase artifacts even after late failures.",
+  "No live M3 model inference, model binary, BitNet local-answer claim, M4 performance claim, or broad Apple Silicon performance claim is introduced.",
+]
