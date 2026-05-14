@@ -141,7 +141,7 @@ pub fn run(
     }
 
     let mut by_lane: BTreeMap<String, Vec<f64>> = BTreeMap::new();
-    for e in entries.iter().rev().take(window) {
+    for e in entries.iter().rev().filter(|entry| is_healthy_sample(entry)).take(window) {
         if e.lane.is_empty() {
             continue;
         }
@@ -179,6 +179,10 @@ pub fn run(
         window
     );
     Ok(())
+}
+
+fn is_healthy_sample(entry: &HistoryEntry) -> bool {
+    matches!(entry.conclusion.as_str(), "" | "success")
 }
 
 #[cfg(test)]
@@ -231,6 +235,32 @@ mod tests {
         assert_eq!(entries.len(), 3);
         assert_eq!(entries[0].lane, "a");
         assert_eq!(entries[2].actual_lem, 3.0);
+    }
+
+    #[test]
+    fn learned_estimates_ignore_cap_failures() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let history = dir.path().join("hist.jsonl");
+        let lanes = dir.path().join("lanes.toml");
+        let out = dir.path().join("estimate.json");
+        std::fs::write(
+            &history,
+            "\
+{\"lane\":\"m3-live\",\"actual_lem\":10.0,\"conclusion\":\"success\"}
+{\"lane\":\"m3-live\",\"actual_lem\":11.0,\"conclusion\":\"timed_out\"}
+{\"lane\":\"m3-live\",\"actual_lem\":12.0,\"conclusion\":\"cancelled\"}
+{\"lane\":\"m3-live\",\"actual_lem\":20.0,\"conclusion\":\"success\"}
+",
+        )?;
+        std::fs::write(&lanes, "[lane.m3-live]\nbase_lem = 1\n")?;
+
+        run(history, lanes, out.clone(), false, 10)?;
+        let report: EstimateReport = serde_json::from_str(&std::fs::read_to_string(out)?)?;
+        let lane = &report.lanes["m3-live"];
+
+        assert_eq!(lane.samples, 2);
+        assert!((lane.p50 - 15.0).abs() < 1e-9);
+        Ok(())
     }
 
     #[test]

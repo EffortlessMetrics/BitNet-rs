@@ -1,0 +1,14 @@
+timestamp = "2026-05-13T23:30:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-012"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-012-dense-harness-contract"
+summary = "Started the M3 Air dense SLM harness contract before live smoke evidence."
+
+notes = [
+  "The contract defines the apple-m3-air-cpu-neon mac validate and receipts-check boundary before M3 dense smoke runs.",
+  "The PR stays docs/tracker/policy scoped and does not run live model inference or commit hardware timing receipts.",
+]

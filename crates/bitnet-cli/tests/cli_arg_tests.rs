@@ -4068,7 +4068,8 @@ fn answer_corpus_dry_run_accepts_slm_answer_corpus() {
 /// `answer-corpus --dry-run` validates the seeded Apple M4 SLM eval scoring contract.
 #[cfg(feature = "full-cli")]
 #[test]
-fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract() {
+fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract()
+-> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir().expect("tempdir");
     let out = dir.path().join("apple-m4-slm-eval.json");
     let corpus = workspace_path("ci/quality/apple-m4-slm-eval-seeded-corpus.yaml");
@@ -4099,8 +4100,7 @@ fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract() {
     assert_eq!(receipt["scoring_summary"]["not_run"], 10);
     let kinds: Vec<&str> = receipt["scoring_summary"]["kinds"]
         .as_array()
-        .map(Vec::as_slice)
-        .unwrap_or(&[])
+        .ok_or("missing scoring summary kinds array")?
         .iter()
         .filter_map(serde_json::Value::as_str)
         .collect();
@@ -4118,6 +4118,7 @@ fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract() {
     assert_eq!(receipt["cases"][9]["quality"]["scoring"]["forbidden_tokens"][0], "maybe");
     assert_eq!(receipt["claim_boundary"]["bounded_slm_answer_smoke_passed"], false);
     assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+    Ok(())
 }
 
 /// `reference-compare` validates an external SLM reference divergence artifact.
