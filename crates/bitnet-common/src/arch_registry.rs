@@ -12,7 +12,7 @@ use crate::config::{ActivationType, NormType};
 pub struct ArchDefaults {
     /// Normalization layer variant (RmsNorm or LayerNorm).
     pub norm_type: NormType,
-    /// Activation function variant (Silu or Gelu).
+    /// Activation function variant.
     pub activation_type: ActivationType,
     /// Default context length, if one is widely agreed upon.
     pub default_context_length: Option<usize>,
@@ -27,7 +27,7 @@ impl ArchitectureRegistry {
     /// The match is **case-insensitive**.  Returns `None` for unrecognised
     /// architecture strings.
     pub fn lookup(architecture: &str) -> Option<ArchDefaults> {
-        use ActivationType::{Gelu, Silu};
+        use ActivationType::{Gelu, Relu2, Silu};
         use NormType::{LayerNorm, RmsNorm};
 
         let (norm, act, ctx) = match architecture.to_lowercase().as_str() {
@@ -48,7 +48,7 @@ impl ArchitectureRegistry {
             "gemma" => (RmsNorm, Gelu, None),
             "gemma2" | "gemma-2" => (RmsNorm, Gelu, Some(8192)),
 
-            "bitnet" | "bitnet-b1.58" => (LayerNorm, Silu, None),
+            "bitnet" | "bitnet-b1.58" => (RmsNorm, Relu2, None),
 
             "deepseek" | "deepseek2" => (RmsNorm, Silu, None),
             "deepseek-v3" | "deepseekv3" | "deepseek3" => (RmsNorm, Silu, Some(65536)),
@@ -305,13 +305,13 @@ mod tests {
     #[test]
     fn test_bitnet_defaults() {
         let d = ArchitectureRegistry::lookup("bitnet").unwrap();
-        assert_eq!(d.norm_type, NormType::LayerNorm);
-        assert_eq!(d.activation_type, ActivationType::Silu);
+        assert_eq!(d.norm_type, NormType::RmsNorm);
+        assert_eq!(d.activation_type, ActivationType::Relu2);
         assert_eq!(d.default_context_length, None);
 
         let d2 = ArchitectureRegistry::lookup("bitnet-b1.58").unwrap();
-        assert_eq!(d2.norm_type, NormType::LayerNorm);
-        assert_eq!(d2.activation_type, ActivationType::Silu);
+        assert_eq!(d2.norm_type, NormType::RmsNorm);
+        assert_eq!(d2.activation_type, ActivationType::Relu2);
         assert_eq!(d2.default_context_length, None);
     }
 

@@ -1093,6 +1093,10 @@ impl GgufLoader {
     fn extract_config(&self, reader: &GgufReader) -> Result<BitNetConfig> {
         let mut config = BitNetConfig::default();
 
+        if let Some(architecture) = reader.get_string_metadata("general.architecture") {
+            config.model.apply_architecture_defaults(&architecture);
+        }
+
         // Extract model configuration from GGUF metadata
         if let Some(vocab_size) = Self::get_u32_any(
             reader,
