@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T00:20:18Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-003"
+event = "merged"
+pr = 4663
+merge_sha = "967125399f278b2e710aa94c61738a132f114a23"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "PR #4663 merged apple_m4_slm_eval_summary schema validation under bitnet mac receipts-check.",
+  "The merged schema validates model/tokenizer identity, seeded corpus counts, accuracy buckets, generated evidence coverage, speed, memory, stability, and dense-only claim boundaries with fixture tests.",
+  "Claim boundaries remain narrow: no live supported-model matrix, broad M4 performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook claim.",
+]

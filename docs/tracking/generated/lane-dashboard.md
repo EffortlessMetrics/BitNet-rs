@@ -14,7 +14,7 @@
 | apple-m4-operational | Apple M4 operational readiness | M4-OP-006 | Do not reopen the completed apple-m4 proof campaign. |
 | apple-m4-productization | Apple M4 local answer productization | M4-PROD-005 | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
 | apple-m4-slm-answer | Apple M4 SLM local answer usability | SLM-M4-007 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
-| apple-m4-slm-eval-and-proof | Apple M4 dense SLM eval and proof | M4-SLM-EVAL-003 | This is an M4 Mac mini dense SLM campaign. |
+| apple-m4-slm-eval-and-proof | Apple M4 dense SLM eval and proof | M4-SLM-EVAL-004 | This is an M4 Mac mini dense SLM campaign. |
 | apple-m4-slm-excellence | Apple M4 SLM excellence | M4-SLM-EX-010 | This is an M4 Mac mini local campaign. |
 | apple-m4-slm-hardening | Apple M4 SLM hardening | M4-SLM-HARDEN-004 | Do not reopen completed Apple M4 proof, operational, SLM answer, productization, or performance campaigns. |
 | apple-m4-slm-metal-phases | Apple M4 SLM Metal phases | M4-METAL-007 | This is an M4 Mac mini dense SLM campaign. |

@@ -118,8 +118,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL-003"
-status = "pr_open"
+status = "merged"
 pr = 4663
+merge_sha = "967125399f278b2e710aa94c61738a132f114a23"
 branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-003-report-schema"
 stackable = false
 review_mode = "codex_premerge"
