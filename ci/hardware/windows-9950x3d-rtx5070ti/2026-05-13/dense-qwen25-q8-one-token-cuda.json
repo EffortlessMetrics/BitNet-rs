@@ -162,7 +162,7 @@
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
   },
   "notes": [
-    "CUDA-DENSE-044 proves exactly one deterministic greedy Qwen token through the dense regular-LLM CUDA route.",
+    "CUDA-DENSE-051 proves exactly one deterministic greedy Qwen token through the dense regular-LLM CUDA route.",
     "This receipt does not claim short decode, chat, server readiness, speedup, persistent residency, full CUDA residency, or BitNet packed I2_S/QK256 proof."
   ],
   "one_token_proof": {
