@@ -1285,38 +1285,35 @@ fn bitnet_answer_corpus_proof_fixture(include_timing: bool) -> serde_json::Value
 }
 
 #[test]
-fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt() {
+fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt()
+-> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("answer.json");
-    std::fs::write(
-        &receipt_path,
-        serde_json::to_vec_pretty(&serde_json::json!({
-            "artifact_kind": "inference_result",
-            "requested_backend": "apple-m4-cpu-neon",
-            "selected_backend": "apple-m4-cpu-neon",
-            "runtime_api": "cpu",
-            "fallback_used": false,
-            "text": "4.",
-            "tokens": {
-                "generated": 1,
-                "generated_ids": [19]
-            },
-            "model": {
-                "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
-            },
-            "tokenizer": {
-                "source": "gguf_metadata"
-            },
-            "mac_claim_boundary": {
-                "full_metal_inference_claimed": false,
-                "neural_engine_execution_claimed": false,
-                "qk256_apple_claimed": false,
-                "bitnet_quality_claimed": false
-            }
-        }))
-        .expect("json"),
-    )
-    .expect("write receipt");
+    let receipt_json = serde_json::to_vec_pretty(&serde_json::json!({
+        "artifact_kind": "inference_result",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "text": "4.",
+        "tokens": {
+            "generated": 1,
+            "generated_ids": [19]
+        },
+        "model": {
+            "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+        },
+        "tokenizer": {
+            "source": "gguf_metadata"
+        },
+        "mac_claim_boundary": {
+            "full_metal_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "bitnet_quality_claimed": false
+        }
+    }))?;
+    std::fs::write(&receipt_path, receipt_json)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -1325,6 +1322,7 @@ fn mac_receipts_check_accepts_valid_cpu_neon_answer_receipt() {
         .success()
         .stdout(predicate::str::contains("\"passed\": true"))
         .stdout(predicate::str::contains("apple-m4-cpu-neon"));
+    Ok(())
 }
 
 #[test]
@@ -1762,14 +1760,10 @@ fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate() {
 }
 
 #[test]
-fn slm_eval_report_schema_accepts_fixture_summary() {
+fn slm_eval_report_schema_accepts_fixture_summary() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("slm-eval-summary.json");
-    std::fs::write(
-        &receipt_path,
-        serde_json::to_vec_pretty(&slm_eval_summary_report()).expect("json"),
-    )
-    .expect("write receipt");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&slm_eval_summary_report())?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -1780,16 +1774,20 @@ fn slm_eval_report_schema_accepts_fixture_summary() {
         .stdout(predicate::str::contains("\"prompt_count\": 10"))
         .stdout(predicate::str::contains("\"generated_tokens\": 128"))
         .stdout(predicate::str::contains("\"passed\": true"));
+    Ok(())
 }
 
 #[test]
-fn slm_eval_report_schema_rejects_missing_input_throughput() {
+fn slm_eval_report_schema_rejects_missing_input_throughput()
+-> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("slm-eval-summary-missing-throughput.json");
     let mut receipt = slm_eval_summary_report();
-    receipt["speed"].as_object_mut().expect("speed object").remove("input_tok_s_p50");
-    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
-        .expect("write receipt");
+    receipt["speed"]
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("speed object missing"))?
+        .remove("input_tok_s_p50");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -1797,16 +1795,16 @@ fn slm_eval_report_schema_rejects_missing_input_throughput() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("speed.input_tok_s_p50"));
+    Ok(())
 }
 
 #[test]
-fn slm_eval_report_schema_rejects_broad_quality_claim() {
+fn slm_eval_report_schema_rejects_broad_quality_claim() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("slm-eval-summary-broad-claim.json");
     let mut receipt = slm_eval_summary_report();
     receipt["claim_boundary"]["broad_model_quality_claim"] = serde_json::json!(true);
-    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
-        .expect("write receipt");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -1814,6 +1812,7 @@ fn slm_eval_report_schema_rejects_broad_quality_claim() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("claim_boundary.broad_model_quality_claim"));
+    Ok(())
 }
 
 #[test]
