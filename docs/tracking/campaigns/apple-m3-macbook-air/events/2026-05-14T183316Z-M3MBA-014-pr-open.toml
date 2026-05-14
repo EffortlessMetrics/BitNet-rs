@@ -1,0 +1,20 @@
+timestamp = "2026-05-14T18:33:16Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-014"
+event = "pr_open"
+from = "in_progress"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-014-tracker-readiness"
+pr = 4766
+head_sha = "1ed8d348c829955bc3d049396aad0725f85c3fd5"
+summary = "Opened PR #4766 for the M3 Air Mac validate receipt bridge."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4766",
+]
+
+notes = [
+  "The PR extends `mac validate`, `slm-warm-session`, receipt checks, and help snapshots so apple-m3-air-cpu-neon receipts preserve M3-specific identity without live model inference.",
+  "No M3 Air dense smoke, BitNet behavior, M4 Mac mini performance, Metal inference, MPSGraph model inference, Neural Engine execution, or QK256 support is claimed.",
+]
