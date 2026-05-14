@@ -373,6 +373,10 @@ enum Commands {
         #[arg(long, value_name = "TEMPLATE", default_value = "auto")]
         prompt_template: String,
 
+        /// Disable Qwen thinking mode by appending the Qwen no-thinking assistant suffix
+        #[arg(long = "no-think", visible_alias = "no-thinking", default_value_t = false)]
+        no_think: bool,
+
         /// System prompt for chat models
         #[arg(long, value_name = "TEXT")]
         system_prompt: Option<String>,
@@ -1415,6 +1419,7 @@ async fn async_main() -> Result<()> {
             deterministic,
             threads,
             prompt_template,
+            no_think,
             system_prompt,
             stop,
             stop_id,
@@ -1453,6 +1458,7 @@ async fn async_main() -> Result<()> {
                 deterministic,
                 threads,
                 prompt_template,
+                no_think,
                 system_prompt,
                 stop,
                 stop_id,
@@ -3996,6 +4002,36 @@ fn qwen_trace_full_prompt_enabled() -> bool {
     qwen_trace_enabled() && std::env::var("BITNET_QWEN_TRACE_FULL_PROMPT").as_deref() == Ok("1")
 }
 
+fn apply_qwen_no_think_prompt_policy(
+    template_type: bitnet_inference::TemplateType,
+    formatted_prompt: String,
+    no_think: bool,
+) -> Result<String> {
+    if !no_think {
+        return Ok(formatted_prompt);
+    }
+
+    if !matches!(template_type, bitnet_inference::TemplateType::QwenChat) {
+        anyhow::bail!("--no-think is only supported with --prompt-template qwen");
+    }
+
+    const QWEN_ASSISTANT_MARKER: &str = "<|im_start|>assistant\n";
+    const QWEN_NO_THINK_SUFFIX: &str = "<think>\n\n</think>\n\n";
+
+    if formatted_prompt.ends_with(QWEN_NO_THINK_SUFFIX) {
+        return Ok(formatted_prompt);
+    }
+
+    if formatted_prompt.ends_with(QWEN_ASSISTANT_MARKER) {
+        return Ok(format!("{formatted_prompt}{QWEN_NO_THINK_SUFFIX}"));
+    }
+
+    anyhow::bail!(
+        "--no-think requires a Qwen assistant generation prompt ending in \
+         <|im_start|>assistant\\n"
+    );
+}
+
 fn qwen_trace_prompt_id_override() -> Result<Option<Vec<u32>>> {
     let Ok(raw) = std::env::var("BITNET_QWEN_TRACE_PROMPT_IDS") else {
         return Ok(None);
@@ -4123,6 +4159,7 @@ async fn run_simple_generation(
     deterministic: bool,
     threads: usize,
     prompt_template: String,
+    no_think: bool,
     system_prompt: Option<String>,
     stop: Vec<String>,
     stop_id: Vec<u32>,
@@ -4161,6 +4198,7 @@ async fn run_simple_generation(
             "has_tokenizer_path": tokenizer_path.is_some(),
             "max_new_tokens": max_new_tokens,
             "prompt_template": prompt_template.clone(),
+            "qwen_no_think": no_think,
             "json_out": json_out.as_ref().map(|path| path.display().to_string()),
         }),
     );
@@ -4406,12 +4444,17 @@ async fn run_simple_generation(
             "has_system_prompt": system_prompt.is_some(),
         }),
     );
-    let formatted_prompt = template_type.apply(&prompt, system_prompt.as_deref());
+    let formatted_prompt = apply_qwen_no_think_prompt_policy(
+        template_type,
+        template_type.apply(&prompt, system_prompt.as_deref()),
+        no_think,
+    )?;
     let rendered_prompt_sha256 = compute_sha256_bytes(formatted_prompt.as_bytes());
     answer_corpus_child_phase(
         "prompt_render_complete",
         serde_json::json!({
             "template": template_type.to_string(),
+            "qwen_no_think": no_think,
             "rendered_prompt_bytes": formatted_prompt.len(),
             "rendered_prompt_sha256": rendered_prompt_sha256.clone(),
         }),
@@ -5088,9 +5131,11 @@ async fn run_simple_generation(
             "seed": seed.unwrap_or(0),
             "greedy": greedy,
             "deterministic": deterministic,
+            "qwen_no_think": no_think,
         });
         let prompt_render_receipt = serde_json::json!({
             "template_family": template_type.to_string(),
+            "qwen_no_think": no_think,
             "rendered_text": formatted_prompt,
             "rendered_sha256": rendered_prompt_sha256,
             "add_bos": bos_policy,
@@ -9654,6 +9699,7 @@ async fn run_lunar_lake_ask(
         true,
         0,
         "qwen2.5".to_string(),
+        false,
         None,
         vec!["<|im_end|>".to_string()],
         Vec::new(),
@@ -10014,6 +10060,7 @@ async fn run_ask_generation(
         true,
         0,
         BITNET_CPP_ANSWER_TEMPLATE.to_string(),
+        false,
         system_prompt,
         vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
         Vec::new(),
@@ -11524,6 +11571,36 @@ fn apple_machine_receipt_json_from_probe(probe: &AppleCliMachineProbe) -> serde_
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn no_think_appends_qwen_suffix() {
+        let prompt = "<|im_start|>system\nYou are helpful.<|im_end|>\n<|im_start|>user\n2+2?<|im_end|>\n<|im_start|>assistant\n";
+        let result = apply_qwen_no_think_prompt_policy(
+            bitnet_inference::TemplateType::QwenChat,
+            prompt.to_string(),
+            true,
+        );
+
+        assert!(result.is_ok());
+        let rendered = result.unwrap_or_default();
+
+        assert!(rendered.ends_with("<think>\n\n</think>\n\n"));
+        assert_eq!(rendered.matches("<think>").count(), 1);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn no_think_rejects_non_qwen_template() {
+        let err = apply_qwen_no_think_prompt_policy(
+            bitnet_inference::TemplateType::Instruct,
+            "Q: 2+2?\nA:".to_string(),
+            true,
+        )
+        .expect_err("no-thinking should be qwen-only");
+
+        assert!(err.to_string().contains("--prompt-template qwen"));
+    }
 
     #[test]
     fn answer_quality_rejects_punctuation_noise() {
