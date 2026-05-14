@@ -804,7 +804,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-WARM-001"
-status = "in_progress"
+status = "pr_open"
+pr = 4701
+head_sha = "93dc74d5159b0b401f8a01f79099cea4cf89c846"
 branch = "codex/apple-m4-local-answer/M4-BITNET-WARM-001-route"
 stackable = false
 review_mode = "codex_premerge"
