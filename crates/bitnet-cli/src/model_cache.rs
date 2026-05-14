@@ -410,6 +410,13 @@ pub(crate) struct VerifiedCachedModel {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(
+    not(feature = "full-cli"),
+    expect(
+        dead_code,
+        reason = "Apple M4 SLM receipt metadata is consumed by the full-cli answer-corpus path"
+    )
+)]
 pub(crate) struct AppleM4SlmModelReceiptMetadata {
     pub id: &'static str,
     pub repo: &'static str,
@@ -1989,6 +1996,13 @@ fn supported_model(id: &str) -> Result<&'static SupportedModel> {
     })
 }
 
+#[cfg_attr(
+    not(feature = "full-cli"),
+    expect(
+        dead_code,
+        reason = "Apple M4 SLM receipt metadata is consumed by the full-cli answer-corpus path"
+    )
+)]
 pub(crate) fn apple_m4_slm_model_receipt_metadata(
     id: &str,
 ) -> Result<AppleM4SlmModelReceiptMetadata> {
