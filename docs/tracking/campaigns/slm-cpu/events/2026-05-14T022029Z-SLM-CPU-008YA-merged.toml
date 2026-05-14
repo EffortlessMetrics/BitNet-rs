@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T02:20:29Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008YA"
+event = "merged"
+pr = 4669
+merge_sha = "04ac4b17713fdb9e9aa5950d8b3f582b2225aceb"
+actor = "codex"
+summary = "Merged explicit Qwen no-thinking prompt policy support for the i5-8250U Qwen3 first-token evidence lane."
+
+artifacts = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/commands/inference.rs",
+  "docs/slm/SLM_CPU_8250U_RUNBOOK.md",
+  "docs/slm/SLM_REFERENCE_DIVERGENCE.md",
+]
+
+notes = [
+  "The run command now accepts --no-think/--no-thinking only with --prompt-template qwen and records qwen_no_think in prompt/generation receipt metadata.",
+  "The merge keeps first-token parity open; the local diagnostic run emitted token 32313 / Okay for the no-thinking prompt and did not claim token 19 / 4 parity.",
+  "SLM-CPU-008Y remains the next ready evidence item for capturing or ingesting a real known-good internal Qwen3 checkpoint pack for the exact rendered prompt policy.",
+  "No answer-quality, corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 claim is made.",
+]
