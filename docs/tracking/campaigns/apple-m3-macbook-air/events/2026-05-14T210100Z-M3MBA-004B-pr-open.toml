@@ -1,0 +1,14 @@
+timestamp = "2026-05-14T21:01:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-004B"
+event = "pr_open"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-004B-dense-qwen-operator"
+pr = 4785
+head_sha = "e66e46ef0ab03839eecbb44975c7849655856ce9"
+summary = "Opened the live M3 Air dense Qwen operator-profile evidence PR."
+
+notes = [
+  "The PR records the M3 Air dense Qwen2.5 0.5B operator profile receipts, per-profile prompt receipts, receipt-check output, host context, allocation audit, fallback-free backend identity, and diagnostic-only timing boundary.",
+  "The live operator run exposed and fixes remaining M3 device-model label paths for warm-session prompt artifact kinds and allocation-audit scopes.",
+]
