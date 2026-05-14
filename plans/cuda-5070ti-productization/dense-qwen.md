@@ -21,7 +21,7 @@ user-path receipts versus validators, fixtures, or contracts.
 
 ## Work item: CUDA-DENSE-050
 
-Status: in progress
+Status: PR open (#4713)
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007
 Linked ADRs: BITNET-ADR-0004
@@ -158,13 +158,19 @@ Remove the short-decode receipt and keep one-token proof scoped.
 
 ## Work item: CUDA-DENSE-053
 
-Status: planned
+Status: in progress
 Campaign item: `CUDA-DENSE-053`
-Blocked by: CUDA-DENSE-052
+Blocked by:
 
 ### Goal
 
 Prove dense Qwen warm-session behavior.
+
+Current-source receipt:
+
+```text
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-warm-session-current-source.json
+```
 
 ### Acceptance
 
@@ -176,10 +182,30 @@ Prove dense Qwen warm-session behavior.
 - `full_cuda_residency_claimed=false` unless all phases prove residency;
 - `speedup_claim=false` unless benchmark-qualified.
 
+Observed current-source proof:
+
+```text
+turns_count = 3
+generated_tokens_total = 24
+model_loaded_once = true
+tokenizer_loaded_once = true
+cuda_context_initialized_once = true
+runtime_buffers_reused = true
+weights_uploaded_once = true
+per_turn_weight_upload = false
+generated_token_ids_match = true
+top_k_all_match = true
+fallback_used = false
+speedup_claim = false
+full_cuda_residency_claimed = false
+bitnet_packed_i2s_qk256_proof = false
+```
+
 ### Receipt path
 
 ```text
 ci/hardware/windows-9950x3d-rtx5070ti/<date>/dense-qwen25-q8-warm-session.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-warm-session-current-source.json
 ```
 
 ### Rollback

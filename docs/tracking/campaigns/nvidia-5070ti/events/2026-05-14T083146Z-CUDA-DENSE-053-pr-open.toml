@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T08:31:46Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-053"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "cuda/dense-qwen25-warm-session-proof"
+pr = 4713
+head_sha = "f5a07e543a5a598c86798ec4b0fef7441e18e1a8"
+summary = "Opened CUDA-DENSE-053 current-source dense Qwen warm-session strict CUDA proof PR."
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-warm-session-current-source.json",
+  "docs/reports/CUDA_DENSE_053_WARM_SESSION_CURRENT_SOURCE_PROOF.md",
+]
+
+notes = [
+  "Draft PR #4713 records the Qwen2.5 0.5B Q8_0 warm-session proof through dense_regular_llm_cuda on nvidia-rtx-5070-ti-cuda.",
+  "The receipt records fallback_used=false, generated-token equality, top-k equality, model/tokenizer/context initialized once, runtime buffer reuse, and upload-once weights for the bounded three-turn session.",
+  "The PR keeps speedup, full CUDA residency, server readiness, broad dense GGUF readiness, crates/docs publication readiness, and BitNet packed I2_S/QK256 claims false.",
+]
