@@ -1,0 +1,55 @@
+schema_version = 1
+
+[[profile]]
+id = "prefill_128_decode_32"
+prompt_tokens = 128
+decode_tokens = 32
+warmup_runs = 1
+measured_runs = 5
+quality_required = true
+resource_envelope_required = true
+
+[[profile]]
+id = "prefill_512_decode_64"
+prompt_tokens = 512
+decode_tokens = 64
+warmup_runs = 2
+measured_runs = 7
+quality_required = true
+resource_envelope_required = true
+
+[[profile]]
+id = "prefill_2048_decode_64"
+prompt_tokens = 2048
+decode_tokens = 64
+warmup_runs = 2
+measured_runs = 5
+quality_required = true
+resource_envelope_required = true
+
+[[profile]]
+id = "prefill_4096_decode_32"
+prompt_tokens = 4096
+decode_tokens = 32
+warmup_runs = 1
+measured_runs = 5
+quality_required = true
+resource_envelope_required = true
+
+[[profile]]
+id = "long_decode_128"
+decode_tokens = 128
+warmup_runs = 1
+measured_runs = 5
+quality_required = true
+repetition_guard = true
+resource_envelope_required = true
+
+[[profile]]
+id = "chat_smoke_real_question"
+prompt_suite = "seeded-v1"
+max_new_tokens = 128
+warmup_runs = 1
+measured_runs = 3
+quality_required = true
+resource_envelope_required = true

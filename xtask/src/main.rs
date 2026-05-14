@@ -35,9 +35,8 @@ use std::{
     time::{Duration, Instant},
 };
 use walkdir::WalkDir;
-use xtask::hardware;
-
 mod apple_m4;
+mod bench_receipt;
 mod campaign;
 mod ci;
 mod cpp_setup_auto;
@@ -46,9 +45,9 @@ pub mod ffi;
 mod gates;
 mod grid_check;
 mod hardware;
-mod model_contract;
 #[allow(dead_code)]
 mod health_check;
+mod model_contract;
 mod model_coverage;
 #[allow(dead_code)]
 mod model_info;
@@ -300,6 +299,12 @@ enum Cmd {
     PromptSuite {
         #[command(subcommand)]
         cmd: PromptSuiteCmd,
+    },
+
+    /// Verify quality-gated benchmark receipts.
+    Bench {
+        #[command(subcommand)]
+        cmd: BenchCmd,
     },
 
     /// Verify hardware claim rails and resolve device-specific kernel routes.
@@ -1363,6 +1368,23 @@ enum PromptSuiteCmd {
 }
 
 #[derive(Subcommand)]
+enum BenchCmd {
+    /// Verify a quality-gated benchmark receipt.
+    #[command(name = "verify-receipt")]
+    VerifyReceipt {
+        /// Benchmark receipt JSON file.
+        #[arg(long)]
+        receipt: PathBuf,
+        /// Require the receipt to be claimable, not merely well-formed diagnostic evidence.
+        #[arg(long, default_value_t = false)]
+        require_claimable: bool,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum HardwareCmd {
     /// Intel Arc A770 hardware claim checks.
     A770 {
@@ -1584,6 +1606,11 @@ fn real_main() -> Result<()> {
             PromptSuiteCmd::Verify { suite, format } => prompt_suite::verify_suite(&suite, &format),
             PromptSuiteCmd::Render { suite, model_contract, format } => {
                 prompt_suite::render_suite(&suite, model_contract.as_deref(), &format)
+            }
+        },
+        Cmd::Bench { cmd } => match cmd {
+            BenchCmd::VerifyReceipt { receipt, require_claimable, format } => {
+                bench_receipt::verify_receipt(&receipt, &format, require_claimable)
             }
         },
         Cmd::Hardware { cmd } => match cmd {
