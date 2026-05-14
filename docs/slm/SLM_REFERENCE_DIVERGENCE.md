@@ -194,6 +194,29 @@ known-good runner can emit bounded internal checkpoint summaries for the same
 model SHA, rendered prompt, prompt IDs, and first-token greedy settings as the
 bitnet-rs run.
 
+`SLM-CPU-008Y` requires a real internal checkpoint pack, not a generated
+placeholder and not a final-token-only reference run. A valid capture path must
+be non-interactive and reproducible because interactive `llama.cpp` chat modes
+can change prompt handling, block automation, or terminate unexpectedly on the
+8250U host. `llama-tokenize` is useful for prompt-ID checks, and a known-good
+runner's first token or top-k output is useful for prompt-policy triage, but
+neither is enough to satisfy `SLM-CPU-008Y` unless the same run also emits the
+required internal checkpoint summaries.
+
+The accepted capture method is one of:
+
+- a patched known-good GGUF runner, such as `llama.cpp`, that writes the
+  checkpoint summaries below for the exact rendered prompt;
+- an independent reference harness that reads the same GGUF tensors and emits
+  the same stages with the same Qwen3 prompt IDs and greedy first-token policy;
+- an externally produced checkpoint pack that is ingested unchanged and then
+  validated by `bitnet-cli reference-compare`.
+
+The capture method must record the runner name/version, model SHA, rendered
+prompt SHA, prompt IDs, generated IDs, first-token policy, and all required
+checkpoint summaries. If any internal reference checkpoint is missing, keep
+`SLM-CPU-008Y` blocked and do not advance to answer-corpus or performance work.
+
 Each side must include the usual reference fields plus a `checkpoints` array:
 
 ```json
