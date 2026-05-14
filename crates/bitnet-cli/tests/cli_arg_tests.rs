@@ -627,6 +627,8 @@ fn mac_ask_bitnet_requires_explicit_tokenizer_before_cache_lookup() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("requires explicit tokenizer authority"))
+        .stderr(predicate::str::contains("Repair guidance:"))
+        .stderr(predicate::str::contains("does not infer tokenizer authority"))
         .stderr(predicate::str::contains(
             "--tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
         ))
@@ -659,7 +661,9 @@ fn mac_ask_bitnet_writes_failure_receipt_for_missing_tokenizer()
         .assert()
         .failure()
         .stderr(predicate::str::contains("tokenizer is missing"))
-        .stderr(predicate::str::contains("failure receipt written"));
+        .stderr(predicate::str::contains("failure receipt written"))
+        .stderr(predicate::str::contains("Repair guidance:"))
+        .stderr(predicate::str::contains("shasum -a 256"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_mac_ask_failure");
@@ -707,6 +711,7 @@ fn mac_ask_bitnet_rejects_wrong_tokenizer_sha_before_model_lookup()
         .failure()
         .stderr(predicate::str::contains("requires tokenizer SHA256"))
         .stderr(predicate::str::contains("failure receipt written"))
+        .stderr(predicate::str::contains("Repair guidance:"))
         .stderr(predicate::str::contains("accepted GGUF").not());
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;

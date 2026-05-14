@@ -67,7 +67,10 @@ receipt to `--json-out` before returning the error. That receipt records the
 failure stage, repair guidance, explicit timeout-boundary status,
 `fallback_used=false`, empty partial generation, and unchanged BitNet chat,
 serve, Metal, QK256, Neural Engine, MPSGraph, broad-performance, and speedup
-claim boundaries.
+claim boundaries. The stderr error also prints compact `Repair guidance:` lines
+covering the accepted external tokenizer SHA, explicit GGUF replacement or
+cache fetch/verify commands, `bitnet mac models` cache inspection, and the
+unchanged BitNet chat/serve-disabled boundary.
 First-run missing-cache failures include both the exact `bitnet model fetch`
 repair command and a `bitnet mac models --cache-dir ...` command with current
 disk guidance, so low-space operators can choose the right supported model

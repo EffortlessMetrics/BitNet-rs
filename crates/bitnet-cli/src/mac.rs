@@ -1603,15 +1603,17 @@ fn fail_bitnet_mac_ask_with_receipt(
     stage: &str,
     message: &str,
 ) -> Result<()> {
+    let repair_guidance = bitnet_mac_ask_failure_repair_guidance(stage, &context);
+    let repair_text = bitnet_mac_ask_failure_repair_text(&repair_guidance);
     if let Err(receipt_error) =
-        write_bitnet_mac_ask_failure_receipt(json_out, context, stage, message)
+        write_bitnet_mac_ask_failure_receipt(json_out, context, stage, message, &repair_guidance)
     {
         anyhow::bail!(
-            "{message}; additionally failed to write BitNet Mac ask failure receipt {}: {receipt_error}",
+            "{message}{repair_text}; additionally failed to write BitNet Mac ask failure receipt {}: {receipt_error}",
             json_out.display()
         );
     }
-    anyhow::bail!("{message}; failure receipt written to {}", json_out.display())
+    anyhow::bail!("{message}; failure receipt written to {}{repair_text}", json_out.display())
 }
 
 fn write_bitnet_mac_ask_failure_receipt(
@@ -1619,6 +1621,7 @@ fn write_bitnet_mac_ask_failure_receipt(
     context: BitNetMacAskFailureContext,
     stage: &str,
     message: &str,
+    repair_guidance: &[String],
 ) -> Result<()> {
     let elapsed_ms = context.started_at.elapsed().as_secs_f64() * 1000.0;
     let receipt = serde_json::json!({
@@ -1671,7 +1674,7 @@ fn write_bitnet_mac_ask_failure_receipt(
             "status": "not_reached",
             "note": "failure occurred before a complete BitNet one-shot answer receipt was produced",
         },
-        "repair_guidance": bitnet_mac_ask_failure_repair_guidance(stage, context),
+        "repair_guidance": repair_guidance,
         "mac_bitnet_claim_boundary": {
             "bitnet_one_shot_mac_ask": true,
             "partial_failure_receipt": true,
@@ -1692,13 +1695,29 @@ fn write_bitnet_mac_ask_failure_receipt(
 
 fn bitnet_mac_ask_failure_repair_guidance(
     stage: &str,
-    context: BitNetMacAskFailureContext,
+    context: &BitNetMacAskFailureContext,
 ) -> Vec<String> {
     let mut guidance = Vec::new();
+    let cache_dir_arg = context
+        .cache_dir
+        .as_ref()
+        .map(|path| format!(" --cache-dir {}", path.display()))
+        .unwrap_or_default();
+    if stage == "tokenizer_authority_missing" {
+        guidance.push(
+            "BitNet ask does not infer tokenizer authority from the GGUF or dense SLM cache; pass the accepted external tokenizer explicitly.".to_string(),
+        );
+    }
     if stage.contains("tokenizer") {
         guidance.push(format!(
             "pass --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json with SHA256 {BITNET_M4_EXPECTED_TOKENIZER_SHA256}"
         ));
+        if let Some(tokenizer_path) = context.tokenizer_path.as_ref() {
+            guidance.push(format!(
+                "verify the tokenizer path with `shasum -a 256 {}` before retrying",
+                tokenizer_path.display()
+            ));
+        }
     }
     if stage.contains("model") || stage == "generation_failed" {
         let model_repair = if context.model_path.is_some() {
@@ -1707,17 +1726,40 @@ fn bitnet_mac_ask_failure_repair_guidance(
             )
         } else {
             format!(
-                "run `bitnet model fetch {}` or pass --model-path <accepted-bitnet-gguf>",
-                context.model_id
+                "run `bitnet model fetch {}`{} or pass --model-path <accepted-bitnet-gguf>",
+                context.model_id, cache_dir_arg
             )
         };
         guidance.push(model_repair);
+        if let Some(model_path) = context.model_path.as_ref() {
+            guidance.push(format!(
+                "verify the explicit model with `bitnet model verify {} --path {}` before retrying",
+                context.model_id,
+                model_path.display()
+            ));
+        } else {
+            guidance.push(format!(
+                "inspect cache state with `bitnet mac models{cache_dir_arg}` and `bitnet model verify {}`{}",
+                context.model_id, cache_dir_arg
+            ));
+        }
     }
     guidance.push(
         "keep BitNet chat and serve disabled; this receipt is a failed one-shot ask attempt"
             .to_string(),
     );
     guidance
+}
+
+fn bitnet_mac_ask_failure_repair_text(guidance: &[String]) -> String {
+    if guidance.is_empty() {
+        return String::new();
+    }
+    let mut text = String::from("\nRepair guidance:");
+    for (index, step) in guidance.iter().enumerate() {
+        text.push_str(&format!("\n  {}. {step}", index + 1));
+    }
+    text
 }
 
 fn mac_ask_progress<F>(enabled: bool, stage: &str, details: F)
@@ -6566,6 +6608,58 @@ mod tests {
             None,
         );
         Ok((temp, state))
+    }
+
+    #[test]
+    fn bitnet_mac_ask_model_failure_guidance_includes_cache_repair_commands()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let context = BitNetMacAskFailureContext {
+            model_id: "microsoft-bitnet-b1.58-2B-4T-i2s".to_string(),
+            cache_dir: Some(temp.path().join("models")),
+            model_path: None,
+            tokenizer_path: Some(temp.path().join("tokenizer.json")),
+            question_bytes: 12,
+            question_sha256: "prompt-sha".to_string(),
+            max_new_tokens: 16,
+            started_at: std::time::Instant::now(),
+        };
+
+        let guidance = bitnet_mac_ask_failure_repair_guidance("model_verify_failed", &context);
+        let joined = guidance.join("\n");
+
+        assert!(joined.contains("bitnet model fetch microsoft-bitnet-b1.58-2B-4T-i2s"));
+        assert!(joined.contains("--cache-dir"));
+        assert!(joined.contains("bitnet mac models"));
+        assert!(joined.contains("bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s"));
+        assert!(joined.contains("chat and serve disabled"));
+        assert!(bitnet_mac_ask_failure_repair_text(&guidance).contains("Repair guidance:"));
+        Ok(())
+    }
+
+    #[test]
+    fn bitnet_mac_ask_model_failure_guidance_includes_explicit_model_verify_command()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model_path = temp.path().join("wrong-bitnet.gguf");
+        let context = BitNetMacAskFailureContext {
+            model_id: "microsoft-bitnet-b1.58-2B-4T-i2s".to_string(),
+            cache_dir: None,
+            model_path: Some(model_path.clone()),
+            tokenizer_path: Some(temp.path().join("tokenizer.json")),
+            question_bytes: 12,
+            question_sha256: "prompt-sha".to_string(),
+            max_new_tokens: 16,
+            started_at: std::time::Instant::now(),
+        };
+
+        let guidance = bitnet_mac_ask_failure_repair_guidance("model_verify_failed", &context);
+        let joined = guidance.join("\n");
+
+        assert!(joined.contains("replace --model-path with the accepted Microsoft I2_S GGUF"));
+        assert!(joined.contains("bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --path"));
+        assert!(joined.contains(&model_path.display().to_string()));
+        Ok(())
     }
 
     #[test]
