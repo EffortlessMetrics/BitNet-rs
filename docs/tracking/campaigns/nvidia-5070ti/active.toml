@@ -2519,7 +2519,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-010"
-status = "proposed"
+status = "pr_open"
 branch = "docs/9950x3d-5070ti-cuda-quickstart"
 stackable = true
 review_mode = "codex_premerge"
