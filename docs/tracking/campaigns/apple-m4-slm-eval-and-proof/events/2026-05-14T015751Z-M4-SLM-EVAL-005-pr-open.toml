@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T01:57:51Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-005"
+event = "pr_open"
+pr = 4675
+head_sha = "ad326fb0a3e0287e4e7a4d7f5d8b1cbb3c095704"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4675 to add the Apple M4 SLM eval Tier 0 workflow.",
+  "The workflow covers parser, deterministic scoring, dry-run seeded corpus shape, and committed summary receipt validation only.",
+  "The PR documents advisory/nightly/release M4 tiers separately and keeps live M4 model fetch, mac validate, timing, long soak, broad performance, BitNet, full Metal, QK256, Neural Engine, MPSGraph, MacBook, and speedup claims out of generic PR CI.",
+]

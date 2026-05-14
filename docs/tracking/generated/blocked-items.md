@@ -74,7 +74,7 @@
 | apple-m4-slm-eval-and-proof | M4-SLM-EVAL-002 | M4-SLM-EVAL-001 | merged |
 | apple-m4-slm-eval-and-proof | M4-SLM-EVAL-003 | M4-SLM-EVAL-002 | merged |
 | apple-m4-slm-eval-and-proof | M4-SLM-EVAL-004 | M4-SLM-EVAL-003 | merged |
-| apple-m4-slm-eval-and-proof | M4-SLM-EVAL-005 | M4-SLM-EVAL-003 | ready |
+| apple-m4-slm-eval-and-proof | M4-SLM-EVAL-005 | M4-SLM-EVAL-003 | pr_open |
 | apple-m4-slm-eval-and-proof | M4-SLM-EVAL-006 | M4-SLM-EVAL-004 | ready |
 | apple-m4-slm-excellence | M4-SLM-EX-002 | M4-SLM-EX-001 | merged |
 | apple-m4-slm-excellence | M4-SLM-EX-003 | M4-SLM-EX-002 | merged |

@@ -50,7 +50,7 @@ MacBook behavior, or broad Apple Silicon performance.
 | M4-SLM-EVAL-002 | merged | #4660 added deterministic exact/normalized/schema/numeric/keyword scoring fixtures; no live runtime accuracy claim. |
 | M4-SLM-EVAL-003 | merged | #4663 defined and validated the per-model M4 dense SLM eval summary report schema. |
 | M4-SLM-EVAL-004 | merged | #4670 published 2026-05-14 per-model reports for the three supported dense M4 model IDs. |
-| M4-SLM-EVAL-005 | ready | Wire lightweight generic CI checks and document advisory/nightly/release M4 tiers. |
+| M4-SLM-EVAL-005 | pr_open | #4675 wires lightweight generic CI checks and documents advisory/nightly/release M4 tiers. |
 | M4-SLM-EVAL-006 | ready | Compare matching dense SLM eval reports through regression tooling. |
 
 ## Review Policy

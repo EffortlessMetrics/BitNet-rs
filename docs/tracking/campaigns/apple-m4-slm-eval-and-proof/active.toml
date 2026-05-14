@@ -211,7 +211,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL-005"
-status = "ready"
+status = "pr_open"
+pr = 4675
 branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-005-ci-tiers"
 stackable = false
 review_mode = "codex_premerge"
@@ -222,6 +223,9 @@ acceptance = "Document and wire lightweight Tier 0 parser/schema/report checks f
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval",
+  "cargo test --locked -p bitnet-cli slm_eval_scoring",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- answer-corpus --dry-run --device cpu --model missing.gguf --corpus ci/quality/apple-m4-slm-eval-seeded-corpus.yaml --json-out target/apple-m4-slm-eval-tier0/seeded-corpus-dry-run.json",
+  "find ci/hardware/apple-m4-mac-mini -path '*/slm-eval/*/summary.json' -type f | sort | while IFS= read -r summary; do cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- mac receipts-check \"$summary\" --json > /dev/null; done",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-and-proof",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
