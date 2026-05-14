@@ -1,7 +1,7 @@
 //! Model inspection commands for diagnostics and debugging
 
 use anyhow::{Context, Result};
-use bitnet_common::BitNetError;
+use bitnet_common::{BitNetConfig, BitNetError};
 use bitnet_models::formats::gguf::{GgufReader, GgufTensorType};
 use bitnet_models::names::{is_layernorm_weight, is_projection_weight};
 use candle_core::{DType, Tensor};
@@ -34,6 +34,14 @@ pub struct InspectCommand {
     #[arg(long)]
     pub qk256_layout_report: bool,
 
+    /// Emit effective runtime contract metadata for the GGUF model
+    #[arg(long)]
+    pub runtime_contract_report: bool,
+
+    /// Explicit tokenizer path to compare against GGUF tokenizer metadata
+    #[arg(long)]
+    pub tokenizer: Option<PathBuf>,
+
     /// Gate behavior: none|auto|policy
     #[arg(long, default_value = "auto")]
     pub gate: String,
@@ -59,10 +67,14 @@ impl InspectCommand {
     pub async fn execute(&self) -> Result<()> {
         if self.qk256_layout_report {
             self.write_qk256_layout_report().await
+        } else if self.runtime_contract_report {
+            self.write_runtime_contract_report().await
         } else if self.ln_stats {
             self.check_ln_gamma_stats().await
         } else {
-            anyhow::bail!("No inspection mode specified. Use --ln-stats or --qk256-layout-report.");
+            anyhow::bail!(
+                "No inspection mode specified. Use --ln-stats, --qk256-layout-report, or --runtime-contract-report."
+            );
         }
     }
 
@@ -76,6 +88,11 @@ impl InspectCommand {
     async fn write_qk256_layout_report(&self) -> Result<()> {
         let report = self.qk256_layout_report()?;
         let json = serde_json::to_string_pretty(&report)?;
+        self.write_json(json)?;
+        Ok(())
+    }
+
+    fn write_json(&self, json: String) -> Result<()> {
         if let Some(path) = &self.json_out {
             if let Some(parent) = path.parent()
                 && !parent.as_os_str().is_empty()
@@ -198,6 +215,125 @@ impl InspectCommand {
                 .map(str::to_string)
                 .collect(),
             tensors,
+        })
+    }
+
+    async fn write_runtime_contract_report(&self) -> Result<()> {
+        let report = self.runtime_contract_report()?;
+        self.write_json(serde_json::to_string_pretty(&report)?)?;
+        Ok(())
+    }
+
+    fn runtime_contract_report(&self) -> Result<RuntimeContractReport> {
+        let model_path = self.model_path()?;
+        let file = File::open(model_path)
+            .with_context(|| format!("Failed to open model: {}", model_path.display()))?;
+        let mmap = unsafe { Mmap::map(&file)? };
+
+        let mut hasher = Sha256::new();
+        hasher.update(&mmap);
+        let model_sha256 = format!("{:x}", hasher.finalize());
+
+        let reader = GgufReader::new(&mmap)?;
+        let architecture = reader.get_string_metadata("general.architecture");
+        let file_type = reader.get_u32_metadata("general.file_type");
+        let tokenizer_model = reader.get_string_metadata("tokenizer.ggml.model");
+        let tokenizer_tokens_len =
+            reader.get_string_array_metadata("tokenizer.ggml.tokens").map(|tokens| tokens.len());
+
+        let mut config = BitNetConfig::default();
+        if let Some(architecture) = &architecture {
+            config.model.apply_architecture_defaults(architecture);
+        }
+        fill_runtime_contract_config(&reader, &mut config);
+
+        let gguf_special_tokens = RuntimeSpecialTokens {
+            bos_token_id: u32_any(
+                &reader,
+                &[
+                    "bitnet-b1.58.tokenizer.bos_token_id",
+                    "llama.tokenizer.bos_token_id",
+                    "tokenizer.ggml.bos_token_id",
+                    "general.bos_token_id",
+                ],
+            ),
+            eos_token_id: u32_any(
+                &reader,
+                &[
+                    "bitnet-b1.58.tokenizer.eos_token_id",
+                    "llama.tokenizer.eos_token_id",
+                    "tokenizer.ggml.eos_token_id",
+                    "general.eos_token_id",
+                ],
+            ),
+            eot_token_id: reader.get_u32_metadata("tokenizer.ggml.eot_token_id"),
+            pad_token_id: u32_any(
+                &reader,
+                &[
+                    "bitnet-b1.58.tokenizer.pad_token_id",
+                    "llama.tokenizer.pad_token_id",
+                    "tokenizer.ggml.padding_token_id",
+                    "general.pad_token_id",
+                ],
+            ),
+        };
+
+        let external_tokenizer =
+            self.tokenizer.as_ref().map(|path| external_tokenizer_contract(path)).transpose()?;
+
+        let tokenizer_agreement = external_tokenizer
+            .as_ref()
+            .map(|external| tokenizer_agreement(&gguf_special_tokens, external));
+
+        Ok(RuntimeContractReport {
+            schema_version: 1,
+            diagnostic: "bitnet_runtime_contract_report".to_string(),
+            diagnostic_only: true,
+            promotion_allowed: false,
+            proof_receipts_written: false,
+            manifest_updated: false,
+            model: model_path.display().to_string(),
+            model_sha256,
+            gguf_metadata: RuntimeGgufMetadata {
+                architecture,
+                file_type,
+                tokenizer_model,
+                tokenizer_tokens_len,
+                llama_vocab_size: reader.get_u32_metadata("llama.vocab_size"),
+                bitnet_vocab_size: reader.get_u32_metadata("bitnet-b1.58.vocab_size"),
+                context_length: u32_any(
+                    &reader,
+                    &["bitnet-b1.58.context_length", "llama.context_length"],
+                ),
+            },
+            effective_config: RuntimeEffectiveConfig {
+                norm_type: format!("{:?}", config.model.norm_type),
+                activation_type: format!("{:?}", config.model.activation_type),
+                vocab_size: config.model.vocab_size,
+                hidden_size: config.model.hidden_size,
+                num_layers: config.model.num_layers,
+                num_heads: config.model.num_heads,
+                num_key_value_heads: config.model.num_key_value_heads,
+                intermediate_size: config.model.intermediate_size,
+                max_position_embeddings: config.model.max_position_embeddings,
+                rope_theta: config.model.rope_theta,
+                rms_norm_eps: config.model.rms_norm_eps,
+                add_bos: config.inference.add_bos,
+                append_eos: config.inference.append_eos,
+                mask_pad: config.inference.mask_pad,
+            },
+            gguf_special_tokens,
+            external_tokenizer,
+            tokenizer_agreement,
+            not_claims: critical_qk256_report_not_claims()
+                .into_iter()
+                .chain([
+                    "runtime_reference_parity",
+                    "semantic_quality",
+                    "tokenizer_template_authority",
+                ])
+                .map(str::to_string)
+                .collect(),
         })
     }
 
@@ -615,6 +751,310 @@ struct Qk256TensorLayoutReport {
     first_row_hashes_match: bool,
     first_row_act_parallel_codes_32: Vec<u8>,
     first_row_contiguous_codes_32: Vec<u8>,
+}
+
+#[derive(Debug, Serialize)]
+struct RuntimeContractReport {
+    schema_version: u32,
+    diagnostic: String,
+    diagnostic_only: bool,
+    promotion_allowed: bool,
+    proof_receipts_written: bool,
+    manifest_updated: bool,
+    model: String,
+    model_sha256: String,
+    gguf_metadata: RuntimeGgufMetadata,
+    effective_config: RuntimeEffectiveConfig,
+    gguf_special_tokens: RuntimeSpecialTokens,
+    external_tokenizer: Option<RuntimeExternalTokenizer>,
+    tokenizer_agreement: Option<RuntimeTokenizerAgreement>,
+    not_claims: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct RuntimeGgufMetadata {
+    architecture: Option<String>,
+    file_type: Option<u32>,
+    tokenizer_model: Option<String>,
+    tokenizer_tokens_len: Option<usize>,
+    llama_vocab_size: Option<u32>,
+    bitnet_vocab_size: Option<u32>,
+    context_length: Option<u32>,
+}
+
+#[derive(Debug, Serialize)]
+struct RuntimeEffectiveConfig {
+    norm_type: String,
+    activation_type: String,
+    vocab_size: usize,
+    hidden_size: usize,
+    num_layers: usize,
+    num_heads: usize,
+    num_key_value_heads: usize,
+    intermediate_size: usize,
+    max_position_embeddings: usize,
+    rope_theta: Option<f32>,
+    rms_norm_eps: Option<f32>,
+    add_bos: bool,
+    append_eos: bool,
+    mask_pad: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct RuntimeSpecialTokens {
+    bos_token_id: Option<u32>,
+    eos_token_id: Option<u32>,
+    eot_token_id: Option<u32>,
+    pad_token_id: Option<u32>,
+}
+
+#[derive(Debug, Serialize)]
+struct RuntimeExternalTokenizer {
+    path: String,
+    sha256: String,
+    vocab_size: usize,
+    real_vocab_size: usize,
+    bos_token_id: Option<u32>,
+    eos_token_id: Option<u32>,
+    pad_token_id: Option<u32>,
+    begin_of_text_id: Option<u32>,
+    end_of_text_id: Option<u32>,
+    eot_id: Option<u32>,
+    start_header_id: Option<u32>,
+    end_header_id: Option<u32>,
+}
+
+#[derive(Debug, Serialize)]
+struct RuntimeTokenizerAgreement {
+    gguf_bos_matches_tokenizer_bos: Option<bool>,
+    gguf_eos_matches_tokenizer_eos: Option<bool>,
+    gguf_pad_matches_tokenizer_pad: Option<bool>,
+    gguf_bos_matches_begin_of_text: Option<bool>,
+    gguf_eos_matches_end_of_text: Option<bool>,
+    gguf_eos_matches_eot: Option<bool>,
+    gguf_eot_matches_tokenizer_eot: Option<bool>,
+    all_checked_specials_match: bool,
+    checked_count: usize,
+    mismatch_count: usize,
+}
+
+fn fill_runtime_contract_config(reader: &GgufReader, config: &mut BitNetConfig) {
+    if let Some(vocab_size) = reader
+        .get_string_array_metadata("tokenizer.ggml.tokens")
+        .map(|tokens| tokens.len() as u32)
+        .or_else(|| u32_any(reader, &["llama.vocab_size", "bitnet-b1.58.vocab_size"]))
+    {
+        config.model.vocab_size = vocab_size as usize;
+    }
+
+    if let Some(num_layers) =
+        u32_any(reader, &["llama.block_count", "bitnet-b1.58.block_count", "n_layer"])
+    {
+        config.model.num_layers = num_layers as usize;
+    }
+
+    if let Some(hidden_size) = u32_any(
+        reader,
+        &["llama.embedding_length", "bitnet-b1.58.embedding_length", "n_embd", "hidden_size"],
+    ) {
+        config.model.hidden_size = hidden_size as usize;
+    }
+
+    if let Some(num_heads) = u32_any(
+        reader,
+        &[
+            "llama.attention.head_count",
+            "bitnet-b1.58.attention.head_count",
+            "n_head",
+            "attn.n_heads",
+            "num_attention_heads",
+        ],
+    ) {
+        config.model.num_heads = num_heads as usize;
+    }
+
+    config.model.num_key_value_heads = u32_any(
+        reader,
+        &[
+            "llama.attention.head_count_kv",
+            "bitnet-b1.58.attention.head_count_kv",
+            "n_head_kv",
+            "n_kv_heads",
+            "attn.n_kv_heads",
+            "attn_n_kv_heads",
+            "num_key_value_heads",
+        ],
+    )
+    .map(|v| v as usize)
+    .unwrap_or(0);
+    if config.model.num_key_value_heads == 0 {
+        config.model.num_key_value_heads = config.model.num_heads;
+    }
+
+    if let Some(intermediate_size) =
+        u32_any(reader, &["llama.feed_forward_length", "bitnet-b1.58.feed_forward_length", "n_ff"])
+    {
+        config.model.intermediate_size = intermediate_size as usize;
+    }
+
+    if let Some(context_length) =
+        u32_any(reader, &["llama.context_length", "bitnet-b1.58.context_length"])
+    {
+        config.model.max_position_embeddings = context_length as usize;
+    }
+
+    config.model.rope_theta =
+        f32_any(reader, &["bitnet-b1.58.rope.freq_base", "llama.rope.freq_base", "rope.freq_base"]);
+
+    config.model.rms_norm_eps = f32_any(
+        reader,
+        &[
+            "bitnet-b1.58.attention.layer_norm_rms_epsilon",
+            "llama.attention.layer_norm_rms_epsilon",
+            "llama.attention.layer_norm_epsilon",
+            "general.layer_norm_epsilon",
+        ],
+    );
+
+    if let Some(bos) = u32_any(
+        reader,
+        &[
+            "bitnet-b1.58.tokenizer.bos_token_id",
+            "llama.tokenizer.bos_token_id",
+            "tokenizer.ggml.bos_token_id",
+            "general.bos_token_id",
+        ],
+    ) {
+        config.model.tokenizer.bos_id = Some(bos as i32);
+    }
+
+    if let Some(eos) = u32_any(
+        reader,
+        &[
+            "bitnet-b1.58.tokenizer.eos_token_id",
+            "llama.tokenizer.eos_token_id",
+            "tokenizer.ggml.eos_token_id",
+            "general.eos_token_id",
+        ],
+    ) {
+        config.model.tokenizer.eos_id = Some(eos as i32);
+    }
+
+    if let Some(pad) = u32_any(
+        reader,
+        &[
+            "bitnet-b1.58.tokenizer.padding_token_id",
+            "llama.tokenizer.padding_token_id",
+            "tokenizer.ggml.padding_token_id",
+            "general.padding_token_id",
+        ],
+    ) {
+        config.model.tokenizer.pad_id = Some(pad as i32);
+    }
+
+    if let Some(add_bos) = bool_any(
+        reader,
+        &[
+            "bitnet-b1.58.tokenizer.add_bos",
+            "tokenizer.ggml.add_bos_token",
+            "tokenizer.ggml.add_bos",
+            "general.add_bos",
+        ],
+    ) {
+        config.inference.add_bos = add_bos;
+    }
+
+    if let Some(append_eos) = bool_any(
+        reader,
+        &[
+            "bitnet-b1.58.tokenizer.append_eos",
+            "tokenizer.ggml.add_eos_token",
+            "tokenizer.ggml.append_eos",
+            "general.append_eos",
+        ],
+    ) {
+        config.inference.append_eos = append_eos;
+    }
+
+    if let Some(mask_pad) = bool_any(
+        reader,
+        &["bitnet-b1.58.tokenizer.mask_pad", "tokenizer.ggml.mask_pad", "general.mask_pad"],
+    ) {
+        config.inference.mask_pad = mask_pad;
+    }
+}
+
+fn u32_any(reader: &GgufReader, keys: &[&str]) -> Option<u32> {
+    keys.iter().find_map(|key| {
+        reader
+            .get_u32_metadata(key)
+            .or_else(|| reader.get_i32_metadata(key).and_then(|v| (v >= 0).then_some(v as u32)))
+    })
+}
+
+fn f32_any(reader: &GgufReader, keys: &[&str]) -> Option<f32> {
+    keys.iter().find_map(|key| reader.get_f32_metadata(key))
+}
+
+fn bool_any(reader: &GgufReader, keys: &[&str]) -> Option<bool> {
+    keys.iter().find_map(|key| reader.get_bool_metadata(key))
+}
+
+fn external_tokenizer_contract(path: &PathBuf) -> Result<RuntimeExternalTokenizer> {
+    let bytes = std::fs::read(path)
+        .with_context(|| format!("failed to read tokenizer {}", path.display()))?;
+    let sha256 = sha256_hex_bytes(&bytes);
+    let tokenizer = bitnet_tokenizers::load_tokenizer(path)
+        .with_context(|| format!("failed to load tokenizer {}", path.display()))?;
+
+    Ok(RuntimeExternalTokenizer {
+        path: path.display().to_string(),
+        sha256,
+        vocab_size: tokenizer.vocab_size(),
+        real_vocab_size: tokenizer.real_vocab_size(),
+        bos_token_id: tokenizer.bos_token_id(),
+        eos_token_id: tokenizer.eos_token_id(),
+        pad_token_id: tokenizer.pad_token_id(),
+        begin_of_text_id: tokenizer.token_to_id("<|begin_of_text|>"),
+        end_of_text_id: tokenizer.token_to_id("<|end_of_text|>"),
+        eot_id: tokenizer.token_to_id("<|eot_id|>"),
+        start_header_id: tokenizer.token_to_id("<|start_header_id|>"),
+        end_header_id: tokenizer.token_to_id("<|end_header_id|>"),
+    })
+}
+
+fn tokenizer_agreement(
+    gguf: &RuntimeSpecialTokens,
+    external: &RuntimeExternalTokenizer,
+) -> RuntimeTokenizerAgreement {
+    let checks = [
+        eq_if_both(gguf.bos_token_id, external.bos_token_id),
+        eq_if_both(gguf.eos_token_id, external.eos_token_id),
+        eq_if_both(gguf.pad_token_id, external.pad_token_id),
+        eq_if_both(gguf.bos_token_id, external.begin_of_text_id),
+        eq_if_both(gguf.eos_token_id, external.end_of_text_id),
+        eq_if_both(gguf.eos_token_id, external.eot_id),
+        eq_if_both(gguf.eot_token_id, external.eot_id),
+    ];
+    let checked_count = checks.iter().filter(|check| check.is_some()).count();
+    let mismatch_count = checks.iter().filter(|check| **check == Some(false)).count();
+
+    RuntimeTokenizerAgreement {
+        gguf_bos_matches_tokenizer_bos: checks[0],
+        gguf_eos_matches_tokenizer_eos: checks[1],
+        gguf_pad_matches_tokenizer_pad: checks[2],
+        gguf_bos_matches_begin_of_text: checks[3],
+        gguf_eos_matches_end_of_text: checks[4],
+        gguf_eos_matches_eot: checks[5],
+        gguf_eot_matches_tokenizer_eot: checks[6],
+        all_checked_specials_match: mismatch_count == 0,
+        checked_count,
+        mismatch_count,
+    }
+}
+
+fn eq_if_both(left: Option<u32>, right: Option<u32>) -> Option<bool> {
+    Some(left? == right?)
 }
 
 fn qk256_logical_packed_bytes(nelems: usize) -> usize {
