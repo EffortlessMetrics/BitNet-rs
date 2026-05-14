@@ -1,0 +1,19 @@
+timestamp = "2026-05-14T05:00:35Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008Y"
+event = "blocked"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "blocked"
+pr = 4696
+merge_sha = "6f829be17bbc55017ac2c527d9aa7f442a255fa9"
+
+artifacts = [
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-reference-checkpoint-compare.json",
+]
+
+notes = [
+  "PR #4696 recorded that the real Qwen3 reference checkpoint pack required by the SLM-CPU-008Y validation command is not present in the repository or on origin/main.",
+  "SLM-CPU-008Y is blocked until that checkpoint artifact is captured or ingested for the same Qwen3-0.6B Q8_0 model SHA, rendered prompt, prompt IDs, and greedy first-token settings used by the i5-8250U artifact.",
+  "No first-token parity, answer quality, tiny corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 claim is made.",
+]

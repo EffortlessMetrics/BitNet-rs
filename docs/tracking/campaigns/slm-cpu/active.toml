@@ -969,7 +969,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008Y"
-status = "pr_open"
+status = "blocked"
 pr = 4696
 branch = "codex/slm-cpu-008y-blocked"
 stackable = false
