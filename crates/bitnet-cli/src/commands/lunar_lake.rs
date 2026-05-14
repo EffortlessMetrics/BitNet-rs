@@ -20,6 +20,8 @@ const DENSE_OV_PHASE: &str = "slm-openvino-cpu-gpu-npu-phase-runner.json";
 const DENSE_OV_CPU: &str = "slm-openvino-cpu-llmpipeline-smoke.json";
 const DENSE_OV_GPU: &str = "slm-openvino-gpu-arc140v-llmpipeline-smoke.json";
 const DENSE_OV_NPU: &str = "slm-openvino-npu-llmpipeline-smoke.json";
+const DENSE_OV_GPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-gpu-math-brief.json";
+const DENSE_OV_NPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-npu-math-brief.json";
 const BITNET_CPU_BUNDLE: &str = "cpu-reference-bundle-after-semantic-fix.json";
 const BITNET_REFERENCE: &str = "cpu-bitnet-ref-001-external-boundary.json";
 const BITNET_REFERENCE_DIRECT: &str = "external-first-token-reference-direct.json";
@@ -378,7 +380,19 @@ pub fn build_operator_readiness_receipt_with_created_utc(
             DENSE_OV_GPU,
             EvidenceExpectation::Answer,
         )?,
+        inspect_receipt(
+            root,
+            "dense_slm_openvino_gpu_operator_ask",
+            DENSE_OV_GPU_OPERATOR_ASK,
+            EvidenceExpectation::Answer,
+        )?,
         inspect_receipt(root, "dense_slm_openvino_npu", DENSE_OV_NPU, EvidenceExpectation::Answer)?,
+        inspect_receipt(
+            root,
+            "dense_slm_openvino_npu_operator_ask",
+            DENSE_OV_NPU_OPERATOR_ASK,
+            EvidenceExpectation::Answer,
+        )?,
         inspect_receipt(
             root,
             "dense_slm_openvino_phase_runner",
@@ -458,7 +472,9 @@ pub fn build_operator_readiness_receipt_with_created_utc(
         && evidence_ok(&evidence, "dense_slm_cpu_phase");
     let dense_openvino_ready = evidence_ok(&evidence, "dense_slm_openvino_cpu")
         && evidence_ok(&evidence, "dense_slm_openvino_gpu_arc140v")
+        && evidence_ok(&evidence, "dense_slm_openvino_gpu_operator_ask")
         && evidence_ok(&evidence, "dense_slm_openvino_npu")
+        && evidence_ok(&evidence, "dense_slm_openvino_npu_operator_ask")
         && evidence_ok(&evidence, "dense_slm_openvino_phase_runner");
     let bitnet_cpu_ready = evidence_ok(&evidence, "bitnet_cpu_reference_bundle")
         && evidence_ok(&evidence, "bitnet_external_reference_boundary")
@@ -588,9 +604,17 @@ pub fn build_regression_bundle_with_created_utc(
             route_ok(&operator, "dense_slm_openvino_gpu_candidate")
                 && route_ok(&operator, "dense_slm_openvino_npu_candidate")
                 && evidence_ok(&operator.evidence, "dense_slm_openvino_gpu_arc140v")
+                && evidence_ok(&operator.evidence, "dense_slm_openvino_gpu_operator_ask")
                 && evidence_ok(&operator.evidence, "dense_slm_openvino_npu")
+                && evidence_ok(&operator.evidence, "dense_slm_openvino_npu_operator_ask")
                 && evidence_ok(&operator.evidence, "dense_slm_openvino_phase_runner"),
-            vec![DENSE_OV_GPU, DENSE_OV_NPU, DENSE_OV_PHASE],
+            vec![
+                DENSE_OV_GPU,
+                DENSE_OV_GPU_OPERATOR_ASK,
+                DENSE_OV_NPU,
+                DENSE_OV_NPU_OPERATOR_ASK,
+                DENSE_OV_PHASE,
+            ],
             vec!["OpenVINO GPU and NPU remain candidate routes without speedup claims".to_string()],
         ),
         regression_check(
@@ -926,7 +950,7 @@ fn openvino_gpu_candidate_route() -> OperatorRoute {
         selected_kernel_or_runtime: "openvino-genai-llmpipeline-gpu".to_string(),
         fallback_policy: "strict_no_fallback".to_string(),
         route_reason: "Candidate route because Arc 140V OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false, but no benchmark-qualified speedup claim is recorded.".to_string(),
-        answer_gate_evidence: Some(DENSE_OV_GPU.to_string()),
+        answer_gate_evidence: Some(DENSE_OV_GPU_OPERATOR_ASK.to_string()),
         phase_evidence: Some(DENSE_OV_PHASE.to_string()),
         acceleration_claim: false,
     }
@@ -942,7 +966,7 @@ fn openvino_npu_candidate_route() -> OperatorRoute {
         selected_kernel_or_runtime: "openvino-genai-llmpipeline-npu".to_string(),
         fallback_policy: "strict_no_fallback".to_string(),
         route_reason: "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.".to_string(),
-        answer_gate_evidence: Some(DENSE_OV_NPU.to_string()),
+        answer_gate_evidence: Some(DENSE_OV_NPU_OPERATOR_ASK.to_string()),
         phase_evidence: Some(DENSE_OV_PHASE.to_string()),
         acceleration_claim: false,
     }
@@ -1139,6 +1163,8 @@ fn answer_gate_passed(json: &Value) -> Option<bool> {
         json,
         &[
             "answer_gate_passed",
+            "answer_gate.passed",
+            "execution.answer_gate_passed",
             "quality.passed",
             "generation.all_answer_gates_passed",
             "summary.all_passed",
@@ -1231,6 +1257,25 @@ fn path_string(path: &Path) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn answer_gate_accepts_openvino_operator_ask_shape() {
+        let receipt = json!({
+            "artifact_kind": "lunar_lake_openvino_operator_ask",
+            "fallback_used": false,
+            "answer_gate": {
+                "kind": "contains",
+                "expected": "4",
+                "passed": true,
+                "failed_rules": []
+            },
+            "execution": {
+                "answer_gate_passed": true
+            }
+        });
+
+        assert_eq!(answer_gate_passed(&receipt), Some(true));
+    }
 
     #[test]
     fn operator_readiness_passes_with_required_receipts() -> Result<()> {
@@ -1508,7 +1553,14 @@ mod tests {
             "speedup_claim": false
         });
 
-        for file in [DENSE_CPU_ANSWER, DENSE_OV_CPU, DENSE_OV_GPU, DENSE_OV_NPU] {
+        for file in [
+            DENSE_CPU_ANSWER,
+            DENSE_OV_CPU,
+            DENSE_OV_GPU,
+            DENSE_OV_NPU,
+            DENSE_OV_GPU_OPERATOR_ASK,
+            DENSE_OV_NPU_OPERATOR_ASK,
+        ] {
             write_json(root, file, answer.clone())?;
         }
         write_json(root, DENSE_CPU_PHASE, phase)?;

@@ -3409,6 +3409,78 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-OP-003"
+status = "pr_open"
+pr = 4721
+branch = "codex/lunar-lake/LNL258V-OP-003-openvino-ask-evidence"
+head_sha = "9bd37b412c3d193b95491c54de38ddd1c8235275"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = [
+  "LNL258V-OP-002",
+  "LNL258V-ASK-004",
+  "SLM-OV258V-006",
+]
+acceptance = "Refresh Lunar Lake operator readiness, regression, and comparison receipts so OpenVINO GPU/NPU dense SLM candidate routes index the bounded operator-ask receipts as answer-gate evidence while preserving LLMPipeline smoke receipts as supporting evidence and making no new inference, answer-quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, or QK256 accelerator decode claim."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -j 1 commands::lunar_lake::tests -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake validate --artifact-root ci/hardware/intel-258v/2026-05-08 --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json --created-utc 2026-05-14T11:20:00Z --strict",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle.json --created-utc 2026-05-14T11:21:00Z --strict",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-14T11:22:00Z --strict",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-npu-math-brief.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-gpu-arc140v-llmpipeline-smoke.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-npu-llmpipeline-smoke.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-runner.json",
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "The Lunar Lake operator readiness, regression, and comparison receipts now index OpenVINO GPU/NPU bounded operator-ask receipts as dense SLM candidate-route answer evidence.",
+  "The OpenVINO GPU/NPU candidate routes preserve LLMPipeline smoke receipts as supporting evidence and phase-runner receipts as phase evidence.",
+  "Dense Qwen CPU remains the default operator ask route; OpenVINO GPU/NPU remain candidate dense SLM routes without acceleration claims.",
+]
+must_not_claim = [
+  "New inference is executed by the operator readiness, regression, or comparison commands.",
+  "Broad dense SLM answer quality is newly proven.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Native OpenCL execution is proven by the OpenVINO GPU operator-ask receipt.",
+  "Native NPU inference outside OpenVINO GenAI is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+]
+
+[[work_item]]
 id = "LNL258V-ASK-003"
 status = "merged"
 pr = 4668
