@@ -13,6 +13,11 @@ $ErrorActionPreference = "Stop"
 
 # Configuration
 $BitNetCppRepo = "https://github.com/microsoft/BitNet.git"
+
+if (-not [System.IO.Path]::IsPathRooted($CachePath)) {
+    $CachePath = Join-Path (Get-Location) $CachePath
+}
+$CachePath = [System.IO.Path]::GetFullPath($CachePath)
 $BuildDir = Join-Path $CachePath "build"
 
 function Write-Info {
@@ -104,18 +109,30 @@ function Get-SourceCode {
             # Fetch latest changes
             git fetch origin
 
-            # Check if we're already on the right tag
+            $OldErrorActionPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
             $CurrentTag = git describe --tags --exact-match 2>$null
-            if ($CurrentTag -eq $Tag) {
+            $DescribeExitCode = $LASTEXITCODE
+            $ErrorActionPreference = $OldErrorActionPreference
+
+            $CurrentBranch = git rev-parse --abbrev-ref HEAD
+
+            # Clean any local changes before moving refs.
+            git reset --hard
+            git clean -fd
+
+            if ($DescribeExitCode -eq 0 -and $CurrentTag -eq $Tag) {
                 Write-Info "Already on correct tag: $Tag"
                 return
             }
 
-            # Clean any local changes
-            git reset --hard
-            git clean -fd
+            if ($CurrentBranch -eq $Tag) {
+                Write-Info "Already on branch $Tag; fast-forwarding to origin/$Tag"
+                git reset --hard "origin/$Tag"
+                return
+            }
 
-            # Checkout the specified tag
+            # Checkout the specified tag or branch.
             git checkout $Tag
         }
         finally {
