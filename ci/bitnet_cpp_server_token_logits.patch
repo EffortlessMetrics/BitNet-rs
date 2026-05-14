@@ -1,0 +1,41 @@
+diff --git a/3rdparty/llama.cpp/examples/server/utils.hpp b/3rdparty/llama.cpp/examples/server/utils.hpp
+index 4e258516..7be11532 100644
+--- a/3rdparty/llama.cpp/examples/server/utils.hpp
++++ b/3rdparty/llama.cpp/examples/server/utils.hpp
+@@ -273,6 +273,7 @@ struct completion_token_output {
+ 
+     struct token_prob {
+         llama_token tok;
++        float logit;
+         float prob;
+     };
+ 
+@@ -288,13 +289,17 @@ static json probs_vector_to_json(const llama_context * ctx, const std::vector<co
+         for (const auto & p : prob.probs) {
+             const std::string tok_str = tokens_to_output_formatted_string(ctx, p.tok);
+             probs_for_token.push_back(json {
++                {"tok_id",  p.tok},
+                 {"tok_str", tok_str},
++                {"logit",   p.logit},
+                 {"prob",    p.prob},
+             });
+         }
+ 
+         const std::string tok_str = tokens_to_output_formatted_string(ctx, prob.tok);
+         out.push_back(json {
++            {"tok_id",  prob.tok},
+             {"content", tok_str},
+             {"probs",   probs_for_token},
+         });
+diff --git a/3rdparty/llama.cpp/examples/server/server.cpp b/3rdparty/llama.cpp/examples/server/server.cpp
+index 77c64f4d..4dad7fc9 100644
+--- a/3rdparty/llama.cpp/examples/server/server.cpp
++++ b/3rdparty/llama.cpp/examples/server/server.cpp
+@@ -2373,6 +2373,7 @@ struct server_context {
+                 for (size_t i = 0; i < (size_t) slot.sparams.n_probs; ++i) {
+                     result.probs.push_back({
+                         cur_p->data[i].id,
++                        i >= cur_p->size ? 0.0f : cur_p->data[i].logit,
+                         i >= cur_p->size ? 0.0f : cur_p->data[i].p,
+                     });
+                 }

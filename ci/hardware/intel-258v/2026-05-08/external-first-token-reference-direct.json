@@ -1,0 +1,868 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "bitnet_external_reference_direct_token_boundary",
+  "item": "CPU-BITNET-REF-003",
+  "machine_id": "intel-258v",
+  "proof_stage": "external_reference_direct_tokens_recorded",
+  "created_utc": "2026-05-14T09:19:15Z",
+  "source_reference": "ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity-after-prompt-fix.json",
+  "text_boundary_reference": "ci/hardware/intel-258v/2026-05-08/external-first-token-reference.json",
+  "reference": {
+    "runner": "Microsoft BitNet.cpp / llama-server",
+    "bitnet_cpp_commit": "01eb415772c342d9f20dc42772f1583ae1e5b102",
+    "llama_cpp_submodule_commit": "1f86f058de0c3f4098dedae2ae8653c335c868a1",
+    "llama_cli_version": "3962 (1f86f058)",
+    "server_binary": "C:\\Users\\szim9\\.cache\\bitnet_cpp\\build\\bin\\llama-server.exe",
+    "server_patch": "ci/bitnet_cpp_server_token_logits.patch",
+    "server_patch_status": "required_for_tok_id_and_logit_fields",
+    "command_shape": "llama-server.exe -m <ggml-model-i2_s.gguf> --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -ngl 0 -t 8 -c 4096 --host 127.0.0.1 --port <port>",
+    "completion_request": {
+      "temperature": 0,
+      "top_k": 1,
+      "top_p": 1,
+      "min_p": 0,
+      "seed": 42,
+      "n_probs": 5,
+      "stream": false,
+      "cache_prompt": false
+    },
+    "generated_token_ids_available": true,
+    "first_generated_token_id_available": true,
+    "first_token_topk_logits_available": true,
+    "logits_available": true
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "local_path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+    "local_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "tokenizer": {
+    "source_repo": "microsoft/bitnet-b1.58-2B-4T",
+    "source_revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+    "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "local_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "pretokenizer_authority": "externally_supplied_llama_bpe",
+    "override_kv": "tokenizer.ggml.pre=str:llama-bpe",
+    "hf_transformers_version": "5.8.0",
+    "hf_tokenizers_version": "0.22.2",
+    "hf_base_vocab_size": 128000,
+    "hf_total_token_count": 128256,
+    "bos_token": "<|begin_of_text|>",
+    "bos_token_id": 128000,
+    "eos_token": "<|eot_id|>",
+    "eos_token_id": 128009
+  },
+  "summary": {
+    "cases_total": 4,
+    "cases_with_reference_generated_token_ids": 4,
+    "cases_with_reference_first_token_topk_logits": 4,
+    "reference_generated_token_ids_available": true,
+    "reference_logits_available": true,
+    "boundary_classification": "direct_reference_generated_token_ids_and_first_token_topk_logits_recorded",
+    "next_required_evidence": "rerun first-token-divergence against this direct reference artifact"
+  },
+  "cases": [
+    {
+      "case_id": "math_2_plus_2",
+      "question": "What is 2+2? Answer with only the number.",
+      "reference_prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant: ",
+      "reference_prompt_mode": "hf_apply_chat_template_after_prompt_fix",
+      "prompt_token_ids": [
+        128000,
+        1502,
+        25,
+        3639,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        22559,
+        449,
+        1193,
+        279,
+        1396,
+        13,
+        128009,
+        72803,
+        25,
+        220
+      ],
+      "prompt_token_ids_source": "BitNet.cpp llama-server /tokenize add_special=true with tokenizer.ggml.pre=str:llama-bpe",
+      "expected_prompt_token_ids_without_local_bos": [
+        1502,
+        25,
+        3639,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        22559,
+        449,
+        1193,
+        279,
+        1396,
+        13,
+        128009,
+        72803,
+        25,
+        220
+      ],
+      "max_new_tokens": 4,
+      "reference_generated_text": "4",
+      "expected_text_boundary_from_previous_reference": "4",
+      "first_generated_token_id": 19,
+      "decoded_first_token": "4",
+      "generated_token_ids": [
+        19,
+        128009
+      ],
+      "generated_token_records": [
+        {
+          "token_id": 19,
+          "token_text": "4",
+          "top_k": [
+            {
+              "token_id": 19,
+              "token_text": "4",
+              "logit": 20.782499313354492,
+              "probability": 0.9983421564102173
+            },
+            {
+              "token_id": 17,
+              "token_text": "2",
+              "logit": 13.656194686889648,
+              "probability": 0.0008023514528758824
+            },
+            {
+              "token_id": 2983,
+              "token_text": "42",
+              "logit": 12.657991409301758,
+              "probability": 0.00029569939943030477
+            },
+            {
+              "token_id": 791,
+              "token_text": "The",
+              "logit": 12.637462615966797,
+              "probability": 0.00028969094273634255
+            },
+            {
+              "token_id": 16275,
+              "token_text": "\ufffd",
+              "logit": 12.567102432250977,
+              "probability": 0.0002700087788980454
+            }
+          ]
+        },
+        {
+          "token_id": 128009,
+          "token_text": "<|eot_id|>",
+          "top_k": [
+            {
+              "token_id": 128009,
+              "token_text": "<|eot_id|>",
+              "logit": 8.66567611694336,
+              "probability": 0.9996881484985352
+            },
+            {
+              "token_id": 13,
+              "token_text": ".",
+              "logit": 0.5737717151641846,
+              "probability": 0.0003059109440073371
+            },
+            {
+              "token_id": 198,
+              "token_text": "\n",
+              "logit": -3.8922672271728516,
+              "probability": 3.515758407957037e-06
+            },
+            {
+              "token_id": 271,
+              "token_text": "\n\n",
+              "logit": -4.918674945831299,
+              "probability": 1.2596677834153525e-06
+            },
+            {
+              "token_id": 220,
+              "token_text": " ",
+              "logit": -5.095705986022949,
+              "probability": 1.0552909088801243e-06
+            }
+          ]
+        }
+      ],
+      "generated_token_ids_available": true,
+      "logits_available": true,
+      "first_token_top_k_logits": [
+        {
+          "token_id": 19,
+          "token_text": "4",
+          "logit": 20.782499313354492,
+          "probability": 0.9983421564102173
+        },
+        {
+          "token_id": 17,
+          "token_text": "2",
+          "logit": 13.656194686889648,
+          "probability": 0.0008023514528758824
+        },
+        {
+          "token_id": 2983,
+          "token_text": "42",
+          "logit": 12.657991409301758,
+          "probability": 0.00029569939943030477
+        },
+        {
+          "token_id": 791,
+          "token_text": "The",
+          "logit": 12.637462615966797,
+          "probability": 0.00028969094273634255
+        },
+        {
+          "token_id": 16275,
+          "token_text": "\ufffd",
+          "logit": 12.567102432250977,
+          "probability": 0.0002700087788980454
+        }
+      ],
+      "server_response_summary": {
+        "tokens_predicted": 2,
+        "tokens_evaluated": 20,
+        "stopped_eos": true,
+        "stopped_limit": false,
+        "timings": {
+          "prompt_n": 20,
+          "prompt_ms": 168.804,
+          "prompt_per_token_ms": 8.4402,
+          "prompt_per_second": 118.48060472500651,
+          "predicted_n": 2,
+          "predicted_ms": 103.445,
+          "predicted_per_token_ms": 51.7225,
+          "predicted_per_second": 19.333945574943208
+        }
+      },
+      "missing_reference_fields": []
+    },
+    {
+      "case_id": "say_ok",
+      "question": "Say exactly: OK",
+      "reference_prompt": "User: Say exactly: OK<|eot_id|>Assistant: ",
+      "reference_prompt_mode": "hf_apply_chat_template_after_prompt_fix",
+      "prompt_token_ids": [
+        128000,
+        1502,
+        25,
+        25961,
+        7041,
+        25,
+        10619,
+        128009,
+        72803,
+        25,
+        220
+      ],
+      "prompt_token_ids_source": "BitNet.cpp llama-server /tokenize add_special=true with tokenizer.ggml.pre=str:llama-bpe",
+      "expected_prompt_token_ids_without_local_bos": [
+        1502,
+        25,
+        25961,
+        7041,
+        25,
+        10619,
+        128009,
+        72803,
+        25,
+        220
+      ],
+      "max_new_tokens": 4,
+      "reference_generated_text": "OK",
+      "expected_text_boundary_from_previous_reference": "OK",
+      "first_generated_token_id": 4012,
+      "decoded_first_token": "OK",
+      "generated_token_ids": [
+        4012,
+        128009
+      ],
+      "generated_token_records": [
+        {
+          "token_id": 4012,
+          "token_text": "OK",
+          "top_k": [
+            {
+              "token_id": 4012,
+              "token_text": "OK",
+              "logit": 26.66142463684082,
+              "probability": 0.9988783001899719
+            },
+            {
+              "token_id": 33413,
+              "token_text": "Okay",
+              "logit": 19.29623794555664,
+              "probability": 0.0006321973633021116
+            },
+            {
+              "token_id": 40,
+              "token_text": "I",
+              "logit": 18.592960357666016,
+              "probability": 0.0003129125980194658
+            },
+            {
+              "token_id": 40914,
+              "token_text": "Sure",
+              "logit": 17.43975067138672,
+              "probability": 9.876213152892888e-05
+            },
+            {
+              "token_id": 564,
+              "token_text": "ok",
+              "logit": 17.20183563232422,
+              "probability": 7.785119669279084e-05
+            }
+          ]
+        },
+        {
+          "token_id": 128009,
+          "token_text": "<|eot_id|>",
+          "top_k": [
+            {
+              "token_id": 128009,
+              "token_text": "<|eot_id|>",
+              "logit": 8.11461067199707,
+              "probability": 0.9765645861625671
+            },
+            {
+              "token_id": 13,
+              "token_text": ".",
+              "logit": 4.358115196228027,
+              "probability": 0.022817904129624367
+            },
+            {
+              "token_id": 0,
+              "token_text": "!",
+              "logit": 0.2143850326538086,
+              "probability": 0.0003619733324740082
+            },
+            {
+              "token_id": 11,
+              "token_text": ",",
+              "logit": -0.5277097225189209,
+              "probability": 0.0001723410823615268
+            },
+            {
+              "token_id": 30,
+              "token_text": "?",
+              "logit": -1.2557294368743896,
+              "probability": 8.321734640048817e-05
+            }
+          ]
+        }
+      ],
+      "generated_token_ids_available": true,
+      "logits_available": true,
+      "first_token_top_k_logits": [
+        {
+          "token_id": 4012,
+          "token_text": "OK",
+          "logit": 26.66142463684082,
+          "probability": 0.9988783001899719
+        },
+        {
+          "token_id": 33413,
+          "token_text": "Okay",
+          "logit": 19.29623794555664,
+          "probability": 0.0006321973633021116
+        },
+        {
+          "token_id": 40,
+          "token_text": "I",
+          "logit": 18.592960357666016,
+          "probability": 0.0003129125980194658
+        },
+        {
+          "token_id": 40914,
+          "token_text": "Sure",
+          "logit": 17.43975067138672,
+          "probability": 9.876213152892888e-05
+        },
+        {
+          "token_id": 564,
+          "token_text": "ok",
+          "logit": 17.20183563232422,
+          "probability": 7.785119669279084e-05
+        }
+      ],
+      "server_response_summary": {
+        "tokens_predicted": 2,
+        "tokens_evaluated": 11,
+        "stopped_eos": true,
+        "stopped_limit": false,
+        "timings": {
+          "prompt_n": 11,
+          "prompt_ms": 135.831,
+          "prompt_per_token_ms": 12.348272727272727,
+          "prompt_per_second": 80.98298621080609,
+          "predicted_n": 2,
+          "predicted_ms": 99.292,
+          "predicted_per_token_ms": 49.646,
+          "predicted_per_second": 20.14260967650969
+        }
+      },
+      "missing_reference_fields": []
+    },
+    {
+      "case_id": "capital_france",
+      "question": "What is the capital of France? Answer with one word.",
+      "reference_prompt": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant: ",
+      "reference_prompt_mode": "hf_apply_chat_template_after_prompt_fix",
+      "prompt_token_ids": [
+        128000,
+        1502,
+        25,
+        3639,
+        374,
+        279,
+        6864,
+        315,
+        9822,
+        30,
+        22559,
+        449,
+        832,
+        3492,
+        13,
+        128009,
+        72803,
+        25,
+        220
+      ],
+      "prompt_token_ids_source": "BitNet.cpp llama-server /tokenize add_special=true with tokenizer.ggml.pre=str:llama-bpe",
+      "expected_prompt_token_ids_without_local_bos": [
+        1502,
+        25,
+        3639,
+        374,
+        279,
+        6864,
+        315,
+        9822,
+        30,
+        22559,
+        449,
+        832,
+        3492,
+        13,
+        128009,
+        72803,
+        25,
+        220
+      ],
+      "max_new_tokens": 8,
+      "reference_generated_text": "Paris",
+      "expected_text_boundary_from_previous_reference": "Paris",
+      "first_generated_token_id": 60704,
+      "decoded_first_token": "Paris",
+      "generated_token_ids": [
+        60704,
+        128009
+      ],
+      "generated_token_records": [
+        {
+          "token_id": 60704,
+          "token_text": "Paris",
+          "top_k": [
+            {
+              "token_id": 60704,
+              "token_text": "Paris",
+              "logit": 22.813045501708984,
+              "probability": 0.9960508942604065
+            },
+            {
+              "token_id": 49,
+              "token_text": "R",
+              "logit": 16.82805633544922,
+              "probability": 0.0025063040666282177
+            },
+            {
+              "token_id": 95509,
+              "token_text": "Berlin",
+              "logit": 15.849761009216309,
+              "probability": 0.0009422485600225627
+            },
+            {
+              "token_id": 6971,
+              "token_text": "Br",
+              "logit": 15.073748588562012,
+              "probability": 0.0004336582205723971
+            },
+            {
+              "token_id": 50100,
+              "token_text": "France",
+              "logit": 13.205475807189941,
+              "probability": 6.695253978250548e-05
+            }
+          ]
+        },
+        {
+          "token_id": 128009,
+          "token_text": "<|eot_id|>",
+          "top_k": [
+            {
+              "token_id": 128009,
+              "token_text": "<|eot_id|>",
+              "logit": 9.538793563842773,
+              "probability": 0.8955382704734802
+            },
+            {
+              "token_id": 13,
+              "token_text": ".",
+              "logit": 7.389447212219238,
+              "probability": 0.10438422858715057
+            },
+            {
+              "token_id": 11410,
+              "token_text": " \ufffd",
+              "logit": -0.5562019348144531,
+              "probability": 3.697288047987968e-05
+            },
+            {
+              "token_id": 198,
+              "token_text": "\n",
+              "logit": -0.7640581130981445,
+              "probability": 3.0033954317332245e-05
+            },
+            {
+              "token_id": 320,
+              "token_text": " (",
+              "logit": -1.8049211502075195,
+              "probability": 1.0606484465824906e-05
+            }
+          ]
+        }
+      ],
+      "generated_token_ids_available": true,
+      "logits_available": true,
+      "first_token_top_k_logits": [
+        {
+          "token_id": 60704,
+          "token_text": "Paris",
+          "logit": 22.813045501708984,
+          "probability": 0.9960508942604065
+        },
+        {
+          "token_id": 49,
+          "token_text": "R",
+          "logit": 16.82805633544922,
+          "probability": 0.0025063040666282177
+        },
+        {
+          "token_id": 95509,
+          "token_text": "Berlin",
+          "logit": 15.849761009216309,
+          "probability": 0.0009422485600225627
+        },
+        {
+          "token_id": 6971,
+          "token_text": "Br",
+          "logit": 15.073748588562012,
+          "probability": 0.0004336582205723971
+        },
+        {
+          "token_id": 50100,
+          "token_text": "France",
+          "logit": 13.205475807189941,
+          "probability": 6.695253978250548e-05
+        }
+      ],
+      "server_response_summary": {
+        "tokens_predicted": 2,
+        "tokens_evaluated": 19,
+        "stopped_eos": true,
+        "stopped_limit": false,
+        "timings": {
+          "prompt_n": 19,
+          "prompt_ms": 180.721,
+          "prompt_per_token_ms": 9.511631578947368,
+          "prompt_per_second": 105.13443374040648,
+          "predicted_n": 2,
+          "predicted_ms": 99.19,
+          "predicted_per_token_ms": 49.595,
+          "predicted_per_second": 20.163322915616494
+        }
+      },
+      "missing_reference_fields": []
+    },
+    {
+      "case_id": "yes_no_water",
+      "question": "Answer yes or no: is water wet?",
+      "reference_prompt": "User: Answer yes or no: is water wet?<|eot_id|>Assistant: ",
+      "reference_prompt_mode": "hf_apply_chat_template_after_prompt_fix",
+      "prompt_token_ids": [
+        128000,
+        1502,
+        25,
+        22559,
+        10035,
+        477,
+        912,
+        25,
+        374,
+        3090,
+        14739,
+        30,
+        128009,
+        72803,
+        25,
+        220
+      ],
+      "prompt_token_ids_source": "BitNet.cpp llama-server /tokenize add_special=true with tokenizer.ggml.pre=str:llama-bpe",
+      "expected_prompt_token_ids_without_local_bos": [
+        1502,
+        25,
+        22559,
+        10035,
+        477,
+        912,
+        25,
+        374,
+        3090,
+        14739,
+        30,
+        128009,
+        72803,
+        25,
+        220
+      ],
+      "max_new_tokens": 4,
+      "reference_generated_text": "No. Water is",
+      "expected_text_boundary_from_previous_reference": "No. Water is",
+      "first_generated_token_id": 2822,
+      "decoded_first_token": "No",
+      "generated_token_ids": [
+        2822,
+        13,
+        10164,
+        374
+      ],
+      "generated_token_records": [
+        {
+          "token_id": 2822,
+          "token_text": "No",
+          "top_k": [
+            {
+              "token_id": 2822,
+              "token_text": "No",
+              "logit": 23.598541259765625,
+              "probability": 0.5999794602394104
+            },
+            {
+              "token_id": 9642,
+              "token_text": "Yes",
+              "logit": 23.192663192749023,
+              "probability": 0.3998211622238159
+            },
+            {
+              "token_id": 29353,
+              "token_text": "Water",
+              "logit": 14.97898006439209,
+              "probability": 0.0001083199676941149
+            },
+            {
+              "token_id": 644,
+              "token_text": "In",
+              "logit": 14.124247550964355,
+              "probability": 4.60789815406315e-05
+            },
+            {
+              "token_id": 16533,
+              "token_text": "Answer",
+              "logit": 14.10216999053955,
+              "probability": 4.507282210397534e-05
+            }
+          ]
+        },
+        {
+          "token_id": 13,
+          "token_text": ".",
+          "top_k": [
+            {
+              "token_id": 13,
+              "token_text": ".",
+              "logit": 9.600932121276855,
+              "probability": 0.9612412452697754
+            },
+            {
+              "token_id": 11,
+              "token_text": ",",
+              "logit": 6.189879417419434,
+              "probability": 0.0317271463572979
+            },
+            {
+              "token_id": 128009,
+              "token_text": "<|eot_id|>",
+              "logit": 4.290703773498535,
+              "probability": 0.0047492990270257
+            },
+            {
+              "token_id": 382,
+              "token_text": ".\n\n",
+              "logit": 3.5417983531951904,
+              "probability": 0.0022458676248788834
+            },
+            {
+              "token_id": 627,
+              "token_text": ".\n",
+              "logit": -0.576484203338623,
+              "probability": 3.6545749026117846e-05
+            }
+          ]
+        },
+        {
+          "token_id": 10164,
+          "token_text": " Water",
+          "top_k": [
+            {
+              "token_id": 10164,
+              "token_text": " Water",
+              "logit": 6.613015651702881,
+              "probability": 0.9247932434082031
+            },
+            {
+              "token_id": 128009,
+              "token_text": "<|eot_id|>",
+              "logit": 3.8166375160217285,
+              "probability": 0.05644078552722931
+            },
+            {
+              "token_id": 45956,
+              "token_text": " Wet",
+              "logit": 2.3966760635375977,
+              "probability": 0.013643055222928524
+            },
+            {
+              "token_id": 6104,
+              "token_text": " While",
+              "logit": 1.0229074954986572,
+              "probability": 0.0034537557512521744
+            },
+            {
+              "token_id": 4815,
+              "token_text": " \n\n",
+              "logit": 0.2957918643951416,
+              "probability": 0.001669203513301909
+            }
+          ]
+        },
+        {
+          "token_id": 374,
+          "token_text": " is",
+          "top_k": [
+            {
+              "token_id": 374,
+              "token_text": " is",
+              "logit": 26.667564392089844,
+              "probability": 0.8752739429473877
+            },
+            {
+              "token_id": 5196,
+              "token_text": " itself",
+              "logit": 24.62388801574707,
+              "probability": 0.11339310556650162
+            },
+            {
+              "token_id": 1587,
+              "token_text": " does",
+              "logit": 21.963035583496094,
+              "probability": 0.007924887351691723
+            },
+            {
+              "token_id": 4536,
+              "token_text": " isn",
+              "logit": 20.554237365722656,
+              "probability": 0.0019371345406398177
+            },
+            {
+              "token_id": 4250,
+              "token_text": " cannot",
+              "logit": 20.278949737548828,
+              "probability": 0.001470970339141786
+            }
+          ]
+        }
+      ],
+      "generated_token_ids_available": true,
+      "logits_available": true,
+      "first_token_top_k_logits": [
+        {
+          "token_id": 2822,
+          "token_text": "No",
+          "logit": 23.598541259765625,
+          "probability": 0.5999794602394104
+        },
+        {
+          "token_id": 9642,
+          "token_text": "Yes",
+          "logit": 23.192663192749023,
+          "probability": 0.3998211622238159
+        },
+        {
+          "token_id": 29353,
+          "token_text": "Water",
+          "logit": 14.97898006439209,
+          "probability": 0.0001083199676941149
+        },
+        {
+          "token_id": 644,
+          "token_text": "In",
+          "logit": 14.124247550964355,
+          "probability": 4.60789815406315e-05
+        },
+        {
+          "token_id": 16533,
+          "token_text": "Answer",
+          "logit": 14.10216999053955,
+          "probability": 4.507282210397534e-05
+        }
+      ],
+      "server_response_summary": {
+        "tokens_predicted": 4,
+        "tokens_evaluated": 16,
+        "stopped_eos": false,
+        "stopped_limit": true,
+        "timings": {
+          "prompt_n": 16,
+          "prompt_ms": 148.34,
+          "prompt_per_token_ms": 9.27125,
+          "prompt_per_second": 107.86032088445462,
+          "predicted_n": 4,
+          "predicted_ms": 299.875,
+          "predicted_per_token_ms": 74.96875,
+          "predicted_per_second": 13.338891204668611
+        }
+      },
+      "missing_reference_fields": []
+    }
+  ],
+  "fallback_used": false,
+  "claim_boundary": {
+    "may_claim": [
+      "BitNet.cpp direct generated-token IDs are recorded for the fixed 258V reference prompts.",
+      "BitNet.cpp first-token top-k token IDs, probabilities, and raw candidate logits are recorded from the patched llama-server response.",
+      "The evidence is suitable for rerunning the first-token divergence classifier against local scalar/AVX2 receipts."
+    ],
+    "must_not_claim": [
+      "BitNet-rs generated-token-ID parity against BitNet.cpp is proven by this receipt alone.",
+      "BitNet-rs first-token logits parity against BitNet.cpp is proven by this receipt alone.",
+      "Broad BitNet answer quality is proven.",
+      "CPU speedup or sustained performance is proven.",
+      "Arc 140V execution or acceleration is involved.",
+      "Intel NPU execution or acceleration is involved.",
+      "QK256/I2_S kernel behavior is changed by this receipt.",
+      "Full model correctness is proven."
+    ]
+  }
+}
