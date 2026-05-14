@@ -58,6 +58,34 @@ fn bitnet_version() -> &'static str {
     })
 }
 
+fn sha256_hex_bytes(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+fn sha256_text(text: &str) -> String {
+    sha256_hex_bytes(text.as_bytes())
+}
+
+fn sha256_token_ids(tokens: &[u32]) -> Result<String> {
+    Ok(sha256_hex_bytes(&serde_json::to_vec(tokens)?))
+}
+
+fn critical_not_claims() -> Vec<&'static str> {
+    vec![
+        "selected_attention_residency",
+        "resident_kv_decode",
+        "attention_scores_residency",
+        "softmax_residency",
+        "attention_value_mix_residency",
+        "full_support_op_residency",
+        "full_device_residency",
+        "completion",
+    ]
+}
+
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
@@ -239,6 +267,14 @@ enum Commands {
         /// Output JSON results to file
         #[arg(long)]
         json_out: Option<std::path::PathBuf>,
+
+        /// Declared model contract for diagnostic proof binding.
+        #[arg(long)]
+        proof_model_contract: Option<std::path::PathBuf>,
+
+        /// Declared kernel route id for diagnostic proof binding.
+        #[arg(long)]
+        proof_kernel_route: Option<String>,
 
         /// Dump token IDs to stdout
         #[arg(long, default_value_t = false)]
@@ -543,6 +579,8 @@ async fn main() -> Result<()> {
             strict_tokenizer,
             strict_loader,
             json_out,
+            proof_model_contract,
+            proof_kernel_route,
             dump_ids,
             bos,
             greedy,
@@ -574,6 +612,9 @@ async fn main() -> Result<()> {
                 strict_tokenizer,
                 strict_loader,
                 json_out,
+                proof_model_contract,
+                proof_kernel_route,
+                requested_backend_label.clone(),
                 dump_ids,
                 bos,
                 greedy,
@@ -1320,6 +1361,9 @@ async fn run_simple_generation(
     strict_tokenizer: bool,
     strict_loader: bool,
     json_out: Option<std::path::PathBuf>,
+    proof_model_contract: Option<std::path::PathBuf>,
+    proof_kernel_route: Option<String>,
+    requested_backend_label: String,
     dump_ids: bool,
     bos: bool,
     greedy: bool,
@@ -1421,6 +1465,7 @@ async fn run_simple_generation(
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
     let loader_mode;
+    let mut loader_fallback_used = false;
 
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
@@ -1439,6 +1484,7 @@ async fn run_simple_generation(
                 );
             }
             tracing::warn!("Real loader failed: {e}. Falling back to MOCK loader (by request).");
+            loader_fallback_used = true;
             if !strict_loader {
                 unsafe {
                     std::env::set_var("BITNET_ALLOW_MINIMAL_LOADER", "1");
@@ -1497,6 +1543,7 @@ async fn run_simple_generation(
     // Track GGUF metadata for JSON output
     let mut gguf_metadata: Option<(usize, usize)> = None;
     let effective_strict_tokenizer = strict_tokenizer || strict_loader;
+    let mut tokenizer_fallback_used = false;
 
     let tokenizer_resolution = match bitnet_tokenizers::auto::resolve_tokenizer(
         &model_path,
@@ -1543,6 +1590,7 @@ async fn run_simple_generation(
                 );
             }
             println!("Warning: Using mock tokenizer due to: {e}");
+            tokenizer_fallback_used = true;
             bitnet_tokenizers::auto::TokenizerResolution {
                 tokenizer: std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new()),
                 source: bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback,
@@ -1553,6 +1601,9 @@ async fn run_simple_generation(
     };
     let tokenizer_source = tokenizer_resolution.source;
     let tokenizer_strict = tokenizer_resolution.strict;
+    if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::CompatibilityFallback {
+        tokenizer_fallback_used = true;
+    }
     let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = tokenizer_resolution.tokenizer;
 
     if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
@@ -1613,6 +1664,8 @@ async fn run_simple_generation(
     // Tokenize formatted prompt with proper BOS policy and special token parsing
     let parse_special = template_type.parse_special();
     let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
+    let prompt_token_ids = tokens.clone();
+    let prompt_token_ids_sha256 = sha256_token_ids(&prompt_token_ids)?;
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
 
     // Create KV cache
@@ -1920,9 +1973,24 @@ async fn run_simple_generation(
         });
 
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
+        let fallback_used = loader_fallback_used || tokenizer_fallback_used;
+        let execution_backend = "cpu";
+        let requested_backend = requested_backend_label.as_str();
+        let execution_backend_matched = requested_backend.eq_ignore_ascii_case(execution_backend);
+        let proof_model_contract_path =
+            proof_model_contract.as_ref().map(|path| path.display().to_string());
+        let proof_kernel_route_id = proof_kernel_route.as_deref();
         let output = serde_json::json!({
             "prompt": prompt,
             "text": generated_text,
+            "prompt_identity": {
+                "template": template_type.to_string(),
+                "rendered_prompt_sha256": sha256_text(&formatted_prompt),
+                "prompt_token_ids_sha256": prompt_token_ids_sha256,
+                "prompt_token_count": prompt_token_ids.len(),
+                "bos_policy": bos_policy,
+                "parse_special": parse_special,
+            },
             "tokens": {
                 "prompt": prompt_tokens_len,
                 "generated": generated_tokens.len(),
@@ -1942,6 +2010,30 @@ async fn run_simple_generation(
             "tokenizer": tokenizer_info,
             "loader": loader_info,
             "gen_policy": gen_policy,
+            "proof_summary": {
+                "requested_device": requested_backend,
+                "requested_backend": requested_backend,
+                "selected_backend": execution_backend,
+                "execution_backend": execution_backend,
+                "execution_backend_matched": execution_backend_matched,
+                "fallback_used": fallback_used,
+                "loader_fallback_used": loader_fallback_used,
+                "tokenizer_fallback_used": tokenizer_fallback_used,
+                "strict_backend": !allow_mock,
+                "claim_level": "diagnostic_cli_run",
+                "model_contract": proof_model_contract_path,
+                "model_contract_declared": proof_model_contract.is_some(),
+                "kernel_route": {
+                    "route_id": proof_kernel_route_id,
+                    "route_declared": proof_kernel_route.is_some(),
+                    "diagnostic_only": true,
+                    "claimable": false,
+                },
+                "route_declared": proof_kernel_route.is_some(),
+                "backend_claimable": false,
+                "not_claims": critical_not_claims(),
+            },
+            "not_claims": critical_not_claims(),
             "logits_dump": if !logits_dump.is_empty() {
                 Some(logits_dump.iter().map(|step| {
                     serde_json::json!({
