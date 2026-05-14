@@ -48,10 +48,11 @@ on:
       - 'Cargo.lock'
       - '.github/workflows/crossval.yml'
 
-# Cancel in-progress runs for same PR/branch
+# Preserve started cross-validation runs; the lane is selected explicitly by
+# label, schedule, or manual dispatch and should produce evidence once started.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -71,6 +72,7 @@ jobs:
   check-trigger:
     name: Check Trigger Conditions
     runs-on: ubuntu-22.04
+    timeout-minutes: 10
     outputs:
       should_run_lane_a: ${{ steps.check.outputs.should_run_lane_a }}
       should_run_lane_b: ${{ steps.check.outputs.should_run_lane_b }}
@@ -148,6 +150,7 @@ jobs:
   check-no-ffi:
     name: Check No-FFI Compilation
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     # Always run this check (required status check)
 
     steps:
@@ -201,6 +204,7 @@ jobs:
   check-llama-stub:
     name: Check STUB Mode (FFI Without Libs)
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     # Always run this check (required status check)
 
     steps:
@@ -515,6 +519,7 @@ jobs:
     needs: [check-trigger, check-no-ffi, check-llama-stub, lane-b-llama, lane-a-bitnet]
     if: always()
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: write

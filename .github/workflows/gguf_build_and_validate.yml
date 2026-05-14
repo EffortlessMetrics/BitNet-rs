@@ -41,7 +41,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   # Ensure no policy corrections are used (strict validation)
@@ -248,6 +248,7 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-22.04
+    timeout-minutes: 10
     needs: build-validate
     if: always()
 

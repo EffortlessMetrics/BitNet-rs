@@ -85,6 +85,34 @@ cap failures, but they should not enter healthy-runtime percentile samples. A
 cancelled or timed-out job did not produce the receipt, test result, or cache
 state that the selected lane was supposed to buy.
 
+Short, cheap PR validators may use PR-only cancellation when their result is
+only useful for the newest commit:
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+```
+
+Long selected lanes should not use cancellation as a cost control, including
+when they are selected by a PR label such as `coverage`, `crossval`,
+`property-tests`, `receipts`, or `full-ci`. They should reject irrelevant events
+before the job starts, then use:
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+```
+
+This lets started runs produce the receipt, cache state, or failure evidence
+that the lane was selected to buy. GitHub may still collapse pending queued runs
+for the same concurrency group before they start; the policy boundary is that
+started long jobs should finish unless they exceed their explicit timeout or hit
+a real failure. Workflows that have no PR trigger, such as cache warmers, should
+normally use `cancel-in-progress: false` unless the workflow is explicitly
+designed to discard partial work.
+
 ### Selected hardware and model lanes
 
 Hardware/model lanes such as the M3 MacBook Air work need an extra distinction:
