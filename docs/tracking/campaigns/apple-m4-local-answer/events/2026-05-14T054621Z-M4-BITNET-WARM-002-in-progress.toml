@@ -1,0 +1,13 @@
+timestamp = "2026-05-14T05:46:21Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-WARM-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started BitNet warm-route catalog/readiness exposure after M4-BITNET-WARM-001 merged.",
+  "The slice updates model-selection, doctor advisory readiness, and local-server models catalog metadata only.",
+  "The route remains fixed-prompt warm proof only; BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and broad performance claims stay disabled.",
+]

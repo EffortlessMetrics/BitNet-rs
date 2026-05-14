@@ -89,11 +89,12 @@ support status. Fetch warns on low disk headroom and honors `--offline` /
 blocked, candidate, and rejected model states plus disk-headroom guidance for
 first fetches. Its text output prints exact `Next fetch` and `Next verify`
 commands for the recommended first supported model when disk headroom is
-adequate. The BitNet row also prints a receipt-only `bitnet mac
-bitnet-proof --proof-receipt ...` bridge command so operators can validate the
-strict BitNet answer-corpus proof. BitNet is limited to explicit one-shot
-`bitnet mac ask` with verified GGUF/tokenizer authority; `M4-BITNET-ASK-001`
-adds one committed user-route receipt at
+adequate. The BitNet row also prints receipt-only `bitnet mac bitnet-proof`
+and fixed-prompt `bitnet mac bitnet-warm` bridge commands so operators can
+validate the strict BitNet answer-corpus proof and the warm-session receipt.
+BitNet is limited to explicit one-shot `bitnet mac ask` plus fixed-prompt
+`bitnet mac bitnet-warm` with verified GGUF/tokenizer authority;
+`M4-BITNET-ASK-001` adds one committed user-route receipt at
 `ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json`.
 It is not an enabled Mac chat/server route. `bitnet model list` is the
 lower-level cache inventory; use `bitnet model verify <id>` or `bitnet mac

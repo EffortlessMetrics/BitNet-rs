@@ -854,3 +854,55 @@ must_not_claim = [
   "Broad BitNet chat quality or performance is proven.",
   "Broad BitNet warm-session quality or performance is proven.",
 ]
+
+[[work_item]]
+id = "M4-BITNET-WARM-002"
+status = "in_progress"
+branch = "codex/apple-m4-local-answer/M4-BITNET-WARM-002-catalog-readiness"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-WARM-001"]
+acceptance = "Update the Apple M4 operator catalog and readiness surfaces so the accepted BitNet row exposes the fixed-prompt `bitnet mac bitnet-warm` route alongside one-shot ask: `bitnet mac models` JSON/text include warm capability, warm command, warm receipt path, and unchanged chat/serve disabled flags; `bitnet mac doctor` advisory BitNet readiness includes a cached warm command and warm claim boundary; local-server `/models` and `mac serve-check` validate the warm catalog fields without treating BitNet as a server completion model; docs/tracking explain the route as fixed-prompt warm proof only."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_models",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_check_rejects_blocked_bitnet_model_before_cache_guidance",
+  "cargo test --locked -p bitnet-cli mac_serve_http_models_route_reports_catalog_no_generation",
+  "cargo test --locked -p bitnet-cli bitnet_mac_ask_readiness_is_advisory_and_preserves_claim_boundary",
+  "cargo test --locked -p bitnet-cli mac_serve_check_models_catalog_pass_requires_operator_catalog_shape",
+  "cargo test --locked -p bitnet-cli --test cli_snapshot_tests mac_smoke_help",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/src/model_cache.rs",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = [
+  "`bitnet mac models`, `bitnet mac doctor`, and local-server `/models` expose the accepted BitNet fixed-prompt warm route as catalog/readiness metadata with committed warm receipt path and chat/serve disabled boundaries.",
+]
+must_not_claim = [
+  "BitNet chat works.",
+  "BitNet serve works.",
+  "Full apple-m4-metal model inference works.",
+  "Apple M4 Metal participates in autoregressive BitNet decode.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+  "Broad BitNet warm-session quality or performance is proven.",
+]

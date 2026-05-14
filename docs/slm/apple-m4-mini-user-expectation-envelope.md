@@ -20,12 +20,13 @@ bitnet mac regression <receipt.json> --baseline <baseline.json>
 
 `bitnet mac models` is the operator-facing model-selection view. It lists the
 default model, supported explicit-only dense models, cache state, the BitNet
-one-shot ask row, candidate/rejected rows, and disk-headroom guidance without
-downloading artifacts. The text view also prints exact `Next fetch` and
-`Next verify` commands for the recommended first supported model when disk
-headroom is adequate. The BitNet row includes a receipt bridge command for
-validating a strict `answer-corpus` proof receipt and is limited to explicit
-one-shot ask with a verified GGUF plus external tokenizer:
+one-shot ask plus fixed warm-session row, candidate/rejected rows, and
+disk-headroom guidance without downloading artifacts. The text view also prints
+exact `Next fetch` and `Next verify` commands for the recommended first
+supported model when disk headroom is adequate. The BitNet row includes receipt
+bridge commands for validating the strict `answer-corpus` proof and the
+fixed-prompt warm-session proof. It is limited to explicit one-shot ask or
+fixed-prompt warm reuse with a verified GGUF plus external tokenizer:
 
 ```bash
 bitnet mac ask \
@@ -219,11 +220,11 @@ bitnet mac doctor
 ```
 
 The doctor receipt includes an advisory `checks.bitnet_ask` section for the
-BitNet one-shot route. It reports the `supported-ask` catalog row, cached-model
-fetch/verify commands, accepted tokenizer path and SHA, an example cached-model
-ask command, and explicit chat/serve/Metal-disabled claim boundaries. This
-readiness check does not make dense SLM doctor fail when optional BitNet
-artifacts are absent.
+BitNet one-shot and fixed-prompt warm routes. It reports the `supported-ask`
+catalog row, cached-model fetch/verify commands, accepted tokenizer path and
+SHA, example cached-model ask and warm commands, and explicit
+chat/serve/Metal-disabled claim boundaries. This readiness check does not make
+dense SLM doctor fail when optional BitNet artifacts are absent.
 
 Use `smoke` for a compact answer/cache receipt:
 
@@ -256,6 +257,12 @@ serve:
 
 ```bash
 bitnet mac bitnet-warm
+```
+
+The committed aggregate warm receipt is:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-warm/bitnet-mac-bitnet-warm-runtime-receipt.json
 ```
 
 Use `regression` for receipt-only drift checks against matching M4 dense SLM
