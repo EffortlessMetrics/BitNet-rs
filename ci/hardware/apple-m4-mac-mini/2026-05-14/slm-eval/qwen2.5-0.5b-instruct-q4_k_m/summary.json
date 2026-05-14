@@ -1,0 +1,156 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_slm_eval_summary",
+  "machine_id": "apple-m4-mac-mini",
+  "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "model": {
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+    "file": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "bytes": 491400032,
+    "family": "qwen",
+    "architecture": "qwen2",
+    "quantization": "Q4_K_M"
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "authority": "gguf_metadata",
+    "pretokenizer_authority": "qwen2",
+    "gguf_tokenizer_model": "gpt2",
+    "strict": true
+  },
+  "prompt_template": "qwen2.5",
+  "corpus": {
+    "name": "apple-m4-slm-eval-seeded-corpus-v1",
+    "path": "ci/quality/apple-m4-slm-eval-seeded-corpus.yaml",
+    "seed": 424242,
+    "case_count": 10,
+    "selected_case_count": 10
+  },
+  "accuracy": {
+    "cases_total": 10,
+    "cases_scored": 10,
+    "cases_passed": 2,
+    "quality_gate_cases_passed": 1,
+    "exact_match": 0.0,
+    "normalized_match": 0.0,
+    "json_schema_pass": 0.0,
+    "numeric_tolerance_pass": 1.0,
+    "required_keywords_pass": 0.667,
+    "forbidden_tokens_pass": 1.0,
+    "bucket_counts": {
+      "exact_match": {
+        "passed": 0,
+        "total": 5
+      },
+      "normalized_match": {
+        "passed": 0,
+        "total": 1
+      },
+      "json_schema": {
+        "passed": 0,
+        "total": 1
+      },
+      "numeric_tolerance": {
+        "passed": 0,
+        "total": 0
+      },
+      "required_keywords": {
+        "passed": 2,
+        "total": 3
+      },
+      "forbidden_tokens": {
+        "passed": 1,
+        "total": 1
+      }
+    },
+    "scoring_kinds": [
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ]
+  },
+  "evidence": {
+    "generated_text_recorded": true,
+    "generated_token_ids_recorded": true,
+    "generated_tokens_total": 83,
+    "case_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed424242_add_07_08.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/arithmetic_seed424242_double_12.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/fixed_table_seed424242_color_heron.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/json_seed424242_status_ready.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/classification_seed424242_invoice_positive.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/extraction_seed424242_ticket_owner.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/ordering_seed424242_animals.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/rewrite_seed424242_cache_sentence.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/summary_seed424242_keywords.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus-runs/instruction_seed424242_required_forbidden.json"
+    ],
+    "source_answer_corpus_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus.json",
+    "resident_stability_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality.json",
+    "resident_prompt_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/01-what-is-22-answer-briefly.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/02-what-is-22-answer-briefly.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/03-name-the-capital-of-france.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/04-name-the-capital-of-france.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/05-write-one-short-sentence-about-rust.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/06-write-one-short-sentence-about-rust.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/07-in-one-short-sentence-say-that-the-system-is-rea.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/08-in-one-short-sentence-say-that-the-system-is-rea.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/09-return-the-answer-as-answer-blue-for-this-questi.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/10-return-the-answer-as-answer-blue-for-this-questi.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/11-summarize-in-three-words-rust-is-fast-safe-and-r.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/12-summarize-in-three-words-rust-is-fast-safe-and-r.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/13-rewrite-as-a-short-plain-sentence-the-model-cach.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality-prompts/14-rewrite-as-a-short-plain-sentence-the-model-cach.json"
+    ]
+  },
+  "speed": {
+    "source": "seeded answer-corpus child run receipts",
+    "cold_load_ms_p50": 2499.62,
+    "tokenizer_load_ms_p50": 54.606,
+    "prompt_tokenize_ms_p50": 42.892,
+    "prefill_ms_p50": 3478.173,
+    "ttft_ms_p50": 3596.0,
+    "ttft_ms_p90": 4313.0,
+    "input_tok_s_p50": 12.358,
+    "output_tok_s_p50": 1.886,
+    "decode_tok_s_p50": 9.162,
+    "sampling_ms_per_token_p50": 0.113,
+    "total_wall_ms_p50": 4476.5
+  },
+  "memory": {
+    "peak_memory_mb": 4013.844,
+    "source": "getrusage.ru_maxrss"
+  },
+  "stability": {
+    "resident_prompts": 14,
+    "quality_passed": true,
+    "memory_drift_mb": 0.0,
+    "memory_drift_source": "not_recorded_by_warm_session_receipt",
+    "model_loaded_once": true,
+    "tokenizer_loaded_once": true
+  },
+  "claim_boundary": {
+    "dense_slm_only": true,
+    "bounded_seeded_corpus_only": true,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "bitnet_evidence": false,
+    "bitnet_quality_claimed": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_evidence": false,
+    "speedup_claim": false
+  }
+}

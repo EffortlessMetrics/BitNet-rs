@@ -109,6 +109,49 @@ broad model-quality benchmark, broad Apple Silicon performance claim, BitNet
 proof, full Metal inference proof, QK256 claim, Neural Engine claim, MPSGraph
 claim, or MacBook claim.
 
+## Published 2026-05-14 Reports
+
+`M4-SLM-EVAL-004` publishes the first per-model report set:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/<model-id>/summary.json
+```
+
+Each summary combines:
+
+- seeded deterministic scoring from `answer-corpus` over
+  `ci/quality/apple-m4-slm-eval-seeded-corpus.yaml`;
+- resident stability from `bitnet mac validate` over
+  `ci/quality/apple-m4-slm-quality-corpus.yaml`;
+- source answer-corpus receipts, per-case run receipts, resident aggregate
+  receipts, and resident per-prompt receipts.
+
+For the non-default model runs, the summary model identity is taken from the
+supported model-cache entry and per-case run receipts. The aggregate
+`answer-corpus` receipt still carries the corpus default model block, so it is
+not treated as the authority for non-default model SHA or quantization.
+
+All three summaries validate with `bitnet mac receipts-check` and record
+`requested_backend=apple-m4-cpu-neon`, `selected_backend=apple-m4-cpu-neon`,
+`runtime_api=cpu`, and `fallback_used=false`.
+
+| Model ID | Seeded score | TTFT p50 | TTFT p90 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 | Resident prompts | Peak memory |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `qwen2.5-0.5b-instruct-q8_0` | 2 / 10 | 3895.5 ms | 4529.0 ms | 12.398 | 1.619 | 9.034 | 14 | 4012.047 MB |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 2 / 10 | 3596.0 ms | 4313.0 ms | 12.358 | 1.886 | 9.162 | 14 | 4013.844 MB |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 2 / 10 | 14879.0 ms | 17867.0 ms | 3.335 | 0.329 | 3.039 | 14 | 7995.656 MB |
+
+The seeded score is intentionally strict. The current misses mostly expose
+format and stop-token behavior such as raw `<|im_end|>` tails or JSON fenced
+code blocks, not a broad quality verdict. The resident quality corpus still
+passes for all three models, so the report set should be read as bounded
+evidence with concrete failure modes for future regression work.
+
+The warm-session receipt records peak memory through `getrusage.ru_maxrss`; it
+does not record a separate memory-drift series. The summary schema therefore
+records `memory_drift_mb=0.0` with
+`memory_drift_source=not_recorded_by_warm_session_receipt`.
+
 ## CI Tiers
 
 Generic PR CI stays lightweight:
