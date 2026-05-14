@@ -467,7 +467,7 @@ enum MacAction {
         /// Receipt file or directory containing JSON receipts.
         path: PathBuf,
 
-        /// Compare Apple M4 dense SLM performance receipts against a published baseline receipt.
+        /// Compare Apple M4 dense SLM receipts against a published baseline receipt.
         #[arg(long = "regression-baseline", value_name = "PATH")]
         regression_baseline: Option<PathBuf>,
 
@@ -4173,7 +4173,7 @@ fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: boo
         .with_context(|| format!("invalid JSON receipt {}", receipt_path.display()))?;
         let mut summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
         if let Some(baseline) = &baseline
-            && receipt["artifact_kind"].as_str() == Some("apple_m4_slm_performance_profiles")
+            && receipt["artifact_kind"].as_str() == baseline.receipt["artifact_kind"].as_str()
         {
             summary.regression =
                 Some(compare_dense_slm_regression(&receipt_path, &receipt, baseline)?);
@@ -4183,7 +4183,7 @@ fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: boo
     }
     if baseline.is_some() && regression_compared == 0 {
         anyhow::bail!(
-            "regression baseline was provided, but no apple_m4_slm_performance_profiles receipts were found under {}",
+            "regression baseline was provided, but no matching Apple M4 dense SLM receipts were found under {}",
             path.display()
         );
     }
@@ -4344,10 +4344,12 @@ fn load_regression_baseline(path: &Path) -> Result<RegressionBaseline> {
     validate_mac_receipt_value(path, &receipt)?;
     if !matches!(
         receipt["artifact_kind"].as_str(),
-        Some("apple_m4_slm_performance_profiles") | Some("slm_apple_m4_warm_session")
+        Some("apple_m4_slm_performance_profiles")
+            | Some("slm_apple_m4_warm_session")
+            | Some("apple_m4_slm_eval_summary")
     ) {
         anyhow::bail!(
-            "regression baseline {} must be an apple_m4_slm_performance_profiles or slm_apple_m4_warm_session receipt",
+            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, or apple_m4_slm_eval_summary receipt",
             path.display()
         );
     }
@@ -4365,6 +4367,9 @@ fn compare_dense_slm_regression(
         }
         Some("slm_apple_m4_warm_session") => {
             compare_dense_slm_warm_session_regression(path, receipt, baseline)
+        }
+        Some("apple_m4_slm_eval_summary") => {
+            compare_dense_slm_eval_summary_regression(path, receipt, baseline)
         }
         _ => anyhow::bail!("{} is not an Apple M4 dense SLM envelope receipt", path.display()),
     }
@@ -4521,6 +4526,96 @@ fn compare_dense_slm_warm_session_regression(
     })
 }
 
+fn compare_dense_slm_eval_summary_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    const ACCURACY_LOWER_PCT: f64 = 0.0;
+    const DECODE_TOK_S_LOWER_PCT: f64 = 12.5;
+    const THROUGHPUT_LOWER_PCT: f64 = 15.0;
+    const LATENCY_HIGHER_PCT: f64 = 15.0;
+    const LOAD_HIGHER_PCT: f64 = 20.0;
+    const SAMPLING_HIGHER_PCT: f64 = 20.0;
+    const PEAK_MEMORY_MB_HIGHER_PCT: f64 = 10.0;
+
+    ensure_slm_eval_summary_regression_context_matches(
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+    )?;
+
+    let mut warnings = Vec::new();
+    for field in [
+        "cases_passed",
+        "exact_match",
+        "normalized_match",
+        "json_schema_pass",
+        "numeric_tolerance_pass",
+        "required_keywords_pass",
+        "forbidden_tokens_pass",
+    ] {
+        compare_lower_is_worse(
+            &mut warnings,
+            "seeded_corpus",
+            &format!("accuracy.{field}"),
+            regression_metric(&baseline.receipt, &["accuracy", field])?,
+            regression_metric(receipt, &["accuracy", field])?,
+            ACCURACY_LOWER_PCT,
+        );
+    }
+    for (field, threshold) in [
+        ("input_tok_s_p50", THROUGHPUT_LOWER_PCT),
+        ("output_tok_s_p50", THROUGHPUT_LOWER_PCT),
+        ("decode_tok_s_p50", DECODE_TOK_S_LOWER_PCT),
+    ] {
+        compare_lower_is_worse(
+            &mut warnings,
+            "seeded_corpus",
+            &format!("speed.{field}"),
+            regression_metric(&baseline.receipt, &["speed", field])?,
+            regression_metric(receipt, &["speed", field])?,
+            threshold,
+        );
+    }
+    for (field, threshold) in [
+        ("cold_load_ms_p50", LOAD_HIGHER_PCT),
+        ("tokenizer_load_ms_p50", LOAD_HIGHER_PCT),
+        ("prompt_tokenize_ms_p50", LOAD_HIGHER_PCT),
+        ("prefill_ms_p50", LATENCY_HIGHER_PCT),
+        ("ttft_ms_p50", LATENCY_HIGHER_PCT),
+        ("ttft_ms_p90", LATENCY_HIGHER_PCT),
+        ("sampling_ms_per_token_p50", SAMPLING_HIGHER_PCT),
+        ("total_wall_ms_p50", LATENCY_HIGHER_PCT),
+    ] {
+        compare_higher_is_worse(
+            &mut warnings,
+            "seeded_corpus",
+            &format!("speed.{field}"),
+            regression_metric(&baseline.receipt, &["speed", field])?,
+            regression_metric(receipt, &["speed", field])?,
+            threshold,
+        );
+    }
+    compare_higher_is_worse(
+        &mut warnings,
+        "resident_stability",
+        "memory.peak_memory_mb",
+        regression_metric(&baseline.receipt, &["memory", "peak_memory_mb"])?,
+        regression_metric(receipt, &["memory", "peak_memory_mb"])?,
+        PEAK_MEMORY_MB_HIGHER_PCT,
+    );
+
+    Ok(RegressionCheckSummary {
+        baseline_path: baseline.path.clone(),
+        advisory: true,
+        matched_context: true,
+        warning_count: warnings.len(),
+        warnings,
+    })
+}
+
 fn ensure_regression_context_matches(
     path: &Path,
     receipt: &serde_json::Value,
@@ -4581,6 +4676,168 @@ fn ensure_regression_context_matches(
             path.display(),
             baseline_path.display()
         );
+    }
+    Ok(())
+}
+
+fn ensure_slm_eval_summary_regression_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    for (label, observed, expected) in [
+        ("artifact_kind", receipt["artifact_kind"].as_str(), baseline["artifact_kind"].as_str()),
+        ("machine_id", receipt["machine_id"].as_str(), baseline["machine_id"].as_str()),
+        ("model_id", receipt["model_id"].as_str(), baseline["model_id"].as_str()),
+        (
+            "requested_backend",
+            receipt["requested_backend"].as_str(),
+            baseline["requested_backend"].as_str(),
+        ),
+        (
+            "selected_backend",
+            receipt["selected_backend"].as_str(),
+            baseline["selected_backend"].as_str(),
+        ),
+        ("runtime_api", receipt["runtime_api"].as_str(), baseline["runtime_api"].as_str()),
+        ("model.repo", receipt["model"]["repo"].as_str(), baseline["model"]["repo"].as_str()),
+        ("model.file", receipt["model"]["file"].as_str(), baseline["model"]["file"].as_str()),
+        ("model.sha256", receipt["model"]["sha256"].as_str(), baseline["model"]["sha256"].as_str()),
+        ("model.family", receipt["model"]["family"].as_str(), baseline["model"]["family"].as_str()),
+        (
+            "model.architecture",
+            receipt["model"]["architecture"].as_str(),
+            baseline["model"]["architecture"].as_str(),
+        ),
+        (
+            "model.quantization",
+            receipt["model"]["quantization"].as_str(),
+            baseline["model"]["quantization"].as_str(),
+        ),
+        (
+            "tokenizer.source",
+            receipt["tokenizer"]["source"].as_str(),
+            baseline["tokenizer"]["source"].as_str(),
+        ),
+        (
+            "tokenizer.authority",
+            receipt["tokenizer"]["authority"].as_str(),
+            baseline["tokenizer"]["authority"].as_str(),
+        ),
+        (
+            "tokenizer.pretokenizer_authority",
+            receipt["tokenizer"]["pretokenizer_authority"].as_str(),
+            baseline["tokenizer"]["pretokenizer_authority"].as_str(),
+        ),
+        (
+            "prompt_template",
+            receipt["prompt_template"].as_str(),
+            baseline["prompt_template"].as_str(),
+        ),
+        ("corpus.name", receipt["corpus"]["name"].as_str(), baseline["corpus"]["name"].as_str()),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        ("corpus.seed", receipt["corpus"]["seed"].as_u64(), baseline["corpus"]["seed"].as_u64()),
+        (
+            "corpus.case_count",
+            receipt["corpus"]["case_count"].as_u64(),
+            baseline["corpus"]["case_count"].as_u64(),
+        ),
+        (
+            "accuracy.cases_total",
+            receipt["accuracy"]["cases_total"].as_u64(),
+            baseline["accuracy"]["cases_total"].as_u64(),
+        ),
+        (
+            "accuracy.cases_scored",
+            receipt["accuracy"]["cases_scored"].as_u64(),
+            baseline["accuracy"]["cases_scored"].as_u64(),
+        ),
+        (
+            "stability.resident_prompts",
+            receipt["stability"]["resident_prompts"].as_u64(),
+            baseline["stability"]["resident_prompts"].as_u64(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for (label, observed, expected) in [
+        ("fallback_used", receipt["fallback_used"].as_bool(), baseline["fallback_used"].as_bool()),
+        (
+            "tokenizer.strict",
+            receipt["tokenizer"]["strict"].as_bool(),
+            baseline["tokenizer"]["strict"].as_bool(),
+        ),
+        (
+            "stability.quality_passed",
+            receipt["stability"]["quality_passed"].as_bool(),
+            baseline["stability"]["quality_passed"].as_bool(),
+        ),
+        (
+            "claim_boundary.dense_slm_only",
+            receipt["claim_boundary"]["dense_slm_only"].as_bool(),
+            baseline["claim_boundary"]["dense_slm_only"].as_bool(),
+        ),
+        (
+            "claim_boundary.bounded_seeded_corpus_only",
+            receipt["claim_boundary"]["bounded_seeded_corpus_only"].as_bool(),
+            baseline["claim_boundary"]["bounded_seeded_corpus_only"].as_bool(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    if receipt["stability"]["quality_passed"].as_bool() != Some(true)
+        || baseline["stability"]["quality_passed"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: both SLM eval summaries must pass resident stability quality",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+    for flag in [
+        "broad_model_quality_claim",
+        "broad_performance_claim",
+        "bitnet_evidence",
+        "bitnet_quality_claimed",
+        "full_metal_inference_claimed",
+        "qk256_apple_claimed",
+        "neural_engine_claimed",
+        "neural_engine_execution_claimed",
+        "mpsgraph_inference_claimed",
+        "macbook_evidence",
+        "speedup_claim",
+    ] {
+        if receipt["claim_boundary"][flag].as_bool() != Some(false)
+            || baseline["claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
     }
     Ok(())
 }

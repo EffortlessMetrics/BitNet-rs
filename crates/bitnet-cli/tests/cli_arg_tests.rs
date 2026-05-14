@@ -994,6 +994,114 @@ fn mac_regression_fail_on_drift_turns_warning_into_error() {
 }
 
 #[test]
+fn mac_regression_accepts_matching_slm_eval_summary_report()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let baseline = dir.path().join("baseline-summary.json");
+    let observed = dir.path().join("observed-summary.json");
+    std::fs::write(&baseline, serde_json::to_vec_pretty(&slm_eval_summary_report())?)?;
+    std::fs::write(&observed, serde_json::to_vec_pretty(&slm_eval_summary_report())?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_slm_eval_summary"))
+        .stdout(predicate::str::contains("\"warning_count\": 0"))
+        .stdout(predicate::str::contains("\"matched_context\": true"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_fail_on_slm_eval_summary_drift_turns_warning_into_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let baseline = dir.path().join("baseline-summary.json");
+    let observed = dir.path().join("observed-summary.json");
+    let mut receipt = slm_eval_summary_report();
+    receipt["accuracy"]["cases_passed"] = serde_json::json!(8);
+    receipt["speed"]["decode_tok_s_p50"] = serde_json::json!(12.0);
+    std::fs::write(&baseline, serde_json::to_vec_pretty(&slm_eval_summary_report())?)?;
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression",
+            observed_str.as_str(),
+            "--baseline",
+            baseline_str.as_str(),
+            "--fail-on-drift",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Mac regression drift exceeded advisory thresholds"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_rejects_slm_eval_summary_context_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let baseline = dir.path().join("baseline-summary.json");
+    let observed = dir.path().join("observed-summary.json");
+    let mut receipt = slm_eval_summary_report();
+    receipt["model"]["sha256"] =
+        serde_json::json!("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    std::fs::write(&baseline, serde_json::to_vec_pretty(&slm_eval_summary_report())?)?;
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "regression", observed_str.as_str(), "--baseline", baseline_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("model.sha256 mismatch"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_receipts_check_reports_slm_eval_summary_warning()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let baseline = dir.path().join("baseline-summary.json");
+    let observed = dir.path().join("observed-summary.json");
+    let mut receipt = slm_eval_summary_report();
+    receipt["speed"]["ttft_ms_p50"] = serde_json::json!(2080.0);
+    std::fs::write(&baseline, serde_json::to_vec_pretty(&slm_eval_summary_report())?)?;
+    std::fs::write(&observed, serde_json::to_vec_pretty(&receipt)?)?;
+    let baseline_str = baseline.to_string_lossy().into_owned();
+    let observed_str = observed.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "receipts-check",
+            observed_str.as_str(),
+            "--regression-baseline",
+            baseline_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("speed.ttft_ms_p50"))
+        .stdout(predicate::str::contains("\"warning_count\": 1"));
+    Ok(())
+}
+
+#[test]
 fn mac_bitnet_proof_help_documents_blocked_contract() {
     bitnet()
         .args(["mac", "bitnet-proof", "--help"])

@@ -256,7 +256,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL-006"
-status = "ready"
+status = "pr_open"
+pr = 4677
 branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-006-regression"
 stackable = false
 review_mode = "codex_premerge"
