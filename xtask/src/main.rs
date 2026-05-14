@@ -1323,6 +1323,9 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
 }
 
 fn real_main() -> Result<()> {
+    if llm_experience::maybe_dispatch_from_env()? {
+        return Ok(());
+    }
     let cli = Cli::parse();
     match cli.cmd {
         Cmd::DownloadModel {
