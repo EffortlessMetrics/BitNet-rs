@@ -97,6 +97,24 @@ cuda = [
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cuda",
 ]
+opencl = [
+  "bitnet-common/opencl",
+  "bitnet-inference/opencl",
+  "bitnet-kernels/opencl",
+  "bitnet-quantization/opencl",
+  "bitnet-device-probe/opencl",
+  "runtime-profile-core",
+  "bitnet-runtime-bootstrap/runtime-profile-gpu",
+]
+oneapi = [
+  "bitnet-common/oneapi",
+  "bitnet-inference/oneapi",
+  "bitnet-kernels/oneapi",
+  "bitnet-quantization/oneapi",
+  "bitnet-device-probe/oneapi",
+  "runtime-profile-core",
+  "bitnet-runtime-bootstrap/runtime-profile-gpu",
+]
 metal = [
   "bitnet-common/metal",
   "bitnet-inference/metal",

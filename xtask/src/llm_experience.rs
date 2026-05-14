@@ -741,7 +741,7 @@ fn build_cli_command(
         "bitnet-cli".to_string(),
         "--no-default-features".to_string(),
         "--features".to_string(),
-        "cpu".to_string(),
+        "cpu,opencl".to_string(),
         "--".to_string(),
         "--device".to_string(),
         backend.to_string(),
@@ -1444,6 +1444,7 @@ mod tests {
             "a770.bitnet.i2s.qk256",
         );
         assert!(command.windows(2).any(|args| args == ["--device", "intel-arc-a770-opencl"]));
+        assert!(command.windows(2).any(|args| args == ["--features", "cpu,opencl"]));
         assert!(command.iter().any(|arg| arg == "--proof-model-contract"));
         assert!(command.iter().any(|arg| arg == "--proof-kernel-route"));
         assert!(command.iter().any(|arg| arg == "a770.bitnet.i2s.qk256"));
