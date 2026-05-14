@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T05:06:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008YB"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+actor = "codex"
+pr = 4699
+branch = "codex/slm-cpu-008yb-qwen-think-special-tokenizer"
+head_sha = "4c1335b1581cab7aced48192a632eb034dc1ae24"
+summary = "Opened #4699 to preserve Qwen thinking control tokens as GGUF-authoritative BPE special tokens before regenerating no-thinking reference checkpoints."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4699",
+  "target/slm-cpu/qwen3-current-no-think-special-token-first-token.json",
+]
+
+notes = [
+  "The local no-thinking one-token Qwen3 run now records 36 prompt tokens, matching special-tokenized <think> and </think> handling.",
+  "The same local run generated token 17 / 2, so first-token parity remains open and is not claimed by this support slice.",
+  "No known-good checkpoint pack, answer-quality, corpus, warm-session, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, Q4/Q5, or BitNet QK256 claim is made.",
+]

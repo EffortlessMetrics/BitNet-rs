@@ -772,7 +772,8 @@ fn mac_smoke_missing_cache_points_to_model_fetch() {
 }
 
 #[test]
-fn mac_smoke_bitnet_missing_cache_writes_failure_receipt() {
+fn mac_smoke_bitnet_missing_cache_writes_failure_receipt() -> Result<(), Box<dyn std::error::Error>>
+{
     let dir = tempfile::tempdir().expect("tempdir");
     let cache = dir.path().join("models");
     let json_out = dir.path().join("mac-smoke.json");
@@ -798,16 +799,14 @@ fn mac_smoke_bitnet_missing_cache_writes_failure_receipt() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("failure receipt written"))
-        .stderr(predicate::str::contains("bitnet model fetch microsoft-bitnet"));
+        .stderr(predicate::str::contains("tokenizer is missing"));
 
-    let receipt_json: serde_json::Value = serde_json::from_slice(
-        &std::fs::read(answer_receipt).expect("BitNet smoke failure receipt"),
-    )
-    .expect("receipt json");
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(answer_receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "bitnet_apple_m4_mac_ask_failure");
-    assert_eq!(receipt_json["failure"]["stage"], "model_verify_failed");
+    assert_eq!(receipt_json["failure"]["stage"], "tokenizer_missing");
     assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"], false);
     assert_eq!(receipt_json["mac_bitnet_claim_boundary"]["serve_enabled"], false);
+    Ok(())
 }
 
 #[test]

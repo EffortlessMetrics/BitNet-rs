@@ -94,6 +94,8 @@ const GGUF_BPE_SPECIAL_TOKEN_CANDIDATES: &[&str] = &[
     "<|end_header_id|>",
     "<|im_start|>",
     "<|im_end|>",
+    "<think>",
+    "</think>",
 ];
 
 impl RustTokenizer {
@@ -829,6 +831,8 @@ mod tests {
         assert_eq!(tok.token_to_id("<|end_header_id|>"), Some(128007));
         assert_eq!(tok.token_to_id("<|im_start|>"), Some(151644));
         assert_eq!(tok.token_to_id("<|im_end|>"), Some(151645));
+        assert_eq!(tok.token_to_id("<think>"), Some(151667));
+        assert_eq!(tok.token_to_id("</think>"), Some(151668));
     }
 
     #[test]
@@ -874,6 +878,26 @@ mod tests {
     }
 
     #[test]
+    fn bpe_special_split_preserves_qwen_thinking_control_tokens() {
+        let tok = bpe_tokenizer_for_special_tests();
+
+        let segments =
+            tok.split_bpe_special_segments("<|im_start|>assistant\n<think>\n\n</think>\n\n");
+
+        assert_eq!(
+            segments,
+            vec![
+                SpecialSplitSegment::Special(151644),
+                SpecialSplitSegment::Text("assistant\n"),
+                SpecialSplitSegment::Special(151667),
+                SpecialSplitSegment::Text("\n\n"),
+                SpecialSplitSegment::Special(151668),
+                SpecialSplitSegment::Text("\n\n"),
+            ]
+        );
+    }
+
+    #[test]
     fn test_getters() {
         let tok = RustTokenizer {
             kind: GgufTokKind::Bpe,
@@ -904,6 +928,8 @@ mod tests {
         piece_to_id.insert("<|eot_id|>".to_string(), 128009);
         piece_to_id.insert("<|im_start|>".to_string(), 151644);
         piece_to_id.insert("<|im_end|>".to_string(), 151645);
+        piece_to_id.insert("<think>".to_string(), 151667);
+        piece_to_id.insert("</think>".to_string(), 151668);
 
         RustTokenizer {
             kind: GgufTokKind::Bpe,
