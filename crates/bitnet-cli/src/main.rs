@@ -11458,6 +11458,7 @@ fn allocation_audit_backend_supported(identity: &RunBackendIdentity) -> bool {
         && !identity.fallback_used
 }
 
+#[cfg(feature = "full-cli")]
 fn slm_warm_session_artifact_kind(requested_backend: &str) -> &'static str {
     match requested_backend.trim().to_ascii_lowercase().as_str() {
         "apple-m3-air-cpu-neon" => "slm_apple_m3_air_warm_session",
