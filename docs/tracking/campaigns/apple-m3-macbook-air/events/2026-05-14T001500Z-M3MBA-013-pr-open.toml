@@ -1,0 +1,17 @@
+timestamp = "2026-05-14T00:15:00Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-013"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 4665
+head_sha = "014e4c09602336b0bb670d95f5d35b554ab20cf3"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-013-ci-completion-workflow"
+summary = "Opened M3MBA-013 for the staged M3 Air selected long-job workflow."
+
+notes = [
+  "The PR adds a manual-only Apple M3 Air dense SLM evidence workflow with enable_run=false by default.",
+  "Selected runs preserve started jobs with cancel-in-progress=false, preflight disk before model work, and upload phase artifacts with if: always().",
+  "No live M3 model inference, model binary, BitNet local-answer claim, M4 performance claim, or broad Apple Silicon performance claim is introduced.",
+]
