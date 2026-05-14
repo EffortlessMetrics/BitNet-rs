@@ -3106,10 +3106,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-001"
-status = "pr_open"
+status = "merged"
 pr = 4771
+merge_sha = "6685aa34384142598cef140a1ea715ca20b2c188"
 branch = "codex/lunar-lake/LNL258V-ROUTE-001-promotion-ledger"
-head_sha = "ab1822e8d086da2e7397634c2cd05eb9c9f2532f"
+head_sha = "8b4aeaee6130f380f10c1a00a9cf406da84e58d4"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
