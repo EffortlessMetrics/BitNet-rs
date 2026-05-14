@@ -65,10 +65,49 @@ Each supported model should eventually publish one summary:
 ci/hardware/apple-m4-mac-mini/<date>/slm-eval/<model-id>/summary.json
 ```
 
-Required fields include model and tokenizer identity, prompt template, backend,
-fallback status, accuracy buckets, timing percentiles, resident stability, and
-claim boundaries. A passing report must not be treated as a broad model-quality
-benchmark unless the report explicitly records that scope.
+The schema artifact kind is:
+
+```text
+apple_m4_slm_eval_summary
+```
+
+The report must validate through `bitnet mac receipts-check` and record:
+
+- schema version, `machine_id=apple-m4-mac-mini`, model ID, model repo/file,
+  model SHA256, model family, architecture, and quantization;
+- tokenizer source, tokenizer authority, pretokenizer authority, strict
+  tokenizer mode, and prompt template;
+- seeded corpus name, seed, and case count;
+- accuracy totals plus exact, normalized, JSON/schema, numeric tolerance,
+  required-keyword, and forbidden-token pass rates;
+- generated-text and generated-token-ID evidence coverage, generated token
+  total, and source receipt links;
+- first-class speed fields for cold load, tokenizer load, prompt tokenization,
+  prefill, TTFT p50/p90, input token throughput, output/decode throughput,
+  sampling cost, and total wall time;
+- peak memory and resident-session stability fields;
+- dense-SLM-only claim boundaries.
+
+Required claim-boundary flags keep the report narrow:
+
+```text
+dense_slm_only=true
+bounded_seeded_corpus_only=true
+broad_model_quality_claim=false
+broad_performance_claim=false
+bitnet_evidence=false
+full_metal_inference_claimed=false
+qk256_apple_claimed=false
+neural_engine_claimed=false
+mpsgraph_inference_claimed=false
+macbook_evidence=false
+speedup_claim=false
+```
+
+A passing report is a bounded seeded-corpus dense SLM artifact. It is not a
+broad model-quality benchmark, broad Apple Silicon performance claim, BitNet
+proof, full Metal inference proof, QK256 claim, Neural Engine claim, MPSGraph
+claim, or MacBook claim.
 
 ## CI Tiers
 

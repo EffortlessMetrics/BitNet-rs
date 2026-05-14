@@ -1,0 +1,13 @@
+timestamp = "2026-05-13T23:54:27Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started per-model Apple M4 dense SLM eval summary schema validation under mac receipts-check.",
+  "The scope is schema and fixture validation only; no live supported-model matrix or runtime performance run is included.",
+  "Claim boundaries remain narrow: no broad model quality, broad performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook claim.",
+]
