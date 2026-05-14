@@ -36,19 +36,19 @@ use std::{
 };
 use walkdir::WalkDir;
 
-mod campaign;
 mod bench_receipt;
-mod cpp_setup_auto;
+mod campaign;
 mod claims;
+mod cpp_setup_auto;
 mod crossval;
 pub mod ffi;
 mod gates;
 mod grid_check;
 mod hardware;
-mod llm_experience;
-mod model_contract;
 #[allow(dead_code)]
 mod health_check;
+mod llm_experience;
+mod model_contract;
 #[allow(dead_code)]
 mod model_info;
 mod model_registry;
@@ -1147,6 +1147,9 @@ enum ClaimsCmd {
             default_value = "ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json"
         )]
         a770_capability_matrix: PathBuf,
+        /// Optional LLM experience receipt required for promoted A770 performance claims.
+        #[arg(long)]
+        llm_experience_receipt: Option<PathBuf>,
         /// Output format: human or json.
         #[arg(long, default_value = "human")]
         format: String,
@@ -1419,9 +1422,17 @@ fn real_main() -> Result<()> {
             }
         },
         Cmd::Claims { cmd } => match cmd {
-            ClaimsCmd::Verify { ledger, a770_capability_matrix, format } => {
-                claims::verify(&ledger, &a770_capability_matrix, &format)
-            }
+            ClaimsCmd::Verify {
+                ledger,
+                a770_capability_matrix,
+                llm_experience_receipt,
+                format,
+            } => claims::verify(
+                &ledger,
+                &a770_capability_matrix,
+                llm_experience_receipt.as_deref(),
+                &format,
+            ),
             ClaimsCmd::Docs { ledger, output, check, format } => {
                 claims::docs(&ledger, &output, check, &format)
             }
