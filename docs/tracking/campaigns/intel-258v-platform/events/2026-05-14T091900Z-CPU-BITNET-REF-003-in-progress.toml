@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T09:19:00Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-REF-003"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/CPU-BITNET-REF-003-direct-reference-tokens"
+summary = "Started CPU-BITNET-REF-003 to record direct Microsoft BitNet.cpp generated-token IDs and first-token top-k/logit evidence for the fixed 258V prompts."
+
+artifacts = [
+  "ci/bitnet_cpp_server_token_logits.patch",
+  "scripts/bitnet_cpp_reference_boundary.py",
+  "ci/hardware/intel-258v/2026-05-08/external-first-token-reference-direct.json",
+  "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-direct.json",
+]
+
+notes = [
+  "The local BitNet.cpp llama-server boundary is patched to expose tok_id and logit fields in completion probabilities.",
+  "The direct reference artifact records generated-token IDs and first-token top-k/logit evidence for the four fixed 258V prompts.",
+  "The classifier is rerun against the direct reference artifact and corrected scalar/AVX2 CPU receipts while preserving no answer-quality, speed, Arc/NPU, QK256, or full-correctness claims.",
+]

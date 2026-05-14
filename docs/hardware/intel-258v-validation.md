@@ -1406,3 +1406,80 @@ CPU speed is proven.
 Arc 140V or Intel NPU execution is proven.
 Packed QK256 decode semantics are fixed.
 ```
+
+## CPU-BITNET-REF-003 Direct BitNet.cpp Token Boundary
+
+Artifacts:
+
+```text
+ci/hardware/intel-258v/2026-05-08/external-first-token-reference-direct.json
+ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-direct.json
+```
+
+CPU-BITNET-REF-003 records the direct Microsoft BitNet.cpp token boundary for
+the fixed 258V prompts. A local BitNet.cpp `llama-server` build is patched with:
+
+```text
+ci/bitnet_cpp_server_token_logits.patch
+```
+
+The patch exposes `tok_id` and raw candidate `logit` fields in the server
+`completion_probabilities` response. The helper script:
+
+```text
+scripts/bitnet_cpp_reference_boundary.py
+```
+
+starts that patched local server, uses the post-prompt-fix HF prompt/token
+reference as the prompt authority, and records BitNet.cpp prompt token IDs,
+generated token IDs, first generated token IDs, decoded first tokens, and
+first-token top-k token IDs/probabilities/raw logits.
+
+Current direct reference result:
+
+```text
+cases_total = 4
+cases_with_reference_generated_token_ids = 4
+cases_with_reference_first_token_topk_logits = 4
+reference_generated_token_ids_available = true
+reference_logits_available = true
+boundary_classification = direct_reference_generated_token_ids_and_first_token_topk_logits_recorded
+```
+
+The first-token divergence classifier is rerun against that direct reference
+artifact and the corrected scalar/AVX2 CPU receipts.
+
+Current classifier result:
+
+```text
+validation.passed = true
+cases_total = 4
+prompt_token_exact_matches = 4
+cases_with_reference_generated_token_ids = 4
+cases_with_reference_first_token_topk_logits = 4
+reference_generated_token_ids_available = true
+reference_logits_available = true
+scalar_avx2_parity_passed = true
+classification = no_divergence_at_first_generated_token
+first_divergence_stage = none
+```
+
+Allowed claim:
+
+```text
+Direct BitNet.cpp generated-token IDs and first-token top-k/logit evidence are
+recorded for the fixed 258V prompts, and the first generated token matches the
+corrected 258V scalar and AVX2 CPU receipts for all four cases.
+```
+
+Not allowed:
+
+```text
+Broad BitNet answer quality is proven.
+Full generated-token sequence parity is proven beyond the recorded boundary.
+BitNet-rs first-token logits parity against BitNet.cpp is proven.
+CPU speed or sustained throughput is proven.
+Arc 140V or Intel NPU execution is proven.
+QK256/I2_S behavior changed.
+Full model correctness is proven.
+```

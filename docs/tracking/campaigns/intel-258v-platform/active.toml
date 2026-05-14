@@ -3217,6 +3217,65 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CPU-BITNET-REF-003"
+status = "in_progress"
+branch = "codex/lunar-lake/CPU-BITNET-REF-003-direct-reference-tokens"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-BITNET-REF-002"]
+acceptance = "Record direct Microsoft BitNet.cpp generated-token IDs and first-token top-k/logit evidence for the fixed 258V prompts using a patched local llama-server boundary, then rerun the first-token divergence classifier so direct reference token evidence validates against the corrected 258V scalar/AVX2 CPU receipts without claiming broad answer quality, speed, Arc/NPU execution, QK256 changes, or full model correctness."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/first_token_divergence.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::first_token_divergence::tests -- --nocapture",
+  "python -m py_compile scripts/bitnet_cpp_reference_boundary.py",
+  "python scripts/bitnet_cpp_reference_boundary.py --help",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/external-first-token-reference-direct.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-direct.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/first_token_divergence.rs",
+  "scripts/bitnet_cpp_reference_boundary.py",
+  "ci/bitnet_cpp_server_token_logits.patch",
+  "ci/hardware/intel-258v/2026-05-08/external-first-token-reference-direct.json",
+  "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-direct.json",
+  "docs/hardware/intel-258v-validation.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "The fixed 258V BitNet prompts now have direct Microsoft BitNet.cpp generated-token IDs and first-token top-k/logit evidence recorded from the patched local llama-server boundary.",
+  "The first-token divergence classifier validates the direct reference artifact and records no first-generated-token divergence against the corrected 258V scalar/AVX2 CPU receipts.",
+  "The reference runner patch needed to expose tok_id and logit fields is documented for local reproduction.",
+]
+must_not_claim = [
+  "Broad BitNet answer quality is proven.",
+  "Full generated-token sequence parity is proven beyond the recorded boundary.",
+  "BitNet-rs first-token logits parity against BitNet.cpp is proven.",
+  "CPU speed or sustained throughput is proven.",
+  "Arc 140V execution or acceleration is involved.",
+  "Intel NPU execution or acceleration is involved.",
+  "QK256/I2_S behavior is changed.",
+  "Full model correctness is proven.",
+]
+
+[[work_item]]
 id = "CPU-BITNET-EMBD-001"
 status = "merged"
 pr = 4684
