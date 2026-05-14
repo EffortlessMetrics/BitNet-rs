@@ -3218,8 +3218,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-REF-003"
-status = "pr_open"
+status = "merged"
 pr = 4715
+merge_sha = "0a7de1cdb4d7957a43f786b08d001da2a3c467f1"
 head_sha = "ac5c03b9334bffa93ec2f9808ce5b08b4966b5cf"
 branch = "codex/lunar-lake/CPU-BITNET-REF-003-direct-reference-tokens"
 stackable = false
