@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T03:20:17Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-004"
+event = "merged"
+pr = 4686
+merge_sha = "a38c63fb13764b2265b97d4906362b568bb704c0"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "Merged PR #4686 for M4-BITNET-ASK-004 BitNet `bitnet mac ask` operator repair guidance.",
+  "The merged route prints compact stderr repair steps for accepted tokenizer authority, tokenizer SHA checks, model cache fetch/verify, explicit GGUF verification, and `bitnet mac models` cache inspection while keeping durable failure receipts.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad performance, and speedup claims remain disabled.",
+]
