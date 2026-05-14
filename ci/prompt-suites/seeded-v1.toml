@@ -1,0 +1,238 @@
+schema_version = 1
+suite_id = "seeded-v1"
+description = "Deterministic prompt breadth suite for BitNet-rs LLM experience receipts."
+template = "llama3-chat"
+add_bos = true
+parse_special = true
+manual_review_allowed_for_claims = false
+required_categories = [
+  "direct_factual_qa",
+  "short_explanation",
+  "structured_json",
+  "context_changes_answer",
+  "long_answer_qa",
+  "summarization",
+  "instruction_following",
+  "simple_code_reasoning",
+  "table_extraction_from_text",
+  "contradiction_handling",
+  "multi_turn_memory_within_prompt",
+  "stop_repetition_stress",
+]
+
+[anti_fakery]
+require_seed_binding = true
+require_answer_binding = true
+require_name_slots = true
+minimum_slot_values = 3
+min_generation_policy_coverage = 1.0
+min_answer_bound_surface_coverage = 1.0
+min_required_surface_category_coverage = 1.0
+
+[[case]]
+id = "seeded-v1-000001"
+seed = 1001
+category = "direct_factual_qa"
+difficulty = "small_model_reasonable"
+oracle = "regex"
+max_new_tokens = 48
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must name the requested capital and avoid unrelated countries"
+required_surface_category = "factual_entity"
+expected_behavior = "Answer the capital directly."
+prompt = "{analyst} asks: What is the capital of Japan? Answer in one short sentence."
+name_slots = [
+  { slot = "analyst", values = ["Mira", "Tomas", "Ilya", "Rhea"] },
+]
+
+[[case]]
+id = "seeded-v1-000002"
+seed = 1002
+category = "short_explanation"
+difficulty = "small_model_reasonable"
+oracle = "semantic_nonempty"
+max_new_tokens = 96
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must explain cache reuse and repeated work"
+required_surface_category = "causal_explanation"
+expected_behavior = "Explain caching in two concise sentences."
+prompt = "{engineer} is reviewing {system}. Explain why caching can speed up repeated work in two short sentences."
+name_slots = [
+  { slot = "engineer", values = ["Nia", "Oren", "Pavel", "Sana"] },
+  { slot = "system", values = ["Atlas", "Beacon", "Cedar", "Delta"] },
+]
+
+[[case]]
+id = "seeded-v1-000003"
+seed = 1003
+category = "structured_json"
+difficulty = "small_model_reasonable"
+oracle = "json_schema"
+max_new_tokens = 128
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must return only JSON with task and priority keys"
+required_surface_category = "format_compliance"
+expected_behavior = "Return valid compact JSON with no prose."
+prompt = "{planner} needs a JSON object with keys task and priority for this request: back up the index before migration. Return only JSON."
+name_slots = [
+  { slot = "planner", values = ["Asha", "Bram", "Cleo", "Dax"] },
+]
+
+[[case]]
+id = "seeded-v1-000004"
+seed = 1004
+category = "context_changes_answer"
+difficulty = "small_model_reasonable"
+oracle = "semantic_pair_difference"
+max_new_tokens = 48
+temperature = 0.0
+requires_pair = true
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "first answer must indicate miss, paired answer must indicate hit"
+required_surface_category = "context_sensitivity"
+expected_behavior = "Answer changes when the cache context changes."
+prompt = "Context for {operator}: The cache is empty. Should the next lookup hit or miss?"
+pair_prompt = "Context for {operator}: The cache already contains the requested key. Should the next lookup hit or miss?"
+name_slots = [
+  { slot = "operator", values = ["Eli", "Faye", "Gita", "Hale"] },
+]
+
+[[case]]
+id = "seeded-v1-000005"
+seed = 1005
+category = "long_answer_qa"
+difficulty = "small_model_reasonable"
+oracle = "semantic_nonempty"
+max_new_tokens = 192
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must include at least three practical setup steps"
+required_surface_category = "procedural_answer"
+expected_behavior = "Give a useful multi-step answer."
+prompt = "{maintainer} is setting up local model evaluation. List three practical steps to make the run repeatable."
+name_slots = [
+  { slot = "maintainer", values = ["Iris", "Jules", "Kavi", "Lena"] },
+]
+
+[[case]]
+id = "seeded-v1-000006"
+seed = 1006
+category = "summarization"
+difficulty = "small_model_reasonable"
+oracle = "structural"
+max_new_tokens = 96
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must preserve cause and result from the source paragraph"
+required_surface_category = "source_grounding"
+expected_behavior = "Summarize the paragraph in one sentence."
+prompt = "Summarize for {reviewer}: The build failed because the tokenizer file was missing. After restoring the tokenizer, the same command loaded the model and produced output."
+name_slots = [
+  { slot = "reviewer", values = ["Marek", "Nora", "Omar", "Priya"] },
+]
+
+[[case]]
+id = "seeded-v1-000007"
+seed = 1007
+category = "instruction_following"
+difficulty = "small_model_reasonable"
+oracle = "structural"
+max_new_tokens = 96
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must produce exactly two bullets"
+required_surface_category = "instruction_constraint"
+expected_behavior = "Return exactly two bullet points."
+prompt = "{lead} asks for exactly two bullet points about why explicit fallback reporting matters."
+name_slots = [
+  { slot = "lead", values = ["Quinn", "Ravi", "Sela", "Tariq"] },
+]
+
+[[case]]
+id = "seeded-v1-000008"
+seed = 1008
+category = "simple_code_reasoning"
+difficulty = "small_model_reasonable"
+oracle = "regex"
+max_new_tokens = 96
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must identify the off-by-one result"
+required_surface_category = "code_reasoning"
+expected_behavior = "Explain the final value."
+prompt = "{developer} runs: let mut total = 0; for i in 0..3 { total += i; } What is total and why?"
+name_slots = [
+  { slot = "developer", values = ["Uma", "Vik", "Wen", "Yara"] },
+]
+
+[[case]]
+id = "seeded-v1-000009"
+seed = 1009
+category = "table_extraction_from_text"
+difficulty = "small_model_reasonable"
+oracle = "structural"
+max_new_tokens = 128
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must extract the owner and status pairs from text"
+required_surface_category = "information_extraction"
+expected_behavior = "Return a compact table or two clear rows."
+prompt = "Extract owner and status for {coordinator}. Item Alpha is owned by Nina and is ready. Item Beta is owned by Omar and is blocked."
+name_slots = [
+  { slot = "coordinator", values = ["Zane", "Ada", "Bela", "Ciro"] },
+]
+
+[[case]]
+id = "seeded-v1-000010"
+seed = 1010
+category = "contradiction_handling"
+difficulty = "small_model_reasonable"
+oracle = "semantic_nonempty"
+max_new_tokens = 96
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must say the notes conflict instead of choosing both"
+required_surface_category = "uncertainty_handling"
+expected_behavior = "Acknowledge contradiction."
+prompt = "{auditor} sees two notes: the package was delivered Monday, and the same package was never delivered. What should be concluded?"
+name_slots = [
+  { slot = "auditor", values = ["Dina", "Enzo", "Farah", "Glen"] },
+]
+
+[[case]]
+id = "seeded-v1-000011"
+seed = 1011
+category = "multi_turn_memory_within_prompt"
+difficulty = "small_model_reasonable"
+oracle = "semantic_nonempty"
+max_new_tokens = 96
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must remember the color stated earlier in the prompt"
+required_surface_category = "in_prompt_memory"
+expected_behavior = "Use the earlier color."
+prompt = "User {user_name}: My deployment tag color is teal. Assistant: Noted. User {user_name}: What color did I say?"
+name_slots = [
+  { slot = "user_name", values = ["Hana", "Ivan", "Jory", "Kira"] },
+]
+
+[[case]]
+id = "seeded-v1-000012"
+seed = 1012
+category = "stop_repetition_stress"
+difficulty = "small_model_reasonable"
+oracle = "repetition_guard"
+max_new_tokens = 128
+temperature = 0.0
+generation_policy = "deterministic_greedy"
+answer_bound_surface = "must avoid repeating the same sentence more than twice"
+required_surface_category = "stop_repetition"
+expected_behavior = "Give a bounded answer without looping."
+stop_expectation = "stop_token_or_max_new_tokens_without_loop"
+prompt = "{tester} asks for a one-paragraph explanation of why a receipt should include not-claims. Do not repeat sentences."
+name_slots = [
+  { slot = "tester", values = ["Lio", "Mina", "Noel", "Orla"] },
+]

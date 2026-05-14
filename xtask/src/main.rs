@@ -49,6 +49,7 @@ mod health_check;
 #[allow(dead_code)]
 mod model_info;
 mod model_registry;
+mod prompt_suite;
 mod tokenizers;
 mod trace_diff;
 
@@ -286,6 +287,13 @@ enum Cmd {
     ModelContract {
         #[command(subcommand)]
         cmd: ModelContractCmd,
+    },
+
+    /// Verify and render deterministic prompt-suite artifacts.
+    #[command(name = "prompt-suite")]
+    PromptSuite {
+        #[command(subcommand)]
+        cmd: PromptSuiteCmd,
     },
 
     /// Verify hardware claim rails and resolve device-specific kernel routes.
@@ -1037,6 +1045,31 @@ enum ModelContractCmd {
 }
 
 #[derive(Subcommand)]
+enum PromptSuiteCmd {
+    /// Verify deterministic prompt-suite policy.
+    Verify {
+        /// Prompt suite TOML file.
+        #[arg(long, default_value = "ci/prompt-suites/seeded-v1.toml")]
+        suite: PathBuf,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+    /// Render prompt-suite cases and emit stable prompt/token hashes.
+    Render {
+        /// Prompt suite TOML file.
+        #[arg(long, default_value = "ci/prompt-suites/seeded-v1.toml")]
+        suite: PathBuf,
+        /// Optional model contract for tokenizer-backed token ID hashes.
+        #[arg(long)]
+        model_contract: Option<PathBuf>,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum HardwareCmd {
     /// Intel Arc A770 hardware claim checks.
     A770 {
@@ -1221,6 +1254,12 @@ fn real_main() -> Result<()> {
         Cmd::ModelContract { cmd } => match cmd {
             ModelContractCmd::Lint { contract_dir, format, allow_missing_assets } => {
                 model_contract::lint_contracts(&contract_dir, &format, allow_missing_assets)
+            }
+        },
+        Cmd::PromptSuite { cmd } => match cmd {
+            PromptSuiteCmd::Verify { suite, format } => prompt_suite::verify_suite(&suite, &format),
+            PromptSuiteCmd::Render { suite, model_contract, format } => {
+                prompt_suite::render_suite(&suite, model_contract.as_deref(), &format)
             }
         },
         Cmd::Hardware { cmd } => match cmd {
