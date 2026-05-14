@@ -367,8 +367,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-005A"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-005A-microsoft-2b-identity"
+pr = 4795
+head_sha = "98e19583b66292535051bc6ea3d3b17e81180a56"
+merge_sha = "6e3fa444e48a38daa91504c6988587b09cda23f9"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

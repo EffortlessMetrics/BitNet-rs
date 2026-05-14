@@ -1,0 +1,24 @@
+timestamp = "2026-05-14T22:20:31Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-005A"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-005A-microsoft-2b-identity"
+pr = 4795
+head_sha = "98e19583b66292535051bc6ea3d3b17e81180a56"
+merge_sha = "6e3fa444e48a38daa91504c6988587b09cda23f9"
+summary = "Merged the M3 Air official Microsoft 2B I2_S identity and hash evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4795",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-identity.json",
+  "docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md",
+]
+
+notes = [
+  "The merged evidence records the official Microsoft BitNet 2B I2_S GGUF revision, filename, size, SHA256, local cache root, storage before and after download, and shared answer-gate and compatibility references.",
+  "The cached artifact is retained for M3MBA-005B tokenizer authority and M3MBA-005C reference output decision.",
+  "This identity item does not accept the artifact and makes no Apple answer-readiness, M4 Mac mini proof, Apple Metal inference, MPSGraph model inference, Neural Engine execution, QK256-on-Apple, speedup, or broad Apple Silicon performance claim.",
+]
