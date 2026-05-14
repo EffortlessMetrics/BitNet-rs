@@ -53,6 +53,33 @@ fn forward_qk256_supports_rank3_input() {
 }
 
 #[test]
+fn forward_qk256_rank3_preserves_varied_token_rows() {
+    let device = Device::Cpu;
+    let mut input_rows = Vec::with_capacity(2 * 2 * 256);
+    for value in [1.0f32, 2.0, -1.0, 0.5] {
+        input_rows.extend(std::iter::repeat_n(value, 256));
+    }
+    let input = Tensor::from_vec(input_rows, (2, 2, 256), &device).unwrap();
+    let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
+
+    let out = forward_qk256(&input, &qk, "layers.0.feed_forward.up_proj.weight.qk256_qs").unwrap();
+    assert_eq!(out.dims(), &[2, 2, 1]);
+
+    let out_vals = out.to_vec3::<f32>().unwrap();
+    let expected = [[[256.0f32], [512.0]], [[-256.0], [128.0]]];
+    for (batch_idx, batch) in out_vals.iter().enumerate() {
+        for (token_idx, token) in batch.iter().enumerate() {
+            assert!(
+                (token[0] - expected[batch_idx][token_idx][0]).abs() < 1e-4,
+                "rank3 QK256 row mismatch at batch {batch_idx}, token {token_idx}: expected {}, actual {}",
+                expected[batch_idx][token_idx][0],
+                token[0]
+            );
+        }
+    }
+}
+
+#[test]
 fn forward_qk256_rejects_dimension_mismatch() {
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 128], (1, 128), &device).unwrap();
