@@ -466,7 +466,9 @@ must_not_claim = [
 [[work_item]]
 id = "M3MBA-005C"
 status = "in_progress"
+pr = 4811
 branch = "codex/apple-m3-macbook-air/M3MBA-005C-microsoft-2b-reference-output"
+head_sha = "0a34dc2ac361299c232129f62027734bf8985030"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
