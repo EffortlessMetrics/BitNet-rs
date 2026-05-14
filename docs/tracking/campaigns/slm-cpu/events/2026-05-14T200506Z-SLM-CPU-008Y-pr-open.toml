@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T20:05:06Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008Y"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+actor = "codex"
+pr = 4778
+branch = "codex/slm-cpu-008y-reference-checkpoints"
+head_sha = "a48b1b548b20704be3fc221bc2885a4aaea9fef1"
+summary = "Opened #4778 to add the real Qwen3 internal checkpoint comparison artifact and validation receipt."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4778",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-reference-checkpoint-compare.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-reference-checkpoint-validation.json",
+]
+
+notes = [
+  "The checkpoint artifact uses a non-interactive candle-transformers Qwen3 reference harness against the verified Qwen3-0.6B Q8_0 model SHA.",
+  "The validator passes and identifies the first required-stage drift at attention.q_proj with classification shared_transformer_math_checkpoint_values.",
+  "No first-token parity, answer-quality, corpus, warm-session, throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, Q4/Q5, or BitNet QK256 claim is made.",
+]

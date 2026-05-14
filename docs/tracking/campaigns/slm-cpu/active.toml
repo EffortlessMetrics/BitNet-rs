@@ -1020,7 +1020,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008Y"
-status = "ready"
+status = "merged"
+pr = 4778
+merge_sha = "a7f65ca5008a4fedaa3e352b2fe368a639dcfea2"
 branch = "codex/slm-cpu-008y-reference-checkpoints"
 stackable = false
 review_mode = "codex_premerge"
@@ -1097,6 +1099,56 @@ may_claim = [
 ]
 must_not_claim = [
   "A real known-good Qwen3 internal checkpoint artifact is available.",
+  "Qwen first-token parity is restored.",
+  "Qwen answer quality is proven.",
+  "Qwen3 tiny answer corpus is green.",
+  "Multi-token stability is proven.",
+  "Warm-session usability is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved.",
+  "Qwen3.5 or hybrid Qwen architecture support is in scope.",
+  "Q4/Q5 quant expansion is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-008Z"
+status = "ready"
+branch = "codex/slm-cpu-008z-qwen3-qproj-drift"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-008Y"]
+acceptance = "Use the SLM-CPU-008Y checkpoint artifact to fix or further localize the first required-stage Qwen3 drift at `attention.q_proj` for the verified Qwen3-0.6B Q8_0 model SHA and exact rendered prompt. The slice must compare the bitnet-rs projection path against the known-good reference checkpoint evidence and identify whether the remaining fault is q_proj input, q_proj weight/dequantization, bias handling, matmul orientation, accumulation precision, or tensor mapping. It must not claim first-token parity, answer quality, tiny corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu qwen",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu q_proj",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- reference-compare --artifact ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-reference-checkpoint-compare.json --json-out target/slm-cpu/qwen3-reference-checkpoint-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The first required-stage Qwen3 drift at `attention.q_proj` is fixed or narrowed to a specific projection-path subcomponent after merge.",
+  "The SLM-CPU-008Y checkpoint artifact remains the reference evidence for the Qwen3 first-token correctness lane.",
+]
+must_not_claim = [
   "Qwen first-token parity is restored.",
   "Qwen answer quality is proven.",
   "Qwen3 tiny answer corpus is green.",

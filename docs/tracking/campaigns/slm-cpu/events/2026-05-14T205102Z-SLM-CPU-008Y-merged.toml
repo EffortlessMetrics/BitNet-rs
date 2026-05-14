@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T20:51:02Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008Y"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4778
+merge_sha = "a7f65ca5008a4fedaa3e352b2fe368a639dcfea2"
+branch = "codex/slm-cpu-008y-reference-checkpoints"
+summary = "Merged #4778 with the Qwen3 reference checkpoint comparison artifact and validation receipt."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4778",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-reference-checkpoint-compare.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-reference-checkpoint-validation.json",
+]
+
+notes = [
+  "The validation receipt passes and reports comparison.passed=false because the artifact is diagnostic.",
+  "The first required-stage drift is attention.q_proj with classification shared_transformer_math_checkpoint_values.",
+  "This merge does not claim Qwen first-token parity, answer quality, tiny corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]
