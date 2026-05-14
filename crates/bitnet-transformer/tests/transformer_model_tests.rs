@@ -13,7 +13,7 @@
 #![cfg(feature = "cpu")]
 
 use bitnet_common::config::{ActivationType, BitNetConfig, ModelConfig, NormType};
-use bitnet_transformer::{KVCache, TransformerModel};
+use bitnet_transformer::{KVCache, Qk256DispatchBackend, TransformerModel};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use std::collections::HashMap;
@@ -56,6 +56,60 @@ fn zero_2x2(device: &Device) -> candle_core::Result<Tensor> {
 
 fn ones_2(device: &Device) -> candle_core::Result<Tensor> {
     Tensor::from_vec(vec![1.0f32, 1.0], 2usize, device)
+}
+
+fn ones_256(device: &Device) -> candle_core::Result<Tensor> {
+    Tensor::from_vec(vec![1.0f32; 256], 256usize, device)
+}
+
+fn zero_matrix(rows: usize, cols: usize, device: &Device) -> candle_core::Result<Tensor> {
+    Tensor::zeros((rows, cols), DType::F32, device)
+}
+
+fn identity_matrix(dim: usize, device: &Device) -> candle_core::Result<Tensor> {
+    let mut values = vec![0.0f32; dim * dim];
+    for idx in 0..dim {
+        values[idx * dim + idx] = 1.0;
+    }
+    Tensor::from_vec(values, (dim, dim), device)
+}
+
+fn qk256_row_with_codes(codes: &[(usize, u8)]) -> Vec<u8> {
+    let mut unpacked = [2u8; 256];
+    for &(idx, code) in codes {
+        assert!(idx < unpacked.len(), "QK256 test code index out of range");
+        assert!(code <= 3, "QK256 test code must fit in two bits");
+        unpacked[idx] = code;
+    }
+
+    let mut packed = vec![0u8; 64];
+    for (byte_idx, chunk) in unpacked.chunks_exact(4).enumerate() {
+        packed[byte_idx] = chunk[0] | (chunk[1] << 2) | (chunk[2] << 4) | (chunk[3] << 6);
+    }
+    packed
+}
+
+fn repeated_qk256_tensor(
+    rows: usize,
+    row_bytes: &[u8],
+    device: &Device,
+) -> candle_core::Result<Tensor> {
+    let mut bytes = Vec::with_capacity(rows * row_bytes.len());
+    for _ in 0..rows {
+        bytes.extend_from_slice(row_bytes);
+    }
+    Tensor::from_vec(bytes, (rows, row_bytes.len()), device)
+}
+
+fn qk256_tensor_from_rows(row_bytes: &[Vec<u8>], device: &Device) -> candle_core::Result<Tensor> {
+    let row_stride = row_bytes.first().map(Vec::len).unwrap_or(0);
+    assert!(row_stride > 0, "QK256 test tensor must have at least one row");
+    let mut bytes = Vec::with_capacity(row_bytes.len() * row_stride);
+    for row in row_bytes {
+        assert_eq!(row.len(), row_stride, "QK256 test tensor row stride mismatch");
+        bytes.extend_from_slice(row);
+    }
+    Tensor::from_vec(bytes, (row_bytes.len(), row_stride), device)
 }
 
 fn prompt_sensitive_model() -> anyhow::Result<TransformerModel> {
@@ -110,6 +164,103 @@ fn prompt_sensitive_model() -> anyhow::Result<TransformerModel> {
 
     let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
     Ok(TransformerModel::new(cfg, vb)?)
+}
+
+fn qk256_prompt_sensitive_model() -> anyhow::Result<TransformerModel> {
+    let device = Device::Cpu;
+    let cfg = BitNetConfig {
+        model: ModelConfig {
+            hidden_size: 256,
+            vocab_size: 4,
+            num_heads: 1,
+            num_key_value_heads: 1,
+            num_layers: 1,
+            intermediate_size: 256,
+            max_position_embeddings: 8,
+            rms_norm_eps: Some(1e-6),
+            norm_type: NormType::RmsNorm,
+            activation_type: ActivationType::Relu2,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    let mut embed = vec![0.0f32; 4 * 256];
+    embed[256] = 1.0; // token 1: history A
+    embed[(2 * 256) + 1] = 1.0; // token 2: history B
+    embed[(3 * 256) + 2] = 1.0; // token 3: shared current token
+
+    let mut tensors = HashMap::new();
+    tensors.insert("embed_tokens.weight".to_string(), Tensor::from_vec(embed, (4, 256), &device)?);
+
+    let mut lm_head = vec![0.0f32; 4 * 256];
+    lm_head[256] = 1.0;
+    lm_head[256 + 1] = -1.0;
+    lm_head[2 * 256] = -1.0;
+    lm_head[(2 * 256) + 1] = 1.0;
+    lm_head[(3 * 256) + 2] = 1.0;
+    tensors.insert("lm_head.weight".to_string(), Tensor::from_vec(lm_head, (4, 256), &device)?);
+
+    for proj in ["q_proj", "k_proj", "v_proj"] {
+        tensors
+            .insert(format!("layers.0.attention.{proj}.weight"), zero_matrix(256, 256, &device)?);
+    }
+    tensors.insert("layers.0.attention.o_proj.weight".to_string(), identity_matrix(256, &device)?);
+
+    for norm in [
+        "layers.0.attention_norm.weight",
+        "layers.0.post_attention_layernorm.weight",
+        "final_norm.weight",
+    ] {
+        tensors.insert(norm.to_string(), ones_256(&device)?);
+    }
+
+    for proj in ["gate_proj", "up_proj", "down_proj"] {
+        tensors.insert(
+            format!("layers.0.feed_forward.{proj}.weight"),
+            zero_matrix(256, 256, &device)?,
+        );
+    }
+
+    let q_pos_row = qk256_row_with_codes(&[(2, 3)]);
+    let q_neg_row = qk256_row_with_codes(&[(2, 0)]);
+    let mut q_rows = Vec::with_capacity(256);
+    for row_idx in 0..256 {
+        if row_idx % 2 == 0 {
+            q_rows.push(q_pos_row.clone());
+        } else {
+            q_rows.push(q_neg_row.clone());
+        }
+    }
+    let history_sensitive_row = qk256_row_with_codes(&[(0, 3), (1, 0), (2, 3)]);
+    let v_history_a_row = qk256_row_with_codes(&[(0, 3), (1, 0), (2, 2)]);
+    let v_history_b_row = qk256_row_with_codes(&[(0, 0), (1, 3), (2, 2)]);
+    let v_neutral_row = qk256_row_with_codes(&[(2, 2)]);
+    let mut v_rows = vec![v_neutral_row; 256];
+    v_rows[0] = v_history_a_row;
+    v_rows[1] = v_history_b_row;
+
+    let mut raw_tensors = HashMap::new();
+    raw_tensors.insert(
+        "layers.0.attention.q_proj.weight.qk256_qs".to_string(),
+        qk256_tensor_from_rows(&q_rows, &device)?,
+    );
+    raw_tensors.insert(
+        "layers.0.attention.k_proj.weight.qk256_qs".to_string(),
+        repeated_qk256_tensor(256, &history_sensitive_row, &device)?,
+    );
+    raw_tensors.insert(
+        "layers.0.attention.v_proj.weight.qk256_qs".to_string(),
+        qk256_tensor_from_rows(&v_rows, &device)?,
+    );
+
+    let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+    Ok(TransformerModel::new_with_tensors_and_qk256_backend(
+        cfg,
+        vb,
+        raw_tensors,
+        Qk256DispatchBackend::Cpu,
+    )?)
 }
 
 fn prefill_last_logits(model: &TransformerModel, tokens: &[u32]) -> anyhow::Result<Vec<f32>> {
@@ -269,6 +420,34 @@ fn test_prefill_last_logits_are_prompt_history_sensitive() -> anyhow::Result<()>
     assert!(
         max_delta > 1e-3,
         "history-sensitive fixture should produce a material logit delta, got {max_delta}"
+    );
+
+    Ok(())
+}
+
+/// The prompt-history invariant must also hold when Q/K/V use raw QK256
+/// projection tensors. This guards the integration path from `raw_tensors`
+/// through transformer attention, not just the standalone QK256 dispatch crate.
+#[test]
+fn test_qk256_prefill_last_logits_are_prompt_history_sensitive() -> anyhow::Result<()> {
+    let model = qk256_prompt_sensitive_model()?;
+
+    let logits_history_a = prefill_last_logits(&model, &[1, 3])?;
+    let logits_history_b = prefill_last_logits(&model, &[2, 3])?;
+
+    assert_ne!(
+        logits_history_a, logits_history_b,
+        "QK256-backed last-position logits must depend on earlier prompt history"
+    );
+
+    let max_delta = logits_history_a
+        .iter()
+        .zip(logits_history_b.iter())
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0f32, f32::max);
+    assert!(
+        max_delta > 1e-3,
+        "QK256-backed history-sensitive fixture should produce a material logit delta, got {max_delta}"
     );
 
     Ok(())
