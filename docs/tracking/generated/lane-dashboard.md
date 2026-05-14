@@ -5,7 +5,7 @@
 |---|---|---|---|
 | amd-cpu-baselines | AMD CPU baselines | AMD5700X-003 | These lanes are CPU proof lanes, not accelerator lanes. |
 | apple-bitnet-artifact-sweep | Apple BitNet artifact sweep | ABAS-001 | Use MacBook first for larger artifact sweeps; do not manufacture MacBook receipts from the M4 Mac mini. |
-| apple-m3-macbook-air | Apple M3 MacBook Air | M3MBA-005A | This is the Apple M3 MacBook Air lane, not the M4 Mac mini product, performance, or strict-proof lane. |
+| apple-m3-macbook-air | Apple M3 MacBook Air | M3MBA-005B | This is the Apple M3 MacBook Air lane, not the M4 Mac mini product, performance, or strict-proof lane. |
 | apple-m4 | Apple M4 Mac mini validation | M4-018 | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
 | apple-m4-continuity | Apple M4 continuity | M4-CONT-005 | This is an M4 Mac mini local campaign; do not execute MacBook artifact sweeps or MacBook receipts here. |
 | apple-m4-dense-slm-regression | Apple M4 dense SLM regression guardrails | M4-SLM-REG-005 | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
