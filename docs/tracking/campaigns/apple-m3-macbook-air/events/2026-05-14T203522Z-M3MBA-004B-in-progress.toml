@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T20:35:22Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-004B"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-004B-dense-qwen-operator"
+summary = "Started the live M3 Air dense Qwen operator evidence item after M3MBA-004A merged."
+
+notes = [
+  "The run uses the explicit apple-m3-air-cpu-neon backend label, allocation audit, and committed qwen-mirror-operator receipt path.",
+  "The live run exposed and fixed an aggregate receipts-check acceptance gap for M3 Air operator profile artifact kinds.",
+  "The item may claim only dense Qwen SLM operator-profile evidence for the recorded M3 Air context; it must not claim BitNet behavior, Metal inference, MPSGraph inference, Neural Engine execution, speedup, or replacement of M4 Mac mini timing.",
+]

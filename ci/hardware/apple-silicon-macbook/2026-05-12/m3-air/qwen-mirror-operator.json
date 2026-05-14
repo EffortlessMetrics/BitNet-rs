@@ -1,0 +1,538 @@
+{
+  "allocation_audit": {
+    "claim_scope": "aggregate of prompt-level allocation counter deltas; no optimization or performance improvement claimed",
+    "enabled": true,
+    "method": "process_global_allocator_counter_delta",
+    "optimization_deferred": true,
+    "profile_count": 3,
+    "ranked_hotspots": [
+      {
+        "alloc_bytes": 7421520002,
+        "alloc_count": 1369684,
+        "component": "prompt_setup"
+      },
+      {
+        "alloc_bytes": 3032603117,
+        "alloc_count": 2698538,
+        "component": "decode_total"
+      },
+      {
+        "alloc_bytes": 2919654816,
+        "alloc_count": 5055600,
+        "component": "prompt_prefill"
+      },
+      {
+        "alloc_bytes": 2728683616,
+        "alloc_count": 2689200,
+        "component": "model.forward"
+      },
+      {
+        "alloc_bytes": 1139431090,
+        "alloc_count": 13681054,
+        "component": "prompt_tokenize"
+      },
+      {
+        "alloc_bytes": 303013578,
+        "alloc_count": 4814,
+        "component": "model.logits_and_extract"
+      },
+      {
+        "alloc_bytes": 822696,
+        "alloc_count": 2822,
+        "component": "model.embed"
+      },
+      {
+        "alloc_bytes": 267965,
+        "alloc_count": 2574,
+        "component": "receipt_construction"
+      },
+      {
+        "alloc_bytes": 38075,
+        "alloc_count": 1204,
+        "component": "tokenizer.decode"
+      }
+    ],
+    "scope": "selected Apple M3 Air CPU/NEON SLM warm-session profile set"
+  },
+  "artifact_kind": "apple_m3_air_slm_operator_profiles",
+  "artifact_path": "target/apple-silicon-macbook/m3-air/M3MBA-004B/qwen-mirror-operator.json",
+  "build": {
+    "profile": "release",
+    "release_mode": true
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "mac_claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_local_answer": true,
+    "speedup_claim": false,
+    "timing_profile": true
+  },
+  "model_cache": {
+    "architecture": "qwen2",
+    "bytes": 675710816,
+    "cache_root": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models",
+    "chat_template": true,
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "path": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "support_note": "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate.",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2"
+  },
+  "operator_thresholds": {
+    "cold_load_separated": true,
+    "hard_latency_thresholds": null,
+    "initial_targets": {
+      "warm_16": "complete reliably",
+      "warm_32": "complete without timeout",
+      "warm_64": "measured and bounded"
+    },
+    "model_tokenizer_reuse_visible": true,
+    "model_tokenizer_reuse_visible_per_profile": true,
+    "profile_execution_model": "one warm-session run per token budget",
+    "profile_set_model_loads": 3,
+    "profiles_loaded_independently": true,
+    "profiles_required": [
+      "warm_16",
+      "warm_32",
+      "warm_64"
+    ],
+    "reuse_scope": "within_each_profile",
+    "scope": "supported Apple M3 Air SLM warm-answer timing only",
+    "thresholds_are_claim_bounds_not_speed_guarantees": true
+  },
+  "operator_ux": {
+    "clear_failure_messages": true,
+    "progress_enabled": false,
+    "quiet_default_logs": true,
+    "quiet_requested": true,
+    "status_stream": "stderr",
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipts": true
+  },
+  "performance_baseline": {
+    "baseline_scope": "release-mode warm-session timing for this model, backend, machine, and profile set only",
+    "broad_performance_claim": false,
+    "cold_load_separated": true,
+    "release_mode_observed": true,
+    "release_mode_required": false,
+    "speedup_claim": false,
+    "warm_128_included": false
+  },
+  "profile_set": "operator",
+  "profiles": [
+    {
+      "allocation_audit": {
+        "claim_scope": "aggregate of prompt-level allocation counter deltas; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
+        "enabled": true,
+        "method": "process_global_allocator_counter_delta",
+        "optimization_deferred": false,
+        "prompt_count": 3,
+        "ranked_hotspots": [
+          {
+            "alloc_bytes": 2473833574,
+            "alloc_count": 456562,
+            "component": "prompt_setup"
+          },
+          {
+            "alloc_bytes": 973218272,
+            "alloc_count": 1685200,
+            "component": "prompt_prefill"
+          },
+          {
+            "alloc_bytes": 542472235,
+            "alloc_count": 552718,
+            "component": "decode_total"
+          },
+          {
+            "alloc_bytes": 480214048,
+            "alloc_count": 550800,
+            "component": "model.forward"
+          },
+          {
+            "alloc_bytes": 379815426,
+            "alloc_count": 4560356,
+            "component": "prompt_tokenize"
+          },
+          {
+            "alloc_bytes": 62063022,
+            "alloc_count": 986,
+            "component": "model.logits_and_extract"
+          },
+          {
+            "alloc_bytes": 168504,
+            "alloc_count": 578,
+            "component": "model.embed"
+          },
+          {
+            "alloc_bytes": 86685,
+            "alloc_count": 858,
+            "component": "receipt_construction"
+          },
+          {
+            "alloc_bytes": 17413,
+            "alloc_count": 252,
+            "component": "tokenizer.decode"
+          }
+        ],
+        "scope": "selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "cold_load_separated": true,
+      "generated_tokens": 34,
+      "memory": {
+        "peak_memory_mb": 2742.922,
+        "peak_memory_source": "getrusage.ru_maxrss"
+      },
+      "model_loaded_once": true,
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipts": true,
+        "token_stream": "disabled"
+      },
+      "profile_id": "warm_16",
+      "prompt_count": 3,
+      "quality_passed": true,
+      "receipt_path": "target/apple-silicon-macbook/m3-air/M3MBA-004B/qwen-mirror-operator-profiles/warm_16.json",
+      "requested_max_new_tokens": 16,
+      "resident_session": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true
+      },
+      "reuse_scope": "within_profile",
+      "timing": {
+        "decode_generated_tok_s": 13.125,
+        "decode_total_ms": 2590.497,
+        "first_token_ms": {
+          "count": 3,
+          "max_ms": 2247.0,
+          "mean_ms": 2132.333,
+          "min_ms": 2053.0,
+          "p50_ms": 2097.0,
+          "p95_ms": 2247.0,
+          "total_ms": 6397.0
+        },
+        "model_load_ms": 4657.24,
+        "prefill_ms": 5630.496,
+        "sampling_ms": 2.625,
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max_ms": 2247.0,
+          "mean_ms": 2132.333,
+          "min_ms": 2053.0,
+          "p50_ms": 2097.0,
+          "p95_ms": 2247.0,
+          "total_ms": 6397.0
+        },
+        "tokenize_ms": 167.462,
+        "tokenizer_load_ms": 70.892,
+        "total_session_ms": 13772.78,
+        "warm_prompt_generated_tok_s": 3.926,
+        "warm_prompt_wall_ms": 8659.309
+      },
+      "tokenizer_loaded_once": true
+    },
+    {
+      "allocation_audit": {
+        "claim_scope": "aggregate of prompt-level allocation counter deltas; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
+        "enabled": true,
+        "method": "process_global_allocator_counter_delta",
+        "optimization_deferred": false,
+        "prompt_count": 3,
+        "ranked_hotspots": [
+          {
+            "alloc_bytes": 2473838222,
+            "alloc_count": 456561,
+            "component": "prompt_setup"
+          },
+          {
+            "alloc_bytes": 973218272,
+            "alloc_count": 1685200,
+            "component": "prompt_prefill"
+          },
+          {
+            "alloc_bytes": 854465692,
+            "alloc_count": 812809,
+            "component": "decode_total"
+          },
+          {
+            "alloc_bytes": 762927392,
+            "alloc_count": 810000,
+            "component": "model.forward"
+          },
+          {
+            "alloc_bytes": 379807832,
+            "alloc_count": 4560349,
+            "component": "prompt_tokenize"
+          },
+          {
+            "alloc_bytes": 91269150,
+            "alloc_count": 1450,
+            "component": "model.logits_and_extract"
+          },
+          {
+            "alloc_bytes": 247800,
+            "alloc_count": 850,
+            "component": "model.embed"
+          },
+          {
+            "alloc_bytes": 88647,
+            "alloc_count": 858,
+            "component": "receipt_construction"
+          },
+          {
+            "alloc_bytes": 7750,
+            "alloc_count": 359,
+            "component": "tokenizer.decode"
+          }
+        ],
+        "scope": "selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "cold_load_separated": true,
+      "generated_tokens": 50,
+      "memory": {
+        "peak_memory_mb": 3821.609,
+        "peak_memory_source": "getrusage.ru_maxrss"
+      },
+      "model_loaded_once": true,
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipts": true,
+        "token_stream": "disabled"
+      },
+      "profile_id": "warm_32",
+      "prompt_count": 3,
+      "quality_passed": true,
+      "receipt_path": "target/apple-silicon-macbook/m3-air/M3MBA-004B/qwen-mirror-operator-profiles/warm_32.json",
+      "requested_max_new_tokens": 32,
+      "resident_session": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true
+      },
+      "reuse_scope": "within_profile",
+      "timing": {
+        "decode_generated_tok_s": 13.043,
+        "decode_total_ms": 3833.62,
+        "first_token_ms": {
+          "count": 3,
+          "max_ms": 2559.0,
+          "mean_ms": 2339.667,
+          "min_ms": 2210.0,
+          "p50_ms": 2250.0,
+          "p95_ms": 2559.0,
+          "total_ms": 7019.0
+        },
+        "model_load_ms": 3865.448,
+        "prefill_ms": 5931.919,
+        "sampling_ms": 4.108,
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max_ms": 2559.0,
+          "mean_ms": 2339.667,
+          "min_ms": 2210.0,
+          "p50_ms": 2250.0,
+          "p95_ms": 2559.0,
+          "total_ms": 7019.0
+        },
+        "tokenize_ms": 153.889,
+        "tokenizer_load_ms": 66.085,
+        "total_session_ms": 14973.999,
+        "warm_prompt_generated_tok_s": 4.783,
+        "warm_prompt_wall_ms": 10454.173
+      },
+      "tokenizer_loaded_once": true
+    },
+    {
+      "allocation_audit": {
+        "claim_scope": "aggregate of prompt-level allocation counter deltas; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
+        "enabled": true,
+        "method": "process_global_allocator_counter_delta",
+        "optimization_deferred": false,
+        "prompt_count": 3,
+        "ranked_hotspots": [
+          {
+            "alloc_bytes": 2473848206,
+            "alloc_count": 456561,
+            "component": "prompt_setup"
+          },
+          {
+            "alloc_bytes": 1635665190,
+            "alloc_count": 1333011,
+            "component": "decode_total"
+          },
+          {
+            "alloc_bytes": 1485542176,
+            "alloc_count": 1328400,
+            "component": "model.forward"
+          },
+          {
+            "alloc_bytes": 973218272,
+            "alloc_count": 1685200,
+            "component": "prompt_prefill"
+          },
+          {
+            "alloc_bytes": 379807832,
+            "alloc_count": 4560349,
+            "component": "prompt_tokenize"
+          },
+          {
+            "alloc_bytes": 149681406,
+            "alloc_count": 2378,
+            "component": "model.logits_and_extract"
+          },
+          {
+            "alloc_bytes": 406392,
+            "alloc_count": 1394,
+            "component": "model.embed"
+          },
+          {
+            "alloc_bytes": 92633,
+            "alloc_count": 858,
+            "component": "receipt_construction"
+          },
+          {
+            "alloc_bytes": 12912,
+            "alloc_count": 593,
+            "component": "tokenizer.decode"
+          }
+        ],
+        "scope": "selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "cold_load_separated": true,
+      "generated_tokens": 82,
+      "memory": {
+        "peak_memory_mb": 3861.094,
+        "peak_memory_source": "getrusage.ru_maxrss"
+      },
+      "model_loaded_once": true,
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": false,
+        "quiet_default_logs": true,
+        "quiet_requested": true,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipts": true,
+        "token_stream": "disabled"
+      },
+      "profile_id": "warm_64",
+      "prompt_count": 3,
+      "quality_passed": true,
+      "receipt_path": "target/apple-silicon-macbook/m3-air/M3MBA-004B/qwen-mirror-operator-profiles/warm_64.json",
+      "requested_max_new_tokens": 64,
+      "resident_session": {
+        "allocation_audit_buffers_reused": true,
+        "generated_token_buffer_reused": true,
+        "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+        "logits_buffer_reuse_policy": "model.logits extraction still allocates tensor/vector outputs; sampler logits scratch is preallocated separately",
+        "prompt_token_buffer_reused": true,
+        "reuse_scope": "resident_session",
+        "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+        "session_owned_buffers": true,
+        "stop_tail_buffer_reused": true,
+        "timing_buffers_reused": true
+      },
+      "reuse_scope": "within_profile",
+      "timing": {
+        "decode_generated_tok_s": 13.592,
+        "decode_total_ms": 6033.05,
+        "first_token_ms": {
+          "count": 3,
+          "max_ms": 2523.0,
+          "mean_ms": 2196.0,
+          "min_ms": 1977.0,
+          "p50_ms": 2088.0,
+          "p95_ms": 2523.0,
+          "total_ms": 6588.0
+        },
+        "model_load_ms": 4193.742,
+        "prefill_ms": 5620.471,
+        "sampling_ms": 6.004,
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max_ms": 2523.0,
+          "mean_ms": 2196.0,
+          "min_ms": 1977.0,
+          "p50_ms": 2088.0,
+          "p95_ms": 2523.0,
+          "total_ms": 6588.0
+        },
+        "tokenize_ms": 151.749,
+        "tokenizer_load_ms": 65.048,
+        "total_session_ms": 17104.071,
+        "warm_prompt_generated_tok_s": 6.656,
+        "warm_prompt_wall_ms": 12319.152
+      },
+      "tokenizer_loaded_once": true
+    }
+  ],
+  "requested_backend": "apple-m3-air-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m3-air-cpu-neon",
+  "speedup_claim": false,
+  "timestamp": "2026-05-14T20:55:09.682188+00:00"
+}

@@ -8437,9 +8437,11 @@ async fn run_slm_warm_session(
             output.write_prompt_receipts.then(|| prompt_receipt_path.display().to_string());
         let prompt_total_alloc = AllocationAuditSnapshot::delta_since(prompt_alloc_start);
         let prompt_receipt_construct_alloc_start = AllocationAuditSnapshot::current();
+        let prompt_artifact_kind =
+            slm_warm_session_prompt_artifact_kind(backend_identity.requested_backend.as_str());
         let mut prompt_receipt = serde_json::json!({
             "schema_version": "1.0.0",
-            "artifact_kind": "slm_apple_m4_warm_session_prompt",
+            "artifact_kind": prompt_artifact_kind,
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "session_artifact_path": json_out.display().to_string(),
             "artifact_path": prompt_receipt_path_json,
@@ -8567,6 +8569,7 @@ async fn run_slm_warm_session(
         let prompt_allocation_audit =
             warm_session_prompt_allocation_audit_json(WarmSessionPromptAllocationAudit {
                 enabled: allocation_audit_enabled,
+                requested_backend: backend_identity.requested_backend.as_str(),
                 prompt_tokenize: prompt_tokenize_alloc,
                 prompt_setup: prompt_setup_alloc,
                 prompt_prefill: prefill_step_allocs,
@@ -8809,7 +8812,11 @@ async fn run_slm_warm_session(
             "full_metal_inference_claimed": false,
             "speedup_claim": false,
         },
-        "allocation_audit": warm_session_aggregate_allocation_audit_json(allocation_audit_enabled, &prompt_summaries),
+        "allocation_audit": warm_session_aggregate_allocation_audit_json(
+            allocation_audit_enabled,
+            backend_identity.requested_backend.as_str(),
+            &prompt_summaries,
+        ),
         "claim_boundary": {
             "warm_session_flow": true,
             "model_loaded_once": true,
@@ -11145,6 +11152,7 @@ fn allocation_samples_json(samples: &[AllocationAuditSnapshot]) -> serde_json::V
 #[cfg(feature = "full-cli")]
 struct WarmSessionPromptAllocationAudit<'a> {
     enabled: bool,
+    requested_backend: &'a str,
     prompt_tokenize: AllocationAuditSnapshot,
     prompt_setup: AllocationAuditSnapshot,
     prompt_prefill: &'a [AllocationAuditSnapshot],
@@ -11200,7 +11208,7 @@ fn warm_session_prompt_allocation_audit_json(
     serde_json::json!({
         "enabled": true,
         "method": "process_global_allocator_counter_delta",
-        "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
+        "scope": warm_session_allocation_scope(audit.requested_backend),
         "claim_scope": "allocation counter deltas for this prompt/profile only; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
         "optimization_deferred": false,
         "unavoidable_candidates_named_before_optimization": true,
@@ -11252,6 +11260,7 @@ fn warm_session_prompt_allocation_audit_json(
 #[cfg(feature = "full-cli")]
 fn warm_session_aggregate_allocation_audit_json(
     enabled: bool,
+    requested_backend: &str,
     prompt_summaries: &[serde_json::Value],
 ) -> serde_json::Value {
     if !enabled {
@@ -11308,12 +11317,22 @@ fn warm_session_aggregate_allocation_audit_json(
     serde_json::json!({
         "enabled": true,
         "method": "process_global_allocator_counter_delta",
-        "scope": "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
+        "scope": warm_session_allocation_scope(requested_backend),
         "claim_scope": "aggregate of prompt-level allocation counter deltas; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
         "prompt_count": prompt_summaries.len(),
         "ranked_hotspots": ranked,
         "optimization_deferred": false,
     })
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_allocation_scope(requested_backend: &str) -> &'static str {
+    match requested_backend.trim().to_ascii_lowercase().as_str() {
+        "apple-m3-air-cpu-neon" => {
+            "selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path"
+        }
+        _ => "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
+    }
 }
 
 #[cfg(feature = "full-cli")]
@@ -11463,6 +11482,14 @@ fn slm_warm_session_artifact_kind(requested_backend: &str) -> &'static str {
     match requested_backend.trim().to_ascii_lowercase().as_str() {
         "apple-m3-air-cpu-neon" => "slm_apple_m3_air_warm_session",
         _ => "slm_apple_m4_warm_session",
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_warm_session_prompt_artifact_kind(requested_backend: &str) -> &'static str {
+    match requested_backend.trim().to_ascii_lowercase().as_str() {
+        "apple-m3-air-cpu-neon" => "slm_apple_m3_air_warm_session_prompt",
+        _ => "slm_apple_m4_warm_session_prompt",
     }
 }
 

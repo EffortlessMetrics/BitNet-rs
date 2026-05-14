@@ -4520,7 +4520,11 @@ async fn run_warm_profile_set(
             "broad_performance_claim": false,
             "speedup_claim": false
         },
-        "allocation_audit": profile_set_allocation_audit_json(&summaries, spec.allocation_audit),
+        "allocation_audit": profile_set_allocation_audit_json(
+            &summaries,
+            spec.allocation_audit,
+            requested_backend,
+        ),
         "speedup_claim": false,
     });
     std::fs::write(&json_out, serde_json::to_vec_pretty(&aggregate)?)
@@ -4637,6 +4641,7 @@ fn operator_profile_summary(
 fn profile_set_allocation_audit_json(
     summaries: &[serde_json::Value],
     enabled: bool,
+    requested_backend: &str,
 ) -> serde_json::Value {
     if !enabled {
         return serde_json::json!({
@@ -4692,12 +4697,19 @@ fn profile_set_allocation_audit_json(
     serde_json::json!({
         "enabled": true,
         "method": "process_global_allocator_counter_delta",
-        "scope": "selected Apple M4 CPU/NEON SLM warm-session profile set",
+        "scope": profile_set_allocation_scope(requested_backend),
         "claim_scope": "aggregate of prompt-level allocation counter deltas; no optimization or performance improvement claimed",
         "profile_count": summaries.len(),
         "ranked_hotspots": ranked,
         "optimization_deferred": true,
     })
+}
+
+fn profile_set_allocation_scope(requested_backend: &str) -> &'static str {
+    match requested_backend {
+        APPLE_M3_AIR_CPU_NEON => "selected Apple M3 Air CPU/NEON SLM warm-session profile set",
+        _ => "selected Apple M4 CPU/NEON SLM warm-session profile set",
+    }
 }
 
 fn memory_receipt_json() -> serde_json::Value {
@@ -6007,7 +6019,12 @@ fn validate_mac_receipt_value(
         || artifact_kind == "apple_m3_air_slm_operator_profiles"
         || artifact_kind == "apple_m3_air_slm_performance_profiles"
     {
-        validate_profile_set_receipt(path, receipt, artifact_kind.as_str())?
+        validate_profile_set_receipt(
+            path,
+            receipt,
+            requested_backend.as_str(),
+            artifact_kind.as_str(),
+        )?
     } else if artifact_kind == "apple_m4_slm_eval_summary" {
         validate_slm_eval_summary_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_mac_ask_failure" {
@@ -6258,13 +6275,14 @@ fn validate_slm_eval_summary_receipt(
 fn validate_profile_set_receipt(
     path: &Path,
     receipt: &serde_json::Value,
+    requested_backend: &str,
     artifact_kind: &str,
 ) -> Result<(Option<usize>, Option<usize>)> {
     let required = match artifact_kind {
-        "apple_m4_slm_operator_profiles" => {
+        "apple_m4_slm_operator_profiles" | "apple_m3_air_slm_operator_profiles" => {
             &[("warm_16", 16_u64), ("warm_32", 32_u64), ("warm_64", 64_u64)][..]
         }
-        "apple_m4_slm_performance_profiles" => {
+        "apple_m4_slm_performance_profiles" | "apple_m3_air_slm_performance_profiles" => {
             &[("warm_16", 16_u64), ("warm_32", 32_u64), ("warm_64", 64_u64), ("warm_128", 128_u64)]
                 [..]
         }
@@ -6315,7 +6333,9 @@ fn validate_profile_set_receipt(
             required.len()
         );
     }
-    if artifact_kind == "apple_m4_slm_performance_profiles" {
+    if artifact_kind == "apple_m4_slm_performance_profiles"
+        || artifact_kind == "apple_m3_air_slm_performance_profiles"
+    {
         if receipt["profile_set"].as_str() != Some("performance") {
             anyhow::bail!(
                 "{} performance summary must record profile_set=performance",
@@ -6356,6 +6376,10 @@ fn validate_profile_set_receipt(
             .is_none_or(|hotspots| hotspots.is_empty())
         {
             anyhow::bail!("{} allocation audit must rank hotspots", path.display());
+        }
+        let expected_scope = profile_set_allocation_scope(requested_backend);
+        if receipt["allocation_audit"]["scope"].as_str() != Some(expected_scope) {
+            anyhow::bail!("{} allocation audit scope must be {expected_scope:?}", path.display());
         }
     }
     for (profile_id, requested_tokens) in required {
@@ -6414,6 +6438,13 @@ fn validate_profile_set_receipt(
                     path.display()
                 );
             }
+            let expected_scope = warm_session_allocation_scope(requested_backend);
+            if profile["allocation_audit"]["scope"].as_str() != Some(expected_scope) {
+                anyhow::bail!(
+                    "{} profile allocation audit scope must be {expected_scope:?}",
+                    path.display()
+                );
+            }
             if profile["allocation_audit"]["ranked_hotspots"]
                 .as_array()
                 .is_none_or(|hotspots| hotspots.is_empty())
@@ -6439,7 +6470,9 @@ fn validate_profile_set_receipt(
                 );
             }
         }
-        if artifact_kind == "apple_m4_slm_performance_profiles" {
+        if artifact_kind == "apple_m4_slm_performance_profiles"
+            || artifact_kind == "apple_m3_air_slm_performance_profiles"
+        {
             for field in ["total_session_ms", "tokenize_ms", "prefill_ms", "first_token_ms"] {
                 if timing[field].is_null() {
                     anyhow::bail!(
@@ -6460,6 +6493,13 @@ fn validate_profile_set_receipt(
         generated_total += generated as usize;
     }
     Ok((Some(profiles.len()), Some(generated_total)))
+}
+
+fn warm_session_allocation_scope(requested_backend: &str) -> &'static str {
+    match requested_backend {
+        APPLE_M3_AIR_CPU_NEON => "selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path",
+        _ => "selected Apple M4 CPU/NEON SLM warm-session prompt hot path",
+    }
 }
 
 fn is_metal_phase_receipt(receipt: &serde_json::Value) -> bool {
@@ -7318,6 +7358,29 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn mac_receipts_check_accepts_m3_operator_profile_summary()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = test_m3_operator_profile_summary();
+
+        let summary = validate_mac_receipt_value(Path::new("m3-operator.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m3_air_slm_operator_profiles");
+        assert_eq!(summary.requested_backend, APPLE_M3_AIR_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M3_AIR_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(3));
+        assert_eq!(summary.generated_tokens, Some(112));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_profile_set_allocation_scope_preserves_m3_backend_label() {
+        assert_eq!(
+            profile_set_allocation_scope(APPLE_M3_AIR_CPU_NEON),
+            "selected Apple M3 Air CPU/NEON SLM warm-session profile set"
+        );
+    }
+
     fn test_m3_warm_session_receipt() -> serde_json::Value {
         serde_json::json!({
             "artifact_kind": "slm_apple_m3_air_warm_session",
@@ -7358,6 +7421,99 @@ mod tests {
                     }
                 }
             ]
+        })
+    }
+
+    fn test_m3_operator_profile_summary() -> serde_json::Value {
+        serde_json::json!({
+            "artifact_kind": "apple_m3_air_slm_operator_profiles",
+            "requested_backend": APPLE_M3_AIR_CPU_NEON,
+            "selected_backend": APPLE_M3_AIR_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "profile_set": "operator",
+            "profiles": [
+                test_operator_profile("warm_16", 16, 16),
+                test_operator_profile("warm_32", 32, 32),
+                test_operator_profile("warm_64", 64, 64)
+            ],
+            "build": {
+                "profile": "release",
+                "release_mode": true
+            },
+            "operator_thresholds": {
+                "scope": "supported Apple M3 Air SLM warm-answer timing only",
+                "profiles_loaded_independently": true,
+                "profile_set_model_loads": 3,
+                "cold_load_separated": true,
+                "model_tokenizer_reuse_visible": true,
+                "model_tokenizer_reuse_visible_per_profile": true,
+                "thresholds_are_claim_bounds_not_speed_guarantees": true
+            },
+            "performance_baseline": {
+                "release_mode_observed": true,
+                "warm_128_included": false
+            },
+            "allocation_audit": {
+                "enabled": true,
+                "method": "process_global_allocator_counter_delta",
+                "scope": "selected Apple M3 Air CPU/NEON SLM warm-session profile set",
+                "optimization_deferred": true,
+                "ranked_hotspots": [
+                    {
+                        "component": "decode_total",
+                        "alloc_count": 1,
+                        "alloc_bytes": 2
+                    }
+                ]
+            }
+        })
+    }
+
+    fn test_operator_profile(
+        profile_id: &str,
+        requested_tokens: u64,
+        generated_tokens: u64,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "profile_id": profile_id,
+            "requested_max_new_tokens": requested_tokens,
+            "quality_passed": true,
+            "prompt_count": 1,
+            "generated_tokens": generated_tokens,
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "cold_load_separated": true,
+            "reuse_scope": "within_profile",
+            "resident_session": {
+                "reuse_scope": "resident_session",
+                "session_owned_buffers": true,
+                "prompt_token_buffer_reused": true,
+                "generated_token_buffer_reused": true,
+                "timing_buffers_reused": true,
+                "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+                "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence"
+            },
+            "allocation_audit": {
+                "enabled": true,
+                "scope": "selected Apple M3 Air CPU/NEON SLM warm-session prompt hot path",
+                "ranked_hotspots": [
+                    {
+                        "component": "decode_total",
+                        "alloc_count": 1,
+                        "alloc_bytes": 2
+                    }
+                ]
+            },
+            "timing": {
+                "model_load_ms": 1.0,
+                "tokenizer_load_ms": 1.0,
+                "warm_prompt_wall_ms": 1.0,
+                "decode_total_ms": 1.0,
+                "sampling_ms": 1.0,
+                "warm_prompt_generated_tok_s": 1.0,
+                "decode_generated_tok_s": 1.0
+            }
         })
     }
 
