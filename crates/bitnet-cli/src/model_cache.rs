@@ -2468,12 +2468,12 @@ mod tests {
     fn model_status_row_for<'a>(
         dashboard: &'a ModelStatusDashboard,
         id: &str,
-    ) -> &'a ModelStatusRow {
+    ) -> Result<&'a ModelStatusRow> {
         dashboard
             .models
             .iter()
             .find(|row| row.id == id)
-            .unwrap_or_else(|| panic!("missing model status row {id}"))
+            .with_context(|| format!("missing model status row {id}"))
     }
 
     #[test]
@@ -2955,16 +2955,17 @@ mod tests {
     }
 
     #[test]
-    fn model_status_dashboard_shows_cuda_supported_rows_without_speed_or_server_claims() {
+    fn model_status_dashboard_shows_cuda_supported_rows_without_speed_or_server_claims()
+    -> Result<()> {
         let matrix_path = workspace_model_coverage_matrix_path();
-        let matrix = read_model_coverage_matrix(&matrix_path).unwrap();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
         let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
 
         assert_eq!(dashboard.schema_version, 1);
         assert_eq!(dashboard.device, "nvidia-rtx-5070-ti-cuda");
         assert!(dashboard.note.contains("does not probe hardware"));
 
-        let bitnet = model_status_row_for(&dashboard, "bitnet_official_2b_i2s_qk256");
+        let bitnet = model_status_row_for(&dashboard, "bitnet_official_2b_i2s_qk256")?;
         assert_eq!(bitnet.display_name, "microsoft-bitnet-b1.58-2B-4T-i2s");
         assert_eq!(bitnet.category, "supported");
         assert_eq!(bitnet.model_class, "bitnet");
@@ -2982,7 +2983,7 @@ mod tests {
         assert_eq!(bitnet.benchmark, "reviewed, speedup not accepted");
         assert!(bitnet.claim_boundary.contains("does not prove dense regular-LLM CUDA"));
 
-        let dense = model_status_row_for(&dashboard, "dense_qwen25_05b_q8_cuda");
+        let dense = model_status_row_for(&dashboard, "dense_qwen25_05b_q8_cuda")?;
         assert_eq!(dense.display_name, "qwen2.5-0.5b-instruct-q8_0");
         assert_eq!(dense.category, "supported");
         assert_eq!(dense.model_class, "dense_slm");
@@ -3000,15 +3001,16 @@ mod tests {
         assert_eq!(dense.warm_session, "ready");
         assert_eq!(dense.benchmark, "reviewed, speedup not accepted");
         assert!(dense.claim_boundary.contains("do not satisfy BitNet packed I2_S/QK256"));
+        Ok(())
     }
 
     #[test]
-    fn model_status_dashboard_lists_qwen3_as_candidate_not_cuda_ready() {
+    fn model_status_dashboard_lists_qwen3_as_candidate_not_cuda_ready() -> Result<()> {
         let matrix_path = workspace_model_coverage_matrix_path();
-        let matrix = read_model_coverage_matrix(&matrix_path).unwrap();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
         let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
 
-        let qwen3 = model_status_row_for(&dashboard, "dense_qwen3_06b_q8_candidate");
+        let qwen3 = model_status_row_for(&dashboard, "dense_qwen3_06b_q8_candidate")?;
         assert_eq!(qwen3.display_name, "qwen3-0.6b-instruct-q8_0");
         assert_eq!(qwen3.category, "candidate");
         assert_eq!(qwen3.route, None);
@@ -3023,24 +3025,26 @@ mod tests {
         assert_eq!(qwen3.benchmark, "not ready");
         assert!(qwen3.next_proof.contains("artifact contract"));
         assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA answer receipts"));
+        Ok(())
     }
 
     #[test]
-    fn model_status_dashboard_is_strictly_device_scoped() {
+    fn model_status_dashboard_is_strictly_device_scoped() -> Result<()> {
         let matrix_path = workspace_model_coverage_matrix_path();
-        let matrix = read_model_coverage_matrix(&matrix_path).unwrap();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
         let dashboard = model_status_dashboard("cuda", &matrix_path, &matrix);
 
         assert_eq!(dashboard.device, "cuda");
         assert!(dashboard.models.is_empty());
+        Ok(())
     }
 
     #[test]
-    fn model_status_dashboard_json_shape_is_stable() {
+    fn model_status_dashboard_json_shape_is_stable() -> Result<()> {
         let matrix_path = workspace_model_coverage_matrix_path();
-        let matrix = read_model_coverage_matrix(&matrix_path).unwrap();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
         let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
-        let value = serde_json::to_value(&dashboard).unwrap();
+        let value = serde_json::to_value(&dashboard)?;
 
         assert_eq!(value["schema_version"], 1);
         assert_eq!(value["device"], "nvidia-rtx-5070-ti-cuda");
@@ -3054,6 +3058,7 @@ mod tests {
                     && model["dense_regular_llm_cuda_proof"] == true
             })
         }));
+        Ok(())
     }
 
     #[test]
