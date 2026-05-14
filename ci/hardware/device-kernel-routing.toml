@@ -1,0 +1,155 @@
+# Device-specific kernel routing policy.
+#
+# Compatibility is not a public claim. A claimable route must name a concrete
+# device, concrete kernel variant, fallback_allowed=false, and proof receipts.
+
+[[route]]
+route_id = "a770.bitnet.i2s.qk256"
+op = "qk256_i2s_gemv"
+model_family = "bitnet"
+quantization = "i2_s"
+backend_family = "intel-opencl"
+selected_backend = "intel-arc-a770-opencl"
+device_slug = "amd-5700x-intel-a770"
+device_family = "arc_alchemist"
+device_models = ["arc-a770-16gb"]
+kernel_variant = "a770_opencl_qk256_i2s_route_pending_claim_receipts"
+claim_level = "diagnostic"
+fallback_allowed = false
+proof_receipts = []
+reason = "A770 route is explicit, but claim-grade A770 QK256 receipts are not committed yet."
+not_claims = [
+  "selected_attention_residency",
+  "resident_kv_decode",
+  "attention_scores_residency",
+  "softmax_residency",
+  "attention_value_mix_residency",
+  "full_support_op_residency",
+  "full_device_residency",
+  "completion",
+]
+
+[[route]]
+route_id = "a770.bitnet.i2s.embedding"
+op = "embedding_lookup"
+model_family = "bitnet"
+quantization = "i2_s"
+backend_family = "intel-opencl"
+selected_backend = "intel-arc-a770-opencl"
+device_slug = "amd-5700x-intel-a770"
+device_family = "arc_alchemist"
+device_models = ["arc-a770-16gb"]
+kernel_variant = "a770_opencl_embedding_route_pending_claim_receipts"
+claim_level = "diagnostic"
+fallback_allowed = false
+proof_receipts = []
+reason = "A770 embedding route is explicit, but claim-grade receipts are not committed yet."
+not_claims = [
+  "selected_attention_residency",
+  "resident_kv_decode",
+  "attention_scores_residency",
+  "softmax_residency",
+  "attention_value_mix_residency",
+  "full_support_op_residency",
+  "full_device_residency",
+  "completion",
+]
+
+[[route]]
+route_id = "a770.bitnet.i2s.lm_head"
+op = "lm_head_tied_logits"
+model_family = "bitnet"
+quantization = "i2_s"
+backend_family = "intel-opencl"
+selected_backend = "intel-arc-a770-opencl"
+device_slug = "amd-5700x-intel-a770"
+device_family = "arc_alchemist"
+device_models = ["arc-a770-16gb"]
+kernel_variant = "a770_opencl_lm_head_route_pending_claim_receipts"
+claim_level = "diagnostic"
+fallback_allowed = false
+proof_receipts = []
+reason = "A770 lm_head route is explicit, but claim-grade receipts are not committed yet."
+not_claims = [
+  "selected_attention_residency",
+  "resident_kv_decode",
+  "attention_scores_residency",
+  "softmax_residency",
+  "attention_value_mix_residency",
+  "full_support_op_residency",
+  "full_device_residency",
+  "completion",
+]
+
+[[route]]
+route_id = "a770.bitnet.selected_attention_scores"
+op = "selected_attention_scores"
+model_family = "bitnet"
+quantization = "i2_s"
+backend_family = "intel-opencl"
+selected_backend = "intel-arc-a770-opencl"
+device_slug = "amd-5700x-intel-a770"
+device_family = "arc_alchemist"
+device_models = ["arc-a770-16gb"]
+kernel_variant = "missing"
+claim_level = "unsupported"
+fallback_allowed = false
+proof_receipts = []
+reason = "Selected attention score rule is not implementation-authorized."
+not_claims = [
+  "selected_attention_residency",
+  "resident_kv_decode",
+  "attention_scores_residency",
+  "softmax_residency",
+  "attention_value_mix_residency",
+  "full_support_op_residency",
+  "full_device_residency",
+  "completion",
+]
+
+[[route]]
+route_id = "a770.gemma.dense_f16_gemv"
+op = "dense_f16_gemv"
+model_family = "gemma"
+quantization = "f16"
+backend_family = "intel-opencl"
+selected_backend = "intel-arc-a770-opencl"
+device_slug = "amd-5700x-intel-a770"
+device_family = "arc_alchemist"
+device_models = ["arc-a770-16gb"]
+kernel_variant = "missing"
+claim_level = "unsupported"
+fallback_allowed = false
+proof_receipts = []
+reason = "Gemma-class A770 dense kernels, tokenizer/template proof, quality proof, and resource receipts are not present."
+not_claims = [
+  "gemma_a770_supported",
+  "gemma4_a770_supported",
+  "selected_attention_residency",
+  "resident_kv_decode",
+  "full_device_residency",
+  "completion",
+]
+
+[[route]]
+route_id = "a770.slm.q4_dequant_gemv"
+op = "q4_dequant_gemv"
+model_family = "slm"
+quantization = "q4"
+backend_family = "intel-opencl"
+selected_backend = "intel-arc-a770-opencl"
+device_slug = "amd-5700x-intel-a770"
+device_family = "arc_alchemist"
+device_models = ["arc-a770-16gb"]
+kernel_variant = "missing"
+claim_level = "unsupported"
+fallback_allowed = false
+proof_receipts = []
+reason = "Small dense SLM A770 support is blocked until model contracts, dense kernels, quality proof, and resources exist."
+not_claims = [
+  "slm_a770_supported",
+  "selected_attention_residency",
+  "resident_kv_decode",
+  "full_device_residency",
+  "completion",
+]

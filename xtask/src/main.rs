@@ -42,6 +42,7 @@ mod crossval;
 pub mod ffi;
 mod gates;
 mod grid_check;
+mod hardware;
 mod model_contract;
 #[allow(dead_code)]
 mod health_check;
@@ -285,6 +286,12 @@ enum Cmd {
     ModelContract {
         #[command(subcommand)]
         cmd: ModelContractCmd,
+    },
+
+    /// Verify hardware claim rails and resolve device-specific kernel routes.
+    Hardware {
+        #[command(subcommand)]
+        cmd: HardwareCmd,
     },
 
     /// Fetch & build microsoft/BitNet C++ for cross-validation
@@ -1030,6 +1037,68 @@ enum ModelContractCmd {
 }
 
 #[derive(Subcommand)]
+enum HardwareCmd {
+    /// Intel Arc A770 hardware claim checks.
+    A770 {
+        #[command(subcommand)]
+        cmd: A770HardwareCmd,
+    },
+    /// Resolve a device-specific kernel route.
+    Route {
+        #[command(subcommand)]
+        cmd: HardwareRouteCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum A770HardwareCmd {
+    /// Check the A770 kernel capability matrix.
+    #[command(name = "kernel-capability-check")]
+    KernelCapabilityCheck {
+        /// Capability matrix JSON file.
+        #[arg(
+            long,
+            default_value = "ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json"
+        )]
+        matrix: PathBuf,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum HardwareRouteCmd {
+    /// Resolve the kernel route for a model/backend/device operation.
+    Resolve {
+        /// Device kernel routing table.
+        #[arg(long, default_value = "ci/hardware/device-kernel-routing.toml")]
+        routing_table: PathBuf,
+        /// Concrete device slug.
+        #[arg(long, default_value = "amd-5700x-intel-a770")]
+        device_slug: String,
+        /// Selected backend identifier.
+        #[arg(long, default_value = "intel-arc-a770-opencl")]
+        selected_backend: String,
+        /// Backend family identifier.
+        #[arg(long, default_value = "intel-opencl")]
+        backend_family: String,
+        /// Model family.
+        #[arg(long, default_value = "bitnet")]
+        model_family: String,
+        /// Model quantization.
+        #[arg(long, default_value = "i2_s")]
+        quantization: String,
+        /// Operation to route.
+        #[arg(long, default_value = "qk256_i2s_gemv")]
+        op: String,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum GateWhich {
     /// Dry-run tensor-name mapper gate → JSON
     Mapper {
@@ -1153,6 +1222,34 @@ fn real_main() -> Result<()> {
             ModelContractCmd::Lint { contract_dir, format, allow_missing_assets } => {
                 model_contract::lint_contracts(&contract_dir, &format, allow_missing_assets)
             }
+        },
+        Cmd::Hardware { cmd } => match cmd {
+            HardwareCmd::A770 { cmd } => match cmd {
+                A770HardwareCmd::KernelCapabilityCheck { matrix, format } => {
+                    hardware::kernel_capability_check(&matrix, &format)
+                }
+            },
+            HardwareCmd::Route { cmd } => match cmd {
+                HardwareRouteCmd::Resolve {
+                    routing_table,
+                    device_slug,
+                    selected_backend,
+                    backend_family,
+                    model_family,
+                    quantization,
+                    op,
+                    format,
+                } => hardware::route_resolve(
+                    &routing_table,
+                    &device_slug,
+                    &selected_backend,
+                    &backend_family,
+                    &model_family,
+                    &quantization,
+                    &op,
+                    &format,
+                ),
+            },
         },
         Cmd::FetchCpp { tag, force, clean, backend, cmake_flags, repo } => {
             fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags, &repo)

@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "matrix_id": "amd-5700x-intel-a770.a770-kernel-capability",
+  "device_slug": "amd-5700x-intel-a770",
+  "backend_family": "intel-opencl",
+  "selected_backend": "intel-arc-a770-opencl",
+  "quality_gated_benchmarks_required": true,
+  "claim_policy": {
+    "no_model_family_claim_without_required_kernels": true,
+    "no_benchmark_claim_without_quality_passed": true,
+    "no_fallback_for_claimed_kernels": true,
+    "device_route_must_be_concrete": true
+  },
+  "kernels": [
+    {
+      "kernel": "qk256_i2s_gemv",
+      "model_families": ["bitnet"],
+      "status": "diagnostic",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "Trusted-path A770 QK256 receipts are local/target evidence until a clean claim-grade rerun lands."
+    },
+    {
+      "kernel": "embedding_lookup",
+      "model_families": ["bitnet"],
+      "status": "diagnostic",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "A770 embedding route is explicit, but claim-grade receipts are not committed yet."
+    },
+    {
+      "kernel": "lm_head_tied_logits",
+      "model_families": ["bitnet"],
+      "status": "diagnostic",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "A770 lm_head/tied-logits route is explicit, but claim-grade receipts are not committed yet."
+    },
+    {
+      "kernel": "dense_f16_gemv",
+      "model_families": ["gemma", "llama", "qwen"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "Dense f16/bf16 A770 kernels are not claim-ready."
+    },
+    {
+      "kernel": "q4_q5_q8_dequant_gemv",
+      "model_families": ["slm", "llama", "qwen", "gemma"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "Dense GGUF dequant A770 kernels are not claim-ready."
+    },
+    {
+      "kernel": "rmsnorm",
+      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "RMSNorm A770 residency is not claimed."
+    },
+    {
+      "kernel": "rope",
+      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "RoPE A770 residency is not claimed."
+    },
+    {
+      "kernel": "selected_attention_scores",
+      "model_families": ["bitnet"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "Selected attention score rule is diagnostic-only and not implementation-authorized."
+    },
+    {
+      "kernel": "softmax",
+      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "A770 softmax residency is not claimed."
+    },
+    {
+      "kernel": "attention_value_mix",
+      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "A770 attention value-mix residency is not claimed."
+    },
+    {
+      "kernel": "resident_kv_cache",
+      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "Resident KV decode is not claimed."
+    },
+    {
+      "kernel": "full_support_residency",
+      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "Full A770 support-op residency is not claimed."
+    },
+    {
+      "kernel": "full_device_residency",
+      "model_families": ["bitnet", "llama", "qwen", "gemma"],
+      "status": "missing",
+      "fallback_allowed_when_claimed": false,
+      "proof_receipts": [],
+      "reason": "Full A770 device residency is not claimed."
+    }
+  ],
+  "not_claims": [
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion",
+    "slm_a770_supported",
+    "gemma_a770_supported",
+    "gemma4_a770_supported"
+  ]
+}
