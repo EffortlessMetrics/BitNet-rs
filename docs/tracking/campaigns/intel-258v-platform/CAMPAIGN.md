@@ -97,6 +97,7 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 | LNL258V-ASK-003 | merged | Harden Lunar Lake operator ask receipts so backend/runtime/fallback/model/template identity is explicit at top level while preserving source-run evidence and the no broad quality/speed/Arc/NPU/BitNet claim boundary; merged in #4668. |
 | LNL258V-ASK-004 | merged | Added an explicit OpenVINO GenAI operator-ask helper for dense Qwen GPU/NPU candidate routes, recording bounded answer receipts with fallback=false and no acceleration or speedup claim; merged in #4712. |
 | CPU-BITNET-EMBD-001 | merged | #4684 recorded 258V BitNet embedding quantization evidence from the committed tensor-boundary audit, including current F16 embedding state and explicit Q6_K-not-active boundary unless a Q6_K embedding artifact is present. |
+| LNL258V-OP-002 | pr_open | Refresh operator readiness, regression, and comparison receipts so the BitNet CPU route indexes direct BitNet.cpp generated-token/logit evidence, direct first-token divergence classification, applied-thread microbench evidence, and embedding-quantization boundary without new inference or acceleration claims; opened as #4718. |
 
 ## Review Policy
 

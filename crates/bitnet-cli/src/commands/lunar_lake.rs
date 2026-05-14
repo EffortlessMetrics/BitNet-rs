@@ -22,8 +22,12 @@ const DENSE_OV_GPU: &str = "slm-openvino-gpu-arc140v-llmpipeline-smoke.json";
 const DENSE_OV_NPU: &str = "slm-openvino-npu-llmpipeline-smoke.json";
 const BITNET_CPU_BUNDLE: &str = "cpu-reference-bundle-after-semantic-fix.json";
 const BITNET_REFERENCE: &str = "cpu-bitnet-ref-001-external-boundary.json";
+const BITNET_REFERENCE_DIRECT: &str = "external-first-token-reference-direct.json";
+const BITNET_DIVERGENCE_DIRECT: &str = "first-token-divergence-classification-direct.json";
 const BITNET_PERF_MICRO: &str = "cpu-bitnet-perf-001-i2s-microbench.json";
 const BITNET_PERF_TILING: &str = "cpu-bitnet-perf-002-i2s-tiling-matrix.json";
+const BITNET_PERF_APPLIED: &str = "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json";
+const BITNET_EMBEDDING_EVIDENCE: &str = "cpu-bitnet-embd-001-q6k-embedding-evidence.json";
 const ARC_OPENCL_PARITY: &str = "arc-140v-opencl-parity.json";
 const NPU_RMSNORM: &str = "npu-bitnet-rmsnorm-subgraph-parity.json";
 const NPU_LINEAR: &str = "npu-bitnet-linear-projection-subgraph-parity.json";
@@ -395,6 +399,18 @@ pub fn build_operator_readiness_receipt_with_created_utc(
         )?,
         inspect_receipt(
             root,
+            "bitnet_external_direct_token_boundary",
+            BITNET_REFERENCE_DIRECT,
+            EvidenceExpectation::Present,
+        )?,
+        inspect_receipt(
+            root,
+            "bitnet_first_token_direct_classifier",
+            BITNET_DIVERGENCE_DIRECT,
+            EvidenceExpectation::Present,
+        )?,
+        inspect_receipt(
+            root,
             "bitnet_i2s_gemv_gemm_microbench",
             BITNET_PERF_MICRO,
             EvidenceExpectation::NoSpeedupClaim,
@@ -403,6 +419,18 @@ pub fn build_operator_readiness_receipt_with_created_utc(
             root,
             "bitnet_i2s_tiling_thread_matrix",
             BITNET_PERF_TILING,
+            EvidenceExpectation::NoSpeedupClaim,
+        )?,
+        inspect_receipt(
+            root,
+            "bitnet_i2s_applied_thread_matrix",
+            BITNET_PERF_APPLIED,
+            EvidenceExpectation::NoSpeedupClaim,
+        )?,
+        inspect_receipt(
+            root,
+            "bitnet_embedding_quantization_evidence",
+            BITNET_EMBEDDING_EVIDENCE,
             EvidenceExpectation::NoSpeedupClaim,
         )?,
         inspect_receipt(
@@ -434,8 +462,12 @@ pub fn build_operator_readiness_receipt_with_created_utc(
         && evidence_ok(&evidence, "dense_slm_openvino_phase_runner");
     let bitnet_cpu_ready = evidence_ok(&evidence, "bitnet_cpu_reference_bundle")
         && evidence_ok(&evidence, "bitnet_external_reference_boundary")
+        && evidence_ok(&evidence, "bitnet_external_direct_token_boundary")
+        && evidence_ok(&evidence, "bitnet_first_token_direct_classifier")
         && evidence_ok(&evidence, "bitnet_i2s_gemv_gemm_microbench")
-        && evidence_ok(&evidence, "bitnet_i2s_tiling_thread_matrix");
+        && evidence_ok(&evidence, "bitnet_i2s_tiling_thread_matrix")
+        && evidence_ok(&evidence, "bitnet_i2s_applied_thread_matrix")
+        && evidence_ok(&evidence, "bitnet_embedding_quantization_evidence");
     let arc_npu_bounded_ready = evidence_ok(&evidence, "arc140v_native_opencl_parity")
         && evidence_ok(&evidence, "npu_rmsnorm_static_subgraph")
         && evidence_ok(&evidence, "npu_linear_static_subgraph")
@@ -533,9 +565,22 @@ pub fn build_regression_bundle_with_created_utc(
             route_ok(&operator, "bitnet_reference_cpu")
                 && evidence_ok(&operator.evidence, "bitnet_cpu_reference_bundle")
                 && evidence_ok(&operator.evidence, "bitnet_external_reference_boundary")
+                && evidence_ok(&operator.evidence, "bitnet_external_direct_token_boundary")
+                && evidence_ok(&operator.evidence, "bitnet_first_token_direct_classifier")
                 && evidence_ok(&operator.evidence, "bitnet_i2s_gemv_gemm_microbench")
-                && evidence_ok(&operator.evidence, "bitnet_i2s_tiling_thread_matrix"),
-            vec![BITNET_CPU_BUNDLE, BITNET_REFERENCE, BITNET_PERF_MICRO, BITNET_PERF_TILING],
+                && evidence_ok(&operator.evidence, "bitnet_i2s_tiling_thread_matrix")
+                && evidence_ok(&operator.evidence, "bitnet_i2s_applied_thread_matrix")
+                && evidence_ok(&operator.evidence, "bitnet_embedding_quantization_evidence"),
+            vec![
+                BITNET_CPU_BUNDLE,
+                BITNET_REFERENCE,
+                BITNET_REFERENCE_DIRECT,
+                BITNET_DIVERGENCE_DIRECT,
+                BITNET_PERF_MICRO,
+                BITNET_PERF_TILING,
+                BITNET_PERF_APPLIED,
+                BITNET_EMBEDDING_EVIDENCE,
+            ],
             vec!["BitNet remains CPU reference-only in the operator route policy".to_string()],
         ),
         regression_check(
@@ -864,9 +909,9 @@ fn bitnet_cpu_route() -> OperatorRoute {
         runtime_api: "cpu".to_string(),
         selected_kernel_or_runtime: "qk256/i2_s-cpu".to_string(),
         fallback_policy: "strict_no_fallback".to_string(),
-        route_reason: "BitNet remains on CPU because the 258V CPU has the corrected reference bundle, bitnet.cpp boundary evidence, scalar/AVX2 parity, and I2_S GEMV/GEMM tuning receipts; Arc/NPU BitNet evidence is still selected kernel or static subgraph only.".to_string(),
+        route_reason: "BitNet remains on CPU because the 258V CPU has the corrected reference bundle, direct bitnet.cpp generated-token/logit boundary evidence, scalar/AVX2 parity, I2_S GEMV/GEMM tuning receipts, applied-thread microbench evidence, and explicit embedding-quantization status; Arc/NPU BitNet evidence is still selected kernel or static subgraph only.".to_string(),
         answer_gate_evidence: Some(BITNET_CPU_BUNDLE.to_string()),
-        phase_evidence: Some(BITNET_PERF_TILING.to_string()),
+        phase_evidence: Some(BITNET_PERF_APPLIED.to_string()),
         acceleration_claim: false,
     }
 }
@@ -1471,6 +1516,8 @@ mod tests {
         for file in [
             BITNET_CPU_BUNDLE,
             BITNET_REFERENCE,
+            BITNET_REFERENCE_DIRECT,
+            BITNET_DIVERGENCE_DIRECT,
             ARC_OPENCL_PARITY,
             NPU_RMSNORM,
             NPU_LINEAR,
@@ -1478,7 +1525,9 @@ mod tests {
         ] {
             write_json(root, file, present.clone())?;
         }
-        for file in [BITNET_PERF_MICRO, BITNET_PERF_TILING] {
+        for file in
+            [BITNET_PERF_MICRO, BITNET_PERF_TILING, BITNET_PERF_APPLIED, BITNET_EMBEDDING_EVIDENCE]
+        {
             write_json(root, file, no_speedup.clone())?;
         }
         Ok(())

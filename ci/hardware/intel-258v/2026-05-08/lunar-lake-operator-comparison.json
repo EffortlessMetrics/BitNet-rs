@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-13T18:30:00Z",
+  "created_utc": "2026-05-14T10:32:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -42,14 +42,14 @@
       "selected_kernel_or_runtime": "qk256/i2_s-cpu",
       "fallback_policy": "strict_no_fallback",
       "answer_gate_evidence": "cpu-reference-bundle-after-semantic-fix.json",
-      "phase_evidence": "cpu-bitnet-perf-002-i2s-tiling-matrix.json",
+      "phase_evidence": "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
       "evidence_ready": true,
       "acceleration_claim": false,
-      "route_reason": "BitNet remains on CPU because the 258V CPU has the corrected reference bundle, bitnet.cpp boundary evidence, scalar/AVX2 parity, and I2_S GEMV/GEMM tuning receipts; Arc/NPU BitNet evidence is still selected kernel or static subgraph only.",
+      "route_reason": "BitNet remains on CPU because the 258V CPU has the corrected reference bundle, direct bitnet.cpp generated-token/logit boundary evidence, scalar/AVX2 parity, I2_S GEMV/GEMM tuning receipts, applied-thread microbench evidence, and explicit embedding-quantization status; Arc/NPU BitNet evidence is still selected kernel or static subgraph only.",
       "notes": [
         "role=bitnet_cpu_reference_path",
         "bitnet_cpu_reference_bundle present=true fallback_used=Some(false) answer_gate=None phase_timing=None",
-        "bitnet_i2s_tiling_thread_matrix present=true fallback_used=Some(false) answer_gate=None phase_timing=Some(false)"
+        "bitnet_i2s_applied_thread_matrix present=true fallback_used=Some(false) answer_gate=None phase_timing=Some(false)"
       ]
     },
     {
@@ -207,6 +207,34 @@
       "issues": []
     },
     {
+      "evidence_id": "bitnet_external_direct_token_boundary",
+      "path": "ci/hardware/intel-258v/2026-05-08/external-first-token-reference-direct.json",
+      "present": true,
+      "artifact_kind": "bitnet_external_reference_direct_token_boundary",
+      "requested_backend": null,
+      "selected_backend": null,
+      "runtime_api": null,
+      "fallback_used": false,
+      "answer_gate_passed": false,
+      "phase_timing_present": null,
+      "speedup_claim": null,
+      "issues": []
+    },
+    {
+      "evidence_id": "bitnet_first_token_direct_classifier",
+      "path": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-direct.json",
+      "present": true,
+      "artifact_kind": "bitnet_first_token_divergence_classification",
+      "requested_backend": null,
+      "selected_backend": null,
+      "runtime_api": null,
+      "fallback_used": false,
+      "answer_gate_passed": false,
+      "phase_timing_present": null,
+      "speedup_claim": null,
+      "issues": []
+    },
+    {
       "evidence_id": "bitnet_i2s_gemv_gemm_microbench",
       "path": "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-001-i2s-microbench.json",
       "present": true,
@@ -223,6 +251,34 @@
     {
       "evidence_id": "bitnet_i2s_tiling_thread_matrix",
       "path": "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-002-i2s-tiling-matrix.json",
+      "present": true,
+      "artifact_kind": "cpu_benchmark",
+      "requested_backend": "cpu",
+      "selected_backend": "intel-258v-cpu-avx2",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "answer_gate_passed": null,
+      "phase_timing_present": false,
+      "speedup_claim": false,
+      "issues": []
+    },
+    {
+      "evidence_id": "bitnet_i2s_applied_thread_matrix",
+      "path": "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
+      "present": true,
+      "artifact_kind": "cpu_benchmark",
+      "requested_backend": "cpu",
+      "selected_backend": "intel-258v-cpu-avx2",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "answer_gate_passed": null,
+      "phase_timing_present": false,
+      "speedup_claim": false,
+      "issues": []
+    },
+    {
+      "evidence_id": "bitnet_embedding_quantization_evidence",
+      "path": "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-embd-001-q6k-embedding-evidence.json",
       "present": true,
       "artifact_kind": "cpu_benchmark",
       "requested_backend": "cpu",
@@ -320,8 +376,12 @@
       "evidence": [
         "cpu-reference-bundle-after-semantic-fix.json",
         "cpu-bitnet-ref-001-external-boundary.json",
+        "external-first-token-reference-direct.json",
+        "first-token-divergence-classification-direct.json",
         "cpu-bitnet-perf-001-i2s-microbench.json",
-        "cpu-bitnet-perf-002-i2s-tiling-matrix.json"
+        "cpu-bitnet-perf-002-i2s-tiling-matrix.json",
+        "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
+        "cpu-bitnet-embd-001-q6k-embedding-evidence.json"
       ],
       "notes": [
         "BitNet remains CPU reference-only in the operator route policy"

@@ -1,0 +1,24 @@
+timestamp = "2026-05-14T10:34:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4718
+branch = "codex/lunar-lake/LNL258V-ASK-005-operating-audit"
+head_sha = "f4577be98e56f493fc36855796caf534b8bef256"
+summary = "Opened LNL258V-OP-002 to refresh Lunar Lake operator readiness with direct BitNet reference evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4718",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The PR updates operator readiness, regression, and comparison receipts so the BitNet CPU route consumes CPU-BITNET-REF-003 direct generated-token/logit evidence and direct first-token divergence classification.",
+  "The BitNet CPU route now also indexes CPU-BITNET-PERF-003 applied-thread microbench evidence and CPU-BITNET-EMBD-001 embedding-quantization boundary evidence.",
+  "Dense Qwen CPU remains the default ask route; no new inference, broad answer quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, QK256 semantic change, or Q6_K-active claim is made.",
+]
