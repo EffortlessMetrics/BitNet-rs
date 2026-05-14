@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-slm-eval-and-proof`
 
-Status: active
+Status: complete
 
 ## Objective
 
