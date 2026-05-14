@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T01:59:23Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-005"
+event = "merged"
+pr = 4675
+merge_sha = "3e693fd55df944814f8d867aff3323657a1e9b33"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "Merged PR #4675 with the Apple M4 SLM eval Tier 0 workflow.",
+  "The merged workflow checks parser/scoring fixtures, dry-run seeded corpus shape, and committed summary receipt schemas without live M4 model fetch or inference.",
+  "Advisory/nightly/release live M4 tiers remain separate and do not become generic required PR CI.",
+]
