@@ -1,0 +1,21 @@
+timestamp = "2026-05-14T19:08:11Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-014"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-014-tracker-readiness"
+pr = 4766
+head_sha = "f740999c680e62316ed74f0057f2285ec5d5d973"
+merge_sha = "3e8fea9ebefcd06ddfbcdd192271410e3b638377"
+summary = "Merged the M3 Air Mac validate receipt bridge."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4766",
+]
+
+notes = [
+  "The merged bridge lets mac validate and mac receipts-check preserve apple-m3-air-cpu-neon backend identity, M3 Air machine identity, allocation-audit eligibility, and M3-specific receipt artifact kinds without running live model inference.",
+  "No M3 Air dense smoke, BitNet behavior, M4 Mac mini performance, Metal inference, MPSGraph model inference, Neural Engine execution, or QK256 support is claimed.",
+]
