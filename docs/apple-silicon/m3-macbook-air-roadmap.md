@@ -96,42 +96,43 @@ thin: proof still belongs to a fresh M4 item with fresh M4 receipts.
 | 3 | `M3MBA-011` | Roadmap depth and stale-reference cleanup | Operating horizons, stop/go decisions, parallel lane policy, resource budget, and M3MBA authority alignment |
 | 4 | `M3MBA-012` | Dense SLM harness contract | `mac validate`/`mac receipts-check` contract, synthetic CI receipt plan, and local-only timing boundary |
 | 5 | `M3MBA-013` | CI completion policy for selected long jobs | Routing, preflight, artifact upload, cap sizing, and CI actuals policy |
-| 6 | `M3MBA-004A` | Dense Qwen SLM smoke mirror on M3 Air | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json` plus report |
-| 7 | `M3MBA-004B` | Dense Qwen SLM operator profile on M3 Air | Operator receipt with allocation-audit, thermal, power, and comparison-grade context |
-| 8 | `M3MBA-005A` | Official Microsoft 2B I2_S artifact identity | Source revision, filename, size, SHA256, cache root, storage context |
-| 9 | `M3MBA-005B` | Official Microsoft 2B I2_S tokenizer authority | Tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence |
-| 10 | `M3MBA-005C` | Official Microsoft 2B I2_S reference output decision | Reference-runner report, answer-gate result or failing prompt IDs, cleanup state |
-| 11 | `M3MBA-010` | Storage and cache hygiene audit | Artifact ledger audit with retained/deleted model state and free-space floor |
-| 12 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
-| 13 | `M3MBA-009` | M3 SLM lane synthesis | Cross-lane report comparing M3 Air dense SLM receipts against M4 and 8250U SLM evidence |
-| 14 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
-| 15 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
+| 6 | `M3MBA-014` | M3 Air Mac validate receipt bridge | Runtime path preserves M3 Air backend and machine identity before live smoke |
+| 7 | `M3MBA-004A` | Dense Qwen SLM smoke mirror on M3 Air | `ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json` plus report |
+| 8 | `M3MBA-004B` | Dense Qwen SLM operator profile on M3 Air | Operator receipt with allocation-audit, thermal, power, and comparison-grade context |
+| 9 | `M3MBA-005A` | Official Microsoft 2B I2_S artifact identity | Source revision, filename, size, SHA256, cache root, storage context |
+| 10 | `M3MBA-005B` | Official Microsoft 2B I2_S tokenizer authority | Tokenizer/pre-tokenizer authority and bad/no-authority rejection evidence |
+| 11 | `M3MBA-005C` | Official Microsoft 2B I2_S reference output decision | Reference-runner report, answer-gate result or failing prompt IDs, cleanup state |
+| 12 | `M3MBA-010` | Storage and cache hygiene audit | Artifact ledger audit with retained/deleted model state and free-space floor |
+| 13 | `M3MBA-006` | Smaller 0.7B BitNet control candidate | `docs/reports/apple-silicon-macbook-m3-air-1bitllm-07b.md` |
+| 14 | `M3MBA-009` | M3 SLM lane synthesis | Cross-lane report comparing M3 Air dense SLM receipts against M4 and 8250U SLM evidence |
+| 15 | `M3MBA-007` | 3B TL1/TL2 diagnostic only | `docs/reports/apple-silicon-macbook-m3-air-3b-tl-diagnostic.md` |
+| 16 | `M3MBA-008` | M4 strict-proof handoff for accepted artifacts | `docs/reports/apple-silicon-macbook-m3-air-m4-proof-handoff.md` |
 
 ## Current PR Stack
 
-`M3MBA-001`, `M3MBA-002`, `M3MBA-003`, and `M3MBA-011` are merged. The lane has
-its tracker, real machine profile, explicit M3 Air CPU/NEON receipt label, and
-roadmap depth. The current stack starts by specifying the M3 dense harness
-contract, then moves to dense control evidence and the large BitNet artifact
-path.
+`M3MBA-001`, `M3MBA-002`, `M3MBA-003`, `M3MBA-011`, `M3MBA-012`, and
+`M3MBA-013` are merged. The lane has its tracker, real machine profile,
+explicit M3 Air CPU/NEON receipt label, roadmap depth, dense harness contract,
+and selected-long-job CI completion posture. The active stack now starts with a
+no-live-model Mac validate bridge so live dense control evidence cannot be
+stamped as M4 Mac mini evidence.
 
 The next sequence should stay as small PRs, with each PR either merging evidence
 or naming a blocker:
 
 | Stack position | Item | PR shape | Blocks |
 |---:|---|---|---|
-| 1 | `M3MBA-012` | Specify the M3 dense SLM harness contract and synthetic CI receipt expectation. | Live dense smoke. |
-| 2 | `M3MBA-013` | Encode CI completion policy for selected long M3 jobs. | Scheduled/labeled live M3 jobs. |
-| 3 | `M3MBA-004A` | Run dense Qwen smoke with model/tokenizer/backend/fallback context. | BitNet downloads. |
-| 4 | `M3MBA-004B` | Run bounded dense operator profile with thermal, power, and allocation context. | Comparison-grade SLM synthesis and BitNet screening. |
-| 5 | `M3MBA-005A` | Download/hash the official Microsoft 2B I2_S artifact with storage evidence. | Tokenizer authority and reference output decisions. |
-| 6 | `M3MBA-005B` | Prove tokenizer/pre-tokenizer authority and bad/no-authority rejection. | Artifact acceptance. |
-| 7 | `M3MBA-005C` | Accept, reject, or block Microsoft 2B reference output. | Secondary candidates and handoff. |
-| 8 | `M3MBA-010` | Audit cache retention, deletion, and free-space floor. | Additional large downloads. |
-| 9 | `M3MBA-006` | Evaluate the smaller 0.7B control candidate. | Handoff completeness when Microsoft 2B is blocked or rejected. |
-| 10 | `M3MBA-009` | Compare M3 dense SLM evidence against M4 and CPU receipts. | SLM lane closeout only. |
-| 11 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Optional secondary evidence. |
-| 12 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts. | M4 proof work. |
+| 1 | `M3MBA-014` | Preserve M3 Air Mac validate and receipt-check identity before live model work. | Live dense smoke. |
+| 2 | `M3MBA-004A` | Run dense Qwen smoke with model/tokenizer/backend/fallback context. | BitNet downloads. |
+| 3 | `M3MBA-004B` | Run bounded dense operator profile with thermal, power, and allocation context. | Comparison-grade SLM synthesis and BitNet screening. |
+| 4 | `M3MBA-005A` | Download/hash the official Microsoft 2B I2_S artifact with storage evidence. | Tokenizer authority and reference output decisions. |
+| 5 | `M3MBA-005B` | Prove tokenizer/pre-tokenizer authority and bad/no-authority rejection. | Artifact acceptance. |
+| 6 | `M3MBA-005C` | Accept, reject, or block Microsoft 2B reference output. | Secondary candidates and handoff. |
+| 7 | `M3MBA-010` | Audit cache retention, deletion, and free-space floor. | Additional large downloads. |
+| 8 | `M3MBA-006` | Evaluate the smaller 0.7B control candidate. | Handoff completeness when Microsoft 2B is blocked or rejected. |
+| 9 | `M3MBA-009` | Compare M3 dense SLM evidence against M4 and CPU receipts. | SLM lane closeout only. |
+| 10 | `M3MBA-007` | Keep 3B work diagnostic-only on TL1/TL2 routes. | Optional secondary evidence. |
+| 11 | `M3MBA-008` | Open or close M4 strict-proof handoff based on accepted artifacts. | M4 proof work. |
 
 ## 2026-05-13 Tactical Plan
 
@@ -142,14 +143,15 @@ artifact qualification second:
 |---:|---|---|---|
 | 1 | `M3MBA-012` | Specify the dense SLM harness contract. | Merge when the docs name the CLI/receipt contract and synthetic CI receipt expectation. |
 | 2 | `M3MBA-013` | Encode the selected-job CI completion rule. | Merge when the policy tells future M3 jobs how to route, preflight, cap, upload artifacts, and record actuals. |
-| 3 | `M3MBA-004A` | Run the dense Qwen smoke mirror as the control path. | Merge pass receipts or a blocker report; do not skip to BitNet silently. |
-| 4 | `M3MBA-004B` | Run the bounded dense Qwen operator profile. | Merge only after smoke passes, with allocation and thermal/power context. |
-| 5 | `M3MBA-005A` | Identify and hash Microsoft 2B I2_S. | Record source, revision, size, SHA256, cache root, and storage context. |
-| 6 | `M3MBA-005B` | Prove tokenizer/pre-tokenizer authority. | Record authority and bad/no-authority rejection evidence before output decisions. |
-| 7 | `M3MBA-005C` | Screen Microsoft 2B I2_S reference outputs. | Accept, reject, or block with answer-gate result or failing prompt IDs. |
-| 8 | `M3MBA-010` | Audit local cache retention after the first large download. | Merge before additional large candidates if free space falls below policy. |
-| 9 | `M3MBA-006` | Try the smaller 0.7B control candidate. | Proceed only after Microsoft 2B has a decision. |
-| 10 | `M3MBA-009` | Summarize dense SLM cross-lane behavior. | Merge after M3 dense receipts exist; feeds SLM CPU/M4 comparison. |
+| 3 | `M3MBA-014` | Implement the M3 Air Mac validate receipt bridge. | Merge when synthetic/CLI tests prove M3 backend and machine identity are preserved without live inference. |
+| 4 | `M3MBA-004A` | Run the dense Qwen smoke mirror as the control path. | Merge pass receipts or a blocker report; do not skip to BitNet silently. |
+| 5 | `M3MBA-004B` | Run the bounded dense Qwen operator profile. | Merge only after smoke passes, with allocation and thermal/power context. |
+| 6 | `M3MBA-005A` | Identify and hash Microsoft 2B I2_S. | Record source, revision, size, SHA256, cache root, and storage context. |
+| 7 | `M3MBA-005B` | Prove tokenizer/pre-tokenizer authority. | Record authority and bad/no-authority rejection evidence before output decisions. |
+| 8 | `M3MBA-005C` | Screen Microsoft 2B I2_S reference outputs. | Accept, reject, or block with answer-gate result or failing prompt IDs. |
+| 9 | `M3MBA-010` | Audit local cache retention after the first large download. | Merge before additional large candidates if free space falls below policy. |
+| 10 | `M3MBA-006` | Try the smaller 0.7B control candidate. | Proceed only after Microsoft 2B has a decision. |
+| 11 | `M3MBA-009` | Summarize dense SLM cross-lane behavior. | Merge after M3 dense receipts exist; feeds SLM CPU/M4 comparison. |
 | 11 | `M3MBA-007` | Run 3B TL diagnostics only. | Keep diagnostic-only unless the compatibility matrix changes. |
 | 12 | `M3MBA-008` | Write M4 strict-proof handoff. | Only for accepted artifacts, with fresh M4 proof still required. |
 
@@ -238,10 +240,12 @@ hardware push:
 | H2: Prove the operator path | `M3MBA-004A`, `M3MBA-004B`, `M3MBA-009` | Show the MacBook can run the known dense SLM control path with comparable receipt fields. | Smoke/operator receipts are pass/fail reviewed and synthesis names comparable gaps. |
 | H3: Spend disk on BitNet candidates | `M3MBA-005A`, `M3MBA-005B`, `M3MBA-005C`, `M3MBA-010`, `M3MBA-006`, `M3MBA-007`, `M3MBA-008` | Use the available storage for artifact identity, tokenizer authority, answer screening, cleanup, and strict-proof handoff. | Each candidate is accepted, rejected, blocked, or handed to a separate M4 proof item. |
 
-H1 has one remaining planning item: `M3MBA-012`. H2 should not run live dense
-smoke until that harness contract lands. H3 should not download the official 2B
-artifact until the dense control path leaves either passing receipts or a
-committed MacBook-specific blocker.
+H1 is complete through `M3MBA-012`, and `M3MBA-013` has added the selected
+long-job CI posture for the next live dense runs. H2 should run live dense smoke
+through `M3MBA-004A` only after `M3MBA-014` proves the Mac validate path
+preserves M3 Air identity. H3 should not download the official 2B artifact until
+the dense control path leaves either passing receipts or a committed
+MacBook-specific blocker.
 
 ## CI Completion Policy
 
@@ -312,12 +316,13 @@ M3MBA-001
     -> M3MBA-003
       -> M3MBA-012
         -> M3MBA-013
-          -> M3MBA-004A
-            -> M3MBA-004B
-              -> M3MBA-005A
-                -> M3MBA-005B
-                  -> M3MBA-005C
-                    -> M3MBA-010
+          -> M3MBA-014
+            -> M3MBA-004A
+              -> M3MBA-004B
+                -> M3MBA-005A
+                  -> M3MBA-005B
+                    -> M3MBA-005C
+                      -> M3MBA-010
                       -> M3MBA-006
                       -> M3MBA-007
                         -> M3MBA-008
@@ -349,7 +354,7 @@ stay narrow:
 | Work type | Can run in parallel? | Boundary |
 |---|---|---|
 | Review of machine-profile schema, report templates, and tracker docs | Yes | Must not change live receipt state without the owning work item. |
-| Dense SLM command planning and artifact-cache inspection | Yes | Must not run model inference before `M3MBA-012` lands. |
+| Dense SLM command planning and artifact-cache inspection | Yes | Must not run model inference before `M3MBA-014` lands. |
 | M3 CI completion-policy work | Yes | Must not enable live M3 timing in ordinary required CI; policy can land before live smoke. |
 | Tokenizer authority research for Microsoft 2B | Yes | Must not accept or reject the artifact before `M3MBA-005A` records identity and hash. |
 | Large artifact downloads | No, unless storage audit says there is headroom | One active large BitNet candidate at a time until `M3MBA-010` records retention policy. |
@@ -413,6 +418,7 @@ that a reviewer can inspect without access to the local model cache.
 | Receipt label readiness | `M3MBA-003` | Validator or documented label support for `apple-m3-air-cpu-neon` | None | Ready to record M3 timing without M4 wording |
 | Dense harness readiness | `M3MBA-012` | `mac validate`/`mac receipts-check` contract, synthetic no-model CI receipt expectation, and local-only timing boundary | None | Ready for live dense smoke or implementation PR |
 | CI completion readiness | `M3MBA-013` | Routing, preflight, artifact upload, cap sizing, and CI actuals policy for selected long M3 jobs | None | Ready for scheduled/labeled live M3 evidence without near-completion caps |
+| M3 validate bridge | `M3MBA-014` | Mac validate and receipts-check preserve `apple-m3-air-cpu-neon` backend, M3 machine ID, and M3-specific artifact kinds without live inference | None | Ready for live dense smoke |
 | Dense control | `M3MBA-004A` | Smoke receipt, receipts-check output, model hash, tokenizer metadata, fallback status | Downloaded dense Qwen artifact | Ready for bounded operator run or blocker report |
 | Dense operator | `M3MBA-004B` | Operator receipt, allocation-audit summary, thermal/power context | Warm model cache | Ready for BitNet artifact screening |
 | Microsoft 2B identity | `M3MBA-005A` | Candidate report with source revision, filename, size, SHA256, cache root, free space before/after | Official 2B GGUF while active | Ready for tokenizer authority work |
@@ -618,16 +624,17 @@ work.
 |---:|---|---|---|
 | 1 | `M3MBA-012` | Dense SLM harness contract | CLI/receipt contract and synthetic CI receipt expectation recorded |
 | 2 | `M3MBA-013` | CI completion policy | Selected long jobs have routing, preflight, artifact upload, cap, and actuals rules |
-| 3 | `M3MBA-004A` | Dense Qwen smoke mirror | Smoke receipt passes or blocker is recorded |
-| 4 | `M3MBA-004B` | Dense Qwen operator mirror | Operator receipt passes or remains diagnostic-only |
-| 5 | `M3MBA-005A` | Microsoft 2B I2_S artifact identity | Source, revision, size, hash, cache root, and storage state recorded |
-| 6 | `M3MBA-005B` | Microsoft 2B I2_S tokenizer authority | Authority and bad/no-authority rejection evidence recorded |
-| 7 | `M3MBA-005C` | Microsoft 2B I2_S reference output decision | Accept/reject/block report with answer-gate result |
-| 8 | `M3MBA-010` | Storage and cache hygiene audit | Headroom decision before secondary large candidates |
-| 9 | `M3MBA-006` | 0.7B 1bitLLM control candidate | Accept/reject report and cleanup state |
-| 10 | `M3MBA-009` | Dense SLM cross-lane synthesis | Comparable receipt fields and gaps named |
-| 11 | `M3MBA-007` | 3B TL1/TL2 diagnostic | Diagnostic report only |
-| 12 | `M3MBA-008` | M4 strict-proof handoff | New M4 proof item, or no-accepted-artifact closure |
+| 3 | `M3MBA-014` | M3 Air Mac validate receipt bridge | M3 backend and machine identity are preserved without live model inference |
+| 4 | `M3MBA-004A` | Dense Qwen smoke mirror | Smoke receipt passes or blocker is recorded |
+| 5 | `M3MBA-004B` | Dense Qwen operator mirror | Operator receipt passes or remains diagnostic-only |
+| 6 | `M3MBA-005A` | Microsoft 2B I2_S artifact identity | Source, revision, size, hash, cache root, and storage state recorded |
+| 7 | `M3MBA-005B` | Microsoft 2B I2_S tokenizer authority | Authority and bad/no-authority rejection evidence recorded |
+| 8 | `M3MBA-005C` | Microsoft 2B I2_S reference output decision | Accept/reject/block report with answer-gate result |
+| 9 | `M3MBA-010` | Storage and cache hygiene audit | Headroom decision before secondary large candidates |
+| 10 | `M3MBA-006` | 0.7B 1bitLLM control candidate | Accept/reject report and cleanup state |
+| 11 | `M3MBA-009` | Dense SLM cross-lane synthesis | Comparable receipt fields and gaps named |
+| 12 | `M3MBA-007` | 3B TL1/TL2 diagnostic | Diagnostic report only |
+| 13 | `M3MBA-008` | M4 strict-proof handoff | New M4 proof item, or no-accepted-artifact closure |
 
 ## Execution Roadmap
 
@@ -701,7 +708,7 @@ work.
      --corpus ci/quality/apple-m4-slm-quality-corpus.yaml \
      --corpus-repeat-runs 2 \
      --max-new-tokens 32 \
-     --backend-label apple-m3-air-cpu-neon \
+     --device apple-m3-air-cpu-neon \
      --json-out target/apple-silicon-macbook/m3-air/M3MBA-004A/qwen-mirror-smoke.json \
      --quiet
 
@@ -719,13 +726,12 @@ work.
      --corpus-repeat-runs 2 \
      --max-new-tokens 32 \
      --allocation-audit \
-     --backend-label apple-m3-air-cpu-neon \
+     --device apple-m3-air-cpu-neon \
      --json-out target/apple-silicon-macbook/m3-air/M3MBA-004B/qwen-mirror-operator.json \
      --quiet
    ```
 
-   The exact command may change if the CLI already has a MacBook-specific profile
-   or if `--backend-label` is not the final CLI spelling. If the existing M4
+   The exact command may change if the CLI adds a MacBook-specific profile. If the existing M4
    profile label rejects the M3 host, add the smallest MacBook-specific receipt
    label instead of weakening M4 validation.
 
@@ -813,28 +819,26 @@ work.
 
 ## Near-Term Order
 
-1. Land `M3MBA-012` so live dense smoke has a written M3 Air harness contract
-   before it runs.
-2. Land `M3MBA-013` so any selected long M3 job is designed to finish and emit
-   receipts, or is routed away before it starts.
-3. Run `M3MBA-004A` as an M3 Air dense Qwen smoke mirror now that real MacBook
+1. Merge `M3MBA-014` so `mac validate` and `mac receipts-check` preserve M3 Air
+   backend and machine identity before live model work.
+2. Run `M3MBA-004A` as an M3 Air dense Qwen smoke mirror now that real MacBook
    hardware and receipt labeling are available.
-4. Run `M3MBA-004B` as the bounded dense Qwen operator profile only after smoke
+3. Run `M3MBA-004B` as the bounded dense Qwen operator profile only after smoke
    passes.
-5. Run `M3MBA-005A`, `M3MBA-005B`, and `M3MBA-005C` for official Microsoft 2B
+4. Run `M3MBA-005A`, `M3MBA-005B`, and `M3MBA-005C` for official Microsoft 2B
    I2_S identity, tokenizer authority, and reference-output decisions before
    any secondary BitNet candidate.
-6. Run `M3MBA-010` after the first large BitNet download so retained/deleted
+5. Run `M3MBA-010` after the first large BitNet download so retained/deleted
    artifacts, free-space before/after, and secondary-download headroom are
    committed.
-7. Use the 0.7B 1bitLLM candidate in `M3MBA-006` only after the Microsoft path
+6. Use the 0.7B 1bitLLM candidate in `M3MBA-006` only after the Microsoft path
    records a decision, the preflight resolves concrete artifact identity, and
    `M3MBA-010` permits another large candidate.
-8. Run `M3MBA-009` once dense smoke/operator receipts exist so the M3 dense SLM
+7. Run `M3MBA-009` once dense smoke/operator receipts exist so the M3 dense SLM
    lane is compared against M4 and SLM CPU evidence before broader claims.
-9. Keep `M3MBA-007` diagnostic-only and run it only after storage audit permits
+8. Keep `M3MBA-007` diagnostic-only and run it only after storage audit permits
     the 3B download.
-10. Keep M4 proof handoff separate in `M3MBA-008` until a candidate passes
+9. Keep M4 proof handoff separate in `M3MBA-008` until a candidate passes
     reference output with tokenizer authority and the secondary-candidate
     decision surface is explicit; otherwise close it as no accepted artifact.
 

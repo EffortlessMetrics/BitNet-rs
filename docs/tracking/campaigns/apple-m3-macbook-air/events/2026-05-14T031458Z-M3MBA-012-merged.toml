@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T03:14:58Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-012"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-012-dense-harness-contract"
+pr = 4658
+head_sha = "b35ec82b8765a4cb5529ed53d7fb653e5e6490bf"
+merge_sha = "cad5693291ef80152d75dffaa25824ba08fe09c9"
+summary = "Merged the M3 Air dense SLM harness contract."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4658",
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+]
+
+notes = [
+  "The merged contract names the mac validate and mac receipts-check path for apple-m3-air-cpu-neon dense SLM smoke before live M3 evidence starts.",
+  "The item remains no-inference proof only; it does not claim a live dense smoke run, BitNet behavior, M4 Mac mini performance, Metal inference, Neural Engine, MPSGraph, or QK256 support.",
+]

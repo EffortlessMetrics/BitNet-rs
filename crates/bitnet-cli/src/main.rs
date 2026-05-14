@@ -4594,7 +4594,7 @@ async fn run_simple_generation(
     }
     if allocation_audit && !allocation_audit_backend_supported(&backend_identity) {
         anyhow::bail!(
-            "--allocation-audit is currently scoped to --device apple-m4-cpu-neon with fallback_used=false; got requested_backend={}, selected_backend={}, runtime_api={}, fallback_used={}",
+            "--allocation-audit is currently scoped to supported Apple CPU/NEON labels with fallback_used=false; got requested_backend={}, selected_backend={}, runtime_api={}, fallback_used={}",
             backend_identity.requested_backend,
             backend_identity.selected_backend,
             backend_identity.runtime_api,
@@ -8002,9 +8002,9 @@ async fn run_slm_warm_session(
         .as_ref()
         .and_then(|corpus| corpus.defaults.prompt_template.clone())
         .unwrap_or(prompt_template);
-    if requested_backend_label != "apple-m4-cpu-neon" {
+    if !is_supported_apple_cpu_neon_backend(requested_backend_label) {
         anyhow::bail!(
-            "slm-warm-session is scoped to --device apple-m4-cpu-neon for Apple M4 SLM receipts; got {requested_backend_label}"
+            "slm-warm-session is scoped to supported Apple CPU/NEON receipt labels: apple-m4-cpu-neon or apple-m3-air-cpu-neon; got {requested_backend_label}"
         );
     }
     match model_format.as_str() {
@@ -8653,7 +8653,7 @@ async fn run_slm_warm_session(
         model_load_ms,
         tokenizer_load_ms,
         total_session_ms,
-        "validated SLM warm session on apple-m4-cpu-neon",
+        &format!("validated SLM warm session on {}", backend_identity.selected_backend.as_str()),
         "warm-answer timing is measured for this model, corpus, backend, and machine context only",
     );
     let determinism = slm_warm_session_determinism_receipt(&determinism_records);
@@ -8670,7 +8670,7 @@ async fn run_slm_warm_session(
         .unwrap_or(min_distinct_generated_tokens);
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
-        "artifact_kind": "slm_apple_m4_warm_session",
+        "artifact_kind": slm_warm_session_artifact_kind(backend_identity.requested_backend.as_str()),
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "artifact_path": json_out.display().to_string(),
         "requested_backend": backend_identity.requested_backend.as_str(),
@@ -11424,7 +11424,7 @@ fn steady_decode_tps_ms(decode_step_ms: &[f64]) -> Option<f64> {
 fn profile_claim_scope(runtime_api: &str, selected_backend: &str) -> &'static str {
     if runtime_api == "cpu" || selected_backend == "cpu-rust" {
         "selected CPU backend phase timing only"
-    } else if selected_backend.starts_with("apple-m4") || runtime_api == "metal" {
+    } else if is_apple_backend_label(selected_backend) || runtime_api == "metal" {
         "selected Apple backend phase timing only"
     } else if runtime_api == "cuda" || selected_backend.contains("cuda") {
         "selected CUDA backend phase timing only"
@@ -11444,7 +11444,7 @@ fn profile_machine_context_recorded(
         return cpu_model_present || !cpu_features.is_empty();
     }
 
-    if selected_backend.starts_with("apple-m4") || runtime_api == "metal" {
+    if is_apple_backend_label(selected_backend) || runtime_api == "metal" {
         return apple_machine_present;
     }
 
@@ -11452,27 +11452,54 @@ fn profile_machine_context_recorded(
 }
 
 fn allocation_audit_backend_supported(identity: &RunBackendIdentity) -> bool {
-    identity.requested_backend == "apple-m4-cpu-neon"
-        && identity.selected_backend == "apple-m4-cpu-neon"
+    is_supported_apple_cpu_neon_backend(identity.requested_backend.as_str())
+        && identity.selected_backend == identity.requested_backend
         && identity.runtime_api == "cpu"
         && !identity.fallback_used
+}
+
+fn slm_warm_session_artifact_kind(requested_backend: &str) -> &'static str {
+    match requested_backend.trim().to_ascii_lowercase().as_str() {
+        "apple-m3-air-cpu-neon" => "slm_apple_m3_air_warm_session",
+        _ => "slm_apple_m4_warm_session",
+    }
 }
 
 fn apple_machine_receipt_json(
     requested_backend: &str,
     selected_backend: &str,
 ) -> Option<serde_json::Value> {
-    if !is_apple_m4_backend_label(requested_backend) && !is_apple_m4_backend_label(selected_backend)
-    {
+    if !is_apple_backend_label(requested_backend) && !is_apple_backend_label(selected_backend) {
         return None;
     }
 
     let probe = probe_apple_cli_machine();
-    Some(apple_machine_receipt_json_from_probe(&probe))
+    let machine_id = apple_machine_id_for_backend(requested_backend)
+        .or_else(|| apple_machine_id_for_backend(selected_backend))
+        .unwrap_or("apple-silicon-mac");
+    Some(apple_machine_receipt_json_from_probe(&probe, machine_id))
 }
 
-fn is_apple_m4_backend_label(label: &str) -> bool {
-    label.trim().to_ascii_lowercase().starts_with("apple-m4-")
+fn is_apple_backend_label(label: &str) -> bool {
+    matches!(
+        label.trim().to_ascii_lowercase().as_str(),
+        "apple-m4-metal" | "apple-m4-mpsgraph" | "apple-m4-cpu-neon" | "apple-m3-air-cpu-neon"
+    )
+}
+
+fn is_supported_apple_cpu_neon_backend(label: &str) -> bool {
+    matches!(
+        label.trim().to_ascii_lowercase().as_str(),
+        "apple-m4-cpu-neon" | "apple-m3-air-cpu-neon"
+    )
+}
+
+fn apple_machine_id_for_backend(label: &str) -> Option<&'static str> {
+    match label.trim().to_ascii_lowercase().as_str() {
+        "apple-m4-metal" | "apple-m4-mpsgraph" | "apple-m4-cpu-neon" => Some("apple-m4-mac-mini"),
+        "apple-m3-air-cpu-neon" => Some("apple-m3-macbook-air"),
+        _ => None,
+    }
 }
 
 fn backend_selection_error_message_with_note(requested_backend_label: &str, error: &str) -> String {
@@ -11492,6 +11519,9 @@ fn apple_backend_failure_note(requested_backend_label: &str) -> Option<&'static 
         ),
         "apple-m4-cpu-neon" => Some(
             "apple-m4-cpu-neon is the Apple ARM64 CPU/NEON fallback and parity lane; it is not Metal acceleration, and scalar fallback must be visible in receipts.",
+        ),
+        "apple-m3-air-cpu-neon" => Some(
+            "apple-m3-air-cpu-neon is the Apple M3 MacBook Air CPU/NEON lane; it is not M4 Mac mini evidence, Metal acceleration, Neural Engine execution, or MPSGraph model inference.",
         ),
         _ => None,
     }
@@ -11607,7 +11637,10 @@ fn receipt_metal_text_reports_visibility(output: &str) -> bool {
             || lower.contains("gpu"))
 }
 
-fn apple_machine_receipt_json_from_probe(probe: &AppleCliMachineProbe) -> serde_json::Value {
+fn apple_machine_receipt_json_from_probe(
+    probe: &AppleCliMachineProbe,
+    machine_id: &str,
+) -> serde_json::Value {
     let mut resolved_device = serde_json::Map::new();
     resolved_device.insert(
         "chip".to_string(),
@@ -11628,7 +11661,7 @@ fn apple_machine_receipt_json_from_probe(probe: &AppleCliMachineProbe) -> serde_
     }
 
     serde_json::json!({
-        "machine_id": "apple-m4-mac-mini",
+        "machine_id": machine_id,
         "resolved_device": resolved_device,
         "macos": {
             "version": probe.macos_version,
@@ -12914,7 +12947,7 @@ mod tests {
             native_or_virtualized: Some("native-macos".to_string()),
             metal_visible: true,
         };
-        let receipt = apple_machine_receipt_json_from_probe(&probe);
+        let receipt = apple_machine_receipt_json_from_probe(&probe, "apple-m4-mac-mini");
 
         assert_eq!(receipt["machine_id"], "apple-m4-mac-mini");
         assert_eq!(receipt["resolved_device"]["chip"], "Apple M4");
@@ -12924,6 +12957,26 @@ mod tests {
         assert_eq!(receipt["resolved_device"]["unified_memory_bytes"], 17_179_869_184_u64);
         assert_eq!(receipt["macos"]["native_or_virtualized"], "native-macos");
         assert_eq!(receipt["metal_visible"], true);
+    }
+
+    #[test]
+    fn apple_m3_air_receipt_uses_macbook_machine_id() {
+        let probe = AppleCliMachineProbe {
+            chip: Some("Apple M3".to_string()),
+            cpu_cores: Some(8),
+            gpu_cores: Some(10),
+            unified_memory: Some(true),
+            unified_memory_bytes: Some(17_179_869_184),
+            macos_version: Some("15.5".to_string()),
+            macos_build: Some("24F74".to_string()),
+            native_or_virtualized: Some("native-macos".to_string()),
+            metal_visible: true,
+        };
+        let receipt = apple_machine_receipt_json_from_probe(&probe, "apple-m3-macbook-air");
+
+        assert_eq!(receipt["machine_id"], "apple-m3-macbook-air");
+        assert_eq!(receipt["resolved_device"]["chip"], "Apple M3");
+        assert_eq!(receipt["resolved_device"]["cpu_cores"], 8);
     }
 
     #[test]
@@ -13104,6 +13157,13 @@ mod tests {
         assert!(allocation_audit_backend_supported(&RunBackendIdentity {
             requested_backend: "apple-m4-cpu-neon".to_string(),
             selected_backend: "apple-m4-cpu-neon".to_string(),
+            runtime_api: "cpu".to_string(),
+            fallback_used: false,
+            fallback_reason: None,
+        }));
+        assert!(allocation_audit_backend_supported(&RunBackendIdentity {
+            requested_backend: "apple-m3-air-cpu-neon".to_string(),
+            selected_backend: "apple-m3-air-cpu-neon".to_string(),
             runtime_api: "cpu".to_string(),
             fallback_used: false,
             fallback_reason: None,

@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T03:48:12Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-013"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-013-ci-completion-workflow"
+pr = 4665
+head_sha = "6da90069dee38cdbc7f87ecc111eab57b8c1e086"
+merge_sha = "7389b271a9cf508bc13b9d81aed9e15be925eb17"
+summary = "Merged the staged M3 Air dense SLM CI completion workflow."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4665",
+  ".github/workflows/apple-m3-air-dense-slm.yml",
+  "docs/ci/cost-and-verification-policy.md",
+]
+
+notes = [
+  "The merged workflow is manual and selected-lane only, with disk preflight, artifact upload, and cancel-in-progress disabled so selected long jobs can finish and emit receipts.",
+  "The item does not enable live M3 model work in ordinary required PR CI and does not claim that any M3 Air model inference ran.",
+]

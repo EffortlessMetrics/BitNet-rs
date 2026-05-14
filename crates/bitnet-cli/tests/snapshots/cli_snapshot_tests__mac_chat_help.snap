@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 158
 expression: help
 ---
 Run multiple prompts in one resident Apple M4 CPU/NEON SLM session
@@ -12,7 +13,7 @@ Options:
       --prompt <TEXT>
           Prompt to answer. Repeat for each turn in the resident Mac session
   -d, --device <DEVICE>
-          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto). Apple M4 labels are distinct proof lanes
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
       --stdin
           Read additional prompts from stdin, one non-empty line per turn
       --interactive
