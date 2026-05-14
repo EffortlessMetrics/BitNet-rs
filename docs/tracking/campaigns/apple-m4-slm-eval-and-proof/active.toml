@@ -160,7 +160,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL-004"
-status = "in_progress"
+status = "pr_open"
+pr = 4670
 branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-004-supported-model-reports"
 stackable = false
 review_mode = "codex_premerge"

@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T01:26:04Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-004"
+event = "pr_open"
+pr = 4670
+head_sha = "62363dc8cb7a4813432d97fde3c53effeee9b30b"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4670 to publish the 2026-05-14 Apple M4 dense SLM eval report set.",
+  "The PR includes summary, answer-corpus, per-case, resident aggregate, and resident per-prompt receipts for qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m.",
+  "All three summaries validate with bitnet mac receipts-check and keep requested_backend=apple-m4-cpu-neon, selected_backend=apple-m4-cpu-neon, runtime_api=cpu, fallback_used=false, dense-SLM-only scope, and no broad quality/performance, BitNet, full Metal, QK256, Neural Engine, MPSGraph, MacBook, or speedup claim.",
+]
