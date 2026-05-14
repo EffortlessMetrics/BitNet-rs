@@ -277,18 +277,17 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-004A"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M3MBA-014"]
 acceptance = "Run the dense Qwen2.5 0.5B Mac smoke path on M3 Air with the known model hash, tokenizer metadata, deterministic settings, exact requested/selected backend label identity, fallback status, power and thermal context, storage before/after, receipts-check output, and dense-only claim boundary."
 commands = [
-  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set smoke --device apple-m3-air-cpu-neon --quiet",
-  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check <receipt> --json",
-  "jq -e '.strict_provenance.requested_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.selected_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.fallback_used == false' <receipt>",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set smoke --device apple-m3-air-cpu-neon --corpus ci/quality/apple-m4-slm-quality-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 32 --cache-dir ~/Library/Caches/bitnet-rs/models --json-out ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json --quiet",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json --json",
+  "jq -e '.backend.requested_backend == \"apple-m3-air-cpu-neon\" and .backend.selected_backend == \"apple-m3-air-cpu-neon\" and .backend.fallback_used == false and .mac_claim_boundary.requested_backend == \"apple-m3-air-cpu-neon\"' ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
@@ -296,6 +295,7 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "crates/bitnet-cli/**",
   "ci/hardware/apple-silicon-macbook/**",
   "docs/apple-silicon/**",
   "docs/reports/**",
