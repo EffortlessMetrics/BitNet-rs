@@ -21,7 +21,7 @@ user-path receipts versus validators, fixtures, or contracts.
 
 ## Work item: CUDA-DENSE-050
 
-Status: in progress
+Status: PR open (#4713)
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007
 Linked ADRs: BITNET-ADR-0004
