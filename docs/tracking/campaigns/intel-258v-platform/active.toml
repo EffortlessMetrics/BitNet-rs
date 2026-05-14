@@ -3410,10 +3410,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-003"
-status = "pr_open"
+status = "merged"
 pr = 4721
+merge_sha = "00d4ac6c1a152dcf55408d4095e22f550965398e"
 branch = "codex/lunar-lake/LNL258V-OP-003-openvino-ask-evidence"
-head_sha = "9bd37b412c3d193b95491c54de38ddd1c8235275"
+head_sha = "6538b465bfe981579d7bf18cd55c009e6310c7ba"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
