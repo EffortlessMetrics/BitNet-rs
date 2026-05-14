@@ -62,6 +62,7 @@
 | apple-m4-local-answer | M4-BITNET-ASK-006 | M4-BITNET-ASK-005 | merged |
 | apple-m4-local-answer | M4-BITNET-SMOKE-001 | M4-BITNET-ASK-006 | merged |
 | apple-m4-local-answer | M4-BITNET-WARM-001 | M4-BITNET-SMOKE-001 | merged |
+| apple-m4-local-answer | M4-BITNET-WARM-002 | M4-BITNET-WARM-001 | merged |
 | apple-m4-operational | M4-OP-002 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-003 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-004 | M4-OP-003 | merged |
@@ -354,8 +355,8 @@
 | slm-cpu | SLM-CPU-008W | SLM-CPU-008V | merged |
 | slm-cpu | SLM-CPU-008X | SLM-CPU-008W | merged |
 | slm-cpu | SLM-CPU-008YA | SLM-CPU-008X | merged |
-| slm-cpu | SLM-CPU-008YB | SLM-CPU-008YA | pr_open |
-| slm-cpu | SLM-CPU-008Y | SLM-CPU-008YA, SLM-CPU-008YB | blocked |
+| slm-cpu | SLM-CPU-008YB | SLM-CPU-008YA | merged |
+| slm-cpu | SLM-CPU-008Y | SLM-CPU-008YA, SLM-CPU-008YB | ready |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | merged |
 | wasm-inference | WASM-002 | WASM-001 | ready |

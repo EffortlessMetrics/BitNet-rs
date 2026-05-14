@@ -339,9 +339,10 @@ fn mac_models_lists_operator_model_states() -> Result<(), Box<dyn std::error::Er
         .stdout(predicate::str::contains("supported-ask"))
         .stdout(predicate::str::contains("candidate"))
         .stdout(predicate::str::contains("rejected"))
-        .stdout(predicate::str::contains("one-shot ask only"))
+        .stdout(predicate::str::contains("one-shot ask or fixed warm route"))
         .stdout(predicate::str::contains("Proof bridge: microsoft-bitnet-b1.58-2B-4T-i2s"))
         .stdout(predicate::str::contains("mac bitnet-proof --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf"))
+        .stdout(predicate::str::contains("mac bitnet-warm"))
         .stdout(predicate::str::contains("--proof-receipt ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json"));
     Ok(())
 }
@@ -372,7 +373,7 @@ fn mac_models_json_exposes_claim_boundaries_without_fetching()
     assert!(recommendation.contains("default") || recommendation.contains("Disk"));
     let claim_boundary =
         json["claim_boundary"].as_str().ok_or_else(|| std::io::Error::other("claim boundary"))?;
-    assert!(claim_boundary.contains("one-shot ask only"));
+    assert!(claim_boundary.contains("fixed-prompt warm-session"));
     let rows = json["rows"].as_array().ok_or_else(|| std::io::Error::other("rows"))?;
     assert!(rows.iter().any(|row| {
         row["id"] == "qwen2.5-0.5b-instruct-q8_0"
@@ -388,17 +389,25 @@ fn mac_models_json_exposes_claim_boundaries_without_fetching()
         row["id"] == "microsoft-bitnet-b1.58-2B-4T-i2s"
             && row["state"] == "supported-ask"
             && row["selection"]
-                == "explicit --model-id with --model-path/--tokenizer for one-shot ask only"
+                == "explicit --model-id with --model-path/--tokenizer for one-shot ask or fixed warm route only"
             && row["mac_ask_enabled"] == true
+            && row["mac_bitnet_warm_enabled"] == true
             && row["mac_chat_enabled"] == false
             && row["mac_ask_chat_enabled"] == false
             && row["mac_serve_enabled"] == false
-            && row["proof_status"] == "answer-corpus-proof-passed-one-shot-ask-explicit-artifact"
+            && row["proof_status"] == "answer-corpus-and-warm-session-proof-passed-explicit-artifact"
             && row["proof_command"]
                 .as_str()
                 .is_some_and(|command| command.contains("mac bitnet-proof --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf"))
             && row["proof_receipt_path"]
                 == "ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json"
+            && row["warm_command"].as_str().is_some_and(|command| {
+                command.contains("mac bitnet-warm")
+                    && command.contains("--model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf")
+                    && command.contains("--tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json")
+            })
+            && row["warm_receipt_path"]
+                == "ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-warm/bitnet-mac-bitnet-warm-runtime-receipt.json"
             && row["recommended_fetch_headroom_bytes"].as_u64().is_some()
             && row["fetch_command"].as_str().is_some_and(|command| command.contains("bitnet model fetch microsoft-bitnet"))
     }));
@@ -478,6 +487,7 @@ fn mac_check_rejects_blocked_bitnet_model_before_cache_guidance() {
         .stderr(predicate::str::contains("MODEL-ARTIFACT-007"))
         .stderr(predicate::str::contains("M4-QA-001"))
         .stderr(predicate::str::contains("one-shot `bitnet mac ask`"))
+        .stderr(predicate::str::contains("fixed-prompt `bitnet mac bitnet-warm`"))
         .stderr(predicate::str::contains("bitnet mac models"))
         .stderr(predicate::str::contains("bitnet model fetch microsoft-bitnet").not());
 }
@@ -932,6 +942,17 @@ fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt()
     );
     assert_eq!(receipt_json["checks"]["bitnet_ask"]["claim_boundary"]["chat_enabled"], false);
     assert_eq!(receipt_json["checks"]["bitnet_ask"]["claim_boundary"]["serve_enabled"], false);
+    assert_eq!(
+        receipt_json["checks"]["bitnet_ask"]["claim_boundary"]["bitnet_fixed_prompt_warm_session"],
+        true
+    );
+    assert_eq!(receipt_json["checks"]["bitnet_ask"]["model"]["mac_bitnet_warm_enabled"], true);
+    assert!(
+        receipt_json["checks"]["bitnet_ask"]["commands"]["warm_cached_model"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("bitnet mac bitnet-warm")
+    );
     assert!(
         receipt_json["checks"]["bitnet_ask"]["commands"]["models"]
             .as_str()
@@ -3467,7 +3488,7 @@ fn legacy_inference_apple_label_error_points_to_receipt_backed_run_path() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("does not support device label 'apple-m4-metal'"))
-        .stderr(predicate::str::contains("Use `bitnet run` for receipt-backed Apple M4 labels"))
+        .stderr(predicate::str::contains("Use `bitnet run` for receipt-backed Apple proof labels"))
         .stderr(predicate::str::contains("CPU fallback cannot count as Metal execution"));
 }
 

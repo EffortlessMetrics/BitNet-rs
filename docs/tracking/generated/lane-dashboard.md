@@ -9,7 +9,7 @@
 | apple-m4 | Apple M4 Mac mini validation | M4-018 | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
 | apple-m4-continuity | Apple M4 continuity | M4-CONT-005 | This is an M4 Mac mini local campaign; do not execute MacBook artifact sweeps or MacBook receipts here. |
 | apple-m4-dense-slm-regression | Apple M4 dense SLM regression guardrails | M4-SLM-REG-005 | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
-| apple-m4-local-answer | Apple M4 local answer usability | M4-BITNET-WARM-001 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
+| apple-m4-local-answer | Apple M4 local answer usability | M4-BITNET-WARM-002 | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-local-server | Apple M4 local server | M4-SERVE-005 | This is an M4 Mac mini dense SLM service campaign. |
 | apple-m4-operational | Apple M4 operational readiness | M4-OP-006 | Do not reopen the completed apple-m4 proof campaign. |
 | apple-m4-productization | Apple M4 local answer productization | M4-PROD-005 | Do not reopen the completed apple-m4, apple-m4-operational, or apple-m4-slm-answer campaigns. |
@@ -31,6 +31,6 @@
 | model-artifacts | Model artifact answer authority | MODEL-ARTIFACT-002 | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-DENSE-052 | CUDA visibility is not kernel execution. |
 | server-real-inference | Server real inference | SERVER-005 | Do not reintroduce simulated inference. |
-| slm-cpu | Small dense model CPU proof | SLM-CPU-008YB | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | Small dense model CPU proof | SLM-CPU-008Y | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | Tracker infrastructure | TRACKER-003 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM inference proof lane | WASM-002 | WASM detection is not inference. |

@@ -1,0 +1,16 @@
+timestamp = "2026-05-14T06:27:41Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-WARM-002"
+event = "merged"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "merged"
+pr = 4705
+head_sha = "715252ea8f8cb41128f045e70b5242904bde15ed"
+merge_sha = "0cb4a1cdd73e7ec4cccdb92054e101a9feb37ce0"
+
+notes = [
+  "PR #4705 merged the BitNet fixed-prompt warm-route catalog/readiness exposure.",
+  "`bitnet mac models`, `bitnet mac doctor`, local-server `/models`, and `mac serve-check` expose warm-route metadata and committed receipt path.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and broad performance claims remain disabled.",
+]
