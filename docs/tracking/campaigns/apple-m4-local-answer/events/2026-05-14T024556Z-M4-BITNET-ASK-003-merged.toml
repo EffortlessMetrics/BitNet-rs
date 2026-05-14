@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T02:45:56Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-003"
+event = "merged"
+pr = 4680
+merge_sha = "f19375062636d436ca7005de140e5df6f544ea39"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "Merged PR #4680 for M4-BITNET-ASK-003 one-shot BitNet `bitnet mac ask` partial-failure receipts.",
+  "The route now writes durable setup/generation failure receipts with failure stage, repair guidance, timeout-boundary status, fallback_used=false, and empty partial generation before returning an error.",
+  "BitNet chat, BitNet serve, full Metal inference, Apple QK256, Neural Engine, MPSGraph, broad BitNet quality, and broad performance claims remain disabled.",
+]
