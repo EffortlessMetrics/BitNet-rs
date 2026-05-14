@@ -1,7 +1,7 @@
 use bitnet_bench_receipts::validate_strict_cpu_benchmark_receipt_json;
 use bitnet_quantization::i2s_qk256::{
     QK256_BLOCK, QK256_PACKED_BYTES, QK256_SCALAR_GEMM_KERNEL_ID, QK256_SCALAR_GEMV_KERNEL_ID,
-    gemv_qk256_with_kernel_selection, qk256_gemm_scalar,
+    Qk256KernelSelection, gemv_qk256_with_kernel_selection, qk256_gemm_scalar,
 };
 use serde_json::json;
 use std::env;
@@ -31,6 +31,7 @@ struct Args {
     generated_tokens: u64,
     batch_size: u64,
     include_i2s_tiling_matrix: bool,
+    include_i2s_applied_thread_matrix: bool,
     include_embedding_quantization_evidence: bool,
     tensor_boundary_audit: Option<PathBuf>,
 }
@@ -51,6 +52,7 @@ impl Default for Args {
             generated_tokens: 8,
             batch_size: 1,
             include_i2s_tiling_matrix: false,
+            include_i2s_applied_thread_matrix: false,
             include_embedding_quantization_evidence: false,
             tensor_boundary_audit: None,
         }
@@ -109,6 +111,14 @@ struct TilingMatrixRun {
     profile: KernelMicrobenchProfile,
 }
 
+#[derive(Debug)]
+struct AppliedThreadMatrixRun {
+    candidate: TilingCandidate,
+    profile: KernelMicrobenchProfile,
+    applied_thread_count: usize,
+    thread_partition: &'static str,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let args = parse_args()?;
     let receipt = build_receipt(&args)?;
@@ -154,6 +164,9 @@ fn parse_args() -> Result<Args, Box<dyn Error>> {
             "--generated-tokens" => args.generated_tokens = next_value(&mut iter, &arg)?.parse()?,
             "--batch-size" => args.batch_size = next_value(&mut iter, &arg)?.parse()?,
             "--include-i2s-tiling-matrix" => args.include_i2s_tiling_matrix = true,
+            "--include-i2s-applied-thread-matrix" => {
+                args.include_i2s_applied_thread_matrix = true;
+            }
             "--include-embedding-quantization-evidence" => {
                 args.include_embedding_quantization_evidence = true;
             }
@@ -183,7 +196,7 @@ fn print_help() {
         "Usage: cpu_benchmark_receipt [--receipt-out PATH] [--kernel auto|qk256-scalar-gemv|qk256-avx2-gemv] [--strict]\n\
          Options: --model-repo, --model-file, --model-sha256, --quant-format, --tokenizer-source,\n\
          --selected-backend, --prompt-tokens, --generated-tokens, --batch-size, --include-i2s-tiling-matrix,\n\
-         --include-embedding-quantization-evidence, --tensor-boundary-audit PATH"
+         --include-i2s-applied-thread-matrix, --include-embedding-quantization-evidence, --tensor-boundary-audit PATH"
     );
 }
 
@@ -225,6 +238,11 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
     } else {
         Vec::new()
     };
+    let applied_thread_matrix_runs = if args.include_i2s_applied_thread_matrix {
+        measure_i2s_applied_thread_matrix(args.requested_kernel, args.strict)?
+    } else {
+        Vec::new()
+    };
 
     let selected_kernel = measured
         .first()
@@ -232,7 +250,8 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
         .unwrap_or(QK256_SCALAR_GEMV_KERNEL_ID);
     let fallback_used = measured.iter().any(|profile| profile.fallback_used)
         || microbench_profiles.iter().any(|profile| profile.fallback_used)
-        || tiling_matrix_runs.iter().any(|run| run.profile.fallback_used);
+        || tiling_matrix_runs.iter().any(|run| run.profile.fallback_used)
+        || applied_thread_matrix_runs.iter().any(|run| run.profile.fallback_used);
     let cpu_features = cpu_features();
 
     let profiles: Vec<_> = measured
@@ -288,6 +307,14 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
         .collect();
     let i2s_tiling_thread_matrix = if args.include_i2s_tiling_matrix {
         Some(build_i2s_tiling_thread_matrix(&tiling_matrix_runs, args.quant_format.as_str()))
+    } else {
+        None
+    };
+    let i2s_applied_thread_matrix = if args.include_i2s_applied_thread_matrix {
+        Some(build_i2s_applied_thread_matrix(
+            &applied_thread_matrix_runs,
+            args.quant_format.as_str(),
+        ))
     } else {
         None
     };
@@ -366,11 +393,96 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
             ]
         },
         "i2s_tiling_thread_matrix": i2s_tiling_thread_matrix,
+        "i2s_applied_thread_matrix": i2s_applied_thread_matrix,
         "embedding_quantization_evidence": embedding_quantization_evidence,
         "profiles": profiles,
         "profile_order": PROFILE_NAMES,
         "artifact_path": args.receipt_out.as_ref().map(|path| path.display().to_string())
     }))
+}
+
+fn build_i2s_applied_thread_matrix(
+    runs: &[AppliedThreadMatrixRun],
+    quant_format: &str,
+) -> serde_json::Value {
+    let measured_runs: Vec<_> = runs
+        .iter()
+        .map(|run| {
+            let profile = &run.profile;
+            json!({
+                "profile": profile.profile,
+                "operation": profile.operation,
+                "execution_phase": profile.execution_phase,
+                "status": "measured",
+                "candidate": {
+                    "parallelism_degree": run.candidate.parallelism_degree,
+                    "row_block": run.candidate.row_block,
+                    "col_block": run.candidate.col_block,
+                    "thread_count": run.candidate.thread_count,
+                    "thread_count_applied": true,
+                    "thread_count_policy": "applied_scoped_threads",
+                    "applied_thread_count": run.applied_thread_count,
+                    "thread_partition": run.thread_partition,
+                    "thread_count_note": "This sample applies scoped worker threads inside the synthetic QK256/I2_S microbench only; it does not change the full BitNet decode path."
+                },
+                "requested_kernel": profile.requested_kernel,
+                "selected_kernel": profile.selected_kernel,
+                "fallback_used": profile.fallback_used,
+                "fallback_reason": profile.fallback_reason.as_deref(),
+                "shape": {
+                    "rows": profile.rows,
+                    "cols": profile.cols,
+                    "tokens": profile.tokens,
+                    "iterations": profile.iterations,
+                    "cols_rounded_to_qk256_block": profile.cols != run.candidate.col_block
+                },
+                "wall_time_ms": profile.wall_time_ms,
+                "median_ms": profile.median_ms,
+                "p95_ms": profile.p95_ms,
+                "bandwidth_gbps": profile.bandwidth_gbps,
+                "tokens_per_second": profile.tokens_per_second,
+                "speedup_claim": false
+            })
+        })
+        .collect();
+    json!({
+        "work_item": "CPU-BITNET-PERF-003",
+        "artifact_kind": "cpu_bitnet_i2s_applied_thread_matrix",
+        "claim": "i2_s_applied_thread_matrix_receipt",
+        "kernel_family": "i2_s_qk256",
+        "quantization": quant_format,
+        "speedup_claim": false,
+        "fallback_used": runs.iter().any(|run| run.profile.fallback_used),
+        "fallback_reason": null,
+        "candidate_grid": {
+            "parallelism_degrees": TILING_PARALLELISM_DEGREES,
+            "row_blocks": TILING_ROW_BLOCKS,
+            "col_blocks": TILING_COL_BLOCKS,
+            "thread_counts": TILING_THREAD_COUNTS,
+            "candidate_count": TILING_PARALLELISM_DEGREES.len()
+                * TILING_ROW_BLOCKS.len()
+                * TILING_COL_BLOCKS.len()
+                * TILING_THREAD_COUNTS.len()
+        },
+        "coverage": {
+            "status": "sampled_applied_thread_baseline",
+            "measured_candidate_count": measured_runs.len(),
+            "full_matrix_candidate_count": TILING_PARALLELISM_DEGREES.len()
+                * TILING_ROW_BLOCKS.len()
+                * TILING_COL_BLOCKS.len()
+                * TILING_THREAD_COUNTS.len(),
+            "thread_counts_applied": true,
+            "thread_count_policy": "applied_scoped_threads",
+            "thread_partitions": ["rows", "tokens"],
+            "reason": "This receipt applies sampled thread-count candidates to synthetic QK256/I2_S GEMV/GEMM microbenches without upgrading any profile to a speedup or full-decode claim."
+        },
+        "measured_runs": measured_runs,
+        "claim_boundary": [
+            "Records sampled Lunar Lake QK256/I2_S GEMV/GEMM timings with scoped worker threads applied inside the synthetic microbench.",
+            "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, QK256 semantic changes, or full model correctness.",
+            "Does not claim the full BitNet runtime applies this worker-thread policy outside this benchmark receipt."
+        ]
+    })
 }
 
 fn build_embedding_quantization_evidence(
@@ -557,6 +669,59 @@ fn measure_i2s_tiling_thread_matrix(
     Ok(runs)
 }
 
+fn measure_i2s_applied_thread_matrix(
+    requested_kernel: Option<&'static str>,
+    strict: bool,
+) -> Result<Vec<AppliedThreadMatrixRun>, Box<dyn Error>> {
+    let candidates = [
+        TilingCandidate { parallelism_degree: 2, row_block: 2, col_block: 64, thread_count: 1 },
+        TilingCandidate { parallelism_degree: 4, row_block: 4, col_block: 128, thread_count: 2 },
+        TilingCandidate { parallelism_degree: 8, row_block: 8, col_block: 256, thread_count: 4 },
+        TilingCandidate { parallelism_degree: 8, row_block: 16, col_block: 512, thread_count: 8 },
+    ];
+    let mut runs = Vec::with_capacity(candidates.len() * 2);
+    for candidate in candidates {
+        let rows = candidate.parallelism_degree * candidate.row_block;
+        let cols = candidate.col_block.max(QK256_BLOCK);
+        let (profile, applied_thread_count) = measure_threaded_gemv_microbench(
+            "i2s_qk256_applied_thread_matrix_gemv",
+            "decode_gemv_applied_thread_sample",
+            rows,
+            cols,
+            8,
+            requested_kernel,
+            strict,
+            candidate.thread_count,
+        )?;
+        runs.push(AppliedThreadMatrixRun {
+            candidate,
+            profile,
+            applied_thread_count,
+            thread_partition: "rows",
+        });
+
+        let tokens = candidate.parallelism_degree;
+        let rows = candidate.parallelism_degree * candidate.row_block;
+        let cols = candidate.col_block.max(QK256_BLOCK);
+        let (profile, applied_thread_count) = measure_threaded_gemm_microbench(
+            "i2s_qk256_applied_thread_matrix_gemm",
+            "prefill_gemm_applied_thread_sample",
+            tokens,
+            rows,
+            cols,
+            4,
+            candidate.thread_count,
+        )?;
+        runs.push(AppliedThreadMatrixRun {
+            candidate,
+            profile,
+            applied_thread_count,
+            thread_partition: "tokens",
+        });
+    }
+    Ok(runs)
+}
+
 fn measure_i2s_microbench(
     requested_kernel: Option<&'static str>,
     strict: bool,
@@ -580,6 +745,248 @@ fn measure_i2s_microbench(
             16,
         )?,
     ])
+}
+
+#[allow(clippy::too_many_arguments)]
+fn measure_threaded_gemv_microbench(
+    profile: &'static str,
+    execution_phase: &'static str,
+    rows: usize,
+    cols: usize,
+    iterations: u64,
+    requested_kernel: Option<&'static str>,
+    strict: bool,
+    thread_count: usize,
+) -> Result<(KernelMicrobenchProfile, usize), Box<dyn Error>> {
+    let (packed, row_stride) = create_qk256_weights(rows, cols);
+    let activations = create_activation_vector(cols);
+    let mut output = vec![0.0f32; rows];
+    let (selection, applied_thread_count) = run_threaded_gemv_qk256(
+        &packed,
+        &activations,
+        &mut output,
+        rows,
+        cols,
+        row_stride,
+        requested_kernel,
+        strict,
+        thread_count,
+    )?;
+
+    let mut samples = Vec::with_capacity(iterations as usize);
+    let wall_start = Instant::now();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        run_threaded_gemv_qk256(
+            &packed,
+            &activations,
+            &mut output,
+            rows,
+            cols,
+            row_stride,
+            requested_kernel,
+            strict,
+            thread_count,
+        )?;
+        samples.push(start.elapsed().as_secs_f64() * 1_000.0);
+    }
+    let wall_time_ms = wall_start.elapsed().as_secs_f64() * 1_000.0;
+    samples.sort_by(f64::total_cmp);
+
+    let bytes_per_iteration = packed.len()
+        + activations.len() * std::mem::size_of::<f32>()
+        + output.len() * std::mem::size_of::<f32>();
+    let total_seconds = (wall_time_ms / 1_000.0).max(f64::EPSILON);
+
+    Ok((
+        KernelMicrobenchProfile {
+            profile,
+            operation: "gemv",
+            execution_phase,
+            requested_kernel: selection.requested_kernel.unwrap_or("auto"),
+            selected_kernel: selection.selected_kernel,
+            fallback_used: selection.fallback_used,
+            fallback_reason: selection.fallback_reason,
+            rows,
+            cols,
+            tokens: 1,
+            iterations,
+            wall_time_ms,
+            median_ms: percentile(&samples, 0.50),
+            p95_ms: percentile(&samples, 0.95),
+            bandwidth_gbps: (bytes_per_iteration as f64 * iterations as f64)
+                / total_seconds
+                / 1_000_000_000.0,
+            tokens_per_second: iterations as f64 / total_seconds,
+        },
+        applied_thread_count,
+    ))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn measure_threaded_gemm_microbench(
+    profile: &'static str,
+    execution_phase: &'static str,
+    tokens: usize,
+    rows: usize,
+    cols: usize,
+    iterations: u64,
+    thread_count: usize,
+) -> Result<(KernelMicrobenchProfile, usize), Box<dyn Error>> {
+    let (packed, _row_stride) = create_qk256_weights(rows, cols);
+    let activations = create_activation_matrix(tokens, cols);
+    let mut output = vec![0.0f32; tokens * rows];
+    let applied_thread_count = run_threaded_gemm_qk256(
+        &packed,
+        &activations,
+        &mut output,
+        tokens,
+        rows,
+        cols,
+        thread_count,
+    )?;
+
+    let mut samples = Vec::with_capacity(iterations as usize);
+    let wall_start = Instant::now();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        run_threaded_gemm_qk256(
+            &packed,
+            &activations,
+            &mut output,
+            tokens,
+            rows,
+            cols,
+            thread_count,
+        )?;
+        samples.push(start.elapsed().as_secs_f64() * 1_000.0);
+    }
+    let wall_time_ms = wall_start.elapsed().as_secs_f64() * 1_000.0;
+    samples.sort_by(f64::total_cmp);
+
+    let bytes_per_iteration = packed.len()
+        + activations.len() * std::mem::size_of::<f32>()
+        + output.len() * std::mem::size_of::<f32>();
+    let total_seconds = (wall_time_ms / 1_000.0).max(f64::EPSILON);
+
+    Ok((
+        KernelMicrobenchProfile {
+            profile,
+            operation: "gemm",
+            execution_phase,
+            requested_kernel: QK256_SCALAR_GEMM_KERNEL_ID,
+            selected_kernel: QK256_SCALAR_GEMM_KERNEL_ID,
+            fallback_used: false,
+            fallback_reason: None,
+            rows,
+            cols,
+            tokens,
+            iterations,
+            wall_time_ms,
+            median_ms: percentile(&samples, 0.50),
+            p95_ms: percentile(&samples, 0.95),
+            bandwidth_gbps: (bytes_per_iteration as f64 * iterations as f64)
+                / total_seconds
+                / 1_000_000_000.0,
+            tokens_per_second: (tokens as f64 * iterations as f64) / total_seconds,
+        },
+        applied_thread_count,
+    ))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_threaded_gemv_qk256(
+    packed: &[u8],
+    activations: &[f32],
+    output: &mut [f32],
+    rows: usize,
+    cols: usize,
+    row_stride: usize,
+    requested_kernel: Option<&'static str>,
+    strict: bool,
+    thread_count: usize,
+) -> Result<(Qk256KernelSelection, usize), Box<dyn Error>> {
+    let applied_thread_count = applied_thread_count(rows, thread_count);
+    let rows_per_thread = rows.div_ceil(applied_thread_count);
+    let mut selections = Vec::with_capacity(applied_thread_count);
+    let scope_result: Result<(), String> = std::thread::scope(|scope| {
+        let mut handles = Vec::new();
+        for (chunk_index, output_chunk) in output.chunks_mut(rows_per_thread).enumerate() {
+            let row_start = chunk_index * rows_per_thread;
+            let row_count = output_chunk.len();
+            if row_count == 0 {
+                continue;
+            }
+            let byte_start = row_start * row_stride;
+            let byte_end = byte_start + row_count * row_stride;
+            let packed_chunk = &packed[byte_start..byte_end];
+            handles.push(scope.spawn(move || {
+                gemv_qk256_with_kernel_selection(
+                    packed_chunk,
+                    activations,
+                    output_chunk,
+                    row_count,
+                    cols,
+                    row_stride,
+                    requested_kernel,
+                    strict,
+                )
+                .map_err(|err| err.to_string())
+            }));
+        }
+
+        for handle in handles {
+            let selection =
+                handle.join().map_err(|_| "GEMV worker thread panicked".to_string())??;
+            selections.push(selection);
+        }
+        Ok(())
+    });
+    scope_result.map_err(|err| std::io::Error::other(err))?;
+
+    let selection =
+        selections.into_iter().next().ok_or("threaded GEMV produced no worker selection")?;
+    Ok((selection, applied_thread_count))
+}
+
+fn run_threaded_gemm_qk256(
+    packed: &[u8],
+    activations: &[f32],
+    output: &mut [f32],
+    tokens: usize,
+    rows: usize,
+    cols: usize,
+    thread_count: usize,
+) -> Result<usize, Box<dyn Error>> {
+    let applied_thread_count = applied_thread_count(tokens, thread_count);
+    let tokens_per_thread = tokens.div_ceil(applied_thread_count);
+    let scope_result: Result<(), String> = std::thread::scope(|scope| {
+        let mut handles = Vec::new();
+        for (activation_chunk, output_chunk) in activations
+            .chunks(tokens_per_thread * cols)
+            .zip(output.chunks_mut(tokens_per_thread * rows))
+        {
+            let token_count = activation_chunk.len() / cols;
+            if token_count == 0 {
+                continue;
+            }
+            handles.push(scope.spawn(move || {
+                qk256_gemm_scalar(packed, activation_chunk, output_chunk, token_count, rows, cols)
+                    .map_err(|err| err.to_string())
+            }));
+        }
+
+        for handle in handles {
+            handle.join().map_err(|_| "GEMM worker thread panicked".to_string())??;
+        }
+        Ok(())
+    });
+    scope_result.map_err(|err| std::io::Error::other(err))?;
+    Ok(applied_thread_count)
+}
+
+fn applied_thread_count(work_items: usize, requested_threads: usize) -> usize {
+    requested_threads.max(1).min(work_items.max(1))
 }
 
 fn measure_gemv_microbench(
@@ -845,6 +1252,33 @@ mod tests {
         assert_eq!(matrix["fallback_used"], false);
         assert!(measured_runs.iter().any(|run| run["operation"] == "gemv"));
         assert!(measured_runs.iter().any(|run| run["operation"] == "gemm"));
+        Ok(())
+    }
+
+    #[test]
+    fn receipt_records_i2s_applied_thread_matrix_when_requested() -> Result<(), Box<dyn Error>> {
+        let receipt =
+            build_receipt(&Args { include_i2s_applied_thread_matrix: true, ..Args::default() })?;
+        let matrix = receipt["i2s_applied_thread_matrix"].as_object().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "missing applied thread matrix")
+        })?;
+        let measured_runs = matrix["measured_runs"].as_array().ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "missing applied thread measured runs",
+            )
+        })?;
+
+        assert_eq!(matrix["work_item"], "CPU-BITNET-PERF-003");
+        assert_eq!(matrix["speedup_claim"], false);
+        assert_eq!(matrix["fallback_used"], false);
+        assert!(measured_runs.iter().all(|run| run["candidate"]["thread_count_applied"] == true));
+        assert!(measured_runs.iter().any(|run| {
+            run["operation"] == "gemv" && run["candidate"]["thread_partition"] == "rows"
+        }));
+        assert!(measured_runs.iter().any(|run| {
+            run["operation"] == "gemm" && run["candidate"]["thread_partition"] == "tokens"
+        }));
         Ok(())
     }
 }
