@@ -2157,6 +2157,12 @@ pub fn validate_strict_cpu_benchmark_receipt_json(
     if receipt.get("i2s_tiling_thread_matrix").is_some_and(|value| !value.is_null()) {
         validate_i2s_tiling_thread_matrix(require_object(receipt, "i2s_tiling_thread_matrix")?)?;
     }
+    if receipt.get("embedding_quantization_evidence").is_some_and(|value| !value.is_null()) {
+        validate_embedding_quantization_evidence(require_object(
+            receipt,
+            "embedding_quantization_evidence",
+        )?)?;
+    }
 
     Ok(())
 }
@@ -2307,6 +2313,49 @@ fn validate_i2s_tiling_thread_matrix(matrix: &serde_json::Value) -> Result<(), R
     }
     if !has_gemm {
         return Err(validation_error("i2s_tiling_thread_matrix missing gemm run"));
+    }
+
+    Ok(())
+}
+
+fn validate_embedding_quantization_evidence(
+    evidence: &serde_json::Value,
+) -> Result<(), ReceiptError> {
+    require_string_eq(evidence, "work_item", "CPU-BITNET-EMBD-001")?;
+    require_string_eq(evidence, "artifact_kind", "cpu_bitnet_embedding_quantization_evidence")?;
+    require_string_eq(evidence, "claim", "bitnet_embedding_quantization_evidence_receipt")?;
+    require_non_empty_string(evidence, "source_tensor_boundary_audit")?;
+    require_string_eq(evidence, "target_quantization", "Q6_K")?;
+    require_bool_eq(evidence, "fallback_used", false)?;
+    require_null(evidence, "fallback_reason")?;
+    require_bool_eq(evidence, "speedup_claim", false)?;
+    require_bool_eq(evidence, "answer_quality_claim", false)?;
+    require_bool_eq(evidence, "acceleration_claim", false)?;
+    require_bool_eq(evidence, "qk256_semantic_change_claim", false)?;
+    require_non_empty_string(evidence, "current_embedding_quantization")?;
+    require_bool(evidence, "current_artifact_contains_q6_k_embedding")?;
+    require_bool(evidence, "q6_k_embedding_proven")?;
+    require_non_empty_string(evidence, "evidence_status")?;
+    require_non_empty_string(evidence, "recommended_next_step")?;
+
+    let current_embedding = require_object(evidence, "current_embedding")?;
+    require_non_empty_string(current_embedding, "name")?;
+    require_non_empty_string(current_embedding, "tensor_type")?;
+    require_u64_at_least(current_embedding, "size_bytes", 1)?;
+    let shape = require_array(current_embedding, "shape")?;
+    if shape.is_empty() {
+        return Err(validation_error("current_embedding.shape must not be empty"));
+    }
+
+    let loader_scope = require_object(evidence, "loader_scope")?;
+    require_bool_eq(loader_scope, "q6_k_tensor_type_known", true)?;
+    require_bool_eq(loader_scope, "q6_k_dense_standard_dequantizer_present", true)?;
+    require_non_empty_string(loader_scope, "q6_k_embedding_operating_path")?;
+    require_non_empty_string(loader_scope, "note")?;
+
+    let boundary = require_array(evidence, "claim_boundary")?;
+    if boundary.is_empty() {
+        return Err(validation_error("claim_boundary must not be empty"));
     }
 
     Ok(())
@@ -3073,6 +3122,27 @@ mod tests {
 
         let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
         assert!(err.contains("missing gemm"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn strict_cpu_benchmark_rejects_embedding_quantization_speedup_claim() {
+        let mut receipt = sample_cpu_benchmark_receipt();
+        receipt["embedding_quantization_evidence"]["speedup_claim"] = json!(true);
+
+        let err = validate_strict_cpu_benchmark_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("speedup_claim"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn committed_lunar_lake_embedding_quantization_evidence_receipt_validates() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../ci/hardware/intel-258v/2026-05-08/cpu-bitnet-embd-001-q6k-embedding-evidence.json",
+        );
+        let result = validate_strict_cpu_benchmark_receipt_file(&path);
+        assert!(
+            result.is_ok(),
+            "committed Lunar Lake embedding quantization evidence receipt should validate: {result:?}"
+        );
     }
 
     #[test]
@@ -4708,6 +4778,7 @@ mod tests {
                     "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, QK256 semantic changes, or full model correctness."
                 ]
             },
+            "embedding_quantization_evidence": sample_embedding_quantization_evidence(),
             "profiles": [
                 measured_cpu_profile("micro"),
                 measured_cpu_profile("layer"),
@@ -4716,6 +4787,44 @@ mod tests {
                 measured_cpu_profile("decode")
             ],
             "artifact_path": "ci/hardware/intel-i5-8250u-cpu-avx2/benchmark-receipt.json"
+        })
+    }
+
+    fn sample_embedding_quantization_evidence() -> serde_json::Value {
+        json!({
+            "work_item": "CPU-BITNET-EMBD-001",
+            "artifact_kind": "cpu_bitnet_embedding_quantization_evidence",
+            "claim": "bitnet_embedding_quantization_evidence_receipt",
+            "source_tensor_boundary_audit": "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
+            "target_quantization": "Q6_K",
+            "fallback_used": false,
+            "fallback_reason": null,
+            "speedup_claim": false,
+            "answer_quality_claim": false,
+            "acceleration_claim": false,
+            "qk256_semantic_change_claim": false,
+            "current_embedding": {
+                "name": "token_embd.weight",
+                "tensor_type": "F16",
+                "shape": [2560, 128256],
+                "size_bytes": 656670720
+            },
+            "current_embedding_quantization": "F16",
+            "current_artifact_contains_q6_k_embedding": false,
+            "q6_k_embedding_proven": false,
+            "evidence_status": "q6_k_embedding_not_present_in_current_canonical_artifact",
+            "loader_scope": {
+                "q6_k_tensor_type_known": true,
+                "q6_k_dense_standard_dequantizer_present": true,
+                "q6_k_embedding_operating_path": "not_applied_to_current_bitnet_artifact",
+                "note": "Sample fixture records the Q6_K embedding evidence contract without claiming it is active."
+            },
+            "recommended_next_step": "Acquire or generate a canonical BitNet b1.58 Q6_K embedding variant before claiming embedding-quantization support.",
+            "claim_boundary": [
+                "Records BitNet embedding tensor quantization evidence from the committed 258V tensor boundary audit.",
+                "Does not claim answer quality, speedup, Arc/NPU execution, acceleration, QK256 semantic changes, or full model correctness.",
+                "Does not claim Q6_K embedding quantization is active unless the current canonical BitNet artifact records a Q6_K embedding tensor."
+            ]
         })
     }
 

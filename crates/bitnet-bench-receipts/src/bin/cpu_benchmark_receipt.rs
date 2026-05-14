@@ -31,6 +31,8 @@ struct Args {
     generated_tokens: u64,
     batch_size: u64,
     include_i2s_tiling_matrix: bool,
+    include_embedding_quantization_evidence: bool,
+    tensor_boundary_audit: Option<PathBuf>,
 }
 
 impl Default for Args {
@@ -49,6 +51,8 @@ impl Default for Args {
             generated_tokens: 8,
             batch_size: 1,
             include_i2s_tiling_matrix: false,
+            include_embedding_quantization_evidence: false,
+            tensor_boundary_audit: None,
         }
     }
 }
@@ -150,6 +154,12 @@ fn parse_args() -> Result<Args, Box<dyn Error>> {
             "--generated-tokens" => args.generated_tokens = next_value(&mut iter, &arg)?.parse()?,
             "--batch-size" => args.batch_size = next_value(&mut iter, &arg)?.parse()?,
             "--include-i2s-tiling-matrix" => args.include_i2s_tiling_matrix = true,
+            "--include-embedding-quantization-evidence" => {
+                args.include_embedding_quantization_evidence = true;
+            }
+            "--tensor-boundary-audit" => {
+                args.tensor_boundary_audit = Some(PathBuf::from(next_value(&mut iter, &arg)?));
+            }
             "--help" | "-h" => {
                 print_help();
                 std::process::exit(0);
@@ -172,7 +182,8 @@ fn print_help() {
     println!(
         "Usage: cpu_benchmark_receipt [--receipt-out PATH] [--kernel auto|qk256-scalar-gemv|qk256-avx2-gemv] [--strict]\n\
          Options: --model-repo, --model-file, --model-sha256, --quant-format, --tokenizer-source,\n\
-         --selected-backend, --prompt-tokens, --generated-tokens, --batch-size, --include-i2s-tiling-matrix"
+         --selected-backend, --prompt-tokens, --generated-tokens, --batch-size, --include-i2s-tiling-matrix,\n\
+         --include-embedding-quantization-evidence, --tensor-boundary-audit PATH"
     );
 }
 
@@ -280,6 +291,15 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
     } else {
         None
     };
+    let embedding_quantization_evidence = if args.include_embedding_quantization_evidence {
+        let audit_path = args
+            .tensor_boundary_audit
+            .as_ref()
+            .ok_or("--include-embedding-quantization-evidence requires --tensor-boundary-audit")?;
+        Some(build_embedding_quantization_evidence(audit_path)?)
+    } else {
+        None
+    };
 
     Ok(json!({
         "schema": 1,
@@ -346,9 +366,76 @@ fn build_receipt(args: &Args) -> Result<serde_json::Value, Box<dyn Error>> {
             ]
         },
         "i2s_tiling_thread_matrix": i2s_tiling_thread_matrix,
+        "embedding_quantization_evidence": embedding_quantization_evidence,
         "profiles": profiles,
         "profile_order": PROFILE_NAMES,
         "artifact_path": args.receipt_out.as_ref().map(|path| path.display().to_string())
+    }))
+}
+
+fn build_embedding_quantization_evidence(
+    tensor_boundary_audit: &PathBuf,
+) -> Result<serde_json::Value, Box<dyn Error>> {
+    let audit: serde_json::Value = serde_json::from_slice(&fs::read(tensor_boundary_audit)?)?;
+    let selected_embedding = audit
+        .pointer("/tensor_boundary/selected_embedding")
+        .and_then(serde_json::Value::as_object)
+        .ok_or("tensor boundary audit missing tensor_boundary.selected_embedding")?;
+    let tensor_type = selected_embedding
+        .get("tensor_type")
+        .and_then(serde_json::Value::as_str)
+        .ok_or("selected embedding missing tensor_type")?;
+    let shape = selected_embedding
+        .get("shape")
+        .and_then(serde_json::Value::as_array)
+        .ok_or("selected embedding missing shape")?;
+    if shape.is_empty() {
+        return Err("selected embedding shape must not be empty".into());
+    }
+    let current_artifact_contains_q6_k_embedding = tensor_type.eq_ignore_ascii_case("Q6_K");
+    let evidence_status = if current_artifact_contains_q6_k_embedding {
+        "q6_k_embedding_present_in_current_artifact"
+    } else {
+        "q6_k_embedding_not_present_in_current_canonical_artifact"
+    };
+
+    Ok(json!({
+        "work_item": "CPU-BITNET-EMBD-001",
+        "artifact_kind": "cpu_bitnet_embedding_quantization_evidence",
+        "claim": "bitnet_embedding_quantization_evidence_receipt",
+        "source_tensor_boundary_audit": tensor_boundary_audit.display().to_string(),
+        "target_quantization": "Q6_K",
+        "fallback_used": false,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "answer_quality_claim": false,
+        "acceleration_claim": false,
+        "qk256_semantic_change_claim": false,
+        "current_embedding": selected_embedding,
+        "current_embedding_quantization": tensor_type,
+        "current_artifact_contains_q6_k_embedding": current_artifact_contains_q6_k_embedding,
+        "q6_k_embedding_proven": current_artifact_contains_q6_k_embedding,
+        "evidence_status": evidence_status,
+        "loader_scope": {
+            "q6_k_tensor_type_known": true,
+            "q6_k_dense_standard_dequantizer_present": true,
+            "q6_k_embedding_operating_path": if current_artifact_contains_q6_k_embedding {
+                "current_artifact"
+            } else {
+                "not_applied_to_current_bitnet_artifact"
+            },
+            "note": "BitNet-rs can name and dequantize GGUF Q6_K tensors for supported dense-standard adapters, but this receipt does not prove a Q6_K embedding variant for the canonical BitNet b1.58 I2_S GGUF unless the committed tensor boundary actually contains Q6_K."
+        },
+        "recommended_next_step": if current_artifact_contains_q6_k_embedding {
+            "Add answer and phase receipts that use the Q6_K embedding artifact before claiming performance value."
+        } else {
+            "Acquire or generate a canonical BitNet b1.58 Q6_K embedding variant, then add embedding lookup/dequant parity and answer/phase receipts before claiming embedding-quantization support."
+        },
+        "claim_boundary": [
+            "Records BitNet embedding tensor quantization evidence from the committed 258V tensor boundary audit.",
+            "Does not claim answer quality, speedup, Arc/NPU execution, acceleration, QK256 semantic changes, or full model correctness.",
+            "Does not claim Q6_K embedding quantization is active unless the current canonical BitNet artifact records a Q6_K embedding tensor."
+        ]
     }))
 }
 

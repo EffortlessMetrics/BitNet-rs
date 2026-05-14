@@ -1,0 +1,18 @@
+timestamp = "2026-05-14T03:08:36Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-EMBD-001"
+event = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/CPU-BITNET-EMBD-001"
+summary = "Started CPU-BITNET-EMBD-001 to record Lunar Lake BitNet embedding quantization evidence from the committed tensor-boundary audit."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-embd-001-q6k-embedding-evidence.json",
+  "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
+]
+
+notes = [
+  "The new receipt records the current canonical BitNet b1.58 embedding tensor identity and quantization state before claiming any Q6_K embedding path.",
+  "The current tensor-boundary audit shows the selected embedding is token_embd.weight with F16 quantization, so Q6_K embedding quantization remains not active for this artifact.",
+  "No answer-quality, speedup, Arc/NPU execution, acceleration, QK256 semantic-change, or full-model correctness claim is made.",
+]
