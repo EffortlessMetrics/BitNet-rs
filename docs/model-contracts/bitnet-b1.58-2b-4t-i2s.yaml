@@ -1,0 +1,50 @@
+schema_version: 1
+model_id: microsoft/bitnet-b1.58-2B-4T-gguf
+family: bitnet
+source: huggingface
+official_repo: microsoft/bitnet-b1.58-2B-4T-gguf
+format: gguf
+quantization: i2_s
+architecture: bitnet_b1_58
+parameters: approx_2b
+training_tokens: 4t
+local_path: models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
+sha256: 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162
+max_context: 4096
+
+tokenizer:
+  kind: llama3_tokenizer_json
+  path: models/BitNet-b1.58-2B-4T/tokenizer.json
+  sha256: e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7
+  vocab_size: 128256
+
+chat_template:
+  name: llama3-chat
+  source: model_contract
+  bos_token_id: 128000
+  eos_token_id: 128001
+
+stop_tokens:
+  eos_token_id: 128001
+  policy: stop_on_eos
+
+cpu:
+  support: required
+  quality_gate: required
+
+a770:
+  support: trusted_partial
+  selected_backend: intel-arc-a770-opencl
+  required_claimed_ops:
+    - qk256_linears
+    - embedding
+    - lm_head_tied_logits
+  not_claims:
+    - selected_attention_residency
+    - resident_kv_decode
+    - attention_scores_residency
+    - softmax_residency
+    - attention_value_mix_residency
+    - full_support_op_residency
+    - full_device_residency
+    - completion

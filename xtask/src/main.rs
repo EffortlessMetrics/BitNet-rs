@@ -42,6 +42,7 @@ mod crossval;
 pub mod ffi;
 mod gates;
 mod grid_check;
+mod model_contract;
 #[allow(dead_code)]
 mod health_check;
 #[allow(dead_code)]
@@ -277,6 +278,13 @@ enum Cmd {
         /// Verbose output for debugging
         #[arg(short, long)]
         verbose: bool,
+    },
+
+    /// Verify model contract files and local model/tokenizer hashes.
+    #[command(name = "model-contract")]
+    ModelContract {
+        #[command(subcommand)]
+        cmd: ModelContractCmd,
     },
 
     /// Fetch & build microsoft/BitNet C++ for cross-validation
@@ -1006,6 +1014,22 @@ enum Cmd {
 }
 
 #[derive(Subcommand)]
+enum ModelContractCmd {
+    /// Lint model contracts and verify local assets.
+    Lint {
+        /// Directory containing model contract YAML files.
+        #[arg(long, default_value = "docs/model-contracts")]
+        contract_dir: PathBuf,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+        /// Allow missing local model/tokenizer assets for diagnostic-only environments.
+        #[arg(long, default_value_t = false)]
+        allow_missing_assets: bool,
+    },
+}
+
+#[derive(Subcommand)]
 enum GateWhich {
     /// Dry-run tensor-name mapper gate → JSON
     Mapper {
@@ -1125,6 +1149,11 @@ fn real_main() -> Result<()> {
             println!("✓ Downloaded tokenizer to: {}", output_path.display());
             Ok(())
         }
+        Cmd::ModelContract { cmd } => match cmd {
+            ModelContractCmd::Lint { contract_dir, format, allow_missing_assets } => {
+                model_contract::lint_contracts(&contract_dir, &format, allow_missing_assets)
+            }
+        },
         Cmd::FetchCpp { tag, force, clean, backend, cmake_flags, repo } => {
             fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags, &repo)
         }

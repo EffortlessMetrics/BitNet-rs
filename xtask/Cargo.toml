@@ -21,6 +21,7 @@ fs2 = "0.4.3"
 is-terminal = "0.4.17"
 serde.workspace = true
 serde_json.workspace = true
+serde_yaml.workspace = true
 toml = "0.9.8"
 httpdate = "1.0.3"
 tempfile = "3.23.0"
