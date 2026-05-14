@@ -86,6 +86,34 @@ fn critical_not_claims() -> Vec<&'static str> {
     ]
 }
 
+fn greedy_effective_argmax(
+    logits: &[f32],
+    generated_tokens: &[u32],
+    repetition_penalty: f32,
+) -> Option<(usize, f32)> {
+    let mut effective_logits = logits.to_vec();
+    bitnet_sampling::apply_repetition_penalty(
+        &mut effective_logits,
+        generated_tokens,
+        repetition_penalty,
+    );
+
+    let mut best: Option<(usize, f32)> = None;
+    for (idx, value) in effective_logits.iter().copied().enumerate() {
+        if !value.is_finite() {
+            continue;
+        }
+
+        match best {
+            Some((_, best_value)) if value < best_value => {}
+            Some((best_idx, best_value)) if value == best_value && idx > best_idx => {}
+            _ => best = Some((idx, value)),
+        }
+    }
+
+    best
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct BackendFallbackProof {
     used: bool,
@@ -167,6 +195,21 @@ mod proof_summary_tests {
             proof.reason.as_deref(),
             Some("requested backend intel-arc-a770-opencl executed on cpu")
         );
+    }
+
+    #[test]
+    fn greedy_effective_argmax_applies_repetition_penalty() {
+        let logits = [10.0, 9.0];
+
+        assert_eq!(greedy_effective_argmax(&logits, &[], 1.1), Some((0, 10.0)));
+        assert_eq!(greedy_effective_argmax(&logits, &[0], 2.0), Some((1, 9.0)));
+    }
+
+    #[test]
+    fn greedy_effective_argmax_breaks_ties_by_lowest_token_id() {
+        let logits = [1.0, 1.0, 0.0];
+
+        assert_eq!(greedy_effective_argmax(&logits, &[], 1.0), Some((0, 1.0)));
     }
 
     #[test]
@@ -1962,16 +2005,18 @@ async fn run_simple_generation(
         // Assert greedy invariant if requested
         if assert_greedy && greedy && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)
         {
-            let (mut best_i, mut best_v) = (0usize, f32::NEG_INFINITY);
-            for (i, &v) in logits_vec.iter().enumerate() {
-                if v.is_finite() && v > best_v {
-                    best_v = v;
-                    best_i = i;
-                }
-            }
+            let (best_i, best_v) =
+                greedy_effective_argmax(&logits_vec, &generated_tokens, repetition_penalty)
+                    .unwrap_or((0, f32::NEG_INFINITY));
             if next_token as usize != best_i {
-                eprintln!("ERROR: Non-argmax token chosen in --greedy at step {}", step_idx);
-                eprintln!("  argmax={} (logit={:.4}) but chosen={}", best_i, best_v, next_token);
+                eprintln!(
+                    "ERROR: Non-effective-argmax token chosen in --greedy at step {}",
+                    step_idx
+                );
+                eprintln!(
+                    "  effective_argmax={} (logit={:.4}) but chosen={}",
+                    best_i, best_v, next_token
+                );
                 std::process::exit(EXIT_ARGMAX_MISMATCH);
             }
         }
