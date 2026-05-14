@@ -16,6 +16,12 @@ BitNet claim boundary:
 docs/specs/a770-bitnet-claim-boundary.md
 ```
 
+Clean claim rerun runbook:
+
+```text
+docs/hardware/amd-5700x-intel-a770-clean-claim-rerun.md
+```
+
 ## Required Machine Facts
 
 Record these before moving A770 beyond `scaffold`:

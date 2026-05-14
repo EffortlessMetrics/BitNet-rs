@@ -319,6 +319,12 @@ diagnostic supplement alone
 
 Purpose: produce the first claim-grade parent benchmark.
 
+Operator runbook:
+
+```text
+docs/hardware/amd-5700x-intel-a770-clean-claim-rerun.md
+```
+
 Required sequence:
 
 ```powershell
