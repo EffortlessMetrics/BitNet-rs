@@ -154,15 +154,21 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
     let candidates = reference_candidates(args.reference_exe, args.cpp_root);
     let selected = candidates.iter().find(|candidate| candidate.exists);
     let reference_ready = selected.is_some();
+    let setup_prerequisites = reference_setup_prerequisites();
     let mut blocked_reasons = Vec::new();
     if !reference_ready {
-        blocked_reasons.push("reference_executable_missing");
+        blocked_reasons.push("reference_executable_missing".to_string());
+    }
+    if !bool_at(&setup_prerequisites, "/ready").unwrap_or(false) {
+        for reason in array_strings(&setup_prerequisites, "/missing") {
+            blocked_reasons.push(reason);
+        }
     }
     if !Path::new(&model_path).exists() {
-        blocked_reasons.push("model_file_missing");
+        blocked_reasons.push("model_file_missing".to_string());
     }
     if !Path::new(&tokenizer_path).exists() {
-        blocked_reasons.push("tokenizer_file_missing");
+        blocked_reasons.push("tokenizer_file_missing".to_string());
     }
 
     let reference_argv = selected.map(|candidate| {
@@ -214,6 +220,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             "backend": "bitnet.cpp_or_llama.cpp_cli",
             "ready": reference_ready,
             "selected_executable": selected.map(|candidate| candidate.path.as_str()),
+            "setup_prerequisites": setup_prerequisites,
             "candidate_executables": candidates.iter().map(|candidate| {
                 json!({
                     "path": candidate.path,
@@ -223,7 +230,7 @@ fn build_report(args: &ReferencePlanArgs<'_>) -> Result<Value> {
             }).collect::<Vec<_>>(),
             "command_argv": reference_argv,
             "command_policy": "uses_rendered_prompt_text_for_template_parity; token parity still must be verified against reference output",
-            "setup_command_pwsh": "cargo run --locked -p xtask -- setup-cpp-auto --emit=pwsh",
+            "setup_command_pwsh": "powershell -ExecutionPolicy Bypass -File ci\\fetch_bitnet_cpp.ps1 -Tag main -CachePath target\\external\\BitNet-reference -Force -SkipPatches",
         },
         "rust_commands": {
             "cpu_argv": rust_cli_argv(
@@ -314,6 +321,116 @@ fn executable_names() -> &'static [&'static str] {
     }
 }
 
+fn reference_setup_prerequisites() -> Value {
+    let git = command_probe("git");
+    let cmake = command_probe("cmake");
+    let clang = command_probe("clang");
+    let clangxx = command_probe("clang++");
+    let vs_build_tools = visual_studio_build_tools_probe();
+    let windows = cfg!(windows);
+
+    let mut missing = Vec::new();
+    if !bool_at(&git, "/present").unwrap_or(false) {
+        missing.push("git_missing".to_string());
+    }
+    if !bool_at(&cmake, "/present").unwrap_or(false) {
+        missing.push("cmake_missing".to_string());
+    }
+    if windows {
+        if !bool_at(&clang, "/present").unwrap_or(false) {
+            missing.push("clang_missing".to_string());
+        }
+        if !bool_at(&clangxx, "/present").unwrap_or(false) {
+            missing.push("clangxx_missing".to_string());
+        }
+        if !bool_at(&vs_build_tools, "/present").unwrap_or(false) {
+            missing.push("visual_studio_build_tools_missing".to_string());
+        }
+    }
+
+    json!({
+        "ready": missing.is_empty(),
+        "windows": windows,
+        "git": git,
+        "cmake": cmake,
+        "clang": clang,
+        "clangxx": clangxx,
+        "visual_studio_build_tools": vs_build_tools,
+        "missing": missing,
+        "windows_required_components": [
+            "C++ Clang Compiler for Windows",
+            "MS-Build Support for LLVM-Toolset",
+            "Desktop development with C++"
+        ],
+    })
+}
+
+fn command_probe(name: &str) -> Value {
+    match which::which(name) {
+        Ok(path) => json!({
+            "present": true,
+            "path": path_to_string(&path),
+        }),
+        Err(_) => json!({
+            "present": false,
+            "path": Value::Null,
+        }),
+    }
+}
+
+fn visual_studio_build_tools_probe() -> Value {
+    if !cfg!(windows) {
+        return json!({
+            "present": false,
+            "path": Value::Null,
+            "not_required_on_this_platform": true,
+        });
+    }
+    let Some(program_files_x86) = std::env::var_os("ProgramFiles(x86)") else {
+        return json!({
+            "present": false,
+            "path": Value::Null,
+        });
+    };
+    let vswhere = PathBuf::from(program_files_x86)
+        .join("Microsoft Visual Studio")
+        .join("Installer")
+        .join("vswhere.exe");
+    if !vswhere.is_file() {
+        return json!({
+            "present": false,
+            "path": Value::Null,
+            "vswhere": path_to_string(&vswhere),
+        });
+    }
+    let output = std::process::Command::new(&vswhere)
+        .args([
+            "-latest",
+            "-products",
+            "*",
+            "-requires",
+            "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+            "-property",
+            "installationPath",
+        ])
+        .output();
+    match output {
+        Ok(output) if output.status.success() => {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            json!({
+                "present": !path.is_empty(),
+                "path": if path.is_empty() { Value::Null } else { Value::String(path) },
+                "vswhere": path_to_string(&vswhere),
+            })
+        }
+        _ => json!({
+            "present": false,
+            "path": Value::Null,
+            "vswhere": path_to_string(&vswhere),
+        }),
+    }
+}
+
 fn rust_cli_argv(
     device: &str,
     model: &str,
@@ -376,6 +493,18 @@ fn read_yaml(path: &Path) -> Result<Value> {
 
 fn str_at<'a>(value: &'a Value, pointer: &str) -> Option<&'a str> {
     value.pointer(pointer).and_then(Value::as_str)
+}
+
+fn bool_at(value: &Value, pointer: &str) -> Option<bool> {
+    value.pointer(pointer).and_then(Value::as_bool)
+}
+
+fn array_strings(value: &Value, pointer: &str) -> Vec<String> {
+    value
+        .pointer(pointer)
+        .and_then(Value::as_array)
+        .map(|items| items.iter().filter_map(Value::as_str).map(ToOwned::to_owned).collect())
+        .unwrap_or_default()
 }
 
 fn path_to_string(path: &Path) -> String {
@@ -453,5 +582,12 @@ mod tests {
                 .iter()
                 .any(|candidate| candidate.path.ends_with("target/reference/llama-cli.exe"))
         );
+    }
+
+    #[test]
+    fn setup_prerequisites_report_missing_list() {
+        let report = reference_setup_prerequisites();
+        assert!(report.pointer("/ready").and_then(Value::as_bool).is_some());
+        assert!(report.pointer("/missing").and_then(Value::as_array).is_some());
     }
 }
