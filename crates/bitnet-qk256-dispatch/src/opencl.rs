@@ -8,6 +8,7 @@ use opencl3::platform::get_platforms;
 use opencl3::program::Program;
 use opencl3::types::CL_BLOCKING;
 use std::ptr::null_mut;
+use std::sync::{Arc, OnceLock};
 
 pub const QK256_OPENCL_KERNEL_NAME: &str = "qk256_gemm_no_scale";
 
@@ -62,7 +63,7 @@ pub fn gemm_qk256_opencl(
 ) -> Result<()> {
     validate_args(qs_data, input, output, input_rows, rows, cols, row_stride_bytes)?;
 
-    let runtime = OpenClQk256Runtime::new()?;
+    let runtime = qk256_runtime()?;
     runtime.run(qs_data, input, output, input_rows, rows, cols, row_stride_bytes)
 }
 
@@ -132,6 +133,29 @@ struct OpenClQk256Runtime {
     context: Context,
     queue: CommandQueue,
     program: Program,
+}
+
+// SAFETY: The OpenCL command queue serializes submitted work; the cached runtime
+// owns immutable context/program handles after initialization.
+unsafe impl Send for OpenClQk256Runtime {}
+unsafe impl Sync for OpenClQk256Runtime {}
+
+static QK256_RUNTIME: OnceLock<Arc<OpenClQk256Runtime>> = OnceLock::new();
+
+fn qk256_runtime() -> Result<Arc<OpenClQk256Runtime>> {
+    if let Some(runtime) = QK256_RUNTIME.get() {
+        return Ok(runtime.clone());
+    }
+
+    let runtime = Arc::new(OpenClQk256Runtime::new()?);
+    if QK256_RUNTIME.set(runtime.clone()).is_ok() {
+        Ok(runtime)
+    } else {
+        Ok(QK256_RUNTIME
+            .get()
+            .expect("QK256 runtime must be set after racing initialization")
+            .clone())
+    }
 }
 
 impl OpenClQk256Runtime {
