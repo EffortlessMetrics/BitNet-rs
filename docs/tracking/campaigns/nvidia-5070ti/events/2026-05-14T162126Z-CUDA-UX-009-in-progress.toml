@@ -1,0 +1,17 @@
+timestamp = "2026-05-14T16:21:26Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-009"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "docs/rtx5070ti-bitnet-cuda-guide"
+summary = "Started the strict RTX 5070 Ti BitNet CUDA user guide after CUDA-UX-008 landed."
+artifacts = [
+  "docs/tutorials/rtx5070ti-bitnet-cuda.md",
+]
+notes = [
+  "Docs-only tutorial work.",
+  "No runtime, CUDA kernel, receipt, model manifest, badge, server readiness, or speedup claim changes.",
+  "Guide keeps official BitNet I2_S/QK256 CUDA proof separate from dense SLM CUDA proof.",
+]
