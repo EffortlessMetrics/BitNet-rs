@@ -3218,7 +3218,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-REF-003"
-status = "in_progress"
+status = "pr_open"
+pr = 4715
+head_sha = "ac5c03b9334bffa93ec2f9808ce5b08b4966b5cf"
 branch = "codex/lunar-lake/CPU-BITNET-REF-003-direct-reference-tokens"
 stackable = false
 review_mode = "codex_premerge"
