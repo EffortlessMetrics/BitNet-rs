@@ -6,6 +6,7 @@ param(
     [string]$CachePath = $(if ($env:BITNET_CPP_PATH) { $env:BITNET_CPP_PATH } else { "$env:USERPROFILE\.cache\bitnet_cpp" }),
     [switch]$Force,
     [switch]$Clean,
+    [switch]$SkipPatches,
     [switch]$Help
 )
 
@@ -51,6 +52,7 @@ OPTIONS:
     -CachePath PATH     Specify cache directory (default: $CachePath)
     -Force              Force rebuild even if already built
     -Clean              Clean build directory before building
+    -SkipPatches        Use upstream C++ source as-is without applying local patches
     -Help               Show this help message
 
 ENVIRONMENT VARIABLES:
@@ -62,6 +64,7 @@ EXAMPLES:
     .\fetch_bitnet_cpp.ps1 -Tag v1.1.0         # Use specific version
     .\fetch_bitnet_cpp.ps1 -Force              # Force rebuild
     .\fetch_bitnet_cpp.ps1 -Clean -Force       # Clean rebuild
+    .\fetch_bitnet_cpp.ps1 -SkipPatches        # Build upstream source without patches
 
 After successful build, set environment variables:
     `$env:BITNET_CPP_PATH = "$CachePath"
@@ -222,6 +225,9 @@ function Invoke-ApplyPatches {
     if (Test-Path $PatchScript) {
         Write-Info "Applying patches..."
         & $PatchScript -CppPath $CachePath
+        if ($LASTEXITCODE -ne 0) {
+            throw "Patch application failed"
+        }
     } else {
         Write-Info "No patch application script found - using C++ implementation as-is"
     }
@@ -321,8 +327,12 @@ function Main {
     # Fetch source code
     Get-SourceCode
 
-    # Apply patches
-    Invoke-ApplyPatches
+    # Apply patches, unless explicitly disabled for upstream reference checks.
+    if ($SkipPatches) {
+        Write-Info "Skipping local patches; using upstream C++ implementation as-is"
+    } else {
+        Invoke-ApplyPatches
+    }
 
     # Build
     Invoke-Build
