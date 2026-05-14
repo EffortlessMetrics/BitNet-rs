@@ -215,9 +215,9 @@ the last proven stage.
 
 ## Work item: CUDA-DENSE-054
 
-Status: pr_open (#4720)
+Status: merged (#4720)
 Campaign item: `CUDA-DENSE-054`
-Blocked by: CUDA-DENSE-053
+Blocked by:
 
 ### Goal
 

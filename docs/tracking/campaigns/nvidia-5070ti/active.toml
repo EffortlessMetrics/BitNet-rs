@@ -2201,15 +2201,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-054"
-status = "pr_open"
+status = "merged"
 branch = "cuda/dense-qwen25-benchmark-qualification"
 pr = 4720
-head_sha = "52d99efefd235e73e1020386435f700e94a80f9c"
+head_sha = "53c3c475327d6a3eda808afe6a0ddd5e74a93c06"
+merge_sha = "a20cfbb78645f4acd0e6b8fd20bc280356daced6"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["CUDA-DENSE-051", "CUDA-DENSE-052", "CUDA-DENSE-053"]
+blocked_by = []
 acceptance = "Add a Qwen2.5 0.5B Q8_0 benchmark qualification review that consumes one-token, short-decode, and warm-session receipts, accepts or rejects speedup by exact profile with reasons, and keeps bitnet_packed_i2s_qk256_proof=false."
 commands = [
   "cargo test --locked -p bitnet-bench-receipts --no-default-features",
@@ -2220,9 +2221,6 @@ commands = [
 ]
 allowed_paths = [
   "crates/bitnet-bench-receipts/**",
-  "crates/bitnet-cli/**",
-  "crates/bitnet-receipts-core/**",
-  "crates/bitnet-receipts/**",
   "ci/hardware/windows-9950x3d-rtx5070ti/**",
   "docs/reports/**",
   "docs/tracking/campaigns/nvidia-5070ti/**",

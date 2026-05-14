@@ -1,0 +1,24 @@
+timestamp = "2026-05-14T12:04:56Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-054"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "cuda/dense-qwen25-benchmark-qualification"
+pr = 4720
+head_sha = "53c3c475327d6a3eda808afe6a0ddd5e74a93c06"
+merge_sha = "a20cfbb78645f4acd0e6b8fd20bc280356daced6"
+summary = "Marked CUDA-DENSE-054 merged after the current-source dense Qwen benchmark qualification review landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4720",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-benchmark-qualification-current-source.json",
+  "docs/reports/CUDA_DENSE_054_BENCHMARK_QUALIFICATION_CURRENT_SOURCE.md",
+]
+
+notes = [
+  "The merged PR consumes current-source one-token, short-decode, and warm-session dense_regular_llm_cuda strict RTX 5070 Ti CUDA receipts.",
+  "All reviewed profiles remain not accepted for speedup because CUDA mean total times remain slower than CPU means and pure H2D copy timing is still unmeasured.",
+  "The PR keeps speedup, full CUDA residency, server readiness, broad dense GGUF readiness, crates/docs publication readiness, and BitNet packed I2_S/QK256 claims false.",
+]
