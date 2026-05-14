@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T22:41:04Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-005B"
+event = "pr_open"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-005B-microsoft-2b-tokenizer-authority"
+pr = 4802
+head_sha = "f84a00021ff6cce17672d67e54b806afb01d7c74"
+summary = "Opened the M3 Air official Microsoft 2B I2_S tokenizer and external pre-tokenizer authority PR."
+
+notes = [
+  "The PR records the externally supplied Microsoft tokenizer authority and the required tokenizer.ggml.pre=str:llama-bpe override for the cached official Microsoft I2_S GGUF.",
+  "The PR records the no-override diagnostic warning path as bad/no-authority evidence because BitNet.cpp defaults the missing pre-tokenizer and warns that generation quality will be degraded.",
+  "The PR does not accept the artifact and makes no Apple answer-readiness, Rust M4 BitNet local-answer, Apple Metal BitNet inference, QK256-on-Apple, speedup, or broad Apple Silicon performance claim.",
+]
