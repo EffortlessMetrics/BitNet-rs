@@ -164,16 +164,16 @@ pub fn opencl_compiled() -> bool {
     cfg!(feature = "opencl")
 }
 
-/// Check if an OpenCL-capable GPU runtime is available.
+/// Check if an OpenCL runtime is available.
 ///
-/// Detection is best-effort via `clinfo`. Tests can force deterministic
-/// outcomes with `BITNET_GPU_FAKE=opencl` / `BITNET_GPU_FAKE=none` unless
-/// strict mode is enabled.
+/// Detection uses the same dynamic OpenCL probe as hardware receipts instead
+/// of requiring a separate `clinfo` executable to be installed. Tests can
+/// force deterministic outcomes with `BITNET_GPU_FAKE=opencl` /
+/// `BITNET_GPU_FAKE=none` unless strict mode is enabled.
 #[cfg(feature = "opencl")]
 #[inline]
 pub fn opencl_available_runtime() -> bool {
     use std::env;
-    use std::process::{Command, Stdio};
 
     let strict_mode = env::var("BITNET_STRICT_MODE")
         .map(|v| v == "1" || v.to_lowercase() == "true")
@@ -190,12 +190,7 @@ pub fn opencl_available_runtime() -> bool {
         }
     }
 
-    Command::new("clinfo")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    bitnet_device_probe::probe_opencl().runtime_available
 }
 
 #[cfg(not(feature = "opencl"))]
@@ -442,6 +437,16 @@ mod intel_tests {
             assert!(info.device_name.contains("simulated"));
             assert_eq!(info.compute_units, 32);
             assert!(intel_gpu_available());
+        });
+    }
+
+    #[cfg(feature = "opencl")]
+    #[test]
+    #[serial(bitnet_env)]
+    fn opencl_runtime_fake_detection_sets_capability() {
+        temp_env::with_var("BITNET_GPU_FAKE", Some("opencl"), || {
+            assert!(opencl_available_runtime());
+            assert!(current_kernel_capabilities().opencl_runtime);
         });
     }
 

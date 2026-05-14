@@ -137,7 +137,7 @@ impl CliConfig {
     pub fn validate(&self) -> Result<()> {
         if !is_supported_device_label(&self.default_device) {
             anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, npu, intel-npu, openvino-npu, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto",
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, a770-opencl, intel-arc-a770-opencl, npu, intel-npu, openvino-npu, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, auto",
                 self.default_device
             );
         }
@@ -176,6 +176,8 @@ fn is_supported_device_label(label: &str) -> bool {
             | "vulkan"
             | "opencl"
             | "ocl"
+            | "a770-opencl"
+            | "intel-arc-a770-opencl"
             | "npu"
             | "intel-npu"
             | "openvino-npu"
@@ -266,5 +268,13 @@ mod tests {
     fn builder_preserves_intel_npu_device_label() {
         let config = ConfigBuilder::new().device(Some("intel-npu:2".to_string())).build().unwrap();
         assert_eq!(config.default_device, "intel-npu:2");
+    }
+
+    #[test]
+    fn validates_a770_opencl_route_labels_without_aliasing() {
+        for device in ["a770-opencl", "intel-arc-a770-opencl"] {
+            let config = CliConfig { default_device: device.to_string(), ..CliConfig::default() };
+            config.validate().unwrap();
+        }
     }
 }
