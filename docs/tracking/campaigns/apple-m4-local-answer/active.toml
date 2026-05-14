@@ -610,8 +610,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-ASK-004"
-status = "pr_open"
+status = "merged"
 pr = 4686
+merge_sha = "a38c63fb13764b2265b97d4906362b568bb704c0"
 branch = "codex/apple-m4-local-answer/M4-BITNET-ASK-004-repair-guidance"
 stackable = false
 review_mode = "codex_premerge"

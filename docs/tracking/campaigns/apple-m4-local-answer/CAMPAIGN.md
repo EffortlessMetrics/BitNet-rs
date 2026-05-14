@@ -69,7 +69,7 @@ and `mac serve` remain disabled.
 | M4-BITNET-ASK-001 | merged | Local receipt `ci/hardware/apple-m4-mac-mini/2026-05-13/bitnet-mac-ask/bitnet-mac-ask-runtime-receipt.json` proves the user-facing BitNet `bitnet mac ask` route completed one strict Apple M4 CPU/NEON prompt with fallback_used=false, text `2+2 equals 4.`, generated token IDs, accepted model/tokenizer identity, and timing fields; merged in #4647. |
 | M4-BITNET-ASK-002 | merged | #4651 added explicit `--progress` status milestones for slow one-shot `bitnet mac ask` runs and `--quiet` suppression for scripts while keeping generated text on stdout and BitNet chat/server/Metal claims disabled. |
 | M4-BITNET-ASK-003 | merged | #4680 added durable partial-failure receipts for BitNet `bitnet mac ask` setup and generation failures, with repair guidance and unchanged chat/server/Metal claim boundaries. |
-| M4-BITNET-ASK-004 | in_progress | Print compact operator repair guidance for BitNet `bitnet mac ask` setup/generation failures, matching the receipt guidance for accepted tokenizer, model cache, explicit GGUF verification, and unchanged chat/server/Metal boundaries. |
+| M4-BITNET-ASK-004 | merged | #4686 prints compact operator repair guidance for BitNet `bitnet mac ask` setup/generation failures, matching the receipt guidance for accepted tokenizer, model cache, explicit GGUF verification, and unchanged chat/server/Metal boundaries. |
 
 ## Review Policy
 
