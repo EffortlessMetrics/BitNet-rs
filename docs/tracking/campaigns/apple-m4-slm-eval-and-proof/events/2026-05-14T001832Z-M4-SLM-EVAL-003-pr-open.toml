@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T00:18:32Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-003"
+event = "pr_open"
+pr = 4663
+head_sha = "e10252af29a6e61d1889d6adc789e1c9d49ca5d6"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4663 to add apple_m4_slm_eval_summary schema validation under bitnet mac receipts-check.",
+  "The PR validates model/tokenizer identity, seeded corpus counts, accuracy buckets, generated evidence coverage, speed, memory, stability, and dense-only claim boundaries with fixture tests.",
+  "Claim boundaries remain narrow: no live supported-model matrix, broad M4 performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook claim.",
+]
