@@ -160,7 +160,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL-004"
-status = "ready"
+status = "in_progress"
 branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-004-supported-model-reports"
 stackable = false
 review_mode = "codex_premerge"
@@ -170,9 +170,16 @@ blocked_by = ["M4-SLM-EVAL-003"]
 acceptance = "Run and publish per-model Apple M4 dense SLM eval reports for every supported dense model ID under the seeded corpus and report schema, preserving fallback=false and dense-only claim boundaries."
 commands = [
   "cargo fmt --all -- --check",
-  "Local M4 release eval command for qwen2.5-0.5b-instruct-q8_0",
-  "Local M4 release eval command for qwen2.5-0.5b-instruct-q4_k_m",
-  "Local M4 release eval command for qwen2.5-1.5b-instruct-q4_k_m",
+  "cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model $HOME/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf --corpus ci/quality/apple-m4-slm-eval-seeded-corpus.yaml --json-out ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q8_0/answer-corpus.json --per-prompt-timeout-seconds 240",
+  "target/release/bitnet mac validate --model-id qwen2.5-0.5b-instruct-q8_0 --device apple-m4-cpu-neon --corpus ci/quality/apple-m4-slm-quality-corpus.yaml --json-out ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q8_0/resident-quality.json --progress --log-level warn",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q8_0/summary.json --json",
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model $HOME/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q4_k_m/qwen2.5-0.5b-instruct-q4_k_m.gguf --corpus ci/quality/apple-m4-slm-eval-seeded-corpus.yaml --json-out ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/answer-corpus.json --per-prompt-timeout-seconds 240",
+  "target/release/bitnet mac validate --model-id qwen2.5-0.5b-instruct-q4_k_m --device apple-m4-cpu-neon --corpus ci/quality/apple-m4-slm-quality-corpus.yaml --json-out ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/resident-quality.json --progress --log-level warn",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-0.5b-instruct-q4_k_m/summary.json --json",
+  "target/release/bitnet --device apple-m4-cpu-neon answer-corpus --model $HOME/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf --corpus ci/quality/apple-m4-slm-eval-seeded-corpus.yaml --json-out ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-1.5b-instruct-q4_k_m/answer-corpus.json --per-prompt-timeout-seconds 240",
+  "target/release/bitnet mac validate --model-id qwen2.5-1.5b-instruct-q4_k_m --device apple-m4-cpu-neon --corpus ci/quality/apple-m4-slm-quality-corpus.yaml --json-out ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-1.5b-instruct-q4_k_m/resident-quality.json --progress --log-level warn",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-14/slm-eval/qwen2.5-1.5b-instruct-q4_k_m/summary.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-slm-eval-and-proof",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",

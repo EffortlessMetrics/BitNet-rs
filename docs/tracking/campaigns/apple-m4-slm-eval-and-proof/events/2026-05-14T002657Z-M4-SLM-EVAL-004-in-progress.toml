@@ -1,0 +1,13 @@
+timestamp = "2026-05-14T00:26:57Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started per-model Apple M4 dense SLM eval reports for the supported Qwen model IDs under the seeded corpus and summary schema.",
+  "The work requires live local release receipts plus summary validation for qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m.",
+  "Claim boundaries remain narrow: bounded seeded-corpus dense SLM reports only; no broad model quality, broad M4 performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, or MacBook claim.",
+]
