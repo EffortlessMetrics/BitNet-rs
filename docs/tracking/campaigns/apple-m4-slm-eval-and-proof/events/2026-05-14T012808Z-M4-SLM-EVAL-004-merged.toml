@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T01:28:08Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-004"
+event = "merged"
+pr = 4670
+merge_sha = "d2fc8d02d2c471e0b9de87c1e210de9417f4758e"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+
+notes = [
+  "Merged PR #4670 with the 2026-05-14 Apple M4 dense SLM eval report set.",
+  "The report set publishes summary, answer-corpus, per-case, resident aggregate, and resident per-prompt receipts for all three supported dense M4 model IDs.",
+  "The merged claim remains bounded seeded-corpus dense SLM evidence only, with no broad model quality, broad Apple Silicon performance, BitNet, full Metal, QK256, Neural Engine, MPSGraph, MacBook, or speedup claim.",
+]
