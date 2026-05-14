@@ -23,10 +23,13 @@ use tracing::{debug, error, info, warn};
 mod commands;
 mod config;
 mod exit;
-#[cfg(feature = "full-cli")]
 mod ln_rules;
 mod score;
 pub mod tokenizer_discovery;
+
+#[cfg(not(feature = "full-cli"))]
+#[path = "commands/inspect.rs"]
+mod inspect;
 
 use exit::*;
 
@@ -258,6 +261,8 @@ use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
 use commands::{ConvertCommand, InferenceCommand, InspectCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
+#[cfg(not(feature = "full-cli"))]
+use inspect::InspectCommand;
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
 #[derive(Parser)]
@@ -611,7 +616,6 @@ enum Commands {
         json_out: Option<std::path::PathBuf>,
     },
 
-    #[cfg(feature = "full-cli")]
     /// Inspect model metadata and diagnostics
     Inspect(InspectCommand),
 
@@ -826,7 +830,6 @@ async fn main() -> Result<()> {
         Some(Commands::CudaSmoke { device_index, json_out }) => {
             handle_cuda_smoke_command(&requested_backend_label, device_index, json_out).await
         }
-        #[cfg(feature = "full-cli")]
         Some(Commands::Inspect(cmd)) => cmd.execute().await,
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
             handle_compat_check_command(path, json, strict, show_kv, kv_limit).await

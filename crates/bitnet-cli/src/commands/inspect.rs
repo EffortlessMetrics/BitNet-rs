@@ -7,6 +7,7 @@ use bitnet_models::names::{is_layernorm_weight, is_projection_weight};
 use candle_core::{DType, Tensor};
 use clap::Args;
 use memmap2::Mmap;
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::path::PathBuf;
@@ -18,12 +19,20 @@ use crate::ln_rules::{Ruleset, detect_rules, load_policy};
 #[derive(Args)]
 pub struct InspectCommand {
     /// Model file path
-    #[arg(value_name = "MODEL")]
-    pub model: PathBuf,
+    #[arg(value_name = "MODEL", required_unless_present = "model")]
+    pub model_positional: Option<PathBuf>,
+
+    /// Model file path
+    #[arg(long = "model", value_name = "MODEL", conflicts_with = "model_positional")]
+    pub model: Option<PathBuf>,
 
     /// Compute and display LayerNorm gamma statistics
     #[arg(long)]
     pub ln_stats: bool,
+
+    /// Emit a QK256 layout report for real GGUF tensors
+    #[arg(long)]
+    pub qk256_layout_report: bool,
 
     /// Gate behavior: none|auto|policy
     #[arg(long, default_value = "auto")]
@@ -40,24 +49,164 @@ pub struct InspectCommand {
     /// Output format as JSON
     #[arg(long, default_value_t = false)]
     pub json: bool,
+
+    /// Write JSON report to this path
+    #[arg(long)]
+    pub json_out: Option<PathBuf>,
 }
 
 impl InspectCommand {
     pub async fn execute(&self) -> Result<()> {
-        if self.ln_stats {
+        if self.qk256_layout_report {
+            self.write_qk256_layout_report().await
+        } else if self.ln_stats {
             self.check_ln_gamma_stats().await
         } else {
-            anyhow::bail!(
-                "No inspection mode specified. Use --ln-stats to check LayerNorm gamma statistics."
-            );
+            anyhow::bail!("No inspection mode specified. Use --ln-stats or --qk256-layout-report.");
         }
+    }
+
+    fn model_path(&self) -> Result<&PathBuf> {
+        self.model
+            .as_ref()
+            .or(self.model_positional.as_ref())
+            .ok_or_else(|| anyhow::anyhow!("model path is required"))
+    }
+
+    async fn write_qk256_layout_report(&self) -> Result<()> {
+        let report = self.qk256_layout_report()?;
+        let json = serde_json::to_string_pretty(&report)?;
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent()
+                && !parent.as_os_str().is_empty()
+            {
+                std::fs::create_dir_all(parent)
+                    .with_context(|| format!("failed to create {}", parent.display()))?;
+            }
+            std::fs::write(path, format!("{json}\n"))
+                .with_context(|| format!("failed to write {}", path.display()))?;
+        } else {
+            println!("{json}");
+        }
+        Ok(())
+    }
+
+    fn qk256_layout_report(&self) -> Result<Qk256LayoutReport> {
+        let model_path = self.model_path()?;
+        let file = File::open(model_path)
+            .with_context(|| format!("Failed to open model: {}", model_path.display()))?;
+        let mmap = unsafe { Mmap::map(&file)? };
+
+        let mut hasher = Sha256::new();
+        hasher.update(&mmap);
+        let model_sha256 = format!("{:x}", hasher.finalize());
+
+        let reader = GgufReader::new(&mmap)?;
+        let mut tensors = Vec::new();
+
+        for i in 0..reader.tensor_count() as usize {
+            let info = reader.get_tensor_info(i)?;
+            if info.tensor_type != GgufTensorType::I2_S || info.shape.len() != 2 {
+                continue;
+            }
+
+            let gguf_cols = info.shape[0];
+            let gguf_rows = info.shape[1];
+            let nelems = gguf_rows.checked_mul(gguf_cols).ok_or_else(|| {
+                anyhow::anyhow!("QK256 tensor '{}' element count overflow", info.name)
+            })?;
+            let row_stride_bytes = qk256_logical_packed_bytes(gguf_cols);
+            let logical_packed_bytes =
+                gguf_rows.checked_mul(row_stride_bytes).ok_or_else(|| {
+                    anyhow::anyhow!("QK256 tensor '{}' byte count overflow", info.name)
+                })?;
+            let data = reader.get_tensor_data_by_info(info)?;
+            if data.len() < logical_packed_bytes {
+                continue;
+            }
+
+            let qk_bytes = &data[..logical_packed_bytes];
+            let trailer_scale = if data.len() >= logical_packed_bytes + 4 {
+                Some(f32::from_le_bytes([
+                    data[logical_packed_bytes],
+                    data[logical_packed_bytes + 1],
+                    data[logical_packed_bytes + 2],
+                    data[logical_packed_bytes + 3],
+                ]))
+            } else {
+                None
+            };
+            let trailer_scale_bytes = if trailer_scale.is_some() { 4 } else { 0 };
+            let padding_bytes =
+                data.len().saturating_sub(logical_packed_bytes + trailer_scale_bytes);
+
+            let hist = qk256_code_histogram_act_parallel_rows(
+                qk_bytes,
+                gguf_rows,
+                gguf_cols,
+                row_stride_bytes,
+            );
+            let code_3_frequency = if nelems == 0 { 0.0 } else { hist[3] as f64 / nelems as f64 };
+
+            let kernel_shape_from_gguf_dims = [gguf_rows, gguf_cols];
+            let first_row_bytes = &qk_bytes[..row_stride_bytes.min(qk_bytes.len())];
+            let sample_cols = gguf_cols.min(256);
+            let act_sample = unpack_act_parallel_codes(first_row_bytes, sample_cols);
+            let contiguous_sample = unpack_contiguous_codes(first_row_bytes, sample_cols);
+
+            tensors.push(Qk256TensorLayoutReport {
+                name: info.name.clone(),
+                gguf_shape: info.shape.clone(),
+                kernel_shape_from_gguf_dims,
+                tensor_type: format!("{:?}", info.tensor_type),
+                nelems,
+                row_stride_bytes,
+                logical_packed_bytes,
+                actual_bytes: data.len(),
+                trailer_scale,
+                trailer_scale_bytes,
+                padding_bytes,
+                packing_mode_detected: if code_3_frequency == 0.0 {
+                    "qk256_act_parallel_128_ternary_like".to_string()
+                } else {
+                    "qk256_act_parallel_128_code3_present".to_string()
+                },
+                code_histogram: hist,
+                code_3_count: hist[3],
+                code_3_frequency,
+                first_row_sample_len: sample_cols,
+                first_row_act_parallel_hash: sha256_hex_bytes(&act_sample),
+                first_row_contiguous_hash: sha256_hex_bytes(&contiguous_sample),
+                first_row_hashes_match: act_sample == contiguous_sample,
+                first_row_act_parallel_codes_32: act_sample.iter().take(32).copied().collect(),
+                first_row_contiguous_codes_32: contiguous_sample.iter().take(32).copied().collect(),
+            });
+        }
+
+        Ok(Qk256LayoutReport {
+            schema_version: 1,
+            diagnostic: "bitnet_qk256_layout_report".to_string(),
+            diagnostic_only: true,
+            promotion_allowed: false,
+            proof_receipts_written: false,
+            manifest_updated: false,
+            model: model_path.display().to_string(),
+            model_sha256,
+            tensor_count: tensors.len(),
+            not_claims: critical_qk256_report_not_claims()
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            tensors,
+        })
     }
 
     /// Check LayerNorm gamma statistics with architecture-aware validation
     async fn check_ln_gamma_stats(&self) -> Result<()> {
         // Open once, mmap once, hash from slice
-        let file = File::open(&self.model)
-            .with_context(|| format!("Failed to open model: {}", self.model.display()))?;
+        let model_path = self.model_path()?;
+        let file = File::open(model_path)
+            .with_context(|| format!("Failed to open model: {}", model_path.display()))?;
         let mmap = unsafe { Mmap::map(&file)? };
 
         // Compute SHA256 from mmap
@@ -428,6 +577,110 @@ impl InspectCommand {
     }
 }
 
+#[derive(Debug, Serialize)]
+struct Qk256LayoutReport {
+    schema_version: u32,
+    diagnostic: String,
+    diagnostic_only: bool,
+    promotion_allowed: bool,
+    proof_receipts_written: bool,
+    manifest_updated: bool,
+    model: String,
+    model_sha256: String,
+    tensor_count: usize,
+    not_claims: Vec<String>,
+    tensors: Vec<Qk256TensorLayoutReport>,
+}
+
+#[derive(Debug, Serialize)]
+struct Qk256TensorLayoutReport {
+    name: String,
+    gguf_shape: Vec<usize>,
+    kernel_shape_from_gguf_dims: [usize; 2],
+    tensor_type: String,
+    nelems: usize,
+    row_stride_bytes: usize,
+    logical_packed_bytes: usize,
+    actual_bytes: usize,
+    trailer_scale: Option<f32>,
+    trailer_scale_bytes: usize,
+    padding_bytes: usize,
+    packing_mode_detected: String,
+    code_histogram: [usize; 4],
+    code_3_count: usize,
+    code_3_frequency: f64,
+    first_row_sample_len: usize,
+    first_row_act_parallel_hash: String,
+    first_row_contiguous_hash: String,
+    first_row_hashes_match: bool,
+    first_row_act_parallel_codes_32: Vec<u8>,
+    first_row_contiguous_codes_32: Vec<u8>,
+}
+
+fn qk256_logical_packed_bytes(nelems: usize) -> usize {
+    nelems.div_ceil(256) * 64
+}
+
+fn qk256_act_parallel_code_at(qk_bytes: &[u8], col: usize) -> u8 {
+    let group128 = col / 128;
+    let within = col % 128;
+    let lane = within / 32;
+    let pos = within % 32;
+    let byte = qk_bytes[group128 * 32 + pos];
+    (byte >> (6 - lane * 2)) & 0x03
+}
+
+fn qk256_contiguous_code_at(qk_bytes: &[u8], col: usize) -> u8 {
+    let byte = qk_bytes[col / 4];
+    (byte >> ((col % 4) * 2)) & 0x03
+}
+
+fn qk256_code_histogram_act_parallel_rows(
+    qk_bytes: &[u8],
+    rows: usize,
+    cols: usize,
+    row_stride_bytes: usize,
+) -> [usize; 4] {
+    let mut hist = [0usize; 4];
+    for row in 0..rows {
+        let start = row * row_stride_bytes;
+        let end = start + row_stride_bytes;
+        let row_bytes = &qk_bytes[start..end];
+        for col in 0..cols {
+            let code = qk256_act_parallel_code_at(row_bytes, col);
+            hist[code as usize] += 1;
+        }
+    }
+    hist
+}
+
+fn unpack_act_parallel_codes(qk_bytes: &[u8], cols: usize) -> Vec<u8> {
+    (0..cols).map(|col| qk256_act_parallel_code_at(qk_bytes, col)).collect()
+}
+
+fn unpack_contiguous_codes(qk_bytes: &[u8], cols: usize) -> Vec<u8> {
+    (0..cols).map(|col| qk256_contiguous_code_at(qk_bytes, col)).collect()
+}
+
+fn sha256_hex_bytes(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+fn critical_qk256_report_not_claims() -> Vec<&'static str> {
+    vec![
+        "selected_attention_residency",
+        "resident_kv_decode",
+        "attention_scores_residency",
+        "softmax_residency",
+        "attention_value_mix_residency",
+        "full_support_op_residency",
+        "full_device_residency",
+        "completion",
+    ]
+}
+
 /// Tensor statistics for validation
 #[derive(Debug)]
 struct TensorStat {
@@ -442,4 +695,41 @@ struct TensorStat {
 enum TensorKind {
     LayerNorm,
     Projection,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn act_parallel_code_at_decodes_128_value_lane_layout() {
+        let mut bytes = vec![0u8; 32];
+        bytes[0] = (0 << 6) | (1 << 4) | (2 << 2) | 3;
+        bytes[31] = (3 << 6) | (2 << 4) | (1 << 2);
+
+        assert_eq!(qk256_act_parallel_code_at(&bytes, 0), 0);
+        assert_eq!(qk256_act_parallel_code_at(&bytes, 32), 1);
+        assert_eq!(qk256_act_parallel_code_at(&bytes, 64), 2);
+        assert_eq!(qk256_act_parallel_code_at(&bytes, 96), 3);
+        assert_eq!(qk256_act_parallel_code_at(&bytes, 31), 3);
+        assert_eq!(qk256_act_parallel_code_at(&bytes, 63), 2);
+        assert_eq!(qk256_act_parallel_code_at(&bytes, 95), 1);
+        assert_eq!(qk256_act_parallel_code_at(&bytes, 127), 0);
+    }
+
+    #[test]
+    fn contiguous_and_act_parallel_samples_differ_for_lane_packed_bytes() {
+        let mut bytes = vec![0u8; 64];
+        bytes[0] = (0 << 6) | (1 << 4) | (2 << 2) | 3;
+
+        let act = unpack_act_parallel_codes(&bytes, 128);
+        let contiguous = unpack_contiguous_codes(&bytes, 128);
+
+        assert_ne!(act, contiguous);
+        assert_eq!(&act[..4], &[0, 0, 0, 0]);
+        assert_eq!(act[32], 1);
+        assert_eq!(act[64], 2);
+        assert_eq!(act[96], 3);
+        assert_eq!(&contiguous[..4], &[3, 2, 1, 0]);
+    }
 }
