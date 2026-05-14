@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T02:14:34Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-006"
+event = "pr_open"
+pr = 4677
+head_sha = "ce3d10f41ce7f6f73f5f4ca5f4a483e5cb791924"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+
+notes = [
+  "Opened PR #4677 to compare matching Apple M4 dense SLM eval summary reports through `bitnet mac regression` and `mac receipts-check --regression-baseline`.",
+  "The PR requires matching model, tokenizer, corpus, backend, stability, and claim-boundary context before applying advisory thresholds.",
+  "The comparison remains dense-SLM-only regression tooling and does not claim broad model quality, broad performance, BitNet evidence, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook evidence, or speedup.",
+]
