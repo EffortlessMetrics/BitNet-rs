@@ -2253,7 +2253,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["CUDA-DENSE-054"]
+blocked_by = ["CUDA-UX-010"]
 acceptance = "Add the Qwen3 0.6B artifact contract with source, file identity, SHA256, bytes, GGUF type, architecture, quantization, tokenizer, chat template, context length, license, storage envelope, and VRAM estimate without promoting CPU, CUDA, BitNet, speed, or server claims."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
@@ -2442,10 +2442,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-008"
-status = "pr_open"
+status = "merged"
 branch = "cli/cuda-model-support-dashboard"
 pr = 4724
-head_sha = "d9fdc448b1e7bfcbc1817cc4a43d5bd7e04f348b"
+head_sha = "200303d764d95d4b85673b8292cba109698f9106"
+merge_sha = "2c9daac4d90acb821f81d24e190f9f3a1452aa65"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
