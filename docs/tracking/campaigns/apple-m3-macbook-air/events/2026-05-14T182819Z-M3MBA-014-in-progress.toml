@@ -1,0 +1,14 @@
+timestamp = "2026-05-14T18:28:19Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-014"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-014-tracker-readiness"
+summary = "Started the M3 Air Mac validate receipt bridge before live dense smoke."
+
+notes = [
+  "This implementation item keeps live model inference out of scope while extending the Mac validate and receipt-check path to preserve apple-m3-air-cpu-neon identity.",
+  "The work must not reuse M4 Mac mini machine labels for M3 Air receipts and must not claim dense smoke, BitNet behavior, Metal inference, MPSGraph model inference, Neural Engine execution, or QK256 support.",
+]

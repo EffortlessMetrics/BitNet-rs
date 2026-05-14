@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 128
 expression: help
 ---
 Mac-oriented SLM check, ask, validate, and receipt-check wrappers
@@ -10,13 +11,14 @@ Commands:
   models          List Apple M4 model states, cache status, and selection guidance
   check           Check the cached Apple M4 SLM model artifact and routing boundary
   ask             Ask one question through the Rust-native Apple M4 CPU/NEON SLM path
-  smoke           Run a compact Apple M4 dense-SLM health smoke with cache and receipt checks
+  smoke           Run a compact Apple M4 model-family health smoke with cache and receipt checks
+  bitnet-warm     Run fixed BitNet prompts in one warm Apple M4 CPU/NEON process without enabling chat
   doctor          Run one local health verdict for the supported Apple M4 dense-SLM path
   serve           Serve local M4 dense-SLM health and readiness endpoints without generation
   serve-check     Check a running M4 local server readiness and optional completion/receipt export
   chat            Run multiple prompts in one resident Apple M4 CPU/NEON SLM session
   validate        Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session
-  bitnet-proof    Validate M4 BitNet proof inputs without enabling Mac ask/chat routing
+  bitnet-proof    Validate M4 BitNet proof inputs without enabling BitNet chat/serve routing
   receipts-check  Check Apple M4 SLM answer/warm-session receipts for hidden fallback or overclaims
   regression      Compare Apple M4 dense-SLM receipts against a stored local envelope
   help            Print this message or the help of the given subcommand(s)

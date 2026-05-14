@@ -150,10 +150,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-012"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-012-dense-harness-contract"
 pr = 4658
-head_sha = "51bda54f2055a3ec29e456074bed1c1100d852d9"
+head_sha = "b35ec82b8765a4cb5529ed53d7fb653e5e6490bf"
+merge_sha = "cad5693291ef80152d75dffaa25824ba08fe09c9"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -188,10 +189,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-013"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-013-ci-completion-workflow"
 pr = 4665
-head_sha = "014e4c09602336b0bb670d95f5d35b554ab20cf3"
+head_sha = "6da90069dee38cdbc7f87ecc111eab57b8c1e086"
+merge_sha = "7389b271a9cf508bc13b9d81aed9e15be925eb17"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -230,6 +232,49 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M3MBA-014"
+status = "in_progress"
+branch = "codex/apple-m3-macbook-air/M3MBA-014-tracker-readiness"
+pr = 4766
+head_sha = "1ed8d348c829955bc3d049396aad0725f85c3fd5"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-013"]
+acceptance = "Implement the no-live-model Mac validate and receipts-check bridge for apple-m3-air-cpu-neon so M3 Air dense SLM smoke can emit M3 machine identity, selected backend identity, allocation-audit eligibility, and M3-specific receipt artifact kinds without reusing M4 Mac mini labels."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-device-config-core --no-default-features",
+  "cargo test --locked -p bitnet-receipts-core --no-default-features strict_cpu_proof",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli apple -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  ".github/workflows/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "The Mac validate and receipt-check path can preserve apple-m3-air-cpu-neon identity before live M3 dense smoke.",
+]
+must_not_claim = [
+  "M3 Air dense smoke ran.",
+  "Any live model inference was performed.",
+  "M3 Air receipts are M4 Mac mini evidence.",
+  "M3 Air evidence proves BitNet behavior, Metal inference, MPSGraph model inference, Neural Engine execution, or QK256 support.",
+]
+
+[[work_item]]
 id = "M3MBA-004A"
 status = "proposed"
 branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
@@ -237,10 +282,10 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M3MBA-013"]
+blocked_by = ["M3MBA-014"]
 acceptance = "Run the dense Qwen2.5 0.5B Mac smoke path on M3 Air with the known model hash, tokenizer metadata, deterministic settings, exact requested/selected backend label identity, fallback status, power and thermal context, storage before/after, receipts-check output, and dense-only claim boundary."
 commands = [
-  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set smoke --backend-label apple-m3-air-cpu-neon --quiet",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set smoke --device apple-m3-air-cpu-neon --quiet",
   "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check <receipt> --json",
   "jq -e '.strict_provenance.requested_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.selected_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.fallback_used == false' <receipt>",
   "cargo fmt --all -- --check",
@@ -281,7 +326,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-004A"]
 acceptance = "Run the dense Qwen2.5 0.5B bounded operator profile only after smoke passes, recording allocation-audit context, power and thermal context, repeat count, token budget, storage before/after, receipts-check output, exact requested/selected backend label identity, fallback status, and whether the result is comparison-grade or diagnostic-only."
 commands = [
-  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set operator --backend-label apple-m3-air-cpu-neon --allocation-audit --quiet",
+  "cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set operator --device apple-m3-air-cpu-neon --allocation-audit --quiet",
   "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac receipts-check <receipt> --json",
   "jq -e '.strict_provenance.requested_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.selected_backend == \"apple-m3-air-cpu-neon\" and .strict_provenance.fallback_used == false' <receipt>",
   "cargo fmt --all -- --check",

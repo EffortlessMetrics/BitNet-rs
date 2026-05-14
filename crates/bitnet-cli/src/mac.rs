@@ -18,6 +18,7 @@ use tokio::net::{TcpListener, TcpStream};
 use crate::model_cache::{self, VerifiedCachedModel};
 
 const APPLE_M4_CPU_NEON: &str = "apple-m4-cpu-neon";
+const APPLE_M3_AIR_CPU_NEON: &str = "apple-m3-air-cpu-neon";
 const APPLE_M4_METAL: &str = "apple-m4-metal";
 const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.json";
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
@@ -816,10 +817,12 @@ impl MacCommand {
                 quiet,
                 json_out,
             } => {
-                ensure_supported_mac_device(explicit_device_label, "mac validate")?;
+                let requested_backend =
+                    ensure_supported_mac_validate_device(explicit_device_label)?;
                 run_validate(MacValidateRun {
                     model_id: &model_id,
                     cache_dir,
+                    requested_backend,
                     corpus,
                     corpus_repeat_runs,
                     profile_set,
@@ -981,6 +984,21 @@ fn ensure_supported_mac_device(explicit_device_label: Option<&str>, command: &st
     anyhow::bail!(
         "{command} routes the supported Mac local-answer path through --device {APPLE_M4_CPU_NEON}; requested --device {label}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
     )
+}
+
+fn ensure_supported_mac_validate_device(
+    explicit_device_label: Option<&str>,
+) -> Result<&'static str> {
+    let Some(label) = explicit_device_label else {
+        return Ok(APPLE_M4_CPU_NEON);
+    };
+    match label {
+        APPLE_M4_CPU_NEON => Ok(APPLE_M4_CPU_NEON),
+        APPLE_M3_AIR_CPU_NEON => Ok(APPLE_M3_AIR_CPU_NEON),
+        _ => anyhow::bail!(
+            "mac validate routes supported Apple CPU/NEON validation through --device {APPLE_M4_CPU_NEON} or --device {APPLE_M3_AIR_CPU_NEON}; requested --device {label}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+        ),
+    }
 }
 
 fn ensure_supported_mac_serve_device(explicit_device_label: Option<&str>) -> Result<()> {
@@ -4183,6 +4201,7 @@ async fn run_chat_session(
 struct MacValidateRun<'a> {
     model_id: &'a str,
     cache_dir: Option<PathBuf>,
+    requested_backend: &'static str,
     corpus: PathBuf,
     corpus_repeat_runs: usize,
     profile_set: MacValidateProfileSet,
@@ -4199,6 +4218,7 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
     let MacValidateRun {
         model_id,
         cache_dir,
+        requested_backend,
         corpus,
         corpus_repeat_runs,
         profile_set,
@@ -4223,8 +4243,16 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
                 "mac validate --metal-prefill-qkv-phase is scoped to the smoke quality corpus; profile timing remains CPU/NEON until M4-METAL-007"
             );
         }
-        return run_operator_profiles(model, json_out, threads, allocation_audit, progress, quiet)
-            .await;
+        return run_operator_profiles(
+            model,
+            requested_backend,
+            json_out,
+            threads,
+            allocation_audit,
+            progress,
+            quiet,
+        )
+        .await;
     }
     if profile_set == MacValidateProfileSet::Performance {
         if metal_prefill_qkv_phase {
@@ -4234,6 +4262,7 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
         }
         return run_performance_profiles(
             model,
+            requested_backend,
             json_out,
             threads,
             allocation_audit,
@@ -4243,7 +4272,7 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
         .await;
     }
     crate::run_slm_warm_session(
-        APPLE_M4_CPU_NEON,
+        requested_backend,
         model.path.clone(),
         "auto".to_string(),
         None,
@@ -4282,6 +4311,7 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
 
 async fn run_operator_profiles(
     model: VerifiedCachedModel,
+    requested_backend: &'static str,
     json_out: PathBuf,
     threads: usize,
     allocation_audit: bool,
@@ -4290,6 +4320,7 @@ async fn run_operator_profiles(
 ) -> Result<()> {
     run_warm_profile_set(
         model,
+        requested_backend,
         json_out,
         threads,
         WarmProfileSetSpec {
@@ -4308,6 +4339,7 @@ async fn run_operator_profiles(
 
 async fn run_performance_profiles(
     model: VerifiedCachedModel,
+    requested_backend: &'static str,
     json_out: PathBuf,
     threads: usize,
     allocation_audit: bool,
@@ -4321,6 +4353,7 @@ async fn run_performance_profiles(
     }
     run_warm_profile_set(
         model,
+        requested_backend,
         json_out,
         threads,
         WarmProfileSetSpec {
@@ -4350,6 +4383,7 @@ struct WarmProfileSetSpec {
 
 async fn run_warm_profile_set(
     model: VerifiedCachedModel,
+    requested_backend: &'static str,
     json_out: PathBuf,
     threads: usize,
     spec: WarmProfileSetSpec,
@@ -4369,7 +4403,7 @@ async fn run_warm_profile_set(
         let profile_id = format!("warm_{tokens}");
         let receipt_path = receipt_dir.join(format!("{profile_id}.json"));
         crate::run_slm_warm_session(
-            APPLE_M4_CPU_NEON,
+            requested_backend,
             model.path.clone(),
             "auto".to_string(),
             None,
@@ -4415,11 +4449,11 @@ async fn run_warm_profile_set(
 
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
-        "artifact_kind": spec.artifact_kind,
+        "artifact_kind": mac_profile_set_artifact_kind(requested_backend, spec.artifact_kind),
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "artifact_path": json_out.display().to_string(),
-        "requested_backend": APPLE_M4_CPU_NEON,
-        "selected_backend": APPLE_M4_CPU_NEON,
+        "requested_backend": requested_backend,
+        "selected_backend": requested_backend,
         "runtime_api": "cpu",
         "fallback_used": false,
         "fallback_reason": serde_json::Value::Null,
@@ -4430,7 +4464,7 @@ async fn run_warm_profile_set(
             "release_mode": release_mode,
         },
         "operator_thresholds": {
-            "scope": "supported Apple M4 SLM warm-answer timing only",
+            "scope": supported_apple_slm_scope(requested_backend),
             "profile_execution_model": "one warm-session run per token budget",
             "profiles_loaded_independently": true,
             "profile_set_model_loads": profile_set_model_loads,
@@ -4499,6 +4533,28 @@ async fn run_warm_profile_set(
         profile_ids_display(spec.tokens)
     );
     Ok(())
+}
+
+fn mac_profile_set_artifact_kind(
+    requested_backend: &str,
+    default_artifact_kind: &'static str,
+) -> &'static str {
+    match (requested_backend, default_artifact_kind) {
+        (APPLE_M3_AIR_CPU_NEON, "apple_m4_slm_operator_profiles") => {
+            "apple_m3_air_slm_operator_profiles"
+        }
+        (APPLE_M3_AIR_CPU_NEON, "apple_m4_slm_performance_profiles") => {
+            "apple_m3_air_slm_performance_profiles"
+        }
+        _ => default_artifact_kind,
+    }
+}
+
+fn supported_apple_slm_scope(requested_backend: &str) -> &'static str {
+    match requested_backend {
+        APPLE_M3_AIR_CPU_NEON => "supported Apple M3 Air SLM warm-answer timing only",
+        _ => "supported Apple M4 SLM warm-answer timing only",
+    }
 }
 
 fn operator_profile_summary(
@@ -5899,15 +5955,15 @@ fn validate_mac_receipt_value(
     let runtime_api = receipt_string(receipt, "runtime_api").unwrap_or_default();
     let fallback_used = receipt_bool(receipt, "fallback_used").unwrap_or(true);
 
-    if requested_backend != APPLE_M4_CPU_NEON {
+    if !is_supported_mac_cpu_neon_receipt_backend(requested_backend.as_str()) {
         anyhow::bail!(
-            "{} requested_backend must be {APPLE_M4_CPU_NEON}, got {requested_backend:?}",
+            "{} requested_backend must be {APPLE_M4_CPU_NEON} or {APPLE_M3_AIR_CPU_NEON}, got {requested_backend:?}",
             path.display()
         );
     }
-    if selected_backend != APPLE_M4_CPU_NEON {
+    if selected_backend != requested_backend {
         anyhow::bail!(
-            "{} selected_backend must be {APPLE_M4_CPU_NEON}, got {selected_backend:?}",
+            "{} selected_backend must match requested_backend {requested_backend:?}, got {selected_backend:?}",
             path.display()
         );
     }
@@ -5942,11 +5998,14 @@ fn validate_mac_receipt_value(
     }
 
     let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session"
+        || artifact_kind == "slm_apple_m3_air_warm_session"
         || artifact_kind == "bitnet_apple_m4_warm_session"
     {
         validate_warm_session_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_operator_profiles"
         || artifact_kind == "apple_m4_slm_performance_profiles"
+        || artifact_kind == "apple_m3_air_slm_operator_profiles"
+        || artifact_kind == "apple_m3_air_slm_performance_profiles"
     {
         validate_profile_set_receipt(path, receipt, artifact_kind.as_str())?
     } else if artifact_kind == "apple_m4_slm_eval_summary" {
@@ -5969,6 +6028,10 @@ fn validate_mac_receipt_value(
         passed: true,
         regression: None,
     })
+}
+
+fn is_supported_mac_cpu_neon_receipt_backend(label: &str) -> bool {
+    matches!(label, APPLE_M4_CPU_NEON | APPLE_M3_AIR_CPU_NEON)
 }
 
 fn validate_bitnet_mac_ask_failure_receipt(

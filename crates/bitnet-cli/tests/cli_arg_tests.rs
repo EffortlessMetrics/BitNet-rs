@@ -3181,7 +3181,7 @@ fn slm_warm_session_requires_multiple_prompts_before_loading_model() {
 }
 
 #[test]
-fn slm_warm_session_requires_apple_m4_cpu_neon_before_loading_model() {
+fn slm_warm_session_requires_supported_apple_cpu_neon_before_loading_model() {
     bitnet()
         .args([
             "--device",
@@ -3198,7 +3198,7 @@ fn slm_warm_session_requires_apple_m4_cpu_neon_before_loading_model() {
         ])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("scoped to --device apple-m4-cpu-neon"));
+        .stderr(predicate::str::contains("apple-m4-cpu-neon or apple-m3-air-cpu-neon"));
 }
 
 #[test]
