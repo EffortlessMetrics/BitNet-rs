@@ -6,6 +6,7 @@
   "required": [
     "schema_version",
     "receipt_type",
+    "run_id",
     "producer",
     "repo",
     "model",
@@ -29,6 +30,9 @@
     },
     "receipt_type": {
       "const": "llm_experience_run"
+    },
+    "run_id": {
+      "type": "string"
     },
     "producer": {
       "type": "string"

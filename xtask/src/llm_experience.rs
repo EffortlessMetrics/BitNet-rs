@@ -5,6 +5,7 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
+use walkdir::WalkDir;
 
 const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "selected_attention_residency",
@@ -20,6 +21,7 @@ const CRITICAL_NOT_CLAIMS: &[&str] = &[
 const REQUIRED_EXPERIENCE_POINTERS: &[&str] = &[
     "/schema_version",
     "/receipt_type",
+    "/run_id",
     "/producer",
     "/repo",
     "/model",
@@ -95,9 +97,43 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             verify(&opts.receipt, &opts.format, opts.require_claimable)?;
             Ok(true)
         }
+        Some("publish") => {
+            if args[3..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_publish_help();
+                return Ok(true);
+            }
+            let opts = parse_publish_args(&args[3..])?;
+            publish(&opts.receipt, &opts.history_root, &opts.format)?;
+            Ok(true)
+        }
+        Some("compare") => {
+            if args[3..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_compare_help();
+                return Ok(true);
+            }
+            let opts = parse_compare_args(&args[3..])?;
+            compare(
+                &opts.history_root,
+                &opts.device,
+                &opts.profile,
+                opts.require_same_route,
+                opts.require_claim_ready,
+                &opts.format,
+            )?;
+            Ok(true)
+        }
+        Some("docs") => {
+            if args[3..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_docs_help();
+                return Ok(true);
+            }
+            let opts = parse_docs_args(&args[3..])?;
+            docs(&opts.history_root, &opts.output, opts.check, &opts.format)?;
+            Ok(true)
+        }
         Some("profile-cli-plan") | Some("-h") | Some("--help") | None => Ok(false),
         Some(other) => bail!(
-            "unknown llm-experience subcommand {other}; supported manual subcommands: run, verify"
+            "unknown llm-experience subcommand {other}; supported manual subcommands: run, verify, publish, compare, docs"
         ),
     }
 }
@@ -114,6 +150,31 @@ struct RunArgs {
 struct VerifyArgs {
     receipt: PathBuf,
     require_claimable: bool,
+    format: String,
+}
+
+#[derive(Debug)]
+struct PublishArgs {
+    receipt: PathBuf,
+    history_root: PathBuf,
+    format: String,
+}
+
+#[derive(Debug)]
+struct CompareArgs {
+    history_root: PathBuf,
+    device: String,
+    profile: String,
+    require_same_route: bool,
+    require_claim_ready: bool,
+    format: String,
+}
+
+#[derive(Debug)]
+struct DocsArgs {
+    history_root: PathBuf,
+    output: PathBuf,
+    check: bool,
     format: String,
 }
 
@@ -178,6 +239,101 @@ fn parse_verify_args(args: &[String]) -> Result<VerifyArgs> {
     Ok(opts)
 }
 
+fn parse_publish_args(args: &[String]) -> Result<PublishArgs> {
+    let mut opts = PublishArgs {
+        receipt: PathBuf::from("target/llm-experience/a770-bitnet-profile-stage.json"),
+        history_root: PathBuf::from("target/llm-experience-history"),
+        format: "human".to_string(),
+    };
+    let mut index = 0usize;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--receipt" => {
+                index += 1;
+                opts.receipt = PathBuf::from(required_value(args, index, "--receipt")?);
+            }
+            "--history-root" => {
+                index += 1;
+                opts.history_root = PathBuf::from(required_value(args, index, "--history-root")?);
+            }
+            "--format" => {
+                index += 1;
+                opts.format = required_value(args, index, "--format")?.to_string();
+            }
+            other => bail!("unknown llm-experience publish option {other}"),
+        }
+        index += 1;
+    }
+    Ok(opts)
+}
+
+fn parse_compare_args(args: &[String]) -> Result<CompareArgs> {
+    let mut opts = CompareArgs {
+        history_root: PathBuf::from("target/llm-experience-history"),
+        device: "amd-5700x-intel-a770".to_string(),
+        profile: "prefill_512_decode_64".to_string(),
+        require_same_route: false,
+        require_claim_ready: false,
+        format: "human".to_string(),
+    };
+    let mut index = 0usize;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--history-root" => {
+                index += 1;
+                opts.history_root = PathBuf::from(required_value(args, index, "--history-root")?);
+            }
+            "--device" => {
+                index += 1;
+                opts.device = required_value(args, index, "--device")?.to_string();
+            }
+            "--profile" => {
+                index += 1;
+                opts.profile = required_value(args, index, "--profile")?.to_string();
+            }
+            "--require-same-route" => opts.require_same_route = true,
+            "--require-claim-ready" => opts.require_claim_ready = true,
+            "--format" => {
+                index += 1;
+                opts.format = required_value(args, index, "--format")?.to_string();
+            }
+            other => bail!("unknown llm-experience compare option {other}"),
+        }
+        index += 1;
+    }
+    Ok(opts)
+}
+
+fn parse_docs_args(args: &[String]) -> Result<DocsArgs> {
+    let mut opts = DocsArgs {
+        history_root: PathBuf::from("target/llm-experience-history"),
+        output: PathBuf::from("docs/benchmarks/llm-experience.md"),
+        check: false,
+        format: "human".to_string(),
+    };
+    let mut index = 0usize;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--history-root" => {
+                index += 1;
+                opts.history_root = PathBuf::from(required_value(args, index, "--history-root")?);
+            }
+            "--output" => {
+                index += 1;
+                opts.output = PathBuf::from(required_value(args, index, "--output")?);
+            }
+            "--check" => opts.check = true,
+            "--format" => {
+                index += 1;
+                opts.format = required_value(args, index, "--format")?.to_string();
+            }
+            other => bail!("unknown llm-experience docs option {other}"),
+        }
+        index += 1;
+    }
+    Ok(opts)
+}
+
 fn required_value<'a>(args: &'a [String], index: usize, flag: &str) -> Result<&'a str> {
     args.get(index)
         .map(String::as_str)
@@ -194,6 +350,24 @@ fn print_run_help() {
 fn print_verify_help() {
     println!(
         "Verify an LLM experience receipt\n\nUsage: xtask.exe llm-experience verify [OPTIONS]\n\nOptions:\n      --receipt <PATH>             Experience receipt [default: target/llm-experience/a770-bitnet-profile-stage.json]\n      --require-claimable          Fail if receipt is diagnostic-only\n      --format <FORMAT>            human or json [default: human]\n  -h, --help                       Print help"
+    );
+}
+
+fn print_publish_help() {
+    println!(
+        "Publish an LLM experience receipt to local history\n\nUsage: xtask.exe llm-experience publish [OPTIONS]\n\nOptions:\n      --receipt <PATH>             Experience receipt [default: target/llm-experience/a770-bitnet-profile-stage.json]\n      --history-root <PATH>        History root [default: target/llm-experience-history]\n      --format <FORMAT>            human or json [default: human]\n  -h, --help                       Print help"
+    );
+}
+
+fn print_compare_help() {
+    println!(
+        "Compare LLM experience history for same-device/same-route readiness\n\nUsage: xtask.exe llm-experience compare [OPTIONS]\n\nOptions:\n      --history-root <PATH>        History root [default: target/llm-experience-history]\n      --device <SLUG>              Device slug [default: amd-5700x-intel-a770]\n      --profile <ID>               Benchmark profile [default: prefill_512_decode_64]\n      --require-same-route         Fail unless the latest pair is same-route comparable\n      --require-claim-ready        Fail unless both receipts are claim-ready\n      --format <FORMAT>            human or json [default: human]\n  -h, --help                       Print help"
+    );
+}
+
+fn print_docs_help() {
+    println!(
+        "Generate LLM experience dashboard docs from local history\n\nUsage: xtask.exe llm-experience docs [OPTIONS]\n\nOptions:\n      --history-root <PATH>        History root [default: target/llm-experience-history]\n      --output <PATH>              Markdown output [default: docs/benchmarks/llm-experience.md]\n      --check                      Fail if output is stale\n      --format <FORMAT>            human or json [default: human]\n  -h, --help                       Print help"
     );
 }
 
@@ -337,6 +511,98 @@ pub fn verify(receipt: &Path, format: &str, require_claimable: bool) -> Result<(
     Ok(())
 }
 
+pub fn publish(receipt: &Path, history_root: &Path, format: &str) -> Result<()> {
+    let value = read_json(receipt)?;
+    let commit = str_at(&value, "/repo/commit").unwrap_or("unknown-commit");
+    let device = str_at(&value, "/device/device_slug").unwrap_or("unknown-device");
+    let profile = str_at(&value, "/benchmark_profile/id").unwrap_or("unknown-profile");
+    let run_id = run_id(&value);
+    let output = history_root
+        .join("runs")
+        .join(sanitize_path_component(commit))
+        .join(sanitize_path_component(device))
+        .join(sanitize_path_component(profile))
+        .join(format!("{}.json", sanitize_path_component(&run_id)));
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
+    }
+    fs::copy(receipt, &output)
+        .with_context(|| format!("copying {} to {}", receipt.display(), output.display()))?;
+    let report = json!({
+        "diagnostic": "llm_experience_publish",
+        "producer": "cargo xtask llm-experience publish",
+        "receipt": receipt.display().to_string(),
+        "history_root": history_root.display().to_string(),
+        "published_path": output.display().to_string(),
+        "run_id": run_id,
+        "claim_allowed": bool_at(&value, "/claim_gate/claim_allowed").unwrap_or(false),
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    });
+    emit_value(&report, format)
+}
+
+pub fn compare(
+    history_root: &Path,
+    device: &str,
+    profile: &str,
+    require_same_route: bool,
+    require_claim_ready: bool,
+    format: &str,
+) -> Result<()> {
+    let mut receipts = history_receipts(history_root, device, profile)?;
+    receipts.sort_by(|left, right| left.path.cmp(&right.path));
+    let report = build_compare_report(
+        history_root,
+        device,
+        profile,
+        require_same_route,
+        require_claim_ready,
+        &receipts,
+    );
+    emit_value(&report, format)?;
+    if !report["passed"].as_bool().unwrap_or(false) {
+        bail!("llm-experience compare failed: {}", report["failures"]);
+    }
+    Ok(())
+}
+
+pub fn docs(history_root: &Path, output: &Path, check: bool, format: &str) -> Result<()> {
+    let receipts = all_history_receipts(history_root)?;
+    let rendered = render_history_docs(history_root, &receipts);
+    if check {
+        let existing = fs::read_to_string(output).unwrap_or_default();
+        let passed = existing == rendered;
+        let report = json!({
+            "diagnostic": "llm_experience_docs",
+            "producer": "cargo xtask llm-experience docs",
+            "check": true,
+            "passed": passed,
+            "output": output.display().to_string(),
+            "history_root": history_root.display().to_string(),
+            "receipt_count": receipts.len(),
+        });
+        emit_value(&report, format)?;
+        if !passed {
+            bail!("LLM experience docs are stale: {}", output.display());
+        }
+        return Ok(());
+    }
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
+    }
+    fs::write(output, rendered).with_context(|| format!("writing {}", output.display()))?;
+    let report = json!({
+        "diagnostic": "llm_experience_docs",
+        "producer": "cargo xtask llm-experience docs",
+        "check": false,
+        "passed": true,
+        "output": output.display().to_string(),
+        "history_root": history_root.display().to_string(),
+        "receipt_count": receipts.len(),
+    });
+    emit_value(&report, format)
+}
+
 fn build_experience_receipt(
     bench_path: &Path,
     bench: &Value,
@@ -404,6 +670,7 @@ fn build_experience_receipt(
     json!({
         "schema_version": 1,
         "receipt_type": "llm_experience_run",
+        "run_id": str_at(bench, "/run_id").unwrap_or("unknown-run"),
         "producer": "cargo xtask llm-experience run",
         "created_at": chrono::Utc::now().to_rfc3339(),
         "source_receipts": {
@@ -869,6 +1136,213 @@ fn build_verify_report(receipt_path: &Path, value: &Value, require_claimable: bo
     })
 }
 
+#[derive(Debug, Clone)]
+struct HistoryReceipt {
+    path: PathBuf,
+    value: Value,
+}
+
+fn history_receipts(
+    history_root: &Path,
+    device: &str,
+    profile: &str,
+) -> Result<Vec<HistoryReceipt>> {
+    let root = history_root.join("runs");
+    if !root.exists() {
+        return Ok(Vec::new());
+    }
+    let mut receipts = Vec::new();
+    for entry in WalkDir::new(&root).into_iter().filter_map(|entry| entry.ok()) {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        if entry.path().extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+        let value = read_json(entry.path())?;
+        if str_at(&value, "/device/device_slug") == Some(device)
+            && str_at(&value, "/benchmark_profile/id") == Some(profile)
+        {
+            receipts.push(HistoryReceipt { path: entry.path().to_path_buf(), value });
+        }
+    }
+    Ok(receipts)
+}
+
+fn all_history_receipts(history_root: &Path) -> Result<Vec<HistoryReceipt>> {
+    let root = history_root.join("runs");
+    if !root.exists() {
+        return Ok(Vec::new());
+    }
+    let mut receipts = Vec::new();
+    for entry in WalkDir::new(&root).into_iter().filter_map(|entry| entry.ok()) {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        if entry.path().extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+        receipts.push(HistoryReceipt {
+            path: entry.path().to_path_buf(),
+            value: read_json(entry.path())?,
+        });
+    }
+    receipts.sort_by(|left, right| left.path.cmp(&right.path));
+    Ok(receipts)
+}
+
+fn build_compare_report(
+    history_root: &Path,
+    device: &str,
+    profile: &str,
+    require_same_route: bool,
+    require_claim_ready: bool,
+    receipts: &[HistoryReceipt],
+) -> Value {
+    let mut failures = Vec::new();
+    if receipts.len() < 2 {
+        failures.push("history_pair_missing".to_string());
+        return json!({
+            "diagnostic": "llm_experience_compare",
+            "producer": "cargo xtask llm-experience compare",
+            "history_root": history_root.display().to_string(),
+            "device": device,
+            "profile": profile,
+            "passed": false,
+            "comparison_classification": "diagnostic_only",
+            "receipt_count": receipts.len(),
+            "failures": failures,
+            "not_claims": CRITICAL_NOT_CLAIMS,
+        });
+    }
+
+    let left = &receipts[receipts.len() - 2];
+    let right = &receipts[receipts.len() - 1];
+    let left_run_id = run_id(&left.value);
+    let right_run_id = run_id(&right.value);
+    let distinct_paths = left.path != right.path;
+    let distinct_run_ids = !left_run_id.is_empty()
+        && !right_run_id.is_empty()
+        && left_run_id != "unknown-run"
+        && right_run_id != "unknown-run"
+        && left_run_id != right_run_id;
+    let same_device =
+        str_at(&left.value, "/device/device_slug") == str_at(&right.value, "/device/device_slug");
+    let same_backend = str_at(&left.value, "/backend/selected_backend")
+        == str_at(&right.value, "/backend/selected_backend");
+    let same_route = route_key(&left.value) == route_key(&right.value);
+    let left_claim_ready = bool_at(&left.value, "/claim_gate/claim_allowed").unwrap_or(false);
+    let right_claim_ready = bool_at(&right.value, "/claim_gate/claim_allowed").unwrap_or(false);
+    let claim_ready_pair = left_claim_ready && right_claim_ready;
+
+    let comparison_classification = if !distinct_paths || !distinct_run_ids {
+        "self_comparison_not_regression_comparable"
+    } else if same_device && same_backend && same_route && claim_ready_pair {
+        "same_device_same_route_regression"
+    } else if same_device && same_backend && same_route {
+        "same_device_same_route_diagnostic"
+    } else if same_device && same_backend {
+        "same_device_route_changed"
+    } else {
+        "diagnostic_only"
+    };
+
+    if require_same_route
+        && !(same_device && same_backend && same_route && distinct_paths && distinct_run_ids)
+    {
+        failures.push("same_route_history_not_ready".to_string());
+    }
+    if require_claim_ready && !claim_ready_pair {
+        failures.push("claim_ready_history_not_ready".to_string());
+    }
+    if !distinct_paths {
+        failures.push("history_receipt_paths_not_distinct".to_string());
+    }
+    if !distinct_run_ids {
+        failures.push("history_run_ids_not_distinct".to_string());
+    }
+
+    json!({
+        "diagnostic": "llm_experience_compare",
+        "producer": "cargo xtask llm-experience compare",
+        "history_root": history_root.display().to_string(),
+        "device": device,
+        "profile": profile,
+        "passed": failures.is_empty(),
+        "comparison_classification": comparison_classification,
+        "receipt_count": receipts.len(),
+        "left": {
+            "path": left.path.display().to_string(),
+            "run_id": left_run_id,
+            "claim_allowed": left_claim_ready,
+            "route_key": route_key(&left.value),
+        },
+        "right": {
+            "path": right.path.display().to_string(),
+            "run_id": right_run_id,
+            "claim_allowed": right_claim_ready,
+            "route_key": route_key(&right.value),
+        },
+        "same_device": same_device,
+        "same_backend": same_backend,
+        "same_route": same_route,
+        "distinct_paths": distinct_paths,
+        "distinct_run_ids": distinct_run_ids,
+        "claim_ready_pair": claim_ready_pair,
+        "failures": failures,
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    })
+}
+
+fn render_history_docs(history_root: &Path, receipts: &[HistoryReceipt]) -> String {
+    let mut out = String::new();
+    out.push_str("# LLM Experience History\n\n");
+    out.push_str(&format!("History root: `{}`\n\n", history_root.display()));
+    out.push_str("| Device | Profile | Backend | Claim | Run ID | Receipt |\n");
+    out.push_str("| --- | --- | --- | --- | --- | --- |\n");
+    for receipt in receipts {
+        out.push_str(&format!(
+            "| {} | {} | {} | {} | {} | {} |\n",
+            str_at(&receipt.value, "/device/device_slug").unwrap_or("unknown-device"),
+            str_at(&receipt.value, "/benchmark_profile/id").unwrap_or("unknown-profile"),
+            str_at(&receipt.value, "/backend/selected_backend").unwrap_or("unknown-backend"),
+            bool_at(&receipt.value, "/claim_gate/claim_allowed").unwrap_or(false),
+            run_id(&receipt.value),
+            receipt.path.display()
+        ));
+    }
+    out.push_str("\nNot claimed: selected attention, resident KV, attention scores, softmax, value mix, full support residency, full device residency, completion.\n");
+    out
+}
+
+fn run_id(value: &Value) -> String {
+    str_at(value, "/run_id")
+        .or_else(|| str_at(value, "/source_receipts/parent_run_id"))
+        .or_else(|| str_at(value, "/source_receipts/bench_run_id"))
+        .or_else(|| str_at(value, "/benchmark_profile/run_id"))
+        .unwrap_or("unknown-run")
+        .to_string()
+}
+
+fn route_key(value: &Value) -> String {
+    str_at(value, "/kernel_route/declared_route_id")
+        .or_else(|| str_at(value, "/kernel_route/route_id"))
+        .or_else(|| str_at(value, "/kernel_route/selected_backend"))
+        .or_else(|| str_at(value, "/backend/selected_backend"))
+        .unwrap_or("unknown-route")
+        .to_string()
+}
+
+fn sanitize_path_component(value: &str) -> String {
+    value
+        .chars()
+        .map(|ch| match ch {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '.' => ch,
+            _ => '_',
+        })
+        .collect()
+}
+
 fn read_json(path: &Path) -> Result<Value> {
     let raw = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
     serde_json::from_str(&raw).with_context(|| format!("parsing {}", path.display()))
@@ -1033,8 +1507,43 @@ mod tests {
         );
     }
 
+    #[test]
+    fn compare_rejects_self_history() {
+        let receipt = build_experience_receipt(
+            Path::new("bench.json"),
+            &bench_receipt(false),
+            Some(Path::new("cli.json")),
+            Some(&cli_stage()),
+        );
+        let receipts = vec![
+            HistoryReceipt { path: PathBuf::from("same.json"), value: receipt.clone() },
+            HistoryReceipt { path: PathBuf::from("same.json"), value: receipt },
+        ];
+        let report = build_compare_report(
+            Path::new("history"),
+            "amd-5700x-intel-a770",
+            "prefill_512_decode_64",
+            true,
+            true,
+            &receipts,
+        );
+        assert_eq!(
+            report["comparison_classification"],
+            "self_comparison_not_regression_comparable"
+        );
+        assert_eq!(report["passed"], false);
+        assert!(
+            report["failures"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|failure| { failure == "history_receipt_paths_not_distinct" })
+        );
+    }
+
     fn bench_receipt(parent_claimable: bool) -> Value {
         json!({
+            "run_id": if parent_claimable { "claimable-run" } else { "diagnostic-run" },
             "repo": { "commit": "abc", "tree": "def", "dirty": !parent_claimable },
             "model": { "contract": "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml" },
             "device": { "device_slug": "amd-5700x-intel-a770" },
