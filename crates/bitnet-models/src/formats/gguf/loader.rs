@@ -1535,15 +1535,33 @@ impl GgufLoader {
                 let has_scale_sibling = false; // QK256 has no sibling scale tensor (scales are inline or absent)
 
                 let flavor = detect_i2s_flavor(info, has_scale_sibling, nelems)?;
+                let logical_size = flavor.logical_size_bytes(nelems);
+                if data.len() < logical_size {
+                    return Err(BitNetError::Validation(format!(
+                        "I2_S '{}': available bytes {} shorter than logical {} for {:?}",
+                        info.name,
+                        data.len(),
+                        logical_size,
+                        flavor
+                    )));
+                }
+                let i2s_data = &data[..logical_size];
+                if data.len() > logical_size {
+                    tracing::debug!(
+                        "I2_S '{}': trimming {} GGUF alignment padding bytes before decode",
+                        info.name,
+                        data.len() - logical_size
+                    );
+                }
 
                 // If QK256, preserve raw bytes instead of dequantizing
                 if matches!(flavor, I2SFlavor::GgmlQk256NoScale) {
                     tracing::debug!(
-                        "Detected QK256 tensor '{}' ({}x{}, {} bytes) - preserving raw bytes",
+                        "Detected QK256 tensor '{}' ({}x{}, {} logical bytes) - preserving raw bytes",
                         info.name,
                         info.shape[0],
                         info.shape[1],
-                        data.len()
+                        i2s_data.len()
                     );
 
                     // Determine correct orientation for QK256 tensors
@@ -1591,7 +1609,7 @@ impl GgufLoader {
                                 detect_qk256_orientation_by_bytes(
                                     shape_as_is,
                                     shape_transposed,
-                                    data.len(),
+                                    i2s_data.len(),
                                 )
                             }
                         } else {
@@ -1599,7 +1617,7 @@ impl GgufLoader {
                             detect_qk256_orientation_by_bytes(
                                 shape_as_is,
                                 shape_transposed,
-                                data.len(),
+                                i2s_data.len(),
                             )
                         }
                     };
@@ -1609,7 +1627,7 @@ impl GgufLoader {
 
                     // Store raw bytes as U8 tensor [rows, row_stride_bytes]
                     let raw_tensor = Tensor::from_raw_buffer(
-                        data,
+                        i2s_data,
                         DType::U8,
                         &[rows, row_stride_bytes],
                         &candle_device,
@@ -1636,7 +1654,7 @@ impl GgufLoader {
                 // For other I2_S flavors (Split32, Inline), continue with dequantization
                 // Select per-tensor I2_S config (policy → heuristic → default)
                 let (inv, k, correction_opt) =
-                    Self::select_i2s_config(&info.name, Some(data), policy_plan);
+                    Self::select_i2s_config(&info.name, Some(i2s_data), policy_plan);
                 let cfg = I2SDequantCfg { inv, k };
 
                 // Log projection weight RMS after dequant for diagnosis
@@ -1648,7 +1666,7 @@ impl GgufLoader {
                 {
                     info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
                     let f32_data =
-                        i2s::dequantize_to_f32_transposed_with_cfg(data, &info.shape, cfg)
+                        i2s::dequantize_to_f32_transposed_with_cfg(i2s_data, &info.shape, cfg)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?;
 
                     // Now dims become [vocab, hidden]
@@ -1665,7 +1683,7 @@ impl GgufLoader {
                         [info.shape[1], info.shape[0]]
                     );
                     let tensor = Self::create_transposed_i2s_tensor_with_cfg(
-                        data,
+                        i2s_data,
                         &info.shape,
                         &candle_device,
                         cfg,
@@ -1686,7 +1704,7 @@ impl GgufLoader {
                     return Ok((tensor, None, correction_opt));
                 } else {
                     // Normal I2_S dequantization with config
-                    let mut f32_data = i2s::dequantize_to_f32_with_cfg(data, &info.shape, cfg)
+                    let mut f32_data = i2s::dequantize_to_f32_with_cfg(i2s_data, &info.shape, cfg)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
 
                     // Transpose once to [out,in] if this is a projection weight

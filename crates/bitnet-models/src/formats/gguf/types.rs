@@ -834,6 +834,12 @@ impl I2SFlavor {
         }
     }
 
+    /// Get the logical tensor byte count for this flavor, excluding GGUF
+    /// alignment padding between tensors.
+    pub fn logical_size_bytes(&self, nelems: usize) -> usize {
+        nelems.div_ceil(self.block_size()) * self.total_bytes_per_block()
+    }
+
     /// Convert to legacy I2SLayoutKind for backward compatibility
     pub fn to_layout_kind(&self) -> I2SLayoutKind {
         match self {
@@ -878,11 +884,12 @@ pub fn detect_i2s_flavor(
     let available = info.size as usize;
 
     // AC2: Centralized tolerance
-    // - Strict mode: tight 8 bytes (fail-fast)
+    // - Strict mode: allow one GGUF alignment interval of padding, but loader
+    //   code must still trim to the flavor's logical byte count before decode.
     // - Default: size-proportional (~0.1%) using quantization helper
     let strict = std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1");
     let tolerance = if strict {
-        8usize
+        64usize
     } else {
         // pick a representative expected size (qk256/split) to compute tolerance bytes
         let expected_any = core::cmp::min(split_need, qk256_need);
@@ -1319,5 +1326,29 @@ mod tests {
         assert_eq!(align_up(31, 32), 32);
         assert_eq!(align_up(32, 32), 32);
         assert_eq!(align_up(33, 32), 64);
+    }
+
+    #[test]
+    fn i2s_flavor_accepts_strict_gguf_alignment_padding() {
+        let nelems = 256 * 256;
+        let logical = I2SFlavor::GgmlQk256NoScale.logical_size_bytes(nelems);
+        let info = TensorInfo {
+            name: "blk.0.ffn_down.weight".to_string(),
+            shape: vec![256, 256],
+            tensor_type: GgufTensorType::I2_S,
+            offset: 0,
+            size: (logical + 32) as u64,
+        };
+
+        temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+            let flavor = detect_i2s_flavor(&info, false, nelems).expect("alignment padding");
+            assert_eq!(flavor, I2SFlavor::GgmlQk256NoScale);
+        });
+    }
+
+    #[test]
+    fn i2s_logical_size_excludes_padding() {
+        let nelems = 256 * 256;
+        assert_eq!(I2SFlavor::GgmlQk256NoScale.logical_size_bytes(nelems), 16_384);
     }
 }
