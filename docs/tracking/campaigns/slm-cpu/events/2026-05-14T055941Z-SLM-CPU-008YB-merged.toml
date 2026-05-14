@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T05:59:41Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008YB"
+event = "merged"
+pr = 4699
+merge_sha = "0f06153ae25d3777cfdbb1c3a01109f0d53218cf"
+actor = "codex"
+summary = "Merged Qwen thinking control token preservation for no-thinking prompt-token reference comparisons."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4699",
+  "crates/bitnet-tokenizers/src/gguf_loader.rs",
+  "crates/bitnet-tokenizers/src/tokenizer/bpe.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+]
+
+notes = [
+  "PR #4699 preserves Qwen thinking control tokens as GGUF-authoritative BPE special tokens when parse_special=true.",
+  "The merge supports refreshed no-thinking Qwen3 reference prompt-ID comparison without literalized <think> markers.",
+  "SLM-CPU-008 remains blocked until a real known-good Qwen3 reference checkpoint pack is captured or ingested.",
+  "No first-token parity, known-good checkpoint capture, answer quality, tiny corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 claim is made.",
+]
