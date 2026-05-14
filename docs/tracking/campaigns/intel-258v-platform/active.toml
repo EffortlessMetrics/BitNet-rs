@@ -2765,8 +2765,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-PERF-003"
-status = "in_progress"
+status = "pr_open"
+pr = 4689
 branch = "codex/lunar-lake/CPU-BITNET-PERF-003-applied-threads"
+head_sha = "2f24a3131477c9b36bfff0e609b6ff0d42924935"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
