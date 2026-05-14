@@ -2104,16 +2104,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-052"
-status = "proposed"
+status = "blocked"
 branch = "cuda/dense-qwen25-short-decode-proof"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["CUDA-DENSE-051"]
-acceptance = "Add an 8-32 token deterministic Qwen2.5 0.5B Q8_0 short-decode strict CUDA receipt with fallback_used=false, stable greedy token sequence, valid UTF-8 answer, no raw special-token garbage, and recorded prefill, KV, logits, sampler, kernel, and transfer evidence."
+acceptance = "Add an 8-32 token deterministic Qwen2.5 0.5B Q8_0 short-decode strict CUDA receipt with fallback_used=false, stable greedy token sequence, valid UTF-8 answer, no raw special-token garbage, and recorded prefill, KV, logits, sampler, kernel, and transfer evidence. Current diagnostic run proves fallback-free CPU/CUDA token parity but is blocked from product promotion because decoded text is not user-acceptable."
 commands = [
-  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\<date>\\dense-qwen25-q8-short-decode.json",
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-14\\dense-qwen25-q8-short-decode-diagnostic.json",
   "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
@@ -2137,9 +2137,11 @@ forbidden_paths = [
   "README.md",
 ]
 may_claim = [
-  "The exact Qwen2.5 0.5B Q8_0 artifact has short-decode strict RTX 5070 Ti CUDA proof after the receipt exists.",
+  "A diagnostic Qwen2.5 0.5B Q8_0 short-decode run proves fallback-free RTX 5070 Ti CUDA token parity for the recorded prompt.",
+  "CUDA-DENSE-052 remains blocked for product promotion until decoded text is user-acceptable.",
 ]
 must_not_claim = [
+  "Qwen2.5 0.5B Q8_0 short-decode product readiness is accepted.",
   "Dense Qwen proof is BitNet packed I2S/QK256 proof.",
   "Broad chat quality, server readiness, or speedup is accepted.",
   "General dense GGUF CUDA inference is complete.",
