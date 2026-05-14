@@ -1,0 +1,20 @@
+timestamp = "2026-05-14T16:29:27Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-009"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "docs/rtx5070ti-bitnet-cuda-guide"
+pr = 4754
+head_sha = "e0945998049de65fd94f9d6bc99d91b611643e11"
+summary = "Opened draft PR #4754 for the strict RTX 5070 Ti BitNet CUDA user guide."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4754",
+  "docs/tutorials/rtx5070ti-bitnet-cuda.md",
+]
+notes = [
+  "PR is docs/tracker only.",
+  "No runtime, CUDA kernel, receipt, model manifest, badge, server readiness, or speedup claim changes.",
+  "Guide keeps official BitNet I2_S/QK256 CUDA proof separate from dense SLM CUDA proof.",
+]
