@@ -168,7 +168,10 @@ jobs:
   # Job 4: Formatting check
   fmt:
     name: "macOS: Format"
-    runs-on: macos-14  # Apple Silicon M1
+    # rustfmt is platform-independent and does not need scarce Apple Silicon
+    # capacity. Keeping the check name stable preserves branch protection while
+    # preventing the final macOS gate from failing on an unstarted format job.
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout code
@@ -189,7 +192,9 @@ jobs:
   # Summary job for branch protection
   macos-arm64-success:
     name: macOS arm64 Success
-    runs-on: macos-14
+    # This job only summarizes check outcomes; it should not consume or wait for
+    # an Apple Silicon runner after the platform-specific jobs have completed.
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build-cpu, build-metal, clippy, fmt]
     if: always()
