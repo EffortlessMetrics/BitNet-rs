@@ -1,0 +1,20 @@
+timestamp = "2026-05-14T00:26:02Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008X"
+event = "merged"
+pr = 4655
+merge_sha = "a6e3bf2c846363c8dfc7e3282d3c0f3575169ac0"
+actor = "codex"
+summary = "Merged checkpoint-aware SLM reference comparison support for the i5-8250U Qwen3 lane."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/reference_compare.rs",
+  "docs/slm/SLM_REFERENCE_DIVERGENCE.md",
+]
+
+notes = [
+  "The validator now accepts slm_reference_checkpoint_compare artifacts and requires complete reference and bitnet-rs checkpoint summaries before classifying checkpoint-level drift.",
+  "This merge did not capture a real known-good Qwen3 reference checkpoint pack because the verified GGUF and external checkpoint runner were not available in the worktree.",
+  "SLM-CPU-008Y is the next ready evidence item for capturing or ingesting the real checkpoint pack and validating the first shared-transformer-math drift.",
+  "No first-token parity, answer-quality, corpus success, multi-token stability, warm-session performance, Q4/Q5 expansion, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 claim is made.",
+]

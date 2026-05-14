@@ -47,7 +47,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-008U | merged | GGUF output.weight layout candidate merged in #4617. |
 | SLM-CPU-008V | merged | Post-008U real i5-8250U artifact refresh merged in #4633; first-token parity remained unproven and the official GGUF uses tied token embeddings. |
 | SLM-CPU-008W | merged | Tied-token-embedding logits audit merged in #4641; output-head/vocab boundary remains insufficient to prove first-token parity. |
-| SLM-CPU-008X | ready | Capture comparable known-good internal checkpoints so the remaining shared transformer math divergence can be localized before corpus work. |
+| SLM-CPU-008X | merged | Checkpoint-aware reference comparison support merged in #4655; real known-good checkpoint capture remains separate. |
+| SLM-CPU-008Y | ready | Capture or ingest the real Qwen3 reference checkpoint pack and validate the first shared-transformer-math drift before corpus work. |
 
 ## Review Policy
 
