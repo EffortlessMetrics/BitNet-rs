@@ -88,6 +88,18 @@
       ]
     },
     {
+      "profile_id": "low_power",
+      "prompt_tokens": "<=512",
+      "output_tokens": "<=128",
+      "purpose": "battery or quiet-mode ask where NPU/GPU must prove power or stability advantage",
+      "promoted_route": null,
+      "candidate_routes": [
+        "dense_slm_default_cpu",
+        "dense_slm_openvino_npu_candidate",
+        "dense_slm_openvino_gpu_candidate"
+      ]
+    },
+    {
       "profile_id": "bitnet_strict_reference",
       "prompt_tokens": "fixed BitNet corpus",
       "output_tokens": "bounded",

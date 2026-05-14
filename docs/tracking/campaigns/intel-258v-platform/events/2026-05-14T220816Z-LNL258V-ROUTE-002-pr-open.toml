@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T22:08:16Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4798
+branch = "codex/lunar-lake/LNL258V-ROUTE-002-profile-comparison"
+head_sha = "5ce9a52a4a0e106cb37717628d17cd24f7ace699"
+summary = "Opened LNL258V-ROUTE-002 to add a policy/evidence-only Lunar Lake route profile comparison."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4798",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+]
+
+notes = [
+  "The PR adds `bitnet lunar-lake profile-compare` and commits a route profile comparison from existing route promotion, operator ask, and phase receipts.",
+  "Dense Qwen CPU remains promoted for regression_tiny, ask_short, and ask_normal; OpenVINO GPU/NPU remain candidates until benchmark-qualified profile advantage and profile regression evidence exists.",
+  "The low_power profile is recorded as a candidate-only gap until power or stability telemetry exists.",
+  "No new inference, broad dense SLM quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]

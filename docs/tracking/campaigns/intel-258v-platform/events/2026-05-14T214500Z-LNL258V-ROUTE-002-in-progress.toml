@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T21:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-002"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-002-profile-comparison"
+summary = "Started LNL258V-ROUTE-002 to index Lunar Lake route evidence across fixed workload profiles."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+]
+
+notes = [
+  "The profile comparison reads existing route promotion, operator ask, and phase receipts; it does not run inference.",
+  "Dense Qwen CPU remains the promoted default for regression_tiny, ask_short, and ask_normal.",
+  "OpenVINO GPU/NPU remain candidates until benchmark-qualified profile advantage and profile regression evidence exists.",
+  "The low_power profile is a candidate-only gap until power or stability telemetry is recorded.",
+  "No broad answer-quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]
