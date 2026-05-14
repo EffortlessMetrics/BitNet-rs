@@ -1,0 +1,13 @@
+timestamp = "2026-05-14T01:49:41Z"
+campaign = "apple-m4-slm-eval-and-proof"
+item = "M4-SLM-EVAL-005"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started Tier 0 CI wiring for Apple M4 dense SLM eval reports.",
+  "The implementation is limited to parser, scoring, dry-run corpus, and committed summary schema checks in generic PR CI.",
+  "Live M4 model fetch, mac validate, timing, long soak, broad performance, BitNet, full Metal, QK256, Neural Engine, MPSGraph, MacBook, and speedup claims remain outside generic PR CI.",
+]

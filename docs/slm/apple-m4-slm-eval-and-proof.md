@@ -154,14 +154,42 @@ records `memory_drift_mb=0.0` with
 
 ## CI Tiers
 
-Generic PR CI stays lightweight:
+Generic PR CI stays lightweight. The Tier 0 workflow is:
+
+```text
+.github/workflows/apple-m4-slm-eval-tier0.yml
+```
+
+It runs only parser, fixture, dry-run, and committed-report schema checks:
+
+- `cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval`;
+- `cargo test --locked -p bitnet-cli slm_eval_scoring`;
+- `answer-corpus --dry-run` over
+  `ci/quality/apple-m4-slm-eval-seeded-corpus.yaml` with a missing model path,
+  which validates corpus shape without loading a model;
+- `bitnet mac receipts-check` over committed
+  `ci/hardware/apple-m4-mac-mini/**/slm-eval/**/summary.json` reports.
+
+The workflow is generic PR-safe because it does not fetch models, does not run
+`bitnet model fetch`, does not run `bitnet mac validate`, does not run live M4
+inference, and does not create new timing evidence.
+
+The live tiers remain separate:
 
 - Tier 0: schema, tracker, receipt-schema, parser, and tiny fixture checks;
-- Tier 1: advisory M4 label for a quick supported-model smoke;
+- Tier 1: advisory M4 workflow dispatch for quick supported-model smoke on a
+  provisioned `apple-m4-dense-slm` runner;
 - Tier 2: nightly M4 full supported-model matrix, seeded corpus, speed profiles,
-  and resident soak;
+  and resident soak only after a provisioned runner is confirmed;
 - Tier 3: release gate for full reports, regression comparison, and published
   user envelope refresh.
+
+The existing staged hardware workflow remains manual until runner availability
+is confirmed:
+
+```text
+.github/workflows/apple-m4-dense-slm-regression.yml
+```
 
 Live model downloads, long soaks, and hardware timing runs do not belong in
 ordinary required CI.

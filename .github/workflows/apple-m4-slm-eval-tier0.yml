@@ -1,0 +1,100 @@
+name: Apple M4 SLM Eval Tier 0
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/apple-m4-slm-eval-tier0.yml'
+      - 'ci/quality/apple-m4-slm-eval-seeded-corpus.yaml'
+      - 'ci/hardware/apple-m4-mac-mini/**/slm-eval/**/summary.json'
+      - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-slm-eval-and-proof.md'
+      - 'docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apple-m4-slm-eval-tier0.yml'
+      - 'ci/quality/apple-m4-slm-eval-seeded-corpus.yaml'
+      - 'ci/hardware/apple-m4-mac-mini/**/slm-eval/**/summary.json'
+      - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-slm-eval-and-proof.md'
+      - 'docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: "1"
+  BITNET_SKIP_SLOW_TESTS: "1"
+  TIER0_ARTIFACT_ROOT: target/apple-m4-slm-eval-tier0
+
+jobs:
+  tier0:
+    name: Parser, Schema, And Report Checks
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+        with:
+          toolchain: "1.95.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+        with:
+          shared-key: apple-m4-slm-eval-tier0
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Run SLM eval parser and schema tests
+        run: cargo test --locked -p bitnet-cli --test cli_arg_tests slm_eval
+
+      - name: Run deterministic SLM eval scorer unit tests
+        run: cargo test --locked -p bitnet-cli slm_eval_scoring
+
+      - name: Dry-run seeded corpus without loading a model
+        run: |
+          set -euo pipefail
+          mkdir -p "$TIER0_ARTIFACT_ROOT"
+          cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- \
+            answer-corpus \
+            --dry-run \
+            --device cpu \
+            --model missing.gguf \
+            --corpus ci/quality/apple-m4-slm-eval-seeded-corpus.yaml \
+            --json-out "$TIER0_ARTIFACT_ROOT/seeded-corpus-dry-run.json"
+
+      - name: Validate committed Apple M4 SLM eval summaries
+        run: |
+          set -euo pipefail
+          mapfile -t summaries < <(find ci/hardware/apple-m4-mac-mini -path '*/slm-eval/*/summary.json' -type f | sort)
+          if [ "${#summaries[@]}" -eq 0 ]; then
+            echo "No committed Apple M4 SLM eval summary reports found." >&2
+            exit 1
+          fi
+          for summary in "${summaries[@]}"; do
+            safe_name="${summary//\//__}"
+            cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- \
+              mac receipts-check "$summary" --json \
+              > "$TIER0_ARTIFACT_ROOT/${safe_name}.receipts-check.json"
+          done
+
+      - name: Summarize Tier 0 boundary
+        run: |
+          {
+            echo "## Apple M4 SLM Eval Tier 0"
+            echo
+            echo "Tier 0 validated parser, scoring, dry-run corpus shape, and committed summary receipt schemas only."
+            echo
+            echo "This workflow does not fetch models, run live M4 inference, run mac validate, publish performance, or claim broad model quality."
+          } >> "$GITHUB_STEP_SUMMARY"
