@@ -9696,83 +9696,17 @@ async fn run_lunar_lake_ask(
     } else {
         artifact_root.join(operator_receipt)
     };
-    let receipt = serde_json::json!({
-        "schema_version": "1.0.0",
-        "artifact_kind": "lunar_lake_operator_ask",
-        "proof_stage": "operator_default_route_executed",
-        "created_utc": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-        "machine_id": "intel-258v",
-        "artifact_root": artifact_root.display().to_string(),
-        "operator_receipt": operator_receipt_path.display().to_string(),
-        "source_run_receipt": source_run_path.display().to_string(),
-        "route": {
-            "route_id": route.route_id,
-            "workload": route.workload,
-            "selected_model": route.selected_model,
-            "selected_backend": route.selected_backend,
-            "runtime_api": route.runtime_api,
-            "selected_kernel_or_runtime": route.selected_kernel_or_runtime,
-            "fallback_policy": route.fallback_policy,
-            "route_reason": route.route_reason,
-            "answer_gate_evidence": route.answer_gate_evidence,
-            "phase_evidence": route.phase_evidence,
-            "acceleration_claim": route.acceleration_claim,
-        },
-        "question": question,
-        "answer": {
-            "text": answer,
-            "normalized_text": normalized_answer,
-            "gate": {
-                "name": answer_gate.name,
-                "passed": answer_gate_passed,
-                "expected_contains": expect_contains,
-                "failed_rules": answer_gate.failed_rules,
-                "broad_quality_claim": false,
-            },
-        },
-        "model": {
-            "path": source_run_receipt["model"]["path"].clone(),
-            "sha256": source_run_receipt["model"]["sha256"].clone(),
-            "family": source_run_receipt["model"]["family"].clone(),
-            "architecture": source_run_receipt["model"]["architecture"].clone(),
-            "quant_format": source_run_receipt["model"]["quant_format"].clone(),
-            "tokenizer": source_run_receipt["model"]["tokenizer"].clone(),
-            "vocab_size": source_run_receipt["model"]["vocab_size"].clone(),
-            "loader_mode": source_run_receipt["model"]["loader_mode"].clone(),
-            "fallback_loader_used": source_run_receipt["model"]["fallback_loader_used"].clone(),
-        },
-        "prompt": {
-            "template": "qwen2.5",
-            "render": source_run_receipt["prompt_render"].clone(),
-            "token_ids": source_run_receipt["tokens"]["prompt_ids"].clone(),
-        },
-        "tokens": {
-            "generated_ids": source_run_receipt["tokens"]["generated_ids"].clone(),
-            "generated_count": source_run_receipt["tokens"]["generated"].clone(),
-            "prompt_count": source_run_receipt["tokens"]["prompt"].clone(),
-        },
-        "backend": {
-            "requested_backend": source_run_receipt["requested_backend"].clone(),
-            "selected_backend": source_run_receipt["selected_backend"].clone(),
-            "runtime_api": source_run_receipt["runtime_api"].clone(),
-            "fallback_used": source_run_receipt["fallback_used"].clone(),
-            "fallback_reason": source_run_receipt["fallback_reason"].clone(),
-            "backend_lane": "dense_slm_cpu",
-            "selected_kernel_or_runtime": source_run_receipt["kernel"]["kernel_id"].clone(),
-        },
-        "dense_slm": source_run_receipt["dense_slm"].clone(),
-        "execution_coverage": source_run_receipt["execution_coverage"].clone(),
-        "timing": source_run_receipt["timing"].clone(),
-        "profile": source_run_receipt["profile"].clone(),
-        "claim_boundary": {
-            "cpu_default_route_only": true,
-            "fallback_used": false,
-            "acceleration_claim": false,
-            "broad_dense_slm_quality_claim": false,
-            "bitnet_qk256_i2s_claim": false,
-            "arc_or_npu_execution_claim": false,
-        },
-        "source_receipt": source_run_receipt,
+    let receipt = build_lunar_lake_operator_ask_receipt(LunarLakeAskReceiptContext {
+        artifact_root: &artifact_root,
+        operator_receipt_path: &operator_receipt_path,
+        source_run_path: &source_run_path,
+        route: &route,
+        question: &question,
+        answer,
+        normalized_answer: &normalized_answer,
+        answer_gate: &answer_gate,
+        expect_contains: expect_contains.as_deref(),
+        source_run_receipt: &source_run_receipt,
     });
     write_json_output(Some(&receipt_path), &receipt)?;
     println!("Lunar Lake ask receipt written to {}", receipt_path.display());
@@ -9805,6 +9739,132 @@ struct LunarLakeAnswerGate {
     name: &'static str,
     passed: bool,
     failed_rules: Vec<&'static str>,
+}
+
+#[cfg(feature = "full-cli")]
+struct LunarLakeAskReceiptContext<'a> {
+    artifact_root: &'a std::path::Path,
+    operator_receipt_path: &'a std::path::Path,
+    source_run_path: &'a std::path::Path,
+    route: &'a commands::lunar_lake::OperatorRoute,
+    question: &'a str,
+    answer: &'a str,
+    normalized_answer: &'a str,
+    answer_gate: &'a LunarLakeAnswerGate,
+    expect_contains: Option<&'a str>,
+    source_run_receipt: &'a serde_json::Value,
+}
+
+#[cfg(feature = "full-cli")]
+fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) -> serde_json::Value {
+    let requested_backend = ctx.source_run_receipt["requested_backend"].clone();
+    let selected_backend = ctx.source_run_receipt["selected_backend"].clone();
+    let runtime_api = ctx.source_run_receipt["runtime_api"].clone();
+    let fallback_used = ctx.source_run_receipt["fallback_used"].clone();
+    let fallback_reason = ctx.source_run_receipt["fallback_reason"].clone();
+    let selected_kernel_or_runtime = ctx.source_run_receipt["kernel"]["kernel_id"].clone();
+    let model_family = ctx.source_run_receipt["model"]["family"].clone();
+    let model_architecture = ctx.source_run_receipt["model"]["architecture"].clone();
+    let quantization = ctx.source_run_receipt["model"]["quant_format"].clone();
+    let tokenizer_source = ctx.source_run_receipt["model"]["tokenizer"].clone();
+
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "lunar_lake_operator_ask",
+        "proof_stage": "operator_default_route_executed",
+        "created_utc": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        "machine_id": "intel-258v",
+        "artifact_root": ctx.artifact_root.display().to_string(),
+        "operator_receipt": ctx.operator_receipt_path.display().to_string(),
+        "source_run_receipt": ctx.source_run_path.display().to_string(),
+        "requested_backend": requested_backend,
+        "selected_backend": selected_backend,
+        "runtime_api": runtime_api,
+        "fallback_used": fallback_used,
+        "fallback_reason": fallback_reason,
+        "backend_lane": "dense_slm_cpu",
+        "selected_kernel_or_runtime": selected_kernel_or_runtime,
+        "route_id": ctx.route.route_id,
+        "model_family": model_family,
+        "model_architecture": model_architecture,
+        "quantization": quantization,
+        "tokenizer_source": tokenizer_source,
+        "prompt_template": "qwen2.5",
+        "answer_gate_passed": ctx.answer_gate.passed,
+        "speedup_claim": false,
+        "acceleration_claim": false,
+        "broad_quality_claim": false,
+        "bitnet_qk256_i2s_claim": false,
+        "arc_or_npu_execution_claim": false,
+        "route": {
+            "route_id": ctx.route.route_id,
+            "workload": ctx.route.workload,
+            "selected_model": ctx.route.selected_model,
+            "selected_backend": ctx.route.selected_backend,
+            "runtime_api": ctx.route.runtime_api,
+            "selected_kernel_or_runtime": ctx.route.selected_kernel_or_runtime,
+            "fallback_policy": ctx.route.fallback_policy,
+            "route_reason": ctx.route.route_reason,
+            "answer_gate_evidence": ctx.route.answer_gate_evidence,
+            "phase_evidence": ctx.route.phase_evidence,
+            "acceleration_claim": ctx.route.acceleration_claim,
+        },
+        "question": ctx.question,
+        "answer": {
+            "text": ctx.answer,
+            "normalized_text": ctx.normalized_answer,
+            "gate": {
+                "name": ctx.answer_gate.name,
+                "passed": ctx.answer_gate.passed,
+                "expected_contains": ctx.expect_contains,
+                "failed_rules": ctx.answer_gate.failed_rules,
+                "broad_quality_claim": false,
+            },
+        },
+        "model": {
+            "path": ctx.source_run_receipt["model"]["path"].clone(),
+            "sha256": ctx.source_run_receipt["model"]["sha256"].clone(),
+            "family": ctx.source_run_receipt["model"]["family"].clone(),
+            "architecture": ctx.source_run_receipt["model"]["architecture"].clone(),
+            "quant_format": ctx.source_run_receipt["model"]["quant_format"].clone(),
+            "tokenizer": ctx.source_run_receipt["model"]["tokenizer"].clone(),
+            "vocab_size": ctx.source_run_receipt["model"]["vocab_size"].clone(),
+            "loader_mode": ctx.source_run_receipt["model"]["loader_mode"].clone(),
+            "fallback_loader_used": ctx.source_run_receipt["model"]["fallback_loader_used"].clone(),
+        },
+        "prompt": {
+            "template": "qwen2.5",
+            "render": ctx.source_run_receipt["prompt_render"].clone(),
+            "token_ids": ctx.source_run_receipt["tokens"]["prompt_ids"].clone(),
+        },
+        "tokens": {
+            "generated_ids": ctx.source_run_receipt["tokens"]["generated_ids"].clone(),
+            "generated_count": ctx.source_run_receipt["tokens"]["generated"].clone(),
+            "prompt_count": ctx.source_run_receipt["tokens"]["prompt"].clone(),
+        },
+        "backend": {
+            "requested_backend": ctx.source_run_receipt["requested_backend"].clone(),
+            "selected_backend": ctx.source_run_receipt["selected_backend"].clone(),
+            "runtime_api": ctx.source_run_receipt["runtime_api"].clone(),
+            "fallback_used": ctx.source_run_receipt["fallback_used"].clone(),
+            "fallback_reason": ctx.source_run_receipt["fallback_reason"].clone(),
+            "backend_lane": "dense_slm_cpu",
+            "selected_kernel_or_runtime": ctx.source_run_receipt["kernel"]["kernel_id"].clone(),
+        },
+        "dense_slm": ctx.source_run_receipt["dense_slm"].clone(),
+        "execution_coverage": ctx.source_run_receipt["execution_coverage"].clone(),
+        "timing": ctx.source_run_receipt["timing"].clone(),
+        "profile": ctx.source_run_receipt["profile"].clone(),
+        "claim_boundary": {
+            "cpu_default_route_only": true,
+            "fallback_used": false,
+            "acceleration_claim": false,
+            "broad_dense_slm_quality_claim": false,
+            "bitnet_qk256_i2s_claim": false,
+            "arc_or_npu_execution_claim": false,
+        },
+        "source_receipt": ctx.source_run_receipt,
+    })
 }
 
 #[cfg(feature = "full-cli")]
@@ -12447,6 +12507,87 @@ mod tests {
         let failed = evaluate_lunar_lake_answer_gate("not the expected answer", Some("4"));
         assert!(!failed.passed);
         assert_eq!(failed.failed_rules, vec!["expected_contains"]);
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_operator_ask_receipt_has_top_level_identity() {
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+            workload: "ask".to_string(),
+            selected_model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            selected_kernel_or_runtime: "dense-qwen-cpu-reference".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "test route".to_string(),
+            answer_gate_evidence: Some(
+                "slm-answer-corpus-qwen25-cpu-clean-provenance.json".to_string(),
+            ),
+            phase_evidence: Some("slm-phase-warm-session-qwen25-cpu.json".to_string()),
+            acceleration_claim: false,
+        };
+        let source = serde_json::json!({
+            "requested_backend": "cpu",
+            "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "fallback_reason": null,
+            "kernel": {"kernel_id": "dense-qwen-cpu-reference"},
+            "model": {
+                "path": "models/qwen2.5.gguf",
+                "sha256": "abc",
+                "family": "qwen",
+                "architecture": "qwen2",
+                "quant_format": "Q8_0",
+                "tokenizer": "gguf_metadata",
+                "vocab_size": 151936,
+                "loader_mode": "real_gguf",
+                "fallback_loader_used": false
+            },
+            "prompt_render": "<|im_start|>user\n2+2?<|im_end|>\n<|im_start|>assistant\n",
+            "tokens": {
+                "prompt_ids": [1, 2, 3],
+                "generated_ids": [19],
+                "generated": 1,
+                "prompt": 3
+            },
+            "dense_slm": {"model_family": "qwen"},
+            "execution_coverage": {"execution_claim": "dense_slm_cpu_reference_answer_smoke"},
+            "timing": {"first_token_ms": 1.0},
+            "profile": {"phase": "decode"},
+            "text": "\n4<|im_end|>"
+        });
+        let gate = evaluate_lunar_lake_answer_gate("4", Some("4"));
+        let receipt = build_lunar_lake_operator_ask_receipt(LunarLakeAskReceiptContext {
+            artifact_root: std::path::Path::new("ci/hardware/intel-258v/2026-05-08"),
+            operator_receipt_path: std::path::Path::new("lunar-lake-operator-readiness.json"),
+            source_run_path: std::path::Path::new("lunar-lake-operator-ask-source-run.json"),
+            route: &route,
+            question: "2+2?",
+            answer: "\n4<|im_end|>",
+            normalized_answer: "4",
+            answer_gate: &gate,
+            expect_contains: Some("4"),
+            source_run_receipt: &source,
+        });
+
+        assert_eq!(receipt["requested_backend"], "cpu");
+        assert_eq!(receipt["selected_backend"], "cpu-rust");
+        assert_eq!(receipt["runtime_api"], "cpu");
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["backend_lane"], "dense_slm_cpu");
+        assert_eq!(receipt["selected_kernel_or_runtime"], "dense-qwen-cpu-reference");
+        assert_eq!(receipt["route_id"], commands::lunar_lake::DEFAULT_ASK_ROUTE);
+        assert_eq!(receipt["model_family"], "qwen");
+        assert_eq!(receipt["model_architecture"], "qwen2");
+        assert_eq!(receipt["quantization"], "Q8_0");
+        assert_eq!(receipt["tokenizer_source"], "gguf_metadata");
+        assert_eq!(receipt["prompt_template"], "qwen2.5");
+        assert_eq!(receipt["answer_gate_passed"], true);
+        assert_eq!(receipt["acceleration_claim"], false);
+        assert_eq!(receipt["backend"]["fallback_used"], false);
+        assert!(receipt["source_receipt"].is_object());
     }
 
     #[test]

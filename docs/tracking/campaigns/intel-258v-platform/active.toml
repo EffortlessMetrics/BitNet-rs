@@ -3045,3 +3045,64 @@ must_not_claim = [
   "Packed QK256 decode works on Arc or NPU.",
   "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
 ]
+
+[[work_item]]
+id = "LNL258V-ASK-003"
+status = "pr_open"
+pr = 4668
+branch = "codex/lunar-lake/LNL258V-ASK-003-operator-ask-identity"
+head_sha = "a7233aa5aff867d0129ab23597658a5ff8c5ea19"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-ASK-002"]
+acceptance = "Harden Lunar Lake operator ask receipts so top-level requested_backend, selected_backend, runtime_api, fallback_used, backend_lane, selected kernel/runtime, model family/architecture, quantization, tokenizer source, prompt template, route id, answer gate, and claim-boundary fields are explicit while preserving nested backend/source-run evidence and without claiming broad dense SLM quality, speedup, Arc/NPU execution, acceleration, full BitNet accelerator inference, or BitNet QK256/I2_S proof."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet tests::lunar_lake_operator_ask_receipt_has_top_level_identity -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet tests::lunar_lake_answer_gate_can_require_expected_text -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::answer_corpus::tests::slm_eval_scoring_supports_numeric_tolerance -- --exact --nocapture",
+  "cargo clippy --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- -D warnings",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake ask --model C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --question \"What is 2+2? Answer with only the number.\" --max-new-tokens 16 --expect-contains 4 --json-out ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-math.json",
+  "target\\debug\\bitnet.exe lunar-lake ask --model C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf --question \"What is 2+2? Answer briefly.\" --max-new-tokens 16 --expect-contains 4 --json-out ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-math-brief.json",
+  "target\\debug\\xtask.exe campaign check intel-258v-platform",
+  "target\\debug\\xtask.exe campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-math-brief-source-run.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-math-brief.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-math-source-run.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-math.json",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+]
+may_claim = [
+  "Lunar Lake operator ask receipts expose top-level backend/runtime/fallback/model/template/route identity for the dense Qwen CPU default route.",
+  "The regenerated bounded math ask receipts preserve fallback_used=false and source-run evidence.",
+  "The ask route remains the dense Qwen CPU default route only.",
+]
+must_not_claim = [
+  "Broad dense SLM answer quality is proven.",
+  "CPU, Arc, or NPU speedup is proven.",
+  "Arc 140V execution or acceleration is proven by the operator ask route.",
+  "Intel NPU execution or acceleration is proven by the operator ask route.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+]
