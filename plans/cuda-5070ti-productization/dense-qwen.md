@@ -69,7 +69,7 @@ Revert the audit report and any docs-only references.
 
 ## Work item: CUDA-DENSE-051
 
-Status: in progress
+Status: merged
 Campaign item: `CUDA-DENSE-051`
 Blocked by: CUDA-DENSE-050
 
