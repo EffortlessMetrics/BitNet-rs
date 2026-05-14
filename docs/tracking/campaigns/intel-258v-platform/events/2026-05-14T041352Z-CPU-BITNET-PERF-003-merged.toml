@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T04:13:52Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4689
+merge_sha = "f41e923e8c2a4e5da84d0f58f5a117ee0a305f04"
+branch = "codex/lunar-lake/CPU-BITNET-PERF-003-applied-threads"
+head_sha = "9e5abd34fecae3c1a91c58741c69a72f1c0ebade"
+summary = "Marked CPU-BITNET-PERF-003 merged after PR #4689 recorded Lunar Lake applied-thread QK256/I2_S microbench evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4689",
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
+]
+
+notes = [
+  "The merged receipt records scoped row-partitioned GEMV and token-partitioned GEMM samples with requested and applied thread counts.",
+  "The receipt preserves fallback_used=false and speedup_claim=false.",
+  "No answer-quality, sustained-throughput, full-runtime thread-policy, Arc/NPU, acceleration, QK256 semantic-change, or full-model correctness claim is made.",
+]
