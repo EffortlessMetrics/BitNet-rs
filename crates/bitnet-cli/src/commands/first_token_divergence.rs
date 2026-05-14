@@ -131,6 +131,8 @@ fn build_first_token_divergence_receipt(
             })
         })
         .unwrap_or_else(|| no_divergence_summary(&cases));
+    let next_required_evidence =
+        next_required_evidence(external_reference, &reference_evidence, &first_divergence);
     let classification = first_divergence["classification"].as_str().unwrap_or("unknown");
 
     json!({
@@ -184,19 +186,20 @@ fn build_first_token_divergence_receipt(
             "reference_logits_available": reference_evidence.first_token_logits_available,
             "first_divergence": first_divergence,
             "classification": classification,
-            "next_required_evidence": external_reference["summary"]["next_required_evidence"].clone(),
+            "next_required_evidence": next_required_evidence,
         },
         "cases": cases,
         "fallback_used": false,
         "claim_boundary": {
             "may_claim": [
                 "The receipt classifies the first available evidence boundary between external BitNet reference text and 258V scalar/AVX2 CPU receipts.",
+                "When the external reference supplies direct generated-token IDs, the receipt classifies first-generated-token matches or mismatches against the local CPU receipts.",
                 "Scalar-vs-AVX2 agreement can be kept separate from missing external generated-token/logit evidence.",
                 "Prompt-token comparisons distinguish exact matches from local BOS-prefix policy deltas."
             ],
             "must_not_claim": [
                 "first-token logits parity",
-                "generated-token-ID parity against the external reference when reference IDs are unavailable",
+                "full generated-token sequence parity beyond the recorded first-token boundary",
                 "general answer quality",
                 "CPU speed or sustained throughput",
                 "Arc 140V execution or acceleration",
@@ -205,6 +208,30 @@ fn build_first_token_divergence_receipt(
             ]
         }
     })
+}
+
+fn next_required_evidence(
+    external_reference: &Value,
+    reference_evidence: &ReferenceEvidenceSummary,
+    first_divergence: &Value,
+) -> Value {
+    if reference_evidence.generated_token_ids_available {
+        return match first_divergence["first_divergence_stage"].as_str() {
+            Some("none") => json!(
+                "none_for_first_generated_token_boundary; use deeper sequence, logits, or layer evidence only if needed"
+            ),
+            Some("generated_token") if reference_evidence.first_token_logits_available => json!(
+                "compare direct reference top-k/logits against local top-k, then classify model math or sampler boundary"
+            ),
+            Some("generated_token") => json!(
+                "capture direct reference first-token top-k/logits to separate sampler from logits or model math"
+            ),
+            _ => json!(
+                "fix the classified earlier divergence before deeper token or logits evidence"
+            ),
+        };
+    }
+    external_reference["summary"]["next_required_evidence"].clone()
 }
 
 #[derive(Default)]
@@ -271,9 +298,7 @@ fn validate_inputs(
     answer_parity: &Value,
 ) -> Vec<&'static str> {
     let mut failures = Vec::new();
-    if external_reference["artifact_kind"].as_str()
-        != Some("bitnet_external_first_token_reference_capture")
-    {
+    if !is_supported_external_reference_kind(external_reference["artifact_kind"].as_str()) {
         failures.push("external_reference_artifact_kind");
     }
     if prompt_audit["artifact_kind"].as_str() != Some("bitnet_prompt_token_authority_audit") {
@@ -301,6 +326,16 @@ fn validate_inputs(
         failures.push("answer_parity_summary_failed");
     }
     failures
+}
+
+fn is_supported_external_reference_kind(kind: Option<&str>) -> bool {
+    matches!(
+        kind,
+        Some(
+            "bitnet_external_first_token_reference_capture"
+                | "bitnet_external_reference_direct_token_boundary"
+        )
+    )
 }
 
 fn classify_case(reference_case: &Value, scalar: &Value, avx2: &Value, bos_id: u64) -> Value {
@@ -814,5 +849,40 @@ mod tests {
             "generated_token_mismatch_reference_logits_unavailable"
         );
         assert_eq!(receipt["summary"]["reference_generated_token_ids_available"], true);
+    }
+
+    #[test]
+    fn accepts_direct_reference_artifact_kind() {
+        let mut reference = external(&[128000, 1502, 25], "4");
+        reference["artifact_kind"] = json!("bitnet_external_reference_direct_token_boundary");
+        reference["reference"]["runner"] = json!("Microsoft BitNet.cpp / llama-server");
+        reference["reference"]["generated_token_ids_available"] = json!(true);
+        reference["reference"]["logits_available"] = json!(true);
+        reference["cases"][0]["prompt_token_ids"] = json!([128000, 1502, 25]);
+        reference["cases"][0]["generated_token_ids"] = json!([19, 128009]);
+        reference["cases"][0]["first_generated_token_id"] = json!(19);
+        reference["cases"][0]["first_token_top_k_logits"] = json!([
+            {"token_id": 19, "token_text": "4", "logit": 20.0, "probability": 0.99}
+        ]);
+        let scalar =
+            corpus("math", &[128000, 1502, 25], &[19, 128009], "4", "i2_s-scalar-reference");
+        let avx2 = corpus("math", &[128000, 1502, 25], &[19, 128009], "4", "i2_s-avx2-reference");
+
+        let receipt = build_first_token_divergence_receipt(
+            &inputs(),
+            &reference,
+            &prompt_audit(),
+            &scalar,
+            &avx2,
+            &parity(),
+        );
+
+        assert_eq!(receipt["validation"]["passed"], true);
+        assert_eq!(receipt["summary"]["reference_generated_token_ids_available"], true);
+        assert_eq!(receipt["summary"]["reference_logits_available"], true);
+        assert_eq!(
+            receipt["summary"]["first_divergence"]["classification"],
+            "no_divergence_at_first_generated_token"
+        );
     }
 }
