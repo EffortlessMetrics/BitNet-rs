@@ -1,0 +1,563 @@
+{
+  "artifact_kind": "cpu_benchmark",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-embd-001-q6k-embedding-evidence.json",
+  "claim": "cpu_benchmark_receipt",
+  "cpu": {
+    "arch": "x86_64",
+    "avx512": false,
+    "features": [
+      "sse2",
+      "avx",
+      "avx2",
+      "fma"
+    ],
+    "frequency_mhz": null,
+    "model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "power_mode": "unknown",
+    "temperature_c": null,
+    "threads": 8
+  },
+  "embedding_quantization_evidence": {
+    "acceleration_claim": false,
+    "answer_quality_claim": false,
+    "artifact_kind": "cpu_bitnet_embedding_quantization_evidence",
+    "claim": "bitnet_embedding_quantization_evidence_receipt",
+    "claim_boundary": [
+      "Records BitNet embedding tensor quantization evidence from the committed 258V tensor boundary audit.",
+      "Does not claim answer quality, speedup, Arc/NPU execution, acceleration, QK256 semantic changes, or full model correctness.",
+      "Does not claim Q6_K embedding quantization is active unless the current canonical BitNet artifact records a Q6_K embedding tensor."
+    ],
+    "current_artifact_contains_q6_k_embedding": false,
+    "current_embedding": {
+      "name": "token_embd.weight",
+      "offset": 0,
+      "shape": [
+        2560,
+        128256
+      ],
+      "size_bytes": 656670720,
+      "tensor_type": "F16"
+    },
+    "current_embedding_quantization": "F16",
+    "evidence_status": "q6_k_embedding_not_present_in_current_canonical_artifact",
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_scope": {
+      "note": "BitNet-rs can name and dequantize GGUF Q6_K tensors for supported dense-standard adapters, but this receipt does not prove a Q6_K embedding variant for the canonical BitNet b1.58 I2_S GGUF unless the committed tensor boundary actually contains Q6_K.",
+      "q6_k_dense_standard_dequantizer_present": true,
+      "q6_k_embedding_operating_path": "not_applied_to_current_bitnet_artifact",
+      "q6_k_tensor_type_known": true
+    },
+    "q6_k_embedding_proven": false,
+    "qk256_semantic_change_claim": false,
+    "recommended_next_step": "Acquire or generate a canonical BitNet b1.58 Q6_K embedding variant, then add embedding lookup/dequant parity and answer/phase receipts before claiming embedding-quantization support.",
+    "source_tensor_boundary_audit": "ci/hardware/intel-258v/2026-05-08/output-head-logits-index-audit.json",
+    "speedup_claim": false,
+    "target_quantization": "Q6_K",
+    "work_item": "CPU-BITNET-EMBD-001"
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "hardware_lane": "intel-258v-cpu-avx2",
+  "i2s_microbench": {
+    "artifact_kind": "cpu_bitnet_i2s_microbench",
+    "claim": "i2_s_gemv_gemm_microbench_receipt",
+    "claim_boundary": [
+      "Records QK256/I2_S GEMV and GEMM microbench timing only.",
+      "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, or QK256 semantic changes."
+    ],
+    "fallback_reason": null,
+    "fallback_used": false,
+    "kernel_family": "i2_s_qk256",
+    "profiles": [
+      {
+        "bandwidth_gbps": 0.014384236026056514,
+        "execution_phase": "decode_gemv_micro_kernel",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 1.4091,
+        "operation": "gemv",
+        "p95_ms": 1.5593,
+        "profile": "i2s_qk256_gemv_decode_microbench",
+        "requested_kernel": "auto",
+        "selected_kernel": "qk256-avx2-gemv",
+        "shape": {
+          "cols": 1024,
+          "iterations": 64,
+          "rows": 64,
+          "tokens": 1
+        },
+        "status": "measured",
+        "tokens_per_second": 693.6842219355958,
+        "wall_time_ms": 92.261
+      },
+      {
+        "bandwidth_gbps": 0.011200082031850819,
+        "execution_phase": "prefill_gemm_micro_kernel",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 7.6616,
+        "operation": "gemm",
+        "p95_ms": 7.9551,
+        "profile": "i2s_qk256_gemm_prefill_microbench",
+        "requested_kernel": "qk256-scalar-gemm",
+        "selected_kernel": "qk256-scalar-gemm",
+        "shape": {
+          "cols": 1024,
+          "iterations": 16,
+          "rows": 64,
+          "tokens": 16
+        },
+        "status": "measured",
+        "tokens_per_second": 2083.348592234155,
+        "wall_time_ms": 122.87910000000001
+      }
+    ],
+    "quantization": "QK256/I2_S",
+    "speedup_claim": false,
+    "work_item": "CPU-BITNET-PERF-001"
+  },
+  "i2s_tiling_thread_matrix": {
+    "artifact_kind": "cpu_bitnet_i2s_tiling_thread_matrix",
+    "candidate_grid": {
+      "candidate_count": 240,
+      "col_blocks": [
+        64,
+        128,
+        256,
+        512
+      ],
+      "parallelism_degrees": [
+        2,
+        4,
+        8
+      ],
+      "row_blocks": [
+        2,
+        4,
+        8,
+        16
+      ],
+      "thread_counts": [
+        1,
+        2,
+        4,
+        6,
+        8
+      ]
+    },
+    "claim": "i2_s_tiling_thread_matrix_receipt",
+    "claim_boundary": [
+      "Records a Lunar Lake QK256/I2_S tiling/thread candidate matrix and sampled GEMV/GEMM timings.",
+      "Does not claim answer quality, sustained decode throughput, Arc/NPU execution, acceleration, QK256 semantic changes, or full model correctness."
+    ],
+    "coverage": {
+      "full_matrix_candidate_count": 240,
+      "measured_candidate_count": 8,
+      "reason": "This receipt captures the Lunar Lake tiling/thread search surface and sampled QK256/I2_S timings without upgrading any profile to a speedup claim.",
+      "status": "sampled_baseline",
+      "thread_counts_recorded_not_applied": true
+    },
+    "fallback_reason": null,
+    "fallback_used": false,
+    "kernel_family": "i2_s_qk256",
+    "measured_runs": [
+      {
+        "bandwidth_gbps": 0.05622559652928416,
+        "candidate": {
+          "col_block": 64,
+          "parallelism_degree": 2,
+          "row_block": 2,
+          "thread_count": 1,
+          "thread_count_applied": false,
+          "thread_count_note": "Current QK256/I2_S CPU microbench records thread-count candidates; worker-thread scheduling is a later tuning step.",
+          "thread_count_policy": "recorded_not_applied"
+        },
+        "execution_phase": "decode_gemv_tiling_sample",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 0.0229,
+        "operation": "gemv",
+        "p95_ms": 0.0236,
+        "profile": "i2s_qk256_tiling_matrix_gemv",
+        "requested_kernel": "auto",
+        "selected_kernel": "qk256-avx2-gemv",
+        "shape": {
+          "cols": 256,
+          "cols_rounded_to_qk256_block": true,
+          "iterations": 8,
+          "rows": 4,
+          "tokens": 1
+        },
+        "speedup_claim": false,
+        "status": "measured",
+        "tokens_per_second": 43383.94793926247,
+        "wall_time_ms": 0.1844
+      },
+      {
+        "bandwidth_gbps": 0.14645768025078368,
+        "candidate": {
+          "col_block": 64,
+          "parallelism_degree": 2,
+          "row_block": 2,
+          "thread_count": 1,
+          "thread_count_applied": false,
+          "thread_count_note": "Current QK256/I2_S CPU microbench records thread-count candidates; worker-thread scheduling is a later tuning step.",
+          "thread_count_policy": "recorded_not_applied"
+        },
+        "execution_phase": "prefill_gemm_tiling_sample",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 0.0159,
+        "operation": "gemm",
+        "p95_ms": 0.0161,
+        "profile": "i2s_qk256_tiling_matrix_gemm",
+        "requested_kernel": "qk256-scalar-gemm",
+        "selected_kernel": "qk256-scalar-gemm",
+        "shape": {
+          "cols": 256,
+          "cols_rounded_to_qk256_block": true,
+          "iterations": 4,
+          "rows": 4,
+          "tokens": 2
+        },
+        "speedup_claim": false,
+        "status": "measured",
+        "tokens_per_second": 125391.84952978055,
+        "wall_time_ms": 0.06380000000000001
+      },
+      {
+        "bandwidth_gbps": 0.023607656839457872,
+        "candidate": {
+          "col_block": 128,
+          "parallelism_degree": 4,
+          "row_block": 4,
+          "thread_count": 2,
+          "thread_count_applied": false,
+          "thread_count_note": "Current QK256/I2_S CPU microbench records thread-count candidates; worker-thread scheduling is a later tuning step.",
+          "thread_count_policy": "recorded_not_applied"
+        },
+        "execution_phase": "decode_gemv_tiling_sample",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 0.0892,
+        "operation": "gemv",
+        "p95_ms": 0.0917,
+        "profile": "i2s_qk256_tiling_matrix_gemv",
+        "requested_kernel": "auto",
+        "selected_kernel": "qk256-avx2-gemv",
+        "shape": {
+          "cols": 256,
+          "cols_rounded_to_qk256_block": true,
+          "iterations": 8,
+          "rows": 16,
+          "tokens": 1
+        },
+        "speedup_claim": false,
+        "status": "measured",
+        "tokens_per_second": 11177.86782171301,
+        "wall_time_ms": 0.7157
+      },
+      {
+        "bandwidth_gbps": 0.04332863187588152,
+        "candidate": {
+          "col_block": 128,
+          "parallelism_degree": 4,
+          "row_block": 4,
+          "thread_count": 2,
+          "thread_count_applied": false,
+          "thread_count_note": "Current QK256/I2_S CPU microbench records thread-count candidates; worker-thread scheduling is a later tuning step.",
+          "thread_count_policy": "recorded_not_applied"
+        },
+        "execution_phase": "prefill_gemm_tiling_sample",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 0.1234,
+        "operation": "gemm",
+        "p95_ms": 0.12669999999999998,
+        "profile": "i2s_qk256_tiling_matrix_gemm",
+        "requested_kernel": "qk256-scalar-gemm",
+        "selected_kernel": "qk256-scalar-gemm",
+        "shape": {
+          "cols": 256,
+          "cols_rounded_to_qk256_block": true,
+          "iterations": 4,
+          "rows": 16,
+          "tokens": 4
+        },
+        "speedup_claim": false,
+        "status": "measured",
+        "tokens_per_second": 32238.56538384042,
+        "wall_time_ms": 0.49629999999999996
+      },
+      {
+        "bandwidth_gbps": 0.014854932301740812,
+        "candidate": {
+          "col_block": 256,
+          "parallelism_degree": 8,
+          "row_block": 8,
+          "thread_count": 4,
+          "thread_count_applied": false,
+          "thread_count_note": "Current QK256/I2_S CPU microbench records thread-count candidates; worker-thread scheduling is a later tuning step.",
+          "thread_count_policy": "recorded_not_applied"
+        },
+        "execution_phase": "decode_gemv_tiling_sample",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 0.357,
+        "operation": "gemv",
+        "p95_ms": 0.3943,
+        "profile": "i2s_qk256_tiling_matrix_gemv",
+        "requested_kernel": "auto",
+        "selected_kernel": "qk256-avx2-gemv",
+        "shape": {
+          "cols": 256,
+          "cols_rounded_to_qk256_block": false,
+          "iterations": 8,
+          "rows": 64,
+          "tokens": 1
+        },
+        "speedup_claim": false,
+        "status": "measured",
+        "tokens_per_second": 2763.194252555955,
+        "wall_time_ms": 2.8952
+      },
+      {
+        "bandwidth_gbps": 0.01453549973384705,
+        "candidate": {
+          "col_block": 256,
+          "parallelism_degree": 8,
+          "row_block": 8,
+          "thread_count": 4,
+          "thread_count_applied": false,
+          "thread_count_note": "Current QK256/I2_S CPU microbench records thread-count candidates; worker-thread scheduling is a later tuning step.",
+          "thread_count_policy": "recorded_not_applied"
+        },
+        "execution_phase": "prefill_gemm_tiling_sample",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 0.9917999999999999,
+        "operation": "gemm",
+        "p95_ms": 0.9944999999999999,
+        "profile": "i2s_qk256_tiling_matrix_gemm",
+        "requested_kernel": "qk256-scalar-gemm",
+        "selected_kernel": "qk256-scalar-gemm",
+        "shape": {
+          "cols": 256,
+          "cols_rounded_to_qk256_block": false,
+          "iterations": 4,
+          "rows": 64,
+          "tokens": 8
+        },
+        "speedup_claim": false,
+        "status": "measured",
+        "tokens_per_second": 8111.327976477149,
+        "wall_time_ms": 3.9451
+      },
+      {
+        "bandwidth_gbps": 0.012841648590021692,
+        "candidate": {
+          "col_block": 512,
+          "parallelism_degree": 8,
+          "row_block": 16,
+          "thread_count": 8,
+          "thread_count_applied": false,
+          "thread_count_note": "Current QK256/I2_S CPU microbench records thread-count candidates; worker-thread scheduling is a later tuning step.",
+          "thread_count_policy": "recorded_not_applied"
+        },
+        "execution_phase": "decode_gemv_tiling_sample",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 1.4982000000000002,
+        "operation": "gemv",
+        "p95_ms": 1.5928,
+        "profile": "i2s_qk256_tiling_matrix_gemv",
+        "requested_kernel": "auto",
+        "selected_kernel": "qk256-avx2-gemv",
+        "shape": {
+          "cols": 512,
+          "cols_rounded_to_qk256_block": false,
+          "iterations": 8,
+          "rows": 128,
+          "tokens": 1
+        },
+        "speedup_claim": false,
+        "status": "measured",
+        "tokens_per_second": 677.8741865509761,
+        "wall_time_ms": 11.8016
+      },
+      {
+        "bandwidth_gbps": 0.009164051284282226,
+        "candidate": {
+          "col_block": 512,
+          "parallelism_degree": 8,
+          "row_block": 16,
+          "thread_count": 8,
+          "thread_count_applied": false,
+          "thread_count_note": "Current QK256/I2_S CPU microbench records thread-count candidates; worker-thread scheduling is a later tuning step.",
+          "thread_count_policy": "recorded_not_applied"
+        },
+        "execution_phase": "prefill_gemm_tiling_sample",
+        "fallback_reason": null,
+        "fallback_used": false,
+        "median_ms": 3.7988000000000004,
+        "operation": "gemm",
+        "p95_ms": 4.767399999999999,
+        "profile": "i2s_qk256_tiling_matrix_gemm",
+        "requested_kernel": "qk256-scalar-gemm",
+        "selected_kernel": "qk256-scalar-gemm",
+        "shape": {
+          "cols": 512,
+          "cols_rounded_to_qk256_block": false,
+          "iterations": 4,
+          "rows": 128,
+          "tokens": 8
+        },
+        "speedup_claim": false,
+        "status": "measured",
+        "tokens_per_second": 1988.7264071793024,
+        "wall_time_ms": 16.0907
+      }
+    ],
+    "quantization": "QK256/I2_S",
+    "speedup_claim": false,
+    "work_item": "CPU-BITNET-PERF-002"
+  },
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "gemm_oracle_kernel": "qk256-scalar-gemm",
+    "kernel_family": "i2_s_qk256",
+    "oracle_kernel": "qk256-scalar-gemv",
+    "requested_kernel": "auto",
+    "selected_kernel": "qk256-avx2-gemv"
+  },
+  "machine_id": "intel-258v-cpu-avx2",
+  "model": {
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "quant_format": "QK256/I2_S",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "profile_order": [
+    "micro",
+    "layer",
+    "prefill",
+    "first_token",
+    "decode"
+  ],
+  "profiles": [
+    {
+      "bandwidth_gbps": 0.16230376219228984,
+      "execution_phase": "micro_kernel",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "median_ms": 0.0066,
+      "p95_ms": 0.0068000000000000005,
+      "profile": "micro",
+      "requested_kernel": "auto",
+      "selected_kernel": "qk256-avx2-gemv",
+      "shape": {
+        "cols": 256,
+        "iterations": 32,
+        "rows": 1
+      },
+      "status": "measured",
+      "tokens_per_second": 148629.81885740827,
+      "wall_time_ms": 0.2153
+    },
+    {
+      "bandwidth_gbps": 0.016956316038479736,
+      "execution_phase": "layer_forward",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "median_ms": 0.3504,
+      "p95_ms": 0.49839999999999995,
+      "profile": "layer",
+      "requested_kernel": "auto",
+      "selected_kernel": "qk256-avx2-gemv",
+      "shape": {
+        "cols": 512,
+        "iterations": 12,
+        "rows": 32
+      },
+      "status": "measured",
+      "tokens_per_second": 2703.4942663392435,
+      "wall_time_ms": 4.4387
+    },
+    {
+      "bandwidth_gbps": 0.022684617653981623,
+      "execution_phase": "prefill",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "median_ms": 0.17679999999999998,
+      "p95_ms": 0.2092,
+      "profile": "prefill",
+      "requested_kernel": "auto",
+      "selected_kernel": "qk256-avx2-gemv",
+      "shape": {
+        "cols": 512,
+        "iterations": 512,
+        "rows": 16
+      },
+      "status": "measured",
+      "tokens_per_second": 5453.033089899428,
+      "wall_time_ms": 93.89269999999999
+    },
+    {
+      "bandwidth_gbps": 0.19760703147150552,
+      "execution_phase": "first_token",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "median_ms": 0.0217,
+      "p95_ms": 0.022699999999999998,
+      "profile": "first_token",
+      "requested_kernel": "auto",
+      "selected_kernel": "qk256-avx2-gemv",
+      "shape": {
+        "cols": 1024,
+        "iterations": 16,
+        "rows": 1
+      },
+      "status": "measured",
+      "tokens_per_second": 45364.33229373405,
+      "wall_time_ms": 0.3527
+    },
+    {
+      "bandwidth_gbps": 0.1961195919803025,
+      "execution_phase": "decode_steady_state",
+      "fallback_reason": null,
+      "fallback_used": false,
+      "median_ms": 0.0223,
+      "p95_ms": 0.022699999999999998,
+      "profile": "decode",
+      "requested_kernel": "auto",
+      "selected_kernel": "qk256-avx2-gemv",
+      "shape": {
+        "cols": 1024,
+        "iterations": 128,
+        "rows": 1
+      },
+      "status": "measured",
+      "tokens_per_second": 45022.863172704885,
+      "wall_time_ms": 2.843
+    }
+  ],
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema": 1,
+  "selected_backend": "intel-258v-cpu-avx2",
+  "speedup_claim": false,
+  "timestamp_utc": "2026-05-14T03:07:47Z",
+  "tokenizer": {
+    "source": "explicit",
+    "strict": true
+  },
+  "workload": {
+    "batch_size": 1,
+    "generated_tokens": 128,
+    "prompt_tokens": 512
+  }
+}
