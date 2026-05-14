@@ -1,0 +1,24 @@
+timestamp = "2026-05-14T20:23:53Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-004A"
+event = "merged"
+from = "in_progress"
+to = "merged"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-004A-dense-qwen-smoke"
+pr = 4775
+head_sha = "0538db9ab59a076d9a36c4cb47593d2e95e9879c"
+merge_sha = "3881e754e8b1ffe4bdd0d5808fcc836a058ae006"
+summary = "Merged the live M3 Air dense Qwen smoke receipt and CLI backend-identity fix."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4775",
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/qwen-mirror-smoke.json",
+  "docs/reports/apple-silicon-macbook-m3-air-qwen-smoke.md",
+]
+
+notes = [
+  "The merged smoke ran Qwen2.5 0.5B Q8_0 on the M3 Air dense CPU path with apple-m3-air-cpu-neon requested and selected, fallback_used=false, deterministic smoke quality passing, and power, thermal, storage, model hash, tokenizer, and receipt-check context recorded.",
+  "The CLI receipt validation fix preserves non-M4 Mac warm-session prompt backend identity and mac_claim_boundary requested_backend identity.",
+  "This evidence is dense Qwen SLM smoke only; it does not prove BitNet behavior, Metal inference, MPSGraph model inference, Neural Engine execution, or QK256 support.",
+]
