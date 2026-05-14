@@ -69,7 +69,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL2-002"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-002-failure-taxonomy"
 stackable = false
 review_mode = "codex_premerge"

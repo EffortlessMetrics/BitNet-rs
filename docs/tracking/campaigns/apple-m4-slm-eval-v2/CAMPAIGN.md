@@ -52,7 +52,7 @@ MacBook behavior, or broad Apple Silicon performance.
 | Work item | Status | Notes |
 |---|---|---|
 | M4-SLM-EVAL2-001 | merged | PR #4777 defined the campaign and added a 120-case deterministic dense SLM corpus v2 that dry-runs through parser/scoring with no live model claim. |
-| M4-SLM-EVAL2-002 | in_progress | Add stop-token/template/scoring failure taxonomy for v2 reports. |
+| M4-SLM-EVAL2-002 | merged | PR #4792 added stop-token/template/scoring failure taxonomy for v2 reports. |
 | M4-SLM-EVAL2-003 | proposed | Run supported dense M4 models and publish task-family pass-rate reports. |
 | M4-SLM-EVAL2-004 | proposed | Refresh dense M4 benchmark profiles with p50/p90/p99 timing and memory fields. |
 | M4-SLM-EVAL2-005 | proposed | Wire v2 eval/benchmark reports into advisory or nightly regression dashboards. |

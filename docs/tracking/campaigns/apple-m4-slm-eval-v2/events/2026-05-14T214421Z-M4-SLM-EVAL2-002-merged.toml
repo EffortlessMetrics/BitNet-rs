@@ -1,0 +1,24 @@
+timestamp = "2026-05-14T21:44:21Z"
+campaign = "apple-m4-slm-eval-v2"
+item = "M4-SLM-EVAL2-002"
+event = "merged"
+actor = "codex"
+from = "in_progress"
+to = "merged"
+branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-002-failure-taxonomy"
+pr = 4792
+head_sha = "9a7b38d6976e095827de2fcee520791ada0e8736"
+merge_sha = "1fe53caf6503015ea7dcf385fe14cea5a02e5709"
+summary = "Marked M4-SLM-EVAL2-002 merged after dense SLM eval failure taxonomy landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4792",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+]
+
+notes = [
+  "The merged PR adds additive failure_taxonomy fields while preserving strict scoring failed_rules.",
+  "The taxonomy separates raw special-token tails, template/stop leakage, fenced JSON, normalization-only misses, format-only misses, and answer-content misses.",
+  "No runtime pass-rate improvement, live M4 eval result, broad model-quality claim, BitNet proof, Metal proof, QK256, Neural Engine, or MPSGraph claim is made.",
+]
