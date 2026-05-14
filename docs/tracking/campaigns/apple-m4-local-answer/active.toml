@@ -706,8 +706,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-ASK-006"
-status = "pr_open"
+status = "merged"
 pr = 4691
+merge_sha = "c0d524fac23c556c0ce726c17d029b88cfec1af7"
 branch = "codex/apple-m4-local-answer/M4-BITNET-ASK-006-bitnet-smoke"
 stackable = false
 review_mode = "codex_premerge"

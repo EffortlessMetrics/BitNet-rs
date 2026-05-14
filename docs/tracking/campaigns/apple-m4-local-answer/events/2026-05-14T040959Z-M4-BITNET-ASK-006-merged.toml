@@ -1,0 +1,16 @@
+timestamp = "2026-05-14T04:09:59Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-006"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 4691
+head_sha = "93ad2182af2ddcb5a71725097f3a3518ee17ec91"
+merge_sha = "c0d524fac23c556c0ce726c17d029b88cfec1af7"
+
+notes = [
+  "Merged PR #4691 with `bitnet mac smoke --model-family bitnet`.",
+  "The merged route reuses the explicit one-shot BitNet ask path, writes an aggregate smoke receipt on success, and leaves setup failure receipts on failure.",
+  "No BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, or performance claim was added.",
+]
