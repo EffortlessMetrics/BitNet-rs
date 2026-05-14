@@ -89,6 +89,104 @@ fn critical_not_claims() -> Vec<&'static str> {
     ]
 }
 
+struct PromptStopReceiptFields {
+    prompt_identity: serde_json::Value,
+    stop_contract: serde_json::Value,
+    tokenizer_info: serde_json::Value,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_prompt_stop_receipt_fields(
+    template_type: bitnet_inference::TemplateType,
+    formatted_prompt: &str,
+    prompt_token_ids: &[u32],
+    prompt_token_ids_sha256: &str,
+    bos_policy: bool,
+    parse_special: bool,
+    manual_stop_sequences: &[String],
+    manual_stop_token_ids: &[u32],
+    effective_stop_sequences: &[String],
+    effective_stop_token_ids: &[u32],
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+    tokenizer_origin: &str,
+    tokenizer_source: &str,
+    tokenizer_strict: bool,
+) -> PromptStopReceiptFields {
+    let tokenizer_bos = tokenizer.bos_token_id();
+    let tokenizer_eos = tokenizer.eos_token_id();
+    let tokenizer_pad = tokenizer.pad_token_id();
+    let begin_of_text_id = tokenizer.token_to_id("<|begin_of_text|>");
+    let end_of_text_id = tokenizer.token_to_id("<|end_of_text|>");
+    let eot_id = tokenizer.token_to_id("<|eot_id|>");
+    let prompt_token_ids_head: Vec<u32> = prompt_token_ids.iter().take(16).copied().collect();
+    let prompt_token_ids_tail: Vec<u32> = prompt_token_ids
+        .iter()
+        .rev()
+        .take(16)
+        .copied()
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    let prompt_starts_with_begin_of_text =
+        begin_of_text_id.is_some_and(|id| prompt_token_ids.first().copied() == Some(id));
+    let prompt_starts_with_trait_bos =
+        tokenizer_bos.is_some_and(|id| prompt_token_ids.first().copied() == Some(id));
+    let rendered_prompt_embeds_begin_of_text = formatted_prompt.starts_with("<|begin_of_text|>");
+
+    PromptStopReceiptFields {
+        prompt_identity: serde_json::json!({
+            "template": template_type.to_string(),
+            "rendered_prompt_sha256": sha256_text(formatted_prompt),
+            "prompt_token_ids_sha256": prompt_token_ids_sha256,
+            "prompt_token_count": prompt_token_ids.len(),
+            "prompt_token_ids_head": prompt_token_ids_head,
+            "prompt_token_ids_tail": prompt_token_ids_tail,
+            "bos_policy": bos_policy,
+            "parse_special": parse_special,
+            "rendered_prompt_embeds_begin_of_text": rendered_prompt_embeds_begin_of_text,
+            "prompt_starts_with_begin_of_text": prompt_starts_with_begin_of_text,
+            "prompt_starts_with_trait_bos": prompt_starts_with_trait_bos,
+        }),
+        stop_contract: serde_json::json!({
+            "manual_stop_sequences": manual_stop_sequences,
+            "template_stop_sequences": template_type.default_stop_sequences(),
+            "effective_stop_sequences": effective_stop_sequences,
+            "manual_stop_token_ids": manual_stop_token_ids,
+            "template_stop_token_ids": template_type.resolve_stop_token_ids(tokenizer),
+            "effective_stop_token_ids": effective_stop_token_ids,
+            "tokenizer_specials": {
+                "bos_token_id": tokenizer_bos,
+                "eos_token_id": tokenizer_eos,
+                "pad_token_id": tokenizer_pad,
+                "begin_of_text_id": begin_of_text_id,
+                "end_of_text_id": end_of_text_id,
+                "eot_id": eot_id,
+                "start_header_id": tokenizer.token_to_id("<|start_header_id|>"),
+                "end_header_id": tokenizer.token_to_id("<|end_header_id|>"),
+            },
+            "diagnostic_only": true,
+            "not_claims": [
+                "tokenizer_template_authority",
+                "semantic_quality",
+                "reference_parity"
+            ],
+        }),
+        tokenizer_info: serde_json::json!({
+            "type": "sentencepiece",
+            "origin": tokenizer_origin,
+            "source": tokenizer_source,
+            "strict": tokenizer_strict,
+            "bos": tokenizer_bos,
+            "eos": tokenizer_eos,
+            "pad": tokenizer_pad,
+            "begin_of_text": begin_of_text_id,
+            "end_of_text": end_of_text_id,
+            "eot": eot_id,
+        }),
+    }
+}
+
 fn greedy_effective_argmax(
     logits: &[f32],
     generated_tokens: &[u32],
@@ -252,6 +350,146 @@ mod proof_summary_tests {
         match cli.command {
             Some(Commands::Run { strict_backend, .. }) => assert!(strict_backend),
             _ => panic!("expected run command"),
+        }
+    }
+
+    #[test]
+    fn prompt_stop_receipts_pin_llama3_special_contract() -> Result<()> {
+        let tokenizer = bitnet_tokenizers::MockTokenizer::with_special_tokens(&[
+            ("<|begin_of_text|>", 128000),
+            ("<|end_of_text|>", 128001),
+            ("<|start_header_id|>", 128006),
+            ("<|end_header_id|>", 128007),
+            ("<|eot_id|>", 128009),
+        ]);
+        let template_type = bitnet_inference::TemplateType::Llama3Chat;
+        let formatted_prompt = template_type.apply("What is 2+2?", None);
+        assert!(
+            formatted_prompt.starts_with("<|begin_of_text|>"),
+            "llama3 rendered prompts must carry the embedded begin-of-text marker"
+        );
+        let prompt_token_ids = vec![
+            128000, 128006, 882, 128007, 271, 3923, 374, 220, 17, 10, 17, 30, 128009, 128006,
+            78191, 128007, 271,
+        ];
+        let prompt_hash = sha256_token_ids(&prompt_token_ids)?;
+        let manual_stop_sequences = Vec::<String>::new();
+        let manual_stop_token_ids = Vec::<u32>::new();
+        let effective_stop_sequences =
+            vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()];
+        let effective_stop_token_ids = vec![128009, 128001];
+        let before_prompt_ids = prompt_token_ids.clone();
+        let before_stop_ids = effective_stop_token_ids.clone();
+
+        let receipts = build_prompt_stop_receipt_fields(
+            template_type,
+            &formatted_prompt,
+            &prompt_token_ids,
+            &prompt_hash,
+            false,
+            true,
+            &manual_stop_sequences,
+            &manual_stop_token_ids,
+            &effective_stop_sequences,
+            &effective_stop_token_ids,
+            &tokenizer,
+            "external",
+            "explicit",
+            true,
+        );
+
+        assert_eq!(
+            prompt_token_ids, before_prompt_ids,
+            "receipt helper must not mutate prompt ids"
+        );
+        assert_eq!(
+            effective_stop_token_ids, before_stop_ids,
+            "receipt helper must not mutate stop ids"
+        );
+        assert_eq!(receipts.tokenizer_info["bos"], serde_json::Value::Null);
+        assert_eq!(receipts.tokenizer_info["eos"], serde_json::Value::Null);
+        assert_ne!(receipts.tokenizer_info["bos"], serde_json::json!(1));
+        assert_ne!(receipts.tokenizer_info["eos"], serde_json::json!(2));
+        assert_eq!(receipts.tokenizer_info["begin_of_text"], serde_json::json!(128000));
+        assert_eq!(receipts.tokenizer_info["end_of_text"], serde_json::json!(128001));
+        assert_eq!(receipts.tokenizer_info["eot"], serde_json::json!(128009));
+
+        assert_eq!(receipts.prompt_identity["template"], serde_json::json!("llama3-chat"));
+        assert_eq!(
+            receipts.prompt_identity["rendered_prompt_sha256"],
+            serde_json::json!(sha256_text(&formatted_prompt))
+        );
+        assert_eq!(
+            receipts.prompt_identity["prompt_token_ids_sha256"],
+            serde_json::json!(prompt_hash)
+        );
+        assert_eq!(receipts.prompt_identity["bos_policy"], serde_json::json!(false));
+        assert_eq!(receipts.prompt_identity["parse_special"], serde_json::json!(true));
+        assert_eq!(
+            receipts.prompt_identity["rendered_prompt_embeds_begin_of_text"],
+            serde_json::json!(true)
+        );
+        assert_eq!(
+            receipts.prompt_identity["prompt_starts_with_begin_of_text"],
+            serde_json::json!(true)
+        );
+        assert_eq!(
+            receipts.prompt_identity["prompt_starts_with_trait_bos"],
+            serde_json::json!(false)
+        );
+        assert!(
+            receipts.prompt_identity.get("prompt_token_ids_head").is_some(),
+            "receipt must expose prompt token head for live prompt audits"
+        );
+        assert!(
+            receipts.prompt_identity.get("prompt_token_ids_tail").is_some(),
+            "receipt must expose prompt token tail for live prompt audits"
+        );
+        assert_eq!(receipts.prompt_identity["prompt_token_ids_head"][0], serde_json::json!(128000));
+        assert_eq!(
+            receipts.prompt_identity["prompt_token_ids_tail"]
+                .as_array()
+                .expect("tail should be an array")
+                .last()
+                .cloned(),
+            Some(serde_json::json!(271))
+        );
+
+        assert_eq!(
+            receipts.stop_contract["template_stop_token_ids"],
+            serde_json::json!([128009, 128001])
+        );
+        assert_eq!(
+            receipts.stop_contract["effective_stop_token_ids"],
+            serde_json::json!([128009, 128001])
+        );
+        assert_eq!(
+            receipts.stop_contract["tokenizer_specials"]["eot_id"],
+            serde_json::json!(128009)
+        );
+        let not_claims =
+            receipts.stop_contract["not_claims"].as_array().expect("not_claims should be an array");
+        assert!(not_claims.contains(&serde_json::json!("tokenizer_template_authority")));
+        assert!(not_claims.contains(&serde_json::json!("semantic_quality")));
+        assert!(not_claims.contains(&serde_json::json!("reference_parity")));
+        Ok(())
+    }
+
+    #[test]
+    fn diagnostic_proof_summary_keeps_a770_claim_boundary_closed() {
+        let not_claims = critical_not_claims();
+
+        for claim in [
+            "selected_attention_residency",
+            "resident_kv_decode",
+            "attention_scores_residency",
+            "softmax_residency",
+            "attention_value_mix_residency",
+            "full_support_op_residency",
+            "full_device_residency",
+            "completion",
+        ] {
+            assert!(not_claims.contains(&claim), "missing diagnostic not-claim: {claim}");
         }
     }
 }
@@ -2132,18 +2370,12 @@ async fn run_simple_generation(
 
         // Get tokenizer info
         let tokenizer_source_str = tokenizer_source.as_str();
-        let tokenizer_info = serde_json::json!({
-            "type": "sentencepiece",
-            "origin": if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
+        let tokenizer_origin =
+            if tokenizer_source == bitnet_tokenizers::auto::TokenizerSource::GgufMetadata {
                 "embedded"
             } else {
                 "external"
-            },
-            "source": tokenizer_source_str,
-            "strict": tokenizer_strict,
-            "bos": tokenizer.bos_token_id().unwrap_or(1),
-            "eos": tokenizer.eos_token_id().unwrap_or(2),
-        });
+            };
 
         // Count info from GGUF metadata
         let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
@@ -2177,17 +2409,27 @@ async fn run_simple_generation(
         let proof_model_contract_path =
             proof_model_contract.as_ref().map(|path| path.display().to_string());
         let proof_kernel_route_id = proof_kernel_route.as_deref();
+        let prompt_stop_receipts = build_prompt_stop_receipt_fields(
+            template_type,
+            &formatted_prompt,
+            &prompt_token_ids,
+            &prompt_token_ids_sha256,
+            bos_policy,
+            parse_special,
+            &stop,
+            &stop_id,
+            &all_stop_sequences,
+            &all_stop_ids,
+            tokenizer.as_ref(),
+            tokenizer_origin,
+            tokenizer_source_str,
+            tokenizer_strict,
+        );
         let output = serde_json::json!({
             "prompt": prompt,
             "text": generated_text,
-            "prompt_identity": {
-                "template": template_type.to_string(),
-                "rendered_prompt_sha256": sha256_text(&formatted_prompt),
-                "prompt_token_ids_sha256": prompt_token_ids_sha256,
-                "prompt_token_count": prompt_token_ids.len(),
-                "bos_policy": bos_policy,
-                "parse_special": parse_special,
-            },
+            "prompt_identity": prompt_stop_receipts.prompt_identity,
+            "stop_contract": prompt_stop_receipts.stop_contract,
             "tokens": {
                 "prompt": prompt_tokens_len,
                 "generated": generated_tokens.len(),
@@ -2204,7 +2446,7 @@ async fn run_simple_generation(
                 "decoded_tokens": generated_tokens.len(),
             },
             "counts": counts,
-            "tokenizer": tokenizer_info,
+            "tokenizer": prompt_stop_receipts.tokenizer_info,
             "loader": loader_info,
             "gen_policy": gen_policy,
             "proof_summary": {
