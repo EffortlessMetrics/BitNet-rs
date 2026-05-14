@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T00:26:25Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-051"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "cuda/dense-qwen25-one-token-proof"
+pr = 4645
+head_sha = "647dde90da229ab3391cbea91d92f7aa0df51d12"
+merge_sha = "77227fbee7dba09457444a7d1ade740d98aa33c5"
+summary = "Merged CUDA-DENSE-051 to refresh the dense Qwen2.5 one-token strict RTX 5070 Ti CUDA proof."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4645",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/dense-qwen25-q8-one-token-cuda.json",
+]
+
+notes = [
+  "The merged receipt records dense_regular_llm_cuda routing, selected nvidia-rtx-5070-ti-cuda backend identity, runtime_api=cuda, fallback_used=false, CPU/CUDA selected-token parity, kernel stats, transfer stats, and quality_gate.passed=true.",
+  "The PR keeps speedup_claim=false and bitnet_packed_i2s_qk256_proof=false.",
+  "Short-decode, warm-session chat, server readiness, broad dense GGUF CUDA inference, crates.io badge readiness, and docs.rs badge readiness remain out of scope.",
+]
