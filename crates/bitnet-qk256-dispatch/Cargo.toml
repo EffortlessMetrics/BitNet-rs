@@ -16,6 +16,7 @@ bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 bitnet-qk256-layout-core = { path = "../bitnet-qk256-layout-core", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
 candle-core = { workspace = true }
+opencl3 = { version = "0.12", optional = true }
 
 [dev-dependencies]
 bitnet-test-support.workspace = true
@@ -24,7 +25,7 @@ bitnet-test-support.workspace = true
 default = []
 cpu = ["bitnet-quantization/cpu"]
 cuda = ["bitnet-common/cuda", "candle-core/cuda", "bitnet-quantization/cuda"]
-opencl = ["bitnet-common/opencl", "bitnet-quantization/opencl"]
+opencl = ["dep:opencl3", "bitnet-common/opencl", "bitnet-quantization/opencl"]
 oneapi = ["bitnet-common/oneapi", "bitnet-quantization/oneapi", "opencl"]
 metal = ["bitnet-common/metal"]
 gpu = ["cuda", "metal", "opencl"]

@@ -1184,6 +1184,7 @@ dependencies = [
  "bitnet-quantization",
  "bitnet-test-support",
  "candle-core",
+ "opencl3",
 ]
 
 [[package]]

@@ -1,4 +1,10 @@
-use bitnet_common::{BitNetError, Result};
+#[cfg(feature = "opencl")]
+mod opencl;
+
+#[cfg(feature = "opencl")]
+pub use opencl::{QK256_OPENCL_KERNEL_NAME, QK256_OPENCL_KERNEL_SRC, gemm_qk256_opencl};
+
+use bitnet_common::{BitNetError, KernelError, Result};
 use bitnet_qk256_layout_core::{parse_input_shape, parse_qk256_layout, validate_input_cols};
 use candle_core::Tensor;
 
@@ -14,6 +20,7 @@ const NOT_CLAIMED_OPENCL_QK256: &[&str] =
 pub struct Qk256DispatchStatus {
     pub compiled_opencl: bool,
     pub compiled_oneapi: bool,
+    pub opencl_launcher_available: bool,
     pub runtime_backend: &'static str,
     pub accelerator_claimable: bool,
     pub blocker: Option<&'static str>,
@@ -25,9 +32,9 @@ pub fn qk256_dispatch_status() -> Qk256DispatchStatus {
     let compiled_opencl = cfg!(feature = "opencl");
     let compiled_oneapi = cfg!(feature = "oneapi");
     let blocker = if compiled_oneapi {
-        Some("oneapi_qk256_runtime_not_wired")
+        Some("oneapi_qk256_transformer_dispatch_not_wired")
     } else if compiled_opencl {
-        Some("opencl_qk256_runtime_not_wired")
+        Some("opencl_qk256_transformer_dispatch_not_wired")
     } else {
         Some("cpu_qk256_dispatch_only")
     };
@@ -35,6 +42,7 @@ pub fn qk256_dispatch_status() -> Qk256DispatchStatus {
     Qk256DispatchStatus {
         compiled_opencl,
         compiled_oneapi,
+        opencl_launcher_available: cfg!(feature = "opencl"),
         runtime_backend: "cpu_qk256_reference",
         accelerator_claimable: false,
         blocker,
@@ -42,8 +50,24 @@ pub fn qk256_dispatch_status() -> Qk256DispatchStatus {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Qk256DispatchBackend {
+    Cpu,
+    OpenCl,
+}
+
 /// Runs I2_S QK256 forward pass for input tensor shapes [B, T, H] or [B, H].
 pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
+    forward_qk256_with_backend(input, qk256_tensor, weight_name, Qk256DispatchBackend::Cpu)
+}
+
+/// Runs I2_S QK256 forward pass using an explicit dispatch backend.
+pub fn forward_qk256_with_backend(
+    input: &Tensor,
+    qk256_tensor: &Tensor,
+    weight_name: &str,
+    backend: Qk256DispatchBackend,
+) -> Result<Tensor> {
     use bitnet_quantization::i2s_qk256::gemv_qk256;
 
     let qk256_dims = qk256_tensor.dims();
@@ -78,7 +102,8 @@ pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -
         ))
     })?;
 
-    let mut output_vec = vec![vec![0.0f32; layout.rows]; shape.batch_size * shape.seq_len];
+    let input_rows = shape.batch_size * shape.seq_len;
+    let mut output_flat = vec![0.0f32; input_rows * layout.rows];
 
     if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && weight_name.contains("layers.0.")
     {
@@ -91,24 +116,40 @@ pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -
         });
     }
 
-    for (i, input_row) in input_vec.iter().enumerate() {
-        gemv_qk256(
-            &flat_bytes,
-            input_row,
-            &mut output_vec[i],
-            layout.rows,
-            layout.cols,
-            layout.row_stride_bytes,
-        )
-        .map_err(|e| {
-            BitNetError::Validation(format!(
-                "QK256 GEMV failed for {} at row {}: {}",
-                weight_name, i, e
-            ))
-        })?;
+    match backend {
+        Qk256DispatchBackend::Cpu => {
+            for (i, input_row) in input_vec.iter().enumerate() {
+                let start = i * layout.rows;
+                let end = start + layout.rows;
+                gemv_qk256(
+                    &flat_bytes,
+                    input_row,
+                    &mut output_flat[start..end],
+                    layout.rows,
+                    layout.cols,
+                    layout.row_stride_bytes,
+                )
+                .map_err(|e| {
+                    BitNetError::Validation(format!(
+                        "QK256 GEMV failed for {} at row {}: {}",
+                        weight_name, i, e
+                    ))
+                })?;
+            }
+        }
+        Qk256DispatchBackend::OpenCl => {
+            run_opencl_qk256(
+                &flat_bytes,
+                &input_vec,
+                &mut output_flat,
+                layout.rows,
+                layout.cols,
+                layout.row_stride_bytes,
+                weight_name,
+            )?;
+        }
     }
 
-    let output_flat: Vec<f32> = output_vec.into_iter().flatten().collect();
     let output_tensor = if shape.input_rank == 3 {
         Tensor::from_vec(
             output_flat,
@@ -120,4 +161,43 @@ pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -
     };
 
     Ok(output_tensor)
+}
+
+fn run_opencl_qk256(
+    flat_bytes: &[u8],
+    input_vec: &[Vec<f32>],
+    output_flat: &mut [f32],
+    rows: usize,
+    cols: usize,
+    row_stride_bytes: usize,
+    weight_name: &str,
+) -> Result<()> {
+    #[cfg(feature = "opencl")]
+    {
+        let input_flat: Vec<f32> = input_vec.iter().flat_map(|row| row.iter().copied()).collect();
+        opencl::gemm_qk256_opencl(
+            flat_bytes,
+            &input_flat,
+            output_flat,
+            input_vec.len(),
+            rows,
+            cols,
+            row_stride_bytes,
+        )
+        .map_err(|e| {
+            BitNetError::Kernel(KernelError::GpuError {
+                reason: format!("OpenCL QK256 GEMV failed for {weight_name}: {e}"),
+            })
+        })
+    }
+
+    #[cfg(not(feature = "opencl"))]
+    {
+        let _ = (flat_bytes, input_vec, output_flat, rows, cols, row_stride_bytes);
+        Err(BitNetError::Kernel(KernelError::DeviceUnavailable {
+            reason: format!(
+                "OpenCL QK256 dispatch requested for {weight_name}, but opencl feature is disabled"
+            ),
+        }))
+    }
 }
