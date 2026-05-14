@@ -2153,10 +2153,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-053"
-status = "pr_open"
+status = "merged"
 branch = "cuda/dense-qwen25-warm-session-proof"
 pr = 4713
-head_sha = "f5a07e543a5a598c86798ec4b0fef7441e18e1a8"
+head_sha = "2210a2767797f5e7e3c55e3afe2f7e6c0ff633a8"
+merge_sha = "27aab4a5a30187ccaadbe6959dcbd7b90c75a7f6"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
