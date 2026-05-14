@@ -215,7 +215,7 @@ the last proven stage.
 
 ## Work item: CUDA-DENSE-054
 
-Status: planned
+Status: pr_open (#4720)
 Campaign item: `CUDA-DENSE-054`
 Blocked by: CUDA-DENSE-053
 
@@ -223,11 +223,28 @@ Blocked by: CUDA-DENSE-053
 
 Add dense Qwen benchmark qualification.
 
+Current-source receipt:
+
+```text
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-benchmark-qualification-current-source.json
+```
+
 ### Acceptance
 
 The review consumes one-token, short-decode, and warm-session receipts,
 explicitly accepts or rejects speedup by profile, records blockers, and keeps
 BitNet proof false.
+
+Observed current-source review:
+
+```text
+qualification_decision.status = not_accepted
+accepted_profiles = []
+blocked_profiles = [one_token, short_decode_8, warm_session_3_turns]
+speedup_claim = false
+benchmark_qualified_speedup = false
+bitnet_packed_i2s_qk256_proof = false
+```
 
 ### Rollback
 

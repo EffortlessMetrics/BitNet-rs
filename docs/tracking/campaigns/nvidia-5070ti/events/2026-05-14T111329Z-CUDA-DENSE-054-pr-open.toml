@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T11:13:29Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-054"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "cuda/dense-qwen25-benchmark-qualification"
+pr = 4720
+head_sha = "52d99efefd235e73e1020386435f700e94a80f9c"
+summary = "Opened CUDA-DENSE-054 current-source dense Qwen benchmark qualification PR."
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-benchmark-qualification-current-source.json",
+  "docs/reports/CUDA_DENSE_054_BENCHMARK_QUALIFICATION_CURRENT_SOURCE.md",
+]
+
+notes = [
+  "Draft PR #4720 records the Qwen2.5 0.5B Q8_0 benchmark qualification review for current-source one-token, short-decode, and warm-session strict CUDA receipts.",
+  "The receipt keeps all reviewed profiles not accepted for speedup because CUDA mean total times remain slower than CPU means and pure H2D copy timing is still unmeasured.",
+  "The PR keeps speedup, full CUDA residency, server readiness, broad dense GGUF readiness, crates/docs publication readiness, and BitNet packed I2_S/QK256 claims false.",
+]
