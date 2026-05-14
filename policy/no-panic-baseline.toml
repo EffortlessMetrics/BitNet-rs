@@ -4612,7 +4612,7 @@ receiver_fingerprint = ".expect(\"write current\");"
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
 snippet = ".expect(\"write receipt\");"
-count = 16
+count = 18
 
 [baseline.selector]
 kind = "method_call"
@@ -4643,6 +4643,30 @@ kind = "method_call"
 container = ""
 callee = "expect"
 receiver_fingerprint = "let cases = corpus[\"cases\"].as_sequence().expect(\"cases\");"
+
+[[baseline]]
+path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
+family = "expect"
+snippet = "receipt[\"speed\"].as_object_mut().expect(\"speed object\").remove(\"input_tok_s_p50\");"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = "receipt[\"speed\"].as_object_mut().expect(\"speed object\").remove(\"input_tok_s_p50\");"
+
+[[baseline]]
+path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
+family = "expect"
+snippet = "serde_json::to_vec_pretty(&slm_eval_summary_report()).expect(\"json\"),"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = "serde_json::to_vec_pretty(&slm_eval_summary_report()).expect(\"json\"),"
 
 [[baseline]]
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
@@ -4996,7 +5020,7 @@ receiver_fingerprint = "std::fs::write(&receipt, b\"{}\").expect(\"write receipt
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
 snippet = "std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect(\"json\"))"
-count = 3
+count = 5
 
 [baseline.selector]
 kind = "method_call"

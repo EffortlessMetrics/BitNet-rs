@@ -130,6 +130,39 @@ same prompt IDs before comparing checkpoint summaries. The trace remains a
 diagnostic artifact: it localizes the first drift point and does not claim Qwen
 answer quality or throughput.
 
+## Qwen3 Thinking Mode Boundary
+
+The default Qwen ChatML prompt ends at `<|im_start|>assistant\n`, which can
+legitimately select `<think>` as the first token for Qwen3. That is a prompt
+policy result, not by itself a dense-math failure. For deterministic
+answer-readiness triage, `bitnet run` exposes an explicit no-thinking policy:
+
+```powershell
+cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli" -- `
+  --device cpu `
+  run `
+  --model models\slm\Qwen3-0.6B-Q8_0.gguf `
+  --prompt-template qwen `
+  --no-think `
+  --prompt "What is 2+2? Answer with only the number." `
+  --max-new-tokens 1 `
+  --temperature 0.0 `
+  --greedy `
+  --deterministic `
+  --strict-loader `
+  --strict-tokenizer `
+  --logits-dump-steps 1 `
+  --logits-topk 10 `
+  --assert-greedy `
+  --json-out ci\slm-cpu\intel-i5-8250u\2026-05-07\qwen3-bitnet-rs-no-think-first-token.json
+```
+
+`--no-think` appends the Qwen no-thinking suffix
+`<think>\n\n</think>\n\n` after the Qwen assistant generation marker and records
+`qwen_no_think = true` in the receipt. This changes prompt IDs, so it must be
+compared only against a known-good reference regenerated with the exact rendered
+prompt and BOS policy.
+
 The `SLM-CPU-007B` i5-8250U capture records the first layer-0 trace at:
 
 ```text

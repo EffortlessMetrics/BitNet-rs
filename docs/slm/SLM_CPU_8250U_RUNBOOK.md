@@ -187,9 +187,9 @@ cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli"
 
 No-thinking prompt policy:
 
-The post-#4434 `run` command does not currently expose a `--no-think` flag. If
-a later prompt-control slice adds that flag, run the same artifact protocol with
-the no-thinking rendered prompt and refresh the known-good reference first:
+Use `--no-think` when a Qwen3 first-token comparison is meant to exercise
+answer mode rather than thinking mode. Run the same artifact protocol with the
+no-thinking rendered prompt and refresh the known-good reference first:
 
 ```powershell
 cargo run --locked -p bitnet-cli --no-default-features --features "cpu,full-cli" -- `
@@ -216,7 +216,8 @@ generated IDs, decoded text, chosen token, first-step top-k, selected backend,
 kernel/backend provenance, tokenizer source, and `fallback_used = false`.
 Validate the result with `reference-compare`. Do not judge `--no-think` against
 the older SLM-CPU-006B reference unless the known-good reference was regenerated
-from the exact no-thinking rendered prompt and BOS policy.
+from the exact no-thinking rendered prompt and BOS policy. The receipt records
+`qwen_no_think = true` when this policy is active.
 
 If the original prompt now emits token `19` / `4`, first-token parity is
 revalidated and the lane can move to the tiny corpus. If either policy still
