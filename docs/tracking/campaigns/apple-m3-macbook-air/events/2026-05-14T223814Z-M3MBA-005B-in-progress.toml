@@ -1,0 +1,20 @@
+timestamp = "2026-05-14T22:38:14Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-005B"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-005B-microsoft-2b-tokenizer-authority"
+summary = "Started the M3 Air official Microsoft 2B I2_S tokenizer and external pre-tokenizer authority item."
+
+artifacts = [
+  "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-tokenizer-authority.json",
+  "docs/reports/apple-silicon-macbook-m3-air-microsoft-2b-i2s.md",
+]
+
+notes = [
+  "The item records the externally supplied Microsoft tokenizer authority, required tokenizer.ggml.pre=str:llama-bpe override, and bad/no-authority default-pre-tokenizer warning evidence.",
+  "The local BitNet.cpp diagnostic selected Apple M3 Metal by default; this is recorded as context only, not as Apple answer-readiness or Apple Metal BitNet inference acceptance.",
+  "M3MBA-005C remains the first item allowed to accept, reject, or block the candidate for the M3 Air reference context.",
+]

@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "artifact_kind": "apple_m3_air_bitnet_tokenizer_authority",
+  "work_item": "M3MBA-005B",
+  "captured_at": "2026-05-14T22:38:14Z",
+  "host": {
+    "platform": "apple_silicon_macbook",
+    "device_label": "m3-air",
+    "cpu": "Apple M3",
+    "arch": "arm64",
+    "logical_cpus": 8,
+    "memory_bytes": 17179869184,
+    "os": "macOS 26.3.1",
+    "os_build": "25D2128"
+  },
+  "power_thermal": {
+    "power_source": "AC Power",
+    "battery_percent": 100,
+    "battery_state": "charged",
+    "thermal_warning_recorded": false,
+    "performance_warning_recorded": false,
+    "cpu_power_warning_recorded": false
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+    "file": "ggml-model-i2_s.gguf",
+    "local_path": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf",
+    "bytes": 1187801280,
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "format": "GGUF V3",
+    "architecture": "bitnet-b1.58",
+    "quantization": "i2_s"
+  },
+  "gguf_tokenizer_metadata": {
+    "kv_count": 24,
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "missing",
+    "token_count": 128256,
+    "merges_count": 280147,
+    "bos_token_id": 128000,
+    "eos_token_id": 128001,
+    "eot_token_id": 128009,
+    "chat_template_present": true
+  },
+  "external_tokenizer_authority": {
+    "source_repo": "microsoft/bitnet-b1.58-2B-4T",
+    "source_revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+    "tokenizer_json": "tokenizer.json",
+    "tokenizer_json_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "tokenizer_model_type": "BPE",
+    "tokenizer_vocab_size": 128000,
+    "added_tokens": 256,
+    "combined_vocab_entries": 128256,
+    "merges_count": 280147,
+    "merges_sha256": "cfe2e1ca857e85780db48349c18f4dc6e5262573b9a25e79e15f93f2a2d43339",
+    "pretokenizer_authority": "externally_supplied",
+    "pretokenizer_source": "tokenizer_json",
+    "pretokenizer_summary": "Sequence: Regex Split with GPT-4/Llama-3-style pattern, then ByteLevel add_prefix_space=false trim_offsets=true use_regex=false",
+    "required_override": "tokenizer.ggml.pre=str:llama-bpe",
+    "compatibility_decision": "tokenizer.ggml.pre=llama-bpe"
+  },
+  "runner": {
+    "name": "Microsoft BitNet.cpp llama-cli",
+    "repository": "/Users/sarahisaacs/.cache/bitnet_cpp",
+    "bitnet_cpp_commit": "01eb415772c342d9f20dc42772f1583ae1e5b102",
+    "llama_cpp_submodule_commit": "1f86f058de0c3f4098dedae2ae8653c335c868a1",
+    "llama_cli_version": "3962 (1f86f058)",
+    "compiler": "Apple clang version 17.0.0 (clang-1700.6.4.2)",
+    "build_target": "arm64-apple-darwin25.3.0",
+    "fetch_command": "cargo run --release --locked -p xtask --no-default-features -- fetch-cpp --backend cpu",
+    "fetch_result": "passed",
+    "fetch_notes": [
+      "The fetch/build completed and linked build/bin/llama-cli.",
+      "The xtask verifier warned that no CLI binary was found, but build/bin/llama-cli exists and reports version 3962.",
+      "The CMake build found Accelerate and Metal on Apple M3; OpenMP was not found."
+    ]
+  },
+  "diagnostic_prompt": {
+    "text": "User: What is 2+2? Answer with one digit.<|eot_id|>Assistant:",
+    "max_new_tokens": 8,
+    "temp": 0,
+    "top_k": 1,
+    "no_display_prompt": true,
+    "no_mmap": true
+  },
+  "with_required_override": {
+    "command_shape": "llama-cli -m <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf -p <diagnostic-prompt> -n 8 --no-display-prompt --temp 0 --top-k 1 --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap",
+    "exit_code": 0,
+    "metadata_override_logged": true,
+    "missing_pretokenizer_warning_logged": false,
+    "selected_backend": "Metal",
+    "selected_device": "Apple M3",
+    "offloaded_layers": "31/31",
+    "output": "4",
+    "output_gate": "diagnostic_only",
+    "claim": "required tokenizer pre-tokenizer authority path recorded"
+  },
+  "without_required_override": {
+    "command_shape": "llama-cli -m <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf -p <diagnostic-prompt> -n 8 --no-display-prompt --temp 0 --top-k 1 --no-mmap",
+    "exit_code": 0,
+    "metadata_override_logged": false,
+    "missing_pretokenizer_warning_logged": true,
+    "default_pretokenizer_logged": true,
+    "quality_degraded_warning_logged": true,
+    "selected_backend": "Metal",
+    "selected_device": "Apple M3",
+    "offloaded_layers": "31/31",
+    "output": "4",
+    "output_gate": "bad_no_authority_evidence",
+    "claim": "no-override path is not authoritative despite this diagnostic prompt output"
+  },
+  "authority_links": {
+    "shared_answer_gate": "docs/model-artifacts/ANSWER_ARTIFACT_GATE.md",
+    "shared_artifact_manifest": "ci/model-artifacts/artifact-manifest.toml",
+    "tokenizer_authority_ledger": "ci/model-artifacts/tokenizer-authority.toml",
+    "model_kernel_compatibility_ledger": "ci/model-artifacts/model-kernel-compatibility.toml",
+    "reference_runner_report": "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md",
+    "m3_identity_receipt": "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-identity.json"
+  },
+  "claim_boundary": {
+    "tokenizer_authority_path_recorded": true,
+    "bad_no_authority_evidence_recorded": true,
+    "artifact_accepted": false,
+    "answer_readiness_claim": false,
+    "apple_local_answer_claim": false,
+    "rust_m4_bitnet_local_answer_claim": false,
+    "apple_metal_bitnet_inference_claim": false,
+    "mpsgraph_model_inference_claim": false,
+    "neural_engine_execution_claim": false,
+    "qk256_on_apple_claim": false,
+    "speedup_claim": false,
+    "model_binary_committed": false
+  }
+}

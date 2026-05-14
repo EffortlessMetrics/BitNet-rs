@@ -416,7 +416,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-005B"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m3-macbook-air/M3MBA-005B-microsoft-2b-tokenizer-authority"
 stackable = false
 review_mode = "codex_premerge"
