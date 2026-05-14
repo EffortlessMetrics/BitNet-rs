@@ -307,6 +307,7 @@ fn mac_help_documents_operator_wrappers() {
         .stdout(predicate::str::contains("check"))
         .stdout(predicate::str::contains("ask"))
         .stdout(predicate::str::contains("smoke"))
+        .stdout(predicate::str::contains("bitnet-warm"))
         .stdout(predicate::str::contains("doctor"))
         .stdout(predicate::str::contains("validate"))
         .stdout(predicate::str::contains("bitnet-proof"))
@@ -846,6 +847,42 @@ fn mac_smoke_rejects_diagnostic_only_model_before_cache_lookup() {
         .stderr(predicate::str::contains("not selectable"))
         .stderr(predicate::str::contains("bitnet mac models"))
         .stderr(predicate::str::contains("bitnet model fetch").not());
+}
+
+#[test]
+fn mac_bitnet_warm_help_documents_fixed_resident_proof() {
+    bitnet()
+        .args(["mac", "bitnet-warm", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("fixed BitNet prompts"))
+        .stdout(predicate::str::contains("--model-id"))
+        .stdout(predicate::str::contains("--model-path"))
+        .stdout(predicate::str::contains("--tokenizer"))
+        .stdout(predicate::str::contains("--json-out"));
+}
+
+#[test]
+fn mac_bitnet_warm_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "bitnet-warm"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "mac bitnet-warm routes the supported Mac local-answer path",
+        ))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn mac_bitnet_warm_rejects_non_bitnet_model_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "bitnet-warm", "--model-id", "qwen2.5-0.5b-instruct-q8_0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "`bitnet mac bitnet-warm` only supports microsoft-bitnet-b1.58-2B-4T-i2s",
+        ));
 }
 
 #[test]
@@ -1639,6 +1676,191 @@ fn mac_receipts_check_accepts_golden_smoke_receipt() {
         .assert()
         .success()
         .stdout(predicate::str::contains("apple_m4_slm_golden_smoke"))
+        .stdout(predicate::str::contains("\"passed\": true"));
+}
+
+#[test]
+fn mac_receipts_check_accepts_bitnet_warm_session_receipt() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("bitnet-warm.json");
+    let prompt = "Answer with a single digit: 2+2=";
+    let prompts = serde_json::json!([
+        {
+            "prompt_index": 0,
+            "case_id": "prompt_01",
+            "prompt": prompt,
+            "text": "4",
+            "generated_tokens": 2,
+            "generated_token_ids": [19, 128009],
+            "quality": {
+                "passed": true,
+                "valid_utf8": true,
+                "printable_utf8": true,
+                "non_empty": true,
+                "no_replacement_chars": true,
+                "mostly_text": true,
+                "non_degenerate": true,
+                "generated_tokens": 2,
+                "distinct_generated_tokens": 2,
+                "failed_rules": []
+            },
+            "timing": {
+                "time_to_first_token_ms": 100,
+                "total_ms": 200.0
+            },
+            "backend": {
+                "requested_backend": "apple-m4-cpu-neon",
+                "selected_backend": "apple-m4-cpu-neon",
+                "runtime_api": "cpu",
+                "fallback_used": false
+            },
+            "operator_ux": {
+                "time_to_first_token_receipt": true
+            }
+        },
+        {
+            "prompt_index": 1,
+            "case_id": "prompt_02",
+            "prompt": "Name the capital of France. Answer with one word.",
+            "text": "Paris",
+            "generated_tokens": 1,
+            "generated_token_ids": [60704],
+            "quality": {
+                "passed": true,
+                "valid_utf8": true,
+                "printable_utf8": true,
+                "non_empty": true,
+                "no_replacement_chars": true,
+                "mostly_text": true,
+                "non_degenerate": true,
+                "generated_tokens": 1,
+                "distinct_generated_tokens": 1,
+                "failed_rules": []
+            },
+            "timing": {
+                "time_to_first_token_ms": 100,
+                "total_ms": 200.0
+            },
+            "backend": {
+                "requested_backend": "apple-m4-cpu-neon",
+                "selected_backend": "apple-m4-cpu-neon",
+                "runtime_api": "cpu",
+                "fallback_used": false
+            },
+            "operator_ux": {
+                "time_to_first_token_receipt": true
+            }
+        },
+        {
+            "prompt_index": 2,
+            "case_id": "prompt_03",
+            "prompt": prompt,
+            "text": "4",
+            "generated_tokens": 2,
+            "generated_token_ids": [19, 128009],
+            "quality": {
+                "passed": true,
+                "valid_utf8": true,
+                "printable_utf8": true,
+                "non_empty": true,
+                "no_replacement_chars": true,
+                "mostly_text": true,
+                "non_degenerate": true,
+                "generated_tokens": 2,
+                "distinct_generated_tokens": 2,
+                "failed_rules": []
+            },
+            "timing": {
+                "time_to_first_token_ms": 100,
+                "total_ms": 200.0
+            },
+            "backend": {
+                "requested_backend": "apple-m4-cpu-neon",
+                "selected_backend": "apple-m4-cpu-neon",
+                "runtime_api": "cpu",
+                "fallback_used": false
+            },
+            "operator_ux": {
+                "time_to_first_token_receipt": true
+            }
+        }
+    ]);
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "artifact_kind": "bitnet_apple_m4_warm_session",
+            "operator_command": "mac bitnet-warm",
+            "requested_backend": "apple-m4-cpu-neon",
+            "selected_backend": "apple-m4-cpu-neon",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "session": {
+                "model_loaded_once": true,
+                "tokenizer_loaded_once": true,
+                "prompt_count": 3
+            },
+            "model": {
+                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "family": "bitnet",
+                "loader_mode": "real_gguf"
+            },
+            "tokenizer": {
+                "source": "explicit",
+                "strict": true,
+                "pretokenizer_authority": "llama-bpe"
+            },
+            "quality_summary": {
+                "passed": true
+            },
+            "operator_ux": {
+                "time_to_first_token_receipts": true
+            },
+            "determinism": {
+                "checked": true,
+                "passed": true,
+                "repeated_prompt_groups": 1,
+                "groups": [{
+                    "prompt": prompt,
+                    "attempt_count": 2,
+                    "stable_generated_token_ids": true,
+                    "stable_text": true
+                }]
+            },
+            "prompts": prompts,
+            "claim_boundary": {
+                "bitnet_warm_session": true,
+                "bitnet_quality_claimed": false,
+                "full_metal_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            },
+            "mac_bitnet_claim_boundary": {
+                "bitnet_warm_session": true,
+                "chat_enabled": false,
+                "serve_enabled": false,
+                "full_metal_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            },
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        }))
+        .expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("bitnet_apple_m4_warm_session"))
+        .stdout(predicate::str::contains("\"prompt_count\": 3"))
         .stdout(predicate::str::contains("\"passed\": true"));
 }
 

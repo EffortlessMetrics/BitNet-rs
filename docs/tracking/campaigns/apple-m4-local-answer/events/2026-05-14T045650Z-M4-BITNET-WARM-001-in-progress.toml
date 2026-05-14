@@ -1,0 +1,14 @@
+timestamp = "2026-05-14T04:56:50Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-WARM-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started a narrow BitNet warm-session route after the one-shot ask and smoke routes landed.",
+  "The route must use the accepted Microsoft I2_S GGUF and accepted external tokenizer, load model/tokenizer once, run fixed repeated prompts, and write per-turn plus aggregate receipts.",
+  "The proof must record fallback_used=false, generated text, generated token IDs, timing and memory fields, and repeated-prompt determinism.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and broad performance claims remain disabled.",
+]

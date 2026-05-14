@@ -23,6 +23,7 @@ const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.js
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
 const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
+const MAC_BITNET_WARM_DEFAULT_RECEIPT: &str = "target/apple-m4-local-answer/mac-bitnet-warm.json";
 const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
 const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-serve-check.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
@@ -49,6 +50,11 @@ const OPERATOR_PROFILE_PROMPTS: &[&str] = &[
     "What is 2+2? Answer briefly.",
     "Name the capital of France.",
     "Write one short sentence about Rust.",
+];
+const BITNET_WARM_PROMPTS: &[&str] = &[
+    "Answer with a single digit: 2+2=",
+    "Name the capital of France. Answer with one word.",
+    "Answer with a single digit: 2+2=",
 ];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -207,6 +213,45 @@ enum MacAction {
 
         /// Output aggregate golden smoke receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_SMOKE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
+    /// Run fixed BitNet prompts in one warm Apple M4 CPU/NEON process without enabling chat.
+    BitnetWarm {
+        /// Accepted BitNet model id. Only microsoft-bitnet-b1.58-2B-4T-i2s is supported.
+        #[arg(long, default_value = BITNET_M4_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Explicit accepted BitNet GGUF path.
+        #[arg(long = "model-path", value_name = "PATH")]
+        model_path: Option<PathBuf>,
+
+        /// Explicit accepted external tokenizer path. Defaults to the Microsoft tokenizer.
+        #[arg(long, value_name = "PATH")]
+        tokenizer: Option<PathBuf>,
+
+        /// Maximum new tokens per fixed warm prompt.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 8)]
+        max_new_tokens: usize,
+
+        /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Emit operator progress lines to stderr.
+        #[arg(long, default_value_t = false)]
+        progress: bool,
+
+        /// Suppress final status line; receipts are still written.
+        #[arg(long, default_value_t = false)]
+        quiet: bool,
+
+        /// Output aggregate BitNet warm-session receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_BITNET_WARM_DEFAULT_RECEIPT)]
         json_out: PathBuf,
     },
 
@@ -628,6 +673,31 @@ impl MacCommand {
                     tokenizer,
                     max_new_tokens,
                     threads,
+                    json_out,
+                )
+                .await
+            }
+            MacAction::BitnetWarm {
+                model_id,
+                cache_dir,
+                model_path,
+                tokenizer,
+                max_new_tokens,
+                threads,
+                progress,
+                quiet,
+                json_out,
+            } => {
+                ensure_supported_mac_device(explicit_device_label, "mac bitnet-warm")?;
+                run_bitnet_warm(
+                    &model_id,
+                    cache_dir,
+                    model_path,
+                    tokenizer,
+                    max_new_tokens,
+                    threads,
+                    progress,
+                    quiet,
                     json_out,
                 )
                 .await
@@ -2203,6 +2273,86 @@ async fn run_bitnet_smoke(
         json_out.display(),
         answer_receipt_path.display()
     );
+    Ok(())
+}
+
+async fn run_bitnet_warm(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    model_path: Option<PathBuf>,
+    tokenizer: Option<PathBuf>,
+    max_new_tokens: usize,
+    threads: usize,
+    progress: bool,
+    quiet: bool,
+    json_out: PathBuf,
+) -> Result<()> {
+    if max_new_tokens == 0 {
+        anyhow::bail!("`bitnet mac bitnet-warm` requires --max-new-tokens greater than zero");
+    }
+    if !model_cache::is_apple_m4_bitnet_artifact_id(model_id) {
+        anyhow::bail!(
+            "`bitnet mac bitnet-warm` only supports {BITNET_M4_MODEL_ID}; got `{model_id}`"
+        );
+    }
+    let tokenizer = tokenizer.unwrap_or_else(|| PathBuf::from(BITNET_M4_DEFAULT_TOKENIZER_PATH));
+    if !tokenizer.exists() {
+        anyhow::bail!(
+            "BitNet warm session requires the accepted external tokenizer at {}; pass --tokenizer {}",
+            tokenizer.display(),
+            BITNET_M4_DEFAULT_TOKENIZER_PATH
+        );
+    }
+    let tokenizer_sha256 = verify_bitnet_m4_tokenizer(&tokenizer)?;
+    let model = model_cache::verified_apple_m4_bitnet_model(model_id, cache_dir, model_path)?;
+    let prompts = BITNET_WARM_PROMPTS.iter().map(|prompt| (*prompt).to_string()).collect();
+
+    crate::run_slm_warm_session(
+        APPLE_M4_CPU_NEON,
+        model.path.clone(),
+        "gguf".to_string(),
+        Some(tokenizer.clone()),
+        None,
+        1,
+        prompts,
+        max_new_tokens,
+        0.0,
+        1,
+        1.0,
+        1.1,
+        None,
+        true,
+        true,
+        true,
+        true,
+        threads,
+        BITNET_M4_PROMPT_TEMPLATE.to_string(),
+        None,
+        vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
+        Vec::new(),
+        true,
+        true,
+        false,
+        crate::SlmWarmSessionOutput::new(false, progress, quiet)
+            .with_model_sha256_override(Some(model.sha256.clone())),
+        1,
+        1,
+        json_out.clone(),
+    )
+    .await?;
+    annotate_and_validate_bitnet_warm_session_receipt(
+        &json_out,
+        &model,
+        &tokenizer,
+        &tokenizer_sha256,
+    )?;
+    if !quiet {
+        println!(
+            "Mac BitNet warm session passed: {} (prompts={}, chat=false, serve=false)",
+            json_out.display(),
+            BITNET_WARM_PROMPTS.len()
+        );
+    }
     Ok(())
 }
 
@@ -4704,6 +4854,121 @@ fn annotate_and_validate_bitnet_mac_ask_receipt(
     Ok(())
 }
 
+fn annotate_and_validate_bitnet_warm_session_receipt(
+    path: &Path,
+    model: &VerifiedCachedModel,
+    tokenizer: &Path,
+    tokenizer_sha256: &str,
+) -> Result<()> {
+    let bytes = std::fs::read(path).with_context(|| {
+        format!("failed to read BitNet warm-session receipt {}", path.display())
+    })?;
+    let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("invalid BitNet warm-session receipt {}", path.display()))?;
+    if receipt["artifact_kind"].as_str() != Some("slm_apple_m4_warm_session") {
+        anyhow::bail!("{} was not produced by the warm-session receipt engine", path.display());
+    }
+    validate_mac_receipt_value(path, &receipt)?;
+    if receipt["model"]["sha256"].as_str() != Some(BITNET_M4_EXPECTED_MODEL_SHA256) {
+        anyhow::bail!("{} does not use the accepted Microsoft BitNet I2_S GGUF", path.display());
+    }
+    if receipt["model"]["family"].as_str() != Some("bitnet")
+        || receipt["model"]["loader_mode"].as_str()
+            != Some(bitnet_models::GgufLoaderMode::RealGguf.as_str())
+    {
+        anyhow::bail!(
+            "{} does not record strict real-GGUF BitNet warm-session loading",
+            path.display()
+        );
+    }
+    if receipt["tokenizer"]["strict"].as_bool() != Some(true)
+        || receipt["tokenizer"]["pretokenizer_authority"].as_str() != Some("llama-bpe")
+    {
+        anyhow::bail!(
+            "{} does not record strict external llama-bpe tokenizer authority",
+            path.display()
+        );
+    }
+    if receipt["generation"]["prompt_template"].as_str() != Some(BITNET_M4_PROMPT_TEMPLATE) {
+        anyhow::bail!("{} does not use the BitNet.cpp answer prompt template", path.display());
+    }
+    if receipt["session"]["prompt_count"].as_u64() != Some(BITNET_WARM_PROMPTS.len() as u64)
+        || receipt["session"]["model_loaded_once"].as_bool() != Some(true)
+        || receipt["session"]["tokenizer_loaded_once"].as_bool() != Some(true)
+    {
+        anyhow::bail!(
+            "{} must record the fixed BitNet warm prompt count and one model/tokenizer load",
+            path.display()
+        );
+    }
+    if receipt["determinism"]["checked"].as_bool() != Some(true)
+        || receipt["determinism"]["passed"].as_bool() != Some(true)
+    {
+        anyhow::bail!("{} must record passing repeated-prompt determinism", path.display());
+    }
+    let Some(object) = receipt.as_object_mut() else {
+        anyhow::bail!("BitNet warm-session receipt {} is not a JSON object", path.display());
+    };
+    object.insert("artifact_kind".to_string(), serde_json::json!("bitnet_apple_m4_warm_session"));
+    object.insert("operator_command".to_string(), serde_json::json!("mac bitnet-warm"));
+    object.insert("model_id".to_string(), serde_json::json!(model.id));
+    object.insert(
+        "model_cache".to_string(),
+        serde_json::json!({
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        }),
+    );
+    object.insert(
+        "mac_bitnet_claim_boundary".to_string(),
+        serde_json::json!({
+            "bitnet_warm_session": true,
+            "answer_corpus_proof_gate": "MODEL-ARTIFACT-007/M4-QA-001",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "tokenizer_path": tokenizer,
+            "tokenizer_sha256": tokenizer_sha256,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        }),
+    );
+    object.entry("bitnet_quality_claimed".to_string()).or_insert(serde_json::json!(false));
+    object.entry("broad_performance_claim".to_string()).or_insert(serde_json::json!(false));
+    object.entry("speedup_claim".to_string()).or_insert(serde_json::json!(false));
+    object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
+    if let Some(claim_boundary) =
+        object.get_mut("claim_boundary").and_then(|value| value.as_object_mut())
+    {
+        claim_boundary.insert("bitnet_warm_session".to_string(), serde_json::json!(true));
+        claim_boundary.insert("chat_enabled".to_string(), serde_json::json!(false));
+        claim_boundary.insert("serve_enabled".to_string(), serde_json::json!(false));
+        claim_boundary.insert("qk256_apple_claimed".to_string(), serde_json::json!(false));
+        claim_boundary
+            .insert("neural_engine_execution_claimed".to_string(), serde_json::json!(false));
+        claim_boundary.insert("mpsgraph_inference_claimed".to_string(), serde_json::json!(false));
+    }
+    validate_mac_receipt_value(path, &receipt)?;
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?).with_context(|| {
+        format!("failed to update BitNet warm-session receipt {}", path.display())
+    })?;
+    Ok(())
+}
+
 fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: bool) -> Result<()> {
     let receipt_paths = collect_receipt_paths(path)?;
     if receipt_paths.is_empty() {
@@ -5636,7 +5901,9 @@ fn validate_mac_receipt_value(
         anyhow::bail!("{} claims broad Mac performance or speedup", path.display());
     }
 
-    let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session" {
+    let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session"
+        || artifact_kind == "bitnet_apple_m4_warm_session"
+    {
         validate_warm_session_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_operator_profiles"
         || artifact_kind == "apple_m4_slm_performance_profiles"

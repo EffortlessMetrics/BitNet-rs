@@ -73,6 +73,7 @@ and `mac serve` remain disabled.
 | M4-BITNET-ASK-005 | merged | #4688 added advisory BitNet one-shot ask readiness to `bitnet mac doctor` receipts without making dense doctor fail when optional BitNet artifacts are absent or enabling BitNet chat/server/Metal claims. |
 | M4-BITNET-ASK-006 | merged | #4691 added `bitnet mac smoke --model-family bitnet` as a one-shot BitNet ask smoke with accepted model/tokenizer identity, failure receipts, and unchanged chat/server/Metal boundaries. |
 | M4-BITNET-SMOKE-001 | merged | #4697 added a committed runtime receipt proving `bitnet mac smoke --model-family bitnet` completes through the accepted Microsoft I2_S GGUF and accepted external tokenizer under `apple-m4-cpu-neon`, with generated text/token IDs, fallback=false, and unchanged chat/server/Metal boundaries. |
+| M4-BITNET-WARM-001 | in_progress | Add a narrow BitNet warm-session route that loads the accepted Microsoft I2_S GGUF and accepted external tokenizer once, runs fixed repeated prompts under `apple-m4-cpu-neon`, records per-turn and aggregate receipts, checks determinism, and keeps BitNet chat/server/Metal boundaries disabled. |
 
 ## Review Policy
 
