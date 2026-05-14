@@ -211,7 +211,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SLM-EVAL-005"
-status = "in_progress"
+status = "pr_open"
+pr = 4675
 branch = "codex/apple-m4-slm-eval-and-proof/M4-SLM-EVAL-005-ci-tiers"
 stackable = false
 review_mode = "codex_premerge"
