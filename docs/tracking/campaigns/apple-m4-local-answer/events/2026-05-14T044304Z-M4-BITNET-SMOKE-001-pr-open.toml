@@ -1,0 +1,16 @@
+timestamp = "2026-05-14T04:43:04Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-SMOKE-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 4697
+head_sha = "67e55161f490d4cd805f512f7893eefcb673d61f"
+
+notes = [
+  "Opened PR #4697 for the committed `bitnet mac smoke --model-family bitnet` runtime receipt.",
+  "The PR records the aggregate smoke receipt and paired strict BitNet CPU profile answer receipt under `ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-mac-smoke/`.",
+  "The receipt pair uses the accepted Microsoft I2_S GGUF and accepted external tokenizer, records fallback_used=false, generated text, generated token IDs, timing fields, and receipt validation.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and broad performance claims remain disabled.",
+]

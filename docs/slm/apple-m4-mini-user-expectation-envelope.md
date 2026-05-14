@@ -241,6 +241,14 @@ performance claims disabled:
 bitnet mac smoke --model-family bitnet
 ```
 
+Committed local evidence for that BitNet smoke surface lives at
+`ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-mac-smoke/bitnet-mac-smoke-runtime-receipt.json`,
+with the paired answer receipt at
+`ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-mac-smoke/bitnet-mac-smoke-runtime-receipt-answer.json`.
+Those receipts prove one explicit accepted-artifact smoke run, not BitNet chat,
+serve, full Metal inference, QK256 on Apple Silicon, or a broad performance
+envelope.
+
 Use `regression` for receipt-only drift checks against matching M4 dense SLM
 envelopes:
 

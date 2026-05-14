@@ -1,0 +1,164 @@
+{
+  "answer_receipt": {
+    "artifact_kind": "strict_bitnet_cpu_profile",
+    "generated_tokens": 2,
+    "path": "ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-mac-smoke/bitnet-mac-smoke-runtime-receipt-answer.json",
+    "prompt_count": 1,
+    "validated": true
+  },
+  "artifact_kind": "bitnet_apple_m4_mac_smoke",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-mac-smoke/bitnet-mac-smoke-runtime-receipt.json",
+  "bitnet_quality_claimed": false,
+  "broad_performance_claim": false,
+  "cache_health": {
+    "advisory": true,
+    "blocks_doctor": false,
+    "checked": true,
+    "claim_boundary": {
+      "bitnet_one_shot_mac_ask": true,
+      "bitnet_quality_claimed": false,
+      "broad_performance_claim": false,
+      "chat_enabled": false,
+      "full_metal_inference_claimed": false,
+      "mpsgraph_inference_claimed": false,
+      "neural_engine_execution_claimed": false,
+      "qk256_apple_claimed": false,
+      "readiness_only": true,
+      "serve_enabled": false,
+      "speedup_claim": false
+    },
+    "commands": {
+      "ask_cached_model": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \"What is 2+2? Answer briefly.\"",
+      "fetch": "bitnet model fetch microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "models": "bitnet mac models --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "verify": "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models"
+    },
+    "model": {
+      "cache_path": "/Users/steven/Library/Caches/bitnet-rs/models/microsoft-bitnet-b1.58-2B-4T-i2s/ggml-model-i2_s.gguf",
+      "cache_state": "missing",
+      "cached_model_ready": false,
+      "catalog_state": "supported-ask",
+      "expected_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+      "fetch_command": "bitnet model fetch microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+      "proof_command": "bitnet --device apple-m4-cpu-neon mac bitnet-proof --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --proof-receipt ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json --strict",
+      "proof_status": "answer-corpus-proof-passed-one-shot-ask-explicit-artifact",
+      "verify_command": "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models"
+    },
+    "ready": false,
+    "tokenizer": {
+      "error": null,
+      "expected_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+      "present": true,
+      "required_explicit_argument": "--tokenizer",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "verified": true
+    }
+  },
+  "expected_text_fragment": "4",
+  "expected_text_fragment_found": true,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "mac_bitnet_claim_boundary": {
+    "bitnet_mac_smoke": true,
+    "bitnet_one_shot_mac_ask": true,
+    "broad_performance_claim": false,
+    "chat_enabled": false,
+    "full_metal_inference_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "serve_enabled": false,
+    "speedup_claim": false
+  },
+  "memory": {
+    "peak_memory_mb": 4248.688,
+    "peak_memory_source": "getrusage.ru_maxrss"
+  },
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "tied_token_embeddings",
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tie_word_embeddings": true,
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "model_family": "bitnet",
+  "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+  "operator_command": "mac smoke --model-family bitnet",
+  "prompt": "Answer with a single digit: 2+2=",
+  "quality": null,
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "speedup_claim": false,
+  "text": "4",
+  "timestamp": "2026-05-14T04:31:36.271471+00:00",
+  "timing": {
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 2.091,
+    "decode_total_ms": 976.518,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 498.242,
+    "first_token_ms": 7931,
+    "host_to_device_bytes": null,
+    "model_load_ms": 4438.087,
+    "prefill_ms": 7433.188,
+    "sampling_ms_per_token": 0.055,
+    "tokenize_ms": 0.211,
+    "tokenizer_load_ms": 173.517
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "model_family": "llama3",
+    "origin": "external",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "tokens": {
+    "generated": 2,
+    "generated_ids": [
+      19,
+      128009
+    ],
+    "ids": [
+      19,
+      128009
+    ],
+    "prompt": 18,
+    "prompt_ids": [
+      128000,
+      1502,
+      25,
+      22559,
+      449,
+      264,
+      3254,
+      16099,
+      25,
+      220,
+      17,
+      10,
+      17,
+      28,
+      128009,
+      72803,
+      25,
+      220
+    ],
+    "total": 20
+  }
+}

@@ -751,3 +751,52 @@ must_not_claim = [
   "MPSGraph inference is proven.",
   "Broad BitNet chat quality or performance is proven.",
 ]
+
+[[work_item]]
+id = "M4-BITNET-SMOKE-001"
+status = "pr_open"
+pr = 4697
+head_sha = "67e55161f490d4cd805f512f7893eefcb673d61f"
+branch = "codex/apple-m4-local-answer/M4-BITNET-SMOKE-001-runtime-receipt"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-ASK-006"]
+acceptance = "Commit a runtime receipt for `bitnet mac smoke --model-family bitnet` using the accepted Microsoft I2_S GGUF and accepted external tokenizer under strict apple-m4-cpu-neon routing, with fallback_used=false, expected text fragment found, generated text, generated token IDs, timing fields, receipt validation, documented operator command, and chat, serve, full Metal, QK256, Neural Engine, MPSGraph, broad quality, and broad performance claims disabled."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- --device apple-m4-cpu-neon mac smoke --model-family bitnet --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --max-new-tokens 8 --json-out ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-mac-smoke/bitnet-mac-smoke-runtime-receipt.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-mac-smoke/bitnet-mac-smoke-runtime-receipt.json --json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-mac-smoke/bitnet-mac-smoke-runtime-receipt-answer.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = [
+  "`bitnet mac smoke --model-family bitnet` completed for the committed Apple M4 CPU/NEON one-shot smoke receipt with accepted model/tokenizer identity, fallback_used=false, generated text, generated token IDs, and disabled chat/serve/Metal boundaries.",
+]
+must_not_claim = [
+  "BitNet chat works.",
+  "BitNet serve works.",
+  "Full apple-m4-metal model inference works.",
+  "Apple M4 Metal participates in autoregressive BitNet decode.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+  "Broad BitNet chat quality or performance is proven.",
+  "Broad BitNet performance is proven.",
+]
