@@ -146,6 +146,25 @@ mod proof_summary_tests {
             Some("requested backend intel-arc-a770-opencl executed on cpu")
         );
     }
+
+    #[test]
+    fn run_command_accepts_strict_backend_flag() {
+        let cli = Cli::try_parse_from([
+            "bitnet",
+            "run",
+            "--model",
+            "model.gguf",
+            "--prompt",
+            "hello",
+            "--strict-backend",
+        ])
+        .expect("strict backend flag should parse");
+
+        match cli.command {
+            Some(Commands::Run { strict_backend, .. }) => assert!(strict_backend),
+            _ => panic!("expected run command"),
+        }
+    }
 }
 
 #[cfg(feature = "cli-bench")]
@@ -325,6 +344,10 @@ enum Commands {
         /// Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)
         #[arg(long, default_value_t = false)]
         strict_loader: bool,
+
+        /// Require the requested backend identity to match the actual execution backend
+        #[arg(long, default_value_t = false)]
+        strict_backend: bool,
 
         /// Output JSON results to file
         #[arg(long)]
@@ -640,6 +663,7 @@ async fn main() -> Result<()> {
             strict_mapping,
             strict_tokenizer,
             strict_loader,
+            strict_backend,
             json_out,
             proof_model_contract,
             proof_kernel_route,
@@ -673,6 +697,7 @@ async fn main() -> Result<()> {
                 strict_mapping,
                 strict_tokenizer,
                 strict_loader,
+                strict_backend,
                 json_out,
                 proof_model_contract,
                 proof_kernel_route,
@@ -1422,6 +1447,7 @@ async fn run_simple_generation(
     _strict_mapping: bool,
     strict_tokenizer: bool,
     strict_loader: bool,
+    strict_backend: bool,
     json_out: Option<std::path::PathBuf>,
     proof_model_contract: Option<std::path::PathBuf>,
     proof_kernel_route: Option<String>,
@@ -1490,6 +1516,16 @@ async fn run_simple_generation(
             std::env::set_var("BITNET_STRICT_MODE", "1");
         }
         debug!("Strict loader enabled (BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)");
+    }
+
+    let simple_execution_backend = "cpu";
+    let initial_backend_fallback =
+        backend_fallback_proof(&requested_backend_label, simple_execution_backend);
+    if strict_backend && initial_backend_fallback.used {
+        let reason = initial_backend_fallback
+            .reason
+            .unwrap_or_else(|| "requested backend does not match execution backend".to_string());
+        anyhow::bail!("strict backend check failed: {reason}");
     }
 
     // Override temperature if greedy mode
@@ -2035,7 +2071,7 @@ async fn run_simple_generation(
         });
 
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
-        let execution_backend = "cpu";
+        let execution_backend = simple_execution_backend;
         let requested_backend = requested_backend_label.as_str();
         let backend_fallback = backend_fallback_proof(requested_backend, execution_backend);
         let fallback_used =
@@ -2085,7 +2121,7 @@ async fn run_simple_generation(
                 "backend_fallback_reason": backend_fallback.reason,
                 "loader_fallback_used": loader_fallback_used,
                 "tokenizer_fallback_used": tokenizer_fallback_used,
-                "strict_backend": !allow_mock,
+                "strict_backend": strict_backend,
                 "claim_level": "diagnostic_cli_run",
                 "model_contract": proof_model_contract_path,
                 "model_contract_declared": proof_model_contract.is_some(),

@@ -760,6 +760,7 @@ fn build_cli_command(
         "--deterministic".to_string(),
         "--strict-tokenizer".to_string(),
         "--strict-loader".to_string(),
+        "--strict-backend".to_string(),
         "--prompt-template".to_string(),
         template_name.to_string(),
         "--json-out".to_string(),
@@ -1445,6 +1446,7 @@ mod tests {
         );
         assert!(command.windows(2).any(|args| args == ["--device", "intel-arc-a770-opencl"]));
         assert!(command.windows(2).any(|args| args == ["--features", "cpu,opencl"]));
+        assert!(command.iter().any(|arg| arg == "--strict-backend"));
         assert!(command.iter().any(|arg| arg == "--proof-model-contract"));
         assert!(command.iter().any(|arg| arg == "--proof-kernel-route"));
         assert!(command.iter().any(|arg| arg == "a770.bitnet.i2s.qk256"));
