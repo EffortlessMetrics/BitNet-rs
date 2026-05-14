@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-local-answer`
 
-Status: active
+Status: complete
 
 ## Objective
 
