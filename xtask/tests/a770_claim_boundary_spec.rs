@@ -4,15 +4,19 @@
 //! rails land PR by PR. They intentionally check only documentation/source
 //! policy, not runtime receipts.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn repo_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask crate should live under the workspace root")
+        .to_path_buf()
 }
 
 fn read_repo_file(path: &str) -> String {
     let full_path = repo_root().join(path);
-    std::fs::read_to_string(&full_path).unwrap_or_default()
+    std::fs::read_to_string(&full_path)
+        .unwrap_or_else(|err| panic!("failed to read {}: {}", full_path.display(), err))
 }
 
 fn assert_contains(contents: &str, needle: &str, context: &str) {
@@ -21,7 +25,7 @@ fn assert_contains(contents: &str, needle: &str, context: &str) {
 
 fn assert_file_exists(path: &str) {
     let full_path = repo_root().join(path);
-    assert!(full_path.exists(), "missing required file {}", full_path.display());
+    assert!(Path::new(&full_path).exists(), "missing required file {}", full_path.display());
 }
 
 #[test]
@@ -38,8 +42,16 @@ fn a770_claim_boundary_docs_link_to_the_spec() {
     let validation = read_repo_file("docs/hardware/intel-arc-a770-validation.md");
     let index = read_repo_file("docs/specs/INDEX.md");
 
-    assert_contains(&roadmap, "docs/specs/a770-bitnet-claim-boundary.md", "A770 roadmap");
-    assert_contains(&roadmap, "plans/a770-bitnet-claim-boundary-implementation.md", "A770 roadmap");
+    assert_contains(
+        &roadmap,
+        "docs/specs/a770-bitnet-claim-boundary.md",
+        "A770 roadmap",
+    );
+    assert_contains(
+        &roadmap,
+        "plans/a770-bitnet-claim-boundary-implementation.md",
+        "A770 roadmap",
+    );
     assert_contains(
         &validation,
         "docs/specs/a770-bitnet-claim-boundary.md",
@@ -108,8 +120,16 @@ fn a770_claim_boundary_keeps_selected_attention_separate() {
         "Selected attention is a separate research lane",
         "A770 claim-boundary spec",
     );
-    assert_contains(&spec, "It is not promoted by trusted", "A770 claim-boundary spec");
-    assert_contains(&roadmap, "Selected attention, resident KV", "A770 roadmap");
+    assert_contains(
+        &spec,
+        "It is not promoted by trusted",
+        "A770 claim-boundary spec",
+    );
+    assert_contains(
+        &roadmap,
+        "Selected attention, resident KV",
+        "A770 roadmap",
+    );
 }
 
 #[test]
