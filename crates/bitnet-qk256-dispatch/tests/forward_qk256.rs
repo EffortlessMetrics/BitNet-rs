@@ -1,4 +1,4 @@
-use bitnet_qk256_dispatch::forward_qk256;
+use bitnet_qk256_dispatch::{forward_qk256, qk256_dispatch_status};
 use candle_core::{Device, Tensor};
 
 #[test]
@@ -39,4 +39,23 @@ fn forward_qk256_rejects_dimension_mismatch() {
 
     let err = forward_qk256(&input, &qk, "layers.1.attention.k_proj.weight.qk256_qs").unwrap_err();
     assert!(err.to_string().contains("dimension mismatch"));
+}
+
+#[test]
+fn qk256_dispatch_status_keeps_opencl_non_claiming() {
+    let status = qk256_dispatch_status();
+
+    assert_eq!(status.compiled_opencl, cfg!(feature = "opencl"));
+    assert_eq!(status.compiled_oneapi, cfg!(feature = "oneapi"));
+    assert_eq!(status.runtime_backend, "cpu_qk256_reference");
+    assert!(!status.accelerator_claimable);
+    assert!(status.not_claims.contains(&"a770_qk256_opencl_execution"));
+
+    if cfg!(feature = "oneapi") {
+        assert_eq!(status.blocker, Some("oneapi_qk256_runtime_not_wired"));
+    } else if cfg!(feature = "opencl") {
+        assert_eq!(status.blocker, Some("opencl_qk256_runtime_not_wired"));
+    } else {
+        assert_eq!(status.blocker, Some("cpu_qk256_dispatch_only"));
+    }
 }

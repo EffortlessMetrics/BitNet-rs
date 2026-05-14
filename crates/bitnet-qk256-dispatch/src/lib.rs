@@ -2,6 +2,46 @@ use bitnet_common::{BitNetError, Result};
 use bitnet_qk256_layout_core::{parse_input_shape, parse_qk256_layout, validate_input_cols};
 use candle_core::Tensor;
 
+const NOT_CLAIMED_OPENCL_QK256: &[&str] =
+    &["a770_qk256_opencl_execution", "a770_qk256_opencl_performance", "a770_full_device_residency"];
+
+/// Describes which QK256 runtime is currently used by this dispatch crate.
+///
+/// OpenCL/oneAPI features currently compile the route dependencies only. The actual
+/// GGML QK256 no-scale GEMV remains the CPU implementation until a format-correct
+/// OpenCL QK256 runtime is wired here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Qk256DispatchStatus {
+    pub compiled_opencl: bool,
+    pub compiled_oneapi: bool,
+    pub runtime_backend: &'static str,
+    pub accelerator_claimable: bool,
+    pub blocker: Option<&'static str>,
+    pub not_claims: &'static [&'static str],
+}
+
+/// Returns the non-promoting QK256 dispatch status for proof receipts.
+pub fn qk256_dispatch_status() -> Qk256DispatchStatus {
+    let compiled_opencl = cfg!(feature = "opencl");
+    let compiled_oneapi = cfg!(feature = "oneapi");
+    let blocker = if compiled_oneapi {
+        Some("oneapi_qk256_runtime_not_wired")
+    } else if compiled_opencl {
+        Some("opencl_qk256_runtime_not_wired")
+    } else {
+        Some("cpu_qk256_dispatch_only")
+    };
+
+    Qk256DispatchStatus {
+        compiled_opencl,
+        compiled_oneapi,
+        runtime_backend: "cpu_qk256_reference",
+        accelerator_claimable: false,
+        blocker,
+        not_claims: NOT_CLAIMED_OPENCL_QK256,
+    }
+}
+
 /// Runs I2_S QK256 forward pass for input tensor shapes [B, T, H] or [B, H].
 pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
     use bitnet_quantization::i2s_qk256::gemv_qk256;
