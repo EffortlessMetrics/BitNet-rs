@@ -1,0 +1,21 @@
+timestamp = "2026-05-14T10:25:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-002"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ASK-005-operating-audit"
+summary = "Started LNL258V-OP-002 to refresh Lunar Lake operator readiness around direct BitNet reference evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The slice indexes the already-merged direct Microsoft BitNet.cpp generated-token/logit boundary, direct first-token divergence classifier, applied-thread I2_S microbench, and embedding quantization boundary in the operator route policy.",
+  "Dense Qwen CPU remains the default user-facing ask route; BitNet remains a CPU reference route.",
+  "No new inference, broad answer quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, QK256 semantic change, or Q6_K-active claim is made.",
+]
