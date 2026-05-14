@@ -1,0 +1,94 @@
+{
+  "artifact_kind": "apple_m3_air_bitnet_artifact_identity",
+  "schema_version": "1.0.0",
+  "timestamp": "2026-05-14T21:44:22Z",
+  "work_item": "M3MBA-005A",
+  "machine_id": "apple-m3-macbook-air",
+  "artifact_path": "ci/hardware/apple-silicon-macbook/2026-05-12/m3-air/microsoft-2b-i2s-identity.json",
+  "source": {
+    "source_kind": "huggingface",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "url": "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf",
+    "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+    "last_modified": "2025-12-17T18:12:47.000Z",
+    "download_url": "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/a1f2f1c765812aa8af3f6eda4a313707064bba15/ggml-model-i2_s.gguf",
+    "header_linked_etag": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "header_xet_hash": "8fc299b2c197558dd063213df3475356adda52923314428388d7f7f66fcdd5cc"
+  },
+  "model": {
+    "id": "microsoft_bitnet_b158_2b_4t_i2s",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "architecture": "bitnet-b1.58",
+    "quantization": "i2_s",
+    "bytes": 1187801280,
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "local_path": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf"
+  },
+  "download": {
+    "tool": "curl",
+    "command": "curl -L --fail --continue-at - --output ~/Library/Caches/bitnet-rs/models/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/a1f2f1c765812aa8af3f6eda4a313707064bba15/ggml-model-i2_s.gguf",
+    "verified_with": "shasum -a 256 ~/Library/Caches/bitnet-rs/models/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf"
+  },
+  "model_cache": {
+    "cache_root": "/Users/sarahisaacs/Library/Caches/bitnet-rs/models",
+    "model_binaries_committed": false,
+    "cleanup_required": false,
+    "retention_status": "retained_for_M3MBA-005B_and_M3MBA-005C",
+    "cache_size_after": "1.7G",
+    "candidate_cache_size_after": "1.1G"
+  },
+  "storage": {
+    "volume": "/System/Volumes/Data",
+    "available_kib_before": 60456036,
+    "available_kib_after": 59294360,
+    "available_delta_kib": -1161676,
+    "free_space_floor_kib": 8388608,
+    "preferred_free_floor_kib": 26214400,
+    "large_artifact_sweep_allowed": true,
+    "policy": "ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml"
+  },
+  "power": {
+    "source": "ac",
+    "battery_percent": 100,
+    "charged": true
+  },
+  "thermal": {
+    "state": "no_warning_recorded",
+    "source": "pmset -g therm",
+    "thermal_warning_recorded": false,
+    "performance_warning_recorded": false,
+    "cpu_power_warning_recorded": false
+  },
+  "answer_gate": {
+    "gate": "docs/model-artifacts/ANSWER_ARTIFACT_GATE.md",
+    "artifact_manifest": "ci/model-artifacts/artifact-manifest.toml",
+    "tokenizer_authority": "ci/model-artifacts/tokenizer-authority.toml",
+    "decision": "identity_only_not_answer_accepted",
+    "answer_readiness_claim": false,
+    "reference_output_run": false,
+    "tokenizer_authority_run": false
+  },
+  "compatibility": {
+    "ledger": "ci/model-artifacts/model-kernel-compatibility.toml",
+    "candidate_matrix": "ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml",
+    "artifact_manifest": "ci/model-artifacts/artifact-manifest.toml",
+    "route": {
+      "arch": "arm",
+      "kernel": "i2_s",
+      "status": "supported"
+    }
+  },
+  "claim_boundary": {
+    "artifact_identity_recorded": true,
+    "artifact_accepted": false,
+    "bitnet_local_answer_claimed": false,
+    "m4_mac_mini_claimed": false,
+    "apple_metal_inference_claimed": false,
+    "mpsgraph_model_inference_claimed": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false,
+    "model_binary_committed": false
+  }
+}
