@@ -1,0 +1,14 @@
+timestamp = "2026-05-14T04:33:31Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-SMOKE-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started a committed runtime receipt item for `bitnet mac smoke --model-family bitnet`.",
+  "The receipt must prove the accepted Microsoft I2_S GGUF and accepted external tokenizer under strict Apple M4 CPU/NEON routing.",
+  "The expected proof fields are fallback_used=false, generated text, generated token IDs, timing fields, receipt validation, and the documented operator command.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and broad performance claims remain disabled.",
+]

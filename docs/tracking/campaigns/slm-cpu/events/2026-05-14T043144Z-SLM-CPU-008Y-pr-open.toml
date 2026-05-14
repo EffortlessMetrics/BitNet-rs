@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T04:31:44Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-008Y"
+event = "pr_open"
+from = "ready"
+to = "pr_open"
+actor = "codex"
+pr = 4696
+branch = "codex/slm-cpu-008y-blocked"
+head_sha = "124069349707b32ddd9887ef5ac8d979a230b7f4"
+summary = "Opened #4696 to record that SLM-CPU-008Y cannot run until the real Qwen3 reference checkpoint artifact is available."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4696",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-07/qwen3-reference-checkpoint-compare.json",
+]
+
+notes = [
+  "The tracker command for SLM-CPU-008Y requires qwen3-reference-checkpoint-compare.json.",
+  "That artifact is absent on origin/main, so the checkpoint-aware reference comparison cannot satisfy acceptance yet.",
+  "No first-token parity, answer-quality, corpus, warm-session, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, Q4/Q5, or BitNet QK256 claim is made.",
+]
