@@ -45,9 +45,9 @@ mod crossval;
 pub mod ffi;
 mod gates;
 mod grid_check;
+mod model_contract;
 #[allow(dead_code)]
 mod health_check;
-mod model_contract;
 mod model_coverage;
 #[allow(dead_code)]
 mod model_info;
