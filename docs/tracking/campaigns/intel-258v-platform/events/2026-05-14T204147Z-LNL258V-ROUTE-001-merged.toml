@@ -1,0 +1,23 @@
+timestamp = "2026-05-14T20:41:47Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4771
+branch = "codex/lunar-lake/LNL258V-ROUTE-001-promotion-ledger"
+head_sha = "8b4aeaee6130f380f10c1a00a9cf406da84e58d4"
+merge_sha = "6685aa34384142598cef140a1ea715ca20b2c188"
+summary = "Marked LNL258V-ROUTE-001 merged after the policy-only Lunar Lake route promotion ledger landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4771",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+]
+
+notes = [
+  "Dense Qwen CPU is promoted for regression_tiny, ask_short, and ask_normal in the policy ledger.",
+  "OpenVINO GPU and NPU dense SLM routes remain candidates until benchmark-qualified speedup or power evidence plus profile regression evidence exists.",
+  "No new inference, speedup, acceleration, full accelerator BitNet inference, or QK256 accelerator decode claim is made.",
+]
