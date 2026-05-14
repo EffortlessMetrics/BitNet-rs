@@ -1928,6 +1928,7 @@ dependencies = [
  "bitnet-quantization",
  "bitnet-rope",
  "bitnet-test-support",
+ "bitnet-trace",
  "candle-core",
  "candle-nn",
  "insta",

@@ -1,156 +1,271 @@
-//! Trace diff wrapper for cross-validation debugging.
+//! Rust-native trace diffing for activation diagnostics.
 //!
-//! This module provides a Rust wrapper for the Python `scripts/trace_diff.py`
-//! script, which performs Blake3 hash comparison of trace files captured during
-//! Rust vs C++ cross-validation runs.
-//!
-//! # Usage
-//!
-//! ```bash
-//! # Capture traces (example)
-//! BITNET_TRACE_DIR=/tmp/rs cargo run -p bitnet-cli --features cpu,trace -- \
-//!   run --model model.gguf --tokenizer tok.json --prompt "Test" --max-tokens 4
-//!
-//! # (capture C++ trace to /tmp/cpp using C++ inference)
-//!
-//! # Compare traces
-//! cargo run -p xtask -- trace-diff /tmp/rs /tmp/cpp
-//! ```
-//!
-//! # Output
-//!
-//! The tool prints:
-//! - First divergence point: `(seq, layer, stage)` where traces differ
-//! - "All tracepoints match" if traces are identical
-//! - Error diagnostics if trace files are missing or Python is unavailable
+//! Trace files are JSON records produced by `bitnet-trace` when
+//! `BITNET_TRACE_DIR` is set. The diff is diagnostic-only: it never updates
+//! proof manifests or promotes backend/residency claims.
 
 use anyhow::{Context, Result, bail};
-use std::{fs, path::Path, process::Command};
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::Path,
+};
 
-/// Find available Python interpreter
-///
-/// Tries interpreters in order: python3, python, py
-fn find_python() -> Result<String> {
-    for interp in ["python3", "python", "py"] {
-        if Command::new(interp)
-            .arg("--version")
-            .output()
-            .ok()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
-        {
-            return Ok(interp.to_string());
+#[derive(Debug, Clone, Deserialize)]
+struct TraceRecord {
+    name: String,
+    shape: Vec<usize>,
+    dtype: String,
+    blake3: String,
+    rms: f64,
+    num_elements: usize,
+    seq: Option<usize>,
+    layer: Option<isize>,
+    stage: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TraceDiffReport {
+    diagnostic: &'static str,
+    diagnostic_only: bool,
+    promotion_allowed: bool,
+    proof_receipts_written: bool,
+    manifest_updated: bool,
+    left_dir: String,
+    right_dir: String,
+    left_record_count: usize,
+    right_record_count: usize,
+    comparable_record_count: usize,
+    matched_record_count: usize,
+    divergent_record_count: usize,
+    missing_left_count: usize,
+    missing_right_count: usize,
+    first_divergence: Option<TraceDivergence>,
+    not_claims: Vec<&'static str>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TraceDivergence {
+    key: String,
+    kind: String,
+    left: Option<TraceSummary>,
+    right: Option<TraceSummary>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TraceSummary {
+    name: String,
+    shape: Vec<usize>,
+    dtype: String,
+    blake3: String,
+    rms: f64,
+    num_elements: usize,
+    seq: Option<usize>,
+    layer: Option<isize>,
+    stage: Option<String>,
+}
+
+impl From<&TraceRecord> for TraceSummary {
+    fn from(record: &TraceRecord) -> Self {
+        Self {
+            name: record.name.clone(),
+            shape: record.shape.clone(),
+            dtype: record.dtype.clone(),
+            blake3: record.blake3.clone(),
+            rms: record.rms,
+            num_elements: record.num_elements,
+            seq: record.seq,
+            layer: record.layer,
+            stage: record.stage.clone(),
         }
     }
-    bail!(
-        "Python interpreter not found (tried python3, python, py).\n\
-         Install Python 3.7+ to use trace comparison."
+}
+
+fn critical_not_claims() -> Vec<&'static str> {
+    vec![
+        "selected_attention_residency",
+        "resident_kv_decode",
+        "attention_scores_residency",
+        "softmax_residency",
+        "attention_value_mix_residency",
+        "full_support_op_residency",
+        "full_device_residency",
+        "completion",
+    ]
+}
+
+fn trace_key(record: &TraceRecord) -> String {
+    format!(
+        "seq={}|layer={}|stage={}|name={}",
+        record.seq.map(|value| value.to_string()).unwrap_or_else(|| "none".to_string()),
+        record.layer.map(|value| value.to_string()).unwrap_or_else(|| "none".to_string()),
+        record.stage.as_deref().unwrap_or("none"),
+        record.name
     )
 }
 
-/// Check if a directory has trace files
-fn has_trace_files(dir: &Path) -> bool {
-    fs::read_dir(dir).ok().map(|entries| entries.count() > 0).unwrap_or(false)
+fn read_trace_dir(dir: &Path) -> Result<BTreeMap<String, TraceRecord>> {
+    if !dir.exists() {
+        bail!("trace directory not found: {}", dir.display());
+    }
+    if !dir.is_dir() {
+        bail!("trace path is not a directory: {}", dir.display());
+    }
+
+    let mut records = BTreeMap::new();
+    for entry in fs::read_dir(dir).with_context(|| format!("failed to read {}", dir.display()))? {
+        let entry = entry.with_context(|| format!("failed to read entry in {}", dir.display()))?;
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        if path.extension().and_then(|ext| ext.to_str()) != Some("trace") {
+            continue;
+        }
+
+        let json = fs::read_to_string(&path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        let record: TraceRecord = serde_json::from_str(&json)
+            .with_context(|| format!("failed to parse trace JSON {}", path.display()))?;
+        let key = trace_key(&record);
+        if records.insert(key.clone(), record).is_some() {
+            bail!("duplicate trace key {key} in {}", dir.display());
+        }
+    }
+
+    if records.is_empty() {
+        bail!("trace directory is empty: {}", dir.display());
+    }
+
+    Ok(records)
 }
 
-/// Compare Rust vs C++ traces and report first divergence
-///
-/// # Arguments
-///
-/// - `rs_dir`: Path to directory containing Rust trace files
-/// - `cpp_dir`: Path to directory containing C++ trace files
-///
-/// # Workflow
-///
-/// 1. Validates both trace directories exist
-/// 2. Checks `scripts/trace_diff.py` is available in repo
-/// 3. Executes Python script via `python3` subprocess
-/// 4. Propagates exit code from Python script
-///
-/// # Returns
-///
-/// - `Ok(())` if comparison succeeds (traces match or divergence found)
-/// - `Err(_)` if:
-///   - Trace directories don't exist
-///   - `trace_diff.py` script not found
-///   - `python3` not available
-///   - Script execution fails
-pub fn run(rs_dir: &Path, cpp_dir: &Path) -> Result<()> {
-    // 1) Validate trace directories exist
-    if !rs_dir.exists() {
-        eprintln!("❌ Rust trace directory not found: {}", rs_dir.display());
-        eprintln!();
-        eprintln!("How to capture Rust traces:");
-        eprintln!(
-            "  BITNET_TRACE_DIR=/tmp/rs RUST_LOG=warn BITNET_DETERMINISTIC=1 BITNET_SEED=42 \\"
-        );
-        eprintln!("    cargo run -p bitnet-cli --features cpu,trace -- run \\");
-        eprintln!("    --model <model.gguf> --tokenizer <tokenizer.json> \\");
-        eprintln!("    --prompt \"What is 2+2?\" --max-tokens 4 --greedy");
-        anyhow::bail!("Rust trace directory not found: {}", rs_dir.display());
+fn compare_trace_dirs(left_dir: &Path, right_dir: &Path) -> Result<TraceDiffReport> {
+    let left = read_trace_dir(left_dir)?;
+    let right = read_trace_dir(right_dir)?;
+    let keys = left.keys().chain(right.keys()).cloned().collect::<BTreeSet<_>>();
+
+    let mut comparable_record_count = 0usize;
+    let mut matched_record_count = 0usize;
+    let mut divergent_record_count = 0usize;
+    let mut missing_left_count = 0usize;
+    let mut missing_right_count = 0usize;
+    let mut first_divergence = None;
+
+    for key in keys {
+        match (left.get(&key), right.get(&key)) {
+            (Some(left_record), Some(right_record)) => {
+                comparable_record_count += 1;
+                let matches = left_record.shape == right_record.shape
+                    && left_record.dtype == right_record.dtype
+                    && left_record.blake3 == right_record.blake3;
+                if matches {
+                    matched_record_count += 1;
+                } else {
+                    divergent_record_count += 1;
+                    if first_divergence.is_none() {
+                        let kind = if left_record.shape != right_record.shape {
+                            "shape_mismatch"
+                        } else if left_record.dtype != right_record.dtype {
+                            "dtype_mismatch"
+                        } else {
+                            "hash_mismatch"
+                        };
+                        first_divergence = Some(TraceDivergence {
+                            key,
+                            kind: kind.to_string(),
+                            left: Some(left_record.into()),
+                            right: Some(right_record.into()),
+                        });
+                    }
+                }
+            }
+            (None, Some(right_record)) => {
+                missing_left_count += 1;
+                if first_divergence.is_none() {
+                    first_divergence = Some(TraceDivergence {
+                        key,
+                        kind: "missing_left".to_string(),
+                        left: None,
+                        right: Some(right_record.into()),
+                    });
+                }
+            }
+            (Some(left_record), None) => {
+                missing_right_count += 1;
+                if first_divergence.is_none() {
+                    first_divergence = Some(TraceDivergence {
+                        key,
+                        kind: "missing_right".to_string(),
+                        left: Some(left_record.into()),
+                        right: None,
+                    });
+                }
+            }
+            (None, None) => unreachable!("trace key came from at least one input"),
+        }
     }
 
-    if !cpp_dir.exists() {
-        eprintln!("❌ C++ trace directory not found: {}", cpp_dir.display());
-        eprintln!();
-        eprintln!("How to capture C++ traces:");
-        eprintln!("  See docs/howto/cpp-setup.md for C++ instrumentation and trace capture");
-        anyhow::bail!("C++ trace directory not found: {}", cpp_dir.display());
+    Ok(TraceDiffReport {
+        diagnostic: "bitnet_trace_diff",
+        diagnostic_only: true,
+        promotion_allowed: false,
+        proof_receipts_written: false,
+        manifest_updated: false,
+        left_dir: left_dir.display().to_string(),
+        right_dir: right_dir.display().to_string(),
+        left_record_count: left.len(),
+        right_record_count: right.len(),
+        comparable_record_count,
+        matched_record_count,
+        divergent_record_count,
+        missing_left_count,
+        missing_right_count,
+        first_divergence,
+        not_claims: critical_not_claims(),
+    })
+}
+
+fn print_human(report: &TraceDiffReport) {
+    println!("trace diff: diagnostic_only=true promotion_allowed=false");
+    println!("left:  {} records ({})", report.left_record_count, report.left_dir);
+    println!("right: {} records ({})", report.right_record_count, report.right_dir);
+    println!(
+        "matched={} divergent={} missing_left={} missing_right={}",
+        report.matched_record_count,
+        report.divergent_record_count,
+        report.missing_left_count,
+        report.missing_right_count
+    );
+
+    if let Some(divergence) = &report.first_divergence {
+        println!("first_divergence: {} ({})", divergence.key, divergence.kind);
+        if let (Some(left), Some(right)) = (&divergence.left, &divergence.right) {
+            println!(
+                "left:  shape={:?} dtype={} rms={:.8} blake3={}",
+                left.shape, left.dtype, left.rms, left.blake3
+            );
+            println!(
+                "right: shape={:?} dtype={} rms={:.8} blake3={}",
+                right.shape, right.dtype, right.rms, right.blake3
+            );
+        }
+    } else {
+        println!("all tracepoints match");
     }
+}
 
-    // 2) Check if directories are empty
-    if !has_trace_files(rs_dir) {
-        eprintln!("❌ Rust trace directory is empty: {}", rs_dir.display());
-        eprintln!();
-        eprintln!("How to capture Rust traces:");
-        eprintln!(
-            "  BITNET_TRACE_DIR=/tmp/rs RUST_LOG=warn BITNET_DETERMINISTIC=1 BITNET_SEED=42 \\"
-        );
-        eprintln!("    cargo run -p bitnet-cli --features cpu,trace -- run \\");
-        eprintln!("    --model <model.gguf> --tokenizer <tokenizer.json> \\");
-        eprintln!("    --prompt \"What is 2+2?\" --max-tokens 4 --greedy");
-        anyhow::bail!("Rust trace directory is empty: {}", rs_dir.display());
+/// Compare two trace directories and report the first divergence.
+pub fn run(left_dir: &Path, right_dir: &Path, format: &str) -> Result<()> {
+    let report = compare_trace_dirs(left_dir, right_dir)?;
+    match format {
+        "json" => {
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        "human" => print_human(&report),
+        other => bail!("unsupported trace-diff format: {other}"),
     }
-
-    if !has_trace_files(cpp_dir) {
-        eprintln!("❌ C++ trace directory is empty: {}", cpp_dir.display());
-        eprintln!();
-        eprintln!("How to capture C++ traces:");
-        eprintln!("  See docs/howto/cpp-setup.md for C++ instrumentation and trace capture");
-        anyhow::bail!("C++ trace directory is empty: {}", cpp_dir.display());
-    }
-
-    // 3) Verify trace_diff.py script exists
-    let script = Path::new("scripts/trace_diff.py");
-    if !script.exists() {
-        bail!(
-            "scripts/trace_diff.py not found at {}\n\
-             Are you running from the repository root?",
-            script.display()
-        );
-    }
-
-    // 4) Find Python interpreter
-    let python = find_python()?;
-
-    // 5) Execute Python script
-    eprintln!("[bitnet] Comparing traces:");
-    eprintln!("  Rust:  {}", rs_dir.display());
-    eprintln!("  C++:   {}", cpp_dir.display());
-    eprintln!();
-
-    let status = Command::new(&python)
-        .arg(script)
-        .arg(rs_dir)
-        .arg(cpp_dir)
-        .status()
-        .context(format!("failed to spawn {} for trace_diff.py", python))?;
-
-    // 6) Propagate exit code
-    if !status.success() {
-        bail!("trace_diff.py failed with exit code: {:?}", status.code().unwrap_or(-1));
-    }
-
     Ok(())
 }
 
@@ -158,14 +273,61 @@ pub fn run(rs_dir: &Path, cpp_dir: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use tempfile::tempdir;
+
+    fn write_trace(dir: &Path, file: &str, name: &str, hash: &str, rms: f64) {
+        let path = dir.join(file);
+        let record = serde_json::json!({
+            "name": name,
+            "shape": [1, 2],
+            "dtype": "F32",
+            "blake3": hash,
+            "rms": rms,
+            "num_elements": 2,
+            "seq": 0,
+            "layer": 0,
+            "stage": name
+        });
+        fs::write(path, serde_json::to_string_pretty(&record).unwrap()).unwrap();
+    }
 
     #[test]
-    fn test_run_missing_dirs() {
-        let rs_dir = PathBuf::from("/nonexistent/rs");
-        let cpp_dir = PathBuf::from("/nonexistent/cpp");
+    fn missing_trace_dir_errors() {
+        let left = PathBuf::from("/nonexistent/left");
+        let right = PathBuf::from("/nonexistent/right");
 
-        let result = run(&rs_dir, &cpp_dir);
+        let result = compare_trace_dirs(&left, &right);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("trace directory not found"));
+    }
+
+    #[test]
+    fn matching_trace_dirs_are_diagnostic_not_promoting() {
+        let left = tempdir().unwrap();
+        let right = tempdir().unwrap();
+        write_trace(left.path(), "a.trace", "attention_q", "abc", 1.0);
+        write_trace(right.path(), "a.trace", "attention_q", "abc", 1.0);
+
+        let report = compare_trace_dirs(left.path(), right.path()).unwrap();
+        assert!(report.diagnostic_only);
+        assert!(!report.promotion_allowed);
+        assert_eq!(report.matched_record_count, 1);
+        assert_eq!(report.divergent_record_count, 0);
+        assert!(report.first_divergence.is_none());
+        assert!(report.not_claims.contains(&"selected_attention_residency"));
+    }
+
+    #[test]
+    fn hash_mismatch_reports_first_divergence() {
+        let left = tempdir().unwrap();
+        let right = tempdir().unwrap();
+        write_trace(left.path(), "a.trace", "attention_q", "abc", 1.0);
+        write_trace(right.path(), "a.trace", "attention_q", "def", 1.25);
+
+        let report = compare_trace_dirs(left.path(), right.path()).unwrap();
+        assert_eq!(report.divergent_record_count, 1);
+        let divergence = report.first_divergence.unwrap();
+        assert_eq!(divergence.kind, "hash_mismatch");
+        assert!(divergence.key.contains("attention_q"));
     }
 }

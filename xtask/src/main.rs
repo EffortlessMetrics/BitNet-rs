@@ -366,19 +366,16 @@ enum Cmd {
         emit: String,
     },
 
-    /// Compare Rust vs C++ traces and report first divergence
-    ///
-    /// Wrapper for scripts/trace_diff.py that performs Blake3 hash comparison
-    /// of trace files captured during cross-validation runs.
+    /// Compare two bitnet-trace directories and report first divergence.
     ///
     /// Usage:
-    ///   cargo run -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
+    ///   cargo run -p xtask -- trace-diff /tmp/cpu_traces /tmp/a770_traces
     #[command(name = "trace-diff")]
     TraceDiff {
-        /// Rust trace directory
-        rs_dir: PathBuf,
-        /// C++ trace directory
-        cpp_dir: PathBuf,
+        /// Left trace directory
+        left_dir: PathBuf,
+        /// Right trace directory
+        right_dir: PathBuf,
     },
 
     /// Check C++ backend availability for cross-validation
@@ -1494,8 +1491,8 @@ fn real_main() -> Result<()> {
             cpp_setup_auto::run(emit_format)?;
             Ok(())
         }
-        Cmd::TraceDiff { rs_dir, cpp_dir } => {
-            trace_diff::run(&rs_dir, &cpp_dir)?;
+        Cmd::TraceDiff { left_dir, right_dir } => {
+            trace_diff::run(&left_dir, &right_dir, "human")?;
             Ok(())
         }
         #[cfg(any(feature = "crossval", feature = "crossval-all"))]

@@ -5,6 +5,25 @@ use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rop
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
 
+#[cfg(feature = "trace")]
+fn trace_tensor_record(
+    name: &str,
+    tensor: &Tensor,
+    layer: Option<isize>,
+    stage: &str,
+) -> Result<()> {
+    bitnet_trace::dump_trace(name, tensor, Some(0), layer, Some(stage)).map_err(BitNetError::from)
+}
+
+#[cfg(feature = "trace")]
+fn trace_layer0_tensor(layer_idx: usize, stage: &str, tensor: &Tensor) -> Result<()> {
+    if layer_idx == 0 {
+        let trace_name = format!("t0/blk0/{stage}");
+        trace_tensor_record(&trace_name, tensor, Some(0), stage)?;
+    }
+    Ok(())
+}
+
 /// Debug helper for tensor statistics (only runs if DEBUG_ATTN env var is set)
 fn dbg_stats(tag: &str, t: &Tensor) -> candle_core::Result<()> {
     if std::env::var("DEBUG_ATTN").is_ok() {
@@ -366,6 +385,13 @@ impl MultiHeadAttention {
         let k_proj_out = self.apply_linear(x, &self.k_proj, "k_proj", raw_tensors)?;
         let v_proj_out = self.apply_linear(x, &self.v_proj, "v_proj", raw_tensors)?;
 
+        #[cfg(feature = "trace")]
+        {
+            trace_layer0_tensor(self.layer_idx, "attention_q", &q_proj_out)?;
+            trace_layer0_tensor(self.layer_idx, "attention_k", &k_proj_out)?;
+            trace_layer0_tensor(self.layer_idx, "attention_v", &v_proj_out)?;
+        }
+
         // Probe A3: Q/K/V projection RMS (layer 0, step 0 only)
         if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.layer_idx == 0 {
             static PROJ_LOGGED: std::sync::Once = std::sync::Once::new();
@@ -607,10 +633,12 @@ impl MultiHeadAttention {
             eprintln!("[dbg] attn row-sums (first 4): {:?}", take);
         }
 
-        let attn_output = attn_weights.matmul(&v_expanded)?;
+        let attn_value_mix = attn_weights.matmul(&v_expanded)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.layer_idx, "attention_value_mix", &attn_value_mix)?;
 
         // Reshape and project output
-        let attn_output = attn_output.transpose(1, 2)?.reshape(&[
+        let attn_output = attn_value_mix.transpose(1, 2)?.reshape(&[
             batch_size,
             seq_len,
             self.n_heads * self.head_dim,
@@ -619,8 +647,13 @@ impl MultiHeadAttention {
             Some(norm) => norm.forward(&attn_output)?,
             None => attn_output,
         };
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.layer_idx, "post_attention_subnorm", &attn_output)?;
 
-        self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)
+        let output = self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.layer_idx, "post_o_proj", &output)?;
+        Ok(output)
     }
 
     /// Apply linear transformation with QK256 dispatch
@@ -742,6 +775,8 @@ impl FeedForward {
         raw_tensors: &std::collections::HashMap<String, Tensor>,
     ) -> Result<Tensor> {
         let gate = self.apply_linear(x, &self.gate_proj, "gate_proj", raw_tensors)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.layer_idx, "post_ffn_gate_proj", &gate)?;
 
         // MLP gating diagnostics (point 3 of user's plan)
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
@@ -751,6 +786,8 @@ impl FeedForward {
         }
 
         let gate = feed_forward_activation(self.activation_type, &gate)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.layer_idx, "post_ffn_gate_activation", &gate)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(activation_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -763,6 +800,8 @@ impl FeedForward {
         }
 
         let up = self.apply_linear(x, &self.up_proj, "up_proj", raw_tensors)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.layer_idx, "post_ffn_up_proj", &up)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(v_norm) = up.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -771,10 +810,15 @@ impl FeedForward {
         }
 
         let hidden = gate.mul(&up)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.layer_idx, "post_swiglu", &hidden)?;
+
         let hidden = match &self.sub_layernorm {
             Some(norm) => norm.forward(&hidden)?,
             None => hidden,
         };
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.layer_idx, "post_ffn_subnorm", &hidden)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(prod_norm) = hidden.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -787,6 +831,8 @@ impl FeedForward {
         }
 
         let output = self.apply_linear(&hidden, &self.down_proj, "down_proj", raw_tensors)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.layer_idx, "post_down_proj", &output)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(out_norm) = output.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -979,6 +1025,8 @@ impl TransformerBlock {
 
         let x = self.attention.forward(&x, kv_cache, raw_tensors)?;
         let x = (x + residual)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.attention.layer_idx, "post_attention_residual", &x)?;
 
         // Debug post-attention activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {
@@ -988,6 +1036,8 @@ impl TransformerBlock {
 
         // Pre-norm FFN
         let residual = &x;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.attention.layer_idx, "pre_ffn_norm", &x)?;
 
         // RMSNorm diagnostics (Layer 0 only) - FFN norm
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
@@ -1010,6 +1060,8 @@ impl TransformerBlock {
         }
 
         let x = self.ffn_norm.forward(&x)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.attention.layer_idx, "post_ffn_norm", &x)?;
 
         // Check norm output
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
@@ -1031,6 +1083,8 @@ impl TransformerBlock {
 
         let x = self.feed_forward.forward(&x, raw_tensors)?;
         let x = (x + residual)?;
+        #[cfg(feature = "trace")]
+        trace_layer0_tensor(self.attention.layer_idx, "post_layer", &x)?;
 
         // Debug post-FFN activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {
@@ -1514,6 +1568,8 @@ impl TransformerModel {
         }
 
         let normalized = self.norm.forward(&x)?;
+        #[cfg(feature = "trace")]
+        trace_tensor_record("t0/final_norm", &normalized, Some(-1), "final_norm")?;
         if std::env::var("DEBUG_ATTN").is_ok()
             && let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
