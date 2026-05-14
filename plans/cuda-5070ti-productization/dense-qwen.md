@@ -119,13 +119,21 @@ Remove the new receipt and demote any matrix/status row that depended on it.
 
 ## Work item: CUDA-DENSE-052
 
-Status: planned
+Status: blocked
 Campaign item: `CUDA-DENSE-052`
 Blocked by: CUDA-DENSE-051
 
 ### Goal
 
 Add deterministic 8 to 32 token strict CUDA short-decode proof.
+
+### Current Blocker
+
+The 2026-05-14 diagnostic run records fallback-free RTX 5070 Ti CUDA execution,
+CPU/CUDA generated-token equality, kernel stats, transfer stats, and
+`speedup_claim=false`, but the decoded text is not user-acceptable. Keep the
+receipt diagnostic until a fresh run satisfies the short-decode product
+acceptance criteria.
 
 ### Acceptance
 
@@ -140,7 +148,7 @@ Add deterministic 8 to 32 token strict CUDA short-decode proof.
 
 ```bash
 cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-answer-corpus <args>
-python -m json.tool ci/hardware/windows-9950x3d-rtx5070ti/<date>/dense-qwen25-q8-short-decode.json
+python -m json.tool ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-short-decode-diagnostic.json
 git diff --check
 ```
 

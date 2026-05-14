@@ -241,7 +241,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-PROD-009 | merged | Harden strict BitNet CUDA ask/chat preflight with `bitnet cuda doctor`, fail-closed strict backend/tokenizer checks, visible receipt paths, and `speedup_claim=false`. |
 | CUDA-PROD-010 | merged | Add a governed BitNet I2_S/QK256 CUDA product benchmark qualification receipt/report for five target profiles; report existing evidence through bench/receipts UX while keeping every speedup claim false. |
 | CUDA-DENSE-051 | merged | Refresh or add the dense Qwen2.5 Q8_0 one-token strict CUDA hardware proof with explicit dense, non-BitNet claim boundaries; merged in #4645. |
-| CUDA-DENSE-052 | proposed | Add dense Qwen2.5 Q8_0 short-decode strict CUDA proof after the one-token proof is current. |
+| CUDA-DENSE-052 | blocked | Diagnostic short-decode run proves fallback-free RTX 5070 Ti CUDA token parity, but decoded text is not user-acceptable, so product short-decode promotion remains blocked. |
 | CUDA-DENSE-053 | proposed | Add dense Qwen2.5 Q8_0 warm-session strict CUDA proof after short decode is current. |
 | CUDA-DENSE-054 | proposed | Add dense Qwen2.5 Q8_0 benchmark qualification after one-token, short-decode, and warm-session receipts are current. |
 | CUDA-MODEL-001 | proposed | Add the Qwen3 0.6B artifact contract as the first generalized dense model onboarding item. |

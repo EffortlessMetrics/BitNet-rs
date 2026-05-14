@@ -1,0 +1,19 @@
+timestamp = "2026-05-14T02:16:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-DENSE-052"
+event = "blocked"
+actor = "codex"
+previous_status = "proposed"
+new_status = "blocked"
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-14/dense-qwen25-q8-short-decode-diagnostic.json",
+  "docs/reports/CUDA_DENSE_052_SHORT_DECODE_BLOCKER.md",
+]
+
+notes = [
+  "A fresh diagnostic Qwen2.5 0.5B Q8_0 short-decode run selected nvidia-rtx-5070-ti-cuda, used route dense_regular_llm_cuda, and recorded fallback_used=false.",
+  "CPU and CUDA generated token IDs matched for the recorded 8-token greedy decode, with kernel, transfer, and timing evidence preserved.",
+  "The decoded output is not user-acceptable, so CUDA-DENSE-052 is blocked from product promotion and must not claim Qwen short-decode readiness.",
+  "The receipt remains diagnostic evidence only; it does not claim speedup, server readiness, general dense GGUF CUDA readiness, or BitNet packed I2_S/QK256 proof.",
+]
