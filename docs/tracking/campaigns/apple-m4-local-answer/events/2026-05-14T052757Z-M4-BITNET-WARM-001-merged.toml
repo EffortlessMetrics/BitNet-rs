@@ -1,0 +1,16 @@
+timestamp = "2026-05-14T05:27:57Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-WARM-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 4701
+head_sha = "93dc74d5159b0b401f8a01f79099cea4cf89c846"
+merge_sha = "fa2c7c2d459a38ae19d5fdf269d7d8e8d96cf2b0"
+
+notes = [
+  "Merged PR #4701 with the fixed-prompt BitNet warm-session route.",
+  "The merged receipt set records one accepted Microsoft I2_S GGUF load, one accepted external tokenizer load, three fixed prompts, repeated-prompt determinism, fallback_used=false, generated text, generated token IDs, timing fields, and memory fields.",
+  "The merged route remains scoped to Apple M4 CPU/NEON warm reuse and keeps BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and broad performance claims disabled.",
+]
