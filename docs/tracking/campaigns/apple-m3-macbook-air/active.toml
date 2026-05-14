@@ -416,8 +416,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-005B"
-status = "in_progress"
+status = "merged"
+pr = 4802
 branch = "codex/apple-m3-macbook-air/M3MBA-005B-microsoft-2b-tokenizer-authority"
+head_sha = "af307d470044435fb10913660eeba5b8471762cc"
+merge_sha = "686ea7e8301f71e4127744b37d46e8decf37ca9d"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
