@@ -1,0 +1,341 @@
+{
+  "artifact_kind": "slm_reference_divergence_validation",
+  "claim": "slm_reference_divergence_diagnostic",
+  "comparison": {
+    "bitnet_rs": {
+      "backend": "cpu-rust",
+      "checkpoints": {
+        "count": 26,
+        "stages": [
+          "decode.input_embedding",
+          "block.attention_norm",
+          "attention.q_proj",
+          "attention.k_proj",
+          "attention.v_proj",
+          "attention.q_norm",
+          "attention.k_norm",
+          "attention.q_rope",
+          "attention.k_rope",
+          "attention.scores_post_mask",
+          "attention.weights",
+          "attention.output_heads",
+          "attention.o_proj",
+          "block.post_attention_residual",
+          "block.ffn_norm",
+          "mlp.gate_proj",
+          "mlp.gate_activation",
+          "mlp.up_proj",
+          "mlp.gated_product",
+          "mlp.down_proj",
+          "block.output",
+          "model.final_norm",
+          "decode.forward_output",
+          "decode.last_hidden",
+          "lm_head.input_hidden",
+          "lm_head.logits"
+        ]
+      },
+      "chosen_id": 151667,
+      "fallback_used": false,
+      "generated_ids": [
+        151667
+      ],
+      "kernel": "dense-qwen-cpu-reference",
+      "loader_mode": "real_gguf",
+      "prompt_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        448,
+        1172,
+        279,
+        1372,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "runtime_api": null,
+      "text": "<think>",
+      "tokenizer_source": "gguf_metadata",
+      "tokenizer_strict": true,
+      "topk_step0": [
+        [
+          151667,
+          31.92052841186523
+        ],
+        [
+          151644,
+          22.455360412597656
+        ],
+        [
+          151668,
+          21.120849609375
+        ],
+        [
+          151645,
+          21.03325462341309
+        ],
+        [
+          80135,
+          20.418224334716797
+        ],
+        [
+          125215,
+          18.872535705566406
+        ],
+        [
+          33137,
+          18.855493545532227
+        ],
+        [
+          138414,
+          18.61666488647461
+        ],
+        [
+          91482,
+          18.592424392700195
+        ],
+        [
+          32657,
+          18.55155563354492
+        ]
+      ]
+    },
+    "checkpoints": {
+      "missing_bitnet_rs_stages": [],
+      "missing_reference_stages": [],
+      "required_stages": [
+        "decode.input_embedding",
+        "block.attention_norm",
+        "attention.q_proj",
+        "attention.k_proj",
+        "attention.v_proj",
+        "attention.q_rope",
+        "model.final_norm",
+        "lm_head.logits"
+      ],
+      "sample_atol": 0.0001
+    },
+    "first_divergence": {
+      "bitnet_rs": {
+        "checksum": -2813.918429214,
+        "dims": [
+          1,
+          1,
+          2048
+        ],
+        "dtype": "F32",
+        "finite": 2048,
+        "kind": "qwen_trace_tensor",
+        "layer": 0,
+        "len": 2048,
+        "max": 5.01752615,
+        "mean": -0.013607808,
+        "min": -6.337046623,
+        "nonfinite": 0,
+        "rms": 0.485162692,
+        "sample": [
+          -0.006242596,
+          -0.040103063,
+          -0.022058982,
+          0.0145014,
+          -0.032929443,
+          -0.005892746,
+          -0.062577896,
+          0.052840509
+        ],
+        "stage": "attention.q_proj",
+        "step": 0
+      },
+      "classification": "shared_transformer_math_checkpoint_values",
+      "index": 2,
+      "phase": "checkpoint",
+      "reference": {
+        "checksum": -2814.507750040153,
+        "dims": [
+          1,
+          1,
+          2048
+        ],
+        "dtype": "F32",
+        "finite": 2048,
+        "len": 2048,
+        "max": 5.015716552734375,
+        "mean": -0.013617656655810606,
+        "min": -6.3371686935424805,
+        "nonfinite": 0,
+        "rms": 0.48515828882251294,
+        "sample": [
+          -0.007172613404691219,
+          -0.04105579853057861,
+          -0.02184368669986725,
+          0.014568129554390907,
+          -0.031282030045986176,
+          -0.00615747831761837,
+          -0.06164475530385971,
+          0.05340827256441116
+        ],
+        "stage": "attention.q_proj"
+      }
+    },
+    "passed": false,
+    "reference": {
+      "backend": "candle-transformers-0.10.2",
+      "checkpoints": {
+        "count": 8,
+        "stages": [
+          "decode.input_embedding",
+          "block.attention_norm",
+          "attention.q_proj",
+          "attention.k_proj",
+          "attention.v_proj",
+          "attention.q_rope",
+          "model.final_norm",
+          "lm_head.logits"
+        ]
+      },
+      "chosen_id": 151667,
+      "fallback_used": null,
+      "generated_ids": [
+        151667
+      ],
+      "kernel": "quantized_qwen3",
+      "loader_mode": null,
+      "prompt_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        448,
+        1172,
+        279,
+        1372,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "runtime_api": null,
+      "text": "",
+      "tokenizer_source": null,
+      "tokenizer_strict": null,
+      "topk_step0": [
+        [
+          151667,
+          31.75886344909668
+        ],
+        [
+          151644,
+          22.18763732910156
+        ],
+        [
+          151668,
+          20.88733673095703
+        ],
+        [
+          151645,
+          20.82306671142578
+        ],
+        [
+          80135,
+          19.951732635498047
+        ],
+        [
+          33137,
+          18.92930793762207
+        ],
+        [
+          125215,
+          18.8021240234375
+        ],
+        [
+          32657,
+          18.483055114746097
+        ],
+        [
+          91482,
+          18.44631576538086
+        ],
+        [
+          138414,
+          18.43164825439453
+        ]
+      ]
+    }
+  },
+  "inputs": {
+    "artifact_path": "ci\\slm-cpu\\intel-i5-8250u\\2026-05-07\\qwen3-qproj-drift-refresh-compare.json"
+  },
+  "may_claim": [
+    "The artifact is machine-checkable against an external reference run.",
+    "First divergence evidence can separate tokenizer, prompt-template, decode, logits, and text-decoding issues.",
+    "For checkpoint artifacts, bounded internal tensor summaries can localize shared transformer math drift before final logits.",
+    "For BitNet CPU artifacts, strict loader, tokenizer, backend, kernel, and fallback evidence was checked."
+  ],
+  "model": {
+    "family": "qwen3",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+  },
+  "must_not_claim": [
+    "BitNet-rs can run the external reference engine.",
+    "General chat quality is proven.",
+    "Sustained CPU throughput is proven.",
+    "Server, GPU, OpenVINO, UHD 620, or NPU execution is involved."
+  ],
+  "prompt": {
+    "bos": false,
+    "bytes": null,
+    "template": "qwen",
+    "text": "What is 2+2? Answer with only the number."
+  },
+  "proof_stage": "external_reference_compared",
+  "schema_version": "1.0.0",
+  "speedup_claim": false,
+  "timestamp": "2026-05-14T21:21:54.134370+00:00",
+  "validation": {
+    "failed_rules": [],
+    "passed": true
+  }
+}
