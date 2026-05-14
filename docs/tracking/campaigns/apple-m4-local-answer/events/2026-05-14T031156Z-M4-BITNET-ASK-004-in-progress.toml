@@ -1,0 +1,13 @@
+timestamp = "2026-05-14T03:11:56Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-ASK-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+
+notes = [
+  "Started operator repair guidance hardening for one-shot BitNet `bitnet mac ask` failures.",
+  "The item is scoped to stderr repair guidance that mirrors durable failure receipts: accepted tokenizer, model cache fetch/verify, explicit GGUF verification, `bitnet mac models`, and unchanged BitNet chat/serve/Metal claim boundaries.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad performance, and speedup claims remain disabled.",
+]

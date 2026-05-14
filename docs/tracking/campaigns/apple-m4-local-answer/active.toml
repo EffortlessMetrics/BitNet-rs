@@ -607,3 +607,49 @@ must_not_claim = [
   "MPSGraph inference is proven.",
   "Broad BitNet chat quality or performance is proven.",
 ]
+
+[[work_item]]
+id = "M4-BITNET-ASK-004"
+status = "in_progress"
+branch = "codex/apple-m4-local-answer/M4-BITNET-ASK-004-repair-guidance"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BITNET-ASK-003"]
+acceptance = "Print compact operator repair guidance on BitNet `bitnet mac ask` setup and generation failures while preserving durable failure receipts: missing tokenizer authority/path, tokenizer SHA mismatch, missing/wrong accepted GGUF, cache repair, and generation errors should surface actionable accepted-tokenizer, model fetch/verify, explicit GGUF verify, `bitnet mac models`, and unchanged BitNet chat/serve/Metal claim-boundary guidance in stderr and receipts."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_ask_bitnet",
+  "cargo test --locked -p bitnet-cli --bin bitnet bitnet_mac_ask_model_failure_guidance",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-local-answer",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/**/tests/**",
+  "docs/slm/apple-m4-mini-user-expectation-envelope.md",
+  "docs/tracking/campaigns/apple-m4-local-answer/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/metal/**",
+]
+may_claim = [
+  "One-shot BitNet `bitnet mac ask` setup and generation failures print compact repair guidance that matches the durable failure receipt guidance.",
+]
+must_not_claim = [
+  "BitNet chat works.",
+  "BitNet serve works.",
+  "Full apple-m4-metal model inference works.",
+  "Apple M4 Metal participates in autoregressive BitNet decode.",
+  "QK256 works on Apple Silicon.",
+  "Neural Engine execution is proven.",
+  "MPSGraph inference is proven.",
+  "Broad BitNet chat quality or performance is proven.",
+]
