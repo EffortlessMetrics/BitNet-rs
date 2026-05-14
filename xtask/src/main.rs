@@ -1376,6 +1376,32 @@ enum PromptSuiteCmd {
 
 #[derive(Subcommand)]
 enum BenchCmd {
+    /// Convert a profile CLI-stage receipt into a quality-gated benchmark receipt.
+    #[command(name = "from-cli-stage")]
+    FromCliStage {
+        /// Profile CLI plan emitted by a profile planner.
+        #[arg(long, default_value = "target/llm-experience/profile-cli-stage-plan.json")]
+        plan: PathBuf,
+        /// CLI-stage JSON receipt emitted by bitnet run --json-out.
+        #[arg(long, default_value = "target/llm-experience/profile-cli-stage.json")]
+        cli_stage_receipt: PathBuf,
+        /// Model contract YAML file.
+        #[arg(long, default_value = "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml")]
+        model_contract: PathBuf,
+        /// Quality receipt path this benchmark depends on.
+        #[arg(long, default_value = "target/quality/a770-bitnet-quality.json")]
+        quality_receipt: PathBuf,
+        /// Whether the referenced quality receipt passed.
+        #[arg(long, default_value_t = false)]
+        quality_passed: bool,
+        /// Output benchmark receipt JSON file.
+        #[arg(long, default_value = "target/bench-runs/profile-cli-stage.json")]
+        output: PathBuf,
+        /// Output format: human or json.
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+
     /// Verify a quality-gated benchmark receipt.
     #[command(name = "verify-receipt")]
     VerifyReceipt {
@@ -1650,6 +1676,23 @@ fn real_main() -> Result<()> {
             }
         },
         Cmd::Bench { cmd } => match cmd {
+            BenchCmd::FromCliStage {
+                plan,
+                cli_stage_receipt,
+                model_contract,
+                quality_receipt,
+                quality_passed,
+                output,
+                format,
+            } => bench_receipt::from_cli_stage(
+                &plan,
+                &cli_stage_receipt,
+                &model_contract,
+                &quality_receipt,
+                quality_passed,
+                &output,
+                &format,
+            ),
             BenchCmd::VerifyReceipt { receipt, require_claimable, format } => {
                 bench_receipt::verify_receipt(&receipt, &format, require_claimable)
             }
