@@ -12,7 +12,7 @@ Options:
           Configuration file path
 
       --model-family <MODEL_FAMILY>
-          Model family to smoke. BitNet remains one-shot ask only
+          Model family to smoke. BitNet smoke uses one-shot ask; fixed warm proof is `mac bitnet-warm`
 
           Possible values:
           - dense-slm: Run the dense Qwen SLM golden smoke path

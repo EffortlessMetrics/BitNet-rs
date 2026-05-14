@@ -4,8 +4,9 @@
 command now has two bounded modes: artifact preflight and strict receipt
 validation. Receipt validation can verify a completed Apple M4 BitNet
 `answer-corpus` proof. BitNet is now limited to explicit one-shot
-`bitnet mac ask` with the accepted GGUF plus external tokenizer; `bitnet mac
-chat` and `bitnet mac serve` remain disabled for BitNet.
+`bitnet mac ask` and fixed-prompt `bitnet mac bitnet-warm` with the accepted
+GGUF plus external tokenizer; `bitnet mac chat` and `bitnet mac serve` remain
+disabled for BitNet.
 
 ## Command Contract
 
@@ -146,6 +147,9 @@ Allowed now:
 - Missing or unaccepted artifacts fail before proof execution.
 - The explicit BitNet one-shot `bitnet mac ask` route has one committed
   Apple M4 CPU/NEON runtime receipt for the fixed short prompt above.
+- The fixed-prompt `bitnet mac bitnet-warm` route has a committed Apple M4
+  CPU/NEON aggregate receipt plus per-prompt receipts for repeated-prompt
+  determinism.
 
 Not allowed now:
 

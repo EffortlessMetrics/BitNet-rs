@@ -211,12 +211,15 @@ struct AppleM4ModelRow {
     selection: String,
     reason: String,
     mac_ask_enabled: bool,
+    mac_bitnet_warm_enabled: bool,
     mac_chat_enabled: bool,
     mac_ask_chat_enabled: bool,
     mac_serve_enabled: bool,
     proof_status: Option<String>,
     proof_command: Option<String>,
     proof_receipt_path: Option<String>,
+    warm_command: Option<String>,
+    warm_receipt_path: Option<String>,
     recommended_fetch_headroom_bytes: Option<u64>,
     recommended_fetch_headroom: Option<String>,
     fits_current_disk: Option<bool>,
@@ -281,12 +284,17 @@ const APPLE_M4_POLICY_MODELS: &[AppleM4PolicyModel] = &[
 ];
 
 #[cfg(feature = "full-cli")]
-const APPLE_M4_BITNET_ROUTE_BOUNDARY: &str = "BitNet answer-ready artifact authority and local Apple M4 CPU/NEON answer-corpus proof receipts exist via MODEL-ARTIFACT-007/M4-QA-001 evidence. The BitNet Mac route is limited to one-shot `bitnet mac ask` with an explicit verified GGUF and external tokenizer authority; `bitnet mac chat` and `bitnet mac serve` remain disabled for BitNet, and dense SLM success must not be counted as BitNet Mac UX proof.";
+const APPLE_M4_BITNET_ROUTE_BOUNDARY: &str = "BitNet answer-ready artifact authority and local Apple M4 CPU/NEON answer-corpus proof receipts exist via MODEL-ARTIFACT-007/M4-QA-001 evidence. The BitNet Mac route is limited to explicit one-shot `bitnet mac ask` and fixed-prompt `bitnet mac bitnet-warm` with a verified GGUF and external tokenizer authority; `bitnet mac chat` and `bitnet mac serve` remain disabled for BitNet, and dense SLM success must not be counted as BitNet Mac UX proof.";
 
 #[cfg(feature = "full-cli")]
 const APPLE_M4_BITNET_PROOF_MODEL_PATH: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
 #[cfg(feature = "full-cli")]
 const APPLE_M4_BITNET_PROOF_RECEIPT_PATH: &str = "ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json";
+#[cfg(feature = "full-cli")]
+const APPLE_M4_BITNET_DEFAULT_TOKENIZER_PATH: &str =
+    "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json";
+#[cfg(feature = "full-cli")]
+const APPLE_M4_BITNET_WARM_RECEIPT_PATH: &str = "ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-warm/bitnet-mac-bitnet-warm-runtime-receipt.json";
 
 #[derive(Debug, Serialize)]
 struct VerifyResult {
@@ -1245,6 +1253,9 @@ pub(crate) fn list_apple_m4_models(cache_dir: Option<PathBuf>, json: bool) -> Re
         if let Some(command) = &row.proof_command {
             println!("Proof bridge: {} -> {}", row.id, command);
         }
+        if let Some(command) = &row.warm_command {
+            println!("Warm bridge: {} -> {}", row.id, command);
+        }
     }
     Ok(())
 }
@@ -1295,7 +1306,7 @@ fn apple_m4_model_catalog(cache_dir: Option<PathBuf>) -> Result<AppleM4ModelCata
         cache_root,
         default_model_id: M4_SLM_RUNTIME_MODEL_ID,
         disk,
-        claim_boundary: "default/supported rows are dense Qwen Apple M4 CPU/NEON answer paths; supported-ask BitNet rows are one-shot ask only with explicit GGUF/tokenizer authority; diagnostic-only, candidate, and rejected rows are not selectable M4 answer claims",
+        claim_boundary: "default/supported rows are dense Qwen Apple M4 CPU/NEON answer paths; supported-ask BitNet rows are limited to one-shot ask plus fixed-prompt warm-session proof with explicit GGUF/tokenizer authority; diagnostic-only, candidate, and rejected rows are not selectable M4 answer claims",
         rows,
     })
 }
@@ -1319,8 +1330,8 @@ fn apple_m4_registered_model_row(
     } else if model.id == "microsoft-bitnet-b1.58-2B-4T-i2s" {
         (
             "supported-ask",
-            "explicit --model-id with --model-path/--tokenizer for one-shot ask only",
-            "apple-m4-cpu-neon bitnet one-shot ask",
+            "explicit --model-id with --model-path/--tokenizer for one-shot ask or fixed warm route only",
+            "apple-m4-cpu-neon bitnet one-shot ask + fixed-prompt warm",
             APPLE_M4_BITNET_ROUTE_BOUNDARY,
         )
     } else {
@@ -1373,14 +1384,18 @@ fn apple_m4_registered_model_row(
         selection: selection.to_string(),
         reason: reason.to_string(),
         mac_ask_enabled: selectable_m4_answer || bitnet_ask_only,
+        mac_bitnet_warm_enabled: bitnet_ask_only,
         mac_chat_enabled: selectable_m4_answer,
         mac_ask_chat_enabled: selectable_m4_answer,
         mac_serve_enabled: selectable_m4_answer,
         proof_status: bitnet_contract_only
-            .then(|| "answer-corpus-proof-passed-one-shot-ask-explicit-artifact".to_string()),
+            .then(|| "answer-corpus-and-warm-session-proof-passed-explicit-artifact".to_string()),
         proof_command: bitnet_contract_only.then(apple_m4_bitnet_proof_command),
         proof_receipt_path: bitnet_contract_only
             .then(|| APPLE_M4_BITNET_PROOF_RECEIPT_PATH.to_string()),
+        warm_command: bitnet_contract_only.then(apple_m4_bitnet_warm_command),
+        warm_receipt_path: bitnet_contract_only
+            .then(|| APPLE_M4_BITNET_WARM_RECEIPT_PATH.to_string()),
         recommended_fetch_headroom_bytes,
         recommended_fetch_headroom,
         fits_current_disk,
@@ -1396,6 +1411,13 @@ fn apple_m4_registered_model_row(
 fn apple_m4_bitnet_proof_command() -> String {
     format!(
         "bitnet --device apple-m4-cpu-neon mac bitnet-proof --model {APPLE_M4_BITNET_PROOF_MODEL_PATH} --proof-receipt {APPLE_M4_BITNET_PROOF_RECEIPT_PATH} --strict"
+    )
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_bitnet_warm_command() -> String {
+    format!(
+        "bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path {APPLE_M4_BITNET_PROOF_MODEL_PATH} --tokenizer {APPLE_M4_BITNET_DEFAULT_TOKENIZER_PATH} --max-new-tokens 8 --json-out {APPLE_M4_BITNET_WARM_RECEIPT_PATH}"
     )
 }
 
@@ -1426,12 +1448,15 @@ fn apple_m4_policy_rows() -> Vec<AppleM4ModelRow> {
             selection: model.selection.to_string(),
             reason: model.reason.to_string(),
             mac_ask_enabled: false,
+            mac_bitnet_warm_enabled: false,
             mac_chat_enabled: false,
             mac_ask_chat_enabled: false,
             mac_serve_enabled: false,
             proof_status: None,
             proof_command: None,
             proof_receipt_path: None,
+            warm_command: None,
+            warm_receipt_path: None,
             recommended_fetch_headroom_bytes: None,
             recommended_fetch_headroom: None,
             fits_current_disk: None,
@@ -1802,7 +1827,7 @@ fn apple_m4_cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> St
         });
     if cache_state_label(status) == "missing" {
         format!(
-            "{base} First-run model selection: run `{models_command}` to inspect default/supported/supported-ask model states and disk headroom. Disk guidance: {disk_guidance}"
+            "{base} First-run model selection: run `{models_command}` to inspect default/supported/supported-ask model states, BitNet warm-route readiness, and disk headroom. Disk guidance: {disk_guidance}"
         )
     } else {
         format!(
@@ -2215,6 +2240,7 @@ mod tests {
         assert!(message.contains("MODEL-ARTIFACT-007"));
         assert!(message.contains("M4-QA-001"));
         assert!(message.contains("one-shot `bitnet mac ask`"));
+        assert!(message.contains("fixed-prompt `bitnet mac bitnet-warm`"));
         assert!(message.contains("bitnet mac models"));
         assert!(message.contains("qwen2.5-0.5b-instruct-q8_0"));
     }

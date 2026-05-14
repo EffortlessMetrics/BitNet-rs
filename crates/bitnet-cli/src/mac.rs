@@ -183,7 +183,7 @@ enum MacAction {
 
     /// Run a compact Apple M4 model-family health smoke with cache and receipt checks.
     Smoke {
-        /// Model family to smoke. BitNet remains one-shot ask only.
+        /// Model family to smoke. BitNet smoke uses one-shot ask; fixed warm proof is `mac bitnet-warm`.
         #[arg(long, value_enum, default_value_t = MacSmokeModelFamily::DenseSlm)]
         model_family: MacSmokeModelFamily,
 
@@ -1189,12 +1189,12 @@ fn run_bitnet_proof_preflight(
 
     if proof_valid {
         println!(
-            "M4 BitNet proof receipt verified; BitNet remains limited to explicit one-shot `bitnet mac ask` and does not enable `bitnet mac chat` or `bitnet mac serve`. Receipt: {}",
+            "M4 BitNet proof receipt verified; BitNet remains limited to explicit one-shot `bitnet mac ask` plus fixed-prompt `bitnet mac bitnet-warm` and does not enable `bitnet mac chat` or `bitnet mac serve`. Receipt: {}",
             json_out.display()
         );
     } else {
         println!(
-            "M4 BitNet proof preflight passed; BitNet remains limited to explicit one-shot `bitnet mac ask` and does not enable `bitnet mac chat` or `bitnet mac serve`. Receipt: {}",
+            "M4 BitNet proof preflight passed; BitNet remains limited to explicit one-shot `bitnet mac ask` plus fixed-prompt `bitnet mac bitnet-warm` and does not enable `bitnet mac chat` or `bitnet mac serve`. Receipt: {}",
             json_out.display()
         );
     }
@@ -3370,6 +3370,7 @@ fn mac_serve_check_models_result(status: u16, body: &serde_json::Value) -> serde
         "resident_model_id": body["resident_model_id"],
         "generation_executed": body["generation_executed"],
         "bitnet_ask_only": mac_serve_models_catalog_has_bitnet_ask_only(body),
+        "bitnet_warm_session": mac_serve_models_catalog_has_bitnet_warm(body),
         "disk_available_bytes": body["catalog"]["disk"]["available_bytes"],
         "recommended_first_model_id": body["catalog"]["disk"]["recommended_first_model_id"],
         "recommended_fetch_command": mac_serve_models_catalog_recommended_command(body, "fetch_command"),
@@ -3391,6 +3392,7 @@ fn mac_serve_check_models_catalog_pass(status: u16, body: &serde_json::Value) ->
         && mac_serve_models_catalog_has_supported_model(body, model_cache::M4_SLM_RUNTIME_MODEL_ID)
         && mac_serve_models_catalog_has_supported_model(body, "qwen2.5-1.5b-instruct-q4_k_m")
         && mac_serve_models_catalog_has_bitnet_ask_only(body)
+        && mac_serve_models_catalog_has_bitnet_warm(body)
         && mac_serve_models_catalog_recommended_commands_are_coherent(body)
 }
 
@@ -3410,11 +3412,12 @@ fn mac_serve_models_catalog_has_bitnet_ask_only(body: &serde_json::Value) -> boo
             row["id"].as_str() == Some("microsoft-bitnet-b1.58-2B-4T-i2s")
                 && row["state"].as_str() == Some("supported-ask")
                 && row["mac_ask_enabled"].as_bool() == Some(true)
+                && row["mac_bitnet_warm_enabled"].as_bool() == Some(true)
                 && row["mac_chat_enabled"].as_bool() == Some(false)
                 && row["mac_ask_chat_enabled"].as_bool() == Some(false)
                 && row["mac_serve_enabled"].as_bool() == Some(false)
                 && row["proof_status"].as_str()
-                    == Some("answer-corpus-proof-passed-one-shot-ask-explicit-artifact")
+                    == Some("answer-corpus-and-warm-session-proof-passed-explicit-artifact")
                 && row["proof_command"].as_str().is_some_and(|command| {
                     command.contains("mac bitnet-proof")
                         && command.contains("--proof-receipt")
@@ -3424,6 +3427,26 @@ fn mac_serve_models_catalog_has_bitnet_ask_only(body: &serde_json::Value) -> boo
                     .as_str()
                     .is_some_and(|command| command.contains("bitnet model fetch microsoft-bitnet"))
                 && row["recommended_fetch_headroom_bytes"].as_u64().is_some()
+        })
+    })
+}
+
+fn mac_serve_models_catalog_has_bitnet_warm(body: &serde_json::Value) -> bool {
+    body["catalog"]["rows"].as_array().is_some_and(|rows| {
+        rows.iter().any(|row| {
+            row["id"].as_str() == Some("microsoft-bitnet-b1.58-2B-4T-i2s")
+                && row["mac_bitnet_warm_enabled"].as_bool() == Some(true)
+                && row["warm_command"].as_str().is_some_and(|command| {
+                    command.contains("mac bitnet-warm")
+                        && command.contains("--model-path")
+                        && command.contains("--tokenizer")
+                })
+                && row["warm_receipt_path"].as_str().is_some_and(|path| {
+                    path.contains("ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-warm")
+                        && path.ends_with("bitnet-mac-bitnet-warm-runtime-receipt.json")
+                })
+                && row["mac_chat_enabled"].as_bool() == Some(false)
+                && row["mac_serve_enabled"].as_bool() == Some(false)
         })
     })
 }
@@ -3912,6 +3935,7 @@ fn mac_doctor_base_receipt(
             "slm_local_answer": true,
             "doctor": true,
             "bitnet_one_shot_ask_readiness_checked": true,
+            "bitnet_fixed_prompt_warm_readiness_checked": true,
             "requested_backend": APPLE_M4_CPU_NEON,
             "bitnet_quality_claimed": false,
             "full_metal_inference_claimed": false,
@@ -3971,11 +3995,11 @@ fn bitnet_mac_ask_readiness_json(cache_dir: Option<PathBuf>) -> serde_json::Valu
         } else {
             (false, false, None, None)
         };
-    let cached_ask_ready = cached_model_ready && tokenizer_verified;
+    let bitnet_cached_route_ready = cached_model_ready && tokenizer_verified;
 
     serde_json::json!({
         "checked": true,
-        "ready": cached_ask_ready,
+        "ready": bitnet_cached_route_ready,
         "advisory": true,
         "blocks_doctor": false,
         "model": {
@@ -3989,6 +4013,12 @@ fn bitnet_mac_ask_readiness_json(cache_dir: Option<PathBuf>) -> serde_json::Valu
             "verify_command": row["verify_command"].clone(),
             "proof_status": row["proof_status"].clone(),
             "proof_command": row["proof_command"].clone(),
+            "mac_ask_enabled": row["mac_ask_enabled"].clone(),
+            "mac_bitnet_warm_enabled": row["mac_bitnet_warm_enabled"].clone(),
+            "mac_chat_enabled": row["mac_chat_enabled"].clone(),
+            "mac_serve_enabled": row["mac_serve_enabled"].clone(),
+            "warm_command": row["warm_command"].clone(),
+            "warm_receipt_path": row["warm_receipt_path"].clone(),
         },
         "tokenizer": {
             "path": tokenizer_path,
@@ -4002,6 +4032,7 @@ fn bitnet_mac_ask_readiness_json(cache_dir: Option<PathBuf>) -> serde_json::Valu
         "commands": {
             "models": bitnet_mac_models_command(catalog["cache_root"].as_str()),
             "ask_cached_model": bitnet_cached_ask_command(catalog["cache_root"].as_str()),
+            "warm_cached_model": bitnet_cached_warm_command(catalog["cache_root"].as_str()),
             "fetch": row["fetch_command"].clone(),
             "verify": row["verify_command"].clone(),
         },
@@ -4024,9 +4055,18 @@ fn bitnet_cached_ask_command(cache_root: Option<&str>) -> String {
     )
 }
 
+fn bitnet_cached_warm_command(cache_root: Option<&str>) -> String {
+    let cache_arg =
+        cache_root.map(|cache_root| format!(" --cache-dir {cache_root}")).unwrap_or_default();
+    format!(
+        "bitnet mac bitnet-warm --model-id {BITNET_M4_MODEL_ID}{cache_arg} --tokenizer {BITNET_M4_DEFAULT_TOKENIZER_PATH}"
+    )
+}
+
 fn bitnet_mac_ask_readiness_claim_boundary() -> serde_json::Value {
     serde_json::json!({
         "bitnet_one_shot_mac_ask": true,
+        "bitnet_fixed_prompt_warm_session": true,
         "readiness_only": true,
         "chat_enabled": false,
         "serve_enabled": false,
@@ -7240,6 +7280,8 @@ mod tests {
         assert_eq!(readiness["model"]["catalog_state"], "supported-ask");
         assert_eq!(readiness["claim_boundary"]["chat_enabled"], false);
         assert_eq!(readiness["claim_boundary"]["serve_enabled"], false);
+        assert_eq!(readiness["claim_boundary"]["bitnet_fixed_prompt_warm_session"], true);
+        assert_eq!(readiness["model"]["mac_bitnet_warm_enabled"], true);
         assert_eq!(readiness["claim_boundary"]["full_metal_inference_claimed"], false);
         assert!(
             readiness["commands"]["models"]
@@ -7252,6 +7294,12 @@ mod tests {
                 .as_str()
                 .ok_or_else(|| std::io::Error::other("ask command"))?
                 .contains("--tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json")
+        );
+        assert!(
+            readiness["commands"]["warm_cached_model"]
+                .as_str()
+                .ok_or_else(|| std::io::Error::other("warm command"))?
+                .contains("bitnet mac bitnet-warm")
         );
         Ok(())
     }
@@ -7319,14 +7367,20 @@ mod tests {
             row["id"] == "microsoft-bitnet-b1.58-2B-4T-i2s"
                 && row["state"] == "supported-ask"
                 && row["mac_ask_enabled"] == true
+                && row["mac_bitnet_warm_enabled"] == true
                 && row["mac_chat_enabled"] == false
                 && row["mac_ask_chat_enabled"] == false
                 && row["mac_serve_enabled"] == false
                 && row["proof_status"]
-                    == "answer-corpus-proof-passed-one-shot-ask-explicit-artifact"
+                    == "answer-corpus-and-warm-session-proof-passed-explicit-artifact"
                 && row["proof_command"].as_str().is_some_and(|command| {
                     command.contains("mac bitnet-proof") && command.contains("--proof-receipt")
                 })
+                && row["warm_command"].as_str().is_some_and(|command| {
+                    command.contains("mac bitnet-warm") && command.contains("--tokenizer")
+                })
+                && row["warm_receipt_path"]
+                    == "ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-warm/bitnet-mac-bitnet-warm-runtime-receipt.json"
                 && row["fetch_command"]
                     .as_str()
                     .is_some_and(|command| command.contains("bitnet model fetch microsoft-bitnet"))
