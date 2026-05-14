@@ -1869,26 +1869,30 @@ async fn run_simple_generation(
     // BITNET_TRACE_TIMING=1: Enable timing instrumentation
     let timing_enabled = std::env::var("BITNET_TRACE_TIMING").as_deref() == Ok("1");
 
-    // Generation loop: incremental decoding
+    // Generation loop: prompt prefill followed by incremental decoding.
     //
-    // Each step:
-    //   1. Embed ONLY the new token (last in sequence)
+    // Step 0:
+    //   1. Embed the full rendered prompt
+    //   2. Forward pass fills KV cache for prompt history
+    //
+    // Subsequent steps:
+    //   1. Embed ONLY the newly generated token
     //   2. Forward pass uses KV cache for historical context
-    //   3. No need to re-embed previous tokens (O(N) not O(N┬▓))
     //
     // Historical context is maintained via:
     //   - KV cache: stores key/value tensors from previous steps
     //   - `tokens` vector: tracks full sequence for stop detection/logging
     //
-    // Performance impact: This changes embedding from O(N┬▓) to O(N), providing
-    // ~50├ù speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
+    // Performance impact: This avoids O(N^2) full-context re-embedding while
+    // still giving the first generated token the complete prompt context.
     for step_idx in 0..max_new_tokens {
-        // Embed only the LAST token (incremental)
-        // KV cache already maintains historical context
-        let last_token = tokens.last().copied().expect("tokens must be non-empty");
-
         let t0 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
-        let x = model.embed(&[last_token])?;
+        let x = if step_idx == 0 {
+            model.embed(&tokens)?
+        } else {
+            let last_token = tokens.last().copied().expect("tokens must be non-empty");
+            model.embed(&[last_token])?
+        };
         if let Some(t) = t0 {
             eprintln!("timing: embed_us={}", t.elapsed().as_micros());
         }
