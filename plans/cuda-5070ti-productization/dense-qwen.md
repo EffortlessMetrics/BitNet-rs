@@ -119,7 +119,7 @@ Remove the new receipt and demote any matrix/status row that depended on it.
 
 ## Work item: CUDA-DENSE-052
 
-Status: in_progress
+Status: pr_open
 Campaign item: `CUDA-DENSE-052`
 Blocked by: none
 
