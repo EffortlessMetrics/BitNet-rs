@@ -297,7 +297,40 @@ impl GgufLoader {
     /// If stats are suspicious, fail in strict mode or warn otherwise.
     ///
     /// Set BITNET_STRICT_MODE=1 to fail on invalid LN gamma.
+    #[cfg(test)]
     pub(crate) fn check_ln_gamma_stats(name: &str, w: &Tensor) -> Result<()> {
+        Self::check_ln_gamma_stats_with_envelope(name, w, 0.5, 2.0, "expected ≈1.0")
+    }
+
+    fn check_ln_gamma_stats_for_config(
+        name: &str,
+        w: &Tensor,
+        config: &BitNetConfig,
+    ) -> Result<()> {
+        let (lower, upper, expectation) = Self::ln_gamma_rms_envelope(config);
+        Self::check_ln_gamma_stats_with_envelope(name, w, lower, upper, expectation)
+    }
+
+    fn ln_gamma_rms_envelope(config: &BitNetConfig) -> (f32, f32, &'static str) {
+        let is_bitnet_b158_i2s = config.quantization.quantization_type
+            == bitnet_common::QuantizationType::I2S
+            && config.model.hidden_size == 2560
+            && config.model.intermediate_size == 6912
+            && config.model.num_layers == 30;
+        if is_bitnet_b158_i2s {
+            (0.005, 2.0, "expected BitNet b1.58 I2_S gamma RMS in [0.005, 2.0]")
+        } else {
+            (0.5, 2.0, "expected ≈1.0")
+        }
+    }
+
+    fn check_ln_gamma_stats_with_envelope(
+        name: &str,
+        w: &Tensor,
+        lower: f32,
+        upper: f32,
+        expectation: &str,
+    ) -> Result<()> {
         use bitnet_common::SecurityError;
 
         // Convert to FP32 for reliable statistics
@@ -305,11 +338,11 @@ impl GgufLoader {
         let rms = Self::rms_f32(&w32)?;
 
         // Acceptable envelope for γ RMS
-        let ok = (0.5..=2.0).contains(&rms) && rms.is_finite();
+        let ok = (lower..=upper).contains(&rms) && rms.is_finite();
 
         if !ok {
             let msg =
-                format!("LayerNorm gamma '{}' suspicious: rms={:.5} (expected ≈1.0)", name, rms);
+                format!("LayerNorm gamma '{}' suspicious: rms={:.5} ({})", name, rms, expectation);
 
             // In strict mode, fail immediately
             if Self::env_truthy("BITNET_STRICT_MODE") {
@@ -1762,7 +1795,7 @@ impl GgufLoader {
 
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
                     if is_layernorm_weight(&info.name) {
-                        Self::check_ln_gamma_stats(&info.name, &tensor)?;
+                        Self::check_ln_gamma_stats_for_config(&info.name, &tensor, model_config)?;
 
                         // Apply policy-driven rescaling first (if configured)
                         let (rescaled, correction1) = Self::maybe_rescale_ln_gamma_with_policy(
@@ -1828,7 +1861,7 @@ impl GgufLoader {
 
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
                     if is_layernorm_weight(&info.name) {
-                        Self::check_ln_gamma_stats(&info.name, &tensor)?;
+                        Self::check_ln_gamma_stats_for_config(&info.name, &tensor, model_config)?;
 
                         // Apply policy-driven rescaling first (if configured)
                         let (rescaled, correction1) = Self::maybe_rescale_ln_gamma_with_policy(
@@ -1912,6 +1945,15 @@ mod tests {
         config
     }
 
+    fn bitnet_b158_i2s_config() -> BitNetConfig {
+        let mut config = BitNetConfig::default();
+        config.model.hidden_size = 2560;
+        config.model.intermediate_size = 6912;
+        config.model.num_layers = 30;
+        config.quantization.quantization_type = bitnet_common::QuantizationType::I2S;
+        config
+    }
+
     fn one_layer_names_with_embedding() -> Vec<&'static str> {
         vec![
             "token_embd.weight",
@@ -1945,5 +1987,26 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("token embedding weight"), "got: {msg}");
         assert!(msg.contains("output/lm head weight"), "got: {msg}");
+    }
+
+    #[test]
+    fn bitnet_i2s_ln_gamma_envelope_accepts_small_official_scale() {
+        let tensor = Tensor::from_vec(vec![0.018f32; 16], &[16], &candle_core::Device::Cpu)
+            .expect("test tensor");
+        temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+            GgufLoader::check_ln_gamma_stats_for_config(
+                "blk.0.attn_norm.weight",
+                &tensor,
+                &bitnet_b158_i2s_config(),
+            )
+            .expect("BitNet b1.58 I2_S gamma should pass its architecture envelope");
+
+            let default_result =
+                GgufLoader::check_ln_gamma_stats("blk.0.attn_norm.weight", &tensor);
+            assert!(
+                default_result.is_err(),
+                "default strict LayerNorm envelope should remain unchanged"
+            );
+        });
     }
 }
