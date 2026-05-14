@@ -60,8 +60,13 @@ Per-turn decoded text:
 
 ## Command
 
+The run used the locally cached artifact whose model identity and SHA-256 are
+recorded in the receipt. The reproduction command is parameterized so it does
+not depend on a user-specific cache path:
+
 ```powershell
-rtk powershell -NoProfile -Command '$cmd = ''"C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat" -arch=x64 && set "LIB=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\lib\x64;%LIB%" && set "PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\bin;%PATH%" && rtk cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-warm-session-strict-cuda --model C:\Users\steven\AppData\Local\bitnet-rs\models\qwen2.5-0.5b-instruct-q8_0\qwen2.5-0.5b-instruct-q8_0.gguf --one-token-proof ci\hardware\windows-9950x3d-rtx5070ti\2026-05-13\dense-qwen25-q8-one-token-cuda.json --short-decode-proof ci\hardware\windows-9950x3d-rtx5070ti\2026-05-14\dense-qwen25-q8-short-decode-current-source.json --json-out ci\hardware\windows-9950x3d-rtx5070ti\2026-05-14\dense-qwen25-q8-warm-session-current-source.json''; cmd /d /s /c $cmd'
+$env:BITNET_QWEN25_Q8_GGUF = "<path-to-qwen2.5-0.5b-instruct-q8_0.gguf>"
+rtk powershell -NoProfile -Command '$cmd = ''"C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat" -arch=x64 && set "LIB=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\lib\x64;%LIB%" && set "PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\bin;%PATH%" && rtk cargo run --locked --release -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- dense-gguf-qwen-warm-session-strict-cuda --model "%BITNET_QWEN25_Q8_GGUF%" --one-token-proof ci\hardware\windows-9950x3d-rtx5070ti\2026-05-13\dense-qwen25-q8-one-token-cuda.json --short-decode-proof ci\hardware\windows-9950x3d-rtx5070ti\2026-05-14\dense-qwen25-q8-short-decode-current-source.json --json-out ci\hardware\windows-9950x3d-rtx5070ti\2026-05-14\dense-qwen25-q8-warm-session-current-source.json''; cmd /d /s /c $cmd'
 ```
 
 ## Claim Boundary
