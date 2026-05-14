@@ -75,7 +75,7 @@ fn identity_matrix(dim: usize, device: &Device) -> candle_core::Result<Tensor> {
 }
 
 fn qk256_row_with_codes(codes: &[(usize, u8)]) -> Vec<u8> {
-    let mut unpacked = [2u8; 256];
+    let mut unpacked = [1u8; 256];
     for &(idx, code) in codes {
         assert!(idx < unpacked.len(), "QK256 test code index out of range");
         assert!(code <= 3, "QK256 test code must fit in two bits");
@@ -223,19 +223,14 @@ fn qk256_prompt_sensitive_model() -> anyhow::Result<TransformerModel> {
     }
 
     let q_pos_row = qk256_row_with_codes(&[(2, 3)]);
-    let q_neg_row = qk256_row_with_codes(&[(2, 0)]);
     let mut q_rows = Vec::with_capacity(256);
-    for row_idx in 0..256 {
-        if row_idx % 2 == 0 {
-            q_rows.push(q_pos_row.clone());
-        } else {
-            q_rows.push(q_neg_row.clone());
-        }
+    for _ in 0..256 {
+        q_rows.push(q_pos_row.clone());
     }
-    let history_sensitive_row = qk256_row_with_codes(&[(0, 3), (1, 0), (2, 3)]);
-    let v_history_a_row = qk256_row_with_codes(&[(0, 3), (1, 0), (2, 2)]);
-    let v_history_b_row = qk256_row_with_codes(&[(0, 0), (1, 3), (2, 2)]);
-    let v_neutral_row = qk256_row_with_codes(&[(2, 2)]);
+    let history_sensitive_row = qk256_row_with_codes(&[(0, 3), (1, 0), (2, 0)]);
+    let v_history_a_row = qk256_row_with_codes(&[(0, 2)]);
+    let v_history_b_row = qk256_row_with_codes(&[(1, 2)]);
+    let v_neutral_row = qk256_row_with_codes(&[]);
     let mut v_rows = vec![v_neutral_row; 256];
     v_rows[0] = v_history_a_row;
     v_rows[1] = v_history_b_row;

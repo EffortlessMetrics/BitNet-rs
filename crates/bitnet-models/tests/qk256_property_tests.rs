@@ -8,7 +8,7 @@
 //! ## Coverage
 //!
 //! - Random matrix dimensions (rows, cols with various QK256 block alignments)
-//! - Random code patterns (0..=3 mapping to -2.0, -1.0, 1.0, 2.0)
+//! - Random code patterns (0..=3 mapping to -1.0, 0.0, 1.0, 2.0)
 //! - Random input vectors with various distributions
 //! - Tail handling (cols not multiple of 256)
 //! - Numerical accuracy validation against FP32 reference
@@ -54,12 +54,11 @@ fn random_input_vector(len: usize) -> impl Strategy<Value = Vec<f32>> {
 
 /// Test spec: i2s-dual-flavor.md#code-to-f32-lut-verification
 ///
-/// Verify code_to_f32 LUT values match GGML reference: {-2, -1, 1, 2}
+/// Verify code_to_f32 LUT values match Microsoft BitNet I2_S: {-1, 0, 1, 2}
 #[test]
 fn test_code_to_f32_lut_values() {
-    // Verified against GGML ggml-quants.c:62
-    assert_eq!(code_to_f32(0), -2.0);
-    assert_eq!(code_to_f32(1), -1.0);
+    assert_eq!(code_to_f32(0), -1.0);
+    assert_eq!(code_to_f32(1), 0.0);
     assert_eq!(code_to_f32(2), 1.0);
     assert_eq!(code_to_f32(3), 2.0);
 }

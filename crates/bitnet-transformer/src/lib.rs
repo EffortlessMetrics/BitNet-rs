@@ -1,6 +1,6 @@
 use bitnet_common::{ActivationType, BitNetConfig, BitNetError, NormType, Result};
 pub use bitnet_qk256_dispatch::Qk256DispatchBackend;
-use bitnet_qk256_dispatch::forward_qk256_with_backend;
+use bitnet_qk256_dispatch::forward_qk256_scaled_with_backend;
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
@@ -41,6 +41,25 @@ fn dbg_finite(tag: &str, t: &Tensor) -> candle_core::Result<()> {
         }
     }
     Ok(())
+}
+
+fn qk256_scale_for(
+    raw_tensors: &std::collections::HashMap<String, Tensor>,
+    qk256_key: &str,
+) -> Result<f32> {
+    let scale_key = qk256_key
+        .strip_suffix(".qk256_qs")
+        .map(|base| format!("{base}.qk256_scale"))
+        .unwrap_or_else(|| format!("{qk256_key}.qk256_scale"));
+
+    let Some(scale_tensor) = raw_tensors.get(&scale_key) else {
+        return Ok(1.0);
+    };
+
+    let values = scale_tensor.flatten_all()?.to_vec1::<f32>()?;
+    values.first().copied().ok_or_else(|| {
+        BitNetError::Validation(format!("QK256 scale tensor '{scale_key}' is empty"))
+    })
 }
 
 /// Helper to create linear layers with optional bias tensors (zero-injection)
@@ -619,8 +638,15 @@ impl MultiHeadAttention {
 
         // Check for QK256 data
         if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
-            tracing::debug!("Using QK256 kernel for {}", qk256_key);
-            return forward_qk256_with_backend(input, qk256_tensor, &qk256_key, self.qk256_backend);
+            let qk256_scale = qk256_scale_for(raw_tensors, &qk256_key)?;
+            tracing::debug!("Using QK256 kernel for {} with scale {}", qk256_key, qk256_scale);
+            return forward_qk256_scaled_with_backend(
+                input,
+                qk256_tensor,
+                &qk256_key,
+                self.qk256_backend,
+                qk256_scale,
+            );
         }
 
         // Probe: Why is QK256 not found? (layer 0 only, once)
@@ -786,8 +812,15 @@ impl FeedForward {
 
         // Check for QK256 data
         if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
-            tracing::debug!("Using QK256 kernel for {}", qk256_key);
-            return forward_qk256_with_backend(input, qk256_tensor, &qk256_key, self.qk256_backend);
+            let qk256_scale = qk256_scale_for(raw_tensors, &qk256_key)?;
+            tracing::debug!("Using QK256 kernel for {} with scale {}", qk256_key, qk256_scale);
+            return forward_qk256_scaled_with_backend(
+                input,
+                qk256_tensor,
+                &qk256_key,
+                self.qk256_backend,
+                qk256_scale,
+            );
         }
 
         // Fall back to standard linear

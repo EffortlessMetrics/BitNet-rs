@@ -33,12 +33,12 @@ use rand_chacha::ChaCha8Rng;
 
 /// Code-to-weight mapping for QK256 format
 ///
-/// This matches the GGML I2_S specification:
-/// - Code 0 → -2.0
-/// - Code 1 → -1.0
+/// This matches the Microsoft BitNet I2_S QK256 specification:
+/// - Code 0 → -1.0
+/// - Code 1 → 0.0
 /// - Code 2 → +1.0
 /// - Code 3 → +2.0
-const WEIGHTS: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
+const WEIGHTS: [f32; 4] = [-1.0, 0.0, 1.0, 2.0];
 
 /// Tolerance for floating-point comparison
 ///
@@ -467,13 +467,15 @@ fn test_qk256_avx2_uniform_codes() {
         let expected_diff = (scalar_result - expected).abs();
 
         // Allow larger tolerance for expected value due to summation order differences
+        let expected_rel_diff =
+            if expected.abs() > 1e-6 { expected_diff / expected.abs() } else { expected_diff };
         assert!(
-            expected_diff / expected.abs() < 0.01,
+            expected_rel_diff < 0.01,
             "Uniform code {} sanity check failed: expected={}, got={}, rel_diff={}",
             code,
             expected,
             scalar_result,
-            expected_diff / expected.abs()
+            expected_rel_diff
         );
     }
 

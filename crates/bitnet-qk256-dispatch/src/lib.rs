@@ -106,7 +106,18 @@ pub fn forward_qk256_with_backend(
     weight_name: &str,
     backend: Qk256DispatchBackend,
 ) -> Result<Tensor> {
-    use bitnet_quantization::i2s_qk256::gemv_qk256;
+    forward_qk256_scaled_with_backend(input, qk256_tensor, weight_name, backend, 1.0)
+}
+
+/// Runs I2_S QK256 forward pass with a Microsoft BitNet per-tensor trailer scale.
+pub fn forward_qk256_scaled_with_backend(
+    input: &Tensor,
+    qk256_tensor: &Tensor,
+    weight_name: &str,
+    backend: Qk256DispatchBackend,
+    scale: f32,
+) -> Result<Tensor> {
+    use bitnet_quantization::i2s_qk256::gemv_qk256_scaled;
 
     let qk256_dims = qk256_tensor.dims();
     let layout = parse_qk256_layout(weight_name, qk256_dims)
@@ -161,13 +172,14 @@ pub fn forward_qk256_with_backend(
             for (i, input_row) in input_vec.iter().enumerate() {
                 let start = i * layout.rows;
                 let end = start + layout.rows;
-                gemv_qk256(
+                gemv_qk256_scaled(
                     &flat_bytes,
                     input_row,
                     &mut output_flat[start..end],
                     layout.rows,
                     layout.cols,
                     layout.row_stride_bytes,
+                    scale,
                 )
                 .map_err(|e| {
                     BitNetError::Validation(format!(
@@ -189,6 +201,7 @@ pub fn forward_qk256_with_backend(
                 layout.cols,
                 layout.row_stride_bytes,
                 weight_name,
+                scale,
             )?;
             OPENCL_SUCCESSES.fetch_add(1, Ordering::Relaxed);
         }
@@ -215,6 +228,7 @@ fn run_opencl_qk256(
     cols: usize,
     row_stride_bytes: usize,
     weight_name: &str,
+    scale: f32,
 ) -> Result<()> {
     #[cfg(feature = "opencl")]
     {
@@ -227,6 +241,7 @@ fn run_opencl_qk256(
             rows,
             cols,
             row_stride_bytes,
+            scale,
         )
         .map_err(|e| {
             BitNetError::Kernel(KernelError::GpuError {
@@ -237,7 +252,7 @@ fn run_opencl_qk256(
 
     #[cfg(not(feature = "opencl"))]
     {
-        let _ = (flat_bytes, input_vec, output_flat, rows, cols, row_stride_bytes);
+        let _ = (flat_bytes, input_vec, output_flat, rows, cols, row_stride_bytes, scale);
         Err(BitNetError::Kernel(KernelError::DeviceUnavailable {
             reason: format!(
                 "OpenCL QK256 dispatch requested for {weight_name}, but opencl feature is disabled"

@@ -273,8 +273,8 @@ fn test_qk256_multi_layer_integration() -> anyhow::Result<()> {
     let mut layer_weights = Vec::new();
     for layer_idx in 0..num_layers {
         let pattern = match layer_idx % 4 {
-            0 => 0x00u8, // Code 0 → -2.0
-            1 => 0x55u8, // Code 1 → -1.0
+            0 => 0x00u8, // Code 0 → -1.0
+            1 => 0x55u8, // Code 1 → 0.0
             2 => 0xAAu8, // Code 2 → +1.0
             _ => 0xFFu8, // Code 3 → +2.0
         };

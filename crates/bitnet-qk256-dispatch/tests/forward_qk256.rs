@@ -129,15 +129,12 @@ fn qk256_dispatch_status_keeps_opencl_non_claiming() {
 
 #[cfg(feature = "opencl")]
 #[test]
-fn qk256_opencl_source_matches_ggml_no_scale_mapping() {
+fn qk256_opencl_source_matches_microsoft_bitnet_mapping() {
     use bitnet_qk256_dispatch::{QK256_OPENCL_KERNEL_NAME, QK256_OPENCL_KERNEL_SRC};
 
     assert_eq!(QK256_OPENCL_KERNEL_NAME, "qk256_gemm_no_scale");
     assert!(QK256_OPENCL_KERNEL_SRC.contains("__kernel void qk256_gemm_no_scale"));
-    assert!(QK256_OPENCL_KERNEL_SRC.contains("w = -2.0f"));
-    assert!(QK256_OPENCL_KERNEL_SRC.contains("w = -1.0f"));
-    assert!(QK256_OPENCL_KERNEL_SRC.contains("w = 1.0f"));
-    assert!(QK256_OPENCL_KERNEL_SRC.contains("w = 2.0f"));
-    assert!(!QK256_OPENCL_KERNEL_SRC.contains("scales"));
-    assert!(!QK256_OPENCL_KERNEL_SRC.contains("* scale"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("const float w = ((float)code) - 1.0f"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("acc * scale"));
+    assert!(QK256_OPENCL_KERNEL_SRC.contains("const float scale"));
 }

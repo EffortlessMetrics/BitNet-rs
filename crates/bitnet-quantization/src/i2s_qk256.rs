@@ -1,9 +1,12 @@
-//! GGML I2_S (QK=256) scalar reference kernels
+//! Microsoft BitNet I2_S (QK=256) scalar reference kernels
 //!
-//! This module implements pure-Rust dequantization and GEMV for GGML's I2_S format:
+//! This module implements pure-Rust dequantization and GEMV for Microsoft BitNet's
+//! GGUF I2_S format:
 //! - Block size: 256 elements
-//! - Packed format: 64 bytes per block (2 bits/element, no embedded scales)
-//! - Code mapping: **VERIFIED** against GGML reference (ggml-quants.c:62)
+//! - Packed format: 64 bytes per block (2 bits/element)
+//! - Per-tensor scale: one little-endian `f32` trailer after the packed bytes
+//! - Code mapping: ternary `0 -> -1`, `1 -> 0`, `2 -> +1`; code `3` is unused by
+//!   the Microsoft BitNet quantizer and is treated as `+2` for deterministic decode
 //!
 //! ## Memory Layout
 //!
@@ -19,19 +22,16 @@
 //!
 //! ## Code Mapping (VERIFIED)
 //!
-//! The 2-bit codes map to signed weights according to GGML's IQ2_S specification
-//! (verified in `crates/bitnet-ggml-ffi/csrc/ggml/src/ggml-quants.c:62`):
+//! The 2-bit codes map to signed weights according to Microsoft BitNet's
+//! `quantize_i2_s` path:
 //!
-//! - Code 0 → -2.0
-//! - Code 1 → -1.0
+//! - Code 0 → -1.0
+//! - Code 1 → 0.0
 //! - Code 2 → +1.0
-//! - Code 3 → +2.0
+//! - Code 3 → +2.0 (unused by the quantizer)
 //!
-//! **Format variants:**
-//! - **GgmlQk256NoScale** (MS BitNet): No per-block scale, use LUT values directly
-//! - **Full GGML IQ2_S** (82B/block): Multiply LUT values by per-block FP16 scale `d`
-//!
-//! This implementation supports the "no-scale" variant used by MS BitNet GGUF models.
+//! The public no-scale entry points use scale `1.0` for fixtures. Real Microsoft
+//! BitNet GGUF loading should call the scaled entry point with the trailer scale.
 
 use anyhow::{Result, bail};
 use bitnet_qk256_layout_core::{
@@ -50,11 +50,13 @@ pub const QK256_SCALAR_GEMV_KERNEL_ID: &str = "qk256-scalar-gemv";
 /// Stable receipt/proof kernel ID for the canonical scalar QK256 prefill GEMM.
 pub const QK256_SCALAR_GEMM_KERNEL_ID: &str = "qk256-scalar-gemm";
 
-/// Storage for GGML I2_S (QK=256) quantized weights without per-block scales
+/// Storage for Microsoft BitNet I2_S (QK=256) quantized weights.
 ///
 /// This structure holds raw packed 2-bit codes for a weight tensor in the
-/// "GgmlQk256NoScale" format used by MS BitNet GGUF models. The data is stored
-/// in row-major order without dequantization.
+/// "GgmlQk256NoScale" format used by MS BitNet GGUF models. The packed data is
+/// stored in row-major order without dequantization. The optional per-tensor scale
+/// is carried separately because the packed row tensor is passed through Candle as
+/// a U8 matrix.
 ///
 /// # Memory Layout
 ///
@@ -76,6 +78,7 @@ pub struct I2SQk256NoScale {
     pub rows: usize,
     pub cols: usize,
     pub row_stride_bytes: usize,
+    pub scale: f32,
     pub qs: Vec<u8>,
 }
 
@@ -92,6 +95,11 @@ impl I2SQk256NoScale {
     ///
     /// `Result<Self>` - The quantized tensor or error if dimensions don't match
     pub fn new(rows: usize, cols: usize, qs: Vec<u8>) -> Result<Self> {
+        Self::new_with_scale(rows, cols, qs, 1.0)
+    }
+
+    /// Create a new QK256 quantized tensor with an explicit per-tensor scale.
+    pub fn new_with_scale(rows: usize, cols: usize, qs: Vec<u8>, scale: f32) -> Result<Self> {
         let layout = Qk256Layout::from_rows_cols(rows, cols)?;
         let row_stride_bytes = layout.row_stride_bytes;
         let expected_bytes = layout.packed_len_bytes;
@@ -111,7 +119,7 @@ impl I2SQk256NoScale {
             );
         }
 
-        Ok(Self { rows, cols, row_stride_bytes, qs })
+        Ok(Self { rows, cols, row_stride_bytes, scale, qs })
     }
 
     /// Get a slice of bytes for a specific row
@@ -138,19 +146,16 @@ impl I2SQk256NoScale {
 
 /// Code-to-float lookup table
 ///
-/// **VERIFIED**: This mapping matches GGML's IQ2_S dequantization (ggml-quants.c:62).
-/// Reference: `const float qmap[4] = { -2.f, -1.f, 1.f, 2.f };`
-///
-/// For MS BitNet "GgmlQk256NoScale" format, these values are used directly
-/// (no per-block scale). For full GGML IQ2_S format (82B/block with FP16 scale),
-/// these would be multiplied by the scale factor.
+/// This mapping matches Microsoft BitNet's `quantize_i2_s` encoding:
+/// `0, 1, 2` represent `-1, 0, +1`, and code `3` is unused by the quantizer.
+/// Real Microsoft BitNet GGUF tensors multiply the dot result by the per-tensor
+/// scale stored after the packed bytes.
 #[inline]
 pub fn code_to_f32(code: u8) -> f32 {
     // SAFETY: code is masked to 0..=3 by caller
     debug_assert!(code < 4, "I2S_QK256: code must be 0..=3, got {}", code);
 
-    // Verified against GGML reference (crates/bitnet-ggml-ffi/csrc/ggml/src/ggml-quants.c:62)
-    const LUT: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
+    const LUT: [f32; 4] = [-1.0, 0.0, 1.0, 2.0];
     LUT[code as usize]
 }
 
@@ -331,7 +336,7 @@ fn gemv_qk256_scalar_checked(
 
 /// Canonical scalar QK256 GEMV oracle for decode: `y = A x`.
 ///
-/// This path uses the GGML I2_S no-scale mapping from [`code_to_f32`] and the
+/// This path uses the Microsoft BitNet I2_S mapping from [`code_to_f32`] and the
 /// canonical QK256 packed layout. It never dispatches to SIMD.
 pub fn qk256_gemv_scalar(
     qs_data: &[u8],
@@ -452,6 +457,25 @@ pub fn gemv_qk256(
     gemv_qk256_scalar_checked(qs_data, x, y_out, rows, cols, row_stride_bytes)
 }
 
+/// Multi-row GEMV with an explicit Microsoft BitNet per-tensor trailer scale.
+pub fn gemv_qk256_scaled(
+    qs_data: &[u8],
+    x: &[f32],
+    y_out: &mut [f32],
+    rows: usize,
+    cols: usize,
+    row_stride_bytes: usize,
+    scale: f32,
+) -> Result<()> {
+    gemv_qk256(qs_data, x, y_out, rows, cols, row_stride_bytes)?;
+    if scale != 1.0 {
+        for output in y_out {
+            *output *= scale;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -543,7 +567,7 @@ mod tests {
         let cols = 256usize;
         let row_stride_bytes = QK256_PACKED_BYTES;
 
-        // All codes = 1 (→ -1.0)
+        // All codes = 1 (→ 0.0)
         let qs_data = vec![0x55u8; rows * row_stride_bytes]; // 0b_01_01_01_01
 
         let x: Vec<f32> = (0..cols).map(|i| i as f32).collect();
@@ -552,8 +576,8 @@ mod tests {
         gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, row_stride_bytes)
             .expect("gemv_qk256 should succeed");
 
-        // Code 1 → -1.0, so each row = -sum(x)
-        let expected: f32 = -x.iter().sum::<f32>();
+        // Code 1 → 0.0, so each row is zero.
+        let expected: f32 = 0.0;
         for (i, &val) in y_out.iter().enumerate() {
             assert!(
                 (val - expected).abs() < 1e-3,
@@ -567,9 +591,9 @@ mod tests {
 
     #[test]
     fn code_to_f32_lut() {
-        // Verify LUT values (verified against GGML ggml-quants.c:62)
-        assert_eq!(code_to_f32(0), -2.0);
-        assert_eq!(code_to_f32(1), -1.0);
+        // Verify LUT values against Microsoft BitNet quantize_i2_s ternary encoding.
+        assert_eq!(code_to_f32(0), -1.0);
+        assert_eq!(code_to_f32(1), 0.0);
         assert_eq!(code_to_f32(2), 1.0);
         assert_eq!(code_to_f32(3), 2.0);
     }
@@ -755,15 +779,15 @@ mod tests {
     /// Test (A): LUT Sanity (NoScale)
     ///
     /// Tests feature spec: i2s-dual-flavor.md#code-mapping
-    /// Verifies that the code-to-float lookup table matches GGML reference:
-    /// - Code 0 → -2.0
-    /// - Code 1 → -1.0
+    /// Verifies that the code-to-float lookup table matches Microsoft BitNet:
+    /// - Code 0 → -1.0
+    /// - Code 1 → 0.0
     /// - Code 2 → +1.0
-    /// - Code 3 → +2.0
+    /// - Code 3 → +2.0 (unused by the quantizer)
     #[test]
     fn qk256_lut_basic() {
-        assert_eq!(code_to_f32(0), -2.0, "Code 0 should map to -2.0");
-        assert_eq!(code_to_f32(1), -1.0, "Code 1 should map to -1.0");
+        assert_eq!(code_to_f32(0), -1.0, "Code 0 should map to -1.0");
+        assert_eq!(code_to_f32(1), 0.0, "Code 1 should map to 0.0");
         assert_eq!(code_to_f32(2), 1.0, "Code 2 should map to +1.0");
         assert_eq!(code_to_f32(3), 2.0, "Code 3 should map to +2.0");
     }
@@ -774,7 +798,7 @@ mod tests {
     /// Pack 256 two-bit codes (LSB-first) cycling 0..3 into 64 bytes.
     /// Decode using the unpack path and verify:
     /// - RMS in range [0.1, 5.0]
-    /// - First 16 values contain the set {-2, -1, 1, 2}
+    /// - First 16 values contain the set {-1, 0, 1, 2}
     #[test]
     fn qk256_block_decode_golden() {
         // Pack pattern: 0,1,2,3,0,1,2,3,... (cycling through all codes)
@@ -813,13 +837,13 @@ mod tests {
         let sum_sq: f32 = weights.iter().map(|x| x * x).sum();
         let rms = (sum_sq / QK256_BLOCK as f32).sqrt();
 
-        // Verify RMS is reasonable (should be ~1.58 for uniform {-2,-1,1,2})
+        // Verify RMS is reasonable (sqrt(1.5) for uniform {-1,0,1,2})
         assert!((0.1..=5.0).contains(&rms), "RMS {} should be in range [0.1, 5.0]", rms);
 
         // Verify first 16 values contain all expected codes
         let first_16: Vec<f32> = weights[..16].to_vec();
-        assert!(first_16.contains(&-2.0), "First 16 values should contain -2.0");
         assert!(first_16.contains(&-1.0), "First 16 values should contain -1.0");
+        assert!(first_16.contains(&0.0), "First 16 values should contain 0.0");
         assert!(first_16.contains(&1.0), "First 16 values should contain 1.0");
         assert!(first_16.contains(&2.0), "First 16 values should contain 2.0");
     }

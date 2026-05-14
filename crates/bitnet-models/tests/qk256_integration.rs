@@ -18,7 +18,7 @@
 ///
 /// - **Block size**: 256 elements
 /// - **Packed bytes**: 64 bytes/block (2 bits/element)
-/// - **Code mapping**: 0 → -2.0, 1 → -1.0, 2 → +1.0, 3 → +2.0
+/// - **Code mapping**: 0 → -1.0, 1 → 0.0, 2 → +1.0, 3 → +2.0
 /// - **Tensor shape**: `[rows, row_stride_bytes]` where `row_stride_bytes = ceil(cols/256) * 64`
 /// - **Storage key**: `{original_name}.qk256_qs` (e.g., `layers.0.attention.q_proj.weight.qk256_qs`)
 use bitnet_models::quant::i2s_qk256::{
@@ -63,8 +63,8 @@ fn create_qk256_tensor(rows: usize, cols: usize, code: u8) -> anyhow::Result<Can
 #[inline]
 fn code_to_float(code: u8) -> f32 {
     match code {
-        0 => -2.0,
-        1 => -1.0,
+        0 => -1.0,
+        1 => 0.0,
         2 => 1.0,
         3 => 2.0,
         _ => panic!("Invalid QK256 code: {}", code),
@@ -115,7 +115,7 @@ fn test_qk256_single_block_predictable_output() {
 
 #[test]
 fn test_qk256_single_block_all_codes() {
-    // Test each code mapping (0 → -2.0, 1 → -1.0, 2 → +1.0, 3 → +2.0)
+    // Test each code mapping (0 → -1.0, 1 → 0.0, 2 → +1.0, 3 → +2.0)
     let rows = 1;
     let cols = 256;
 
@@ -196,7 +196,7 @@ fn test_qk256_large_matrix() {
     // Test larger matrix: 512×768 (3 blocks per row)
     let rows = 512;
     let cols: usize = 768;
-    let code = 1u8; // → -1.0
+    let code = 0u8; // → -1.0
 
     let blocks_per_row = cols.div_ceil(QK256_BLOCK); // = 3
     let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES; // = 192
@@ -324,7 +324,7 @@ fn test_qk256_vs_fp32_quantization_error() {
     let rows = 4;
     let cols = 256;
 
-    // Create FP32 reference weights: deterministic pattern in [-2, -1, 1, 2]
+    // Create FP32 reference weights: deterministic pattern in [-1, 0, 1, 2]
     // Use deterministic pattern instead of random to avoid randomness in tests
     let fp32_weights: Vec<Vec<f32>> = (0..rows)
         .map(|row_idx| {
@@ -345,8 +345,8 @@ fn test_qk256_vs_fp32_quantization_error() {
             let mut byte = 0u8;
             for (i, &w) in chunk.iter().enumerate() {
                 let code = match w {
-                    x if (x + 2.0).abs() < 1e-6 => 0u8,
-                    x if (x + 1.0).abs() < 1e-6 => 1u8,
+                    x if (x + 1.0).abs() < 1e-6 => 0u8,
+                    x if x.abs() < 1e-6 => 1u8,
                     x if (x - 1.0).abs() < 1e-6 => 2u8,
                     x if (x - 2.0).abs() < 1e-6 => 3u8,
                     _ => panic!("Invalid FP32 value in QK256 space: {}", w),
@@ -574,7 +574,7 @@ fn test_qk256_struct_creation() {
 fn test_qk256_unpack_block() {
     // Test unpack_qk256_block with known patterns
 
-    // Pattern 1: All zeros (code 0 → -2.0)
+    // Pattern 1: All zeros (code 0 → -1.0)
     let qs_zeros = [0u8; QK256_PACKED_BYTES];
     let mut codes = [0u8; QK256_BLOCK];
     unpack_qk256_block(&qs_zeros, &mut codes);
@@ -618,13 +618,13 @@ fn test_qk256_unpack_block() {
 
 #[test]
 fn test_qk256_code_to_float_lut() {
-    // Verify code-to-float LUT matches GGML reference
+    // Verify code-to-float LUT matches Microsoft BitNet I2_S trailer-scale reference.
     use bitnet_models::quant::i2s_qk256::code_to_f32;
 
-    assert_eq!(code_to_f32(0), -2.0);
-    assert_eq!(code_to_f32(1), -1.0);
+    assert_eq!(code_to_f32(0), -1.0);
+    assert_eq!(code_to_f32(1), 0.0);
     assert_eq!(code_to_f32(2), 1.0);
     assert_eq!(code_to_f32(3), 2.0);
 
-    println!("✓ Code-to-float LUT verified against GGML reference");
+    println!("✓ Code-to-float LUT verified against Microsoft BitNet I2_S reference");
 }

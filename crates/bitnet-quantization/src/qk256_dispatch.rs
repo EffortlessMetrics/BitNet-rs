@@ -15,8 +15,8 @@ pub const QK256: usize = QK256_BLOCK_COLS;
 
 /// Legacy QK256 GEMV entry-point.
 ///
-/// The legacy signature exposes an explicit `scales` tensor, but the current
-/// GGML I2_S (QK256 no-scale) format used in BitNet-rs does not consume it.
+/// The legacy signature exposes an explicit `scales` tensor, but this wrapper
+/// delegates to the canonical packed-byte path with scale `1.0`.
 ///
 /// This function validates the legacy input contract and forwards to
 /// [`i2s_qk256::gemv_qk256`], which dispatches AVX2/scalar at runtime.
@@ -49,8 +49,8 @@ pub fn qk256_gemv(
 
 /// Scalar legacy QK256 GEMV (kept for benchmark compatibility).
 ///
-/// This preserves the historical 2-bit mapping used by this legacy interface:
-/// `00→-1, 01→0, 10→1, 11→-1`, followed by per-block scaling.
+/// This preserves the Microsoft BitNet QK256 code mapping used by the canonical
+/// packed-byte path: `00→-1, 01→0, 10→1, 11→2`, followed by per-block scaling.
 pub fn qk256_gemv_scalar(
     output: &mut [f32],
     rows: usize,
@@ -91,7 +91,7 @@ pub fn qk256_gemv_scalar(
                     0b00 => -1.0f32,
                     0b01 => 0.0f32,
                     0b10 => 1.0f32,
-                    0b11 => -1.0f32,
+                    0b11 => 2.0f32,
                     _ => unreachable!(),
                 };
 
@@ -114,15 +114,15 @@ mod tests {
         let rows = 256;
         let cols = 256;
         let mut output = vec![0.0f32; rows];
-        // Code 1 (0b01) maps to -1.0 in i2s_qk256; with activations at 0.5 this
+        // Code 2 (0b10) maps to +1.0 in i2s_qk256; with activations at 0.5 this
         // yields a stable, non-zero smoke assertion.
-        let packed = vec![0x55u8; rows * cols / 4];
+        let packed = vec![0xAAu8; rows * cols / 4];
         let scales = vec![1.0f32; rows * cols / QK256];
         let activations = vec![0.5f32; cols];
 
         qk256_gemv(&mut output, rows, cols, &packed, &scales, &activations);
 
-        assert!(output.iter().all(|&x| x == -128.0));
+        assert!(output.iter().all(|&x| x == 128.0));
     }
 
     #[test]

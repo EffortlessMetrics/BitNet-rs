@@ -309,11 +309,11 @@ fn test_qk256_constants() {
     );
 }
 
-/// `code_to_f32` maps exactly to the GGML-verified LUT: {-2, -1, +1, +2}.
+/// `code_to_f32` maps exactly to the Microsoft BitNet I2_S LUT: {-1, 0, +1, +2}.
 #[test]
 fn test_qk256_code_to_f32_all_valid_codes() {
-    assert_eq!(code_to_f32(0), -2.0);
-    assert_eq!(code_to_f32(1), -1.0);
+    assert_eq!(code_to_f32(0), -1.0);
+    assert_eq!(code_to_f32(1), 0.0);
     assert_eq!(code_to_f32(2), 1.0);
     assert_eq!(code_to_f32(3), 2.0);
 }

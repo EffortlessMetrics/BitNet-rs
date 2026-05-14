@@ -20,7 +20,8 @@ __kernel void qk256_gemm_no_scale(
     const uint input_rows,
     const uint rows,
     const uint cols,
-    const uint row_stride_bytes
+    const uint row_stride_bytes,
+    const float scale
 ) {
     const uint row = get_global_id(0);
     const uint input_row = get_global_id(1);
@@ -35,20 +36,11 @@ __kernel void qk256_gemm_no_scale(
     for (uint col = 0; col < cols; ++col) {
         const uchar packed = row_bytes[col >> 2];
         const uchar code = (packed >> ((col & 3u) * 2u)) & 3u;
-        float w;
-        if (code == 0u) {
-            w = -2.0f;
-        } else if (code == 1u) {
-            w = -1.0f;
-        } else if (code == 2u) {
-            w = 1.0f;
-        } else {
-            w = 2.0f;
-        }
+        const float w = ((float)code) - 1.0f;
         acc += w * x[col];
     }
 
-    output[((ulong)input_row * (ulong)rows) + (ulong)row] = acc;
+    output[((ulong)input_row * (ulong)rows) + (ulong)row] = acc * scale;
 }
 "#;
 
@@ -60,11 +52,12 @@ pub fn gemm_qk256_opencl(
     rows: usize,
     cols: usize,
     row_stride_bytes: usize,
+    scale: f32,
 ) -> Result<()> {
     validate_args(qs_data, input, output, input_rows, rows, cols, row_stride_bytes)?;
 
     let runtime = qk256_runtime()?;
-    runtime.run(qs_data, input, output, input_rows, rows, cols, row_stride_bytes)
+    runtime.run(qs_data, input, output, input_rows, rows, cols, row_stride_bytes, scale)
 }
 
 fn validate_args(
@@ -219,6 +212,7 @@ impl OpenClQk256Runtime {
         rows: usize,
         cols: usize,
         row_stride_bytes: usize,
+        scale: f32,
     ) -> Result<()> {
         let mut qs_buf = unsafe {
             Buffer::<u8>::create(&self.context, CL_MEM_READ_ONLY, qs_data.len(), null_mut())
@@ -263,6 +257,7 @@ impl OpenClQk256Runtime {
                 .set_arg(&rows_u32)
                 .set_arg(&cols_u32)
                 .set_arg(&row_stride_u32)
+                .set_arg(&scale)
                 .set_global_work_sizes(&[rows, input_rows])
                 .enqueue_nd_range(&self.queue)
                 .map_err(|e| {

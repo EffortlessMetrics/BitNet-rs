@@ -1,6 +1,9 @@
 #![cfg(feature = "opencl")]
 
-use bitnet_qk256_dispatch::{Qk256DispatchBackend, forward_qk256, forward_qk256_with_backend};
+use bitnet_qk256_dispatch::{
+    Qk256DispatchBackend, forward_qk256, forward_qk256_scaled_with_backend,
+    forward_qk256_with_backend,
+};
 use candle_core::{Device, Tensor};
 
 #[test]
@@ -74,6 +77,50 @@ fn opencl_qk256_rank3_matches_cpu_reference_for_varied_rows() {
                     "OpenCL rank3 QK256 mismatch at batch {batch_idx}, token {token_idx}, col {col_idx}: expected {expected}, actual {actual}"
                 );
             }
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires an Intel OpenCL GPU runtime; run manually on the A770 proof station"]
+fn opencl_qk256_applies_trailer_scale() {
+    let device = Device::Cpu;
+    let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device).unwrap();
+
+    let mut qk_bytes = Vec::with_capacity(2 * 64);
+    qk_bytes.extend_from_slice(&[0xAAu8; 64]); // code 2 -> +1.0
+    qk_bytes.extend_from_slice(&[0x00u8; 64]); // code 0 -> -1.0
+    let qk = Tensor::from_vec(qk_bytes, (2, 64), &device).unwrap();
+
+    let weight_name = "layers.0.attention.q_proj.weight.qk256_qs";
+    let scale = 0.125f32;
+    let cpu = forward_qk256_scaled_with_backend(
+        &input,
+        &qk,
+        weight_name,
+        Qk256DispatchBackend::Cpu,
+        scale,
+    )
+    .unwrap();
+    let opencl = forward_qk256_scaled_with_backend(
+        &input,
+        &qk,
+        weight_name,
+        Qk256DispatchBackend::OpenCl,
+        scale,
+    )
+    .unwrap();
+
+    let cpu_vals = cpu.to_vec2::<f32>().unwrap();
+    let opencl_vals = opencl.to_vec2::<f32>().unwrap();
+    assert_eq!(cpu_vals, vec![vec![32.0, -32.0]]);
+    assert_eq!(opencl_vals.len(), cpu_vals.len());
+    for (expected_row, actual_row) in cpu_vals.iter().zip(opencl_vals.iter()) {
+        for (&expected, &actual) in expected_row.iter().zip(actual_row.iter()) {
+            assert!(
+                (expected - actual).abs() <= 1e-4,
+                "OpenCL scaled QK256 mismatch: expected {expected}, actual {actual}"
+            );
         }
     }
 }

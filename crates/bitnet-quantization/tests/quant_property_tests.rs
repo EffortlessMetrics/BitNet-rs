@@ -3,7 +3,7 @@
 //! These tests cover invariants not already addressed in `property_tests.rs`:
 //!
 //! 1. **QK256 unpack round-trip** – pack→unpack recovers original 2-bit codes.
-//! 2. **QK256 code_to_f32 range** – all valid codes map to {-2, -1, 1, 2}.
+//! 2. **QK256 code_to_f32 range** – all valid codes map to {-1, 0, 1, 2}.
 //! 3. **Quantize-dequantize sign preservation** – non-zero inputs preserve sign.
 //! 4. **Zero vector quantizes to all-zero output** (I2S).
 //! 5. **validate_numerical_input accepts all-finite data**.
@@ -62,11 +62,11 @@ proptest! {
 // ── QK256 code_to_f32 range ─────────────────────────────────────────────────
 
 proptest! {
-    /// `code_to_f32` maps every valid code (0..=3) to exactly one of {-2, -1, 1, 2}.
+    /// `code_to_f32` maps every valid code (0..=3) to exactly one of {-1, 0, 1, 2}.
     #[test]
     fn prop_code_to_f32_maps_to_expected_set(code in 0u8..=3u8) {
         let v = code_to_f32(code);
-        let valid = [-2.0_f32, -1.0, 1.0, 2.0];
+        let valid = [-1.0_f32, 0.0, 1.0, 2.0];
         prop_assert!(
             valid.contains(&v),
             "code_to_f32({}) = {}; expected one of {:?}", code, v, valid

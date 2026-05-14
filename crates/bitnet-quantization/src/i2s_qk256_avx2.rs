@@ -36,7 +36,7 @@ use anyhow::Result;
 /// Uses `vpsrlvd` (per-lane variable shift) to extract all 8 codes in parallel:
 ///   packed = b0 | (b1 << 16)  →  broadcast to all lanes  →  shift by [0,2,4,6,16,18,20,22]  →  mask 0x03
 ///
-/// Then maps codes [0,1,2,3] → weights [-2,-1,+1,+2] via: `weight = code - 2 + (code >> 1) & 1`.
+/// Then maps codes [0,1,2,3] → weights [-1,0,+1,+2] via `weight = code - 1`.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 unsafe fn decode_8_weights_avx2(
@@ -44,7 +44,6 @@ unsafe fn decode_8_weights_avx2(
     byte1: u8,
     shifts: __m256i,
     mask_03: __m256i,
-    two: __m256i,
     one: __m256i,
 ) -> __m256 {
     // Pack both bytes so per-lane shifts extract each 2-bit code:
@@ -54,10 +53,9 @@ unsafe fn decode_8_weights_avx2(
     let broadcast = _mm256_set1_epi32(packed);
     let codes = _mm256_and_si256(_mm256_srlv_epi32(broadcast, shifts), mask_03);
 
-    // codes ∈ {0,1,2,3} → weights ∈ {-2,-1,+1,+2}
-    let shifted = _mm256_sub_epi32(codes, two);
-    let correction = _mm256_and_si256(_mm256_srli_epi32::<1>(codes), one);
-    _mm256_cvtepi32_ps(_mm256_add_epi32(shifted, correction))
+    // codes ∈ {0,1,2,3} → weights ∈ {-1,0,+1,+2}. Code 3 is unused by the
+    // Microsoft BitNet quantizer but remains deterministic if encountered.
+    _mm256_cvtepi32_ps(_mm256_sub_epi32(codes, one))
 }
 
 /// AVX2-accelerated dot product for one QK256 row.
@@ -96,7 +94,6 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
         // Hoisted constants shared by every decode_8_weights_avx2 call.
         let shifts = _mm256_setr_epi32(0, 2, 4, 6, 16, 18, 20, 22);
         let mask_03 = _mm256_set1_epi32(0x03);
-        let two = _mm256_set1_epi32(2);
         let one = _mm256_set1_epi32(1);
 
         // 4 independent FMA accumulators to saturate the FMA pipe.
@@ -129,38 +126,14 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
             while j + 32 <= take {
                 let pi = j / 4;
 
-                let w0 = decode_8_weights_avx2(
-                    *blk.add(pi),
-                    *blk.add(pi + 1),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
-                let w1 = decode_8_weights_avx2(
-                    *blk.add(pi + 2),
-                    *blk.add(pi + 3),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
-                let w2 = decode_8_weights_avx2(
-                    *blk.add(pi + 4),
-                    *blk.add(pi + 5),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
-                let w3 = decode_8_weights_avx2(
-                    *blk.add(pi + 6),
-                    *blk.add(pi + 7),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
+                let w0 =
+                    decode_8_weights_avx2(*blk.add(pi), *blk.add(pi + 1), shifts, mask_03, one);
+                let w1 =
+                    decode_8_weights_avx2(*blk.add(pi + 2), *blk.add(pi + 3), shifts, mask_03, one);
+                let w2 =
+                    decode_8_weights_avx2(*blk.add(pi + 4), *blk.add(pi + 5), shifts, mask_03, one);
+                let w3 =
+                    decode_8_weights_avx2(*blk.add(pi + 6), *blk.add(pi + 7), shifts, mask_03, one);
 
                 let xj = col + j;
                 let x0 = _mm256_loadu_ps(x_ptr.add(xj));
@@ -179,14 +152,7 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
             // --- 8-element cleanup loop ---
             while j + 8 <= take {
                 let pi = j / 4;
-                let w = decode_8_weights_avx2(
-                    *blk.add(pi),
-                    *blk.add(pi + 1),
-                    shifts,
-                    mask_03,
-                    two,
-                    one,
-                );
+                let w = decode_8_weights_avx2(*blk.add(pi), *blk.add(pi + 1), shifts, mask_03, one);
                 let xv = _mm256_loadu_ps(x_ptr.add(col + j));
                 acc0 = _mm256_fmadd_ps(w, xv, acc0);
                 j += 8;
@@ -198,8 +164,8 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
                 let shift = (j % 4) * 2;
                 let code = (packed_byte >> shift) & 0x03;
                 let w = match code {
-                    0 => -2.0,
-                    1 => -1.0,
+                    0 => -1.0,
+                    1 => 0.0,
                     2 => 1.0,
                     _ => 2.0,
                 };

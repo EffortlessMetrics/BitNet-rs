@@ -108,12 +108,12 @@ fn test_gemv_single_row_all_ones() {
     assert_parity(&qs, &x, 1, cols, stride, 1e-5);
 }
 
-// ── Test 2: single row, all codes=1 (-1), uniform x=1.0 ──
+// ── Test 2: single row, all codes=0 (-1), uniform x=1.0 ──
 
 #[test]
 fn test_gemv_single_row_all_neg_ones() {
     let cols = 256;
-    let codes = vec![1u8; cols]; // code 1 → -1.0
+    let codes = vec![0u8; cols]; // code 0 → -1.0
     let x = vec![1.0f32; cols];
     let (qs, stride) = build_qs_data(&[codes], cols);
 
@@ -215,8 +215,8 @@ fn test_unpack_code_roundtrip() {
 
 #[test]
 fn test_code_to_f32_mapping() {
-    assert_eq!(code_to_f32(0), -2.0);
-    assert_eq!(code_to_f32(1), -1.0);
+    assert_eq!(code_to_f32(0), -1.0);
+    assert_eq!(code_to_f32(1), 0.0);
     assert_eq!(code_to_f32(2), 1.0);
     assert_eq!(code_to_f32(3), 2.0);
 }
@@ -265,17 +265,17 @@ fn test_gemv_large_values() {
 fn test_gemv_single_element_rows() {
     let cols = 4; // minimum meaningful size
     let rows = 2;
-    // codes: row0=[0,1,2,3] → weights [-2,-1,+1,+2]
+    // codes: row0=[0,1,2,3] → weights [-1,0,+1,+2]
     // codes: row1=[3,3,3,3] → weights [+2,+2,+2,+2]
     let row_codes = vec![vec![0u8, 1, 2, 3], vec![3u8, 3, 3, 3]];
     let x = vec![1.0f32; cols];
     let (qs, stride) = build_qs_data(&row_codes, cols);
 
-    // Row 0: (-2)*1 + (-1)*1 + 1*1 + 2*1 = 0
+    // Row 0: (-1)*1 + 0*1 + 1*1 + 2*1 = 2
     // Row 1: 2*1 + 2*1 + 2*1 + 2*1 = 8
     let mut y = vec![0.0f32; rows];
     gemv_qk256(&qs, &x, &mut y, rows, cols, stride).expect("gemv_qk256 small");
-    assert!(y[0].abs() < 1e-5, "row 0 expected 0, got {}", y[0]);
+    assert!((y[0] - 2.0).abs() < 1e-5, "row 0 expected 2, got {}", y[0]);
     assert!((y[1] - 8.0).abs() < 1e-5, "row 1 expected 8, got {}", y[1]);
     assert_parity(&qs, &x, rows, cols, stride, 1e-5);
 }

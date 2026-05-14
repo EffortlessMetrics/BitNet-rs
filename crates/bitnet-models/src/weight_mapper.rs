@@ -179,10 +179,12 @@ pub fn remap_gguf_weights_with_options(
 
     // First pass: map all tensors
     for (name, tensor) in tensors {
-        // Handle raw QK256 tensor keys with .qk256_qs suffix
+        // Handle raw QK256 tensor keys with .qk256_* suffixes
         // Strip suffix -> remap base -> re-append suffix
         let (base_name, suffix) = if let Some(base) = name.strip_suffix(".qk256_qs") {
             (base, Some(".qk256_qs"))
+        } else if let Some(base) = name.strip_suffix(".qk256_scale") {
+            (base, Some(".qk256_scale"))
         } else {
             (name.as_str(), None)
         };
