@@ -1,0 +1,16 @@
+timestamp = "2026-05-14T04:44:38Z"
+campaign = "apple-m4-local-answer"
+item = "M4-BITNET-SMOKE-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 4697
+merge_sha = "a4d500d10ef4d8447e815a0ddd95acc4cdfc6ee2"
+
+notes = [
+  "Merged PR #4697 with the committed `bitnet mac smoke --model-family bitnet` runtime receipt.",
+  "The committed evidence includes the aggregate smoke receipt and paired strict BitNet CPU profile answer receipt under `ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-mac-smoke/`.",
+  "The receipt pair records accepted model/tokenizer identity, strict Apple M4 CPU/NEON routing, fallback_used=false, expected fragment found, generated text, generated token IDs, and timing fields.",
+  "BitNet chat, BitNet serve, full Metal inference, QK256, Neural Engine, MPSGraph, broad quality, and broad performance claims remain disabled.",
+]

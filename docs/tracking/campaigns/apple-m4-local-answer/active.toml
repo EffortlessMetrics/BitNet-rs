@@ -754,8 +754,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-SMOKE-001"
-status = "pr_open"
+status = "merged"
 pr = 4697
+merge_sha = "a4d500d10ef4d8447e815a0ddd95acc4cdfc6ee2"
 head_sha = "67e55161f490d4cd805f512f7893eefcb673d61f"
 branch = "codex/apple-m4-local-answer/M4-BITNET-SMOKE-001-runtime-receipt"
 stackable = false
