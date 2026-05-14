@@ -3106,8 +3106,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-001"
-status = "in_progress"
+status = "pr_open"
+pr = 4771
 branch = "codex/lunar-lake/LNL258V-ROUTE-001-promotion-ledger"
+head_sha = "c91dd8905d06c5c8b0164bd12647d09b02c0b4ff"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
