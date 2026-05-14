@@ -1,0 +1,15 @@
+timestamp = "2026-05-14T21:47:41Z"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-005A"
+event = "pr_open"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-005A-microsoft-2b-identity"
+pr = 4795
+head_sha = "a4762c4c93c2b26eaef5147771ef01b9b4c0ff22"
+summary = "Opened the M3 Air official Microsoft 2B I2_S identity and hash PR."
+
+notes = [
+  "The PR records the official Microsoft BitNet 2B I2_S GGUF revision, filename, size, SHA256, local cache root, storage before and after download, and shared answer-gate and compatibility references.",
+  "The evidence is identity-only for M3MBA-005A; tokenizer authority remains M3MBA-005B and reference output acceptance, rejection, or blocking remains M3MBA-005C.",
+  "No artifact acceptance, Apple answer-readiness, M4 Mac mini proof, Apple Metal inference, MPSGraph model inference, Neural Engine execution, QK256-on-Apple, speedup, or broad Apple Silicon performance claim is made.",
+]
