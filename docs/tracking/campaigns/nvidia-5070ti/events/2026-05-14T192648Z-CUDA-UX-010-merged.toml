@@ -1,0 +1,17 @@
+timestamp = "2026-05-14T19:26:48Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-010"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "docs/9950x3d-5070ti-cuda-quickstart"
+pr = 4768
+head_sha = "ab36634a5069de04d920c06c1b5f492dea987c40"
+merge_sha = "2a5b8dcf020500c58b06eca0fa9fde298f81d5df"
+summary = "Closed the tracker for the merged 9950X3D + RTX 5070 Ti CUDA quickstart."
+
+notes = [
+  "GitHub reports PR #4768 merged at 2026-05-14T19:26:48Z.",
+  "This closeout is tracker-only and keeps the quickstart claims bounded to documentation.",
+]

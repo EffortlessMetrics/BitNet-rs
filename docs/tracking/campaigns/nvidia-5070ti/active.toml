@@ -2519,8 +2519,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-UX-010"
-status = "pr_open"
+status = "merged"
 branch = "docs/9950x3d-5070ti-cuda-quickstart"
+pr = 4768
+head_sha = "ab36634a5069de04d920c06c1b5f492dea987c40"
+merge_sha = "2a5b8dcf020500c58b06eca0fa9fde298f81d5df"
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
