@@ -200,7 +200,7 @@
 | intel-258v-platform | LNL258V-COMPARE-005 | LNL258V-REG-001 | merged |
 | intel-258v-platform | LNL258V-ASK-001 | LNL258V-COMPARE-005 | merged |
 | intel-258v-platform | LNL258V-ASK-002 | LNL258V-ASK-001 | merged |
-| intel-258v-platform | CPU-BITNET-REF-002 | CPU-BITNET-REF-001 | pr_open |
+| intel-258v-platform | CPU-BITNET-REF-002 | CPU-BITNET-REF-001 | merged |
 | intel-258v-platform | CPU-BITNET-EMBD-001 | CPU-BITNET-PERF-002 | merged |
 | intel-258v-platform | LNL258V-ASK-003 | LNL258V-ASK-002 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |

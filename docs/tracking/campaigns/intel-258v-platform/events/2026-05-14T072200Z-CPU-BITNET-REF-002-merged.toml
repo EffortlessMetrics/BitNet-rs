@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T07:22:00Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-REF-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 4710
+merge_sha = "bd3a638892a67ed2e160b99cbaed322894f0d5a6"
+branch = "codex/lunar-lake/CPU-BITNET-REF-002-direct-token-classifier"
+head_sha = "1a9ae7989495f38de5e00336659a399b141bcd15"
+summary = "Marked CPU-BITNET-REF-002 merged after PR #4710 hardened the BitNet first-token divergence classifier for direct reference token evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4710",
+]
+
+notes = [
+  "The merged classifier derives reference first-generated-token evidence from direct external generated_token_ids when a future BitNet.cpp/reference artifact supplies them.",
+  "All matching direct first-token cases now classify as no divergence instead of falling through to an unknown summary.",
+  "The current committed external BitNet.cpp artifact remains text-only; generated-token parity, first-token logits parity, answer quality, speed, Arc, NPU, QK256 changes, and full model correctness remain non-claims.",
+]

@@ -3106,10 +3106,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-BITNET-REF-002"
-status = "pr_open"
+status = "merged"
 pr = 4710
+merge_sha = "bd3a638892a67ed2e160b99cbaed322894f0d5a6"
 branch = "codex/lunar-lake/CPU-BITNET-REF-002-direct-token-classifier"
-head_sha = "0f8ddab487ff78cfa39c65b9f7122dac86433e29"
+head_sha = "1a9ae7989495f38de5e00336659a399b141bcd15"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
