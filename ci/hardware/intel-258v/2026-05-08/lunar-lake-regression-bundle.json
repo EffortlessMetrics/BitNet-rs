@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-14T10:31:00Z",
+  "created_utc": "2026-05-14T11:21:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -52,7 +52,9 @@
       "status": "passed",
       "evidence": [
         "slm-openvino-gpu-arc140v-llmpipeline-smoke.json",
+        "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
         "slm-openvino-npu-llmpipeline-smoke.json",
+        "lunar-lake-openvino-operator-ask-npu-math-brief.json",
         "slm-openvino-cpu-gpu-npu-phase-runner.json"
       ],
       "notes": [

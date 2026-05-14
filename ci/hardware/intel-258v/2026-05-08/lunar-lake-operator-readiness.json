@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-14T10:30:00Z",
+  "created_utc": "2026-05-14T11:20:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -55,7 +55,7 @@
       "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu",
       "fallback_policy": "strict_no_fallback",
       "route_reason": "Candidate route because Arc 140V OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false, but no benchmark-qualified speedup claim is recorded.",
-      "answer_gate_evidence": "slm-openvino-gpu-arc140v-llmpipeline-smoke.json",
+      "answer_gate_evidence": "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "acceleration_claim": false
     },
@@ -68,7 +68,7 @@
       "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
       "fallback_policy": "strict_no_fallback",
       "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
-      "answer_gate_evidence": "slm-openvino-npu-llmpipeline-smoke.json",
+      "answer_gate_evidence": "lunar-lake-openvino-operator-ask-npu-math-brief.json",
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "acceleration_claim": false
     }
@@ -131,10 +131,38 @@
       "issues": []
     },
     {
+      "evidence_id": "dense_slm_openvino_gpu_operator_ask",
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+      "present": true,
+      "artifact_kind": "lunar_lake_openvino_operator_ask",
+      "requested_backend": "openvino-gpu",
+      "selected_backend": "openvino-gpu",
+      "runtime_api": "openvino_genai",
+      "fallback_used": false,
+      "answer_gate_passed": true,
+      "phase_timing_present": null,
+      "speedup_claim": null,
+      "issues": []
+    },
+    {
       "evidence_id": "dense_slm_openvino_npu",
       "path": "ci/hardware/intel-258v/2026-05-08/slm-openvino-npu-llmpipeline-smoke.json",
       "present": true,
       "artifact_kind": "intel_258v_dense_slm_openvino_npu_llmpipeline_smoke",
+      "requested_backend": "openvino-npu",
+      "selected_backend": "openvino-npu",
+      "runtime_api": "openvino_genai",
+      "fallback_used": false,
+      "answer_gate_passed": true,
+      "phase_timing_present": null,
+      "speedup_claim": null,
+      "issues": []
+    },
+    {
+      "evidence_id": "dense_slm_openvino_npu_operator_ask",
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-npu-math-brief.json",
+      "present": true,
+      "artifact_kind": "lunar_lake_openvino_operator_ask",
       "requested_backend": "openvino-npu",
       "selected_backend": "openvino-npu",
       "runtime_api": "openvino_genai",
