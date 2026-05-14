@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T03:40:39Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4689
+branch = "codex/lunar-lake/CPU-BITNET-PERF-003-applied-threads"
+head_sha = "2f24a3131477c9b36bfff0e609b6ff0d42924935"
+summary = "Opened CPU-BITNET-PERF-003 to record 258V QK256/I2_S applied-thread microbench evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4689",
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
+]
+
+notes = [
+  "The PR adds an optional i2s_applied_thread_matrix block to the CPU benchmark receipt generator and validator.",
+  "The committed receipt applies scoped row-partitioned GEMV and token-partitioned GEMM samples with requested and applied thread counts.",
+  "The receipt preserves fallback_used=false and speedup_claim=false while making no answer-quality, sustained-throughput, full-runtime thread-policy, Arc/NPU, acceleration, QK256 semantic-change, or full-model claim.",
+]

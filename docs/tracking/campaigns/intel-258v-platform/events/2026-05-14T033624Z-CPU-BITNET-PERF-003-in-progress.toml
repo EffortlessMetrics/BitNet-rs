@@ -1,0 +1,17 @@
+timestamp = "2026-05-14T03:36:24Z"
+campaign = "intel-258v-platform"
+item = "CPU-BITNET-PERF-003"
+event = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/CPU-BITNET-PERF-003-applied-threads"
+summary = "Started CPU-BITNET-PERF-003 to record Lunar Lake QK256/I2_S applied-thread microbench evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-003-i2s-applied-thread-matrix.json",
+]
+
+notes = [
+  "The new receipt records scoped row-partitioned GEMV and token-partitioned GEMM samples with requested and applied thread counts.",
+  "The applied-thread matrix is synthetic microbench evidence only and does not change the full BitNet decode path.",
+  "No answer-quality, speedup, sustained-throughput, Arc/NPU execution, acceleration, QK256 semantic-change, or full-model correctness claim is made.",
+]
