@@ -48,7 +48,7 @@ MacBook behavior, or broad Apple Silicon performance.
 |---|---|---|
 | M4-SLM-EVAL-001 | merged | #4656 defined the campaign and seeded deterministic eval corpus spec; corpus shape only, no runtime accuracy claim. |
 | M4-SLM-EVAL-002 | merged | #4660 added deterministic exact/normalized/schema/numeric/keyword scoring fixtures; no live runtime accuracy claim. |
-| M4-SLM-EVAL-003 | ready | Define and validate the per-model M4 dense SLM eval summary report schema. |
+| M4-SLM-EVAL-003 | pr_open | #4663 defines and validates the per-model M4 dense SLM eval summary report schema. |
 | M4-SLM-EVAL-004 | ready | Run and publish per-model reports for all supported dense M4 model IDs. |
 | M4-SLM-EVAL-005 | ready | Wire lightweight generic CI checks and document advisory/nightly/release M4 tiers. |
 | M4-SLM-EVAL-006 | ready | Compare matching dense SLM eval reports through regression tooling. |

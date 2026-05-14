@@ -4838,6 +4838,8 @@ fn validate_mac_receipt_value(
         || artifact_kind == "apple_m4_slm_performance_profiles"
     {
         validate_profile_set_receipt(path, receipt, artifact_kind.as_str())?
+    } else if artifact_kind == "apple_m4_slm_eval_summary" {
+        validate_slm_eval_summary_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -4854,6 +4856,129 @@ fn validate_mac_receipt_value(
         passed: true,
         regression: None,
     })
+}
+
+fn validate_slm_eval_summary_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_slm_eval_summary")?;
+    require_exact_string_at(path, receipt, &["machine_id"], "apple-m4-mac-mini")?;
+    require_non_empty_string_at(path, receipt, &["model_id"])?;
+
+    require_non_empty_string_at(path, receipt, &["model", "repo"])?;
+    require_non_empty_string_at(path, receipt, &["model", "file"])?;
+    let model_sha = require_non_empty_string_at(path, receipt, &["model", "sha256"])?;
+    if !is_sha256_hex(model_sha) {
+        anyhow::bail!(
+            "{} SLM eval summary model.sha256 must be a 64-character SHA256 hex digest",
+            path.display()
+        );
+    }
+    let model_family = require_non_empty_string_at(path, receipt, &["model", "family"])?;
+    if model_family.eq_ignore_ascii_case("bitnet") {
+        anyhow::bail!(
+            "{} SLM eval summary is dense-SLM only and must not record a BitNet model family",
+            path.display()
+        );
+    }
+    require_non_empty_string_at(path, receipt, &["model", "architecture"])?;
+    require_non_empty_string_at(path, receipt, &["model", "quantization"])?;
+
+    require_non_empty_string_at(path, receipt, &["tokenizer", "source"])?;
+    require_non_empty_string_at(path, receipt, &["tokenizer", "authority"])?;
+    require_non_empty_string_at(path, receipt, &["tokenizer", "pretokenizer_authority"])?;
+    require_bool_at(path, receipt, &["tokenizer", "strict"], true)?;
+    require_non_empty_string_at(path, receipt, &["prompt_template"])?;
+
+    require_non_empty_string_at(path, receipt, &["corpus", "name"])?;
+    require_u64_at(path, receipt, &["corpus", "seed"], false)?;
+    let corpus_case_count = require_u64_at(path, receipt, &["corpus", "case_count"], true)?;
+
+    let cases_total = require_u64_at(path, receipt, &["accuracy", "cases_total"], true)?;
+    let cases_scored = require_u64_at(path, receipt, &["accuracy", "cases_scored"], true)?;
+    let cases_passed = require_u64_at(path, receipt, &["accuracy", "cases_passed"], false)?;
+    if cases_total != corpus_case_count {
+        anyhow::bail!(
+            "{} SLM eval summary accuracy.cases_total must match corpus.case_count",
+            path.display()
+        );
+    }
+    if cases_scored > cases_total {
+        anyhow::bail!(
+            "{} SLM eval summary accuracy.cases_scored must not exceed cases_total",
+            path.display()
+        );
+    }
+    if cases_passed > cases_scored {
+        anyhow::bail!(
+            "{} SLM eval summary accuracy.cases_passed must not exceed cases_scored",
+            path.display()
+        );
+    }
+    for field in [
+        "exact_match",
+        "normalized_match",
+        "json_schema_pass",
+        "numeric_tolerance_pass",
+        "required_keywords_pass",
+        "forbidden_tokens_pass",
+    ] {
+        require_unit_rate_at(path, receipt, &["accuracy", field])?;
+    }
+
+    require_bool_at(path, receipt, &["evidence", "generated_text_recorded"], true)?;
+    require_bool_at(path, receipt, &["evidence", "generated_token_ids_recorded"], true)?;
+    require_non_empty_string_array_at(path, receipt, &["evidence", "case_receipts"])?;
+    require_non_empty_string_at(path, receipt, &["evidence", "source_answer_corpus_receipt"])?;
+    let generated_tokens_total =
+        require_u64_at(path, receipt, &["evidence", "generated_tokens_total"], true)?;
+
+    for field in [
+        "cold_load_ms_p50",
+        "tokenizer_load_ms_p50",
+        "prompt_tokenize_ms_p50",
+        "prefill_ms_p50",
+        "ttft_ms_p50",
+        "ttft_ms_p90",
+        "input_tok_s_p50",
+        "output_tok_s_p50",
+        "decode_tok_s_p50",
+        "sampling_ms_per_token_p50",
+        "total_wall_ms_p50",
+    ] {
+        require_positive_number_at(path, receipt, &["speed", field])?;
+    }
+    let ttft_p50 = require_positive_number_at(path, receipt, &["speed", "ttft_ms_p50"])?;
+    let ttft_p90 = require_positive_number_at(path, receipt, &["speed", "ttft_ms_p90"])?;
+    if ttft_p90 < ttft_p50 {
+        anyhow::bail!(
+            "{} SLM eval summary speed.ttft_ms_p90 must be greater than or equal to speed.ttft_ms_p50",
+            path.display()
+        );
+    }
+
+    require_positive_number_at(path, receipt, &["memory", "peak_memory_mb"])?;
+    require_non_empty_string_at(path, receipt, &["memory", "source"])?;
+
+    require_u64_at(path, receipt, &["stability", "resident_prompts"], true)?;
+    require_bool_at(path, receipt, &["stability", "quality_passed"], true)?;
+    require_number_at(path, receipt, &["stability", "memory_drift_mb"], true)?;
+
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bounded_seeded_corpus_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+
+    Ok((Some(cases_total as usize), Some(generated_tokens_total as usize)))
 }
 
 fn validate_profile_set_receipt(
@@ -5663,6 +5788,155 @@ fn validate_warm_session_prompt_metal_phase(path: &Path, prompt: &serde_json::Va
         }
     }
     Ok(())
+}
+
+fn json_value_at<'a>(value: &'a serde_json::Value, segments: &[&str]) -> &'a serde_json::Value {
+    let mut current = value;
+    for segment in segments {
+        current = &current[*segment];
+    }
+    current
+}
+
+fn json_path_label(segments: &[&str]) -> String {
+    segments.join(".")
+}
+
+fn require_non_empty_string_at<'a>(
+    receipt_path: &Path,
+    value: &'a serde_json::Value,
+    segments: &[&str],
+) -> Result<&'a str> {
+    let label = json_path_label(segments);
+    let text = json_value_at(value, segments)
+        .as_str()
+        .ok_or_else(|| anyhow!("{} SLM eval summary is missing {label}", receipt_path.display()))?;
+    if text.trim().is_empty() {
+        anyhow::bail!("{} SLM eval summary {label} must not be empty", receipt_path.display());
+    }
+    Ok(text)
+}
+
+fn require_exact_string_at(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+    expected: &str,
+) -> Result<()> {
+    let label = json_path_label(segments);
+    let observed = json_value_at(value, segments).as_str();
+    if observed != Some(expected) {
+        anyhow::bail!(
+            "{} SLM eval summary {label} must be {expected:?}, got {observed:?}",
+            receipt_path.display()
+        );
+    }
+    Ok(())
+}
+
+fn require_bool_at(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+    expected: bool,
+) -> Result<()> {
+    let label = json_path_label(segments);
+    let observed = json_value_at(value, segments).as_bool();
+    if observed != Some(expected) {
+        anyhow::bail!("{} SLM eval summary {label} must be {expected}", receipt_path.display());
+    }
+    Ok(())
+}
+
+fn require_u64_at(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+    positive: bool,
+) -> Result<u64> {
+    let label = json_path_label(segments);
+    let number = json_value_at(value, segments).as_u64().ok_or_else(|| {
+        anyhow!("{} SLM eval summary is missing numeric {label}", receipt_path.display())
+    })?;
+    if positive && number == 0 {
+        anyhow::bail!(
+            "{} SLM eval summary {label} must be greater than zero",
+            receipt_path.display()
+        );
+    }
+    Ok(number)
+}
+
+fn require_number_at(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+    non_negative: bool,
+) -> Result<f64> {
+    let label = json_path_label(segments);
+    let number = json_value_at(value, segments).as_f64().ok_or_else(|| {
+        anyhow!("{} SLM eval summary is missing numeric {label}", receipt_path.display())
+    })?;
+    if non_negative && number < 0.0 {
+        anyhow::bail!("{} SLM eval summary {label} must be non-negative", receipt_path.display());
+    }
+    Ok(number)
+}
+
+fn require_positive_number_at(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+) -> Result<f64> {
+    let label = json_path_label(segments);
+    let number = require_number_at(receipt_path, value, segments, false)?;
+    if number <= 0.0 {
+        anyhow::bail!(
+            "{} SLM eval summary {label} must be greater than zero",
+            receipt_path.display()
+        );
+    }
+    Ok(number)
+}
+
+fn require_unit_rate_at(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+) -> Result<()> {
+    let label = json_path_label(segments);
+    let rate = require_number_at(receipt_path, value, segments, false)?;
+    if !(0.0..=1.0).contains(&rate) {
+        anyhow::bail!(
+            "{} SLM eval summary {label} must be a rate between 0 and 1",
+            receipt_path.display()
+        );
+    }
+    Ok(())
+}
+
+fn require_non_empty_string_array_at(
+    receipt_path: &Path,
+    value: &serde_json::Value,
+    segments: &[&str],
+) -> Result<()> {
+    let label = json_path_label(segments);
+    let values = json_value_at(value, segments).as_array().ok_or_else(|| {
+        anyhow!("{} SLM eval summary is missing array {label}", receipt_path.display())
+    })?;
+    if values.is_empty()
+        || values.iter().any(|value| value.as_str().is_none_or(|text| text.trim().is_empty()))
+    {
+        anyhow::bail!(
+            "{} SLM eval summary {label} must contain non-empty strings",
+            receipt_path.display()
+        );
+    }
+    Ok(())
+}
+
+fn is_sha256_hex(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn receipt_string(receipt: &serde_json::Value, key: &str) -> Option<String> {

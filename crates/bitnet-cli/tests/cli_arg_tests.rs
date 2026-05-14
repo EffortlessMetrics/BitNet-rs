@@ -1762,6 +1762,61 @@ fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate() {
 }
 
 #[test]
+fn slm_eval_report_schema_accepts_fixture_summary() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("slm-eval-summary.json");
+    std::fs::write(
+        &receipt_path,
+        serde_json::to_vec_pretty(&slm_eval_summary_report()).expect("json"),
+    )
+    .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_slm_eval_summary"))
+        .stdout(predicate::str::contains("\"prompt_count\": 10"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 128"))
+        .stdout(predicate::str::contains("\"passed\": true"));
+}
+
+#[test]
+fn slm_eval_report_schema_rejects_missing_input_throughput() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("slm-eval-summary-missing-throughput.json");
+    let mut receipt = slm_eval_summary_report();
+    receipt["speed"].as_object_mut().expect("speed object").remove("input_tok_s_p50");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("speed.input_tok_s_p50"));
+}
+
+#[test]
+fn slm_eval_report_schema_rejects_broad_quality_claim() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("slm-eval-summary-broad-claim.json");
+    let mut receipt = slm_eval_summary_report();
+    receipt["claim_boundary"]["broad_model_quality_claim"] = serde_json::json!(true);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("claim_boundary.broad_model_quality_claim"));
+}
+
+#[test]
 fn mac_receipts_check_rejects_dense_slm_quality_corpus_determinism_drift() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("warm-quality-drift.json");
@@ -2336,6 +2391,96 @@ fn performance_summary_receipt(model_sha: &str) -> serde_json::Value {
             "qk256_apple_claimed": false,
             "bitnet_quality_claimed": false,
             "broad_performance_claim": false,
+            "speedup_claim": false
+        }
+    })
+}
+
+fn slm_eval_summary_report() -> serde_json::Value {
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_eval_summary",
+        "machine_id": "apple-m4-mac-mini",
+        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "model": {
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+            "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "family": "qwen",
+            "architecture": "qwen2",
+            "quantization": "Q8_0"
+        },
+        "tokenizer": {
+            "source": "gguf_metadata",
+            "authority": "gguf_metadata",
+            "pretokenizer_authority": "qwen2",
+            "strict": true
+        },
+        "prompt_template": "qwen2.5",
+        "corpus": {
+            "name": "apple-m4-slm-eval-seeded-corpus-v1",
+            "seed": 424242,
+            "case_count": 10
+        },
+        "accuracy": {
+            "cases_total": 10,
+            "cases_scored": 10,
+            "cases_passed": 9,
+            "exact_match": 0.8,
+            "normalized_match": 0.9,
+            "json_schema_pass": 1.0,
+            "numeric_tolerance_pass": 1.0,
+            "required_keywords_pass": 1.0,
+            "forbidden_tokens_pass": 1.0
+        },
+        "evidence": {
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "generated_tokens_total": 128,
+            "case_receipts": [
+                "ci/hardware/apple-m4-mac-mini/2026-05-13/slm-eval/qwen2.5-0.5b-instruct-q8_0/cases.json"
+            ],
+            "source_answer_corpus_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-13/slm-eval/qwen2.5-0.5b-instruct-q8_0/answer-corpus.json"
+        },
+        "speed": {
+            "cold_load_ms_p50": 3200.0,
+            "tokenizer_load_ms_p50": 45.0,
+            "prompt_tokenize_ms_p50": 4.0,
+            "prefill_ms_p50": 650.0,
+            "ttft_ms_p50": 1800.0,
+            "ttft_ms_p90": 2100.0,
+            "input_tok_s_p50": 118.0,
+            "output_tok_s_p50": 15.2,
+            "decode_tok_s_p50": 15.5,
+            "sampling_ms_per_token_p50": 0.3,
+            "total_wall_ms_p50": 5200.0
+        },
+        "memory": {
+            "peak_memory_mb": 3900.0,
+            "source": "getrusage.ru_maxrss"
+        },
+        "stability": {
+            "resident_prompts": 50,
+            "quality_passed": true,
+            "memory_drift_mb": 64.0
+        },
+        "claim_boundary": {
+            "dense_slm_only": true,
+            "bounded_seeded_corpus_only": true,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "bitnet_evidence": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
             "speedup_claim": false
         }
     })
