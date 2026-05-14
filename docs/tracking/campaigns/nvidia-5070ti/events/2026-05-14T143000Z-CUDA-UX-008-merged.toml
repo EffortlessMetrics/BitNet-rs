@@ -1,0 +1,25 @@
+timestamp = "2026-05-14T14:30:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-008"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "cli/cuda-model-support-dashboard"
+pr = 4724
+head_sha = "200303d764d95d4b85673b8292cba109698f9106"
+merge_sha = "2c9daac4d90acb821f81d24e190f9f3a1452aa65"
+summary = "Marked CUDA-UX-008 merged after the RTX 5070 Ti CUDA model status dashboard landed."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4724",
+  "crates/bitnet-cli/src/model_cache.rs",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+]
+
+notes = [
+  "The merged PR adds `bitnet model status --device nvidia-rtx-5070-ti-cuda` and JSON output sourced from the model coverage matrix.",
+  "The dashboard separates BitNet QK256 CUDA proof from dense regular-LLM CUDA proof and keeps speedup, full-residency, and server readiness false where the coverage matrix says so.",
+  "Qwen3 onboarding remains behind the CUDA UX guide/quickstart sequence because current lane direction keeps candidate model onboarding after the 5070 Ti user-facing status and guide surfaces.",
+  "The status command is read-only and does not require CUDA hardware, create new receipts, promote model claims, or change crates.io/docs.rs publication readiness.",
+]
