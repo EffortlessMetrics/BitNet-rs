@@ -233,10 +233,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-014"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-014-tracker-readiness"
 pr = 4766
-head_sha = "1ed8d348c829955bc3d049396aad0725f85c3fd5"
+head_sha = "f740999c680e62316ed74f0057f2285ec5d5d973"
+merge_sha = "3e8fea9ebefcd06ddfbcdd192271410e3b638377"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
