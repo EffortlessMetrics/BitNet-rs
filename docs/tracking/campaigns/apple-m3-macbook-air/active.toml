@@ -367,7 +367,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-005A"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m3-macbook-air/M3MBA-005A-microsoft-2b-identity"
 stackable = false
 review_mode = "codex_premerge"
@@ -376,8 +376,8 @@ human_gate = "on_blocker_only"
 blocked_by = ["M3MBA-004B"]
 acceptance = "Identify and hash the official Microsoft BitNet 2B I2_S GGUF on M3 Air without accepting model behavior yet, recording source repository, revision, filename, size, SHA256, local cache root, free space before/after, and the shared model-artifact gate and compatibility ledger entries consulted."
 commands = [
-  "huggingface-cli download microsoft/bitnet-b1.58-2B-4T-gguf ggml-model-i2_s.gguf --revision <revision> --local-dir <cache-root>/microsoft-bitnet-2b-i2s",
-  "shasum -a 256 <cache-root>/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf",
+  "curl -L --fail --continue-at - --output ~/Library/Caches/bitnet-rs/models/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/a1f2f1c765812aa8af3f6eda4a313707064bba15/ggml-model-i2_s.gguf",
+  "shasum -a 256 ~/Library/Caches/bitnet-rs/models/microsoft-bitnet-2b-i2s/ggml-model-i2_s.gguf",
   "cargo fmt --all -- --check",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
