@@ -1,0 +1,19 @@
+timestamp = "2026-05-14T23:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-001"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-QUAL-001-answer-corpus-v2"
+summary = "Started LNL258V-QUAL-001 to add the bounded Lunar Lake dense Qwen answer corpus v2 fixture."
+
+artifacts = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+]
+
+notes = [
+  "The v2 corpus covers math, copy, yes/no, factual, instruction, stop/EOS, transcript context, structured output, long-prompt summary, short reasoning, and decode-heavy route checks.",
+  "The PR validates the fixture with answer-corpus --dry-run only and does not run model inference.",
+  "No broad dense SLM quality, speedup, Arc/NPU execution, acceleration, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]

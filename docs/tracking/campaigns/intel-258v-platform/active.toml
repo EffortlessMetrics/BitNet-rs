@@ -3234,6 +3234,63 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-QUAL-001"
+status = "pr_open"
+pr = 4806
+branch = "codex/lunar-lake/LNL258V-QUAL-001-answer-corpus-v2"
+head_sha = "0d230cc36551fb46446a09f26ba496807c5abaf2"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-ROUTE-002"]
+acceptance = "Add a bounded Lunar Lake dense Qwen answer corpus v2 fixture that expands the promoted CPU control route regression surface across math, copy, yes/no, short factual, instruction following, stop/EOS, transcript-style prompt context, structured output, long-prompt summarization, short reasoning, and decode-heavy readable output checks. Validate the corpus with answer-corpus --dry-run only; do not run new inference or claim broad answer quality, speedup, Arc/NPU execution, acceleration, full accelerator BitNet inference, or QK256 accelerator decode."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --dry-run --device cpu --model C:/does-not-exist/qwen2.5-0.5b-instruct-q8_0.gguf --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml --json-out target/bitnet/receipts/lunar-lake-answer-corpus-v2-dry-run.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-device-probe/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-math-brief.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+]
+may_claim = [
+  "The Lunar Lake dense Qwen answer corpus v2 fixture is defined and dry-run validated.",
+  "The corpus covers bounded profile-aware regression categories for the promoted dense Qwen CPU control route.",
+  "The corpus is intended for later route-profile regression runs across CPU and candidate OpenVINO routes.",
+]
+must_not_claim = [
+  "The v2 corpus has been executed against a real model in this PR.",
+  "Broad dense SLM answer quality is proven.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU becomes the default route.",
+  "Arc 140V execution or acceleration is proven.",
+  "Intel NPU execution or acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+]
+
+[[work_item]]
 id = "LNL258V-ASK-004"
 status = "merged"
 pr = 4712

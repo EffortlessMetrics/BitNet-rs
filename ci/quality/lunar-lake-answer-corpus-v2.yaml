@@ -1,0 +1,224 @@
+schema: 1
+artifact_kind: slm_answer_corpus
+name: lunar-lake-qwen25-answer-corpus-v2
+description: Bounded Lunar Lake dense Qwen2.5 answer corpus v2 for profile-aware route regression.
+metadata:
+  campaign: intel-258v-platform
+  work_item: LNL258V-QUAL-001
+  route_scope: dense_slm_default_cpu
+  model_role: promoted_control_route
+  prompt_template: qwen2.5
+  corpus_policy: deterministic-static-fixture-v2
+  claim_boundary:
+    broad_quality_claim: false
+    speedup_claim: false
+    arc_execution_claim: false
+    npu_execution_claim: false
+    bitnet_qk256_claim: false
+model:
+  repo: Qwen/Qwen2.5-0.5B-Instruct-GGUF
+  file: qwen2.5-0.5b-instruct-q8_0.gguf
+  sha256: ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e
+  family: qwen
+  architecture: qwen2
+  quant_format: Q8_0
+defaults:
+  prompt_template: qwen2.5
+  max_new_tokens: 48
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 240
+  min_generated_tokens: 1
+  min_distinct_generated_tokens: 2
+cases:
+  - id: math_2_plus_2_brief
+    category: math
+    profile: regression_tiny
+    question: "What is 2+2? Answer briefly."
+    max_new_tokens: 8
+    scoring:
+      kind: required_forbidden_tokens
+      required_keywords:
+        - "4"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "4"
+        - "four"
+
+  - id: arithmetic_add_7_8
+    category: math
+    profile: regression_tiny
+    question: "Compute 7 + 8. Answer with the result."
+    max_new_tokens: 8
+    scoring:
+      kind: required_forbidden_tokens
+      required_keywords:
+        - "15"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "15"
+        - "fifteen"
+
+  - id: copy_exact_color_triplet
+    category: copy_exact
+    profile: regression_tiny
+    question: "Repeat exactly: red blue green"
+    max_new_tokens: 12
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - "red"
+        - "blue"
+        - "green"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "red blue green"
+        - "Red blue green"
+
+  - id: yes_no_clear_sky
+    category: yes_no
+    profile: ask_short
+    question: "Answer yes or no: is the sky usually blue on a clear day?"
+    max_new_tokens: 8
+    scoring:
+      kind: normalized_match
+      expected_normalized: "yes"
+    gate:
+      kind: starts_with_any
+      starts_with_any:
+        - "yes"
+        - "Yes"
+
+  - id: short_factual_capital_france
+    category: short_factual
+    profile: ask_short
+    question: "Name the capital of France."
+    max_new_tokens: 12
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - "Paris"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Paris"
+        - "paris"
+
+  - id: instruction_single_sentence_rust
+    category: instruction_following
+    profile: ask_normal
+    question: "Write one short sentence about Rust."
+    max_new_tokens: 24
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - "Rust"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Rust"
+        - "rust"
+        - "programming"
+        - "language"
+
+  - id: stop_token_one_word_done
+    category: stop_and_eos
+    profile: regression_tiny
+    question: "Answer with exactly one word: done"
+    max_new_tokens: 8
+    scoring:
+      kind: normalized_match
+      expected_normalized: "done"
+    gate:
+      kind: starts_with_any
+      starts_with_any:
+        - "done"
+        - "Done"
+
+  - id: transcript_context_code_word
+    category: prompt_history_sensitivity
+    profile: ask_normal
+    question: "Transcript:\nUser: My code word is amber.\nAssistant: Noted.\nUser: What is the code word? Answer with one word."
+    max_new_tokens: 12
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - "amber"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "amber"
+        - "Amber"
+
+  - id: structured_json_city_country
+    category: structured_output
+    profile: structured
+    question: "Return one compact JSON object with keys city and country for Paris, France."
+    max_new_tokens: 48
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - "city"
+        - "country"
+        - "Paris"
+        - "France"
+      forbidden_tokens:
+        - "```"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "\"city\""
+        - "city"
+
+  - id: long_prompt_summary_route_policy
+    category: long_prompt_summarization
+    profile: prefill_heavy
+    question: "Read this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path."
+    max_new_tokens: 40
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - "Lunar"
+        - "CPU"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "Lunar"
+        - "CPU"
+        - "route"
+
+  - id: short_reasoning_heavier_object
+    category: short_reasoning
+    profile: ask_normal
+    question: "A full mug is heavier than an empty mug. Which one is heavier? Answer briefly."
+    max_new_tokens: 16
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - "full"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "full"
+        - "Full"
+
+  - id: decode_heavy_short_list
+    category: decode_heavy
+    profile: decode_heavy
+    question: "List six practical checks for a local inference route. Use short comma-separated phrases."
+    max_new_tokens: 64
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - "fallback"
+        - "model"
+      forbidden_tokens:
+        - "<|"
+    gate:
+      kind: readable
+      min_words: 8
