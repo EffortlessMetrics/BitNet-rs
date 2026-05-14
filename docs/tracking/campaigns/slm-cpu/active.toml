@@ -969,8 +969,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-008YB"
-status = "pr_open"
+status = "merged"
 pr = 4699
+merge_sha = "0f06153ae25d3777cfdbb1c3a01109f0d53218cf"
 branch = "codex/slm-cpu-008yb-qwen-think-special-tokenizer"
 stackable = false
 review_mode = "codex_premerge"
