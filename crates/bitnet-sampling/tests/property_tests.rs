@@ -21,12 +21,14 @@ proptest! {
     #[test]
     fn greedy_returns_argmax(logits in prop::collection::vec(-10.0f32..10.0f32, 2..100)) {
         let result = greedy_sample(&logits).unwrap();
-        let expected = logits
-            .iter()
-            .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-            .map(|(i, _)| i as u32)
-            .unwrap();
+        let mut expected = 0u32;
+        let mut best = logits[0];
+        for (index, &logit) in logits.iter().enumerate().skip(1) {
+            if logit > best {
+                best = logit;
+                expected = index as u32;
+            }
+        }
         prop_assert_eq!(result, expected);
     }
 

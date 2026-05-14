@@ -158,7 +158,7 @@ Remove the short-decode receipt and keep one-token proof scoped.
 
 ## Work item: CUDA-DENSE-053
 
-Status: in progress
+Status: merged (#4713)
 Campaign item: `CUDA-DENSE-053`
 Blocked by:
 
