@@ -2104,8 +2104,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-DENSE-052"
-status = "pr_open"
+status = "merged"
 branch = "cuda/dense-qwen25-short-decode-unblock"
+pr = 4695
+head_sha = "e13c4d483db9ce797086f34e4e4dbe3011da1799"
+merge_sha = "928c72621598be6486bf7614d800aa0268a3962f"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

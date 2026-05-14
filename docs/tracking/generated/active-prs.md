@@ -3,4 +3,4 @@
 
 | Campaign | Item | PR | Branch | Notes |
 |---|---|---:|---|---|
-| nvidia-5070ti | CUDA-DENSE-052 | #4695 | `cuda/dense-qwen25-short-decode-unblock` | Add an 8-32 token deterministic Qwen2.5 0.5B Q8_0 short-decode strict CUDA receipt with fallback_used=false, stable greedy token sequence, valid UTF-8 answer, no raw special-token garbage, and recorded prefill, KV, logits, sampler, kernel, and transfer evidence. The current-source rerun supersedes the stale-binary diagnostic blocker and records decoded text `The answer is 4. What is` with CPU/CUDA generated-token equality. |
+| intel-258v-platform | LNL258V-ASK-004 | #4712 | `codex/lunar-lake/LNL258V-ASK-004-openvino-operator-ask` | Add an explicit Lunar Lake OpenVINO GenAI operator-ask helper for dense Qwen GPU/NPU candidate routes that validates the operator-readiness route, runs bounded greedy generation on the requested OpenVINO device, emits top-level backend/runtime/device/fallback/model/template/route/answer-gate/timing identity, and preserves the default CPU ask route plus no speedup, acceleration, broad quality, native OpenCL/NPU, generated-token-ID, or BitNet QK256/I2_S claims. |
