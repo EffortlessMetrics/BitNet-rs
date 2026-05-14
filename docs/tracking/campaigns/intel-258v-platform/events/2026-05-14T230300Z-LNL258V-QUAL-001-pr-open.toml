@@ -1,0 +1,22 @@
+timestamp = "2026-05-14T23:03:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 4806
+branch = "codex/lunar-lake/LNL258V-QUAL-001-answer-corpus-v2"
+head_sha = "0d230cc36551fb46446a09f26ba496807c5abaf2"
+summary = "Opened LNL258V-QUAL-001 to add the bounded Lunar Lake dense Qwen answer corpus v2 fixture."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4806",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+]
+
+notes = [
+  "The PR defines a broader profile-aware dense Qwen control-route corpus and validates it with answer-corpus --dry-run only.",
+  "The fixture is intended for later CPU and candidate OpenVINO route regression runs.",
+  "No new model inference, broad dense SLM quality, speedup, Arc/NPU execution, acceleration, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]
