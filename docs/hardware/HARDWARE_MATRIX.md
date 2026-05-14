@@ -189,6 +189,8 @@ Do not jump from docs or detection directly to benchmark claims.
 
 BitNet-specific proof also requires:
 
+- `docs/specs/a770-bitnet-claim-boundary.md` for A770 trusted BitNet product claims.
+- `plans/a770-bitnet-claim-boundary-implementation.md` for the PR-by-PR A770 implementation sequence.
 - `docs/bitnet/BITNET_MODEL_CONTRACT.md`
 - `docs/bitnet/BITNET_QUANTIZATION_CONTRACT.md`
 - `docs/bitnet/BITNET_KERNEL_MATRIX.md`

@@ -3,6 +3,22 @@
 **Discovery Date**: October 25, 2025
 **Status**: COMPLETE - All APIs identified and documented
 
+## A770 BitNet Productization
+
+Use these specs before implementing or claiming A770 BitNet product support:
+
+1. [A770 BitNet Claim Boundary](a770-bitnet-claim-boundary.md)
+   - Defines claim levels, required evidence, current not-claims, and the
+     selected-attention boundary for real BitNet question-answer usage on
+     A770.
+2. [Intel Arc A770 GPU Roadmap](intel-arc-a770-gpu-roadmap.md)
+   - Defines the A770 hardware/runtime lane and native OpenCL proof path.
+3. [A770 BitNet Productization Plan](../../plans/a770-bitnet-claim-boundary-implementation.md)
+   - Defines the PR-by-PR implementation sequence and acceptance gates.
+
+Do not proceed from A770 detection or a single benchmark to product claims.
+Claims must pass through the claim boundary and productization plan first.
+
 ## Overview
 
 This directory contains comprehensive documentation of the BitNet.cpp API discovered during G2 discovery phase. BitNet.cpp uses the llama.cpp C API; there is no separate BitNet-specific public interface.
