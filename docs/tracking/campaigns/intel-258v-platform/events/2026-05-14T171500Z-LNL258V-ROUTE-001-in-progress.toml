@@ -1,0 +1,19 @@
+timestamp = "2026-05-14T17:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-001"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-001-promotion-ledger"
+summary = "Started LNL258V-ROUTE-001 to add a policy-only Lunar Lake route promotion ledger."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+]
+
+notes = [
+  "The route promotion ledger reads existing operator readiness and comparison receipts; it does not run inference.",
+  "Dense Qwen CPU is the only promoted default route and OpenVINO GPU/NPU remain candidate dense SLM routes until profile-specific advantage evidence exists.",
+  "No broad answer-quality, speedup, Arc/NPU acceleration, full accelerator BitNet inference, QK256 accelerator decode, or dense-SLM-as-BitNet proof is claimed.",
+]
