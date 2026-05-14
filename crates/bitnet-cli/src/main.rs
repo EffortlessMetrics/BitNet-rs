@@ -1366,7 +1366,7 @@ async fn async_main() -> Result<()> {
     let explicit_device_label = cli.device.clone();
 
     // Report backend selection at startup so logs and receipts are deterministic.
-    if !uses_report_only_cuda_benchmark_receipt(cli.command.as_ref()) {
+    if !skips_startup_backend_selection(cli.command.as_ref()) {
         use bitnet_common::{BackendRequest, select_backend};
         use bitnet_kernels::device_features::current_kernel_capabilities;
 
@@ -9996,6 +9996,10 @@ fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static 
     }
 }
 
+fn skips_startup_backend_selection(command: Option<&Commands>) -> bool {
+    uses_report_only_cuda_benchmark_receipt(command) || uses_read_only_model_status(command)
+}
+
 fn uses_report_only_cuda_benchmark_receipt(command: Option<&Commands>) -> bool {
     #[cfg(feature = "cli-bench")]
     if let Some(Commands::Benchmark(cmd)) = command {
@@ -10004,6 +10008,13 @@ fn uses_report_only_cuda_benchmark_receipt(command: Option<&Commands>) -> bool {
 
     let _ = command;
     false
+}
+
+fn uses_read_only_model_status(command: Option<&Commands>) -> bool {
+    matches!(
+        command,
+        Some(Commands::Model(ModelCommand { action: model_cache::ModelAction::Status { .. } }))
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -12177,6 +12188,21 @@ mod tests {
     }
 
     #[test]
+    fn model_status_skips_startup_backend_selection() {
+        let command = Commands::Model(ModelCommand {
+            action: model_cache::ModelAction::Status {
+                device: "nvidia-rtx-5070-ti-cuda".to_string(),
+                matrix: None,
+                format: model_cache::ModelStatusFormat::Text,
+            },
+        });
+
+        assert!(uses_read_only_model_status(Some(&command)));
+        assert!(skips_startup_backend_selection(Some(&command)));
+        assert_eq!(default_log_level_for_command(Some(&command)), Some("warn"));
+    }
+
+    #[test]
     #[cfg(feature = "cli-bench")]
     fn report_only_cuda_benchmark_receipt_skips_startup_backend_selection() {
         let report_command = Commands::Benchmark(BenchmarkCommand {
@@ -12213,8 +12239,10 @@ mod tests {
         });
 
         assert!(uses_report_only_cuda_benchmark_receipt(Some(&report_command)));
+        assert!(skips_startup_backend_selection(Some(&report_command)));
         assert_eq!(default_log_level_for_command(Some(&report_command)), Some("warn"));
         assert!(!uses_report_only_cuda_benchmark_receipt(Some(&legacy_command)));
+        assert!(!skips_startup_backend_selection(Some(&legacy_command)));
         assert!(!uses_report_only_cuda_benchmark_receipt(None));
     }
 

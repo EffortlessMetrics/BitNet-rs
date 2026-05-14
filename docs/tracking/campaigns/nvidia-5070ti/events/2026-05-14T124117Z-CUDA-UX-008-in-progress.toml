@@ -1,0 +1,18 @@
+timestamp = "2026-05-14T12:41:17Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-008"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "cli/cuda-model-support-dashboard"
+summary = "Started the CUDA model support dashboard work after CUDA-DENSE-054 tracker closeout unblocked the UX lane."
+
+artifacts = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+]
+
+notes = [
+  "The status command is read-only and must not require CUDA hardware to summarize the coverage matrix.",
+  "The dashboard must keep BitNet QK256 and dense_regular_llm_cuda proof separate and keep speedup, server, and full-residency claims false unless existing coverage rows say otherwise.",
+]

@@ -5,7 +5,7 @@ use bitnet_models::{
     capability_check::detect_capabilities,
     model_contracts::{BitnetModelContract, bitnet_model_contracts, find_bitnet_model_contract},
 };
-use clap::{Args, Subcommand};
+use clap::{Args, Subcommand, ValueEnum};
 use futures::StreamExt;
 use humansize::{DECIMAL, format_size};
 use serde::{Deserialize, Serialize};
@@ -99,6 +99,21 @@ pub enum ModelAction {
         json: bool,
     },
 
+    /// Show user-facing model support for a device from the coverage matrix.
+    Status {
+        /// Device label to summarize, for example nvidia-rtx-5070-ti-cuda.
+        #[arg(long, value_name = "DEVICE")]
+        device: String,
+
+        /// Override the coverage matrix path. Defaults to ci/model-artifacts/model-coverage-matrix.toml when run from this repo.
+        #[arg(long, value_name = "PATH", env = "BITNET_MODEL_COVERAGE_MATRIX")]
+        matrix: Option<PathBuf>,
+
+        /// Output format.
+        #[arg(long, value_enum, default_value_t = ModelStatusFormat::Text)]
+        format: ModelStatusFormat,
+    },
+
     /// List supported model artifacts and cache status.
     List {
         /// Override cache root. Defaults to ~/.cache/bitnet-rs/models.
@@ -131,6 +146,12 @@ pub enum ModelAction {
         #[arg(long, default_value_t = false)]
         json: bool,
     },
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum ModelStatusFormat {
+    Text,
+    Json,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -474,6 +495,42 @@ struct ModelCoverageEntryOutput<'a> {
     entry: &'a ModelCoverageEntry,
 }
 
+#[derive(Debug, Serialize)]
+struct ModelStatusDashboard {
+    schema_version: u32,
+    device: String,
+    source: PathBuf,
+    note: &'static str,
+    models: Vec<ModelStatusRow>,
+}
+
+#[derive(Debug, Serialize)]
+struct ModelStatusRow {
+    id: String,
+    display_name: String,
+    model_class: String,
+    route: Option<String>,
+    tier: String,
+    status: String,
+    category: String,
+    cpu_answer_ready: bool,
+    accelerator_answer_ready: bool,
+    benchmark_qualified: bool,
+    speedup_claim: bool,
+    server_ready: bool,
+    full_residency_claim: bool,
+    bitnet_packed_i2s_qk256_proof: bool,
+    dense_regular_llm_cuda_proof: bool,
+    ask: String,
+    one_token: String,
+    short_decode: String,
+    warm_session: String,
+    benchmark: String,
+    server: String,
+    claim_boundary: String,
+    next_proof: String,
+}
+
 impl ModelCommand {
     pub async fn execute(self) -> Result<()> {
         match self.action {
@@ -486,6 +543,9 @@ impl ModelCommand {
             ModelAction::Contracts { id, json } => list_model_contracts(id.as_deref(), json),
             ModelAction::Coverage { id, matrix, json } => {
                 list_model_coverage(id.as_deref(), matrix, json)
+            }
+            ModelAction::Status { device, matrix, format } => {
+                print_model_status(&device, matrix, format)
             }
             ModelAction::List { cache_dir, json } => list_models(cache_dir, json),
             ModelAction::Prune { id, all, dry_run, cache_dir, json } => {
@@ -1179,6 +1239,214 @@ fn print_model_coverage_entry(path: &Path, entry: &ModelCoverageEntry) {
     println!("  full_residency_claim: {}", entry.claims.full_residency_claim);
     println!("  bitnet_packed_i2s_qk256_proof: {}", entry.claims.bitnet_packed_i2s_qk256_proof);
     println!("  dense_regular_llm_cuda_proof: {}", entry.claims.dense_regular_llm_cuda_proof);
+}
+
+fn print_model_status(
+    device: &str,
+    matrix: Option<PathBuf>,
+    format: ModelStatusFormat,
+) -> Result<()> {
+    let matrix_path = resolve_model_coverage_matrix_path(matrix)?;
+    let matrix = read_model_coverage_matrix(&matrix_path)?;
+    let dashboard = model_status_dashboard(device, &matrix_path, &matrix);
+
+    match format {
+        ModelStatusFormat::Json => {
+            println!("{}", serde_json::to_string_pretty(&dashboard)?);
+        }
+        ModelStatusFormat::Text => print_model_status_text(&dashboard),
+    }
+
+    Ok(())
+}
+
+fn model_status_dashboard(
+    device: &str,
+    matrix_path: &Path,
+    matrix: &ModelCoverageMatrix,
+) -> ModelStatusDashboard {
+    let models = matrix
+        .entry
+        .iter()
+        .filter(|entry| model_status_includes_entry(device, entry))
+        .map(model_status_row)
+        .collect();
+
+    ModelStatusDashboard {
+        schema_version: 1,
+        device: device.to_string(),
+        source: matrix_path.to_path_buf(),
+        note: "Read-only model coverage view; it does not probe hardware or create new proof.",
+        models,
+    }
+}
+
+fn model_status_includes_entry(device: &str, entry: &ModelCoverageEntry) -> bool {
+    if device != "nvidia-rtx-5070-ti-cuda" {
+        return false;
+    }
+    if entry.claims.product_cli_ready
+        && (entry.accelerator_routes.iter().any(|route| route == "bitnet_qk256_cuda")
+            || entry.accelerator_routes.iter().any(|route| route == "dense_regular_llm_cuda"))
+    {
+        return true;
+    }
+
+    !entry.claims.product_cli_ready
+        && entry.status.contains("candidate")
+        && matches!(entry.model_class.as_str(), "dense_slm" | "small_llm")
+}
+
+fn model_status_row(entry: &ModelCoverageEntry) -> ModelStatusRow {
+    let route = entry.accelerator_routes.first().cloned();
+    let category =
+        if entry.claims.product_cli_ready { "supported" } else { "candidate" }.to_string();
+    let benchmark = benchmark_status(entry);
+    let warm_session = warm_session_status(entry);
+    let ask = ask_status(entry);
+    let one_token = dense_receipt_status(entry, "one_token");
+    let short_decode = dense_receipt_status(entry, "short_decode");
+
+    ModelStatusRow {
+        id: entry.id.clone(),
+        display_name: model_status_display_name(entry),
+        model_class: entry.model_class.clone(),
+        route,
+        tier: entry.current_tier.clone(),
+        status: entry.status.clone(),
+        category,
+        cpu_answer_ready: entry.claims.cpu_answer_ready,
+        accelerator_answer_ready: entry.claims.accelerator_answer_ready,
+        benchmark_qualified: entry.claims.benchmark_qualified,
+        speedup_claim: entry.claims.speedup_claim,
+        server_ready: entry.claims.server_ready,
+        full_residency_claim: entry.claims.full_residency_claim,
+        bitnet_packed_i2s_qk256_proof: entry.claims.bitnet_packed_i2s_qk256_proof,
+        dense_regular_llm_cuda_proof: entry.claims.dense_regular_llm_cuda_proof,
+        ask,
+        one_token,
+        short_decode,
+        warm_session,
+        benchmark,
+        server: if entry.claims.server_ready { "ready" } else { "not ready" }.to_string(),
+        claim_boundary: entry.claim_boundary.clone(),
+        next_proof: entry.next_proof.clone(),
+    }
+}
+
+fn print_model_status_text(dashboard: &ModelStatusDashboard) {
+    println!("CUDA model status for {}", dashboard.device);
+    println!("source: {}", dashboard.source.display());
+    println!("{}", dashboard.note);
+    println!();
+
+    print_model_status_group(dashboard, "Supported", "supported");
+    println!();
+    print_model_status_group(dashboard, "Candidates", "candidate");
+}
+
+fn print_model_status_group(dashboard: &ModelStatusDashboard, title: &str, category: &str) {
+    println!("{title}:");
+    let mut printed = false;
+    for row in dashboard.models.iter().filter(|row| row.category == category) {
+        printed = true;
+        println!("  {}", row.display_name);
+        println!("    id: {}", row.id);
+        println!("    class: {}", model_status_class_label(&row.model_class));
+        println!("    route: {}", row.route.as_deref().unwrap_or("not ready"));
+        println!("    tier: {}", row.tier);
+        println!("    cpu answer: {}", ready_label(row.cpu_answer_ready));
+        println!("    cuda answer: {}", ready_label(row.accelerator_answer_ready));
+        if row.model_class == "dense_slm" && row.category == "supported" {
+            println!("    one-token: {}", row.one_token);
+            println!("    short-decode: {}", row.short_decode);
+        } else {
+            println!("    ask: {}", row.ask);
+        }
+        println!("    warm-session: {}", row.warm_session);
+        println!("    benchmark: {}", row.benchmark);
+        println!("    speedup: {}", if row.speedup_claim { "qualified" } else { "not qualified" });
+        println!("    server: {}", row.server);
+        println!(
+            "    full residency: {}",
+            if row.full_residency_claim { "claimed" } else { "not claimed" }
+        );
+        println!("    claim boundary: {}", row.claim_boundary);
+        if row.category == "candidate" {
+            println!("    next proof: {}", row.next_proof);
+        }
+        println!();
+    }
+
+    if !printed {
+        println!("  none");
+    }
+}
+
+fn model_status_display_name(entry: &ModelCoverageEntry) -> String {
+    if let Some(id) = &entry.capability_id {
+        return id.clone();
+    }
+    if let Some(id) = entry.verifier_surface.split_whitespace().last()
+        && !id.is_empty()
+        && id != "only"
+        && id != "matrix"
+    {
+        return id.to_string();
+    }
+    entry.contract_id.clone().unwrap_or_else(|| entry.id.clone())
+}
+
+fn model_status_class_label(model_class: &str) -> &'static str {
+    match model_class {
+        "bitnet" => "BitNet",
+        "dense_slm" => "dense SLM",
+        "small_llm" => "small dense LLM",
+        "modern_llm_docs_only" => "docs-only modern LLM",
+        _ => "model",
+    }
+}
+
+fn ready_label(ready: bool) -> &'static str {
+    if ready { "ready" } else { "not ready" }
+}
+
+fn ask_status(entry: &ModelCoverageEntry) -> String {
+    if entry.claims.product_cli_ready && entry.claims.accelerator_answer_ready {
+        "ready".to_string()
+    } else {
+        "not ready".to_string()
+    }
+}
+
+fn dense_receipt_status(entry: &ModelCoverageEntry, receipt_fragment: &str) -> String {
+    if entry.required_receipts.iter().any(|receipt| receipt.contains(receipt_fragment)) {
+        "ready".to_string()
+    } else {
+        "not ready".to_string()
+    }
+}
+
+fn warm_session_status(entry: &ModelCoverageEntry) -> String {
+    if entry.required_receipts.iter().any(|receipt| receipt.contains("warm_session"))
+        && entry.claims.accelerator_answer_ready
+    {
+        "ready".to_string()
+    } else {
+        "not ready".to_string()
+    }
+}
+
+fn benchmark_status(entry: &ModelCoverageEntry) -> String {
+    if entry.claims.benchmark_qualified && entry.claims.speedup_claim {
+        return "qualified".to_string();
+    }
+    if entry.claims.product_cli_ready
+        && entry.required_receipts.iter().any(|receipt| receipt.contains("benchmark"))
+    {
+        return "reviewed, speedup not accepted".to_string();
+    }
+    "not ready".to_string()
 }
 
 fn list_models(cache_dir: Option<PathBuf>, json: bool) -> Result<()> {
@@ -2197,6 +2465,17 @@ mod tests {
             .join("model-coverage-matrix.toml")
     }
 
+    fn model_status_row_for<'a>(
+        dashboard: &'a ModelStatusDashboard,
+        id: &str,
+    ) -> Result<&'a ModelStatusRow> {
+        dashboard
+            .models
+            .iter()
+            .find(|row| row.id == id)
+            .with_context(|| format!("missing model status row {id}"))
+    }
+
     #[test]
     fn supported_manifest_contains_m4_runtime_artifact() {
         let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
@@ -2673,6 +2952,113 @@ mod tests {
                 model.id
             );
         }
+    }
+
+    #[test]
+    fn model_status_dashboard_shows_cuda_supported_rows_without_speed_or_server_claims()
+    -> Result<()> {
+        let matrix_path = workspace_model_coverage_matrix_path();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
+        let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
+
+        assert_eq!(dashboard.schema_version, 1);
+        assert_eq!(dashboard.device, "nvidia-rtx-5070-ti-cuda");
+        assert!(dashboard.note.contains("does not probe hardware"));
+
+        let bitnet = model_status_row_for(&dashboard, "bitnet_official_2b_i2s_qk256")?;
+        assert_eq!(bitnet.display_name, "microsoft-bitnet-b1.58-2B-4T-i2s");
+        assert_eq!(bitnet.category, "supported");
+        assert_eq!(bitnet.model_class, "bitnet");
+        assert_eq!(bitnet.route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert!(bitnet.cpu_answer_ready);
+        assert!(bitnet.accelerator_answer_ready);
+        assert!(bitnet.bitnet_packed_i2s_qk256_proof);
+        assert!(!bitnet.dense_regular_llm_cuda_proof);
+        assert!(!bitnet.benchmark_qualified);
+        assert!(!bitnet.speedup_claim);
+        assert!(!bitnet.server_ready);
+        assert!(!bitnet.full_residency_claim);
+        assert_eq!(bitnet.ask, "ready");
+        assert_eq!(bitnet.warm_session, "ready");
+        assert_eq!(bitnet.benchmark, "reviewed, speedup not accepted");
+        assert!(bitnet.claim_boundary.contains("does not prove dense regular-LLM CUDA"));
+
+        let dense = model_status_row_for(&dashboard, "dense_qwen25_05b_q8_cuda")?;
+        assert_eq!(dense.display_name, "qwen2.5-0.5b-instruct-q8_0");
+        assert_eq!(dense.category, "supported");
+        assert_eq!(dense.model_class, "dense_slm");
+        assert_eq!(dense.route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert!(dense.cpu_answer_ready);
+        assert!(dense.accelerator_answer_ready);
+        assert!(dense.dense_regular_llm_cuda_proof);
+        assert!(!dense.bitnet_packed_i2s_qk256_proof);
+        assert!(!dense.benchmark_qualified);
+        assert!(!dense.speedup_claim);
+        assert!(!dense.server_ready);
+        assert!(!dense.full_residency_claim);
+        assert_eq!(dense.one_token, "ready");
+        assert_eq!(dense.short_decode, "ready");
+        assert_eq!(dense.warm_session, "ready");
+        assert_eq!(dense.benchmark, "reviewed, speedup not accepted");
+        assert!(dense.claim_boundary.contains("do not satisfy BitNet packed I2_S/QK256"));
+        Ok(())
+    }
+
+    #[test]
+    fn model_status_dashboard_lists_qwen3_as_candidate_not_cuda_ready() -> Result<()> {
+        let matrix_path = workspace_model_coverage_matrix_path();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
+        let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
+
+        let qwen3 = model_status_row_for(&dashboard, "dense_qwen3_06b_q8_candidate")?;
+        assert_eq!(qwen3.display_name, "qwen3-0.6b-instruct-q8_0");
+        assert_eq!(qwen3.category, "candidate");
+        assert_eq!(qwen3.route, None);
+        assert!(!qwen3.cpu_answer_ready);
+        assert!(!qwen3.accelerator_answer_ready);
+        assert!(!qwen3.dense_regular_llm_cuda_proof);
+        assert!(!qwen3.bitnet_packed_i2s_qk256_proof);
+        assert!(!qwen3.speedup_claim);
+        assert!(!qwen3.server_ready);
+        assert_eq!(qwen3.ask, "not ready");
+        assert_eq!(qwen3.warm_session, "not ready");
+        assert_eq!(qwen3.benchmark, "not ready");
+        assert!(qwen3.next_proof.contains("artifact contract"));
+        assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA answer receipts"));
+        Ok(())
+    }
+
+    #[test]
+    fn model_status_dashboard_is_strictly_device_scoped() -> Result<()> {
+        let matrix_path = workspace_model_coverage_matrix_path();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
+        let dashboard = model_status_dashboard("cuda", &matrix_path, &matrix);
+
+        assert_eq!(dashboard.device, "cuda");
+        assert!(dashboard.models.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn model_status_dashboard_json_shape_is_stable() -> Result<()> {
+        let matrix_path = workspace_model_coverage_matrix_path();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
+        let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
+        let value = serde_json::to_value(&dashboard)?;
+
+        assert_eq!(value["schema_version"], 1);
+        assert_eq!(value["device"], "nvidia-rtx-5070-ti-cuda");
+        assert!(value["models"].as_array().is_some_and(|models| {
+            models.iter().any(|model| {
+                model["id"] == "dense_qwen25_05b_q8_cuda"
+                    && model["route"] == "dense_regular_llm_cuda"
+                    && model["speedup_claim"] == false
+                    && model["server_ready"] == false
+                    && model["bitnet_packed_i2s_qk256_proof"] == false
+                    && model["dense_regular_llm_cuda_proof"] == true
+            })
+        }));
+        Ok(())
     }
 
     #[test]
