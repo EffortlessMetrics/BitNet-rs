@@ -61,7 +61,7 @@
 | apple-m4-local-answer | M4-BITNET-ASK-005 | M4-BITNET-ASK-004 | merged |
 | apple-m4-local-answer | M4-BITNET-ASK-006 | M4-BITNET-ASK-005 | merged |
 | apple-m4-local-answer | M4-BITNET-SMOKE-001 | M4-BITNET-ASK-006 | merged |
-| apple-m4-local-answer | M4-BITNET-WARM-001 | M4-BITNET-SMOKE-001 | pr_open |
+| apple-m4-local-answer | M4-BITNET-WARM-001 | M4-BITNET-SMOKE-001 | merged |
 | apple-m4-operational | M4-OP-002 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-003 | M4-OP-001 | merged |
 | apple-m4-operational | M4-OP-004 | M4-OP-003 | merged |
