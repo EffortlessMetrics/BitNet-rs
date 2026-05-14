@@ -37,6 +37,9 @@ const NPU_FFN: &str = "npu-bitnet-ffn-subgraph-parity.json";
 const OPERATOR_READINESS: &str = "lunar-lake-operator-readiness.json";
 const REGRESSION_BUNDLE: &str = "lunar-lake-regression-bundle.json";
 const OPERATOR_COMPARISON: &str = "lunar-lake-operator-comparison.json";
+const ROUTE_PROMOTION_LEDGER: &str = "lunar-lake-route-promotion.json";
+const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
+const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 pub const DEFAULT_ASK_ROUTE: &str = "dense_slm_default_cpu";
 
 /// Lunar Lake operator commands.
@@ -140,6 +143,33 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the promotion ledger cannot safely preserve CPU as the default route.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Compare promoted and candidate routes against fixed workload profiles.
+    ProfileCompare {
+        /// Artifact root containing the 258V receipts to index.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Route promotion ledger to evaluate. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROMOTION_LEDGER)]
+        promotion_ledger: PathBuf,
+
+        /// Dense SLM phase comparison receipt to index. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = DENSE_PHASE_COMPARISON)]
+        phase_comparison: PathBuf,
+
+        /// Output JSON profile comparison to file.
+        #[arg(long)]
+        json_out: Option<PathBuf>,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the profile comparison cannot safely preserve CPU as default.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -372,6 +402,70 @@ pub struct RoutePromotion {
     pub reason: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeRouteProfileComparison {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub promotion_ledger: String,
+    pub phase_comparison_receipt: String,
+    pub profile_comparison_ready: bool,
+    pub default_route_id: String,
+    pub profiles: Vec<WorkloadProfileEvaluation>,
+    pub gaps: Vec<String>,
+    pub claim_boundary: ClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WorkloadProfileEvaluation {
+    pub profile_id: String,
+    pub prompt_tokens: String,
+    pub output_tokens: String,
+    pub purpose: String,
+    pub promoted_route: Option<String>,
+    pub candidate_routes: Vec<String>,
+    pub profile_status: String,
+    pub route_evidence: Vec<ProfileRouteEvidence>,
+    pub promotion_decision: String,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProfileRouteEvidence {
+    pub route_id: String,
+    pub route_status: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub phase_timing_present: Option<bool>,
+    pub timing: ProfileTimingSummary,
+    pub benchmark_qualified_advantage: bool,
+    pub promotion_eligible_for_profile: bool,
+    pub evidence: Vec<String>,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProfileTimingSummary {
+    pub timing_scope: String,
+    pub source_receipts: Vec<String>,
+    pub cold_load_ms: Option<f64>,
+    pub tokenize_ms: Option<f64>,
+    pub prefill_ms: Option<f64>,
+    pub first_token_ms: Option<f64>,
+    pub decode_total_ms: Option<f64>,
+    pub generation_total_ms: Option<f64>,
+    pub total_response_ms: Option<f64>,
+    pub output_tokens: Option<u64>,
+    pub throughput_tokens_per_s: Option<f64>,
+    pub phase_coverage: Vec<String>,
+    pub known_gaps: Vec<String>,
+}
+
 impl LunarLakeCommand {
     pub async fn execute(&self) -> Result<()> {
         match &self.action {
@@ -459,6 +553,33 @@ impl LunarLakeCommand {
                 write_or_print_route_promotion_ledger(&receipt, json_out.as_deref())?;
                 if *strict && !receipt.promotion_ready {
                     bail!("Lunar Lake route promotion ledger failed: {}", receipt.gaps.join("; "));
+                }
+                Ok(())
+            }
+            LunarLakeAction::ProfileCompare {
+                artifact_root,
+                promotion_ledger,
+                phase_comparison,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_route_profile_comparison_with_created_utc(
+                    artifact_root,
+                    promotion_ledger,
+                    phase_comparison,
+                    created_utc,
+                )?;
+                write_or_print_route_profile_comparison(&receipt, json_out.as_deref())?;
+                if *strict && !receipt.profile_comparison_ready {
+                    bail!(
+                        "Lunar Lake route profile comparison failed: {}",
+                        receipt.gaps.join("; ")
+                    );
                 }
                 Ok(())
             }
@@ -929,6 +1050,84 @@ pub fn build_route_promotion_ledger_with_created_utc(
     })
 }
 
+pub fn build_route_profile_comparison_with_created_utc(
+    root: &Path,
+    promotion_ledger: &Path,
+    phase_comparison: &Path,
+    created_utc: String,
+) -> Result<LunarLakeRouteProfileComparison> {
+    let promotion_ledger_path = resolve_receipt_path(root, promotion_ledger);
+    let phase_comparison_path = resolve_receipt_path(root, phase_comparison);
+    let ledger: LunarLakeRoutePromotionLedger = read_json_receipt(&promotion_ledger_path)?;
+    let phase_comparison_json: Value = read_json_receipt(&phase_comparison_path)?;
+
+    let mut gaps = Vec::new();
+    if !ledger.promotion_ready {
+        gaps.push(format!("promotion ledger not ready: {}", ledger.gaps.join("; ")));
+    }
+    if ledger.default_route_id != DEFAULT_ASK_ROUTE {
+        gaps.push(format!(
+            "default route changed from {DEFAULT_ASK_ROUTE} to {}",
+            ledger.default_route_id
+        ));
+    }
+    if ledger.claim_boundary.hidden_fallback_allowed {
+        gaps.push("route profile comparison refuses hidden fallback".to_string());
+    }
+    if !ledger.claim_boundary.openvino_gpu_npu_are_candidates_not_speedup_claims {
+        gaps.push("OpenVINO GPU/NPU candidate boundary is not preserved".to_string());
+    }
+
+    let profiles = ledger
+        .workload_profiles
+        .iter()
+        .map(|profile| evaluate_workload_profile(root, profile, &ledger, &phase_comparison_json))
+        .collect::<Result<Vec<_>>>()?;
+
+    let default_profile_ready = profiles.iter().any(|profile| {
+        profile.promoted_route.as_deref() == Some(DEFAULT_ASK_ROUTE)
+            && profile.route_evidence.iter().any(|route| {
+                route.route_id == DEFAULT_ASK_ROUTE && route.promotion_eligible_for_profile
+            })
+    });
+    if !default_profile_ready {
+        gaps.push("dense Qwen CPU default route is not profile-eligible".to_string());
+    }
+    for profile in &profiles {
+        for route in &profile.route_evidence {
+            if route.fallback_used == Some(true) {
+                gaps.push(format!(
+                    "{} route {} observed fallback_used=true",
+                    profile.profile_id, route.route_id
+                ));
+            }
+            if route.benchmark_qualified_advantage {
+                gaps.push(format!(
+                    "{} route {} unexpectedly records benchmark-qualified advantage",
+                    profile.profile_id, route.route_id
+                ));
+            }
+        }
+    }
+
+    let profile_comparison_ready = gaps.is_empty();
+    Ok(LunarLakeRouteProfileComparison {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_route_profile_comparison".to_string(),
+        proof_stage: "route_profiles_indexed_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: ledger.machine_id.clone(),
+        artifact_root: path_string(root),
+        promotion_ledger: path_string(&promotion_ledger_path),
+        phase_comparison_receipt: path_string(&phase_comparison_path),
+        profile_comparison_ready,
+        default_route_id: ledger.default_route_id,
+        profiles,
+        gaps,
+        claim_boundary: ledger.claim_boundary,
+    })
+}
+
 pub fn load_operator_ask_route(
     root: &Path,
     operator_receipt: &Path,
@@ -1247,6 +1446,25 @@ fn write_or_print_route_promotion_ledger(
     Ok(())
 }
 
+fn write_or_print_route_profile_comparison(
+    receipt: &LunarLakeRouteProfileComparison,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake route profile comparison written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
 fn read_json_receipt<T: DeserializeOwned>(path: &Path) -> Result<T> {
     let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     serde_json::from_slice(&bytes).with_context(|| format!("failed to parse {}", path.display()))
@@ -1494,6 +1712,301 @@ fn promote_route(
     }
 }
 
+fn evaluate_workload_profile(
+    root: &Path,
+    profile: &WorkloadProfile,
+    ledger: &LunarLakeRoutePromotionLedger,
+    phase_comparison: &Value,
+) -> Result<WorkloadProfileEvaluation> {
+    let mut route_ids = Vec::new();
+    if let Some(route_id) = &profile.promoted_route {
+        route_ids.push(route_id.clone());
+    }
+    for route_id in &profile.candidate_routes {
+        if !route_ids.contains(route_id) {
+            route_ids.push(route_id.clone());
+        }
+    }
+
+    let route_evidence = route_ids
+        .iter()
+        .map(|route_id| evaluate_profile_route(root, profile, route_id, ledger, phase_comparison))
+        .collect::<Result<Vec<_>>>()?;
+
+    let mut gaps = Vec::new();
+    if route_evidence.is_empty() {
+        gaps.push("profile has no promoted or candidate route".to_string());
+    }
+    for route in &route_evidence {
+        if route.fallback_used == Some(true) {
+            gaps.push(format!("{} fallback_used=true", route.route_id));
+        }
+        if route.route_status == "candidate" && route.benchmark_qualified_advantage {
+            gaps.push(format!(
+                "{} records benchmark advantage while still candidate",
+                route.route_id
+            ));
+        }
+    }
+
+    let promoted_ready = route_evidence.iter().any(|route| route.promotion_eligible_for_profile);
+    let profile_status = if promoted_ready {
+        "promoted_route_ready"
+    } else if route_evidence.iter().any(|route| route.route_status == "candidate") {
+        "candidate_only"
+    } else {
+        "unqualified_gap"
+    }
+    .to_string();
+    let promotion_decision = match &profile.promoted_route {
+        Some(route_id) if promoted_ready => {
+            format!("{route_id} remains promoted for {}", profile.profile_id)
+        }
+        Some(route_id) => format!(
+            "{route_id} is listed as promoted for {}, but profile evidence is incomplete",
+            profile.profile_id
+        ),
+        None => format!(
+            "{} has no promoted route; candidate evidence is indexed without promotion",
+            profile.profile_id
+        ),
+    };
+
+    Ok(WorkloadProfileEvaluation {
+        profile_id: profile.profile_id.clone(),
+        prompt_tokens: profile.prompt_tokens.clone(),
+        output_tokens: profile.output_tokens.clone(),
+        purpose: profile.purpose.clone(),
+        promoted_route: profile.promoted_route.clone(),
+        candidate_routes: profile.candidate_routes.clone(),
+        profile_status,
+        route_evidence,
+        promotion_decision,
+        gaps,
+    })
+}
+
+fn evaluate_profile_route(
+    root: &Path,
+    profile: &WorkloadProfile,
+    route_id: &str,
+    ledger: &LunarLakeRoutePromotionLedger,
+    phase_comparison: &Value,
+) -> Result<ProfileRouteEvidence> {
+    let route = ledger
+        .routes
+        .iter()
+        .find(|route| route.route_id == route_id)
+        .with_context(|| format!("route `{route_id}` not found in promotion ledger"))?;
+    let timing = profile_timing_for_route(root, route_id, phase_comparison)?;
+    let mut blockers = route.missing_evidence.clone();
+    if route.status != "promoted" || !route.promoted_for.contains(&profile.profile_id) {
+        blockers.push(format!("route not promoted for profile {}", profile.profile_id));
+    }
+    if route.status == "candidate" {
+        blockers.push("candidate route requires benchmark-qualified profile evidence".to_string());
+    }
+    if timing.known_gaps.iter().any(|gap| gap.contains("missing")) {
+        blockers.push("timing coverage has missing profile fields".to_string());
+    }
+    if profile.profile_id == "low_power" {
+        blockers.push("power telemetry receipt missing for low_power promotion".to_string());
+    }
+    if route.speedup_claim {
+        blockers.push("route source claims speedup before profile promotion".to_string());
+    }
+    blockers.sort();
+    blockers.dedup();
+
+    let promotion_eligible_for_profile = route.status == "promoted"
+        && route.promoted_for.contains(&profile.profile_id)
+        && route.fallback_used == Some(false)
+        && blockers.is_empty();
+
+    Ok(ProfileRouteEvidence {
+        route_id: route.route_id.clone(),
+        route_status: route.status.clone(),
+        selected_backend: route.selected_backend.clone(),
+        runtime_api: route.runtime_api.clone(),
+        fallback_used: route.fallback_used,
+        answer_gate_passed: route.answer_gate_passed,
+        phase_timing_present: route.phase_timing_present,
+        timing,
+        benchmark_qualified_advantage: false,
+        promotion_eligible_for_profile,
+        evidence: route.present_evidence.clone(),
+        blockers,
+    })
+}
+
+fn profile_timing_for_route(
+    root: &Path,
+    route_id: &str,
+    phase_comparison: &Value,
+) -> Result<ProfileTimingSummary> {
+    match route_id {
+        DEFAULT_ASK_ROUTE => dense_cpu_profile_timing(root, phase_comparison),
+        "dense_slm_openvino_gpu_candidate" => {
+            openvino_profile_timing(root, DENSE_OV_GPU_OPERATOR_ASK, "openvino_gpu_operator_ask")
+        }
+        "dense_slm_openvino_npu_candidate" => {
+            openvino_profile_timing(root, DENSE_OV_NPU_OPERATOR_ASK, "openvino_npu_operator_ask")
+        }
+        "bitnet_reference_cpu" => Ok(ProfileTimingSummary {
+            timing_scope: "bitnet_reference_cpu_not_dense_slm_profile".to_string(),
+            source_receipts: vec![BITNET_PERF_APPLIED.to_string(), BITNET_CPU_BUNDLE.to_string()],
+            cold_load_ms: None,
+            tokenize_ms: None,
+            prefill_ms: None,
+            first_token_ms: None,
+            decode_total_ms: None,
+            generation_total_ms: None,
+            total_response_ms: None,
+            output_tokens: None,
+            throughput_tokens_per_s: None,
+            phase_coverage: vec![
+                "BitNet I2_S applied-thread evidence is indexed separately".to_string(),
+                "Not comparable to dense Qwen OpenVINO route profiles".to_string(),
+            ],
+            known_gaps: vec![
+                "BitNet route remains a strict reference route, not a general dense SLM ask route"
+                    .to_string(),
+            ],
+        }),
+        _ => Ok(ProfileTimingSummary {
+            timing_scope: "unknown_route".to_string(),
+            source_receipts: vec![],
+            cold_load_ms: None,
+            tokenize_ms: None,
+            prefill_ms: None,
+            first_token_ms: None,
+            decode_total_ms: None,
+            generation_total_ms: None,
+            total_response_ms: None,
+            output_tokens: None,
+            throughput_tokens_per_s: None,
+            phase_coverage: vec![],
+            known_gaps: vec![format!("no timing extractor for route `{route_id}`")],
+        }),
+    }
+}
+
+fn dense_cpu_profile_timing(root: &Path, phase_comparison: &Value) -> Result<ProfileTimingSummary> {
+    let ask_path = root.join(DENSE_CPU_OPERATOR_ASK);
+    let ask: Value = read_json_receipt(&ask_path)?;
+    let output_tokens = number_at_any(&ask, &["tokens.generated_count", "timing.decode_tokens"])
+        .map(|value| value as u64);
+    let generation_total_ms = number_at_any(&ask, &["timing.decode_total_ms"]);
+    let throughput_tokens_per_s = number_at_any(&ask, &["timing.decode_steady_state_tok_s"])
+        .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms));
+
+    let mut phase_coverage = vec![
+        "operator_ask_math_brief".to_string(),
+        "cpu_timing_model_load_tokenize_prefill_first_token_decode".to_string(),
+    ];
+    let prefill_512 = value_at(phase_comparison, "gguf_cpu_reference.timing.prefill_512").is_some();
+    let decode_128 = value_at(phase_comparison, "gguf_cpu_reference.timing.decode_128").is_some();
+    if prefill_512 {
+        phase_coverage.push("warm_prefill_512".to_string());
+    }
+    if decode_128 {
+        phase_coverage.push("warm_decode_128".to_string());
+    }
+
+    Ok(ProfileTimingSummary {
+        timing_scope: "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts".to_string(),
+        source_receipts: vec![
+            DENSE_CPU_OPERATOR_ASK.to_string(),
+            DENSE_CPU_PHASE.to_string(),
+            DENSE_PHASE_COMPARISON.to_string(),
+        ],
+        cold_load_ms: number_at_any(&ask, &["timing.model_load_ms"]),
+        tokenize_ms: number_at_any(&ask, &["timing.tokenize_ms"]),
+        prefill_ms: number_at_any(&ask, &["timing.prefill_ms"]),
+        first_token_ms: number_at_any(&ask, &["timing.first_token_ms"]),
+        decode_total_ms: generation_total_ms,
+        generation_total_ms,
+        total_response_ms: number_at_any(&ask, &["latency.total_ms"]),
+        output_tokens,
+        throughput_tokens_per_s,
+        phase_coverage,
+        known_gaps: vec![
+            "bounded math ask only; not expanded profile regression corpus".to_string(),
+            "power and thermal context not normalized in this comparison".to_string(),
+        ],
+    })
+}
+
+fn openvino_profile_timing(
+    root: &Path,
+    receipt_name: &str,
+    timing_scope: &str,
+) -> Result<ProfileTimingSummary> {
+    let path = root.join(receipt_name);
+    let ask: Value = read_json_receipt(&path)?;
+    let output_tokens = number_at_any(&ask, &["timing.openvino_perf_metrics.num_generated_tokens"])
+        .map(|value| value as u64);
+    let generation_total_ms = number_at_any(
+        &ask,
+        &["timing.generation_wall_ms", "timing.openvino_perf_metrics.generate.mean_ms"],
+    );
+
+    Ok(ProfileTimingSummary {
+        timing_scope: timing_scope.to_string(),
+        source_receipts: vec![receipt_name.to_string(), DENSE_OV_PHASE.to_string()],
+        cold_load_ms: number_at_any(
+            &ask,
+            &["timing.openvino_perf_metrics.load_time_ms", "timing.pipeline_construct_wall_ms"],
+        ),
+        tokenize_ms: number_at_any(&ask, &["timing.openvino_perf_metrics.tokenization.mean_ms"]),
+        prefill_ms: None,
+        first_token_ms: number_at_any(
+            &ask,
+            &[
+                "timing.openvino_perf_metrics.time_to_first_token.mean_ms",
+                "timing.first_streamed_text_chunk_ms",
+            ],
+        ),
+        decode_total_ms: generation_total_ms,
+        generation_total_ms,
+        total_response_ms: sum_optional(
+            number_at_any(&ask, &["timing.pipeline_construct_wall_ms"]),
+            generation_total_ms,
+        ),
+        output_tokens,
+        throughput_tokens_per_s: throughput_from_tokens(output_tokens, generation_total_ms),
+        phase_coverage: vec![
+            "bounded_operator_ask_math_brief".to_string(),
+            "openvino_genai_perf_metrics".to_string(),
+            "pipeline_construct_and_generation_wall_time".to_string(),
+        ],
+        known_gaps: vec![
+            "profile regression bundle missing".to_string(),
+            "benchmark-qualified speedup or power advantage missing".to_string(),
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
+                .to_string(),
+            "generated token IDs are not available directly from OpenVINO GenAI internals"
+                .to_string(),
+        ],
+    })
+}
+
+fn throughput_from_tokens(tokens: Option<u64>, total_ms: Option<f64>) -> Option<f64> {
+    let tokens = tokens?;
+    let total_ms = total_ms?;
+    if tokens == 0 || total_ms <= 0.0 {
+        return None;
+    }
+    Some(tokens as f64 / (total_ms / 1000.0))
+}
+
+fn sum_optional(left: Option<f64>, right: Option<f64>) -> Option<f64> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(left + right),
+        _ => None,
+    }
+}
+
 fn attached_route_evidence<'a>(
     route: &OperatorRoute,
     evidence: &'a [EvidenceStatus],
@@ -1570,6 +2083,20 @@ fn workload_profiles() -> Vec<WorkloadProfile> {
                 .to_string(),
             promoted_route: None,
             candidate_routes: vec![DEFAULT_ASK_ROUTE.to_string()],
+        },
+        WorkloadProfile {
+            profile_id: "low_power".to_string(),
+            prompt_tokens: "<=512".to_string(),
+            output_tokens: "<=128".to_string(),
+            purpose:
+                "battery or quiet-mode ask where NPU/GPU must prove power or stability advantage"
+                    .to_string(),
+            promoted_route: None,
+            candidate_routes: vec![
+                DEFAULT_ASK_ROUTE.to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+                "dense_slm_openvino_gpu_candidate".to_string(),
+            ],
         },
         WorkloadProfile {
             profile_id: "bitnet_strict_reference".to_string(),
@@ -1736,6 +2263,10 @@ fn string_at(json: &Value, path: &str) -> Option<String> {
 
 fn bool_at_any(json: &Value, paths: &[&str]) -> Option<bool> {
     paths.iter().find_map(|path| value_at(json, path).and_then(Value::as_bool))
+}
+
+fn number_at_any(json: &Value, paths: &[&str]) -> Option<f64> {
+    paths.iter().find_map(|path| value_at(json, path).and_then(Value::as_f64))
 }
 
 fn value_at<'a>(json: &'a Value, dotted_path: &str) -> Option<&'a Value> {
@@ -2041,6 +2572,110 @@ mod tests {
                 .iter()
                 .any(|route| route.route_id == DEFAULT_ASK_ROUTE && route.status == "blocked")
         );
+        Ok(())
+    }
+
+    #[test]
+    fn route_profile_comparison_indexes_profiles_without_promoting_accelerators() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {
+                    "total_ms": 150.0
+                },
+                "tokens": {
+                    "generated_count": 8
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {
+                    "timing": {
+                        "prefill_512": {},
+                        "decode_128": {}
+                    }
+                }
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let profiles = build_route_profile_comparison_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            "2026-05-14T17:30:00Z".to_string(),
+        )?;
+
+        assert!(profiles.profile_comparison_ready, "{:?}", profiles.gaps);
+        assert_eq!(profiles.artifact_kind, "lunar_lake_route_profile_comparison");
+        let Some(ask_normal) =
+            profiles.profiles.iter().find(|profile| profile.profile_id == "ask_normal")
+        else {
+            bail!("missing ask_normal profile");
+        };
+        assert!(ask_normal.route_evidence.iter().any(|route| {
+            route.route_id == DEFAULT_ASK_ROUTE && route.promotion_eligible_for_profile
+        }));
+        assert!(ask_normal.route_evidence.iter().any(|route| {
+            route.route_id == "dense_slm_openvino_gpu_candidate"
+                && route.route_status == "candidate"
+                && !route.benchmark_qualified_advantage
+        }));
+        let Some(low_power) =
+            profiles.profiles.iter().find(|profile| profile.profile_id == "low_power")
+        else {
+            bail!("missing low_power profile");
+        };
+        assert!(low_power.route_evidence.iter().any(|route| {
+            route.route_id == "dense_slm_openvino_npu_candidate"
+                && route.blockers.contains(
+                    &"power telemetry receipt missing for low_power promotion".to_string(),
+                )
+        }));
         Ok(())
     }
 
