@@ -138,6 +138,19 @@ profile, explicit label, manual dispatch, schedule, release gate, or campaign
 receipt lane before it starts. Do not use a near-completion timeout as the
 budget mechanism.
 
+The staged M3 Air dense SLM workflow is the reference Apple MacBook pattern:
+
+```text
+.github/workflows/apple-m3-air-dense-slm.yml
+```
+
+It is manual-only, defaults to a no-run staged message, requires an explicit
+`enable_run=true` dispatch for live hardware, uses `cancel-in-progress: false`,
+checks disk before model fetch, writes preflight and host-context artifacts, and
+uploads the receipt directory with `if: always()`. Future M3 Air model, artifact,
+or timing lanes should either reuse that pattern or explain why the selected
+lane can safely discard partial work.
+
 ## Why the budget target is aggressive
 
 Our CI budget target is intentionally aggressive — but **not because we want
