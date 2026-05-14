@@ -54,6 +54,23 @@ Each report should include:
   total wall time, peak memory, and memory drift;
 - claim-boundary fields stating that the report is dense SLM only.
 
+Strict scoring still reports exact `failed_rules`. V2 taxonomy is additive and
+groups those failures under stable labels so reports can separate failure
+families without hiding the strict result:
+
+| Taxonomy | Meaning |
+|---|---|
+| `raw_special_token_tail` | Raw special-token text such as ChatML/header markers reached the decoded answer. |
+| `template_or_stop` | Output suggests prompt-template or stop-token handling leaked into the answer. |
+| `fenced_json` | A JSON-scored answer was wrapped in a Markdown code fence. |
+| `punctuation_casing_normalization` | Strict exact-match failed, but normalized punctuation/case/spacing would match. |
+| `format_only` | The answer shape failed, such as JSON parse/schema/type or missing numeric form. |
+| `answer_content` | The answer content missed the expected value, label, keyword, forbidden token, enum, or numeric tolerance. |
+
+Per-case receipts expose `quality.failure_taxonomy` and
+`quality.scoring.failure_taxonomy`; aggregate receipts expose
+`scoring_summary.failure_taxonomy` counts.
+
 ## Benchmark Contract
 
 The v2 benchmark profile set should include:

@@ -1,0 +1,19 @@
+timestamp = "2026-05-14T21:37:55Z"
+campaign = "apple-m4-slm-eval-v2"
+item = "M4-SLM-EVAL2-002"
+event = "in_progress"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/apple-m4-slm-eval-v2/M4-SLM-EVAL2-002-failure-taxonomy"
+summary = "Started dense SLM eval v2 failure taxonomy work after M4-SLM-EVAL2-001 landed."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "docs/slm/apple-m4-slm-eval-v2.md",
+]
+
+notes = [
+  "This item is parser/scoring/reporting taxonomy work only.",
+  "It must preserve strict scoring failed_rules and must not claim improved runtime pass rates, broad model quality, BitNet quality, or broad M4 performance.",
+]

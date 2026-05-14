@@ -6,7 +6,7 @@ use clap::{Args, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     ffi::OsString,
     fs::{self, File},
     path::{Path, PathBuf},
@@ -572,6 +572,7 @@ impl AnswerCorpusCommand {
                 "gate_kind": case.gate.kind,
                 "scoring": scoring_result_json(quality.scoring.as_ref()),
                 "failed_rules": quality.failed_rules,
+                "failure_taxonomy": quality.failure_taxonomy,
             },
             "backend": {
                 "requested_backend": run_receipt["requested_backend"].clone(),
@@ -626,6 +627,7 @@ impl AnswerCorpusCommand {
             "quality": {
                 "passed": false,
                 "failed_rules": ["not_run"],
+                "failure_taxonomy": [],
                 "scoring": scoring_not_run_json(case.scoring.as_ref()),
             }
         })
@@ -770,6 +772,7 @@ struct QualityResult {
     mostly_text: bool,
     distinct_generated_tokens: usize,
     failed_rules: Vec<String>,
+    failure_taxonomy: Vec<String>,
     scoring: Option<ScoringResult>,
 }
 
@@ -778,6 +781,7 @@ struct ScoringResult {
     passed: bool,
     normalized_answer: String,
     failed_rules: Vec<String>,
+    failure_taxonomy: Vec<String>,
     details: Value,
 }
 
@@ -1033,6 +1037,8 @@ fn evaluate_quality(
     {
         failed_rules.push("generated_token_variation".to_string());
     }
+    let failure_taxonomy =
+        quality_failure_taxonomy(&failed_rules, scoring_result.as_ref(), &normalized);
 
     QualityResult {
         passed: failed_rules.is_empty(),
@@ -1043,6 +1049,7 @@ fn evaluate_quality(
         mostly_text,
         distinct_generated_tokens,
         failed_rules,
+        failure_taxonomy,
         scoring: scoring_result,
     }
 }
@@ -1144,10 +1151,13 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
         _ => failed_rules.push("unsupported_kind".to_string()),
     }
 
+    let failure_taxonomy = scoring_failure_taxonomy(answer, scoring, &kind, &failed_rules);
+
     ScoringResult {
         kind,
         passed: failed_rules.is_empty(),
         normalized_answer,
+        failure_taxonomy,
         failed_rules,
         details: Value::Object(details),
     }
@@ -1160,6 +1170,7 @@ fn scoring_result_json(result: Option<&ScoringResult>) -> Value {
             "passed": result.passed,
             "normalized_answer": &result.normalized_answer,
             "failed_rules": &result.failed_rules,
+            "failure_taxonomy": &result.failure_taxonomy,
             "details": &result.details,
         })
     })
@@ -1178,6 +1189,7 @@ fn scoring_not_run_json(scoring: Option<&AnswerScoring>) -> Value {
             "numeric_tolerance": scoring.numeric_tolerance,
             "required_keywords": &scoring.required_keywords,
             "forbidden_tokens": &scoring.forbidden_tokens,
+            "failure_taxonomy": [],
         })
     })
 }
@@ -1188,6 +1200,7 @@ fn scoring_summary(rows: &[Value]) -> Value {
     let mut failed = 0usize;
     let mut not_run = 0usize;
     let mut kinds = BTreeSet::new();
+    let mut failure_taxonomy = BTreeMap::<String, usize>::new();
     for row in rows {
         let scoring = &row["quality"]["scoring"];
         let Some(kind) = scoring["kind"].as_str() else {
@@ -1200,6 +1213,11 @@ fn scoring_summary(rows: &[Value]) -> Value {
             Some(false) => failed += 1,
             None => not_run += 1,
         }
+        for taxonomy in
+            scoring["failure_taxonomy"].as_array().into_iter().flatten().filter_map(Value::as_str)
+        {
+            *failure_taxonomy.entry(taxonomy.to_string()).or_default() += 1;
+        }
     }
     json!({
         "enabled": total > 0,
@@ -1208,7 +1226,105 @@ fn scoring_summary(rows: &[Value]) -> Value {
         "failed": failed,
         "not_run": not_run,
         "kinds": kinds.into_iter().collect::<Vec<_>>(),
+        "failure_taxonomy": failure_taxonomy,
     })
+}
+
+fn quality_failure_taxonomy(
+    failed_rules: &[String],
+    scoring: Option<&ScoringResult>,
+    answer: &str,
+) -> Vec<String> {
+    let mut taxonomy = BTreeSet::new();
+    if failed_rules.iter().any(|rule| rule == "raw_special_tokens")
+        || contains_raw_special_token(answer)
+    {
+        taxonomy.insert("raw_special_token_tail".to_string());
+        taxonomy.insert("template_or_stop".to_string());
+    }
+    for rule in failed_rules {
+        if matches!(rule.as_str(), "replacement_chars" | "mostly_text" | "printable_utf8") {
+            taxonomy.insert("format_only".to_string());
+        } else if rule == "empty_answer"
+            || rule.starts_with("gate_")
+            || matches!(rule.as_str(), "generated_token_min" | "generated_token_variation")
+        {
+            taxonomy.insert("answer_content".to_string());
+        }
+    }
+    if let Some(scoring) = scoring {
+        taxonomy.extend(scoring.failure_taxonomy.iter().cloned());
+    }
+    taxonomy.into_iter().collect()
+}
+
+fn scoring_failure_taxonomy(
+    answer: &str,
+    scoring: &AnswerScoring,
+    kind: &str,
+    failed_rules: &[String],
+) -> Vec<String> {
+    if failed_rules.is_empty() {
+        return Vec::new();
+    }
+    let mut taxonomy = BTreeSet::new();
+    if contains_raw_special_token(answer) {
+        taxonomy.insert("raw_special_token_tail".to_string());
+        taxonomy.insert("template_or_stop".to_string());
+    }
+    match kind {
+        "exact_match" => {
+            let expected = scoring.expected_answer().unwrap_or_default();
+            if normalize_match_text(answer) == normalize_match_text(expected) {
+                taxonomy.insert("punctuation_casing_normalization".to_string());
+            } else {
+                taxonomy.insert("answer_content".to_string());
+            }
+        }
+        "normalized_match"
+        | "required_keywords"
+        | "forbidden_tokens"
+        | "required_forbidden_tokens" => {
+            taxonomy.insert("answer_content".to_string());
+        }
+        "numeric_tolerance" => {
+            if failed_rules.iter().any(|rule| {
+                matches!(rule.as_str(), "numeric_observed_missing" | "numeric_expected_missing")
+            }) {
+                taxonomy.insert("format_only".to_string());
+            } else {
+                taxonomy.insert("answer_content".to_string());
+            }
+        }
+        "json_schema" => {
+            if contains_fenced_json(answer) {
+                taxonomy.insert("fenced_json".to_string());
+            }
+            for rule in failed_rules {
+                if rule == "json_parse"
+                    || rule.starts_with("json_required_")
+                    || rule.starts_with("json_additional_")
+                    || rule.starts_with("json_type")
+                {
+                    taxonomy.insert("format_only".to_string());
+                } else if rule.starts_with("json_const_") || rule.starts_with("json_enum_") {
+                    taxonomy.insert("answer_content".to_string());
+                }
+            }
+        }
+        _ => {
+            taxonomy.insert("answer_content".to_string());
+        }
+    }
+    if taxonomy.is_empty() {
+        taxonomy.insert("answer_content".to_string());
+    }
+    taxonomy.into_iter().collect()
+}
+
+fn contains_fenced_json(answer: &str) -> bool {
+    let trimmed = answer.trim_start();
+    trimmed.starts_with("```") || trimmed.contains("\n```")
 }
 
 fn normalize_scoring_text(value: &str) -> String {
@@ -1981,6 +2097,8 @@ mod tests {
         );
         assert!(!quality.passed);
         assert!(quality.failed_rules.contains(&"raw_special_tokens".to_string()));
+        assert!(quality.failure_taxonomy.contains(&"raw_special_token_tail".to_string()));
+        assert!(quality.failure_taxonomy.contains(&"template_or_stop".to_string()));
     }
 
     #[test]
@@ -2006,7 +2124,13 @@ mod tests {
         let exact =
             AnswerScoring { expected_normalized: Some("15".to_string()), ..scoring("exact_match") };
         assert!(evaluate_scoring("15", &exact).passed);
-        assert!(!evaluate_scoring("15.", &exact).passed);
+        let punctuation_only = evaluate_scoring("15.", &exact);
+        assert!(!punctuation_only.passed);
+        assert!(
+            punctuation_only
+                .failure_taxonomy
+                .contains(&"punctuation_casing_normalization".to_string())
+        );
 
         let normalized = AnswerScoring {
             expected_normalized: Some("ant, cat, dog".to_string()),
@@ -2033,6 +2157,13 @@ mod tests {
         let result = evaluate_scoring(r#"{"status":"ready","extra":true}"#, &scoring);
         assert!(!result.passed);
         assert!(result.failed_rules.contains(&"json_additional_extra".to_string()));
+        assert!(result.failure_taxonomy.contains(&"format_only".to_string()));
+
+        let fenced = evaluate_scoring("```json\n{\"status\":\"ready\"}\n```", &scoring);
+        assert!(!fenced.passed);
+        assert!(fenced.failed_rules.contains(&"json_parse".to_string()));
+        assert!(fenced.failure_taxonomy.contains(&"fenced_json".to_string()));
+        assert!(fenced.failure_taxonomy.contains(&"format_only".to_string()));
     }
 
     #[test]
@@ -2047,6 +2178,7 @@ mod tests {
         let result = evaluate_scoring("3.20", &scoring);
         assert!(!result.passed);
         assert!(result.failed_rules.contains(&"numeric_tolerance".to_string()));
+        assert!(result.failure_taxonomy.contains(&"answer_content".to_string()));
     }
 
     #[test]
@@ -2063,10 +2195,41 @@ mod tests {
         assert!(!quality.passed);
         assert!(quality.failed_rules.contains(&"scoring_required_keywords".to_string()));
         assert!(quality.failed_rules.contains(&"scoring_forbidden_tokens".to_string()));
+        assert!(quality.failure_taxonomy.contains(&"answer_content".to_string()));
         assert_eq!(
             quality.scoring.as_ref().map(|result| result.kind.as_str()),
             Some("required_forbidden_tokens")
         );
+    }
+
+    #[test]
+    fn slm_eval_scoring_summary_counts_failure_taxonomy() {
+        let rows = vec![
+            json!({
+                "quality": {
+                    "scoring": {
+                        "kind": "exact_match",
+                        "passed": false,
+                        "failure_taxonomy": ["punctuation_casing_normalization"]
+                    }
+                }
+            }),
+            json!({
+                "quality": {
+                    "scoring": {
+                        "kind": "json_schema",
+                        "passed": false,
+                        "failure_taxonomy": ["fenced_json", "format_only"]
+                    }
+                }
+            }),
+        ];
+
+        let summary = scoring_summary(&rows);
+        assert_eq!(summary["failed"], 2);
+        assert_eq!(summary["failure_taxonomy"]["punctuation_casing_normalization"], 1);
+        assert_eq!(summary["failure_taxonomy"]["fenced_json"], 1);
+        assert_eq!(summary["failure_taxonomy"]["format_only"], 1);
     }
 
     #[test]
