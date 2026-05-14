@@ -1,0 +1,20 @@
+timestamp = "2026-05-14T12:48:15Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-UX-008"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "cli/cuda-model-support-dashboard"
+pr = 4724
+head_sha = "d9fdc448b1e7bfcbc1817cc4a43d5bd7e04f348b"
+summary = "Opened draft PR #4724 for the read-only RTX 5070 Ti CUDA model status dashboard."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/4724",
+]
+
+notes = [
+  "The command reports supported and candidate model rows from ci/model-artifacts/model-coverage-matrix.toml without probing CUDA hardware.",
+  "The implementation keeps BitNet QK256 and dense_regular_llm_cuda rows distinct and surfaces speedup, server, and full-residency as not qualified or not ready where the matrix says so.",
+]
