@@ -3335,9 +3335,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-002"
-status = "pr_open"
+status = "merged"
 pr = 4718
+merge_sha = "11928fc6f823654eab665d28e0acc7df8392b0df"
 branch = "codex/lunar-lake/LNL258V-ASK-005-operating-audit"
+head_sha = "998e558cc80db70e54eba881cd88c89255c7e783"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
